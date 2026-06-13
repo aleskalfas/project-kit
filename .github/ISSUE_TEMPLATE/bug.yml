@@ -1,0 +1,66 @@
+name: Bug
+description: Something is broken or behaving wrong.
+title: "fix: "
+labels: ["kind:bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Filing a bug. Pairs with `fix:` commits on the closing PR.
+  - type: textarea
+    id: symptom
+    attributes:
+      label: Symptom
+      description: What did you observe? Exact command, exact error, exact state where helpful.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: If known. "Not reliably reproducible" is a valid answer.
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: root_cause
+    attributes:
+      label: Suspected root cause
+      description: Optional. File paths + line numbers if you have them.
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - "priority:0-top — drop everything, blocking"
+        - "priority:1-high — next up"
+        - "priority:2-medium — scheduled, not urgent"
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area(s)
+      multiple: true
+      options:
+        - "area:decisions"
+        - "area:agents"
+        - "area:workflow"
+        - "area:cli"
+        - "area:rules"
+    validations:
+      required: true
+  - type: textarea
+    id: related
+    attributes:
+      label: Related
+      description: Decisions (COR-*, PRJ-*) or other issues.

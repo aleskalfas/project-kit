@@ -1,0 +1,80 @@
+---
+id: ADR-004
+title: Agent autonomy is intent × confinement; pkit owns intent and the declaration, and delegates confinement to the harness sandbox
+status: accepted
+date: 2026-05-31
+author: Ales Kalfas <kalfas.ales@gmail.com>
+---
+
+## Context
+
+[COR-028](../../../.pkit/decisions/core/COR-028-permission-model-realization.md) establishes permissions as a harness-neutral model the methodology owns, realized by each harness adapter, with an explicit *honesty-about-gaps* discipline: a realizer declares which model dimensions its harness can natively enforce and **reports the residual gap** rather than overstating fidelity. [ADR-002](ADR-002-permission-realizer-ownership.md) records the first realizer's ownership boundary inside `.claude/settings.json` and the fail-open hook / fail-closed native-deny double-lock. This ADR is a child of ADR-002: it does not change that ownership boundary, it pins the *shape of agent autonomy* that sits on top of it — the conceptual model a future autonomy surface (the deferred `pkit permissions profile` verb) must conform to, recorded now so the surface cannot relitigate it later.
+
+The forcing question (issue #255) was whether pkit can offer named *autonomy levels* that reduce permission babysitting safely — "let project-manager run bash/python, but only able to write the project folder and `/tmp`." A `critic` pass trimmed the deliverable from "build a profiles CLI" to "pin the decision + refine the enforcement declaration; defer the surface." The design was worked in the `2026-05-31-autonomy-profiles.md` scratchpad note. The decisive insight is that autonomy is **two independent axes, and the permission model governs only one**:
+
+- **Intent — *what* an agent may invoke.** "pm may use `gh`; critic may not." This is the permission model's home: pkit grants + agent-frontmatter tool-gating, double-locked across the fail-open PreToolUse hook and fail-closed native denies per ADR-002.
+- **Confinement — *how bounded* execution is** (filesystem and network *reach*). This is **not** enforceable by command inspection. A directory-scoped grant on `bash` is security theater: `bash -c 'cd /etc && cat shadow'` runs with cwd at the project root but reads `/etc`, and absolute paths escape any cwd check. Confinement is only real when enforced by an OS-level sandbox.
+
+A prior `critic`+`architect` pass on the sibling seam (`2026-05-29-capability-harness-config.md`, lines 76–91) already established two constraints this ADR must stay consistent with, and does: (1) command-pattern permission rules in Claude Code are **session-wide, never per-agent** — only *tool*-level gating is per-agent (frontmatter `tools`/`disallowedTools`); and (2) the explicit warning **not to fuse intent and confinement into a single per-agent "profile,"** because that implies an agent-granularity the harness cannot honour. This ADR generalises that warning into a positive model and extends it to the confinement axis.
+
+The Claude Code sandbox was verified against the live harness documentation (`code.claude.com/docs/en/sandboxing`, 2026-05-31): an OS-level sandbox (macOS Seatbelt, Linux/WSL2 bubblewrap), configured by a top-level `sandbox` key, with an auto-allow mode that runs Bash without a prompt *because* execution is sandboxed. Three facts from that documentation are load-bearing below: subagents *run in the same process and share the parent session's sandbox configuration* (confinement is session-wide); the default behaviour when the sandbox cannot start is **fail-open** (warn and run unsandboxed) unless `failIfUnavailable` is set; and network filtering is a **client-supplied-hostname allowlist with no TLS inspection**, vulnerable to domain fronting and IP-literal / DNS-rebind exfil.
+
+The proposed status is the acceptance-gate gesture per [PRJ-005](../../../.pkit/decisions/project/PRJ-005-adopt-adrs.md). As project-kit's own architecture-decision record, harness specifics are in scope here — unlike the harness-neutral COR.
+
+## Decision
+
+**Agent autonomy is the product of two independent axes — intent × confinement — and the two are modelled separately because exactly one is per-agent-expressible and exactly one is OS-enforceable.**
+
+**1. Intent (what may be invoked).** Intent is the permission model's existing surface. It splits by the granularity the harness can honour, per the prior pass:
+
+- *Tool-gating* is **per-agent** — agent frontmatter (`tools`/`disallowedTools`), native to the harness.
+- *Command rules* are **session-wide** — the `permissions` block, a project-level union across installed agents; never per-agent.
+
+Intent is **pkit-owned** and double-locked per ADR-002: the fail-open PreToolUse hook carries the nuanced, evolving rules; the fail-closed native deny carries the non-negotiable denies.
+
+**2. Confinement (how bounded reach is).** Confinement is filesystem and network *reach*. It is **not command-inspection-enforceable** (a shell escapes any cwd check via `cd` or absolute paths) and is therefore **OS-sandbox-enforced**, never hook-enforced. pkit **manages but delegates** this axis: pkit may write and merge the adapter's `sandbox` block (an adapter-tier settings contribution through the existing merge primitive) and *declare* which layer enforces each dimension, but **the OS sandbox enforces it — pkit must never imply the hook does.**
+
+**3. Own vs delegate is split per-axis.** pkit **OWNS** the intent axis *and* the *declaration* of which layer enforces each dimension (`permission-enforcement.yaml`). pkit **MANAGES-BUT-DELEGATES** confinement to the harness sandbox. The declaration is the honest contract: it is the artifact that says "this dimension is sandbox-native, that one is hook-runtime, that one is an out-of-harness residual gap."
+
+**4. Fail-closed invariant on confinement-conditioned prompt-suppression.** Any mechanism that suppresses prompts *because* execution is confined — the sandbox's auto-allow mode, or any future preset that turns it on — **MUST fail closed.** If the confinement layer is unavailable or unverified, prompt-suppression must NOT take effect. Concretely: a preset that enables auto-allow-when-sandboxed MUST also assert `sandbox.failIfUnavailable: true` (so a missing sandbox blocks rather than silently degrades) and SHOULD assert the strict escape-hatch lockdown (`allowUnsandboxedCommands: false`), so a command cannot silently fall back to running unconfined-and-unprompted. A confinement preset that can run unconfined-and-unprompted is worse than prompting: the user believes a boundary holds that does not. This resolves the prior open question ("does a profile refuse or warn-and-prompt when the sandbox can't start?") as a decision, not a deferred toggle — the safe default is the only correct default.
+
+**5. No per-agent confinement.** The sandbox is session-wide (subagents share the parent session's configuration). Per-agent differentiation is therefore honestly expressible **only on the intent axis, and only its tool-gating sub-axis.** "project-manager is autonomous but critic is read-only" is expressible as *tool* gating (per-agent, frontmatter) and is **not** expressible as differential confinement. Consequently, any future "profile" abstraction is a **per-PROJECT concept for confinement, not a per-agent one.** A profile binds {a chosen session-wide confinement posture} × {a chosen intent set, whose only per-agent lever is tool-gating} under one project-chosen name. This is recorded so a future surface cannot reintroduce a per-agent confinement profile the harness cannot honour.
+
+## Rationale
+
+**Why two axes rather than one "profile" abstraction.** A profile that fuses intent and confinement implies a single granularity, but the two axes have *different* enforceable granularities (intent: per-agent for tools, session-wide for commands; confinement: session-wide only) and *different* enforcers (intent: pkit hook + native deny; confinement: the OS sandbox). The prior pass already warned against fusing them into a per-agent profile; modelling them as independent axes is the positive form of that warning. It also keeps each axis honest about what it can promise — the whole point of COR-028's honesty discipline.
+
+**Why pkit delegates confinement rather than enforcing it.** pkit's enforcement reach is command inspection (the hook) plus native config writes. Neither can confine a shell — the cwd-escape is unanswerable at the command-string layer. The only real confinement is OS-level, which the harness already provides. Claiming pkit-enforced confinement would be precisely the overstated-fidelity failure COR-028 forbids. Delegation with an honest declaration is the only stance that doesn't lie about the boundary.
+
+**Why the fail-closed invariant is a decision, not a toggle.** A confinement preset's *entire safety claim* is "prompts are suppressed because execution is bounded." If the boundary silently doesn't materialise (missing bubblewrap on Linux, unsupported platform, a command falling back through the `dangerouslyDisableSandbox` escape hatch) and prompts stay suppressed, the user has *less* safety than plain prompting while believing they have more. The harness's own default here is fail-open (warn-and-continue); a pkit preset that rode that default would inherit the unsafe behaviour. Pinning fail-closed as an invariant means a pkit-authored confinement preset is *defined* to include `failIfUnavailable: true` — there is no safe variant without it, so it is not a per-profile choice.
+
+**Why no per-agent confinement, stated now.** The sandbox is session-wide and subagents inherit it; this is a harness substrate fact, not a pkit choice. Recording it as a decision (rather than leaving it an open question) prevents a future profile surface from advertising "agent A confined, agent B not" — an asymmetry the harness cannot deliver and that would re-import the exact dishonesty this model exists to prevent. The honest expression of per-agent autonomy is tool-gating; differential reach is a per-project posture.
+
+### Alternatives considered
+
+- **A single per-agent "autonomy profile" fusing intent and confinement.** Rejected — explicitly warned against by the prior `critic`+`architect` pass (`2026-05-29-capability-harness-config.md` line 78), and confirmed against the live harness (subagents share the session sandbox). It implies a per-agent confinement granularity the harness cannot honour, and would let a profile make a safety claim it cannot keep.
+
+- **Enforce confinement in the PreToolUse hook (directory-scoped `bash` grants).** Rejected — security theater. The hook inspects command strings; `cd`/absolute-path escapes defeat any cwd check. This is the same reason `permission-enforcement.yaml` already carries `network-egress: enforcement: none`. Confinement must be OS-enforced.
+
+- **Make confinement-conditioned prompt-suppression a per-profile fail-open/fail-closed toggle.** Rejected — a profile whose safety claim hinges on confinement cannot offer a variant that silently runs unconfined-and-unprompted. The unsafe variant is never the right answer, so it is not offered. Fail-closed is the invariant, not the default.
+
+- **Relabel `network-egress` as natively enforced once a sandbox domain allowlist exists.** Rejected — the sandbox proxy allowlists on client-supplied hostname without TLS inspection, so domain fronting and IP-literal / DNS-rebind exfil remain open. Calling egress "natively enforced" would overstate fidelity and violate COR-028's honesty discipline. The correct refinement adds a `filesystem-confinement` dimension (genuinely OS-native) and a separate `domain-allowlist` dimension that names what the allowlist *does* enforce, while **keeping `network-egress: none` standing as the residual-gap truth** the adopter closes outside the harness.
+
+- **Build the `pkit permissions profile` surface now.** Deferred, not rejected. The profile grain (data-vs-code, backbone-vs-capability, where presets live) is unresolved, and a profile that writes confinement is **blocked on the unbuilt realizer `apply`** (managed-mode region regeneration per ADR-002). Issue #255 is re-scoped to "decision + declaration"; the surface is a later, demand-driven step that lands once a real second consumer and the `apply` substrate exist (the COR-007 recurrence test, not speculative generality).
+
+## Implications
+
+- **Issue #255 is re-scoped.** Deliverable is this ADR plus the `permission-enforcement.yaml` declaration refinement (below). The `pkit permissions profile` surface is explicitly deferred — demand-driven, and gated on the unbuilt realizer `apply` and on resolving the profile grain.
+
+- **`permission-enforcement.yaml` gains two confinement dimensions; the residual gap stands.** The claude-code adapter declaration is refined to *add* (it does not relabel `network-egress`):
+  - `filesystem-confinement` — `layer: sandbox`, `enforcement: native`, `granularity: session-wide` (the OS sandbox enforces `filesystem.allowWrite`/`denyRead` on every subprocess; genuinely native).
+  - `domain-allowlist` — `layer: sandbox`, `enforcement: native`, `granularity: session-wide`, annotated that it allowlists on client-supplied hostname **without TLS inspection** (so it bounds well-behaved egress but is not an exfil control).
+  - `network-egress` — **unchanged**, remains `layer: out-of-harness`, `enforcement: none`. It is the honest residual gap: the domain allowlist does not stop IP-literal / DNS-rebind / domain-fronting exfil, so confining egress as a security boundary remains an out-of-harness (network/OS) concern. (This is an adapter-tier file edit applied separately; it is outside this ADR's ADR-edit scope.)
+
+- **`pkit permissions diff` reads the refined declaration honestly.** With `filesystem-confinement`/`domain-allowlist` declared native and `network-egress` declared `none`, the fidelity report can say "writes are confined; well-behaved egress is allowlisted; egress *as a security boundary* is the residual gap, close it at the network/OS layer" — the whole autonomy picture, not a half-truth.
+
+- **A future confinement preset is pkit-authored against the `sandbox` block via the merge primitive.** It is a per-project posture, includes `failIfUnavailable: true` by invariant (and should include `allowUnsandboxedCommands: false`), and writes only the `sandbox` block — never a per-agent confinement claim. Per-agent autonomy stays on the tool-gating sub-axis (frontmatter).
+
+- **Child of ADR-002, no boundary change.** This ADR adds no new ownership tier. The intent axis is exactly ADR-002's double-lock; the confinement axis is delegated to the harness and merely *declared* by pkit. Managed-mode region regeneration (ADR-002) remains the substrate the deferred profile surface will eventually ride for the intent half; the `sandbox` block rides the existing additive merge for the confinement half.
+
+- **Cross-harness.** The intent/confinement split is harness-neutral; the confinement axis maps to each adapter's own sandbox primitive, and each future adapter ships its own `permission-enforcement.yaml` declaration (including its own residual gaps). The model — two axes, pkit owns intent + declaration, delegates confinement — carries across adapters even where a given harness has no sandbox at all (in which case confinement is wholly out-of-harness, declared as such).

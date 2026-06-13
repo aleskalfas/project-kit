@@ -1,0 +1,32 @@
+# Local-first task runner for project-kit.
+#
+# mise routes verbs; uv owns Python interpreter management (via
+# `requires-python` in pyproject.toml). No `[tools]` section here — adding
+# one would duplicate the Python pin and create drift risk.
+#
+# Adopters who already use mise pick up the pattern. Adopters who don't
+# can run the underlying `uv run ...` commands directly.
+
+[tasks.test]
+description = "Run the test suite (pytest)"
+run = "uv run pytest"
+
+[tasks.lint]
+description = "Lint the source tree (ruff)"
+run = "uv run ruff check ."
+
+[tasks.format]
+description = "Format the source tree (ruff)"
+run = "uv run ruff format ."
+
+[tasks."format:check"]
+description = "Check formatting without writing (ruff)"
+run = "uv run ruff format --check ."
+
+[tasks.typecheck]
+description = "Type-check the source tree (pyright)"
+run = "uv run pyright"
+
+[tasks.check]
+description = "Run all checks (lint + format:check + typecheck + test)"
+depends = ["lint", "format:check", "typecheck", "test"]

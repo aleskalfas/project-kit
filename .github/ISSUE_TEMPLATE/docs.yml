@@ -1,0 +1,51 @@
+name: Docs
+description: Documentation-only change.
+title: "docs: "
+labels: ["kind:docs"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Docs-only change. Pairs with `docs:` commits. Use this for READMEs, methodology docs, decision records, agent instructions, and any other prose-only updates.
+  - type: textarea
+    id: what
+    attributes:
+      label: What needs to change
+      description: Which file(s), and what is wrong, missing, or outdated.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: What decision, finding, or behaviour does this bring the docs into line with?
+    validations:
+      required: true
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - "priority:0-top"
+        - "priority:1-high"
+        - "priority:2-medium"
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area(s)
+      multiple: true
+      options:
+        - "area:decisions"
+        - "area:agents"
+        - "area:workflow"
+        - "area:cli"
+        - "area:rules"
+    validations:
+      required: true
+  - type: textarea
+    id: related
+    attributes:
+      label: Related
+      description: Decisions (COR-*, PRJ-*) or other issues.

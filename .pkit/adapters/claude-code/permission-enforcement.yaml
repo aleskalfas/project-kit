@@ -1,0 +1,59 @@
+schema_version: 1
+
+# Per-adapter enforcement-capability declaration (per COR-028) — which dimensions
+# of the permission model the claude-code adapter realizes natively, and via which
+# layer. `pkit permissions diff` reads this to label declared intent the harness
+# cannot faithfully enforce (the fidelity / out-of-harness report). Adapter-side
+# data; a future harness adapter ships its own declaration.
+#
+# layer:       frontmatter | settings | hook | sandbox | out-of-harness
+#              (`sandbox` = the harness's OS-level sandbox enforces it — Seatbelt/
+#              bubblewrap — not the harness config or the hook; per ADR-004)
+# enforcement: native (the harness config/sandbox enforces it) | runtime (a
+#              generated PreToolUse hook enforces it; fail-open — see ADR-002) |
+#              none (not enforceable in-harness; reported for the OS/container layer)
+
+adapter: claude-code
+
+dimensions:
+  tool-gating:
+    layer: frontmatter
+    enforcement: native
+    granularity: per-agent
+  command-allow:
+    layer: settings
+    enforcement: native
+    granularity: session-wide
+  command-deny:
+    layer: settings
+    enforcement: native
+    granularity: session-wide
+    fail_closed: true
+  per-agent-command:
+    layer: hook
+    enforcement: runtime
+  directory-scope:
+    layer: hook
+    enforcement: runtime
+  domain-scope:
+    # Per-agent domain rules the hook inspects (model intent); distinct from the
+    # session-wide sandbox `domain-allowlist` below (the OS-enforced host list).
+    layer: hook
+    enforcement: runtime
+  # Confinement dimensions (per ADR-004) — enforced by the harness OS sandbox,
+  # NOT by the command-inspection hook (a shell escapes any cwd check). pkit
+  # declares + manages the sandbox config but delegates enforcement to it.
+  filesystem-confinement:
+    layer: sandbox
+    enforcement: native
+    granularity: session-wide
+  domain-allowlist:
+    layer: sandbox
+    enforcement: native
+    granularity: session-wide
+    # Allowlists on client-supplied hostname; NO TLS inspection. Bounds
+    # well-behaved egress; NOT an exfil control (domain fronting / IP-literal /
+    # DNS-rebind bypass it) — hence network-egress below stays the gap truth.
+  network-egress:
+    layer: out-of-harness
+    enforcement: none

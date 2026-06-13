@@ -1,0 +1,8 @@
+schema_version: 1
+component:
+  kind: capability
+  name: project-management
+  version: 0.17.0
+  installed_at: '2026-05-27T00:00:00+00:00'
+requires_backbone: '>=1.26.0,<2.0.0'
+backend_state: {}

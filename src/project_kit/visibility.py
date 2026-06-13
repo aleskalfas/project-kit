@@ -1,0 +1,303 @@
+"""Adopter-controlled git footprint (per ADR-009).
+
+Two visibility modes over a per-component-declared footprint, realized entirely
+through the per-clone `.git/info/exclude` — **no committed `.gitignore` is ever
+written**:
+
+- `shared` (default): pkit is committed; pkit's region is kept clear of
+  `info/exclude`.
+- `private`: the whole footprint goes into a pkit-owned delimited region in
+  `.git/info/exclude` (uncommitted, parent-level — the only native channel that
+  can hide `.pkit/` itself), and — because going private *means* "stop sharing
+  pkit" — a confirm-gated `untrack` removes any already-tracked footprint files
+  from the index (working copies preserved).
+
+`untrack` is also a standalone, footprint-restricted, precondition-guarded verb
+(the one backbone gesture that mutates adopter git-index state, bounded per
+ADR-009 rule 5). pkit co-edits nothing the adopter owns: the only file it writes
+is `info/exclude`, which git owns, and only within its own delimited region.
+"""
+from __future__ import annotations
+
+import subprocess
+from collections.abc import Callable
+from pathlib import Path
+
+import click
+
+from project_kit import cli_render
+from project_kit.manifest import read_backbone_manifest
+
+# Core's OWN footprint. Naming `.pkit/` here is not the layering inversion
+# ADR-009 forbids — that rule bars core from naming *adapter*/*capability*
+# paths; core may declare its own directory. Components contribute the rest
+# (e.g. the claude-code adapter's `.claude/` deploys) via package.yaml.
+_BACKBONE_FOOTPRINT: tuple[str, ...] = (".pkit/",)
+
+_BEGIN = "# >>> pkit footprint — managed by `pkit visibility`; do not edit >>>"
+_END = "# <<< pkit footprint <<<"
+
+_yaml_keys = ("footprint",)
+
+
+# --- footprint aggregation ---------------------------------------------------
+
+def _component_package_yaml(target_root: Path, kind: str, name: str) -> Path | None:
+    if kind == "adapter":
+        p = target_root / ".pkit" / "adapters" / name / "package.yaml"
+    elif kind == "capability":
+        p = target_root / ".pkit" / "capabilities" / name / "package.yaml"
+    else:
+        return None
+    return p if p.is_file() else None
+
+
+def _read_footprint_decl(package_yaml: Path) -> list[str]:
+    """Read a component's `footprint:` list from package.yaml (tolerant)."""
+    from ruamel.yaml import YAML
+
+    try:
+        data = YAML(typ="safe").load(package_yaml.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return []
+    raw = data.get("footprint") if isinstance(data, dict) else None
+    if not isinstance(raw, list):
+        return []
+    return [str(x).strip() for x in raw if str(x).strip()]
+
+
+def footprint(target_root: Path) -> list[str]:
+    """Aggregate the footprint across installed components (backbone + each
+    adapter/capability's declared `footprint`). De-duped, order-stable."""
+    out: list[str] = list(_BACKBONE_FOOTPRINT)
+    manifest = read_backbone_manifest(target_root)
+    if manifest is not None:
+        for entry in manifest.components:
+            pkg = _component_package_yaml(target_root, entry.kind, entry.name)
+            if pkg is not None:
+                out.extend(_read_footprint_decl(pkg))
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for path in out:
+        if path not in seen:
+            seen.add(path)
+            deduped.append(path)
+    return deduped
+
+
+# --- git helpers -------------------------------------------------------------
+
+def _git(target_root: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["git", *args], cwd=target_root, capture_output=True, text=True, check=False
+    )
+
+
+def _info_exclude_path(target_root: Path) -> Path:
+    """Resolve `.git/info/exclude` robustly (handles worktrees/submodules)."""
+    res = _git(target_root, "rev-parse", "--git-path", "info/exclude")
+    if res.returncode != 0:
+        raise click.ClickException("not a git repository (git rev-parse failed).")
+    p = Path(res.stdout.strip())
+    return p if p.is_absolute() else (target_root / p)
+
+
+def _repo_busy(target_root: Path) -> str | None:
+    """Return a reason string if a merge/rebase/cherry-pick/revert is in progress."""
+    checks = {
+        "MERGE_HEAD": "a merge is in progress",
+        "CHERRY_PICK_HEAD": "a cherry-pick is in progress",
+        "REVERT_HEAD": "a revert is in progress",
+        "rebase-merge": "a rebase is in progress",
+        "rebase-apply": "a rebase is in progress",
+    }
+    for marker, reason in checks.items():
+        res = _git(target_root, "rev-parse", "--git-path", marker)
+        if res.returncode == 0 and (target_root / res.stdout.strip()).exists():
+            return reason
+    return None
+
+
+def _tracked_footprint(target_root: Path, fp: list[str]) -> list[str]:
+    res = _git(target_root, "ls-files", "-z", "--", *fp)
+    if res.returncode != 0 or not res.stdout:
+        return []
+    return sorted(p for p in res.stdout.split("\0") if p)
+
+
+def _staged_footprint(target_root: Path, fp: list[str]) -> list[str]:
+    res = _git(target_root, "diff", "--cached", "--name-only", "-z", "--", *fp)
+    if res.returncode != 0 or not res.stdout:
+        return []
+    return sorted(p for p in res.stdout.split("\0") if p)
+
+
+# --- info/exclude region management ------------------------------------------
+
+def _strip_region(text: str) -> str:
+    """Remove pkit's delimited region (and a trailing blank line) if present."""
+    if _BEGIN not in text:
+        return text
+    lines = text.splitlines()
+    out: list[str] = []
+    skipping = False
+    for line in lines:
+        if line.strip() == _BEGIN:
+            skipping = True
+            continue
+        if skipping:
+            if line.strip() == _END:
+                skipping = False
+            continue
+        out.append(line)
+    # Drop a trailing blank that the region may have left behind.
+    while out and out[-1].strip() == "":
+        out.pop()
+    return ("\n".join(out) + "\n") if out else ""
+
+
+def _region_present(target_root: Path) -> bool:
+    path = _info_exclude_path(target_root)
+    return path.is_file() and _BEGIN in path.read_text(encoding="utf-8")
+
+
+def _write_region(target_root: Path, fp: list[str]) -> None:
+    path = _info_exclude_path(target_root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    base = _strip_region(path.read_text(encoding="utf-8")) if path.is_file() else ""
+    block = "\n".join([_BEGIN, *fp, _END])
+    new = (base.rstrip("\n") + "\n\n" if base.strip() else "") + block + "\n"
+    path.write_text(new, encoding="utf-8")
+
+
+def _remove_region(target_root: Path) -> bool:
+    path = _info_exclude_path(target_root)
+    if not path.is_file():
+        return False
+    text = path.read_text(encoding="utf-8")
+    if _BEGIN not in text:
+        return False
+    path.write_text(_strip_region(text), encoding="utf-8")
+    return True
+
+
+# --- untrack -----------------------------------------------------------------
+
+def untrack(
+    target_root: Path, *, dry_run: bool = False, confirm: Callable[[str], bool] | None = None
+) -> str:
+    """Remove already-tracked footprint files from the index (working copies
+    preserved). Footprint-only, confirm-gated, clean-precondition guarded."""
+    fp = footprint(target_root)
+    busy = _repo_busy(target_root)
+    if busy:
+        raise click.ClickException(
+            f"refusing to untrack — {busy}. Finish or abort it first, then re-run."
+        )
+
+    # Nothing tracked → clean no-op. Checked before the staged-changes guard so
+    # a re-run after a prior untrack (which leaves *staged deletions* of these
+    # paths) is idempotent rather than a false "staged changes" refusal.
+    tracked = _tracked_footprint(target_root, fp)
+    if not tracked:
+        return cli_render.style("strong", "untrack: no tracked footprint files — nothing to remove.") + "\n"
+
+    # A still-tracked footprint file carrying a staged *modification* would
+    # entangle the removal with a pending index — refuse (ADR-009 rule 5).
+    staged = [p for p in _staged_footprint(target_root, fp) if p in set(tracked)]
+    if staged:
+        raise click.ClickException(
+            "refusing to untrack — footprint paths have staged changes:\n"
+            + "\n".join(f"  {p}" for p in staged)
+            + "\nCommit or unstage them first."
+        )
+
+    lines = [cli_render.style("strong", f"{len(tracked)} tracked footprint file(s) would be removed from the index:")]
+    lines += [f"  {p}" for p in tracked[:20]]
+    if len(tracked) > 20:
+        lines.append(f"  … and {len(tracked) - 20} more")
+    lines.append("")
+    lines.append("Working copies are preserved (git rm --cached); they're removed from the")
+    lines.append("shared tree on your next commit.")
+
+    if dry_run:
+        lines.append("")
+        lines.append("(dry-run — nothing changed.)")
+        return "\n".join(lines) + "\n"
+
+    if confirm is not None and not confirm("\n".join(lines) + "\n\nProceed?"):
+        return cli_render.style("strong", "untrack: cancelled — files left tracked.") + "\n"
+
+    res = _git(target_root, "rm", "--cached", "--quiet", "--", *tracked)
+    if res.returncode != 0:
+        raise click.ClickException(f"git rm --cached failed:\n{res.stderr.strip()}")
+    return cli_render.style("strong", f"untracked {len(tracked)} footprint file(s) (working copies kept).") + "\n"
+
+
+# --- visibility --------------------------------------------------------------
+
+def status(target_root: Path) -> str:
+    fp = footprint(target_root)
+    private = _region_present(target_root)
+    tracked = _tracked_footprint(target_root, fp)
+    mode = "private" if private else "shared"
+    gloss = ("pkit hidden via .git/info/exclude (this clone only)" if private
+             else "pkit committed the ordinary way")
+    rows = [{"path": p} for p in fp]
+    sections = [cli_render.section(
+        rows=rows, columns=["path"], header="FOOTPRINT",
+        gloss="aggregated across installed components",
+        empty="(no footprint declared)",
+    )]
+    st = cli_render.status("Visibility", mode, gloss=gloss, placement="header")
+    commands = [
+        ("pkit visibility private", "hide pkit from the shared tree (this clone)"),
+        ("pkit visibility shared", "return pkit to committed (default)"),
+        ("pkit visibility untrack --dry-run", "preview removing tracked footprint files"),
+    ]
+    warn = None
+    if private and tracked:
+        st = cli_render.status(
+            "Visibility", mode, gloss=gloss, placement="header",
+            warn=f"{len(tracked)} footprint file(s) still tracked — run `pkit visibility untrack`",
+        )
+    return cli_render.view(
+        title=cli_render.title("Git footprint", mode, gloss="adopter-controlled (ADR-009)"),
+        status=st, sections=sections, commands=commands,
+    )
+
+
+def set_visibility(
+    target_root: Path, mode: str, *, dry_run: bool = False,
+    confirm: Callable[[str], bool] | None = None,
+) -> str:
+    """Apply `shared` or `private`. `private` writes the info/exclude region and
+    runs the confirm-gated untrack; `shared` clears the region."""
+    if not (target_root / ".git").exists():
+        raise click.ClickException("not a git repository.")
+    fp = footprint(target_root)
+
+    if mode == "shared":
+        if dry_run:
+            verb = "would clear" if _region_present(target_root) else "no pkit region in"
+            return cli_render.style("strong", f"shared: {verb} .git/info/exclude (pkit committed normally).") + "\n"
+        removed = _remove_region(target_root)
+        msg = "cleared pkit's region from .git/info/exclude" if removed else "no pkit region to clear"
+        return cli_render.style("strong", f"visibility: shared — {msg}; pkit is committed normally.") + "\n"
+
+    if mode == "private":
+        lines = [cli_render.style("strong", "visibility: private — pkit hidden from the shared tree (this clone).")]
+        if dry_run:
+            lines.append("")
+            lines.append("would write to .git/info/exclude:")
+            lines += [f"  {p}" for p in fp]
+            lines.append("")
+            lines.append(untrack(target_root, dry_run=True).rstrip("\n"))
+            return "\n".join(lines) + "\n"
+        _write_region(target_root, fp)
+        lines.append(f"  wrote {len(fp)} footprint pattern(s) to .git/info/exclude")
+        lines.append("")
+        lines.append(untrack(target_root, dry_run=False, confirm=confirm).rstrip("\n"))
+        return "\n".join(lines) + "\n"
+
+    raise click.ClickException(f"unknown visibility mode {mode!r}; expected 'shared' or 'private'.")

@@ -1,0 +1,39 @@
+name: checks
+
+# The unbypassable backstop + Linux / clean-env / post-merge coverage that a
+# local pre-push hook structurally can't give. Runs the SAME aggregator the
+# pre-push hook runs (scripts/check.sh) — one source of truth, no drift.
+# Replaces the former migrations-check + schemas-validate workflows (both are
+# now steps inside the aggregator).
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history so the migration-diff base ref resolves)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install project (clean resolve)
+        run: uv sync
+
+      - name: Run the check aggregator
+        env:
+          # PR: diff against the PR base. Push to main: against main (no-op diff).
+          PKIT_CHECK_BASE: origin/${{ github.event.pull_request.base.ref || 'main' }}
+        run: ./scripts/check.sh

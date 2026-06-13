@@ -1,0 +1,63 @@
+name: Feature
+description: A new capability or enhancement.
+title: "feat: "
+labels: ["kind:feature"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Filing a new capability. Pairs with `feat:` commits on the closing PR.
+  - type: textarea
+    id: what
+    attributes:
+      label: What
+      description: One paragraph — what does this feature do?
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: Link to the use case or motivation. If it does not map to one, explain why it belongs in scope.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Checkable conditions. Someone reviewing the PR should be able to tick these off.
+      value: |
+        - [ ]
+        - [ ]
+    validations:
+      required: true
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: Pick one. Drives sort order and milestone candidacy.
+      options:
+        - "priority:0-top — drop everything, blocking"
+        - "priority:1-high — next up"
+        - "priority:2-medium — scheduled, not urgent"
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area(s)
+      description: Pick one, or two if the change genuinely crosses subsystems.
+      multiple: true
+      options:
+        - "area:decisions"
+        - "area:agents"
+        - "area:workflow"
+        - "area:cli"
+        - "area:rules"
+    validations:
+      required: true
+  - type: textarea
+    id: related
+    attributes:
+      label: Related
+      description: Decisions (COR-*, PRJ-*) or other issues.

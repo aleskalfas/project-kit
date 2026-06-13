@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(GH_HOST=github.com gh:*)",
+      "Bash(uv:*)",
+      "Bash(ruff:*)",
+      "Bash(pytest:*)",
+
+      "Bash(sed:*)",
+      "Bash(awk:*)",
+      "Bash(printf:*)",
+      "Bash(sort:*)",
+      "Bash(uniq:*)",
+      "Bash(cut:*)",
+      "Bash(tr:*)",
+      "Bash(wc:*)",
+      "Bash(tee:*)",
+
+      "Bash(rm:*)",
+      "Bash(rmdir:*)",
+
+      "Bash(mktemp:*)",
+      "Bash(mkfifo:*)"
+    ]
+  }
+}

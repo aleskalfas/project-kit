@@ -1,0 +1,2350 @@
+"""`pkit permissions` CLI — observability + model mutation over the permission model.
+
+A thin orchestrator (per ADR-003): it loads the model + catalog (through the
+propagated decision core's single `load_model`, preserving ADR-002's same-code
+invariant), parses live harness state, and renders. `explain` / `diff` /
+`catalog` are read-only; `grant` / `revoke` / `mode` mutate the model;
+`enable` / `disable` toggle live enforcement by registering/stripping the
+PreToolUse hook. The realizer's projection-based `apply` is a later batch.
+
+`diff` here is attribution-based (it maps live settings rules back to catalog
+privileges to flag unjustified grants). The *projection*-based diff — computing
+expected settings from the model via the propagated decision core
+(`.pkit/permissions/decide.py`), preserving ADR-002's same-code invariant —
+lands with the realizer (`apply`), which produces that projection.
+
+`probe` (#276) is the same-code-invariant VERIFIER — the conformance-fixture
+role ADR-003 names: it drives the hook's actual entry point (`hook_decide`)
+over curated concrete requests against the current model and checks each
+verdict against an independent restatement of the declared contract.
+"""
+from __future__ import annotations
+
+import fnmatch
+import importlib.util
+import json
+import os
+import re
+from pathlib import Path
+from typing import Any
+
+from ruamel.yaml import YAML
+
+from project_kit import cli_render
+
+_yaml = YAML(typ="safe")
+
+
+# ---- loaders ---------------------------------------------------------------
+
+def _load_yaml(path: Path) -> dict[str, Any]:
+    if not path.is_file():
+        return {}
+    with path.open(encoding="utf-8") as fh:
+        return _yaml.load(fh) or {}
+
+
+def _load_catalog(target_root: Path) -> dict[str, Any]:
+    # Single catalog loader (same-code invariant): delegate to the decision
+    # core so the CLI *displays* exactly the catalog the hook *decides* on.
+    # When capability-fragment merging lands, it lands once — here — for both
+    # readers, rather than diverging a CLI-only reader from the hook's.
+    return _decide_mod(target_root).load_catalog(str(target_root))
+
+
+def _decide_mod(target_root: Path):
+    """Import the target tree's propagated decision core (`.pkit/permissions/
+    decide.py`). The CLI builds its model through the *same* loader the
+    PreToolUse hook uses, preserving ADR-002's same-code invariant — there is
+    exactly one `load_model`, and it lives in `decide.py`."""
+    path = target_root / ".pkit" / "permissions" / "decide.py"
+    if not path.is_file():
+        raise PermissionsError(f"decision core not found at {path}.")
+    spec = importlib.util.spec_from_file_location("pkit_perm_decide", path)
+    if spec is None or spec.loader is None:
+        raise PermissionsError(f"decision core could not be loaded from {path}.")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _projection_mod(target_root: Path):
+    """Import the target tree's propagated realized-state projector
+    (`.pkit/permissions/projection.py`). The same-code counterpart of
+    `_decide_mod`: `diff` (here) and `apply` (later) render expected config
+    through the *same* `project()` (ADR-002 same-code; #249)."""
+    path = target_root / ".pkit" / "permissions" / "projection.py"
+    if not path.is_file():
+        raise PermissionsError(f"projection core not found at {path}.")
+    spec = importlib.util.spec_from_file_location("pkit_perm_projection", path)
+    if spec is None or spec.loader is None:
+        raise PermissionsError(f"projection core could not be loaded from {path}.")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _load_model(target_root: Path) -> dict[str, Any]:
+    catalog = _load_catalog(target_root)
+    return _decide_mod(target_root).load_model(str(target_root), catalog)
+
+
+# ---- shared helpers --------------------------------------------------------
+
+_BARE = re.compile(r"^\[privilege-catalog:([a-z][a-z0-9-]*)\]$")
+# A simple settings allow/deny pattern like `Bash(gh:*)` or `Bash(git push --force:*)`.
+_BASH_RULE = re.compile(r"^Bash\((.+?)(?::\*)?\)$")
+_TOOL_RULE = re.compile(r"^([A-Z][A-Za-z]+)$")
+
+
+def _bare(token: str) -> str:
+    m = _BARE.match(token)
+    return m.group(1) if m else token
+
+
+def _subjects(model: dict) -> list[str]:
+    seen: list[str] = []
+    for g in model["grants"]:
+        if g["subject"] not in seen:
+            seen.append(g["subject"])
+    return seen
+
+
+def _attribute_rule(rule: str, catalog: dict) -> str | None:
+    """Map a live settings.json permission pattern back to a catalog privilege
+    id, if one recognizes it. Best-effort over the simple `Bash(<cmd>...)` /
+    `<Tool>` shapes; returns None when nothing in the catalog claims it."""
+    privileges = catalog.get("privileges", {})
+    m = _BASH_RULE.match(rule)
+    if m:
+        head = m.group(1).split()[0]
+        for pid, spec in privileges.items():
+            for r in spec.get("recognize", {}).get("bash", []):
+                if r.get("cmd") == head:
+                    return pid
+        return None
+    if _TOOL_RULE.match(rule):
+        for pid, spec in privileges.items():
+            if rule in spec.get("recognize", {}).get("tool", []):
+                return pid
+    return None
+
+
+def _live_settings(target_root: Path) -> dict[str, list[str]]:
+    path = target_root / ".claude" / "settings.json"
+    if not path.is_file():
+        return {"allow": [], "deny": []}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {"allow": [], "deny": []}
+    perms = data.get("permissions", {})
+    return {"allow": perms.get("allow", []), "deny": perms.get("deny", [])}
+
+
+# ---- explain ---------------------------------------------------------------
+
+def _subject_gloss(subject: str) -> str:
+    if subject == "all":
+        return "every agent and the operator"
+    if subject == "operator":
+        return "the human / main session"
+    if subject.startswith("agent:"):
+        return f"the {subject.split(':', 1)[1]} subagent"
+    return ""
+
+
+_EXPLAIN_LEGEND = [
+    "Legend",
+    "  allow / deny   the subject may / may not use the privilege",
+    "  guardrail      denied for everyone, always — can't be granted around",
+    "  posture        lenient = uncovered requests defer to Claude Code · strict = denied",
+    "  ownership      additive = only adds to settings.json · managed = owns the permissions region",
+    "  subjects       all = every agent + operator · operator = the human · agent:<name> = one subagent",
+]
+_EXPLAIN_COMMANDS = [
+    "Commands",
+    "  pkit permissions grant <subj> <priv> [--scope G] [--deny]   add a grant",
+    "  pkit permissions revoke <subj> <priv>                       remove a grant",
+    "  pkit permissions overview                                   privilege vocabulary + live status",
+]
+
+
+def explain(target_root: Path, agent: str | None) -> str:
+    catalog = _load_catalog(target_root)
+    guardrail_ids = {p for p, s in catalog.get("privileges", {}).items() if s.get("guardrail")}
+    model = _load_model(target_root)
+    posture = model.get("posture", "lenient")
+    ownership = model.get("ownership_mode", "additive")
+
+    def is_guardrail_grant(g: dict) -> bool:
+        return g.get("effect") == "deny" and all(
+            pid in guardrail_ids for pid in _grant_priv_ids(g.get("privilege"))
+        )
+
+    title = (
+        cli_render.style("title", "Permission policy — who may (allow) or may not (deny) each privilege")
+        + "   (vocabulary: `pkit permissions overview`)"
+    )
+    banner = f"  posture: {posture} · ownership: {ownership}"
+
+    subjects = _subjects(model)
+    if agent:
+        want = agent if agent in ("all", "operator") else f"agent:{agent}"
+        if want not in subjects:
+            note = f"no grants declared for {want!r}."
+            if want != "all":
+                note += "  It still inherits the `all` guardrails — run `pkit permissions explain`."
+            return "\n".join([title, "", banner, "", note]) + "\n"
+        subjects = [want]
+
+    shown = [g for subj in subjects for g in model["grants"] if g["subject"] == subj]
+    name_w = max((len(", ".join(_grant_priv_ids(g.get("privilege")))) for g in shown), default=0)
+
+    lines = [title, "", banner]
+    for subj in subjects:
+        lines.append("\n" + cli_render.style("heading", f"{subj}  ({_subject_gloss(subj)})"))
+        for g in (x for x in model["grants"] if x["subject"] == subj):
+            names = ", ".join(_grant_priv_ids(g.get("privilege")))
+            eff = g.get("effect", "allow")
+            mark = "  guardrail" if is_guardrail_grant(g) else ""
+            scope = f"  scope: {', '.join(g['scope'])}" if g.get("scope") else ""
+            lines.append(f"  {eff:5} {names:{name_w}}{mark}{scope}")
+
+    if not any(not is_guardrail_grant(g) for g in model["grants"]):
+        lines.append(
+            "\n  (no capability granted to any agent yet — agents fall through to the posture above)"
+        )
+
+    lines += ["", cli_render.style("heading", _EXPLAIN_LEGEND[0]), *_EXPLAIN_LEGEND[1:],
+              "", cli_render.style("heading", _EXPLAIN_COMMANDS[0]), *_EXPLAIN_COMMANDS[1:]]
+    return "\n".join(lines) + "\n"
+
+
+# ---- catalog ---------------------------------------------------------------
+
+def catalog(target_root: Path) -> str:
+    cat = _load_catalog(target_root)
+    privileges = cat.get("privileges", {})
+    if not privileges:
+        return "privilege catalog is empty.\n"
+    lines = [cli_render.style("title", f"{len(privileges)} privilege(s):")]
+    for pid in sorted(privileges):
+        spec = privileges[pid]
+        scope = f"  [scope: {spec['scope_type']}]" if spec.get("scope_type") else ""
+        lines.append(f"  {pid:22} {spec.get('description', '')}{scope}")
+    return "\n".join(lines) + "\n"
+
+
+# ---- overview --------------------------------------------------------------
+
+def _grant_priv_ids(value: Any) -> list[str]:
+    vals = value if isinstance(value, list) else [value]
+    return [_bare(v) for v in vals]
+
+
+def _provenance(spec: dict) -> str:
+    """Where a privilege came from. Today every entry is the backbone baseline;
+    when capability-fragment merging lands, the merge will stamp a `provenance`
+    field (`capability:<name>`) the loader sets — this reads it forward-compatibly."""
+    return spec.get("provenance", "backbone")
+
+
+def overview(target_root: Path) -> str:
+    """A role-grouped overview of the catalog: which privileges are guardrails
+    (denied for everyone — the 'don't do bad things' floor) vs enablers (inert
+    until granted — the 'let an agent work' set), each with its provenance and
+    who it's granted to. The vocabulary view; `explain` is the policy view."""
+    catalog = _load_catalog(target_root)
+    privileges = catalog.get("privileges", {})
+    if not privileges:
+        return "privilege catalog is empty.\n"
+    model = _load_model(target_root)
+
+    # privilege id -> {allow: [subjects], deny: [subjects]}
+    grants: dict[str, dict[str, list[str]]] = {}
+    for g in model.get("grants", []):
+        eff = g.get("effect", "allow")
+        for pid in _grant_priv_ids(g.get("privilege")):
+            grants.setdefault(pid, {"allow": [], "deny": []}).setdefault(eff, []).append(
+                g.get("subject", "?")
+            )
+
+    guardrails = sorted(p for p, s in privileges.items() if s.get("guardrail"))
+    enablers = sorted(p for p, s in privileges.items() if not s.get("guardrail"))
+
+    def _scope(spec: dict) -> str:
+        return f"[{spec['scope_type']}-scope]" if spec.get("scope_type") else ""
+
+    # Compute column widths across ALL rows so the two sections align together.
+    id_w = max((len(p) for p in privileges), default=0)
+    desc_w = max((len(s.get("description", "")) for s in privileges.values()), default=0)
+    scope_w = max((len(_scope(s)) for s in privileges.values()), default=0)
+    prov_w = max((len(_provenance(s)) for s in privileges.values()), default=0)
+
+    def _row(pid: str, note: str) -> str:
+        spec = privileges[pid]
+        cols = [f"{pid:{id_w}}", f"{spec.get('description',''):{desc_w}}"]
+        if scope_w:
+            cols.append(f"{_scope(spec):{scope_w}}")
+        cols.append(f"{_provenance(spec):{prov_w}}")
+        cols.append(note)
+        return "  " + "  ".join(cols)
+
+    # Enforcement banner — the strong "is the hook live?" indication.
+    on = _enforcement_on(target_root)
+    posture = model.get("posture", "lenient")
+    ownership = model.get("ownership_mode", "additive")
+    unmodeled = "denied" if posture == "strict" else "deferred to Claude Code"
+    if on:
+        status = "ON — the PreToolUse hook checks every agent tool call against the model below"
+    else:
+        status = "OFF — declared but not enforced live; run `pkit permissions enable`"
+    sb = _sandbox_block(target_root)
+    if sb.get("enabled") is True:
+        sandbox_line = "  sandbox ON — scripting runs prompt-free inside the OS box"
+        if sb.get("failIfUnavailable") is not True:
+            sandbox_line += "  ⚠ fail-open — run `pkit permissions sandbox enable` to restore fail-closed"
+        else:
+            sandbox_line += " (fail-closed)"
+    else:
+        sandbox_line = (
+            "  sandbox OFF — scripting prompts; "
+            "`pkit permissions sandbox enable` for prompt-free scripting in the OS box"
+        )
+
+    lines: list[str] = [
+        cli_render.style("title", f"Permission catalog — {len(privileges)} privilege(s)")
+        + "   (the vocabulary; who-may-do-what is `pkit permissions explain`)",
+        "",
+        cli_render.style("strong", f"Live enforcement: {status}"),
+        f"  posture {posture} (unmodeled requests {unmodeled}) · "
+        f"ownership {ownership} (how much of settings.json the realizer owns)",
+        sandbox_line,
+        "",
+        cli_render.style("heading", "GUARDRAILS — always denied for every agent; the safety floor you cannot grant around"),
+    ]
+    for pid in guardrails:
+        lines.append(_row(pid, "denied for all · double-locked"))
+    if not guardrails:
+        lines.append("  (none)")
+
+    lines += [
+        "",
+        cli_render.style("heading", "ENABLERS — a capability an agent can use only once you grant it (otherwise inert)"),
+    ]
+    for pid in enablers:
+        allowed = grants.get(pid, {}).get("allow", [])
+        granted = ", ".join(allowed) if allowed else "—"
+        lines.append(_row(pid, f"granted to: {granted}"))
+    if not enablers:
+        lines.append("  (none)")
+
+    cap_note = (
+        "ships with core; capability:<name> = added by an installed capability"
+    )
+    lines += [
+        "",
+        cli_render.style("heading", "Legend"),
+        "  double-locked      denied in BOTH the hook (model) and Claude Code's native",
+        "                     settings — so it holds even if the hook is off/faulting",
+        "  granted to: —      no agent has this enabler yet",
+        "  [directory|domain-scope]  the grant can be limited to paths or hosts via --scope",
+        f"  backbone           {cap_note}",
+        "",
+        cli_render.style("heading", "Commands"),
+        "  pkit permissions explain [agent]        who may do what (the policy view)",
+        "  pkit permissions grant <subj> <priv>    enable a capability for a subject "
+        "(--scope, --deny)",
+        "  pkit permissions revoke <subj> <priv>   remove a grant",
+        "  pkit permissions diff                   compare the model to live settings.json",
+        "  pkit permissions enable | disable       turn live enforcement on / off",
+        "  pkit permissions sandbox [enable|disable]  OS-box confinement: prompt-free scripting",
+    ]
+    return "\n".join(lines) + "\n"
+
+
+# ---- diff ------------------------------------------------------------------
+
+def diff(target_root: Path, agent: str | None) -> tuple[str, bool]:
+    """Reconcile the model against live harness state. Returns (report, clean).
+
+    Read-only and honest about scope: it reports rule *presence* + attribution,
+    not invocation form. The high-value finding is live allow/deny rules that no
+    granted privilege justifies (the "unjustified grant" flag)."""
+    catalog = _load_catalog(target_root)
+    model = _load_model(target_root)
+    live = _live_settings(target_root)
+
+    # Which privilege ids does the model grant (allow) to anyone?
+    granted: set[str] = set()
+    for g in model["grants"]:
+        if g.get("effect", "allow") != "allow":
+            continue
+        privs = g["privilege"] if isinstance(g["privilege"], list) else [g["privilege"]]
+        granted.update(_bare(p) for p in privs)
+
+    lines: list[str] = [cli_render.style("title", "permissions diff (model ↔ live .claude/settings.json):")]
+    extra: list[str] = []
+    for rule in live["allow"]:
+        pid = _attribute_rule(rule, catalog)
+        if pid is None:
+            extra.append(f"  ⚠ extra (no catalog privilege recognizes it): {rule}")
+        elif pid not in granted:
+            extra.append(f"  ⚠ unjustified (live allows {rule} → {pid}, but no subject is granted {pid})")
+    if extra:
+        lines.append("\n" + cli_render.style("heading", "live allow rules not justified by the model:"))
+        lines.extend(extra)
+    else:
+        lines.append("  ✓ every live allow rule is justified by a granted privilege.")
+
+    # Projection-based reconciliation (model → expected native settings, #249).
+    # Augments the attribution view above: what the model would *realize* into
+    # session-wide settings vs what's live. Uses the shared project() so this
+    # view and `apply`'s emission can't disagree (ADR-002 same-code).
+    proj = _projection_mod(target_root).project(model, catalog)
+    expected = set(proj["settings"]["allow"])
+    live_allow = set(live["allow"])
+    ownership = model.get("ownership_mode", "additive")
+    lines.append("\n" + cli_render.style("heading", "model → settings projection (expected session-wide allow rules):"))
+    if not expected:
+        lines.append("  (the model projects no session-wide allow rules yet)")
+    else:
+        applied = sorted(expected & live_allow)
+        not_applied = sorted(expected - live_allow)
+        lines.append(f"  applied: {len(applied)}/{len(expected)} expected rule(s) present live")
+        if not_applied:
+            lines.append(
+                f"  not applied: {', '.join(not_applied)}  "
+                f"(a future `apply` would write these to settings)"
+            )
+        if ownership == "managed":
+            drift = sorted(
+                r for r in (live_allow - expected) if _attribute_rule(r, catalog) in granted
+            )
+            if drift:
+                lines.append(
+                    f"  drift (managed mode): {', '.join(drift)}  "
+                    f"(live, but not in the model's projection — a future `apply` would heal)"
+                )
+    lines.extend(_gap_report(target_root, proj))
+    lines.append(
+        "\nnote: reports rule presence + attribution, not invocation form; "
+        "the command boundary is session-wide, not per-agent."
+    )
+    return "\n".join(lines) + "\n", not extra
+
+
+def _gap_report(target_root: Path, proj: dict[str, Any]) -> list[str]:
+    """The shared out-of-harness gap report: model intent that does NOT realize
+    into session-wide settings — grants the hook enforces at runtime, grants no
+    native layer expresses, and adapter-declared unenforceable dimensions. Used
+    by both `diff` and `apply` so the two never describe the gap differently."""
+    out: list[str] = []
+    if proj["runtime"]:
+        out.append(
+            f"  {len(proj['runtime'])} grant(s) enforced at runtime, not in settings "
+            f"(per-agent / scoped → the hook)"
+        )
+    if proj["unprojectable"]:
+        out.append(
+            f"  {len(proj['unprojectable'])} grant(s) no native layer expresses "
+            f"(scoped / recognizer-shape — see ADR-004)"
+        )
+    enf = _load_yaml(target_root / ".pkit" / "adapters" / "claude-code" / "permission-enforcement.yaml")
+    unenforceable = [
+        d for d, spec in enf.get("dimensions", {}).items()
+        if spec.get("enforcement") == "none"
+    ]
+    if unenforceable:
+        out.append(
+            f"⚠ not natively enforceable (declare + enforce out-of-harness): "
+            f"{', '.join(unenforceable)}"
+        )
+    return out
+
+
+# ---- mutation: grant / revoke / mode ---------------------------------------
+
+_SUBJECT = re.compile(r"^(all|operator|agent:[a-z][a-z0-9-]*)$")
+_PRIV_ID = re.compile(r"^[a-z][a-z0-9-]*$")
+
+
+class PermissionsError(Exception):
+    """Raised on an invalid mutation (bad subject, unknown privilege, …)."""
+
+
+def _project_dir(target_root: Path) -> Path:
+    return target_root / ".pkit" / "permissions" / "project"
+
+
+def _grants_path(target_root: Path) -> Path:
+    return _project_dir(target_root) / "grants.yaml"
+
+
+def _config_path(target_root: Path) -> Path:
+    return _project_dir(target_root) / "config.yaml"
+
+
+def _dump_yaml(path: Path, data: dict) -> None:
+    yaml = YAML()
+    yaml.default_flow_style = False
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as fh:
+        yaml.dump(data, fh)
+
+
+def _read_grants_doc(target_root: Path) -> dict[str, Any]:
+    path = _grants_path(target_root)
+    if path.is_file():
+        doc = _load_yaml(path)
+        doc.setdefault("schema_version", 1)
+        doc.setdefault("grants", [])
+        return doc
+    return {"schema_version": 1, "grants": []}
+
+
+def _grant_matches(g: dict, subject: str, token: str) -> bool:
+    if g.get("subject") != subject:
+        return False
+    gp = g.get("privilege")
+    return gp == token or (isinstance(gp, list) and gp == [token])
+
+
+def grant(target_root: Path, subject: str, privilege: str,
+          scope: tuple[str, ...] | list[str], deny: bool) -> str:
+    if not _SUBJECT.match(subject):
+        raise PermissionsError(
+            f"invalid subject {subject!r}; expected `all`, `operator`, or `agent:<name>`."
+        )
+    if not _PRIV_ID.match(privilege):
+        raise PermissionsError(f"invalid privilege id {privilege!r} (expected kebab-case).")
+    privileges = _load_catalog(target_root).get("privileges", {})
+    if privilege not in privileges:
+        raise PermissionsError(
+            f"privilege {privilege!r} is not in the catalog — run `pkit permissions catalog`."
+        )
+    if scope and not privileges[privilege].get("scope_type"):
+        raise PermissionsError(
+            f"privilege {privilege!r} has no scope_type; --scope is not allowed for it."
+        )
+    doc = _read_grants_doc(target_root)
+    token = f"[privilege-catalog:{privilege}]"
+    effect = "deny" if deny else "allow"
+    scope_list = list(scope)
+    for g in doc["grants"]:
+        if _grant_matches(g, subject, token):
+            g["effect"] = effect
+            if scope_list:
+                g["scope"] = scope_list
+            else:
+                g.pop("scope", None)
+            _dump_yaml(_grants_path(target_root), doc)
+            return _grant_msg("updated", subject, effect, privilege, scope_list)
+    entry: dict[str, Any] = {"subject": subject, "privilege": token, "effect": effect}
+    if scope_list:
+        entry["scope"] = scope_list
+    doc["grants"].append(entry)
+    _dump_yaml(_grants_path(target_root), doc)
+    return _grant_msg("granted", subject, effect, privilege, scope_list)
+
+
+def _grant_msg(verb: str, subject: str, effect: str, privilege: str, scope: list[str]) -> str:
+    s = f"{verb}: {subject} {effect} {privilege}"
+    return s + (f" (scope: {', '.join(scope)})" if scope else "")
+
+
+def revoke(target_root: Path, subject: str, privilege: str) -> str:
+    token = f"[privilege-catalog:{privilege}]"
+    doc = _read_grants_doc(target_root)
+    before = len(doc["grants"])
+    doc["grants"] = [g for g in doc["grants"] if not _grant_matches(g, subject, token)]
+    if len(doc["grants"]) == before:
+        return f"no grant matched {subject} {privilege}; nothing to revoke."
+    _dump_yaml(_grants_path(target_root), doc)
+    return f"revoked: {subject} {privilege}"
+
+
+def show_mode(target_root: Path) -> str:
+    cfg = _load_yaml(_config_path(target_root))
+    return (
+        f"ownership_mode: {cfg.get('ownership_mode', 'additive')}   "
+        f"posture: {cfg.get('posture', 'lenient')}"
+    )
+
+
+def set_mode(target_root: Path, mode: str) -> str:
+    path = _config_path(target_root)
+    cfg = _load_yaml(path) if path.is_file() else {}
+    cfg.setdefault("schema_version", 1)
+    cfg.setdefault("posture", "lenient")
+    cfg["ownership_mode"] = mode
+    _dump_yaml(path, cfg)
+    msg = f"ownership_mode set to {mode}."
+    if mode == "managed":
+        msg += " (note: managed-mode realization is not yet implemented — wave 2.)"
+    return msg
+
+
+# ---- enable / disable live enforcement (claude-code) -----------------------
+#
+# Opt-in live enforcement per the issue #247 "Option B" decision (the DEC-030
+# default-agent toggle precedent): a PreToolUse hook fires per Bash/tool call,
+# so registering it is the adopter's explicit choice, not an install default.
+#
+# `enable` writes ONLY to the live `.claude/settings.json` (never a merge
+# source): the `hooks` registration lives outside any realizer-owned region
+# (ADR-002), and the merge primitive treats existing target top-level keys as
+# last-write-wins survivors — so a registration written here survives re-merge,
+# and `disable` must explicitly strip it (the DEC-030 strip-logic pattern).
+#
+# The hook script itself is a propagated adapter file (sync owns its lifecycle);
+# enable/disable manage only its registration — there is no script to deploy or
+# remove, hence no orphaned-script class of bug.
+
+HOOK_COMMAND = "${CLAUDE_PROJECT_DIR}/.pkit/adapters/claude-code/permission-hook.py"
+# Match all tools: `decide()` is the real filter (it abstains on anything the
+# catalog doesn't recognize), so a static broad matcher can't go stale as the
+# catalog grows — unlike a matcher derived from the catalog at enable time. The
+# per-call cost of the broad match is the accepted tradeoff that makes this
+# opt-in rather than on-by-default.
+HOOK_MATCHER = "*"
+
+
+def _settings_path(target_root: Path) -> Path:
+    return target_root / ".claude" / "settings.json"
+
+
+def _core_settings_denies(target_root: Path) -> list[str]:
+    """The harness baseline's fail-closed native denies — the double-lock half
+    that holds even if the hook faults. Sourced from the adapter's canonical
+    core settings so there is no second hand-maintained deny list here."""
+    core = target_root / ".pkit" / "adapters" / "claude-code" / "settings" / "core" / "settings.json"
+    if not core.is_file():
+        return []
+    try:
+        data = json.loads(core.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    return list(data.get("permissions", {}).get("deny", []))
+
+
+def _adapter_installed(target_root: Path, name: str) -> bool:
+    manifest = target_root / ".pkit" / "manifest.yaml"
+    data = _load_yaml(manifest)
+    for entry in data.get("components", []) or []:
+        if isinstance(entry, dict) and entry.get("kind") == "adapter" and entry.get("name") == name:
+            return True
+    return False
+
+
+def _read_settings(target_root: Path) -> dict[str, Any]:
+    path = _settings_path(target_root)
+    if not path.is_file():
+        return {}
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise PermissionsError(f"{path} is not readable JSON: {exc}") from exc
+
+
+def _write_settings(target_root: Path, data: dict[str, Any]) -> None:
+    path = _settings_path(target_root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+
+
+def _hook_entry_registered(pretooluse: list) -> bool:
+    return any(
+        isinstance(entry, dict)
+        and any(
+            isinstance(h, dict) and h.get("command") == HOOK_COMMAND
+            for h in entry.get("hooks", []) or []
+        )
+        for entry in pretooluse
+    )
+
+
+def _enforcement_on(target_root: Path) -> bool:
+    """True if the PreToolUse enforcement hook is registered live. Read-only,
+    degrades to False on a missing/unreadable settings file (used by `overview`)."""
+    path = _settings_path(target_root)
+    if not path.is_file():
+        return False
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    hooks = data.get("hooks") if isinstance(data, dict) else None
+    pre = hooks.get("PreToolUse", []) if isinstance(hooks, dict) else []
+    return _hook_entry_registered(pre)
+
+
+def enable(target_root: Path) -> str:
+    """Register the PreToolUse enforcement hook and ensure the fail-closed
+    native guardrail denies are present (the double-lock). Idempotent."""
+    if not _adapter_installed(target_root, "claude-code"):
+        raise PermissionsError(
+            "the claude-code adapter is not installed in this project; "
+            "live enforcement is harness-specific, so there is nothing to enable."
+        )
+    settings = _read_settings(target_root)
+    changes: list[str] = []
+
+    hooks = settings.setdefault("hooks", {})
+    pretooluse = hooks.setdefault("PreToolUse", [])
+    if _hook_entry_registered(pretooluse):
+        changes.append("hook already registered")
+    else:
+        pretooluse.append(
+            {"matcher": HOOK_MATCHER, "hooks": [{"type": "command", "command": HOOK_COMMAND}]}
+        )
+        changes.append("registered PreToolUse hook")
+
+    perms = settings.setdefault("permissions", {})
+    deny = perms.setdefault("deny", [])
+    added = [d for d in _core_settings_denies(target_root) if d not in deny]
+    if added:
+        deny.extend(added)
+        changes.append(f"ensured {len(added)} native guardrail deny(ies)")
+    else:
+        changes.append("native guardrail denies already present")
+
+    _write_settings(target_root, settings)
+    return "live enforcement enabled: " + "; ".join(changes) + "."
+
+
+def disable(target_root: Path) -> str:
+    """Strip the PreToolUse enforcement hook registration (the DEC-030 strip-
+    logic pattern), preserving any other adopter hooks and the baseline native
+    denies. Idempotent."""
+    path = _settings_path(target_root)
+    if not path.is_file():
+        return "live enforcement already disabled: no .claude/settings.json."
+    settings = _read_settings(target_root)
+    hooks = settings.get("hooks")
+    if not isinstance(hooks, dict) or not hooks.get("PreToolUse"):
+        return "live enforcement already disabled: no PreToolUse hook registered."
+
+    kept: list = []
+    stripped = False
+    for entry in hooks["PreToolUse"]:
+        if not isinstance(entry, dict):
+            kept.append(entry)
+            continue
+        inner = [
+            h for h in entry.get("hooks", []) or []
+            if not (isinstance(h, dict) and h.get("command") == HOOK_COMMAND)
+        ]
+        if len(inner) != len(entry.get("hooks", []) or []):
+            stripped = True
+        if inner:
+            entry["hooks"] = inner
+            kept.append(entry)
+        # entry whose only hook was ours → dropped entirely (no orphan).
+
+    if not stripped:
+        return "live enforcement already disabled: pkit hook not registered."
+
+    if kept:
+        hooks["PreToolUse"] = kept
+    else:
+        hooks.pop("PreToolUse", None)
+    if not hooks:
+        settings.pop("hooks", None)
+
+    _write_settings(target_root, settings)
+    return (
+        "live enforcement disabled: stripped the PreToolUse hook registration "
+        "(native guardrail denies left in place)."
+    )
+
+
+# ---- sandbox confinement (ADR-004 / ADR-005, #274) --------------------------
+#
+# The sandbox writer ADR-005 deferred: turn on Claude Code's OS sandbox
+# (macOS Seatbelt / Linux bubblewrap) with `autoAllowBashIfSandboxed`, so
+# scripting (bash / python3) runs prompt-free INSIDE the box instead of
+# prompting the operator. This closes the autonomous profile's documented gap
+# ("scripting rides the (deferred) sandbox").
+#
+# Fail-closed invariant (ADR-004 §4 "fail-closed"): prompt-suppression
+# conditioned on confinement MUST fail closed — `sandbox_enable` always pairs
+# auto-allow with `failIfUnavailable: true` (session refuses if the box can't
+# start, rather than silently running unsandboxed — the harness default is
+# fail-open). The sole way to write `failIfUnavailable: false` is the loud,
+# per-invocation `--dangerously-allow-unconfined` operator gesture; it is never
+# persisted as a default — re-running `enable` without it restores the floor.
+#
+# Reconciliation of ADR-005's `allowUnsandboxedCommands: false` requirement:
+# NOT required for safety. The unsandboxed *fail-over* path (a command that
+# fails inside the box retried outside via `dangerouslyDisableSandbox`) rides
+# the normal permission flow — allowlist or prompt — and is never auto-allowed;
+# only *sandboxed* commands are auto-approved. Forcing `false` breaks legit
+# fail-over (`git push` / `gh` need network/SSH reach the box blocks), so the
+# key is left at harness default; `--strict` writes it as optional hardening.
+# The reconciliation note lives in ADR-005.
+#
+# Writes are additive over the operator's `sandbox` block: operator keys
+# (`excludedCommands`, `network`, extra `denyRead` entries, …) survive both
+# enable and disable. The default sandbox read policy still permits credential
+# paths, so `enable` also writes a credential `denyRead` floor. The harness
+# does NOT hot-reload `sandbox.enabled` — enable/disable print a restart note;
+# the other keys hot-reload.
+
+SANDBOX_CREDENTIAL_DENY_READ = ["~/.ssh", "~/.aws", "~/.config/gh", "~/.netrc"]
+
+_RESTART_NOTE = (
+    "note: `sandbox.enabled` is not hot-reloaded — restart the Claude Code "
+    "session for it to take effect."
+)
+
+
+def _sandbox_block(target_root: Path) -> dict[str, Any]:
+    """The live `sandbox` settings block. Read-only; degrades to {} on a
+    missing/unreadable settings file (used by `overview` and `sandbox status`)."""
+    path = _settings_path(target_root)
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    sb = data.get("sandbox") if isinstance(data, dict) else None
+    return sb if isinstance(sb, dict) else {}
+
+
+def sandbox_enable(target_root: Path, strict: bool = False,
+                   dangerously_allow_unconfined: bool = False) -> str:
+    """Turn on the OS sandbox with prompt-free scripting, fail-closed.
+    Additive over the operator's `sandbox` block; idempotent."""
+    if not _adapter_installed(target_root, "claude-code"):
+        raise PermissionsError(
+            "the claude-code adapter is not installed in this project; the "
+            "sandbox is harness-specific, so there is nothing to enable."
+        )
+    settings = _read_settings(target_root)
+    sb = settings.setdefault("sandbox", {})
+    changes: list[str] = []
+
+    if sb.get("enabled") is True:
+        changes.append("sandbox already enabled")
+    else:
+        sb["enabled"] = True
+        changes.append("enabled the OS sandbox")
+    if sb.get("autoAllowBashIfSandboxed") is not True:
+        sb["autoAllowBashIfSandboxed"] = True
+        changes.append("auto-allow for sandboxed Bash")
+
+    # The fail-closed invariant (ADR-004): always written, so a previous
+    # dangerous run (or a hand-edit) can't leave the floor lowered.
+    fail_closed = not dangerously_allow_unconfined
+    if sb.get("failIfUnavailable") is not fail_closed:
+        sb["failIfUnavailable"] = fail_closed
+        changes.append(
+            "fail-closed (failIfUnavailable: true)" if fail_closed
+            else "FAIL-OPEN (failIfUnavailable: false)"
+        )
+
+    if strict:
+        if sb.get("allowUnsandboxedCommands") is not False:
+            sb["allowUnsandboxedCommands"] = False
+            changes.append("strict mode (allowUnsandboxedCommands: false)")
+    # not strict → leave the key untouched: the harness default (fail-over via
+    # the normal permission flow) is the reconciled-safe default, and an
+    # operator's explicit choice survives.
+
+    fs = sb.setdefault("filesystem", {})
+    deny = fs.setdefault("denyRead", [])
+    added = [p for p in SANDBOX_CREDENTIAL_DENY_READ if p not in deny]
+    if added:
+        deny.extend(added)
+        changes.append(f"credential denyRead floor (+{len(added)} path(s))")
+    else:
+        changes.append("credential denyRead floor already present")
+
+    _write_settings(target_root, settings)
+    lines = ["sandbox enabled: " + "; ".join(changes) + "."]
+    if dangerously_allow_unconfined:
+        lines.append(
+            "⚠ DANGEROUS: failIfUnavailable is OFF — if the OS sandbox cannot "
+            "start, the session silently runs UNCONFINED (the fail-open ADR-004 "
+            "forbids). Per-invocation operator gesture only; re-run "
+            "`pkit permissions sandbox enable` without the flag to restore the "
+            "fail-closed floor."
+        )
+    if strict:
+        lines.append(
+            "strict: the unsandboxed fail-over escape hatch is locked — commands "
+            "that fail inside the box (e.g. `git push` / `gh` needing network/SSH) "
+            "cannot be retried outside it; use `excludedCommands` for those."
+        )
+    lines.append(_RESTART_NOTE)
+    return "\n".join(lines) + "\n"
+
+
+def sandbox_disable(target_root: Path) -> str:
+    """Turn the OS sandbox off (`enabled: false`), leaving operator keys
+    (excludedCommands, denyRead floor, …) in place. Idempotent."""
+    path = _settings_path(target_root)
+    if not path.is_file():
+        return "sandbox already disabled: no .claude/settings.json.\n"
+    settings = _read_settings(target_root)
+    sb = settings.get("sandbox")
+    if not isinstance(sb, dict) or sb.get("enabled") is not True:
+        return "sandbox already disabled.\n"
+    sb["enabled"] = False
+    _write_settings(target_root, settings)
+    return (
+        "sandbox disabled (enabled: false — other sandbox keys left in place; "
+        "scripting prompts again).\n" + _RESTART_NOTE + "\n"
+    )
+
+
+def sandbox_status(target_root: Path) -> str:
+    """Render the sandbox confinement state (read-only)."""
+    sb = _sandbox_block(target_root)
+    enabled = sb.get("enabled") is True
+    lines = [cli_render.style("title", "Sandbox confinement — prompt-free scripting inside the OS box (ADR-004)"), ""]
+    if not enabled:
+        lines.append(
+            "  " + cli_render.style("strong", "OFF") + " — scripting (bash / python3) rides the normal permission flow "
+            "(prompts); run `pkit permissions sandbox enable`."
+        )
+        return "\n".join(lines) + "\n"
+
+    auto = sb.get("autoAllowBashIfSandboxed", True)  # harness default: true
+    fail_closed = sb.get("failIfUnavailable") is True
+    strict = sb.get("allowUnsandboxedCommands") is False
+    deny = (sb.get("filesystem") or {}).get("denyRead", []) or []
+    missing = [p for p in SANDBOX_CREDENTIAL_DENY_READ if p not in deny]
+
+    lines.append("  " + cli_render.style("strong", "ON") + " — sandboxed commands run confined to the box (Seatbelt / bubblewrap)")
+    lines.append(
+        "  auto-allow      "
+        + ("on — sandboxed Bash runs prompt-free" if auto
+           else "off — sandboxed Bash still prompts")
+    )
+    lines.append(
+        "  fail mode       "
+        + ("closed — session refuses if the box can't start (the ADR-004 invariant)"
+           if fail_closed else
+           "⚠ OPEN — if the box can't start the session runs UNCONFINED; "
+           "re-run `sandbox enable` to restore fail-closed")
+    )
+    lines.append(
+        "  fail-over       "
+        + ("strict — locked; failing commands can't retry outside the box" if strict
+           else "default — failing commands retry outside the box via the normal "
+                "permission flow (never auto-allowed)")
+    )
+    lines.append(
+        "  credential floor "
+        + ("complete — " + ", ".join(SANDBOX_CREDENTIAL_DENY_READ) + " deny-read"
+           if not missing else
+           f"⚠ incomplete — missing denyRead for: {', '.join(missing)}; "
+           "re-run `sandbox enable`")
+    )
+    excluded = sb.get("excludedCommands") or []
+    if excluded:
+        lines.append(f"  excluded        {len(excluded)} command(s) run outside the box (operator-set)")
+    lines += [
+        "",
+        cli_render.style("heading", "Commands"),
+        "  pkit permissions sandbox enable [--strict]   turn on (fail-closed, additive)",
+        "  pkit permissions sandbox disable             turn off (operator keys survive)",
+        "  pkit permissions overview                    full permission + enforcement state",
+    ]
+    return "\n".join(lines) + "\n"
+
+
+# ---- apply (additive realization, #250) ------------------------------------
+
+def apply(target_root: Path) -> str:
+    """Additively realize the model into the harness (per ADR-002 additive mode).
+
+    Unions the model's projected session-wide allow rules into live
+    `.claude/settings.json` and ensures the fail-closed guardrail denies (the
+    double-lock), then reports the out-of-harness gap. Writes the live target
+    in-process — like `enable`, and deliberately NOT via a merge source:
+    projected allows are model-derived realizer output, and parking them in a
+    hand-edited source would accrete drift additive mode can't heal on revoke.
+
+    Additive only — never removes or replaces (managed-mode wholesale
+    regeneration is #252). Idempotent: a set-union write, so re-running is a
+    fixed point. The settings + gap report use the same `project()` /
+    `_gap_report` as `diff`, so realization and reconciliation can't disagree.
+    """
+    if not _adapter_installed(target_root, "claude-code"):
+        raise PermissionsError(
+            "the claude-code adapter is not installed; `apply` realizes into its "
+            "settings.json and has nothing to write without it."
+        )
+    catalog = _load_catalog(target_root)
+    model = _load_model(target_root)
+    if model.get("ownership_mode") == "managed":
+        # Additive-only by guard, not by omission: managed mode wholesale-
+        # regenerates the region (the #252 seam), which this realizer does not do.
+        raise PermissionsError(
+            "ownership_mode is `managed`, but managed-mode apply (wholesale region "
+            "regeneration) is not yet implemented (#252). This is the additive "
+            "realizer — set `pkit permissions mode additive` to use it."
+        )
+    proj = _projection_mod(target_root).project(model, catalog)
+
+    settings = _read_settings(target_root)
+    perms = settings.setdefault("permissions", {})
+    allow = perms.setdefault("allow", [])
+    deny = perms.setdefault("deny", [])
+
+    expected = proj["settings"]["allow"]
+    added_allow = [r for r in expected if r not in allow]
+    allow.extend(added_allow)
+    added_deny = [d for d in _core_settings_denies(target_root) if d not in deny]
+    deny.extend(added_deny)
+
+    changed = bool(added_allow or added_deny)
+    if changed:
+        _write_settings(target_root, settings)
+
+    lines: list[str] = []
+    if changed:
+        parts = []
+        if added_allow:
+            parts.append(f"{len(added_allow)} allow rule(s)")
+        if added_deny:
+            parts.append(f"{len(added_deny)} guardrail deny(ies)")
+        lines.append(cli_render.style(
+            "strong",
+            "applied (additive): added " + " + ".join(parts) + " to .claude/settings.json.",
+        ))
+    else:
+        lines.append(cli_render.style("strong", "applied (additive): already realized — nothing to add."))
+    if expected:
+        lines.append(f"  model's session-wide allow rules: {', '.join(sorted(expected))}")
+
+    gap = _gap_report(target_root, proj)
+    if gap:
+        lines.append("\n" + cli_render.style("heading", "out-of-harness gap (enforced elsewhere or not natively expressible):"))
+        lines.extend(gap)
+    return "\n".join(lines) + "\n"
+
+
+# ---- profiles (#255 / ADR-005) ---------------------------------------------
+#
+# A profile is a named, selectable autonomy level: posture + a LAYERED per-agent
+# grant-source. `use` writes `active_profile` + posture to config; the model
+# loader (decide.load_model) layers the profile's grants between the guardrail
+# denies and the adopter's own grants.yaml — never overwriting manual grants.
+# Confinement (sandbox) is referenced in a profile's prose, not written (ADR-005
+# defers the sandbox writer). `use` does NOT enable the hook (orthogonal, #247).
+
+def _shipped_profiles_dir(target_root: Path) -> Path:
+    return target_root / ".pkit" / "permissions" / "profiles"
+
+
+def _project_profiles_dir(target_root: Path) -> Path:
+    return target_root / ".pkit" / "permissions" / "project" / "profiles"
+
+
+def _profile_names(d: Path) -> list[str]:
+    return sorted(p.stem for p in d.glob("*.yaml")) if d.is_dir() else []
+
+
+def _resolve_profile(target_root: Path, name: str) -> tuple[Path, dict[str, Any]] | None:
+    """Resolve a profile by name, project-first then shipped. (path, doc) or None."""
+    for d in (_project_profiles_dir(target_root), _shipped_profiles_dir(target_root)):
+        path = d / f"{name}.yaml"
+        if path.is_file():
+            return path, _load_yaml(path)
+    return None
+
+
+_PROFILE_GLOSS = "a named autonomy level; activate one with `profile activate <name>`"
+_LIST_COMMANDS = [
+    ("pkit permissions profile show <name>", "a profile's posture + grants"),
+    ("pkit permissions profile activate <name>", "select it: set posture + layer grants, then apply"),
+    ("pkit permissions profile activate <name> --no-apply", "select without writing settings"),
+    ("pkit permissions overview", "full permission state"),
+]
+_SHOW_COMMANDS = [
+    ("pkit permissions profile activate <name>", "make this the active profile"),
+    ("pkit permissions profile list", "all profiles + which is active"),
+    ("pkit permissions explain [agent]", "who may do what once layered"),
+    ("pkit permissions overview", "the full privilege catalog"),
+]
+
+
+def list_profiles(target_root: Path) -> str:
+    active = _load_yaml(_config_path(target_root)).get("active_profile")
+    shipped = set(_profile_names(_shipped_profiles_dir(target_root)))
+    project = set(_profile_names(_project_profiles_dir(target_root)))
+    names = sorted(shipped | project)
+
+    if active:
+        st = cli_render.status(
+            "Active profile", active, placement="footer",
+            gloss="its posture + grants are layered into the model; manual grants win last",
+            warn=(None if active in names
+                  else "no such profile file exists — re-run `profile activate`"))
+    else:
+        st = cli_render.status(
+            "Active profile", "none", placement="footer",
+            gloss="only your manual grants + the guardrails apply")
+
+    if not names:
+        return cli_render.view(
+            title=cli_render.title("Permission profiles", "0 available", _PROFILE_GLOSS),
+            sections=[cli_render.section(empty="(none shipped or project-defined)")],
+            status=st)
+
+    def _source(n: str) -> str:
+        if n in project and n in shipped:
+            return "project (overrides shipped)"
+        return "project" if n in project else "shipped"
+
+    # SOURCE is shown only when the project defines/overrides a profile; in the
+    # all-shipped default it's a constant column the renderer suppresses.
+    show_source = bool(project)
+    rows = []
+    for n in names:
+        res = _resolve_profile(target_root, n)
+        desc = (res[1].get("description") if res else None) or "(no description)"
+        rows.append({"mark": "→" if n == active else "", "name": n,
+                     "source": _source(n) if show_source else "", "description": desc})
+
+    legend = [("→", "the active profile (one at a time; set by `profile activate`)")]
+    if show_source:
+        legend.append(("shipped", "ships with the methodology · project = defined in your repo "
+                                  "(.pkit/permissions/project/profiles/)"))
+
+    return cli_render.view(
+        title=cli_render.title("Permission profiles", f"{len(names)} available", _PROFILE_GLOSS),
+        sections=[cli_render.section(rows=rows, columns=["name", "source", "description"],
+                                     marker="mark")],
+        status=st, legend=legend, commands=_LIST_COMMANDS)
+
+
+def show_profile(target_root: Path, name: str) -> str:
+    res = _resolve_profile(target_root, name)
+    if res is None:
+        raise PermissionsError(f"no profile named {name!r}; run `pkit permissions profile list`.")
+    path, doc = res
+    rel = path.relative_to(target_root)
+    source = "project" if _project_profiles_dir(target_root) in path.parents else "shipped"
+    posture = doc.get("posture")
+    posture_gloss = {
+        "lenient": "unmodeled requests defer to Claude Code",
+        "strict": "unmodeled requests are denied",
+    }.get(posture, "inherits the project posture")
+    desc = doc.get("description") or "(no description)"
+    privileges = _load_catalog(target_root).get("privileges", {})
+
+    def _pdesc(pid: str) -> str:
+        return privileges.get(pid, {}).get("description", "(not in catalog)")
+
+    rows = []
+    for g in doc.get("grants", []) or []:
+        subject = g.get("subject", "?")
+        effect = g.get("effect", "allow")
+        scope = ", ".join(g["scope"]) if g.get("scope") else ""
+        for pid in _grant_priv_ids(g.get("privilege")):
+            rows.append({"privilege": pid, "description": _pdesc(pid), "subject": subject,
+                         "effect": effect, "scope": f"[{scope}]" if scope else ""})
+
+    # Suppress subject/effect columns when constant across all rows (state them
+    # in the header); show them + a Legend for mixed-grant profiles.
+    uniform = bool(rows) and len({r["subject"] for r in rows}) == 1 and len({r["effect"] for r in rows}) == 1
+    any_scope = any(r["scope"] for r in rows)
+
+    if uniform:
+        subj, eff = rows[0]["subject"], rows[0]["effect"]
+        verb = "granted to" if eff == "allow" else "denied to"
+        gloss = (f"{verb} {_subject_gloss(subj)} (`{subj}`); "
+                 "layered under your grants.yaml, manual grants win last (deny-wins)")
+        columns = ["privilege", "description", "scope"]
+    else:
+        gloss = "layered under your grants.yaml; manual grants win last (deny-wins)"
+        columns = ["privilege", "description", "subject", "effect", "scope"]
+
+    legend: list[tuple[str, str]] = []
+    if not uniform:
+        legend += [("all / operator / agent:<name>", "the subject a grant applies to"),
+                   ("allow / deny", "the subject may / may not use it")]
+    if any_scope:
+        legend.append(("[scope]", "the grant is limited to those paths / hosts"))
+
+    meta = f"posture {posture or 'unchanged'} ({posture_gloss}) · source {source} · {rel}"
+    grants = cli_render.section(
+        rows=rows, columns=columns, header="GRANTS", gloss=gloss,
+        empty=(None if rows else "(none — this profile only sets posture)"))
+    return cli_render.view(
+        title=cli_render.title(f"Profile: {name}", gloss=desc),
+        status=cli_render.status(placement="header", extra=[meta]),
+        sections=[grants], legend=legend, commands=_SHOW_COMMANDS)
+
+
+def activate_profile(target_root: Path, name: str, apply_after: bool = True) -> str:
+    res = _resolve_profile(target_root, name)
+    if res is None:
+        raise PermissionsError(f"no profile named {name!r}; run `pkit permissions profile list`.")
+    _path, doc = res
+    cfg_path = _config_path(target_root)
+    cfg = _load_yaml(cfg_path) if cfg_path.is_file() else {}
+    cfg.setdefault("schema_version", 1)
+    cfg.setdefault("ownership_mode", "additive")
+    cfg["active_profile"] = name
+    if doc.get("posture"):
+        cfg["posture"] = doc["posture"]
+    cfg.setdefault("posture", "lenient")
+    _dump_yaml(cfg_path, cfg)
+
+    lines = [
+        f"profile {name!r} active — posture {cfg['posture']}; its grants are layered "
+        f"under your own (manual grants untouched)."
+    ]
+    if apply_after:
+        try:
+            lines += ["", apply(target_root).rstrip()]
+        except PermissionsError as exc:
+            lines.append(f"\n(apply skipped — {exc})")
+    else:
+        lines.append("(--no-apply: model set; run `pkit permissions apply` to realize to settings.)")
+    if not _enforcement_on(target_root):
+        lines.append("\nenforcement is OFF — run `pkit permissions enable` to make the model bite.")
+    return "\n".join(lines) + "\n"
+
+
+# ---- probe (#276) -----------------------------------------------------------
+#
+# Probe-by-probe demonstration that the CURRENT model (guardrails + active
+# profile + manual grants) rejects/allows what it declares. Three layers,
+# each claiming only what it proves (COR-028 honesty-about-gaps):
+#
+#   Layer 1 — decision: drives `hook_decide()` — the live PreToolUse hook's
+#   actual entry point, payload translation included — over curated concrete
+#   requests, with model + catalog loaded through the propagated decide.py
+#   loaders (ADR-002/003 same-code). This is the conformance-fixture
+#   realization ADR-003 names: it proves the DECISION layer, not that the
+#   hook is registered in a live session (that's Layer 2's enforcement line).
+#
+#   Layer 2 — native double-lock: every canonical core guardrail deny string
+#   present verbatim in live settings (catches deletion AND narrowing), plus
+#   the hook-registration state.
+#
+#   Layer 3 (--live) — confinement: open-attempt-only reads against the
+#   credential denyRead floor. Honest verdicts only — REJECTED proves the
+#   floor; ALLOWED is never reported as fine (either "not configured" or
+#   "UNPROVEN — outside the box"); no pass is certified that isn't proven
+#   (ADR-004 fail-closed honesty). Contract: reachability only — never read
+#   bytes, never surface content.
+#
+# COR-007 promotion note: fixtures are hardcoded v1 — one consumer, the
+# baseline catalog. Promote to shipped data (a probes.yaml beside the
+# catalog) when a catalog-extending adopter needs to probe privileges of
+# their own; until then a schema'd data file is speculative generality.
+
+# Each probe: description; a synthesized PreToolUse payload fragment
+# (tool/command, optional cwd — None means the project root); the privilege
+# ids it SHOULD exercise (membership check against the recognized set —
+# catches recognizer drift; [] asserts the request must stay unrecognized);
+# and an optional static `expect` (guardrails: always deny, regardless of
+# profile — the golden floor an oracle computed from a mutated catalog
+# could not catch).
+_PROBES: list[dict[str, Any]] = [
+    {"desc": "privilege escalation — `sudo whoami`",
+     "command": "sudo whoami", "privileges": ["privilege-escalation"], "expect": "deny"},
+    {"desc": "recursive deletion — `rm -rf build/`",
+     "command": "rm -rf build/", "privileges": ["destructive-fs"], "expect": "deny"},
+    {"desc": "rewriting published history — `git push --force`",
+     "command": "git push --force", "privileges": ["vcs-history-rewrite"], "expect": "deny"},
+    {"desc": "version control — `git status`",
+     "command": "git status", "privileges": ["vcs"]},
+    {"desc": "issue tracker — `gh issue list`",
+     "command": "gh issue list", "privileges": ["issue-tracker"]},
+    {"desc": "issue tracker behind an env prefix — `export FOO=1 && gh pr list`",
+     "command": "export FOO=1 && gh pr list", "privileges": ["issue-tracker"]},
+    {"desc": "the kit CLI — `pkit status`",
+     "command": "pkit status", "privileges": ["kit"]},
+    {"desc": "docker in the project — `docker ps`",
+     "command": "docker ps", "privileges": ["docker"]},
+    {"desc": "docker outside a scoped grant's boundary — `docker ps` with cwd /",
+     "command": "docker ps", "cwd": "/", "privileges": ["docker"]},
+    {"desc": "web fetch (tool)", "tool": "WebFetch", "privileges": ["web-fetch"]},
+    {"desc": "repository read (tool)", "tool": "Read", "privileges": ["repo-read"]},
+    {"desc": "an unrecognized command — `frobnicate --xyz`",
+     "command": "frobnicate --xyz", "privileges": []},
+]
+
+
+def _any_scoped_allow(model: dict[str, Any], subject: str, hits: set[str]) -> bool:
+    """Does any effective allow grant on these privileges carry a scope?
+    Drives the unscoped-grant honesty gloss on cwd-bearing probes."""
+    for g in model.get("grants", []):
+        if g.get("subject") not in ("all", subject) or g.get("effect", "allow") != "allow":
+            continue
+        gp = g.get("privilege")
+        gp_ids = {_bare(v) for v in (gp if isinstance(gp, list) else [gp])}
+        if hits & gp_ids and g.get("scope"):
+            return True
+    return False
+
+
+def _oracle(model: dict[str, Any], hits: set[str], subject: str, cwd: str) -> tuple[str, str]:
+    """The independent contract restatement (the test oracle).
+
+    Restates the DECLARED model contract — deny-wins across the recognized-
+    privilege union, a scoped allow does not allow outside its scope, posture
+    maps an uncovered request (strict → deny, lenient → defer) — so that a
+    divergence from the live verdict is detectable. Update this in lockstep
+    with decide()'s contract; NEVER import or call decide() here (that would
+    make the probe a tautology), and no production path may ever consume this.
+    """
+    posture = model.get("posture", "lenient")
+    if not hits:
+        if posture == "strict":
+            return "deny", "uncovered + strict posture"
+        return "abstain", "uncovered + lenient posture (Claude Code's normal flow)"
+    allow_hit = False
+    for g in model.get("grants", []):
+        if g.get("subject") not in ("all", subject):
+            continue
+        gp = g.get("privilege")
+        gp_ids = {_bare(v) for v in (gp if isinstance(gp, list) else [gp])}
+        overlap = hits & gp_ids
+        if not overlap:
+            continue
+        if g.get("effect", "allow") == "deny":
+            return "deny", f"declared deny on {sorted(overlap)}"
+        scope = g.get("scope")
+        if scope and not any(
+            fnmatch.fnmatch(cwd, pat) or fnmatch.fnmatch(cwd, pat.rstrip("*") + "*")
+            for pat in scope
+        ):
+            return "deny", f"allowed only in {scope}, probed from {cwd!r}"
+        allow_hit = True
+    if allow_hit:
+        return "allow", f"declared allow on {sorted(hits)}"
+    if posture == "strict":
+        return "deny", "ungranted + strict posture"
+    return "abstain", "ungranted + lenient posture (Claude Code's normal flow)"
+
+
+_VERDICT_WORD = {"deny": "REJECTED", "allow": "ALLOWED", "abstain": "NOT COVERED"}
+
+
+def _probe_payload(p: dict[str, Any], subject: str, cwd: str) -> dict[str, Any]:
+    """Synthesize the PreToolUse payload `hook_decide` receives live."""
+    payload: dict[str, Any] = {"cwd": cwd}
+    if subject.startswith("agent:"):
+        payload["agent_type"] = subject.split(":", 1)[1]
+    if "command" in p:
+        payload["tool_name"] = "Bash"
+        payload["tool_input"] = {"command": p["command"]}
+    else:
+        payload["tool_name"] = p["tool"]
+        payload["tool_input"] = {}
+    return payload
+
+
+def probe(target_root: Path, subject: str = "operator", live: bool = False) -> tuple[str, bool]:
+    """Run the probe suite against the current model. Returns (report, ok)."""
+    if not _SUBJECT.match(subject):
+        raise PermissionsError(
+            f"invalid subject {subject!r}; expected `operator` or `agent:<name>`."
+        )
+    dm = _decide_mod(target_root)
+    catalog = _load_catalog(target_root)
+    model = dm.load_model(str(target_root), catalog)
+    posture = model.get("posture", "lenient")
+    active = model.get("active_profile") or "none"
+
+    lines: list[str] = [
+        cli_render.style("title", "Permission probes — does the model do what it declares?")
+        + f"   profile: {active} · posture: {posture} · subject: {subject}",
+        "",
+        cli_render.style("heading", "DECISION LAYER — each probe is the verdict the live PreToolUse hook would return"),
+    ]
+    broken = 0
+    n = len(_PROBES)
+    for i, p in enumerate(_PROBES, 1):
+        cwd = p.get("cwd") or str(target_root)
+        payload = _probe_payload(p, subject, cwd)
+        request = (
+            {"type": "bash", "command": p["command"], "cwd": cwd, "subject": subject}
+            if "command" in p
+            else {"type": "tool", "tool": p["tool"], "cwd": cwd, "subject": subject}
+        )
+        hits = dm.recognized_privileges(catalog, request)
+        verdict, reason = dm.hook_decide(model, catalog, payload)
+
+        lines.append("\n" + cli_render.style("heading", f"[{i:>2}/{n}] {p['desc']}"))
+        declared = set(p["privileges"])
+        if declared and not declared <= hits:
+            broken += 1
+            lines.append(
+                f"        ✗ BROKEN — recognizer drift: should exercise "
+                f"{sorted(declared)}, recognized {sorted(hits) or 'nothing'}"
+            )
+            continue
+        if not declared and hits:
+            broken += 1
+            lines.append(
+                f"        ✗ BROKEN — fixture expects this to be unrecognized, "
+                f"but it now matches {sorted(hits)}"
+            )
+            continue
+
+        expected, exp_reason = _oracle(model, hits, subject, cwd)
+        static = p.get("expect")
+        if static and static != expected:
+            # The golden floor disagrees with the computed oracle — e.g. a
+            # guardrail flag was dropped from the catalog. The golden wins.
+            expected, exp_reason = static, "golden expectation (guardrail: always deny)"
+
+        lines.append(f"        {_VERDICT_WORD[verdict]} — {reason}")
+        if verdict == expected:
+            lines.append("        ✓ works — matches the declared model")
+            if "cwd" in p and verdict == "allow" and not _any_scoped_allow(model, subject, hits):
+                # Honesty gloss: an ALLOWED here did NOT test a boundary —
+                # the active grant is unscoped, so there is nothing to be
+                # outside of. Without this line the probe would read like a
+                # scope check that passed.
+                lines.append(
+                    "        note: the active grant is unscoped — no directory boundary "
+                    "exists to be outside of; add `--scope <glob>` to the grant to make "
+                    "this probe exercise the boundary (it then REJECTS from cwd /)"
+                )
+        else:
+            broken += 1
+            lines.append(
+                f"        ✗ BROKEN — model declares {_VERDICT_WORD[expected]} "
+                f"({exp_reason}), live decision is {_VERDICT_WORD[verdict]}"
+            )
+
+    # Layer 2 — the fail-closed native half of the double-lock.
+    lines += ["", cli_render.style("heading", "NATIVE DOUBLE-LOCK — fail-closed denies that hold even if the hook is off")]
+    hook_on = _enforcement_on(target_root)
+    canonical = _core_settings_denies(target_root)
+    if not canonical:
+        lines.append("  (claude-code adapter core settings not found — skipped)")
+    else:
+        live_deny = _live_settings(target_root)["deny"]
+        for rule in canonical:
+            if rule in live_deny:
+                lines.append(f"  ✓ {rule}  present verbatim")
+            else:
+                lines.append(
+                    f"  {'✗ BROKEN' if hook_on else '⚠ missing'} — {rule} not in live deny "
+                    f"(deleted or narrowed); run `pkit permissions enable` to restore"
+                )
+                if hook_on:
+                    broken += 1
+    lines.append(
+        f"  hook enforcement: {'ON' if hook_on else 'OFF'} — "
+        + ("the decision layer above is live in sessions"
+           if hook_on else
+           "the decision layer above is NOT live; run `pkit permissions enable`"
+           " (missing denies are ⚠ informational while OFF)")
+    )
+
+    # Layer 3 — confinement floor (--live): reachability only, never content.
+    if live:
+        lines += ["", cli_render.style("heading", "CONFINEMENT FLOOR (--live) — open-attempts against the credential denyRead floor")]
+        sandbox_on = _sandbox_block(target_root).get("enabled") is True
+        for raw in SANDBOX_CREDENTIAL_DENY_READ:
+            path = Path(raw).expanduser()
+            outcome = _reach_attempt(path)
+            if outcome == "absent":
+                lines.append(f"  {raw:13} absent on this machine — nothing to probe")
+            elif outcome == "rejected":
+                lines.append(f"  {raw:13} REJECTED — the OS denied it; the floor holds here  ✓")
+            elif not sandbox_on:
+                lines.append(
+                    f"  {raw:13} ALLOWED — confinement not configured (sandbox OFF in "
+                    f"settings); floor unprobed"
+                )
+            else:
+                lines.append(
+                    f"  {raw:13} ALLOWED — UNPROVEN: this process is outside the box "
+                    f"(likely a plain terminal) or fail-open; run this probe from a "
+                    f"sandboxed Claude session to prove the floor"
+                )
+        lines.append("  (reachability checked only — no bytes read, no content surfaced)")
+
+    ok = broken == 0
+    lines += [
+        "",
+        cli_render.style("strong",
+            f"{n} decision probe(s): all behave as the model declares."
+            if ok else
+            f"{n} decision probe(s): {broken} BROKEN — the live decision diverges "
+            f"from the declared model."),
+        "",
+        "note: the decision layer proves the verdict (same decide.py + hook_decide the",
+        "live hook runs) — whether the hook fires in sessions is the enforcement line;",
+        "OS confinement is the --live section. Coverage: baseline catalog only —",
+        "adopter-added privileges are not yet probed.",
+    ]
+    return "\n".join(lines) + "\n", ok
+
+
+def _reach_attempt(path: Path) -> str:
+    """Reachability-only attempt: absent | rejected | allowed. Opens/lists and
+    immediately discards — never reads bytes, never surfaces content."""
+    try:
+        if path.is_dir():
+            os.listdir(path)
+        elif path.exists():
+            with open(path, "rb"):
+                pass
+        else:
+            return "absent"
+        return "allowed"
+    except PermissionError:
+        return "rejected"
+    except OSError:
+        # The sandbox may surface denial as EPERM-wrapped OSError variants.
+        return "rejected"
+
+
+# ---- confinement allowances (ADR-008, #281) ---------------------------------
+#
+# Manage the OS-sandbox allowances that let legit out-of-project tooling work
+# under confinement, split by boundary effect (ADR-008):
+#
+#   narrowing — makes the box usable without enlarging reach (a build-cache
+#   allowWrite, a needed unix socket). Managed data (confinement-toolkit),
+#   detectable, committable to permission-config, auto-applied by setup.
+#
+#   widening — carves a command OUT of the box to run unconfined
+#   (excludedCommands) or weakens TLS. Applied ONLY by the loud, per-invocation,
+#   never-persisted `sandbox exclude` gesture; never committed, never detected,
+#   never applied by setup; always reported as a boundary reduction.
+#
+# Single writer + provenance: every sandbox-block list mutation routes through
+# `_apply_allowances` / `_remove_allowances`, which record what pkit authored in
+# a sidecar (`sandbox-provenance.yaml`). Removal touches ONLY pkit-authored
+# entries no longer claimed by another active toolkit — never an operator's
+# hand-added entry (the ADR-002 §52 silent-deletion footgun, transposed).
+
+_TOOLKIT_BARE = re.compile(r"^\[confinement-toolkit:([a-z][a-z0-9-]*)\]$")
+
+
+def _toolkit_name(token: str) -> str:
+    m = _TOOLKIT_BARE.match(token)
+    return m.group(1) if m else token
+
+
+def _load_toolkits(target_root: Path) -> dict[str, Any]:
+    """Load confinement toolkits: shipped data (`.pkit/schemas/confinement-
+    toolkit.yaml`) overlaid by an optional project file (same-name entries in
+    `.pkit/permissions/project/confinement-toolkit.yaml` override shipped)."""
+    shipped = _load_yaml(target_root / ".pkit" / "schemas" / "confinement-toolkit.yaml")
+    toolkits = dict(shipped.get("toolkits", {}) or {})
+    project = _load_yaml(
+        target_root / ".pkit" / "permissions" / "project" / "confinement-toolkit.yaml"
+    )
+    toolkits.update(project.get("toolkits", {}) or {})
+    return toolkits
+
+
+# sandbox-block list key for each allowance kind (None = the weaker-tls bool).
+_ALLOWANCE_KEY = {
+    "allow-write": ("filesystem", "allowWrite"),
+    "allow-read": ("filesystem", "allowRead"),
+    "allow-unix-socket": ("network", "allowUnixSockets"),
+    "exclude-command": (None, "excludedCommands"),
+}
+
+
+def _narrowing(allowances: list[dict]) -> list[dict]:
+    return [a for a in allowances if a.get("effect") == "narrowing"]
+
+
+def _widening(allowances: list[dict]) -> list[dict]:
+    return [a for a in allowances if a.get("effect") == "widening"]
+
+
+def _provenance_path(target_root: Path) -> Path:
+    return _project_dir(target_root) / "sandbox-provenance.yaml"
+
+
+def _load_provenance(target_root: Path) -> list[dict]:
+    doc = _load_yaml(_provenance_path(target_root))
+    return list(doc.get("entries", []) or [])
+
+
+def _dump_provenance(target_root: Path, entries: list[dict]) -> None:
+    _dump_yaml(_provenance_path(target_root), {"schema_version": 1, "entries": entries})
+
+
+def _allowance_list(sb: dict, kind: str) -> list | None:
+    """The live sandbox-block list for an allowance kind (created if absent)."""
+    loc = _ALLOWANCE_KEY.get(kind)
+    if loc is None:
+        return None
+    section, key = loc
+    container = sb.setdefault(section, {}) if section else sb
+    return container.setdefault(key, [])
+
+
+def _apply_allowances(target_root: Path, allowances: list[dict], toolkit: str) -> list[str]:
+    """Additively write a set of allowances to the live sandbox block, tagging
+    each in provenance as authored by `toolkit`. Idempotent (set-union per key;
+    provenance de-duplicated on (kind, value)). Returns human notes on what was
+    added. The single writer for sandbox-block list keys (ADR-008 rule 2)."""
+    settings = _read_settings(target_root)
+    sb = settings.setdefault("sandbox", {})
+    prov = _load_provenance(target_root)
+    seen = {(e["kind"], e.get("value")) for e in prov}
+    notes: list[str] = []
+    for a in allowances:
+        kind, value = a["kind"], a.get("value")
+        if kind == "weaker-tls":
+            if sb.get("enableWeakerNetworkIsolation") is not True:
+                sb["enableWeakerNetworkIsolation"] = True
+                notes.append("enableWeakerNetworkIsolation: true")
+        else:
+            lst = _allowance_list(sb, kind)
+            if lst is not None and value not in lst:
+                lst.append(value)
+                notes.append(f"{kind} {value}")
+        if (kind, value) not in seen:
+            prov.append({"kind": kind, "value": value, "toolkit": toolkit})
+            seen.add((kind, value))
+    _write_settings(target_root, settings)
+    _dump_provenance(target_root, prov)
+    return notes
+
+
+def _remove_allowances(target_root: Path, toolkit: str) -> list[str]:
+    """Remove the sandbox-block entries a toolkit contributed — but ONLY pkit-
+    authored entries (in provenance) no longer claimed by another toolkit still
+    in provenance. Operator hand-added entries are never in provenance, so are
+    never removed (ADR-002 §52 footgun avoided). Returns human notes."""
+    settings = _read_settings(target_root)
+    sb = settings.get("sandbox")
+    prov = _load_provenance(target_root)
+    mine = [e for e in prov if e.get("toolkit") == toolkit]
+    if not mine:
+        return []
+    remaining = [e for e in prov if e.get("toolkit") != toolkit]
+    still_claimed = {(e["kind"], e.get("value")) for e in remaining}
+    notes: list[str] = []
+    if isinstance(sb, dict):
+        for e in mine:
+            kind, value = e["kind"], e.get("value")
+            if (kind, value) in still_claimed:
+                continue  # another active toolkit still needs it
+            if kind == "weaker-tls":
+                if sb.pop("enableWeakerNetworkIsolation", None) is not None:
+                    notes.append("enableWeakerNetworkIsolation removed")
+            else:
+                lst = _allowance_list(sb, kind)
+                if lst is not None and value in lst:
+                    lst.remove(value)
+                    notes.append(f"{kind} {value} removed")
+        _write_settings(target_root, settings)
+    _dump_provenance(target_root, remaining)
+    return notes
+
+
+# ---- host-environment detection (ADR-010) ----------------------------------
+#
+# Narrowing socket accommodations whose source is a HOST fact (the SSH-agent
+# socket in $SSH_AUTH_SOCK), not a repo fact. These route ONLY to the live
+# per-machine sandbox block under a `socket:<source>` provenance tag — never to
+# the committed `confinement_accommodations` (ADR-010 rule 3). Recompute-replace
+# keyed by that tag keeps a per-session-varying path from accreting (rule 4);
+# a path inside the credential floor is never silently auto-applied (rule 7);
+# a dead socket is reported honestly, not claimed "applied" (rule 5).
+
+
+def _expand(raw: str) -> str:
+    return os.path.expandvars(os.path.expanduser(raw))
+
+
+def _path_under_floor(resolved: str) -> str | None:
+    """The credential denyRead floor entry `resolved` falls under, or None
+    (ADR-010 rule 7). Used to refuse silent auto-apply of in-floor sockets."""
+    rp = os.path.normpath(resolved)
+    for entry in SANDBOX_CREDENTIAL_DENY_READ:
+        base = os.path.normpath(_expand(entry))
+        if rp == base or rp.startswith(base + os.sep):
+            return entry
+    return None
+
+
+def _socket_live(resolved: str) -> bool:
+    """Best-effort AF_UNIX liveness: can we connect? Never reads bytes; False on
+    any error (→ honest nudge rather than a false 'applied', ADR-010 rule 5)."""
+    import socket as _socket
+    s = _socket.socket(_socket.AF_UNIX, _socket.SOCK_STREAM)
+    s.settimeout(0.5)
+    try:
+        s.connect(resolved)
+        return True
+    except OSError:
+        return False
+    finally:
+        s.close()
+
+
+def accommodate_socket(target_root: Path, raw_path: str, name: str = "manual",
+                       remove: bool = False) -> str:
+    """The `--socket` lever (ADR-010): a one-off narrowing allow-unix-socket,
+    per-machine, never committed, provenance-tagged `socket:<name>`. Recompute-
+    replace keyed by that tag, so re-running with a changed path leaves no stale
+    entry. The writer `setup autonomy`'s host-resolution reuses."""
+    if not _adapter_installed(target_root, "claude-code"):
+        raise PermissionsError(
+            "the claude-code adapter is not installed; the sandbox is harness-specific."
+        )
+    tag = f"socket:{name}"
+    if remove:
+        notes = _remove_allowances(target_root, tag)
+        return (f"removed socket allowance {name!r}: "
+                f"{', '.join(notes) if notes else 'nothing pkit-authored to remove'}.\n")
+    resolved = _expand(raw_path) if raw_path else ""
+    if not resolved:
+        raise PermissionsError("give a socket path (e.g. \"$SSH_AUTH_SOCK\").")
+    _remove_allowances(target_root, tag)  # recompute-replace: drop our prior entry first
+    _apply_allowances(
+        target_root,
+        [{"kind": "allow-unix-socket", "value": resolved, "effect": "narrowing"}],
+        tag,
+    )
+    lines = [
+        f"socket accommodated ({name}): allow-unix-socket {resolved} "
+        f"(narrowing, per-machine, NOT committed)."
+    ]
+    floor = _path_under_floor(resolved)
+    if floor:
+        lines.append(
+            f"  ⚠ this path is under the credential denyRead floor ({floor}) — the box "
+            f"may still block it; you chose this explicitly. (setup never auto-applies "
+            f"in-floor sockets; per ADR-010 rule 7.)"
+        )
+    lines.append(_RESTART_NOTE)
+    return "\n".join(lines) + "\n"
+
+
+def _setup_host_accommodations(target_root: Path) -> tuple[list[str], list[tuple[str, str]]]:
+    """ADR-010: resolve the universal host signal ($SSH_AUTH_SOCK) and auto-apply
+    it as a narrowing socket allowance (per-machine, recompute-replace), unless
+    it is in-floor (rule 7) or dead (rule 5) — in which case nudge. Returns
+    (applied notes, nudges as (description, command) pairs)."""
+    applied: list[str] = []
+    nudges: list[tuple[str, str]] = []
+    sock = (os.environ.get("SSH_AUTH_SOCK") or "").strip()
+    if not sock:
+        return applied, nudges
+    resolved = _expand(sock)
+    floor = _path_under_floor(resolved)
+    if floor:
+        nudges.append((
+            f"SSH agent socket is under the credential floor ({floor}); not auto-applied — decide explicitly",
+            'pkit permissions sandbox accommodate --socket "$SSH_AUTH_SOCK" --name ssh-agent',
+        ))
+        return applied, nudges
+    if not _socket_live(resolved):
+        nudges.append((
+            f"$SSH_AUTH_SOCK is set ({resolved}) but the socket isn't answering; not applied "
+            f"(start your agent and re-run, or run)",
+            'pkit permissions sandbox accommodate --socket "$SSH_AUTH_SOCK" --name ssh-agent',
+        ))
+        return applied, nudges
+    tag = "socket:ssh-agent"
+    _remove_allowances(target_root, tag)  # recompute-replace against the per-session path
+    _apply_allowances(
+        target_root,
+        [{"kind": "allow-unix-socket", "value": resolved, "effect": "narrowing"}],
+        tag,
+    )
+    applied.append(f"ssh-agent socket ({resolved})")
+    return applied, nudges
+
+
+def _config_accommodations(target_root: Path) -> list[str]:
+    cfg = _load_yaml(_config_path(target_root))
+    return [_toolkit_name(t) for t in (cfg.get("confinement_accommodations") or [])]
+
+
+def _record_accommodation(target_root: Path, tool: str, add: bool) -> None:
+    """Add/remove a toolkit from permission-config's confinement_accommodations
+    (the authoritative, committable narrowing list)."""
+    path = _config_path(target_root)
+    cfg = _load_yaml(path) if path.is_file() else {}
+    cfg.setdefault("schema_version", 1)
+    cfg.setdefault("ownership_mode", "additive")
+    cfg.setdefault("posture", "lenient")
+    current = list(cfg.get("confinement_accommodations") or [])
+    token = f"[confinement-toolkit:{tool}]"
+    names = {_toolkit_name(t) for t in current}
+    if add and tool not in names:
+        current.append(token)
+    elif not add:
+        current = [t for t in current if _toolkit_name(t) != tool]
+    if current:
+        cfg["confinement_accommodations"] = current
+    else:
+        cfg.pop("confinement_accommodations", None)
+    _dump_yaml(path, cfg)
+
+
+def _effect_mark(allowances: list[dict]) -> str:
+    has_w = any(a.get("effect") == "widening" for a in allowances)
+    has_n = any(a.get("effect") == "narrowing" for a in allowances)
+    if has_w and has_n:
+        return "narrowing + widening"
+    return "widening" if has_w else "narrowing"
+
+
+def confinement_list(target_root: Path) -> str:
+    """`sandbox toolkit list` — available toolkits, marked by boundary effect."""
+    toolkits = _load_toolkits(target_root)
+    active = set(_config_accommodations(target_root))
+    if not toolkits:
+        return "no confinement toolkits available.\n"
+    lines = [
+        cli_render.style("title", "Confinement toolkits — OS-sandbox allowances per tool (per ADR-008)"),
+        "",
+        "  the allowances a tool needs to work inside the box; marked by boundary effect.",
+        "",
+    ]
+    for name in sorted(toolkits):
+        spec = toolkits[name]
+        mark = "→" if name in active else " "
+        eff = _effect_mark(spec.get("allowances", []))
+        lines.append(f"  {mark} {name:12} [{eff:20}] {spec.get('description', '')}")
+    lines += [
+        "",
+        cli_render.style("heading", "Legend"),
+        "  →                   accommodated (its narrowing allowances are applied)",
+        "  narrowing           makes the box usable, no reach increase — `sandbox accommodate <tool>`",
+        "  widening            carves a tool OUT of the box (unconfined) — `sandbox exclude <cmd>` (loud, explicit)",
+        "",
+        cli_render.style("heading", "Commands"),
+        "  pkit permissions sandbox toolkit show <name>   the exact allowances + effects",
+        "  pkit permissions sandbox accommodate <tool>…   apply narrowing allowances (or --detect)",
+        "  pkit permissions sandbox exclude <cmd>         carve a command out of the box (widening)",
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def confinement_show(target_root: Path, name: str) -> str:
+    """`sandbox toolkit show <name>` — the toolkit's allowances, each marked."""
+    toolkits = _load_toolkits(target_root)
+    if name not in toolkits:
+        raise PermissionsError(
+            f"no confinement toolkit named {name!r}; run `pkit permissions sandbox toolkit list`."
+        )
+    spec = toolkits[name]
+    active = name in _config_accommodations(target_root)
+    lines = [
+        cli_render.style("title", f"Confinement toolkit: {name} — {spec.get('description', '')}"),
+        f"  accommodated: {'yes' if active else 'no'}",
+    ]
+    if spec.get("detect"):
+        lines.append(f"  detected by: {', '.join(spec['detect'])}")
+    lines.append("")
+    for a in spec.get("allowances", []):
+        eff = a.get("effect", "?")
+        tgt = a.get("value", "(toggle)")
+        lines.append(f"  [{eff:9}] {a['kind']:18} {tgt}")
+        if a.get("note"):
+            lines.append(f"              ↳ {a['note'].strip()}")
+    widening = _widening(spec.get("allowances", []))
+    if widening:
+        lines += [
+            "",
+            "  ⚠ this toolkit has WIDENING allowances — applied only by the explicit",
+            "    `pkit permissions sandbox exclude <cmd>` gesture, never by accommodate/setup.",
+        ]
+    return "\n".join(lines) + "\n"
+
+
+def _detect_tools(target_root: Path, toolkits: dict[str, Any]) -> list[str]:
+    """Tools whose detect globs match files in the project tree."""
+    import fnmatch as _fn
+    found: list[str] = []
+    for name in sorted(toolkits):
+        globs = toolkits[name].get("detect") or []
+        for g in globs:
+            g = g.rstrip("/")
+            if list(target_root.glob(g)) or list(target_root.glob(f"**/{g}")) \
+                    or any(_fn.fnmatch(p.name, g) for p in target_root.iterdir() if p.exists()):
+                found.append(name)
+                break
+    return found
+
+
+def accommodate(target_root: Path, tools: tuple[str, ...] | list[str],
+                detect: bool = False, remove: bool = False) -> str:
+    """Apply (or --remove) the NARROWING allowances of named toolkits to the
+    sandbox. Widening allowances are never applied here — they are surfaced as
+    the explicit `sandbox exclude` gesture. Records the choice in permission-
+    config (committable, narrowing-only). Additive + idempotent."""
+    if not _adapter_installed(target_root, "claude-code"):
+        raise PermissionsError(
+            "the claude-code adapter is not installed; the sandbox is harness-specific."
+        )
+    toolkits = _load_toolkits(target_root)
+    names = list(tools)
+    if detect:
+        detected = _detect_tools(target_root, toolkits)
+        names = sorted(set(names) | set(detected))
+    if not names:
+        return ("no toolkits named or detected. Pass tool names or use --detect "
+                "in a project that uses a known tool.\n")
+    unknown = [n for n in names if n not in toolkits]
+    if unknown:
+        raise PermissionsError(
+            f"unknown toolkit(s): {', '.join(unknown)}; run "
+            f"`pkit permissions sandbox toolkit list`."
+        )
+
+    lines: list[str] = []
+    for tool in names:
+        allowances = toolkits[tool].get("allowances", [])
+        narrowing = _narrowing(allowances)
+        widening = _widening(allowances)
+        if remove:
+            notes = _remove_allowances(target_root, tool)
+            _record_accommodation(target_root, tool, add=False)
+            lines.append(
+                f"  {tool}: removed — {', '.join(notes) if notes else 'no pkit-authored entries left to remove'}"
+            )
+            continue
+        if not narrowing:
+            lines.append(
+                f"  {tool}: nothing to accommodate — its allowances are all WIDENING; "
+                f"run `pkit permissions sandbox exclude {widening[0].get('value', tool)}` "
+                f"to carve it out of the box (explicit, loud)."
+            )
+            continue
+        notes = _apply_allowances(target_root, narrowing, tool)
+        _record_accommodation(target_root, tool, add=True)
+        applied = ", ".join(notes) if notes else "already applied"
+        line = f"  {tool}: ✓ narrowing applied — {applied}"
+        if widening:
+            line += (f"; NOTE this tool also needs WIDENING — run "
+                     f"`pkit permissions sandbox exclude {widening[0].get('value', tool)}` (explicit)")
+        lines.append(line)
+
+    verb = "removed" if remove else "accommodated"
+    head = f"Confinement — {verb} {len(names)} toolkit(s) (narrowing only; the box stays confined):"
+    tail = [""]
+    if not remove:
+        tail.append(_RESTART_NOTE)
+    return head + "\n" + "\n".join(lines) + "\n" + "\n".join(tail) + "\n"
+
+
+def sandbox_exclude(target_root: Path, command: str, remove: bool = False,
+                    weaker_tls: bool = False) -> str:
+    """The WIDENING gesture (ADR-008 rule 4): carve a command out of the box so
+    it runs UNCONFINED. Loud, per-invocation, NEVER persisted to committed
+    config, never proposed by detect, never applied by setup. Provenance-tagged
+    under the synthetic toolkit `_manual` so teardown can find it."""
+    if not _adapter_installed(target_root, "claude-code"):
+        raise PermissionsError(
+            "the claude-code adapter is not installed; the sandbox is harness-specific."
+        )
+    allowance = (
+        {"kind": "weaker-tls", "effect": "widening"} if weaker_tls
+        else {"kind": "exclude-command", "value": command, "effect": "widening"}
+    )
+    target = "weaker TLS isolation" if weaker_tls else f"`{command}`"
+    if remove:
+        # Remove just this manual entry (provenance-scoped to _manual).
+        settings = _read_settings(target_root)
+        sb = settings.get("sandbox")
+        prov = _load_provenance(target_root)
+        key = ("weaker-tls", None) if weaker_tls else ("exclude-command", command)
+        kept = [e for e in prov if e.get("toolkit") != "_manual"
+                or (e["kind"], e.get("value")) != key]
+        if isinstance(sb, dict):
+            if weaker_tls:
+                sb.pop("enableWeakerNetworkIsolation", None)
+            else:
+                lst = _allowance_list(sb, "exclude-command")
+                if lst is not None and command in lst:
+                    lst.remove(command)
+            _write_settings(target_root, settings)
+        _dump_provenance(target_root, kept)
+        return f"removed exclusion: {target} now runs inside the box again.\n"
+
+    notes = _apply_allowances(target_root, [allowance], "_manual")
+    return (
+        f"⚠ WIDENING the boundary: {target} now runs OUTSIDE the OS box — UNCONFINED, "
+        f"with full host filesystem and network reach.\n"
+        f"  {'applied' if notes else 'already excluded'}. This is NOT recorded in any "
+        f"committed file (it lowers the floor; per-operator + per-machine only).\n"
+        f"  It is reported by `pkit permissions sandbox status` and counted by "
+        f"`pkit permissions probe`.\n" + _RESTART_NOTE + "\n"
+    )
+
+
+# ---- setup goals (ADR-007, #279) ---------------------------------------------
+#
+# First instance of the ADR-007 setup-command class: goal-oriented, stepwise,
+# resumable orchestrators over the accepted primitives. The contract (ADR-007,
+# seven rules): composition is the command's named purpose (the explicit
+# opt-in — ADR-002 §64 preserved; `profile activate` stays nudge-only); it
+# owns nothing (every effect below is a primitive's effect); it is resumable
+# and idempotent (the live system is the checkpoint — no state file); it stops
+# honestly at the restart boundary; it declares the goal reached only when the
+# verification proof passes; dangerous flags never ride it; teardown reports
+# residual state loudly.
+
+_SETUP_GOALS: list[tuple[str, str]] = [
+    ("autonomy", "stand up autonomous agents — profile + enforcement + OS sandbox + proof"),
+]
+
+
+def setup_list(target_root: Path) -> str:
+    lines = [
+        cli_render.style("title", "Setup goals — permissions domain (per ADR-007): one command per composite goal,"),
+        "stepwise and resumable; re-run after any manual step to continue.",
+        "",
+    ]
+    for name, gloss in _SETUP_GOALS:
+        lines.append(f"  {name:10} {gloss}")
+    lines += [
+        "",
+        cli_render.style("heading", "Commands"),
+        "  pkit permissions setup <goal>        stand the goal up (resumable; re-run to verify)",
+        "  pkit permissions setup <goal> down   tear the live switches down (residuals reported)",
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def _floor_status(target_root: Path) -> str:
+    """Confinement-floor proof status: proven | unproven | empty. Same
+    reachability primitive and credential list as `probe --live` — never a
+    second hand-maintained list, never any content read."""
+    results = [
+        _reach_attempt(Path(raw).expanduser())
+        for raw in SANDBOX_CREDENTIAL_DENY_READ
+    ]
+    present = [r for r in results if r != "absent"]
+    if not present:
+        return "empty"
+    return "proven" if all(r == "rejected" for r in present) else "unproven"
+
+
+def _command_on_path(cmd: str) -> bool:
+    """Is `cmd` (the head token of an exclude-command value) on PATH? A nudge-only
+    host signal (ADR-010 bounded host-probing) — used to detect a widening tool is
+    in use even without a repo marker. Never gates an auto-apply."""
+    import shutil
+    return shutil.which(cmd.split()[0]) is not None if cmd else False
+
+
+def _detect_signing(target_root: Path) -> tuple[str, str] | None:
+    """If git commit-signing-over-ssh is configured, return (description, command)
+    nudging the socket accommodation the box can't reach. Bounded host-probing
+    (git config) for a NUDGE only (ADR-010); never auto-applied. Recognizes the
+    1Password helper to name its socket precisely; generic otherwise. Returns None
+    when signing isn't configured or the socket is already accommodated."""
+    import subprocess
+
+    def _cfg(key: str) -> str:
+        try:
+            r = subprocess.run(["git", "config", "--get", key], cwd=target_root,
+                               capture_output=True, text=True, check=False)
+        except (OSError, ValueError):
+            return ""
+        return r.stdout.strip() if r.returncode == 0 else ""
+
+    if _cfg("gpg.format") != "ssh":
+        return None
+    program = _cfg("gpg.ssh.program")
+    if not program:
+        return None
+    live = {_expand(s) for s in (_sandbox_block(target_root).get("network") or {}).get("allowUnixSockets", [])}
+    low = program.lower()
+    if "op-ssh-sign" in low or "1password" in low:
+        sock = "~/.1password/agent.sock"
+        if _expand(sock) in live:
+            return None  # already accommodated
+        return ("commit-signing via 1Password (op-ssh-sign) — the box can't reach its agent socket",
+                f"pkit permissions sandbox accommodate --socket {sock} --name signing")
+    return (f"commit-signing via {os.path.basename(program)} — the box can't reach its agent socket",
+            "pkit permissions sandbox accommodate --socket <its-agent-socket> --name signing")
+
+
+_VOLATILE_SOCK_PREFIXES = (
+    "/var/run/com.apple.launchd.",
+    "/private/var/run/com.apple.launchd.",
+    "/private/tmp/com.apple.launchd.",
+)
+
+
+def _setup_stability_tip(target_root: Path) -> list[str]:
+    """ADR-010 detect-to-nudge: when $SSH_AUTH_SOCK is a *volatile* per-session
+    launchd path (rotates on reboot, so the accommodation goes stale) AND a
+    *stable* agent socket (1Password) is present, emit a one-time tip guiding the
+    operator to route SSH through the stable socket — truly run-once. Bounded
+    host-probing (env + a socket's existence), nudge-only, nothing auto-applied.
+    Self-vanishing: once $SSH_AUTH_SOCK is non-volatile this returns []. Conforms
+    to the CLI output convention (Title-case header, whitespace, no rules)."""
+    sock = (os.environ.get("SSH_AUTH_SOCK") or "").strip()
+    if not sock:
+        return []
+    resolved = _expand(sock)
+    if not any(resolved.startswith(p) for p in _VOLATILE_SOCK_PREFIXES):
+        return []  # already stable → no tip
+    if not Path("~/.1password/agent.sock").expanduser().exists():
+        return []  # no stable alternative to recommend
+    shell = os.path.basename(os.environ.get("SHELL", "") or "")
+    rc = {"zsh": "~/.zshrc", "bash": "~/.bashrc"}.get(shell, "your shell startup file")
+    return [
+        "",
+        "  " + cli_render.style("heading", "Optional — make SSH survive reboots (run-once)"),
+        "",
+        "    Your SSH agent socket changes on every reboot, so you'd re-run setup after each one.",
+        "    To make autonomy truly run-once, route SSH through 1Password's stable socket:",
+        "",
+        '      1. 1Password → Settings → Developer → turn on "Use the SSH agent".',
+        f"      2. Add this line to {rc}:",
+        "             export SSH_AUTH_SOCK=~/.1password/agent.sock",
+        "      3. Open a new terminal, then run `pkit permissions setup autonomy` once more.",
+        "",
+        "    After that the socket never moves — set once, done.",
+    ]
+
+
+def _setup_next_steps(target_root: Path, widening: list[tuple[str, str]],
+                      host_nudges: list[tuple[str, str]]) -> list[str]:
+    """Render the consolidated NEXT block: explicit gestures the project needs but
+    setup will NOT run for the operator — widening (lowers the box) and
+    narrowing-but-unresolvable (signing socket, host nudges). Each item is a
+    description line + the command on its own indented line (copy-paste ready).
+    Empty list if none."""
+    signing = _detect_signing(target_root)
+    if not (widening or host_nudges or signing):
+        return []
+
+    # Title-case header + blank-line zoning, NO horizontal rules — per the CLI
+    # output convention (.pkit/cli/README.md "Command output conventions"): zones
+    # are marked by header case + whitespace, never drawn rules. Each command
+    # goes on its own indented line so it's copy-paste-obvious.
+    def _item(desc: str, command: str) -> list[str]:
+        return ["", f"    {desc}:", f"        `{command}`"]
+
+    out = ["", "  " + cli_render.style("heading", "Next — run these yourself (setup never lowers the box for you)")]
+    for tool, cmd in widening:
+        out += _item(
+            f"{tool}: runs UNCONFINED outside the box (widening)",
+            f"pkit permissions sandbox exclude {cmd}",
+        )
+    if signing:
+        out += _item(f"{signing[0]} (narrowing — box stays confined)", signing[1])
+    for desc, command in host_nudges:
+        out += _item(desc, command)
+    out += [
+        "",
+        "    (each persists once run; `accommodate` choices re-apply on every future setup.)",
+    ]
+    return out
+
+
+def _setup_accommodations(target_root: Path, profile: str) -> tuple[list[str], list[tuple[str, str]]]:
+    """The narrowing-apply step of `setup autonomy` (ADR-008): on first run, seed
+    the active profile's recommended toolkits + detected tools into permission-
+    config (narrowing only); then apply every recorded toolkit's NARROWING
+    allowances. Returns (applied tool names, widening nudges as (tool, cmd)).
+    Widening is NEVER applied here — only surfaced as an explicit-gesture nudge."""
+    toolkits = _load_toolkits(target_root)
+    acc = _config_accommodations(target_root)
+    if not acc:
+        res = _resolve_profile(target_root, profile)
+        recommended = (
+            [_toolkit_name(t) for t in (res[1].get("recommended_accommodations") or [])]
+            if res else []
+        )
+        detected = _detect_tools(target_root, toolkits)
+        seed = sorted(set(recommended) | set(detected))
+        for t in seed:
+            if t in toolkits and _narrowing(toolkits[t].get("allowances", [])):
+                _record_accommodation(target_root, t, add=True)
+        acc = _config_accommodations(target_root)
+
+    applied: list[str] = []
+    for t in acc:
+        if t not in toolkits:
+            continue
+        narrowing = _narrowing(toolkits[t].get("allowances", []))
+        if narrowing:
+            _apply_allowances(target_root, narrowing, t)
+            applied.append(t)
+
+    # Widening nudges: tools that need carving out of the box — surfaced, never
+    # applied (ADR-008 rule 4). A widening tool counts as "in use" if a repo
+    # marker matches OR its command is on PATH (the host signal makes gh-style
+    # detection robust; nudge-only per ADR-010). Skip anything already excluded.
+    sb = _sandbox_block(target_root)
+    excluded = set(sb.get("excludedCommands") or [])
+    in_use = set(_detect_tools(target_root, toolkits))
+    for t in toolkits:
+        for w in _widening(toolkits[t].get("allowances", [])):
+            if w.get("kind") == "exclude-command" and _command_on_path(w.get("value", "")):
+                in_use.add(t)
+    nudges: list[tuple[str, str]] = []
+    for t in sorted(in_use):
+        for w in _widening(toolkits[t].get("allowances", [])):
+            cmd = w.get("value")
+            if w.get("kind") == "exclude-command" and cmd and cmd not in excluded:
+                nudges.append((t, cmd))
+    return applied, nudges
+
+
+def setup_autonomy(target_root: Path, profile: str = "autonomous") -> tuple[str, bool]:
+    """Stand up the autonomy goal (ADR-007 first instance). Returns (report, ok);
+    ok is False only when verification finds the decision layer BROKEN."""
+    lines = [
+        f"Setup goal: autonomy — autonomous agents (ADR-007)   profile: {profile}",
+        "",
+    ]
+    # [1/4] intent — the profile (grants + posture), applied. Primitive: activate_profile.
+    model = _load_model(target_root)
+    if model.get("active_profile") == profile:
+        lines.append(f"  [1/4] intent        ✓ already — profile {profile!r} active")
+    else:
+        activate_profile(target_root, profile, apply_after=True)
+        lines.append(
+            f"  [1/4] intent        ✓ done — profile {profile!r} activated "
+            f"(grants layered under yours + applied)"
+        )
+    # [2/4] enforcement — the PreToolUse hook. Primitive: enable.
+    if _enforcement_on(target_root):
+        lines.append("  [2/4] enforcement   ✓ already — PreToolUse hook registered")
+    else:
+        enable(target_root)
+        lines.append(
+            "  [2/4] enforcement   ✓ done — PreToolUse hook registered + "
+            "native guardrail denies ensured"
+        )
+    # [3/4] confinement — the OS sandbox, always fail-closed. Primitive:
+    # sandbox_enable (no flag pass-through per ADR-007 rule 6).
+    sb = _sandbox_block(target_root)
+    was_on = sb.get("enabled") is True
+    if was_on and sb.get("failIfUnavailable") is True:
+        lines.append("  [3/4] confinement   ✓ already — OS sandbox enabled (fail-closed)")
+    else:
+        sandbox_enable(target_root)
+        lines.append(
+            "  [3/4] confinement   ✓ done — OS sandbox enabled "
+            "(fail-closed, credential denyRead floor)"
+        )
+
+    # Confinement accommodations (ADR-008 + ADR-010 host): make the box usable —
+    # narrowing only, applied automatically. Rendered as a hanging-indent
+    # continuation of the [3/4] step (aligned under the status column), so it
+    # reads as a detail OF confinement, not a peer step.
+    applied, nudges = _setup_accommodations(target_root, profile)
+    host_applied, host_nudges = _setup_host_accommodations(target_root)
+    applied = applied + host_applied
+    cont = " " * 22  # aligns step continuations under the [N/4] status column
+    if applied:
+        lines.append(f"{cont}accommodations: {', '.join(applied)} — reachable; box stays confined")
+    else:
+        lines.append(f"{cont}accommodations: none needed (no known tool detected)")
+
+    # Action blocks are HELD and appended after the step spine + verdict, so they
+    # don't interrupt [3/4]→[4/4]. `Next` = explicit gestures you run; the
+    # stability tip is `Optional`. Order signals priority (Next before Optional).
+    action_blocks = (
+        _setup_next_steps(target_root, nudges, host_nudges)
+        + _setup_stability_tip(target_root)
+    )
+
+    if not was_on:
+        # The honest boundary (rule 4): sandbox.enabled is not hot-reloaded.
+        lines += [
+            "  [4/4] verification  → blocked: sandbox.enabled is not hot-reloaded",
+            f"{cont}restart the session, then re-run — finished steps are skipped and the floor is proven",
+            "",
+            "  " + cli_render.style("strong", "Result: configured. Restart the session and re-run to enable the box and prove the goal."),
+        ]
+        return "\n".join(lines + action_blocks) + "\n", True
+
+    # [4/4] verification — the goal is reached only when the proof passes
+    # (rule 5). Decision layer via the probe suite; confinement floor via the
+    # same reachability primitive `probe --live` uses.
+    _report, decisions_ok = probe(target_root, live=False)
+    if not decisions_ok:
+        lines += [
+            "  [4/4] verification  ✗ BROKEN — the live decision layer diverges from the declared model",
+            f"{cont}run `pkit permissions probe` for the per-probe detail",
+            "",
+            "  " + cli_render.style("strong", "Result: BROKEN — fix the decision layer before relying on autonomy."),
+        ]
+        return "\n".join(lines + action_blocks) + "\n", False
+    floor = _floor_status(target_root)
+    if floor == "proven":
+        lines += [
+            "  [4/4] verification  ✓ decision layer proven · credential floor REJECTED by the OS",
+            "",
+            "  " + cli_render.style("strong", "Result: goal reached — autonomous agents: configured, confined, and proven."),
+        ]
+        return "\n".join(lines + action_blocks) + "\n", True
+    lines += [
+        "  [4/4] verification  ✓ decision layer proven · OS confinement floor not provable from here",
+        f"{cont}you're outside the box (not yet restarted); re-run after restart — or `pkit permissions probe --live` — to prove it",
+        "",
+        "  " + cli_render.style("strong", "Result: configured and decision-proven. One step left: restart the session, then re-run to prove the OS confinement floor."),
+    ]
+    return "\n".join(lines + action_blocks) + "\n", True
+
+
+def setup_autonomy_down(target_root: Path) -> str:
+    """Tear down the autonomy goal's live switches; report residual state
+    loudly (ADR-007 rule 7 — never a bare success)."""
+    lines = [cli_render.style("title", "Teardown: autonomy — reversing the live switches (ADR-007)"), ""]
+    msg = disable(target_root)
+    lines.append(
+        "  enforcement   ✓ " + ("hook already off" if "already" in msg
+                                else "PreToolUse hook stripped (guardrail denies stay)")
+    )
+    msg = sandbox_disable(target_root)
+    lines.append(
+        "  confinement   ✓ " + ("sandbox already off" if "already" in msg
+                                else "sandbox disabled (restart to drop the running box)")
+    )
+    model = _load_model(target_root)
+    active = model.get("active_profile")
+    lines += ["", "  " + cli_render.style("heading", "residual (deliberately left — review it):")]
+    if active:
+        lines.append(
+            f"    · profile {active!r} is STILL ACTIVE in the model "
+            f"(posture {model.get('posture', 'lenient')}) — now UNENFORCED: "
+            f"nothing checks or confines it"
+        )
+    else:
+        lines.append("    · no active profile; manual grants (if any) remain in the model")
+    prov = _load_provenance(target_root)
+    narrowing_left = [e for e in prov if e.get("toolkit") != "_manual"]
+    widening_left = [e for e in prov if e.get("toolkit") == "_manual"]
+    if narrowing_left:
+        tools = sorted({e.get("toolkit") for e in narrowing_left})
+        lines.append(
+            f"    · narrowing accommodations remain ({', '.join(tools)}) — harmless "
+            f"(they don't widen the boundary); `sandbox accommodate --remove <tool>` to drop"
+        )
+    if widening_left:
+        cmds = ", ".join(e.get("value") or "weaker-tls" for e in widening_left)
+        lines.append(
+            f"    · ⚠ WIDENING exclusions remain ({cmds}) — these run UNCONFINED; "
+            f"`sandbox exclude --remove <cmd>` to put them back in the box"
+        )
+    lines += [
+        "    · sandbox operator keys (excludedCommands, denyRead floor, …) left in settings",
+        "    · realized allow rules from earlier `apply` runs remain in .claude/settings.json",
+        "",
+        "  lower intent too: `pkit permissions profile activate read-only`   · "
+        "re-arm: `pkit permissions setup autonomy`",
+    ]
+    return "\n".join(lines) + "\n"

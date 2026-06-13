@@ -1,0 +1,63 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "project-kit"
+description = "Methodology framework for AI-assisted software projects"
+requires-python = ">=3.11"
+dynamic = ["version"]
+authors = [{ name = "Ales Kalfas", email = "kalfas.ales@gmail.com" }]
+license = { text = "MIT" }
+dependencies = [
+    "click>=8.1",
+    "ruamel.yaml>=0.18",
+    "packaging>=24.0",
+    "jsonschema>=4.20",
+]
+
+[project.scripts]
+pkit = "project_kit.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+    "pyright>=1.1.380",
+]
+
+[tool.hatch.version]
+path = ".pkit/VERSION"
+pattern = "^(?P<version>[0-9]+\\.[0-9]+\\.[0-9]+)$"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/project_kit"]
+
+[tool.hatch.build.targets.wheel.force-include]
+".pkit/VERSION" = "project_kit/_kit_version.txt"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",     # pycodestyle errors
+    "F",     # pyflakes
+    "I",     # isort
+    "UP",    # pyupgrade
+    "B",     # flake8-bugbear
+    "SIM",   # flake8-simplify
+    "RUF",   # ruff-specific
+]
+
+[tool.pyright]
+include = ["src", "tests"]
+typeCheckingMode = "strict"
+pythonVersion = "3.11"
+reportMissingTypeStubs = false  # click stubs are bundled; no third-party stubs needed today
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"

@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+#
+# pkit pre-push gate: runs the same check aggregator CI runs (scripts/check.sh)
+# before code leaves your machine — fast local feedback instead of waiting on CI.
+#
+# Install once per clone:  git config core.hooksPath .githooks
+# Bypass in a pinch:        git push --no-verify
+#
+# (core.hooksPath is per-clone local config, not version-controlled, so each
+# clone opts in explicitly.)
+
+exec "$(git rev-parse --show-toplevel)/scripts/check.sh"

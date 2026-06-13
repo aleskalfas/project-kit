@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Decision-record system
+    url: https://github.com/aleskalfas/project-kit/blob/main/.pkit/decisions/README.md
+    about: Read how decisions are recorded before filing a decision issue.
+  - name: Workflow reference
+    url: https://github.com/aleskalfas/project-kit/blob/main/.pkit/workflow/README.md
+    about: Labels, lifecycle, hand-offs.
+  - name: Contributor guidance
+    url: https://github.com/aleskalfas/project-kit/blob/main/CONTRIBUTING.md
+    about: Math/physics framing, COR-authoring disciplines (axiom, project-neutrality, principles-not-inventory).

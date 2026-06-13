@@ -1,0 +1,22 @@
+# Personal / per-machine Claude Code state — not committed.
+.claude/settings.local.json
+.claude/worktrees/
+
+# Python build / venv / cache
+.venv/
+__pycache__/
+*.egg-info/
+dist/
+build/
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+
+# Re-include kit-managed skills and agents under .claude/ — the symlinks
+# (skills) and resolved copies (agents) are tracked so a clone gets the
+# same environment without needing to run the deploy scripts first.
+# Negates any higher-level rule that may catch .claude/.
+!.claude/skills/
+!.claude/skills/**
+!.claude/agents/
+!.claude/agents/**

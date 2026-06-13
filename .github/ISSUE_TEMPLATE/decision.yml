@@ -1,0 +1,66 @@
+name: Decision (COR / PRJ)
+description: Propose or ratify an architectural decision.
+title: "decision: "
+labels: ["kind:decision"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this to propose a new architectural decision or re-ratify an existing one. The decision file itself lives at `.pkit/decisions/core/COR-NNN-*.md` (project-kit's core methodology) or `.pkit/decisions/project/PRJ-NNN-*.md` (project-kit's own project-side decisions). This issue tracks the drafting and review work; the file carries the decision content.
+  - type: dropdown
+    id: namespace
+    attributes:
+      label: Namespace
+      description: COR for project-kit's core methodology; PRJ for project-kit's own project-side decisions.
+      options:
+        - "PRJ — project-side decision"
+        - "COR — core-side decision (methodology)"
+    validations:
+      required: true
+  - type: textarea
+    id: question
+    attributes:
+      label: The question
+      description: One paragraph — what situation is forcing a decision?
+    validations:
+      required: true
+  - type: textarea
+    id: options
+    attributes:
+      label: Options considered
+      description: List the alternatives you've thought about, including ones you'll reject.
+    validations:
+      required: true
+  - type: textarea
+    id: proposed
+    attributes:
+      label: Proposed direction
+      description: Your current preference. Can change during review.
+  - type: textarea
+    id: related_decisions
+    attributes:
+      label: Related decisions
+      description: COR-* / PRJ-* this supersedes, depends on, or contradicts.
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - "priority:0-top"
+        - "priority:1-high"
+        - "priority:2-medium"
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area(s)
+      multiple: true
+      options:
+        - "area:decisions"
+        - "area:agents"
+        - "area:workflow"
+        - "area:cli"
+        - "area:rules"
+    validations:
+      required: true

@@ -1,0 +1,24 @@
+# Adopter overlay (per COR-013). project-kit is its own first adopter,
+# so this file populates the agent-template categories with values
+# meaningful for the methodology source itself. Adopting projects ship
+# their own overlay with project-specific paths.
+
+workflow-docs:
+  - CONTRIBUTING.md
+
+project-root-docs:
+  - CLAUDE.md
+  - CONTRIBUTING.md
+
+# Architecture documentation roots (per COR-024). project-kit's
+# architectural surface is distributed across CONTRIBUTING.md,
+# and the COR records. Adopters with conventional doc layouts will
+# point these at docs/architecture/ and docs/architecture/decisions/.
+architecture-docs:
+  - CONTRIBUTING.md
+  - .pkit/decisions/core/
+
+# ADR records (per COR-024 + COR-025). Project-kit has adopted ADRs for
+# its architectural decisions per PRJ-005; records land here.
+adr-records:
+  - docs/architecture/decisions/
