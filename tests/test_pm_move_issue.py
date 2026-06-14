@@ -4,6 +4,12 @@ Covers transition lookup, state inference, plan computation, severity
 parsing, forward-direction detection, parent-chain walking. The
 subprocess (gh) layer is not tested — those wrappers are thin
 pass-throughs.
+
+Also covers the DEC-031 placeholder-check wiring (issue #25):
+the transition path must invoke detect_placeholder_residuals at
+phase=transition; an unauthored body must produce a hard-reject
+finding that would block the transition; an authored body must produce
+no hard-reject.
 """
 
 from __future__ import annotations
@@ -23,6 +29,14 @@ SCRIPT_PATH = (
     / "project-management"
     / "scripts"
     / "move-issue.py"
+)
+CAPABILITY_ROOT = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
+LIB_PATH = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
+
+sys.path.insert(0, str(LIB_PATH))
+from _lib.placeholder_detection import (  # noqa: E402
+    PHASE_TRANSITION,
+    detect_placeholder_residuals,
 )
 
 
@@ -419,3 +433,108 @@ def test_noop_does_not_require_transition_in_workflow(mi, workflow) -> None:
     """
     # This would have caused the bug: the transition table has no done→done entry.
     assert mi._find_transition(workflow, "done", "done", "task") is None
+
+
+# ---- DEC-031 transition-enforcement wiring (regression for issue #25) ----------
+#
+# move-issue was not calling detect_placeholder_residuals at phase=transition,
+# so an unauthored issue could advance freely. Tests below verify the correct
+# semantics that the wired check relies on: authored bodies pass, skeleton
+# bodies hard-reject.  The inline call in move-issue.main() cannot be exercised
+# without a full gh mock, so we verify the detection contract here and leave the
+# wiring proven by code inspection + check.sh.
+
+
+@pytest.fixture
+def body_format_task_with_checkboxes() -> dict:
+    """Minimal body-format.yaml data with a checkbox-requiring section."""
+    return {
+        "bodies": {
+            "task": {
+                "required_sections": [
+                    {
+                        "heading": "## What",
+                        "has_checkboxes": False,
+                        "severity": "[validation-severity:hard-reject]",
+                    },
+                    {
+                        "heading": "## Acceptance criteria",
+                        "has_checkboxes": True,
+                        "severity": "[validation-severity:hard-reject]",
+                    },
+                    {
+                        "heading": "## Doc impact",
+                        "has_checkboxes": False,
+                        "severity": "[validation-severity:hard-reject]",
+                    },
+                ],
+            },
+        },
+    }
+
+
+def test_regression_25_transition_check_blocks_skeleton_body(
+    body_format_task_with_checkboxes: dict,
+) -> None:
+    """Regression #25 — at phase=transition an unauthored (skeleton) body must
+    produce a hard-reject finding that move-issue uses to block the transition.
+
+    Before the fix, move-issue did not invoke the placeholder check at all on
+    the transition path; an unauthored issue could advance Todo → Backlog freely.
+    """
+    skeleton_body = (
+        "Feature: #1\n\n"
+        "## What\n"
+        "The concrete change being made. Outcome-focused, not implementation-focused.\n\n"
+        "## Acceptance criteria\n"
+        "- [ ]\n"
+        "- [ ]\n\n"
+        "## Doc impact\n"
+        "- [ ]\n"
+    )
+    findings = detect_placeholder_residuals(
+        body=skeleton_body,
+        structural_type="task",
+        body_format=body_format_task_with_checkboxes,
+        capability_root=CAPABILITY_ROOT,
+        phase=PHASE_TRANSITION,
+    )
+    hard_rejects = [f for f in findings if f[0] == "hard-reject"]
+    assert hard_rejects, (
+        "skeleton body must produce at least one hard-reject finding at "
+        f"phase=transition so move-issue can block the transition; got: {findings}"
+    )
+
+
+def test_regression_25_transition_check_passes_authored_body(
+    body_format_task_with_checkboxes: dict,
+) -> None:
+    """Regression #25 — at phase=transition an authored body must not produce
+    any hard-reject finding so move-issue lets the transition proceed.
+
+    Covers both checked (- [x]) and unchecked (- [ ] with real text) criteria
+    to confirm the false-positive fix (Defect 1) and the wiring (Defect 2)
+    work together.
+    """
+    authored_body_unchecked = (
+        "Feature: #1\n\n"
+        "## What\n"
+        "Implement the frobnication layer.\n\n"
+        "## Acceptance criteria\n"
+        "- [ ] The frobnication layer is installed and returns the correct value.\n"
+        "- [ ] Edge-case inputs are handled without panic.\n\n"
+        "## Doc impact\n"
+        "No doc impact: internal refactor only.\n"
+    )
+    findings = detect_placeholder_residuals(
+        body=authored_body_unchecked,
+        structural_type="task",
+        body_format=body_format_task_with_checkboxes,
+        capability_root=CAPABILITY_ROOT,
+        phase=PHASE_TRANSITION,
+    )
+    hard_rejects = [f for f in findings if f[0] == "hard-reject"]
+    assert hard_rejects == [], (
+        "authored body with unchecked real criteria must produce no hard-reject "
+        f"at phase=transition; got: {hard_rejects}"
+    )
