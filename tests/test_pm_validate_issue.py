@@ -588,3 +588,292 @@ def test_new_milestone_form_number_must_match_in_text_and_link(
     parent_findings = [f for f in findings if "parent-ref" in f.label]
     assert len(parent_findings) == 1
     assert parent_findings[0].severity == "hard-reject"
+
+
+# ---- placeholder detection (DEC-031) --------------------------------
+
+CAPABILITY_ROOT = (
+    REPO_ROOT
+    / ".pkit"
+    / "capabilities"
+    / "project-management"
+)
+
+
+@pytest.fixture
+def body_format_with_checkboxes() -> dict:
+    """body-format fixture that declares has_checkboxes: true for task sections."""
+    return {
+        "bodies": {
+            "task": {
+                "required_sections": [
+                    {
+                        "heading": "## What",
+                        "severity": "[validation-severity:hard-reject]",
+                        "has_checkboxes": False,
+                        "purpose": "What",
+                    },
+                    {
+                        "heading": "## Acceptance criteria",
+                        "severity": "[validation-severity:hard-reject]",
+                        "has_checkboxes": True,
+                        "purpose": "Criteria",
+                    },
+                    {
+                        "heading": "## Doc impact",
+                        "severity": "[validation-severity:hard-reject]",
+                        "has_checkboxes": False,
+                        "purpose": "Docs",
+                    },
+                ],
+            },
+            "epic": {
+                "required_sections": [
+                    {
+                        "heading": "## Outcome",
+                        "severity": "[validation-severity:hard-reject]",
+                        "has_checkboxes": False,
+                        "purpose": "Outcome",
+                    },
+                    {
+                        "heading": "## Success criteria",
+                        "severity": "[validation-severity:hard-reject]",
+                        "has_checkboxes": True,
+                        "purpose": "Criteria",
+                    },
+                ],
+            },
+        },
+    }
+
+
+def _make_full_task_issue(body: str, labels: list[str] | None = None) -> dict:
+    """Helper: task issue with the given body."""
+    return {
+        "title": "[Task] Some authored task",
+        "body": body,
+        "labels": [{"name": lbl} for lbl in (labels or ["type:feature"])],
+        "assignees": [{"login": "alice"}],
+    }
+
+
+# -- authored body passes without placeholder findings ----------------
+
+
+def test_authored_task_body_no_placeholder_findings(
+    vi,
+    issue_types,
+    titles,
+    body_format_with_checkboxes,
+    board_config,
+) -> None:
+    """A fully authored body with filled checkbox items produces no placeholder findings."""
+    body = (
+        "Feature: #1\n\n"
+        "## What\n"
+        "Implement the frobnication layer.\n\n"
+        "## Acceptance criteria\n"
+        "- [x] The frobnication layer is installed.\n"
+        "- [x] Tests pass.\n\n"
+        "## Doc impact\n"
+        "No doc impact: internal refactor only.\n"
+    )
+    issue = _make_full_task_issue(body)
+    findings = vi._validate_issue(
+        issue=issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format_with_checkboxes,
+        config=board_config,
+        capability_root=CAPABILITY_ROOT,
+        phase="transition",
+    )
+    placeholder_findings = [
+        f for f in findings if f.label.startswith("body.placeholder")
+    ]
+    assert placeholder_findings == [], f"unexpected: {placeholder_findings}"
+
+
+# -- raw skeleton: empty checkbox section → hard-reject at transition --
+
+
+def test_empty_checkbox_section_is_hard_reject_at_transition(
+    vi,
+    issue_types,
+    titles,
+    body_format_with_checkboxes,
+    board_config,
+) -> None:
+    """A required checkbox section with zero filled items is a hard-reject at transition."""
+    body = (
+        "Feature: #1\n\n"
+        "## What\n"
+        "The concrete change being made. Outcome-focused, not implementation-focused.\n\n"
+        "## Acceptance criteria\n"
+        "- [ ]\n"
+        "- [ ]\n\n"
+        "## Doc impact\n"
+        "- [ ]\n"
+    )
+    issue = _make_full_task_issue(body)
+    findings = vi._validate_issue(
+        issue=issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format_with_checkboxes,
+        config=board_config,
+        capability_root=CAPABILITY_ROOT,
+        phase="transition",
+    )
+    cb_findings = [f for f in findings if f.label == "body.placeholder.empty-checkbox-section"]
+    assert len(cb_findings) >= 1, f"expected at least one finding, got: {findings}"
+    assert all(f.severity == "hard-reject" for f in cb_findings)
+
+
+# -- raw skeleton: empty checkbox section → warning at create ----------
+
+
+def test_empty_checkbox_section_is_warning_at_create(
+    vi,
+    issue_types,
+    titles,
+    body_format_with_checkboxes,
+    board_config,
+) -> None:
+    """A required checkbox section with zero filled items is only a warning at create."""
+    body = (
+        "Feature: #1\n\n"
+        "## What\n"
+        "The concrete change being made. Outcome-focused, not implementation-focused.\n\n"
+        "## Acceptance criteria\n"
+        "- [ ]\n"
+        "- [ ]\n\n"
+        "## Doc impact\n"
+        "- [ ]\n"
+    )
+    issue = _make_full_task_issue(body)
+    findings = vi._validate_issue(
+        issue=issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format_with_checkboxes,
+        config=board_config,
+        capability_root=CAPABILITY_ROOT,
+        phase="create",
+    )
+    cb_findings = [f for f in findings if f.label == "body.placeholder.empty-checkbox-section"]
+    assert len(cb_findings) >= 1, f"expected at least one finding, got: {findings}"
+    assert all(f.severity == "warning" for f in cb_findings), (
+        f"expected all warnings at create phase, got: {[f.severity for f in cb_findings]}"
+    )
+
+
+# -- lenient: trailing empty box alongside filled items is OK ----------
+
+
+def test_trailing_empty_checkbox_alongside_filled_items_is_ok(
+    vi,
+    issue_types,
+    titles,
+    body_format_with_checkboxes,
+    board_config,
+) -> None:
+    """A section with some filled and some empty checkboxes must NOT trigger the signal."""
+    body = (
+        "Feature: #1\n\n"
+        "## What\n"
+        "Implement the frobnication layer.\n\n"
+        "## Acceptance criteria\n"
+        "- [x] The frobnication layer is installed.\n"
+        "- [ ] Leftover empty box.\n\n"  # trailing empty — lenient rule: should pass
+        "## Doc impact\n"
+        "No doc impact: internal refactor only.\n"
+    )
+    issue = _make_full_task_issue(body)
+    findings = vi._validate_issue(
+        issue=issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format_with_checkboxes,
+        config=board_config,
+        capability_root=CAPABILITY_ROOT,
+        phase="transition",
+    )
+    cb_findings = [
+        f for f in findings if f.label == "body.placeholder.empty-checkbox-section"
+    ]
+    assert cb_findings == [], f"unexpected findings: {cb_findings}"
+
+
+# -- placeholder prose: surviving template text → warning -------------
+
+
+def test_surviving_template_prose_is_warning(
+    vi,
+    issue_types,
+    titles,
+    body_format_with_checkboxes,
+    board_config,
+) -> None:
+    """A body still containing the template's placeholder prose emits a warning."""
+    # Use the literal placeholder prose from Task.md:
+    # "The concrete change being made. Outcome-focused, not implementation-focused."
+    body = (
+        "Feature: #1\n\n"
+        "## What\n"
+        "The concrete change being made. Outcome-focused, not implementation-focused.\n\n"
+        "## Acceptance criteria\n"
+        "- [x] Something real.\n\n"
+        "## Doc impact\n"
+        "No doc impact: internal refactor only.\n"
+    )
+    issue = _make_full_task_issue(body)
+    findings = vi._validate_issue(
+        issue=issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format_with_checkboxes,
+        config=board_config,
+        capability_root=CAPABILITY_ROOT,
+        phase="transition",
+    )
+    prose_findings = [f for f in findings if f.label == "body.placeholder.template-prose"]
+    assert len(prose_findings) == 1, f"expected 1 prose finding, got: {findings}"
+    assert prose_findings[0].severity == "warning"
+
+
+# -- no false positive when capability_root is None -------------------
+
+
+def test_no_placeholder_check_when_no_capability_root(
+    vi,
+    issue_types,
+    titles,
+    body_format_with_checkboxes,
+    board_config,
+) -> None:
+    """When capability_root is None the placeholder check is skipped (no crash)."""
+    body = (
+        "Feature: #1\n\n"
+        "## What\n"
+        "The concrete change being made. Outcome-focused, not implementation-focused.\n\n"
+        "## Acceptance criteria\n"
+        "- [ ]\n\n"
+        "## Doc impact\n"
+        "- [ ]\n"
+    )
+    issue = _make_full_task_issue(body)
+    # Should not raise, and should produce no placeholder findings.
+    findings = vi._validate_issue(
+        issue=issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format_with_checkboxes,
+        config=board_config,
+        capability_root=None,  # explicitly no root
+        phase="transition",
+    )
+    placeholder_findings = [
+        f for f in findings if f.label.startswith("body.placeholder")
+    ]
+    assert placeholder_findings == []

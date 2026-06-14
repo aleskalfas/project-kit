@@ -52,6 +52,11 @@ from _lib.membership import (  # noqa: E402
     resolve_capability_root,
     resolve_invoker_identity,
 )
+from _lib.placeholder_detection import (  # noqa: E402
+    PHASE_CREATE,
+    PHASE_TRANSITION,
+    detect_placeholder_residuals,
+)
 
 
 SEVERITY_HARD_REJECT = "hard-reject"
@@ -88,6 +93,17 @@ def main() -> int:
         help=(
             "Path to the installed capability's directory "
             f"(default: <repo-root>/.pkit/capabilities/{CAPABILITY_NAME}/)."
+        ),
+    )
+    parser.add_argument(
+        "--phase",
+        choices=(PHASE_CREATE, PHASE_TRANSITION),
+        default=PHASE_TRANSITION,
+        help=(
+            "Validation phase. 'create' — body was just stamped from the "
+            "template (empty-checkbox-section is a warning, not a hard-reject). "
+            "'transition' (default) — body is being validated at a lifecycle "
+            "transition; empty-checkbox-section is a hard-reject per DEC-031."
         ),
     )
     parser.add_argument(
@@ -136,6 +152,8 @@ def main() -> int:
         body_format=body_format,
         config=config,
         mandatory_state=mandatory_state,
+        capability_root=capability_root,
+        phase=args.phase,
     )
 
     if args.json:
@@ -170,6 +188,8 @@ def _validate_issue(
     body_format: dict,
     config: dict,
     mandatory_state: dict | None = None,
+    capability_root: Path | None = None,
+    phase: str = PHASE_TRANSITION,
 ) -> list[Finding]:
     findings: list[Finding] = []
     title = str(issue.get("title", ""))
@@ -359,6 +379,17 @@ def _validate_issue(
                             f"form {parent_ref_form!r}; got {first_line!r}.",
                         )
                     )
+
+        # Residual-placeholder detection per DEC-031.
+        if capability_root is not None:
+            for sev, label, detail in detect_placeholder_residuals(
+                body=body,
+                structural_type=structural_type,
+                body_format=body_format,
+                capability_root=capability_root,
+                phase=phase,
+            ):
+                findings.append(Finding(sev, label, detail))
 
     # Universal body rules — minimal subset.
     if re.search(r"^# [^#]", body, flags=re.MULTILINE):

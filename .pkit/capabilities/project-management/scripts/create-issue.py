@@ -59,6 +59,10 @@ from _lib.membership import (  # noqa: E402
     resolve_invoker_identity,
 )
 from _lib.milestone import resolve_milestone  # noqa: E402
+from _lib.placeholder_detection import (  # noqa: E402
+    PHASE_CREATE,
+    detect_placeholder_residuals,
+)
 
 
 VALID_STRUCTURAL_TYPES = ("epic", "feature", "umbrella", "task")
@@ -207,6 +211,9 @@ def main() -> int:
     titles = _read_yaml(
         capability_root / "schemas" / "titles.yaml", yaml_loader
     )
+    body_format = _read_yaml(
+        capability_root / "schemas" / "body-format.yaml", yaml_loader
+    )
     config = _read_yaml(
         capability_root / "project" / "config.yaml", yaml_loader
     )
@@ -339,6 +346,13 @@ def main() -> int:
             )
         body = _compose_body(template_path, parent_ref=expected_parent_ref)
 
+    # Residual-placeholder check at create-phase (DEC-031).
+    # Emits warnings when the composed body is still the raw skeleton so
+    # the author sees the unfinished state from the first moment.  Does
+    # NOT block filing — the hard-reject gate fires at the first
+    # lifecycle transition via validate-issue --phase transition.
+    _warn_placeholder_residuals(body, args.type, body_format, capability_root)
+
     # Resolve assignee.
     assignee = args.assignee or invoker.github_login
     if not assignee:
@@ -419,6 +433,29 @@ def main() -> int:
     )
 
     return 0
+
+
+def _warn_placeholder_residuals(
+    body: str,
+    structural_type: str,
+    body_format: dict,
+    capability_root: Path,
+) -> None:
+    """Emit stderr warnings when *body* still contains template-skeleton content.
+
+    Runs at create-phase (DEC-031): the hard-reject gate lives in
+    validate-issue --phase transition.  Filing is not blocked; the warnings
+    make the unfinished body visible from the first moment.
+    """
+    findings = detect_placeholder_residuals(
+        body=body,
+        structural_type=structural_type,
+        body_format=body_format,
+        capability_root=capability_root,
+        phase=PHASE_CREATE,
+    )
+    for _sev, label, detail in findings:
+        print(f"[warning] {label}: {detail}", file=sys.stderr)
 
 
 def _extract_issue_number_from_url(url: str) -> int | None:
