@@ -129,6 +129,18 @@ universal_body_rules:
       Done) and the living-document edit rules (wording free; scope
       changes gated by author).
     severity: "[validation-severity:hard-reject]"
+  - rule: |
+      A required checkbox section (has_checkboxes: true) with zero filled
+      items signals an unedited template skeleton. At the first lifecycle
+      transition (Todo → Backlog onward) this is a hard-reject; at create
+      it is a warning. A trailing empty `- [ ]` alongside real filled items
+      is tolerated (lenient). Per DEC-031.
+    severity: "[validation-severity:hard-reject]"
+  - rule: |
+      Surviving template placeholder prose (text derived at runtime from the
+      matching templates/<Type>.md that still appears verbatim in the body)
+      signals an unedited skeleton. Always a warning. Per DEC-031.
+    severity: "[validation-severity:warning]"
 
 integration_marker:
   pattern: '^Integration: integration/([a-z0-9][a-z0-9-]*[a-z0-9])$'
