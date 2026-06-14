@@ -169,6 +169,17 @@ EPIC bodies may omit the parent-ref line entirely (EPICs are not always schedule
 
 `validate-issue` enforces these forms. The old plain `Milestone: #<N>` form is accepted with a deprecation warning during the grace period; update existing bodies to the link form.
 
+#### Issue body validation — residual placeholder detection (per [project-management:DEC-031-reject-unauthored-placeholder-bodies])
+
+`validate-issue` detects bodies that still carry the stamped template skeleton the author was supposed to fill. Two signals, both derived structurally from the live template at runtime:
+
+- **Empty required checkbox section** — a required checkbox section (per [project-management:DEC-010-issue-body-minimum-structure]) with **zero filled items** is the primary "unauthored" signal. Severity: `warning` at `create-issue` (the issue is filed, but the warning is visible); `hard-reject` from the **first lifecycle transition** (Todo → Backlog) onward. Lenient: a trailing unfilled `- [ ]` alongside real, filled items is fine — only a section with *no* real items at all triggers.
+- **Surviving template placeholder prose** — if the body still contains placeholder text from the template (e.g. "The thesis or outcome being de-risked…"), `validate-issue` emits a `warning` at every validation call. Detection is runtime-derived from the matching `templates/<Type>.md`, so it stays in sync automatically when a template is edited.
+
+The asymmetry is deliberate: `create-issue` keeps stamping the template skeleton for the author to fill (stamp-then-fill workflow is preserved), and a just-filed Todo that cannot advance is harmless. The **block** lives at the first transition — that is where the harm of an unauthored body advancing through its whole lifecycle is closed.
+
+`create-issue` always emits the warning when filing an unauthored body; it never silently admits one.
+
 #### The seven workflow wrappers (per [project-management:DEC-026-work-ownership-lifecycle])
 
 For the standard development flow, seven verb-subject commands compose over `move-issue` and own the side-effects (branch, PR, merge, audit comments) at each step. They replace ad-hoc combinations of `move-issue` + `gh` calls that adopters previously had to wire by hand.
