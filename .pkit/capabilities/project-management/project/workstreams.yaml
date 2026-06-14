@@ -4,14 +4,41 @@
 schema_version: 1
 
 workstreams:
-  - capabilities
-  - schemas
-  - cli
-  - decisions
-  - workflow
-  - adapters
-  - agents
-  - skills
-  - lifecycle
-  - evidence
-  - tests
+  capabilities:
+    name: capabilities
+    status: active
+  schemas:
+    name: schemas
+    status: active
+  cli:
+    name: cli
+    status: active
+  decisions:
+    name: decisions
+    status: active
+  workflow:
+    name: workflow
+    status: active
+  adapters:
+    name: adapters
+    status: active
+  agents:
+    name: agents
+    status: active
+  skills:
+    name: skills
+    status: active
+  lifecycle:
+    name: lifecycle
+    status: active
+  evidence:
+    name: evidence
+    status: active
+  tests:
+    name: tests
+    status: active
+  docs:
+    name: docs
+    description: Top-level and area navigation/overview docs (README.md, 
+      .pkit/README.md, area READMEs)
+    status: active

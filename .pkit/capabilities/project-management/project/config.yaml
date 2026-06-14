@@ -24,6 +24,19 @@ has_projects_v2_board: false
 # [project-management:DEC-016-time-bound-containers]).
 pre_close_triage_lead_days: 3
 
+# Code-path -> doc-path mappings per [project-management:DEC-015-doc-update-obligations].
+# When a PR touches a mapped code path without touching the mapped doc(s),
+# the project-manager emits a [validation-severity:warning] at PR-open time.
+# Advisory only — the mandatory `## Doc impact` section on Tasks/PRs is the
+# hard gate; this adds an automated nudge for the trees most prone to drift.
+code_path_to_doc_mapping:
+  "src/**": [README.md, .pkit/cli/README.md]
+  ".pkit/cli/**": [.pkit/cli/README.md, README.md]
+  ".pkit/capabilities/project-management/**": [.pkit/capabilities/project-management/README.md]
+  ".pkit/capabilities/evidence/**": [.pkit/capabilities/evidence/README.md]
+  ".pkit/capabilities/software-engineering/**": [.pkit/capabilities/software-engineering/README.md]
+  ".pkit/adapters/**": [.pkit/adapters/README.md]
+
 # Transitional shim — pre-check.py still requires this field, but the
 # canonical workstreams list lives in project/workstreams.yaml per
 # [project-management:DEC-018-workstream-taxonomy-and-lifecycle].
