@@ -203,6 +203,39 @@ def main() -> int:
         state=state, milestone=milestone, labels=labels
     )
 
+    has_board = bool(config.get("has_projects_v2_board", False))
+
+    # Idempotency check: issue is already at the requested state.
+    #
+    # Must run BEFORE the transition-table lookup so that callers (e.g.
+    # done-work after a squash-merge whose `Closes #N` auto-closes the
+    # issue) don't get a spurious "done → done" error. On the label
+    # substrate the state:* label may be stale (e.g. state:review
+    # lingering after a GitHub-native close), so we reconcile it here
+    # rather than returning immediately without touching the label.
+    if args.to == current_state:
+        print(f"move-issue: #{args.issue_number}")
+        print(f"  title:        {title}")
+        print(f"  type:         {structural_type}")
+        print(f"  current:      {current_state}")
+        print(f"  target:       {args.to}")
+        print("\n[noop] already at target state; reconciling labels if needed.")
+        if not args.dry_run and not has_board:
+            plan = _compute_plan(
+                issue_number=args.issue_number,
+                current_state=current_state,
+                target_state=args.to,
+                has_board=False,
+                labels=labels,
+            )
+            # Only act when there is a stale label to remove (the add is
+            # idempotent but skip the gh round-trip if nothing to fix).
+            if plan.remove_label:
+                print(f"  reconcile: removing stale label {plan.remove_label!r}")
+                if not _gh_apply_state_label(args.issue_number, plan, config):
+                    return 3
+        return 0
+
     # Look up the transition.
     transition = _find_transition(
         workflow, current_state, args.to, structural_type
@@ -254,7 +287,6 @@ def main() -> int:
     print(f"  authorisation: {transition.authorisation}")
     print(f"  severity:      {transition.severity}")
 
-    has_board = bool(config.get("has_projects_v2_board", False))
     if has_board:
         print(
             f"\n[note] board substrate detected (projects_v2_board_id="
@@ -263,10 +295,6 @@ def main() -> int:
             "(per DEC-019). This invocation will surface the planned move "
             "but not mutate the board field at v1."
         )
-
-    if args.to == current_state:
-        print("\n[noop] target matches current; nothing to change.")
-        return 0
 
     plan = _compute_plan(
         issue_number=args.issue_number,

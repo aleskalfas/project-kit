@@ -171,3 +171,96 @@ def test_gate_handles_gh_failure(dw, monkeypatch) -> None:
     result = dw._check_approval_gate(99, {}, None, {})
     assert result.passed is False
     assert "gh pr view failed" in result.refusal_message
+
+
+# ---- _invoke_move_issue — regression for GitHub issue #7 -------------
+#
+# When done-work squash-merges a PR whose body carries `Closes #N`,
+# GitHub auto-closes the issue before _invoke_move_issue is called.
+# move-issue.py then sees state==closed → infers current_state="done",
+# which matched the target "done". The old code looked up a done→done
+# transition (none exists) and returned exit 2. The fix: move-issue
+# detects current==target before the transition lookup and returns 0
+# (with stale-label reconciliation). This test pins the contract that
+# _invoke_move_issue exits 0 in that scenario by running the real
+# move-issue.py subprocess against a stub that simulates the post-merge
+# issue state (closed, with stale state:review label).
+
+
+def test_invoke_move_issue_exits_zero_when_issue_already_done(
+    dw, tmp_path, monkeypatch
+) -> None:
+    """Regression: _invoke_move_issue("done") must exit 0 when the issue is
+    already closed (GitHub auto-close via Closes #N), even if the
+    state:review label is still present.
+
+    Exercises the move-issue.py noop/reconciliation path that fixes #7.
+    """
+    import subprocess
+
+    # Build a minimal capability root in tmp_path.
+    cap_root = tmp_path / ".pkit" / "capabilities" / "project-management"
+    project_dir = cap_root / "project"
+    schemas_dir = cap_root / "schemas"
+    project_dir.mkdir(parents=True)
+    schemas_dir.mkdir(parents=True)
+
+    # Minimal config.yaml (label-fallback substrate).
+    (project_dir / "config.yaml").write_text("has_projects_v2_board: false\n")
+
+    # Copy the real schema files that move-issue.py reads.
+    import shutil
+    real_cap = (
+        Path(__file__).resolve().parent.parent
+        / ".pkit" / "capabilities" / "project-management"
+    )
+    for schema_name in ("workflow.yaml", "issue-types.yaml", "classification.yaml"):
+        shutil.copy(real_cap / "schemas" / schema_name, schemas_dir / schema_name)
+
+    # Stub gh so no real GitHub calls are made.
+    # move-issue.py calls: gh issue view (to fetch issue data) and
+    # gh issue edit (to reconcile labels). We need to handle both.
+    stub_gh = tmp_path / "gh"
+    stub_gh.write_text(
+        "#!/usr/bin/env python3\n"
+        "import sys, json\n"
+        "args = sys.argv[1:]\n"
+        "# gh issue view <N> --json <fields>\n"
+        "if 'issue' in args and 'view' in args and '--json' in args:\n"
+        "    data = {\n"
+        "        'title': '[Task] fix the widget',\n"
+        "        'body': '## What\\nfix\\n## Acceptance criteria\\n- [x] done\\n## Doc impact\\nNone',\n"
+        "        'state': 'closed',\n"
+        "        'labels': [{'name': 'state:review'}, {'name': 'priority:High'}],\n"
+        "        'assignees': [],\n"
+        "        'milestone': None,\n"
+        "        'url': 'https://github.com/example/repo/issues/42',\n"
+        "    }\n"
+        "    print(json.dumps(data))\n"
+        "    sys.exit(0)\n"
+        "# gh issue edit (label reconciliation) — accept silently.\n"
+        "if 'issue' in args and 'edit' in args:\n"
+        "    sys.exit(0)\n"
+        "sys.exit(0)\n"
+    )
+    stub_gh.chmod(0o755)
+    new_path = str(stub_gh.parent) + ":" + __import__("os").environ.get("PATH", "")
+
+    move_issue_script = real_cap / "scripts" / "move-issue.py"
+    result = subprocess.run(
+        [sys.executable, str(move_issue_script), "42", "--to", "done", "--yes",
+         "--capability-root", str(cap_root)],
+        capture_output=True,
+        text=True,
+        env={**__import__("os").environ, "PATH": new_path},
+    )
+
+    assert result.returncode == 0, (
+        f"move-issue exited {result.returncode} on already-closed issue.\n"
+        f"stdout: {result.stdout}\nstderr: {result.stderr}\n"
+        "Regression: done-work happy path should not fail after auto-close."
+    )
+    # The noop path should mention the reconciliation or the already-at-target state.
+    assert "noop" in result.stdout.lower() or "already at target" in result.stdout.lower(), (
+        f"Expected noop message in stdout, got: {result.stdout!r}"
+    )
