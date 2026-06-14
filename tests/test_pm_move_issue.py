@@ -350,3 +350,72 @@ def test_state_is_behind(mi) -> None:
     assert mi._state_is_behind("todo", "backlog") is True
     assert mi._state_is_behind("backlog", "todo") is False
     assert mi._state_is_behind("in-progress", "in-progress") is False
+
+
+# --- noop / idempotency path (regression for GitHub issue #7) ---------
+#
+# When done-work squash-merges a PR whose body carries `Closes #N`,
+# GitHub auto-closes the issue before move-issue is called. At that
+# point _infer_current_state returns "done" (from state==closed). The
+# old code then tried to look up a "done → done" transition — which
+# doesn't exist — and exited 2. The fix: detect current==target BEFORE
+# the transition-table lookup and treat it as an idempotent noop, while
+# still reconciling any stale state:* label on the label substrate.
+
+
+def test_infer_state_closed_returns_done_regardless_of_labels(mi) -> None:
+    """Closed GitHub state always maps to done, even with stale state:review label.
+
+    This is the precondition that triggers the bug: after GitHub auto-closes
+    the issue via Closes #N, state is 'closed' but state:review label lingers.
+    _infer_current_state must return 'done' so the noop path fires.
+    """
+    result = mi._infer_current_state(
+        state="closed",
+        milestone=None,
+        labels=["state:review", "priority:High"],
+    )
+    assert result == "done"
+
+
+def test_compute_plan_noop_with_stale_label_reconciles_label(mi) -> None:
+    """When current==target but a stale state:review label is present,
+    _compute_plan should produce a plan that removes state:review and
+    adds state:done (idempotent reconciliation).
+
+    This is the core of the fix: the noop path calls _compute_plan and
+    acts when plan.remove_label is set.
+    """
+    plan = mi._compute_plan(
+        issue_number=42,
+        current_state="done",
+        target_state="done",
+        has_board=False,
+        labels=["state:review", "priority:High"],
+    )
+    assert plan.add_label == "state:done"
+    assert plan.remove_label == "state:review"
+
+
+def test_compute_plan_noop_with_correct_label_no_mutation(mi) -> None:
+    """When state:done is already present (no stale label), plan.remove_label
+    is None so no gh round-trip is needed."""
+    plan = mi._compute_plan(
+        issue_number=42,
+        current_state="done",
+        target_state="done",
+        has_board=False,
+        labels=["state:done", "priority:High"],
+    )
+    # state:done is already correct; nothing to remove.
+    assert plan.remove_label is None
+
+
+def test_noop_does_not_require_transition_in_workflow(mi, workflow) -> None:
+    """done → done has no transition in workflow.yaml, but _find_transition
+    returning None should not be reached on the noop path. Confirm that
+    _find_transition returns None for same-state lookup (the pre-fix
+    code path that caused the exit-2 error).
+    """
+    # This would have caused the bug: the transition table has no done→done entry.
+    assert mi._find_transition(workflow, "done", "done", "task") is None
