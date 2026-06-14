@@ -28,14 +28,16 @@ Detection is **structural** and reads the matching shipped template at validatio
 
 Two signals:
 
-- **Empty required checkbox section → `[validation-severity:hard-reject]`.** A required checkbox section (per [project-management:DEC-010-issue-body-minimum-structure]) with **zero filled items** is the unambiguous "unauthored" signal — and the one that catches the motivating incident's class (a body filed with no real criteria at all). This is **lenient**: a trailing empty `- [ ]` *alongside* real, filled items is fine — only a section with no real items at all triggers. This avoids punishing a legitimately partial criteria list while catching the genuinely empty skeleton. The prose signal below is a softer, secondary catch.
+- **Empty required checkbox section → `[validation-severity:hard-reject]` at the first transition (a `warning` at create — see Trigger).** A required checkbox section (per [project-management:DEC-010-issue-body-minimum-structure]) with **zero filled items** is the unambiguous "unauthored" signal — and the one that catches the motivating incident's class (a body filed with no real criteria at all). This is **lenient**: a trailing empty `- [ ]` *alongside* real, filled items is fine — only a section with no real items at all triggers. This avoids punishing a legitimately partial criteria list while catching the genuinely empty skeleton. The prose signal below is a softer, secondary catch.
 - **Surviving template placeholder prose → `[validation-severity:warning]`.** If the template's placeholder prose still appears in the body, emit a warning. The placeholder strings are **derived at runtime from the live `templates/<Type>.md`**, not enumerated in a schema — so the check stays in sync automatically when a template is edited.
 
-### Trigger — uniform, including at create
+### Trigger — warn at create, hard-reject at the first transition
 
-The rule fires on **every** validation interaction, **including at filing**. There is no quiet-at-create carve-out: silently admitting an unauthored body at create is the exact failure that let the rule's motivating incident through.
+The hard gate fires at the **first lifecycle transition** (Todo → Backlog onward), not at filing. The harm the motivating incident exposed was an unauthored issue *advancing through its whole lifecycle* — not its transient existence right after filing. A just-filed skeleton that cannot move is harmless; blocking it at the transition closes the actual harm.
 
-Consequently, **`create-issue` no longer stamps-and-leaves a blank skeleton.** It must be handed an authored body up front; the template becomes scaffold the author fills *before* submitting. Reworking `create-issue` to this contract is part of the issue-side implementation.
+At **create**, the same detection runs but emits a `[validation-severity:warning]` — visible, never silent. This preserves the stamp-then-fill workflow (`create-issue` keeps stamping the template skeleton for the author to fill) while signalling the unfinished body from the first moment. So the empty-required-checkbox signal is a *warning* at create and a *hard-reject* from the first transition onward.
+
+This is deliberately *not* the rejected quiet-at-create carve-out: the warning makes the unauthored body visible at filing; only the **block** is deferred to the transition, where the harm actually lives.
 
 ### Implementation contract — declared in schema, enforced in code
 
@@ -43,7 +45,7 @@ The rule is **declared** — name + severity token — as an entry in [`schemas/
 
 ## Rationale
 
-- **Block at create, not quiet-at-create.** The motivating incident was a *silent* pass. A rule that stays silent at the one moment a skeleton is most likely to slip through defeats its own purpose. Uniform enforcement, including filing, is the honest design — at the cost of reworking `create-issue` so a body is authored up front.
+- **Warn at create, block at the transition.** The motivating incident's harm was an unauthored body *advancing*, not existing for a moment in Todo. Gating at the first transition closes that harm while preserving the stamp-then-fill ergonomics — no `create-issue` rework. A warning at create keeps the signal visible from filing, so this is *not* the silent carve-out rejected below; it just puts the **block** where the harm is.
 - **Structural over a sentinel marker.** A "delete this line" sentinel gives a zero-false-positive signal but changes every shipped template, forcing a migration and touching every adopter's templates. Structural detection reads the existing template at runtime: lighter, migration-free, and the false-positive risk is closed by the lenient checkbox rule.
 - **Lenient over strict checkboxes.** Flagging *any* empty `- [ ]` would punish an author who legitimately files three of four template boxes. Keying the hard-reject to a section with *zero* filled items targets only the genuinely unauthored case.
 - **Runtime-derived fingerprints over schema-enumerated.** Listing placeholder phrases in a schema means every template edit needs a matching schema update or the check silently drifts. Deriving from the live template keeps the two in lockstep; the validator and templates ship together in the same capability, so the coupling is acceptable.
@@ -51,15 +53,16 @@ The rule is **declared** — name + severity token — as an entry in [`schemas/
 ### Alternatives considered
 
 - **Sentinel marker token in every template.** Rejected — zero false positives, but a shipped-template-shape change that forces a migration and rewrites every adopter's templates. The structural approach achieves the goal without that cost.
-- **Quiet at create, enforce only from the first transition.** Rejected — a silent admit at filing is precisely the failure mode being fixed; it would leave the most common slip-through path open.
+- **Quiet at create (silent), enforce only from the first transition.** Rejected — a *silent* admit at filing hides the unfinished body. The chosen design keeps the transition gate but adds a visible warning at create, so the body is never silently accepted.
+- **Block at create outright (no skeleton may ever be filed).** Rejected — it forces a `create-issue` rework that demands an authored body up front and discards the stamp-then-fill flow, for the marginal benefit of preventing a transient, immovable Todo skeleton. The harm is in advancing, not in transient existence, so gating the first transition is sufficient.
 - **Strict: any empty checkbox rejects.** Rejected — false-positives on legitimately partial criteria lists; nags half-filled drafts.
 - **Schema-enumerated placeholder fingerprints.** Rejected — drifts out of sync on any template edit; the runtime-derived form cannot drift.
 
 ## Implications
 
-- **`create-issue` is reworked** so it cannot produce an unauthored body — a body must be supplied at filing; the stamp-and-leave default is removed. This is an observable workflow change for adopters (filing now requires authored content), hence a surface change carrying a version bump per the capability's versioning policy (for project-kit's self-hosted instance, [pkit:PRJ-002]).
+- **`create-issue` is unchanged** — it keeps stamping the template skeleton for the author to fill; it additionally emits the warning when the body it would file is still unauthored. No contract change, no workflow disruption. The hard gate lives in the transition path (`move-issue` / the workflow wrappers), which already run body validation.
 - **`validate-issue.py` and `validate-pr.py`** each gain the detection: the empty-required-checkbox-section hard-reject and the surviving-placeholder-prose warning.
 - **[`schemas/body-format.yaml`](../schemas/body-format.yaml) and [`schemas/git-conventions.yaml`](../schemas/git-conventions.yaml)** each gain a declaration entry for the rule, tagged with its severity token; the entry documents the rule, the validator enforces it.
-- **No migration** — detection changes no shipped template shape, so the migration discipline ([pkit:COR-010]) does not fire; the only versioned surface change is the `create-issue` contract + the new convention. (project-kit confirms migration-coverage through its own `pkit migrations check-diff` check.)
+- **No migration** — detection changes no shipped template shape, so the migration discipline ([pkit:COR-010]) does not fire; the only versioned surface change is the new validation convention itself, shipping with the implementation Tasks. (project-kit confirms migration-coverage through its own `pkit migrations check-diff` check.)
 - The rule is realised in two implementation Tasks: the issue-side build and the PR-side build, each blocked on this record being accepted.
 - Doc-impact checkboxes and required-section rules from [project-management:DEC-007-checkbox-validation] and [project-management:DEC-010-issue-body-minimum-structure] are unaffected; this rule sits alongside them as a new universal body rule.
