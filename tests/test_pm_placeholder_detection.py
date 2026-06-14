@@ -3,8 +3,11 @@
 Tests cover:
 
 - ``extract_placeholder_phrases`` — template fingerprint extraction
-- ``has_filled_checkbox_items`` — filled-item detection per section
+- ``has_authored_checkbox_items`` — authored-item detection per section
+  (checked state is irrelevant; content after ``]`` is the signal)
 - ``detect_placeholder_residuals`` — public API, both signals, both phases
+- False-positive regression: unchecked but real criteria must pass (#25)
+- Transition-block regression: empty-only skeleton must hard-reject at transition (#25)
 """
 
 from __future__ import annotations
@@ -32,7 +35,8 @@ from _lib.placeholder_detection import (  # noqa: E402
     PHASE_TRANSITION,
     detect_placeholder_residuals,
     extract_placeholder_phrases,
-    has_filled_checkbox_items,
+    has_authored_checkbox_items,
+    has_filled_checkbox_items,  # backward-compat alias — must remain importable
 )
 
 
@@ -135,41 +139,62 @@ def test_extract_phrases_nonexistent_template(tmp_path: Path) -> None:
     assert phrases == []
 
 
-# ---- has_filled_checkbox_items --------------------------------------
+# ---- has_authored_checkbox_items ------------------------------------
+#
+# "Authored" = non-whitespace content after the ].
+# Checked state ([x] vs [ ]) is irrelevant.
 
 
-def test_has_filled_items_true_with_checked_box() -> None:
+def test_has_authored_items_true_with_checked_box() -> None:
     body = "## Acceptance criteria\n- [x] Something done.\n- [ ] Todo.\n"
-    assert has_filled_checkbox_items(body, "## Acceptance criteria") is True
+    assert has_authored_checkbox_items(body, "## Acceptance criteria") is True
 
 
-def test_has_filled_items_true_with_uppercase_x() -> None:
+def test_has_authored_items_true_with_uppercase_x() -> None:
     body = "## Acceptance criteria\n- [X] Done.\n"
-    assert has_filled_checkbox_items(body, "## Acceptance criteria") is True
+    assert has_authored_checkbox_items(body, "## Acceptance criteria") is True
 
 
-def test_has_filled_items_false_all_empty() -> None:
+def test_has_authored_items_true_with_unchecked_real_text() -> None:
+    """Regression #25 — an unchecked box with real text is authored (not a skeleton)."""
+    body = "## Acceptance criteria\n- [ ] Real criterion that gates close.\n"
+    assert has_authored_checkbox_items(body, "## Acceptance criteria") is True
+
+
+def test_has_authored_items_false_all_bare_empty() -> None:
+    """Bare ``- [ ]`` lines with nothing after are skeleton items — not authored."""
     body = "## Acceptance criteria\n- [ ]\n- [ ]\n"
-    assert has_filled_checkbox_items(body, "## Acceptance criteria") is False
+    assert has_authored_checkbox_items(body, "## Acceptance criteria") is False
 
 
-def test_has_filled_items_false_missing_section() -> None:
+def test_has_authored_items_false_missing_section() -> None:
     body = "## What\nSomething.\n"
-    assert has_filled_checkbox_items(body, "## Acceptance criteria") is False
+    assert has_authored_checkbox_items(body, "## Acceptance criteria") is False
 
 
-def test_has_filled_items_does_not_bleed_across_sections() -> None:
-    """Filled items in a later section do not affect an earlier section's result."""
+def test_has_authored_items_does_not_bleed_across_sections() -> None:
+    """Authored items in a later section do not affect an earlier section's result."""
     body = (
         "## Acceptance criteria\n"
         "- [ ]\n"
         "## Doc impact\n"
         "- [x] Updated README.\n"
     )
-    # Acceptance criteria section has zero filled items.
-    assert has_filled_checkbox_items(body, "## Acceptance criteria") is False
-    # Doc impact section has a filled item.
-    assert has_filled_checkbox_items(body, "## Doc impact") is True
+    # Acceptance criteria section has zero authored items (bare empty boxes).
+    assert has_authored_checkbox_items(body, "## Acceptance criteria") is False
+    # Doc impact section has an authored item.
+    assert has_authored_checkbox_items(body, "## Doc impact") is True
+
+
+# ---- backward-compat alias ------------------------------------------
+
+
+def test_has_filled_checkbox_items_alias_works() -> None:
+    """has_filled_checkbox_items is a backward-compat alias for has_authored_checkbox_items."""
+    body = "## Acceptance criteria\n- [ ] Real criterion.\n"
+    # Both names must return the same result.
+    assert has_filled_checkbox_items(body, "## Acceptance criteria") is True
+    assert has_authored_checkbox_items(body, "## Acceptance criteria") is True
 
 
 # ---- detect_placeholder_residuals — public API ----------------------
@@ -378,3 +403,74 @@ def test_partial_but_real_body_passes(body_format_task: dict) -> None:
         phase=PHASE_TRANSITION,
     )
     assert results == [], f"unexpected findings: {results}"
+
+
+# ---- regression tests for issue #25 ---------------------------------
+
+
+def test_regression_25_unchecked_real_criteria_no_false_positive(
+    body_format_task: dict,
+) -> None:
+    """Regression #25 — an issue with real but unchecked acceptance criteria must not
+    be flagged as an unedited skeleton.  Before the fix, the check keyed on
+    ``- [x]`` only; a freshly-authored issue with unchecked criteria was wrongly
+    rejected at transition.
+    """
+    body = (
+        "Feature: #1\n\n"
+        "## What\n"
+        "Implement the frobnication layer.\n\n"
+        "## Acceptance criteria\n"
+        "- [ ] The frobnication layer is installed and returns the correct value.\n"
+        "- [ ] Edge-case inputs are handled without panic.\n\n"
+        "## Doc impact\n"
+        "No doc impact: internal refactor only.\n"
+    )
+    results = detect_placeholder_residuals(
+        body=body,
+        structural_type="task",
+        body_format=body_format_task,
+        capability_root=CAPABILITY_ROOT,
+        phase=PHASE_TRANSITION,
+    )
+    cb_findings = [r for r in results if r[1] == "body.placeholder.empty-checkbox-section"]
+    assert cb_findings == [], (
+        "unchecked-but-real criteria falsely flagged as empty skeleton: "
+        f"{cb_findings}"
+    )
+
+
+def test_regression_25_bare_empty_boxes_warn_at_create(
+    body_format_task: dict,
+) -> None:
+    """Regression #25 — a skeleton with only bare ``- [ ]`` must warn at create phase."""
+    results = detect_placeholder_residuals(
+        body=_skeleton_task_body(),
+        structural_type="task",
+        body_format=body_format_task,
+        capability_root=CAPABILITY_ROOT,
+        phase=PHASE_CREATE,
+    )
+    cb_findings = [r for r in results if r[1] == "body.placeholder.empty-checkbox-section"]
+    assert cb_findings, "skeleton body must produce a warning at create"
+    assert all(sev == "warning" for sev, _, _ in cb_findings), (
+        f"expected warning severity at create, got: {cb_findings}"
+    )
+
+
+def test_regression_25_bare_empty_boxes_hard_reject_at_transition(
+    body_format_task: dict,
+) -> None:
+    """Regression #25 — a skeleton with only bare ``- [ ]`` must hard-reject at transition."""
+    results = detect_placeholder_residuals(
+        body=_skeleton_task_body(),
+        structural_type="task",
+        body_format=body_format_task,
+        capability_root=CAPABILITY_ROOT,
+        phase=PHASE_TRANSITION,
+    )
+    cb_findings = [r for r in results if r[1] == "body.placeholder.empty-checkbox-section"]
+    assert cb_findings, "skeleton body must produce a hard-reject at transition"
+    assert all(sev == "hard-reject" for sev, _, _ in cb_findings), (
+        f"expected hard-reject severity at transition, got: {cb_findings}"
+    )

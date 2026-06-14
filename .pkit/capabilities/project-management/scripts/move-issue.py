@@ -60,6 +60,10 @@ from _lib.membership import (  # noqa: E402
     resolve_capability_root,
     resolve_invoker_identity,
 )
+from _lib.placeholder_detection import (  # noqa: E402
+    PHASE_TRANSITION,
+    detect_placeholder_residuals,
+)
 
 
 SEVERITY_HARD_REJECT = "hard-reject"
@@ -163,6 +167,9 @@ def main() -> int:
     )
     classification = _read_yaml(
         capability_root / "schemas" / "classification.yaml", yaml_loader
+    )
+    body_format = _read_yaml(
+        capability_root / "schemas" / "body-format.yaml", yaml_loader
     )
     config = _read_yaml(capability_root / "project" / "config.yaml", yaml_loader)
 
@@ -278,6 +285,30 @@ def main() -> int:
                     file=sys.stderr,
                 )
                 return 1
+
+    # Residual-placeholder check per DEC-031 — hard-reject at transition.
+    # Run before any mutation so an unauthored body blocks the transition.
+    placeholder_findings = detect_placeholder_residuals(
+        body=body,
+        structural_type=structural_type,
+        body_format=body_format,
+        capability_root=capability_root,
+        phase=PHASE_TRANSITION,
+    )
+    hard_reject_findings = [f for f in placeholder_findings if f[0] == "hard-reject"]
+    if hard_reject_findings:
+        print(
+            f"[hard-reject] transition {current_state!r} → {args.to!r} blocked: "
+            f"issue #{args.issue_number} body has not been authored.",
+            file=sys.stderr,
+        )
+        for sev, label, detail in hard_reject_findings:
+            print(f"  [{sev}] {label}: {detail}", file=sys.stderr)
+        print(
+            "  → Fill in the required sections of the issue body before advancing.",
+            file=sys.stderr,
+        )
+        return 1
 
     print(f"move-issue: #{args.issue_number}")
     print(f"  title:        {title}")

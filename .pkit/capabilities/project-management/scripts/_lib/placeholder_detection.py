@@ -7,10 +7,14 @@ Two signals (per DEC-031):
 
   1. *Empty required checkbox section* — a required checkbox section
      (as declared in body-format.yaml, ``has_checkboxes: true``) whose
-     body contains zero *filled* items (``- [x]`` / ``- [X]``).
+     body contains zero *authored* items.  An authored item is a checkbox
+     line with non-whitespace content after the ``]``, regardless of
+     checked state — both ``- [ ] Real criterion`` and
+     ``- [x] Real criterion`` are authored; a bare ``- [ ]`` (nothing
+     after) is a skeleton item.
      Severity is phase-dependent: ``warning`` at create, ``hard-reject``
-     at the first transition onward.  A trailing unfilled ``- [ ]``
-     *alongside* real filled items is fine (lenient rule).
+     at the first transition onward.  A trailing bare ``- [ ]``
+     *alongside* real authored items is fine (lenient rule).
 
   2. *Surviving template placeholder prose* — text lines extracted at
      runtime from the matching ``templates/<Type>.md`` that still appear
@@ -92,9 +96,19 @@ def _strip_html_comments(text: str) -> str:
 # ---- checkbox-section detection -------------------------------------
 
 
-def _filled_checkbox_re() -> re.Pattern[str]:
-    """Regex matching a ticked checkbox item line."""
-    return re.compile(r"^\s*-\s*\[[xX]\]", re.MULTILINE)
+def _authored_checkbox_re() -> re.Pattern[str]:
+    """Regex matching a checkbox item line with non-whitespace content after ``]``.
+
+    Both ``- [ ] Real criterion`` and ``- [x] Real criterion`` match.
+    A bare ``- [ ]`` (nothing or only whitespace after, or end of line) does not match.
+    Checked state is irrelevant to authorship — an unchecked criterion
+    with real text is authored; a bare empty box is a skeleton item.
+
+    ``[^\\S\\n]+`` matches one or more horizontal whitespace characters (space / tab)
+    without crossing a line boundary, so a bare ``- [ ]\\n`` does not match even
+    when the next line starts with a non-whitespace character.
+    """
+    return re.compile(r"^\s*-\s*\[[ xX?]\][^\S\n]+\S", re.MULTILINE)
 
 
 def _section_body(body: str, heading: str) -> str:
@@ -110,10 +124,20 @@ def _section_body(body: str, heading: str) -> str:
     return m.group(1) if m else ""
 
 
-def has_filled_checkbox_items(body: str, heading: str) -> bool:
-    """Return True iff the section *heading* contains at least one filled item."""
+def has_authored_checkbox_items(body: str, heading: str) -> bool:
+    """Return True iff the section *heading* contains at least one authored item.
+
+    An authored item is a checkbox line with non-whitespace content after
+    the ``]``, regardless of whether the box is checked or unchecked.
+    A bare ``- [ ]`` with nothing after counts as a skeleton item.
+    """
     section = _section_body(body, heading)
-    return bool(_filled_checkbox_re().search(section))
+    return bool(_authored_checkbox_re().search(section))
+
+
+# Backward-compat alias — callers that imported has_filled_checkbox_items
+# directly (tests, external tools) keep working until updated.
+has_filled_checkbox_items = has_authored_checkbox_items
 
 
 # ---- public API ------------------------------------------------------
@@ -171,14 +195,14 @@ def detect_placeholder_residuals(
                 # Section is missing — the required-section check fires
                 # separately; skip here to avoid double-reporting.
                 continue
-            if not has_filled_checkbox_items(body, heading):
+            if not has_authored_checkbox_items(body, heading):
                 severity = (
                     "warning" if phase == PHASE_CREATE else "hard-reject"
                 )
                 results.append((
                     severity,
                     "body.placeholder.empty-checkbox-section",
-                    f"section {heading!r} has no filled items — "
+                    f"section {heading!r} has no authored items — "
                     f"body appears to be an unedited template skeleton.",
                 ))
 
