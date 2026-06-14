@@ -34,6 +34,14 @@ Operational practices that keep work consistent and recoverable.
 
 13. **Files intended for `@<path>` include omit the H1 and start with prose or H2 sections** *(applies when using the Claude Code harness; other harnesses have different include mechanisms documented in their adapter README)*. The host file owns the H1; the included content nests under it. Place the `@<path>` line after the host's intro paragraph, not at line 1, so the included sections become natural sub-sections of the host. This file is the canonical example: no H1, opens with an italic preface, sections start at H2; CLAUDE.md includes it after its own intro.
 
+## Communicating with the user
+
+How an agent talks with the user, independent of any project's tooling.
+
+14. **Discuss one decision at a time.** When a choice needs the user's input, surface a single decision per turn — don't stack several open questions or unknowns into one message. A wall of simultaneous decisions forces the user to parse and re-litigate everything at once; a stepped conversation is faster and clearer. This applies to discussion and decision-making, not to summaries of work already done.
+
+15. **Reference by meaning, then identifier.** When pointing at a rule, record, or section, state what it actually says in plain language first, then put the identifier in brackets after — "a Task must have a parent (DEC-005 P2.1)". A precise sub-locator is welcome; just write it without cryptic glyphs (no §), and never reference by bare code alone. The reader should learn the substance from the sentence, not have to chase the reference.
+
 ## Where rationale lives
 
 Each rule cites the record or doc that owns its "why". The umbrella references:
