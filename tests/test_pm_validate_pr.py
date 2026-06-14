@@ -1,7 +1,8 @@
 """Tests for project-management's validate-pr script's pure logic.
 
 Covers title-pattern checks, closing-keyword detection, doc-impact
-detection, type-vs-label cross-check.
+detection, type-vs-label cross-check, and residual-placeholder
+detection per DEC-031.
 """
 
 from __future__ import annotations
@@ -14,14 +15,14 @@ import pytest
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCRIPT_PATH = (
-    REPO_ROOT
-    / ".pkit"
-    / "capabilities"
-    / "project-management"
-    / "scripts"
-    / "validate-pr.py"
+SCRIPTS_DIR = (
+    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 )
+SCRIPT_PATH = SCRIPTS_DIR / "validate-pr.py"
+
+# Ensure _lib is importable for direct imports in test bodies.
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
 
 
 @pytest.fixture(scope="module")
@@ -224,3 +225,189 @@ def test_extract_dedupes(vp) -> None:
 
 def test_extract_returns_empty_when_no_keyword(vp) -> None:
     assert vp._extract_closing_issues("plain body") == []
+
+
+# --- placeholder detection (DEC-031) ---------------------------------
+
+CAPABILITY_ROOT = (
+    REPO_ROOT / ".pkit" / "capabilities" / "project-management"
+)
+
+
+def _authored_pr_body() -> str:
+    """A PR body that has been fully authored (no skeleton residuals)."""
+    return (
+        "Closes #42\n\n"
+        "## Summary\n\n"
+        "Implement the frobnication subsystem per the design.\n\n"
+        "## Test plan\n\n"
+        "- [ ] Unit tests pass under `uv run pytest`.\n"
+        "- [ ] Integration smoke-test runs clean.\n\n"
+        "## Doc impact\n\n"
+        "Updated README.md install section.\n"
+    )
+
+
+def _skeleton_pr_body() -> str:
+    """A PR body still carrying the raw PR.md skeleton."""
+    return (
+        "Closes #\n\n"
+        "## Summary\n\n"
+        "<!-- 1–3 paragraphs: the why and how. -->\n\n"
+        "## Test plan\n\n"
+        "- [ ]\n\n"
+        "## Doc impact\n\n"
+        "-\n"
+    )
+
+
+def test_authored_pr_body_no_placeholder_findings(
+    vp, titles, classification, git_conv
+) -> None:
+    """A fully authored PR body produces no placeholder findings."""
+    from _lib.placeholder_detection import PHASE_CREATE, PHASE_TRANSITION
+    for phase in (PHASE_CREATE, PHASE_TRANSITION):
+        findings = vp._validate_pr(
+            pr_title="feat(pm): implement frobnication",
+            pr_body=_authored_pr_body(),
+            titles=titles,
+            classification=classification,
+            git_conv=git_conv,
+            closing_type_labels=["type:feature"],
+            capability_root=CAPABILITY_ROOT,
+            phase=phase,
+        )
+        placeholder_findings = [
+            f for f in findings
+            if f.label.startswith("body.placeholder.")
+        ]
+        assert placeholder_findings == [], (
+            f"unexpected placeholder findings at phase={phase!r}: "
+            f"{placeholder_findings}"
+        )
+
+
+def test_skeleton_pr_body_warns_at_open(
+    vp, titles, classification, git_conv
+) -> None:
+    """At create/open phase an empty ## Test plan section is a warning (not hard-reject)."""
+    from _lib.placeholder_detection import PHASE_CREATE
+    findings = vp._validate_pr(
+        pr_title="feat(pm): skeleton pr",
+        pr_body=(
+            "Closes #1\n\n"
+            "## Summary\n\nfoo\n\n"
+            "## Test plan\n\n- [ ]\n\n"
+            "## Doc impact\n\nnone.\n"
+        ),
+        titles=titles,
+        classification=classification,
+        git_conv=git_conv,
+        closing_type_labels=["type:feature"],
+        capability_root=CAPABILITY_ROOT,
+        phase=PHASE_CREATE,
+    )
+    cb_findings = [
+        f for f in findings
+        if f.label == "body.placeholder.empty-checkbox-section"
+    ]
+    assert cb_findings, "expected empty-checkbox-section warning at open phase"
+    assert all(f.severity == "warning" for f in cb_findings), (
+        f"expected warning severity at open, got: {cb_findings}"
+    )
+
+
+def test_skeleton_pr_body_hard_rejects_at_merge_gate(
+    vp, titles, classification, git_conv
+) -> None:
+    """At transition/merge-gate phase an empty ## Test plan section is a hard-reject."""
+    from _lib.placeholder_detection import PHASE_TRANSITION
+    findings = vp._validate_pr(
+        pr_title="feat(pm): skeleton pr",
+        pr_body=(
+            "Closes #1\n\n"
+            "## Summary\n\nfoo\n\n"
+            "## Test plan\n\n- [ ]\n\n"
+            "## Doc impact\n\nnone.\n"
+        ),
+        titles=titles,
+        classification=classification,
+        git_conv=git_conv,
+        closing_type_labels=["type:feature"],
+        capability_root=CAPABILITY_ROOT,
+        phase=PHASE_TRANSITION,
+    )
+    cb_findings = [
+        f for f in findings
+        if f.label == "body.placeholder.empty-checkbox-section"
+    ]
+    assert cb_findings, "expected empty-checkbox-section hard-reject at merge gate"
+    assert all(f.severity == "hard-reject" for f in cb_findings), (
+        f"expected hard-reject severity at merge gate, got: {cb_findings}"
+    )
+
+
+def test_authored_but_unticked_pr_body_no_false_positive(
+    vp, titles, classification, git_conv
+) -> None:
+    """Regression: authored but unchecked ## Test plan items must NOT be flagged.
+
+    An unchecked checkbox with real text (e.g. '- [ ] Run the test suite')
+    is authored. Checking for authorship must be checked-state-independent.
+    """
+    from _lib.placeholder_detection import PHASE_TRANSITION
+    body = (
+        "Closes #7\n\n"
+        "## Summary\n\nReplace the widget factory with a new impl.\n\n"
+        "## Test plan\n\n"
+        "- [ ] Run the test suite with `uv run pytest`.\n"
+        "- [ ] Manual smoke test the widget creation flow.\n\n"
+        "## Doc impact\n\nNone — internal refactor only.\n"
+    )
+    findings = vp._validate_pr(
+        pr_title="refactor(widget): replace factory",
+        pr_body=body,
+        titles=titles,
+        classification=classification,
+        git_conv=git_conv,
+        closing_type_labels=["type:refactor"],
+        capability_root=CAPABILITY_ROOT,
+        phase=PHASE_TRANSITION,
+    )
+    cb_findings = [
+        f for f in findings
+        if f.label == "body.placeholder.empty-checkbox-section"
+    ]
+    assert cb_findings == [], (
+        "authored-but-unticked PR body falsely flagged as skeleton: "
+        f"{cb_findings}"
+    )
+
+
+def test_no_capability_root_no_placeholder_check(
+    vp, titles, classification, git_conv
+) -> None:
+    """When capability_root is None the placeholder check is skipped gracefully."""
+    from _lib.placeholder_detection import PHASE_TRANSITION
+    body = (
+        "Closes #1\n\n"
+        "## Summary\n\nfoo\n\n"
+        "## Test plan\n\n- [ ]\n\n"
+        "## Doc impact\n\nnone.\n"
+    )
+    findings = vp._validate_pr(
+        pr_title="feat: add thing",
+        pr_body=body,
+        titles=titles,
+        classification=classification,
+        git_conv=git_conv,
+        closing_type_labels=["type:feature"],
+        capability_root=None,
+        phase=PHASE_TRANSITION,
+    )
+    placeholder_findings = [
+        f for f in findings if f.label.startswith("body.placeholder.")
+    ]
+    assert placeholder_findings == [], (
+        "placeholder check must be skipped when capability_root is None"
+    )

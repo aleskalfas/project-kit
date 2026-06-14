@@ -1,5 +1,5 @@
 """Tests for `done-work` wrapper (DEC-026) — focused on the human-mode
-three-way OR approval gate."""
+three-way OR approval gate and the PR-body placeholder gate (DEC-031)."""
 
 from __future__ import annotations
 
@@ -264,3 +264,104 @@ def test_invoke_move_issue_exits_zero_when_issue_already_done(
     assert "noop" in result.stdout.lower() or "already at target" in result.stdout.lower(), (
         f"Expected noop message in stdout, got: {result.stdout!r}"
     )
+
+
+# ---- PR-body placeholder gate (DEC-031) ------------------------------
+
+REPO_ROOT_DW = Path(__file__).resolve().parent.parent
+CAPABILITY_ROOT_DW = (
+    REPO_ROOT_DW / ".pkit" / "capabilities" / "project-management"
+)
+
+
+def _authored_pr_body_dw() -> str:
+    return (
+        "Closes #42\n\n"
+        "## Summary\n\nImplement the thing.\n\n"
+        "## Test plan\n\n"
+        "- [ ] Unit tests pass.\n"
+        "- [x] Integration smoke test ran.\n\n"
+        "## Doc impact\n\nUpdated README.\n"
+    )
+
+
+def _skeleton_pr_body_dw() -> str:
+    """PR body still carrying the raw ## Test plan skeleton (bare - [ ])."""
+    return (
+        "Closes #42\n\n"
+        "## Summary\n\nfoo\n\n"
+        "## Test plan\n\n"
+        "- [ ]\n\n"
+        "## Doc impact\n\nnone.\n"
+    )
+
+
+def test_check_pr_placeholder_authored_body_clean(dw) -> None:
+    """An authored PR body produces no findings from _check_pr_placeholder."""
+    findings = dw._check_pr_placeholder(
+        _authored_pr_body_dw(), 42, CAPABILITY_ROOT_DW
+    )
+    hard_rejects = [f for f in findings if f[0] == "hard-reject"]
+    assert hard_rejects == [], (
+        f"unexpected hard-reject on authored PR body: {hard_rejects}"
+    )
+
+
+def test_check_pr_placeholder_skeleton_body_hard_rejects(dw) -> None:
+    """A skeleton PR body (bare - [ ] in ## Test plan) produces a hard-reject."""
+    findings = dw._check_pr_placeholder(
+        _skeleton_pr_body_dw(), 42, CAPABILITY_ROOT_DW
+    )
+    hard_rejects = [f for f in findings if f[0] == "hard-reject"]
+    assert hard_rejects, (
+        "expected hard-reject for skeleton PR body at merge gate"
+    )
+    labels = [f[1] for f in hard_rejects]
+    assert "body.placeholder.empty-checkbox-section" in labels
+
+
+def test_check_pr_placeholder_unticked_real_items_no_false_positive(dw) -> None:
+    """Authored-but-unchecked ## Test plan items must not trigger the skeleton signal."""
+    body = (
+        "Closes #7\n\n"
+        "## Summary\n\nRefactor the widget.\n\n"
+        "## Test plan\n\n"
+        "- [ ] Run pytest.\n"
+        "- [ ] Manual smoke test.\n\n"
+        "## Doc impact\n\nNone.\n"
+    )
+    findings = dw._check_pr_placeholder(body, 7, CAPABILITY_ROOT_DW)
+    hard_rejects = [
+        f for f in findings
+        if f[0] == "hard-reject" and f[1] == "body.placeholder.empty-checkbox-section"
+    ]
+    assert hard_rejects == [], (
+        "authored-but-unticked PR body falsely flagged as skeleton: "
+        f"{hard_rejects}"
+    )
+
+
+def test_gh_get_pr_body_returns_none_on_failure(dw, monkeypatch) -> None:
+    """_gh_get_pr_body returns None when `gh` fails."""
+    import subprocess
+    def fake_gh_run(args, config, **kwargs):
+        return subprocess.CompletedProcess(
+            args=args, returncode=1, stdout="", stderr="not found",
+        )
+    monkeypatch.setattr(dw, "gh_run", fake_gh_run)
+    result = dw._gh_get_pr_body(99, {})
+    assert result is None
+
+
+def test_gh_get_pr_body_extracts_body(dw, monkeypatch) -> None:
+    """_gh_get_pr_body returns the body string from the JSON response."""
+    import subprocess
+    def fake_gh_run(args, config, **kwargs):
+        return subprocess.CompletedProcess(
+            args=args, returncode=0,
+            stdout=json.dumps({"body": "Closes #1\n## Test plan\n- [x] done.\n"}),
+            stderr="",
+        )
+    monkeypatch.setattr(dw, "gh_run", fake_gh_run)
+    result = dw._gh_get_pr_body(99, {})
+    assert result == "Closes #1\n## Test plan\n- [x] done.\n"

@@ -56,6 +56,10 @@ from _lib.membership import (  # noqa: E402
     resolve_capability_root,
     resolve_invoker_identity,
 )
+from _lib.placeholder_detection import (  # noqa: E402
+    PHASE_TRANSITION,
+    detect_placeholder_residuals,
+)
 from _lib.review_mode import resolve_mode  # noqa: E402
 
 
@@ -158,6 +162,29 @@ def main() -> int:
     if not gate_result.passed:
         print(gate_result.refusal_message, file=sys.stderr)
         return 1
+
+    # Residual-placeholder check per DEC-031 — hard-reject at the merge gate.
+    # Fetch the PR body (not fetched earlier; _find_pr_for_branch only
+    # retrieves number/isDraft/headRefName).
+    pr_body = _gh_get_pr_body(pr_number, config)
+    if pr_body is not None:
+        pr_placeholder_findings = _check_pr_placeholder(
+            pr_body, pr_number, capability_root
+        )
+        hard_reject = [f for f in pr_placeholder_findings if f[0] == "hard-reject"]
+        if hard_reject:
+            print(
+                f"[hard-reject] merge of PR #{pr_number} blocked: "
+                "PR body has not been authored (DEC-031).",
+                file=sys.stderr,
+            )
+            for sev, label, detail in hard_reject:
+                print(f"  [{sev}] {label}: {detail}", file=sys.stderr)
+            print(
+                "  → Fill in the required sections of the PR body before merging.",
+                file=sys.stderr,
+            )
+            return 1
 
     print(f"done-work: #{args.issue_number}")
     print(f"  PR:      #{pr_number}")
@@ -520,6 +547,71 @@ def _git_pull_main() -> None:
             f"[warn] git pull failed: {proc.stderr.strip()}",
             file=sys.stderr,
         )
+
+
+# ---- PR-placeholder helpers ------------------------------------------
+
+# Body-format descriptor for the PR placeholder check (mirrors the
+# issue-side body-format.yaml structure).  ## Test plan is the only
+# required checkbox section in PR.md.
+_PR_BODY_FORMAT: dict = {
+    "bodies": {
+        "pr": {
+            "required_sections": [
+                {
+                    "heading": "## Test plan",
+                    "has_checkboxes": True,
+                    "severity": "[validation-severity:hard-reject]",
+                    "purpose": (
+                        "Checkboxes describing the testing strategy. "
+                        "Omit the section entirely for trivial changes; "
+                        "when present, at least one authored item is required."
+                    ),
+                },
+            ],
+        },
+    },
+}
+
+
+def _gh_get_pr_body(pr_number: int | None, config: dict) -> str | None:
+    """Fetch the PR body via `gh pr view`.  Returns None on failure."""
+    if pr_number is None:
+        return None
+    try:
+        proc = gh_run(
+            ["gh", "pr", "view", str(pr_number), "--json", "body"],
+            config,
+            check=False,
+        )
+    except FileNotFoundError:
+        return None
+    if proc.returncode != 0:
+        return None
+    try:
+        data = json.loads(proc.stdout)
+        body = data.get("body")
+        return str(body) if body is not None else ""
+    except (json.JSONDecodeError, KeyError):
+        return None
+
+
+def _check_pr_placeholder(
+    pr_body: str,
+    pr_number: int | None,
+    capability_root: "Path",
+) -> list[tuple[str, str, str]]:
+    """Run residual-placeholder detection on *pr_body* at PHASE_TRANSITION.
+
+    Returns a list of ``(severity, label, detail)`` tuples — empty when clean.
+    """
+    return detect_placeholder_residuals(
+        body=pr_body,
+        structural_type="pr",
+        body_format=_PR_BODY_FORMAT,
+        capability_root=capability_root,
+        phase=PHASE_TRANSITION,
+    )
 
 
 # ---- helpers -----------------------------------------------------------

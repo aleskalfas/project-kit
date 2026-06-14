@@ -80,6 +80,19 @@ conventions:
         severity: "[validation-severity:hard-reject]"
       - rule: "PR body does not paste content already in the closing issue's body."
         severity: "[validation-severity:warning]"
+      - rule: |
+          A required PR checkbox section (`## Test plan`) with zero authored items
+          signals an unedited PR template skeleton. At the merge gate (`done-work`)
+          this is a hard-reject; at open it is a warning. A trailing empty `- [ ]`
+          alongside real authored items is tolerated (lenient). Per DEC-031.
+        severity: "[validation-severity:hard-reject]"
+        name: "body.placeholder.empty-checkbox-section"
+      - rule: |
+          Surviving PR.md template placeholder prose (text derived at runtime from
+          `templates/PR.md` that still appears verbatim in the body) signals an
+          unedited PR skeleton. Always a warning. Per DEC-031.
+        severity: "[validation-severity:warning]"
+        name: "body.placeholder.template-prose"
 
   merge:
     surface_kind: merge

@@ -210,6 +210,11 @@
               "rule": { "type": "string", "minLength": 1 },
               "severity": {
                 "$ref": "validation-severity.schema.json#/$defs/severity_ref"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Optional machine-readable rule identifier (e.g. 'body.placeholder.empty-checkbox-section'). Used by DEC-031's declare-in-schema / enforce-in-code pattern."
               }
             }
           },
