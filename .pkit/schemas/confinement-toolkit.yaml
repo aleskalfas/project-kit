@@ -3,16 +3,32 @@
 # A toolkit names the sandbox-block allowances one tool (or tool-group) needs to
 # work under OS confinement (per ADR-008). Each allowance carries an `effect`:
 #   narrowing — makes the box usable without enlarging the agent's reach
-#               (a build-cache allowWrite, a needed unix socket). Safe to
-#               detect, commit, and auto-apply via `setup autonomy`.
+#               (a build-cache allowWrite, a needed unix socket, or a named
+#               allow-host). Safe to detect, commit, and auto-apply via
+#               `setup autonomy`. NOTE: allow-host narrowing is the
+#               "narrowing-but-reported" posture (ADR-008 amendment / ADR-015):
+#               auto-applied like narrowing, but MANDATORY surfaced with the
+#               verbatim "session-wide egress to <host>; not a security
+#               boundary" gloss in sandbox status / permissions overview /
+#               toolkit listing. The allowlist is not a security boundary (no
+#               TLS inspection; ADR-004 §61).
 #   widening  — lowers the boundary: a command carved OUT of the box to run
-#               unconfined (excludedCommands), or weakened TLS. Explicit
+#               unconfined (excludedCommands), weakened TLS, or allow-host
+#               with value `*` (open egress to every host). Explicit
 #               per-invocation operator gesture only — never committed, never
 #               detected, never applied by setup (ADR-008 rules 3–4).
 # The `sandbox accommodate` verb applies a toolkit's narrowing allowances; its
 # widening allowances are surfaced as the explicit `sandbox exclude` gesture.
 # `detect` globs signal a tool is in use. Backbone ships this set; projects
 # extend/override by same-name (the privilege-catalog data pattern).
+#
+# allow-host — new allowance kind (ADR-015, issue #24):
+#   Routes named hosts to sandbox.network.allowedHosts via the single provenance
+#   writer. Named bounded hosts (e.g. "api.github.com") are `narrowing` effect
+#   (narrowing-but-reported). The wildcard `*` is `widening` effect (never
+#   auto-applied; only via `sandbox exclude`). Every applied allow-host is
+#   mandatorily surfaced with the egress honesty gloss (session-wide; not a
+#   security boundary). See ADR-015 for the full design.
 
 schema_version: 1
 
@@ -41,6 +57,21 @@ toolkits:
       - kind: allow-write
         effect: narrowing
         value: "~/.cache/node"
+
+  github-api:
+    description: GitHub API — session-wide egress to api.github.com for capabilities that call the GitHub REST/GraphQL API (e.g. project-management).
+    detect:
+      - ".github/"
+    allowances:
+      - kind: allow-host
+        effect: narrowing
+        value: "api.github.com"
+        note: >-
+          session-wide egress to api.github.com; not a security boundary
+          (no TLS inspection — ADR-004 §61 / ADR-015). The sandbox allowlist
+          bounds well-behaved egress but does not stop IP-literal / DNS-rebind
+          / domain-fronting exfil. Apply only for capabilities that need the
+          GitHub API; for fully unconfined gh CLI access, use `sandbox exclude gh`.
 
   # NOTE: there is intentionally no `ssh-agent` toolkit. The SSH agent socket
   # path is a per-session HOST fact ($SSH_AUTH_SOCK), not a static value a

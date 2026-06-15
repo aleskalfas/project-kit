@@ -78,10 +78,11 @@
             "allow-write",
             "allow-read",
             "allow-unix-socket",
+            "allow-host",
             "exclude-command",
             "weaker-tls"
           ],
-          "description": "Which sandbox-block key this writes: allow-write/allow-read → filesystem.allowWrite/allowRead; allow-unix-socket → network.allowUnixSockets; exclude-command → excludedCommands; weaker-tls → enableWeakerNetworkIsolation."
+          "description": "Which sandbox-block key this writes: allow-write/allow-read → filesystem.allowWrite/allowRead; allow-unix-socket → network.allowUnixSockets; allow-host → network.allowedHosts (session-wide egress, not a security boundary — ADR-015); exclude-command → excludedCommands; weaker-tls → enableWeakerNetworkIsolation. NOTE: allow-host with value `*` (or host `any`) is unambiguously widening and never auto-applied (ADR-015 fork 6); named, bounded hosts are `narrowing-but-reported` (auto-applied but mandatorily surfaced with the egress honesty gloss)."
         },
         "effect": {
           "type": "string",
@@ -89,7 +90,7 @@
             "narrowing",
             "widening"
           ],
-          "description": "The load-bearing classification (ADR-008). `narrowing` = makes the box usable without enlarging reach (allow-write of a build cache, a needed socket) — auto-applicable, detectable, committable. `widening` = lowers the boundary (a command carved out of the box, weakened TLS) — explicit per-invocation gesture only, never committed, never detected, never applied by setup."
+          "description": "The load-bearing classification (ADR-008). `narrowing` = makes the box usable without enlarging reach (allow-write of a build cache, a needed socket; allow-host of a named bounded host) — auto-applicable, detectable, committable; allow-host narrowing is additionally mandatory-reported (the `narrowing-but-reported` posture per ADR-008 amendment / ADR-015). `widening` = lowers the boundary (a command carved out of the box, weakened TLS, allow-host with `*`) — explicit per-invocation gesture only, never committed, never detected, never applied by setup."
         },
         "value": {
           "type": "string",

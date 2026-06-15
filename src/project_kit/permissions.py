@@ -354,6 +354,14 @@ def overview(target_root: Path) -> str:
         f"  posture {posture} (unmodeled requests {unmodeled}) · "
         f"ownership {ownership} (how much of settings.json the realizer owns)",
         sandbox_line,
+    ]
+    # Mandatory egress reporting (ADR-015 narrowing-but-reported): surface every
+    # applied allow-host host with source + the verbatim honesty gloss, always,
+    # in permissions overview.
+    egress_lines = _egress_report_lines(target_root)
+    if egress_lines:
+        lines.extend(egress_lines)
+    lines += [
         "",
         cli_render.style("heading", "GUARDRAILS — always denied for every agent; the safety floor you cannot grant around"),
     ]
@@ -992,6 +1000,13 @@ def _auto_accommodate_narrowing_toolkits(target_root: Path) -> str:
     no second write path). Idempotent: `_apply_allowances` is a set-union write
     and `_record_accommodation` de-duplicates the config list.
 
+    allow-host narrowing (ADR-015 narrowing-but-reported): toolkits whose ONLY
+    narrowing allowances are `allow-host` for named, bounded hosts are also
+    auto-applied here. ANY toolkit with an `allow-host * / any` value is kept in
+    the widening class (its effect is `widening` in the data) and is excluded by
+    the no-widening guard below. Egress hosts applied here are surfaced in the
+    mandatory-reporting lines of `sandbox_status` / `overview`.
+
     Returns a human-readable note for the `sandbox enable` output, or an
     empty string when no toolkit is detected."""
     toolkits = _load_toolkits(target_root)
@@ -1018,6 +1033,11 @@ def _auto_accommodate_narrowing_toolkits(target_root: Path) -> str:
         f"auto-accommodated: {', '.join(applied)} (narrowing — {', '.join(v for v in values if v)}; "
         f"effective on Linux/bubblewrap; inert on macOS per ADR-014)"
     )
+    # Mandatory egress reporting (ADR-015 narrowing-but-reported): surface any
+    # allow-host allowances applied by auto-accommodation with the verbatim gloss.
+    egress_lines = _egress_report_lines(target_root)
+    if egress_lines:
+        note += "\n" + "\n".join(egress_lines)
     return note
 
 
@@ -1239,6 +1259,12 @@ def sandbox_status(target_root: Path) -> str:
     excluded = sb.get("excludedCommands") or []
     if excluded:
         lines.append(f"  excluded        {len(excluded)} command(s) run outside the box (operator-set)")
+    # Mandatory egress reporting (ADR-015 narrowing-but-reported): surface every
+    # applied allow-host host with source + the verbatim honesty gloss.
+    egress_lines = _egress_report_lines(target_root)
+    if egress_lines:
+        lines.append("")
+        lines.extend(egress_lines)
     lines += [
         "",
         cli_render.style("heading", "Commands"),
@@ -1845,6 +1871,7 @@ _ALLOWANCE_KEY = {
     "allow-write": ("filesystem", "allowWrite"),
     "allow-read": ("filesystem", "allowRead"),
     "allow-unix-socket": ("network", "allowUnixSockets"),
+    "allow-host": ("network", "allowedHosts"),
     "exclude-command": (None, "excludedCommands"),
 }
 
@@ -1855,6 +1882,40 @@ def _narrowing(allowances: list[dict]) -> list[dict]:
 
 def _widening(allowances: list[dict]) -> list[dict]:
     return [a for a in allowances if a.get("effect") == "widening"]
+
+
+def _is_any_host(value: str | None) -> bool:
+    """True when a value targets the unbounded wildcard — `*` or the keyword `any`.
+    allow-host with this value is unambiguously widening (ADR-015 fork 6); it
+    must NEVER be auto-applied, only via the loud explicit widening gesture."""
+    return value in ("*", "any") if value else False
+
+
+def _applied_egress_hosts(target_root: Path) -> list[dict]:
+    """Return provenance entries for every applied allow-host allowance.
+    Each entry has {kind, value, toolkit}. Used by the mandatory-reporting
+    surfaces (sandbox status / permissions overview / toolkit listing) to
+    surface the narrowing-but-reported egress gloss (ADR-015)."""
+    prov = _load_provenance(target_root)
+    return [e for e in prov if e.get("kind") == "allow-host"]
+
+
+def _egress_report_lines(target_root: Path) -> list[str]:
+    """Mandatory reporting for applied allow-host allowances (ADR-015).
+    Returns zero or more lines with the verbatim "session-wide egress to X;
+    not a security boundary" gloss for each applied host + its source toolkit.
+    Empty list when no allow-host allowances are applied."""
+    entries = _applied_egress_hosts(target_root)
+    if not entries:
+        return []
+    lines = ["  Declared network egress (session-wide; NOT a security boundary — no TLS inspection):"]
+    for e in entries:
+        host = e.get("value", "?")
+        source = e.get("toolkit", "?")
+        lines.append(
+            f"    session-wide egress to {host}; not a security boundary  [source: {source}]"
+        )
+    return lines
 
 
 def _provenance_path(target_root: Path) -> Path:
@@ -1884,7 +1945,13 @@ def _apply_allowances(target_root: Path, allowances: list[dict], toolkit: str) -
     """Additively write a set of allowances to the live sandbox block, tagging
     each in provenance as authored by `toolkit`. Idempotent (set-union per key;
     provenance de-duplicated on (kind, value)). Returns human notes on what was
-    added. The single writer for sandbox-block list keys (ADR-008 rule 2)."""
+    added. The single writer for sandbox-block list keys (ADR-008 rule 2).
+
+    allow-host safety gate (ADR-015 fork 6): a value of `*` or `any` on an
+    allow-host allowance is unambiguously widening — it must never be written by
+    this path (which is the narrowing / auto-apply writer). Callers that reach
+    this function with such a value have a programming error; we refuse rather
+    than silently open unbounded egress."""
     settings = _read_settings(target_root)
     sb = settings.setdefault("sandbox", {})
     prov = _load_provenance(target_root)
@@ -1892,6 +1959,12 @@ def _apply_allowances(target_root: Path, allowances: list[dict], toolkit: str) -
     notes: list[str] = []
     for a in allowances:
         kind, value = a["kind"], a.get("value")
+        if kind == "allow-host" and _is_any_host(value):
+            raise PermissionsError(
+                f"allow-host with value {value!r} is unambiguously widening (open egress to "
+                f"every host) and must not be auto-applied. Use `pkit permissions sandbox "
+                f"exclude --weaker-tls` or the explicit widening path (ADR-015 fork 6)."
+            )
         if kind == "weaker-tls":
             if sb.get("enableWeakerNetworkIsolation") is not True:
                 sb["enableWeakerNetworkIsolation"] = True
@@ -2087,8 +2160,17 @@ def _record_accommodation(target_root: Path, tool: str, add: bool) -> None:
 def _effect_mark(allowances: list[dict]) -> str:
     has_w = any(a.get("effect") == "widening" for a in allowances)
     has_n = any(a.get("effect") == "narrowing" for a in allowances)
+    # A toolkit that has narrowing allow-host allowances (named, bounded hosts)
+    # is the narrowing-but-reported posture (ADR-015 / ADR-008 amendment): auto-
+    # applied like narrowing but mandatorily surfaced with the egress gloss.
+    has_egress = any(
+        a.get("kind") == "allow-host" and a.get("effect") == "narrowing"
+        for a in allowances
+    )
     if has_w and has_n:
         return "narrowing + widening"
+    if has_egress and not has_w:
+        return "narrowing-but-reported"
     return "widening" if has_w else "narrowing"
 
 
@@ -2112,9 +2194,10 @@ def confinement_list(target_root: Path) -> str:
     lines += [
         "",
         cli_render.style("heading", "Legend"),
-        "  →                   accommodated (its narrowing allowances are applied)",
-        "  narrowing           makes the box usable, no reach increase — `sandbox accommodate <tool>`",
-        "  widening            carves a tool OUT of the box (unconfined) — `sandbox exclude <cmd>` (loud, explicit)",
+        "  →                        accommodated (its narrowing allowances are applied)",
+        "  narrowing                makes the box usable, no reach increase — `sandbox accommodate <tool>`",
+        "  narrowing-but-reported   auto-applied + mandatorily surfaced (allow-host egress; session-wide, not a security boundary)",
+        "  widening                 carves a tool OUT of the box (unconfined) — `sandbox exclude <cmd>` (loud, explicit)",
         "",
         cli_render.style("heading", "Commands"),
         "  pkit permissions sandbox toolkit show <name>   the exact allowances + effects",
@@ -2146,12 +2229,31 @@ def confinement_show(target_root: Path, name: str) -> str:
         lines.append(f"  [{eff:9}] {a['kind']:18} {tgt}")
         if a.get("note"):
             lines.append(f"              ↳ {a['note'].strip()}")
+        # Mandatory egress gloss for allow-host narrowing (ADR-015): every
+        # allow-host entry in the toolkit must be shown with the verbatim
+        # honesty gloss in `toolkit show`, whether or not it is applied.
+        if a.get("kind") == "allow-host" and a.get("effect") == "narrowing":
+            lines.append(
+                f"              ↳ session-wide egress to {tgt}; not a security boundary "
+                f"(no TLS inspection — ADR-004 §61 / ADR-015)"
+            )
     widening = _widening(spec.get("allowances", []))
     if widening:
         lines += [
             "",
             "  ⚠ this toolkit has WIDENING allowances — applied only by the explicit",
             "    `pkit permissions sandbox exclude <cmd>` gesture, never by accommodate/setup.",
+        ]
+    egress_narrowing = [
+        a for a in spec.get("allowances", [])
+        if a.get("kind") == "allow-host" and a.get("effect") == "narrowing"
+    ]
+    if egress_narrowing:
+        lines += [
+            "",
+            "  ℹ this toolkit has NARROWING-BUT-REPORTED allow-host allowances — auto-applied",
+            "    on install, but always surfaced in `sandbox status` / `permissions overview`",
+            "    with the egress honesty gloss. The host allowlist is NOT a security boundary.",
         ]
     return "\n".join(lines) + "\n"
 
@@ -2229,6 +2331,12 @@ def accommodate(target_root: Path, tools: tuple[str, ...] | list[str],
     tail = [""]
     if not remove:
         tail.append(_RESTART_NOTE)
+    # Mandatory egress reporting after accommodate (ADR-015 narrowing-but-reported):
+    # surface all applied allow-host hosts with the verbatim honesty gloss.
+    if not remove:
+        egress_lines = _egress_report_lines(target_root)
+        if egress_lines:
+            tail.extend(egress_lines)
     return head + "\n" + "\n".join(lines) + "\n" + "\n".join(tail) + "\n"
 
 
