@@ -154,7 +154,12 @@ deploy_one() {
         # remediation, deploy the rest, and don't abort the whole sync/upgrade
         # over an unrelated capability. The deploy is idempotent — once the
         # overlay defines the category, the next sync deploys the agent.
-        status "skipped" "$name — $(cat "$tmperr"); run \`pkit agents adopt $name\` to create the conventional layout and deploy it, or \`pkit agents reconcile --write\` to scaffold the missing category into .pkit/agents/project/overlay.yaml, fill in the paths, then re-run sync"
+        local skip_reason
+        skip_reason="$(cat "$tmperr")"
+        status "skipped" "$name — $skip_reason."
+        printf "  %s\n"    "         Deploy it:  pkit agents adopt $name"
+        printf "  %s\n"    "         (custom doc layout? run \`pkit agents reconcile --write\`, set the"
+        printf "  %s\n"    "          paths in overlay.yaml, then \`pkit sync\`)"
         rm -f "$tmpfile" "$tmperr"
         unresolved=$((unresolved + 1))
         return 0
@@ -226,11 +231,8 @@ fi
 
 echo "Done."
 if [ "$unresolved" -gt 0 ]; then
-    echo "  note: $unresolved agent(s) skipped — overlay category not defined. The rest"
-    echo "        deployed and the upgrade continued. Run \`pkit agents adopt <agent>\`"
-    echo "        to create the conventional layout and deploy it in one step, or run"
-    echo "        \`pkit agents reconcile --write\` to scaffold the missing categories"
-    echo "        into .pkit/agents/project/overlay.yaml, fill in the paths, then re-run"
-    echo "        \`pkit sync\` to deploy them."
+    echo "  note: $unresolved agent(s) skipped — overlay category not set; the rest deployed."
+    echo "        → Deploy the skipped agent(s):  pkit agents adopt <agent>"
+    echo "        → Custom doc layout:            pkit agents reconcile --write → set paths → pkit sync"
 fi
 exit $exit_code

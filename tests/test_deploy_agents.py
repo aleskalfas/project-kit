@@ -169,7 +169,8 @@ def test_deploy_unresolved_category_degrades_not_aborts(mock_kit: Path) -> None:
     assert "skipped" in result.stdout and "broken" in result.stdout
     assert "<undefined-category>" in result.stdout          # the missing category named
     assert "overlay.yaml" in result.stdout                  # remediation pointer
-    assert "pkit agents reconcile --write" in result.stdout  # scaffolding command named
+    assert "pkit agents adopt" in result.stdout             # lead command: adopt
+    assert "pkit agents reconcile --write" in result.stdout  # custom-layout fallback named
     assert "1 agent(s) skipped" in result.stdout            # end-of-run summary
     assert (mock_kit / ".claude" / "agents" / "fine.md").is_file()      # rest deployed
     assert not (mock_kit / ".claude" / "agents" / "broken.md").exists()  # the gap one skipped
