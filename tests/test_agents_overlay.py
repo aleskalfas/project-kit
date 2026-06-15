@@ -128,10 +128,75 @@ def test_reconcile_write_appends_commented_stubs_idempotently(tmp_path):
     # The category stays undefined → agent still skipped (commented = visible, not resolved).
     assert ao.missing_categories(proj) == ["architecture-docs"]
 
-    # Idempotent: a second run adds nothing (the commented key is detected).
-    added2, _ = ao.reconcile_overlay(proj, write=True)
+    # Idempotent: a second run adds nothing (the commented stub is detected).
+    # Crucially, it must surface "uncomment + set real paths" guidance — never
+    # a bare "nothing to add" that strands the adopter (regression for issue #40).
+    added2, report2 = ao.reconcile_overlay(proj, write=True)
     assert added2 == []
-    assert overlay.read_text() == text
+    assert overlay.read_text() == text  # file unchanged
+    assert "uncomment" in report2
+    assert "pkit sync" in report2
+    assert "overlay is complete" not in report2
+
+
+# --- reconcile: three-state regression (issue #40) ---------------------------
+
+def test_reconcile_missing_state_adds_stub(tmp_path):
+    """State 1 (missing): category absent from overlay → stub is added."""
+    proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
+    _agent(proj / ".pkit" / "agents" / "core", "a", owns=["<architecture-docs>"])
+    overlay = proj / ".pkit" / "agents" / "project" / "overlay.yaml"
+
+    added, report = ao.reconcile_overlay(proj, write=True)
+
+    assert "architecture-docs" in added
+    assert "# architecture-docs:" in overlay.read_text()
+    # Still missing from sync/deploy's perspective (commented ≠ defined).
+    assert ao.missing_categories(proj) == ["architecture-docs"]
+
+
+def test_reconcile_commented_stub_state_reports_guidance_no_duplicate(tmp_path):
+    """State 2 (commented-stub): stub exists but unfilled → guidance shown, no
+    duplicate stub written, file unchanged."""
+    # Overlay already contains a commented stub for architecture-docs.
+    overlay_text = (
+        "workflow-docs:\n  - README.md\n"
+        "# architecture-docs:\n"
+        "#   - <path/relative/to/project/root>\n"
+    )
+    proj = _project(tmp_path, overlay=overlay_text)
+    _agent(proj / ".pkit" / "agents" / "core", "a", owns=["<architecture-docs>"])
+    overlay = proj / ".pkit" / "agents" / "project" / "overlay.yaml"
+    before = overlay.read_text()
+
+    added, report = ao.reconcile_overlay(proj, write=True)
+
+    # No new stubs appended.
+    assert added == []
+    assert overlay.read_text() == before
+    # Actionable guidance must be present — never a bare "nothing to add".
+    assert "uncomment" in report
+    assert "pkit sync" in report
+    assert "overlay is complete" not in report
+    # The category name must be called out.
+    assert "architecture-docs" in report
+
+
+def test_reconcile_defined_state_reports_complete(tmp_path):
+    """State 3 (defined): uncommented entry with paths → overlay is complete."""
+    overlay_text = (
+        "workflow-docs:\n  - README.md\n"
+        "architecture-docs:\n  - docs/ARCH.md\n"
+    )
+    proj = _project(tmp_path, overlay=overlay_text)
+    _agent(proj / ".pkit" / "agents" / "core", "a", owns=["<architecture-docs>"])
+
+    added, report = ao.reconcile_overlay(proj, write=True)
+
+    assert added == []
+    assert "overlay is complete" in report
+    # Agent should now be deployable (not missing).
+    assert ao.missing_categories(proj) == []
 
 
 # --- CLI ---------------------------------------------------------------------
