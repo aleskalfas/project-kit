@@ -540,6 +540,69 @@ def test_sandbox_enable_refused_without_adapter(tmp_path, monkeypatch):
     assert "claude-code adapter is not installed" in out
 
 
+# ---- auto-accommodation of narrowing toolkits on sandbox enable (#22) --------
+
+def test_sandbox_enable_auto_accommodates_uv_when_detected(tmp_path, monkeypatch):
+    """When uv.lock is present, `sandbox enable` auto-applies the uv-cache
+    narrowing allowance via the provenance writer (ADR-008 single-writer rule)."""
+    proj = _with_adapter(_setup(tmp_path))
+    (proj / "uv.lock").write_text("")              # signals uv toolkit
+    out = _run(proj, monkeypatch, "sandbox", "enable")
+    assert "auto-accommodated" in out and "uv" in out
+    assert "~/.cache/uv" in _sb(proj)["filesystem"]["allowWrite"]
+    # recorded in permission-config (committable narrowing list)
+    cfg = (proj / ".pkit" / "permissions" / "project" / "config.yaml").read_text()
+    assert "[confinement-toolkit:uv]" in cfg
+    # widening never written
+    assert "excludedCommands" not in _sb(proj)
+
+
+def test_sandbox_enable_auto_accommodate_uv_idempotent(tmp_path, monkeypatch):
+    """Re-running `sandbox enable` when uv is already accommodated is a no-op:
+    no duplicate entries in allowWrite, settings file is a fixed point."""
+    proj = _with_adapter(_setup(tmp_path))
+    (proj / "uv.lock").write_text("")
+    _run(proj, monkeypatch, "sandbox", "enable")
+    before = _settings(proj)
+    _run(proj, monkeypatch, "sandbox", "enable")
+    assert _settings(proj) == before
+    assert _sb(proj)["filesystem"]["allowWrite"].count("~/.cache/uv") == 1
+
+
+def test_sandbox_enable_does_not_accommodate_when_uv_absent(tmp_path, monkeypatch):
+    """When no uv.lock or pyproject.toml is present, no uv allowance is written."""
+    proj = _with_adapter(_setup(tmp_path))
+    out = _run(proj, monkeypatch, "sandbox", "enable")
+    assert "auto-accommodated" not in out
+    fs = _sb(proj).get("filesystem", {})
+    assert "~/.cache/uv" not in fs.get("allowWrite", [])
+    cfgp = proj / ".pkit" / "permissions" / "project" / "config.yaml"
+    if cfgp.is_file():
+        assert "confinement-toolkit:uv" not in cfgp.read_text()
+
+
+def test_sandbox_enable_auto_accommodate_provenance_tagged_narrowing(tmp_path, monkeypatch):
+    """The auto-applied uv allowance is recorded in sandbox-provenance.yaml as
+    authored by the 'uv' toolkit (the provenance writer — ADR-008 rule 2)."""
+    import json as _json
+    from ruamel.yaml import YAML as _YAML
+    proj = _with_adapter(_setup(tmp_path))
+    (proj / "pyproject.toml").write_text("[build-system]\n")  # pyproject.toml also detects uv
+    _run(proj, monkeypatch, "sandbox", "enable")
+    prov_path = proj / ".pkit" / "permissions" / "project" / "sandbox-provenance.yaml"
+    assert prov_path.is_file(), "provenance file not written"
+    yaml = _YAML(typ="safe")
+    with prov_path.open() as fh:
+        doc = yaml.load(fh)
+    entries = doc.get("entries", [])
+    uv_entries = [e for e in entries if e.get("toolkit") == "uv"]
+    assert uv_entries, "no uv-tagged provenance entries found"
+    # Each uv entry corresponds to a narrowing allowance
+    for e in uv_entries:
+        assert e.get("kind") == "allow-write"
+        assert e.get("value") == "~/.cache/uv"
+
+
 def test_overview_banner_gains_sandbox_line(tmp_path, monkeypatch):
     proj = _with_adapter(_setup(tmp_path))
     out = _run(proj, monkeypatch, "overview")
