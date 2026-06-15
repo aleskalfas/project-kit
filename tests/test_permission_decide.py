@@ -929,3 +929,197 @@ def test_stdlib_path_enforce_deny_grant_end_to_end(decide_mod, tmp_path, monkeyp
     assert "issue-tracker-write" in why, (
         f"denial reason must name the privilege; got: {why!r}"
     )
+
+
+# ---- default-agent subject resolution (issue #57) ----------------------------
+#
+# When the main Claude Code session has no agent_type in the payload (the hook
+# only sets it for spawned Task-subagents), the hook must resolve the subject
+# from the configured default agent in .claude/settings.json rather than
+# unconditionally falling back to "operator".
+#
+# Without this fix: per-agent grants (e.g. the #53 issue-tracker-write deny on
+# agent:project-manager) are inert for the main session because it resolves to
+# "operator", not "agent:project-manager".
+
+def _write_settings(root: Path, agent: str) -> None:
+    """Write a minimal .claude/settings.json with the given agent value."""
+    import json as _json
+    claude_dir = root / ".claude"
+    claude_dir.mkdir(parents=True, exist_ok=True)
+    (claude_dir / "settings.json").write_text(
+        _json.dumps({"agent": agent}), encoding="utf-8"
+    )
+
+
+def test_read_default_agent_returns_agent_from_settings(decide_mod, tmp_path):
+    """_read_default_agent reads the 'agent' key from .claude/settings.json."""
+    _write_settings(tmp_path, "project-manager")
+    assert decide_mod._read_default_agent(str(tmp_path)) == "project-manager"
+
+
+def test_read_default_agent_returns_none_when_file_missing(decide_mod, tmp_path):
+    """_read_default_agent returns None when .claude/settings.json does not exist."""
+    result = decide_mod._read_default_agent(str(tmp_path))
+    assert result is None
+
+
+def test_read_default_agent_returns_none_when_key_absent(decide_mod, tmp_path):
+    """_read_default_agent returns None when settings.json has no 'agent' key."""
+    import json as _json
+    (tmp_path / ".claude").mkdir()
+    (tmp_path / ".claude" / "settings.json").write_text(
+        _json.dumps({"permissions": {}}), encoding="utf-8"
+    )
+    assert decide_mod._read_default_agent(str(tmp_path)) is None
+
+
+def test_read_default_agent_returns_none_on_malformed_json(decide_mod, tmp_path):
+    """_read_default_agent returns None (never throws) when settings.json is malformed."""
+    (tmp_path / ".claude").mkdir()
+    (tmp_path / ".claude" / "settings.json").write_text("{ not valid json }", encoding="utf-8")
+    assert decide_mod._read_default_agent(str(tmp_path)) is None
+
+
+def test_hook_decide_agent_type_present_unchanged(decide_mod, catalog):
+    """agent_type present in payload → subject agent:<type> (existing behaviour unchanged)."""
+    payload = {
+        "tool_name": "Bash",
+        "tool_input": {"command": "git status"},
+        "cwd": "/r",
+        "agent_type": "project-manager",
+    }
+    d, why = decide_mod.hook_decide(MODEL, catalog, payload, project_root=None)
+    assert d == "allow"
+    assert "agent:project-manager" in why
+
+
+def test_hook_decide_no_agent_type_no_root_falls_back_to_operator(decide_mod, catalog):
+    """agent_type absent, no project_root → subject 'operator' (unchanged fallback)."""
+    payload = {
+        "tool_name": "Bash",
+        "tool_input": {"command": "git status"},
+        "cwd": "/r",
+    }
+    d, why = decide_mod.hook_decide(MODEL, catalog, payload)
+    assert d == "allow"
+    assert "operator" in why
+
+
+def test_hook_decide_no_agent_type_no_default_agent_falls_back_to_operator(decide_mod, catalog, tmp_path):
+    """agent_type absent + settings.json has no 'agent' key → subject 'operator'."""
+    # No .claude/settings.json in tmp_path.
+    payload = {
+        "tool_name": "Bash",
+        "tool_input": {"command": "git status"},
+        "cwd": "/r",
+    }
+    d, why = decide_mod.hook_decide(MODEL, catalog, payload, project_root=str(tmp_path))
+    assert d == "allow"
+    assert "operator" in why
+
+
+def test_hook_decide_no_agent_type_resolves_from_settings(decide_mod, catalog, tmp_path):
+    """agent_type absent + settings.json agent: project-manager → subject agent:project-manager.
+
+    This is the core of the issue #57 fix: a main-session payload (no agent_type)
+    is resolved to the configured default agent, so per-agent grants apply.
+    """
+    _write_settings(tmp_path, "project-manager")
+    # git status: allowed for agent:project-manager via the MODEL vcs grant.
+    payload = {
+        "tool_name": "Bash",
+        "tool_input": {"command": "git status"},
+        "cwd": "/r",
+    }
+    d, why = decide_mod.hook_decide(MODEL, catalog, payload, project_root=str(tmp_path))
+    assert d == "allow"
+    assert "agent:project-manager" in why
+
+
+def test_hook_decide_no_agent_type_deny_applies_via_default_agent(decide_mod, catalog, tmp_path):
+    """agent_type absent + settings.json agent: project-manager + deny grant → deny.
+
+    The per-agent deny on issue-tracker-write for agent:project-manager now applies
+    to the main session when no agent_type is present in the payload — the fix that
+    makes #53's enforcement work end-to-end for the primary execution context.
+    """
+    _write_settings(tmp_path, "project-manager")
+    payload = {
+        "tool_name": "Bash",
+        "tool_input": {"command": "gh issue edit 53 --body 'new body'"},
+        "cwd": "/r",
+        # No agent_type — simulates a main-session call.
+    }
+    d, why = decide_mod.hook_decide(_PM_WITH_DENY_MODEL, catalog, payload, project_root=str(tmp_path))
+    assert d == "deny", (
+        f"deny grant on agent:project-manager must apply to main-session payload "
+        f"(no agent_type) when settings.json sets agent: project-manager; got {d!r}: {why}"
+    )
+    assert "issue-tracker-write" in why
+
+
+# ---- end-to-end stdlib-path deny for main session (issue #57) ---------------
+#
+# The live hook runs bare python3 (no ruamel, no uv — ADR-014 / macOS Seatbelt).
+# This test proves that with ruamel completely absent:
+#   - a main-session payload (no agent_type) with settings.json agent: project-manager
+#   - the deny grant in grants.yaml (col-0 block-seq shape)
+# resolves the subject to agent:project-manager and returns deny for gh issue edit.
+# This is the end-to-end enforcement guard for issue #57.
+
+def test_stdlib_path_default_agent_deny_end_to_end(decide_mod, tmp_path, monkeypatch):
+    """End-to-end: stdlib-only path (no ruamel), no agent_type payload, settings.json
+    agent: project-manager, deny grant → hook_decide returns deny for gh issue edit.
+
+    This is the enforcement guard for issue #57: the same test as #55's
+    test_stdlib_path_enforce_deny_grant_end_to_end but via the DEFAULT-AGENT
+    resolution path (no agent_type in payload) rather than the explicit agent_type
+    path — proving that the main session finally enforces per-agent denies.
+    """
+    import builtins
+    real_import = builtins.__import__
+
+    def _block_ruamel(name, *args, **kwargs):
+        if "ruamel" in name:
+            raise ImportError(f"simulated missing ruamel: {name}")
+        return real_import(name, *args, **kwargs)
+
+    # Build a tree with the real catalog + deny grant (col-0 block-seq shape).
+    _write_tree(
+        tmp_path,
+        grants=(
+            "schema_version: 1\n"
+            "grants:\n"
+            "- subject: agent:project-manager\n"
+            "  privilege: '[privilege-catalog:issue-tracker-write]'\n"
+            "  effect: deny\n"
+        ),
+    )
+    # Write settings.json so _read_default_agent returns "project-manager".
+    _write_settings(tmp_path, "project-manager")
+
+    # Block ruamel — every load_yaml call falls back to _stdlib_load_yaml.
+    monkeypatch.setattr(builtins, "__import__", _block_ruamel)
+
+    catalog_stdlib = decide_mod.load_catalog(str(tmp_path))
+    model_stdlib = decide_mod.load_model(str(tmp_path), catalog_stdlib)
+
+    # Main-session payload: NO agent_type — the gap that issue #57 describes.
+    payload = {
+        "tool_name": "Bash",
+        "tool_input": {"command": "gh issue edit 53 --body 'new body'"},
+        "cwd": "/r",
+        # Deliberately no agent_type to simulate the main session.
+    }
+    d, why = decide_mod.hook_decide(
+        model_stdlib, catalog_stdlib, payload, project_root=str(tmp_path)
+    )
+    assert d == "deny", (
+        f"stdlib path must resolve default agent from settings.json and enforce the "
+        f"deny grant for main-session gh issue edit; got {d!r}: {why} — "
+        f"issue #57 fix not working through stdlib fallback"
+    )
+    assert "issue-tracker-write" in why, (
+        f"denial reason must name the privilege; got: {why!r}"
+    )
