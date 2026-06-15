@@ -4,7 +4,8 @@ The `pkit agents` surface: a read-only diagnostic of which kit-shipped agents
 will deploy vs. be skipped (because they reference an overlay *category* the
 adopter's `.pkit/agents/project/overlay.yaml` does not define), plus an
 explicit `reconcile` that surfaces the missing categories into the overlay as
-commented stubs.
+commented stubs or (when the conventional default directory exists) as
+uncommented, deploy-ready entries.
 
 This is a *backbone* read of *backbone-defined* artifacts: the agent
 frontmatter format and the `<category>` placeholder convention are fixed by
@@ -26,6 +27,21 @@ from pathlib import Path
 from ruamel.yaml import YAML
 
 from project_kit import cli_render
+
+# Conventional default paths for well-known overlay categories, relative to
+# the project root.  reconcile checks whether the directory at this path
+# exists before deciding whether to fill uncommented (detect-then-fill) or
+# fall back to a commented stub.  Declared here — not in agent prose — so that
+# reconcile can act on them programmatically and any future agent category can
+# register its own default in the same place.
+#
+# Keys are overlay category names; values are the conventional-default directory
+# path (string, relative to project root, no leading slash).  A missing key
+# means "no conventional default" → always fall back to a commented stub.
+CONVENTIONAL_CATEGORY_DEFAULTS: dict[str, str] = {
+    "architecture-docs": "docs/architecture",
+    "adr-records": "docs/architecture/decisions",
+}
 
 # The frontmatter keys whose list items may hold `<category>` placeholders,
 # mirrored from the claude-code adapter's `_resolve_agent.py`. A guard test
@@ -218,10 +234,10 @@ def render_status(target_root: Path) -> str:
             "Skipped", f"{len(skipped)} agent(s)",
             gloss=f"undefined overlay categor(ies): {cats}",
             placement="footer",
-            warn="run `pkit agents reconcile --write` to scaffold the missing categories into .pkit/agents/project/overlay.yaml, fill in the paths, then re-run `pkit sync`",
+            warn="run `pkit agents reconcile --write` to scaffold the missing categories into .pkit/agents/project/overlay.yaml (auto-fills when the conventional default directory exists, otherwise adds a commented stub to fill in), then re-run `pkit sync`",
         )
     commands = [
-        ("pkit agents reconcile [--write]", "add missing overlay categories (commented)"),
+        ("pkit agents reconcile [--write]", "auto-fill or stub missing overlay categories; then `pkit sync`"),
         ("pkit sync", "re-deploy agents after editing the overlay"),
     ]
     return cli_render.view(
@@ -231,16 +247,26 @@ def render_status(target_root: Path) -> str:
 
 
 def reconcile_overlay(target_root: Path, *, write: bool) -> tuple[list[str], str]:
-    """Surface referenced-but-undefined categories into the overlay as commented
-    stubs.
+    """Surface referenced-but-undefined categories into the overlay.
 
-    Three states per referenced category:
-    - **missing**: not in the overlay at all → add a commented stub.
+    Four states per referenced category:
+
+    - **missing + conventional dir exists** (detect-then-fill): the category is
+      absent from the overlay AND the conventional default directory for it
+      exists under the project root → write the category **uncommented** with
+      that path, ready for ``pkit sync`` to deploy the agent with no manual
+      editing.
+    - **missing + conventional dir absent**: the category is absent AND there is
+      no conventional default to auto-fill → add a commented stub; the adopter
+      fills in real paths before ``pkit sync``.
     - **commented-stub**: a ``# cat:`` line exists but is unfilled → report
       "uncomment + set real paths" guidance; do NOT duplicate the stub.
-    - **defined**: an uncommented ``cat:`` entry with paths → nothing to do.
+    - **defined**: an uncommented ``cat:`` entry with paths → nothing to do;
+      an adopter-set value is never overwritten.
 
     Dry-run unless ``write``. Returns (categories_added, report).
+    ``categories_added`` covers **both** auto-filled (uncommented) and stubbed
+    (commented) categories written to the file in this run.
     """
     missing = missing_categories(target_root)
     path = _overlay_path(target_root)
@@ -254,28 +280,70 @@ def reconcile_overlay(target_root: Path, *, write: bool) -> tuple[list[str], str
         """A ``# cat:`` stub exists but is not yet uncommented/filled."""
         return bool(re.search(rf"(?m)^\s*#\s*{re.escape(cat)}\s*:", existing))
 
-    # Only categories that are truly absent need a new stub appended.
-    to_add = [c for c in missing if not _is_defined(c) and not _is_commented_stub(c)]
+    def _conventional_dir_exists(cat: str) -> str | None:
+        """Return the conventional default path if its directory exists, else None."""
+        default = CONVENTIONAL_CATEGORY_DEFAULTS.get(cat)
+        if default and (target_root / default).is_dir():
+            return default
+        return None
+
+    truly_missing = [c for c in missing if not _is_defined(c) and not _is_commented_stub(c)]
+
+    # Partition missing categories: auto-fill (conventional dir exists) vs stub.
+    auto_fill: list[tuple[str, str]] = []   # (category, path)
+    to_stub: list[str] = []
+    for cat in truly_missing:
+        conv = _conventional_dir_exists(cat)
+        if conv is not None:
+            auto_fill.append((cat, conv))
+        else:
+            to_stub.append(cat)
+
     # Categories that are stubbed-but-commented: already in the file, need
     # the adopter to uncomment + fill paths before sync will deploy the agent.
     commented_stubs = [c for c in missing if _is_commented_stub(c)]
 
     lines: list[str] = []
+    to_add: list[str] = []
 
-    if to_add:
-        block = ["", "# --- added by `pkit agents reconcile` — uncomment and set real paths ---"]
-        for cat in to_add:
-            block += [f"# {cat}:", "#   - <path/relative/to/project/root>"]
-        stub = "\n".join(block) + "\n"
-
-        verb = "would add" if not write else "added"
-        lines.append(cli_render.style("strong", f"{verb} {len(to_add)} commented categor(ies) to the overlay:"))
-        lines += [f"  # {c}" for c in to_add]
+    if auto_fill:
+        to_add += [cat for cat, _ in auto_fill]
+        verb = "would auto-fill" if not write else "auto-filled"
+        lines.append(cli_render.style(
+            "strong",
+            f"{verb} {len(auto_fill)} categor(ies) — conventional default directory exists:",
+        ))
+        for cat, conv_path in auto_fill:
+            lines.append(f"  {cat}: [{conv_path}]")
         if write:
             if not path.is_file():
                 raise FileNotFoundError(f"overlay not found at {path}; run `pkit init` first.")
+            block_lines = ["", "# --- added by `pkit agents reconcile` (detect-then-fill) ---"]
+            for cat, conv_path in auto_fill:
+                block_lines += [f"{cat}:", f"  - {conv_path}"]
             with path.open("a", encoding="utf-8") as fh:
-                fh.write(stub)
+                fh.write("\n".join(block_lines) + "\n")
+            lines.append("")
+            lines.append("conventional paths written — run `pkit sync` to deploy the agent(s).")
+        else:
+            lines.append("")
+            lines.append("(dry-run — re-run with `--write` to write these entries.)")
+
+    if to_stub:
+        to_add += to_stub
+        if lines:
+            lines.append("")
+        verb = "would add" if not write else "added"
+        lines.append(cli_render.style("strong", f"{verb} {len(to_stub)} commented categor(ies) to the overlay:"))
+        lines += [f"  # {c}" for c in to_stub]
+        if write:
+            if not path.is_file():
+                raise FileNotFoundError(f"overlay not found at {path}; run `pkit init` first.")
+            block_lines = ["", "# --- added by `pkit agents reconcile` — uncomment and set real paths ---"]
+            for cat in to_stub:
+                block_lines += [f"# {cat}:", "#   - <path/relative/to/project/root>"]
+            with path.open("a", encoding="utf-8") as fh:
+                fh.write("\n".join(block_lines) + "\n")
             lines.append("")
             lines.append("uncomment + set real paths, then `pkit sync` to deploy the skipped agent(s).")
         else:

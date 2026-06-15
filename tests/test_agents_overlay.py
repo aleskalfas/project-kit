@@ -233,3 +233,146 @@ def test_cli_agents_never_load_bearing(tmp_path, monkeypatch):
     never = CliRunner().invoke(main, ["--color", "never", "agents"]).output
     assert "\033[" in always
     assert cli_render.strip_ansi(always) == never
+
+
+# --- reconcile: detect-then-fill (issue #45) ---------------------------------
+
+def test_reconcile_auto_fills_when_conventional_dir_exists(tmp_path):
+    """State 4 (detect-then-fill): missing category + conventional default dir
+    exists → written uncommented; agent becomes deployable after write."""
+    proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
+    _agent(proj / ".pkit" / "agents" / "core", "a", owns=["<architecture-docs>"])
+    overlay = proj / ".pkit" / "agents" / "project" / "overlay.yaml"
+
+    # Create the conventional default directory.
+    (proj / "docs" / "architecture").mkdir(parents=True)
+
+    added, report = ao.reconcile_overlay(proj, write=True)
+
+    assert "architecture-docs" in added
+    text = overlay.read_text()
+    # Written uncommented — no leading `#` on the category key line.
+    assert "architecture-docs:" in text
+    assert "# architecture-docs:" not in text
+    # Verify the conventional path was written.
+    assert "docs/architecture" in text
+    # Category is now defined → agent is deployable.
+    assert ao.missing_categories(proj) == []
+
+
+def test_reconcile_auto_fill_dry_run_does_not_write(tmp_path):
+    """Dry-run with conventional dir present: reports what would be written but
+    does not touch the file."""
+    proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
+    _agent(proj / ".pkit" / "agents" / "core", "a", owns=["<architecture-docs>"])
+    overlay = proj / ".pkit" / "agents" / "project" / "overlay.yaml"
+    before = overlay.read_text()
+
+    (proj / "docs" / "architecture").mkdir(parents=True)
+
+    added, report = ao.reconcile_overlay(proj, write=False)
+
+    assert "architecture-docs" in added
+    assert overlay.read_text() == before  # untouched
+    assert "dry-run" in report
+    assert "architecture-docs" in report
+
+
+def test_reconcile_stubs_when_conventional_dir_absent(tmp_path):
+    """Missing category without a conventional dir → commented stub (unchanged
+    from issue #40 behaviour)."""
+    proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
+    _agent(proj / ".pkit" / "agents" / "core", "a", owns=["<architecture-docs>"])
+    overlay = proj / ".pkit" / "agents" / "project" / "overlay.yaml"
+
+    # Do NOT create docs/architecture.
+    added, report = ao.reconcile_overlay(proj, write=True)
+
+    assert "architecture-docs" in added
+    text = overlay.read_text()
+    # Must be commented — dir was absent so we can't auto-fill.
+    assert "# architecture-docs:" in text
+    # Category still missing from deploy's perspective.
+    assert ao.missing_categories(proj) == ["architecture-docs"]
+    assert "uncomment" in report
+
+
+def test_reconcile_does_not_overwrite_adopter_set_value(tmp_path):
+    """An adopter-set (uncommented, non-conventional) value is never clobbered."""
+    overlay_text = (
+        "workflow-docs:\n  - README.md\n"
+        "architecture-docs:\n  - docs/custom-arch/\n"
+    )
+    proj = _project(tmp_path, overlay=overlay_text)
+    _agent(proj / ".pkit" / "agents" / "core", "a", owns=["<architecture-docs>"])
+    overlay = proj / ".pkit" / "agents" / "project" / "overlay.yaml"
+    before = overlay.read_text()
+
+    # Create conventional dir — reconcile must NOT overwrite the adopter value.
+    (proj / "docs" / "architecture").mkdir(parents=True)
+
+    added, report = ao.reconcile_overlay(proj, write=True)
+
+    assert added == []
+    assert overlay.read_text() == before  # unchanged
+    assert "overlay is complete" in report
+    # Confirm the adopter's custom path survived.
+    assert "docs/custom-arch/" in overlay.read_text()
+
+
+def test_reconcile_mixed_auto_fill_and_stub(tmp_path):
+    """Two missing categories: one with the conventional dir present (auto-fill),
+    one without (stub).  Both returned in added; correct form for each."""
+    proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
+    # Agent references both architecture-docs and adr-records.
+    _agent(proj / ".pkit" / "agents" / "core", "a",
+           owns=["<architecture-docs>", "<adr-records>"])
+    overlay = proj / ".pkit" / "agents" / "project" / "overlay.yaml"
+
+    # Only architecture-docs conventional dir exists; adr-records dir does not.
+    (proj / "docs" / "architecture").mkdir(parents=True)
+
+    added, report = ao.reconcile_overlay(proj, write=True)
+
+    assert set(added) == {"architecture-docs", "adr-records"}
+    text = overlay.read_text()
+    # architecture-docs → uncommented (dir existed).
+    assert "architecture-docs:" in text
+    assert "# architecture-docs:" not in text
+    # adr-records → commented stub (dir absent).
+    assert "# adr-records:" in text
+    # Only architecture-docs is now deployable; adr-records still missing.
+    assert ao.missing_categories(proj) == ["adr-records"]
+
+
+def test_reconcile_auto_fill_idempotent(tmp_path):
+    """After auto-fill, a second reconcile call reports 'overlay is complete'
+    and does not re-append the category."""
+    proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
+    _agent(proj / ".pkit" / "agents" / "core", "a", owns=["<architecture-docs>"])
+    overlay = proj / ".pkit" / "agents" / "project" / "overlay.yaml"
+
+    (proj / "docs" / "architecture").mkdir(parents=True)
+
+    ao.reconcile_overlay(proj, write=True)
+    text_after_first = overlay.read_text()
+
+    added2, report2 = ao.reconcile_overlay(proj, write=True)
+    assert added2 == []
+    assert overlay.read_text() == text_after_first  # unchanged
+    assert "overlay is complete" in report2
+
+
+def test_reconcile_conventional_defaults_map_covers_architect_categories():
+    """The CONVENTIONAL_CATEGORY_DEFAULTS map must declare defaults for every
+    category referenced by the core architect agent, matching the paths
+    documented in that agent's prose."""
+    architect_src = (
+        REPO / ".pkit" / "agents" / "core" / "architect.md"
+    )
+    cats = ao.agent_referenced_categories(architect_src)
+    # Both architect categories have a registered conventional default.
+    for cat in cats:
+        assert cat in ao.CONVENTIONAL_CATEGORY_DEFAULTS, (
+            f"architect category <{cat}> has no entry in CONVENTIONAL_CATEGORY_DEFAULTS"
+        )
