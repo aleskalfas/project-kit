@@ -218,7 +218,7 @@ def render_status(target_root: Path) -> str:
             "Skipped", f"{len(skipped)} agent(s)",
             gloss=f"undefined overlay categor(ies): {cats}",
             placement="footer",
-            warn="run `pkit agents reconcile` to surface the missing categories into the overlay",
+            warn="run `pkit agents reconcile --write` to scaffold the missing categories into .pkit/agents/project/overlay.yaml, fill in the paths, then re-run `pkit sync`",
         )
     commands = [
         ("pkit agents reconcile [--write]", "add missing overlay categories (commented)"),
