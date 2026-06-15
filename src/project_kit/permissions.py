@@ -977,10 +977,64 @@ def _sandbox_block(target_root: Path) -> dict[str, Any]:
     return sb if isinstance(sb, dict) else {}
 
 
+def _auto_accommodate_narrowing_toolkits(target_root: Path) -> str:
+    """Auto-apply the narrowing allowances of any confinement toolkit whose
+    detect globs match the project AND whose allowances are ALL narrowing
+    (never widening — ADR-008 rule 3/4).
+
+    Called by `sandbox enable` to make the confined CLI usable without a
+    manual `sandbox accommodate` step. The uv toolkit is the primary consumer
+    (the `~/.cache/uv` write allowance, needed by the confined `pkit`/`uv`
+    CLI on Linux/bubblewrap; inert-but-harmless on macOS per ADR-014).
+
+    Routes through the single provenance writer `_apply_allowances` /
+    `_record_accommodation` — the same path `accommodate` uses (ADR-008 rule 2;
+    no second write path). Idempotent: `_apply_allowances` is a set-union write
+    and `_record_accommodation` de-duplicates the config list.
+
+    Returns a human-readable note for the `sandbox enable` output, or an
+    empty string when no toolkit is detected."""
+    toolkits = _load_toolkits(target_root)
+    # Only toolkits with at least one narrowing allowance AND no widening
+    # allowances qualify for auto-application (safe-to-detect class per ADR-008).
+    candidates = {
+        name: spec for name, spec in toolkits.items()
+        if _narrowing(spec.get("allowances", []))
+        and not _widening(spec.get("allowances", []))
+    }
+    detected = [t for t in _detect_tools(target_root, candidates) if t in candidates]
+    if not detected:
+        return ""
+    applied: list[str] = []
+    for tool in detected:
+        narrowing = _narrowing(candidates[tool].get("allowances", []))
+        _apply_allowances(target_root, narrowing, tool)
+        _record_accommodation(target_root, tool, add=True)
+        applied.append(tool)
+    values = []
+    for tool in applied:
+        values += [a.get("value", "") for a in _narrowing(candidates[tool].get("allowances", []))]
+    note = (
+        f"auto-accommodated: {', '.join(applied)} (narrowing — {', '.join(v for v in values if v)}; "
+        f"effective on Linux/bubblewrap; inert on macOS per ADR-014)"
+    )
+    return note
+
+
 def sandbox_enable(target_root: Path, strict: bool = False,
                    dangerously_allow_unconfined: bool = False) -> str:
     """Turn on the OS sandbox with prompt-free scripting, fail-closed.
-    Additive over the operator's `sandbox` block; idempotent."""
+    Additive over the operator's `sandbox` block; idempotent.
+
+    Auto-accommodates the uv-cache narrowing allowance (`~/.cache/uv`) when
+    the uv confinement toolkit is detected (via its `detect` globs — `uv.lock`
+    or `pyproject.toml` present in the project). This is a narrowing-only
+    allowance (ADR-008 rule 3): it makes the confined `pkit`/`uv` CLI usable
+    on Linux/bubblewrap without enlarging the agent's reach. The allowance is
+    written through the same provenance writer `sandbox accommodate` uses
+    (ADR-008 rule 2 — single writer). On macOS the uv CLI is excluded from the
+    box (ADR-014), so the allowance is inert but harmless there. Idempotent:
+    re-running this when uv is already accommodated is a no-op."""
     if not _adapter_installed(target_root, "claude-code"):
         raise PermissionsError(
             "the claude-code adapter is not installed in this project; the "
@@ -1027,7 +1081,19 @@ def sandbox_enable(target_root: Path, strict: bool = False,
         changes.append("credential denyRead floor already present")
 
     _write_settings(target_root, settings)
+
+    # Auto-accommodate narrowing-only toolkit allowances detected in the project
+    # (ADR-008 rule 3). Applies only the uv toolkit on `sandbox enable` — the
+    # full detect+seed path lives in `setup autonomy` (_setup_accommodations).
+    # Here we narrow to toolkits whose ALL allowances are narrowing (never widen
+    # on auto-detect), and only those whose detect globs match the project tree.
+    # Uses the same provenance writer as `sandbox accommodate` — single writer
+    # (ADR-008 rule 2). Idempotent: _apply_allowances is a set-union write.
+    uv_accommodation_note = _auto_accommodate_narrowing_toolkits(target_root)
+
     lines = ["sandbox enabled: " + "; ".join(changes) + "."]
+    if uv_accommodation_note:
+        lines.append(uv_accommodation_note)
     if dangerously_allow_unconfined:
         lines.append(
             "⚠ DANGEROUS: failIfUnavailable is OFF — if the OS sandbox cannot "
