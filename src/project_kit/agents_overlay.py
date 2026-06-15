@@ -239,7 +239,10 @@ def render_status(target_root: Path) -> str:
             "Skipped", f"{len(skipped)} agent(s)",
             gloss=f"undefined overlay categor(ies): {cats}",
             placement="footer",
-            warn="run `pkit agents adopt <agent>` to create the conventional layout and deploy the agent in one step, or `pkit agents reconcile --write` to scaffold the missing categories into .pkit/agents/project/overlay.yaml, then re-run `pkit sync`",
+            warn=(
+                "Deploy the skipped agent(s):  pkit agents adopt <agent>\n"
+                "Custom doc layout:            pkit agents reconcile --write → set paths → pkit sync"
+            ),
         )
     commands = [
         ("pkit agents adopt <agent>", "create conventional dirs + wire overlay + deploy in one step"),
@@ -352,8 +355,8 @@ def reconcile_overlay(target_root: Path, *, write: bool) -> tuple[list[str], str
                 fh.write("\n".join(block_lines) + "\n")
             lines.append("")
             lines.append(
-                "uncomment + set real paths, then `pkit sync` to deploy the skipped agent(s).\n"
-                "Alternatively, run `pkit agents adopt <agent>` to create the conventional layout and deploy it."
+                "Deploy the skipped agent(s):  pkit agents adopt <agent>\n"
+                "Custom doc layout:            uncomment + set real paths in overlay.yaml, then `pkit sync`."
             )
         else:
             lines.append("")
@@ -368,9 +371,8 @@ def reconcile_overlay(target_root: Path, *, write: bool) -> tuple[list[str], str
             lines.append(f"  # {cat}")
         lines.append("")
         lines.append(
-            "stub present but still commented — uncomment + set real paths in "
-            "`.pkit/agents/project/overlay.yaml`, then `pkit sync`.\n"
-            "Or run `pkit agents adopt <agent>` to create the conventional layout and deploy it."
+            "Deploy the skipped agent(s):  pkit agents adopt <agent>\n"
+            "Custom doc layout:            uncomment + set real paths in overlay.yaml, then `pkit sync`."
         )
 
     if not to_add and not commented_stubs:

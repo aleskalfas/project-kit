@@ -213,14 +213,16 @@ def test_cli_agents_lists_status(tmp_path, monkeypatch):
     assert "architecture-docs" in result.output
 
 
-def test_cli_agents_skip_report_names_reconcile_command(tmp_path, monkeypatch):
-    """The pkit agents skip report names `pkit agents reconcile --write` as the
-    scaffolding step alongside the overlay-file path (regression for issue #31)."""
+def test_cli_agents_skip_report_leads_with_adopt_and_names_reconcile(tmp_path, monkeypatch):
+    """The pkit agents skip report leads with `pkit agents adopt` and names
+    `pkit agents reconcile --write` as the custom-layout fallback alongside the
+    overlay-file path (regression for issue #31; updated for issue #49)."""
     proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
     _agent(proj / ".pkit" / "agents" / "core", "needs-arch", owns=["<architecture-docs>"])
     monkeypatch.chdir(proj)
     result = CliRunner().invoke(main, ["agents"])
     assert result.exit_code == 0, result.output
+    assert "pkit agents adopt" in result.output
     assert "pkit agents reconcile --write" in result.output
     assert "overlay.yaml" in result.output
 
