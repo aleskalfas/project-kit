@@ -23,6 +23,20 @@ privileges:
     recognize:
       bash:
         - cmd: gh
+  issue-tracker-write:
+    description: >-
+      Raw gh mutations that bypass the project-management capability's
+      validating scripts (gh issue edit, gh issue comment, gh pr edit).
+      Grant only to subjects that are explicitly permitted to bypass validation;
+      deny to force the validating scripts.
+    recognize:
+      bash:
+        # Matches gh issue edit, gh issue comment, gh pr edit — and ONLY those
+        # three mutations.  Does NOT match reads (gh issue view, gh pr view),
+        # gh api, or any other gh subcommand.  The pattern runs on the joined
+        # token segment after env-prefix stripping (decide.py segments()), so
+        # "export GH_HOST=x && gh issue edit …" is handled correctly.
+        - pattern: '^gh\s+(issue\s+(edit|comment)|pr\s+edit)(\s|$)'
   kit:
     description: Run the project-kit CLI.
     recognize:

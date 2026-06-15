@@ -628,3 +628,166 @@ def test_stdlib_fallback_load_model_decides_correctly_without_ruamel(decide_mod,
         d_ref, _ = decide_mod.decide(model_with_ruamel, catalog_with_ruamel, request)
         d_std, _ = decide_mod.decide(model_stdlib, catalog_stdlib, request)
         assert d_ref == d_std, f"decide differs on {request}: ruamel={d_ref} stdlib={d_std}"
+
+
+# ---- issue-tracker-write deny (issue #53) -----------------------------------
+#
+# issue-tracker-write recognizes gh issue edit / gh issue comment / gh pr edit.
+# It does NOT recognize gh issue view / gh pr view / gh api / git / pkit.
+#
+# The critical correctness property: deny-precedence.
+# A project-manager `gh issue edit` matches BOTH:
+#   - issue-tracker  (cmd: gh — the broad privilege, granted allow)
+#   - issue-tracker-write  (pattern: the mutation privilege, denied)
+# decide() iterates ALL effective grants, returns deny immediately on any
+# deny-overlap hit — so the explicit deny wins over the broad allow regardless
+# of ordering.  No change to decide.py was required: the existing loop already
+# provides order-independent deny-wins semantics.
+
+_PM_WITH_DENY_MODEL = {
+    "posture": "lenient",
+    "grants": [
+        # guardrail denies (always present)
+        {"subject": "all", "privilege": _tok("privilege-escalation"), "effect": "deny"},
+        {"subject": "all", "privilege": _tok("destructive-fs"), "effect": "deny"},
+        {"subject": "all", "privilege": _tok("vcs-history-rewrite"), "effect": "deny"},
+        # project-manager's production-representative grants
+        {"subject": "agent:project-manager",
+         "privilege": [_tok("vcs"), _tok("issue-tracker"), _tok("kit")], "effect": "allow"},
+        # the surgical deny that forces mutation through the validating scripts
+        {"subject": "agent:project-manager",
+         "privilege": _tok("issue-tracker-write"), "effect": "deny"},
+    ],
+}
+
+
+@pytest.mark.parametrize("cmd", [
+    "gh issue edit 53 --body 'new body'",
+    "gh issue edit 53 --title 'new title'",
+    "gh issue comment 53 --body 'a comment'",
+    "gh pr edit 27 --title 'update'",
+    "gh pr edit 27 --body 'new body'",
+    # env-prefix form — the segments() stripper must handle this
+    "export GH_HOST=github.com && gh issue edit 53",
+])
+def test_pm_issue_tracker_write_denied(decide_mod, catalog, cmd):
+    """gh issue edit / gh issue comment / gh pr edit are blocked for project-manager.
+
+    Deny-precedence proof: these commands also match issue-tracker (broad gh,
+    granted allow), but the explicit deny on issue-tracker-write wins — decide()
+    returns 'deny' even though an allow grant exists for the same request.
+    """
+    hits = decide_mod.recognized_privileges(catalog, _bash(cmd, "agent:project-manager"))
+    assert "issue-tracker-write" in hits, f"issue-tracker-write should recognize {cmd!r}"
+    d, why = decide_mod.decide(_PM_WITH_DENY_MODEL, catalog, _bash(cmd, "agent:project-manager"))
+    assert d == "deny", f"expected deny for project-manager on {cmd!r}, got {d!r}: {why}"
+    assert "issue-tracker-write" in why
+
+
+@pytest.mark.parametrize("cmd", [
+    "gh issue view 53",
+    "gh issue list",
+    "gh issue list --state open",
+    "gh pr view 27",
+    "gh pr list",
+    "gh api repos/owner/repo/issues",
+    "gh api graphql -f query='...'",
+])
+def test_pm_gh_reads_and_api_not_recognized_by_write_privilege(decide_mod, catalog, cmd):
+    """gh reads and gh api are NOT recognized by issue-tracker-write.
+
+    These commands only match issue-tracker (the broad gh privilege).  With a
+    project-manager model that allows issue-tracker but denies issue-tracker-write,
+    the deny has no overlap with the hits — so it does not fire.
+    """
+    hits = decide_mod.recognized_privileges(catalog, _bash(cmd, "agent:project-manager"))
+    assert "issue-tracker-write" not in hits, (
+        f"issue-tracker-write must NOT recognize {cmd!r} (only mutations), got hits={hits}"
+    )
+
+
+@pytest.mark.parametrize("cmd,expected", [
+    # gh reads → allow (issue-tracker allow, no issue-tracker-write overlap → no deny)
+    ("gh issue view 53", "allow"),
+    ("gh issue list", "allow"),
+    ("gh pr view 27", "allow"),
+    ("gh api repos/owner/repo/issues", "allow"),
+    # git → allow (vcs privilege, not affected by issue-tracker-write deny)
+    ("git status", "allow"),
+    ("git log --oneline", "allow"),
+    ("git push origin main", "allow"),
+    # pkit → allow (kit privilege)
+    ("pkit status", "allow"),
+    ("pkit permissions overview", "allow"),
+])
+def test_pm_unaffected_commands_allowed(decide_mod, catalog, cmd, expected):
+    """Commands that do not match issue-tracker-write are unaffected by the deny.
+
+    Proves: the surgical deny does not block reads, gh api, git, or pkit — only
+    the three raw mutations (gh issue edit, gh issue comment, gh pr edit).
+    """
+    d, why = decide_mod.decide(_PM_WITH_DENY_MODEL, catalog, _bash(cmd, "agent:project-manager"))
+    assert d == expected, (
+        f"expected {expected!r} for {cmd!r}, got {d!r}: {why}"
+    )
+
+
+def test_deny_precedence_allow_before_deny_in_grant_list(decide_mod, catalog):
+    """Deny-precedence is order-independent: even when the allow grant appears
+    BEFORE the deny grant in the list, the deny still wins.
+
+    This test exercises the most-restrictive-wins property directly: decide()
+    continues iterating after matched_allow=True and short-circuits on the deny.
+    """
+    allow_first_model = {
+        "posture": "lenient",
+        "grants": [
+            # allow issue-tracker first (broad gh)
+            {"subject": "agent:project-manager",
+             "privilege": _tok("issue-tracker"), "effect": "allow"},
+            # deny issue-tracker-write second
+            {"subject": "agent:project-manager",
+             "privilege": _tok("issue-tracker-write"), "effect": "deny"},
+        ],
+    }
+    d, why = decide_mod.decide(
+        allow_first_model, catalog,
+        _bash("gh issue edit 53", "agent:project-manager"),
+    )
+    assert d == "deny", f"deny must win even when allow precedes deny in grant list; got {d!r}: {why}"
+
+
+def test_deny_precedence_deny_before_allow_in_grant_list(decide_mod, catalog):
+    """Deny-precedence also holds when the deny grant appears BEFORE the allow grant."""
+    deny_first_model = {
+        "posture": "lenient",
+        "grants": [
+            # deny issue-tracker-write first
+            {"subject": "agent:project-manager",
+             "privilege": _tok("issue-tracker-write"), "effect": "deny"},
+            # allow issue-tracker second (broad gh)
+            {"subject": "agent:project-manager",
+             "privilege": _tok("issue-tracker"), "effect": "allow"},
+        ],
+    }
+    d, why = decide_mod.decide(
+        deny_first_model, catalog,
+        _bash("gh issue edit 53", "agent:project-manager"),
+    )
+    assert d == "deny", f"deny must win when deny precedes allow in grant list; got {d!r}: {why}"
+
+
+def test_capability_scripts_internal_gh_not_blocked(decide_mod, catalog):
+    """The capability scripts run inside the pkit subprocess, BELOW the PreToolUse hook.
+
+    The hook fires on Claude Code agent tool calls; pkit's internal subprocess
+    is not a Claude Code tool call and is therefore not subject to the hook.
+    This test documents the invariant: a `pkit ...` call by project-manager is
+    allowed (kit privilege), and any gh invocation inside that subprocess is
+    out-of-scope for the hook — no code change is needed or correct here.
+    """
+    d, _ = decide_mod.decide(
+        _PM_WITH_DENY_MODEL, catalog,
+        _bash("pkit pm transition-state 53 in-progress", "agent:project-manager"),
+    )
+    assert d == "allow", "pkit invocations must remain allowed for project-manager"

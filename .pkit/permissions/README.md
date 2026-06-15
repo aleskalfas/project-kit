@@ -32,6 +32,37 @@ Grant scope globs constrain the reach of an allow grant. The dimension matched d
 
 - **No scope** (absent): the grant is unconstrained — any cwd / any host.
 
+## Surgical deny: blocking raw gh mutations for project-manager
+
+The `issue-tracker-write` privilege (in `privilege-catalog.yaml`) recognizes
+the three raw `gh` mutations that bypass the project-management capability's
+validating scripts:
+
+- `gh issue edit`
+- `gh issue comment`
+- `gh pr edit`
+
+It does **not** match `gh issue view`, `gh pr view`, `gh api`, or any other `gh`
+subcommand — only mutations.
+
+The project carries an explicit **deny** grant for `agent:project-manager` on
+`issue-tracker-write` (in `.pkit/permissions/project/grants.yaml`).  When
+project-manager calls `gh issue edit`, the request matches **two** privileges:
+
+- `issue-tracker` (the broad `cmd: gh` recognizer) — **allowed** (once
+  `issue-tracker` is granted to the agent)
+- `issue-tracker-write` (the mutation pattern) — **denied**
+
+`decide()` provides order-independent deny-wins semantics: it continues
+iterating all effective grants after setting `matched_allow = True` for an
+allow grant, and short-circuits immediately on any deny-overlap hit — so the
+explicit deny wins regardless of grant ordering.  No change to `decide.py` was
+required; the existing loop already guarantees this property.
+
+The capability scripts' internal `gh` calls are **unaffected**: they run inside
+the `pkit` subprocess, below the PreToolUse hook layer — they are not Claude
+Code tool calls and are therefore not subject to hook-based enforcement.
+
 ### Deny/negation scopes are intentionally unsupported
 
 Negation globs (`!*.ru`) in a domain-scoped grant are **explicitly rejected** with an error rather than silently accepted or partially enforced. Rationale (ADR-004 §61): a tool-layer denylist is a false boundary — an agent's raw `bash curl` bypasses it at the sandbox layer, which is agent-blind. Advertising negation enforcement would overstate fidelity and violate COR-028's honesty discipline. Only positive allow-lists are supported; if you need to block a host, remove it from the allow-list rather than adding a negation glob.
