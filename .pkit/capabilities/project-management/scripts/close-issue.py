@@ -17,6 +17,12 @@ Closes a GitHub issue via either path declared in workflow.yaml's
     `Closes #N` keyword. The script runs the cascade pass on parents
     after the fact; it does not itself close the issue.
 
+Both paths reconcile the issue's ``state:*`` labels after closing: any
+non-terminal label (``state:todo``, ``state:backlog``, ``state:in-progress``,
+``state:review``) is removed and ``state:done`` is ensured.  The reconcile
+logic is shared with ``move-issue`` via ``_lib.labels.reconcile_state_labels_to_done``
+so there is no duplicated label-mutation code.
+
 Membership gate per DEC-021 runs at startup.
 
 Self-contained via PEP 723; runs via
@@ -49,6 +55,7 @@ _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib.hooks import fire_hooks  # noqa: E402
+from _lib.labels import reconcile_state_labels_to_done  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
     check_membership,
@@ -154,6 +161,10 @@ def main() -> int:
     title = str(issue.get("title", ""))
     body = str(issue.get("body") or "")
     state = str(issue.get("state", "")).lower()
+    labels = [
+        lbl.get("name", "") if isinstance(lbl, dict) else str(lbl)
+        for lbl in (issue.get("labels") or [])
+    ]
     structural_type = _infer_structural_type(title, issue_types)
 
     print(f"close-issue: #{args.issue_number}")
@@ -205,11 +216,20 @@ def main() -> int:
             return 3
         if not _gh_close_issue(args.issue_number, reason="not planned", config=config):
             return 3
+        # Reconcile state:* labels — remove any non-terminal label and ensure
+        # state:done.  Shared routine from _lib.labels (same logic as
+        # move-issue's reconcile path) so there is no duplicated label logic.
+        if not reconcile_state_labels_to_done(
+            args.issue_number, labels, config, gh_run=gh_run
+        ):
+            return 3
         print(f"\n[ok] closed #{args.issue_number} (wont-do).")
 
     elif args.mode == "pr-merge":
         # In pr-merge mode the issue is expected to be already-closed
-        # via GitHub's Closes #N. The script's job is the cascade pass.
+        # via GitHub's Closes #N. The script's job is the cascade pass
+        # plus label reconciliation (GitHub's auto-close does not touch
+        # state:* labels).
         if state != "closed":
             print(
                 "\n[warn] pr-merge mode but issue is still open. "
@@ -217,6 +237,14 @@ def main() -> int:
                 "Re-check the merged PR's body for `Closes #N`.",
                 file=sys.stderr,
             )
+        # Reconcile state:* labels regardless of open/closed state warning
+        # above — the caller explicitly indicated a PR-merge close, so the
+        # terminal label must be correct.
+        if not args.dry_run:
+            if not reconcile_state_labels_to_done(
+                args.issue_number, labels, config, gh_run=gh_run
+            ):
+                return 3
         print(f"\n[ok] noted pr-merge close for #{args.issue_number}.")
 
     # Closure cascade — semi-automatic per DEC-006.
