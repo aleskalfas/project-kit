@@ -268,3 +268,203 @@ def test_load_model_no_active_profile_no_layer(decide_mod, tmp_path):
     model = decide_mod.load_model(str(tmp_path), catalog)
     assert model["active_profile"] is None
     assert len(model["grants"]) == 3  # guardrails only
+
+
+# ---- stdlib YAML-subset fallback (ADR-014 pt.1 / ADR-002/003 same-code) -----
+#
+# Critical invariant: the stdlib fallback in load_yaml() MUST parse the real
+# shipped files identically to ruamel.yaml safe-load, or the hook and CLI can
+# disagree on the model — a security bug.  These tests assert structural
+# equality between ruamel and stdlib parse results on the actual shipped files.
+
+REPO_ROOT_LOCAL = Path(__file__).resolve().parent.parent
+_SHIPPED_FILES = [
+    REPO_ROOT_LOCAL / ".pkit" / "schemas" / "privilege-catalog.yaml",
+    REPO_ROOT_LOCAL / ".pkit" / "schemas" / "confinement-toolkit.yaml",
+    REPO_ROOT_LOCAL / ".pkit" / "permissions" / "profiles" / "autonomous.yaml",
+    REPO_ROOT_LOCAL / ".pkit" / "permissions" / "profiles" / "non-destructive.yaml",
+    REPO_ROOT_LOCAL / ".pkit" / "permissions" / "profiles" / "read-only.yaml",
+]
+
+# Representative synthetic files that exercise edge cases the shipped files use.
+_SYNTHETIC_YAML_CASES = [
+    # grants.yaml-like: block mapping + block sequence + double-quoted tokens
+    (
+        "grants-like",
+        (
+            "schema_version: 1\n"
+            "grants:\n"
+            '  - subject: operator\n'
+            '    privilege: "[privilege-catalog:vcs]"\n'
+            "    effect: allow\n"
+            '  - subject: all\n'
+            '    privilege:\n'
+            '      - "[privilege-catalog:privilege-escalation]"\n'
+            '      - "[privilege-catalog:destructive-fs]"\n'
+            "    effect: deny\n"
+        ),
+    ),
+    # config.yaml-like: simple block mapping with booleans and null
+    (
+        "config-like",
+        (
+            "schema_version: 1\n"
+            "ownership_mode: additive\n"
+            "posture: lenient\n"
+            "active_profile: ~\n"
+        ),
+    ),
+    # profile-like: block mapping + block sequence + single-quoted values
+    (
+        "profile-like",
+        (
+            "schema_version: 1\n"
+            "description: A test profile.\n"
+            "posture: strict\n"
+            "grants:\n"
+            "  - subject: all\n"
+            "    privilege:\n"
+            '      - "[privilege-catalog:vcs]"\n'
+            "    effect: allow\n"
+        ),
+    ),
+    # Flow sequence (used in privilege-catalog flag_any)
+    (
+        "flow-sequence",
+        'flag_any: ["--force", "-f", "--force-with-lease"]\n',
+    ),
+    # Single-quoted string with regex chars (used in privilege-catalog pattern)
+    (
+        "single-quoted-regex",
+        "pattern: '^rm(?=\\\\s).*'\n",
+    ),
+    # Booleans and integers
+    (
+        "booleans-and-ints",
+        "enabled: true\ncount: 3\nguardrail: false\n",
+    ),
+    # Nested block mapping + block scalar (>-)
+    (
+        "block-scalar",
+        (
+            "toolkits:\n"
+            "  gh:\n"
+            "    description: GitHub CLI.\n"
+            "    allowances:\n"
+            "      - kind: exclude-command\n"
+            "        effect: widening\n"
+            "        value: gh\n"
+            "        note: >-\n"
+            "          runs gh OUTSIDE the box. Needed because gh TLS\n"
+            "          fails under Seatbelt.\n"
+        ),
+    ),
+]
+
+
+def _ruamel_load(text: str) -> Any:
+    """Parse with ruamel.yaml safe-load (the reference parser)."""
+    try:
+        from ruamel.yaml import YAML
+        import io
+        yaml = YAML(typ="safe")
+        return yaml.load(io.StringIO(text)) or {}
+    except ImportError:
+        pytest.skip("ruamel.yaml not available — can't assert parse equality")
+
+
+@pytest.mark.parametrize("shipped_path", _SHIPPED_FILES, ids=lambda p: p.name)
+def test_stdlib_fallback_parses_identically_to_ruamel_on_shipped_files(decide_mod, shipped_path):
+    """The stdlib fallback MUST parse every shipped file identically to ruamel.
+    A mis-parse means the hook mis-decides — a security bug (ADR-014 / ADR-002)."""
+    text = shipped_path.read_text(encoding="utf-8")
+    ruamel_result = _ruamel_load(text)
+    stdlib_result = decide_mod._stdlib_load_yaml(text)
+    assert stdlib_result == ruamel_result, (
+        f"stdlib fallback parse differs from ruamel for {shipped_path.name}:\n"
+        f"  stdlib:  {stdlib_result!r}\n"
+        f"  ruamel:  {ruamel_result!r}"
+    )
+
+
+@pytest.mark.parametrize("name,text", _SYNTHETIC_YAML_CASES, ids=lambda x: x if isinstance(x, str) else "text")
+def test_stdlib_fallback_parses_synthetic_cases_identically_to_ruamel(decide_mod, name, text):
+    """Synthetic edge-case files: fallback == ruamel on all YAML features the
+    shipped files use (flow-seq, block-scalar, single/double-quoted, booleans)."""
+    ruamel_result = _ruamel_load(text)
+    stdlib_result = decide_mod._stdlib_load_yaml(text)
+    assert stdlib_result == ruamel_result, (
+        f"stdlib fallback parse differs from ruamel for case {name!r}:\n"
+        f"  stdlib:  {stdlib_result!r}\n"
+        f"  ruamel:  {ruamel_result!r}"
+    )
+
+
+def test_stdlib_fallback_used_when_ruamel_absent(decide_mod, tmp_path, monkeypatch):
+    """When ruamel.yaml is not importable, load_yaml falls back to the stdlib
+    parser and the result is structurally identical — same-code invariant holds."""
+    import builtins
+    real_import = builtins.__import__
+
+    def _block_ruamel(name, *args, **kwargs):
+        if "ruamel" in name:
+            raise ImportError(f"simulated missing ruamel: {name}")
+        return real_import(name, *args, **kwargs)
+
+    # Write a representative grants file to a tmp tree.
+    path = tmp_path / "grants.yaml"
+    path.write_text(
+        "schema_version: 1\n"
+        "grants:\n"
+        "  - subject: operator\n"
+        '    privilege: "[privilege-catalog:vcs]"\n'
+        "    effect: allow\n",
+        encoding="utf-8",
+    )
+    expected = decide_mod.load_yaml(str(path))  # parse with ruamel (reference)
+
+    monkeypatch.setattr(builtins, "__import__", _block_ruamel)
+    stdlib_result = decide_mod.load_yaml(str(path))  # must fall back to stdlib
+    assert stdlib_result == expected
+
+
+def test_stdlib_fallback_load_model_decides_correctly_without_ruamel(decide_mod, tmp_path, monkeypatch):
+    """With ruamel blocked, load_model still builds a correct model and decide()
+    still gives the right verdicts — the same-code invariant holds end-to-end."""
+    import builtins
+    real_import = builtins.__import__
+
+    def _block_ruamel(name, *args, **kwargs):
+        if "ruamel" in name:
+            raise ImportError(f"simulated missing ruamel: {name}")
+        return real_import(name, *args, **kwargs)
+
+    # Build a complete tree so load_model has real files.
+    _write_tree(
+        tmp_path,
+        grants=(
+            "schema_version: 1\n"
+            "grants:\n"
+            "  - subject: operator\n"
+            '    privilege: "[privilege-catalog:vcs]"\n'
+            "    effect: allow\n"
+        ),
+        config="schema_version: 1\nownership_mode: additive\nposture: lenient\n",
+    )
+    catalog_with_ruamel = decide_mod.load_catalog(str(tmp_path))
+    model_with_ruamel = decide_mod.load_model(str(tmp_path), catalog_with_ruamel)
+
+    monkeypatch.setattr(builtins, "__import__", _block_ruamel)
+    catalog_stdlib = decide_mod.load_catalog(str(tmp_path))
+    model_stdlib = decide_mod.load_model(str(tmp_path), catalog_stdlib)
+
+    assert model_stdlib == model_with_ruamel
+    # Decisions must be identical.
+    for request in [
+        _bash("git status", "operator"),
+        _bash("sudo rm x", "operator"),
+        _tool("WebFetch", "operator"),
+    ]:
+        d_ref, _ = decide_mod.decide(model_with_ruamel, catalog_with_ruamel, request)
+        d_std, _ = decide_mod.decide(model_stdlib, catalog_stdlib, request)
+        assert d_ref == d_std, f"decide differs on {request}: ruamel={d_ref} stdlib={d_std}"

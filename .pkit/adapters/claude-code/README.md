@@ -38,12 +38,16 @@ Walks `.pkit/skills/{core,project}/<name>/` and creates relative symlinks at `.c
 
 The realizer that makes declared permissions *bite* at runtime (per [COR-028](../../decisions/core/COR-028-permission-model-realization.md) / [ADR-002](../../../docs/architecture/decisions/ADR-002-permission-realizer-ownership.md)). It's **opt-in** — see *enable / disable* below.
 
-`permission-hook.py` is a self-contained PEP 723 `uv run --script`. On each matched tool call Claude Code pipes a PreToolUse payload to its stdin; the hook builds the model through the shared, harness-neutral decision core (`.pkit/permissions/decide.py`) and either prints a `permissionDecision` (`allow` / `deny`) or **abstains** (exit 0, no stdout → the harness's normal permission flow proceeds). It imports the *same* `decide.load_model` + `decide.decide` the `pkit permissions` CLI uses, so the hook and the CLI can never decide differently (ADR-002's same-code invariant).
+`permission-hook.py` runs under the **system `python3`** interpreter — no `uv`, no PEP-723 metadata, no third-party deps at startup. This is required so the hook starts inside macOS Seatbelt, where `uv` panics on a fixed `SCDynamicStore` denial (ADR-014). On each matched tool call Claude Code pipes a PreToolUse payload to its stdin; the hook builds the model through the shared, harness-neutral decision core (`.pkit/permissions/decide.py`) and either prints a `permissionDecision` (`allow` / `deny`) or **abstains** (exit 0, no stdout → the harness's normal permission flow proceeds). It imports the *same* `decide.load_model` + `decide.decide` the `pkit permissions` CLI uses, so the hook and the CLI can never decide differently (ADR-002's same-code invariant).
+
+**Zero-dep shebang + stdlib YAML fallback.** The hook's shebang is `#!/usr/bin/env python3` (bare, no `uv`). The shared loader in `decide.py` (`load_yaml`) tries `ruamel.yaml` when available and falls back to a stdlib-only YAML-subset parser when not — handling the full file subset (block mappings/sequences, single/double-quoted strings, flow sequences, block scalars, booleans). **The fallback lives in the shared `decide.py` loader, not in the hook**, so both the hook and the `pkit permissions` CLI parse via the same code path — the same-code invariant is mechanically preserved, not aspirational.
 
 **The double-lock.** The non-negotiable guardrail denies — every privilege the catalog flags `guardrail: true` (currently `privilege-escalation`, `destructive-fs`, `vcs-history-rewrite`) — are enforced in two independent layers:
 
-1. **fail-open hook half** — synthesized as `{subject: all, effect: deny}` grants in the model, derived from the privileges the catalog flags `guardrail: true` (the catalog is the single source of truth). The hook **fails open**: any fault — unreadable model, import failure, malformed payload — yields a silent abstain, never a silent block. Set `PKIT_PERMISSIONS_DEBUG=1` to surface fault reasons on stderr.
+1. **fail-open hook half** — synthesized as `{subject: all, effect: deny}` grants in the model, derived from the privileges the catalog flags `guardrail: true` (the catalog is the single source of truth). The hook **fails open on decision faults** (malformed payload, ambiguous model): any such fault yields a silent abstain, never a silent block. Set `PKIT_PERMISSIONS_DEBUG=1` to surface decision fault reasons on stderr.
 2. **fail-closed native half** — the catastrophic `deny` patterns in `settings/core/settings.json`. These hold even if the hook is absent, faults, or is version-skewed, so failing open in layer 1 can never bypass them.
+
+**Enforcement-runtime fault taxonomy (ADR-002 amendment).** The fail-open contract covers *decision faults* (hook ran, couldn't resolve). A distinct class — *enforcement-runtime faults* — means the hook **cannot start at all** (python3 missing, decide.py absent, syntax error). This class is **fail-loud**, not fail-open: `pkit permissions enable` and `pkit permissions sandbox enable` run a startup self-check after registering the hook and warn loudly if the hook cannot start, so the operator learns enforcement is not running rather than believing a dead hook is gating calls. `pkit permissions overview` also surfaces this state when enforcement is registered-but-dead: it runs the self-check and reports "ENFORCEMENT-RUNTIME FAULT — hook CANNOT START" with the diagnosed reason.
 
 **enable / disable** (the opt-in toggle, per issue #247's "Option B" — mirroring the [project-management:DEC-030] default-agent precedent). Because the hook fires per tool call, registering it is the adopter's explicit choice, not an install default:
 
@@ -53,6 +57,8 @@ pkit permissions enable
 
 Registers the hook under the top-level `hooks.PreToolUse` key in `.claude/settings.json` (command `${CLAUDE_PROJECT_DIR}/.pkit/adapters/claude-code/permission-hook.py`, matcher `*`) and ensures the fail-closed native guardrail denies are present. Refuses if the claude-code adapter isn't installed. Idempotent.
 
+After registering, runs the **enforcement-runtime self-check** (per the ADR-002 amendment): drives the hook script under `python3` with a probe payload to verify it can start. If the hook cannot start (python3 missing, decide.py absent, etc.), outputs a loud WARNING naming the fault and the remediation — rather than silently proceeding with a dead hook that fail-opens on every call.
+
 ```
 pkit permissions disable
 ```
@@ -60,6 +66,8 @@ pkit permissions disable
 Strips *only* the pkit hook registration (matched by its command path), preserving any other adopter hooks, and leaves the native guardrail denies in place. The explicit strip is required because the merge primitive treats existing top-level settings keys as last-write-wins survivors — the DEC-030 strip-logic pattern. Idempotent; leaves no orphaned registration.
 
 The hook **script** itself is a propagated adapter file — `pkit sync` owns its lifecycle, so `enable`/`disable` manage only its *registration*, never deploy or remove the file (there is no orphaned-script failure mode). The registration is written only to the live `.claude/settings.json`, never to a merge source, so it survives re-merge and is removable by strip (the `hooks` key lives outside any realizer-owned region per ADR-002).
+
+**`pkit permissions sandbox enable`** sets `failIfUnavailable: true` always (the ADR-004 / ADR-014 §6 fail-closed invariant), so Claude Code refuses to start an unconfined session rather than silently running without a box. It also runs the enforcement-runtime self-check (same as `enable`) AND verifies **actual confinement** — attempts a write outside the workspace that Seatbelt/bubblewrap must deny. If the write succeeds, it warns "sandbox configured ON but NOT actually confining" loudly (box may not have initialized, or the session hasn't been restarted). `pkit permissions sandbox status` and `pkit permissions overview` report the same actual-confinement probe result so the operator never believes confinement is active when it is not.
 
 ### `permission-enforcement.yaml`
 

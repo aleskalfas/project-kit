@@ -1187,3 +1187,223 @@ def test_procedural_step_logs_styling_is_never_load_bearing(tmp_path, monkeypatc
 
     assert "\033[" in always, f"{args} should emit SGR under --color always"
     assert cli_render.strip_ansi(always) == never
+
+
+# ---- ADR-002 amendment: enforcement-runtime self-check + ADR-014 zero-dep ---
+# Tests for:
+#   (a) `enable` and `sandbox enable` run the self-check and are loud on a dead
+#       hook runtime.
+#   (b) `sandbox enable` sets failIfUnavailable: true (already existing test
+#       test_sandbox_enable_writes_fail_closed_block covers this; these add the
+#       diagnostic self-check angle).
+#   (c) `overview` surfaces enforcement-runtime fault and confinement write probe.
+#   (d) `sandbox status` surfaces actual-confinement write probe.
+#   (e) Confinement write probe: reports "denied" when OS blocks, "allowed" when
+#       not confining.
+
+
+def _with_adapter_and_hook(proj: Path) -> Path:
+    """Like _with_adapter but also copies the hook script so _hook_runtime_check
+    can find it and run it (needed for tests that want a HEALTHY runtime)."""
+    _with_adapter(proj)
+    hook_dst = proj / ".pkit" / "adapters" / "claude-code" / "permission-hook.py"
+    hook_dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy(
+        REPO / ".pkit" / "adapters" / "claude-code" / "permission-hook.py",
+        hook_dst,
+    )
+    # Also copy decide.py so the hook can import it in the probe.
+    (proj / ".pkit" / "permissions").mkdir(parents=True, exist_ok=True)
+    shutil.copy(
+        REPO / ".pkit" / "permissions" / "decide.py",
+        proj / ".pkit" / "permissions" / "decide.py",
+    )
+    return proj
+
+
+def test_enable_warns_loudly_when_hook_runtime_dead(tmp_path, monkeypatch):
+    """When the hook script is missing (dead runtime), `enable` warns loudly
+    rather than silently proceeding (ADR-002 amendment)."""
+    from project_kit import permissions as perm
+    proj = _with_adapter(_setup(tmp_path))
+    # Patch _hook_runtime_check to simulate a dead runtime.
+    monkeypatch.setattr(perm, "_hook_runtime_check", lambda _r: (False, "python3 not found"))
+    out = _run(proj, monkeypatch, "enable")
+    assert "live enforcement enabled" in out  # still registers (structural change)
+    assert "WARNING" in out
+    assert "CANNOT START" in out
+    assert "fail-open" in out
+    assert "python3 not found" in out
+
+
+def test_enable_no_warning_when_hook_runtime_healthy(tmp_path, monkeypatch):
+    """When the hook runtime is healthy, `enable` outputs no WARNING (clean path)."""
+    from project_kit import permissions as perm
+    proj = _with_adapter_and_hook(_setup(tmp_path))
+    monkeypatch.setattr(perm, "_hook_runtime_check", lambda _r: (True, "hook started"))
+    out = _run(proj, monkeypatch, "enable")
+    assert "live enforcement enabled" in out
+    assert "WARNING" not in out
+    assert "CANNOT START" not in out
+
+
+def test_sandbox_enable_warns_loudly_when_hook_runtime_dead(tmp_path, monkeypatch):
+    """When the hook runtime is dead, `sandbox enable` warns loudly (ADR-002 amendment)."""
+    from project_kit import permissions as perm
+    proj = _with_adapter(_setup(tmp_path))
+    monkeypatch.setattr(perm, "_hook_runtime_check", lambda _r: (False, "decide.py missing"))
+    # Also stub out the confinement probe so it doesn't add noise.
+    monkeypatch.setattr(perm, "_confinement_write_probe", lambda: "error")
+    out = _run(proj, monkeypatch, "sandbox", "enable")
+    assert "sandbox enabled" in out
+    assert "WARNING" in out
+    assert "CANNOT START" in out
+    assert "decide.py missing" in out
+
+
+def test_sandbox_enable_sets_failIfUnavailable_true(tmp_path, monkeypatch):
+    """sandbox enable always sets failIfUnavailable: true (ADR-004 / ADR-014 §6).
+    Regression test: fail-closed invariant must hold post #21 changes."""
+    from project_kit import permissions as perm
+    proj = _with_adapter(_setup(tmp_path))
+    monkeypatch.setattr(perm, "_hook_runtime_check", lambda _r: (True, "ok"))
+    monkeypatch.setattr(perm, "_confinement_write_probe", lambda: "denied")
+    _run(proj, monkeypatch, "sandbox", "enable")
+    assert _settings(proj)["sandbox"]["failIfUnavailable"] is True
+
+
+def test_sandbox_enable_confinement_probe_denied_is_quiet(tmp_path, monkeypatch):
+    """When the confinement probe is DENIED (box is confining), sandbox enable
+    reports it cleanly — no warning."""
+    from project_kit import permissions as perm
+    proj = _with_adapter(_setup(tmp_path))
+    monkeypatch.setattr(perm, "_hook_runtime_check", lambda _r: (True, "ok"))
+    monkeypatch.setattr(perm, "_confinement_write_probe", lambda: "denied")
+    out = _run(proj, monkeypatch, "sandbox", "enable")
+    assert "confinement verified" in out
+    assert "NOT actually confining" not in out
+
+
+def test_sandbox_enable_confinement_probe_allowed_warns_loudly(tmp_path, monkeypatch):
+    """When the confinement probe is ALLOWED (box not confining), sandbox enable
+    warns loudly about 'configured but NOT actually confining' (ADR-014 §6)."""
+    from project_kit import permissions as perm
+    proj = _with_adapter(_setup(tmp_path))
+    monkeypatch.setattr(perm, "_hook_runtime_check", lambda _r: (True, "ok"))
+    monkeypatch.setattr(perm, "_confinement_write_probe", lambda: "allowed")
+    out = _run(proj, monkeypatch, "sandbox", "enable")
+    assert "WARNING" in out
+    assert "NOT actually confining" in out
+    assert "out-of-workspace" in out
+
+
+def test_overview_surfaces_enforcement_runtime_fault(tmp_path, monkeypatch):
+    """When enforcement is ON but the hook can't start, `overview` surfaces it
+    as a loud, diagnosed fault (ADR-002 amendment)."""
+    from project_kit import permissions as perm
+    proj = _setup(tmp_path)
+    # Register the hook in settings to make enforcement appear ON.
+    (proj / ".claude").mkdir(parents=True, exist_ok=True)
+    (proj / ".claude" / "settings.json").write_text(json.dumps({"hooks": {"PreToolUse": [
+        {"matcher": "*", "hooks": [{"type": "command", "command": HOOK_COMMAND}]}
+    ]}}))
+    # Simulate a dead runtime.
+    monkeypatch.setattr(perm, "_hook_runtime_check", lambda _r: (False, "python3 not found"))
+    monkeypatch.setattr(perm, "_confinement_write_probe", lambda: "error")
+    out = _run(proj, monkeypatch, "overview")
+    assert "ENFORCEMENT-RUNTIME FAULT" in out
+    assert "CANNOT START" in out
+    assert "python3 not found" in out
+    # Must name the healthy-runtime remediation.
+    assert "pkit permissions enable" in out or "Re-run" in out
+
+
+def test_overview_no_fault_when_runtime_healthy(tmp_path, monkeypatch):
+    """When enforcement is ON and the hook runtime is healthy, `overview` reports
+    clean ON status with no fault (ADR-002 amendment)."""
+    from project_kit import permissions as perm
+    proj = _with_adapter_and_hook(_setup(tmp_path))
+    # Register the hook in settings.
+    (proj / ".claude").mkdir(parents=True, exist_ok=True)
+    (proj / ".claude" / "settings.json").write_text(json.dumps({"hooks": {"PreToolUse": [
+        {"matcher": "*", "hooks": [{"type": "command", "command": HOOK_COMMAND}]}
+    ]}}))
+    monkeypatch.setattr(perm, "_hook_runtime_check", lambda _r: (True, "ok"))
+    monkeypatch.setattr(perm, "_confinement_write_probe", lambda: "error")
+    out = _run(proj, monkeypatch, "overview")
+    assert "Live enforcement: ON" in out
+    assert "ENFORCEMENT-RUNTIME FAULT" not in out
+    assert "CANNOT START" not in out
+
+
+def test_overview_sandbox_on_surfaces_confinement_probe(tmp_path, monkeypatch):
+    """When sandbox is ON, `overview` runs the confinement write probe and reports
+    its outcome — either verified or NOT-CONFINING (ADR-002 amendment / ADR-014 §6)."""
+    from project_kit import permissions as perm
+    proj = _with_adapter(_setup(tmp_path))
+    monkeypatch.setattr(perm, "_hook_runtime_check", lambda _r: (False, "no hook"))
+    # First: probe denied → confinement verified.
+    monkeypatch.setattr(perm, "_confinement_write_probe", lambda: "denied")
+    _run(proj, monkeypatch, "sandbox", "enable")
+    out = _run(proj, monkeypatch, "overview")
+    # Reset probe to denied to check the verified branch.
+    monkeypatch.setattr(perm, "_confinement_write_probe", lambda: "denied")
+    out = _run(proj, monkeypatch, "overview")
+    assert "confinement verified" in out or "write outside workspace DENIED" in out
+
+    # Second: probe allowed → NOT confining warning.
+    monkeypatch.setattr(perm, "_confinement_write_probe", lambda: "allowed")
+    out = _run(proj, monkeypatch, "overview")
+    assert "NOT actually confining" in out or "WARNING" in out
+
+
+def test_sandbox_status_surfaces_confinement_write_probe(tmp_path, monkeypatch):
+    """sandbox status reports actual-confinement write probe: VERIFIED or NOT CONFINING
+    (ADR-002 amendment / ADR-014 §6)."""
+    from project_kit import permissions as perm
+    proj = _with_adapter(_setup(tmp_path))
+    monkeypatch.setattr(perm, "_hook_runtime_check", lambda _r: (True, "ok"))
+
+    # Enable sandbox first so status shows ON.
+    monkeypatch.setattr(perm, "_confinement_write_probe", lambda: "denied")
+    _run(proj, monkeypatch, "sandbox", "enable")
+
+    # Status with probe denied → VERIFIED.
+    monkeypatch.setattr(perm, "_confinement_write_probe", lambda: "denied")
+    out = _run(proj, monkeypatch, "sandbox")
+    assert "VERIFIED" in out or "DENIED" in out
+
+    # Status with probe allowed → NOT CONFINING warning.
+    monkeypatch.setattr(perm, "_confinement_write_probe", lambda: "allowed")
+    out = _run(proj, monkeypatch, "sandbox")
+    assert "NOT CONFINING" in out or "NOT actually confining" in out or "ALLOWED" in out
+
+
+def test_confinement_write_probe_allowed_when_not_sandboxed():
+    """The confinement write probe returns 'allowed' when not in a sandbox
+    (plain terminal). This is the expected state in tests."""
+    from project_kit import permissions as perm
+    result = perm._confinement_write_probe()
+    # From a plain test process, the write outside workspace MUST succeed.
+    # If somehow it doesn't (very rare), 'error' is also acceptable.
+    assert result in ("allowed", "error"), (
+        f"Expected 'allowed' (not sandboxed) or 'error', got {result!r}"
+    )
+
+
+def test_confinement_write_probe_denied_simulation(tmp_path, monkeypatch):
+    """Simulate the 'denied' case by making the /tmp write raise PermissionError."""
+    from project_kit import permissions as perm
+    import pathlib
+
+    original_write_text = pathlib.Path.write_text
+
+    def _raise_perm(self, *args, **kwargs):
+        name = str(self)
+        if "pkit-confinement-probe-" in name:
+            raise PermissionError("simulated sandbox denial")
+        return original_write_text(self, *args, **kwargs)
+
+    monkeypatch.setattr(pathlib.Path, "write_text", _raise_perm)
+    result = perm._confinement_write_probe()
+    assert result == "denied"
