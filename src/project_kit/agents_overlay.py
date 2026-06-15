@@ -232,39 +232,71 @@ def render_status(target_root: Path) -> str:
 
 def reconcile_overlay(target_root: Path, *, write: bool) -> tuple[list[str], str]:
     """Surface referenced-but-undefined categories into the overlay as commented
-    stubs. Idempotent (skips categories already present, commented or not).
-    Dry-run unless ``write``. Returns (categories_added, report)."""
+    stubs.
+
+    Three states per referenced category:
+    - **missing**: not in the overlay at all → add a commented stub.
+    - **commented-stub**: a ``# cat:`` line exists but is unfilled → report
+      "uncomment + set real paths" guidance; do NOT duplicate the stub.
+    - **defined**: an uncommented ``cat:`` entry with paths → nothing to do.
+
+    Dry-run unless ``write``. Returns (categories_added, report).
+    """
     missing = missing_categories(target_root)
     path = _overlay_path(target_root)
     existing = path.read_text(encoding="utf-8") if path.is_file() else ""
 
-    def already_present(cat: str) -> bool:
-        # Defined (`cat:`) or already-stubbed (`# cat:`) — don't duplicate.
-        return bool(re.search(rf"(?m)^\s*#?\s*{re.escape(cat)}\s*:", existing))
+    def _is_defined(cat: str) -> bool:
+        """Uncommented ``cat:`` line — sync/deploy considers this defined."""
+        return bool(re.search(rf"(?m)^\s*{re.escape(cat)}\s*:", existing))
 
-    to_add = [c for c in missing if not already_present(c)]
-    if not to_add:
-        if missing:
-            return [], cli_render.style("strong",
-                f"overlay already lists all {len(missing)} referenced categor(ies); nothing to add.")
+    def _is_commented_stub(cat: str) -> bool:
+        """A ``# cat:`` stub exists but is not yet uncommented/filled."""
+        return bool(re.search(rf"(?m)^\s*#\s*{re.escape(cat)}\s*:", existing))
+
+    # Only categories that are truly absent need a new stub appended.
+    to_add = [c for c in missing if not _is_defined(c) and not _is_commented_stub(c)]
+    # Categories that are stubbed-but-commented: already in the file, need
+    # the adopter to uncomment + fill paths before sync will deploy the agent.
+    commented_stubs = [c for c in missing if _is_commented_stub(c)]
+
+    lines: list[str] = []
+
+    if to_add:
+        block = ["", "# --- added by `pkit agents reconcile` — uncomment and set real paths ---"]
+        for cat in to_add:
+            block += [f"# {cat}:", "#   - <path/relative/to/project/root>"]
+        stub = "\n".join(block) + "\n"
+
+        verb = "would add" if not write else "added"
+        lines.append(cli_render.style("strong", f"{verb} {len(to_add)} commented categor(ies) to the overlay:"))
+        lines += [f"  # {c}" for c in to_add]
+        if write:
+            if not path.is_file():
+                raise FileNotFoundError(f"overlay not found at {path}; run `pkit init` first.")
+            with path.open("a", encoding="utf-8") as fh:
+                fh.write(stub)
+            lines.append("")
+            lines.append("uncomment + set real paths, then `pkit sync` to deploy the skipped agent(s).")
+        else:
+            lines.append("")
+            lines.append("(dry-run — re-run with `--write` to append these stubs.)")
+
+    if commented_stubs:
+        if lines:
+            lines.append("")
+        lines.append(cli_render.style("strong",
+            f"{len(commented_stubs)} categor(ies) already stubbed but still commented — action needed:"))
+        for cat in commented_stubs:
+            lines.append(f"  # {cat}")
+        lines.append("")
+        lines.append(
+            "stub present but still commented — uncomment + set real paths in "
+            "`.pkit/agents/project/overlay.yaml`, then `pkit sync`."
+        )
+
+    if not to_add and not commented_stubs:
+        # Every referenced category is fully defined — nothing left to do.
         return [], cli_render.style("strong", "overlay is complete — every referenced category is defined.")
 
-    block = ["", "# --- added by `pkit agents reconcile` — uncomment and set real paths ---"]
-    for cat in to_add:
-        block += [f"# {cat}:", "#   - <path/relative/to/project/root>"]
-    stub = "\n".join(block) + "\n"
-
-    verb = "would add" if not write else "added"
-    lines = [cli_render.style("strong", f"{verb} {len(to_add)} commented categor(ies) to the overlay:")]
-    lines += [f"  # {c}" for c in to_add]
-    if write:
-        if not path.is_file():
-            raise FileNotFoundError(f"overlay not found at {path}; run `pkit init` first.")
-        with path.open("a", encoding="utf-8") as fh:
-            fh.write(stub)
-        lines.append("")
-        lines.append("uncomment + set real paths, then `pkit sync` to deploy the skipped agent(s).")
-    else:
-        lines.append("")
-        lines.append("(dry-run — re-run with `--write` to append these stubs.)")
     return to_add, "\n".join(lines) + "\n"
