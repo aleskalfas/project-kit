@@ -1,0 +1,5 @@
+schema_version: 1
+grants:
+- subject: agent:project-manager
+  privilege: '[privilege-catalog:issue-tracker-write]'
+  effect: deny
