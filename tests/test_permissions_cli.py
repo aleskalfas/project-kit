@@ -1470,3 +1470,227 @@ def test_confinement_write_probe_denied_simulation(tmp_path, monkeypatch):
     monkeypatch.setattr(pathlib.Path, "write_text", _raise_perm)
     result = perm._confinement_write_probe()
     assert result == "denied"
+
+
+# ---- allow-host network egress (ADR-015, issue #24) --------------------------
+#
+# Acceptance criteria:
+#   (a) allow-host kind added to schema (additive; no schema_version bump).
+#   (b) Named/bounded hosts auto-apply on capability install via single writer.
+#   (c) Every applied allow-host MANDATORILY surfaced in sandbox status +
+#       permissions overview with source + verbatim "session-wide egress to X;
+#       not a security boundary" gloss.
+#   (d) network: any / * treated as widening — never auto-applied.
+#   (e) Adopter-set values preserved; idempotent.
+#   (f) Regression: status surfaces declared egress; override preserved.
+
+
+def _toolkit_yaml(name: str, host: str, effect: str = "narrowing") -> str:
+    """Build a minimal confinement-toolkit YAML with one allow-host allowance."""
+    return (
+        "schema_version: 1\n"
+        "toolkits:\n"
+        f"  {name}:\n"
+        f"    description: Test toolkit for {name}\n"
+        f"    detect:\n"
+        f"      - \"{name}.lock\"\n"
+        f"    allowances:\n"
+        f"      - kind: allow-host\n"
+        f"        effect: {effect}\n"
+        f"        value: \"{host}\"\n"
+        f"        note: test note for {host}\n"
+    )
+
+
+def _project_toolkit(proj: Path, yaml_text: str) -> None:
+    """Write a project-level confinement-toolkit override."""
+    d = proj / ".pkit" / "permissions" / "project"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "confinement-toolkit.yaml").write_text(yaml_text)
+
+
+def test_allow_host_schema_accepts_named_host(tmp_path, monkeypatch):
+    """allow-host kind is accepted by schema validation — additive, no schema_version bump."""
+    # The shipped confinement-toolkit.yaml now includes github-api with allow-host.
+    out = _run(_setup(tmp_path), monkeypatch, "sandbox", "toolkit", "list")
+    assert "github-api" in out
+    assert "narrowing-but-reported" in out   # effect mark for allow-host narrowing
+
+
+def test_allow_host_auto_applied_on_accommodate(tmp_path, monkeypatch):
+    """Named bounded host auto-applies through accommodate — single provenance writer."""
+    proj = _with_adapter(_setup(tmp_path))
+    _project_toolkit(proj, _toolkit_yaml("my-api", "api.example.com"))
+    out = _run(proj, monkeypatch, "sandbox", "accommodate", "my-api")
+    assert "narrowing applied" in out
+    sb = _sb(proj)
+    assert "api.example.com" in sb["network"]["allowedHosts"]
+
+
+def test_allow_host_auto_applied_provenance_tagged(tmp_path, monkeypatch):
+    """allow-host entries are provenance-tagged to the toolkit (ADR-008 rule 2)."""
+    proj = _with_adapter(_setup(tmp_path))
+    _project_toolkit(proj, _toolkit_yaml("my-api", "api.example.com"))
+    _run(proj, monkeypatch, "sandbox", "accommodate", "my-api")
+    prov_path = proj / ".pkit" / "permissions" / "project" / "sandbox-provenance.yaml"
+    from ruamel.yaml import YAML as _YAML
+    _yaml = _YAML(typ="safe")
+    with prov_path.open() as fh:
+        doc = _yaml.load(fh)
+    entries = doc.get("entries", [])
+    host_entries = [e for e in entries if e.get("kind") == "allow-host"]
+    assert len(host_entries) == 1
+    assert host_entries[0]["value"] == "api.example.com"
+    assert host_entries[0]["toolkit"] == "my-api"
+
+
+def test_allow_host_idempotent(tmp_path, monkeypatch):
+    """Re-applying the same allow-host toolkit is a no-op (set-union write)."""
+    proj = _with_adapter(_setup(tmp_path))
+    _project_toolkit(proj, _toolkit_yaml("my-api", "api.example.com"))
+    _run(proj, monkeypatch, "sandbox", "accommodate", "my-api")
+    before = _settings(proj)
+    _run(proj, monkeypatch, "sandbox", "accommodate", "my-api")
+    after = _settings(proj)
+    assert after == before
+    assert after["sandbox"]["network"]["allowedHosts"].count("api.example.com") == 1
+
+
+def test_allow_host_operator_value_preserved(tmp_path, monkeypatch):
+    """Operator-set allowedHosts entries survive pkit operations (no silent deletion)."""
+    import json as _json
+    proj = _with_adapter(_setup(tmp_path, settings=_json.dumps({
+        "sandbox": {"network": {"allowedHosts": ["my.operator.host"]}}
+    })))
+    _project_toolkit(proj, _toolkit_yaml("my-api", "api.example.com"))
+    _run(proj, monkeypatch, "sandbox", "accommodate", "my-api")
+    hosts = _sb(proj)["network"]["allowedHosts"]
+    assert "my.operator.host" in hosts        # operator entry preserved
+    assert "api.example.com" in hosts         # pkit entry added
+
+
+def test_allow_host_mandatory_reporting_in_sandbox_status(tmp_path, monkeypatch):
+    """Applied allow-host is mandatorily surfaced in sandbox status with verbatim gloss."""
+    proj = _with_adapter(_setup(tmp_path))
+    _project_toolkit(proj, _toolkit_yaml("my-api", "api.example.com"))
+    _run(proj, monkeypatch, "sandbox", "enable")
+    _run(proj, monkeypatch, "sandbox", "accommodate", "my-api")
+    out = _run(proj, monkeypatch, "sandbox")
+    assert "session-wide egress to api.example.com; not a security boundary" in out
+    assert "my-api" in out          # source toolkit named
+
+
+def test_allow_host_mandatory_reporting_in_permissions_overview(tmp_path, monkeypatch):
+    """Applied allow-host is mandatorily surfaced in permissions overview."""
+    proj = _with_adapter(_setup(tmp_path))
+    _project_toolkit(proj, _toolkit_yaml("my-api", "api.example.com"))
+    _run(proj, monkeypatch, "sandbox", "accommodate", "my-api")
+    out = _run(proj, monkeypatch, "overview")
+    assert "session-wide egress to api.example.com; not a security boundary" in out
+    assert "my-api" in out
+
+
+def test_allow_host_gloss_in_toolkit_show(tmp_path, monkeypatch):
+    """toolkit show surfaces the egress honesty gloss for allow-host allowances."""
+    proj = _with_adapter(_setup(tmp_path))
+    _project_toolkit(proj, _toolkit_yaml("my-api", "api.example.com"))
+    out = _run(proj, monkeypatch, "sandbox", "toolkit", "show", "my-api")
+    assert "allow-host" in out and "narrowing" in out
+    assert "session-wide egress to api.example.com; not a security boundary" in out
+    assert "narrowing-but-reported" in out or "NARROWING-BUT-REPORTED" in out
+
+
+def test_allow_host_not_reported_when_not_applied(tmp_path, monkeypatch):
+    """Egress section is absent from status / overview when no allow-host is applied."""
+    proj = _with_adapter(_setup(tmp_path))
+    _run(proj, monkeypatch, "sandbox", "enable")
+    out = _run(proj, monkeypatch, "sandbox")
+    assert "session-wide egress" not in out
+    out = _run(proj, monkeypatch, "overview")
+    assert "session-wide egress" not in out
+
+
+def test_allow_host_any_is_widening_not_auto_applied(tmp_path, monkeypatch):
+    """allow-host with value `*` is widening — never auto-applied via accommodate."""
+    proj = _with_adapter(_setup(tmp_path))
+    # A toolkit with effect: widening (as required for any/* per ADR-015 fork 6).
+    # The accommodate command refuses to apply widening allowances.
+    _project_toolkit(proj, _toolkit_yaml("open-egress", "*", effect="widening"))
+    out = _run(proj, monkeypatch, "sandbox", "accommodate", "open-egress")
+    assert "WIDENING" in out and "sandbox exclude" in out
+    # allowedHosts must NOT contain `*`
+    assert "*" not in _sb(proj).get("network", {}).get("allowedHosts", [])
+
+
+def test_allow_host_any_guard_in_apply_allowances(tmp_path, monkeypatch):
+    """_apply_allowances refuses to write allow-host `*` even if called directly."""
+    from project_kit import permissions as perm
+    proj = _with_adapter(_setup(tmp_path))
+    import pytest as _pytest
+    with _pytest.raises(perm.PermissionsError, match="unambiguously widening"):
+        perm._apply_allowances(
+            proj,
+            [{"kind": "allow-host", "value": "*", "effect": "narrowing"}],
+            "bad-toolkit",
+        )
+    # `any` keyword also blocked
+    with _pytest.raises(perm.PermissionsError, match="unambiguously widening"):
+        perm._apply_allowances(
+            proj,
+            [{"kind": "allow-host", "value": "any", "effect": "narrowing"}],
+            "bad-toolkit",
+        )
+    # No allowedHosts entry written
+    assert "allowedHosts" not in _sb(proj).get("network", {})
+
+
+def test_allow_host_auto_accommodate_on_sandbox_enable(tmp_path, monkeypatch):
+    """Named allow-host toolkits are auto-applied on sandbox enable when detected."""
+    proj = _with_adapter(_setup(tmp_path))
+    _project_toolkit(proj, _toolkit_yaml("my-api", "api.example.com"))
+    (proj / "my-api.lock").write_text("")   # signal detect glob
+    out = _run(proj, monkeypatch, "sandbox", "enable")
+    assert "auto-accommodated" in out and "my-api" in out
+    assert "api.example.com" in _sb(proj)["network"]["allowedHosts"]
+    # Mandatory egress gloss must appear in sandbox enable output too.
+    assert "session-wide egress to api.example.com; not a security boundary" in out
+
+
+def test_allow_host_not_auto_accommodated_when_any(tmp_path, monkeypatch):
+    """A toolkit with widening allow-host `*` is never auto-accommodated on sandbox enable."""
+    proj = _with_adapter(_setup(tmp_path))
+    _project_toolkit(proj, _toolkit_yaml("open-egress", "*", effect="widening"))
+    (proj / "open-egress.lock").write_text("")   # signal detect glob
+    out = _run(proj, monkeypatch, "sandbox", "enable")
+    assert "open-egress" not in out or "auto-accommodated" not in out
+    assert "*" not in _sb(proj).get("network", {}).get("allowedHosts", [])
+
+
+def test_allow_host_remove_cleans_provenance(tmp_path, monkeypatch):
+    """Removing a toolkit with allow-host removes its host from allowedHosts (pkit-authored only)."""
+    proj = _with_adapter(_setup(tmp_path))
+    _project_toolkit(proj, _toolkit_yaml("my-api", "api.example.com"))
+    _run(proj, monkeypatch, "sandbox", "accommodate", "my-api")
+    assert "api.example.com" in _sb(proj)["network"]["allowedHosts"]
+    _run(proj, monkeypatch, "sandbox", "accommodate", "my-api", "--remove")
+    assert "api.example.com" not in _sb(proj).get("network", {}).get("allowedHosts", [])
+
+
+def test_allow_host_toolkit_list_shows_narrowing_but_reported(tmp_path, monkeypatch):
+    """Toolkit list marks allow-host narrowing toolkits as narrowing-but-reported."""
+    proj = _setup(tmp_path)
+    _project_toolkit(proj, _toolkit_yaml("my-api", "api.example.com"))
+    out = _run(proj, monkeypatch, "sandbox", "toolkit", "list")
+    assert "my-api" in out
+    assert "narrowing-but-reported" in out
+
+
+def test_allow_host_shipped_github_api_toolkit_present(tmp_path, monkeypatch):
+    """The shipped github-api toolkit with allow-host is present in the toolkit list."""
+    proj = _setup(tmp_path)
+    out = _run(proj, monkeypatch, "sandbox", "toolkit", "list")
+    assert "github-api" in out
+    out = _run(proj, monkeypatch, "sandbox", "toolkit", "show", "github-api")
+    assert "api.github.com" in out
+    assert "allow-host" in out and "narrowing" in out
+    assert "session-wide egress to api.github.com; not a security boundary" in out
