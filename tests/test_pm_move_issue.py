@@ -53,7 +53,12 @@ def mi():
 
 @pytest.fixture
 def workflow() -> dict:
-    """Compact fixture mirroring workflow.yaml's transitions block."""
+    """Compact fixture mirroring workflow.yaml's transitions block.
+
+    Review is task-only (DEC-006, amendment #38). The old parent-typed
+    review→done row has been removed: containers never enter Review, so
+    no closure path from Review is needed for them.
+    """
     return {
         "states": [
             {"id": "todo"},
@@ -101,11 +106,8 @@ def workflow() -> dict:
                 "severity": "[validation-severity:hard-reject]",
                 "applies_to": ["[issue-types:task]"],
             },
-            # Parent-typed review→done — added per #208 so the forward
-            # cascade has a closure path when parents have been walked
-            # into Review by children.
             {
-                "from": "review",
+                "from": "in-progress",
                 "to": "done",
                 "authorisation": "user",
                 "severity": "[validation-severity:hard-reject]",
@@ -178,20 +180,19 @@ def test_find_transition_user_authorised_severity_parsed(mi, workflow) -> None:
     assert t.severity == "hard-reject"
 
 
-def test_find_transition_review_to_done_for_parent_types(mi, workflow) -> None:
-    """review → done is also available to epic/feature/umbrella via close-issue (#208).
+def test_find_transition_review_to_done_not_available_for_parent_types(mi, workflow) -> None:
+    """review → done is NOT available to epic/feature/umbrella (DEC-006, amendment #38).
 
-    The forward cascade walks parents into Review when children advance;
-    without a parent-typed review→done transition, parents dead-end in
-    Review (worked-around manually before this fix).
+    Containers never enter Review via forward cascade (the cap is in-progress),
+    so no closure path from Review is needed for them.  The old workaround row
+    has been removed from workflow.yaml.
     """
     for parent_type in ("epic", "feature", "umbrella"):
         t = mi._find_transition(workflow, "review", "done", parent_type)
-        assert t is not None, f"no review→done transition for {parent_type!r}"
-        assert t.from_state == "review"
-        assert t.to_state == "done"
-        assert t.authorisation == "user"
-        assert t.severity == "hard-reject"
+        assert t is None, (
+            f"parent type {parent_type!r} must not have a review→done "
+            "transition — containers never enter Review"
+        )
 
 
 # --- legal targets --------------------------------------------------
@@ -209,11 +210,15 @@ def test_legal_targets_filters_by_type(mi, workflow) -> None:
     assert "review" not in mi._legal_targets(workflow, "in-progress", "feature")
 
 
-def test_legal_targets_review_to_done_for_parent_types(mi, workflow) -> None:
-    """Parents can transition review → done via close-issue (#208 fix)."""
+def test_legal_targets_review_to_done_not_available_for_parent_types(mi, workflow) -> None:
+    """Parents have no review → done transition (DEC-006, amendment #38).
+
+    Containers never enter Review via the forward cascade; their closure path
+    is in-progress → done (cascade-eligibility-close).
+    """
     for parent_type in ("epic", "feature", "umbrella"):
-        assert "done" in mi._legal_targets(workflow, "review", parent_type), (
-            f"parent type {parent_type!r} should have 'done' reachable from 'review'"
+        assert "done" not in mi._legal_targets(workflow, "review", parent_type), (
+            f"parent type {parent_type!r} must not have 'done' reachable from 'review'"
         )
 
 
@@ -433,6 +438,87 @@ def test_noop_does_not_require_transition_in_workflow(mi, workflow) -> None:
     """
     # This would have caused the bug: the transition table has no done→done entry.
     assert mi._find_transition(workflow, "done", "done", "task") is None
+
+
+# ---- DEC-006 amendment #38 — container forward-cascade cap at in-progress -------
+#
+# A child entering review (or done) must NOT promote its container to review.
+# The forward cascade is scoped to todo → backlog → in-progress; containers
+# reach done only via the closure cascade (in-progress → done,
+# cascade-eligibility-close). The fix lives in _cascade_forward_target, which
+# caps the ancestor's bump target at in-progress regardless of the child state.
+
+
+def test_cascade_forward_target_caps_review_at_in_progress(mi) -> None:
+    """Child entering review → ancestor cascade target is in-progress, not review."""
+    assert mi._cascade_forward_target("review") == "in-progress"
+
+
+def test_cascade_forward_target_caps_done_at_in_progress(mi) -> None:
+    """Child entering done → ancestor cascade target is in-progress, not done.
+
+    Closure cascade (in-progress → done) is the correct path to done for containers.
+    """
+    assert mi._cascade_forward_target("done") == "in-progress"
+
+
+def test_cascade_forward_target_passes_through_in_progress(mi) -> None:
+    """Child entering in-progress → ancestor cascade target is in-progress (unchanged)."""
+    assert mi._cascade_forward_target("in-progress") == "in-progress"
+
+
+def test_cascade_forward_target_passes_through_backlog(mi) -> None:
+    """Child entering backlog → ancestor cascade target is backlog (unchanged)."""
+    assert mi._cascade_forward_target("backlog") == "backlog"
+
+
+def test_cascade_forward_target_passes_through_todo(mi) -> None:
+    """Child entering todo → ancestor cascade target is todo (unchanged)."""
+    assert mi._cascade_forward_target("todo") == "todo"
+
+
+def test_container_closure_path_is_in_progress_to_done(mi, workflow) -> None:
+    """Closure-cascade path for containers is in-progress → done (DEC-006).
+
+    This is the only Done path for containers; the forward cascade never
+    takes them to review.
+    """
+    for parent_type in ("epic", "feature", "umbrella"):
+        t = mi._find_transition(workflow, "in-progress", "done", parent_type)
+        assert t is not None, (
+            f"container type {parent_type!r} must have in-progress→done "
+            "transition for the closure-cascade path"
+        )
+        assert t.authorisation == "user"
+        assert t.severity == "hard-reject"
+
+
+def test_state_is_behind_in_progress_not_behind_in_progress(mi) -> None:
+    """Container already at in-progress is not 'behind' the capped cascade target.
+
+    This confirms the no-op path: a container at in-progress while the child
+    enters review/done must not be re-bumped (it's already at the cap).
+    """
+    capped = mi._cascade_forward_target("review")  # == "in-progress"
+    assert not mi._state_is_behind("in-progress", capped)
+
+
+def test_cascade_review_child_bumps_behind_container_to_in_progress(mi) -> None:
+    """A container that is behind (todo/backlog) gets bumped to in-progress,
+    not to review, when a child enters review (DEC-006, amendment #38).
+    """
+    capped = mi._cascade_forward_target("review")  # == "in-progress"
+    assert mi._state_is_behind("todo", capped)
+    assert mi._state_is_behind("backlog", capped)
+    plan = mi._compute_plan(
+        issue_number=1,
+        current_state="backlog",
+        target_state=capped,
+        has_board=False,
+        labels=["state:backlog"],
+    )
+    assert plan.add_label == "state:in-progress"
+    assert plan.remove_label == "state:backlog"
 
 
 # ---- DEC-031 transition-enforcement wiring (regression for issue #25) ----------

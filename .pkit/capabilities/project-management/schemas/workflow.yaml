@@ -152,26 +152,6 @@ transitions:
       apply (the merge button is the gate). Owned by `done-work` per
       DEC-026; approval gate is mode-conditional per DEC-027 / DEC-028.
 
-  - from: review
-    to: done
-    command: close-issue
-    pr_state_effect: "none → none"
-    authorisation: user
-    executor: agent
-    applies_to:
-      - "[issue-types:epic]"
-      - "[issue-types:feature]"
-      - "[issue-types:umbrella]"
-    severity: "[validation-severity:hard-reject]"
-    notes: |
-      Parent-closure path when the forward cascade has walked the
-      parent into Review (because every child has reached Review or
-      further). Closure requirements are the same as the
-      in-progress → done parent-closure row below: every child issue
-      closed, every parent acceptance/success-criteria checkbox
-      ticked, user authorises the close. Owned by `close-issue` (not
-      `done-work` — parents don't merge PRs).
-
   - from: in-progress
     to: done
     command: close-issue
@@ -262,9 +242,14 @@ cascade:
     direction: upward
     behaviour: |
       Automatic. When a child moves forward (todo → backlog → in-progress),
-      the agent checks each ancestor and bumps any that is behind to match
-      the child's new state. First child to move flips the chain; later
-      siblings re-flipping is a no-op.
+      the agent checks each ancestor and bumps any that is behind. The
+      forward cascade is scoped to todo → backlog → in-progress only;
+      containers do not forward-cascade into review or done. When a child
+      enters review or done, its container is bumped to at most in-progress
+      (if it was behind). Containers reach done only via the closure
+      cascade once all children are done (cascade-eligibility-close).
+      First child to move flips the chain; later siblings re-flipping is
+      a no-op.
     applies_to_levels:
       - "[issue-types:epic]"
       - "[issue-types:feature]"

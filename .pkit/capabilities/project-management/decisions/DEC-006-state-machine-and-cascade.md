@@ -46,6 +46,10 @@ Three behaviours, encoded in the schema's `cascade` block:
 - **Closure cascade (→ Done).** Direction `upward`. Semi-automatic. When the *last open* child of a parent closes, the parent becomes **eligible to close** but never auto-closes. The agent validates the parent's close criteria (Feature acceptance criteria ticked, EPIC success criteria met, Umbrella purpose served) and prompts the user to authorise closure at each level.
 - **Downward cascade.** Direction `none`. Disallowed. Parent state changes do not change children. The wrong direction of causation.
 
+> **Amendment (#38, under EPIC #6) — Review is a leaf/Task state; containers do not forward-cascade into Review.** The forward cascade above is scoped to **Todo → Backlog → In Progress** (Review is deliberately excluded). A child entering **Review** therefore does **not** promote its container — a container's forward-cascade target tops out at **In Progress** while any child is unfinished. A container reaches Done only via the **closure cascade** (In Progress → Done, cascade-eligibility per the authorisation table) once all children are done and its close criteria are met.
+>
+> Rationale: Review models "a PR is open for this leaf"; a container has no PR of its own, so a container sitting in Review is meaningless — and it produced a **stuck state**, because Review's only forward exit is Done, leaving a container with more children still to build unable to return to In Progress (finding 4.2 of the done-work handoff note). This is a **clarification** of the forward cascade's existing scope, not a new rule: the implementation was over-cascading containers to *match* a child's Review state, beyond what this section specifies. No `Review → In Progress` back-edge is needed once containers never enter Review.
+
 ### Closure triggers
 
 Four paths reach Done, encoded as schema entries:

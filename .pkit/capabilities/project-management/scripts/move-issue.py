@@ -672,12 +672,35 @@ def _gh_comment(issue_number: int, body: str, config: dict) -> bool:
     return True
 
 
+def _cascade_forward_target(child_target: str) -> str:
+    """Return the container-safe forward-cascade target for a given child state.
+
+    The forward cascade is scoped to todo → backlog → in-progress (DEC-006,
+    amendment #38). Containers do not enter Review — Review models an open PR
+    for a leaf Task; a container has no PR of its own. When a child reaches
+    review or done, ancestors are bumped to at most in-progress.
+    """
+    _FORWARD_CASCADE_CAP = "in-progress"
+    order = ["todo", "backlog", "in-progress", "review", "done"]
+    try:
+        cap_idx = order.index(_FORWARD_CASCADE_CAP)
+        child_idx = order.index(child_target)
+    except ValueError:
+        return child_target
+    return order[min(child_idx, cap_idx)]
+
+
 def _cascade_parent(parent_num: int, target_state: str, config: dict) -> bool:
     """Forward cascade — bump parent if it's behind.
 
     Conservative implementation: read parent state; if parent is behind
-    the target, label-edit it forward. Bypasses authorisation gates per
-    DEC-006 ("forward cascade is automatic").
+    the capped cascade target, label-edit it forward. Bypasses authorisation
+    gates per DEC-006 ("forward cascade is automatic").
+
+    The cascade target is capped at in-progress for containers: Review is a
+    leaf/Task state and a container must never auto-enter it (DEC-006,
+    amendment #38). A child moving to review or done bumps its ancestors to
+    at most in-progress.
     """
     parent = _gh_get_issue(parent_num, config)
     if parent is None:
@@ -691,18 +714,20 @@ def _cascade_parent(parent_num: int, target_state: str, config: dict) -> bool:
         milestone=parent.get("milestone") or {},
         labels=parent_labels,
     )
-    if not _state_is_behind(parent_state, target_state):
-        return True  # already at or beyond.
+    # Cap the cascade target: containers top out at in-progress.
+    cascade_target = _cascade_forward_target(target_state)
+    if not _state_is_behind(parent_state, cascade_target):
+        return True  # already at or beyond the capped target.
     plan = _compute_plan(
         issue_number=parent_num,
         current_state=parent_state,
-        target_state=target_state,
+        target_state=cascade_target,
         has_board=False,  # cascade only fires for label substrate
         labels=parent_labels,
     )
     print(
         f"[cascade] bumping parent #{parent_num}: "
-        f"{parent_state} → {target_state}"
+        f"{parent_state} → {cascade_target}"
     )
     return _gh_apply_state_label(parent_num, plan, config)
 
