@@ -188,7 +188,15 @@ Per-agent overrides replace; copying base entries into the override is the expli
 **Diagnosing + repairing the overlay (per COR-013):**
 
 - `pkit agents` reports, per kit-shipped agent, whether it is *deployable* or *SKIPPED* and which categories are undefined — the discoverable surface for "why didn't my agent show up?" (deployment happens in `sync`; this is the read-only diagnostic).
-- `pkit agents reconcile [--write]` surfaces every referenced-but-undefined category into `overlay.yaml` as a **commented stub** you then fill with real paths. This is the path for an adopter whose overlay predates a newly-shipped agent's categories — the seed only writes when the overlay is absent and `sync` never re-touches the seeded overlay (COR-001's written-once contract), so the repair is an explicit, idempotent gesture rather than an automatic sync mutation. Dry-run by default.
+- `pkit agents reconcile [--write]` surfaces every referenced-but-undefined category into `overlay.yaml`. The command uses **detect-then-fill** logic — four states per missing category:
+  1. **Missing + conventional default directory exists**: the category is written *uncommented* with the conventional path, ready for `pkit sync` to deploy the agent immediately with no manual step. Example: `architecture-docs` is auto-filled with `docs/architecture/` when that directory is present; `adr-records` with `docs/architecture/decisions/`.
+  2. **Missing + no conventional default directory**: a commented stub is appended (e.g. `# architecture-docs:`) with `<path/relative/to/project/root>` guidance; the adopter fills in a real path before running `pkit sync`.
+  3. **Commented stub already present**: reconcile reports "uncomment + set real paths" guidance and does not append a duplicate.
+  4. **Defined** (uncommented entry with paths): nothing is written; an adopter-set value is never overwritten.
+
+  This is the path for an adopter whose overlay predates a newly-shipped agent's categories — the repair is an explicit, idempotent gesture rather than an automatic sync mutation. Dry-run by default.
+
+  Conventional defaults are declared in `src/project_kit/agents_overlay.py` (`CONVENTIONAL_CATEGORY_DEFAULTS`), one entry per overlay category. Adding a default for a new category is the authoring step that enables auto-fill for adopters who follow the conventional layout.
 
 ## Deploy mechanics
 
