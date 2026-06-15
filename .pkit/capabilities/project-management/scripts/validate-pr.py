@@ -17,6 +17,10 @@ rules:
     keyword reference (git-conventions.yaml `pr-body` rule).
   * Body contains a `## Doc impact` section (git-conventions.yaml
     `pr-body` rule).
+  * Body has been authored — residual-placeholder detection per DEC-031:
+    - `## Test plan` with no authored checkbox items → warning at open,
+      hard-reject at the merge gate (PHASE_TRANSITION).
+    - Surviving PR.md placeholder prose → always a warning.
 
 Findings tagged by severity per validation-severity.yaml.
 
@@ -53,6 +57,11 @@ from _lib.membership import (  # noqa: E402
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
+)
+from _lib.placeholder_detection import (  # noqa: E402
+    PHASE_CREATE,
+    PHASE_TRANSITION,
+    detect_placeholder_residuals,
 )
 
 
@@ -91,6 +100,17 @@ def main() -> int:
         help=(
             "Path to the installed capability's directory "
             f"(default: <repo-root>/.pkit/capabilities/{CAPABILITY_NAME}/)."
+        ),
+    )
+    parser.add_argument(
+        "--phase",
+        choices=(PHASE_CREATE, PHASE_TRANSITION),
+        default=PHASE_CREATE,
+        help=(
+            "Validation phase. 'create' (default) — PR body was just opened; "
+            "empty-checkbox-section in ## Test plan is a warning. "
+            "'transition' — merge gate; empty-checkbox-section is a hard-reject "
+            "per DEC-031."
         ),
     )
     parser.add_argument(
@@ -143,6 +163,8 @@ def main() -> int:
         classification=classification,
         git_conv=git_conv,
         closing_type_labels=closing_type_labels,
+        capability_root=capability_root,
+        phase=args.phase,
     )
 
     if args.json:
@@ -176,6 +198,8 @@ def _validate_pr(
     classification: dict,
     git_conv: dict,
     closing_type_labels: list[str],
+    capability_root: Path | None = None,
+    phase: str = PHASE_CREATE,
 ) -> list[Finding]:
     findings: list[Finding] = []
 
@@ -242,7 +266,53 @@ def _validate_pr(
             )
         )
 
+    # Residual-placeholder detection per DEC-031.
+    # The PR template has a `## Test plan` checkbox section.  We build the
+    # body_format structure the helper expects so no schema file is needed
+    # on the PR side — the structure is derived from the live PR.md template
+    # at runtime via the helper's `extract_placeholder_phrases` signal.
+    if capability_root is not None:
+        pr_body_format = _pr_body_format()
+        for sev, label, detail in detect_placeholder_residuals(
+            body=pr_body,
+            structural_type="pr",
+            body_format=pr_body_format,
+            capability_root=capability_root,
+            phase=phase,
+        ):
+            findings.append(Finding(sev, label, detail))
+
     return findings
+
+
+# PR-body format descriptor for the placeholder-detection helper.
+# Mirrors the body-format.yaml structure used by the issue side.
+# The `## Test plan` section is the only required checkbox section
+# in the PR template (PR.md).  `## Doc impact` and `## Summary` are
+# prose sections; the helper's prose-fingerprint signal covers them.
+_PR_BODY_FORMAT: dict = {
+    "bodies": {
+        "pr": {
+            "required_sections": [
+                {
+                    "heading": "## Test plan",
+                    "has_checkboxes": True,
+                    "severity": "[validation-severity:hard-reject]",
+                    "purpose": (
+                        "Checkboxes describing the testing strategy. "
+                        "Omit the section entirely for trivial changes; "
+                        "when present, at least one authored item is required."
+                    ),
+                },
+            ],
+        },
+    },
+}
+
+
+def _pr_body_format() -> dict:
+    """Return the body-format descriptor for the PR placeholder check."""
+    return _PR_BODY_FORMAT
 
 
 def _pr_title_pattern(titles: dict) -> str | None:

@@ -73,6 +73,16 @@ def extract_placeholder_phrases(template_path: Path) -> list[str]:
         # Milestone link placeholder: "Milestone: [#](../milestone/)" variants.
         if re.match(r"^Milestone:\s+\[?#\]?", stripped):
             continue
+        # PR closing-keyword placeholder: "Closes #", "Fixes #", "Resolves #"
+        # (bare — no issue number yet).  Filtered because any authored body
+        # that writes "Closes #42" contains the "Closes #" substring and
+        # would produce a false-positive prose match.
+        if re.match(r"^(?:Closes|Fixes|Resolves)\s+#\s*$", stripped, re.IGNORECASE):
+            continue
+        # Bare list-item placeholder: a lone "-" or "- " with nothing after
+        # (e.g. the `## Doc impact` placeholder line `-` in PR.md).
+        if re.match(r"^-\s*$", stripped):
+            continue
         phrases.append(stripped)
 
     return phrases

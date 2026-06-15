@@ -180,6 +180,15 @@ The asymmetry is deliberate: `create-issue` keeps stamping the template skeleton
 
 `create-issue` always emits the warning when filing an unauthored body; it never silently admits one.
 
+#### PR body validation — residual placeholder detection (per [project-management:DEC-031-reject-unauthored-placeholder-bodies])
+
+`validate-pr` applies the same two-signal rule to PR bodies, derived structurally from `templates/PR.md` at runtime:
+
+- **Empty required checkbox section** — same authored-item definition as the issue side. Severity: `warning` when the PR is opened (`create-draft` / `review-work`); `hard-reject` at the merge gate — `done-work` refuses to squash-merge a PR whose body still carries the raw `## Summary` skeleton with no authored checkbox items.
+- **Surviving template placeholder prose** — if the body still contains placeholder text from `templates/PR.md`, `validate-pr` emits a `warning` at every validation call. Detection is runtime-derived from the live template, so it stays in sync automatically when the template is edited.
+
+The trigger asymmetry mirrors the issue side: a PR opened with an unauthored body is visible (warning surfaced immediately) but not blocked; the **hard-reject** fires at `done-work`, where merging an unauthored PR body causes the actual harm. `done-work` always runs `validate-pr` before entering the approval gate; a placeholder-body failure is reported and the merge is refused.
+
 #### The seven workflow wrappers (per [project-management:DEC-026-work-ownership-lifecycle])
 
 For the standard development flow, seven verb-subject commands compose over `move-issue` and own the side-effects (branch, PR, merge, audit comments) at each step. They replace ad-hoc combinations of `move-issue` + `gh` calls that adopters previously had to wire by hand.
