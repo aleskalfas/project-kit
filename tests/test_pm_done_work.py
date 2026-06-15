@@ -365,3 +365,80 @@ def test_gh_get_pr_body_extracts_body(dw, monkeypatch) -> None:
     monkeypatch.setattr(dw, "gh_run", fake_gh_run)
     result = dw._gh_get_pr_body(99, {})
     assert result == "Closes #1\n## Test plan\n- [x] done.\n"
+
+
+# ---- squash-merge subject regression (issue #33) ---------------------
+
+
+def test_gh_pr_merge_uses_pr_title_as_subject(dw, monkeypatch) -> None:
+    """_gh_pr_merge passes --subject <PR title> to `gh pr merge --squash`.
+
+    Regression for #33: for a single-commit PR, GitHub defaults the squash
+    subject to the commit message, not the PR title.  The --subject flag
+    overrides this so the landed subject always equals the gate-validated
+    title (DEC-013).
+    """
+    import subprocess
+
+    captured: list[list[str]] = []
+
+    def fake_gh_run(args, config, **kwargs):
+        captured.append(list(args))
+        return subprocess.CompletedProcess(
+            args=args, returncode=0, stdout="", stderr="",
+        )
+
+    monkeypatch.setattr(dw, "gh_run", fake_gh_run)
+    result = dw._gh_pr_merge(
+        42,
+        pr_title="fix(pm-scripts): squash subject uses PR title",
+        admin=False,
+        config={},
+    )
+
+    assert result is True, "Expected _gh_pr_merge to succeed"
+    assert captured, "Expected gh_run to be called"
+    argv = captured[0]
+    assert "--squash" in argv, "--squash must be present"
+    assert "--subject" in argv, "--subject must be present in gh pr merge argv"
+    subject_idx = argv.index("--subject")
+    assert argv[subject_idx + 1] == "fix(pm-scripts): squash subject uses PR title", (
+        f"--subject value must be the PR title; got {argv[subject_idx + 1]!r}"
+    )
+
+
+def test_gh_pr_merge_subject_not_commit_message(dw, monkeypatch) -> None:
+    """The squash subject is the PR title, not whatever commit message was on the branch.
+
+    Simulates a single-commit PR whose commit subject differs from the PR
+    title (the live bug: PR #32 landed 'feat(...)' despite the title being
+    'fix(...)'). Asserts that _gh_pr_merge passes the PR title — not the
+    commit message — as --subject.
+    """
+    import subprocess
+
+    pr_title = "fix(pm-permissions): correct enforcement runtime"
+    commit_subject = "feat(pm-permissions): implement runtime enforcement"
+
+    captured: list[list[str]] = []
+
+    def fake_gh_run(args, config, **kwargs):
+        captured.append(list(args))
+        return subprocess.CompletedProcess(
+            args=args, returncode=0, stdout="", stderr="",
+        )
+
+    monkeypatch.setattr(dw, "gh_run", fake_gh_run)
+    dw._gh_pr_merge(32, pr_title=pr_title, admin=False, config={})
+
+    argv = captured[0]
+    assert "--subject" in argv
+    subject_idx = argv.index("--subject")
+    landed_subject = argv[subject_idx + 1]
+    assert landed_subject == pr_title, (
+        f"Expected PR title as --subject, got {landed_subject!r}. "
+        f"commit_subject={commit_subject!r} must NOT be used."
+    )
+    assert landed_subject != commit_subject, (
+        "Squash subject must be the PR title, not the commit message."
+    )

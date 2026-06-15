@@ -138,3 +138,75 @@ def test_pr_title_pattern_rejects_invalid_titles(mp, titles) -> None:
     pattern = mp._pr_title_pattern(titles)
     assert re.match(pattern, "Sandbox: install CLI") is None
     assert re.match(pattern, "[Task] add CLI") is None
+
+
+# --- squash-merge subject regression (issue #33) ---------------------
+
+
+def test_gh_merge_uses_pr_title_as_subject(mp, monkeypatch) -> None:
+    """_gh_merge passes --subject <PR title> to `gh pr merge --squash`.
+
+    Regression for #33: GitHub defaults the squash subject to the commit
+    message for single-commit PRs, defeating the PR-title type-alignment gate
+    (DEC-013).  The --subject flag locks the landed subject to the PR title.
+    """
+    import subprocess
+
+    captured: list[list[str]] = []
+
+    def fake_run(args, **kwargs):
+        captured.append(list(args))
+        return subprocess.CompletedProcess(
+            args=args, returncode=0, stdout="", stderr="",
+        )
+
+    monkeypatch.setattr(mp.subprocess, "run", fake_run)
+    result = mp._gh_merge(
+        99,
+        pr_title="fix(pm-scripts): squash subject uses PR title",
+        admin=False,
+        config={},
+    )
+
+    assert result is True
+    assert captured, "Expected subprocess.run to be called"
+    argv = captured[0]
+    assert "--squash" in argv
+    assert "--subject" in argv, "--subject must be present so the landed commit subject equals the PR title"
+    subject_idx = argv.index("--subject")
+    assert argv[subject_idx + 1] == "fix(pm-scripts): squash subject uses PR title", (
+        f"--subject value must be the PR title; got {argv[subject_idx + 1]!r}"
+    )
+
+
+def test_gh_merge_subject_not_commit_message(mp, monkeypatch) -> None:
+    """For a single-commit PR the squash subject must be the PR title, not the commit message.
+
+    Simulates the live bug (PR #32): the commit carried 'feat(...)' but the PR
+    title was 'fix(...)'.  Asserts that _gh_merge passes the PR title argument
+    verbatim and not any commit-derived subject.
+    """
+    import subprocess
+
+    pr_title = "fix(pm-permissions): correct enforcement runtime"
+    commit_subject = "feat(pm-permissions): implement runtime enforcement"
+
+    captured: list[list[str]] = []
+
+    def fake_run(args, **kwargs):
+        captured.append(list(args))
+        return subprocess.CompletedProcess(
+            args=args, returncode=0, stdout="", stderr="",
+        )
+
+    monkeypatch.setattr(mp.subprocess, "run", fake_run)
+    mp._gh_merge(32, pr_title=pr_title, admin=False, config={})
+
+    argv = captured[0]
+    assert "--subject" in argv
+    subject_idx = argv.index("--subject")
+    landed_subject = argv[subject_idx + 1]
+    assert landed_subject == pr_title
+    assert landed_subject != commit_subject, (
+        "Squash subject must be the PR title, not the commit message."
+    )
