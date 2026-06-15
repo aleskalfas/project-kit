@@ -58,8 +58,11 @@ def _bash(cmd, subject, cwd="/r"):
     return {"type": "bash", "command": cmd, "cwd": cwd, "subject": subject}
 
 
-def _tool(tool, subject, cwd="/r"):
-    return {"type": "tool", "tool": tool, "cwd": cwd, "subject": subject}
+def _tool(tool, subject, cwd="/r", url=None):
+    r = {"type": "tool", "tool": tool, "cwd": cwd, "subject": subject}
+    if url is not None:
+        r["url"] = url
+    return r
 
 
 def test_segments_strips_env_prefix_and_matches_gh(decide_mod, catalog):
@@ -107,8 +110,165 @@ def test_plain_git_push_allowed_for_pm(decide_mod, catalog):
 
 
 def test_critic_webfetch_allow(decide_mod, catalog):
+    # Unscoped web-fetch grant: no scope constraint → any host allowed.
     d, _ = decide_mod.decide(MODEL, catalog, _tool("WebFetch", "agent:critic"))
     assert d == "allow"
+
+
+# ---- domain-scope matching (issue #23) -------------------------------------
+# A grant with scope_type=domain and a scope list acts as a positive
+# allow-list on the URL hostname.  Directory-scope behaviour is unchanged.
+
+# Minimal model for domain-scope tests: web-fetch scoped to docs.python.org.
+_DOMAIN_MODEL = {
+    "posture": "strict",
+    "grants": [
+        # guardrail denies
+        {"subject": "all", "privilege": _tok("privilege-escalation"), "effect": "deny"},
+        {"subject": "all", "privilege": _tok("destructive-fs"), "effect": "deny"},
+        {"subject": "all", "privilege": _tok("vcs-history-rewrite"), "effect": "deny"},
+        # domain-scoped web-fetch: allow-list on a single exact host
+        {"subject": "agent:researcher",
+         "privilege": _tok("web-fetch"),
+         "scope": ["docs.python.org"],
+         "effect": "allow"},
+        # domain-scoped web-fetch: glob — any subdomain of example.com
+        {"subject": "agent:analyst",
+         "privilege": _tok("web-fetch"),
+         "scope": ["*.example.com"],
+         "effect": "allow"},
+    ],
+}
+
+
+def test_domain_scope_matching_host_allowed(decide_mod, catalog):
+    """A WebFetch request whose host exactly matches the scope glob is allowed."""
+    d, _ = decide_mod.decide(
+        _DOMAIN_MODEL, catalog,
+        _tool("WebFetch", "agent:researcher", url="https://docs.python.org/3/library/fnmatch.html"),
+    )
+    assert d == "allow"
+
+
+def test_domain_scope_non_matching_host_denied(decide_mod, catalog):
+    """A WebFetch request whose host does NOT match the scope glob is denied."""
+    d, why = decide_mod.decide(
+        _DOMAIN_MODEL, catalog,
+        _tool("WebFetch", "agent:researcher", url="https://evil.example.com/steal"),
+    )
+    assert d == "deny"
+    assert "domain-scope" in why.lower() or "does not match" in why.lower()
+
+
+def test_domain_scope_wildcard_glob_matching_host_allowed(decide_mod, catalog):
+    """A host matched by a wildcard glob (*.example.com) is allowed."""
+    d, _ = decide_mod.decide(
+        _DOMAIN_MODEL, catalog,
+        _tool("WebFetch", "agent:analyst", url="https://api.example.com/data"),
+    )
+    assert d == "allow"
+
+
+def test_domain_scope_wildcard_glob_non_matching_host_denied(decide_mod, catalog):
+    """A host that doesn't match the wildcard glob is denied."""
+    d, why = decide_mod.decide(
+        _DOMAIN_MODEL, catalog,
+        _tool("WebFetch", "agent:analyst", url="https://api.notexample.com/data"),
+    )
+    assert d == "deny"
+    assert "domain-scope" in why.lower() or "does not match" in why.lower()
+
+
+def test_domain_scope_missing_url_denied(decide_mod, catalog):
+    """A domain-scoped grant with no URL in the request is denied (can't check host)."""
+    d, why = decide_mod.decide(
+        _DOMAIN_MODEL, catalog,
+        _tool("WebFetch", "agent:researcher"),  # no url kwarg
+    )
+    assert d == "deny"
+    assert "hostname" in why.lower() or "url" in why.lower()
+
+
+def test_domain_scope_deny_glob_rejected(decide_mod, catalog):
+    """A negation/deny scope glob (starting with '!') is explicitly rejected, not silently applied."""
+    deny_glob_model = {
+        "posture": "lenient",
+        "grants": [
+            {"subject": "agent:researcher",
+             "privilege": _tok("web-fetch"),
+             "scope": ["!*.ru"],
+             "effect": "allow"},
+        ],
+    }
+    d, why = decide_mod.decide(
+        deny_glob_model, catalog,
+        _tool("WebFetch", "agent:researcher", url="https://docs.python.org/"),
+    )
+    assert d == "deny"
+    # The rejection message must name the unsupported negation, not silently ignore it.
+    assert "unsupported" in why.lower() or "negation" in why.lower() or "deny" in why.lower()
+
+
+def test_directory_scope_unchanged_inside(decide_mod, catalog):
+    """Directory-scope behaviour is unchanged: a request inside the scope is allowed."""
+    d, _ = decide_mod.decide(MODEL, catalog, _bash("docker run img", "agent:devops", cwd="services/api"))
+    assert d == "allow"
+
+
+def test_directory_scope_unchanged_outside(decide_mod, catalog):
+    """Directory-scope behaviour is unchanged: a request outside the scope is denied."""
+    d, why = decide_mod.decide(MODEL, catalog, _bash("docker run img", "agent:devops", cwd="secret/vault"))
+    assert d == "deny"
+    assert "scope" in why.lower() or "only in" in why.lower() or "does not match" in why.lower()
+
+
+def test_hook_decide_domain_scoped_webfetch_allowed(decide_mod, catalog):
+    """hook_decide threads the URL through for domain-scope checks: matching host is allowed."""
+    model = {
+        "posture": "strict",
+        "grants": [
+            {"subject": "all", "privilege": _tok("privilege-escalation"), "effect": "deny"},
+            {"subject": "all", "privilege": _tok("destructive-fs"), "effect": "deny"},
+            {"subject": "all", "privilege": _tok("vcs-history-rewrite"), "effect": "deny"},
+            {"subject": "agent:researcher",
+             "privilege": _tok("web-fetch"),
+             "scope": ["docs.python.org"],
+             "effect": "allow"},
+        ],
+    }
+    payload = {
+        "tool_name": "WebFetch",
+        "tool_input": {"url": "https://docs.python.org/3/"},
+        "cwd": "/r",
+        "agent_type": "researcher",
+    }
+    d, _ = decide_mod.hook_decide(model, catalog, payload)
+    assert d == "allow"
+
+
+def test_hook_decide_domain_scoped_webfetch_non_matching_denied(decide_mod, catalog):
+    """hook_decide threads the URL through: non-matching host is denied."""
+    model = {
+        "posture": "strict",
+        "grants": [
+            {"subject": "all", "privilege": _tok("privilege-escalation"), "effect": "deny"},
+            {"subject": "all", "privilege": _tok("destructive-fs"), "effect": "deny"},
+            {"subject": "all", "privilege": _tok("vcs-history-rewrite"), "effect": "deny"},
+            {"subject": "agent:researcher",
+             "privilege": _tok("web-fetch"),
+             "scope": ["docs.python.org"],
+             "effect": "allow"},
+        ],
+    }
+    payload = {
+        "tool_name": "WebFetch",
+        "tool_input": {"url": "https://evil.example.com/exfil"},
+        "cwd": "/r",
+        "agent_type": "researcher",
+    }
+    d, why = decide_mod.hook_decide(model, catalog, payload)
+    assert d == "deny"
+    assert "domain-scope" in why.lower() or "does not match" in why.lower()
 
 
 def test_critic_gh_abstain_lenient(decide_mod, catalog):

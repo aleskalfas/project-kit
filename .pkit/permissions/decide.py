@@ -94,13 +94,83 @@ def _privilege_ids(value: Any) -> set[str]:
     return out
 
 
-def _scope_ok(scope: list[str] | None, cwd: str) -> bool:
+def _extract_host(url: str) -> str:
+    """Extract the hostname from a URL string.  Returns an empty string if the
+    URL cannot be parsed (no scheme, malformed, etc.) — a host that can never
+    match a well-formed glob, so the grant is denied rather than silently passed.
+
+    stdlib-only: uses urllib.parse which ships with every Python ≥ 3.6 and is
+    safe inside macOS Seatbelt (ADR-014).
+    """
+    from urllib.parse import urlparse
+    try:
+        parsed = urlparse(url)
+        return parsed.hostname or ""
+    except Exception:
+        return ""
+
+
+def _scope_ok(
+    scope: list[str] | None,
+    cwd: str,
+    *,
+    scope_type: str | None = None,
+    url: str | None = None,
+) -> tuple[bool, str | None]:
+    """Check whether a grant's scope constraint is satisfied.
+
+    Returns (ok, rejection_reason_or_None).
+
+    For ``directory``-scoped privileges (default for absent ``scope_type``):
+      the grant's scope globs are matched against ``cwd`` via fnmatch.
+
+    For ``domain``-scoped privileges (``scope_type="domain"``):
+      positive allow-list semantics — the grant's scope globs are matched
+      against the hostname extracted from ``url``.  Only matching hosts are
+      allowed; non-matching hosts are blocked.
+
+      Deny/negation scopes (any glob starting with ``!``) are explicitly
+      unsupported and rejected with a clear reason rather than silently
+      accepted.  Rationale: a tool-layer denylist is a false boundary — an
+      agent's raw ``bash curl`` bypasses it at the agent-blind sandbox layer
+      (ADR-004 §61).  Only positive allow-lists are honest at this layer.
+
+    When ``scope`` is absent or empty the grant is unconstrained (anywhere).
+    """
     if not scope:
-        return True  # anywhere
-    return any(
+        return True, None
+
+    # Deny/negation scopes are explicitly unsupported for domain privileges.
+    # Check upfront so the error message is clear regardless of scope_type.
+    negation_globs = [pat for pat in scope if pat.startswith("!")]
+    if negation_globs:
+        return False, (
+            f"deny/negation scopes are unsupported for domain-scoped privileges "
+            f"({negation_globs!r}): a tool-layer denylist is a false boundary "
+            f"(ADR-004 §61); use positive allow-list globs only"
+        )
+
+    if scope_type == "domain":
+        host = _extract_host(url or "")
+        if not host:
+            return False, (
+                f"domain-scope check failed: could not extract a hostname from "
+                f"request URL {url!r}"
+            )
+        matched = any(fnmatch.fnmatch(host, pat) for pat in scope)
+        if matched:
+            return True, None
+        return False, (
+            f"domain-scope: host {host!r} does not match any allowed glob in "
+            f"{scope!r}"
+        )
+
+    # directory scope (default)
+    matched = any(
         fnmatch.fnmatch(cwd, pat) or fnmatch.fnmatch(cwd, pat.rstrip("*") + "*")
         for pat in scope
     )
+    return matched, None
 
 
 def _effective_grants(model: dict[str, Any], subject: str) -> list[dict[str, Any]]:
@@ -118,13 +188,21 @@ def decide(
     {allow, deny, abstain}. `abstain` defers to the harness's normal flow
     (lenient); strict maps an unmodeled request to deny.
 
-    `request` = {type: "bash"|"tool", command|tool, cwd, subject}. Effective
-    grants = baseline (`all`) ∪ the subject's own grants; deny wins; a scoped
-    allow denies the privilege outside its scope.
+    `request` = {type: "bash"|"tool", command|tool, cwd, subject[, url]}.
+    The optional `url` field carries the request URL for ``domain``-scoped
+    privilege checks (web-fetch).  Effective grants = baseline (`all`) ∪ the
+    subject's own grants; deny wins; a scoped allow denies the privilege
+    outside its scope.
+
+    Scope semantics by privilege ``scope_type`` (from the catalog):
+      - ``directory`` (default): grant scope globs are matched against ``cwd``.
+      - ``domain``: grant scope globs are matched against the URL hostname
+        (positive allow-list; deny/negation globs are explicitly rejected).
     """
     posture = posture or model.get("posture", "lenient")
     subject = request["subject"]
     hits = recognized_privileges(catalog, request)
+    privileges_catalog = catalog.get("privileges", {})
     matched_allow = False
     for g in _effective_grants(model, subject):
         privs = _privilege_ids(g.get("privilege"))
@@ -133,13 +211,33 @@ def decide(
             continue
         if g.get("effect", "allow") == "deny":
             return "deny", f"deny grant for {subject} on {sorted(overlap)}"
-        if _scope_ok(g.get("scope"), request.get("cwd", "")):
+        # Determine scope_type from the catalog for the overlapping privileges.
+        # When the overlap spans multiple privileges, use the most restrictive
+        # scope_type: prefer "domain" > "directory" > None.  In practice a
+        # single grant rarely covers privileges of mixed scope_type.
+        scope_type: str | None = None
+        for pid in overlap:
+            pspec = privileges_catalog.get(pid, {})
+            st = pspec.get("scope_type")
+            if st == "domain":
+                scope_type = "domain"
+                break
+            if st == "directory":
+                scope_type = "directory"
+        ok, reason = _scope_ok(
+            g.get("scope"),
+            request.get("cwd", ""),
+            scope_type=scope_type,
+            url=request.get("url"),
+        )
+        if ok:
             matched_allow = True
         else:
-            return "deny", (
+            deny_msg = reason or (
                 f"{sorted(overlap)} allowed for {subject} only in "
                 f"{g.get('scope')}, not {request.get('cwd')!r}"
             )
+            return "deny", deny_msg
     if matched_allow:
         return "allow", f"allow grant for {subject} on {sorted(hits)}"
     if posture == "strict":
@@ -170,6 +268,11 @@ def hook_decide(
                 "tool": tool,
                 "cwd": payload.get("cwd", ""),
                 "subject": subject,
+                # Surface the URL for domain-scoped privilege checks (web-fetch).
+                # WebFetch and WebSearch both supply `url` in tool_input; absent
+                # for all other tools.  A missing key becomes None, which _scope_ok
+                # treats as an unparseable host → deny for domain-scoped grants.
+                "url": payload.get("tool_input", {}).get("url"),
             }
         return decide(model, catalog, request)
     except Exception as exc:  # fail-open
