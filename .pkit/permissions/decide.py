@@ -245,15 +245,56 @@ def decide(
     return "abstain", "lenient posture: defer to the harness's normal flow"
 
 
+def _read_default_agent(project_root: str) -> str | None:
+    """Read the configured default agent from .claude/settings.json.
+
+    Returns the value of the top-level ``agent`` key if present and non-empty,
+    otherwise ``None``.  Uses stdlib ``json`` only (the hook runs bare python3 —
+    no third-party deps).  Any I/O or parse error silently returns ``None`` so
+    the caller falls back to ``operator`` — never throw from subject resolution.
+    """
+    import json as _json
+    import os.path as _osp
+
+    path = _osp.join(project_root, ".claude", "settings.json")
+    try:
+        with open(path, encoding="utf-8") as fh:
+            data = _json.load(fh)
+        agent = data.get("agent")
+        return str(agent) if agent and isinstance(agent, str) else None
+    except Exception:
+        return None
+
+
 def hook_decide(
-    model: dict[str, Any], catalog: dict[str, Any], payload: dict[str, Any]
+    model: dict[str, Any],
+    catalog: dict[str, Any],
+    payload: dict[str, Any],
+    project_root: str | None = None,
 ) -> tuple[str, str]:
     """Decision-core entry point for a PreToolUse hook payload. Fails OPEN —
     any fault yields abstain (defer), never a silent block; non-negotiable
-    denies are double-locked in the fail-closed native settings (ADR-002)."""
+    denies are double-locked in the fail-closed native settings (ADR-002).
+
+    Subject resolution (per issue #57):
+      - ``agent_type`` present in payload → ``agent:<agent_type>`` (unchanged)
+      - ``agent_type`` absent + ``project_root`` set + ``.claude/settings.json``
+        has ``agent: X`` → ``agent:X`` (main session runs as the configured agent)
+      - ``agent_type`` absent + no configured default → ``operator``
+
+    Pass ``project_root`` (the adopter tree root) from the hook entry-point so
+    main-session calls resolve to the configured agent.  The CLI synthesizes
+    payloads with explicit ``agent_type`` and does not need to pass a root.
+    """
     try:
         agent_type = payload.get("agent_type")
-        subject = f"agent:{agent_type}" if agent_type else "operator"
+        if agent_type:
+            subject = f"agent:{agent_type}"
+        elif project_root:
+            default_agent = _read_default_agent(project_root)
+            subject = f"agent:{default_agent}" if default_agent else "operator"
+        else:
+            subject = "operator"
         tool = payload["tool_name"]
         if tool == "Bash":
             request = {

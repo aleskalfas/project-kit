@@ -68,7 +68,7 @@ def main() -> int:
 
         catalog = decide.load_catalog(str(root))
         model = decide.load_model(str(root), catalog)
-        decision, reason = decide.hook_decide(model, catalog, payload)
+        decision, reason = decide.hook_decide(model, catalog, payload, project_root=str(root))
     except Exception as exc:  # any load/decision fault → fail open
         _debug(f"decision fault → abstain: {exc!r}")
         return 0

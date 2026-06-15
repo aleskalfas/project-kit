@@ -32,6 +32,29 @@ Grant scope globs constrain the reach of an allow grant. The dimension matched d
 
 - **No scope** (absent): the grant is unconstrained — any cwd / any host.
 
+## Default-agent subject resolution
+
+The hook resolves the subject for every PreToolUse call.  Subject resolution
+order (per issue #57):
+
+1. **`agent_type` present in the payload** → `agent:<agent_type>`.  Claude Code
+   sets this for spawned Task-subagents; the result is unchanged.
+
+2. **`agent_type` absent + `.claude/settings.json` has `agent: X`** →
+   `agent:X`.  The main session runs *as* that agent — all per-agent grants
+   (allow and deny) apply.  `settings.json` is read with stdlib `json`; a
+   missing, unreadable, or malformed file silently falls back to rule 3.
+
+3. **`agent_type` absent + no `agent` key in `settings.json`** → `operator`.
+
+**Implication:** in a session with a configured default agent, a human's
+`!`-typed command is also bound to that agent's grants — consistent, because the
+session runs *as* the agent.
+
+Without this resolution (the pre-#57 behaviour), the main session always resolved
+to `operator` even when `settings.json` set `agent: project-manager`, making
+every per-agent grant inert for the primary execution context.
+
 ## Surgical deny: blocking raw gh mutations for project-manager
 
 The `issue-tracker-write` privilege (in `privilege-catalog.yaml`) recognizes

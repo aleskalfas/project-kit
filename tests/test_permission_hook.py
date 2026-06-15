@@ -271,3 +271,102 @@ def test_hook_runtime_check_fails_when_decide_missing(tmp_path):
     ok, detail = perm._hook_runtime_check(root)
     # Hook starts (it fails-open on missing decide.py → exit 0) so runtime is OK.
     assert ok, f"hook exits 0 even with missing decide.py (fail-open); got: {detail}"
+
+
+# ---- default-agent subject resolution (issue #57) ----------------------------
+#
+# End-to-end subprocess tests: the real hook script, invoked the same way Claude
+# Code does (payload on stdin, CLAUDE_PROJECT_DIR env), proves that main-session
+# payloads (no agent_type) resolve to the configured default agent and that
+# per-agent deny grants apply.
+
+def _write_settings(root: Path, agent: str) -> None:
+    """Write a minimal .claude/settings.json with the given agent value."""
+    import json as _json
+    claude_dir = root / ".claude"
+    claude_dir.mkdir(parents=True, exist_ok=True)
+    (claude_dir / "settings.json").write_text(
+        _json.dumps({"agent": agent}), encoding="utf-8"
+    )
+
+
+def test_hook_default_agent_deny_applies_to_main_session(tmp_path):
+    """Main-session payload (no agent_type) + settings.json agent: project-manager
+    + deny grant → hook returns deny for gh issue edit.
+
+    This is the issue #57 end-to-end enforcement test: the per-agent deny on
+    agent:project-manager now blocks the main session's raw gh issue edit because
+    the hook resolves the missing agent_type from settings.json.
+    """
+    root = _tree(tmp_path, grants=(
+        "schema_version: 1\n"
+        "grants:\n"
+        "- subject: agent:project-manager\n"
+        "  privilege: '[privilege-catalog:issue-tracker-write]'\n"
+        "  effect: deny\n"
+    ))
+    _write_settings(root, "project-manager")
+
+    _, parsed = _invoke(root, {
+        "tool_name": "Bash",
+        "tool_input": {"command": "gh issue edit 53 --body 'new body'"},
+        "cwd": str(root),
+        # Deliberately no agent_type — this is the main-session gap.
+    })
+    assert _decision(parsed) == "deny", (
+        "per-agent deny on agent:project-manager must apply to the main session "
+        "when settings.json sets agent: project-manager (issue #57)"
+    )
+
+
+def test_hook_default_agent_no_settings_falls_back_to_operator(tmp_path):
+    """Main-session payload (no agent_type) + no settings.json → subject operator,
+    per-agent deny on agent:project-manager does NOT fire (correct fallback)."""
+    root = _tree(tmp_path, grants=(
+        "schema_version: 1\n"
+        "grants:\n"
+        "- subject: agent:project-manager\n"
+        "  privilege: '[privilege-catalog:issue-tracker-write]'\n"
+        "  effect: deny\n"
+    ))
+    # No settings.json → no default agent → operator subject.
+
+    _, parsed = _invoke(root, {
+        "tool_name": "Bash",
+        "tool_input": {"command": "gh issue edit 53 --body 'new body'"},
+        "cwd": str(root),
+    })
+    # The deny is scoped to agent:project-manager; operator has no deny → abstain.
+    assert parsed is None, (
+        "without a configured agent, main-session subject must be operator and "
+        "the agent:project-manager deny must not fire"
+    )
+
+
+def test_hook_default_agent_deny_via_stdlib_path(tmp_path):
+    """End-to-end via the stdlib fallback (no ruamel): main-session payload
+    (no agent_type), settings.json agent: project-manager, deny grant →
+    the real hook subprocess (bare python3) returns deny.
+
+    This is the definitive enforcement proof for issue #57 through the live
+    hook process — the same path that runs inside macOS Seatbelt (ADR-014).
+    """
+    root = _tree(tmp_path, grants=(
+        "schema_version: 1\n"
+        "grants:\n"
+        "- subject: agent:project-manager\n"
+        "  privilege: '[privilege-catalog:issue-tracker-write]'\n"
+        "  effect: deny\n"
+    ))
+    _write_settings(root, "project-manager")
+
+    _, parsed = _invoke_with_ruamel_blocked(root, {
+        "tool_name": "Bash",
+        "tool_input": {"command": "gh issue edit 53 --body 'new body'"},
+        "cwd": str(root),
+        # No agent_type — main-session default-agent resolution path.
+    })
+    assert _decision(parsed) == "deny", (
+        "stdlib fallback path must resolve default agent from settings.json and "
+        "enforce the deny for main-session gh issue edit (issue #57)"
+    )
