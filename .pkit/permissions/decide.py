@@ -548,8 +548,19 @@ def _stdlib_load_yaml(text: str) -> Any:
                     continue
                 r2 = lines[j]
                 c2 = len(r2) - len(r2.lstrip())
-                if c2 > col:
-                    # Child block
+                # A block sequence is a valid mapping value at the SAME indent
+                # level as the key — the "- " indicator provides the structural
+                # indent for the sequence entries' content.  Without this check
+                # the grants.yaml shape (key at col 0, "- " entries at col 0)
+                # parses to None, silently dropping all adopter grants and
+                # causing the zero-dep hook to fail open (issue #55).
+                _r2_content = r2.lstrip()
+                _same_level_seq = (
+                    c2 == col
+                    and (_r2_content.startswith("- ") or _r2_content == "-")
+                )
+                if c2 > col or _same_level_seq:
+                    # Child block (deeper indent, OR same-indent block sequence)
                     child_val, i = _parse_block(lines, j, c2)
                     result_map[key] = child_val
                 else:

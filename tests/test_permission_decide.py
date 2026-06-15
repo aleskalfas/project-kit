@@ -444,6 +444,9 @@ _SHIPPED_FILES = [
     REPO_ROOT_LOCAL / ".pkit" / "permissions" / "profiles" / "autonomous.yaml",
     REPO_ROOT_LOCAL / ".pkit" / "permissions" / "profiles" / "non-destructive.yaml",
     REPO_ROOT_LOCAL / ".pkit" / "permissions" / "profiles" / "read-only.yaml",
+    # Adopter-authored grants.yaml: block-seq-of-mappings at col 0 — the shape
+    # that was broken in issue #55.  Added here so shipped-file parity covers it.
+    REPO_ROOT_LOCAL / ".pkit" / "permissions" / "project" / "grants.yaml",
 ]
 
 # Representative synthetic files that exercise edge cases the shipped files use.
@@ -517,6 +520,46 @@ _SYNTHETIC_YAML_CASES = [
             "        note: >-\n"
             "          runs gh OUTSIDE the box. Needed because gh TLS\n"
             "          fails under Seatbelt.\n"
+        ),
+    ),
+    # Adopter grants.yaml shape: block-seq-of-mappings at col 0 — the "- " at
+    # the SAME indent as the parent key.  This is the shape that was broken
+    # (issue #55): _stdlib_load_yaml returned grants: None because the c2 > col
+    # guard rejected same-indent sequences.  Covered here so the regression
+    # can't silently reappear.
+    (
+        "grants-col0-block-seq",
+        (
+            "schema_version: 1\n"
+            "grants:\n"
+            "- subject: agent:project-manager\n"
+            "  privilege: '[privilege-catalog:issue-tracker-write]'\n"
+            "  effect: deny\n"
+        ),
+    ),
+    # Adopter grants.yaml with multiple col-0 entries (multi-entry variant).
+    (
+        "grants-col0-multi-entry",
+        (
+            "schema_version: 1\n"
+            "grants:\n"
+            "- subject: agent:project-manager\n"
+            "  privilege: '[privilege-catalog:issue-tracker-write]'\n"
+            "  effect: deny\n"
+            "- subject: all\n"
+            "  privilege: '[privilege-catalog:vcs]'\n"
+            "  effect: allow\n"
+        ),
+    ),
+    # Adopter config.yaml shape: simple flat mapping (no sequence) — ensures
+    # the same-indent-seq fix doesn't misfire on sibling mapping keys.
+    (
+        "config-adopter",
+        (
+            "schema_version: 1\n"
+            "ownership_mode: additive\n"
+            "posture: lenient\n"
+            "active_profile: team\n"
         ),
     ),
 ]
@@ -791,3 +834,98 @@ def test_capability_scripts_internal_gh_not_blocked(decide_mod, catalog):
         _bash("pkit pm transition-state 53 in-progress", "agent:project-manager"),
     )
     assert d == "allow", "pkit invocations must remain allowed for project-manager"
+
+
+# ---- end-to-end guard: stdlib path enforces deny grants (issue #55) ---------
+#
+# The critical regression guard for the block-sequence-of-mappings parser fix.
+# The zero-dep hook runs under macOS Seatbelt (ADR-014) where uv/ruamel is
+# absent, so _stdlib_load_yaml is THE parse path for grants.yaml at decision
+# time.  Before the fix, _stdlib_load_yaml returned grants: None for the
+# col-0 block-seq shape, silently dropping every adopter grant and causing the
+# hook to fail open even when a deny grant was present (issue #55 live failure).
+#
+# This test proves that with ruamel completely absent, hook_decide reads the
+# deny grant from a grants.yaml file (col-0 block-seq shape) and actually
+# returns "deny" for a project-manager gh issue edit — enforcement holds
+# through the stdlib fallback path.
+
+def test_stdlib_path_enforce_deny_grant_end_to_end(decide_mod, tmp_path, monkeypatch):
+    """End-to-end: with ruamel absent, a deny grant in grants.yaml (col-0 block-seq
+    shape) causes hook_decide to deny a project-manager gh issue edit.
+
+    This is the end-to-end enforcement guard for issue #55.  The grants.yaml uses
+    the exact shape that _stdlib_load_yaml previously mis-parsed to grants: None,
+    which made the zero-dep hook fail open and rendered the deny ineffective.
+    Passing here proves enforcement works *through the stdlib fallback*, not just
+    that parse succeeds in isolation.
+    """
+    import builtins
+    real_import = builtins.__import__
+
+    def _block_ruamel(name, *args, **kwargs):
+        if "ruamel" in name:
+            raise ImportError(f"simulated missing ruamel: {name}")
+        return real_import(name, *args, **kwargs)
+
+    # Build a tree with:
+    #   - The real privilege catalog (needed for recognizer matching).
+    #   - A grants.yaml using the col-0 block-seq shape that was broken:
+    #       grants:
+    #       - subject: agent:project-manager
+    #         privilege: '[privilege-catalog:issue-tracker-write]'
+    #         effect: deny
+    #   - No config (defaults: lenient posture).
+    _write_tree(
+        tmp_path,
+        grants=(
+            "schema_version: 1\n"
+            "grants:\n"
+            "- subject: agent:project-manager\n"
+            "  privilege: '[privilege-catalog:issue-tracker-write]'\n"
+            "  effect: deny\n"
+        ),
+    )
+
+    # Load catalog and model WITH ruamel (reference parse; verifies tree is valid).
+    catalog_ref = decide_mod.load_catalog(str(tmp_path))
+    model_ref = decide_mod.load_model(str(tmp_path), catalog_ref)
+    # Sanity: the deny grant IS in the model under ruamel.
+    deny_grants = [
+        g for g in model_ref["grants"]
+        if g.get("effect") == "deny" and g.get("subject") == "agent:project-manager"
+    ]
+    assert deny_grants, "reference model (ruamel) must contain the deny grant"
+
+    # Now block ruamel — every load_yaml call falls back to _stdlib_load_yaml.
+    monkeypatch.setattr(builtins, "__import__", _block_ruamel)
+
+    catalog_stdlib = decide_mod.load_catalog(str(tmp_path))
+    model_stdlib = decide_mod.load_model(str(tmp_path), catalog_stdlib)
+
+    # The stdlib model must contain the deny grant (was None before the fix).
+    deny_grants_stdlib = [
+        g for g in model_stdlib["grants"]
+        if g.get("effect") == "deny" and g.get("subject") == "agent:project-manager"
+    ]
+    assert deny_grants_stdlib, (
+        "stdlib model is missing the deny grant — grants.yaml block-seq mis-parsed "
+        "(issue #55 regression: _stdlib_load_yaml returned grants: None)"
+    )
+
+    # The real enforcement check: hook_decide must return deny for
+    # project-manager gh issue edit (the command that failed live in #53).
+    payload = {
+        "tool_name": "Bash",
+        "tool_input": {"command": "gh issue edit 53 --body 'new body'"},
+        "cwd": "/r",
+        "agent_type": "project-manager",
+    }
+    d, why = decide_mod.hook_decide(model_stdlib, catalog_stdlib, payload)
+    assert d == "deny", (
+        f"stdlib path must enforce the deny grant for project-manager gh issue edit; "
+        f"got {d!r}: {why} — enforcement failed open (issue #55)"
+    )
+    assert "issue-tracker-write" in why, (
+        f"denial reason must name the privilege; got: {why!r}"
+    )
