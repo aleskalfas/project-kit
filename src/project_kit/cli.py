@@ -130,6 +130,61 @@ def agents_reconcile(write: bool) -> None:
     click.echo(report, nl=False)
 
 
+@agents.command("adopt")
+@click.argument("agent_name", metavar="AGENT")
+def agents_adopt(agent_name: str) -> None:
+    """Create the conventional doc dirs, wire the overlay, and deploy AGENT.
+
+    For each overlay category the agent references that is not yet defined in
+    `.pkit/agents/project/overlay.yaml`:
+
+    \b
+    1. Creates the conventional default directory if absent (with a seed README
+       explaining the directory's purpose).
+    2. Writes the category into the overlay uncommented with the conventional path.
+       An adopter-set value is never overwritten.
+
+    Then runs the adapter's deploy step so the agent ends up in `.claude/agents/`.
+
+    Idempotent: re-running on an already-adopted agent reports no changes and
+    re-deploys (the deploy step is itself idempotent).
+    """
+    from project_kit import agents_overlay as ao
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    try:
+        result = ao.adopt_agent(target_root, agent_name)
+    except click.ClickException:
+        raise
+    except FileNotFoundError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    lines: list[str] = []
+    if result.dirs_created:
+        lines.append(cli_render.style("strong", f"created {len(result.dirs_created)} director(ies):"))
+        for d in result.dirs_created:
+            lines.append(f"  {d}/")
+            lines.append(f"    (seed README.md written explaining the directory's purpose)")
+    if result.categories_wired:
+        lines.append(cli_render.style("strong", f"wired {len(result.categories_wired)} overlay categor(ies):"))
+        for cat in result.categories_wired:
+            lines.append(f"  {cat}")
+    if result.categories_already_set:
+        lines.append(cli_render.style("strong",
+            f"{len(result.categories_already_set)} categor(ies) already defined (unchanged):"))
+        for cat in result.categories_already_set:
+            lines.append(f"  {cat}")
+    if not result.dirs_created and not result.categories_wired:
+        lines.append(cli_render.style("strong",
+            f"agent {agent_name!r}: overlay already complete — no changes."))
+    if result.deployed:
+        lines.append("")
+        lines.append(cli_render.style("strong", f"agent {agent_name!r} deployed."))
+    click.echo("\n".join(lines))
+
+
 @main.group(invoke_without_command=True)
 @click.pass_context
 def version(ctx: click.Context) -> None:

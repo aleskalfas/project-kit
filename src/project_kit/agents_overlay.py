@@ -1,11 +1,13 @@
-"""Agent overlay diagnostics + reconcile (per COR-013).
+"""Agent overlay diagnostics + reconcile + adopt (per COR-013).
 
 The `pkit agents` surface: a read-only diagnostic of which kit-shipped agents
 will deploy vs. be skipped (because they reference an overlay *category* the
 adopter's `.pkit/agents/project/overlay.yaml` does not define), plus an
 explicit `reconcile` that surfaces the missing categories into the overlay as
 commented stubs or (when the conventional default directory exists) as
-uncommented, deploy-ready entries.
+uncommented, deploy-ready entries, and an explicit `adopt` that creates the
+conventional directories, wires the overlay uncommented, and deploys the agent
+in one step.
 
 This is a *backbone* read of *backbone-defined* artifacts: the agent
 frontmatter format and the `<category>` placeholder convention are fixed by
@@ -21,9 +23,12 @@ from __future__ import annotations
 
 import io
 import re
+import subprocess
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+import click
 from ruamel.yaml import YAML
 
 from project_kit import cli_render
@@ -234,9 +239,10 @@ def render_status(target_root: Path) -> str:
             "Skipped", f"{len(skipped)} agent(s)",
             gloss=f"undefined overlay categor(ies): {cats}",
             placement="footer",
-            warn="run `pkit agents reconcile --write` to scaffold the missing categories into .pkit/agents/project/overlay.yaml (auto-fills when the conventional default directory exists, otherwise adds a commented stub to fill in), then re-run `pkit sync`",
+            warn="run `pkit agents adopt <agent>` to create the conventional layout and deploy the agent in one step, or `pkit agents reconcile --write` to scaffold the missing categories into .pkit/agents/project/overlay.yaml, then re-run `pkit sync`",
         )
     commands = [
+        ("pkit agents adopt <agent>", "create conventional dirs + wire overlay + deploy in one step"),
         ("pkit agents reconcile [--write]", "auto-fill or stub missing overlay categories; then `pkit sync`"),
         ("pkit sync", "re-deploy agents after editing the overlay"),
     ]
@@ -345,7 +351,10 @@ def reconcile_overlay(target_root: Path, *, write: bool) -> tuple[list[str], str
             with path.open("a", encoding="utf-8") as fh:
                 fh.write("\n".join(block_lines) + "\n")
             lines.append("")
-            lines.append("uncomment + set real paths, then `pkit sync` to deploy the skipped agent(s).")
+            lines.append(
+                "uncomment + set real paths, then `pkit sync` to deploy the skipped agent(s).\n"
+                "Alternatively, run `pkit agents adopt <agent>` to create the conventional layout and deploy it."
+            )
         else:
             lines.append("")
             lines.append("(dry-run — re-run with `--write` to append these stubs.)")
@@ -360,7 +369,8 @@ def reconcile_overlay(target_root: Path, *, write: bool) -> tuple[list[str], str
         lines.append("")
         lines.append(
             "stub present but still commented — uncomment + set real paths in "
-            "`.pkit/agents/project/overlay.yaml`, then `pkit sync`."
+            "`.pkit/agents/project/overlay.yaml`, then `pkit sync`.\n"
+            "Or run `pkit agents adopt <agent>` to create the conventional layout and deploy it."
         )
 
     if not to_add and not commented_stubs:
@@ -368,3 +378,198 @@ def reconcile_overlay(target_root: Path, *, write: bool) -> tuple[list[str], str
         return [], cli_render.style("strong", "overlay is complete — every referenced category is defined.")
 
     return to_add, "\n".join(lines) + "\n"
+
+
+# Seed README content written into a newly-created conventional dir by `adopt`.
+# Explains the directory's purpose so the adopter knows why it was created.
+_SEED_README_CONTENT: dict[str, str] = {
+    "architecture-docs": """\
+# Architecture documentation
+
+This directory holds architecture documentation for the project.
+It was created by `pkit agents adopt` as the conventional location for the
+`architecture-docs` overlay category used by the `architect` agent (per COR-024).
+
+Place architecture documents here — ADRs, system overviews, design notes — that
+the architect agent should read when performing its review duties.
+""",
+    "adr-records": """\
+# Architecture Decision Records (ADRs)
+
+This directory holds Architecture Decision Records for the project.
+It was created by `pkit agents adopt` as the conventional location for the
+`adr-records` overlay category used by the `architect` agent (per COR-024 + COR-025).
+
+Author new ADRs here using `pkit new decision adr <slug>`.
+""",
+}
+
+_SEED_README_DEFAULT = """\
+# {category}
+
+This directory was created by `pkit agents adopt` as the conventional location
+for the `{category}` overlay category (see `.pkit/agents/project/overlay.yaml`).
+
+Populate it with the files the agent expects to find here.
+"""
+
+
+@dataclass(frozen=True)
+class AdoptResult:
+    """Outcome of `adopt_agent` for one agent."""
+
+    agent: str
+    dirs_created: tuple[str, ...]   # relative paths of directories created
+    categories_wired: tuple[str, ...]  # categories written to overlay (uncommented)
+    categories_already_set: tuple[str, ...]  # categories that were already defined
+    deployed: bool   # whether the deploy step ran
+
+
+def adopt_agent(
+    target_root: Path,
+    agent_name: str,
+    *,
+    deploy_fn: Callable[[Path, str], bool] | None = None,
+) -> AdoptResult:
+    """Stand up an agent's overlay prerequisites in one step.
+
+    For the named agent, for each overlay category it references that is not yet
+    defined in ``.pkit/agents/project/overlay.yaml``:
+
+    1. Ensure the conventional default dir exists — create it (with a seed README)
+       if absent.  Uses :data:`CONVENTIONAL_CATEGORY_DEFAULTS` to resolve the path.
+       Categories without a conventional default raise :class:`click.ClickException`
+       because there is no canonical path to create.
+    2. Write the category into the overlay **uncommented** with the conventional
+       path.  An adopter-set value (already uncommented) is never overwritten.
+
+    After wiring the overlay, invokes *deploy_fn* (a callable taking
+    ``(target_root, agent_name)`` and returning ``True`` on success) to deploy the
+    agent.  When *deploy_fn* is ``None``, falls back to invoking
+    ``deploy-agents.sh`` directly (the claude-code adapter).
+
+    Idempotent: re-running on an already-adopted agent makes no changes to the
+    overlay or filesystem, deploys again (the deploy step itself is idempotent),
+    and returns a result with empty *dirs_created* and *categories_wired*.
+
+    Raises :class:`click.ClickException` when the agent is unknown, or references
+    a category that has no conventional default (so no canonical dir can be
+    created — the adopter must set the path manually via ``reconcile``).
+    """
+    # --- Validate the agent exists and references categories ---
+    kit_agents = discover_kit_agents(target_root)
+    if agent_name not in kit_agents:
+        known = sorted(kit_agents.keys())
+        hint = f"  known: {', '.join(known)}" if known else "  (no kit-shipped agents found)"
+        raise click.ClickException(
+            f"unknown agent {agent_name!r}.\n{hint}"
+        )
+
+    _ns, src = kit_agents[agent_name]
+    referenced = agent_referenced_categories(src)
+    if not referenced:
+        raise click.ClickException(
+            f"agent {agent_name!r} references no overlay categories — nothing to adopt."
+        )
+
+    # --- Check for categories without a conventional default ---
+    no_default = [c for c in sorted(referenced) if c not in CONVENTIONAL_CATEGORY_DEFAULTS]
+    if no_default:
+        raise click.ClickException(
+            f"agent {agent_name!r} references categor(ies) with no conventional default: "
+            f"{', '.join(no_default)}.\n"
+            f"Use `pkit agents reconcile --write` to add a commented stub, then set real "
+            f"paths manually before running `pkit sync`."
+        )
+
+    # --- Load overlay ---
+    path = _overlay_path(target_root)
+    if not path.is_file():
+        raise click.ClickException(
+            f"overlay not found at {path}; run `pkit init` first."
+        )
+    existing = path.read_text(encoding="utf-8")
+
+    def _is_defined(cat: str) -> bool:
+        return bool(re.search(rf"(?m)^\s*{re.escape(cat)}\s*:", existing))
+
+    # Determine which categories need action.
+    undefined = [c for c in sorted(referenced) if not _is_defined(c)]
+    already_set = [c for c in sorted(referenced) if _is_defined(c)]
+
+    dirs_created: list[str] = []
+    categories_wired: list[str] = []
+    overlay_additions: list[tuple[str, str]] = []  # (category, path)
+
+    for cat in undefined:
+        conv_path = CONVENTIONAL_CATEGORY_DEFAULTS[cat]  # guarded above
+        abs_dir = target_root / conv_path
+
+        # 1. Ensure the conventional dir exists.
+        if not abs_dir.is_dir():
+            abs_dir.mkdir(parents=True, exist_ok=True)
+            # Write a seed README explaining the directory's purpose.
+            readme_content = _SEED_README_CONTENT.get(
+                cat, _SEED_README_DEFAULT.format(category=cat)
+            )
+            (abs_dir / "README.md").write_text(readme_content, encoding="utf-8")
+            dirs_created.append(conv_path)
+
+        # 2. Record for overlay write.
+        overlay_additions.append((cat, conv_path))
+        categories_wired.append(cat)
+
+    # 3. Write all new categories to the overlay in one append.
+    if overlay_additions:
+        block_lines = ["", "# --- added by `pkit agents adopt` ---"]
+        for cat, conv_path in overlay_additions:
+            block_lines += [f"{cat}:", f"  - {conv_path}"]
+        with path.open("a", encoding="utf-8") as fh:
+            fh.write("\n".join(block_lines) + "\n")
+
+    # 4. Deploy the agent.
+    deployed = _deploy_agent(target_root, agent_name, deploy_fn=deploy_fn)
+
+    return AdoptResult(
+        agent=agent_name,
+        dirs_created=tuple(dirs_created),
+        categories_wired=tuple(categories_wired),
+        categories_already_set=tuple(already_set),
+        deployed=deployed,
+    )
+
+
+def _deploy_agent(
+    target_root: Path,
+    agent_name: str,
+    *,
+    deploy_fn: Callable[[Path, str], bool] | None,
+) -> bool:
+    """Run the deploy step for a single agent.
+
+    Falls back to invoking ``deploy-agents.sh`` from the claude-code adapter.
+    Returns True on success; raises ClickException on failure.
+    """
+    if deploy_fn is not None:
+        return deploy_fn(target_root, agent_name)
+
+    adapters_root = target_root / ".pkit" / "adapters"
+    deploy_script = adapters_root / "claude-code" / "deploy-agents.sh"
+    if not deploy_script.is_file():
+        # No claude-code adapter present — cannot deploy.
+        raise click.ClickException(
+            f"deploy-agents.sh not found at {deploy_script.relative_to(target_root)}. "
+            f"Run `pkit init` first, or run `pkit sync` manually to deploy the agent."
+        )
+
+    result = subprocess.run(
+        [str(deploy_script)],
+        cwd=target_root,
+        capture_output=False,
+    )
+    if result.returncode != 0:
+        raise click.ClickException(
+            f"deploy-agents.sh exited with status {result.returncode}. "
+            f"See output above for details."
+        )
+    return True

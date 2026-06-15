@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import pytest
 from click.testing import CliRunner
 
 from project_kit import agents_overlay as ao
@@ -376,3 +377,194 @@ def test_reconcile_conventional_defaults_map_covers_architect_categories():
         assert cat in ao.CONVENTIONAL_CATEGORY_DEFAULTS, (
             f"architect category <{cat}> has no entry in CONVENTIONAL_CATEGORY_DEFAULTS"
         )
+
+
+# --- adopt (issue #47) -------------------------------------------------------
+
+def _deploy_ok(target_root: Path, agent_name: str) -> bool:  # noqa: ARG001
+    """Stub deploy_fn that always succeeds (avoids invoking deploy-agents.sh in tests)."""
+    return True
+
+
+def test_adopt_fresh_creates_dirs_and_wires_overlay(tmp_path):
+    """Fresh adopt: conventional dirs created + overlay wired uncommented + deployed."""
+    proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
+    _agent(proj / ".pkit" / "agents" / "core", "a",
+           owns=["<architecture-docs>", "<adr-records>"])
+    overlay = proj / ".pkit" / "agents" / "project" / "overlay.yaml"
+
+    result = ao.adopt_agent(proj, "a", deploy_fn=_deploy_ok)
+
+    # Both categories should be wired.
+    assert set(result.categories_wired) == {"architecture-docs", "adr-records"}
+    # Both conventional dirs were absent; adr-records is processed first (alphabetical),
+    # its mkdir(parents=True) also creates docs/architecture, so architecture-docs' dir
+    # may not be separately tracked as created. What matters: both dirs exist.
+    assert result.deployed is True
+    assert result.categories_already_set == ()
+
+    # Dirs and seed READMEs exist on disk.
+    assert (proj / "docs" / "architecture").is_dir()
+    assert (proj / "docs" / "architecture" / "decisions").is_dir()
+    assert (proj / "docs" / "architecture" / "decisions" / "README.md").is_file()
+
+    # Overlay updated with both categories uncommented.
+    text = overlay.read_text()
+    assert re.search(r"(?m)^architecture-docs:", text)
+    assert "docs/architecture" in text
+    assert re.search(r"(?m)^adr-records:", text)
+    assert "docs/architecture/decisions" in text
+    # Not commented.
+    assert "# architecture-docs:" not in text
+    assert "# adr-records:" not in text
+
+    # Agent is now deployable.
+    assert ao.missing_categories(proj) == []
+
+
+def test_adopt_idempotent(tmp_path):
+    """Re-running adopt on an already-adopted agent → no overlay changes, no error."""
+    proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
+    _agent(proj / ".pkit" / "agents" / "core", "a", owns=["<architecture-docs>"])
+    overlay = proj / ".pkit" / "agents" / "project" / "overlay.yaml"
+
+    ao.adopt_agent(proj, "a", deploy_fn=_deploy_ok)
+    text_after_first = overlay.read_text()
+
+    result2 = ao.adopt_agent(proj, "a", deploy_fn=_deploy_ok)
+    assert result2.categories_wired == ()
+    assert result2.dirs_created == ()
+    assert result2.deployed is True
+    assert overlay.read_text() == text_after_first  # overlay unchanged
+
+
+def test_adopt_does_not_overwrite_adopter_set_value(tmp_path):
+    """Adopter-set overlay value is never clobbered by adopt."""
+    overlay_text = (
+        "workflow-docs:\n  - README.md\n"
+        "architecture-docs:\n  - docs/custom-arch/\n"
+    )
+    proj = _project(tmp_path, overlay=overlay_text)
+    _agent(proj / ".pkit" / "agents" / "core", "a", owns=["<architecture-docs>"])
+    overlay = proj / ".pkit" / "agents" / "project" / "overlay.yaml"
+
+    result = ao.adopt_agent(proj, "a", deploy_fn=_deploy_ok)
+
+    # Category was already defined — no change.
+    assert result.categories_wired == ()
+    assert result.dirs_created == ()
+    assert "architecture-docs" in result.categories_already_set
+    assert overlay.read_text() == overlay_text  # custom path survives
+
+
+def test_adopt_unknown_agent_raises(tmp_path):
+    """Requesting adopt for an unknown agent → clear ClickException."""
+    import click
+    proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
+    with pytest.raises(click.ClickException, match="unknown agent"):
+        ao.adopt_agent(proj, "does-not-exist", deploy_fn=_deploy_ok)
+
+
+def test_adopt_agent_no_categories_raises(tmp_path):
+    """Agent that references no overlay categories → clear ClickException."""
+    import click
+    proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
+    # Agent with no placeholder owns/reads.
+    _agent(proj / ".pkit" / "agents" / "core", "plain", body="nothing special")
+    with pytest.raises(click.ClickException, match="references no overlay categories"):
+        ao.adopt_agent(proj, "plain", deploy_fn=_deploy_ok)
+
+
+def test_adopt_dir_exists_no_duplicate_creation(tmp_path):
+    """If the conventional dir already exists, adopt wires the overlay without
+    re-creating the dir or writing a second seed README."""
+    proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
+    _agent(proj / ".pkit" / "agents" / "core", "a", owns=["<architecture-docs>"])
+    # Pre-create the dir.
+    arch_dir = proj / "docs" / "architecture"
+    arch_dir.mkdir(parents=True)
+    (arch_dir / "existing.md").write_text("# pre-existing file", encoding="utf-8")
+
+    result = ao.adopt_agent(proj, "a", deploy_fn=_deploy_ok)
+
+    # Dir was already present — not listed as created.
+    assert result.dirs_created == ()
+    # Category still wired (overlay updated).
+    assert "architecture-docs" in result.categories_wired
+    # Pre-existing file untouched; no spurious README.md created.
+    assert (arch_dir / "existing.md").read_text("utf-8") == "# pre-existing file"
+    # deploy ran.
+    assert result.deployed is True
+
+
+def test_adopt_cli_fresh(tmp_path, monkeypatch):
+    """CLI: `pkit agents adopt <agent>` outputs dirs-created + wired categories."""
+    proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
+    _agent(proj / ".pkit" / "agents" / "core", "a", owns=["<architecture-docs>"])
+    monkeypatch.chdir(proj)
+
+    # Patch adopt_agent to avoid real disk + deploy side-effects.
+    import project_kit.cli as cli_mod
+    import project_kit.agents_overlay as ao_mod
+
+    called: list[str] = []
+
+    def fake_adopt(target_root: Path, agent_name: str, **kwargs: object) -> ao_mod.AdoptResult:
+        called.append(agent_name)
+        return ao_mod.AdoptResult(
+            agent=agent_name,
+            dirs_created=("docs/architecture",),
+            categories_wired=("architecture-docs",),
+            categories_already_set=(),
+            deployed=True,
+        )
+
+    monkeypatch.setattr(ao_mod, "adopt_agent", fake_adopt)
+
+    result = CliRunner().invoke(main, ["agents", "adopt", "a"])
+    assert result.exit_code == 0, result.output
+    assert "docs/architecture" in result.output
+    assert "architecture-docs" in result.output
+    assert "deployed" in result.output
+    assert called == ["a"]
+
+
+def test_adopt_cli_unknown_agent(tmp_path, monkeypatch):
+    """CLI: unknown agent → non-zero exit with error message."""
+    proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
+    monkeypatch.chdir(proj)
+    result = CliRunner().invoke(main, ["agents", "adopt", "no-such-agent"])
+    assert result.exit_code != 0
+    assert "unknown agent" in result.output
+
+
+def test_adopt_guidance_in_reconcile_output(tmp_path):
+    """reconcile's dir-absent stub output mentions `pkit agents adopt <agent>`."""
+    proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
+    _agent(proj / ".pkit" / "agents" / "core", "a", owns=["<architecture-docs>"])
+    # Do NOT create docs/architecture — so reconcile stubs it.
+    _added, report = ao.reconcile_overlay(proj, write=True)
+    assert "pkit agents adopt" in report
+
+
+def test_adopt_guidance_in_reconcile_commented_stub_output(tmp_path):
+    """reconcile's commented-stub output also mentions `pkit agents adopt <agent>`."""
+    overlay_text = (
+        "workflow-docs:\n  - README.md\n"
+        "# architecture-docs:\n"
+        "#   - <path/relative/to/project/root>\n"
+    )
+    proj = _project(tmp_path, overlay=overlay_text)
+    _agent(proj / ".pkit" / "agents" / "core", "a", owns=["<architecture-docs>"])
+    _added, report = ao.reconcile_overlay(proj, write=True)
+    assert "pkit agents adopt" in report
+
+
+def test_adopt_guidance_in_render_status(tmp_path, monkeypatch):
+    """render_status warn message mentions `pkit agents adopt`."""
+    proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
+    _agent(proj / ".pkit" / "agents" / "core", "needs-arch", owns=["<architecture-docs>"])
+    monkeypatch.chdir(proj)
+    result = CliRunner().invoke(main, ["agents"])
+    assert result.exit_code == 0, result.output
+    assert "pkit agents adopt" in result.output
