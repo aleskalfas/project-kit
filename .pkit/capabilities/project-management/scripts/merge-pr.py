@@ -192,8 +192,8 @@ def main() -> int:
 
     if args.dry_run:
         print(
-            "\n[dry-run] gh pr merge --squash --delete-branch would be "
-            "invoked; nothing written."
+            f"\n[dry-run] gh pr merge --squash --delete-branch "
+            f"--subject {pr_title!r} would be invoked; nothing written."
         )
         return 0
     if not args.yes and sys.stdin.isatty():
@@ -202,7 +202,7 @@ def main() -> int:
             print("aborted.", file=sys.stderr)
             return 0
 
-    if not _gh_merge(args.pr_number, admin=args.admin, config=config):
+    if not _gh_merge(args.pr_number, pr_title=pr_title, admin=args.admin, config=config):
         return 3
 
     print(f"\n[ok] merged: {pr_url}")
@@ -318,7 +318,11 @@ def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
     return gh_get_issue(issue_number, config, fields="title,body,state")
 
 
-def _gh_merge(pr_number: int, *, admin: bool, config: dict) -> bool:
+def _gh_merge(pr_number: int, *, pr_title: str, admin: bool, config: dict) -> bool:
+    # Force --subject to the PR title so the squash-commit subject equals the
+    # gate-validated title for both single- and multi-commit PRs.  GitHub's
+    # default for a single-commit PR is the commit message, not the title —
+    # the --subject flag overrides that (DEC-013; fixes #33).
     cmd = [
         "gh",
         "pr",
@@ -326,6 +330,7 @@ def _gh_merge(pr_number: int, *, admin: bool, config: dict) -> bool:
         str(pr_number),
         "--squash",
         "--delete-branch",
+        "--subject", pr_title,
     ]
     if admin:
         cmd.append("--admin")

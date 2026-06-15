@@ -130,6 +130,7 @@ def main() -> int:
         return 2
 
     pr_number = pr.get("number")
+    pr_title = pr.get("title") or ""
     if pr.get("isDraft"):
         print(
             f"error: PR #{pr_number} is still draft. Run `review-work` "
@@ -191,7 +192,7 @@ def main() -> int:
     print(f"  gate:    {gate_result.passed_via}")
 
     if args.dry_run:
-        print("(dry-run: would post bypass audit (if any), squash-merge, pull main, call move-issue.)")
+        print(f"(dry-run: would post bypass audit (if any), squash-merge --subject {pr_title!r}, pull main, call move-issue.)")
         return 0
 
     if not args.yes and sys.stdin.isatty():
@@ -211,8 +212,10 @@ def main() -> int:
             )
             return 2
 
-    # Squash-merge.
-    if not _gh_pr_merge(pr_number, admin=args.admin, config=config):
+    # Squash-merge with an explicit subject so the landed commit subject
+    # equals the gate-validated PR title regardless of commit count
+    # (DEC-013: squash-commit subject = PR title; fixes #33).
+    if not _gh_pr_merge(pr_number, pr_title=pr_title, admin=args.admin, config=config):
         return 3
 
     print(f"  merged PR #{pr_number}")
@@ -512,10 +515,18 @@ def _post_bypass_audit_idempotent(
     return True
 
 
-def _gh_pr_merge(pr_number: int | None, *, admin: bool, config: dict) -> bool:
+def _gh_pr_merge(pr_number: int | None, *, pr_title: str, admin: bool, config: dict) -> bool:
     if pr_number is None:
         return False
-    cmd = ["gh", "pr", "merge", str(pr_number), "--squash", "--delete-branch"]
+    # Force --subject to the PR title so the squash-commit subject equals the
+    # gate-validated title for both single- and multi-commit PRs.  GitHub's
+    # default for a single-commit PR is the commit message, not the title —
+    # the --subject flag overrides that (DEC-013; fixes #33).
+    cmd = [
+        "gh", "pr", "merge", str(pr_number),
+        "--squash", "--delete-branch",
+        "--subject", pr_title,
+    ]
     if admin:
         cmd.append("--admin")
     proc = gh_run(cmd, config, check=False)
@@ -638,7 +649,7 @@ def _find_issue_branch(issue_number: int) -> str | None:
 def _find_pr_for_branch(branch: str, config: dict) -> dict | None:
     proc = gh_run(
         ["gh", "pr", "list", "--head", branch, "--state", "open",
-         "--json", "number,isDraft,headRefName"],
+         "--json", "number,isDraft,headRefName,title"],
         config, check=False,
     )
     if proc.returncode != 0:
