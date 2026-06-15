@@ -188,15 +188,21 @@ Per-agent overrides replace; copying base entries into the override is the expli
 **Diagnosing + repairing the overlay (per COR-013):**
 
 - `pkit agents` reports, per kit-shipped agent, whether it is *deployable* or *SKIPPED* and which categories are undefined — the discoverable surface for "why didn't my agent show up?" (deployment happens in `sync`; this is the read-only diagnostic).
+- `pkit agents adopt <agent>` is the **one-command path** for agents whose categories reference well-known conventional directories. For each undefined category the agent references, it:
+  1. Creates the conventional default directory if absent (with a seed README explaining the directory's purpose).
+  2. Writes the category into the overlay *uncommented* with the conventional path — never clobbering an adopter-set value.
+  3. Runs the adapter's deploy step so the agent lands in `.claude/agents/` immediately.
+
+  Idempotent: re-running on an already-adopted agent makes no changes and re-deploys. Errors clearly when the agent is unknown, references no overlay categories, or references a category with no registered conventional default (use `reconcile` for those).
 - `pkit agents reconcile [--write]` surfaces every referenced-but-undefined category into `overlay.yaml`. The command uses **detect-then-fill** logic — four states per missing category:
   1. **Missing + conventional default directory exists**: the category is written *uncommented* with the conventional path, ready for `pkit sync` to deploy the agent immediately with no manual step. Example: `architecture-docs` is auto-filled with `docs/architecture/` when that directory is present; `adr-records` with `docs/architecture/decisions/`.
-  2. **Missing + no conventional default directory**: a commented stub is appended (e.g. `# architecture-docs:`) with `<path/relative/to/project/root>` guidance; the adopter fills in a real path before running `pkit sync`.
-  3. **Commented stub already present**: reconcile reports "uncomment + set real paths" guidance and does not append a duplicate.
+  2. **Missing + no conventional default directory**: a commented stub is appended (e.g. `# architecture-docs:`) with `<path/relative/to/project/root>` guidance; the adopter fills in a real path before running `pkit sync`. Or run `pkit agents adopt <agent>` to create the conventional layout and deploy it.
+  3. **Commented stub already present**: reconcile reports "uncomment + set real paths" guidance and does not append a duplicate. Or run `pkit agents adopt <agent>` to create the conventional layout and deploy it.
   4. **Defined** (uncommented entry with paths): nothing is written; an adopter-set value is never overwritten.
 
   This is the path for an adopter whose overlay predates a newly-shipped agent's categories — the repair is an explicit, idempotent gesture rather than an automatic sync mutation. Dry-run by default.
 
-  Conventional defaults are declared in `src/project_kit/agents_overlay.py` (`CONVENTIONAL_CATEGORY_DEFAULTS`), one entry per overlay category. Adding a default for a new category is the authoring step that enables auto-fill for adopters who follow the conventional layout.
+  Conventional defaults are declared in `src/project_kit/agents_overlay.py` (`CONVENTIONAL_CATEGORY_DEFAULTS`), one entry per overlay category. Adding a default for a new category is the authoring step that enables auto-fill for adopters who follow the conventional layout and `adopt` for those who prefer the one-command path.
 
 ## Deploy mechanics
 
