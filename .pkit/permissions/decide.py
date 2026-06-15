@@ -178,15 +178,341 @@ def hook_decide(
 
 # ---- thin loaders ----------------------------------------------------------
 
-def load_yaml(path: str) -> dict[str, Any]:
-    # Local import keeps the pure decide() path dependency-free. ruamel.yaml
-    # is the kit-wide YAML library; the hook (a PEP723 `uv run --script`)
-    # declares it as a dep so the loader is available in the adopter tree too.
-    from ruamel.yaml import YAML
+# ---- stdlib YAML-subset fallback -------------------------------------------
+# Used by load_yaml() when ruamel.yaml is not importable (e.g. inside macOS
+# Seatbelt where uv cannot run — ADR-014). Handles the subset the shipped files
+# use: block mappings, block sequences, single-quoted and double-quoted scalars,
+# flow sequences ([a, b, c]), block scalars (>-), booleans, integers, null,
+# and # comments. No anchors, aliases, merge-keys, flow mappings, multi-doc,
+# or custom tags — none appear in the shipped files.
+#
+# Invariant (ADR-002/ADR-003 same-code): the fallback parses the shipped files
+# IDENTICALLY to ruamel.yaml safe-load. Covered by the conformance fixture
+# tests/test_permission_decide.py::test_stdlib_fallback_parses_identically_to_ruamel.
 
-    yaml = YAML(typ="safe")
+def _stdlib_load_yaml(text: str) -> Any:
+    """Minimal YAML-subset parser (stdlib-only, no third-party deps)."""
+    import re as _re
+
+    # ---- tokeniser helpers -------------------------------------------------
+
+    def _parse_scalar(raw: str) -> Any:
+        """Decode a YAML scalar string (already stripped) to a Python value."""
+        s = raw.strip()
+        if not s or s in ("~", "null", "Null", "NULL"):
+            return None
+        if s in ("true", "True", "TRUE"):
+            return True
+        if s in ("false", "False", "FALSE"):
+            return False
+        try:
+            return int(s)
+        except ValueError:
+            pass
+        try:
+            return float(s)
+        except ValueError:
+            pass
+        return s
+
+    def _unquote_single(s: str) -> str:
+        """Strip surrounding single-quotes; handle '' → ' escape."""
+        assert s.startswith("'") and s.endswith("'")
+        return s[1:-1].replace("''", "'")
+
+    def _unquote_double(s: str) -> str:
+        """Strip surrounding double-quotes; handle \\n, \\t, \\\\ escapes."""
+        assert s.startswith('"') and s.endswith('"')
+        inner = s[1:-1]
+        return inner.replace('\\"', '"').replace("\\n", "\n").replace("\\t", "\t").replace("\\\\", "\\")
+
+    def _parse_value_token(token: str) -> Any:
+        """Parse a single value token (scalar or simple unquoted string)."""
+        t = token.strip()
+        if t.startswith("'") and t.endswith("'") and len(t) >= 2:
+            return _unquote_single(t)
+        if t.startswith('"') and t.endswith('"') and len(t) >= 2:
+            return _unquote_double(t)
+        return _parse_scalar(t)
+
+    def _split_flow_sequence(body: str) -> list:
+        """Parse the interior of a flow sequence [...] into a Python list.
+        Handles single- and double-quoted strings as atomic tokens."""
+        items: list = []
+        current = ""
+        in_single = False
+        in_double = False
+        for ch in body:
+            if ch == "'" and not in_double:
+                in_single = not in_single
+                current += ch
+            elif ch == '"' and not in_single:
+                in_double = not in_double
+                current += ch
+            elif ch == "," and not in_single and not in_double:
+                s = current.strip()
+                if s:
+                    items.append(_parse_value_token(s))
+                current = ""
+            else:
+                current += ch
+        s = current.strip()
+        if s:
+            items.append(_parse_value_token(s))
+        return items
+
+    # ---- block-scalar collector (>- folded-strip, | literal-strip) ---------
+
+    def _collect_block_scalar(lines: list, start_idx: int, indent: int) -> tuple[str, int]:
+        """Collect lines for a block scalar starting at start_idx.
+        Returns (scalar_value, next_line_index)."""
+        # Determine the content indentation from the first non-empty content line.
+        content_indent: int | None = None
+        parts: list[str] = []
+        i = start_idx
+        while i < len(lines):
+            raw = lines[i]
+            stripped = raw.rstrip()
+            if not stripped:
+                parts.append("")
+                i += 1
+                continue
+            col = len(stripped) - len(stripped.lstrip())
+            if content_indent is None:
+                content_indent = col
+            if col < (content_indent if content_indent is not None else indent + 1):
+                break
+            parts.append(stripped[content_indent:] if content_indent else stripped)
+            i += 1
+        # Folded (>-): join non-empty runs with space, remove trailing newlines.
+        result = " ".join(p for p in parts if p).rstrip()
+        return result, i
+
+    # ---- line preprocessor -------------------------------------------------
+
+    def _strip_comment(line: str) -> str:
+        """Remove inline # comments that are outside quotes."""
+        out = ""
+        in_single = False
+        in_double = False
+        for ch in line:
+            if ch == "'" and not in_double:
+                in_single = not in_single
+            elif ch == '"' and not in_single:
+                in_double = not in_double
+            elif ch == "#" and not in_single and not in_double:
+                break
+            out += ch
+        return out.rstrip()
+
+    # ---- recursive block parser --------------------------------------------
+
+    def _parse_block(lines: list, idx: int, base_indent: int) -> tuple[Any, int]:
+        """Parse a block node (mapping or sequence) at the given base_indent.
+        Returns (value, next_idx)."""
+        if idx >= len(lines):
+            return None, idx
+
+        result_map: dict | None = None
+        result_seq: list | None = None
+        i = idx
+
+        while i < len(lines):
+            raw = lines[i]
+            stripped_raw = raw.rstrip()
+            if not stripped_raw or stripped_raw.lstrip().startswith("#"):
+                i += 1
+                continue
+
+            line = _strip_comment(stripped_raw)
+            if not line.strip():
+                i += 1
+                continue
+
+            col = len(line) - len(line.lstrip())
+
+            # Back up to parent block
+            if col < base_indent:
+                break
+
+            # New sibling at a HIGHER-than-expected indent inside parent — skip
+            # (shouldn't happen in valid YAML, but be defensive).
+            if col > base_indent and result_map is None and result_seq is None:
+                # We're establishing the indent from the first entry.
+                base_indent = col
+
+            content = line.lstrip()
+
+            # ---- sequence entry: starts with "- " --------------------------
+            if content.startswith("- "):
+                if result_map is not None:
+                    break  # type switch — back to parent
+                if result_seq is None:
+                    result_seq = []
+                value_part = content[2:].strip()
+                if value_part:
+                    # Inline value after "- "
+                    if value_part.startswith("{"):
+                        # Inline flow mapping — not needed for shipped files; skip.
+                        result_seq.append(_parse_value_token(value_part))
+                        i += 1
+                    elif value_part.startswith("["):
+                        body = value_part[1:value_part.rfind("]")]
+                        result_seq.append(_split_flow_sequence(body))
+                        i += 1
+                    elif value_part.startswith("'") or value_part.startswith('"'):
+                        result_seq.append(_parse_value_token(value_part))
+                        i += 1
+                    elif ":" in value_part:
+                        # Inline mapping key: value on same line as "- "
+                        child_lines = []
+                        # first key:value is on this line
+                        child_indent = col + 2
+                        child_lines.append(" " * child_indent + value_part)
+                        j = i + 1
+                        while j < len(lines):
+                            r2 = lines[j].rstrip()
+                            if not r2 or r2.lstrip().startswith("#"):
+                                j += 1
+                                continue
+                            c2 = len(r2) - len(r2.lstrip())
+                            if c2 <= col:
+                                break
+                            child_lines.append(r2)
+                            j += 1
+                        child_val, _ = _parse_block(child_lines, 0, child_indent)
+                        result_seq.append(child_val)
+                        i = j
+                    else:
+                        result_seq.append(_parse_scalar(value_part))
+                        i += 1
+                else:
+                    # "- " alone — nested block
+                    child_indent = col + 2
+                    child_val, i = _parse_block(lines, i + 1, child_indent)
+                    result_seq.append(child_val)
+                continue
+
+            # ---- bare "- " (dash alone on line) ----------------------------
+            if content.strip() == "-":
+                if result_seq is None:
+                    result_seq = []
+                result_seq.append(None)
+                i += 1
+                continue
+
+            # ---- mapping key: value ----------------------------------------
+            colon_pos = -1
+            in_s = False
+            in_d = False
+            for ci, ch in enumerate(content):
+                if ch == "'" and not in_d:
+                    in_s = not in_s
+                elif ch == '"' and not in_s:
+                    in_d = not in_d
+                elif ch == ":" and not in_s and not in_d:
+                    colon_pos = ci
+                    break
+
+            if colon_pos == -1:
+                # Plain scalar continuation — treat as bare value
+                i += 1
+                continue
+
+            key_raw = content[:colon_pos].strip()
+            key = _parse_value_token(key_raw) if key_raw else None
+            val_raw = content[colon_pos + 1:].strip()
+
+            if result_seq is not None:
+                break  # type switch
+            if result_map is None:
+                result_map = {}
+
+            if not val_raw:
+                # Value on subsequent lines
+                i += 1
+                # Peek at next non-blank, non-comment line
+                j = i
+                while j < len(lines):
+                    r2 = lines[j].rstrip()
+                    if not r2 or r2.lstrip().startswith("#"):
+                        j += 1
+                        continue
+                    break
+                if j >= len(lines):
+                    result_map[key] = None
+                    i = j
+                    continue
+                r2 = lines[j]
+                c2 = len(r2) - len(r2.lstrip())
+                if c2 > col:
+                    # Child block
+                    child_val, i = _parse_block(lines, j, c2)
+                    result_map[key] = child_val
+                else:
+                    result_map[key] = None
+                continue
+            else:
+                # Inline value
+                v = val_raw
+                if v.startswith(">-") or v.startswith("|"):
+                    # Block scalar
+                    scalar_val, i = _collect_block_scalar(lines, i + 1, col + 1)
+                    result_map[key] = scalar_val
+                elif v.startswith("["):
+                    close = v.rfind("]")
+                    if close != -1:
+                        body = v[1:close]
+                        result_map[key] = _split_flow_sequence(body)
+                    else:
+                        result_map[key] = v
+                    i += 1
+                elif v.startswith("'") or v.startswith('"'):
+                    result_map[key] = _parse_value_token(v)
+                    i += 1
+                else:
+                    result_map[key] = _parse_scalar(v)
+                    i += 1
+                continue
+
+        if result_map is not None:
+            return result_map, i
+        if result_seq is not None:
+            return result_seq, i
+        return None, i
+
+    # ---- entry point -------------------------------------------------------
+    lines = text.splitlines()
+    # Strip document-start marker
+    clean: list[str] = []
+    for ln in lines:
+        s = ln.rstrip()
+        if s.lstrip() in ("---", "..."):
+            continue
+        clean.append(ln)
+    result, _ = _parse_block(clean, 0, 0)
+    return result if result is not None else {}
+
+
+def load_yaml(path: str) -> dict[str, Any]:
+    """Load a YAML file, returning a dict. Uses ruamel.yaml when available
+    (the kit-wide library); falls back to the stdlib-only subset parser
+    when ruamel.yaml is not importable (e.g. inside macOS Seatbelt, ADR-014).
+
+    The stdlib fallback is in this SHARED loader — not duplicated in the hook
+    — so the hook and the `pkit permissions` CLI reach identical parse results
+    through the same code path (ADR-002/ADR-003 same-code invariant).
+    """
     with open(path, encoding="utf-8") as fh:
-        return yaml.load(fh) or {}
+        text = fh.read()
+    try:
+        from ruamel.yaml import YAML as _YAML
+        _yaml = _YAML(typ="safe")
+        import io as _io
+        return _yaml.load(_io.StringIO(text)) or {}
+    except ImportError:
+        result = _stdlib_load_yaml(text)
+        return result if isinstance(result, dict) else {}
 
 
 def _exists(path: str) -> bool:

@@ -292,21 +292,45 @@ def overview(target_root: Path) -> str:
         return "  " + "  ".join(cols)
 
     # Enforcement banner — the strong "is the hook live?" indication.
+    # Also runs the enforcement-runtime self-check when enforcement is ON, so
+    # `overview` surfaces a dead hook loudly (ADR-002 amendment).
     on = _enforcement_on(target_root)
     posture = model.get("posture", "lenient")
     ownership = model.get("ownership_mode", "additive")
     unmodeled = "denied" if posture == "strict" else "deferred to Claude Code"
+    runtime_fault: str | None = None
     if on:
-        status = "ON — the PreToolUse hook checks every agent tool call against the model below"
+        rt_ok, rt_detail = _hook_runtime_check(target_root)
+        if rt_ok:
+            status = "ON — the PreToolUse hook checks every agent tool call against the model below"
+        else:
+            status = (
+                "ON (registered) but ENFORCEMENT-RUNTIME FAULT — hook CANNOT START; "
+                "enforcement currently fail-open on every call"
+            )
+            runtime_fault = rt_detail
     else:
         status = "OFF — declared but not enforced live; run `pkit permissions enable`"
     sb = _sandbox_block(target_root)
+    confinement_probe: str | None = None
     if sb.get("enabled") is True:
         sandbox_line = "  sandbox ON — scripting runs prompt-free inside the OS box"
         if sb.get("failIfUnavailable") is not True:
             sandbox_line += "  ⚠ fail-open — run `pkit permissions sandbox enable` to restore fail-closed"
         else:
             sandbox_line += " (fail-closed)"
+        # Actual-confinement write probe: verify the box is actually confining.
+        probe_result = _confinement_write_probe()
+        if probe_result == "denied":
+            sandbox_line += " · confinement verified (write outside workspace DENIED)"
+        elif probe_result == "allowed":
+            sandbox_line += (
+                "\n  ⚠ WARNING: sandbox configured ON but NOT actually confining — "
+                "out-of-workspace write SUCCEEDED. Session may be running outside the "
+                "box (restart needed) or the sandbox cannot initialize. "
+                "Run `pkit permissions sandbox enable` to re-check."
+            )
+            confinement_probe = "allowed"
     else:
         sandbox_line = (
             "  sandbox OFF — scripting prompts; "
@@ -318,6 +342,15 @@ def overview(target_root: Path) -> str:
         + "   (the vocabulary; who-may-do-what is `pkit permissions explain`)",
         "",
         cli_render.style("strong", f"Live enforcement: {status}"),
+    ]
+    if runtime_fault:
+        lines += [
+            f"  ⚠ enforcement-runtime fault: {runtime_fault}",
+            "  The hook is registered but cannot start. Fix: verify python3 is available,",
+            "  .pkit/permissions/decide.py exists, and .pkit/schemas/privilege-catalog.yaml",
+            "  is present. Re-run `pkit permissions enable` after fixing.",
+        ]
+    lines += [
         f"  posture {posture} (unmodeled requests {unmodeled}) · "
         f"ownership {ownership} (how much of settings.json the realizer owns)",
         sandbox_line,
@@ -680,9 +713,122 @@ def _enforcement_on(target_root: Path) -> bool:
     return _hook_entry_registered(pre)
 
 
+# ---- enforcement-runtime self-check (ADR-002 amendment) --------------------
+#
+# Distinct from the decision-time fail-open (§32 in ADR-002). An
+# enforcement-runtime fault means the hook CANNOT START — its python3 runtime
+# can't be found, the script has a syntax error, or `decide.py` is missing.
+# When the runtime is dead, the hook never reaches decide() and silently
+# abstains on EVERY call: the operator believes enforcement is live when it
+# is not. This class of fault is fail-LOUD (ADR-002 amendment), not fail-open.
+#
+# Mechanism: run the hook script directly under `sys.executable` (the same
+# python3 that will be found via `#!/usr/bin/env python3` in the hook's
+# shebang) with a minimal probe payload. Three outcomes:
+#   - Exits 0 + stdout or no-stdout → hook started and decided (runtime OK)
+#   - Exits 0 + no output, payload is malformed by design → abstain (runtime OK)
+#   - Any exception launching the process, or non-zero exit → runtime FAULT
+#
+# The probe payload is a deliberately minimal (but valid) Bash request so the
+# hook exercises load_catalog + load_model + hook_decide. It does NOT need to
+# match any real privilege: the decision (allow/deny/abstain) is irrelevant;
+# we are testing whether the hook CAN RUN, not what it decides.
+
+_RUNTIME_PROBE_PAYLOAD = json.dumps({
+    "tool_name": "Bash",
+    "tool_input": {"command": "echo pkit-runtime-probe"},
+    "cwd": "/tmp",
+})
+
+
+def _hook_runtime_check(target_root: Path) -> tuple[bool, str]:
+    """Probe whether the hook script can start. Returns (ok, detail).
+
+    ok=True  → hook started and ran (runtime is healthy); may have abstained.
+    ok=False → hook could not start (enforcement-runtime fault — fail-loud).
+    This is NOT a decision correctness check (that's `probe`); it is purely
+    a startup-reachability check per the ADR-002 amendment.
+    """
+    import subprocess
+    import sys as _sys
+
+    hook_path = target_root / ".pkit" / "adapters" / "claude-code" / "permission-hook.py"
+    if not hook_path.is_file():
+        return False, f"hook script not found at {hook_path}"
+    try:
+        result = subprocess.run(
+            [_sys.executable, str(hook_path)],
+            input=_RUNTIME_PROBE_PAYLOAD,
+            capture_output=True,
+            text=True,
+            timeout=10,
+            env={
+                "CLAUDE_PROJECT_DIR": str(target_root),
+                "PATH": os.environ.get("PATH", ""),
+            },
+        )
+        if result.returncode != 0:
+            detail = (result.stderr or "").strip()
+            return False, f"hook exited {result.returncode}" + (f": {detail}" if detail else "")
+        return True, "hook started and returned exit 0"
+    except FileNotFoundError as exc:
+        return False, f"python3 interpreter not found: {exc}"
+    except Exception as exc:
+        return False, f"could not launch hook: {exc!r}"
+
+
+# ---- OS confinement write probe (ADR-002 amendment / ADR-014 §6) -----------
+#
+# `sandbox enable` reports config-ON, but Claude Code silently runs unconfined
+# when the box cannot initialize unless `failIfUnavailable: true` is set
+# (ADR-014 evidence 6). Even with failIfUnavailable set, the self-check must
+# verify *actual* confinement — not just that the config reads ON — so that
+# `permissions overview` can report "sandbox configured but NOT actually
+# confining" when config disagrees with a real probe.
+#
+# Mechanism: attempt to create a temporary file outside the workspace (at
+# /private/tmp or /tmp, which the Seatbelt box denies). If the write succeeds,
+# confinement is NOT active from this process's perspective. If it is denied
+# (PermissionError / OSError), confinement is active.
+#
+# Contract (same as probe --live): reachability only; the probe file is
+# deleted immediately on success. The probe is NOT conclusive from a plain
+# terminal (outside the box); it is conclusive ONLY from inside a Claude
+# Code session that has the sandbox active. `overview` annotates accordingly.
+
+def _confinement_write_probe() -> str:
+    """Attempt a write outside the workspace. Returns 'denied' | 'allowed' | 'error'.
+
+    'denied' → OS blocked it → confinement is active.
+    'allowed' → OS permitted it → NOT confined (or probe ran outside the box).
+    'error'   → unexpected error (treat as inconclusive).
+    """
+    import tempfile
+    import uuid
+
+    probe_name = f"pkit-confinement-probe-{uuid.uuid4().hex[:8]}"
+    # Use /private/tmp on macOS (real path behind /tmp symlink) then /tmp as fallback.
+    for probe_dir in ("/private/tmp", "/tmp"):
+        probe_path = Path(probe_dir) / probe_name
+        try:
+            probe_path.write_text("x", encoding="utf-8")
+            try:
+                probe_path.unlink()
+            except OSError:
+                pass
+            return "allowed"
+        except PermissionError:
+            return "denied"
+        except OSError:
+            continue
+    return "error"
+
+
 def enable(target_root: Path) -> str:
-    """Register the PreToolUse enforcement hook and ensure the fail-closed
-    native guardrail denies are present (the double-lock). Idempotent."""
+    """Register the PreToolUse enforcement hook, ensure the fail-closed native
+    guardrail denies are present (the double-lock), and run the startup
+    self-check to detect dead-hook enforcement-runtime faults loudly (per the
+    ADR-002 amendment). Idempotent."""
     if not _adapter_installed(target_root, "claude-code"):
         raise PermissionsError(
             "the claude-code adapter is not installed in this project; "
@@ -711,7 +857,24 @@ def enable(target_root: Path) -> str:
         changes.append("native guardrail denies already present")
 
     _write_settings(target_root, settings)
-    return "live enforcement enabled: " + "; ".join(changes) + "."
+    result = "live enforcement enabled: " + "; ".join(changes) + "."
+
+    # Enforcement-runtime self-check (ADR-002 amendment): verify the hook can
+    # actually start. A dead runtime (can't import decide.py, python3 not found,
+    # etc.) would silently make every call fail-open; that is an enforcement-
+    # runtime fault and must be surfaced loudly, not hidden.
+    ok, detail = _hook_runtime_check(target_root)
+    if not ok:
+        result += (
+            "\n\nWARNING: enforcement-runtime fault — hook registered but CANNOT START.\n"
+            f"  diagnosed: {detail}\n"
+            "  The hook is NOT currently gating tool calls. Enforcement is fail-open on\n"
+            "  EVERY call until this is resolved. Check that `python3` is available,\n"
+            "  that .pkit/permissions/decide.py exists, and that .pkit/schemas/\n"
+            "  privilege-catalog.yaml is present. Run `pkit permissions probe` for detail.\n"
+            "  State surfaced in `pkit permissions overview`."
+        )
+    return result
 
 
 def disable(target_root: Path) -> str:
@@ -880,6 +1043,49 @@ def sandbox_enable(target_root: Path, strict: bool = False,
             "cannot be retried outside it; use `excludedCommands` for those."
         )
     lines.append(_RESTART_NOTE)
+
+    # Enforcement-runtime self-check (ADR-002 amendment): same check as
+    # `enable` — wire into `sandbox enable` because this is the combined
+    # "enforcement + confinement" path that operators run for full autonomy.
+    hook_ok, hook_detail = _hook_runtime_check(target_root)
+    if not hook_ok:
+        lines += [
+            "",
+            "WARNING: enforcement-runtime fault — hook registered but CANNOT START.",
+            f"  diagnosed: {hook_detail}",
+            "  The hook is NOT currently gating tool calls (enforcement fail-open on",
+            "  EVERY call). Fix before relying on enforcement. Run `pkit permissions",
+            "  enable` for the detailed warning. State surfaced in `pkit permissions overview`.",
+        ]
+
+    # Actual-confinement write probe (ADR-002 amendment / ADR-014 §6): verify
+    # the sandbox is ACTUALLY confining — not just that the config reads ON.
+    # A write outside the workspace succeeds when the session runs unconfined
+    # (box can't init without failIfUnavailable, or this is a plain terminal).
+    # Report "configured but NOT actually confining" when config-ON disagrees
+    # with the probe. Probe is inconclusive from outside the box (plain terminal
+    # or session not yet restarted) — annotate that honestly.
+    if fail_closed:
+        probe_result = _confinement_write_probe()
+        if probe_result == "denied":
+            lines += [
+                "",
+                "confinement verified: out-of-workspace write DENIED by the OS — "
+                "the sandbox is actually confining.",
+            ]
+        elif probe_result == "allowed":
+            lines += [
+                "",
+                "WARNING: sandbox configured ON but NOT actually confining — an out-of-workspace",
+                "  write SUCCEEDED. Possible causes: (a) this process is running outside the box",
+                "  (plain terminal / session not yet restarted after enable), (b) the OS sandbox",
+                "  could not initialize and `failIfUnavailable` is not yet in effect (restart the",
+                "  session). If this warning persists from a Claude Code session, the box is NOT",
+                "  confining — investigate before relying on sandbox confinement.",
+                "  State surfaced in `pkit permissions overview`.",
+            ]
+        # probe_result == "error" → inconclusive; no annotation.
+
     return "\n".join(lines) + "\n"
 
 
@@ -902,7 +1108,9 @@ def sandbox_disable(target_root: Path) -> str:
 
 
 def sandbox_status(target_root: Path) -> str:
-    """Render the sandbox confinement state (read-only)."""
+    """Render the sandbox confinement state (read-only), including the actual-
+    confinement write probe so `sandbox status` reports config-ON-but-not-
+    confining loudly (ADR-002 amendment / ADR-014 §6)."""
     sb = _sandbox_block(target_root)
     enabled = sb.get("enabled") is True
     lines = [cli_render.style("title", "Sandbox confinement — prompt-free scripting inside the OS box (ADR-004)"), ""]
@@ -919,6 +1127,10 @@ def sandbox_status(target_root: Path) -> str:
     deny = (sb.get("filesystem") or {}).get("denyRead", []) or []
     missing = [p for p in SANDBOX_CREDENTIAL_DENY_READ if p not in deny]
 
+    # Actual-confinement write probe: verify the box is actually confining.
+    # Reports honestly: DENIED = proven, ALLOWED = not confining (or outside box).
+    probe_result = _confinement_write_probe()
+
     lines.append("  " + cli_render.style("strong", "ON") + " — sandboxed commands run confined to the box (Seatbelt / bubblewrap)")
     lines.append(
         "  auto-allow      "
@@ -932,6 +1144,19 @@ def sandbox_status(target_root: Path) -> str:
            "⚠ OPEN — if the box can't start the session runs UNCONFINED; "
            "re-run `sandbox enable` to restore fail-closed")
     )
+    if probe_result == "denied":
+        confinement_line = "  actual confinement  VERIFIED — out-of-workspace write DENIED by the OS  ✓"
+    elif probe_result == "allowed":
+        confinement_line = (
+            "  actual confinement  ⚠ NOT CONFINING — out-of-workspace write SUCCEEDED; "
+            "session may be outside the box (restart needed) or sandbox cannot initialize"
+        )
+    else:
+        confinement_line = (
+            "  actual confinement  inconclusive (probe could not write to /tmp); "
+            "run from a Claude Code session to prove confinement"
+        )
+    lines.append(confinement_line)
     lines.append(
         "  fail-over       "
         + ("strict — locked; failing commands can't retry outside the box" if strict
