@@ -256,7 +256,7 @@ def main() -> int:
                 f"{', '.join(f'#{n}' for n in parent_nums)}"
             )
             for pnum in parent_nums:
-                _check_parent_eligibility(pnum)
+                _check_parent_eligibility(pnum, config)
         else:
             print("\n[cascade] no parent ref found in body; cascade skipped.")
 
@@ -296,7 +296,7 @@ def _all_boxes_ticked(body: str) -> bool:
 # ---- parent eligibility ---------------------------------------------
 
 
-def _check_parent_eligibility(parent_num: int) -> None:
+def _check_parent_eligibility(parent_num: int, config: dict) -> None:
     """Report whether a parent is eligible to close.
 
     Eligibility per DEC-006: every open child has closed, AND parent's

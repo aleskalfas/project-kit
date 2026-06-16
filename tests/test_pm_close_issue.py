@@ -314,3 +314,54 @@ def test_reconcile_adds_done_when_missing_and_no_stale_labels() -> None:
     assert cmd[add_idx + 1] == "state:done"
     # No --remove-label args since no stale labels present
     assert "--remove-label" not in cmd
+
+
+# ---- regression #65 — _check_parent_eligibility NameError on config --------
+#
+# _check_parent_eligibility called _gh_get_issue(parent_num, config) but
+# `config` was not a parameter of the function — NameError at runtime.
+# Hit live closing #62 (parent EPIC #59): close + label-reconcile succeeded,
+# then the eligibility report crashed before printing.
+#
+# Fix: added `config: dict` parameter and threaded it from the call site.
+# Tests below cover the eligible and not-eligible branches via a fake
+# _gh_get_issue (monkeypatched on the module) to confirm no NameError.
+
+
+def test_check_parent_eligibility_not_eligible_unticked_boxes(ci, monkeypatch) -> None:
+    """Regression #65 — not-eligible branch completes without NameError.
+
+    Parent is open with unticked checkboxes: eligibility report prints the
+    'not eligible' line and returns without raising.
+    """
+    fake_parent = {
+        "state": "open",
+        "body": "- [ ] unfinished thing\n- [x] done thing\n",
+    }
+    monkeypatch.setattr(ci, "_gh_get_issue", lambda num, cfg: fake_parent)
+    # Must not raise; return value is None (procedure).
+    result = ci._check_parent_eligibility(59, config={})
+    assert result is None
+
+
+def test_check_parent_eligibility_eligible_all_boxes_ticked(ci, monkeypatch) -> None:
+    """Regression #65 — eligible branch completes without NameError.
+
+    Parent is open with all checkboxes ticked: eligibility report prints the
+    'eligible to close' line and returns without raising.
+    """
+    fake_parent = {
+        "state": "open",
+        "body": "- [x] finished thing\n- [x] another done thing\n",
+    }
+    monkeypatch.setattr(ci, "_gh_get_issue", lambda num, cfg: fake_parent)
+    result = ci._check_parent_eligibility(59, config={})
+    assert result is None
+
+
+def test_check_parent_eligibility_already_closed(ci, monkeypatch) -> None:
+    """Regression #65 — already-closed parent branch completes without NameError."""
+    fake_parent = {"state": "closed", "body": ""}
+    monkeypatch.setattr(ci, "_gh_get_issue", lambda num, cfg: fake_parent)
+    result = ci._check_parent_eligibility(59, config={})
+    assert result is None
