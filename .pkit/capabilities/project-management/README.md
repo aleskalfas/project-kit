@@ -292,6 +292,40 @@ Preconditions: the claude-code adapter must be installed in the project (`enable
 
 Rationale for the opt-in default: PM-as-default is a substantial behavioural shift (every `claude` session starts as the project-manager agent, not the general-purpose assistant). Adopters should opt in deliberately once they've decided the trade-off works for their workflow.
 
+## Permissions
+
+The project-management capability ships a **capability-contributed permission grant** (per ADR-016) at `.pkit/capabilities/project-management/permissions/grants.yaml`. This fragment is automatically composed into the effective permission model whenever this capability is a registered component — no manual copy required.
+
+### What it enforces
+
+```yaml
+- subject: agent:project-manager
+  privilege: '[privilege-catalog:issue-tracker-write]'
+  effect: deny
+```
+
+This deny blocks the `project-manager` agent from invoking `gh issue edit`, `gh issue comment`, and `gh pr edit` directly. The agent reaches the issue tracker exclusively through the capability's validated scripts (`create-issue.py`, `transition-state.py`, etc.), which enforce the methodology's preconditions and validation gates. Raw `gh` reads, `gh api`, `git`, and `pkit` commands are unaffected.
+
+### Adopter inheritance — how you get the deny
+
+Unlike a hand-authored grant in your project's `grants.yaml`, this deny is **capability-owned** and ships automatically:
+
+1. `pkit capabilities install project-management` registers the capability in `.pkit/manifest.yaml`.
+2. The permission model loader (`load_model` in `.pkit/permissions/decide.py`) discovers the manifest-registered capability and loads its fragment — install-state-as-gate.
+3. A one-time `pkit permissions setup autonomy` activates the enforcement hook and profiles; the capability's deny is already in the model before that step.
+
+On upgrade: `pkit upgrade` (or `pkit capabilities upgrade project-management`) propagates any changes to the fragment; the model loader picks them up on the next invocation. No manual grant is ever needed.
+
+### Deny-wins under any profile
+
+The `autonomous` profile grants `issue-tracker` to all agents (broad `gh` reads and writes). The capability deny on `issue-tracker-write` still holds because `decide()` is **deny-wins and order-independent**: a capability deny wins over a profile allow regardless of layer ordering. Run `pkit permissions probe --agent project-manager` to verify the deny is active.
+
+### Visibility
+
+Run `pkit permissions overview` to see the capability-contributed deny listed under "CAPABILITY-CONTRIBUTED DENIES" with its source (`contributed by capability: project-management`). Run `pkit permissions explain project-manager` to see the per-agent view with the same attribution.
+
+To deliberately override the deny (not recommended — it removes the methodology enforcement gate): `pkit permissions grant agent:project-manager issue-tracker-write` in your project's `grants.yaml`. The override is auditable and explicit; it does not touch the capability's fragment.
+
 ## Upgrading
 
 When `pkit capabilities upgrade project-management` lands a new version that ships a migration manifest under `migrations/`, the adopter's GitHub state may need reconciliation. The upgrade itself is **not** auto-chained with migration — explicit invocation, so the adopter reads the migration plan before authorising:

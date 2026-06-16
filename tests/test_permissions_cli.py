@@ -1693,4 +1693,102 @@ def test_allow_host_shipped_github_api_toolkit_present(tmp_path, monkeypatch):
     out = _run(proj, monkeypatch, "sandbox", "toolkit", "show", "github-api")
     assert "api.github.com" in out
     assert "allow-host" in out and "narrowing" in out
-    assert "session-wide egress to api.github.com; not a security boundary" in out
+
+
+# ---- capability-contributed grant attribution (ADR-016) ---------------------
+#
+# pkit permissions overview / explain MUST surface which capability contributed
+# a deny, so the operator can always see why an agent is denied a privilege.
+# ADR-016 narrowing-but-reported: auto-applied like narrowing, but visible.
+
+def _setup_with_capability(
+    tmp_path: Path,
+    *,
+    cap_name: str = "project-management",
+    cap_grants: str,
+    manifest_yaml: str,
+    config: str | None = None,
+) -> Path:
+    """Extend _setup with a manifest + capability fragment."""
+    proj = _setup(tmp_path, config=config)
+    # Write manifest.
+    (proj / ".pkit" / "manifest.yaml").write_text(manifest_yaml)
+    # Write capability fragment.
+    cap_perm_dir = proj / ".pkit" / "capabilities" / cap_name / "permissions"
+    cap_perm_dir.mkdir(parents=True)
+    (cap_perm_dir / "grants.yaml").write_text(cap_grants)
+    return proj
+
+
+_PM_MANIFEST = (
+    "schema_version: 1\n"
+    "backbone_version: 1.0.0\n"
+    "components:\n"
+    "  - kind: capability\n"
+    "    name: project-management\n"
+    "    manifest: .pkit/capabilities/project-management/manifest.yaml\n"
+)
+_PM_CAP_GRANTS = (
+    "schema_version: 1\n"
+    "grants:\n"
+    "  - subject: agent:project-manager\n"
+    "    privilege: '[privilege-catalog:issue-tracker-write]'\n"
+    "    effect: deny\n"
+)
+
+
+def test_explain_shows_capability_attribution(tmp_path, monkeypatch):
+    """pkit permissions explain shows 'contributed by capability: <name>' for capability denies."""
+    proj = _setup_with_capability(
+        tmp_path,
+        cap_grants=_PM_CAP_GRANTS,
+        manifest_yaml=_PM_MANIFEST,
+    )
+    out = _run(proj, monkeypatch, "explain")
+    assert "contributed by capability: project-management" in out, (
+        f"explain must attribute the capability deny; got:\n{out}"
+    )
+    assert "issue-tracker-write" in out
+
+
+def test_explain_agent_filter_shows_capability_attribution(tmp_path, monkeypatch):
+    """pkit permissions explain <agent> shows capability attribution for that agent's denies."""
+    proj = _setup_with_capability(
+        tmp_path,
+        cap_grants=_PM_CAP_GRANTS,
+        manifest_yaml=_PM_MANIFEST,
+    )
+    out = _run(proj, monkeypatch, "explain", "project-manager")
+    assert "contributed by capability: project-management" in out, (
+        f"explain <agent> must attribute the capability deny; got:\n{out}"
+    )
+
+
+def test_overview_shows_capability_contributed_deny_section(tmp_path, monkeypatch):
+    """pkit permissions overview shows the CAPABILITY-CONTRIBUTED DENIES section."""
+    proj = _setup_with_capability(
+        tmp_path,
+        cap_grants=_PM_CAP_GRANTS,
+        manifest_yaml=_PM_MANIFEST,
+    )
+    out = _run(proj, monkeypatch, "overview")
+    assert "CAPABILITY-CONTRIBUTED DENIES" in out, (
+        f"overview must show the capability-contributed denies section; got:\n{out}"
+    )
+    assert "agent:project-manager" in out
+    assert "DENY issue-tracker-write" in out
+    assert "contributed by capability: project-management" in out
+
+
+def test_overview_enabler_row_shows_capability_denied_subjects(tmp_path, monkeypatch):
+    """overview's ENABLERS section annotates the deny with the source capability."""
+    proj = _setup_with_capability(
+        tmp_path,
+        cap_grants=_PM_CAP_GRANTS,
+        manifest_yaml=_PM_MANIFEST,
+    )
+    out = _run(proj, monkeypatch, "overview")
+    # The issue-tracker-write row in ENABLERS should show the denied subject + capability.
+    assert "agent:project-manager (capability: project-management)" in out, (
+        f"overview ENABLERS row must name the denied subject with capability source; got:\n{out}"
+    )

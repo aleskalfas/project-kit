@@ -722,17 +722,67 @@ def _active_profile_grants(target_root: str, config: dict[str, Any]) -> list[dic
     return []
 
 
+def _capability_fragment_grants(target_root: str) -> list[dict[str, Any]]:
+    """Grants contributed by installed capabilities (ADR-016).
+
+    Walks the manifest ``components:`` list (NOT a glob of ``.pkit/capabilities/``)
+    and for each component of kind ``capability`` reads its grants fragment at
+    ``.pkit/capabilities/<name>/permissions/grants.yaml`` if present. An
+    uninstalled or orphan capability directory contributes nothing — only
+    manifest-registered components count.
+
+    Each grant dict is annotated with a ``_capability`` key naming the source
+    capability; ``load_model`` carries this through for the reporting layer
+    (``pkit permissions overview`` / ``explain``). The ``_capability`` key is
+    stripped before the model is passed to ``decide()`` — ``decide()`` only
+    reads ``subject``, ``privilege``, ``effect``, and ``scope``.
+
+    Stdlib-safe (ADR-002 / ADR-003 same-code invariant): reads files through
+    the existing ``load_yaml`` / ``_stdlib_load_yaml`` fallback; no third-party
+    dependency, no ``src/project_kit`` import.
+    """
+    import os.path
+
+    manifest_path = os.path.join(target_root, ".pkit", "manifest.yaml")
+    if not _exists(manifest_path):
+        return []
+    manifest = load_yaml(manifest_path)
+    out: list[dict[str, Any]] = []
+    for component in manifest.get("components", []) or []:
+        if not isinstance(component, dict):
+            continue
+        if component.get("kind") != "capability":
+            continue
+        name = component.get("name")
+        if not name:
+            continue
+        frag_path = os.path.join(
+            target_root, ".pkit", "capabilities", name, "permissions", "grants.yaml"
+        )
+        if not _exists(frag_path):
+            continue
+        doc = load_yaml(frag_path)
+        for grant in doc.get("grants", []) or []:
+            if isinstance(grant, dict):
+                annotated = dict(grant)
+                annotated["_capability"] = name
+                out.append(annotated)
+    return out
+
+
 def load_model(target_root: str, catalog: dict[str, Any]) -> dict[str, Any]:
     """Build the effective permission model for a target tree: the catalog-
-    derived guardrail denies, then the active profile's grant-layer, then the
-    adopter's authored grants — unioned in that order — plus posture/
-    ownership_mode from project config.
+    derived guardrail denies, then installed-capability fragments, then the
+    active profile's grant-layer, then the adopter's authored grants — unioned
+    in that order — plus posture/ownership_mode from project config.
 
     This is the SINGLE model loader (ADR-002's same-code invariant): the
     PreToolUse hook and the `pkit permissions` CLI both call it, so they decide
-    and display from byte-identical models. Order is guardrails → profile →
-    adopter (adopter last so manual grants are never clobbered, per ADR-005);
-    `decide()` is deny-wins and order-independent regardless.
+    and display from byte-identical models. Order is guardrails → capability
+    fragments → profile → adopter (adopter last so manual grants are never
+    clobbered, per ADR-005); `decide()` is deny-wins and order-independent
+    regardless. Capability-fragment grants are annotated with ``_capability``
+    for the reporting layer (ADR-016); ``decide()`` ignores the extra key.
     """
     import os.path
 
@@ -747,6 +797,7 @@ def load_model(target_root: str, catalog: dict[str, Any]) -> dict[str, Any]:
         "active_profile": config.get("active_profile"),
         "grants": (
             guardrail_denies(catalog)
+            + _capability_fragment_grants(target_root)
             + _active_profile_grants(target_root, config)
             + list(grants_doc.get("grants", []) or [])
         ),

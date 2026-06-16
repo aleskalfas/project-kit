@@ -447,6 +447,9 @@ _SHIPPED_FILES = [
     # Adopter-authored grants.yaml: block-seq-of-mappings at col 0 — the shape
     # that was broken in issue #55.  Added here so shipped-file parity covers it.
     REPO_ROOT_LOCAL / ".pkit" / "permissions" / "project" / "grants.yaml",
+    # Capability-contributed fragment (ADR-016): must also be parse-identical
+    # through the stdlib fallback so the hook can read it in macOS Seatbelt.
+    REPO_ROOT_LOCAL / ".pkit" / "capabilities" / "project-management" / "permissions" / "grants.yaml",
 ]
 
 # Representative synthetic files that exercise edge cases the shipped files use.
@@ -1122,4 +1125,459 @@ def test_stdlib_path_default_agent_deny_end_to_end(decide_mod, tmp_path, monkeyp
     )
     assert "issue-tracker-write" in why, (
         f"denial reason must name the privilege; got: {why!r}"
+    )
+
+
+# ---- capability-fragment layer (ADR-016) ------------------------------------
+#
+# load_model gains a new layer:
+#   guardrail_denies + capability_fragment_grants + active_profile_grants + adopter_grants
+#
+# Discovery walks the manifest components list; an orphan capability directory
+# with no manifest entry contributes nothing (install-state-as-gate).
+# Capability grants are annotated with _capability for the reporting layer;
+# decide() ignores the extra key (it reads only subject/privilege/effect/scope).
+
+CAP_FRAG_PATH = REPO_ROOT_LOCAL / ".pkit" / "capabilities" / "project-management" / "permissions" / "grants.yaml"
+
+
+def _write_cap_tree(
+    root: Path,
+    *,
+    manifest: str | None = None,
+    cap_name: str = "project-management",
+    cap_grants: str | None = None,
+    project_grants: str | None = None,
+    profile_name: str | None = None,
+    profile_yaml: str | None = None,
+    config: str | None = None,
+) -> None:
+    """Build a minimal project tree with manifest + capability fragment support."""
+    (root / ".pkit" / "schemas").mkdir(parents=True)
+    (root / ".pkit" / "schemas" / "privilege-catalog.yaml").write_text(
+        CATALOG_PATH.read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    if manifest is not None:
+        (root / ".pkit" / "manifest.yaml").write_text(manifest, encoding="utf-8")
+    if cap_grants is not None:
+        cap_perm_dir = root / ".pkit" / "capabilities" / cap_name / "permissions"
+        cap_perm_dir.mkdir(parents=True)
+        (cap_perm_dir / "grants.yaml").write_text(cap_grants, encoding="utf-8")
+    (root / ".pkit" / "permissions" / "project").mkdir(parents=True)
+    if project_grants is not None:
+        (root / ".pkit" / "permissions" / "project" / "grants.yaml").write_text(
+            project_grants, encoding="utf-8"
+        )
+    if config is not None:
+        (root / ".pkit" / "permissions" / "project" / "config.yaml").write_text(
+            config, encoding="utf-8"
+        )
+    if profile_name is not None and profile_yaml is not None:
+        pdir = root / ".pkit" / "permissions" / "profiles"
+        pdir.mkdir(parents=True)
+        (pdir / f"{profile_name}.yaml").write_text(profile_yaml, encoding="utf-8")
+
+
+def test_capability_fragment_grants_loaded_when_manifest_registered(decide_mod, tmp_path):
+    """load_model includes capability fragment grants for manifest-registered capabilities."""
+    _write_cap_tree(
+        tmp_path,
+        manifest=(
+            "schema_version: 1\n"
+            "backbone_version: 1.0.0\n"
+            "components:\n"
+            "  - kind: capability\n"
+            "    name: project-management\n"
+            "    manifest: .pkit/capabilities/project-management/manifest.yaml\n"
+        ),
+        cap_grants=(
+            "schema_version: 1\n"
+            "grants:\n"
+            "  - subject: agent:project-manager\n"
+            "    privilege: '[privilege-catalog:issue-tracker-write]'\n"
+            "    effect: deny\n"
+        ),
+    )
+    catalog = decide_mod.load_catalog(str(tmp_path))
+    model = decide_mod.load_model(str(tmp_path), catalog)
+    cap_grants = [
+        g for g in model["grants"]
+        if g.get("_capability") == "project-management"
+    ]
+    assert cap_grants, "capability fragment grants must appear in the model"
+    assert cap_grants[0]["effect"] == "deny"
+    assert cap_grants[0]["subject"] == "agent:project-manager"
+
+
+def test_orphan_capability_dir_contributes_nothing(decide_mod, tmp_path):
+    """An orphan capability directory not registered in the manifest contributes nothing.
+
+    This is the install-state-as-gate invariant (ADR-016 decision 2): only
+    manifest-registered components contribute fragments; a leftover directory
+    from a botched uninstall or rebase does not change the model.
+    """
+    # Write a capability fragment at the expected path, but NO manifest entry.
+    _write_cap_tree(
+        tmp_path,
+        manifest=(
+            "schema_version: 1\n"
+            "backbone_version: 1.0.0\n"
+            "components: []\n"
+        ),
+        cap_grants=(
+            "schema_version: 1\n"
+            "grants:\n"
+            "  - subject: agent:project-manager\n"
+            "    privilege: '[privilege-catalog:issue-tracker-write]'\n"
+            "    effect: deny\n"
+        ),
+    )
+    catalog = decide_mod.load_catalog(str(tmp_path))
+    model = decide_mod.load_model(str(tmp_path), catalog)
+    cap_grants = [g for g in model["grants"] if g.get("_capability")]
+    assert not cap_grants, (
+        "orphan capability directory must NOT contribute grants — "
+        "only manifest-registered capabilities are install-gated"
+    )
+
+
+def test_capability_deny_survives_autonomous_profile_allow_deny_wins(decide_mod, tmp_path):
+    """Pinned dependency test (ADR-016 / critic G-2).
+
+    With the project-management capability installed and the 'autonomous' profile
+    active (which grants issue-tracker to all), a raw 'gh issue edit' by
+    agent:project-manager still resolves to DENY — proving:
+
+    (a) The capability deny overrides the profile allow via deny-wins (order-independent).
+    (b) issue-tracker-write is independently recognized for the mutation command.
+    (c) The capability fragment layer sits before the profile layer, but deny-wins
+        makes the result invariant to ordering — the deny always surfaces.
+    """
+    autonomous_profile = (
+        "schema_version: 1\n"
+        "description: test autonomous\n"
+        "posture: lenient\n"
+        "grants:\n"
+        "  - subject: all\n"
+        "    privilege:\n"
+        "      - '[privilege-catalog:vcs]'\n"
+        "      - '[privilege-catalog:issue-tracker]'\n"
+        "      - '[privilege-catalog:kit]'\n"
+        "      - '[privilege-catalog:repo-read]'\n"
+        "    effect: allow\n"
+    )
+    _write_cap_tree(
+        tmp_path,
+        manifest=(
+            "schema_version: 1\n"
+            "backbone_version: 1.0.0\n"
+            "components:\n"
+            "  - kind: capability\n"
+            "    name: project-management\n"
+            "    manifest: .pkit/capabilities/project-management/manifest.yaml\n"
+        ),
+        cap_grants=(
+            "schema_version: 1\n"
+            "grants:\n"
+            "  - subject: agent:project-manager\n"
+            "    privilege: '[privilege-catalog:issue-tracker-write]'\n"
+            "    effect: deny\n"
+        ),
+        profile_name="autonomous",
+        profile_yaml=autonomous_profile,
+        config=(
+            "schema_version: 1\n"
+            "ownership_mode: additive\n"
+            "posture: lenient\n"
+            "active_profile: autonomous\n"
+        ),
+    )
+    catalog = decide_mod.load_catalog(str(tmp_path))
+    model = decide_mod.load_model(str(tmp_path), catalog)
+
+    # Prove (a): the profile grants issue-tracker to all.
+    profile_grants = [
+        g for g in model["grants"]
+        if g.get("subject") == "all" and g.get("effect") == "allow"
+        and "issue-tracker" in str(g.get("privilege", ""))
+    ]
+    assert profile_grants, "autonomous profile must grant issue-tracker to all"
+
+    # Prove (b): issue-tracker-write is recognized for gh issue edit.
+    request = _bash("gh issue edit 53 --body 'new'", "agent:project-manager")
+    hits = decide_mod.recognized_privileges(catalog, request)
+    assert "issue-tracker-write" in hits, (
+        f"issue-tracker-write must recognize gh issue edit; got {hits}"
+    )
+
+    # Prove (c): deny-wins — the capability deny overrides the profile allow.
+    d, why = decide_mod.decide(model, catalog, request)
+    assert d == "deny", (
+        f"capability deny must override autonomous profile allow via deny-wins; "
+        f"got {d!r}: {why}"
+    )
+    assert "issue-tracker-write" in why
+
+
+def test_capability_deny_under_autonomous_via_stdlib_path(decide_mod, tmp_path, monkeypatch):
+    """Pinned deny-under-autonomous test through the stdlib fallback path.
+
+    Same as test_capability_deny_survives_autonomous_profile_allow_deny_wins but
+    with ruamel blocked — proves the enforcement holds through the zero-dep hook's
+    actual runtime (ADR-002 / ADR-003 same-code invariant).
+    """
+    import builtins
+    real_import = builtins.__import__
+
+    def _block_ruamel(name, *args, **kwargs):
+        if "ruamel" in name:
+            raise ImportError(f"simulated missing ruamel: {name}")
+        return real_import(name, *args, **kwargs)
+
+    autonomous_profile = (
+        "schema_version: 1\n"
+        "description: test autonomous\n"
+        "posture: lenient\n"
+        "grants:\n"
+        "  - subject: all\n"
+        "    privilege:\n"
+        "      - '[privilege-catalog:vcs]'\n"
+        "      - '[privilege-catalog:issue-tracker]'\n"
+        "      - '[privilege-catalog:kit]'\n"
+        "      - '[privilege-catalog:repo-read]'\n"
+        "    effect: allow\n"
+    )
+    _write_cap_tree(
+        tmp_path,
+        manifest=(
+            "schema_version: 1\n"
+            "backbone_version: 1.0.0\n"
+            "components:\n"
+            "  - kind: capability\n"
+            "    name: project-management\n"
+            "    manifest: .pkit/capabilities/project-management/manifest.yaml\n"
+        ),
+        cap_grants=(
+            "schema_version: 1\n"
+            "grants:\n"
+            "  - subject: agent:project-manager\n"
+            "    privilege: '[privilege-catalog:issue-tracker-write]'\n"
+            "    effect: deny\n"
+        ),
+        profile_name="autonomous",
+        profile_yaml=autonomous_profile,
+        config=(
+            "schema_version: 1\n"
+            "ownership_mode: additive\n"
+            "posture: lenient\n"
+            "active_profile: autonomous\n"
+        ),
+    )
+
+    monkeypatch.setattr(builtins, "__import__", _block_ruamel)
+
+    catalog_stdlib = decide_mod.load_catalog(str(tmp_path))
+    model_stdlib = decide_mod.load_model(str(tmp_path), catalog_stdlib)
+
+    payload = {
+        "tool_name": "Bash",
+        "tool_input": {"command": "gh issue edit 53 --body 'new body'"},
+        "cwd": "/r",
+        "agent_type": "project-manager",
+    }
+    d, why = decide_mod.hook_decide(model_stdlib, catalog_stdlib, payload)
+    assert d == "deny", (
+        f"stdlib path must enforce capability deny even with autonomous profile active; "
+        f"got {d!r}: {why}"
+    )
+    assert "issue-tracker-write" in why
+
+
+def test_removing_manual_grant_does_not_weaken_enforcement(decide_mod, tmp_path):
+    """Removing the manual project grant does not weaken enforcement — the fragment now provides it.
+
+    This is the end-to-end test proving that with the capability installed and
+    the project grants.yaml empty (grants: []), the deny still comes from the
+    capability fragment and hook_decide still returns deny for gh issue edit.
+    """
+    _write_cap_tree(
+        tmp_path,
+        manifest=(
+            "schema_version: 1\n"
+            "backbone_version: 1.0.0\n"
+            "components:\n"
+            "  - kind: capability\n"
+            "    name: project-management\n"
+            "    manifest: .pkit/capabilities/project-management/manifest.yaml\n"
+        ),
+        cap_grants=(
+            "schema_version: 1\n"
+            "grants:\n"
+            "  - subject: agent:project-manager\n"
+            "    privilege: '[privilege-catalog:issue-tracker-write]'\n"
+            "    effect: deny\n"
+        ),
+        # Empty project grants — the manual deny is gone.
+        project_grants="schema_version: 1\ngrants: []\n",
+    )
+    catalog = decide_mod.load_catalog(str(tmp_path))
+    model = decide_mod.load_model(str(tmp_path), catalog)
+
+    # No manual deny in model (project grants empty).
+    manual_denies = [
+        g for g in model["grants"]
+        if g.get("subject") == "agent:project-manager"
+        and g.get("effect") == "deny"
+        and not g.get("_capability")
+    ]
+    assert not manual_denies, "no manual deny should be present — only the capability fragment"
+
+    # But enforcement still holds via the fragment.
+    payload = {
+        "tool_name": "Bash",
+        "tool_input": {"command": "gh issue edit 53 --body 'new body'"},
+        "cwd": "/r",
+        "agent_type": "project-manager",
+    }
+    d, why = decide_mod.hook_decide(model, catalog, payload)
+    assert d == "deny", (
+        f"capability fragment must provide the deny even with empty project grants; "
+        f"got {d!r}: {why}"
+    )
+    assert "issue-tracker-write" in why
+
+
+def test_capability_fragment_grants_annotated_with_capability_key(decide_mod, tmp_path):
+    """Capability fragment grants carry the _capability annotation for the reporting layer.
+
+    The _capability annotation is how pkit permissions overview / explain
+    surfaces 'contributed by capability: <name>' (ADR-016 narrowing-but-reported).
+    decide() ignores the extra key — it only reads subject/privilege/effect/scope.
+    """
+    _write_cap_tree(
+        tmp_path,
+        manifest=(
+            "schema_version: 1\n"
+            "backbone_version: 1.0.0\n"
+            "components:\n"
+            "  - kind: capability\n"
+            "    name: project-management\n"
+            "    manifest: .pkit/capabilities/project-management/manifest.yaml\n"
+        ),
+        cap_grants=(
+            "schema_version: 1\n"
+            "grants:\n"
+            "  - subject: agent:project-manager\n"
+            "    privilege: '[privilege-catalog:issue-tracker-write]'\n"
+            "    effect: deny\n"
+        ),
+    )
+    catalog = decide_mod.load_catalog(str(tmp_path))
+    model = decide_mod.load_model(str(tmp_path), catalog)
+
+    cap_grants = [g for g in model["grants"] if g.get("_capability")]
+    assert cap_grants, "capability grants must carry the _capability annotation"
+    assert cap_grants[0]["_capability"] == "project-management"
+
+    # decide() must still work with the annotated grant (the extra key is ignored).
+    d, why = decide_mod.decide(
+        model, catalog,
+        _bash("gh issue edit 53", "agent:project-manager"),
+    )
+    assert d == "deny", f"decide() must work with _capability-annotated grants; got {d!r}: {why}"
+
+
+def test_capability_fragment_layered_before_profile_and_adopter(decide_mod, tmp_path):
+    """Capability fragments sit before the profile and adopter grants in the model.
+
+    ADR-016 decision 1: ordering is guardrails → capability fragments → profile →
+    adopter. This test verifies the positional ordering in the grants list.
+    """
+    _write_cap_tree(
+        tmp_path,
+        manifest=(
+            "schema_version: 1\n"
+            "backbone_version: 1.0.0\n"
+            "components:\n"
+            "  - kind: capability\n"
+            "    name: project-management\n"
+            "    manifest: .pkit/capabilities/project-management/manifest.yaml\n"
+        ),
+        cap_grants=(
+            "schema_version: 1\n"
+            "grants:\n"
+            "  - subject: agent:project-manager\n"
+            "    privilege: '[privilege-catalog:issue-tracker-write]'\n"
+            "    effect: deny\n"
+        ),
+        profile_name="team",
+        profile_yaml=(
+            "schema_version: 1\n"
+            "description: team\n"
+            "posture: lenient\n"
+            "grants:\n"
+            "  - subject: all\n"
+            "    privilege: '[privilege-catalog:vcs]'\n"
+            "    effect: allow\n"
+        ),
+        config=(
+            "schema_version: 1\n"
+            "ownership_mode: additive\n"
+            "posture: lenient\n"
+            "active_profile: team\n"
+        ),
+        project_grants=(
+            "schema_version: 1\n"
+            "grants:\n"
+            "  - subject: agent:critic\n"
+            "    privilege: '[privilege-catalog:repo-read]'\n"
+            "    effect: allow\n"
+        ),
+    )
+    catalog = decide_mod.load_catalog(str(tmp_path))
+    model = decide_mod.load_model(str(tmp_path), catalog)
+    grants = model["grants"]
+
+    cap_idx = next(
+        i for i, g in enumerate(grants)
+        if g.get("_capability") == "project-management"
+    )
+    profile_idx = next(
+        i for i, g in enumerate(grants)
+        if g.get("subject") == "all" and g.get("effect") == "allow"
+        and not g.get("_capability")
+    )
+    adopter_idx = next(
+        i for i, g in enumerate(grants)
+        if g.get("subject") == "agent:critic"
+    )
+    assert cap_idx < profile_idx, (
+        "capability fragment must come before profile grants in the model"
+    )
+    assert profile_idx < adopter_idx, (
+        "profile grants must come before adopter grants in the model"
+    )
+
+
+def test_stdlib_fallback_parses_capability_fragment_identically_to_ruamel(decide_mod):
+    """The stdlib fallback must parse the shipped capability fragment identically to ruamel.
+
+    Same-code invariant (ADR-002): if the hook runs in a macOS Seatbelt context
+    without ruamel, it must parse the capability fragment file through
+    _stdlib_load_yaml and get byte-identical results.
+    """
+    try:
+        from ruamel.yaml import YAML
+        import io
+        yaml = YAML(typ="safe")
+    except ImportError:
+        pytest.skip("ruamel.yaml not available")
+
+    text = CAP_FRAG_PATH.read_text(encoding="utf-8")
+    ruamel_result = yaml.load(io.StringIO(text)) or {}
+    stdlib_result = decide_mod._stdlib_load_yaml(text)
+    assert stdlib_result == ruamel_result, (
+        f"stdlib fallback parse differs from ruamel for capability grants.yaml:\n"
+        f"  stdlib: {stdlib_result!r}\n"
+        f"  ruamel: {ruamel_result!r}"
     )

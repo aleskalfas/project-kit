@@ -209,7 +209,9 @@ def explain(target_root: Path, agent: str | None) -> str:
             eff = g.get("effect", "allow")
             mark = "  guardrail" if is_guardrail_grant(g) else ""
             scope = f"  scope: {', '.join(g['scope'])}" if g.get("scope") else ""
-            lines.append(f"  {eff:5} {names:{name_w}}{mark}{scope}")
+            cap = g.get("_capability")
+            cap_note = f"  (contributed by capability: {cap})" if cap else ""
+            lines.append(f"  {eff:5} {names:{name_w}}{mark}{scope}{cap_note}")
 
     if not any(not is_guardrail_grant(g) for g in model["grants"]):
         lines.append(
@@ -269,6 +271,13 @@ def overview(target_root: Path) -> str:
             grants.setdefault(pid, {"allow": [], "deny": []}).setdefault(eff, []).append(
                 g.get("subject", "?")
             )
+
+    # Capability-contributed denies (ADR-016 narrowing-but-reported): collect all
+    # grants whose source is a capability fragment (annotated with _capability).
+    cap_deny_grants: list[dict] = [
+        g for g in model.get("grants", [])
+        if g.get("_capability") and g.get("effect") == "deny"
+    ]
 
     guardrails = sorted(p for p, s in privileges.items() if s.get("guardrail"))
     enablers = sorted(p for p, s in privileges.items() if not s.get("guardrail"))
@@ -377,9 +386,32 @@ def overview(target_root: Path) -> str:
     for pid in enablers:
         allowed = grants.get(pid, {}).get("allow", [])
         granted = ", ".join(allowed) if allowed else "—"
-        lines.append(_row(pid, f"granted to: {granted}"))
+        # Annotate any subjects that are capability-denied on this privilege.
+        denied_by_cap = [
+            f"{g['subject']} (capability: {g['_capability']})"
+            for g in cap_deny_grants
+            if pid in _grant_priv_ids(g.get("privilege"))
+        ]
+        deny_note = f"  DENIED for: {', '.join(denied_by_cap)}" if denied_by_cap else ""
+        lines.append(_row(pid, f"granted to: {granted}{deny_note}"))
     if not enablers:
         lines.append("  (none)")
+
+    # Mandatory capability-deny attribution (ADR-016 narrowing-but-reported):
+    # surface every capability-contributed deny with its source capability so
+    # the operator can always see why an agent is denied a privilege.
+    if cap_deny_grants:
+        lines += [
+            "",
+            cli_render.style("heading", "CAPABILITY-CONTRIBUTED DENIES — auto-applied by installed capabilities (ADR-016)"),
+        ]
+        for g in cap_deny_grants:
+            subj = g.get("subject", "?")
+            cap = g.get("_capability", "?")
+            privs = ", ".join(_grant_priv_ids(g.get("privilege")))
+            lines.append(
+                f"  {subj} — DENY {privs}  (contributed by capability: {cap})"
+            )
 
     cap_note = (
         "ships with core; capability:<name> = added by an installed capability"

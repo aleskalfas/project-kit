@@ -68,19 +68,28 @@ validating scripts:
 It does **not** match `gh issue view`, `gh pr view`, `gh api`, or any other `gh`
 subcommand — only mutations.
 
-The project carries an explicit **deny** grant for `agent:project-manager` on
-`issue-tracker-write` (in `.pkit/permissions/project/grants.yaml`).  When
-project-manager calls `gh issue edit`, the request matches **two** privileges:
+### Where the deny lives (ADR-016)
+
+The deny is a **capability-contributed grant** shipped by the project-management
+capability at `.pkit/capabilities/project-management/permissions/grants.yaml`.
+It is **not** a manual grant in `project/grants.yaml` (which stays empty for this
+policy). `load_model` discovers it by walking the manifest `components:` list;
+a capability directory not registered in the manifest contributes nothing
+(install-state-as-gate). Run `pkit permissions overview` to see it listed under
+"CAPABILITY-CONTRIBUTED DENIES".
+
+When project-manager calls `gh issue edit`, the request matches **two** privileges:
 
 - `issue-tracker` (the broad `cmd: gh` recognizer) — **allowed** (once
-  `issue-tracker` is granted to the agent)
-- `issue-tracker-write` (the mutation pattern) — **denied**
+  `issue-tracker` is granted to the agent via the active profile)
+- `issue-tracker-write` (the mutation pattern) — **denied** by the capability fragment
 
 `decide()` provides order-independent deny-wins semantics: it continues
 iterating all effective grants after setting `matched_allow = True` for an
 allow grant, and short-circuits immediately on any deny-overlap hit — so the
-explicit deny wins regardless of grant ordering.  No change to `decide.py` was
-required; the existing loop already guarantees this property.
+explicit deny wins regardless of grant ordering, even when the `autonomous`
+profile grants `issue-tracker` to all.  No change to `decide.py` was required;
+the existing loop already guarantees this property.
 
 The capability scripts' internal `gh` calls are **unaffected**: they run inside
 the `pkit` subprocess, below the PreToolUse hook layer — they are not Claude

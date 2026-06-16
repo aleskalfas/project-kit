@@ -1,5 +1,6 @@
 schema_version: 1
-grants:
-- subject: agent:project-manager
-  privilege: '[privilege-catalog:issue-tracker-write]'
-  effect: deny
+# The agent:project-manager / issue-tracker-write deny has moved to the
+# project-management capability fragment (.pkit/capabilities/project-management/
+# permissions/grants.yaml) per ADR-016. This file remains for project-specific
+# manual grants; no capability policy belongs here.
+grants: []
