@@ -7,15 +7,25 @@
 # ///
 """Project-management capability — promote-issue (DEC-026 workflow wrapper).
 
-Promotes an issue from Todo → Backlog by attaching a Milestone and
-recording the authorisation source as an audit comment. Per DEC-026:
+Promotes an issue from Todo → Backlog, recording the authorisation source
+as an audit comment. Per DEC-026 (as amended for issue #61):
 
-    promote-issue <N> --milestone "<M>" --reason "<R>"
+    promote-issue <N> [--milestone "<M>"] --reason "<R>"
+
+Two paths:
+  - `--milestone` given → resolves <M> to an OPEN milestone (by number or
+    exact title), attaches it via `gh issue edit --milestone`, posts the
+    audit comment, then calls `move-issue --to backlog`.
+  - `--milestone` omitted → promotes on `--reason` alone: posts the same
+    audit comment (already milestone-free), skips `_attach_milestone`, then
+    calls `move-issue --to backlog`. No milestone resolution is attempted.
 
 Gates per DEC-026:
   - `--reason` non-empty (the authorisation source — typically the
-    user's verbal in-session request).
-  - `<M>` matches the exact title of an OPEN milestone in the repo.
+    user's verbal in-session request; required in both paths).
+  - When `--milestone` is given, `<M>` must match the exact title of an
+    OPEN milestone in the repo (given-but-unresolvable is still an error;
+    it is never silently downgraded to milestone-free).
   - Current Status = Todo (delegated to `move-issue`'s state machine).
 
 Composes over `move-issue.py`: this wrapper writes the audit comment
@@ -23,9 +33,11 @@ first, then invokes `move-issue --to backlog`. The audit comment is
 idempotent via DEC-024's template-stamp discipline.
 
 Self-contained via PEP 723; runs via
+  uv run --script .pkit/capabilities/project-management/scripts/promote-issue.py 42 --reason "PM approved"
   uv run --script .pkit/capabilities/project-management/scripts/promote-issue.py 42 --milestone "v1" --reason "PM approved"
 
 Or via the dispatcher (per COR-021):
+  pkit project-management promote-issue 42 --reason "PM approved"
   pkit project-management promote-issue 42 --milestone "v1" --reason "PM approved"
 
 Exit codes:
@@ -74,10 +86,13 @@ def main() -> int:
     )
     parser.add_argument(
         "--milestone",
-        required=True,
+        default=None,
         help=(
             "OPEN milestone to attach. Accepts the milestone number "
-            "(e.g. `6`) or its exact title (e.g. `Milestone 1: ...`)."
+            "(e.g. `6`) or its exact title (e.g. `Milestone 1: ...`). "
+            "Optional — omit to promote on --reason alone (no milestone "
+            "attached). When given, must match an OPEN milestone exactly; "
+            "an unresolvable value is always an error."
         ),
     )
     parser.add_argument(
@@ -127,26 +142,42 @@ def main() -> int:
         )
         return 2
 
-    # Resolve --milestone (accepts number OR title; per #217). The title
-    # is what downstream `gh issue edit --milestone` wants, so normalise
-    # to the title form regardless of input shape.
-    resolved = resolve_milestone(str(args.milestone), config)
-    if resolved is None:
-        print(
-            f"error: milestone {args.milestone!r} did not match any OPEN "
-            "milestone (tried as number, then as title). "
-            "List with `gh api repos/<owner>/<repo>/milestones?state=open`.",
-            file=sys.stderr,
-        )
-        return 2
-    args.milestone = resolved.title
+    # Resolve --milestone when given (accepts number OR title; per #217).
+    # The title is what downstream `gh issue edit --milestone` wants, so
+    # normalise to the title form regardless of input shape.
+    # When --milestone is omitted, skip resolution entirely — promoting on
+    # --reason alone is a valid path per the DEC-026 #61 amendment.
+    milestone_title: str | None = None
+    if args.milestone is not None:
+        resolved = resolve_milestone(str(args.milestone), config)
+        if resolved is None:
+            print(
+                f"error: milestone {args.milestone!r} did not match any OPEN "
+                "milestone (tried as number, then as title). "
+                "List with `gh api repos/<owner>/<repo>/milestones?state=open`.",
+                file=sys.stderr,
+            )
+            return 2
+        milestone_title = resolved.title
 
     print(f"promote-issue: #{args.issue_number}")
-    print(f"  milestone: {args.milestone}")
+    if milestone_title is not None:
+        print(f"  milestone: {milestone_title}")
+    else:
+        print("  milestone: (none — promoting on --reason alone)")
     print(f"  reason:    {reason}")
 
     if args.dry_run:
-        print("(dry-run: would post audit comment, attach milestone, and call move-issue --to backlog.)")
+        if milestone_title is not None:
+            print(
+                "(dry-run: would post audit comment, attach milestone "
+                f"{milestone_title!r}, and call move-issue --to backlog.)"
+            )
+        else:
+            print(
+                "(dry-run: would post audit comment and call move-issue --to backlog "
+                "(no milestone — --reason-only path).)"
+            )
         return 0
 
     if not args.yes and sys.stdin.isatty():
@@ -155,7 +186,9 @@ def main() -> int:
             print("aborted.", file=sys.stderr)
             return 0
 
-    # Audit comment (idempotent via stamp marker).
+    # Audit comment (idempotent via stamp marker). The text is milestone-free
+    # by design — it works for both the milestone-given and milestone-omitted
+    # paths without a template fork.
     audit_body = (
         f"{AUDIT_STAMP}\n\nPromoted Todo → Backlog by PM on user's "
         f"in-session request: {reason}"
@@ -163,9 +196,10 @@ def main() -> int:
     if not _post_audit_comment_idempotent(args.issue_number, audit_body, config):
         return 2
 
-    # Attach the milestone via gh issue edit.
-    if not _attach_milestone(args.issue_number, args.milestone, config):
-        return 2
+    # Attach the milestone via gh issue edit — only when one was given.
+    if milestone_title is not None:
+        if not _attach_milestone(args.issue_number, milestone_title, config):
+            return 2
 
     # Detect the issue's current state before calling move-issue. If
     # the issue is already at Backlog or further (cascade may have
@@ -176,23 +210,31 @@ def main() -> int:
     # special-case the already-promoted state.
     current_state = _detect_state_from_labels(args.issue_number, config)
     if current_state in ("backlog", "in-progress", "review", "done"):
+        if milestone_title is not None:
+            idempotent_detail = "milestone reattached, audit recorded"
+        else:
+            idempotent_detail = "audit recorded"
         print(
             f"\n[ok] #{args.issue_number} already at state:{current_state} "
-            f"(milestone reattached, audit recorded; no state transition needed)."
+            f"({idempotent_detail}; no state transition needed)."
         )
         return 0
 
     # Compose over move-issue for the actual state transition.
     rc = _invoke_move_issue(args.issue_number, "backlog", args.capability_root)
     if rc != 0:
+        applied = "audit comment + milestone" if milestone_title is not None else "audit comment"
         print(
-            f"[warn] audit comment + milestone applied; move-issue exited {rc}. "
+            f"[warn] {applied} applied; move-issue exited {rc}. "
             "Re-run this wrapper or run `move-issue --to backlog` to complete the transition.",
             file=sys.stderr,
         )
         return rc
 
-    print(f"\n[ok] promoted #{args.issue_number} Todo → Backlog (milestone: {args.milestone})")
+    if milestone_title is not None:
+        print(f"\n[ok] promoted #{args.issue_number} Todo → Backlog (milestone: {milestone_title})")
+    else:
+        print(f"\n[ok] promoted #{args.issue_number} Todo → Backlog (no milestone)")
     return 0
 
 
@@ -232,7 +274,6 @@ def _detect_state_from_labels(issue_number: int, config: dict) -> str | None:
 # removed in #217 — both moved to `_lib/milestone.py` along with the
 # `resolve_milestone(arg, config)` helper that handles either number
 # or title input. Call sites switched to the lib resolver.
-    return out
 
 
 # ---- side-effects ------------------------------------------------------

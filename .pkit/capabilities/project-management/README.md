@@ -195,7 +195,7 @@ For the standard development flow, seven verb-subject commands compose over `mov
 
 | Command | Issue transition | Side-effects |
 |---|---|---|
-| `promote-issue <N> --milestone "<M>" --reason "<R>"` | Todo → Backlog | Audit comment + milestone attach |
+| `promote-issue <N> [--milestone "<M>"] --reason "<R>"` | Todo → Backlog | Audit comment; milestone attach only when `--milestone` is given (omit to promote on `--reason` alone — per DEC-026 #61 amendment) |
 | `start-work <N>` | Backlog → In Progress | Branch `<type>/<N>-<slug>` + assignee |
 | `create-draft <N>` | (none — issue stays In Progress) | Opens draft PR via `gh pr create --draft` |
 | `review-work <N> [--reviewer @<u>]` | In Progress → Review | Opens ready PR or flips draft→ready; assigns reviewers |
