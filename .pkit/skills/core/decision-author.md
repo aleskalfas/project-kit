@@ -39,7 +39,11 @@ Read `CONTRIBUTING.md`'s **Adding a core record (COR)** section. Three disciplin
 - **Project-neutrality** — the record must make sense in any adopting project. Framework-source-specific decisions (CLI binary name, self-hosting, distribution channel) belong in PRJ records, not COR.
 - **Principles, not inventory** — capture durable rules-among-alternatives, not path lists, command lists, or current-state inventories. Inventory belongs in reference docs that the COR points at.
 
-For **PRJ records**, project-neutrality does not apply (PRJ records are explicitly project-specific). The other two disciplines still apply.
+A fourth discipline applies to **every** record type (COR, PRJ, ADR):
+
+- **Lead with meaning** — the record opens with a short declarative title and a plain-language summary a reader grasps in under a minute, *before* the rigor; cross-references serve the sentence (roughly one per point), not pile five-deep. Keep the depth, but put a readable on-ramp in front of it. See CONTRIBUTING.md's "Lead with meaning". This guards against the wall-of-jargon record whose decision is unrecoverable on a first read.
+
+For **PRJ records**, project-neutrality does not apply (PRJ records are explicitly project-specific). The other disciplines still apply.
 
 For **ADR records** (per COR-025), project-neutrality does not apply either, and the *audience* is the project's architects + future maintainers + on-call engineers (not the methodology corpus). One additional discipline replaces project-neutrality:
 
@@ -87,6 +91,7 @@ Before showing the draft, walk it against each applicable discipline:
 - *Project-neutrality* (COR only): would this record fit naturally in `example-brownfield` or `example-greenfield` adopting the methodology?
 - *Architectural fit* (ADR only): does the record answer "what did we build / why these boundaries / why this technology"? If it answers "how do we work / what's our process", it belongs in PRJ.
 - *Principles-not-inventory*: does the body capture rules-among-alternatives, or has it slipped into enumerating state? Tag candidate content as *rule* or *inventory*; inventory gets a one-line cross-reference, not enumeration.
+- *Lead with meaning* (every record type): is the title short and declarative? Does a plain-language summary open the record so a reader grasps the decision in under a minute before the rigor? Do any sentences pile up cross-references and bury their own meaning? If the decision isn't recoverable on a first read, revise the on-ramp before showing it.
 
 If any check fails, revise.
 

@@ -122,6 +122,7 @@ Before showing the draft, walk it against:
 - **Universal applicability** (core namespace only). Would the agent read naturally for `example-greenfield` and `example-brownfield` in identical form? If it leaks framework-source vocabulary (`pkit` specifics, project-kit decision IDs that don't apply to adopters), demote to project namespace or generalise.
 - **Role-not-procedure.** The body should read as "what you are and how you think", not as "step 1 do this, step 2 do that". Procedures live in skills the agent invokes.
 - **Description quality.** Read the description aloud. Does it tell the harness's auto-loader exactly when this agent applies? Sharpen until yes.
+- **Lead with meaning.** The agent opens by saying plainly what it is and when to reach for it, before the detail; sentences cite what they need (roughly one reference per point), not pile five-deep. An agent definition a reader can't grasp on a first pass has the same failure mode as a cryptic record. See CONTRIBUTING.md's "Lead with meaning".
 
 If any check fails, revise.
 
