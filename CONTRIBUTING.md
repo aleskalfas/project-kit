@@ -98,6 +98,18 @@ Examples in the corpus to read for shape:
 
 When the boundary blurs and a single area's specifics outgrow a general COR, that area earns its own focused record — not by stuffing more state into the existing one. Workflow bundles is the most likely first such split.
 
+### Lead with meaning
+
+A record earns its keep only if a reader can grasp what it decides. Correctness is necessary but not sufficient — a record that is accurate yet unreadable has failed, because the reader can't extract the decision without reverse-engineering it.
+
+So every record **leads with meaning**:
+
+- **A short, declarative title.** State the decision, not a clause-stacked description of its mechanism. "Capabilities contribute permission grants through a model-composed fragment" — not a twenty-five-word run-on naming every layer.
+- **A plain-language summary first.** Open with what the record decides and why it matters, in prose a reader grasps in under a minute, *before* the rigor. The detailed decision, the layering, the citations, and the rejected alternatives come **after** the summary — not instead of it.
+- **Cross-references serve the sentence.** Cite what a point actually needs — roughly one reference per point. A sentence carrying five bracketed citations buries its own meaning; the reader chases links instead of learning the substance. Reference by meaning first, then the identifier (the authoring twin of `.pkit/rules/core.md`'s reference-by-meaning rule).
+
+This is a principle, not a style sheet: don't pad records with mandated boilerplate, and don't strip the rigor — keep the depth, but put a readable on-ramp in front of it. The failure mode it guards against is the wall-of-jargon record whose decision is unrecoverable on a first read.
+
 ---
 
 ## Adding or evolving a project record (PRJ) in project-kit

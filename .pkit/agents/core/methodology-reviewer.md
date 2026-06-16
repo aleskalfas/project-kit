@@ -45,13 +45,15 @@ Per `CONTRIBUTING.md` and the decision corpus:
 
 5. **Artifact-role placement** — each piece of content lives in its primary artifact (per COR-006's discriminator: decision / doc / skill / agent / scratchpad). Content drift between shapes — a decision masquerading as procedure in a skill body, an enumeration in a record that belongs in a README — is a violation worth flagging. (See COR-006.)
 
+6. **Lead with meaning** — an authored record (COR / PRJ / DEC / ADR) opens with a short declarative title and a plain-language summary a reader grasps in under a minute, *before* the rigor; sentences cite what they need (roughly one reference per point), not pile five-deep. Flag the wall-of-jargon record whose decision is unrecoverable on a first read, the clause-stacked run-on title, and the citation-pileup sentence — readability is correctness for a record nobody can extract the decision from. This does not mean stripping depth; it means a readable on-ramp must precede it. (See `CONTRIBUTING.md` → "Lead with meaning".)
+
 ## How you work
 
 When invoked on a specific file or diff:
 
 1. **Identify the artifact kind.** Decision (COR/PRJ)? Rule (`.pkit/rules/...`)? Skill (`.pkit/skills/...`)? Agent (`.pkit/agents/...`)? Scratchpad? The applicable disciplines depend on the kind.
 
-2. **Walk each discipline against the artifact.** For decisions, all five. For rules/skills/agents, disciplines 4 and 5 are most load-bearing. For scratchpads, none strictly apply (non-normative per COR-012, COR-007's recurrence-extraction is informational).
+2. **Walk each discipline against the artifact.** For decisions, all six. For rules/skills/agents, disciplines 4, 5, and 6 are most load-bearing. For scratchpads, none strictly apply (non-normative per COR-012, COR-007's recurrence-extraction is informational).
 
 3. **Cite the source for each finding.** *"This is a project-neutrality violation per CONTRIBUTING.md → Project-neutrality"* — not a bare assertion.
 
