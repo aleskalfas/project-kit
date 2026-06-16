@@ -41,7 +41,7 @@ The per-layer invocation principle (workflow wrappers / substrate primitives / g
 
 | Command | DEC-006 transition (delegated to `move-issue`) | PR-state effect | Composite gates + side-effects |
 |---|---|---|---|
-| `promote-issue <N> --milestone "<M>" --reason "<R>"` | Todo → Backlog | none | `--reason` non-empty; `<M>` matches exact title of an OPEN milestone; current `Status = Todo`. Posts audit comment, then calls `move-issue --to backlog`. |
+| `promote-issue <N> [--milestone "<M>"] --reason "<R>"` | Todo → Backlog | none | `--reason` non-empty; **if** `--milestone` is given, `<M>` matches exact title of an OPEN milestone (omit it to promote milestone-free); current `Status = Todo`. Posts audit comment, attaches the milestone when given, then calls `move-issue --to backlog`. |
 | `start-work <N>` | Backlog → In Progress | none | Current user is a team member (DEC-021 open-mode degrades to no-op); issue not assigned to someone else; if a branch exists, matches `<type>/<N>-<slug>`. Creates branch, sets assignee, then calls `move-issue --to in-progress`. |
 | `create-draft <N>` | (no transition; issue stays In Progress) | None → Draft | Branch exists per `<type>/<N>-<slug>`; at least one commit not on `main`. Opens a *draft* PR via `gh pr create --draft`. No reviewer assignment yet. Used when the PR is needed for CI but the work isn't yet ready for review. |
 | `review-work <N>` | In Progress → Review | None → Ready, **or** Draft → Ready | Current branch matches `<type>/<N>-<slug>`; branch's `<type>` prefix matches issue's `type:*` label per DEC-013; PR title is Conventional Commits. Opens a ready PR if none exists; flips draft→ready if a draft exists. Assigns reviewers (see "Reviewer assignment" below), then calls `move-issue --to review`. |
@@ -50,6 +50,10 @@ The per-layer invocation principle (workflow wrappers / substrate primitives / g
 | `handoff-issue <N>` | (no state change) | none | Current user is a team member; issue currently in `In Progress` or `Review`. Posts audit comment; calls `gh issue edit --remove-assignee <from> --add-assignee <to>`. No `move-issue` call (no state transition). |
 
 `handoff-issue` exists because the alternative to handing off an in-flight issue is closing it — which loses sub-issues, comments, and branch state. Continuing under a new owner is the common case for vacation, illness, or scope shift.
+
+> **Amendment (#61, under EPIC #59) — `promote-issue --milestone` is optional; the command carries a two-substrate authorisation.** As accepted, the row hard-required `--milestone` to resolve to an OPEN Milestone, which made `promote-issue` unusable in a project that has created no Milestone *instances* (e.g. project-kit: a Milestone category is declared but no Milestone exists). The only Todo → Backlog path there was `move-issue --to backlog --bypass`, which loses the authorisation-source attribution `promote-issue` exists to capture. The contract now: `--milestone` given → resolve + attach as before; `--milestone` omitted → promote on `--reason` alone, posting the same audit comment and calling `move-issue --to backlog`, with no Milestone attachment. The audit comment text (`Promoted Todo → Backlog by PM on user's in-session request: <reason>`) is already Milestone-free, so no template fork is needed.
+>
+> This broadens the *substrate* of the Todo → Backlog authorisation (Milestone-assignment OR audited verbal reason) without touching its severity — the transition stays **bypassable-with-audit** per [project-management:DEC-006-state-machine-and-cascade] (see that record's #61/#62 amendment, which also records the decline of the proposal to lower the severity for milestone-less projects). The `--reason` is the audit substrate that satisfies the gate when no Milestone is assigned.
 
 ### PR sub-lifecycle and issue-state mapping
 

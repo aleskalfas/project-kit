@@ -2,6 +2,12 @@
 
 Focused on the wrapper-specific gates and helpers — the state-transition
 mechanics live in `move-issue.py` and are tested separately.
+
+Regression tests for #61 (optional --milestone, DEC-026 amendment):
+  - milestone-omitted happy path (promote on --reason alone)
+  - milestone-given happy path (resolve + attach, unchanged)
+  - given-but-unresolvable milestone (still an error, never silently downgraded)
+  - missing --reason (argparse error)
 """
 
 from __future__ import annotations
@@ -9,7 +15,9 @@ from __future__ import annotations
 import importlib.util
 import json
 import sys
+from dataclasses import dataclass
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -203,3 +211,227 @@ def test_attach_milestone_failure(pi, monkeypatch, capsys) -> None:
     monkeypatch.setattr(pi, "gh_run", fake_gh_run)
     assert pi._attach_milestone(42, "v1.0", {}) is False
     assert "cannot attach" in capsys.readouterr().err
+
+
+# ---- main() integration: #61 regression suite -------------------------
+#
+# Tests exercise main() end-to-end, mocking out all I/O and subprocess
+# calls so no gh access is required. This covers the two-path contract:
+#   - --milestone omitted  → reason-only path (no milestone resolution, no attach)
+#   - --milestone given    → resolve + attach (unchanged from pre-#61)
+#   - bad milestone given  → error exit, never silently downgraded
+#   - --reason missing     → argparse error (exit 2)
+
+
+@dataclass
+class _FakeMembership:
+    allowed: bool = True
+    refusal_message: str | None = None
+
+
+@dataclass
+class _FakeMilestone:
+    number: int
+    title: str
+
+
+def _wire_main_mocks(
+    pi,
+    monkeypatch,
+    *,
+    sys_argv: list[str],
+    milestone_obj=None,      # None → resolve_milestone returns None (unresolvable)
+    milestone_resolve_called: list | None = None,
+    attach_called: list | None = None,
+    comment_result: bool = True,
+    move_issue_rc: int = 0,
+    current_state: str | None = None,
+) -> None:
+    """Wire all main() dependencies with controllable fakes."""
+    monkeypatch.setattr(sys, "argv", sys_argv)
+    monkeypatch.setattr(pi, "resolve_capability_root", lambda _: Path("/fake/cap"))
+    monkeypatch.setattr(pi, "load_adopter_config", lambda _: {})
+    monkeypatch.setattr(pi, "_read_members", lambda *_a, **_k: [])
+    monkeypatch.setattr(pi, "resolve_invoker_identity", lambda **_k: MagicMock())
+    monkeypatch.setattr(pi, "check_membership", lambda *_a: _FakeMembership(allowed=True))
+
+    def fake_resolve_milestone(arg, config):
+        if milestone_resolve_called is not None:
+            milestone_resolve_called.append(arg)
+        return milestone_obj
+
+    monkeypatch.setattr(pi, "resolve_milestone", fake_resolve_milestone)
+
+    def fake_attach(issue_number, title, config):
+        if attach_called is not None:
+            attach_called.append(title)
+        return True
+
+    monkeypatch.setattr(pi, "_attach_milestone", fake_attach)
+    monkeypatch.setattr(pi, "_post_audit_comment_idempotent", lambda *_a, **_k: comment_result)
+    monkeypatch.setattr(pi, "_detect_state_from_labels", lambda *_a: current_state)
+    monkeypatch.setattr(pi, "_invoke_move_issue", lambda *_a, **_k: move_issue_rc)
+
+
+# --- milestone-omitted happy path (acceptance criterion 1) ---
+
+
+def test_main_milestone_omitted_promotes_exit_zero(pi, monkeypatch) -> None:
+    """promote-issue <n> --reason '...' (no --milestone) exits 0."""
+    _wire_main_mocks(
+        pi, monkeypatch,
+        sys_argv=["promote-issue", "42", "--reason", "PM triage", "--yes"],
+    )
+    assert pi.main() == 0
+
+
+def test_main_milestone_omitted_skips_resolve(pi, monkeypatch) -> None:
+    """resolve_milestone must NOT be called when --milestone is omitted."""
+    resolve_calls: list = []
+    _wire_main_mocks(
+        pi, monkeypatch,
+        sys_argv=["promote-issue", "42", "--reason", "triage", "--yes"],
+        milestone_resolve_called=resolve_calls,
+    )
+    pi.main()
+    assert resolve_calls == [], "resolve_milestone must not be called when --milestone is absent"
+
+
+def test_main_milestone_omitted_skips_attach(pi, monkeypatch) -> None:
+    """_attach_milestone must NOT be called when --milestone is omitted."""
+    attached: list = []
+    _wire_main_mocks(
+        pi, monkeypatch,
+        sys_argv=["promote-issue", "42", "--reason", "triage", "--yes"],
+        attach_called=attached,
+    )
+    pi.main()
+    assert attached == [], "_attach_milestone must not be called when --milestone is absent"
+
+
+def test_main_milestone_omitted_calls_move_issue(pi, monkeypatch, capsys) -> None:
+    """move-issue --to backlog is still called on the reason-only path."""
+    move_calls: list = []
+    original_invoke = pi._invoke_move_issue
+
+    def capturing_invoke(issue_number, target, cap_root):
+        move_calls.append((issue_number, target))
+        return 0
+
+    _wire_main_mocks(
+        pi, monkeypatch,
+        sys_argv=["promote-issue", "42", "--reason", "triage", "--yes"],
+    )
+    monkeypatch.setattr(pi, "_invoke_move_issue", capturing_invoke)
+    rc = pi.main()
+    assert rc == 0
+    assert move_calls == [(42, "backlog")]
+
+
+def test_main_milestone_omitted_ok_line_says_no_milestone(pi, monkeypatch, capsys) -> None:
+    """The [ok] line must not claim a milestone when none was given."""
+    _wire_main_mocks(
+        pi, monkeypatch,
+        sys_argv=["promote-issue", "42", "--reason", "triage", "--yes"],
+    )
+    pi.main()
+    out = capsys.readouterr().out
+    assert "no milestone" in out
+    # Must not mention a specific milestone title
+    assert "milestone:" not in out or "(none" in out
+
+
+# --- milestone-given happy path (acceptance criterion 2, unchanged) ---
+
+
+def test_main_milestone_given_resolves_and_attaches(pi, monkeypatch) -> None:
+    """promote-issue <n> --milestone '<open-title>' --reason '...' → resolves + attaches."""
+    resolve_calls: list = []
+    attached: list = []
+    _wire_main_mocks(
+        pi, monkeypatch,
+        sys_argv=["promote-issue", "42", "--milestone", "Sprint 1", "--reason", "PM approved", "--yes"],
+        milestone_obj=_FakeMilestone(number=7, title="Sprint 1"),
+        milestone_resolve_called=resolve_calls,
+        attach_called=attached,
+    )
+    rc = pi.main()
+    assert rc == 0
+    assert resolve_calls == ["Sprint 1"]
+    assert attached == ["Sprint 1"]
+
+
+def test_main_milestone_given_ok_line_shows_milestone(pi, monkeypatch, capsys) -> None:
+    """[ok] line reports the milestone title when one was attached."""
+    _wire_main_mocks(
+        pi, monkeypatch,
+        sys_argv=["promote-issue", "42", "--milestone", "Sprint 1", "--reason", "approved", "--yes"],
+        milestone_obj=_FakeMilestone(number=7, title="Sprint 1"),
+    )
+    pi.main()
+    out = capsys.readouterr().out
+    assert "Sprint 1" in out
+
+
+# --- given-but-unresolvable milestone (acceptance criterion 3) ---
+
+
+def test_main_bad_milestone_errors_not_silently_downgraded(pi, monkeypatch, capsys) -> None:
+    """An unresolvable --milestone is an error; never silently downgraded to milestone-free."""
+    _wire_main_mocks(
+        pi, monkeypatch,
+        sys_argv=["promote-issue", "42", "--milestone", "nonexistent", "--reason", "r", "--yes"],
+        milestone_obj=None,  # resolve returns None → unresolvable
+    )
+    rc = pi.main()
+    assert rc == 2
+    err = capsys.readouterr().err
+    assert "nonexistent" in err
+    assert "OPEN" in err
+
+
+def test_main_bad_milestone_does_not_call_attach(pi, monkeypatch) -> None:
+    """When milestone resolution fails, _attach_milestone must not be called."""
+    attached: list = []
+    _wire_main_mocks(
+        pi, monkeypatch,
+        sys_argv=["promote-issue", "42", "--milestone", "bad", "--reason", "r", "--yes"],
+        milestone_obj=None,
+        attach_called=attached,
+    )
+    pi.main()
+    assert attached == []
+
+
+def test_main_bad_milestone_does_not_call_move_issue(pi, monkeypatch) -> None:
+    """When milestone resolution fails, move-issue must not be called."""
+    move_calls: list = []
+
+    def capturing_invoke(issue_number, target, cap_root):
+        move_calls.append(target)
+        return 0
+
+    _wire_main_mocks(
+        pi, monkeypatch,
+        sys_argv=["promote-issue", "42", "--milestone", "bad", "--reason", "r", "--yes"],
+        milestone_obj=None,
+    )
+    monkeypatch.setattr(pi, "_invoke_move_issue", capturing_invoke)
+    pi.main()
+    assert move_calls == []
+
+
+# --- --reason required (acceptance criterion 4) ---
+
+
+def test_main_reason_required_exits_nonzero(pi, monkeypatch) -> None:
+    """Omitting --reason must produce a non-zero exit (argparse SystemExit)."""
+    monkeypatch.setattr(sys, "argv", ["promote-issue", "42"])
+    monkeypatch.setattr(pi, "resolve_capability_root", lambda _: Path("/fake/cap"))
+    monkeypatch.setattr(pi, "load_adopter_config", lambda _: {})
+    monkeypatch.setattr(pi, "_read_members", lambda *_a, **_k: [])
+    monkeypatch.setattr(pi, "resolve_invoker_identity", lambda **_k: MagicMock())
+    monkeypatch.setattr(pi, "check_membership", lambda *_a: _FakeMembership(allowed=True))
+    with pytest.raises(SystemExit) as exc_info:
+        pi.main()
+    assert exc_info.value.code != 0
