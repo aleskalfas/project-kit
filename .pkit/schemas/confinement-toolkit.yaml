@@ -73,6 +73,25 @@ toolkits:
           / domain-fronting exfil. Apply only for capabilities that need the
           GitHub API; for fully unconfined gh CLI access, use `sandbox exclude gh`.
 
+  anthropic-api:
+    description: Anthropic API — session-wide egress to api.anthropic.com for projects/capabilities that call the Anthropic (Claude) API.
+    # No detect: field — explicit-accommodate only. There is no clean path-glob
+    # that signals "this project calls the Anthropic API": the `anthropic`
+    # dependency lives inside pyproject.toml content, and pyproject.toml is
+    # already the broad `uv` detect signal (reusing it would mis-fire on every
+    # Python project). Egress is an appropriate deliberate operator opt-in via
+    # `pkit permissions sandbox accommodate anthropic-api`.
+    allowances:
+      - kind: allow-host
+        effect: narrowing
+        value: "api.anthropic.com"
+        note: >-
+          session-wide egress to api.anthropic.com; not a security boundary
+          (no TLS inspection — ADR-004 §61 / ADR-015). The sandbox allowlist
+          bounds well-behaved egress but does not stop IP-literal / DNS-rebind
+          / domain-fronting exfil. Apply only for projects/capabilities that
+          call the Anthropic API.
+
   # NOTE: there is intentionally no `ssh-agent` toolkit. The SSH agent socket
   # path is a per-session HOST fact ($SSH_AUTH_SOCK), not a static value a
   # shipped toolkit can hold (per ADR-010). `setup autonomy` resolves and

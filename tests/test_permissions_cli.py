@@ -1695,6 +1695,50 @@ def test_allow_host_shipped_github_api_toolkit_present(tmp_path, monkeypatch):
     assert "allow-host" in out and "narrowing" in out
 
 
+# ---- anthropic-api confinement toolkit (issue #79) -------------------------
+#
+# Faithful sibling of github-api: allow-host → api.anthropic.com, narrowing-
+# but-reported, explicit-accommodate only (no detect glob).
+
+
+def test_allow_host_shipped_anthropic_api_toolkit_present(tmp_path, monkeypatch):
+    """The shipped anthropic-api toolkit is present in the toolkit list as narrowing-but-reported."""
+    proj = _setup(tmp_path)
+    out = _run(proj, monkeypatch, "sandbox", "toolkit", "list")
+    assert "anthropic-api" in out
+    assert "narrowing-but-reported" in out
+
+
+def test_allow_host_shipped_anthropic_api_toolkit_show(tmp_path, monkeypatch):
+    """toolkit show renders the allowance + egress honesty gloss for anthropic-api."""
+    proj = _setup(tmp_path)
+    out = _run(proj, monkeypatch, "sandbox", "toolkit", "show", "anthropic-api")
+    assert "api.anthropic.com" in out
+    assert "allow-host" in out and "narrowing" in out
+    assert "session-wide egress to api.anthropic.com; not a security boundary" in out
+    assert "narrowing-but-reported" in out or "NARROWING-BUT-REPORTED" in out
+
+
+def test_allow_host_anthropic_api_accommodate_applies_host(tmp_path, monkeypatch):
+    """accommodate anthropic-api writes api.anthropic.com to allowedHosts (single provenance writer)."""
+    proj = _with_adapter(_setup(tmp_path))
+    out = _run(proj, monkeypatch, "sandbox", "accommodate", "anthropic-api")
+    assert "narrowing applied" in out
+    sb = _sb(proj)
+    assert "api.anthropic.com" in sb["network"]["allowedHosts"]
+
+
+def test_allow_host_anthropic_api_not_auto_detected(tmp_path, monkeypatch):
+    """anthropic-api has no detect glob — sandbox enable does NOT auto-accommodate it."""
+    proj = _with_adapter(_setup(tmp_path))
+    # Ensure no detect-glob file triggers it inadvertently.
+    out = _run(proj, monkeypatch, "sandbox", "enable")
+    sb = _sb(proj)
+    assert "api.anthropic.com" not in sb.get("network", {}).get("allowedHosts", [])
+    # anthropic-api must not appear in the auto-accommodated notice.
+    assert "anthropic-api" not in out or "auto-accommodated" not in out
+
+
 # ---- capability-contributed grant attribution (ADR-016) ---------------------
 #
 # pkit permissions overview / explain MUST surface which capability contributed
