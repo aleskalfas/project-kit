@@ -298,3 +298,134 @@ def test_upgrade_skips_capability_migrations_in_component_runner(
     _run_component_migrations(installed_target, backbone_manifest.components, dry_run=False)
     # No file written by the component runner — it skipped the capability.
     assert not component_runner_trace.exists()
+
+
+# ============================================================================
+# COR-030: backbone-wide upgrade capability dependency check
+# ============================================================================
+
+
+def _stage_installed_capability(
+    target_root: Path,
+    name: str,
+    *,
+    version: str = "0.1.0",
+    requires_backbone: str = ">=0.1.0,<99.0.0",
+    requires_capabilities: list[dict[str, str]] | None = None,
+) -> None:
+    """Directly create a capability under .pkit/capabilities/<name>/ and register it.
+
+    Bypasses source-kit lookup — used in upgrade tests where we only need
+    the installed state, not the source. The package.yaml is written to the
+    installed path so _resolve_compatibility can read it.
+    """
+    from project_kit import capabilities as caps
+    from project_kit.manifest import ComponentRegistryEntry, read_backbone_manifest, write_backbone_manifest
+
+    cap_dir = target_root / ".pkit" / "capabilities" / name
+    cap_dir.mkdir(parents=True, exist_ok=True)
+
+    req_caps_block = ""
+    if requires_capabilities:
+        lines = ["requires_capabilities:"]
+        for req in requires_capabilities:
+            lines.append(f'  - name: {req["name"]}')
+            lines.append(f'    version: "{req["version"]}"')
+        req_caps_block = "\n" + "\n".join(lines)
+
+    (cap_dir / "package.yaml").write_text(
+        f"""schema_version: 1
+component:
+  kind: capability
+  name: {name}
+  version: {version}
+description: Test.
+requires_backbone: "{requires_backbone}"{req_caps_block}
+""",
+        encoding="utf-8",
+    )
+
+    # Stamp a minimal per-component manifest so version reads work.
+    import datetime as _dt
+    (cap_dir / "manifest.yaml").write_text(
+        f"""schema_version: 1
+component:
+  kind: capability
+  name: {name}
+  version: {version}
+  installed_at: '{_dt.datetime.now(_dt.timezone.utc).isoformat()}'
+requires_backbone: '{requires_backbone}'
+backend_state: {{}}
+""",
+        encoding="utf-8",
+    )
+
+    # Register in backbone manifest.
+    backbone = read_backbone_manifest(target_root)
+    assert backbone is not None
+    backbone.components = [
+        c for c in backbone.components
+        if not (c.kind == "capability" and c.name == name)
+    ]
+    backbone.components.append(ComponentRegistryEntry(
+        kind="capability",
+        name=name,
+        manifest=f".pkit/capabilities/{name}/manifest.yaml",
+    ))
+    write_backbone_manifest(target_root, backbone)
+
+
+def test_backbone_upgrade_refuses_when_installed_cap_has_absent_dep(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Backbone upgrade refuses when an installed capability's declared dependency
+    is not installed."""
+    # Install consumer with a dep on evidence; evidence is NOT installed.
+    _stage_installed_capability(
+        installed_target, "consumer",
+        requires_capabilities=[{"name": "evidence", "version": ">=0.1.0,<2.0.0"}],
+    )
+
+    with pytest.raises(click.ClickException, match="capability dependency check failed"):
+        upgrade.run_upgrade(installed_target)
+
+
+def test_backbone_upgrade_refuses_when_installed_cap_dep_out_of_range(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Backbone upgrade refuses when a declared dependency is installed but out of range."""
+    _stage_installed_capability(installed_target, "evidence", version="0.1.0")
+    _stage_installed_capability(
+        installed_target, "consumer",
+        requires_capabilities=[{"name": "evidence", "version": ">=0.2.0,<2.0.0"}],
+    )
+
+    with pytest.raises(click.ClickException, match="capability dependency check failed"):
+        upgrade.run_upgrade(installed_target)
+
+
+def test_backbone_upgrade_succeeds_when_cap_deps_satisfied(
+    installed_target: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Backbone upgrade proceeds when all capability dependency requirements are satisfied."""
+    _stage_installed_capability(installed_target, "evidence", version="0.3.0")
+    _stage_installed_capability(
+        installed_target, "consumer",
+        requires_capabilities=[{"name": "evidence", "version": ">=0.2.0,<1.0.0"}],
+    )
+
+    # Already at current version → should report "Already at backbone".
+    upgrade.run_upgrade(installed_target)
+    captured = capsys.readouterr()
+    assert "Already at backbone v" in captured.out
+
+
+def test_backbone_upgrade_no_cap_deps_unaffected(
+    installed_target: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A capability with no requires_capabilities is unaffected by the new check."""
+    _stage_installed_capability(installed_target, "standalone")
+
+    upgrade.run_upgrade(installed_target)
+    captured = capsys.readouterr()
+    assert "Already at backbone v" in captured.out

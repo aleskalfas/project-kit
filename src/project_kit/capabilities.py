@@ -9,6 +9,13 @@ registry (per COR-010) alongside adapters.
 This module covers the deterministic mechanics. Interactive collision
 resolution (override / skip / inspect) lives in the CLI layer where
 Click prompts are available.
+
+Capability dependencies (COR-030): a capability may declare
+``requires_capabilities`` in its ``package.yaml`` — an optional list of
+``{name, version}`` entries, each expressing a semver range that a
+dependency capability's installed version must satisfy. The install
+pre-flight, both upgrade entry points, and the uninstall gate enforce
+this contract. See ``check_capability_dependencies``.
 """
 
 from __future__ import annotations
@@ -17,11 +24,13 @@ import datetime as _dt
 import io
 import re
 import shutil
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path, PurePath
 from typing import Any, cast
 
 import click
+from packaging.specifiers import InvalidSpecifier, SpecifierSet
+from packaging.version import InvalidVersion, Version
 from ruamel.yaml import YAML
 
 from project_kit import treecopy
@@ -50,6 +59,14 @@ _CAPABILITY_PROJECT_SUBTREE = "project"
 
 
 @dataclass(frozen=True)
+class CapabilityDependency:
+    """One entry from the ``requires_capabilities`` list in a ``package.yaml``."""
+
+    name: str     # capability name (e.g. "evidence")
+    version: str  # semver range string (e.g. ">=0.2.0,<1.0.0")
+
+
+@dataclass(frozen=True)
 class CapabilityPackage:
     """A capability's package.yaml content, as read from disk."""
 
@@ -57,6 +74,7 @@ class CapabilityPackage:
     version: str
     description: str
     requires_backbone: str
+    requires_capabilities: tuple[CapabilityDependency, ...] = field(default_factory=tuple)
     schema_version: int = 1
 
 
@@ -112,6 +130,133 @@ def is_installed(target_root: Path, name: str) -> bool:
     return any(
         c.kind == "capability" and c.name == name for c in backbone.components
     )
+
+
+def get_installed_capability_version(target_root: Path, name: str) -> str | None:
+    """Return the installed version of a capability, or None if not installed / unreadable.
+
+    Reads the per-component manifest at
+    ``.pkit/capabilities/<name>/manifest.yaml``. This is the public
+    counterpart of the private ``_read_installed_capability_version``
+    used internally by ``refresh_capability``; exposing it lets the
+    upgrade layer query installed versions without importing private
+    internals.
+    """
+    return _read_installed_capability_version(target_root, name)
+
+
+@dataclass(frozen=True)
+class CapabilityDependencyConflict:
+    """One failing dependency found during the pre-flight check (COR-030)."""
+
+    dep_name: str           # the dependency capability's name
+    dep_version_range: str  # the declared range (e.g. ">=0.2.0,<1.0.0")
+    installed_version: str | None  # None means not installed at all
+    reason: str             # "absent" or "out-of-range"
+
+
+def check_capability_dependencies(
+    target_root: Path,
+    requires_capabilities: tuple[CapabilityDependency, ...],
+) -> list[CapabilityDependencyConflict]:
+    """Evaluate declared dependency requirements against the installed state.
+
+    This is the shared predicate used by *both* the install pre-flight
+    (refusing to install a dependent when a dependency is absent or out-
+    of-range) and the single-capability-upgrade check (refusing to upgrade
+    a dependent capability when a dependency is out-of-range). It never
+    auto-installs.
+
+    For each ``CapabilityDependency`` in ``requires_capabilities``:
+    - If the dependency is not installed → conflict with reason "absent".
+    - If the dependency is installed but its version does not satisfy the
+      declared semver range → conflict with reason "out-of-range".
+    - If the range string is invalid (unparseable) → silently skip (the
+      package.yaml is malformed; the gate can only work with valid ranges).
+
+    Returns a list of conflicts; empty means all requirements satisfied.
+
+    Reuses ``is_installed`` and ``get_installed_capability_version`` (this
+    module) for the installed-state side, and the ``packaging`` library
+    directly for range evaluation (the same library ``upgrade.py`` uses
+    for backbone-compatibility resolution).
+    """
+    if not requires_capabilities:
+        return []
+
+    conflicts: list[CapabilityDependencyConflict] = []
+    for dep in requires_capabilities:
+        if not is_installed(target_root, dep.name):
+            conflicts.append(CapabilityDependencyConflict(
+                dep_name=dep.name,
+                dep_version_range=dep.version,
+                installed_version=None,
+                reason="absent",
+            ))
+            continue
+
+        installed_version = get_installed_capability_version(target_root, dep.name)
+        if installed_version is None:
+            # Installed but version unreadable — treat as a soft miss
+            # rather than blocking: the manifest is the adopter's own
+            # record and unreadable manifests are already a degraded state.
+            continue
+
+        try:
+            spec = SpecifierSet(dep.version)
+            ver = Version(installed_version)
+        except (InvalidSpecifier, InvalidVersion):
+            # Malformed range or version string — skip; can't evaluate.
+            continue
+
+        if ver not in spec:
+            conflicts.append(CapabilityDependencyConflict(
+                dep_name=dep.name,
+                dep_version_range=dep.version,
+                installed_version=installed_version,
+                reason="out-of-range",
+            ))
+
+    return conflicts
+
+
+def find_declared_dependents(target_root: Path, dep_name: str) -> list[str]:
+    """Find all installed capabilities that declare *dep_name* in their requires_capabilities.
+
+    Used by the uninstall gate (COR-030) to refuse removal when another
+    installed capability depends on the target. Walks the backbone
+    manifest's component registry, filters to capabilities, and reads
+    each one's per-component manifest + installed package.yaml to
+    extract ``requires_capabilities``.
+
+    Returns a sorted list of dependent capability names (may be empty).
+    """
+    backbone = read_backbone_manifest(target_root)
+    if backbone is None:
+        return []
+
+    dependents: list[str] = []
+    for entry in backbone.components:
+        if entry.kind != "capability":
+            continue
+        if entry.name == dep_name:
+            continue  # skip self
+        # Read the installed package.yaml to get requires_capabilities.
+        pkg_yaml_path = (
+            target_root / ".pkit" / "capabilities" / entry.name / "package.yaml"
+        )
+        if not pkg_yaml_path.is_file():
+            continue
+        pkg = _read_package_yaml(pkg_yaml_path)
+        if pkg is None:
+            continue
+        for dep in pkg.requires_capabilities:
+            if dep.name == dep_name:
+                dependents.append(entry.name)
+                break
+
+    dependents.sort()
+    return dependents
 
 
 @dataclass(frozen=True)
@@ -556,13 +701,44 @@ def _read_package_yaml(path: Path) -> CapabilityPackage | None:
         return None
     description = raw.get("description", "")
     requires_backbone = raw.get("requires_backbone", "")
+    requires_capabilities = _parse_requires_capabilities(raw.get("requires_capabilities"))
     return CapabilityPackage(
         name=name,
         version=version,
         description=str(description),
         requires_backbone=str(requires_backbone),
+        requires_capabilities=requires_capabilities,
         schema_version=int(raw.get("schema_version", 1)),
     )
+
+
+def _parse_requires_capabilities(
+    raw: object,
+) -> tuple[CapabilityDependency, ...]:
+    """Parse the ``requires_capabilities`` list from a package.yaml value.
+
+    Accepts a list of ``{name: str, version: str}`` dicts. Silently
+    skips entries that are malformed — a capability with a broken dep
+    declaration is still usable; the install gate will simply not enforce
+    the malformed entry (a future schema validation pass can surface it).
+    Absence of the field (``None``) returns an empty tuple.
+    """
+    if raw is None:
+        return ()
+    if not isinstance(raw, list):
+        return ()
+    out: list[CapabilityDependency] = []
+    for entry in raw:
+        if not isinstance(entry, dict):
+            continue
+        dep_name = entry.get("name")
+        dep_version = entry.get("version")
+        if not isinstance(dep_name, str) or not isinstance(dep_version, str):
+            continue
+        if not dep_name or not dep_version:
+            continue
+        out.append(CapabilityDependency(name=dep_name, version=dep_version))
+    return tuple(out)
 
 
 def _collect_existing_artifact_names(target_root: Path, area: str) -> dict[str, Path]:

@@ -25,6 +25,7 @@ def _stage_capability_in_source(
     version: str = "0.1.0",
     description: str = "Test capability.",
     requires_backbone: str = ">=0.1.0,<99.0.0",
+    requires_capabilities: list[dict[str, str]] | None = None,
     with_skills: tuple[str, ...] = (),
     with_agents: tuple[str, ...] = (),
     with_decisions: tuple[str, ...] = (),
@@ -34,9 +35,19 @@ def _stage_capability_in_source(
 
     `with_project_files` maps a path relative to the capability's
     adopter-owned `project/` subtree to its seed content.
+
+    `requires_capabilities` is a list of ``{name, version}`` dicts written
+    into ``requires_capabilities:`` in the package.yaml (COR-030).
     """
     cap_dir = source_kit / "capabilities" / name
     cap_dir.mkdir(parents=True, exist_ok=True)
+    req_caps_block = ""
+    if requires_capabilities:
+        lines = ["requires_capabilities:"]
+        for req in requires_capabilities:
+            lines.append(f'  - name: {req["name"]}')
+            lines.append(f'    version: "{req["version"]}"')
+        req_caps_block = "\n" + "\n".join(lines) + "\n"
     (cap_dir / "package.yaml").write_text(
         f"""schema_version: 1
 component:
@@ -44,7 +55,7 @@ component:
   name: {name}
   version: {version}
 description: {description}
-requires_backbone: "{requires_backbone}"
+requires_backbone: "{requires_backbone}"{req_caps_block}
 """,
         encoding="utf-8",
     )
@@ -959,3 +970,372 @@ def test_pending_migration_scripts_walks_version_window(
     scripts_unknown = caps._pending_migration_scripts(source, None)
     versions_unknown = [s.parent.name for s in scripts_unknown]
     assert versions_unknown == ["0.1.0", "0.2.0", "0.3.0", "0.4.0", "0.5.0"]
+
+
+# ============================================================================
+# COR-030: requires_capabilities field + lifecycle gates
+# ============================================================================
+
+
+def _install_capability_with_manifest(
+    target_root: Path,
+    kit_source: Path,
+    name: str,
+    *,
+    version: str = "0.1.0",
+    requires_capabilities: list[dict[str, str]] | None = None,
+) -> None:
+    """Stage a capability in source and install it into the target.
+
+    Convenience for dependency-check tests that need a capability
+    installed (with optional requires_capabilities) without the full CLI.
+    """
+    _stage_capability_in_source(
+        kit_source, name, version=version,
+        requires_capabilities=requires_capabilities,
+    )
+    source = caps.find_capability_in_source(kit_source, name)
+    assert source is not None
+    caps.install_capability(target_root, source)
+
+
+# --- parse / read ---
+
+
+def test_read_package_yaml_parses_requires_capabilities(kit_source: Path) -> None:
+    """requires_capabilities list is parsed from package.yaml into CapabilityDependency tuples."""
+    _stage_capability_in_source(
+        kit_source, "consumer",
+        requires_capabilities=[{"name": "evidence", "version": ">=0.2.0,<1.0.0"}],
+    )
+    source = caps.find_capability_in_source(kit_source, "consumer")
+    assert source is not None
+    assert len(source.package.requires_capabilities) == 1
+    dep = source.package.requires_capabilities[0]
+    assert dep.name == "evidence"
+    assert dep.version == ">=0.2.0,<1.0.0"
+
+
+def test_read_package_yaml_no_requires_capabilities_is_empty_tuple(kit_source: Path) -> None:
+    """A package.yaml with no requires_capabilities field yields an empty tuple."""
+    _stage_capability_in_source(kit_source, "standalone")
+    source = caps.find_capability_in_source(kit_source, "standalone")
+    assert source is not None
+    assert source.package.requires_capabilities == ()
+
+
+# --- check_capability_dependencies ---
+
+
+def test_check_deps_empty_when_no_deps(kit_target: Path) -> None:
+    """A capability with no requires_capabilities has no conflicts."""
+    conflicts = caps.check_capability_dependencies(target_root=kit_target, requires_capabilities=())
+    assert conflicts == []
+
+
+def test_check_deps_conflict_when_dependency_absent(
+    kit_target: Path, kit_source: Path
+) -> None:
+    """Absent dependency → conflict with reason 'absent'."""
+    from project_kit.capabilities import CapabilityDependency
+    deps = (CapabilityDependency(name="evidence", version=">=0.1.0,<2.0.0"),)
+    conflicts = caps.check_capability_dependencies(kit_target, deps)
+    assert len(conflicts) == 1
+    assert conflicts[0].dep_name == "evidence"
+    assert conflicts[0].reason == "absent"
+    assert conflicts[0].installed_version is None
+
+
+def test_check_deps_conflict_when_dependency_out_of_range(
+    kit_target: Path, kit_source: Path
+) -> None:
+    """Installed dependency outside the declared range → conflict with reason 'out-of-range'."""
+    from project_kit.capabilities import CapabilityDependency
+    # Install evidence at v0.1.0.
+    _install_capability_with_manifest(kit_target, kit_source, "evidence", version="0.1.0")
+    # Require >=0.2.0 — v0.1.0 is out of range.
+    deps = (CapabilityDependency(name="evidence", version=">=0.2.0,<2.0.0"),)
+    conflicts = caps.check_capability_dependencies(kit_target, deps)
+    assert len(conflicts) == 1
+    assert conflicts[0].dep_name == "evidence"
+    assert conflicts[0].reason == "out-of-range"
+    assert conflicts[0].installed_version == "0.1.0"
+
+
+def test_check_deps_no_conflict_when_dependency_in_range(
+    kit_target: Path, kit_source: Path
+) -> None:
+    """Installed dependency within the declared range → no conflicts."""
+    from project_kit.capabilities import CapabilityDependency
+    _install_capability_with_manifest(kit_target, kit_source, "evidence", version="0.3.0")
+    deps = (CapabilityDependency(name="evidence", version=">=0.2.0,<1.0.0"),)
+    conflicts = caps.check_capability_dependencies(kit_target, deps)
+    assert conflicts == []
+
+
+def test_check_deps_multiple_dependencies_reports_all_conflicts(
+    kit_target: Path, kit_source: Path
+) -> None:
+    """All failing dependencies are reported, not just the first."""
+    from project_kit.capabilities import CapabilityDependency
+    # Install evidence in range; pm absent.
+    _install_capability_with_manifest(kit_target, kit_source, "evidence", version="0.5.0")
+    deps = (
+        CapabilityDependency(name="evidence", version=">=0.2.0,<1.0.0"),
+        CapabilityDependency(name="project-management", version=">=0.1.0,<2.0.0"),
+    )
+    conflicts = caps.check_capability_dependencies(kit_target, deps)
+    assert len(conflicts) == 1
+    assert conflicts[0].dep_name == "project-management"
+    assert conflicts[0].reason == "absent"
+
+
+# --- install pre-flight (COR-030) ---
+
+
+def test_cli_install_refuses_when_dependency_absent(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """Install refuses with hint when a declared dependency is not installed."""
+    _stage_capability_in_source(
+        kit_source, "consumer",
+        requires_capabilities=[{"name": "evidence", "version": ">=0.1.0,<2.0.0"}],
+    )
+    from project_kit import cli as cli_mod
+    monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
+    runner = CliRunner()
+    result = runner.invoke(main, ["capabilities", "install", "consumer"])
+    assert result.exit_code != 0
+    assert "unsatisfied dependencies" in result.output
+    assert "evidence" in result.output
+    assert "not installed" in result.output
+    assert not caps.is_installed(kit_target, "consumer")
+
+
+def test_cli_install_refuses_when_dependency_out_of_range(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """Install refuses with hint when a declared dependency is installed but out of range."""
+    _install_capability_with_manifest(kit_target, kit_source, "evidence", version="0.1.0")
+    _stage_capability_in_source(
+        kit_source, "consumer",
+        requires_capabilities=[{"name": "evidence", "version": ">=0.2.0,<2.0.0"}],
+    )
+    from project_kit import cli as cli_mod
+    monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
+    runner = CliRunner()
+    result = runner.invoke(main, ["capabilities", "install", "consumer"])
+    assert result.exit_code != 0
+    assert "unsatisfied dependencies" in result.output
+    assert "evidence" in result.output
+    assert "0.1.0" in result.output
+    assert not caps.is_installed(kit_target, "consumer")
+
+
+def test_cli_install_succeeds_when_dependency_in_range(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """Install succeeds when the declared dependency is installed and in range."""
+    _install_capability_with_manifest(kit_target, kit_source, "evidence", version="0.3.0")
+    _stage_capability_in_source(
+        kit_source, "consumer",
+        requires_capabilities=[{"name": "evidence", "version": ">=0.2.0,<1.0.0"}],
+    )
+    from project_kit import cli as cli_mod
+    monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
+    runner = CliRunner()
+    result = runner.invoke(main, ["capabilities", "install", "consumer"])
+    assert result.exit_code == 0, result.output
+    assert "Installed capability 'consumer'" in result.output
+    assert caps.is_installed(kit_target, "consumer")
+
+
+def test_cli_install_with_no_deps_unaffected(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """A capability with no requires_capabilities installs normally (no regression)."""
+    _stage_capability_in_source(kit_source, "standalone")
+    from project_kit import cli as cli_mod
+    monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
+    runner = CliRunner()
+    result = runner.invoke(main, ["capabilities", "install", "standalone"])
+    assert result.exit_code == 0, result.output
+    assert caps.is_installed(kit_target, "standalone")
+
+
+# --- find_declared_dependents ---
+
+
+def test_find_declared_dependents_empty_when_none(
+    kit_target: Path, kit_source: Path
+) -> None:
+    """No installed capability declares the target → empty list."""
+    _install_capability_with_manifest(kit_target, kit_source, "evidence")
+    result = caps.find_declared_dependents(kit_target, "evidence")
+    assert result == []
+
+
+def test_find_declared_dependents_finds_dependent(
+    kit_target: Path, kit_source: Path
+) -> None:
+    """A capability that declares the target in requires_capabilities is found."""
+    _install_capability_with_manifest(kit_target, kit_source, "evidence", version="0.3.0")
+    _install_capability_with_manifest(
+        kit_target, kit_source, "consumer",
+        requires_capabilities=[{"name": "evidence", "version": ">=0.2.0,<1.0.0"}],
+    )
+    result = caps.find_declared_dependents(kit_target, "evidence")
+    assert result == ["consumer"]
+
+
+def test_find_declared_dependents_excludes_unrelated(
+    kit_target: Path, kit_source: Path
+) -> None:
+    """Capabilities not declaring the target are not included."""
+    _install_capability_with_manifest(kit_target, kit_source, "evidence")
+    _install_capability_with_manifest(kit_target, kit_source, "other")
+    result = caps.find_declared_dependents(kit_target, "evidence")
+    assert result == []
+
+
+# --- uninstall declared-dependent refusal (COR-030) ---
+
+
+def test_cli_uninstall_refuses_when_declared_dependent(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """Uninstall refuses when another installed capability declares a dependency."""
+    _install_capability_with_manifest(kit_target, kit_source, "evidence", version="0.3.0")
+    _install_capability_with_manifest(
+        kit_target, kit_source, "consumer",
+        requires_capabilities=[{"name": "evidence", "version": ">=0.2.0,<1.0.0"}],
+    )
+    from project_kit import cli as cli_mod
+    monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
+    runner = CliRunner()
+    result = runner.invoke(main, ["capabilities", "uninstall", "evidence"])
+    assert result.exit_code != 0
+    assert "Refusing" in result.output
+    assert "consumer" in result.output
+    assert caps.is_installed(kit_target, "evidence")
+
+
+def test_cli_uninstall_force_overrides_declared_dependent(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """--force proceeds despite a declared dependent."""
+    _install_capability_with_manifest(kit_target, kit_source, "evidence", version="0.3.0")
+    _install_capability_with_manifest(
+        kit_target, kit_source, "consumer",
+        requires_capabilities=[{"name": "evidence", "version": ">=0.2.0,<1.0.0"}],
+    )
+    from project_kit import cli as cli_mod
+    monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
+    runner = CliRunner()
+    result = runner.invoke(main, ["capabilities", "uninstall", "evidence", "--force"])
+    assert result.exit_code == 0, result.output
+    assert "Removed capability 'evidence'" in result.output
+    assert not caps.is_installed(kit_target, "evidence")
+
+
+# --- upgrade_capability_cmd direction-split (COR-030) ---
+
+
+def test_cli_upgrade_refuses_when_dependent_version_requires_absent_dep(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """Upgrading a dependent capability refuses when its new source version
+    requires a dependency that is absent."""
+    # Install consumer v0.1.0 with no deps (no requires_capabilities).
+    _install_capability_with_manifest(kit_target, kit_source, "consumer", version="0.1.0")
+
+    # Source bumps consumer to v0.2.0 and now requires evidence.
+    _stage_capability_in_source(
+        kit_source, "consumer", version="0.2.0",
+        requires_capabilities=[{"name": "evidence", "version": ">=0.1.0,<2.0.0"}],
+    )
+    from project_kit import cli as cli_mod
+    monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
+    runner = CliRunner()
+    result = runner.invoke(main, ["capabilities", "upgrade", "consumer"])
+    assert result.exit_code != 0
+    assert "unsatisfied dependencies" in result.output
+    assert "evidence" in result.output
+    assert "not installed" in result.output
+
+
+def test_cli_upgrade_refuses_when_dependent_version_requires_out_of_range_dep(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """Upgrading a dependent capability refuses when its new source version
+    requires a dependency installed at an out-of-range version."""
+    _install_capability_with_manifest(kit_target, kit_source, "evidence", version="0.1.0")
+    _install_capability_with_manifest(kit_target, kit_source, "consumer", version="0.1.0")
+
+    # Source bumps consumer to v0.2.0 requiring evidence >=0.2.0.
+    _stage_capability_in_source(
+        kit_source, "consumer", version="0.2.0",
+        requires_capabilities=[{"name": "evidence", "version": ">=0.2.0,<2.0.0"}],
+    )
+    from project_kit import cli as cli_mod
+    monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
+    runner = CliRunner()
+    result = runner.invoke(main, ["capabilities", "upgrade", "consumer"])
+    assert result.exit_code != 0
+    assert "unsatisfied dependencies" in result.output
+    assert "evidence" in result.output
+
+
+def test_cli_upgrade_dependency_warns_and_requires_force_when_dependent_would_desync(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """Upgrading a *dependency* capability warns when an installed *dependent*'s
+    range would be violated — requires --force to proceed (not a hard block)."""
+    # evidence v0.3.0 installed; consumer installed and declares evidence >=0.2.0,<0.4.0.
+    _install_capability_with_manifest(kit_target, kit_source, "evidence", version="0.3.0")
+    _install_capability_with_manifest(
+        kit_target, kit_source, "consumer",
+        requires_capabilities=[{"name": "evidence", "version": ">=0.2.0,<0.4.0"}],
+    )
+    # Source bumps evidence to v0.5.0 — now outside consumer's range.
+    _stage_capability_in_source(kit_source, "evidence", version="0.5.0")
+    from project_kit import cli as cli_mod
+    monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
+    runner = CliRunner()
+    # Without --force: refuses.
+    result = runner.invoke(main, ["capabilities", "upgrade", "evidence"])
+    assert result.exit_code != 0
+    assert "desync" in result.output.lower() or "desynced" in result.output.lower() or "desync" in result.output
+    assert "consumer" in result.output
+    assert "--force" in result.output
+
+    # With --force: proceeds with warning.
+    result_forced = runner.invoke(main, ["capabilities", "upgrade", "evidence", "--force"])
+    assert result_forced.exit_code == 0, result_forced.output
+    assert "Warning" in result_forced.output
+    assert "consumer" in result_forced.output
+    # Evidence should now be at v0.5.0.
+    installed_ver = caps.get_installed_capability_version(kit_target, "evidence")
+    assert installed_ver == "0.5.0"
+
+
+def test_cli_upgrade_dependency_no_desync_proceeds_cleanly(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """Upgrading a dependency to a version still within all dependents' ranges
+    is clean — no warning, no --force needed."""
+    _install_capability_with_manifest(kit_target, kit_source, "evidence", version="0.3.0")
+    _install_capability_with_manifest(
+        kit_target, kit_source, "consumer",
+        requires_capabilities=[{"name": "evidence", "version": ">=0.2.0,<1.0.0"}],
+    )
+    # Source bumps evidence to v0.5.0 — still inside consumer's range.
+    _stage_capability_in_source(kit_source, "evidence", version="0.5.0")
+    from project_kit import cli as cli_mod
+    monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
+    runner = CliRunner()
+    result = runner.invoke(main, ["capabilities", "upgrade", "evidence"])
+    assert result.exit_code == 0, result.output
+    assert "Warning" not in result.output
+    installed_ver = caps.get_installed_capability_version(kit_target, "evidence")
+    assert installed_ver == "0.5.0"
