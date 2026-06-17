@@ -445,12 +445,20 @@ def visibility_untrack(dry_run: bool) -> None:
     "source introduces new naming collisions (per COR-017).",
 )
 @click.option(
+    "--force",
+    is_flag=True,
+    default=False,
+    help="Proceed even when upgrading this capability would desync an installed "
+    "dependent's declared version range (COR-030). Mirrors the uninstall "
+    "--force shape; use when cascade-upgrading dependents manually.",
+)
+@click.option(
     "--dry-run",
     is_flag=True,
     default=False,
     help="Show what would happen without writing any files.",
 )
-def upgrade_capability_cmd(name: str, interactive: bool, dry_run: bool) -> None:
+def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: bool) -> None:
     """Refresh a single installed capability from source (per COR-017).
 
     Walks the capability's source subtree, detects any *new* naming
@@ -461,6 +469,15 @@ def upgrade_capability_cmd(name: str, interactive: bool, dry_run: bool) -> None:
       new collisions exist.
     - Prompts per collision and then refreshes with the merged skip
       state (with --interactive).
+
+    Also enforces capability dependency constraints (COR-030) with a
+    direction-split disposition:
+    - If the new source version of this capability (the *dependent*) has
+      requirements its dependencies don't satisfy → refuse with hint.
+    - If this capability is a *dependency* for other installed capabilities
+      and the new version would fall outside their declared range → loud
+      warning and require --force to proceed (not a hard block; a hard
+      block would deadlock since cascade-upgrade is out of scope).
     """
     from project_kit import capabilities as caps
 
@@ -486,6 +503,76 @@ def upgrade_capability_cmd(name: str, interactive: bool, dry_run: bool) -> None:
             "Use `pkit capabilities uninstall` to remove the orphan, or sync "
             "the source kit if you expect it to ship."
         )
+
+    # --- Capability dependency check: direction-split (COR-030) ---
+
+    # Direction 1 — this capability is the *dependent*: its new source version
+    # may declare requires_capabilities that the installed dependencies don't
+    # satisfy. Refuse with hint (operator controls which version to upgrade to).
+    dep_conflicts = caps.check_capability_dependencies(
+        target_root, capability_source.package.requires_capabilities
+    )
+    if dep_conflicts:
+        lines = []
+        for conflict in dep_conflicts:
+            if conflict.reason == "absent":
+                lines.append(
+                    f"    - '{conflict.dep_name}' ({conflict.dep_version_range}) "
+                    f"is not installed"
+                )
+            else:
+                lines.append(
+                    f"    - '{conflict.dep_name}' {conflict.dep_version_range} "
+                    f"required but v{conflict.installed_version} is installed"
+                )
+        raise click.ClickException(
+            f"capability {name!r} v{capability_source.package.version} has "
+            f"unsatisfied dependencies:\n" + "\n".join(lines) + "\n"
+            "Install or upgrade the required capabilities first, then retry."
+        )
+
+    # Direction 2 — this capability is a *dependency*: upgrading it to the new
+    # source version may push it outside the declared range of installed
+    # dependents. Warn loudly + require --force (not a hard block — a hard block
+    # would deadlock since cascade-upgrade is out of scope per COR-030).
+    new_version = capability_source.package.version
+    desynced_dependents = _find_desynced_dependents(
+        target_root, dep_name=name, new_dep_version=new_version
+    )
+    if desynced_dependents and not force:
+        click.echo(
+            "\n  " + cli_render.style("strong",
+                f"Warning: upgrading {name!r} to v{new_version} would desync "
+                f"{len(desynced_dependents)} installed dependent(s):")
+        )
+        for dep_cap, declared_range in desynced_dependents:
+            click.echo(
+                f"    - '{dep_cap}' declares {name!r} {declared_range} "
+                f"(v{new_version} is outside this range)"
+            )
+        raise click.ClickException(
+            "refusing to upgrade: the new version would desync installed dependents.\n"
+            "Upgrade those capabilities to versions compatible with the new range, "
+            "then retry — or pass --force to proceed anyway and fix dependents "
+            "manually (the deadlock-free override per COR-030)."
+        )
+    if desynced_dependents and force:
+        click.echo(
+            "\n  " + cli_render.style("strong",
+                f"Warning (--force): upgrading {name!r} to v{new_version} "
+                f"desyncs {len(desynced_dependents)} dependent(s):")
+        )
+        for dep_cap, declared_range in desynced_dependents:
+            click.echo(
+                f"    - '{dep_cap}' declares {name!r} {declared_range} "
+                f"(v{new_version} is outside this range)"
+            )
+        click.echo(
+            "  Proceeding under --force; upgrade dependent capabilities "
+            "to restore consistency."
+        )
+
+    # --- Collision detection ---
 
     # Detect collisions introduced by the upgraded source. Filter
     # self-collisions against the currently-installed copy — those will
@@ -1635,6 +1722,31 @@ def install_capability_cmd(name: str, dry_run: bool) -> None:
             f"Use `pkit capabilities upgrade {name}` to refresh."
         )
 
+    # Pre-flight: capability dependency check (COR-030).
+    # Refuse if any declared dependency is absent or its installed version
+    # is outside the required range. Never auto-installs.
+    dep_conflicts = caps.check_capability_dependencies(
+        target_root, capability_source.package.requires_capabilities
+    )
+    if dep_conflicts:
+        lines = []
+        for conflict in dep_conflicts:
+            if conflict.reason == "absent":
+                lines.append(
+                    f"    - '{conflict.dep_name}' ({conflict.dep_version_range}) "
+                    f"is not installed"
+                )
+            else:
+                lines.append(
+                    f"    - '{conflict.dep_name}' {conflict.dep_version_range} "
+                    f"required but v{conflict.installed_version} is installed"
+                )
+        raise click.ClickException(
+            f"capability {name!r} v{capability_source.package.version} has "
+            f"unsatisfied dependencies:\n" + "\n".join(lines) + "\n"
+            "Install or upgrade the required capabilities first."
+        )
+
     # Pre-flight: collision detection.
     collisions = caps.detect_collisions(target_root, capability_source)
     skipped: list[tuple[str, str]] = []
@@ -1675,6 +1787,52 @@ def install_capability_cmd(name: str, dry_run: bool) -> None:
             dry_run=False,
         )
         install_mod.run_installed_adapter_primitives(ctx)
+
+
+def _find_desynced_dependents(
+    target_root: Path, dep_name: str, new_dep_version: str
+) -> list[tuple[str, str]]:
+    """Find installed capabilities whose declared range for *dep_name* excludes *new_dep_version*.
+
+    Used by the single-capability upgrade direction-2 check (COR-030): when
+    upgrading a dependency capability, detect installed dependents that would
+    become desynced by the new version.
+
+    Returns a list of (dependent_name, declared_range_string) pairs.
+    Uses installed versions of the dependent side — only the dependency's
+    version is moving; per the architect note in COR-030 + issue #90.
+    """
+    from packaging.specifiers import InvalidSpecifier, SpecifierSet
+    from packaging.version import InvalidVersion, Version
+    from project_kit import capabilities as caps
+
+    try:
+        new_ver = Version(new_dep_version)
+    except InvalidVersion:
+        return []
+
+    declared_dependents = caps.find_declared_dependents(target_root, dep_name)
+    desynced: list[tuple[str, str]] = []
+    for dep_cap in declared_dependents:
+        pkg_yaml_path = (
+            target_root / ".pkit" / "capabilities" / dep_cap / "package.yaml"
+        )
+        if not pkg_yaml_path.is_file():
+            continue
+        pkg = caps._read_package_yaml(pkg_yaml_path)
+        if pkg is None:
+            continue
+        for req in pkg.requires_capabilities:
+            if req.name != dep_name:
+                continue
+            try:
+                spec = SpecifierSet(req.version)
+            except InvalidSpecifier:
+                continue
+            if new_ver not in spec:
+                desynced.append((dep_cap, req.version))
+            break
+    return desynced
 
 
 def _resolve_collision_interactive(target_root, finding, *, dry_run: bool) -> str:
@@ -1733,7 +1891,8 @@ def _show_unified_diff(existing: Path, incoming: Path) -> None:
     "--force",
     is_flag=True,
     default=False,
-    help="Override the safety check; remove even if references exist.",
+    help="Override the safety checks; remove even if references exist or "
+    "other installed capabilities declare a dependency on this one (COR-030).",
 )
 @click.option(
     "--dry-run",
@@ -1751,6 +1910,26 @@ def uninstall_capability_cmd(name: str, force: bool, dry_run: bool) -> None:
 
     if not caps.is_installed(target_root, name):
         raise click.ClickException(f"capability {name!r} is not installed.")
+
+    # Declared-dependent safety check (COR-030): refuse when another installed
+    # capability declares this one in its requires_capabilities. This catches
+    # behavioural dependencies that leave no textual citation (complementing
+    # the find_references check below). Both checks are gated by --force.
+    if not force:
+        declared_dependents = caps.find_declared_dependents(target_root, name)
+        if declared_dependents:
+            click.echo(
+                "\n  " + cli_render.style("strong",
+                    f"Refusing to uninstall {name!r}: "
+                    f"{len(declared_dependents)} installed capability(ies) "
+                    f"declare a dependency on it:") + "\n"
+            )
+            for dep_cap in declared_dependents:
+                click.echo(f"    - {dep_cap}")
+            raise click.ClickException(
+                "Uninstall or upgrade the dependent capabilities first, "
+                "or pass --force to override."
+            )
 
     # Reference safety check.
     if not force:

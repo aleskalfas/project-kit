@@ -57,6 +57,13 @@ from project_kit.migrations import (
 )
 from project_kit.sync import run_sync
 
+# Capability-dependency check (COR-030) — imported lazily below to avoid
+# any circular-import issues at module load time. The functions used are:
+#   capabilities.check_capability_dependencies
+#   capabilities.find_declared_dependents
+#   capabilities.get_installed_capability_version
+#   capabilities._read_package_yaml (internal, accessed via CapabilitySource path)
+
 
 def run_upgrade(target_root: Path, dry_run: bool = False) -> None:
     """Transition the project to the source kit's current backbone version."""
@@ -117,6 +124,12 @@ def _resolve_compatibility(
     falling back to the installed copy for components the source no longer ships
     (see `_resolve_package_yaml`). Raises `click.ClickException` on conflict so
     the caller surfaces it before any state changes.
+
+    Also checks capability dependency requirements (COR-030): for each installed
+    capability that declares ``requires_capabilities``, verifies that each
+    declared dependency is installed and its installed version satisfies the
+    range. Uses *installed* versions for both sides (backbone upgrade does not
+    change capability versions). Conflicts are refused with an actionable hint.
     """
     try:
         target = Version(target_version)
@@ -147,6 +160,13 @@ def _resolve_compatibility(
             "compatibility check failed — installed components are not compatible "
             f"with backbone v{target_version}:\n" + "\n".join(conflicts)
         )
+
+    # Capability-dependency check (COR-030): refuse backbone upgrade when an
+    # installed capability's declared dependency is absent or out of range.
+    # Backbone upgrade uses installed versions for both sides — it does not
+    # change capability versions (sync propagates kit-owned content but does
+    # not bump capability versions; `pkit capabilities upgrade` does that).
+    _check_capability_dep_conflicts_for_upgrade(target_root, components)
 
 
 def _resolve_package_yaml(
@@ -373,3 +393,65 @@ def _restamp_component_manifest_version(
     manifest.version = new_version
     manifest.installed_at = _dt.datetime.now(_dt.timezone.utc).isoformat()
     write_component_manifest(manifest_path, manifest)
+
+
+def _check_capability_dep_conflicts_for_upgrade(
+    target_root: Path,
+    components: list[ComponentRegistryEntry],
+) -> None:
+    """Refuse backbone upgrade when any installed capability has an unsatisfied dependency.
+
+    Iterates over every installed capability in the registry, reads its
+    installed ``package.yaml`` (not the source copy — backbone upgrade does
+    not change capability versions, so the installed copy is authoritative),
+    and calls ``capabilities.check_capability_dependencies`` to evaluate each
+    declared ``requires_capabilities`` entry against the installed state.
+
+    This is the backbone-wide half of the capability-dependency gate
+    (COR-030). The single-capability-upgrade half lives in
+    ``upgrade_capability_cmd`` in ``cli.py``.
+
+    Direction: backbone upgrade is not moving any capability version, so
+    any desync found here is pre-existing. We apply the "dependent against
+    out-of-range dependency" disposition (refuse with hint) rather than the
+    "dependency past dependent's range" disposition (warn + force), because
+    the operator can resolve by first upgrading the dependency capability.
+    """
+    from project_kit import capabilities as caps
+
+    dep_conflicts: list[str] = []
+    for entry in components:
+        if entry.kind != "capability":
+            continue
+        pkg_yaml_path = (
+            target_root / ".pkit" / "capabilities" / entry.name / "package.yaml"
+        )
+        if not pkg_yaml_path.is_file():
+            continue
+        pkg = caps._read_package_yaml(pkg_yaml_path)
+        if pkg is None or not pkg.requires_capabilities:
+            continue
+        conflicts = caps.check_capability_dependencies(
+            target_root, pkg.requires_capabilities
+        )
+        for conflict in conflicts:
+            if conflict.reason == "absent":
+                dep_conflicts.append(
+                    f"  capability '{entry.name}' requires capability "
+                    f"'{conflict.dep_name}' ({conflict.dep_version_range}), "
+                    f"which is not installed — install it first"
+                )
+            else:
+                dep_conflicts.append(
+                    f"  capability '{entry.name}' requires capability "
+                    f"'{conflict.dep_name}' {conflict.dep_version_range}, "
+                    f"but v{conflict.installed_version} is installed — "
+                    f"upgrade it first"
+                )
+
+    if dep_conflicts:
+        raise click.ClickException(
+            "capability dependency check failed — installed capabilities have "
+            "unsatisfied dependencies:\n" + "\n".join(dep_conflicts) + "\n"
+            "Resolve the dependencies first, then retry the backbone upgrade."
+        )

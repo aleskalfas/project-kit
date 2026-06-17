@@ -23,7 +23,7 @@ Developers don't stamp these layouts by hand. The kit ships authoring commands (
 │           ├── 001-<slug>.sh
 │           └── ...
 ├── capabilities/<capability>/
-│   ├── package.yaml                                 ← component metadata: version, requires_backbone
+│   ├── package.yaml                                 ← component metadata: version, requires_backbone, requires_capabilities
 │   ├── migrations/<major>.<minor>.0/...
 │   └── project/
 │       └── manifest.yaml                            ← per-component manifest
@@ -95,15 +95,57 @@ Sections:
 
 Notably absent: enumerations of files, labels, symlinks, settings entries, templates. These are *derivable* state — the kit-side spec at the component's recorded version + the adopter's config tells you what should exist; the validate/upgrade reconciliation tells you whether reality matches.
 
+### Per-capability `package.yaml` (source-side metadata)
+
+A capability's source-side `package.yaml` carries the metadata the lifecycle reads at install and upgrade time. Adapters have a similar shape.
+
+```yaml
+schema_version: 1
+component:
+  kind: capability
+  name: evidence
+  version: 0.5.1
+description: "Citation discipline — ..."
+requires_backbone: ">=1.26.0,<2.0.0"
+
+# Optional: declared dependencies on other capabilities (COR-030).
+# Each entry is a capability name + semver range for the installed version.
+# Absence of this field (or an empty list) means no dependencies.
+requires_capabilities:
+  - name: project-management
+    version: ">=0.20.0,<1.0.0"
+```
+
+Fields:
+
+- **`requires_backbone`** — semver range of backbone versions this capability version is compatible with. Evaluated at install and upgrade.
+- **`requires_capabilities`** — optional list of capability dependencies, each a `{name, version}` pair where `version` is a semver range. The lifecycle gates on these at install, upgrade, and uninstall (COR-030). Absence means no dependencies; capabilities without this field are unaffected.
+
 ## The component registry
 
 The backbone manifest's `components` list is the canonical install record.
 
-**Install** a component → create its per-component manifest at the designated path, then append a `{kind, name, manifest}` entry to `components`.
+**Install** a component → run the pre-flight checks (see below), create its per-component manifest at the designated path, then append a `{kind, name, manifest}` entry to `components`.
 
-**Remove** a component → delete the registry entry, then delete the per-component manifest file. Adopter-owned content authored on top of the component (project-side records, customisations) is left untouched per COR-005 and the no-shared-files invariant.
+**Remove** a component → run refusal checks (see below), delete the registry entry, then delete the per-component manifest file. Adopter-owned content authored on top of the component (project-side records, customisations) is left untouched per COR-005 and the no-shared-files invariant.
 
 **Status / validate / upgrade** walk the registry to find component manifests, then operate per component.
+
+### Install pre-flight checks
+
+Before placing files, `pkit capabilities install` runs four checks in order:
+
+1. **Already installed?** Refuse with a hint to use `upgrade`.
+2. **Backbone compatibility** — the capability's `requires_backbone` range must include the current backbone version (checked by `find_capability_in_source`).
+3. **Capability dependencies (COR-030)** — every entry in `requires_capabilities` must be satisfied: the declared dependency is installed *and* its recorded version falls within the declared semver range. Refuse with an actionable hint naming what to install or upgrade first. Never auto-installs.
+4. **Naming collision detection** — skills/agents from the new capability must not collide with already-installed names. Interactive resolution available.
+
+### Uninstall refusal checks
+
+Before removing files, `pkit capabilities uninstall` runs two checks (both defeatable by `--force`):
+
+1. **Declared dependents (COR-030)** — if any installed capability lists this one in its `requires_capabilities`, refuse and name the dependents. The operator must uninstall or upgrade the dependents first.
+2. **Textual references** — if any adopter-authored file cites the capability (citation token or path reference), refuse and list the references.
 
 ## Migration framework
 
@@ -154,7 +196,7 @@ Component migrations are tied to the component's version, not the backbone's. A 
 
 The upgrade command transitions an adopter project to a target backbone version (and optionally specific component versions). Six steps:
 
-1. **Resolve compatibility.** Read each installed component's `requires_backbone` against the target backbone version. Refuse to upgrade backbone past a component's range, unless the component is also being upgraded to a version compatible with the new backbone. Surface conflicts so the adopter can address them (upgrade specific components, pin backbone, or remove an incompatible component).
+1. **Resolve compatibility.** Read each installed component's `requires_backbone` against the target backbone version. Refuse to upgrade backbone past a component's range, unless the component is also being upgraded to a version compatible with the new backbone. Surface conflicts so the adopter can address them (upgrade specific components, pin backbone, or remove an incompatible component). Also checks **capability dependencies (COR-030)**: for each installed capability, verifies that its `requires_capabilities` entries are satisfied using *installed* versions of both sides (backbone upgrade does not change capability versions). Refuses with an actionable hint if any dependency is absent or out of range.
 2. **Pull new propagated content.** Run sync (per COR-001) for the backbone. Component-side propagated content updates as part of each component's upgrade.
 3. **Run backbone migrations** in order: manifest-schema → structural → resource-scoped, across minor-version boundaries from current to target.
 4. **For each component being upgraded**, run its migrations in version order with the same scope ordering within each `<major>.<minor>.0/` directory.
@@ -166,6 +208,13 @@ Idempotent: running upgrade on a current adopter is a no-op.
 ### Per-component upgrade
 
 Upgrading just one component (e.g., the project-management capability) skips backbone-side steps as long as the component's new version remains within `requires_backbone` of the current backbone. The same compatibility check from step 1 gates entry. Steps 4 (component migrations), 5 (component-scoped reconciliation), and 6 (component manifest version bump) run; step 2 pulls only the component's source.
+
+For capabilities, a **direction-split dependency check (COR-030)** runs before collision detection:
+
+- *Upgrading a dependent* — the new source version's `requires_capabilities` is checked against the installed dependency versions. If a dependency is absent or out of range, the upgrade **refuses with an actionable hint** (the operator controls the dependent version; no deadlock).
+- *Upgrading a dependency* — installed capabilities that declare this capability in their `requires_capabilities` are checked against the new version. If the new version falls outside a dependent's declared range, the upgrade **warns loudly and requires `--force` to proceed** — it is not a hard block. A hard block would deadlock (the operator cannot advance the dependency without cascade-upgrading the dependent, which is out of scope per COR-030). Use `--force` as the by-hand analogue of cascade-upgrade, then upgrade the now-desynced dependents to restore consistency.
+
+Both entry points — backbone-wide `pkit upgrade` and single-capability `pkit capabilities upgrade <name>` — share one version-range / installed-state predicate (`capabilities.check_capability_dependencies`). The backbone-wide path does not move capability versions, so only the "dependent against unsatisfied dependency" direction (refuse) applies there; the warn+force direction applies only in the single-capability path.
 
 ## Reconciling derivable state
 
