@@ -40,9 +40,26 @@ The title "session start …" reads naturally for either. Pick one before buildi
 - **PM-issue-fit:** confirmed PM validation is a hard gate; the `feedback` lightweight type is the resolution (a small, contained PM extension — a new *type*, far less invasive than a new *role*).
 - **Mapping:** the durable thread is closer to an Umbrella-style bucket than a Task — make the containment mapping explicit when building.
 
+## Reframe — trustworthy-notes hand-off (2026-06-17)
+
+The `tn feedback` design (`2026-06-17-tn-feedback-design.md`) is a *settled, concrete* instance of this pattern, and it reshapes the capability — for the better. It dissolves the critic's fatal findings:
+
+- **Shape: a deterministic `feedback` *command/flow*, not a free autonomous agent.** The LLM is ONE structuring step (raw-text fallback if it fails) inside a fixed pipeline: capture diagnostics → build a repro bundle → AI-structure → file → confirm. This dissolves the critic's RF-1 — a fixed pipeline can't be hijacked into arbitrary tool calls, and injected feedback text at worst garbles the structured title/summary; it can't make the flow *do* something else.
+- **Credential: a separate PRIVATE feedback repo + a fine-grained PAT scoped to that one repo** (Issues + Contents, with expiry), delivered **out-of-band** (1Password), stored in local config — **never in the shipped artifact**. Blast radius if leaked = one private feedback repo, instantly revocable. Dissolves RF-2.
+- **The private repo dissolves the PII/data concern (G-1)** and is *required* because the repro bundle carries sensitive source excerpts. Plus an explicit **consent boundary**: the user sees and acknowledges exactly what is uploaded before it's sent.
+- **Graceful fallback** — offline / missing / expired token → write a local `feedback.txt`; feedback is never lost.
+- **Isolation** — the feedback module is never imported by the core pipeline (`cli → feedback`, never `pipeline → feedback`), keeping the deterministic path network- and second-credential-free.
+- **Identity by name-tag** ("Reported by: \<name\>") since the PAT authors as the maintainer — no GitHub account for the end user.
+
+**Consequences for the earlier open items:**
+- The **lifespan / rollover / per-session-issue** machinery (including the (b) decision) is **largely moot** — feedback is issues in a separate feedback repo the maintainer triages; no per-session rollover to manage (the critic's CA-3 holds).
+- The PM **`feedback`-type extension** is likely **not needed** — feedback lands in its own repo as plain issues, not in the project's PM tracker with a new type.
+- So the **`requires_capabilities: [project-management]` dependency may not be load-bearing for *filing*** — this shape files independently to a feedback repo; the maintainer pulls worthy items into the PM tracker by hand. COR-030 was the prerequisite for the original *agent-uses-PM-scripts* shape; re-examine whether the reframed shape needs it at all.
+- The **serverless-proxy** alternative (tn rejected-but-deferred) is the critic's CA-1 intermediary — kept as the **v2 target** if PAT rotation becomes a burden.
+
 ## Next steps (when resumed)
 
-1. Settle the **lifespan** decision (one-per-session vs long-lived-rollover).
-2. Resolve the **capability-dependency** prerequisite (the parked modular-install-surface note).
-3. Run `critic` then `architect` on the *full* revised design (the first critic pass was on the pre-reframe shape; architect has not reviewed the revised shape).
-4. Author the capability via `capability-author`; ship the `feedback` issue type + the constrained end-user agent + the session lifecycle.
+1. **Re-run `architect`** on the *reframed* shape (deterministic command + AI-structure step; separate private feedback repo + scoped out-of-band PAT; consent + fallback + isolation). The earlier critic+architect passes were on the agent-with-PM-dependency shape; this is materially different and safer.
+2. **Generalize the `tn feedback` pattern into the pkit capability** — separate the reusable parts (the flow, the credential/repo model, consent, fallback, isolation) from the project-specific parts (the repro-bundle contents). Decide whether it still depends on project-management.
+3. **Trust-boundary ADR** — the data-exfiltration / second-credential boundary (tn's docs Task #13 obligation) generalizes to a pkit ADR.
+4. Author via `capability-author` once the shape + the dependency question are settled.
