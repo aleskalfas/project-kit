@@ -539,3 +539,34 @@ def test_install_kit_stamps_backbone_manifest(installed_target: Path) -> None:
     assert len(manifest.components) == 1
     assert manifest.components[0].kind == "adapter"
     assert manifest.components[0].name == "claude-code"
+
+
+# ── rules area sync preservation (issue #96) ──────────────────────────────
+
+
+def test_sync_refreshes_rules_core_md(installed_target: Path) -> None:
+    """Sync propagates an updated core.md (kit-owned) into the adopter tree."""
+    core_md = installed_target / ".pkit" / "rules" / "core.md"
+    assert core_md.is_file(), "core.md must exist after install"
+    # Overwrite with stale content to simulate a pre-update adopter.
+    core_md.write_text("# stale\n", encoding="utf-8")
+
+    sync.run_sync(installed_target)
+
+    refreshed = core_md.read_text(encoding="utf-8")
+    assert "stale" not in refreshed, "sync did not refresh core.md"
+    assert len(refreshed) > 50, "refreshed core.md looks unexpectedly short"
+
+
+def test_sync_does_not_overwrite_rules_project_md(installed_target: Path) -> None:
+    """project.md is adopter-owned; sync must never overwrite it."""
+    project_md = installed_target / ".pkit" / "rules" / "project.md"
+    adopter_content = "# My project rules\n\nCustom adopter rule.\n"
+    project_md.write_text(adopter_content, encoding="utf-8")
+
+    sync.run_sync(installed_target)
+
+    assert project_md.is_file(), "sync removed the adopter's project.md"
+    assert project_md.read_text(encoding="utf-8") == adopter_content, (
+        "sync clobbered the adopter's project.md"
+    )

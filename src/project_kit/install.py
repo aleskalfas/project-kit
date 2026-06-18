@@ -86,6 +86,7 @@ PROPAGATED_AREAS: tuple[str, ...] = (
     "agents",
     "schemas",
     "permissions",
+    "rules",
 )
 
 
@@ -293,6 +294,13 @@ def _install_area(src: Path, dst: Path, ctx: InstallContext, *, overwrite: bool 
         _handled.add("pkit")
     elif area_name == "scratchpad":
         _handled |= {"active", "done", "dropped"}
+    elif area_name == "rules":
+        # project.md is adopter-owned (per the rules area README): the adopter
+        # authors their project-specific rules there; kit sync must never
+        # overwrite it. Exclude it from the flat-content pass so sync only
+        # propagates core.md. On init (overwrite=False), project.md is
+        # absent in fresh adopters so the file-presence guard below handles it.
+        _handled.add("project.md")
     for entry in sorted(src.iterdir()):
         if entry.name in _handled:
             continue
@@ -428,7 +436,7 @@ def _run_adapter_primitive(script: Path, ctx: InstallContext) -> None:
 # matters: settings merge precedes content deploys because some skills
 # may rely on settings being in place. Adding a new primitive: extend
 # this list and document the new script's contract in the adapter README.
-_ADAPTER_PRIMITIVES = ("merge-settings.sh", "deploy-skills.sh", "deploy-agents.sh")
+_ADAPTER_PRIMITIVES = ("merge-settings.sh", "merge-claude-md.sh", "deploy-skills.sh", "deploy-agents.sh")
 
 
 def run_installed_adapter_primitives(ctx: InstallContext) -> None:

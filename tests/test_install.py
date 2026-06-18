@@ -248,3 +248,30 @@ def test_install_does_not_propagate_scratchpad_state_contents(tmp_target: Path) 
     # Stubbed empty (only .gitkeep), never populated with the source's own notes.
     notes = [p for p in done.glob("*.md")] if done.is_dir() else []
     assert notes == []
+
+
+# ── rules area propagation (issue #96) ────────────────────────────────────
+
+
+@pytest.mark.usefixtures("stub_adapter_primitives")
+def test_install_propagates_rules_area(tmp_target: Path) -> None:
+    """The rules area is in PROPAGATED_AREAS and core.md lands on init."""
+    assert "rules" in install.PROPAGATED_AREAS
+    install.install_kit(tmp_target)
+    rules = tmp_target / ".pkit" / "rules"
+    assert rules.is_dir(), ".pkit/rules/ not created on install"
+    assert (rules / "core.md").is_file(), ".pkit/rules/core.md not propagated"
+    assert (rules / "README.md").is_file(), ".pkit/rules/README.md not propagated"
+
+
+@pytest.mark.usefixtures("stub_adapter_primitives")
+def test_install_does_not_propagate_rules_project_md(tmp_target: Path) -> None:
+    """project.md is adopter-owned; init must never copy it into a fresh adopter tree."""
+    install.install_kit(tmp_target)
+    project_md = tmp_target / ".pkit" / "rules" / "project.md"
+    # project.md is in the source kit (project-kit self-hosts) but must not
+    # land in adopters — it's authored by each adopter for their own rules.
+    assert not project_md.exists(), (
+        ".pkit/rules/project.md was copied into the adopter tree; "
+        "it is adopter-owned and must not propagate"
+    )
