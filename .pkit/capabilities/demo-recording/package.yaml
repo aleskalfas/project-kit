@@ -1,0 +1,17 @@
+schema_version: 2
+component:
+  kind: capability
+  name: demo-recording
+  version: 0.1.0
+description: Screen-recorded CLI demos driven by an executable markdown storyboard — a generic storyboard format (parser + plugin interface + runner) plus a macOS CLI-recording plugin.
+requires_backbone: ">=1.26.0,<2.0.0"
+commands:
+  record:
+    script: scripts/record.sh
+    help: "Record a screen-recorded CLI demo (macOS/iTerm2): open the RECORDING + CONTROL windows, start screen capture, and drive the storyboard. Sub-actions: <demo>, windows, stop, --validate, --no-recording."
+  run:
+    script: scripts/run-storyboard.sh
+    help: "Drive a storyboard markdown file step-by-step without screen recording — type the directives into the focused pane. Pass --validate to parse-and-print only."
+  validate:
+    script: scripts/validate.sh
+    help: "Validate a storyboard markdown file's syntax (title, steps, directive fences) and print the resolved step plan. Read-only; no windows, no recording."

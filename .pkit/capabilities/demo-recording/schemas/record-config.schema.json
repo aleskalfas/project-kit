@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "record-config.schema.json",
+  "title": "Recording bundle configuration (record.yaml)",
+  "description": "Formal shape of record-config.yaml — the per-bundle recording configuration an adopter writes for a CLI-demo bundle: working directory, the two iTerm2 window rectangles, output directory, optional font knobs, and the optional after_record hook list. Document-shaped schema: the file IS the resource (no top-level id collection). Models the recording configuration only, not the storyboard document (per demo-recording:DEC-001). Companion per COR-018 / the .pkit/schemas/ area conventions.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "cwd",
+    "windows"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "pkit_schema": {
+      "type": "string",
+      "description": "Self-describing adopter-data binding (per COR-023). Expected value: 'demo-recording:record-config'."
+    },
+    "binds_to": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Per-schema fallback binding (per COR-023). Present on the capability-side schema YAML so the resolver can match adopter record.yaml files without an explicit `pkit_schema:` field."
+    },
+    "source": {
+      "$ref": "refs.schema.json#/$defs/source"
+    },
+    "cwd": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Absolute path the RECORDING and CONTROL windows cd into before the demo runs — the directory the demo drives."
+    },
+    "windows": {
+      "type": "object",
+      "description": "The two iTerm2 window rectangles, in macOS {left, top, right, bottom} pixel bounds.",
+      "required": [
+        "recording",
+        "control"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "recording": {
+          "$ref": "#/$defs/window_bounds",
+          "description": "Bounds of the RECORDING window (visible in the video)."
+        },
+        "control": {
+          "$ref": "#/$defs/window_bounds",
+          "description": "Bounds of the CONTROL window (off the recording region; drives the take)."
+        }
+      }
+    },
+    "recordings_dir": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Where video files land. Relative paths resolve against record.yaml's directory; absolute paths are used as-is. Defaults to ./recordings when omitted."
+    },
+    "font_size": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "iTerm font size for the demo windows (readable for video). Defaults to 18 when omitted."
+    },
+    "font_name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "iTerm font family (Core Text PostScript name). Defaults to Menlo-Regular when omitted."
+    },
+    "hooks": {
+      "type": "object",
+      "description": "Optional post-recording hook scripts (per the after_record contract in the capability README).",
+      "additionalProperties": false,
+      "properties": {
+        "after_record": {
+          "type": "array",
+          "description": "Scripts run sequentially, in order, after a successful recording. Relative paths resolve against record.yaml's directory. Each must be executable.",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "window_bounds": {
+      "type": "array",
+      "description": "iTerm2 window bounds as [left, top, right, bottom] pixel coordinates.",
+      "items": {
+        "type": "integer"
+      },
+      "minItems": 4,
+      "maxItems": 4
+    }
+  }
+}
