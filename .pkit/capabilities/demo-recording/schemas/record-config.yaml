@@ -1,0 +1,46 @@
+# The per-bundle recording configuration (record.yaml) for a CLI-demo bundle.
+#
+# A record.yaml is ADOPTER-side data: each demo bundle a project lays out
+# carries one, declaring where the recording runs (cwd), the two iTerm2
+# window rectangles, where videos land, optional font knobs, and the
+# optional list of after_record hook scripts. The recording engine
+# (scripts/record.sh) reads it at record time. This is a document-shaped
+# schema: the file IS the resource, not a registry of entries.
+#
+# Scope note (per [demo-recording:DEC-001-storyboard-as-executable-format]):
+# this schema models the recording CONFIGURATION only. The storyboard
+# document's grammar is not schema-modelled — it lives in the parser and
+# the capability README spec, because the storyboard is prose-with-
+# directives rather than structured data.
+#
+# Deferred — typing/timing tunables stay env-vars, not config fields.
+# FOCUS_DELAY, MIN_MS / MAX_MS, CHUNK_SIZE, REVIEW_PAUSE, PRE_RUN_PAUSE
+# remain per-invocation environment overrides (read by scripts/lib.sh),
+# NOT record.yaml fields. Whether they should migrate into record.yaml as
+# a per-bundle baseline is unsettled; until it is, they are deliberately
+# absent from this schema. Revisit if a bundle needs to pin them durably.
+#
+# The body below is a minimal VALID example record.yaml — it doubles as
+# the schema's self-test instance (validated by `pkit schemas validate`)
+# and as a copy-paste starting point. A real adopter file replaces the
+# example paths with its own.
+
+schema_version: 1
+
+# Adopter-data binding (per COR-023): record.yaml files in a project's
+# demo bundles match this schema. Adopter files SHOULD also carry the
+# self-describing top-level field `pkit_schema: demo-recording:record-config`.
+binds_to:
+  - "**/record.yaml"
+
+pkit_schema: demo-recording:record-config
+cwd: /abs/path/to/the/project/the/demo/drives
+windows:
+  recording: [50, 50, 1330, 850]   # iTerm bounds: [left, top, right, bottom] → 1280x800 inner
+  control:   [50, 880, 750, 1150]  # off the recording region; drives the take
+recordings_dir: ./recordings        # optional; relative-to-config or absolute
+font_size: 18                       # optional
+font_name: Menlo-Regular            # optional
+hooks:                              # optional
+  after_record:
+    - ./hooks/update-replay-session-id.sh
