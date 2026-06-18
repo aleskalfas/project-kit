@@ -31,7 +31,7 @@ Lay the bundle out under the adopter's own demo area (conventionally `demo/<name
 demo/<name>/
 ├── record.yaml        # per-bundle config (record-config schema)
 ├── record.sh          # OPTIONAL thin wrapper: exec the engine with --config record.yaml
-├── storyboards/       # the executable storyboard .md files (author with demo-storyboard-author)
+├── storyboards/       # the executable storyboard .md files (author with the storyboard-author operation)
 │   └── <demo>.md
 ├── hooks/             # OPTIONAL post-record hooks (author with hook-author)
 │   └── <hook>.sh
@@ -84,7 +84,7 @@ This is optional sugar — adopters can also invoke `pkit demo-recording record 
 
 ### 4. Author the first storyboard
 
-Use the `demo-storyboard-author` skill to write `storyboards/<demo>.md`. Validate it:
+Use the `demo-recording` skill's `storyboard-author` operation to write `storyboards/<demo>.md`. Validate it:
 
 ```
 pkit demo-recording validate demo/<name>/storyboards/<demo>.md

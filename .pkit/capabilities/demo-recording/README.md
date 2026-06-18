@@ -20,11 +20,11 @@ When an adopter runs `pkit capabilities install demo-recording`, they receive:
   - `validate.sh` — platform-neutral storyboard validation.
   - `storyboards/` — Layer 1+2: `parser.py` (markdown → tree), `plugin.py` (Plugin ABC + registry), `runner.py` (CLI entry).
   - `plugins/recording/` — Layer 3: `directives.py` (the recording vocabulary), `lib.sh` (keystroke + pane primitives), `setup-windows.sh`, `_session.sh`, `post-demo.sh`, `ffmpeg_post.sh`, and `platform-guard.sh` (the single macOS gate).
-- **Skills** (`skills/`):
-  - `record/` — composite skill (per COR-020): `start` / `validate` / `windows` / `stop`.
-  - `new-bundle` — scaffold an adopter demo bundle (`record.yaml` + `storyboards/` + `hooks/`).
-  - `demo-storyboard-author` — author an executable demo storyboard (named distinctly from the core COR-016 scripted-scenario `storyboard-author`).
-  - `hook-author` — author an `after_record` hook against the `DCR_*` contract.
+- **Skill** (`skills/demo-recording/`): one composite skill per COR-020, deployed as `Skill(demo-recording)`. Its dispatcher (`demo-recording.md`) routes to per-operation sub-procedures:
+  - Drive the engine — `start` (record a demo) / `validate` / `windows` / `stop`.
+  - Author bundle content — `new-bundle` (scaffold a bundle) / `storyboard-author` (author an executable storyboard) / `hook-author` (author an `after_record` hook against the `DCR_*` contract).
+
+  The `storyboard-author` sub-procedure is namespaced under this composite, so it stays distinct from the methodology's core COR-016 `storyboard-author` skill without needing a prefixed name.
 
 ## CLI surface
 
@@ -46,7 +46,7 @@ Install:
 pkit capabilities install demo-recording
 ```
 
-Then, per demo, scaffold a **bundle** (use the `new-bundle` skill). A bundle is a directory the adopter owns, conventionally under `demo/<name>/`:
+Then, per demo, scaffold a **bundle** (the `demo-recording` skill's `new-bundle` operation). A bundle is a directory the adopter owns, conventionally under `demo/<name>/`:
 
 ```
 demo/<name>/
@@ -58,7 +58,7 @@ demo/<name>/
 └── recordings/        # output (.mov + .mp4); created on first take
 ```
 
-Write storyboards with the `demo-storyboard-author` skill, hooks with `hook-author`, then record with the `record` skill.
+Write storyboards, author hooks, and record via the `demo-recording` skill — its `storyboard-author`, `hook-author`, and `record` operations respectively.
 
 ## The storyboard format
 

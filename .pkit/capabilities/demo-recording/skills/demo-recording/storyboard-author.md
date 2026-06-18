@@ -1,5 +1,5 @@
 ---
-name: demo-storyboard-author
+name: storyboard-author
 description: Author an executable demo storyboard — a markdown document with step headings and fenced recording directives that the engine both reads and runs. Distinct from the core storyboard-author skill (COR-016 scripted-scenario storyboards), which is a different sense of "storyboard". Use when writing or revising a screen-recorded CLI demo's script.
 gates:
   - COR-017
@@ -18,7 +18,7 @@ A **demo storyboard** is a plain markdown document that is **also the executable
 
 ## Naming — two senses of "storyboard"
 
-This is **not** the methodology's COR-016 *scripted-scenario* storyboard (a narrative behaviour spec an agent reads). This skill authors an *executable demo* storyboard. The two senses are deliberately kept distinct — hence the skill name `demo-storyboard-author`. If the task is a behaviour-narrative spec, use the core `storyboard-author` skill instead.
+This is **not** the methodology's COR-016 *scripted-scenario* storyboard (a narrative behaviour spec an agent reads). This skill authors an *executable demo* storyboard. The two senses are deliberately kept distinct: this is the `storyboard-author` operation of the `demo-recording` capability — namespaced under that composite skill, so it doesn't collide with the methodology's top-level core `storyboard-author` skill. If the task is a behaviour-narrative spec, use the core `storyboard-author` skill instead.
 
 ## Acceptance gate
 
