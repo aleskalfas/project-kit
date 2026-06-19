@@ -34,18 +34,31 @@ def run_sync(target_root: Path, dry_run: bool = False) -> None:
 
     source_kit = install.find_source_kit()
 
-    # Mirror init's source==target guard: project-kit self-hosts, so its
-    # own .pkit/ IS the source. Copying files onto themselves either
-    # raises SameFileError or is a no-op; either way, sync against
-    # project-kit's own tree is the wrong gesture (commit changes
-    # directly to the source instead).
+    # Self-host (project-kit): its own .pkit/ IS the source, so propagation
+    # would copy files onto themselves. Rather than refuse, run only the
+    # deploy primitives — they (re-)materialise the harness side
+    # (.claude/agents, skills, settings, CLAUDE.md) from the source tree the
+    # maintainer just edited. This is the self-host equivalent of sync:
+    # "re-wire me to my own source." Propagation, capability refresh, and the
+    # recorded-version stamp are skipped — the source is already the state.
     if target_root.resolve() == source_kit.parent.resolve():
-        raise click.ClickException(
-            f"source and target are the same project ({target_root}).\n"
-            f"       project-kit self-hosts directly; running 'pkit sync' on\n"
-            f"       project-kit itself would copy files onto themselves. Edit\n"
-            f"       the source tree directly instead."
+        ctx = install.InstallContext(
+            target_root=target_root,
+            source_kit=source_kit,
+            dry_run=dry_run,
         )
+        click.echo(f"Syncing project-kit at {target_root} (self-host)")
+        click.echo(
+            "  source == target: skipping propagation; running deploy "
+            "primitives only."
+        )
+        if dry_run:
+            click.echo("  (dry-run — no changes will be written)")
+        click.echo()
+        install.run_installed_adapter_primitives(ctx)
+        click.echo()
+        click.echo("Self-host sync complete (deploy primitives re-run).")
+        return
 
     ctx = install.InstallContext(
         target_root=target_root,
