@@ -31,19 +31,33 @@ def test_sync_refuses_when_pkit_dir_missing(tmp_path: Path) -> None:
         sync.run_sync(tmp_path)
 
 
-def test_sync_refuses_when_target_is_source(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Project-kit self-hosts; sync against the source's own repo is a no-op error.
+def test_sync_self_host_runs_deploy_primitives_only(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Project-kit self-hosts; sync re-runs the deploy primitives instead of refusing.
 
-    Without this guard, `_install_area` tries to copy `.pkit/.../README.md`
-    onto itself and raises `shutil.SameFileError`. The Click-level refusal
-    is clearer than the stack trace.
+    The source IS the installed `.pkit/`, so propagation would copy files
+    onto themselves. The self-host branch skips propagation entirely and runs
+    only the deploy primitives (re-wiring the harness from the source the
+    maintainer just edited). It must not raise and must not propagate.
     """
     from project_kit import install
 
     source_repo = install.find_source_kit().parent
     monkeypatch.chdir(source_repo)
-    with pytest.raises(click.ClickException, match="source and target are the same"):
-        sync.run_sync(source_repo)
+
+    called = {"deploy": 0}
+
+    def _spy_deploy(_ctx: install.InstallContext) -> None:
+        called["deploy"] += 1
+
+    def _no_propagate(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("self-host sync must not propagate (copy onto source)")
+
+    monkeypatch.setattr(install, "run_installed_adapter_primitives", _spy_deploy)
+    monkeypatch.setattr(install, "_install_area", _no_propagate)
+
+    sync.run_sync(source_repo)  # must not raise
+
+    assert called["deploy"] == 1
 
 
 def test_sync_runs_idempotently_after_install(installed_target: Path) -> None:

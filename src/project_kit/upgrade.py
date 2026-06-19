@@ -79,6 +79,20 @@ def run_upgrade(target_root: Path, dry_run: bool = False) -> None:
         )
 
     source_kit = find_source_kit()
+
+    # Self-host (project-kit): the source IS the installed state, so there is
+    # no backbone to upgrade. Delegate to sync, whose self-host branch re-runs
+    # the deploy primitives so the harness picks up source edits. Skips the
+    # version comparison (the recorded manifest version is moot on self-host)
+    # and the migration steps (self-host authors migrations with the source
+    # change; it does not run them against itself).
+    if target_root.resolve() == source_kit.parent.resolve():
+        click.echo("Self-host: source is the installed state; no backbone upgrade needed.")
+        click.echo("Re-running deploy primitives via sync.")
+        click.echo()
+        run_sync(target_root, dry_run=dry_run)
+        return
+
     target_version = read_kit_version(source_kit)
     current_version = manifest.backbone_version
 

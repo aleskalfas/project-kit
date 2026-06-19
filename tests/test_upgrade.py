@@ -36,6 +36,28 @@ def test_upgrade_refuses_when_backbone_manifest_missing(tmp_path: Path) -> None:
         upgrade.run_upgrade(tmp_path)
 
 
+def test_upgrade_self_host_delegates_to_sync(monkeypatch: pytest.MonkeyPatch) -> None:
+    """On self-host (source == target), upgrade short-circuits to sync's deploy.
+
+    There is no backbone to upgrade — the source IS the installed state — so
+    upgrade delegates to sync (whose self-host branch re-runs the deploy
+    primitives) and skips the version comparison + migration steps.
+    """
+    source_repo = install.find_source_kit().parent
+    monkeypatch.chdir(source_repo)
+
+    called = {"sync": 0}
+
+    def _spy_sync(_target_root: Path, dry_run: bool = False) -> None:
+        called["sync"] += 1
+
+    monkeypatch.setattr(upgrade, "run_sync", _spy_sync)
+
+    upgrade.run_upgrade(source_repo)  # must not raise
+
+    assert called["sync"] == 1
+
+
 def test_upgrade_reports_already_at_version_when_in_sync(
     installed_target: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

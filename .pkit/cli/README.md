@@ -115,6 +115,8 @@ Runs first install in this order:
 
 Re-runs propagation only. Pulls current canonical core content into your project's `.pkit/` tree. Does **not** invoke seed (one-shot only — see COR-001) or merge (separate consent profile — see COR-002 and COR-004). Idempotent: re-running with no changes pending reports "current" and exits cleanly.
 
+On **self-host** (project-kit itself, where the source *is* the installed `.pkit/`), propagation would copy files onto themselves — so `sync` skips propagation and runs only the adapter deploy primitives instead, re-wiring the harness (`.claude/` agents, skills, settings, CLAUDE.md) from the source you just edited. This is the self-host way to apply source edits to the harness; you don't (and can't) `sync`/`upgrade` project-kit onto itself otherwise.
+
 ### `merge [<target>...]`
 
 Re-runs merge against one or more declared merge targets, or against all targets if no argument is given. Honours the two-tier (auto-add / prompt-once) contract from COR-002. Idempotent.
@@ -124,6 +126,8 @@ Use this when you want to pull baseline updates for a single fixed-path config f
 ### `upgrade`
 
 Compares the version of the core layer recorded in your project against the version this CLI was built from. Runs any pending migrations in order, then runs `sync`. Refuses to proceed if your project's recorded version is ahead of the CLI's (and tells you so).
+
+On **self-host**, there is no backbone to upgrade (the source is the installed state), so `upgrade` short-circuits to the self-host `sync` above — re-running the deploy primitives — rather than attempting a version transition.
 
 ## Authoring commands
 
