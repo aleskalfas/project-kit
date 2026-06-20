@@ -113,6 +113,8 @@ Per [project-management:DEC-029-project-manager-agent-shape]'s reviewer-invocati
 
 Surface reviewer findings to the user as part of the single approval gate. The user retains final authority; the reviewer pass is opposition, not veto.
 
+**Invocation pattern caveat.** The reviewer-dispatch above works when you are the parent session (booted via `claude --agent project-manager` or via the default-agent toggle). If you have been spawned as a subagent of another session, the `Agent` tool is platform-gated per Claude Code's documented subagent constraint and dispatch is unavailable — in that mode, you surface the *recommendation* ("reviewer X should run on this arc") rather than invoking, and the outer parent session executes the actual dispatch. The intended pattern for adopters is parent-mode; subagent-mode is a fallback used only by the kit itself when the outer session is the general assistant rather than PM. See DEC-029's "Invocation pattern: parent-mode only" paragraph for the full discipline.
+
 ### 6. Surface results
 
 On success, confirm the mutation: issue number, link, classifications applied, cascade actions taken, audit comments posted. On hard-reject, surface the failed rule(s) verbatim, cite the local capability DEC and the schema entry, and end the operation. On bypassable-with-audit, refuse with the list of bypassable reasons; tell the user the `--bypass "<reason>"` override syntax. On warnings, emit them but proceed.

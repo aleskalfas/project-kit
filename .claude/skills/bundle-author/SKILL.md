@@ -1,1 +1,0 @@
-../../../.pkit/skills/core/bundle-author.md
