@@ -470,6 +470,77 @@ def install_capability(
     return dest
 
 
+def register_incubated_capability(
+    target_root: Path,
+    capability_source: CapabilitySource,
+    *,
+    dry_run: bool = False,
+) -> Path:
+    """Register an in-repo (incubated) capability without copying (per COR-031 D3).
+
+    For a kit-shipped capability, entering the project means copying the
+    subtree from kit source (`install_capability`). For an incubated
+    capability the subtree is *already in place* in the adopter's own repo
+    — source and destination are the same directory — so this records and
+    activates the capability but performs **no copy**:
+
+    - registers it in the backbone component registry with
+      ``origin: incubated-in-repo`` (COR-031 D2 — recorded in lifecycle-
+      owned install-state, never inside the capability's adopter-owned
+      subtree);
+    - stamps no per-component manifest into the capability tree — that tree
+      is entirely adopter-owned (the no-shared-files invariant, COR-001), so
+      writing lifecycle state into it would re-create the ownership blur
+      this path exists to avoid. Install-state lives in the backbone
+      manifest alone for an incubated capability.
+
+    Deploy (skills/agents) and dependency-gating registration are the
+    caller's responsibility and happen identically to a kit-shipped
+    capability — the caller runs the adapter deploy primitives after this,
+    exactly as the kit-source install path does. Origin governs source-
+    reconciliation only, not participation (COR-031 D1).
+
+    Skipped-artifacts / collision handling is **not** part of this path:
+    the capability's skills and agents are already present in the adopter's
+    own tree (the adopter authored them), so there is nothing to copy and
+    nothing to selectively omit.
+
+    Refuses if the capability is already registered. Guards that the
+    resolved source genuinely lives at the in-repo destination — the copy
+    primitive (`refresh_owned_tree`) is *not* safe for source == dest, and
+    this path must never reach it; the guard makes that structural rather
+    than incidental.
+
+    Returns the in-place path: ``<target_root>/.pkit/capabilities/<name>/``.
+    """
+    name = capability_source.name
+    if is_installed(target_root, name):
+        raise click.ClickException(
+            f"capability {name!r} is already installed. "
+            f"Use 'pkit capabilities upgrade {name}' to refresh."
+        )
+
+    dest = target_root / ".pkit" / "capabilities" / name
+    # The incubated subtree *is* the destination. Assert source == dest so
+    # the no-copy contract (COR-031 D3) is enforced here and the copy
+    # primitive is never invoked on an in-place tree (which it would
+    # clobber). Resolve both sides to compare canonical paths.
+    if capability_source.path.resolve() != dest.resolve():
+        raise click.ClickException(
+            f"register_incubated_capability expects the capability to live in "
+            f"the adopter's repo at {dest}, but its source resolved to "
+            f"{capability_source.path}. Use 'install_capability' for a "
+            f"kit-shipped capability that must be copied in."
+        )
+
+    if dry_run:
+        return dest
+
+    # Record + activate, but DO NOT copy: the subtree is already in place.
+    _register_in_backbone_manifest(target_root, name, origin=INCUBATED_IN_REPO)
+    return dest
+
+
 def read_prior_skipped_artifacts(
     target_root: Path, capability_name: str
 ) -> tuple[tuple[str, str], ...]:
@@ -594,28 +665,48 @@ def refresh_capability(
 
 
 def _read_installed_capability_version(target_root: Path, name: str) -> str | None:
-    """Read the installed version recorded in the capability's per-component manifest.
+    """Read the installed version of a capability.
 
-    Returns None when the manifest is absent or malformed — the caller
-    treats that as "no migrations to run" rather than failing.
+    A kit-shipped capability records its installed version in the
+    per-component manifest (`.pkit/capabilities/<name>/manifest.yaml`),
+    written at install time. An incubated (in-repo) capability has no such
+    kit-written manifest — its subtree is entirely adopter-owned (COR-031
+    D2), so no lifecycle state is stamped into it — and its version of
+    record is its own authored ``package.yaml``. This reads the
+    per-component manifest first, then falls back to the authored
+    ``package.yaml`` so an incubated capability still reports a version
+    for dependency-gating (COR-031 D1: an incubated capability participates
+    in dependency resolution identically to a kit-shipped one).
+
+    Returns None when neither source yields a version — the caller treats
+    that as "no migrations to run" / "version unreadable" rather than
+    failing.
     """
     manifest_path = (
         target_root / ".pkit" / "capabilities" / name / "manifest.yaml"
     )
-    if not manifest_path.is_file():
-        return None
-    try:
-        raw = _yaml.load(manifest_path.read_text(encoding="utf-8"))
-    except Exception:
-        return None
-    if not isinstance(raw, dict):
-        return None
-    component = raw.get("component")
-    if not isinstance(component, dict):
-        return None
-    version = component.get("version")
-    if isinstance(version, str):
-        return version
+    if manifest_path.is_file():
+        try:
+            raw = _yaml.load(manifest_path.read_text(encoding="utf-8"))
+        except Exception:
+            raw = None
+        if isinstance(raw, dict):
+            component = raw.get("component")
+            if isinstance(component, dict):
+                version = component.get("version")
+                if isinstance(version, str):
+                    return version
+
+    # Fallback: the capability's own authored package.yaml. This is the
+    # version of record for an incubated capability (no kit-written
+    # manifest) and a safe last resort for a kit-shipped one whose
+    # per-component manifest is missing or malformed.
+    package_path = (
+        target_root / ".pkit" / "capabilities" / name / "package.yaml"
+    )
+    package = _read_package_yaml(package_path) if package_path.is_file() else None
+    if package is not None:
+        return package.version
     return None
 
 
@@ -926,8 +1017,15 @@ def _copy_capability_tree(
     )
 
 
-def _register_in_backbone_manifest(target_root: Path, name: str) -> None:
-    """Add a `kind: capability` entry to the backbone manifest's components list."""
+def _register_in_backbone_manifest(
+    target_root: Path, name: str, *, origin: str = KIT_SHIPPED
+) -> None:
+    """Add a `kind: capability` entry to the backbone manifest's components list.
+
+    ``origin`` records where the capability came from (COR-031 D2) in
+    lifecycle-owned install-state. Defaults to ``kit-shipped``; the
+    incubated-in-repo register path passes ``INCUBATED_IN_REPO``.
+    """
     backbone = read_backbone_manifest(target_root)
     if backbone is None:
         raise click.ClickException(
@@ -935,7 +1033,7 @@ def _register_in_backbone_manifest(target_root: Path, name: str) -> None:
         )
     manifest_rel = f".pkit/capabilities/{name}/manifest.yaml"
     entry = ComponentRegistryEntry(
-        kind="capability", name=name, manifest=manifest_rel
+        kind="capability", name=name, manifest=manifest_rel, origin=origin
     )
     # Don't duplicate (caller should check, but defensive).
     backbone.components = [
