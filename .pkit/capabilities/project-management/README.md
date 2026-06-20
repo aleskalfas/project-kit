@@ -205,7 +205,7 @@ For the standard development flow, seven verb-subject commands compose over `mov
 
 All seven are idempotent at the level of observable state — re-running after a partial failure recovers cleanly. Audit comments use DEC-024's template-stamp markers (`<!-- pkit-hook: <name> -->`) so re-posts detect existing entries and skip.
 
-**`close-issue`** is *not* in the seven-command palette — it handles won't-do / abandonment closure, which is a separate concern from forward-progress flow.
+**`close-issue`** is *not* in the seven-command palette — it handles closure outside forward-progress flow: won't-do / abandonment (`--mode=wont-do`), the post-PR-merge cascade hook (`--mode=pr-merge`), and **cascade-eligibility closure** of a container (epic/feature/umbrella) once all its children are closed and its own checkboxes are ticked (`--mode=cascade-eligibility-close`, a non-skippable DEC-007 gate).
 
 **Review-mode resolution** is settled in [project-management:DEC-027-review-modes] (mode lookup) and [project-management:DEC-028-agent-as-approver-paths] (agent gate).
 
@@ -304,7 +304,7 @@ The project-management capability ships a **capability-contributed permission gr
   effect: deny
 ```
 
-This deny blocks the `project-manager` agent from invoking `gh issue edit`, `gh issue comment`, and `gh pr edit` directly. The agent reaches the issue tracker exclusively through the capability's validated scripts (`create-issue.py`, `transition-state.py`, etc.), which enforce the methodology's preconditions and validation gates. Raw `gh` reads, `gh api`, `git`, and `pkit` commands are unaffected.
+This deny blocks the `project-manager` agent from invoking the mutating `gh` subcommands directly — `gh issue create|edit|comment|close|reopen` and `gh pr create|edit|merge|close|reopen`. The agent reaches the issue tracker exclusively through the capability's validated scripts (`create-issue.py`, `close-issue.py`, `merge-pr.py`, etc.), which enforce the methodology's preconditions and gates (validation, the checkbox close-gate, the approval gate). Raw `gh` reads (`view`/`list`/`status`/`checks`/`diff`), `gh api`, `git`, and `pkit` are unaffected. Note this is a **speed-bump, not a security boundary** — per ADR-004 a tool-call denylist is porous (a `bash -c '…'` wrapper or `gh api -X PATCH … state=closed` evades it); the genuine gate enforcement lives inside the scripts, so the deny only removes the reflexive direct-typed bypass.
 
 ### Adopter inheritance — how you get the deny
 

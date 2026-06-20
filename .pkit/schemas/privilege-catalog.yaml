@@ -26,17 +26,27 @@ privileges:
   issue-tracker-write:
     description: >-
       Raw gh mutations that bypass the project-management capability's
-      validating scripts (gh issue edit, gh issue comment, gh pr edit).
-      Grant only to subjects that are explicitly permitted to bypass validation;
-      deny to force the validating scripts.
+      validating scripts (gh issue create/edit/comment/close/reopen and
+      gh pr create/edit/merge/close/reopen). Deny to force the validating
+      scripts — the matching wrappers (create-issue, edit-issue, close-issue,
+      reopen-issue, open-pr, edit-pr, merge-pr, close-pr, reopen-pr) run the
+      methodology's gates (validation, checkbox close-gate, approval gate).
+      NOTE: this is a speed-bump, not a security boundary — per ADR-004 a
+      tool-call denylist is porous (a `bash -c '…'` wrapper or
+      `gh api -X PATCH … state=closed` evades it). The genuine gate
+      enforcement lives inside the scripts; this only removes the reflexive
+      direct-typed bypass.
     recognize:
       bash:
-        # Matches gh issue edit, gh issue comment, gh pr edit — and ONLY those
-        # three mutations.  Does NOT match reads (gh issue view, gh pr view),
-        # gh api, or any other gh subcommand.  The pattern runs on the joined
-        # token segment after env-prefix stripping (decide.py segments()), so
-        # "export GH_HOST=x && gh issue edit …" is handled correctly.
-        - pattern: '^gh\s+(issue\s+(edit|comment)|pr\s+edit)(\s|$)'
+        # Matches the mutating gh subcommands that have validated wrappers:
+        # gh issue {create,edit,comment,close,reopen} and
+        # gh pr {create,edit,merge,close,reopen}.  Does NOT match reads
+        # (gh issue view/list/status, gh pr view/checks/diff) or `gh api`
+        # (left open deliberately as the REST escape hatch — and itself a
+        # bypass vector, per ADR-004).  Runs on the joined token segment after
+        # env-prefix stripping (decide.py segments()), so
+        # "export GH_HOST=x && gh issue close …" is handled correctly.
+        - pattern: '^gh\s+(issue\s+(create|edit|comment|close|reopen)|pr\s+(create|edit|merge|close|reopen))(\s|$)'
   kit:
     description: Run the project-kit CLI.
     recognize:
