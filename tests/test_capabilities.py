@@ -156,6 +156,174 @@ def test_find_capability_returns_none_when_package_yaml_is_not_capability_kind(
     assert caps.find_capability_in_source(kit_source, "wrong-kind") is None
 
 
+# --- find_capability_in_repo (COR-031) ------------------------------
+
+
+def _stage_capability_in_repo(target_root: Path, name: str, **kwargs: object) -> Path:
+    """Materialise a capability at <target_root>/.pkit/capabilities/<name>/.
+
+    Reuses ``_stage_capability_in_source`` by pointing it at the adopter's
+    ``.pkit`` dir, which is where an incubated (in-repo) capability lives.
+    """
+    return _stage_capability_in_source(target_root / ".pkit", name, **kwargs)  # type: ignore[arg-type]
+
+
+def test_find_in_repo_returns_source_when_present(kit_target: Path) -> None:
+    _stage_capability_in_repo(kit_target, "homegrown")
+    result = caps.find_capability_in_repo(kit_target, "homegrown")
+    assert result is not None
+    assert result.name == "homegrown"
+    assert result.package.version == "0.1.0"
+    assert result.path == kit_target / ".pkit" / "capabilities" / "homegrown"
+
+
+def test_find_in_repo_returns_none_when_absent(kit_target: Path) -> None:
+    assert caps.find_capability_in_repo(kit_target, "nope") is None
+
+
+def test_find_in_repo_returns_none_on_invalid_name(kit_target: Path) -> None:
+    _stage_capability_in_repo(kit_target, "good")
+    assert caps.find_capability_in_repo(kit_target, "BadCase") is None
+    assert caps.find_capability_in_repo(kit_target, "with_underscore") is None
+
+
+def test_find_in_repo_returns_none_when_not_capability_kind(kit_target: Path) -> None:
+    cap_dir = kit_target / ".pkit" / "capabilities" / "wrong-kind"
+    cap_dir.mkdir(parents=True)
+    (cap_dir / "package.yaml").write_text(
+        "schema_version: 1\ncomponent:\n  kind: bundle\n  name: wrong-kind\n  version: 0.1.0\n",
+        encoding="utf-8",
+    )
+    assert caps.find_capability_in_repo(kit_target, "wrong-kind") is None
+
+
+def test_find_in_repo_distinct_from_kit_source(
+    kit_target: Path, kit_source: Path
+) -> None:
+    """A repo capability is invisible to the kit-source resolver and vice versa."""
+    _stage_capability_in_repo(kit_target, "homegrown")
+    assert caps.find_capability_in_source(kit_source, "homegrown") is None
+    assert caps.find_capability_in_repo(kit_target, "homegrown") is not None
+
+
+# --- resolve_capability_source (both-present contract, COR-031) ------
+
+
+def test_resolve_prefers_repo_when_only_in_repo(
+    kit_target: Path, kit_source: Path
+) -> None:
+    _stage_capability_in_repo(kit_target, "homegrown")
+    resolved = caps.resolve_capability_source(
+        "homegrown",
+        source_kit=kit_source,
+        target_root=kit_target,
+        prefer=caps.INCUBATED_IN_REPO,
+    )
+    assert resolved is not None
+    assert resolved.origin == caps.INCUBATED_IN_REPO
+    assert resolved.in_repo is True
+    assert resolved.in_kit_source is False
+    assert resolved.source.path == kit_target / ".pkit" / "capabilities" / "homegrown"
+
+
+def test_resolve_prefers_kit_when_only_in_kit(
+    kit_target: Path, kit_source: Path
+) -> None:
+    _stage_capability_in_source(kit_source, "evidence")
+    resolved = caps.resolve_capability_source(
+        "evidence",
+        source_kit=kit_source,
+        target_root=kit_target,
+        prefer=caps.KIT_SHIPPED,
+    )
+    assert resolved is not None
+    assert resolved.origin == caps.KIT_SHIPPED
+    assert resolved.in_kit_source is True
+    assert resolved.in_repo is False
+    assert resolved.source.path == kit_source / "capabilities" / "evidence"
+
+
+def test_resolve_returns_none_when_absent_everywhere(
+    kit_target: Path, kit_source: Path
+) -> None:
+    assert (
+        caps.resolve_capability_source(
+            "nope",
+            source_kit=kit_source,
+            target_root=kit_target,
+            prefer=caps.KIT_SHIPPED,
+        )
+        is None
+    )
+
+
+def test_resolve_both_present_prefer_kit_selects_kit_and_flags_overlap(
+    kit_target: Path, kit_source: Path
+) -> None:
+    """Name in both trees: prefer=kit selects the kit source, but both flags are set."""
+    _stage_capability_in_source(kit_source, "overlap", version="1.0.0")
+    _stage_capability_in_repo(kit_target, "overlap", version="2.0.0")
+    resolved = caps.resolve_capability_source(
+        "overlap",
+        source_kit=kit_source,
+        target_root=kit_target,
+        prefer=caps.KIT_SHIPPED,
+    )
+    assert resolved is not None
+    assert resolved.origin == caps.KIT_SHIPPED
+    assert resolved.source.package.version == "1.0.0"
+    assert resolved.in_kit_source is True
+    assert resolved.in_repo is True
+
+
+def test_resolve_both_present_prefer_repo_selects_repo_and_flags_overlap(
+    kit_target: Path, kit_source: Path
+) -> None:
+    """Same name in both trees: prefer=repo selects the in-repo source; overlap is visible."""
+    _stage_capability_in_source(kit_source, "overlap", version="1.0.0")
+    _stage_capability_in_repo(kit_target, "overlap", version="2.0.0")
+    resolved = caps.resolve_capability_source(
+        "overlap",
+        source_kit=kit_source,
+        target_root=kit_target,
+        prefer=caps.INCUBATED_IN_REPO,
+    )
+    assert resolved is not None
+    assert resolved.origin == caps.INCUBATED_IN_REPO
+    assert resolved.source.package.version == "2.0.0"
+    assert resolved.in_kit_source is True
+    assert resolved.in_repo is True
+
+
+def test_resolve_prefer_falls_back_to_other_source_when_preferred_absent(
+    kit_target: Path, kit_source: Path
+) -> None:
+    """prefer=kit but only the repo has it: fall back rather than fail a resolvable name."""
+    _stage_capability_in_repo(kit_target, "homegrown")
+    resolved = caps.resolve_capability_source(
+        "homegrown",
+        source_kit=kit_source,
+        target_root=kit_target,
+        prefer=caps.KIT_SHIPPED,
+    )
+    assert resolved is not None
+    assert resolved.origin == caps.INCUBATED_IN_REPO
+    assert resolved.in_repo is True
+    assert resolved.in_kit_source is False
+
+
+def test_resolve_rejects_invalid_prefer(
+    kit_target: Path, kit_source: Path
+) -> None:
+    with pytest.raises(ValueError):
+        caps.resolve_capability_source(
+            "evidence",
+            source_kit=kit_source,
+            target_root=kit_target,
+            prefer="bogus",
+        )
+
+
 # --- list_capabilities ----------------------------------------------
 
 

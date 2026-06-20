@@ -80,18 +80,25 @@ class CapabilityPackage:
 
 @dataclass(frozen=True)
 class CapabilitySource:
-    """Resolved location of a capability in the kit source tree."""
+    """Resolved location of a capability, in either the kit source tree or the adopter's repo.
+
+    Both resolvers (``find_capability_in_source`` for the kit source and
+    ``find_capability_in_repo`` for the adopter's own repo, per COR-031)
+    return this same type, so downstream register / deploy / stamp consume a
+    capability uniformly regardless of where it was found.
+    """
 
     name: str
-    path: Path  # source path: <kit-source>/capabilities/<name>/
+    # capability dir: <kit-source>/capabilities/<name>/ (kit source) or
+    # <target-root>/.pkit/capabilities/<name>/ (adopter's repo)
+    path: Path
     package: CapabilityPackage
 
 
-def find_capability_in_source(source_kit: Path, name: str) -> CapabilitySource | None:
-    """Locate a capability in the kit source. Returns None if absent."""
+def _resolve_capability_dir(cap_dir: Path, name: str) -> CapabilitySource | None:
+    """Validate and read a candidate capability directory. Returns None if absent or malformed."""
     if not _is_valid_name(name):
         return None
-    cap_dir = source_kit / "capabilities" / name
     if not cap_dir.is_dir():
         return None
     package_yaml = cap_dir / "package.yaml"
@@ -101,6 +108,110 @@ def find_capability_in_source(source_kit: Path, name: str) -> CapabilitySource |
     if package is None or package.name != name:
         return None
     return CapabilitySource(name=name, path=cap_dir, package=package)
+
+
+def find_capability_in_source(source_kit: Path, name: str) -> CapabilitySource | None:
+    """Locate a capability in the kit source. Returns None if absent."""
+    return _resolve_capability_dir(source_kit / "capabilities" / name, name)
+
+
+def find_capability_in_repo(target_root: Path, name: str) -> CapabilitySource | None:
+    """Locate a capability authored in the adopter's own repo (per COR-031).
+
+    Resolves ``<target_root>/.pkit/capabilities/<name>/`` — the adopter's
+    own capabilities tree — distinct from the kit-source resolver above.
+    This is the incubated-in-repo origin: the working tree *is* the source,
+    so register/deploy consume the returned ``CapabilitySource`` in place,
+    without copying from kit source. Returns None if absent or malformed.
+
+    Note the path overlaps the *install destination* of a kit-shipped
+    capability: a kit-shipped capability that has already been installed
+    also lives under ``.pkit/capabilities/<name>/``. This resolver does not
+    distinguish the two — it answers "is there a usable capability subtree
+    in the repo at this name?". Origin (incubated vs. installed-kit-shipped)
+    is a lifecycle-owned property recorded in install-state (COR-031 D2),
+    not something this resolver infers.
+    """
+    return _resolve_capability_dir(
+        target_root / ".pkit" / "capabilities" / name, name
+    )
+
+
+# Which source a caller wants when a name resolves in more than one place.
+CapabilityOrigin = str  # "kit-shipped" | "incubated-in-repo"
+
+KIT_SHIPPED: CapabilityOrigin = "kit-shipped"
+INCUBATED_IN_REPO: CapabilityOrigin = "incubated-in-repo"
+
+
+@dataclass(frozen=True)
+class ResolvedCapability:
+    """The outcome of resolving a capability name across both possible sources.
+
+    Carries the chosen source plus enough context for the caller to surface
+    a both-present collision (COR-031's boundary case: "surface the collision
+    rather than silently skip it") instead of one source silently shadowing
+    the other.
+    """
+
+    source: CapabilitySource     # the selected source (per `prefer`)
+    origin: CapabilityOrigin     # which tree the selected source came from
+    in_kit_source: bool          # the name also resolved in the kit source
+    in_repo: bool                # the name also resolved in the adopter's repo
+
+
+def resolve_capability_source(
+    name: str,
+    *,
+    source_kit: Path,
+    target_root: Path,
+    prefer: CapabilityOrigin,
+) -> ResolvedCapability | None:
+    """Resolve a capability name across both the kit source and the adopter's repo.
+
+    Consults *both* resolvers and makes the both-present case unambiguous:
+    the caller states which origin it wants via ``prefer`` (``KIT_SHIPPED``
+    or ``INCUBATED_IN_REPO``), and that choice is honoured whenever the
+    preferred source is present. The returned ``ResolvedCapability`` always
+    reports ``in_kit_source`` / ``in_repo`` so the caller can detect — and
+    surface — a name that exists in *both* trees rather than letting one
+    silently shadow the other (COR-031 boundary case).
+
+    Selection contract:
+    - ``prefer`` present → return that source, with its origin.
+    - ``prefer`` absent but the other source present → return the other
+      source. (A pure preference, not a hard requirement: the caller asked
+      for one origin but only the other exists; returning it lets the caller
+      decide, rather than failing a resolvable name.)
+    - neither present → ``None``.
+
+    The caller never gets an ambiguous result: exactly one source is
+    selected, deterministically, and the presence flags expose the overlap.
+    """
+    if prefer not in (KIT_SHIPPED, INCUBATED_IN_REPO):
+        raise ValueError(
+            f"prefer must be one of {KIT_SHIPPED!r}, {INCUBATED_IN_REPO!r}; got {prefer!r}"
+        )
+
+    kit_source = find_capability_in_source(source_kit, name)
+    repo_source = find_capability_in_repo(target_root, name)
+    in_kit_source = kit_source is not None
+    in_repo = repo_source is not None
+
+    if prefer == KIT_SHIPPED:
+        order = ((kit_source, KIT_SHIPPED), (repo_source, INCUBATED_IN_REPO))
+    else:
+        order = ((repo_source, INCUBATED_IN_REPO), (kit_source, KIT_SHIPPED))
+
+    for candidate, origin in order:
+        if candidate is not None:
+            return ResolvedCapability(
+                source=candidate,
+                origin=origin,
+                in_kit_source=in_kit_source,
+                in_repo=in_repo,
+            )
+    return None
 
 
 def list_capabilities(target_root: Path, source_kit: Path) -> tuple[list[str], list[str]]:
