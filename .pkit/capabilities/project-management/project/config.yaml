@@ -24,18 +24,31 @@ has_projects_v2_board: false
 # [project-management:DEC-016-time-bound-containers]).
 pre_close_triage_lead_days: 3
 
-# Code-path -> doc-path mappings per [project-management:DEC-015-doc-update-obligations].
-# When a PR touches a mapped code path without touching the mapped doc(s),
-# the project-manager emits a [validation-severity:warning] at PR-open time.
-# Advisory only — the mandatory `## Doc impact` section on Tasks/PRs is the
-# hard gate; this adds an automated nudge for the trees most prone to drift.
+# Code-path -> doc-path mappings per [project-management:DEC-015-doc-update-obligations]
+# + [ADR-019]. Checked by `pkit project-management check-doc-mapping`.
+#   enforce: false (default) -> advisory: report would-fire mappings, exit 0.
+#   enforce: true            -> hard-reject (exit 1) when mapped code changed
+#                               without the mapped doc. Wire the check as a
+#                               REQUIRED CI status check to make it a real
+#                               boundary; the merge-pr layer is only a speed-bump
+#                               (ADR-004). Override a false positive with a
+#                               `## Doc impact` line naming the code path.
+# Keep enforce: false for BROAD tree->README rules — they false-positive on most
+# PRs (see the dry-run audit). Only enforce SURGICAL 1:1 surface->doc couplings.
+# The mandatory `## Doc impact` section stays the universal hard gate.
 code_path_to_doc_mapping:
-  "src/**": [README.md, .pkit/cli/README.md]
-  ".pkit/cli/**": [.pkit/cli/README.md, README.md]
-  ".pkit/capabilities/project-management/**": [.pkit/capabilities/project-management/README.md]
-  ".pkit/capabilities/evidence/**": [.pkit/capabilities/evidence/README.md]
-  ".pkit/capabilities/software-engineering/**": [.pkit/capabilities/software-engineering/README.md]
-  ".pkit/adapters/**": [.pkit/adapters/README.md]
+  enforce: false
+  rules:
+    - { code: "src/**", docs: [README.md, .pkit/cli/README.md] }
+    - { code: ".pkit/cli/**", docs: [.pkit/cli/README.md, README.md] }
+    - { code: ".pkit/capabilities/project-management/**", docs: [.pkit/capabilities/project-management/README.md] }
+    - { code: ".pkit/capabilities/evidence/**", docs: [.pkit/capabilities/evidence/README.md] }
+    - { code: ".pkit/capabilities/software-engineering/**", docs: [.pkit/capabilities/software-engineering/README.md] }
+    - { code: ".pkit/adapters/**", docs: [.pkit/adapters/README.md] }
+  # To hard-enforce a surgical 1:1 coupling, e.g.:
+  #   enforce: true
+  #   rules:
+  #     - { code: "packages/cli/src/commands/registry.ts", docs: ["packages/cli/README.md"] }
 
 # Transitional shim — pre-check.py still requires this field, but the
 # canonical workstreams list lives in project/workstreams.yaml per
