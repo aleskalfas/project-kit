@@ -26,6 +26,14 @@ from ruamel.yaml.comments import CommentedMap
 
 ComponentKind = Literal["adapter", "capability"]
 
+# Capability origin (COR-031): where a capability came from, recorded in
+# lifecycle-owned install-state (the backbone manifest's component registry),
+# never inside the capability's own subtree. Two origins today; an absent
+# origin on read means `kit-shipped` so existing registrations are unchanged
+# (additive, no migration — COR-031 D2).
+ORIGIN_KIT_SHIPPED = "kit-shipped"
+ORIGIN_INCUBATED_IN_REPO = "incubated-in-repo"
+
 
 # Singleton YAML instance: round-trip mode preserves comments and key
 # ordering when re-serialising. `default_flow_style = False` forces
@@ -47,11 +55,22 @@ def _yaml_dump(data: Any, stream: io.IOBase) -> None:
 
 @dataclass(frozen=True)
 class ComponentRegistryEntry:
-    """One component listed in the backbone manifest's `components` registry."""
+    """One component listed in the backbone manifest's `components` registry.
+
+    ``origin`` (COR-031) records where a capability came from —
+    ``kit-shipped`` (copied from kit source on install) or
+    ``incubated-in-repo`` (authored in, and lives in, the adopter's own
+    repo). It is meaningful only for capabilities; adapters are always
+    kit-shipped. An absent origin on read defaults to ``kit-shipped``
+    (the field is omitted from serialization when it holds that default),
+    so existing registrations are unchanged and the change needs no
+    migration.
+    """
 
     kind: ComponentKind
     name: str
     manifest: str  # relative path from repo root to the per-component manifest
+    origin: str = ORIGIN_KIT_SHIPPED
 
 
 @dataclass
@@ -79,6 +98,9 @@ def read_backbone_manifest(target_root: Path) -> BackboneManifest | None:
             kind=cast(ComponentKind, entry["kind"]),
             name=str(entry["name"]),
             manifest=str(entry["manifest"]),
+            # Absent origin ⇒ kit-shipped (COR-031 D2): existing
+            # registrations carry no origin and must read unchanged.
+            origin=str(entry.get("origin", ORIGIN_KIT_SHIPPED)),
         )
         for entry in components_raw
     ]
@@ -116,6 +138,29 @@ def write_backbone_manifest(target_root: Path, manifest: BackboneManifest) -> Pa
     return path
 
 
+def read_capability_origin(target_root: Path, name: str) -> str:
+    """Return a registered capability's origin from lifecycle-owned install-state.
+
+    Reads the backbone manifest's component registry (COR-031 D2 — origin
+    lives here, never inside the capability's adopter-owned subtree). An
+    entry with no origin reads as ``kit-shipped`` (the default baked into
+    ``ComponentRegistryEntry``), so existing registrations are unchanged.
+
+    Returns ``kit-shipped`` when the capability is not registered (or no
+    manifest exists): a single, safe default keeps callers from scattering
+    the absent-origin fallback. Callers that need to distinguish "not
+    installed" from "installed kit-shipped" should consult ``is_installed``
+    first.
+    """
+    backbone = read_backbone_manifest(target_root)
+    if backbone is None:
+        return ORIGIN_KIT_SHIPPED
+    for entry in backbone.components:
+        if entry.kind == "capability" and entry.name == name:
+            return entry.origin
+    return ORIGIN_KIT_SHIPPED
+
+
 def _backbone_manifest_path(target_root: Path) -> Path:
     return target_root / ".pkit" / "manifest.yaml"
 
@@ -125,6 +170,12 @@ def _entry_to_map(entry: ComponentRegistryEntry) -> CommentedMap:
     out["kind"] = entry.kind
     out["name"] = entry.name
     out["manifest"] = entry.manifest
+    # Omit origin when it holds the default (kit-shipped): the field is
+    # additive (COR-031 D2), so an absent origin reads back as kit-shipped.
+    # Writing it only for the non-default keeps adapter entries and existing
+    # capability entries byte-identical to before this field landed.
+    if entry.origin != ORIGIN_KIT_SHIPPED:
+        out["origin"] = entry.origin
     return out
 
 

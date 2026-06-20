@@ -12,7 +12,14 @@ from click.testing import CliRunner
 from project_kit import capabilities as caps
 from project_kit import install as install_mod
 from project_kit.cli import main
-from project_kit.manifest import BackboneManifest, write_backbone_manifest
+from project_kit.manifest import (
+    ORIGIN_INCUBATED_IN_REPO,
+    ORIGIN_KIT_SHIPPED,
+    BackboneManifest,
+    read_backbone_manifest,
+    read_capability_origin,
+    write_backbone_manifest,
+)
 
 
 # --- fixtures --------------------------------------------------------
@@ -410,6 +417,144 @@ def test_install_omits_skipped_artifacts(kit_target: Path, kit_source: Path) -> 
     assert not (expected / "skills" / "add-evidence.md").exists()
     # The other skill IS.
     assert (expected / "skills" / "validate-evidence.md").is_file()
+
+
+# --- register_incubated_capability (no-copy register, COR-031 D2 + D3) -
+
+
+def test_register_incubated_records_origin_and_does_not_copy(
+    kit_target: Path,
+) -> None:
+    """Registering an in-repo capability records origin incubated-in-repo and copies nothing."""
+    _stage_capability_in_repo(
+        kit_target, "homegrown", with_skills=("homegrown-skill",)
+    )
+    source = caps.find_capability_in_repo(kit_target, "homegrown")
+    assert source is not None
+
+    cap_dir = kit_target / ".pkit" / "capabilities" / "homegrown"
+    # Capture the tree before registration so we can assert no copy mutates it.
+    before = sorted(p.relative_to(cap_dir) for p in cap_dir.rglob("*"))
+
+    registered_path = caps.register_incubated_capability(kit_target, source)
+
+    assert registered_path == cap_dir
+    assert caps.is_installed(kit_target, "homegrown")
+    # Origin recorded in lifecycle-owned install-state.
+    assert read_capability_origin(kit_target, "homegrown") == ORIGIN_INCUBATED_IN_REPO
+
+    # No copy: the in-place tree is byte-for-byte the same set of files, and
+    # NO kit-written per-component manifest.yaml was stamped into the
+    # adopter-owned subtree (COR-031 D2).
+    after = sorted(p.relative_to(cap_dir) for p in cap_dir.rglob("*"))
+    assert before == after
+    assert not (cap_dir / "manifest.yaml").exists()
+
+
+def test_register_incubated_origin_lives_in_install_state_not_subtree(
+    kit_target: Path,
+) -> None:
+    """The origin marker lands in the backbone manifest, never inside the capability subtree."""
+    _stage_capability_in_repo(kit_target, "homegrown")
+    source = caps.find_capability_in_repo(kit_target, "homegrown")
+    assert source is not None
+    caps.register_incubated_capability(kit_target, source)
+
+    # In install-state.
+    backbone = read_backbone_manifest(kit_target)
+    assert backbone is not None
+    entry = next(
+        c for c in backbone.components
+        if c.kind == "capability" and c.name == "homegrown"
+    )
+    assert entry.origin == ORIGIN_INCUBATED_IN_REPO
+
+    # NOT in the capability's own package.yaml.
+    pkg_text = (
+        kit_target / ".pkit" / "capabilities" / "homegrown" / "package.yaml"
+    ).read_text(encoding="utf-8")
+    assert "origin" not in pkg_text
+
+
+def test_register_incubated_refuses_when_already_installed(
+    kit_target: Path,
+) -> None:
+    _stage_capability_in_repo(kit_target, "homegrown")
+    source = caps.find_capability_in_repo(kit_target, "homegrown")
+    assert source is not None
+    caps.register_incubated_capability(kit_target, source)
+    with pytest.raises(click.ClickException, match="already installed"):
+        caps.register_incubated_capability(kit_target, source)
+
+
+def test_register_incubated_dry_run_writes_nothing(kit_target: Path) -> None:
+    _stage_capability_in_repo(kit_target, "homegrown")
+    source = caps.find_capability_in_repo(kit_target, "homegrown")
+    assert source is not None
+    path = caps.register_incubated_capability(kit_target, source, dry_run=True)
+    assert path == kit_target / ".pkit" / "capabilities" / "homegrown"
+    assert not caps.is_installed(kit_target, "homegrown")
+
+
+def test_register_incubated_guards_source_must_equal_destination(
+    kit_target: Path, kit_source: Path
+) -> None:
+    """Passing a kit-source (copy-needed) capability is rejected: the no-copy guard fires."""
+    _stage_capability_in_source(kit_source, "fromkit")
+    kit_src = caps.find_capability_in_source(kit_source, "fromkit")
+    assert kit_src is not None
+    # kit_src.path is under .kit-source/, not the adopter's
+    # .pkit/capabilities/ destination — the guard must refuse.
+    with pytest.raises(click.ClickException, match="adopter's repo"):
+        caps.register_incubated_capability(kit_target, kit_src)
+    assert not caps.is_installed(kit_target, "fromkit")
+
+
+def test_register_incubated_reports_version_for_dependency_gating(
+    kit_target: Path,
+) -> None:
+    """An incubated capability reports its version (from package.yaml) for dependency-gating."""
+    _stage_capability_in_repo(kit_target, "homegrown", version="0.4.2")
+    source = caps.find_capability_in_repo(kit_target, "homegrown")
+    assert source is not None
+    caps.register_incubated_capability(kit_target, source)
+
+    # No kit-written manifest.yaml exists, yet the version resolves from
+    # the authored package.yaml so a dependent's gate can evaluate it.
+    assert caps.get_installed_capability_version(kit_target, "homegrown") == "0.4.2"
+
+    # A dependent declaring a satisfied range against the incubated cap
+    # passes the gate; an unsatisfied one conflicts — identical to a
+    # kit-shipped dependency (COR-031 D1).
+    ok = caps.check_capability_dependencies(
+        kit_target,
+        (caps.CapabilityDependency(name="homegrown", version=">=0.4.0,<1.0.0"),),
+    )
+    assert ok == []
+    bad = caps.check_capability_dependencies(
+        kit_target,
+        (caps.CapabilityDependency(name="homegrown", version=">=0.5.0,<1.0.0"),),
+    )
+    assert len(bad) == 1
+    assert bad[0].reason == "out-of-range"
+
+
+def test_register_incubated_then_kit_shipped_origin_default_distinct(
+    kit_target: Path, kit_source: Path
+) -> None:
+    """A kit-shipped install records (default) kit-shipped; incubated records incubated."""
+    _stage_capability_in_source(kit_source, "shipped")
+    shipped = caps.find_capability_in_source(kit_source, "shipped")
+    assert shipped is not None
+    caps.install_capability(kit_target, shipped)
+
+    _stage_capability_in_repo(kit_target, "homegrown")
+    incubated = caps.find_capability_in_repo(kit_target, "homegrown")
+    assert incubated is not None
+    caps.register_incubated_capability(kit_target, incubated)
+
+    assert read_capability_origin(kit_target, "shipped") == ORIGIN_KIT_SHIPPED
+    assert read_capability_origin(kit_target, "homegrown") == ORIGIN_INCUBATED_IN_REPO
 
 
 # --- refresh preserves the adopter-owned project/ subtree (COR-001) ----
