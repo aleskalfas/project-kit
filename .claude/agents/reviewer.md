@@ -61,11 +61,11 @@ If any of these fail (PR not found, no closing issue link, gh failure), emit `CH
 Walk each criterion. Each maps to a record or schema entry; cite it in the finding.
 
 - **Branch shape ([project-management:DEC-013-branch-and-pr-conventions]).** `headRefName` matches `<type>/<issue-number>-<slug>` from the `git-conventions.yaml` schema.
-- **Branch-type / issue-type alignment ([project-management:DEC-013]).** The branch's `<type>` segment matches the closing issue's `type:*` label per the schema's mapping.
-- **PR title is Conventional Commits ([COR-008](../../../decisions/core/COR-008-git-conventions.md) + [project-management:DEC-013]).** Title parses as `<type>(<scope>): <description>` with `<type>` in the accepted list.
+- **Branch-type / issue-type alignment ([project-management:DEC-013-branch-and-pr-conventions]).** The branch's `<type>` segment matches the closing issue's `type:*` label per the schema's mapping.
+- **PR title is Conventional Commits ([COR-008](../../../decisions/core/COR-008-git-conventions.md) + [project-management:DEC-013-branch-and-pr-conventions]).** Title parses as `<type>(<scope>): <description>` with `<type>` in the accepted list.
 - **PR title type matches issue type.** The Conventional Commits type derives from the issue's `type:*` label per the schema's `pr_type_mapping`.
 - **Issue classification complete ([project-management:DEC-012-classification-axes]).** The closing issue carries `type:*`, `priority:*`, and a workstream value (label or board field per the substrate config).
-- **PR body links to a closing issue ([project-management:DEC-013]).** Either `Closes #<N>` in the body or a populated `closingIssuesReferences`.
+- **PR body links to a closing issue ([project-management:DEC-013-branch-and-pr-conventions]).** Either `Closes #<N>` in the body or a populated `closingIssuesReferences`.
 - **Surface-change discipline ([COR-010](../../../decisions/core/COR-010-resource-lifecycle.md)).** If the diff touches kit-owned trees with renames/removals, schema_version bumps, or capability-subtree restructures, a migration script must exist at the affected tier in the same change-set. Run `pkit migrations check-diff --base <baseRefName>` if available; otherwise eyeball the diff against the lifecycle spec.
 - **No-shared-files invariant ([COR-001](../../../decisions/core/COR-001-content-mechanisms.md)).** No edits to core-owned files (those under `*/core/` or installed adapter / capability trees) — extensions go through the matching `project/` directory or the merge primitive.
 

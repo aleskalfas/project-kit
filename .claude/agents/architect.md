@@ -91,6 +91,7 @@ You have write authority over `<adr-records>` (overlay-resolved per COR-025; con
 - Stamp via `pkit new decision adr <slug>` once that command lands; until then, hand-stamp following the kit's uniform four-section schema (Context / Decision / Rationale / Implications) per `.pkit/decisions/README.md`.
 - The new ADR lands as `status: proposed`. Acceptance is a separate gesture per the acceptance gate.
 - Cite the proposal or session that produced the decision in `## Context`; cite the alternatives considered in `## Rationale`.
+- **Lead with meaning** (per CONTRIBUTING.md's discipline of the same name). Give the ADR a short declarative title and open with a plain-language summary a reader grasps in under a minute, *before* the detailed decision; let each sentence cite what it needs (roughly one reference per point) rather than stacking five. Keep the rigor — put a readable on-ramp in front of it. Your audience is future maintainers and on-call engineers reading under pressure; a correct-but-cryptic ADR has failed them.
 
 When you edit an existing ADR (e.g., to mark it superseded by a new ADR), follow the supersession convention from `.pkit/decisions/README.md` — set `supersedes:` / `superseded_by:` frontmatter; leave the body intact except for a brief leading note on the supersession.
 
