@@ -104,6 +104,9 @@ commands:
   check-mesh:
     script: scripts/check-mesh.py
     help: Compare local methodology state against configured mesh peers per DEC-022. Surfaces drift in labels, capability version, members, milestones as warnings. Read-only.
+  check-doc-mapping:
+    script: scripts/check-doc-mapping.py
+    help: "Enforce the code->doc mapping (DEC-015 + ADR-019). Read-only; exits non-zero when a PR's diff touches mapped code without the mapped doc (with enforce: true). Wire as a required CI status check for a real boundary; override a false positive via a `## Doc impact` line."
   promote-issue:
     script: scripts/promote-issue.py
     help: "Workflow wrapper (DEC-026): Todo → Backlog with milestone + audit comment. Composes over move-issue."
