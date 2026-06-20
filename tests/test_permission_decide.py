@@ -713,8 +713,18 @@ _PM_WITH_DENY_MODEL = {
     "gh issue comment 53 --body 'a comment'",
     "gh pr edit 27 --title 'update'",
     "gh pr edit 27 --body 'new body'",
+    # broadened mutation set (issue #118): create/close/reopen + pr create/merge/close/reopen
+    "gh issue create --title 'x' --body 'y'",
+    "gh issue close 53",
+    "gh issue close 53 --reason completed",
+    "gh issue reopen 53",
+    "gh pr create --title 'x' --body 'y'",
+    "gh pr merge 27 --squash",
+    "gh pr close 27",
+    "gh pr reopen 27",
     # env-prefix form — the segments() stripper must handle this
     "export GH_HOST=github.com && gh issue edit 53",
+    "export GH_HOST=github.com && gh issue close 53",
 ])
 def test_pm_issue_tracker_write_denied(decide_mod, catalog, cmd):
     """gh issue edit / gh issue comment / gh pr edit are blocked for project-manager.
@@ -734,10 +744,14 @@ def test_pm_issue_tracker_write_denied(decide_mod, catalog, cmd):
     "gh issue view 53",
     "gh issue list",
     "gh issue list --state open",
+    "gh issue status",
     "gh pr view 27",
     "gh pr list",
+    "gh pr checks 27",
+    "gh pr diff 27",
     "gh api repos/owner/repo/issues",
     "gh api graphql -f query='...'",
+    "gh api -X PATCH repos/o/r/issues/5 -f state=closed",
 ])
 def test_pm_gh_reads_and_api_not_recognized_by_write_privilege(decide_mod, catalog, cmd):
     """gh reads and gh api are NOT recognized by issue-tracker-write.

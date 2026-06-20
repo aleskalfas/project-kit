@@ -16,6 +16,11 @@ Closes a GitHub issue via either path declared in workflow.yaml's
   * `--mode=pr-merge` — issue closure was triggered by GitHub's
     `Closes #N` keyword. The script runs the cascade pass on parents
     after the fact; it does not itself close the issue.
+  * `--mode=cascade-eligibility-close` — closes a container (epic/feature/
+    umbrella) once every child is closed AND its own checkboxes are ticked
+    (the DEC-007 gate is non-skippable here). Implements the
+    `cascade-eligibility-close` trigger this script previously only reported.
+    Closes via `gh issue close --reason completed`.
 
 Both paths reconcile the issue's ``state:*`` labels after closing: any
 non-terminal label (``state:todo``, ``state:backlog``, ``state:in-progress``,
@@ -64,7 +69,7 @@ from _lib.membership import (  # noqa: E402
 )
 
 
-VALID_MODES = ("wont-do", "pr-merge")
+VALID_MODES = ("wont-do", "pr-merge", "cascade-eligibility-close")
 DEFAULT_MODE = "wont-do"
 
 
@@ -88,7 +93,10 @@ def main() -> int:
         help=(
             f"Closure mode. Default: {DEFAULT_MODE}. "
             "`wont-do` posts a closing comment + closes; "
-            "`pr-merge` is the cascade-only hook after GitHub-native close."
+            "`pr-merge` is the cascade-only hook after GitHub-native close; "
+            "`cascade-eligibility-close` closes a container (epic/feature/"
+            "umbrella) once all children are closed and its own checkboxes "
+            "are ticked (non-skippable gate)."
         ),
     )
     parser.add_argument(
@@ -247,6 +255,86 @@ def main() -> int:
                 return 3
         print(f"\n[ok] noted pr-merge close for #{args.issue_number}.")
 
+    elif args.mode == "cascade-eligibility-close":
+        # Close a container (epic/feature/umbrella) that is cascade-eligible per
+        # DEC-006 + workflow.yaml closure_triggers[cascade-eligibility-close]:
+        # EVERY child is closed AND the container's own checkboxes are ticked.
+        # The checkbox gate is a DEC-007 hard-reject here and is NOT skippable
+        # (unlike wont-do) — a container is "done" only when its work is
+        # genuinely complete. Closes with reason=completed.
+        if structural_type not in ("epic", "feature", "umbrella"):
+            print(
+                "\nerror: cascade-eligibility-close applies to container issues "
+                "(epic/feature/umbrella); "
+                f"#{args.issue_number} is "
+                f"{structural_type or 'an unrecognised type'}. "
+                "Use --mode=wont-do, or close a leaf via its PR (Closes #N).",
+                file=sys.stderr,
+            )
+            return 2
+        if state == "closed":
+            print("\n[noop] issue already closed.")
+            return 0
+
+        # Eligibility half 1 — own checkboxes ticked (DEC-007, NOT skippable here).
+        unticked = _unticked_boxes(body)
+        if unticked:
+            print("\n[refused] DEC-007 checkbox close-gate (cascade-eligibility):")
+            for line in unticked:
+                print(f"  - {line}")
+            print(
+                "\n  → a container closes only when its own checkboxes are all "
+                "ticked. This gate is not skippable in cascade-eligibility-close.",
+                file=sys.stderr,
+            )
+            return 1
+
+        # Eligibility half 2 — every child closed.
+        open_children = _find_open_children(args.issue_number, config)
+        if open_children is None:
+            return 3
+        if open_children:
+            print("\n[refused] not cascade-eligible — open child issue(s) remain:")
+            for n in open_children:
+                print(f"  - #{n}")
+            print(
+                "\n  → close every child first; the container becomes eligible "
+                "when the last child closes.",
+                file=sys.stderr,
+            )
+            return 1
+
+        if args.dry_run:
+            print(
+                "\n[dry-run] eligible (all children closed, checkboxes ticked); "
+                "gh would close with --reason completed."
+            )
+            return 0
+        if not args.yes and sys.stdin.isatty():
+            reply = input("Close cascade-eligible container? [y/N] ").strip().lower()
+            if reply not in ("y", "yes"):
+                print("aborted.", file=sys.stderr)
+                return 0
+
+        comment_body = (
+            "[cascade-eligibility close] all children closed and the container's "
+            "checkboxes are complete.\n\n"
+            "Closed via `pkit project-management close-issue "
+            "--mode=cascade-eligibility-close` "
+            "(per [project-management:DEC-006-state-machine-and-cascade])."
+        )
+        if not _gh_comment(args.issue_number, comment_body, config):
+            return 3
+        if not _gh_close_issue(args.issue_number, reason="completed", config=config):
+            return 3
+        if not reconcile_state_labels_to_done(
+            args.issue_number, labels, config, gh_run=gh_run
+        ):
+            return 3
+        print(
+            f"\n[ok] closed #{args.issue_number} (cascade-eligibility, completed)."
+        )
+
     # Closure cascade — semi-automatic per DEC-006.
     if not args.no_cascade:
         parent_nums = _walk_parent_chain(body)
@@ -323,6 +411,52 @@ def _check_parent_eligibility(parent_num: int, config: dict) -> None:
         f"  · parent #{parent_num} open; checkboxes complete — "
         "eligible to close pending sibling check"
     )
+
+
+def _find_open_children(parent_num: int, config: dict) -> list[int] | None:
+    """Return the OPEN children of a container — issues whose body parent-ref
+    points at *parent_num*.
+
+    Empty list = all children closed (or none); None on gh failure. Children
+    are discovered the same way ``show-tree`` does — by each issue's body
+    parent-ref first line (the methodology's hierarchy source of truth) — so
+    eligibility stays consistent with the rendered tree.
+    """
+    proc = gh_run(
+        [
+            "gh", "issue", "list", "--state", "all", "--limit", "500",
+            "--json", "number,state,body",
+        ],
+        config,
+        check=False,
+    )
+    if proc.returncode != 0:
+        print(
+            f"error: gh issue list failed (exit {proc.returncode}).\n"
+            f"stderr: {proc.stderr.strip()}",
+            file=sys.stderr,
+        )
+        return None
+    try:
+        rows = json.loads(proc.stdout)
+    except (ValueError, json.JSONDecodeError):
+        print("error: gh issue list returned malformed JSON.", file=sys.stderr)
+        return None
+    open_children: list[int] = []
+    for r in rows:
+        if not isinstance(r, dict):
+            continue
+        num = r.get("number")
+        if not isinstance(num, int) or num == parent_num:
+            continue
+        parents = _walk_parent_chain(str(r.get("body") or ""))
+        if (
+            parents
+            and parents[0] == parent_num
+            and str(r.get("state", "")).lower() != "closed"
+        ):
+            open_children.append(num)
+    return sorted(open_children)
 
 
 # ---- gh wrappers ----------------------------------------------------

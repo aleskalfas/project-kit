@@ -164,6 +164,46 @@ def test_walk_parent_chain_returns_empty_for_empty_body(ci) -> None:
     assert ci._walk_parent_chain("") == []
 
 
+# ---- _find_open_children (cascade-eligibility, issue #118) -----------------
+
+
+def _fake_gh_list(ci, monkeypatch, rows, *, returncode=0) -> None:
+    """Patch the module's gh_run so _find_open_children sees `rows`."""
+    import json
+    from subprocess import CompletedProcess
+
+    def fake_gh_run(cmd, config, *, check=True, **kwargs):
+        return CompletedProcess(cmd, returncode, json.dumps(rows), "")
+
+    monkeypatch.setattr(ci, "gh_run", fake_gh_run)
+
+
+def test_find_open_children_returns_only_open_children_of_parent(ci, monkeypatch) -> None:
+    rows = [
+        {"number": 10, "state": "OPEN", "body": "Feature: #5\n\n## What"},
+        {"number": 11, "state": "CLOSED", "body": "Feature: #5\n\n## What"},
+        {"number": 12, "state": "OPEN", "body": "Feature: #99\n\n## What"},
+        {"number": 5, "state": "OPEN", "body": "no parent ref"},
+        {"number": 13, "state": "OPEN", "body": "## What\nno ref"},
+    ]
+    _fake_gh_list(ci, monkeypatch, rows)
+    assert ci._find_open_children(5, {}) == [10]
+
+
+def test_find_open_children_empty_when_all_children_closed(ci, monkeypatch) -> None:
+    rows = [
+        {"number": 10, "state": "CLOSED", "body": "Feature: #5"},
+        {"number": 11, "state": "CLOSED", "body": "Feature: #5"},
+    ]
+    _fake_gh_list(ci, monkeypatch, rows)
+    assert ci._find_open_children(5, {}) == []
+
+
+def test_find_open_children_returns_none_on_gh_failure(ci, monkeypatch) -> None:
+    _fake_gh_list(ci, monkeypatch, [], returncode=1)
+    assert ci._find_open_children(5, {}) is None
+
+
 # ---- regression #60 — label reconciliation on close --------------------
 #
 # close-issue previously closed the GitHub issue but did not reconcile
