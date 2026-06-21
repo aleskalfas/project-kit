@@ -92,6 +92,16 @@ Invariant: "you are in state X" is always true — the engine never reports a ha
 
 All shape decisions resolved (D0–D6 + the determinism-spectrum and composition refinements). Remaining ◇ items are **named hypotheses that accrete per binding**, not open decisions. Next: author the foundational **COR**; then the pm-rebind DEC + the living-docs DEC (each cites the COR; pm's ships the COR-010 migration).
 
+### D7 (resolved 2026-06-21) — predicate mechanism = capability-provided commands
+
+How the content-free engine evaluates a capability's detection predicate / deterministic gate. Three candidates: (A) registered Python functions — rejected (engine would import capability code; breaks the content-free seam; capabilities ship PEP-723 scripts, not an importable package); (B) **capability-provided commands** — chosen; (C) declarative DSL — too weak alone (can't query live reality like "branch exists"/"PR merged", which is the point of inferred detection).
+
+**Decision (B):** a predicate is `{ run: <command-name>, with: <args?> }` referencing a command the owning capability registers (the existing `scripts/` + `package.yaml` pattern). The engine resolves it in `<capability>` (from the definition's location), runs it with the subject + context, reads structured JSON:
+- deterministic gate / detection: `{ result: bool, reason, detail? }` → engine uses `result`.
+- authorisation-artifact gate: `{ exists: bool, produced_by: <authority>, reason, detail? }` → **the engine computes `result = exists && produced_by != actor`** (engine enforces cross-authority, not the capability).
+
+`reason`/`detail` feed the status view's live precheck (self-explanation). Engine stays content-free; capabilities own predicate logic; fits the permission model; reality-queries work. Sharpens the pm rebind: pm's inference (branch-exists / pr-merged / checkboxes) becomes predicate commands the engine calls. Ship-narrow: command-refs only; a declarative-data convenience (the DSL, for trivial field checks) is named-deferred.
+
 ### D6 (resolved 2026-06-21) — blocked = derived detection (★) + first-class flag (◇)
 
 Dissolve the binary (derived status vs new state). The engine **derives** "can I move?" live via gate-precheck (★ — `status`/`can-i-move` need it anyway); when blocked is a *wait*, it materialises a first-class **orthogonal runtime flag** (NOT a definition state → no state-space explosion): `blocked{blocked_on, resume_when, assignee?, since}`, journaled on enter/resume, with the engine re-evaluating `resume_when` live so `status` shows current readiness and the flag clears when satisfied. Gives the wait a journal entry + reason + duration + owner (critic CA-1 #1), a notify-on-enter / act-on-resume hook point (#2), and a typed `blocked_on` that distinguishes awaiting-human / awaiting-condition / awaiting-subprocess-outcome / deadlock (#3). Composition fit: a parent waiting on a subprocess is `blocked_on: <child outcome>`. Split: the derived "is there a legal move?" ships ★; the rich `blocked` record ships ◇ (when a binding needs rich human-in-the-loop).
