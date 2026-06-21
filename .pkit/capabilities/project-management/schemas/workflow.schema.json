@@ -1,14 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "workflow.schema.json",
-  "title": "Issue-lifecycle state machine + transitions + cascade",
-  "description": "Formal shape of workflow.yaml — the five issue-lifecycle states (todo, backlog, in-progress, review, done), the gated transitions between them (who authorises, who executes, what severity gates apply), the cascade rules (upward-only forward and closure cascade; no downward), and the closure triggers (PR merge into main, PR merge into integration branch, manual won't-do). Consumed by the transition-state skill to walk the machine, and by the validator to enforce authorisation gates. Companion per COR-018.",
-  "x-pkit-id-collection": "/states",
+  "title": "Issue-lifecycle process definition + cascade",
+  "description": "Formal shape of workflow.yaml at schema_version 3 — the issue lifecycle rebound onto the shared process substrate (COR-031) as a KEYED process (COR-032), per DEC-032. The substrate-shaped fields live under `process` (id, version, subject, states with `detection` predicates, transitions with optional `gate` predicates); the pm-LOCAL blocks (`cascade`, `closure_triggers`) and pm-local fields on states/transitions stay top-level / inline and are ignored by the engine. Companion per COR-018. The five states (todo, backlog, in-progress, review, done) keep their meaning; state ORDER under `process.states` is load-bearing (the engine returns the first matching detection, and forward cascade infers 'ancestor is behind' from the canonical ordering).",
+  "x-pkit-id-collection": "/process/states",
   "type": "object",
   "required": [
     "schema_version",
-    "states",
-    "transitions",
+    "process",
     "cascade",
     "closure_triggers"
   ],
@@ -16,24 +15,60 @@
   "properties": {
     "schema_version": {
       "type": "integer",
-      "const": 2
+      "const": 3
     },
     "source": {
       "$ref": "refs.schema.json#/$defs/source"
     },
-    "states": {
-      "type": "array",
-      "items": { "$ref": "#/$defs/entry" },
-      "minItems": 1,
-      "uniqueItems": true,
-      "description": "States in linear order from filing to closure. Order is load-bearing: forward cascade infers 'ancestor is behind' from this ordering."
-    },
-    "transitions": {
-      "type": "array",
-      "items": { "$ref": "#/$defs/transition" },
-      "minItems": 1,
-      "uniqueItems": true,
-      "description": "Allowed transitions. A transition not listed here is forbidden."
+    "process": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "subject", "states", "transitions"],
+      "description": "The substrate-bound process definition (COR-031 shape). Conforms to ../../../schemas/_defs/process.schema.json#/$defs/process; restated here with pm's domain-specific field shapes for data↔companion validation (COR-018).",
+      "properties": {
+        "id": {
+          "type": "string",
+          "const": "issue-lifecycle",
+          "description": "Addressable as project-management:issue-lifecycle."
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Definition version (handles definition changes under live subjects)."
+        },
+        "subject": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["cardinality"],
+          "description": "The issue lifecycle is keyed: many issues, each at its own position (COR-032).",
+          "properties": {
+            "cardinality": {
+              "type": "string",
+              "const": "keyed",
+              "description": "keyed (COR-032): the engine operates per a supplied issue number; it never enumerates."
+            },
+            "key": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Descriptive: names what identifies a unit (issue-number)."
+            }
+          }
+        },
+        "states": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/entry" },
+          "minItems": 1,
+          "uniqueItems": true,
+          "description": "States, ordered so the engine's first-matching-detection rule and the forward-cascade ordering both hold. Order is load-bearing."
+        },
+        "transitions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/transition" },
+          "minItems": 1,
+          "uniqueItems": true,
+          "description": "Allowed transitions. A transition not listed here is forbidden."
+        }
+      }
     },
     "cascade": {
       "type": "object",
@@ -44,17 +79,62 @@
         "closure": { "$ref": "#/$defs/cascade_rule" },
         "downward": { "$ref": "#/$defs/cascade_rule" }
       },
-      "description": "The three cascade behaviours. Forward and closure cascade upward through ancestors; downward cascade is explicitly disallowed (parent state changes don't propagate to children)."
+      "description": "Pm-LOCAL (DEC-032 D3; engine ignores). The three cascade behaviours. Forward and closure cascade upward through ancestors; downward cascade is explicitly disallowed."
     },
     "closure_triggers": {
       "type": "array",
       "items": { "$ref": "#/$defs/closure_trigger" },
       "minItems": 1,
       "uniqueItems": true,
-      "description": "Recognised paths by which an issue reaches the Done state."
+      "description": "Pm-LOCAL (DEC-032 D3; engine ignores). Recognised paths by which an issue reaches the Done state."
     }
   },
   "$defs": {
+    "predicate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["run"],
+      "properties": {
+        "run": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "Name of a command the capability registers in package.yaml (the engine rejects an unregistered name)."
+        },
+        "with": {
+          "type": "object",
+          "description": "Optional static arguments."
+        }
+      },
+      "description": "A checkable predicate the engine runs as a read-only subprocess (COR-031)."
+    },
+    "detection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "predicate"],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "const": "inferred",
+          "description": "Position inferred from reality via the predicate (COR-031 core)."
+        },
+        "predicate": { "$ref": "#/$defs/predicate" }
+      },
+      "description": "How the engine resolves whether an issue is in this state."
+    },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "predicate"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["deterministic", "authorisation-artifact"],
+          "description": "deterministic: the predicate's result decides (e.g. checkbox close-gate). authorisation-artifact: the predicate returns {exists, produced_by} and the ENGINE computes result = exists && produced_by != actor (e.g. PR-merge cross-authority)."
+        },
+        "predicate": { "$ref": "#/$defs/predicate" }
+      },
+      "description": "What must hold for a move (COR-031 P4; always reduces to a checkable predicate)."
+    },
     "entry": {
       "type": "object",
       "additionalProperties": false,
@@ -63,7 +143,7 @@
         "display_name",
         "meaning",
         "applies_to",
-        "inferred_from"
+        "detection"
       ],
       "properties": {
         "id": {
@@ -74,26 +154,30 @@
         "display_name": {
           "type": "string",
           "minLength": 1,
-          "description": "Display form used in board UIs and prose (e.g., `Todo`, `In Progress`, `Done`)."
+          "description": "Display form used in board UIs and prose (e.g., `Todo`, `In Progress`, `Done`). Pm-local; engine ignores."
         },
         "meaning": {
           "type": "string",
           "minLength": 1,
-          "description": "One-line definition of what an issue in this state represents."
+          "description": "Load-bearing (the status view renders from it): what an issue in this state represents."
         },
         "applies_to": {
           "type": "array",
           "items": { "$ref": "issue-types.schema.json#/$defs/issue_type_ref" },
           "uniqueItems": true,
-          "description": "Issue-type tokens for which this state is reachable. Empty array would mean the state applies to no type and is therefore unused; populated lists name the types that pass through this state. Review is task-only; the other four states apply to every issue type."
+          "description": "Pm-local. Issue-type tokens for which this state is reachable. Review is task-only; the other four apply to every issue type."
         },
-        "inferred_from": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Prose naming the native GitHub primitives the canonical state is derived from (issue open/closed, Milestone assignment, branch existence, PR state). Board fields are a projection — when native and board disagree, native wins."
+        "detection": { "$ref": "#/$defs/detection" },
+        "entry": {
+          "type": "boolean",
+          "description": "Marks a start state (COR-031). Todo is the unconditional entry."
+        },
+        "terminal": {
+          "type": "boolean",
+          "description": "End state (COR-031). Done is terminal."
         }
       },
-      "description": "Per-state shape."
+      "description": "Per-state shape. `detection` is the substrate-shaped position predicate; `display_name`/`applies_to` are pm-local."
     },
     "transition": {
       "type": "object",
@@ -101,6 +185,7 @@
       "required": [
         "from",
         "to",
+        "trigger",
         "command",
         "pr_state_effect",
         "authorisation",
@@ -112,42 +197,58 @@
         "from": {
           "type": "string",
           "pattern": "^[a-z][a-z0-9-]*$",
-          "description": "Source state id (in-schema ref into `states`)."
+          "description": "Source state id."
         },
         "to": {
           "type": "string",
           "pattern": "^[a-z][a-z0-9-]*$",
-          "description": "Target state id (in-schema ref into `states`). Equal to `from` for PR sub-lifecycle rows (no issue-state change, only a `pr_state_effect`)."
+          "description": "Target state id. Equal to `from` for PR sub-lifecycle rows (no issue-state change)."
+        },
+        "trigger": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "The named action that drives the move (COR-031). Matches `command` for pm."
         },
         "command": {
           "type": "string",
           "pattern": "^[a-z][a-z0-9-]*$",
-          "description": "The verb-subject workflow-wrapper command that owns this transition (per DEC-026). Forward-progress wrappers: promote-issue / start-work / create-draft / review-work / back-to-draft / done-work. Won't-do closure rows use `close-issue` (outside the seven-command palette per DEC-026 rationale). Other commands (handoff-issue) don't appear here because they don't drive any transition."
+          "description": "Pm-local. The verb-subject workflow-wrapper command that owns this transition (DEC-026)."
         },
         "pr_state_effect": {
           "type": "string",
           "pattern": "^[a-z|→ -]+$",
-          "description": "The PR-state effect the owning command drives. Values: `none → none` (no PR effect), `none → draft` (create-draft), `none → ready | draft → ready` (review-work — opens new or flips draft→ready), `ready → draft` (back-to-draft), `ready → merged` (done-work). PR state is coupled to issue state; this field captures the coupling explicitly at the schema level."
+          "description": "Pm-local. The PR-state effect the owning command drives."
         },
         "authorisation": {
           "type": "string",
-          "enum": ["user", "agent-autonomous"],
-          "description": "`user` = user holds the gate; agent may not flip without explicit authorisation (session-scoped). `agent-autonomous` = agent flips without prompting."
+          "enum": ["user", "agent-autonomous", "script"],
+          "description": "Who may move (COR-031). `user` = user holds the gate; `agent-autonomous` = agent flips without prompting."
         },
         "executor": {
           "type": "string",
           "enum": ["agent", "user"],
-          "description": "Which actor performs the mutation. The user can both authorise and execute (rare); the agent typically executes either way."
+          "description": "Pm-local. Which actor performs the mutation."
         },
         "applies_to": {
           "type": "array",
           "items": { "$ref": "issue-types.schema.json#/$defs/issue_type_ref" },
           "uniqueItems": true,
-          "description": "Issue-type tokens for which this transition is valid."
+          "description": "Pm-local. Issue-type tokens for which this transition is valid."
         },
         "severity": {
           "$ref": "validation-severity.schema.json#/$defs/severity_ref",
-          "description": "Severity the agent applies when a user-gated transition is attempted without authorisation."
+          "description": "Pm-local. Severity the agent applies when a user-gated transition is attempted without authorisation."
+        },
+        "gate": { "$ref": "#/$defs/gate" },
+        "why": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Status-view prose: why this move exists (COR-031)."
+        },
+        "hint": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Status-view prose: what to run next (COR-031)."
         },
         "notes": {
           "type": "string",
@@ -155,7 +256,7 @@
           "description": "Optional prose. Edge cases, examples, integration-branch variants."
         }
       },
-      "description": "One allowed transition. Per DEC-026 schema_version 2, every transition declares its owning workflow-wrapper command and PR-state effect — including no-issue-transition rows for PR sub-lifecycle events (`from == to`)."
+      "description": "One allowed transition. The substrate-shaped fields are from/to/trigger/authorisation/gate/why/hint; command/pr_state_effect/executor/applies_to/severity are pm-local."
     },
     "cascade_rule": {
       "type": "object",
@@ -165,7 +266,7 @@
         "direction": {
           "type": "string",
           "enum": ["upward", "downward", "none"],
-          "description": "Which way the cascade propagates. `upward` = child change affects ancestor; `downward` = parent change affects child; `none` = disallowed."
+          "description": "Which way the cascade propagates."
         },
         "behaviour": {
           "type": "string",
@@ -202,7 +303,7 @@
         "target_state": {
           "type": "string",
           "pattern": "^[a-z][a-z0-9-]*$",
-          "description": "Final state the trigger drives the issue to (always `done` at v0.1.0; field present for forward-compatibility)."
+          "description": "Final state the trigger drives the issue to."
         },
         "applies_to": {
           "type": "array",
@@ -213,7 +314,7 @@
         "mechanism": {
           "type": "string",
           "minLength": 1,
-          "description": "Prose describing the trigger's mechanics — what user action fires it, what the agent does in response, what auto-closes via GitHub."
+          "description": "Prose describing the trigger's mechanics."
         }
       },
       "description": "One closure path."

@@ -613,21 +613,29 @@ def _resolve_workstream_slugs(
 def _resolve_state_ids(capability_root: Path) -> list[str]:
     """Read lifecycle state IDs from workflow.yaml's `states[].id` list.
 
-    Returns the IDs in declaration order (todo, backlog, in-progress,
-    review, done per the canonical schema). Returns an empty list when
-    the file is missing or unreadable.
+    Since the schema_version 3 rebind (DEC-032) the states live under a
+    top-level `process:` block; this resolver reads there, falling back to the
+    top level for a pre-v3 override. Returns the IDs in canonical lifecycle
+    order (todo, backlog, in-progress, review, done) so label creation is
+    stable regardless of the file's declaration order. Returns an empty list
+    when the file is missing or unreadable.
     """
     path = capability_root / "schemas" / "workflow.yaml"
     try:
         data = YAML(typ="safe").load(path.read_text(encoding="utf-8")) or {}
     except (OSError, YAMLError):
         return []
-    states = data.get("states") or []
-    return [
+    block = data.get("process") if isinstance(data.get("process"), dict) else data
+    states = block.get("states") or []
+    ids = [
         str(s["id"])
         for s in states
         if isinstance(s, dict) and isinstance(s.get("id"), str)
     ]
+    canonical = ["todo", "backlog", "in-progress", "review", "done"]
+    known = [s for s in canonical if s in ids]
+    extra = [s for s in ids if s not in canonical]
+    return known + extra
 
 
 def _load_classification(

@@ -899,7 +899,11 @@ def _check_state_labels(capability_root: Path) -> CheckResult:
             remediation="The capability install may be corrupt; re-install.",
         )
 
-    states = wf_data.get("states") or []
+    # Since the schema_version 3 rebind (DEC-032) states live under a top-level
+    # `process:` block; read there, falling back to top level for a pre-v3
+    # override.
+    block = wf_data.get("process") if isinstance(wf_data.get("process"), dict) else wf_data
+    states = block.get("states") or []
     state_ids = [
         str(s["id"])
         for s in states

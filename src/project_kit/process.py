@@ -6,11 +6,15 @@ moves through guarded transitions, and renders a self-explaining status view.
 It knows nothing about issues, docs, screens, or trips — only states,
 transitions, gates, a position, and a journal.
 
-Ship-narrow (COR-031 P5): singleton subject, `inferred` detection, static
-transition targets. The deferred extension points (keyed cardinality, stored /
-hybrid detection, hooks, invariants, breadth, resolver / open-region targets,
-composition) are not implemented here; the shape contract's enums already
-reject their values, so an unrecognised value fails closed.
+Ship-narrow (COR-031 P5 + COR-032): singleton or keyed subject, `inferred`
+detection, static transition targets. A keyed process operates per a supplied
+subject identifier (required — no singleton default) and never enumerates its
+subjects; the engine simply threads that identifier through every predicate it
+runs and through the per-subject journal path. The remaining deferred extension
+points (stored / hybrid detection, hooks, invariants, breadth, resolver /
+open-region targets, composition, cross-subject enumeration/cascade) are not
+implemented here; the shape contract's enums already reject their values, so an
+unrecognised value fails closed.
 
 The engine is invoked only as `pkit process …` (ADR-020): a backbone CLI
 surface, never imported by a capability wrapper. Wrappers call it by
@@ -37,8 +41,10 @@ from project_kit.install import find_target_root
 _yaml = YAML(typ="safe")
 
 # Singleton subject key (COR-031 P5: ship-narrow, one journey per process).
-# A keyed cardinality would carry the real subject id here; until that ships,
-# every singleton process tracks one journey under this fixed key.
+# A singleton process has no subject id, so every singleton journey tracks under
+# this fixed key. A keyed process (COR-032) carries the real, caller-supplied
+# subject id instead — threaded through the predicate runner and the journal
+# path — and never defaults to this key.
 SINGLETON_SUBJECT = "_"
 
 # Predicate subprocess timeout. A predicate that overruns is indeterminate
@@ -90,6 +96,7 @@ class PredicateRunner:
     capability: str
     capability_dir: Path
     repo_root: Path
+    subject: str
     _command_registry: dict[str, Path] = field(default_factory=dict)
     _raw_cache: dict[tuple[str, tuple[tuple[str, Any], ...]], dict[str, Any] | None] = field(
         default_factory=dict
@@ -199,7 +206,10 @@ class PredicateRunner:
                 f"predicate command {run_name!r} is not registered in "
                 f"{self.capability!r}'s package.yaml (registered: {registered})"
             )
-        argv = [str(script), SINGLETON_SUBJECT, "--json"]
+        # COR-032: the engine threads the (singleton or keyed) subject id as the
+        # first argv to every predicate, so a keyed predicate resolves the right
+        # unit's reality. Singleton processes pass the fixed SINGLETON_SUBJECT.
+        argv = [str(script), self.subject, "--json"]
         try:
             completed = subprocess.run(
                 argv,
@@ -291,6 +301,32 @@ class ProcessDefinition:
     def version(self) -> Any:
         return self.data.get("version")
 
+    @property
+    def cardinality(self) -> str:
+        """The subject cardinality (`singleton` | `keyed`, COR-032).
+
+        Defaults to `singleton` when the `subject` block omits it — the
+        ship-narrow default and the shape the engine assumed before keyed.
+        """
+        subject = self.data.get("subject")
+        if isinstance(subject, dict):
+            value = subject.get("cardinality")
+            if isinstance(value, str):
+                return value
+        return "singleton"
+
+    @property
+    def subject_key(self) -> str | None:
+        """The descriptive `key` naming what identifies a keyed unit (COR-032),
+        or None when unspecified. Engine does not interpret it; used only for
+        clearer error messages."""
+        subject = self.data.get("subject")
+        if isinstance(subject, dict):
+            value = subject.get("key")
+            if isinstance(value, str) and value:
+                return value
+        return None
+
     def state(self, state_id: str) -> dict[str, Any] | None:
         for s in self.states:
             if s.get("id") == state_id:
@@ -365,6 +401,41 @@ class ProcessEngine:
             capability=definition.capability,
             capability_dir=definition.capability_dir,
             repo_root=repo_root,
+            subject=subject,
+        )
+
+    @classmethod
+    def for_subject(
+        cls,
+        definition: ProcessDefinition,
+        repo_root: Path,
+        subject: str | None,
+    ) -> ProcessEngine:
+        """Build an engine, resolving the subject per the definition's cardinality.
+
+        singleton -> the supplied subject is ignored; the fixed SINGLETON_SUBJECT
+        is used (one journey per process).
+        keyed (COR-032) -> a subject is REQUIRED; absent it, raise a clear
+        ProcessError (no singleton default for a keyed process).
+
+        An unrecognised cardinality fails closed as a ProcessError rather than
+        silently defaulting.
+        """
+        cardinality = definition.cardinality
+        if cardinality == "keyed":
+            if subject is None or subject == "":
+                raise ProcessError(
+                    f"process {definition.capability}:{definition.process_id} is keyed "
+                    "(cardinality: keyed); --subject is required (it identifies which "
+                    f"{definition.subject_key or 'unit'} to act on)."
+                )
+            return cls(definition, repo_root, subject=subject)
+        if cardinality == "singleton":
+            return cls(definition, repo_root, subject=SINGLETON_SUBJECT)
+        raise ProcessError(
+            f"process {definition.capability}:{definition.process_id} declares "
+            f"unsupported subject cardinality {cardinality!r}; failing closed "
+            "(expected 'singleton' or 'keyed')."
         )
 
     # --- position resolution ---------------------------------------------
@@ -574,41 +645,89 @@ def parse_address(address: str) -> tuple[str, str]:
 def load_definition(repo_root: Path, address: str) -> ProcessDefinition:
     """Load the process definition addressed by `<capability>:<process-id>`.
 
-    Resolves the capability's own instance schema at
-    `.pkit/capabilities/<capability>/schemas/<process-id>.yaml` (COR-031
-    binding layout), confirming its `process.id` matches the address.
+    Resolution order in the capability's `schemas/` directory:
+
+    1. The README-convention path `<process-id>.yaml` (the common case — file
+       stem == process id).
+    2. Failing that, a scan of `schemas/*.yaml` for a top-level `process:`
+       block whose `id` matches `<process-id>`. This accommodates a capability
+       whose instance file predates the convention and keeps its historical
+       name (e.g. project-management's `workflow.yaml` holding
+       `process.id: issue-lifecycle`).
+
+    The declared `process.id` must match the address either way.
     """
     capability, process_id = parse_address(address)
     capability_dir = repo_root / ".pkit" / "capabilities" / capability
     if not capability_dir.is_dir():
         raise ProcessError(f"capability {capability!r} is not installed at {capability_dir}")
-    definition_path = capability_dir / "schemas" / f"{process_id}.yaml"
-    if not definition_path.is_file():
-        raise ProcessError(
-            f"no process definition for {address!r} at "
-            f"{definition_path.relative_to(repo_root)}"
+    schemas_dir = capability_dir / "schemas"
+
+    by_convention = schemas_dir / f"{process_id}.yaml"
+    if by_convention.is_file():
+        process = _read_process_block(by_convention, repo_root)
+        if process.get("id") != process_id:
+            raise ProcessError(
+                f"process id mismatch: address {address!r} but definition at "
+                f"{by_convention.relative_to(repo_root)} declares id {process.get('id')!r}"
+            )
+        return ProcessDefinition(
+            capability=capability,
+            process_id=process_id,
+            capability_dir=capability_dir,
+            data=process,
         )
+
+    # Fall back to a scan: find the schema file whose process.id matches.
+    # Collect ALL matches: two files claiming one id is a definition bug, not
+    # something to resolve silently by sort order.
+    if schemas_dir.is_dir():
+        matches: list[tuple[Path, dict[str, Any]]] = []
+        for candidate in sorted(schemas_dir.glob("*.yaml")):
+            try:
+                raw = _yaml.load(candidate.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            if not isinstance(raw, dict):
+                continue
+            block = raw.get("process")
+            if isinstance(block, dict) and block.get("id") == process_id:
+                matches.append((candidate, block))
+        if len(matches) > 1:
+            offenders = ", ".join(
+                str(path.relative_to(repo_root)) for path, _ in matches
+            )
+            raise ProcessError(
+                f"ambiguous process definition for {address!r}: multiple schema "
+                f"files declare process.id {process_id!r} ({offenders}). Exactly "
+                f"one definition may claim an id."
+            )
+        if matches:
+            return ProcessDefinition(
+                capability=capability,
+                process_id=process_id,
+                capability_dir=capability_dir,
+                data=matches[0][1],
+            )
+
+    raise ProcessError(
+        f"no process definition for {address!r}: neither "
+        f"{by_convention.relative_to(repo_root)} exists nor does any schema in "
+        f"{schemas_dir.relative_to(repo_root)} declare process.id {process_id!r}"
+    )
+
+
+def _read_process_block(path: Path, repo_root: Path) -> dict[str, Any]:
+    """Read and return a schema file's top-level `process:` block, or raise."""
     try:
-        raw = _yaml.load(definition_path.read_text(encoding="utf-8"))
+        raw = _yaml.load(path.read_text(encoding="utf-8"))
     except Exception as exc:
-        raise ProcessError(f"could not read process definition {definition_path}: {exc}") from exc
+        raise ProcessError(f"could not read process definition {path}: {exc}") from exc
     if not isinstance(raw, dict) or not isinstance(raw.get("process"), dict):
         raise ProcessError(
-            f"{definition_path.relative_to(repo_root)} has no top-level `process:` block"
+            f"{path.relative_to(repo_root)} has no top-level `process:` block"
         )
-    process = raw["process"]
-    declared_id = process.get("id")
-    if declared_id != process_id:
-        raise ProcessError(
-            f"process id mismatch: address {address!r} but definition declares "
-            f"id {declared_id!r}"
-        )
-    return ProcessDefinition(
-        capability=capability,
-        process_id=process_id,
-        capability_dir=capability_dir,
-        data=process,
-    )
+    return raw["process"]
 
 
 def resolve_repo_root() -> Path:
