@@ -4,7 +4,7 @@ component:
   name: project-management
   version: 0.24.0
 description: Project-management discipline realized from the pm-workflow methodology — issue hierarchy, state machine, body validation, naming conventions — encoded as schemas a methodology-agnostic engine (skills + agent) consumes at runtime.
-requires_backbone: ">=1.98.0,<2.0.0"
+requires_backbone: ">=1.102.0,<2.0.0"
 aliases:
   - pm
 commands:
