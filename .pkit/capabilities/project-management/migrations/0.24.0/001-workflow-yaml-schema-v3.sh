@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # project-management 0.24.0 — workflow.yaml schema_version 2 → 3.
 #
-# DEC-032 rebinds the issue lifecycle onto the shared process substrate
+# DEC-033 rebinds the issue lifecycle onto the shared process substrate
 # (COR-031) as a keyed process (COR-032). The schema bump restructures
 # `workflow.yaml`: `states` + `transitions` move under a top-level
 # `process:` block (with `id`, `version`, `subject: {cardinality: keyed,
@@ -17,7 +17,7 @@
 # tree). Adopters who haven't customised the file get the v3 version
 # directly from sync — no migration action needed on their part.
 #
-# WARN-ON-OVERRIDE ONLY (DEC-032 D6): this migration's only job is to
+# WARN-ON-OVERRIDE ONLY (DEC-033 D6): this migration's only job is to
 # detect the case where an adopter has overridden the kit-shipped
 # `workflow.yaml` (a `project/schema-overrides/workflow.yaml`) still at
 # schema_version 2 and surface a warning so they can hand-update it. It
@@ -80,7 +80,7 @@ cat <<EOF
     Current schema_version: $override_version
     Required schema_version: 3
 
-  Required changes per DEC-032 (rebind onto the process substrate):
+  Required changes per DEC-033 (rebind onto the process substrate):
 
     1. Bump \`schema_version\` to 3.
 
@@ -122,7 +122,7 @@ cat <<EOF
        (top-level, pm-local; the engine ignores them).
 
   See:
-    - $CAP_DIR/decisions/DEC-032-rebind-issue-lifecycle-onto-process-substrate.md
+    - $CAP_DIR/decisions/DEC-033-rebind-issue-lifecycle-onto-process-substrate.md
     - $KIT_WORKFLOW (the kit-shipped v3 reference)
     - $ROOT/.pkit/process/README.md (the substrate shape + engine contract)
 

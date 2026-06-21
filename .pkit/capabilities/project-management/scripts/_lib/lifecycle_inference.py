@@ -1,9 +1,9 @@
-"""Shared issue-lifecycle position + gate inference (pm-local, DEC-032).
+"""Shared issue-lifecycle position + gate inference (pm-local, DEC-033).
 
 This module is the single home of the issue-lifecycle's *domain* inference,
 lifted verbatim from `move-issue`'s pre-rebind logic so the rebound predicate
 commands resolve identical positions and gate outcomes — behaviour parity is
-the acceptance bar (DEC-032 Implications).
+the acceptance bar (DEC-033 Implications).
 
 The process engine (COR-031, in the binary) is content-free: it knows states,
 transitions, gates, a position, a journal — nothing about issues, labels,
@@ -12,7 +12,7 @@ engine only as the structured-JSON predicate contract (the detector + gate
 scripts call into this module).
 
 Position precedence (`infer_current_state`) reproduces move-issue's
-`_infer_current_state` EXACTLY — this is the #1 parity risk per DEC-032:
+`_infer_current_state` EXACTLY — this is the #1 parity risk per DEC-033:
 
   1. GitHub issue state == closed                -> done
   2. first `state:*` label present               -> that state
@@ -24,7 +24,7 @@ The detectors built on top of this are mutually exclusive (each returns
 "first matching state wins" rule is satisfied regardless of state order — the
 order in workflow.yaml is belt-and-suspenders, not the sole guarantee.
 
-The parent in-progress *descendant walk* (DEC-032 Implications (d)) is a
+The parent in-progress *descendant walk* (DEC-033 Implications (d)) is a
 pm-local breadth concern; it lives in `parent_has_active_descendant` here and is
 NEVER pulled into the engine. It is exposed as its own predicate, distinct from
 the position detectors — it must not alter the parity truth-table above (an
@@ -43,7 +43,7 @@ STATE_ORDER = ["todo", "backlog", "in-progress", "review", "done"]
 def workflow_process(workflow: dict | None) -> dict:
     """Return the process-definition block of a parsed workflow.yaml.
 
-    Since the schema_version 3 rebind (DEC-032), `states` + `transitions` live
+    Since the schema_version 3 rebind (DEC-033), `states` + `transitions` live
     under a top-level `process:` block (the substrate shape, COR-031). This
     helper resolves that block, falling back to the top level for a pre-v3
     (schema_version 2) override an adopter may still hold — so pm readers work
@@ -62,7 +62,7 @@ def infer_current_state(
 ) -> str:
     """Best-effort live position — reproduces move-issue `_infer_current_state`.
 
-    Precedence (DO NOT reorder — parity-critical, DEC-032):
+    Precedence (DO NOT reorder — parity-critical, DEC-033):
     closed -> done; first `state:*` label; milestone -> backlog; else todo.
     """
     if state == "closed":

@@ -1,8 +1,8 @@
 """Behaviour-parity tests for the issue-lifecycle rebind onto the process
-substrate (DEC-032). Parity is the acceptance bar: the issue lifecycle must
+substrate (DEC-033). Parity is the acceptance bar: the issue lifecycle must
 behave identically after the rebind.
 
-Coverage (DEC-032 Implications):
+Coverage (DEC-033 Implications):
   (a) position truth-table — every (issue-state x milestone x labels) input
       resolves to the SAME state through the pre-rebind logic
       (move-issue `_infer_current_state`) and the rebound detectors, AND the

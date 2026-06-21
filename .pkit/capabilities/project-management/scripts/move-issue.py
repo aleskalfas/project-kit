@@ -8,7 +8,7 @@
 """Project-management capability — move-issue (verb-subject per DEC-020).
 
 Transitions a GitHub issue through the lifecycle state machine declared
-in `workflow.yaml`, which since DEC-032 is a process definition bound to
+in `workflow.yaml`, which since DEC-033 is a process definition bound to
 the shared process substrate (COR-031) — a KEYED process (COR-032), one
 journey per issue number.
 
@@ -220,7 +220,7 @@ def main() -> int:
         )
         return 2
 
-    # Position: read from the engine (DEC-032 D7 — read, don't re-infer). The
+    # Position: read from the engine (DEC-033 D7 — read, don't re-infer). The
     # engine's detectors reproduce this script's inference precedence, so the
     # result is identical; fall back to the local inference only when the engine
     # is unreachable (e.g. `pkit` not on PATH), so a move is never blocked.
@@ -407,7 +407,7 @@ def main() -> int:
         if not ok:
             return 3
 
-    # Seam-ordering (DEC-032 / process README): the domain side-effect (the
+    # Seam-ordering (DEC-033 / process README): the domain side-effect (the
     # label/board edit) is applied above; now journal the move via the engine.
     # Best-effort — a refusal or missing `pkit` never fails the move, since
     # live detection stays authoritative.
@@ -622,7 +622,7 @@ def _infer_current_state(
     this precedence (closed→done; first state:* label; milestone→backlog; else
     todo). The same resolver backs the process detectors, so move-issue's local
     inference and the engine's detection agree by construction — behaviour
-    parity (DEC-032). Kept as a thin local alias so the rest of this script (and
+    parity (DEC-033). Kept as a thin local alias so the rest of this script (and
     `_cascade_parent`) reads naturally.
     """
     return infer.infer_current_state(state=state, milestone=milestone, labels=labels)
@@ -650,7 +650,7 @@ def _walk_parent_chain(body: str) -> list[int]:
     return out
 
 
-# ---- process-engine delegation (DEC-032 D5/D7) ----------------------
+# ---- process-engine delegation (DEC-033 D5/D7) ----------------------
 #
 # move-issue delegates POSITION + JOURNAL to the shared process engine
 # (`pkit process …`, COR-031), invoked by subprocess (never imported,

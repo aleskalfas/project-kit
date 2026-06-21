@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "workflow.schema.json",
   "title": "Issue-lifecycle process definition + cascade",
-  "description": "Formal shape of workflow.yaml at schema_version 3 — the issue lifecycle rebound onto the shared process substrate (COR-031) as a KEYED process (COR-032), per DEC-032. The substrate-shaped fields live under `process` (id, version, subject, states with `detection` predicates, transitions with optional `gate` predicates); the pm-LOCAL blocks (`cascade`, `closure_triggers`) and pm-local fields on states/transitions stay top-level / inline and are ignored by the engine. Companion per COR-018. The five states (todo, backlog, in-progress, review, done) keep their meaning; state ORDER under `process.states` is load-bearing (the engine returns the first matching detection, and forward cascade infers 'ancestor is behind' from the canonical ordering).",
+  "description": "Formal shape of workflow.yaml at schema_version 3 — the issue lifecycle rebound onto the shared process substrate (COR-031) as a KEYED process (COR-032), per DEC-033. The substrate-shaped fields live under `process` (id, version, subject, states with `detection` predicates, transitions with optional `gate` predicates); the pm-LOCAL blocks (`cascade`, `closure_triggers`) and pm-local fields on states/transitions stay top-level / inline and are ignored by the engine. Companion per COR-018. The five states (todo, backlog, in-progress, review, done) keep their meaning; state ORDER under `process.states` is load-bearing (the engine returns the first matching detection, and forward cascade infers 'ancestor is behind' from the canonical ordering).",
   "x-pkit-id-collection": "/process/states",
   "type": "object",
   "required": [
@@ -79,14 +79,14 @@
         "closure": { "$ref": "#/$defs/cascade_rule" },
         "downward": { "$ref": "#/$defs/cascade_rule" }
       },
-      "description": "Pm-LOCAL (DEC-032 D3; engine ignores). The three cascade behaviours. Forward and closure cascade upward through ancestors; downward cascade is explicitly disallowed."
+      "description": "Pm-LOCAL (DEC-033 D3; engine ignores). The three cascade behaviours. Forward and closure cascade upward through ancestors; downward cascade is explicitly disallowed."
     },
     "closure_triggers": {
       "type": "array",
       "items": { "$ref": "#/$defs/closure_trigger" },
       "minItems": 1,
       "uniqueItems": true,
-      "description": "Pm-LOCAL (DEC-032 D3; engine ignores). Recognised paths by which an issue reaches the Done state."
+      "description": "Pm-LOCAL (DEC-033 D3; engine ignores). Recognised paths by which an issue reaches the Done state."
     }
   },
   "$defs": {

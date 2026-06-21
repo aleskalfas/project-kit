@@ -1,5 +1,5 @@
 ---
-id: DEC-032
+id: DEC-033
 title: Rebind the issue lifecycle onto the process substrate (keyed)
 status: accepted
 date: 2026-06-21
