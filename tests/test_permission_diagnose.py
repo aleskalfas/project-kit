@@ -206,6 +206,71 @@ def test_redaction_preserves_shell_shape_signal(tmp_path):
     assert perm._diagnose_classify({"command": logged}) == "shell-shape"
 
 
+def test_redaction_is_sticky_after_first_flag(tmp_path):
+    """Regression: redaction must be sticky across the whole segment tail. A
+    secret sitting in its OWN bare-word token right after a flag must NOT survive
+    by looking subcommand-like — `--with-token` opens redaction and nothing after
+    it in the segment can re-trip the keep path. The leading subcommand run
+    (`gh auth login`) is still kept for classification."""
+    cap = _load_capture()
+    root = _proj(tmp_path)
+    _arm(root)  # redact on
+    cap.capture(str(root), _bash("gh auth login --with-token mytokenvalue123"),
+                "abstain", "lenient")
+    logged = _log(root)[0]["command"]
+    assert "mytokenvalue123" not in logged, "secret bare word after a flag leaked"
+    assert logged.startswith("gh auth login")  # leading subcommand run kept
+    assert "redacted" in logged
+
+
+def test_redaction_drops_env_prefix_and_quoted_credential(tmp_path):
+    """Regression: an env-prefix is dropped, and an unquoted credential token
+    inside a quoted -H value (split into bare words by whitespace) must not leak
+    via the re-trip path. Neither the env value, the scheme word, nor the token
+    survive; only the program head is kept."""
+    cap = _load_capture()
+    root = _proj(tmp_path)
+    _arm(root)  # redact on
+    cap.capture(
+        str(root),
+        _bash('FOO=secret curl -H "Authorization: Bearer abc123" https://x'),
+        "abstain", "lenient",
+    )
+    logged = _log(root)[0]["command"]
+    assert "secret" not in logged, "env-prefix value leaked"
+    assert "abc123" not in logged, "credential token leaked"
+    assert "Bearer" not in logged, "auth-scheme word leaked via re-trip"
+    assert logged.startswith("curl")  # program head kept for classification
+    assert "redacted" in logged
+
+
+def test_redaction_keeps_operator_redacts_data_either_side(tmp_path):
+    """A shell operator carries no data and is preserved; it also re-opens the
+    head for the segment after it. Data on either side is still redacted."""
+    cap = _load_capture()
+    root = _proj(tmp_path)
+    _arm(root)  # redact on
+    cap.capture(str(root), _bash("git push && rm -rf /secret/x"),
+                "abstain", "lenient")
+    logged = _log(root)[0]["command"]
+    assert "&&" in logged, "structural operator must survive redaction"
+    assert "/secret/x" not in logged
+    # Heads on both sides of the operator are kept; the data tail is redacted.
+    assert logged.startswith("git push")
+    assert "rm" in logged.split("&&")[1]
+
+
+def test_redaction_keeps_full_leading_subcommand_run(tmp_path):
+    """The program plus the contiguous leading bare-word subcommand run is kept
+    intact for classification when there is no data tail at all."""
+    cap = _load_capture()
+    root = _proj(tmp_path)
+    _arm(root)  # redact on
+    cap.capture(str(root), _bash("npm run build"), "abstain", "lenient")
+    logged = _log(root)[0]["command"]
+    assert logged == "npm run build"  # nothing data-carrying → nothing redacted
+
+
 def test_no_redact_keeps_full_command(tmp_path):
     cap = _load_capture()
     root = _proj(tmp_path)

@@ -45,11 +45,14 @@ _LOG_REL = (".pkit", "permissions", "project", "diagnose-log.jsonl")
 # authoritative defaults are the CLI's `diagnose on`, which writes them in.
 _DEFAULT_MAX_ENTRIES = 2000
 _DEFAULT_REDACT = True
-# Redaction keeps the program token and any immediately following SUBCOMMAND-like
-# tokens (bare words: `npm run build`, `gh pr list`), stopping at the first token
-# that could carry data — a flag (`-x` / `--y`), an assignment (`k=v`), or a
-# path/URL. Secrets and paths live past that boundary, so they are dropped. This
-# is stricter than "keep the first N tokens" (which can leak a secret in token N).
+# Redaction keeps the program token and the contiguous LEADING run of SUBCOMMAND-
+# like tokens (bare words: `npm run build`, `gh pr list`), then redacts the entire
+# remainder of the shell segment once the first data-carrying token appears — a
+# flag (`-x` / `--y`), an assignment (`k=v`), a path/URL, a quoted fragment.
+# Redaction is sticky within the segment (reset only at a shell operator), so a
+# secret in its own bare word right after a flag (`--with-token SECRET`) cannot
+# un-redact itself by looking subcommand-like. This cap bounds the leading run so
+# a long chain of bare words can't itself become a smuggling channel.
 _REDACT_MAX_SUBCOMMANDS = 4
 
 
@@ -122,41 +125,50 @@ def _is_subcommand_token(tok: str) -> bool:
 
 
 def _redact(command: str) -> str:
-    """Keep the program token and the run of subcommand-like tokens after it (and
-    any structural shell operators, which carry no data); replace each run of
-    data-carrying tokens with a single redaction marker. The kept head + operators
-    are what the classifier groups on; the dropped tail is where paths and secrets
-    live."""
+    """Keep a shell segment's head — the program token plus the contiguous LEADING
+    run of bare-word subcommands (`npm run build`, `gh auth login`) — then redact
+    the *entire remainder of the segment* once the first data-carrying token (a
+    flag, a value, a quoted fragment, an env-prefix — anything that isn't part of
+    the leading subcommand run) appears. Redaction is STICKY: after that first
+    data-carrying token, no later token can un-redact the tail, so a secret sitting
+    in its own bare-word token right after a flag (`--with-token SECRET`) cannot
+    survive by looking subcommand-like.
+
+    Structural shell operators (`&&`, `|`, `;`, …) carry no data and are the
+    shell-shape signal the classifier groups on, so they are preserved verbatim;
+    each one ends the segment and re-opens the head (a fresh program + leading
+    subcommand run) for what follows. A leading env-assignment prefix (`FOO=bar`)
+    before the program is dropped quietly. The kept head + operators are what the
+    classifier groups on; the redacted tail is where paths and secrets live."""
     tokens = command.split()
     if not tokens:
         return command
     out: list[str] = []
-    kept_words = 0  # subcommand-like words kept since the last operator/program
-    redacting = False
-    for i, tok in enumerate(tokens):
+    kept_words = 0  # head words (program + leading subcommands) kept this segment
+    redacting = False  # sticky within a segment; reset only by a shell operator
+    for tok in tokens:
         if tok in _SHELL_OPERATORS:
             out.append(tok)
             kept_words = 0  # a new command segment begins after an operator
             redacting = False
             continue
+        if redacting:
+            continue  # sticky: the whole segment tail collapses into one marker
         # A leading env-assignment prefix (`FOO=bar`) before the first word is
         # structural noise we drop quietly (it can carry data) without a marker.
-        is_env_prefix = "=" in tok and not tok.startswith("-") and kept_words == 0 and not redacting
-        if is_env_prefix:
+        if "=" in tok and not tok.startswith("-") and kept_words == 0:
             continue
-        keepable = kept_words == 0 or _is_subcommand_token(tok)
-        # The very first token of a segment (the program) is always kept, even if
-        # it isn't "subcommand-like" by the strict test (e.g. an absolute path).
-        if kept_words == 0:
-            keepable = True
-        if keepable and kept_words <= _REDACT_MAX_SUBCOMMANDS:
+        # The program (first head token) is always kept, even if it isn't
+        # "subcommand-like" by the strict test (e.g. an absolute path); after it,
+        # only the contiguous run of bare-word subcommands stays in the head.
+        in_head = kept_words == 0 or _is_subcommand_token(tok)
+        if in_head and kept_words <= _REDACT_MAX_SUBCOMMANDS:
             out.append(tok)
             kept_words += 1
-            redacting = False
-        elif not redacting:
+        else:
+            # First data-carrying token of the segment → open sticky redaction.
             out.append("…[redacted]")
             redacting = True
-        # else: already redacting this segment → collapse into the one marker
     return " ".join(out)
 
 
