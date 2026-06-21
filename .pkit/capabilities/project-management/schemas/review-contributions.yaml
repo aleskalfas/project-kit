@@ -1,0 +1,79 @@
+# Reviewer-contribution declaration format (per project-management:DEC-032).
+#
+# This file DOCUMENTS the shape of the `review-contributions.yaml` a
+# *contributing* capability ships at its own root
+# (`.pkit/capabilities/<cap>/review-contributions.yaml`). It is the
+# format reference, paired with `review-contributions.schema.json` which
+# validates an instance. It is NOT itself a live contribution — pm ships
+# no reviewer-contribution rules (a capability contributes; pm collects).
+#
+# Per DEC-032 D2: a capability declares reviewer-contribution rules, each
+# pairing a classification match-predicate with a required reviewer-agent
+# name. pm builds the resolution map by walking the capabilities
+# registered in `.pkit/manifest.yaml`'s `components:` list (orphan-safe,
+# mirroring DEC-030's collect_capability_overlays) — not arbitrary
+# directories under `.pkit/capabilities/`.
+#
+# Per DEC-032 D5: activation is install-driven. The declaration's mere
+# presence under a manifest-registered capability activates its rules;
+# there is no separate enable/disable toggle. The file is core-owned
+# (the capability ships it; sync refreshes it), NOT adopter-toggled.
+#
+# Per DEC-032 D2 + DEC-028: a contributed `reviewer` name carries the
+# same constraint as a `review.agents.local_registered:` entry — it must
+# correspond to a deployed agent file at `.claude/agents/<name>.md` (or
+# wherever the harness deploys agents). The collector surfaces a clear
+# error when an installed contribution names an undeployed agent rather
+# than silently dropping it.
+#
+# Per DEC-032 D2 (scope): contributed reviewers register on the LOCAL
+# path only at v1 — a contributed reviewer is always a local-path agent.
+
+schema_version: 1
+
+# `contributions` is a list of rules. Each rule pairs a `match`
+# predicate (keyed on classification axes — `workstream` is the axis
+# specified at v1) with the `reviewer` agent name required when the
+# predicate matches a closing issue's classification.
+#
+# A `match.<axis>` value may be a single string OR a list of strings:
+#   * scalar  → the rule matches that one value.
+#   * list    → the rule matches if the issue's value is ANY listed one
+#               (OR *within* an axis).
+# Multiple axes in one `match` are AND-composed (every axis must hold).
+# Per DEC-032 D1 the required set across multiple closing issues is the
+# UNION of each issue's matched rules — pm's collector owns that union.
+#
+# Activation is install-driven (DEC-032 D5): the mere presence of this
+# file under a manifest-registered capability activates its rules. An
+# empty list — `contributions: []` — is VALID and contributes nothing
+# (a capability that ships the file as a placeholder, or temporarily
+# carries no rules, without becoming a malformed declaration).
+#
+# The examples below are illustrative of the format only — the first
+# real consumer is the `ux-ui-design` capability shipping a
+# `design-reviewer` (per DEC-032's Implications). They show the
+# envelope's range, not just its centroid: a multi-value match and a
+# capability contributing more than one rule.
+contributions:
+  # Single-value match: design-workstream PRs require `design-reviewer`.
+  - match:
+      workstream: design
+    reviewer: design-reviewer
+
+  # Multi-value match (OR within the axis): a PR in EITHER the `design`
+  # or `ui` workstream requires `design-reviewer`. This is the case a
+  # scalar-only `workstream` could not express — hence scalar-or-list is
+  # committed at schema_version 1 rather than deferred to a later bump.
+  - match:
+      workstream:
+        - design
+        - ui
+    reviewer: design-reviewer
+
+  # A second rule from the same capability: `accessibility` PRs require a
+  # distinct `a11y-reviewer`. One capability may contribute many rules;
+  # the collector flattens them and de-duplicates by reviewer name.
+  - match:
+      workstream: accessibility
+    reviewer: a11y-reviewer

@@ -40,6 +40,11 @@ from typing import Any
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
+# Shared deployed-agent resolution (one deploy-path definition across
+# pre-check and the DEC-032 contribution collector, per COR-007).
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _lib.agents import agent_deploy_path, agent_is_deployed  # noqa: E402
+
 
 CAPABILITY_NAME = "project-management"
 ADOPTER_CONFIG_PATH = "project/config.yaml"
@@ -1397,16 +1402,18 @@ def _check_review_block(
                             "`name` must be a non-empty string",
                         ))
                     else:
-                        # Verify the agent file exists in .claude/agents/.
-                        # Walk up from capability_root to find the repo root.
+                        # Verify the agent file exists where the harness
+                        # deploys agents. Walk up from capability_root to
+                        # the repo root; the deploy-path resolution is the
+                        # shared one the DEC-032 collector also uses.
                         repo_root = capability_root.parent.parent.parent
-                        agent_file = repo_root / ".claude" / "agents" / f"{name}.md"
-                        if agent_file.is_file():
+                        if agent_is_deployed(repo_root, name):
                             results.append(CheckResult(
                                 f"review.agents.{path}", "ok",
                                 f"name={name} (agent file found)",
                             ))
                         else:
+                            agent_file = agent_deploy_path(repo_root, name)
                             results.append(CheckResult(
                                 f"review.agents.{path}.{name} file present",
                                 "fail",
