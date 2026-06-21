@@ -82,6 +82,8 @@ Both lists are optional; at least one path must have at least one entry for the 
 
 Within each path, the list is **singleton** at v1 — exactly one entry per populated list. If more than one entry appears in either list, validation refuses with "v1 supports one agent per path; multi-agent pipelines are not yet specified".
 
+> **Cap lifted by [project-management:DEC-032-conditional-reviewer-requirements].** The singleton-per-path refusal is removed there: required reviewers may exceed one, resolved per-PR from classification and contributed by installed capabilities, AND-composed (all-must-approve). DEC-032 is the grounded second-specialist case this DEC deferred per COR-007.
+
 The **strict-composition** question (when both paths are configured, should the gate require *both* to approve? prioritise one over the other? defer to the more-rigorous?) is deferred to a future DEC per COR-007 — the OR default works without requiring lived evidence on which strictness rule matches adopter intent. Adopters who need stricter composition today can configure only one path until the future DEC settles the question.
 
 (`review.agents.registered:` was the v0 field name; the rename to `remote_registered:` distinguishes the two paths.)
@@ -165,6 +167,8 @@ The pm capability's `done-work` runs the algorithm:
 7. The gate is satisfied if **any configured path is satisfied** (OR composition across configured paths).
 
 When only one path is configured, step 7 reduces to "that path's satisfaction". When both are configured, the OR-composition is the v1 default; strict-composition rules defer per COR-007.
+
+> **Generalised by [project-management:DEC-032-conditional-reviewer-requirements] (steps 6–7).** Once the required-reviewer set can exceed one, satisfaction is computed **per reviewer, OR across the paths that reviewer is registered on, and AND across the resolved required set** — the gate is satisfied when *every* required reviewer is individually satisfied. For a single configured reviewer this reduces exactly to the cross-path OR above, so existing single-reviewer behaviour is unchanged. Steps 1–5 stand as written.
 
 ### Stale-verdict handling
 
