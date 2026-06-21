@@ -27,7 +27,8 @@ process:
   id:        <slug>                 # core      addressable as <capability>:<id>
   version:   <int>                  # core      definition version (handles definition changes under live subjects)
   subject:
-    cardinality: singleton          # core: singleton (one journey)  |  deferred: keyed (many units, e.g. per issue/screen)
+    cardinality: singleton          # core: singleton (one journey)  |  core: keyed (many units, e.g. per issue/screen — COR-032)
+    key:         <slug>             # core (keyed)  descriptive name of what identifies a unit (e.g. issue-number); engine does not interpret it
     domain_ref:  <pointer>          # core      where the subject's DOMAIN data lives — distinct from its process position
 
   states:
@@ -56,6 +57,15 @@ process:
   interface:                       # deferred  composition: { inputs, outcomes } — the public contract
   orchestration: { overflow, cross_gates }   # deferred  altitude-2
 ```
+
+### Subject cardinality (core)
+
+A process declares `subject.cardinality`:
+
+- **`singleton`** — one journey per process. No subject identifier; the engine tracks the single journey under a fixed internal key.
+- **`keyed`** (COR-032) — many units under one definition, each at its own position (e.g. one per issue). The engine operates **per a supplied subject identifier**: it resolves *that* subject's position, validates and executes *its* moves, and writes *its* journal, threading the identifier through every predicate it runs (as the predicate's first argv). The identifier is **required** for a keyed process — there is no singleton default; `pkit process … --subject <id>` must be given, and the engine errors clearly if it is missing. A keyed subject may declare a descriptive `key` naming what identifies a unit (e.g. `issue-number`); the engine does not interpret it, but subject identifiers must be safe to use in the per-subject journal path.
+
+The engine **never enumerates** a keyed process's subjects — it only ever acts on the one it is given. Cross-subject enumeration and cascade across a containment tree are *breadth* (altitude-2) and remain deferred; a binding that needs them carries them capability-local (e.g. pm's parent/child cascade lives in its wrappers, not the engine).
 
 Per-subject **runtime**: a resolved **position** (core), an append-only **journal** (core) — `{ts, subject, from→to, trigger, actor, gate-result, severity, bypass+reason}`, the memory, the how-we-got-here, and the audit trail in one — and a derived **blocked** detection (core, "no legal move") with an optional first-class `blocked{blocked_on, resume_when}` flag (deferred).
 
@@ -114,6 +124,19 @@ Predicates **must be read-only** — `status` runs them live, so a mutating pred
 **Failure is fail-closed.** A predicate that errors, times out, returns unparseable JSON, or doesn't resolve is **indeterminate**: `status` shows it distinctly ("couldn't evaluate: …") and `move` refuses. An unrecognised or schema-future gate (engine/definition version skew) likewise fails closed — never a silent pass. Gates are correctness boundaries (unlike the permission hook's fail-open *availability* posture).
 
 **Performance.** Resolve position first (run detection predicates), then precheck only the transitions *out of* the current state; evaluate each predicate at most once per `(command, args)` per invocation. No cross-invocation position caching — that is the deferred `stored` detection mode.
+
+### Seam-ordering contract (journal-as-intent-log)
+
+This is canonical guidance for **all** bindings — how a capability wrapper sequences its own domain side-effect against the engine's journal write.
+
+The journal is an **intent log, not the source of truth**. Live detection is authoritative (COR-031 P3): a subject's position is always re-derived by running the detection predicates against current reality, never read back from the journal. So the journal entry the engine appends on a legal `move` records *that a move was taken*, but the next `status` reports the *real* inferred position regardless of what the journal says.
+
+The ordering a wrapper follows:
+
+1. The wrapper validates and applies its **domain side-effect** (create the branch, open the PR, edit the label/board) — the change that will make live detection report the new state.
+2. The wrapper calls `pkit process move` (by subprocess) to **journal** the move.
+
+Because detection is authoritative, the seam is self-correcting in the failure case: if a wrapper's domain side-effect later fails (or partially fails) *after* a journal entry was written, the next `status` runs detection live and reflects the subject's **real** inferred position — the stale journal entry does not lie about where the subject is, it only records the attempt. A wrapper should still surface side-effect failures to its caller; the point is that a failed side-effect cannot corrupt the engine's notion of position. Wrappers must **read position from the engine** (`status --json`) rather than re-inferring it themselves, so there is one source of position truth.
 
 ## Binding a process (how a capability uses this)
 

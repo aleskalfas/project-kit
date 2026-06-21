@@ -378,7 +378,202 @@ def test_load_definition_rejects_bad_address(fixture_repo: Path) -> None:
         load_definition(fixture_repo, "fixture:missing")
 
 
+def test_load_definition_scan_finds_id_in_offnamed_file(fixture_repo: Path) -> None:
+    # No file named `<id>.yaml`: the scan-fallback finds the lone file whose
+    # process.id matches.
+    schemas = fixture_repo / ".pkit" / "capabilities" / "fixture" / "schemas"
+    (schemas / "off-named.yaml").write_text(
+        "process:\n  id: scanned\n  version: 1\n", encoding="utf-8"
+    )
+    definition = load_definition(fixture_repo, "fixture:scanned")
+    assert definition.process_id == "scanned"
+
+
+def test_load_definition_scan_raises_on_duplicate_id(fixture_repo: Path) -> None:
+    # Two files claiming one process.id is a definition bug, not something to
+    # resolve silently by sort order -> raise rather than return the first.
+    schemas = fixture_repo / ".pkit" / "capabilities" / "fixture" / "schemas"
+    (schemas / "dup-a.yaml").write_text(
+        "process:\n  id: clashing\n  version: 1\n", encoding="utf-8"
+    )
+    (schemas / "dup-b.yaml").write_text(
+        "process:\n  id: clashing\n  version: 1\n", encoding="utf-8"
+    )
+    with pytest.raises(ProcessError) as exc:
+        load_definition(fixture_repo, "fixture:clashing")
+    msg = str(exc.value)
+    assert "dup-a.yaml" in msg and "dup-b.yaml" in msg
+
+
 # --- CLI wiring -----------------------------------------------------------
+
+
+# --- keyed cardinality (COR-032) ------------------------------------------
+
+
+# A keyed process: position is per-subject. Each detect-* predicate reports
+# result=true when a per-subject marker file `_state.<subject>` matches it, so
+# two subjects resolve independently.
+_KEYED_DEFINITION = """\
+process:
+  id: keyed-demo
+  version: 1
+  subject:
+    cardinality: keyed
+    key: unit-id
+  states:
+    - id: open
+      meaning: Unit is open.
+      detection:
+        mode: inferred
+        predicate:
+          run: kdetect-open
+    - id: shut
+      meaning: Unit is shut.
+      terminal: true
+      detection:
+        mode: inferred
+        predicate:
+          run: kdetect-shut
+  transitions:
+    - from: open
+      to: shut
+      trigger: shut
+      authorisation: agent-autonomous
+"""
+
+
+@pytest.fixture
+def keyed_repo(tmp_path: Path) -> Path:
+    """A repo with a keyed fixture capability.
+
+    Each detect predicate reads its subject id (first argv) and a per-subject
+    marker file `_state.<subject>`, so two subjects resolve to different states.
+    """
+    repo = tmp_path
+    pkit = repo / ".pkit"
+
+    defs_dst = pkit / "schemas" / "_defs"
+    defs_dst.mkdir(parents=True, exist_ok=True)
+    source_defs = (
+        Path(__file__).resolve().parents[1] / ".pkit" / "schemas" / "_defs" / "process.schema.json"
+    )
+    shutil.copy(source_defs, defs_dst / "process.schema.json")
+
+    cap = pkit / "capabilities" / "kfixture"
+    scripts = cap / "scripts"
+    cap.mkdir(parents=True, exist_ok=True)
+
+    (cap / "package.yaml").write_text(
+        """schema_version: 2
+component:
+  kind: capability
+  name: kfixture
+  version: 0.1.0
+description: Keyed fixture capability for process-engine tests.
+commands:
+  kdetect-open:
+    script: scripts/kdetect_open.py
+    help: detect open
+  kdetect-shut:
+    script: scripts/kdetect_shut.py
+    help: detect shut
+""",
+        encoding="utf-8",
+    )
+
+    (cap / "schemas").mkdir(parents=True, exist_ok=True)
+    (cap / "schemas" / "keyed-demo.yaml").write_text(_KEYED_DEFINITION, encoding="utf-8")
+
+    # Per-subject detect: argv[1] is the subject id; the marker is _state.<subject>.
+    def _detect(state_name: str) -> str:
+        return (
+            "import json, sys, pathlib\n"
+            "subject = sys.argv[1]\n"
+            "marker = pathlib.Path(f'_state.{subject}')\n"
+            "cur = marker.read_text().strip() if marker.exists() else ''\n"
+            f"hit = cur == {state_name!r}\n"
+            "print(json.dumps({'result': hit, 'subject': subject, "
+            "'reason': f'{subject} marker is {cur!r}'}))\n"
+            "sys.exit(0)\n"
+        )
+
+    _write_script(scripts / "kdetect_open.py", _detect("open"))
+    _write_script(scripts / "kdetect_shut.py", _detect("shut"))
+
+    return repo
+
+
+def _keyed_set_state(repo: Path, subject: str, state: str) -> None:
+    (repo / f"_state.{subject}").write_text(state, encoding="utf-8")
+
+
+def test_keyed_resolves_each_subject_independently(keyed_repo: Path) -> None:
+    _keyed_set_state(keyed_repo, "42", "open")
+    _keyed_set_state(keyed_repo, "99", "shut")
+    definition = load_definition(keyed_repo, "kfixture:keyed-demo")
+
+    pos_42 = ProcessEngine.for_subject(definition, keyed_repo, "42").resolve_position()
+    pos_99 = ProcessEngine.for_subject(definition, keyed_repo, "99").resolve_position()
+    assert pos_42.state_id == "open"
+    assert pos_99.state_id == "shut"
+
+
+def test_keyed_journal_is_per_subject(keyed_repo: Path) -> None:
+    _keyed_set_state(keyed_repo, "42", "open")
+    definition = load_definition(keyed_repo, "kfixture:keyed-demo")
+    engine = ProcessEngine.for_subject(definition, keyed_repo, "42")
+    result = engine.move("shut", actor="agent")
+    assert result.ok is True
+    assert engine.journal_path().name == "42.journal.jsonl"
+    assert engine.journal_path().is_file()
+    # A different subject has its own (here, absent) journal.
+    other = ProcessEngine.for_subject(definition, keyed_repo, "99")
+    assert other.journal_path().name == "99.journal.jsonl"
+    assert not other.journal_path().is_file()
+    entry = json.loads(engine.journal_path().read_text().splitlines()[0])
+    assert entry["subject"] == "42"
+
+
+def test_keyed_requires_subject(keyed_repo: Path) -> None:
+    definition = load_definition(keyed_repo, "kfixture:keyed-demo")
+    with pytest.raises(ProcessError) as exc:
+        ProcessEngine.for_subject(definition, keyed_repo, None)
+    assert "keyed" in str(exc.value)
+    assert "--subject" in str(exc.value)
+    # Empty string is treated as missing too.
+    with pytest.raises(ProcessError):
+        ProcessEngine.for_subject(definition, keyed_repo, "")
+
+
+def test_singleton_ignores_subject_and_uses_fixed_key(fixture_repo: Path) -> None:
+    definition = load_definition(fixture_repo, "fixture:demo")
+    # A supplied subject on a singleton process is ignored; the fixed key wins.
+    engine = ProcessEngine.for_subject(definition, fixture_repo, "ignored")
+    assert engine.subject == SINGLETON_SUBJECT
+    # And no --subject at all also works (the singleton default).
+    engine2 = ProcessEngine.for_subject(definition, fixture_repo, None)
+    assert engine2.subject == SINGLETON_SUBJECT
+
+
+def test_keyed_cli_requires_subject(keyed_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    subprocess.run(["git", "init", "-q"], cwd=keyed_repo, check=True)
+    monkeypatch.chdir(keyed_repo)
+    runner = CliRunner()
+    # No --subject on a keyed process -> a clear error, non-zero exit.
+    missing = runner.invoke(main, ["process", "status", "kfixture:keyed-demo", "--json"])
+    assert missing.exit_code != 0
+    assert "keyed" in missing.output
+
+    # With --subject it resolves that subject's position.
+    _keyed_set_state(keyed_repo, "7", "open")
+    ok = runner.invoke(
+        main, ["process", "status", "kfixture:keyed-demo", "--subject", "7", "--json"]
+    )
+    assert ok.exit_code == 0, ok.output
+    payload = json.loads(ok.output)
+    assert payload["subject"] == "7"
+    assert payload["position"]["state"] == "open"
 
 
 def test_cli_status_json_and_move(fixture_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -404,3 +599,57 @@ def test_cli_status_json_and_move(fixture_repo: Path, monkeypatch: pytest.Monkey
     )
     assert moved.exit_code == 0, moved.output
     assert "moved to 'ready'" in moved.output
+
+
+def test_cli_move_cross_authority_bites_on_real_actor(
+    fixture_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The cross-authority gate (ready -> done) compares the authorisation
+    # artifact's producer login against the `--actor` login. Threading the REAL
+    # invoker login (not an authorisation token) is what makes it bite: a
+    # self-approval (produced_by == actor) refuses; a different authority passes.
+    subprocess.run(["git", "init", "-q"], cwd=fixture_repo, check=True)
+    monkeypatch.chdir(fixture_repo)
+    runner = CliRunner()
+    _set_state(fixture_repo, "ready")
+    # The review verdict was produced by login "alice".
+    (fixture_repo / "_review").write_text(json.dumps({"by": "alice"}), encoding="utf-8")
+
+    # Same login drives the move -> self-approval -> refused.
+    same = runner.invoke(
+        main, ["process", "move", "fixture:demo", "--to", "done", "--actor", "alice"]
+    )
+    assert same.exit_code == 1, same.output
+    assert "refused" in same.output
+
+    # A different login drives the move -> cross-authority satisfied -> moves.
+    other = runner.invoke(
+        main, ["process", "move", "fixture:demo", "--to", "done", "--actor", "bob"]
+    )
+    assert other.exit_code == 0, other.output
+    assert "moved to 'done'" in other.output
+
+
+def test_resolve_actor_identity_uses_gh_login(monkeypatch: pytest.MonkeyPatch) -> None:
+    # The `--actor` default must resolve a real gh login (not a token), so the
+    # cross-authority comparison is against the right namespace.
+    from project_kit import cli as cli_mod
+
+    def _fake_run(argv, **kwargs):
+        assert argv == ["gh", "api", "user", "-q", ".login"]
+        return subprocess.CompletedProcess(argv, 0, stdout="octocat\n", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", _fake_run)
+    assert cli_mod._resolve_actor_identity() == "octocat"
+
+
+def test_resolve_actor_identity_falls_back_when_gh_absent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from project_kit import cli as cli_mod
+
+    def _no_gh(argv, **kwargs):
+        raise FileNotFoundError("gh not installed")
+
+    monkeypatch.setattr(subprocess, "run", _no_gh)
+    assert cli_mod._resolve_actor_identity() == "operator"

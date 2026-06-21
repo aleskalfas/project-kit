@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "process.schema.json",
   "title": "Process substrate — shape contract (COR-031)",
-  "description": "Shared shape for a process DEFINITION a capability authors. Capability instance schemas cross-file $ref these $defs (e.g. \"_defs/process.schema.json#/$defs/process\"). Per the .pkit/process/ area spec + COR-031. Ship-narrow: enums admit only the implemented core values (singleton cardinality, inferred detection); deferred values widen the enum when they ship. additionalProperties is permissive on the extensible objects (process, state, transition) so a capability's own domain-local fields coexist; tight on the core sub-objects.",
+  "description": "Shared shape for a process DEFINITION a capability authors. Capability instance schemas cross-file $ref these $defs (e.g. \"_defs/process.schema.json#/$defs/process\"). Per the .pkit/process/ area spec + COR-031. Ship-narrow: enums admit only the implemented core values (singleton + keyed cardinality, inferred detection); remaining deferred values widen the enum when they ship. additionalProperties is permissive on the extensible objects (process, state, transition) so a capability's own domain-local fields coexist; tight on the core sub-objects.",
   "$defs": {
     "predicate": {
       "type": "object",
@@ -28,8 +28,13 @@
       "additionalProperties": false,
       "properties": {
         "cardinality": {
-          "enum": ["singleton"],
-          "description": "Ship-narrow: one journey per process. `keyed` (many units) widens this enum when it ships."
+          "enum": ["singleton", "keyed"],
+          "description": "singleton: one journey per process (no subject id; the engine uses a fixed key). keyed (COR-032): many units under one definition, each at its own position -- the engine operates per a supplied subject identifier (required for keyed; no singleton default) and never enumerates. Cross-subject enumeration/cascade remain deferred breadth."
+        },
+        "key": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Descriptive only (COR-032): names what identifies a keyed unit (e.g. `issue-number`). The engine does not interpret it; supplied subject identifiers must be safe to use in the per-subject journal path."
         },
         "domain_ref": {
           "type": "string",
