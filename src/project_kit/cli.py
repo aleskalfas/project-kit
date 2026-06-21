@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 from project_kit import __version__
 from project_kit import cli_render
-from project_kit.decisions import Namespace, stamp_decision
+from project_kit.decisions import stamp_decision
 from project_kit.dispatcher import CapabilityDispatchGroup
 from project_kit.install import find_source_kit, find_target_root, install_kit
 from project_kit.merge import run_merge
@@ -1438,6 +1438,39 @@ def permissions_profile_activate(name: str, no_apply: bool) -> None:
 
 
 @main.group()
+def decisions() -> None:
+    """Decision-record integrity checks across every id-space (core, project, ADR, per-capability DEC)."""
+
+
+@decisions.command("validate")
+def decisions_validate() -> None:
+    """Detect duplicate decision ids within an id-space (per Feature #162).
+
+    Scans every decision record — `COR-NNN` under `.pkit/decisions/core/`,
+    `PRJ-NNN` under `.pkit/decisions/project/`, `ADR-NNN` at the
+    overlay-resolved `<adr-records>` path, and per-capability `DEC-NNN`
+    under `.pkit/capabilities/<cap>/decisions/` — and fails if two records
+    claim the same id within the same id-space. Numbering is independent
+    per id-space, so the same `DEC-001` in two different capabilities is
+    not a collision.
+
+    Also sanity-checks that each record's frontmatter id matches its
+    filename number. Exits non-zero on any duplicate or mismatch.
+    """
+    from project_kit import decisions_validate as decisions_mod
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    report = decisions_mod.validate_decision_ids(target_root)
+    decisions_mod.print_report(report)
+    if not report.is_clean:
+        raise click.ClickException(
+            f"{len(report.issues)} decision-id issue(s) found."
+        )
+
+
+@main.group()
 def schemas() -> None:
     """Validate capability YAML schemas against their JSON Schema companions (per COR-018 + the .pkit/schemas/ area)."""
 
@@ -2429,15 +2462,19 @@ def new() -> None:
 
 
 @new.command("decision")
-@click.argument("namespace", type=click.Choice(["core", "project", "adr"]))
+@click.argument("namespace")
 @click.argument("slug")
 def new_decision(namespace: str, slug: str) -> None:
     """Stamp a new decision-record stub.
 
     Namespaces:
-      core     → COR-NNN at .pkit/decisions/core/
-      project  → PRJ-NNN at .pkit/decisions/project/
-      adr      → ADR-NNN at the overlay's <adr-records> path (per COR-024/COR-025)
+      core           → COR-NNN at .pkit/decisions/core/
+      project        → PRJ-NNN at .pkit/decisions/project/
+      adr            → ADR-NNN at the overlay's <adr-records> path (per COR-024/COR-025)
+      <capability>   → DEC-NNN at .pkit/capabilities/<capability>/decisions/ (Feature #162)
+
+    Any NAMESPACE that is not core/project/adr is interpreted as a
+    capability name; the command refuses if no such capability exists.
     """
     target_root = find_target_root()
     if target_root is None:
@@ -2446,21 +2483,12 @@ def new_decision(namespace: str, slug: str) -> None:
         raise click.ClickException(
             f"{target_root}/.pkit/ does not exist. Run 'pkit init' from this project's root first."
         )
-    target = stamp_decision(target_root, namespace=cast_namespace(namespace), slug=slug)
+    target = stamp_decision(target_root, namespace=namespace, slug=slug)
     try:
         rel = target.relative_to(target_root)
     except ValueError:
         rel = target
     click.echo(f"Stamped: {rel}")
-
-
-def cast_namespace(value: str) -> Namespace:
-    """Click's `Choice` already validates; this widens str → Namespace for the type checker."""
-    if value == "core":
-        return "core"
-    if value == "adr":
-        return "adr"
-    return "project"
 
 
 @new.command("area")
@@ -2875,12 +2903,12 @@ def _cast_migration_scope(value: str) -> MigrationScope:
     return "resource"
 
 
-# --- process substrate (per COR-031 / ADR-020) ------------------------
+# --- process substrate (per COR-033 / ADR-020) ------------------------
 
 
 @main.group()
 def process() -> None:
-    """Process-substrate engine (per COR-031): resolve position, validate +
+    """Process-substrate engine (per COR-033): resolve position, validate +
     execute guarded moves, render the self-explaining status view.
 
     Content-free — addresses a capability's process definition as
@@ -2948,7 +2976,7 @@ def process_can_move(address: str, to_state: str, subject: str | None, actor: st
 def _resolve_actor_identity() -> str:
     """Resolve the GitHub login of whoever is driving, for the `--actor` default.
 
-    The cross-authority gate (COR-031 P4) compares `--actor` against an
+    The cross-authority gate (COR-033 P4) compares `--actor` against an
     authorisation artifact's `produced_by` login, so the default must be a real
     GitHub login — not an authorisation token. We resolve it via `gh api user`
     rather than importing the project-management capability's membership helper:

@@ -17,6 +17,19 @@ The two namespaces have **independent numbering**. `core/COR-001` and `project/P
 
 The distinct prefixes mean a reference like `COR-002` or `PRJ-007` is unambiguous on sight — no need to know the surrounding directory to know which side of the .pkit/project line it belongs to.
 
+### Two further id-spaces
+
+Beyond the two top-level namespaces, decision records also appear in two other places, each its own independently-numbered **id-space**:
+
+| Location | Prefix | Owner | Per |
+|---|---|---|---|
+| overlay-resolved `<adr-records>` path (default `docs/architecture/decisions/`) | **ADR** | Your project | COR-025 |
+| `.pkit/capabilities/<cap>/decisions/` | **DEC** | The capability | (per-capability) |
+
+A capability's **DEC** records are numbered **per capability** — each capability is its own DEC id-space, so two different capabilities may both hold a `DEC-001` without conflict. Only two records sharing a `DEC-NNN` *within the same capability* collide.
+
+`pkit decisions validate` enforces uniqueness within each id-space (core, project, ADR, and per-capability DEC) and is wired into the project's check gate — it catches two records hand-authored with the same id before they land.
+
 ## The no-shared-files invariant
 
 Every file has exactly one owner — kit or project — and they never share a path.
@@ -33,8 +46,8 @@ Some files must live at fixed paths that you will want to extend — root `CLAUD
 
 `<PREFIX>-NNN-slug.md`, where:
 
-- `<PREFIX>` is `COR` (in `core/`) or `PRJ` (in `project/`).
-- `NNN` is a zero-padded serial within the namespace (`001`, `002`, …, `099`, `100`).
+- `<PREFIX>` is `COR` (in `core/`), `PRJ` (in `project/`), `ADR` (architecture records), or `DEC` (a capability's own `decisions/`) — see "Two further id-spaces" above for ADR and DEC.
+- `NNN` is a zero-padded serial within the id-space (`001`, `002`, …, `099`, `100`); each prefix numbers independently, and DEC numbering is per-capability.
 - `slug` is a kebab-case shorthand of the title — short enough to keep file listings self-documenting, long enough to identify the decision without opening the file.
 
 Examples: `COR-001-init-vs-synced-lifecycle.md` (kit-owned, read-only), `PRJ-001-our-architecture.md` (yours).
@@ -111,6 +124,8 @@ pkit new decision project <slug>
 ```
 
 This stamps `PRJ-NNN-slug.md` with the schema's frontmatter and four section headers; you fill in the body and flip status to `accepted` once agreed.
+
+The same command stamps the other id-spaces by passing a different namespace: `core` (COR), `adr` (ADR, at the overlay-resolved path), or a **capability name** (DEC, under `.pkit/capabilities/<capability>/decisions/`, numbered per capability). The capability must already exist; the command refuses an unknown name.
 
 If you prefer to author by hand, the procedure is:
 

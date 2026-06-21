@@ -1,6 +1,6 @@
 ---
 name: decision-author
-description: Author a new decision record (COR, PRJ, or ADR) with proper schema, disciplines, and citations. Use when adding a methodology, project-side, or project-architectural decision.
+description: Author a new decision record (COR, PRJ, ADR, or a capability-scoped DEC) with proper schema, disciplines, and citations. Use when adding a methodology, project-side, project-architectural, or capability-internal decision.
 metadata:
   wraps_command: pkit new decision
 gates:
@@ -18,7 +18,7 @@ reads:
 
 # Authoring a decision record
 
-This skill walks through adding a new **COR** (core methodology) record under `.pkit/decisions/core/`. **PRJ** records (project-side, under `.pkit/decisions/project/`) follow the same shape with two differences: they skip the project-neutrality discipline, and they use the `PRJ` prefix and a separate numbering sequence. **ADR** records (project-architectural, at the overlay-resolved `<adr-records>` path per [COR-025](../../decisions/core/COR-025-adr-decision-space.md)) follow the same shape with a different discipline emphasis (architectural-fit, see below) and use the `ADR` prefix at the adopter's `docs/architecture/decisions/` (or wherever the overlay resolves).
+This skill walks through adding a new **COR** (core methodology) record under `.pkit/decisions/core/`. **PRJ** records (project-side, under `.pkit/decisions/project/`) follow the same shape with two differences: they skip the project-neutrality discipline, and they use the `PRJ` prefix and a separate numbering sequence. **ADR** records (project-architectural, at the overlay-resolved `<adr-records>` path per [COR-025](../../decisions/core/COR-025-adr-decision-space.md)) follow the same shape with a different discipline emphasis (architectural-fit, see below) and use the `ADR` prefix at the adopter's `docs/architecture/decisions/` (or wherever the overlay resolves). **DEC** records (capability-scoped, under `.pkit/capabilities/<capability>/decisions/`) follow the same shape and use the `DEC` prefix, numbered independently within each capability; pass the capability name as the namespace. Use a DEC record when the decision is internal to a single capability's design; use COR/PRJ/ADR for project- or methodology-wide decisions.
 
 ## Acceptance gate (run first)
 
@@ -65,11 +65,14 @@ Use the methodology's authoring command to scaffold the file (per `.pkit/cli/REA
 pkit new decision core <slug>            # for COR
 pkit new decision project <slug>         # for PRJ
 pkit new decision adr <slug>             # for ADR (per COR-025)
+pkit new decision <capability> <slug>    # for DEC (capability-scoped)
 ```
 
-The command picks the next number in the namespace, stamps the frontmatter (`id`, `title` placeholder, `status: proposed`, today's `date`, `author` from git config), and writes the four required section headers (`## Context`, `## Decision`, `## Rationale`, `## Implications`) with empty bodies.
+The command picks the next number in the id-space, stamps the frontmatter (`id`, `title` placeholder, `status: proposed`, today's `date`, `author` from git config), and writes the four required section headers (`## Context`, `## Decision`, `## Rationale`, `## Implications`) with empty bodies.
 
 For the `adr` namespace, the target directory is resolved from `.pkit/agents/project/overlay.yaml`'s top-level `adr-records:` key (first entry). The directory must exist before stamping — if not, the command refuses with a `mkdir -p` hint. If the overlay key is missing or the path points inside `.pkit/`, the command refuses with a pointer to COR-024/COR-025.
+
+For a **capability namespace** (any namespace that is not `core`/`project`/`adr`), the record stamps under `.pkit/capabilities/<capability>/decisions/` with the `DEC` prefix, numbered independently within that capability. The capability must already exist (have a `package.yaml`); the command refuses an unknown name. The `decisions/` subdirectory is created on first use. Duplicate-id collisions across the corpus are caught by `pkit decisions validate` (wired into the check gate).
 
 This is the deterministic half of authoring. The conversational half — drafting the body — happens in the next steps.
 
