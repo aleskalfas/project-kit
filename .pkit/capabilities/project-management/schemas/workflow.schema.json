@@ -91,49 +91,16 @@
   },
   "$defs": {
     "predicate": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["run"],
-      "properties": {
-        "run": {
-          "type": "string",
-          "pattern": "^[a-z][a-z0-9-]*$",
-          "description": "Name of a command the capability registers in package.yaml (the engine rejects an unregistered name)."
-        },
-        "with": {
-          "type": "object",
-          "description": "Optional static arguments."
-        }
-      },
-      "description": "A checkable predicate the engine runs as a read-only subprocess (COR-031)."
+      "$ref": "process.schema.json#/$defs/predicate",
+      "description": "Substrate shape, single source of truth (COR-031). The pm companion conforms by pointing at the shared contract rather than restating it."
     },
     "detection": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["mode", "predicate"],
-      "properties": {
-        "mode": {
-          "type": "string",
-          "const": "inferred",
-          "description": "Position inferred from reality via the predicate (COR-031 core)."
-        },
-        "predicate": { "$ref": "#/$defs/predicate" }
-      },
-      "description": "How the engine resolves whether an issue is in this state."
+      "$ref": "process.schema.json#/$defs/detection",
+      "description": "Substrate shape, single source of truth (COR-031). pm uses inferred detection; the shared contract owns the field shape."
     },
     "gate": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["kind", "predicate"],
-      "properties": {
-        "kind": {
-          "type": "string",
-          "enum": ["deterministic", "authorisation-artifact"],
-          "description": "deterministic: the predicate's result decides (e.g. checkbox close-gate). authorisation-artifact: the predicate returns {exists, produced_by} and the ENGINE computes result = exists && produced_by != actor (e.g. PR-merge cross-authority)."
-        },
-        "predicate": { "$ref": "#/$defs/predicate" }
-      },
-      "description": "What must hold for a move (COR-031 P4; always reduces to a checkable predicate)."
+      "$ref": "process.schema.json#/$defs/gate",
+      "description": "Substrate shape, single source of truth (COR-031 P4). The shared contract owns the kind enum + predicate shape + the cross-authority semantics."
     },
     "entry": {
       "type": "object",
