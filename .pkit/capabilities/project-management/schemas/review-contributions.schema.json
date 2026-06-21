@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://project-kit/capabilities/project-management/review-contributions.schema.json",
+  "title": "Reviewer-contribution declaration — schema companion",
+  "description": "JSON Schema for a capability's `review-contributions.yaml` (shipped at `.pkit/capabilities/<cap>/review-contributions.yaml`). Per project-management:DEC-032, a capability declares reviewer-contribution rules, each pairing a classification match-predicate with a required reviewer-agent name; pm collects them by walking the manifest-registered capabilities. The matching declaration in `schemas/` documents the format and is paired with this validator.",
+  "type": "object",
+  "required": ["schema_version", "contributions"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "contributions": {
+      "description": "List of reviewer-contribution rules. An empty list is valid (a capability that ships the file but contributes nothing).",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["match", "reviewer"],
+        "additionalProperties": false,
+        "properties": {
+          "match": {
+            "description": "Classification match-predicate. Keys are classification axes (DEC-012); `workstream` is the axis specified at v1. A rule matches a closing issue when every key/value pair holds for that issue's classification.",
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": false,
+            "properties": {
+              "workstream": {
+                "description": "Workstream-axis value(s) the rule matches on. A scalar string matches that one value; a list matches if the closing issue's `workstream` classification is ANY listed value (OR within the axis). Multi-axis predicates remain AND-composed.",
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "reviewer": {
+            "description": "Required reviewer-agent name. Must correspond to a deployed agent file at `.claude/agents/<name>.md` (or wherever the harness deploys agents). Local-path only at v1 (per DEC-032 D2).",
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}
