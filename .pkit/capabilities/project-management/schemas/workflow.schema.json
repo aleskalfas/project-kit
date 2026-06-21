@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "workflow.schema.json",
   "title": "Issue-lifecycle process definition + cascade",
-  "description": "Formal shape of workflow.yaml at schema_version 3 — the issue lifecycle rebound onto the shared process substrate (COR-031) as a KEYED process (COR-032), per DEC-033. The substrate-shaped fields live under `process` (id, version, subject, states with `detection` predicates, transitions with optional `gate` predicates); the pm-LOCAL blocks (`cascade`, `closure_triggers`) and pm-local fields on states/transitions stay top-level / inline and are ignored by the engine. Companion per COR-018. The five states (todo, backlog, in-progress, review, done) keep their meaning; state ORDER under `process.states` is load-bearing (the engine returns the first matching detection, and forward cascade infers 'ancestor is behind' from the canonical ordering).",
+  "description": "Formal shape of workflow.yaml at schema_version 3 — the issue lifecycle rebound onto the shared process substrate (COR-033) as a KEYED process (COR-032), per DEC-033. The substrate-shaped fields live under `process` (id, version, subject, states with `detection` predicates, transitions with optional `gate` predicates); the pm-LOCAL blocks (`cascade`, `closure_triggers`) and pm-local fields on states/transitions stay top-level / inline and are ignored by the engine. Companion per COR-018. The five states (todo, backlog, in-progress, review, done) keep their meaning; state ORDER under `process.states` is load-bearing (the engine returns the first matching detection, and forward cascade infers 'ancestor is behind' from the canonical ordering).",
   "x-pkit-id-collection": "/process/states",
   "type": "object",
   "required": [
@@ -24,7 +24,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["id", "version", "subject", "states", "transitions"],
-      "description": "The substrate-bound process definition (COR-031 shape). Conforms to ../../../schemas/_defs/process.schema.json#/$defs/process; restated here with pm's domain-specific field shapes for data↔companion validation (COR-018).",
+      "description": "The substrate-bound process definition (COR-033 shape). Conforms to ../../../schemas/_defs/process.schema.json#/$defs/process; restated here with pm's domain-specific field shapes for data↔companion validation (COR-018).",
       "properties": {
         "id": {
           "type": "string",
@@ -92,15 +92,15 @@
   "$defs": {
     "predicate": {
       "$ref": "process.schema.json#/$defs/predicate",
-      "description": "Substrate shape, single source of truth (COR-031). The pm companion conforms by pointing at the shared contract rather than restating it."
+      "description": "Substrate shape, single source of truth (COR-033). The pm companion conforms by pointing at the shared contract rather than restating it."
     },
     "detection": {
       "$ref": "process.schema.json#/$defs/detection",
-      "description": "Substrate shape, single source of truth (COR-031). pm uses inferred detection; the shared contract owns the field shape."
+      "description": "Substrate shape, single source of truth (COR-033). pm uses inferred detection; the shared contract owns the field shape."
     },
     "gate": {
       "$ref": "process.schema.json#/$defs/gate",
-      "description": "Substrate shape, single source of truth (COR-031 P4). The shared contract owns the kind enum + predicate shape + the cross-authority semantics."
+      "description": "Substrate shape, single source of truth (COR-033 P4). The shared contract owns the kind enum + predicate shape + the cross-authority semantics."
     },
     "entry": {
       "type": "object",
@@ -137,11 +137,11 @@
         "detection": { "$ref": "#/$defs/detection" },
         "entry": {
           "type": "boolean",
-          "description": "Marks a start state (COR-031). Todo is the unconditional entry."
+          "description": "Marks a start state (COR-033). Todo is the unconditional entry."
         },
         "terminal": {
           "type": "boolean",
-          "description": "End state (COR-031). Done is terminal."
+          "description": "End state (COR-033). Done is terminal."
         }
       },
       "description": "Per-state shape. `detection` is the substrate-shaped position predicate; `display_name`/`applies_to` are pm-local."
@@ -174,7 +174,7 @@
         "trigger": {
           "type": "string",
           "pattern": "^[a-z][a-z0-9-]*$",
-          "description": "The named action that drives the move (COR-031). Matches `command` for pm."
+          "description": "The named action that drives the move (COR-033). Matches `command` for pm."
         },
         "command": {
           "type": "string",
@@ -189,7 +189,7 @@
         "authorisation": {
           "type": "string",
           "enum": ["user", "agent-autonomous", "script"],
-          "description": "Who may move (COR-031). `user` = user holds the gate; `agent-autonomous` = agent flips without prompting."
+          "description": "Who may move (COR-033). `user` = user holds the gate; `agent-autonomous` = agent flips without prompting."
         },
         "executor": {
           "type": "string",
@@ -210,12 +210,12 @@
         "why": {
           "type": "string",
           "minLength": 1,
-          "description": "Status-view prose: why this move exists (COR-031)."
+          "description": "Status-view prose: why this move exists (COR-033)."
         },
         "hint": {
           "type": "string",
           "minLength": 1,
-          "description": "Status-view prose: what to run next (COR-031)."
+          "description": "Status-view prose: what to run next (COR-033)."
         },
         "notes": {
           "type": "string",

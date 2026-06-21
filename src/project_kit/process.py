@@ -1,4 +1,4 @@
-"""The process substrate engine (COR-031, homed in the binary per ADR-020).
+"""The process substrate engine (COR-033, homed in the binary per ADR-020).
 
 Content-free state machine: it loads a `<capability>:<process-id>` definition,
 resolves the subject's position from observable reality, validates/executes
@@ -6,7 +6,7 @@ moves through guarded transitions, and renders a self-explaining status view.
 It knows nothing about issues, docs, screens, or trips — only states,
 transitions, gates, a position, and a journal.
 
-Ship-narrow (COR-031 P5 + COR-032): singleton or keyed subject, `inferred`
+Ship-narrow (COR-033 P5 + COR-032): singleton or keyed subject, `inferred`
 detection, static transition targets. A keyed process operates per a supplied
 subject identifier (required — no singleton default) and never enumerates its
 subjects; the engine simply threads that identifier through every predicate it
@@ -40,7 +40,7 @@ from project_kit.install import find_target_root
 
 _yaml = YAML(typ="safe")
 
-# Singleton subject key (COR-031 P5: ship-narrow, one journey per process).
+# Singleton subject key (COR-033 P5: ship-narrow, one journey per process).
 # A singleton process has no subject id, so every singleton journey tracks under
 # this fixed key. A keyed process (COR-032) carries the real, caller-supplied
 # subject id instead — threaded through the predicate runner and the journal
@@ -86,7 +86,7 @@ class PredicateOutcome:
 class PredicateRunner:
     """Resolves + runs a capability's predicate commands, caching each result.
 
-    Caching is per-invocation per `(command, args)` (COR-031 performance note):
+    Caching is per-invocation per `(command, args)` (COR-033 performance note):
     a predicate is evaluated at most once even when several transitions share
     it. The cache is keyed before the gate-kind interpretation, so the same
     command reused as a detection predicate and a gate predicate runs once;
@@ -126,7 +126,7 @@ class PredicateRunner:
         authorisation-artifact -> reads {exists, produced_by} and computes
                                  result = exists and produced_by != actor; any
                                  predicate-supplied `result` is ignored
-                                 (cross-authority is non-overridable, COR-031 P4).
+                                 (cross-authority is non-overridable, COR-033 P4).
 
         An unrecognised gate kind fails closed (ADR-020 gate-honesty): never a
         silent pass.
@@ -244,7 +244,7 @@ def _load_command_registry(capability_dir: Path) -> dict[str, Path]:
 
     Walks the `commands:` tree in the capability's `package.yaml` (the same
     tree the dispatcher reads, COR-021) and records every leaf with a `script`.
-    A predicate's `run:` must name one of these (COR-031 engine contract).
+    A predicate's `run:` must name one of these (COR-033 engine contract).
     """
     package_yaml = capability_dir / "package.yaml"
     if not package_yaml.is_file():
@@ -385,7 +385,7 @@ class MoveResult:
 
 class ProcessEngine:
     """Resolves position, validates + executes moves, renders status for one
-    process definition + subject. Stateless across invocations (COR-031): every
+    process definition + subject. Stateless across invocations (COR-033): every
     call rediscovers reality by running detection predicates live."""
 
     def __init__(
@@ -490,7 +490,7 @@ class ProcessEngine:
         return out
 
     def precheck_transitions(self, state_id: str | None, actor: str) -> list[TransitionCheck]:
-        """Live-precheck every transition out of the current state (COR-031
+        """Live-precheck every transition out of the current state (COR-033
         performance note: only transitions *out of* the current state)."""
         checks: list[TransitionCheck] = []
         for t in self.transitions_from(state_id):
@@ -564,7 +564,7 @@ class ProcessEngine:
 
     def journal_path(self) -> Path:
         """The per-subject journal at the capability's adopter-owned project/
-        subtree (COR-031 layout; the engine owns the path)."""
+        subtree (COR-033 layout; the engine owns the path)."""
         return (
             self.definition.capability_dir
             / "project"
@@ -731,7 +731,7 @@ def _read_process_block(path: Path, repo_root: Path) -> dict[str, Any]:
 
 
 def resolve_repo_root() -> Path:
-    """The repo root, reusing the kit's root resolution (COR-031 engine
+    """The repo root, reusing the kit's root resolution (COR-033 engine
     contract: predicates run with cwd = repo root)."""
     root = find_target_root()
     if root is None:

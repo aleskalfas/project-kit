@@ -1,5 +1,5 @@
 # Issue-lifecycle process definition — rebound onto the shared process
-# substrate (COR-031) as a KEYED process (COR-032), per DEC-033.
+# substrate (COR-033) as a KEYED process (COR-032), per DEC-033.
 #
 # Conforms to the substrate shape contract at
 # ../../../schemas/_defs/process.schema.json (the `process` $def). The
@@ -192,7 +192,7 @@ process:
         the gate is a hard reject — the audit-trail mechanism does not
         apply (the merge button is the gate). The gate is an
         authorisation-artifact: a merged PR whose merger differs from the
-        actor being gated (cross-authority, COR-031 P4). Owned by
+        actor being gated (cross-authority, COR-033 P4). Owned by
         `done-work` per DEC-026; approval gate is mode-conditional per
         DEC-027 / DEC-028.
 

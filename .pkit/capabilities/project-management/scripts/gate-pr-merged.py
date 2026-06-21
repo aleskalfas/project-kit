@@ -7,9 +7,9 @@
 # ///
 """Project-management capability — gate-pr-merged (process predicate, DEC-033).
 
-Authorisation-artifact gate (PR-merge, cross-authority): reports {exists, produced_by} for a merged PR closing this issue. The ENGINE computes result = exists && produced_by != actor (COR-031 P4); this predicate returns only the facts (who merged the PR).
+Authorisation-artifact gate (PR-merge, cross-authority): reports {exists, produced_by} for a merged PR closing this issue. The ENGINE computes result = exists && produced_by != actor (COR-033 P4); this predicate returns only the facts (who merged the PR).
 
-READ-ONLY. The process engine (COR-031) invokes this as
+READ-ONLY. The process engine (COR-033) invokes this as
   <script> <issue-number> --json
 and reads the structured-JSON contract on stdout. Self-contained via PEP 723.
 
@@ -44,7 +44,7 @@ def main() -> int:
 
     payload = predicates.gate_pr_merged(issue_number, actor=args.actor)
     # A predicate that genuinely couldn't evaluate exits non-zero so the
-    # engine treats it as INDETERMINATE (fail-closed, COR-031), not a clean
+    # engine treats it as INDETERMINATE (fail-closed, COR-033), not a clean
     # negative. Strip the internal marker from the emitted JSON.
     indeterminate = bool(payload.pop(predicates.INDETERMINATE_KEY, False))
     print(json.dumps(payload))

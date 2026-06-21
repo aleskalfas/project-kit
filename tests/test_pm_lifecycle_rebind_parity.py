@@ -153,7 +153,7 @@ def test_checkbox_gate_passes_when_no_checkboxes(monkeypatch: pytest.MonkeyPatch
 
 def test_pr_merge_gate_reports_facts_only(monkeypatch: pytest.MonkeyPatch) -> None:
     """The PR-merge gate returns {exists, produced_by} — it must NOT pre-decide
-    `result` (the engine computes cross-authority, COR-031 P4)."""
+    `result` (the engine computes cross-authority, COR-033 P4)."""
     _stub_merged_pr(monkeypatch, {"number": 7, "merged_by": "reviewer-bob"})
     out = predicates.gate_pr_merged(1, actor="author-alice")
     assert out["exists"] is True

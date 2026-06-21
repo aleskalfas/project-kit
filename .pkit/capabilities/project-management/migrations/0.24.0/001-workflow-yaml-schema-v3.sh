@@ -2,7 +2,7 @@
 # project-management 0.24.0 — workflow.yaml schema_version 2 → 3.
 #
 # DEC-033 rebinds the issue lifecycle onto the shared process substrate
-# (COR-031) as a keyed process (COR-032). The schema bump restructures
+# (COR-033) as a keyed process (COR-032). The schema bump restructures
 # `workflow.yaml`: `states` + `transitions` move under a top-level
 # `process:` block (with `id`, `version`, `subject: {cardinality: keyed,
 # key: issue-number}`); each state's `inferred_from` prose becomes
