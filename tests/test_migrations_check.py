@@ -80,6 +80,27 @@ def test_classify_non_pkit_returns_none() -> None:
     assert migrations_mod._classify_path("README.md") is None
 
 
+# --- _is_decision_path -------------------------------------------------
+
+
+def test_is_decision_path_recognises_decision_records() -> None:
+    assert migrations_mod._is_decision_path(".pkit/decisions/core/COR-001-x.md")
+    assert migrations_mod._is_decision_path(".pkit/decisions/project/PRJ-001-x.md")
+    assert migrations_mod._is_decision_path(
+        ".pkit/capabilities/project-management/decisions/DEC-033-rebind.md"
+    )
+
+
+def test_is_decision_path_rejects_non_decisions() -> None:
+    assert not migrations_mod._is_decision_path(
+        ".pkit/capabilities/project-management/scripts/move-issue.py"
+    )
+    assert not migrations_mod._is_decision_path(
+        ".pkit/capabilities/project-management/schemas/workflow.yaml"
+    )
+    assert not migrations_mod._is_decision_path("src/project_kit/cli.py")
+
+
 # --- _is_migration_path ------------------------------------------------
 
 
@@ -274,6 +295,46 @@ def test_check_diff_coverage_detects_rename_trigger(
     assert report.triggers[0].kind == "rename"
     assert report.triggers[0].path == ".pkit/skills/core/schema/author.md"
     assert report.triggers[0].old_path == ".pkit/skills/core/schema-author.md"
+
+
+def test_check_diff_coverage_decision_rename_does_not_trigger(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Decision-record renames/deletes (COR / PRJ / DEC) are kit-owned
+    reference content orphan-pruned by sync — never adopter-breaking, so they
+    owe no migration. A real capability script rename in the same diff must
+    still trigger (the exclusion is decision-specific, not blanket)."""
+    monkeypatch.setattr(
+        migrations_mod,
+        "_git_diff_name_status",
+        lambda root, base, **kw: [
+            (  # capability DEC renumber — must NOT trigger
+                "R",
+                ".pkit/capabilities/project-management/decisions/DEC-033-rebind.md",
+                ".pkit/capabilities/project-management/decisions/DEC-032-rebind.md",
+            ),
+            (  # core COR rename — must NOT trigger
+                "R",
+                ".pkit/decisions/core/COR-099-new.md",
+                ".pkit/decisions/core/COR-099-old.md",
+            ),
+            (  # capability decision delete — must NOT trigger
+                "D",
+                ".pkit/capabilities/evidence/decisions/DEC-009-dropped.md",
+                None,
+            ),
+            (  # a real capability script rename — MUST still trigger
+                "R",
+                ".pkit/capabilities/project-management/scripts/new.py",
+                ".pkit/capabilities/project-management/scripts/old.py",
+            ),
+        ],
+    )
+    report = check_diff_coverage(tmp_path, "origin/main")
+    assert len(report.triggers) == 1
+    assert report.triggers[0].kind == "rename"
+    assert report.triggers[0].path.endswith("scripts/new.py")
+    assert report.triggers[0].component == "project-management"
 
 
 def test_check_diff_coverage_pairs_trigger_with_migration(
