@@ -41,9 +41,11 @@ from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
 # Shared deployed-agent resolution (one deploy-path definition across
-# pre-check and the DEC-032 contribution collector, per COR-007).
+# pre-check and the DEC-032 contribution collector, per COR-007) and the
+# DEC-032 contribution collector itself (reused, not re-implemented).
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _lib.agents import agent_deploy_path, agent_is_deployed  # noqa: E402
+from _lib.review_contributions import collect_contributions  # noqa: E402
 
 
 CAPABILITY_NAME = "project-management"
@@ -1340,7 +1342,7 @@ def _check_review_block(
                     "`reviewer_role` must be a non-empty string when set",
                 ))
 
-    # DEC-028: agents block.
+    # DEC-028 + DEC-032: agents block.
     agents = review.get("agents")
     if agents is not None:
         if not isinstance(agents, dict):
@@ -1350,88 +1352,235 @@ def _check_review_block(
                 "`review.agents` must be a mapping",
             ))
         else:
-            for path in ("remote_registered", "local_registered"):
-                entries = agents.get(path)
-                if entries is None:
-                    continue
-                if not isinstance(entries, list):
-                    results.append(CheckResult(
-                        f"review.agents.{path} valid",
-                        "fail",
-                        f"`review.agents.{path}` must be a list",
-                    ))
-                    continue
-                # Singleton-per-path at v1.
-                if len(entries) > 1:
-                    results.append(CheckResult(
-                        f"review.agents.{path} singleton",
-                        "fail",
-                        f"v1 supports at most one entry per path; got {len(entries)}",
-                        remediation=(
-                            "Multi-agent pipelines defer per COR-007; "
-                            f"keep at most one entry in `{path}` at v1."
-                        ),
-                    ))
-                    continue
-                if not entries:
-                    continue
-                entry = entries[0]
-                if not isinstance(entry, dict):
-                    results.append(CheckResult(
-                        f"review.agents.{path}[0] shape",
-                        "fail",
-                        "entry must be a mapping",
-                    ))
-                    continue
-                # Per-path field check.
-                if path == "remote_registered":
-                    login = entry.get("github_login")
-                    if not isinstance(login, str) or not login:
-                        results.append(CheckResult(
-                            f"review.agents.{path}[0].github_login",
-                            "fail",
-                            "`github_login` must be a non-empty string",
-                        ))
-                    else:
-                        results.append(CheckResult(
-                            f"review.agents.{path}", "ok",
-                            f"github_login={login}",
-                        ))
-                else:  # local_registered
-                    name = entry.get("name")
-                    if not isinstance(name, str) or not name:
-                        results.append(CheckResult(
-                            f"review.agents.{path}[0].name",
-                            "fail",
-                            "`name` must be a non-empty string",
-                        ))
-                    else:
-                        # Verify the agent file exists where the harness
-                        # deploys agents. Walk up from capability_root to
-                        # the repo root; the deploy-path resolution is the
-                        # shared one the DEC-032 collector also uses.
-                        repo_root = capability_root.parent.parent.parent
-                        if agent_is_deployed(repo_root, name):
-                            results.append(CheckResult(
-                                f"review.agents.{path}", "ok",
-                                f"name={name} (agent file found)",
-                            ))
-                        else:
-                            agent_file = agent_deploy_path(repo_root, name)
-                            results.append(CheckResult(
-                                f"review.agents.{path}.{name} file present",
-                                "fail",
-                                f"agent file not found at {agent_file}",
-                                remediation=(
-                                    f"Either remove `{name}` from `{path}` or "
-                                    f"deploy the agent at `.claude/agents/{name}.md`."
-                                ),
-                            ))
+            repo_root = capability_root.parent.parent.parent
+            results.extend(_check_review_agents(agents, repo_root))
 
     if not results:
         results.append(CheckResult(
             "review: block valid", "ok", "review block parses cleanly (empty)",
         ))
+    return results
+
+
+def _check_review_agents(
+    agents: dict[str, Any], repo_root: Path
+) -> list[CheckResult]:
+    """Validate `review.agents` shape and the *resolvable* reviewer set.
+
+    Two concerns, per DEC-032's D3 (cap lift) + Implications:
+
+      1. **Shape** of the static `remote_registered` / `local_registered`
+         lists. `local_registered` no longer caps at one entry — N≥2 local
+         reviewers is valid (the singleton cap lifted with DEC-032). The
+         `remote_registered` path is still one entry at v1: DEC-032 D2 scopes
+         *contributed* reviewers to the local path, so the multi-reviewer
+         extension only landed there; the remote-bot path is unchanged.
+
+      2. **Resolvable set.** Every name in (baseline `local_registered` ∪
+         every reviewer a manifest-registered capability contributes) must
+         correspond to a deployed agent file. A missing one is an
+         unsatisfiable merge gate — surfaced here with remediation rather
+         than left to fail mid-PR (DEC-032 D5). The contributed half is
+         collected by the shared DEC-032 collector (reused, not
+         re-implemented), whose own `ContributionError`s (malformed
+         declaration, undeployed agent) are surfaced through this check too.
+    """
+    results: list[CheckResult] = []
+
+    # 1a. remote_registered — still singleton at v1 (D2: no remote
+    #     contributions). Shape-validate the single optional entry.
+    results.extend(_check_remote_registered(agents.get("remote_registered")))
+
+    # 1b. local_registered — shape-validate every entry (N≥2 allowed),
+    #     collecting the baseline reviewer names for the resolvable set.
+    baseline_names, local_results = _check_local_registered(
+        agents.get("local_registered")
+    )
+    results.extend(local_results)
+
+    # 2. Resolvable set: baseline ∪ contributed, each name → deployed file.
+    results.extend(_check_resolvable_reviewer_set(baseline_names, repo_root))
+
+    return results
+
+
+def _check_remote_registered(entries: Any) -> list[CheckResult]:
+    """Validate the optional `remote_registered` list (singleton at v1)."""
+    if entries is None:
+        return []
+    if not isinstance(entries, list):
+        return [CheckResult(
+            "review.agents.remote_registered valid",
+            "fail",
+            "`review.agents.remote_registered` must be a list",
+        )]
+    if len(entries) > 1:
+        return [CheckResult(
+            "review.agents.remote_registered singleton",
+            "fail",
+            f"v1 supports at most one remote entry; got {len(entries)}",
+            remediation=(
+                "DEC-032 lifts the local-path cap only — contributed reviewers "
+                "register on the local path. Keep at most one entry in "
+                "`remote_registered` at v1."
+            ),
+        )]
+    if not entries:
+        return []
+    entry = entries[0]
+    if not isinstance(entry, dict):
+        return [CheckResult(
+            "review.agents.remote_registered[0] shape",
+            "fail",
+            "entry must be a mapping",
+        )]
+    login = entry.get("github_login")
+    if not isinstance(login, str) or not login:
+        return [CheckResult(
+            "review.agents.remote_registered[0].github_login",
+            "fail",
+            "`github_login` must be a non-empty string",
+        )]
+    return [CheckResult(
+        "review.agents.remote_registered", "ok", f"github_login={login}",
+    )]
+
+
+def _check_local_registered(entries: Any) -> tuple[list[str], list[CheckResult]]:
+    """Shape-validate `local_registered` (N≥2 allowed) and collect names.
+
+    Returns the baseline reviewer names (the well-formed `name` of each
+    entry) plus a list of shape-validation results. The names feed the
+    resolvable-set check; a malformed entry contributes a `fail` result and
+    no name (the resolvable-set check stays meaningful even when one entry
+    is broken).
+    """
+    if entries is None:
+        return [], []
+    if not isinstance(entries, list):
+        return [], [CheckResult(
+            "review.agents.local_registered valid",
+            "fail",
+            "`review.agents.local_registered` must be a list",
+        )]
+
+    names: list[str] = []
+    results: list[CheckResult] = []
+    for idx, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            results.append(CheckResult(
+                f"review.agents.local_registered[{idx}] shape",
+                "fail",
+                "entry must be a mapping",
+            ))
+            continue
+        name = entry.get("name")
+        if not isinstance(name, str) or not name:
+            results.append(CheckResult(
+                f"review.agents.local_registered[{idx}].name",
+                "fail",
+                "`name` must be a non-empty string",
+            ))
+            continue
+        names.append(name)
+
+    if names:
+        results.append(CheckResult(
+            "review.agents.local_registered shape",
+            "ok",
+            f"{len(names)} baseline local reviewer(s): {', '.join(names)}",
+        ))
+    return names, results
+
+
+def _check_resolvable_reviewer_set(
+    baseline_names: list[str], repo_root: Path
+) -> list[CheckResult]:
+    """Validate every name in the resolvable set has a deployed agent file.
+
+    The resolvable set is the baseline `local_registered` names unioned with
+    every reviewer name a manifest-registered capability contributes
+    (DEC-032 D1/D3). A name with no deployed agent file is an unsatisfiable
+    merge gate: surfaced as a `fail` with redeploy/uninstall remediation, not
+    a silent pass. The contributed half — and any malformed-declaration /
+    undeployed-agent problem the collector finds — comes from the shared
+    DEC-032 collector, gated on its `ok` / `has_blocking_errors` channel.
+    """
+    results: list[CheckResult] = []
+
+    collection = collect_contributions(repo_root)
+
+    # Surface the collector's own structured errors (malformed declaration,
+    # parse error, undeployed contributed agent). Each is blocking per the
+    # collector's contract; report one fail per error so remediation is
+    # specific.
+    for error in collection.errors:
+        scope = (
+            f"capability `{error.capability}`"
+            if error.capability
+            else "contribution manifest"
+        )
+        results.append(CheckResult(
+            f"review contribution ({scope})",
+            "fail",
+            str(error),
+            remediation=(
+                "Fix the capability's review-contributions declaration, "
+                "redeploy its reviewer agent, or uninstall the capability. "
+                "See DEC-032."
+            ),
+        ))
+
+    # Build the resolvable set: baseline ∪ contributed reviewer names. A
+    # contributed rule the collector already flagged undeployed
+    # (deployed=False) is reported via the error channel above — exclude it
+    # here to avoid a duplicate fail. Its name is still validated if the
+    # baseline registers it too, since that's a separate (baseline) concern.
+    contributed_names = [
+        rule.reviewer for rule in collection.rules if rule.deployed
+    ]
+    seen: set[str] = set()
+    resolvable: list[str] = []
+    for name in [*baseline_names, *contributed_names]:
+        if name not in seen:
+            seen.add(name)
+            resolvable.append(name)
+
+    if not resolvable:
+        results.append(CheckResult(
+            "resolvable reviewer set",
+            "skip",
+            "no local reviewers registered or contributed",
+        ))
+        return results
+
+    missing: list[str] = []
+    for name in resolvable:
+        if not agent_is_deployed(repo_root, name):
+            missing.append(name)
+
+    if missing:
+        for name in missing:
+            agent_file = agent_deploy_path(repo_root, name)
+            results.append(CheckResult(
+                f"resolvable reviewer `{name}` deployed",
+                "fail",
+                f"agent file not found at {agent_file}",
+                remediation=(
+                    f"Either remove `{name}` from the reviewer set (drop it "
+                    "from `local_registered`, or uninstall the capability "
+                    "contributing it) or deploy the agent at "
+                    f"`.claude/agents/{name}.md`."
+                ),
+            ))
+    else:
+        results.append(CheckResult(
+            "resolvable reviewer set deployed",
+            "ok",
+            f"all {len(resolvable)} reviewer(s) have deployed agent files: "
+            f"{', '.join(resolvable)}",
+        ))
+
     return results
 
 
