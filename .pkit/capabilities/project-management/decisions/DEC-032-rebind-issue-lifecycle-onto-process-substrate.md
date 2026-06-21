@@ -1,7 +1,7 @@
 ---
 id: DEC-032
 title: Rebind the issue lifecycle onto the process substrate (keyed)
-status: proposed
+status: accepted
 date: 2026-06-21
 author: Ales Kalfas
 ---
