@@ -1,7 +1,7 @@
 ---
 id: COR-032
 title: A process may track many keyed subjects under one definition
-status: proposed
+status: accepted
 date: 2026-06-21
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
