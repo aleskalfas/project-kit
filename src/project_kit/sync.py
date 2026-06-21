@@ -20,6 +20,7 @@ import click
 
 from project_kit import install
 from project_kit.manifest import (
+    ORIGIN_INCUBATED_IN_REPO,
     BackboneManifest,
     read_backbone_manifest,
     read_kit_version,
@@ -125,14 +126,24 @@ def _hint_settings_consolidation(target_root: Path) -> None:
 def _sync_installed_capabilities(
     target_root: Path, source_kit: Path, ctx: install.InstallContext
 ) -> None:
-    """Refresh installed capabilities from source per COR-017.
+    """Refresh installed capabilities from source per COR-017 / COR-031.
 
     For each capability listed in the adopter's backbone manifest:
-    - In source: re-copy the subtree (preserves the capability's
-      registered-state and any prior skip overrides). Emits a refreshed
-      / unchanged status line per capability.
-    - Not in source: warn but do not remove the adopter's installed
-      tree.
+    - `kit-shipped` origin:
+        - In source: re-copy the subtree (preserves the capability's
+          registered-state and any prior skip overrides). Emits a refreshed
+          / unchanged status line per capability.
+        - Not in source: warn but do not remove the adopter's installed
+          tree.
+    - `incubated-in-repo` origin (COR-031 D1): skip source-reconciliation
+      entirely — the subtree is adopter-owned (the no-shared-files invariant,
+      COR-001), there is no kit source to refresh from, and the
+      "no-longer-shipped" warning would mislabel deliberately-local content.
+      Boundary case (COR-031): if the kit *does* now ship a same-named
+      capability, surface that collision (graduation arriving unbidden) so the
+      adopter can decide, rather than silently skipping. Self-consistency
+      validation, dependency-gating, and deploy still apply to incubated
+      capabilities — only reconciliation-against-kit-source is suppressed here.
     """
     from project_kit import capabilities as caps
 
@@ -147,6 +158,14 @@ def _sync_installed_capabilities(
     click.echo("  Capabilities")
 
     for entry in installed_caps:
+        # Incubated (in-repo) capabilities are adopter-owned: skip
+        # source-reconciliation (no refresh, no orphan warning). Origin lives
+        # in lifecycle-owned install-state on the registry entry (COR-031 D2),
+        # so branch on it directly.
+        if entry.origin == ORIGIN_INCUBATED_IN_REPO:
+            _report_incubated_capability(source_kit, entry.name)
+            continue
+
         source = caps.find_capability_in_source(source_kit, entry.name)
         if source is None:
             click.echo(
@@ -167,6 +186,39 @@ def _sync_installed_capabilities(
             dry_run=False,
         )
         click.echo(f"    {'refreshed':<12} {entry.name!r} -> v{source.package.version}")
+
+
+def _report_incubated_capability(source_kit: Path, name: str) -> None:
+    """Emit the per-capability status line for an incubated (in-repo) capability.
+
+    Source-reconciliation is suppressed for an incubated capability (COR-031
+    D1), so this never refreshes or removes anything — it only reports. Two
+    cases (COR-031's boundary case):
+
+    - The kit ships **no** capability of this name: skip silently. The
+      capability is deliberately adopter-owned; reporting it as orphaned or
+      refreshing it would be wrong. A one-line ``incubated`` status keeps the
+      output honest without implying anything is amiss.
+    - The kit **now ships** a same-named capability: surface the collision —
+      graduation arriving unbidden (the deferred case showing up early). Until
+      graduation is specified, the adopter decides; the lifecycle must not
+      silently shadow either the incubated tree or the newly-available kit
+      capability.
+    """
+    from project_kit import capabilities as caps
+
+    kit_source = caps.find_capability_in_source(source_kit, name)
+    if kit_source is None:
+        click.echo(
+            f"    {'incubated':<12} {name!r} — in-repo capability; "
+            f"skipping source-reconciliation."
+        )
+        return
+    click.echo(
+        f"    {'collision':<12} {name!r} — in-repo capability, but the kit now "
+        f"ships a capability of the same name (v{kit_source.package.version}). "
+        f"Source-reconciliation stays skipped; resolve the collision manually."
+    )
 
 
 def _update_recorded_backbone_version(

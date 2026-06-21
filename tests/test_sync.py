@@ -539,6 +539,185 @@ def test_sync_warns_when_capability_no_longer_in_source(
     assert ghost_dir.is_dir()
 
 
+# --- incubated (in-repo) capabilities skip source-reconciliation (COR-031) ---
+
+
+def _stage_incubated_capability(
+    target_root: Path,
+    name: str,
+    *,
+    skill_body: str = "# Skill\n",
+) -> Path:
+    """Stage + register an in-repo (incubated) capability in the adopter.
+
+    The subtree lives under the adopter's own `.pkit/capabilities/<name>/`
+    (the working tree *is* the source — COR-031), and registration records
+    `origin: incubated-in-repo` without copying.
+    """
+    from project_kit import capabilities as caps
+
+    cap_dir = target_root / ".pkit" / "capabilities" / name
+    (cap_dir / "skills").mkdir(parents=True, exist_ok=True)
+    (cap_dir / "package.yaml").write_text(
+        f"""schema_version: 1
+component:
+  kind: capability
+  name: {name}
+  version: 0.1.0
+description: Home-grown capability.
+requires_backbone: ">=0.0.0"
+""",
+        encoding="utf-8",
+    )
+    (cap_dir / "skills" / f"{name}-skill.md").write_text(
+        f"---\nname: {name}-skill\n---\n{skill_body}",
+        encoding="utf-8",
+    )
+    source = caps.find_capability_in_repo(target_root, name)
+    assert source is not None
+    caps.register_incubated_capability(target_root, source)
+    return cap_dir
+
+
+def test_sync_skips_source_reconciliation_for_incubated_capability(
+    installed_target: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """An incubated capability is left untouched by sync — no refresh, no orphan warning.
+
+    Per COR-031 D1, an in-repo capability is adopter-owned: sync skips
+    source-reconciliation entirely. It must not be re-copied from a
+    (non-existent) kit source, and it must not be misflagged "no longer
+    shipped" — the warning kit-shipped capabilities get when their source
+    vanishes.
+    """
+    cap_dir = _stage_incubated_capability(installed_target, "homegrown")
+    skill = cap_dir / "skills" / "homegrown-skill.md"
+    # Adopter edits the skill — sync must preserve this exactly.
+    adopter_body = "---\nname: homegrown-skill\n---\n# Adopter-authored body\n"
+    skill.write_text(adopter_body, encoding="utf-8")
+
+    # Point sync at a fake source that ships NO capability of this name.
+    fake_source = tmp_path / "fake-source" / ".pkit"
+    fake_source.mkdir(parents=True)
+    (fake_source / "decisions").mkdir()
+    (fake_source / "VERSION").write_text("1.0.0\n", encoding="utf-8")
+    monkeypatch.setattr(install, "find_source_kit", lambda: fake_source)
+    monkeypatch.setattr(sync.install, "find_source_kit", lambda: fake_source)
+
+    sync.run_sync(installed_target)
+
+    out = capsys.readouterr().out
+    # Reported as incubated/skipped, never orphaned.
+    assert "homegrown" in out
+    assert "orphan" not in out
+    assert "incubated" in out
+    # Adopter's edits survive untouched.
+    assert skill.read_text(encoding="utf-8") == adopter_body
+
+
+def test_sync_still_registers_incubated_capability_after_run(
+    installed_target: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Skipping reconciliation does not unregister the incubated capability.
+
+    Origin governs source-reconciliation only — the capability stays
+    installed (and so keeps counting for dependency-gating + deploy, COR-031
+    D1) across a sync.
+    """
+    from project_kit import capabilities as caps
+
+    _stage_incubated_capability(installed_target, "homegrown")
+
+    fake_source = tmp_path / "fake-source" / ".pkit"
+    fake_source.mkdir(parents=True)
+    (fake_source / "decisions").mkdir()
+    (fake_source / "VERSION").write_text("1.0.0\n", encoding="utf-8")
+    monkeypatch.setattr(install, "find_source_kit", lambda: fake_source)
+    monkeypatch.setattr(sync.install, "find_source_kit", lambda: fake_source)
+
+    sync.run_sync(installed_target)
+
+    assert caps.is_installed(installed_target, "homegrown")
+
+
+def test_sync_surfaces_collision_when_kit_ships_same_named_capability(
+    installed_target: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Boundary case (COR-031): kit now ships a capability named like an incubated one.
+
+    Graduation arriving unbidden. The lifecycle must SURFACE the collision so
+    the adopter can decide, rather than silently skipping. Source-
+    reconciliation stays suppressed (the incubated tree is not overwritten),
+    but a collision notice is emitted.
+    """
+    cap_dir = _stage_incubated_capability(installed_target, "homegrown")
+    skill = cap_dir / "skills" / "homegrown-skill.md"
+    adopter_body = "---\nname: homegrown-skill\n---\n# Adopter-authored body\n"
+    skill.write_text(adopter_body, encoding="utf-8")
+
+    # Fake source that DOES ship a same-named capability (different version).
+    fake_source = tmp_path / "fake-source" / ".pkit"
+    fake_source.mkdir(parents=True)
+    cap_in_source = _stage_capability_in_source(fake_source, "homegrown")
+    # Distinguish the kit version so the notice is meaningful.
+    (cap_in_source / "package.yaml").write_text(
+        """component:
+  kind: capability
+  name: homegrown
+  version: 2.0.0
+description: Kit-shipped homegrown.
+requires_backbone: ">=0.0.0"
+schema_version: 1
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(install, "find_source_kit", lambda: fake_source)
+    monkeypatch.setattr(sync.install, "find_source_kit", lambda: fake_source)
+
+    sync.run_sync(installed_target)
+
+    out = capsys.readouterr().out
+    assert "collision" in out
+    assert "homegrown" in out
+    # The kit version is surfaced so the adopter knows what's now available.
+    assert "2.0.0" in out
+    # Reconciliation stays suppressed: the adopter's tree is NOT overwritten.
+    assert skill.read_text(encoding="utf-8") == adopter_body
+
+
+def test_sync_dry_run_does_not_refresh_incubated_capability(
+    installed_target: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Dry-run sync leaves an incubated capability's adopter-owned tree untouched."""
+    cap_dir = _stage_incubated_capability(installed_target, "homegrown")
+    skill = cap_dir / "skills" / "homegrown-skill.md"
+    adopter_body = "---\nname: homegrown-skill\n---\n# Adopter body\n"
+    skill.write_text(adopter_body, encoding="utf-8")
+    pre_mtime = skill.stat().st_mtime
+
+    fake_source = tmp_path / "fake-source" / ".pkit"
+    fake_source.mkdir(parents=True)
+    (fake_source / "decisions").mkdir()
+    (fake_source / "VERSION").write_text("1.0.0\n", encoding="utf-8")
+    monkeypatch.setattr(install, "find_source_kit", lambda: fake_source)
+    monkeypatch.setattr(sync.install, "find_source_kit", lambda: fake_source)
+
+    sync.run_sync(installed_target, dry_run=True)
+
+    assert skill.read_text(encoding="utf-8") == adopter_body
+    assert skill.stat().st_mtime == pre_mtime
+
+
 def test_install_kit_stamps_backbone_manifest(installed_target: Path) -> None:
     """PR-G wires init: a fresh install leaves a stamped backbone manifest.
 
