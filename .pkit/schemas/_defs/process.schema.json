@@ -1,0 +1,165 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "process.schema.json",
+  "title": "Process substrate — shape contract (COR-031)",
+  "description": "Shared shape for a process DEFINITION a capability authors. Capability instance schemas cross-file $ref these $defs (e.g. \"_defs/process.schema.json#/$defs/process\"). Per the .pkit/process/ area spec + COR-031. Ship-narrow: enums admit only the implemented core values (singleton cardinality, inferred detection); deferred values widen the enum when they ship. additionalProperties is permissive on the extensible objects (process, state, transition) so a capability's own domain-local fields coexist; tight on the core sub-objects.",
+  "$defs": {
+    "predicate": {
+      "type": "object",
+      "description": "A check the engine evaluates by running a capability-provided command (COR-031 P4). The command returns structured JSON the engine reads: deterministic -> {result, reason, detail?}; authorisation-artifact -> {exists, produced_by, reason, detail?}.",
+      "required": ["run"],
+      "additionalProperties": false,
+      "properties": {
+        "run": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Name of a command the owning capability registers (its scripts/ + package.yaml). The engine runs it with the subject + context."
+        },
+        "with": {
+          "type": "object",
+          "description": "Optional static arguments passed to the command."
+        }
+      }
+    },
+    "subject": {
+      "type": "object",
+      "description": "What the process tracks the position of.",
+      "required": ["cardinality"],
+      "additionalProperties": false,
+      "properties": {
+        "cardinality": {
+          "enum": ["singleton"],
+          "description": "Ship-narrow: one journey per process. `keyed` (many units) widens this enum when it ships."
+        },
+        "domain_ref": {
+          "type": "string",
+          "description": "Pointer to where the subject's domain data lives -- kept distinct from its process position."
+        }
+      }
+    },
+    "detection": {
+      "type": "object",
+      "description": "How the engine resolves whether a subject is in a state.",
+      "required": ["mode", "predicate"],
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "enum": ["inferred"],
+          "description": "Ship-narrow: position inferred from reality via the predicate. `stored`/`hybrid` widen this enum when they ship."
+        },
+        "predicate": { "$ref": "#/$defs/predicate" }
+      }
+    },
+    "state": {
+      "type": "object",
+      "description": "A node. additionalProperties permitted for capability-local fields (e.g. applies_to).",
+      "required": ["id", "meaning", "detection"],
+      "additionalProperties": true,
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "meaning": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Load-bearing: the status view renders from it."
+        },
+        "detection": { "$ref": "#/$defs/detection" },
+        "entry": {
+          "description": "Marks a start state. `true` = unconditional; an object with `when` = guarded entry (selected when the predicate holds; multiple guarded entries allowed).",
+          "oneOf": [
+            { "const": true },
+            {
+              "type": "object",
+              "required": ["when"],
+              "additionalProperties": false,
+              "properties": { "when": { "$ref": "#/$defs/predicate" } }
+            }
+          ]
+        },
+        "terminal": {
+          "type": "boolean",
+          "description": "End state; also a process OUTCOME for composition (deferred)."
+        }
+      }
+    },
+    "gate": {
+      "type": "object",
+      "description": "What must hold for a move. Always reduces to a checkable predicate (COR-031 P4).",
+      "required": ["kind", "predicate"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": ["deterministic", "authorisation-artifact"],
+          "description": "deterministic: the predicate's `result` decides. authorisation-artifact: the predicate returns {exists, produced_by}; the ENGINE computes result = exists && produced_by != actor (cross-authority)."
+        },
+        "predicate": { "$ref": "#/$defs/predicate" }
+      }
+    },
+    "transition": {
+      "type": "object",
+      "description": "A guarded edge. additionalProperties permitted for capability-local fields (e.g. pr_state_effect, executor, notes).",
+      "required": ["from", "to", "trigger", "authorisation"],
+      "additionalProperties": true,
+      "properties": {
+        "from": { "type": "string", "description": "Source state id, or \"*\" for any." },
+        "to": { "type": "string", "description": "Target state id. (A data-resolver target is a deferred extension.)" },
+        "trigger": { "type": "string", "minLength": 1, "description": "The named action that drives the move." },
+        "authorisation": {
+          "enum": ["user", "agent-autonomous", "script"],
+          "description": "Who may move."
+        },
+        "gate": { "$ref": "#/$defs/gate" },
+        "severity": {
+          "$ref": "refs.schema.json#/$defs/reference_token",
+          "description": "A validation-severity token, e.g. [validation-severity:hard-reject]."
+        },
+        "why": { "type": "string", "description": "Status view: why this move exists." },
+        "hint": { "type": "string", "description": "Status view: what to run next." }
+      }
+    },
+    "process": {
+      "type": "object",
+      "description": "A process definition. additionalProperties permitted for capability-local blocks (e.g. pm's cascade / closure_triggers / pr_state_effect) and named-deferred slots (hooks, invariants, interface, orchestration) until they ship.",
+      "required": ["id", "version", "subject", "states", "transitions"],
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "Addressable as <capability>:<id>."
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Definition version (handles definition changes under live subjects)."
+        },
+        "subject": { "$ref": "#/$defs/subject" },
+        "states": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/state" }
+        },
+        "transitions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/transition" }
+        }
+      }
+    },
+    "journal_entry": {
+      "type": "object",
+      "description": "An append-only runtime record the engine writes on each move (the memory + audit trail). Not authored by capabilities; published here so tooling can validate journals.",
+      "required": ["ts", "subject", "to", "trigger", "actor"],
+      "additionalProperties": true,
+      "properties": {
+        "ts": { "type": "string", "format": "date-time" },
+        "subject": { "type": "string" },
+        "from": { "type": "string" },
+        "to": { "type": "string" },
+        "trigger": { "type": "string" },
+        "actor": { "type": "string" },
+        "gate_result": { "type": "string" },
+        "severity": { "type": "string" },
+        "bypass_reason": { "type": "string" }
+      }
+    }
+  }
+}
