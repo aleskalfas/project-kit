@@ -8,8 +8,21 @@
 """Project-management capability — move-issue (verb-subject per DEC-020).
 
 Transitions a GitHub issue through the lifecycle state machine declared
-in `workflow.yaml`. The substrate-specific mechanics differ per adopter
-config:
+in `workflow.yaml`, which since DEC-032 is a process definition bound to
+the shared process substrate (COR-031) — a KEYED process (COR-032), one
+journey per issue number.
+
+State-machine mechanics (position resolution + the move journal) are
+DELEGATED to the process engine via `pkit process …` (subprocess, never
+imported, ADR-020): this script reads the issue's position from the
+engine and, after applying its domain side-effect, journals the move
+through the engine (the seam-ordering contract in .pkit/process/
+README.md). The engine's detectors reproduce this script's inference
+precedence, so position is identical (behaviour parity is the acceptance
+bar). The parity-critical wrapper-side concerns STAY here: membership,
+placeholder, authorisation/bypass/TTY, and the forward cascade.
+
+The substrate-specific mechanics differ per adopter config:
 
   * Board-substrate adopters (`config.has_projects_v2_board == true`):
     the Projects v2 single-select `Status` field carries the state.
@@ -52,6 +65,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
+from _lib import lifecycle_inference as infer  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib.hooks import fire_hooks  # noqa: E402
 from _lib.membership import (  # noqa: E402
@@ -206,9 +220,15 @@ def main() -> int:
         )
         return 2
 
-    current_state = _infer_current_state(
-        state=state, milestone=milestone, labels=labels
-    )
+    # Position: read from the engine (DEC-032 D7 — read, don't re-infer). The
+    # engine's detectors reproduce this script's inference precedence, so the
+    # result is identical; fall back to the local inference only when the engine
+    # is unreachable (e.g. `pkit` not on PATH), so a move is never blocked.
+    current_state = _engine_position(args.issue_number)
+    if current_state is None:
+        current_state = _infer_current_state(
+            state=state, milestone=milestone, labels=labels
+        )
 
     has_board = bool(config.get("has_projects_v2_board", False))
 
@@ -387,6 +407,16 @@ def main() -> int:
         if not ok:
             return 3
 
+    # Seam-ordering (DEC-032 / process README): the domain side-effect (the
+    # label/board edit) is applied above; now journal the move via the engine.
+    # Best-effort — a refusal or missing `pkit` never fails the move, since
+    # live detection stays authoritative.
+    #
+    # `--actor` is the resolved GitHub login of the invoker (not the
+    # authorisation token), so the engine's cross-authority gate compares
+    # like-with-like against an artifact's `produced_by` login (COR-031 P4).
+    _journal_move(args.issue_number, args.to, invoker.github_login)
+
     # Forward cascade.
     if cascade_targets and not args.no_cascade:
         for parent_num in cascade_targets:
@@ -465,7 +495,7 @@ def _print_plan(plan: Plan) -> None:
 
 
 def _known_states(workflow: dict) -> set[str]:
-    states = workflow.get("states") or []
+    states = infer.workflow_process(workflow).get("states") or []
     out = set()
     for s in states:
         if isinstance(s, dict) and isinstance(s.get("id"), str):
@@ -484,7 +514,7 @@ def _find_transition(
     Falls back to None if the transition isn't listed *or* if the
     transition does not `applies_to` the given structural type.
     """
-    transitions = workflow.get("transitions") or []
+    transitions = infer.workflow_process(workflow).get("transitions") or []
     type_token = f"[issue-types:{structural_type}]"
     for t in transitions:
         if not isinstance(t, dict):
@@ -509,7 +539,7 @@ def _legal_targets(
     workflow: dict, current_state: str, structural_type: str
 ) -> list[str]:
     """Enumerate legal target states for diagnostic output."""
-    transitions = workflow.get("transitions") or []
+    transitions = infer.workflow_process(workflow).get("transitions") or []
     type_token = f"[issue-types:{structural_type}]"
     out: list[str] = []
     for t in transitions:
@@ -586,17 +616,16 @@ def _infer_structural_type(
 def _infer_current_state(
     *, state: str, milestone: dict | None, labels: list[str]
 ) -> str:
-    """Best-effort state inference per workflow.yaml's inferred_from notes."""
-    if state == "closed":
-        return "done"
-    # Look for explicit state:* label first (label-fallback substrate).
-    for lbl in labels:
-        if lbl.startswith("state:"):
-            return lbl.removeprefix("state:")
-    # No label → derive from milestone + state.
-    if milestone:
-        return "backlog"
-    return "todo"
+    """Best-effort live state inference.
+
+    Delegates to `lifecycle_inference.infer_current_state`, the single home of
+    this precedence (closed→done; first state:* label; milestone→backlog; else
+    todo). The same resolver backs the process detectors, so move-issue's local
+    inference and the engine's detection agree by construction — behaviour
+    parity (DEC-032). Kept as a thin local alias so the rest of this script (and
+    `_cascade_parent`) reads naturally.
+    """
+    return infer.infer_current_state(state=state, milestone=milestone, labels=labels)
 
 
 def _walk_parent_chain(body: str) -> list[int]:
@@ -619,6 +648,101 @@ def _walk_parent_chain(body: str) -> list[int]:
         out.append(int(m.group(2)))
         break  # parent-ref is one line by convention
     return out
+
+
+# ---- process-engine delegation (DEC-032 D5/D7) ----------------------
+#
+# move-issue delegates POSITION + JOURNAL to the shared process engine
+# (`pkit process …`, COR-031), invoked by subprocess (never imported,
+# ADR-020). It keeps the parity-critical wrapper-side concerns local:
+# bypass/audit, TTY-confirm, placeholder/membership gates, cascade, and
+# the domain side-effect (the label/board edit). The engine's detectors
+# reproduce `_infer_current_state` exactly, so the engine position and
+# the local inference agree; the engine is the single source of position
+# truth (the seam-ordering contract in .pkit/process/README.md).
+
+PROCESS_ADDRESS = "project-management:issue-lifecycle"
+
+
+def _engine_position(issue_number: int) -> str | None:
+    """Read the issue's position from the engine (`pkit process status --json`).
+
+    Returns the resolved state id, or None when the engine cannot be reached or
+    returns no/indeterminate position — callers then fall back to the local
+    inference (which uses the same precedence), so a missing `pkit` on PATH
+    never blocks a move.
+    """
+    try:
+        proc = subprocess.run(
+            [
+                "pkit",
+                "process",
+                "status",
+                PROCESS_ADDRESS,
+                "--subject",
+                str(issue_number),
+                "--json",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except (OSError, FileNotFoundError):
+        return None
+    if proc.returncode != 0:
+        return None
+    try:
+        payload = json.loads(proc.stdout)
+    except (json.JSONDecodeError, ValueError):
+        return None
+    position = payload.get("position") if isinstance(payload, dict) else None
+    if not isinstance(position, dict) or position.get("indeterminate"):
+        return None
+    state = position.get("state")
+    return state if isinstance(state, str) else None
+
+
+def _journal_move(
+    issue_number: int, target_state: str, actor: str | None
+) -> None:
+    """Journal the completed move via `pkit process move` (best-effort).
+
+    Per the seam-ordering contract: the domain side-effect (the label/board
+    edit) has ALREADY been applied by the caller; this only records the move in
+    the engine's append-only journal. A refusal or a missing `pkit` is logged as
+    a note and never fails the move — live detection stays authoritative, so the
+    next `status` reflects the real position regardless.
+
+    `actor` is the invoker's resolved GitHub login. The engine compares it
+    against an authorisation artifact's `produced_by` login for the
+    cross-authority gate (COR-031 P4). When it is None (login unresolved), we
+    omit `--actor` and let the engine apply its own resolved-identity default.
+    """
+    argv = [
+        "pkit",
+        "process",
+        "move",
+        PROCESS_ADDRESS,
+        "--to",
+        target_state,
+        "--subject",
+        str(issue_number),
+    ]
+    if actor:
+        argv += ["--actor", actor]
+    try:
+        proc = subprocess.run(
+            argv,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except (OSError, FileNotFoundError):
+        print("  [note] `pkit` not on PATH; move not journaled (position unaffected).")
+        return
+    if proc.returncode != 0:
+        detail = (proc.stdout or proc.stderr or "").strip()
+        print(f"  [note] move not journaled by the engine: {detail}")
 
 
 # ---- gh wrappers ----------------------------------------------------

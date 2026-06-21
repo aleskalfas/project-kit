@@ -2,9 +2,9 @@ schema_version: 2
 component:
   kind: capability
   name: project-management
-  version: 0.23.2
+  version: 0.24.0
 description: Project-management discipline realized from the pm-workflow methodology — issue hierarchy, state machine, body validation, naming conventions — encoded as schemas a methodology-agnostic engine (skills + agent) consumes at runtime.
-requires_backbone: ">=1.26.0,<2.0.0"
+requires_backbone: ">=1.102.0,<2.0.0"
 aliases:
   - pm
 commands:
@@ -134,6 +134,30 @@ commands:
   self-test:
     script: scripts/self-test.py
     help: "Smoke-test the capability's core transition cycle on the live repo. Creates a throwaway issue, advances it through the state machine, and closes it. Use --dry-run to preview without mutating."
+  detect-todo:
+    script: scripts/detect-todo.py
+    help: "Process detection predicate (DEC-032): read-only; reports whether an issue's inferred lifecycle position is Todo. Invoked by the process engine."
+  detect-backlog:
+    script: scripts/detect-backlog.py
+    help: "Process detection predicate (DEC-032): read-only; reports whether an issue's inferred lifecycle position is Backlog. Invoked by the process engine."
+  detect-in-progress:
+    script: scripts/detect-in-progress.py
+    help: "Process detection predicate (DEC-032): read-only; reports whether an issue's inferred lifecycle position is In Progress. Invoked by the process engine."
+  detect-review:
+    script: scripts/detect-review.py
+    help: "Process detection predicate (DEC-032): read-only; reports whether an issue's inferred lifecycle position is Review. Invoked by the process engine."
+  detect-done:
+    script: scripts/detect-done.py
+    help: "Process detection predicate (DEC-032): read-only; reports whether an issue's inferred lifecycle position is Done. Invoked by the process engine."
+  gate-checkboxes-ticked:
+    script: scripts/gate-checkboxes-ticked.py
+    help: "Process gate predicate (DEC-032 / DEC-007): read-only deterministic close-gate; result=True iff the issue body has no unticked checkbox. Invoked by the process engine."
+  gate-pr-merged:
+    script: scripts/gate-pr-merged.py
+    help: "Process gate predicate (DEC-032): read-only authorisation-artifact; reports {exists, produced_by} for a merged PR closing the issue (the engine computes cross-authority). Invoked by the process engine."
+  parent-active-descendant:
+    script: scripts/parent-active-descendant.py
+    help: "Process predicate (DEC-032): read-only pm-local descendant walk; reports whether an issue has an in-progress-or-further child. Never used by the engine for position; consulted by cascade logic."
   enable-default-agent:
     script: scripts/enable-default-agent.py
     help: "Activate the project-manager default-agent overlay for the claude-code harness (per DEC-030). Copies the capability-shipped overlay template to adopter-owned state and re-runs pkit sync."

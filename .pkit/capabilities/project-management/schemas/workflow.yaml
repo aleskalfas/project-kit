@@ -1,18 +1,27 @@
-# Issue-lifecycle state machine + transitions + cascade.
+# Issue-lifecycle process definition — rebound onto the shared process
+# substrate (COR-031) as a KEYED process (COR-032), per DEC-032.
+#
+# Conforms to the substrate shape contract at
+# ../../../schemas/_defs/process.schema.json (the `process` $def). The
+# engine (in the `pkit` binary, ADR-020) owns the state-machine
+# mechanics — position, validation, journal — and reads `states` +
+# `transitions` + each `detection`/`gate` predicate. The pm-LOCAL
+# blocks below the process (`cascade`, `closure_triggers`) and the
+# pm-local fields on states/transitions (`display_name`, `applies_to`,
+# `command`, `pr_state_effect`, `authorisation`, `executor`, `severity`,
+# `notes`) are ignored by the engine and consumed by pm's wrappers —
+# the substrate stays content-free (DEC-032 D3).
 #
 # Five states (todo → backlog → in-progress → review → done) the
-# methodology drives every issue through, the gated transitions between
-# them (who authorises, who executes, what severity applies on
-# violation), the upward-only cascade rules (forward and closure), and
-# the closure triggers (PR-merge into main, PR-merge into integration
-# branch, manual won't-do).
-#
-# Consumed by the transition-state skill (walks the machine, dispatches
-# on `authorisation` to refuse user-gated moves without explicit
-# authorisation) and by the validator (cascade check after every
-# state-changing op).
+# methodology drives every issue through. Each state's `detection`
+# predicate reproduces move-issue's exact inference precedence
+# (closed→done; first state:* label; milestone→backlog; else todo) so
+# the detectors are mutually exclusive and behaviour is identical
+# pre/post rebind — behaviour parity is the acceptance bar (DEC-032).
+# State ORDER additionally encodes that precedence (the engine returns
+# the first matching detection), so it is load-bearing.
 
-schema_version: 2
+schema_version: 3
 
 source:
   upstream: pm-workflow
@@ -20,222 +29,289 @@ source:
   decisions: [MET-005]
   captured_at: 2026-05-21
 
-states:
-  - id: todo
-    display_name: Todo
-    meaning: |
-      Filed; not yet scheduled to a Milestone.
-    applies_to:
-      - "[issue-types:epic]"
-      - "[issue-types:feature]"
-      - "[issue-types:umbrella]"
-      - "[issue-types:task]"
-    inferred_from: |
-      Issue open, no Milestone assigned.
+process:
+  id: issue-lifecycle
+  version: 3
+  subject:
+    cardinality: keyed
+    key: issue-number
 
-  - id: backlog
-    display_name: Backlog
-    meaning: |
-      Scheduled (Milestone assigned); not started.
-    applies_to:
-      - "[issue-types:epic]"
-      - "[issue-types:feature]"
-      - "[issue-types:umbrella]"
-      - "[issue-types:task]"
-    inferred_from: |
-      Issue open, Milestone assigned, no feature branch exists.
+  states:
+    - id: done
+      display_name: Done
+      meaning: |
+        Issue closed (merged via PR, or closed as won't-do).
+      applies_to:
+        - "[issue-types:epic]"
+        - "[issue-types:feature]"
+        - "[issue-types:umbrella]"
+        - "[issue-types:task]"
+      terminal: true
+      detection:
+        mode: inferred
+        predicate:
+          run: detect-done
 
-  - id: in-progress
-    display_name: In Progress
-    meaning: |
-      Branch open, work in flight.
-    applies_to:
-      - "[issue-types:epic]"
-      - "[issue-types:feature]"
-      - "[issue-types:umbrella]"
-      - "[issue-types:task]"
-    inferred_from: |
-      For Tasks: the feature branch named per git-conventions.yaml's
-      branch-name pattern exists on the remote. For parents (EPIC,
-      Feature, Umbrella): inferred from at least one descendant being
-      in-progress or further.
+    - id: review
+      display_name: Review
+      meaning: |
+        PR open, awaiting human review. Task only — parents skip this
+        state.
+      applies_to:
+        - "[issue-types:task]"
+      detection:
+        mode: inferred
+        predicate:
+          run: detect-review
 
-  - id: review
-    display_name: Review
-    meaning: |
-      PR open, awaiting human review. Task only — parents skip this
-      state.
-    applies_to:
-      - "[issue-types:task]"
-    inferred_from: |
-      An open PR exists whose body carries `Closes #<task-number>`.
+    - id: in-progress
+      display_name: In Progress
+      meaning: |
+        Branch open, work in flight.
+      applies_to:
+        - "[issue-types:epic]"
+        - "[issue-types:feature]"
+        - "[issue-types:umbrella]"
+        - "[issue-types:task]"
+      detection:
+        mode: inferred
+        predicate:
+          run: detect-in-progress
 
-  - id: done
-    display_name: Done
-    meaning: |
-      Issue closed (merged via PR, or closed as won't-do).
-    applies_to:
-      - "[issue-types:epic]"
-      - "[issue-types:feature]"
-      - "[issue-types:umbrella]"
-      - "[issue-types:task]"
-    inferred_from: |
-      GitHub issue state = closed.
+    - id: backlog
+      display_name: Backlog
+      meaning: |
+        Scheduled (Milestone assigned); not started.
+      applies_to:
+        - "[issue-types:epic]"
+        - "[issue-types:feature]"
+        - "[issue-types:umbrella]"
+        - "[issue-types:task]"
+      detection:
+        mode: inferred
+        predicate:
+          run: detect-backlog
 
-transitions:
-  - from: todo
-    to: backlog
-    command: promote-issue
-    pr_state_effect: "none → none"
-    authorisation: user
-    executor: agent
-    applies_to:
-      - "[issue-types:epic]"
-      - "[issue-types:feature]"
-      - "[issue-types:umbrella]"
-      - "[issue-types:task]"
-    severity: "[validation-severity:bypassable-with-audit]"
-    notes: |
-      User typically assigns the Milestone; agent may execute on verbal
-      authorisation, posting an audit comment per
-      `bypassable-with-audit` semantics. Owned by `promote-issue` per
-      DEC-026; the wrapper writes the audit comment with prefix
-      `Promoted` and then calls `move-issue --to backlog`.
+    - id: todo
+      display_name: Todo
+      meaning: |
+        Filed; not yet scheduled to a Milestone.
+      applies_to:
+        - "[issue-types:epic]"
+        - "[issue-types:feature]"
+        - "[issue-types:umbrella]"
+        - "[issue-types:task]"
+      entry: true
+      detection:
+        mode: inferred
+        predicate:
+          run: detect-todo
 
-  - from: backlog
-    to: in-progress
-    command: start-work
-    pr_state_effect: "none → none"
-    authorisation: agent-autonomous
-    executor: agent
-    applies_to:
-      - "[issue-types:epic]"
-      - "[issue-types:feature]"
-      - "[issue-types:umbrella]"
-      - "[issue-types:task]"
-    severity: "[validation-severity:warning]"
-    notes: |
-      Agent opens the branch on `start-work`. For parents, the
-      transition is inferred from forward cascade (see `cascade.forward`).
-      Owned by `start-work` per DEC-026; the wrapper creates the branch,
-      sets the assignee, and then calls `move-issue --to in-progress`.
+  transitions:
+    - from: todo
+      to: backlog
+      trigger: promote-issue
+      command: promote-issue
+      pr_state_effect: "none → none"
+      authorisation: user
+      executor: agent
+      applies_to:
+        - "[issue-types:epic]"
+        - "[issue-types:feature]"
+        - "[issue-types:umbrella]"
+        - "[issue-types:task]"
+      severity: "[validation-severity:bypassable-with-audit]"
+      why: User assigns the Milestone; agent may execute on verbal authorisation with an audit comment.
+      hint: pkit project-management promote-issue <issue-number>
+      notes: |
+        User typically assigns the Milestone; agent may execute on verbal
+        authorisation, posting an audit comment per
+        `bypassable-with-audit` semantics. Owned by `promote-issue` per
+        DEC-026; the wrapper writes the audit comment with prefix
+        `Promoted` and then calls `move-issue --to backlog`.
 
-  - from: in-progress
-    to: review
-    command: review-work
-    pr_state_effect: "none → ready | draft → ready"
-    authorisation: agent-autonomous
-    executor: agent
-    applies_to:
-      - "[issue-types:task]"
-    severity: "[validation-severity:warning]"
-    notes: |
-      Agent opens the PR on `review-work`. Review is task-only. Owned
-      by `review-work` per DEC-026; the wrapper opens a ready PR if
-      none exists, flips draft→ready if a draft exists, assigns
-      reviewers per DEC-027 mode resolution, then calls `move-issue
-      --to review`.
+    - from: backlog
+      to: in-progress
+      trigger: start-work
+      command: start-work
+      pr_state_effect: "none → none"
+      authorisation: agent-autonomous
+      executor: agent
+      applies_to:
+        - "[issue-types:epic]"
+        - "[issue-types:feature]"
+        - "[issue-types:umbrella]"
+        - "[issue-types:task]"
+      severity: "[validation-severity:warning]"
+      why: Agent opens the branch and starts work.
+      hint: pkit project-management start-work <issue-number>
+      notes: |
+        Agent opens the branch on `start-work`. For parents, the
+        transition is inferred from forward cascade (see `cascade.forward`).
+        Owned by `start-work` per DEC-026; the wrapper creates the branch,
+        sets the assignee, and then calls `move-issue --to in-progress`.
 
-  - from: review
-    to: done
-    command: done-work
-    pr_state_effect: "ready → merged"
-    authorisation: user
-    executor: agent
-    applies_to:
-      - "[issue-types:task]"
-    severity: "[validation-severity:hard-reject]"
-    notes: |
-      User authorises the merge per-PR; agent runs the squash-merge
-      after the checkbox-completeness check passes. PR-merge bypassing
-      the gate is a hard reject — the audit-trail mechanism does not
-      apply (the merge button is the gate). Owned by `done-work` per
-      DEC-026; approval gate is mode-conditional per DEC-027 / DEC-028.
+    - from: in-progress
+      to: review
+      trigger: review-work
+      command: review-work
+      pr_state_effect: "none → ready | draft → ready"
+      authorisation: agent-autonomous
+      executor: agent
+      applies_to:
+        - "[issue-types:task]"
+      severity: "[validation-severity:warning]"
+      why: Agent opens the PR; review is task-only.
+      hint: pkit project-management review-work <issue-number>
+      notes: |
+        Agent opens the PR on `review-work`. Review is task-only. Owned
+        by `review-work` per DEC-026; the wrapper opens a ready PR if
+        none exists, flips draft→ready if a draft exists, assigns
+        reviewers per DEC-027 mode resolution, then calls `move-issue
+        --to review`.
 
-  - from: in-progress
-    to: done
-    command: close-issue
-    pr_state_effect: "none → none"
-    authorisation: user
-    executor: agent
-    applies_to:
-      - "[issue-types:epic]"
-      - "[issue-types:feature]"
-      - "[issue-types:umbrella]"
-    severity: "[validation-severity:hard-reject]"
-    notes: |
-      Closure-cascade eligibility path for parents — every child closed,
-      parent's checkboxes (acceptance/success criteria) all ticked, user
-      authorises closure for this level. Owned by `close-issue` (not part
-      of the seven-command palette per DEC-026; closure is its own
-      concern).
+    - from: review
+      to: done
+      trigger: done-work
+      command: done-work
+      pr_state_effect: "ready → merged"
+      authorisation: user
+      executor: agent
+      applies_to:
+        - "[issue-types:task]"
+      severity: "[validation-severity:hard-reject]"
+      gate:
+        kind: authorisation-artifact
+        predicate:
+          run: gate-pr-merged
+      why: User authorises the merge per-PR; a different authority's merge is the gate.
+      hint: pkit project-management done-work <issue-number>
+      notes: |
+        User authorises the merge per-PR; agent runs the squash-merge
+        after the checkbox-completeness check passes. PR-merge bypassing
+        the gate is a hard reject — the audit-trail mechanism does not
+        apply (the merge button is the gate). The gate is an
+        authorisation-artifact: a merged PR whose merger differs from the
+        actor being gated (cross-authority, COR-031 P4). Owned by
+        `done-work` per DEC-026; approval gate is mode-conditional per
+        DEC-027 / DEC-028.
 
-  - from: backlog
-    to: done
-    command: close-issue
-    pr_state_effect: "none → none"
-    authorisation: user
-    executor: agent
-    applies_to:
-      - "[issue-types:epic]"
-      - "[issue-types:feature]"
-      - "[issue-types:umbrella]"
-      - "[issue-types:task]"
-    severity: "[validation-severity:hard-reject]"
-    notes: |
-      Won't-do close from Backlog. All checkboxes must be ticked or
-      removed first (per MET-006). Owned by `close-issue`.
+    - from: in-progress
+      to: done
+      trigger: close-issue
+      command: close-issue
+      pr_state_effect: "none → none"
+      authorisation: user
+      executor: agent
+      applies_to:
+        - "[issue-types:epic]"
+        - "[issue-types:feature]"
+        - "[issue-types:umbrella]"
+      severity: "[validation-severity:hard-reject]"
+      gate:
+        kind: deterministic
+        predicate:
+          run: gate-checkboxes-ticked
+      why: Closure-cascade eligibility path for parents; checkboxes must be ticked.
+      hint: pkit project-management close-issue <issue-number>
+      notes: |
+        Closure-cascade eligibility path for parents — every child closed,
+        parent's checkboxes (acceptance/success criteria) all ticked, user
+        authorises closure for this level. Owned by `close-issue` (not part
+        of the seven-command palette per DEC-026; closure is its own
+        concern).
 
-  - from: todo
-    to: done
-    command: close-issue
-    pr_state_effect: "none → none"
-    authorisation: user
-    executor: agent
-    applies_to:
-      - "[issue-types:epic]"
-      - "[issue-types:feature]"
-      - "[issue-types:umbrella]"
-      - "[issue-types:task]"
-    severity: "[validation-severity:hard-reject]"
-    notes: |
-      Won't-do close from Todo. Same checkbox rule as Backlog → Done.
-      Owned by `close-issue`.
+    - from: backlog
+      to: done
+      trigger: close-issue
+      command: close-issue
+      pr_state_effect: "none → none"
+      authorisation: user
+      executor: agent
+      applies_to:
+        - "[issue-types:epic]"
+        - "[issue-types:feature]"
+        - "[issue-types:umbrella]"
+        - "[issue-types:task]"
+      severity: "[validation-severity:hard-reject]"
+      gate:
+        kind: deterministic
+        predicate:
+          run: gate-checkboxes-ticked
+      why: Won't-do close from Backlog; all checkboxes must be ticked or removed first.
+      hint: pkit project-management close-issue <issue-number>
+      notes: |
+        Won't-do close from Backlog. All checkboxes must be ticked or
+        removed first (per MET-006). Owned by `close-issue`.
 
-  # PR sub-lifecycle rows per DEC-026 — no issue-state transition;
-  # the wrapper drives a PR-state change only.
+    - from: todo
+      to: done
+      trigger: close-issue
+      command: close-issue
+      pr_state_effect: "none → none"
+      authorisation: user
+      executor: agent
+      applies_to:
+        - "[issue-types:epic]"
+        - "[issue-types:feature]"
+        - "[issue-types:umbrella]"
+        - "[issue-types:task]"
+      severity: "[validation-severity:hard-reject]"
+      gate:
+        kind: deterministic
+        predicate:
+          run: gate-checkboxes-ticked
+      why: Won't-do close from Todo; same checkbox rule as Backlog → Done.
+      hint: pkit project-management close-issue <issue-number>
+      notes: |
+        Won't-do close from Todo. Same checkbox rule as Backlog → Done.
+        Owned by `close-issue`.
 
-  - from: in-progress
-    to: in-progress
-    command: create-draft
-    pr_state_effect: "none → draft"
-    authorisation: agent-autonomous
-    executor: agent
-    applies_to:
-      - "[issue-types:task]"
-    severity: "[validation-severity:warning]"
-    notes: |
-      `create-draft` opens a draft PR while the issue stays in
-      In Progress. Used when CI should run on the work-in-progress
-      branch before the work is ready for review. No issue-state
-      change; only a PR-state effect.
+    # PR sub-lifecycle per DEC-026 — no issue-state transition; the
+    # wrapper drives a PR-state change only (self-loops on the same state).
 
-  - from: review
-    to: review
-    command: back-to-draft
-    pr_state_effect: "ready → draft"
-    authorisation: agent-autonomous
-    executor: agent
-    applies_to:
-      - "[issue-types:task]"
-    severity: "[validation-severity:warning]"
-    notes: |
-      `back-to-draft` flips a Ready PR back to Draft (via
-      `gh pr ready --undo`) and dismisses prior APPROVED reviews
-      (`gh pr review --dismiss`) so the next `done-work` cycle
-      requires fresh review of changed content. Issue stays in Review
-      because the work-flow phase hasn't changed — the reviewer is
-      still waiting; only the PR-readiness flipped.
+    - from: in-progress
+      to: in-progress
+      trigger: create-draft
+      command: create-draft
+      pr_state_effect: "none → draft"
+      authorisation: agent-autonomous
+      executor: agent
+      applies_to:
+        - "[issue-types:task]"
+      severity: "[validation-severity:warning]"
+      why: Opens a draft PR while the issue stays In Progress (CI on WIP).
+      hint: pkit project-management create-draft <issue-number>
+      notes: |
+        `create-draft` opens a draft PR while the issue stays in
+        In Progress. Used when CI should run on the work-in-progress
+        branch before the work is ready for review. No issue-state
+        change; only a PR-state effect.
+
+    - from: review
+      to: review
+      trigger: back-to-draft
+      command: back-to-draft
+      pr_state_effect: "ready → draft"
+      authorisation: agent-autonomous
+      executor: agent
+      applies_to:
+        - "[issue-types:task]"
+      severity: "[validation-severity:warning]"
+      why: Flips a Ready PR back to Draft and dismisses prior approvals; issue stays in Review.
+      hint: pkit project-management back-to-draft <issue-number>
+      notes: |
+        `back-to-draft` flips a Ready PR back to Draft (via
+        `gh pr ready --undo`) and dismisses prior APPROVED reviews
+        (`gh pr review --dismiss`) so the next `done-work` cycle
+        requires fresh review of changed content. Issue stays in Review
+        because the work-flow phase hasn't changed — the reviewer is
+        still waiting; only the PR-readiness flipped.
+
+# --- pm-LOCAL blocks (engine ignores; pm wrappers consume) -----------------
+# DEC-032 D3: cascade + closure_triggers are pm-domain breadth/closure
+# semantics and stay capability-local so the shared substrate stays
+# content-free.
 
 cascade:
   forward:
