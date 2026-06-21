@@ -5,7 +5,7 @@
 #   "ruamel.yaml>=0.18",
 # ]
 # ///
-"""Project-management capability — gate-pr-merged (process predicate, DEC-032).
+"""Project-management capability — gate-pr-merged (process predicate, DEC-033).
 
 Authorisation-artifact gate (PR-merge, cross-authority): reports {exists, produced_by} for a merged PR closing this issue. The ENGINE computes result = exists && produced_by != actor (COR-031 P4); this predicate returns only the facts (who merged the PR).
 

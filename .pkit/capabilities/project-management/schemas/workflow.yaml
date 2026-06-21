@@ -1,5 +1,5 @@
 # Issue-lifecycle process definition — rebound onto the shared process
-# substrate (COR-031) as a KEYED process (COR-032), per DEC-032.
+# substrate (COR-031) as a KEYED process (COR-032), per DEC-033.
 #
 # Conforms to the substrate shape contract at
 # ../../../schemas/_defs/process.schema.json (the `process` $def). The
@@ -10,14 +10,14 @@
 # pm-local fields on states/transitions (`display_name`, `applies_to`,
 # `command`, `pr_state_effect`, `authorisation`, `executor`, `severity`,
 # `notes`) are ignored by the engine and consumed by pm's wrappers —
-# the substrate stays content-free (DEC-032 D3).
+# the substrate stays content-free (DEC-033 D3).
 #
 # Five states (todo → backlog → in-progress → review → done) the
 # methodology drives every issue through. Each state's `detection`
 # predicate reproduces move-issue's exact inference precedence
 # (closed→done; first state:* label; milestone→backlog; else todo) so
 # the detectors are mutually exclusive and behaviour is identical
-# pre/post rebind — behaviour parity is the acceptance bar (DEC-032).
+# pre/post rebind — behaviour parity is the acceptance bar (DEC-033).
 # State ORDER additionally encodes that precedence (the engine returns
 # the first matching detection), so it is load-bearing.
 
@@ -309,7 +309,7 @@ process:
         still waiting; only the PR-readiness flipped.
 
 # --- pm-LOCAL blocks (engine ignores; pm wrappers consume) -----------------
-# DEC-032 D3: cascade + closure_triggers are pm-domain breadth/closure
+# DEC-033 D3: cascade + closure_triggers are pm-domain breadth/closure
 # semantics and stay capability-local so the shared substrate stays
 # content-free.
 

@@ -613,7 +613,7 @@ def _resolve_workstream_slugs(
 def _resolve_state_ids(capability_root: Path) -> list[str]:
     """Read lifecycle state IDs from workflow.yaml's `states[].id` list.
 
-    Since the schema_version 3 rebind (DEC-032) the states live under a
+    Since the schema_version 3 rebind (DEC-033) the states live under a
     top-level `process:` block; this resolver reads there, falling back to the
     top level for a pre-v3 override. Returns the IDs in canonical lifecycle
     order (todo, backlog, in-progress, review, done) so label creation is

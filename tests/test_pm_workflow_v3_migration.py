@@ -1,5 +1,5 @@
 """Idempotency + warn-on-override tests for the workflow.yaml v2->v3 migration
-(DEC-032 D6). The migration NEVER rewrites the kit-shipped file and NEVER
+(DEC-033 D6). The migration NEVER rewrites the kit-shipped file and NEVER
 auto-edits a project-owned override — it only warns when an adopter override is
 stale.
 """

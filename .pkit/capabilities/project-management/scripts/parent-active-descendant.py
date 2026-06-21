@@ -5,9 +5,9 @@
 #   "ruamel.yaml>=0.18",
 # ]
 # ///
-"""Project-management capability — parent-active-descendant (process predicate, DEC-032).
+"""Project-management capability — parent-active-descendant (process predicate, DEC-033).
 
-Pm-LOCAL descendant walk (DEC-032 breadth; NEVER in the engine): result=True iff a child issue (one naming this issue as parent) is in-progress or further. Separate from the position detectors; does not alter the position truth-table.
+Pm-LOCAL descendant walk (DEC-033 breadth; NEVER in the engine): result=True iff a child issue (one naming this issue as parent) is in-progress or further. Separate from the position detectors; does not alter the position truth-table.
 
 READ-ONLY. The process engine (COR-031) invokes this as
   <script> <issue-number> --json

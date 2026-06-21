@@ -1,4 +1,4 @@
-"""Predicate bodies for the rebound issue-lifecycle (DEC-032).
+"""Predicate bodies for the rebound issue-lifecycle (DEC-033).
 
 These are the READ-ONLY checks the process engine (COR-031) runs to resolve a
 keyed issue's position and to evaluate its gates. The engine invokes each as a
@@ -132,7 +132,7 @@ def detect_state(issue_number: int, target_state: str) -> dict[str, Any]:
 
 
 def parent_has_active_descendant(parent_number: int) -> dict[str, Any]:
-    """Pm-LOCAL descendant walk (DEC-032 Implications (d); breadth, NEVER in the
+    """Pm-LOCAL descendant walk (DEC-033 Implications (d); breadth, NEVER in the
     engine): True when at least one child issue (one that names this parent in
     its body parent-ref line) is at in-progress or further.
 

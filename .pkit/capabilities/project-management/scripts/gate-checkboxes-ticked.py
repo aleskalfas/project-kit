@@ -5,7 +5,7 @@
 #   "ruamel.yaml>=0.18",
 # ]
 # ///
-"""Project-management capability — gate-checkboxes-ticked (process predicate, DEC-032).
+"""Project-management capability — gate-checkboxes-ticked (process predicate, DEC-033).
 
 Deterministic close-gate (DEC-007): result=True iff the issue body has no unticked '- [ ]' checkbox. The checkbox close-gate for won't-do closure and PR-merge closing issues.
 

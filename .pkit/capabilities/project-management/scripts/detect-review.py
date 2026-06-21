@@ -5,7 +5,7 @@
 #   "ruamel.yaml>=0.18",
 # ]
 # ///
-"""Project-management capability — detect-review (process predicate, DEC-032).
+"""Project-management capability — detect-review (process predicate, DEC-033).
 
 Detection predicate for the 'review' lifecycle state. Resolves the issue's live position via move-issue's exact inference precedence (closed->done; first state:* label; milestone->backlog; else todo) and reports result=True iff it equals 'review'. State meaning: PR open, awaiting human review (Task only).
 

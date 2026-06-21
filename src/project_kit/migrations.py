@@ -257,6 +257,12 @@ def check_diff_coverage(
             # Renames / deletes within a migrations dir don't trigger;
             # they're internal bookkeeping.
             continue
+        if _is_decision_path(path):
+            # Decision records (COR / PRJ / DEC) are kit-owned reference
+            # content refreshed wholesale on sync — treecopy orphan-prunes a
+            # removed/renamed record — so a rename or delete is never
+            # adopter-breaking and triggers no migration.
+            continue
         tier_info = _classify_path(path)
         if tier_info is None:
             continue
@@ -324,6 +330,26 @@ def _git_diff_name_status(
         elif len(parts) >= 2:
             entries.append((kind, parts[1], None))
     return entries
+
+
+def _is_decision_path(path: str) -> bool:
+    """True if `path` is a decision record (COR / PRJ / DEC).
+
+    Decision records are kit-owned reference content; `pkit sync` refreshes the
+    set wholesale (treecopy prunes orphaned/renamed records), and no
+    adopter-owned state references a record by filename. So renaming or removing
+    one is never adopter-breaking — it owes no migration. Matches the core /
+    project decision area and every capability's `decisions/` subtree.
+    """
+    if path.startswith(".pkit/decisions/"):
+        return True
+    parts = path.split("/")
+    return (
+        len(parts) >= 4
+        and parts[0] == ".pkit"
+        and parts[1] == "capabilities"
+        and parts[3] == "decisions"
+    )
 
 
 def _classify_path(path: str) -> tuple[Tier, str | None] | None:
