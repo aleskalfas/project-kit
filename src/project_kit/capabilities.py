@@ -35,6 +35,8 @@ from ruamel.yaml import YAML
 
 from project_kit import treecopy
 from project_kit.manifest import (
+    ORIGIN_INCUBATED_IN_REPO,
+    ORIGIN_KIT_SHIPPED,
     BackboneManifest,
     ComponentManifest,
     ComponentRegistryEntry,
@@ -140,8 +142,14 @@ def find_capability_in_repo(target_root: Path, name: str) -> CapabilitySource | 
 # Which source a caller wants when a name resolves in more than one place.
 CapabilityOrigin = str  # "kit-shipped" | "incubated-in-repo"
 
-KIT_SHIPPED: CapabilityOrigin = "kit-shipped"
-INCUBATED_IN_REPO: CapabilityOrigin = "incubated-in-repo"
+# The origin string values have a single canonical definition in
+# `manifest.py` (COR-031 D2 — origin is lifecycle-owned install-state, so the
+# manifest layer owns it). These module-level names are stable aliases kept
+# here so capability callers can keep referring to `caps.KIT_SHIPPED` /
+# `caps.INCUBATED_IN_REPO`; both bind to the manifest constants, so there is
+# one source of truth for the strings themselves.
+KIT_SHIPPED: CapabilityOrigin = ORIGIN_KIT_SHIPPED
+INCUBATED_IN_REPO: CapabilityOrigin = ORIGIN_INCUBATED_IN_REPO
 
 
 @dataclass(frozen=True)
