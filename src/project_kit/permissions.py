@@ -2779,3 +2779,310 @@ def setup_autonomy_down(target_root: Path) -> str:
         "re-arm: `pkit permissions setup autonomy`",
     ]
     return "\n".join(lines) + "\n"
+
+
+# ---- diagnose: permission-prompt diagnostic loop (PRJ-006) -------------------
+#
+# The opt-in, recommend-only MVP. Capture lives in the claude-code adapter hook
+# (`.pkit/permissions/diagnose_capture.py`, imported after the decision is fixed
+# and fail-safe-wrapped); this CLI half is the harness-agnostic arm/disarm,
+# status, classifier, and report. The two halves share two files under
+# `.pkit/permissions/project/` (the per-project mutable permissions state, beside
+# config.yaml / grants.yaml):
+#
+#   diagnose.yaml      — the ARMED MARKER: a flat `key: value` YAML carrying a TTL
+#                        so a session auto-expires and can't stay silently on
+#                        (PRJ-006 sub-decision 5). The hook reads it with one
+#                        cheap stat+read per call.
+#   diagnose-log.jsonl — the captured log: one JSON record per DEFERRED decision,
+#                        size-capped (drop-oldest) with the command tail redacted
+#                        by default. Git-ignored via the project `.gitignore`.
+#
+# Recommend-only (PRJ-006 sub-decision 4): the classifier orders + explains the
+# report and emits remediations it RECOMMENDS; it never applies a change. The
+# captured signal is a SUPERSET of real prompts (the hook sees only its own
+# abstain, not whether the harness prompted), so the report states COVERAGE, not
+# a predicted prompt-count decrement.
+
+# Default bounded-session TTL: long enough for a working session, short enough to
+# auto-expire by the next day. The operator picks a value via `diagnose on --ttl`.
+_DIAGNOSE_DEFAULT_TTL_SECONDS = 8 * 60 * 60  # 8 hours
+# Default size cap (drop-oldest) and redaction posture — written into the marker
+# so the hook and the report agree on one source of truth.
+_DIAGNOSE_DEFAULT_MAX_ENTRIES = 2000
+_DIAGNOSE_DEFAULT_REDACT = True
+
+
+def _diagnose_marker_path(target_root: Path) -> Path:
+    return _project_dir(target_root) / "diagnose.yaml"
+
+
+def _diagnose_log_path(target_root: Path) -> Path:
+    return _project_dir(target_root) / "diagnose-log.jsonl"
+
+
+def _diagnose_read_marker(target_root: Path) -> dict[str, Any] | None:
+    """Read the armed marker (the same flat `key: value` shape the hook's capture
+    half writes-and-reads). None when absent. Uses the safe YAML loader — the
+    marker is trivial scalars, but going through `_load_yaml` keeps the CLI side
+    tolerant of a hand-edited marker."""
+    path = _diagnose_marker_path(target_root)
+    if not path.is_file():
+        return None
+    return _load_yaml(path)
+
+
+def _diagnose_is_armed(marker: dict[str, Any] | None, now: float) -> bool:
+    """Armed AND unexpired. A malformed/zero-ttl marker reads as not-armed
+    (fail-safe — matches the hook's `_armed`)."""
+    if not marker:
+        return False
+    armed_at = marker.get("armed_at")
+    ttl = marker.get("ttl_seconds")
+    if not isinstance(armed_at, int) or not isinstance(ttl, int) or ttl <= 0:
+        return False
+    return now < armed_at + ttl
+
+
+def diagnose_on(target_root: Path, ttl_seconds: int = _DIAGNOSE_DEFAULT_TTL_SECONDS,
+                redact: bool = _DIAGNOSE_DEFAULT_REDACT,
+                max_entries: int = _DIAGNOSE_DEFAULT_MAX_ENTRIES) -> str:
+    """Arm a bounded diagnostic session: write the armed marker with a TTL. While
+    armed, the hook appends each deferred decision to the log. Idempotent — re-
+    arming refreshes `armed_at` (extends the window) and the cap/redaction knobs.
+    """
+    import time
+    if ttl_seconds <= 0:
+        raise PermissionsError("--ttl must be a positive number of seconds.")
+    marker = {
+        "schema_version": 1,
+        "armed_at": int(time.time()),
+        "ttl_seconds": int(ttl_seconds),
+        "max_entries": int(max_entries),
+        "redact": bool(redact),
+    }
+    # Write the marker as the flat `key: value` shape the hook's stdlib reader
+    # parses (no nested structures), via the shared YAML dumper.
+    _dump_yaml(_diagnose_marker_path(target_root), marker)
+    hours = ttl_seconds / 3600
+    return (
+        f"diagnostic session armed — capturing deferred (prompted) decisions for "
+        f"{hours:.1f}h (auto-expires).\n"
+        f"  redaction: {'on (command tail dropped)' if redact else 'OFF (full commands logged)'} · "
+        f"size cap: {max_entries} entries (drop-oldest)\n"
+        f"  the log is local + git-ignored: {_diagnose_log_path(target_root).relative_to(target_root)}\n"
+        f"  run `pkit permissions diagnose report` to see the classified, ranked, "
+        f"recommend-only report · `diagnose off` to disarm.\n"
+    )
+
+
+def diagnose_off(target_root: Path) -> str:
+    """Disarm: remove the armed marker. The log is left in place (read it with
+    `report`; clear it by deleting the file). Idempotent."""
+    path = _diagnose_marker_path(target_root)
+    if not path.is_file():
+        return "diagnostic session already off (no armed marker).\n"
+    path.unlink()
+    return (
+        "diagnostic session disarmed — the hook stops capturing.\n"
+        "  the captured log is left in place; run `pkit permissions diagnose report` "
+        "to read it, or delete it to clear.\n"
+    )
+
+
+def _diagnose_read_log(target_root: Path) -> list[dict[str, Any]]:
+    """Read the captured JSONL log into a list of records. Skips malformed lines
+    rather than failing — the report tolerates a partially-written log."""
+    path = _diagnose_log_path(target_root)
+    if not path.is_file():
+        return []
+    records: list[dict[str, Any]] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            obj = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(obj, dict):
+            records.append(obj)
+    return records
+
+
+def diagnose_status(target_root: Path) -> str:
+    """Show armed/expired state + log size. Read-only."""
+    import time
+    marker = _diagnose_read_marker(target_root)
+    now = time.time()
+    log = _diagnose_read_log(target_root)
+    lines = [cli_render.style("title", "Permission-prompt diagnostics — opt-in capture session (PRJ-006)"), ""]
+    if marker is None:
+        lines.append("  state    OFF — no armed session; the hook captures nothing")
+    elif _diagnose_is_armed(marker, now):
+        remaining = int(marker["armed_at"] + marker["ttl_seconds"] - now)
+        lines.append(
+            f"  state    ARMED — capturing deferred decisions · expires in {remaining // 60} min"
+        )
+        lines.append(
+            f"  config   redaction {'on' if marker.get('redact', True) else 'OFF'} · "
+            f"size cap {marker.get('max_entries', _DIAGNOSE_DEFAULT_MAX_ENTRIES)} (drop-oldest)"
+        )
+    else:
+        lines.append(
+            "  state    EXPIRED — the marker's TTL has elapsed; the hook captures "
+            "nothing. Re-arm with `diagnose on`"
+        )
+    lines.append(f"  log      {len(log)} captured entry(ies) at "
+                 f"{_diagnose_log_path(target_root).relative_to(target_root)}")
+    lines += [
+        "",
+        cli_render.style("heading", "Commands"),
+        "  pkit permissions diagnose on [--ttl <s>] [--no-redact]   arm a bounded session",
+        "  pkit permissions diagnose off                            disarm",
+        "  pkit permissions diagnose report                         the classified, ranked report",
+    ]
+    return "\n".join(lines) + "\n"
+
+
+# The group taxonomy (PRJ-006 sub-decision 6: lives in code, not the record —
+# it is inventory that churns as the classifier meets real data). Each group is a
+# (id, matcher, remediation, band) tuple. `band` is the action contract — the
+# classifier is ADVISORY for ranking only (PRJ-006 sub-decision 3): it groups raw
+# command text to ORDER and EXPLAIN the report; it never authorizes a change.
+#
+#   recommend     a remediation we recommend the operator apply (the MVP applies
+#                 NOTHING — recommend-only; the auto-fix arc is deferred)
+#   judgement     a real trade-off only the operator can settle
+#   document      unfixable — document + route around
+_DIAGNOSE_GROUPS: list[dict[str, Any]] = [
+    {"id": "interpreter", "band": "judgement",
+     "heads": {"python", "python3", "node", "ruby", "perl", "sed", "awk"},
+     "remediation": "allowlist the interpreter (broad) OR route via a dedicated "
+                    "tool / named command — your call"},
+    {"id": "shell-shape", "band": "judgement",
+     "remediation": "narrow to single commands, or extract a named project "
+                    "command (COR-007) the matcher can vet"},
+    {"id": "egress", "band": "recommend",
+     "heads": {"curl", "wget", "http", "https"},
+     "remediation": "if the host maps to a shipped toolkit, recommend "
+                    "`pkit permissions sandbox accommodate <toolkit>` "
+                    "(toolkit-keyed, never host-keyed — recommend-only)"},
+    {"id": "allowlist-gap", "band": "recommend",
+     "remediation": "recommend granting the matching catalog privilege (a NEW "
+                    "catalog privilege is never auto-fixable — operator task)"},
+]
+# Shell-shape markers: forms the matcher can't vet without running them.
+_DIAGNOSE_SHELL_SHAPE = ("&&", "||", "|", ";", "$(", "`", "<(", ">(", "<<", "for ", "while ")
+
+
+def _diagnose_command_head(command: str) -> str:
+    """The leading program token of a (possibly redacted) command, ignoring a
+    leading `env`-style assignment prefix. Best-effort over redacted text."""
+    for tok in command.split():
+        if "=" in tok and not tok.startswith("-"):
+            continue  # skip `FOO=bar` env prefixes
+        return tok
+    return ""
+
+
+def _diagnose_classify(record: dict[str, Any]) -> str:
+    """Assign a record to a group id. Advisory only (PRJ-006 sub-decision 3):
+    re-derives the group from raw command text since the deferral reason carries
+    no group signal. The worst case of a misclassification here is a wrong RANK,
+    never a wrong change — the MVP applies nothing."""
+    command = str(record.get("command", ""))
+    if any(marker in command for marker in _DIAGNOSE_SHELL_SHAPE):
+        return "shell-shape"
+    head = _diagnose_command_head(command)
+    for group in _DIAGNOSE_GROUPS:
+        heads = group.get("heads")
+        if heads and head in heads:
+            return group["id"]
+    # No specific group matched → the catch-all allowlist-gap (a recognized but
+    # ungranted-or-uncovered command).
+    return "allowlist-gap"
+
+
+_DIAGNOSE_BAND_ORDER = ["recommend", "judgement", "document"]
+_DIAGNOSE_BAND_HEADING = {
+    "recommend": "RECOMMENDED — remediations pkit recommends (MVP applies NOTHING; recommend-only)",
+    "judgement": "NEEDS YOUR JUDGEMENT — real trade-offs only you can settle",
+    "document": "CAN'T FIX — document & route around",
+}
+
+
+def diagnose_report(target_root: Path) -> str:
+    """Render the classified, ranked, recommend-only report over the captured
+    log. Read-only and applies NOTHING (PRJ-006 sub-decision 4) — it groups,
+    ranks by frequency, and emits a recommended remediation per group, stating
+    COVERAGE (the captured signal is a superset of real prompts) rather than a
+    predicted prompt-count decrement."""
+    import time
+    log = _diagnose_read_log(target_root)
+    marker = _diagnose_read_marker(target_root)
+    armed = _diagnose_is_armed(marker, time.time())
+
+    title = cli_render.style(
+        "title", "Permission-prompt diagnosis — captured deferred decisions, classified + ranked"
+    )
+    state = "ARMED" if armed else ("EXPIRED" if marker else "off")
+    header = f"  captured: {len(log)} deferred decision(s) · session: {state}"
+    if not log:
+        return "\n".join([
+            title, "", header, "",
+            "  nothing captured yet. Arm a session with `pkit permissions diagnose on`, "
+            "work normally, then re-run this report.",
+        ]) + "\n"
+
+    by_group: dict[str, list[dict[str, Any]]] = {}
+    for rec in log:
+        by_group.setdefault(_diagnose_classify(rec), []).append(rec)
+
+    groups_by_id = {g["id"]: g for g in _DIAGNOSE_GROUPS}
+
+    lines = [title, "", header,
+             "  note: this is a SUPERSET of real prompts (the hook sees its own "
+             "deferral, not whether the harness prompted) — read counts as COVERAGE.",
+             ""]
+
+    rank = 0
+    for band in _DIAGNOSE_BAND_ORDER:
+        band_groups = sorted(
+            (gid for gid, recs in by_group.items()
+             if groups_by_id.get(gid, {}).get("band", "recommend") == band),
+            key=lambda gid: len(by_group[gid]), reverse=True,
+        )
+        if not band_groups:
+            continue
+        band_total = sum(len(by_group[gid]) for gid in band_groups)
+        lines.append(cli_render.style("heading", _DIAGNOSE_BAND_HEADING[band])
+                     + f"   {band_total} deferral(s) · {len(band_groups)} group(s)")
+        for gid in band_groups:
+            rank += 1
+            recs = by_group[gid]
+            top = _diagnose_top_commands(recs)
+            remediation = groups_by_id.get(gid, {}).get(
+                "remediation", "review these commands and decide a remediation")
+            lines.append(f"  [{rank}] {gid:14} {len(recs):>3}×   {top}")
+            lines.append(f"      → {remediation}")
+        lines.append("")
+
+    lines += [
+        cli_render.style("strong",
+                         "recommend-only: this report applies NOTHING — it ranks + recommends. "
+                         "Apply the remediations yourself."),
+        "  (auto-fix is deferred per PRJ-006; a new catalog privilege is never auto-fixable.)",
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def _diagnose_top_commands(records: list[dict[str, Any]], limit: int = 3) -> str:
+    """The most-frequent (redacted) command heads in a group, with counts —
+    evidence before verdict, so the classification is trusted."""
+    counts: dict[str, int] = {}
+    for rec in records:
+        key = str(rec.get("command") or rec.get("tool") or "?")
+        counts[key] = counts.get(key, 0) + 1
+    ranked = sorted(counts.items(), key=lambda kv: kv[1], reverse=True)[:limit]
+    return " · ".join(f"{cmd} ({n}×)" for cmd, n in ranked)

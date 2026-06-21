@@ -73,6 +73,21 @@ def main() -> int:
         _debug(f"decision fault → abstain: {exc!r}")
         return 0
 
+    # Diagnostic capture (PRJ-006 sub-decision 2): AFTER the decision is computed,
+    # gated on the deferred (abstain) verdict inside `capture`, and fail-safe-
+    # wrapped so a capture fault can NEVER change the decision or break fail-open.
+    # The decision core (`decide.py`) above stays PURE — capture is a harness-side
+    # side-effect only. While a diagnostic session is off (the default), `capture`
+    # is one cheap marker read and a no-op; while armed it appends a redacted,
+    # size-capped log entry. `diagnose_capture` carries its own internal guard
+    # (the first belt); this try is the second.
+    try:
+        import diagnose_capture  # propagated beside decide.py, on sys.path above
+
+        diagnose_capture.capture(str(root), payload, decision, reason)
+    except Exception as exc:  # inert: capture must never affect enforcement
+        _debug(f"diagnostic capture fault (inert): {exc!r}")
+
     if decision in ("allow", "deny"):
         print(
             json.dumps(

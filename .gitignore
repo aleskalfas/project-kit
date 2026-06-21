@@ -2,6 +2,12 @@
 .claude/settings.local.json
 .claude/worktrees/
 
+# Permission-prompt diagnostic loop (PRJ-006) — per-session, per-machine local
+# state: the captured log (redacted command strings) and the TTL armed marker.
+# Never committed (privacy + the marker's wall-clock TTL is meaningful only here).
+.pkit/permissions/project/diagnose-log.jsonl
+.pkit/permissions/project/diagnose.yaml
+
 # Python build / venv / cache
 .venv/
 __pycache__/

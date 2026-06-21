@@ -1836,3 +1836,19 @@ def test_overview_enabler_row_shows_capability_denied_subjects(tmp_path, monkeyp
     assert "agent:project-manager (capability: project-management)" in out, (
         f"overview ENABLERS row must name the denied subject with capability source; got:\n{out}"
     )
+
+
+# ---- diagnose (PRJ-006) CLI wiring ------------------------------------------
+
+def test_diagnose_on_status_off_round_trip(tmp_path, monkeypatch):
+    proj = _setup(tmp_path)
+    assert "OFF" in _run(proj, monkeypatch, "diagnose")  # no subcommand = status
+    assert "armed" in _run(proj, monkeypatch, "diagnose", "on")
+    assert "ARMED" in _run(proj, monkeypatch, "diagnose", "status")
+    assert "disarmed" in _run(proj, monkeypatch, "diagnose", "off")
+    assert "OFF" in _run(proj, monkeypatch, "diagnose", "status")
+
+
+def test_diagnose_report_empty(tmp_path, monkeypatch):
+    proj = _setup(tmp_path)
+    assert "nothing captured" in _run(proj, monkeypatch, "diagnose", "report")
