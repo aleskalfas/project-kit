@@ -57,6 +57,10 @@ components:
   - kind: capability
     name: project-management
     manifest: .pkit/capabilities/project-management/manifest.yaml
+  - kind: capability
+    name: homegrown
+    origin: incubated-in-repo                         ← in-repo (incubated) capability (COR-031)
+    manifest: .pkit/capabilities/homegrown/manifest.yaml
   - kind: adapter
     name: claude-code
     manifest: .pkit/adapters/claude-code/project/manifest.yaml
@@ -66,7 +70,16 @@ Small by design. No component data is duplicated here — that lives in each com
 
 - **`schema_version`** — version of *this* manifest's own schema, independent of any component's. Bumping it triggers a backbone manifest-schema migration.
 - **`backbone_version`** — the recorded backbone version this project is at.
-- **`components`** — the registry. Each entry is a `{kind, name, manifest}` triple pointing at a per-component manifest file.
+- **`components`** — the registry. Each entry is a `{kind, name, manifest}` triple pointing at a per-component manifest file, optionally carrying an **`origin`** marker (below).
+
+#### Capability origin (COR-031)
+
+A capability-kind registry entry may carry an **`origin`** field recording where the capability came from — the property the lifecycle keys off to decide what `sync` / `upgrade` may do to it:
+
+- **`kit-shipped`** (the default) — the capability ships in the kit source and was copied into the adopter on `capabilities install`. This is the status quo COR-017 describes. **The field is omitted when it holds this default**: an absent `origin` reads as `kit-shipped`, so every registration written before this field existed keeps its behaviour with no re-tagging (the change is purely additive — no migration; COR-031 D2).
+- **`incubated-in-repo`** — the capability was authored in the adopter's *own* repo and registered in place via `capabilities register` (no copy). Its subtree is adopter-owned content, not a copy of anything the kit ships.
+
+Origin lives **here, in lifecycle-owned install-state — never inside the capability's own subtree.** An incubated capability's subtree (including its authored `package.yaml`) is entirely adopter-owned; writing lifecycle state into it would re-create the ownership blur the origin distinction exists to prevent (COR-031 D2). For an incubated capability, no kit-written per-component `manifest.yaml` is stamped at all — its version of record is its authored `package.yaml`, and dependency gating reads from there.
 
 ### Per-component manifest (one per installed component)
 
@@ -127,7 +140,9 @@ The backbone manifest's `components` list is the canonical install record.
 
 **Install** a component → run the pre-flight checks (see below), create its per-component manifest at the designated path, then append a `{kind, name, manifest}` entry to `components`.
 
-**Remove** a component → run refusal checks (see below), delete the registry entry, then delete the per-component manifest file. Adopter-owned content authored on top of the component (project-side records, customisations) is left untouched per COR-005 and the no-shared-files invariant.
+**Register an in-repo (incubated) capability** (COR-031) → a no-copy variant of install for a capability the adopter authored in its own repo. Run the same pre-flights *except* "exists in kit source" (the in-repo tree *is* the source), then append a `{kind, name, origin: incubated-in-repo, manifest}` entry — **no subtree copy, and no kit-written per-component manifest** (the tree is adopter-owned; COR-031 D2/D3). Deploy primitives and dependency gating run identically to install (COR-031 D1) — only source-reconciliation differs (below).
+
+**Remove** a component → run refusal checks (see below), delete the registry entry, then delete the per-component manifest file. Adopter-owned content authored on top of the component (project-side records, customisations) is left untouched per COR-005 and the no-shared-files invariant. For a **capability**, whether the capability's *subtree* is also deleted is origin-dependent — a kit-shipped copy is deleted, an incubated (adopter-authored) subtree is kept unless explicitly purged (COR-031 D4; see "Uninstall: origin-aware removal" below).
 
 **Status / validate / upgrade** walk the registry to find component manifests, then operate per component.
 
@@ -136,16 +151,27 @@ The backbone manifest's `components` list is the canonical install record.
 Before placing files, `pkit capabilities install` runs four checks in order:
 
 1. **Already installed?** Refuse with a hint to use `upgrade`.
-2. **Backbone compatibility** — the capability's `requires_backbone` range must include the current backbone version (checked by `find_capability_in_source`).
+2. **Backbone compatibility** — the capability's `requires_backbone` range must include the current backbone version. This is the shared backbone-satisfaction gate (COR-007 pattern-extraction): the *same* check runs from both capability-entry paths — `install` (kit-source copy) and `register` (in-repo incubated) — so neither path can activate a capability the current backbone cannot support.
 3. **Capability dependencies (COR-030)** — every entry in `requires_capabilities` must be satisfied: the declared dependency is installed *and* its recorded version falls within the declared semver range. Refuse with an actionable hint naming what to install or upgrade first. Never auto-installs.
 4. **Naming collision detection** — skills/agents from the new capability must not collide with already-installed names. Interactive resolution available.
 
-### Uninstall refusal checks
+### Register pre-flight checks (incubated; COR-031)
 
-Before removing files, `pkit capabilities uninstall` runs two checks (both defeatable by `--force`):
+`pkit capabilities register` shares the install pre-flights that still apply (backbone-satisfaction, capability-dependencies, collision detection against *other* installed content) and skips "exists in kit source" (the in-repo tree *is* the source). It adds one check the install path doesn't need:
+
+- **Self-consistency validation (COR-031 D1)** — the adopter hand-authored this capability; nothing upstream validated it. Before activation, its own `package.yaml` (parseable capability manifest, valid version, valid `requires_backbone` / dependency ranges), required layout (`README.md`), and own schema pairs (validated by the same validator `pkit schemas validate` runs) are checked against the working tree, which is its spec. Refuse with the structural problems listed. This is *self-validation*, not source-reconciliation — origin suppresses the latter (below), never the former.
+
+### Uninstall: origin-aware removal (COR-031 D4)
+
+`pkit capabilities uninstall` first runs two refusal checks (both defeatable by `--force`):
 
 1. **Declared dependents (COR-030)** — if any installed capability lists this one in its `requires_capabilities`, refuse and name the dependents. The operator must uninstall or upgrade the dependents first.
 2. **Textual references** — if any adopter-authored file cites the capability (citation token or path reference), refuse and list the references.
+
+Once those pass, **what gets deleted depends on origin** — origin-blind deletion would destroy adopter-authored work, the exact hazard COR-031 exists to prevent:
+
+- **`kit-shipped`** — the subtree is a disposable copy of kit source. Uninstall deletes the subtree, removes the registry entry, and re-runs deploy (deploy's stale-removal pass then drops the harness symlinks, since the source is gone). Unchanged from before.
+- **`incubated-in-repo`** — the subtree is the adopter's *only* copy of authored work. Uninstall **unregisters in place**: it removes the registry entry and drops the capability's deployed harness skills/agents, but **leaves the authored subtree on disk** (the CLI reports "unregistered in place; your authored files are kept at `<path>`"). Because the adapter deploy primitives key stale-removal on whether the *source file* still exists — and here it does — the lifecycle drops those harness entries explicitly rather than relying on a deploy re-run. Deleting an incubated capability's files is a separate explicit opt-in: `--purge` (which confirms first, honouring the pause-before-destructive-ops discipline; `--yes` skips the prompt for non-interactive use). The default never deletes incubated files.
 
 ## Migration framework
 
@@ -209,6 +235,10 @@ Idempotent: running upgrade on a current adopter is a no-op.
 
 Upgrading just one component (e.g., the project-management capability) skips backbone-side steps as long as the component's new version remains within `requires_backbone` of the current backbone. The same compatibility check from step 1 gates entry. Steps 4 (component migrations), 5 (component-scoped reconciliation), and 6 (component manifest version bump) run; step 2 pulls only the component's source.
 
+#### Upgrading an incubated capability (COR-031 D1/D4)
+
+`pkit capabilities upgrade <name>` is **origin-aware**. For an `incubated-in-repo` capability there is no kit source to resolve against — the working tree *is* the source — so the command **must not** route through the kit-source resolution path. Doing so would mislabel the capability "no longer ships from source" and steer the adopter toward the destructive uninstall. Instead, "upgrade" for an incubated capability **re-applies deploy from the in-repo tree** (mirroring the sync skip-branch below): any newly-authored skills/agents re-materialise in the harness, and source-reconciliation stays suppressed. If the in-repo subtree has gone missing, the command reports that plainly — never as a kit-source orphan, and never suggesting uninstall. A `kit-shipped` capability's upgrade path is unchanged (resolve from kit source, refresh, run migrations).
+
 For capabilities, a **direction-split dependency check (COR-030)** runs before collision detection:
 
 - *Upgrading a dependent* — the new source version's `requires_capabilities` is checked against the installed dependency versions. If a dependency is absent or out of range, the upgrade **refuses with an actionable hint** (the operator controls the dependent version; no deadlock).
@@ -224,6 +254,14 @@ Two commands consume the manifests differently for the same conceptual job — "
 - **`upgrade`** does the same comparison, then *applies* changes to bring reality into line (step 5 of the flow).
 
 Either way, the kit-side spec at the recorded version is the source of truth for what should exist; the manifest tracks only what the spec can't recover (recorded version, opaque IDs).
+
+### The incubated-origin skip-branch (COR-031 D1)
+
+The reconciliation above assumes a kit-side spec to reconcile against — true for a `kit-shipped` capability, false for an `incubated-in-repo` one, whose working tree *is* the spec. So `sync` (and the capability-refresh inside it) **skips source-reconciliation for any capability whose registry `origin` is `incubated-in-repo`**: it does not re-copy from kit source, and it does not emit the "no longer shipped from source" orphan warning that a kit-shipped capability missing from source would trigger. The capability's adopter-owned files are left exactly as authored — the no-shared-files invariant (COR-001) applied to incubated content.
+
+The skip is scoped to *reconciliation against the kit source only*. Everything else is unchanged: deploy primitives still run (the capability's skills/agents re-materialise in the harness), dependency gating still counts the capability as installed, and structural self-consistency validation still applies against the adopter's own tree (which is its spec). Origin governs source-reconciliation, not participation or self-validation.
+
+One boundary case (COR-031): if a same-named capability *now* also ships from kit source — graduation arriving before graduation is specified — `sync` surfaces the collision rather than silently shadowing either tree, so the adopter can decide. The default skip applies only while no kit capability of that name exists.
 
 ## Worked example
 

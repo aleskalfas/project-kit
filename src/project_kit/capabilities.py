@@ -41,6 +41,7 @@ from project_kit.manifest import (
     ComponentManifest,
     ComponentRegistryEntry,
     read_backbone_manifest,
+    read_capability_origin,
     write_backbone_manifest,
     write_component_manifest,
 )
@@ -239,6 +240,24 @@ def list_capabilities(target_root: Path, source_kit: Path) -> tuple[list[str], l
         ]
     installed.sort()
     return available, installed
+
+
+def installed_capability_origins(target_root: Path) -> dict[str, str]:
+    """Return ``{name: origin}`` for every registered capability (per COR-031).
+
+    Reads origin from lifecycle-owned install-state (the backbone manifest's
+    component registry), where an absent origin reads as ``kit-shipped``.
+    Lets `list` / status mark each installed capability as kit-shipped or
+    incubated-in-repo without the caller re-deriving the default.
+    """
+    backbone = read_backbone_manifest(target_root)
+    if backbone is None:
+        return {}
+    return {
+        c.name: c.origin
+        for c in backbone.components
+        if c.kind == "capability"
+    }
 
 
 def is_installed(target_root: Path, name: str) -> bool:
@@ -587,6 +606,90 @@ def read_prior_skipped_artifacts(
     return tuple(out)
 
 
+def validate_capability_self_consistency(
+    capability_source: CapabilitySource,
+) -> list[str]:
+    """Structurally validate an incubated capability against its own tree (COR-031 D1).
+
+    An incubated capability is hand-authored in the adopter's repo; nothing
+    upstream validated it. Before activation, check its own manifest, schemas,
+    and layout are structurally sound against the working tree (which is its
+    spec). This is *self-consistency*, not source-reconciliation — origin
+    suppresses the latter, never the former (COR-031 D1).
+
+    Returns a list of human-readable problem descriptions; an empty list means
+    the capability is structurally sound. Checks performed:
+
+    - **package.yaml** parses as a capability and its declared name matches
+      the directory (already guaranteed if the caller resolved a
+      ``CapabilitySource``, re-checked here so this is usable standalone);
+    - **version** is a parseable semver string (it gates dependency edges);
+    - **requires_backbone**, when present, is a parseable specifier;
+    - **declared dependency ranges** are parseable specifiers;
+    - **README.md** is present (the capability's layout contract);
+    - the capability's **own schema pairs** (under ``schemas/``) pass schema
+      validation, reusing the same validator ``pkit schemas validate`` runs.
+
+    No reusable end-to-end capability validator existed, so these are the
+    minimal structural checks plus delegation to the schema validator for the
+    schema surface; deeper citation/reference closure is corpus-wide
+    (``refs.validate_corpus``) and runs post-activation, not here.
+    """
+    from project_kit import schemas_validate
+
+    problems: list[str] = []
+    cap_dir = capability_source.path
+    package = capability_source.package
+
+    # package.yaml name/kind are guaranteed by resolution, but re-checking
+    # keeps this callable on a hand-built CapabilitySource.
+    if package.name != capability_source.name:
+        problems.append(
+            f"package.yaml component.name {package.name!r} does not match the "
+            f"capability directory name {capability_source.name!r}."
+        )
+
+    if not package.version:
+        problems.append("package.yaml is missing component.version.")
+    else:
+        try:
+            Version(package.version)
+        except InvalidVersion:
+            problems.append(
+                f"package.yaml component.version {package.version!r} is not a "
+                "valid version (it gates dependency edges)."
+            )
+
+    if package.requires_backbone:
+        try:
+            SpecifierSet(package.requires_backbone)
+        except InvalidSpecifier:
+            problems.append(
+                f"requires_backbone {package.requires_backbone!r} is not a "
+                "valid version specifier."
+            )
+
+    for dep in package.requires_capabilities:
+        try:
+            SpecifierSet(dep.version)
+        except InvalidSpecifier:
+            problems.append(
+                f"requires_capabilities entry for {dep.name!r} has an invalid "
+                f"version range {dep.version!r}."
+            )
+
+    if not (cap_dir / "README.md").is_file():
+        problems.append("README.md is missing (required capability layout).")
+
+    schemas_dir = cap_dir / "schemas"
+    if schemas_dir.is_dir():
+        report = schemas_validate.validate_path(schemas_dir, resolve=False)
+        for issue in report.issues:
+            problems.append(f"schema {issue.location}: {issue.message}")
+
+    return problems
+
+
 def detect_upgrade_collisions(
     target_root: Path,
     capability_source: CapabilitySource,
@@ -606,6 +709,31 @@ def detect_upgrade_collisions(
     for finding in detect_collisions(target_root, capability_source):
         try:
             finding.target_path.relative_to(installed_dir)
+        except ValueError:
+            findings.append(finding)
+    return findings
+
+
+def detect_incubated_collisions(
+    target_root: Path,
+    capability_source: CapabilitySource,
+) -> list[CollisionFinding]:
+    """Detect collisions for an incubated (in-repo) register: skip self-collisions.
+
+    An incubated capability's own skills/agents already live in its in-repo
+    tree, so `detect_collisions` — which walks every installed capability's
+    tree — surfaces them as collisions against themselves. For the register
+    path every such self-collision is a false positive: the capability *is*
+    its own source, nothing is being copied over it. This filters them out
+    by the same rule `detect_upgrade_collisions` uses (drop any finding whose
+    target lives under the capability's own tree), leaving only genuine
+    collisions against *other* installed content.
+    """
+    own_dir = target_root / ".pkit" / "capabilities" / capability_source.name
+    findings: list[CollisionFinding] = []
+    for finding in detect_collisions(target_root, capability_source):
+        try:
+            finding.target_path.relative_to(own_dir)
         except ValueError:
             findings.append(finding)
     return findings
@@ -776,34 +904,138 @@ def _report_pending_migrations(
     )
 
 
+@dataclass(frozen=True)
+class UninstallOutcome:
+    """What an uninstall did, so the CLI can report it accurately (COR-031 D4).
+
+    Origin governs whether the authored subtree is deleted:
+    - a ``kit-shipped`` capability's subtree is a disposable copy of kit
+      source, so uninstall deletes it (``files_deleted=True``);
+    - an ``incubated-in-repo`` capability's subtree is the adopter's *only*
+      copy of authored work, so uninstall unregisters in place and leaves
+      the files (``files_deleted=False``), unless the caller opts in to a
+      purge.
+    """
+
+    cap_dir: Path        # the capability's subtree path (deleted or kept)
+    origin: str          # kit-shipped | incubated-in-repo
+    files_deleted: bool  # whether the subtree was (or would be) removed
+
+
 def uninstall_capability(
     target_root: Path,
     name: str,
     *,
+    purge: bool = False,
     dry_run: bool = False,
-) -> Path:
-    """Remove the capability subtree and unregister it.
+) -> UninstallOutcome:
+    """Unregister a capability, deleting its subtree only when origin permits (COR-031 D4).
 
     Caller is responsible for checking references (the safety check) and
     confirming with the user before invoking. This function performs the
-    mechanical removal only.
+    mechanical unregister (+ conditional removal) only.
 
-    Returns the path that was (or would be) removed.
+    Origin-aware removal:
+    - **kit-shipped** — the subtree is a disposable copy of kit source;
+      delete it and unregister.
+    - **incubated-in-repo** — the subtree is the adopter's only copy of
+      authored work; *unregister in place* and leave the files on disk
+      (the destroy-adopter-work hazard COR-031 exists to prevent). The
+      caller re-runs deploy to drop stale harness symlinks either way.
+
+    ``purge=True`` is the explicit opt-in that deletes an incubated
+    capability's files anyway (the caller must confirm first, honouring the
+    pause-before-destructive-ops discipline). It has no effect on a
+    kit-shipped capability, which always deletes.
+
+    Returns an ``UninstallOutcome`` describing what was (or would be) done.
     """
     if not is_installed(target_root, name):
         raise click.ClickException(
             f"capability {name!r} is not installed."
         )
 
+    origin = read_capability_origin(target_root, name)
     cap_dir = target_root / ".pkit" / "capabilities" / name
-    if dry_run:
-        return cap_dir
+    # An incubated capability keeps its files unless the caller purges; a
+    # kit-shipped one always deletes its disposable copy.
+    delete_files = origin != ORIGIN_INCUBATED_IN_REPO or purge
 
-    if cap_dir.is_dir():
+    if dry_run:
+        return UninstallOutcome(
+            cap_dir=cap_dir, origin=origin, files_deleted=delete_files
+        )
+
+    if delete_files and cap_dir.is_dir():
         shutil.rmtree(cap_dir)
 
     _unregister_from_backbone_manifest(target_root, name)
-    return cap_dir
+    if not delete_files:
+        # Incubated, kept in place: the authored subtree survives, so the
+        # filesystem-keyed adapter deploy primitives won't see the source as
+        # "gone" and won't drop the harness symlinks/copies on their next run.
+        # Drop them here so an unregistered capability stops being active in
+        # the harness (COR-031 D4: uninstall drops stale harness symlinks even
+        # though the source files stay). When the subtree is deleted instead,
+        # deploy's own stale-removal pass handles it, so this is skipped.
+        undeploy_capability_harness_artifacts(target_root, cap_dir)
+    return UninstallOutcome(
+        cap_dir=cap_dir, origin=origin, files_deleted=delete_files
+    )
+
+
+def undeploy_capability_harness_artifacts(target_root: Path, cap_dir: Path) -> None:
+    """Drop deployed harness skills/agents whose source lives under *cap_dir*.
+
+    Needed for the incubated unregister-in-place path: the adapter deploy
+    primitives key their stale-removal on whether the *source file* still
+    exists, so a capability whose subtree stays on disk would keep its skills
+    and agents deployed even after it is unregistered. This removes only the
+    deployed entries that resolve into ``cap_dir`` (skill symlinks under
+    ``.claude/skills/`` and resolved-copy agents under ``.claude/agents/``),
+    leaving the authored subtree and any unrelated deployed content untouched.
+
+    Mirrors the adapter's deployed layout (Claude Code):
+    - a skill deploys as ``.claude/skills/<name>/`` with a ``SKILL.md``
+      symlink pointing at the source file;
+    - an agent deploys as a resolved copy ``.claude/agents/<name>.md``.
+
+    Idempotent: a missing harness dir or absent entry is a no-op.
+    """
+    cap_resolved = cap_dir.resolve()
+
+    skills_root = target_root / ".claude" / "skills"
+    if skills_root.is_dir():
+        for skill_dir in skills_root.iterdir():
+            link = skill_dir / "SKILL.md"
+            if not link.is_symlink():
+                continue
+            if _symlink_points_under(link, cap_resolved):
+                shutil.rmtree(skill_dir)
+
+    agents_root = target_root / ".claude" / "agents"
+    if agents_root.is_dir():
+        cap_agents = {
+            p.stem for p in (cap_dir / "agents").glob("*.md")
+        } if (cap_dir / "agents").is_dir() else set()
+        for agent_file in agents_root.glob("*.md"):
+            # Agents deploy as resolved copies (no symlink back to source), so
+            # match by name against the capability's own agents/ directory.
+            if agent_file.stem in cap_agents:
+                agent_file.unlink()
+
+
+def _symlink_points_under(link: Path, root_resolved: Path) -> bool:
+    """True if *link*'s resolved target lives under *root_resolved*."""
+    try:
+        target = link.resolve()
+    except OSError:
+        return False
+    try:
+        target.relative_to(root_resolved)
+    except ValueError:
+        return False
+    return True
 
 
 def find_references(target_root: Path, capability_name: str) -> list[tuple[Path, str]]:

@@ -59,7 +59,7 @@ pkit status               Show how project-kit is wired in this project.
 pkit validate             Check project state against the kit's invariants.
 pkit version [bump ...]   Show or bump the version.
 pkit new <kind> ...       Scaffold a decision, adapter, migration, area, agent, capability, ...
-pkit capabilities ...     Manage installed capabilities (list, install, ...).
+pkit capabilities ...     Manage capabilities: list, install (kit-shipped), register (in-repo/incubated), ...
 ```
 
 `pkit --help` lists the full surface (including `agents`, `schemas`, `migrations`, `scratchpad`, `permissions`, and per-capability subcommand groups such as `pkit project-management ...`). See [`.pkit/cli/README.md`](.pkit/cli/README.md) for the per-command contract.

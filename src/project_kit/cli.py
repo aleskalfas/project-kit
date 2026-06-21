@@ -10,8 +10,12 @@ the rest of new).
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import click
+
+if TYPE_CHECKING:
+    from project_kit.capabilities import CapabilitySource
 
 from project_kit import __version__
 from project_kit import cli_render
@@ -496,6 +500,17 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
         )
 
     source_kit = find_source_kit()
+
+    # Origin-aware branch (COR-031 D1/D4): an incubated (in-repo) capability has
+    # no kit source to reconcile against — the working tree *is* the source. It
+    # must never hit the kit-source orphan path below (which would mislabel it
+    # "no longer ships" and steer the adopter toward the destructive uninstall).
+    # "Upgrade" for it means re-applying deploy from the in-repo tree, mirroring
+    # the sync skip-branch.
+    if caps.read_capability_origin(target_root, name) == caps.INCUBATED_IN_REPO:
+        _upgrade_incubated_capability(target_root, source_kit, name, dry_run=dry_run)
+        return
+
     capability_source = caps.find_capability_in_source(source_kit, name)
     if capability_source is None:
         raise click.ClickException(
@@ -1722,6 +1737,13 @@ def install_capability_cmd(name: str, dry_run: bool) -> None:
             f"Use `pkit capabilities upgrade {name}` to refresh."
         )
 
+    # Pre-flight: backbone-version satisfaction. Shared with `register` via
+    # `_check_backbone_satisfied` (COR-007 pattern-extraction): both capability-
+    # entry paths refuse when the project's backbone is outside the capability's
+    # requires_backbone range, so neither path can activate a capability the
+    # backbone cannot support.
+    _check_backbone_satisfied(target_root, capability_source)
+
     # Pre-flight: capability dependency check (COR-030).
     # Refuse if any declared dependency is absent or its installed version
     # is outside the required range. Never auto-installs.
@@ -1787,6 +1809,252 @@ def install_capability_cmd(name: str, dry_run: bool) -> None:
             dry_run=False,
         )
         install_mod.run_installed_adapter_primitives(ctx)
+
+
+@capabilities.command("register")
+@click.argument("name")
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Show what would be registered without writing files.",
+)
+def register_capability_cmd(name: str, dry_run: bool) -> None:
+    """Register + activate a capability authored in this repo (per COR-031).
+
+    The capstone of capability incubation: a capability the adopter wrote
+    in its own `.pkit/capabilities/<name>/` is registered *in place* (no
+    copy — source and destination are the same directory) and activated
+    exactly like a kit-shipped install: its skills/agents deploy and it
+    participates in dependency gating. Origin `incubated-in-repo` is
+    recorded in install-state so `pkit sync` leaves it untouched.
+
+    Distinct from `install`, which copies a capability *from kit source*
+    into the adopter. `register` skips the "exists in kit source" pre-flight
+    (the in-repo tree is the source) but keeps the pre-flights that still
+    apply: backbone-version satisfaction, naming-collision detection, and
+    the capability-dependency check (COR-030).
+    """
+    from project_kit import capabilities as caps
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    if not (target_root / ".pkit").is_dir():
+        raise click.ClickException(
+            f"{target_root}/.pkit/ does not exist. Run 'pkit init' first."
+        )
+
+    # Resolve the capability, preferring the in-repo (incubated) source.
+    # Consulting both trees lets us surface the COR-031 boundary case where
+    # a same-named capability now also ships from kit source — graduation
+    # arriving unbidden — rather than silently shadowing it.
+    source_kit = find_source_kit()
+    resolved = caps.resolve_capability_source(
+        name,
+        source_kit=source_kit,
+        target_root=target_root,
+        prefer=caps.INCUBATED_IN_REPO,
+    )
+    if resolved is None or not resolved.in_repo:
+        raise click.ClickException(
+            f"no capability named {name!r} is authored in this repo at "
+            f".pkit/capabilities/{name}/. To install a kit-shipped capability, "
+            f"use `pkit capabilities install {name}`."
+        )
+    capability_source = resolved.source
+
+    # Pre-flight: already registered?
+    if caps.is_installed(target_root, name):
+        raise click.ClickException(
+            f"capability {name!r} is already installed. "
+            f"Use `pkit capabilities upgrade {name}` to refresh."
+        )
+
+    # COR-031 boundary: a same-named capability now also ships from kit
+    # source (graduation, before graduation is specified). Surface it so the
+    # adopter can decide, rather than silently registering the in-repo copy.
+    if resolved.in_kit_source:
+        click.echo(
+            "\n  " + cli_render.style("strong",
+                f"Note: a capability named {name!r} also ships from kit source. "
+                f"Registering the in-repo (incubated) copy; the kit-shipped one "
+                f"is not installed.")
+        )
+
+    # Pre-flight: self-consistency validation (COR-031 D1). The adopter
+    # hand-authored this capability; nothing upstream validated it. Check its
+    # own manifest/schemas/layout against the working tree before activating —
+    # origin suppresses source-reconciliation, never self-validation.
+    self_problems = caps.validate_capability_self_consistency(capability_source)
+    if self_problems:
+        click.echo(
+            "\n  " + cli_render.style("strong",
+                f"capability {name!r} is structurally invalid "
+                f"({len(self_problems)} problem(s)):") + "\n"
+        )
+        for problem in self_problems:
+            click.echo(f"    - {problem}")
+        raise click.ClickException(
+            "fix the structural problems in your capability tree, then retry."
+        )
+
+    # Pre-flight: backbone-version satisfaction. The incubated capability
+    # declares a requires_backbone range; refuse if this project's backbone
+    # falls outside it (the shared gate also run by `install`, per
+    # `_check_backbone_satisfied`).
+    _check_backbone_satisfied(target_root, capability_source)
+
+    # Pre-flight: capability dependency check (COR-030). Identical to the
+    # kit-source install path — origin does not gate dependency edges.
+    dep_conflicts = caps.check_capability_dependencies(
+        target_root, capability_source.package.requires_capabilities
+    )
+    if dep_conflicts:
+        lines = []
+        for conflict in dep_conflicts:
+            if conflict.reason == "absent":
+                lines.append(
+                    f"    - '{conflict.dep_name}' ({conflict.dep_version_range}) "
+                    f"is not installed"
+                )
+            else:
+                lines.append(
+                    f"    - '{conflict.dep_name}' {conflict.dep_version_range} "
+                    f"required but v{conflict.installed_version} is installed"
+                )
+        raise click.ClickException(
+            f"capability {name!r} v{capability_source.package.version} has "
+            f"unsatisfied dependencies:\n" + "\n".join(lines) + "\n"
+            "Install or upgrade the required capabilities first."
+        )
+
+    # Pre-flight: collision detection. The capability's own skills/agents
+    # already live in its in-repo tree, so detect_collisions surfaces them
+    # as self-collisions; filter those out (same shape as the upgrade path,
+    # which excludes the capability's own installed tree). What remains is a
+    # genuine collision against *other* installed content — refuse on it,
+    # since register has no interactive skip path (the adopter authored the
+    # tree and would rename the artifact rather than skip-copy it).
+    collisions = caps.detect_incubated_collisions(target_root, capability_source)
+    if collisions:
+        click.echo(
+            "\n  " + cli_render.style("strong",
+                f"{len(collisions)} naming collision(s) with already-installed content:") + "\n"
+        )
+        for finding in collisions:
+            click.echo(
+                f"    - {finding.artifact_kind} '{finding.artifact_name}' "
+                f"collides with {finding.target_path.relative_to(target_root)}"
+            )
+        raise click.ClickException(
+            "rename the colliding artifact(s) in your capability tree, then retry."
+        )
+
+    # Register in place (no copy) + record origin incubated-in-repo.
+    registered_path = caps.register_incubated_capability(
+        target_root, capability_source, dry_run=dry_run
+    )
+
+    verb = "Would register" if dry_run else "Registered"
+    click.echo(
+        "\n  " + cli_render.style("strong",
+            f"{verb} incubated capability {name!r} v{capability_source.package.version} "
+            f"(in-repo) at {registered_path.relative_to(target_root)}/")
+    )
+
+    if not dry_run:
+        # Run the SAME deploy primitives a kit-source install runs, so the
+        # capability's skills/agents land in the harness (COR-031 D1: deploy
+        # is identical regardless of origin).
+        from project_kit import install as install_mod
+        ctx = install_mod.InstallContext(
+            target_root=target_root,
+            source_kit=source_kit,
+            dry_run=False,
+        )
+        install_mod.run_installed_adapter_primitives(ctx)
+
+
+def _upgrade_incubated_capability(
+    target_root: Path, source_kit: Path, name: str, *, dry_run: bool
+) -> None:
+    """Re-apply deploy for an incubated (in-repo) capability — never reconcile against kit source.
+
+    For an incubated capability the working tree *is* the source (COR-031
+    D1/D4): there is nothing to refresh from kit source, so "upgrade" simply
+    re-runs the harness deploy primitives so any newly-authored skills/agents
+    in the in-repo tree land in the harness. This mirrors the sync skip-branch
+    (`sync._report_incubated_capability`): source-reconciliation stays
+    suppressed; only self-owned deploy re-runs.
+
+    The capability subtree must still be readable. If it has gone missing the
+    install-state is stale, but we do not route to the kit-source orphan path
+    (which would suggest the destructive uninstall) — we report it plainly.
+    """
+    from project_kit import capabilities as caps
+
+    source = caps.find_capability_in_repo(target_root, name)
+    if source is None:
+        raise click.ClickException(
+            f"incubated capability {name!r} is registered but its in-repo "
+            f"subtree at .pkit/capabilities/{name}/ is missing or unreadable. "
+            "Restore the authored subtree, then retry — this is an in-repo "
+            "capability, so there is no kit source to upgrade from."
+        )
+
+    verb = "Would re-deploy" if dry_run else "Re-deployed"
+    click.echo(
+        "\n  " + cli_render.style("strong",
+            f"{verb} incubated capability {name!r} v{source.package.version} "
+            f"from its in-repo tree (no kit-source reconciliation — COR-031).")
+    )
+
+    if not dry_run:
+        from project_kit import install as install_mod
+        ctx = install_mod.InstallContext(
+            target_root=target_root,
+            source_kit=source_kit,
+            dry_run=False,
+        )
+        install_mod.run_installed_adapter_primitives(ctx)
+
+
+def _check_backbone_satisfied(
+    target_root: Path, capability_source: CapabilitySource
+) -> None:
+    """Refuse if the project's backbone version is outside the capability's required range.
+
+    The shared backbone-satisfaction pre-flight for both capability-entry
+    paths (COR-007 pattern-extraction): `install` (kit-source copy) and
+    `register` (in-repo incubated) both call this, so a capability cannot be
+    activated when this project's backbone falls outside its requires_backbone
+    range. An empty/unparseable range is treated as "no constraint" (the
+    capability declared nothing enforceable), matching how the dependency
+    check tolerates malformed ranges rather than blocking.
+    """
+    from packaging.specifiers import InvalidSpecifier, SpecifierSet
+    from packaging.version import InvalidVersion, Version
+    from project_kit.manifest import read_backbone_manifest
+
+    required = capability_source.package.requires_backbone
+    if not required:
+        return
+    backbone = read_backbone_manifest(target_root)
+    if backbone is None:
+        return
+    try:
+        spec = SpecifierSet(required)
+        ver = Version(backbone.backbone_version)
+    except (InvalidSpecifier, InvalidVersion):
+        return
+    if ver not in spec:
+        raise click.ClickException(
+            f"capability {capability_source.name!r} requires backbone "
+            f"{required}, but this project is on backbone v{backbone.backbone_version}. "
+            "Upgrade the backbone (`pkit upgrade`) or relax the capability's "
+            "requires_backbone, then retry."
+        )
 
 
 def _find_desynced_dependents(
@@ -1895,13 +2163,38 @@ def _show_unified_diff(existing: Path, incoming: Path) -> None:
     "other installed capabilities declare a dependency on this one (COR-030).",
 )
 @click.option(
+    "--purge",
+    is_flag=True,
+    default=False,
+    help="For an incubated (in-repo) capability, also delete its authored "
+    "subtree from disk — not just unregister it. Requires confirmation. "
+    "Default for an incubated capability is to keep your authored files "
+    "(COR-031). No effect on a kit-shipped capability, which always deletes "
+    "its disposable copy.",
+)
+@click.option(
+    "--yes",
+    is_flag=True,
+    default=False,
+    help="Skip the --purge confirmation prompt (for non-interactive use).",
+)
+@click.option(
     "--dry-run",
     is_flag=True,
     default=False,
     help="Show what would be removed without deleting files.",
 )
-def uninstall_capability_cmd(name: str, force: bool, dry_run: bool) -> None:
-    """Uninstall a capability: remove subtree, unregister from manifest, re-deploy."""
+def uninstall_capability_cmd(
+    name: str, force: bool, purge: bool, yes: bool, dry_run: bool
+) -> None:
+    """Uninstall a capability: unregister, drop stale symlinks, and delete the subtree per origin.
+
+    Removal is origin-aware (COR-031 D4). A kit-shipped capability's subtree
+    is a disposable copy of kit source, so it is deleted. An incubated
+    (in-repo) capability's subtree is the adopter's only copy of authored
+    work, so it is *unregistered in place* — the files stay on disk unless
+    you pass --purge (which confirms first).
+    """
     from project_kit import capabilities as caps
 
     target_root = find_target_root()
@@ -1910,6 +2203,9 @@ def uninstall_capability_cmd(name: str, force: bool, dry_run: bool) -> None:
 
     if not caps.is_installed(target_root, name):
         raise click.ClickException(f"capability {name!r} is not installed.")
+
+    origin = caps.read_capability_origin(target_root, name)
+    incubated = origin == caps.INCUBATED_IN_REPO
 
     # Declared-dependent safety check (COR-030): refuse when another installed
     # capability declares this one in its requires_capabilities. This catches
@@ -1948,17 +2244,48 @@ def uninstall_capability_cmd(name: str, force: bool, dry_run: bool) -> None:
                 "Clean references first, or pass --force to override."
             )
 
-    removed_path = caps.uninstall_capability(target_root, name, dry_run=dry_run)
-    verb = "Would remove" if dry_run else "Removed"
-    click.echo(
-        "\n  " + cli_render.style("strong",
-            f"{verb} capability {name!r} from {removed_path.relative_to(target_root)}")
+    # --purge on an incubated capability deletes the adopter's only copy of
+    # authored work — a destructive op. Confirm before proceeding (the
+    # pause-before-destructive-ops discipline), unless --yes or --dry-run.
+    if purge and incubated and not dry_run and not yes:
+        cap_dir = target_root / ".pkit" / "capabilities" / name
+        click.confirm(
+            f"--purge will permanently delete the authored subtree at "
+            f"{cap_dir.relative_to(target_root)}/ — the only copy of this "
+            f"incubated capability's work. Continue?",
+            abort=True,
+        )
+
+    outcome = caps.uninstall_capability(
+        target_root, name, purge=purge, dry_run=dry_run
     )
+
+    if outcome.files_deleted:
+        verb = "Would remove" if dry_run else "Removed"
+        click.echo(
+            "\n  " + cli_render.style("strong",
+                f"{verb} capability {name!r} from "
+                f"{outcome.cap_dir.relative_to(target_root)}")
+        )
+    else:
+        # Incubated, kept in place (COR-031 D4): unregistered, files retained.
+        verb = "Would unregister" if dry_run else "Unregistered"
+        click.echo(
+            "\n  " + cli_render.style("strong",
+                f"{verb} incubated capability {name!r} in place; your authored "
+                f"files are kept at {outcome.cap_dir.relative_to(target_root)}/")
+        )
+        if not dry_run:
+            click.echo(
+                "  (pass --purge to delete the authored subtree as well.)"
+            )
 
     if not dry_run:
         # Re-run installed adapter primitives so the harness drops
         # stale symlinks to the removed capability's content (e.g.,
-        # deploy-skills.sh's "stale removal" pass).
+        # deploy-skills.sh's "stale removal" pass). Runs for both origins:
+        # an incubated capability's skills/agents must be undeployed even
+        # though its source files stay on disk.
         from project_kit import install as install_mod
         ctx = install_mod.InstallContext(
             target_root=target_root,
@@ -1978,19 +2305,44 @@ def list_capabilities_cmd() -> None:
         raise click.ClickException("not in a project tree.")
     source_kit = find_source_kit()
     available, installed = caps.list_capabilities(target_root, source_kit)
+    origins = caps.installed_capability_origins(target_root)
 
-    if not available:
+    # Union of names the adopter can see: kit-source-available plus anything
+    # installed. An incubated (in-repo) capability is installed but never in
+    # `available` (it doesn't ship from kit source), so without the union it
+    # would vanish from this list — exactly the visibility COR-031 requires.
+    names = sorted(set(available) | set(installed))
+
+    if not names:
         click.echo(cli_render.view(
             title=cli_render.title("Capabilities", "0 available"),
             sections=[cli_render.section(empty="(none ship in this kit version)")],
         ), nl=False)
         return
-    rows = [{"name": n, "status": "installed" if n in installed else ""} for n in available]
+
+    rows: list[dict[str, str]] = []
+    for n in names:
+        origin = origins.get(n, "")
+        # Only mark origin for installed capabilities; an available-but-not-
+        # installed one has no install-state origin to report.
+        origin_label = (
+            "incubated" if origin == caps.INCUBATED_IN_REPO
+            else "kit-shipped" if n in installed
+            else ""
+        )
+        rows.append({
+            "name": n,
+            "status": "installed" if n in installed else "",
+            "origin": origin_label,
+        })
     click.echo(cli_render.view(
-        title=cli_render.title("Capabilities", f"{len(available)} available",
+        title=cli_render.title("Capabilities", f"{len(names)} known",
                                gloss="install with `pkit capabilities install <name>`"),
-        sections=[cli_render.section(rows=rows, columns=["name", "status"])],
-        commands=[("pkit capabilities install <name>", "install one into this project")],
+        sections=[cli_render.section(rows=rows, columns=["name", "status", "origin"])],
+        commands=[
+            ("pkit capabilities install <name>", "install a kit-shipped one into this project"),
+            ("pkit capabilities register <name>", "register an in-repo (incubated) one"),
+        ],
     ), nl=False)
 
 
