@@ -9,7 +9,7 @@
 
 Transitions a GitHub issue through the lifecycle state machine declared
 in `workflow.yaml`, which since DEC-033 is a process definition bound to
-the shared process substrate (COR-031) — a KEYED process (COR-032), one
+the shared process substrate (COR-033) — a KEYED process (COR-032), one
 journey per issue number.
 
 State-machine mechanics (position resolution + the move journal) are
@@ -414,7 +414,7 @@ def main() -> int:
     #
     # `--actor` is the resolved GitHub login of the invoker (not the
     # authorisation token), so the engine's cross-authority gate compares
-    # like-with-like against an artifact's `produced_by` login (COR-031 P4).
+    # like-with-like against an artifact's `produced_by` login (COR-033 P4).
     _journal_move(args.issue_number, args.to, invoker.github_login)
 
     # Forward cascade.
@@ -653,7 +653,7 @@ def _walk_parent_chain(body: str) -> list[int]:
 # ---- process-engine delegation (DEC-033 D5/D7) ----------------------
 #
 # move-issue delegates POSITION + JOURNAL to the shared process engine
-# (`pkit process …`, COR-031), invoked by subprocess (never imported,
+# (`pkit process …`, COR-033), invoked by subprocess (never imported,
 # ADR-020). It keeps the parity-critical wrapper-side concerns local:
 # bypass/audit, TTY-confirm, placeholder/membership gates, cascade, and
 # the domain side-effect (the label/board edit). The engine's detectors
@@ -715,7 +715,7 @@ def _journal_move(
 
     `actor` is the invoker's resolved GitHub login. The engine compares it
     against an authorisation artifact's `produced_by` login for the
-    cross-authority gate (COR-031 P4). When it is None (login unresolved), we
+    cross-authority gate (COR-033 P4). When it is None (login unresolved), we
     omit `--actor` and let the engine apply its own resolved-identity default.
     """
     argv = [

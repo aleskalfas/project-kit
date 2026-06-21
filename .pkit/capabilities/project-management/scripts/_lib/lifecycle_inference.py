@@ -5,7 +5,7 @@ lifted verbatim from `move-issue`'s pre-rebind logic so the rebound predicate
 commands resolve identical positions and gate outcomes — behaviour parity is
 the acceptance bar (DEC-033 Implications).
 
-The process engine (COR-031, in the binary) is content-free: it knows states,
+The process engine (COR-033, in the binary) is content-free: it knows states,
 transitions, gates, a position, a journal — nothing about issues, labels,
 milestones, branches, or PRs. All of *that* lives here and is exposed to the
 engine only as the structured-JSON predicate contract (the detector + gate
@@ -44,7 +44,7 @@ def workflow_process(workflow: dict | None) -> dict:
     """Return the process-definition block of a parsed workflow.yaml.
 
     Since the schema_version 3 rebind (DEC-033), `states` + `transitions` live
-    under a top-level `process:` block (the substrate shape, COR-031). This
+    under a top-level `process:` block (the substrate shape, COR-033). This
     helper resolves that block, falling back to the top level for a pre-v3
     (schema_version 2) override an adopter may still hold — so pm readers work
     against either shape. Returns an empty dict for unusable input.

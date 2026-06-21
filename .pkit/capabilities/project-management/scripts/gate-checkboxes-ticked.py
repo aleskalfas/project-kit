@@ -9,7 +9,7 @@
 
 Deterministic close-gate (DEC-007): result=True iff the issue body has no unticked '- [ ]' checkbox. The checkbox close-gate for won't-do closure and PR-merge closing issues.
 
-READ-ONLY. The process engine (COR-031) invokes this as
+READ-ONLY. The process engine (COR-033) invokes this as
   <script> <issue-number> --json
 and reads the structured-JSON contract on stdout. Self-contained via PEP 723.
 
@@ -44,7 +44,7 @@ def main() -> int:
 
     payload = predicates.gate_checkboxes_ticked(issue_number)
     # A predicate that genuinely couldn't evaluate exits non-zero so the
-    # engine treats it as INDETERMINATE (fail-closed, COR-031), not a clean
+    # engine treats it as INDETERMINATE (fail-closed, COR-033), not a clean
     # negative. Strip the internal marker from the emitted JSON.
     indeterminate = bool(payload.pop(predicates.INDETERMINATE_KEY, False))
     print(json.dumps(payload))

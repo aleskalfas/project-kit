@@ -70,6 +70,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # or: brew install uv
 | `status` | show how project-kit is wired in this project (paths, installed backbone version vs source, adapter, deployed skills, capabilities, decision counts) | no | yes (read-only) |
 | `validate` | check project state against invariants | no | yes (read-only) |
 | `schemas validate [<path>]` | validate capability schema YAMLs against their JSON Schema companions + cross-file refs | no | yes (read-only) |
+| `decisions validate` | detect duplicate decision ids within an id-space (core / project / ADR / per-capability DEC) + id-vs-filename mismatches; exit non-zero on any | no | yes (read-only) |
 | `data validate <path>` | validate adopter data files against their bound capability schemas (per COR-023); resolves binding field-first via `pkit_schema:`, then via per-schema `binds_to:` fallback | no | yes (read-only) |
 | `agents` | report which kit-shipped agents will deploy vs. be skipped — and why (an overlay category the agent references but `.pkit/agents/project/overlay.yaml` doesn't define), per COR-013. Deployment itself happens in `sync`; this is the diagnostic | no | yes (read-only) |
 | `agents reconcile [--write]` | surface referenced-but-undefined overlay categories into `overlay.yaml` as commented stubs (explicit; `sync` never mutates the seeded overlay). Dry-run by default | yes (with `--write`) | yes — idempotent (skips already-present categories) |
@@ -197,8 +198,9 @@ Scaffolds a new decision-record stub per the schema in `.pkit/decisions/README.m
   | `core` | `COR-NNN` | `.pkit/decisions/core/` | (the methodology) |
   | `project` | `PRJ-NNN` | `.pkit/decisions/project/` | (the methodology) |
   | `adr` | `ADR-NNN` | overlay-resolved (see below) | COR-025 |
+  | *a capability name* | `DEC-NNN` | `.pkit/capabilities/<capability>/decisions/` | (per-capability) |
 
-  Numbering is independent per prefix.
+  Numbering is independent per id-space. A `<namespace>` that is not `core`, `project`, or `adr` is interpreted as a capability name: the record stamps under that capability's `decisions/` directory with the `DEC` prefix, numbered independently within that capability (two different capabilities may both hold a `DEC-001`). The command refuses if no capability of that name exists under `.pkit/capabilities/`; the `decisions/` subdirectory is created on first use.
 
 - **`<slug>`** is a kebab-case shorthand of the decision's title — short enough to keep listings self-documenting (e.g., `merge-delivery`, `pattern-extraction`).
 
@@ -216,7 +218,7 @@ The stamped file includes:
 - Frontmatter — `id` (auto-numbered), `title` (placeholder), `status: proposed`, `date` (today's date), `author` (read from `git config user.name` and `git config user.email`).
 - The four required section headers — `## Context`, `## Decision`, `## Rationale`, `## Implications` — empty.
 
-Refuses if a record with the same slug already exists in the namespace, or if the namespace is invalid.
+Refuses if a record with the same slug already exists in the id-space, or if the namespace is invalid — for a capability namespace, "invalid" means no capability of that name exists under `.pkit/capabilities/`.
 
 **Coordination with the `decision-author` skill.** Per COR-006's discriminator: a command stamps deterministically, a skill drafts content conversationally. The `decision-author` skill (`.pkit/skills/core/decision-author/`) calls `pkit new decision <namespace> <slug>` for the stub, then walks the author through filling the body — content drafting, discipline self-checks, and approval. Authors who don't need the conversational help can call the command directly.
 

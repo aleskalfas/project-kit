@@ -9,7 +9,7 @@
 
 Pm-LOCAL descendant walk (DEC-033 breadth; NEVER in the engine): result=True iff a child issue (one naming this issue as parent) is in-progress or further. Separate from the position detectors; does not alter the position truth-table.
 
-READ-ONLY. The process engine (COR-031) invokes this as
+READ-ONLY. The process engine (COR-033) invokes this as
   <script> <issue-number> --json
 and reads the structured-JSON contract on stdout. Self-contained via PEP 723.
 
@@ -44,7 +44,7 @@ def main() -> int:
 
     payload = predicates.parent_has_active_descendant(issue_number)
     # A predicate that genuinely couldn't evaluate exits non-zero so the
-    # engine treats it as INDETERMINATE (fail-closed, COR-031), not a clean
+    # engine treats it as INDETERMINATE (fail-closed, COR-033), not a clean
     # negative. Strip the internal marker from the emitted JSON.
     indeterminate = bool(payload.pop(predicates.INDETERMINATE_KEY, False))
     print(json.dumps(payload))

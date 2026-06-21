@@ -1,4 +1,4 @@
-"""Tests for the process-substrate engine (COR-031, homed in the binary per ADR-020).
+"""Tests for the process-substrate engine (COR-033, homed in the binary per ADR-020).
 
 Builds a small fixture capability with a process definition + predicate
 commands (tiny executable scripts that emit structured JSON) so the engine has

@@ -1,12 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "process.schema.json",
-  "title": "Process substrate — shape contract (COR-031)",
-  "description": "Shared shape for a process DEFINITION a capability authors. Capability instance schemas cross-file $ref these $defs (e.g. \"_defs/process.schema.json#/$defs/process\"). Per the .pkit/process/ area spec + COR-031. Ship-narrow: enums admit only the implemented core values (singleton + keyed cardinality, inferred detection); remaining deferred values widen the enum when they ship. additionalProperties is permissive on the extensible objects (process, state, transition) so a capability's own domain-local fields coexist; tight on the core sub-objects.",
+  "title": "Process substrate — shape contract (COR-033)",
+  "description": "Shared shape for a process DEFINITION a capability authors. Capability instance schemas cross-file $ref these $defs (e.g. \"_defs/process.schema.json#/$defs/process\"). Per the .pkit/process/ area spec + COR-033. Ship-narrow: enums admit only the implemented core values (singleton + keyed cardinality, inferred detection); remaining deferred values widen the enum when they ship. additionalProperties is permissive on the extensible objects (process, state, transition) so a capability's own domain-local fields coexist; tight on the core sub-objects.",
   "$defs": {
     "predicate": {
       "type": "object",
-      "description": "A check the engine evaluates by running a capability-provided command (COR-031 P4). The command returns structured JSON the engine reads: deterministic -> {result, reason, detail?}; authorisation-artifact -> {exists, produced_by, reason, detail?}.",
+      "description": "A check the engine evaluates by running a capability-provided command (COR-033 P4). The command returns structured JSON the engine reads: deterministic -> {result, reason, detail?}; authorisation-artifact -> {exists, produced_by, reason, detail?}.",
       "required": ["run"],
       "additionalProperties": false,
       "properties": {
@@ -88,7 +88,7 @@
     },
     "gate": {
       "type": "object",
-      "description": "What must hold for a move. Always reduces to a checkable predicate (COR-031 P4).",
+      "description": "What must hold for a move. Always reduces to a checkable predicate (COR-033 P4).",
       "required": ["kind", "predicate"],
       "additionalProperties": false,
       "properties": {

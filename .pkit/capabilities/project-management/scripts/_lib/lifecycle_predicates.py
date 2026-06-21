@@ -1,6 +1,6 @@
 """Predicate bodies for the rebound issue-lifecycle (DEC-033).
 
-These are the READ-ONLY checks the process engine (COR-031) runs to resolve a
+These are the READ-ONLY checks the process engine (COR-033) runs to resolve a
 keyed issue's position and to evaluate its gates. The engine invokes each as a
 plain subprocess `[script, <issue-number>, --json]` (no shell, no `with` args
 threaded — see the per-state detector scripts for how the target state is
@@ -11,7 +11,7 @@ fixed), reads structured JSON on stdout, and acts on it:
                                      reason: str, detail?: {}}
 
 Every function here fetches issue/PR state via the adopter-pinned `gh` helper
-and returns the contract dict. They are strictly read-only (COR-031: `status`
+and returns the contract dict. They are strictly read-only (COR-033: `status`
 runs them live, so a mutating predicate is a bug). All domain inference is
 delegated to `lifecycle_inference`, which lifts move-issue's logic verbatim for
 behaviour parity (the acceptance bar).
@@ -39,7 +39,7 @@ from _lib.membership import resolve_capability_root  # noqa: E402
 # A predicate that genuinely COULD NOT evaluate (gh failure, capability
 # missing) carries this marker key. The thin predicate script strips it and
 # exits non-zero, so the engine treats the predicate as INDETERMINATE
-# (fail-closed, COR-031) rather than a clean result=False — a "couldn't tell"
+# (fail-closed, COR-033) rather than a clean result=False — a "couldn't tell"
 # must never look like a "no".
 INDETERMINATE_KEY = "_indeterminate"
 
@@ -50,7 +50,7 @@ def _indeterminate(reason: str) -> dict[str, Any]:
 
 # Pagination ceilings for the `gh list` queries below. When a returned list hits
 # its ceiling there MAY be more rows we never saw, so the query is honestly
-# indeterminate (fail-closed, COR-031) — not a confident negative. Kept named so
+# indeterminate (fail-closed, COR-033) — not a confident negative. Kept named so
 # the limit and its ceiling-check can never drift apart.
 _OPEN_ISSUES_LIMIT = 500
 _MERGED_PRS_LIMIT = 100
@@ -245,7 +245,7 @@ def gate_pr_merged(issue_number: int, actor: str | None = None) -> dict[str, Any
     merged PR closing this issue exists and WHO merged it (`produced_by`).
 
     The ENGINE computes result = exists && produced_by != actor (cross-authority
-    is non-overridable, COR-031 P4) — this predicate returns only the facts. A
+    is non-overridable, COR-033 P4) — this predicate returns only the facts. A
     PR merged by the actor being gated is the actor's own assertion and must not
     pass; a merge by a different authority (a human reviewer / merger) passes.
     """

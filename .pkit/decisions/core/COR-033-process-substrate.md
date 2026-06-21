@@ -1,5 +1,5 @@
 ---
-id: COR-031
+id: COR-033
 title: Capabilities bind process definitions to a shared, content-free process substrate
 status: accepted
 date: 2026-06-21

@@ -32,9 +32,10 @@ run() {
   fi
 }
 
-run "tests"             uv run pytest -q
-run "schemas validate"  uv run pkit schemas validate
-run "migrations check"  uv run pkit migrations check-diff --base "${BASE}"
+run "tests"              uv run pytest -q
+run "schemas validate"   uv run pkit schemas validate
+run "decisions validate" uv run pkit decisions validate
+run "migrations check"   uv run pkit migrations check-diff --base "${BASE}"
 
 echo
 if [ "${fail}" -ne 0 ]; then
