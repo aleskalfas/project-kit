@@ -100,6 +100,21 @@ The backbone exposes the engine as a `pkit process …` surface. The core operat
 
 The engine is **content-free**: it reads any capability's process definition + that subject's reality and resolves/validates against it. Capability commands (the discipline's verb-subject wrappers) supply the definition + subject + any domain side-effects and delegate the state-machine mechanics to the engine.
 
+**Code home (ADR-020).** The engine ships in the `pkit` binary (`src/project_kit/process.py`), invoked only as `pkit process …`; the engine *code* is not propagated to adopters (only this spec, the shape contract, and the journal home are). Capability wrappers call the engine by **subprocess**, never by import.
+
+### The predicate runner (engine contract)
+
+A predicate's `run:` resolves to a command the owning capability **registers** in its `package.yaml` — not a raw path or shell string; the engine rejects an unregistered name with a self-explaining error. The engine invokes the resolved script as a plain subprocess (explicit argv — the subject + `--json`), with the working directory at the repo root, reads structured JSON, and:
+
+- **deterministic gate / detection** → uses the predicate's `result`;
+- **authorisation-artifact gate** → reads `{ exists, produced_by }` and computes `result = exists && produced_by != actor` *itself* — the engine enforces cross-authority and **ignores any `result` the predicate supplies** (non-overridable).
+
+Predicates **must be read-only** — `status` runs them live, so a mutating predicate would be a side-effect bug.
+
+**Failure is fail-closed.** A predicate that errors, times out, returns unparseable JSON, or doesn't resolve is **indeterminate**: `status` shows it distinctly ("couldn't evaluate: …") and `move` refuses. An unrecognised or schema-future gate (engine/definition version skew) likewise fails closed — never a silent pass. Gates are correctness boundaries (unlike the permission hook's fail-open *availability* posture).
+
+**Performance.** Resolve position first (run detection predicates), then precheck only the transitions *out of* the current state; evaluate each predicate at most once per `(command, args)` per invocation. No cross-invocation position caching — that is the deferred `stored` detection mode.
+
 ## Binding a process (how a capability uses this)
 
 1. Author a process definition as the capability's own instance schema at `.pkit/capabilities/<capability>/schemas/<process>.yaml`, declaring conformance to the shape contract (`../../../schemas/_defs/process.schema.json`).
@@ -111,16 +126,21 @@ The existing schema-binding grammar (COR-023) is unchanged; capabilities stay in
 ## Layout
 
 ```
+src/project_kit/process.py          # the engine (in the binary; ADR-020 — NOT propagated to adopters)
 .pkit/process/
-  README.md                         # this spec — the shape contract + engine contract
+  README.md                         # this spec — the shape contract + engine contract (propagated)
 .pkit/schemas/_defs/
-  process.schema.json               # the shape contract as a JSON-Schema fragment (capability
-                                    # instance schemas $ref it to inherit the shape)
+  process.schema.json               # the shape contract as a JSON-Schema fragment (propagated;
+                                    # capability instance schemas $ref it to inherit the shape)
 .pkit/capabilities/<capability>/schemas/<process>.yaml
                                     # each capability's own conforming process definition (instance)
+.pkit/capabilities/<capability>/project/process/<process-id>/<subject>.journal.jsonl
+                                    # per-subject journal — append-only JSONL, COMMITTED (it is the
+                                    # audit trail), in the capability's adopter-owned project/ subtree
+                                    # (sync-safe; the engine owns the path, capabilities don't declare it)
 ```
 
-The engine ships as a backbone CLI surface (`pkit process …`); capabilities never re-implement the state machine, they bind to it.
+The engine ships as a backbone CLI surface (`pkit process …`) homed in the binary per ADR-020 — capabilities never re-implement the state machine, they bind to it. The journal is project-owned, committed data.
 
 ## Grounding & status
 
