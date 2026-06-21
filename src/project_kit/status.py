@@ -168,14 +168,28 @@ def _report_capabilities(target_root: Path, source_kit: Path) -> None:
 
     try:
         available, installed = caps.list_capabilities(target_root, source_kit)
+        origins = caps.installed_capability_origins(target_root)
     except Exception:
         # Defensive: missing/malformed manifest shouldn't crash status.
-        available, installed = [], []
+        available, installed, origins = [], [], {}
 
     available_value = ", ".join(available) if available else "(none)"
     click.echo(f"    {'available':<18} {available_value}")
 
-    installed_value = ", ".join(installed) if installed else "(none)"
+    # Annotate each installed capability with its origin so an incubated
+    # (in-repo) capability is visibly distinct from a kit-shipped one
+    # (COR-031): the adopter sees it's home-grown, not something to upgrade
+    # from kit source.
+    if installed:
+        labelled = [
+            f"{name} (incubated)"
+            if origins.get(name) == caps.INCUBATED_IN_REPO
+            else name
+            for name in installed
+        ]
+        installed_value = ", ".join(labelled)
+    else:
+        installed_value = "(none)"
     click.echo(f"    {'installed':<18} {installed_value}")
 
 

@@ -12,7 +12,7 @@ The design rules governing the CLI's shape — why these commands exist and not 
 
 The CLI is implemented in Python (per PRJ-003), with `.pkit/cli/pkit` as a thin proxy that exec's the Python runtime via `uv` and bypasses to the adapter's shell scripts for `deploy-skills` / `merge-settings` (which are shell to the bone — primitives the adapter ships, not surface commands).
 
-The full COR-004 surface is implemented: `init`, `sync`, `merge`, `upgrade`, `capabilities install / uninstall / upgrade / list` (per COR-017), `status`, `validate`, `version`, `version bump`, `new decision`, the authoring commands (`area`, `adapter`, `capability`, `agent`, `storyboard`, `schema`, `migration`), and the scratchpad commands (`new scratchpad`, `scratchpad done`, `scratchpad drop`) per COR-012. Each authoring command ships paired with its skill under `.pkit/skills/core/<name>-author/` per COR-005's "Skill / command pairing". (The `bundle` command family was retired in COR-027 — capabilities subsumed the bundle role.)
+The full COR-004 surface is implemented: `init`, `sync`, `merge`, `upgrade`, `capabilities install / register / uninstall / upgrade / list` (per COR-017 + COR-031), `status`, `validate`, `version`, `version bump`, `new decision`, the authoring commands (`area`, `adapter`, `capability`, `agent`, `storyboard`, `schema`, `migration`), and the scratchpad commands (`new scratchpad`, `scratchpad done`, `scratchpad drop`) per COR-012. Each authoring command ships paired with its skill under `.pkit/skills/core/<name>-author/` per COR-005's "Skill / command pairing". (The `bundle` command family was retired in COR-027 — capabilities subsumed the bundle role.)
 
 ## Installing pkit on PATH
 
@@ -55,8 +55,10 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # or: brew install uv
 | `visibility` | control pkit's git footprint (per ADR-009). No subcommand = status | no | yes (read-only) |
 | `visibility shared` / `visibility private` | `private` hides the whole footprint via the per-clone `.git/info/exclude` (no committed `.gitignore` is ever written) + a confirm-gated untrack; `shared` (default) keeps pkit committed. `--dry-run` previews | yes | yes — idempotent |
 | `visibility untrack [--dry-run]` | remove already-tracked pkit footprint files from the git index (`git rm --cached`, working copies preserved). Footprint-only, confirm-gated; refuses mid-merge/rebase or on staged footprint changes. Its own subcommand so the git-index-mutating gesture stays explicit (per ADR-009) | yes | yes — no-op when nothing tracked |
-| `capabilities install <name>` | install a capability (per COR-017) | yes | already-installed reports, no re-run |
+| `capabilities install <name>` | install a *kit-shipped* capability: copy the subtree from kit source into the adopter, register it, deploy (per COR-017) | yes | already-installed reports, no re-run |
+| `capabilities register <name>` | register + activate an *in-repo (incubated)* capability authored at `.pkit/capabilities/<name>/` — registers in place (no copy), records origin `incubated-in-repo`, then runs the same deploy primitives + dependency gating as install (per COR-031). Skips the "exists in kit source" pre-flight; keeps backbone-version + collision + dependency pre-flights | yes | already-installed reports, no re-run |
 | `capabilities uninstall <name>` | remove an installed capability | yes | yes |
+| `capabilities list` | list capabilities known to this project — kit-source-available plus anything installed — with an `origin` column marking each installed one `kit-shipped` or `incubated` (per COR-031) | no | yes (read-only) |
 | `new area <name>` | scaffold a new area (per COR-011) | yes | no — refuses if area already exists |
 | `new adapter <name>` | scaffold a new adapter (per COR-005) | yes | no — refuses if adapter already exists |
 | `new capability <name>` | scaffold a new capability (per COR-017) | yes | no — refuses if capability already exists |
@@ -128,6 +130,18 @@ Use this when you want to pull baseline updates for a single fixed-path config f
 Compares the version of the core layer recorded in your project against the version this CLI was built from. Runs any pending migrations in order, then runs `sync`. Refuses to proceed if your project's recorded version is ahead of the CLI's (and tells you so).
 
 On **self-host**, there is no backbone to upgrade (the source is the installed state), so `upgrade` short-circuits to the self-host `sync` above — re-running the deploy primitives — rather than attempting a version transition.
+
+### Capabilities — two ways in
+
+A capability enters a project through one of two verbs, distinguished by where the capability was authored (its *origin*, per COR-031):
+
+- **`capabilities install <name>`** — for a **kit-shipped** capability. The capability ships in the kit source; install copies its subtree into the adopter's `.pkit/capabilities/<name>/`, registers it (origin `kit-shipped`), and deploys its skills/agents. `sync` thereafter reconciles it against the kit source (auto-upgrade per COR-017).
+
+- **`capabilities register <name>`** — for an **in-repo (incubated)** capability the adopter authored in *its own* repo at `.pkit/capabilities/<name>/`. Because the working tree *is* the source, register performs **no copy**: it records the capability in install-state with origin `incubated-in-repo`, then runs the *same* deploy primitives and dependency gating an install runs, so the capability's skills/agents land in the harness exactly as a kit-shipped one's would. `sync` thereafter **skips source-reconciliation** for it — there is no kit source to reconcile against, and the files are adopter-owned (the no-shared-files invariant) — so a home-grown capability survives `sync` untouched instead of being flagged "no longer shipped" or refreshed from an empty source.
+
+**The in-repo activation flow.** Scaffold a capability with `pkit new capability <name>` (or hand-author the subtree), build it out under `.pkit/capabilities/<name>/`, then run `pkit capabilities register <name>`. Register applies every pre-flight an install does *except* "exists in kit source" (the in-repo tree is the source): it checks backbone-version satisfaction, runs the COR-030 dependency gate, and refuses on a naming collision against *other* installed content (the capability's own artifacts are not collisions against themselves). Origin is the only thing that differs between the two paths — participation, deploy, and dependency edges are identical (COR-031 D1). `capabilities list` and `pkit status` mark each installed capability's origin so an incubated one is visibly distinct from a kit-shipped one.
+
+If a same-named capability later begins shipping from kit source (graduation, before graduation is specified), `register` surfaces the overlap as a note and registers the in-repo copy; `sync` surfaces the same collision rather than silently shadowing either tree (COR-031 boundary case).
 
 ## Authoring commands
 
@@ -306,7 +320,7 @@ The bump commit lands inside the same PR as the surface change it accompanies (p
 
 - **`--help`** on every command, including the root.
 - **`--version`** on the root, equivalent to running the `version` subcommand.
-- **`--dry-run`** on every mutating command (`init`, `sync`, `merge`, `upgrade`, `capabilities install`, `capabilities uninstall`, `capabilities upgrade`). Shows the plan without applying any changes.
+- **`--dry-run`** on every mutating command (`init`, `sync`, `merge`, `upgrade`, `capabilities install`, `capabilities register`, `capabilities uninstall`, `capabilities upgrade`). Shows the plan without applying any changes.
 - **`--color {auto,always,never}`** on the root (default `auto`). Colourizes human output via the semantic styling layer (per ADR-011); resolved once at the command boundary. Honours `NO_COLOR`; styling is never load-bearing (plain text carries all structure), so this never changes machine output or piped/redirected output.
 
 ## Command output conventions
