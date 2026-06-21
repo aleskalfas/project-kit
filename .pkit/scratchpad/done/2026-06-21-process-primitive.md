@@ -2,6 +2,14 @@
 authors:
   - Aleš Kalfas <kalfas.ales@gmail.com>
 started: 2026-06-21
+retired: 2026-06-22
+produced:
+  - COR-033
+  - COR-032
+  - ADR-020
+  - DEC-033
+  - .pkit/process/README.md
+  - .pkit/schemas/_defs/process.schema.json
 ---
 
 # Process primitive
