@@ -87,6 +87,7 @@ PROPAGATED_AREAS: tuple[str, ...] = (
     "schemas",
     "permissions",
     "rules",
+    "process",
 )
 
 
