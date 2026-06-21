@@ -56,6 +56,9 @@ from project_kit.versioning import (
     untag_version,
 )
 
+if TYPE_CHECKING:
+    from project_kit.process import ProcessEngine
+
 
 @click.group(cls=CapabilityDispatchGroup, invoke_without_command=True)
 @click.version_option(version=__version__, prog_name="pkit")
@@ -2870,6 +2873,97 @@ def _cast_migration_scope(value: str) -> MigrationScope:
     if value == "structural":
         return "structural"
     return "resource"
+
+
+# --- process substrate (per COR-031 / ADR-020) ------------------------
+
+
+@main.group()
+def process() -> None:
+    """Process-substrate engine (per COR-031): resolve position, validate +
+    execute guarded moves, render the self-explaining status view.
+
+    Content-free — addresses a capability's process definition as
+    `<capability>:<process-id>` and reads the subject's reality. Homed in the
+    binary (ADR-020); capability wrappers call it by subprocess.
+    """
+
+
+def _load_engine(address: str, subject: str | None) -> ProcessEngine:
+    """Resolve the repo root + definition + engine for a process address."""
+    from project_kit import process as process_mod
+
+    try:
+        repo_root = process_mod.resolve_repo_root()
+        definition = process_mod.load_definition(repo_root, address)
+    except process_mod.ProcessError as exc:
+        raise click.ClickException(str(exc)) from exc
+    subject_key = subject if subject is not None else process_mod.SINGLETON_SUBJECT
+    return process_mod.ProcessEngine(definition, repo_root, subject=subject_key)
+
+
+@process.command("status")
+@click.argument("address")
+@click.option("--subject", default=None, help="Subject key (singleton default: the fixed key).")
+@click.option("--actor", default="operator", show_default=True,
+              help="Evaluate gate prechecks as this actor (cross-authority).")
+@click.option("--json", "as_json", is_flag=True, default=False,
+              help="Emit structured JSON instead of the narrative view.")
+def process_status(address: str, subject: str | None, actor: str, as_json: bool) -> None:
+    """Where the subject is · why · how it got here · legal moves · next hint."""
+    from project_kit import process as process_mod
+
+    engine = _load_engine(address, subject)
+    try:
+        if as_json:
+            click.echo(process_mod.render_status_json(engine, actor), nl=False)
+        else:
+            click.echo(process_mod.render_status_narrative(engine, actor), nl=False)
+    except process_mod.ProcessError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+
+@process.command("can-move")
+@click.argument("address")
+@click.option("--to", "to_state", required=True, help="Target state id.")
+@click.option("--subject", default=None, help="Subject key (singleton default: the fixed key).")
+@click.option("--actor", default="operator", show_default=True,
+              help="The actor being gated (cross-authority is computed against this).")
+def process_can_move(address: str, to_state: str, subject: str | None, actor: str) -> None:
+    """Validate a candidate move; refuse (fail-closed) with a self-explaining reason."""
+    from project_kit import process as process_mod
+
+    engine = _load_engine(address, subject)
+    try:
+        allowed, reason, _position = engine.can_move(to_state, actor)
+    except process_mod.ProcessError as exc:
+        raise click.ClickException(str(exc)) from exc
+    marker = "✓" if allowed else "✗"
+    click.echo(f"  {marker} {reason}")
+    if not allowed:
+        raise SystemExit(1)
+
+
+@process.command("move")
+@click.argument("address")
+@click.option("--to", "to_state", required=True, help="Target state id.")
+@click.option("--subject", default=None, help="Subject key (singleton default: the fixed key).")
+@click.option("--actor", default="operator", show_default=True,
+              help="The actor performing the move (recorded in the journal; gated "
+                   "cross-authority).")
+def process_move(address: str, to_state: str, subject: str | None, actor: str) -> None:
+    """Execute a legal move; append the journal entry. Refuses an illegal move."""
+    from project_kit import process as process_mod
+
+    engine = _load_engine(address, subject)
+    try:
+        result = engine.move(to_state, actor)
+    except process_mod.ProcessError as exc:
+        raise click.ClickException(str(exc)) from exc
+    if not result.ok:
+        click.echo("  " + cli_render.style("strong", f"refused: {result.reason}"))
+        raise SystemExit(1)
+    click.echo("  " + cli_render.style("strong", f"moved to {to_state!r}: {result.reason}"))
 
 
 if __name__ == "__main__":
