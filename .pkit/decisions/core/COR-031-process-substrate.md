@@ -1,7 +1,7 @@
 ---
 id: COR-031
 title: Capabilities bind process definitions to a shared, content-free process substrate
-status: proposed
+status: accepted
 date: 2026-06-21
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
@@ -13,6 +13,8 @@ Several disciplines run **staged, gated processes** — work that moves through 
 Two constraints shape how. First, only one instance is *shipped* today, so the extraction must be **grounded** — proven by rebinding the shipped instance plus one new concrete binding — not abstracted speculatively from a single case (COR-007's named failure mode). Second, the substrate must serve two demanding consumers: an automated agent using it as **durable memory** of where a process stands, and the same agent (or a human with no manual) relying on it to **validate** that each move is legal. A process engine an actor can talk its way past is worthless for both.
 
 ## Decision
+
+**In plain terms:** build the state-machine *mechanism* once, in the backbone, and let each discipline plug its own staged process into it — so every process gets consistent memory, validation, and self-explanation for free, and only a minimal core ships first.
 
 The methodology adopts a shared, **content-free process substrate** — a state machine of states + guarded transitions + a per-subject position + an append-only journal + a self-explaining status view — that capability-owned **process definitions** bind to. The backbone owns the shape and the engine; each capability owns its own process definition.
 
