@@ -1173,6 +1173,77 @@ def permissions_probe(subject: str, live: bool) -> None:
         raise SystemExit(1)
 
 
+@permissions.group("diagnose", invoke_without_command=True)
+@click.pass_context
+def permissions_diagnose(ctx: click.Context) -> None:
+    """Opt-in permission-prompt diagnostic loop (per PRJ-006): capture deferred (prompted) decisions, classify + rank them, and report remediations it RECOMMENDS. No subcommand = status."""
+    if ctx.invoked_subcommand is not None:
+        return
+    from project_kit import permissions as perm
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    click.echo(perm.diagnose_status(target_root), nl=False)
+
+
+@permissions_diagnose.command("on")
+# Default mirrors permissions._DIAGNOSE_DEFAULT_TTL_SECONDS (8h); kept literal
+# here so the option default is available at decorator-eval time without importing
+# the module at CLI load. `diagnose_on` is the single source of truth at runtime.
+@click.option("--ttl", "ttl_seconds", default=8 * 60 * 60, show_default=True,
+              type=int, help="Seconds before the diagnostic session auto-expires "
+                             "(it can't stay silently armed).")
+@click.option("--no-redact", "no_redact", is_flag=True, default=False,
+              help="Log full commands instead of redacting the command tail "
+                   "(redaction is on by default — the tail carries paths/secrets).")
+def permissions_diagnose_on(ttl_seconds: int, no_redact: bool) -> None:
+    """Arm a bounded diagnostic session (TTL-expiring). While armed, the hook appends each deferred decision to a local, git-ignored, size-capped log."""
+    from project_kit import permissions as perm
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    try:
+        click.echo(perm.diagnose_on(target_root, ttl_seconds=ttl_seconds,
+                                    redact=not no_redact), nl=False)
+    except perm.PermissionsError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+
+@permissions_diagnose.command("off")
+def permissions_diagnose_off() -> None:
+    """Disarm the diagnostic session (remove the armed marker); the captured log is left in place."""
+    from project_kit import permissions as perm
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    click.echo(perm.diagnose_off(target_root), nl=False)
+
+
+@permissions_diagnose.command("status")
+def permissions_diagnose_status() -> None:
+    """Show armed/expired state + captured log size. Read-only."""
+    from project_kit import permissions as perm
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    click.echo(perm.diagnose_status(target_root), nl=False)
+
+
+@permissions_diagnose.command("report")
+def permissions_diagnose_report() -> None:
+    """Print the classified, frequency-ranked, recommend-only report over the captured log. Applies nothing; reports COVERAGE, not a predicted prompt decrement."""
+    from project_kit import permissions as perm
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    click.echo(perm.diagnose_report(target_root), nl=False)
+
+
 @permissions.group("sandbox", invoke_without_command=True)
 @click.pass_context
 def permissions_sandbox(ctx: click.Context) -> None:
