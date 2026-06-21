@@ -60,7 +60,13 @@ from _lib.placeholder_detection import (  # noqa: E402
     PHASE_TRANSITION,
     detect_placeholder_residuals,
 )
+from _lib.review_contributions import collect_contributions  # noqa: E402
 from _lib.review_mode import resolve_mode  # noqa: E402
+
+# `workstream:*` label prefix (DEC-012 classification axis). The required-
+# reviewer resolution (DEC-032 D1) keys contributed match-predicates on the
+# `workstream` axis, read off a closing issue's `workstream:<value>` label.
+_WORKSTREAM_LABEL_PREFIX = "workstream:"
 
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
@@ -157,8 +163,10 @@ def main() -> int:
     elif mode_resolution.mode == "human":
         gate_result = _check_approval_gate(pr_number, pr, args.bypass, config)
     else:
-        # agent mode — DEC-028 gate.
-        gate_result = _check_agent_gate(pr_number, pr, config, mode_resolution.source)
+        # agent mode — DEC-028 gate, with DEC-032's per-PR resolved set.
+        gate_result = _check_agent_gate(
+            pr_number, pr, config, mode_resolution.source, capability_root,
+        )
 
     if not gate_result.passed:
         print(gate_result.refusal_message, file=sys.stderr)
@@ -333,14 +341,32 @@ def _check_approval_gate(
 
 
 def _check_agent_gate(
-    pr_number: int | None, pr: dict, config: dict, mode_source: str,
+    pr_number: int | None,
+    pr: dict,
+    config: dict,
+    mode_source: str,
+    capability_root: Path,
 ) -> _GateResult:
-    """DEC-028's 7-step gate-checker.
+    """DEC-028's gate-checker, generalised by DEC-032 to a per-PR resolved set.
 
-    Resolves which paths are configured (remote / local), inspects PR
-    comments for matching verdict lines post-dating the latest commit,
-    and applies path-specific identity checks. Gate satisfies if any
-    configured path has a fresh APPROVED verdict.
+    The resolved required local-reviewer set is the baseline
+    (`review.agents.local_registered:`) UNIONED with every contributed
+    reviewer whose match-predicate matches the classification of any issue
+    the PR closes (DEC-032 D1), de-duplicated by reviewer name. The gate is
+    satisfied iff *every* reviewer in the resolved set has a fresh APPROVED,
+    each satisfiable via any path it is registered on (per-reviewer
+    OR-across-paths, AND-across-the-set — DEC-032 D3, replacing DEC-028's
+    steps 6–7; steps 1–5 below stand unchanged).
+
+    Fail-closed (DEC-032 D5): if the contribution collection has any
+    blocking error (a malformed declaration or a contributed reviewer whose
+    agent is undeployed) the gate REFUSES rather than silently proceeding on
+    the baseline — an unsatisfiable required reviewer cannot be dropped.
+
+    For a project with only the static baseline and no contributions this is
+    equivalent to the single-baseline case (DEC-032 D3: the per-reviewer-OR /
+    across-set-AND rule coincides with DEC-028's cross-path OR when the
+    resolved set has one reviewer).
     """
     review = config.get("review") if isinstance(config, dict) else None
     agents_block = review.get("agents") if isinstance(review, dict) else None
@@ -372,7 +398,40 @@ def _check_agent_gate(
             passed=False, refusal_message="error: cannot resolve PR number.",
         )
 
-    # Fetch comments + author + the latest commit timestamp.
+    # --- DEC-032 D1: resolve the contributed reviewer set for this PR. ----
+    # Recomputed at gate time (D5) from the current manifest + the PR's
+    # current closing-issue classifications. Fail closed on any blocking
+    # error (D5): a malformed declaration or an undeployed contributed agent
+    # is an unsatisfiable required reviewer, never silently dropped.
+    repo_root = capability_root.parent.parent.parent
+    contributed_rules = _resolve_contributed_reviewers(
+        pr_number, config, repo_root
+    )
+    if isinstance(contributed_rules, _GateResult):
+        return contributed_rules  # fail-closed refusal already shaped.
+
+    # Baseline required reviewer names per path (DEC-028's static lists).
+    remote_baseline = [
+        entry.get("github_login")
+        for entry in remote_registered
+        if isinstance(entry, dict) and entry.get("github_login")
+    ]
+    local_baseline = [
+        entry.get("name")
+        for entry in local_registered
+        if isinstance(entry, dict) and entry.get("name")
+    ]
+
+    # The resolved required local set = baseline ∪ contributed, de-duped by
+    # name, preserving baseline-first order (DEC-032 D1).
+    required_local = _dedup_preserve_order(
+        local_baseline + [rule.reviewer for rule in contributed_rules]
+    )
+    # Provenance for the refusal message: reviewer name → contributing
+    # capability (baseline reviewers have no contributing capability).
+    contributed_by = {rule.reviewer: rule.capability for rule in contributed_rules}
+
+    # Fetch comments + author + the latest commit timestamp (one round-trip).
     proc = gh_run(
         ["gh", "pr", "view", str(pr_number),
          "--json", "author,comments,commits"],
@@ -393,22 +452,44 @@ def _check_agent_gate(
     comments = data.get("comments") or []
     commits = data.get("commits") or []
 
-    # Latest commit timestamp.
+    # Latest commit timestamp (DEC-028 step 4 freshness anchor). If it cannot
+    # be established (no commits returned, or the last commit carries neither
+    # committedDate nor authoredDate) the freshness boundary is UNKNOWN — so
+    # the gate REFUSES rather than accept every stale verdict as fresh.
+    # Fail-closed per DEC-032 D5; an unestablishable freshness anchor is not
+    # "no freshness check".
     latest_commit_ts = ""
     if commits:
         last = commits[-1]
         if isinstance(last, dict):
-            # gh pr view returns commits with committedDate field
-            latest_commit_ts = str(last.get("committedDate") or last.get("authoredDate") or "")
+            # gh pr view returns commits with committedDate field.
+            latest_commit_ts = str(
+                last.get("committedDate") or last.get("authoredDate") or ""
+            )
+    if not latest_commit_ts:
+        return _GateResult(
+            passed=False,
+            refusal_message=_freshness_unresolvable_refusal(pr_number),
+        )
 
-    # Per-path satisfaction.
-    remote_satisfied = False
-    local_satisfied = False
-    remote_login = (remote_registered[0].get("github_login") if remote_registered else None)
-    local_name = (local_registered[0].get("name") if local_registered else None)
+    # --- Steps 1–5: latest fresh verdict per agent per path, selected by
+    # TIMESTAMP (DEC-028 step 5), not by list order. A fresh
+    # CHANGES_REQUESTED after a fresh APPROVED must correctly block, and vice
+    # versa, regardless of how `gh` ordered the comments array. We track the
+    # winning verdict's timestamp per agent and only let a later one override.
+    # remote: github_login → (verdict, timestamp).
+    remote_latest: dict[str, tuple[str, str]] = {}
+    # local: agent name → (verdict, timestamp).
+    local_latest: dict[str, tuple[str, str]] = {}
 
-    remote_latest_status: str | None = None  # "APPROVED" | "CHANGES_REQUESTED" | None
-    local_latest_status: str | None = None
+    def _record_latest(
+        store: dict[str, tuple[str, str]], key: str, verdict: str, ts: str
+    ) -> None:
+        prior = store.get(key)
+        # ISO-8601 (UTC `Z`) timestamps compare correctly as strings. Strict
+        # `>` keeps the first-seen verdict on an exact tie (deterministic).
+        if prior is None or ts > prior[1]:
+            store[key] = (verdict, ts)
 
     for c in comments:
         if not isinstance(c, dict):
@@ -419,67 +500,449 @@ def _check_agent_gate(
         comment_ts = str(c.get("createdAt") or "")
 
         # Freshness: comment must post-date the latest commit.
-        if latest_commit_ts and comment_ts <= latest_commit_ts:
+        if comment_ts <= latest_commit_ts:
             continue
 
-        # Remote path: identity match + author exclusion.
-        if remote_login:
-            if first_line in ("Reviewer agent: APPROVED", "Reviewer agent: CHANGES_REQUESTED"):
-                if comment_author == remote_login and comment_author != author_login:
-                    verdict = "APPROVED" if first_line.endswith("APPROVED") else "CHANGES_REQUESTED"
-                    remote_latest_status = verdict  # later iterations overwrite (latest wins)
+        # Remote path: identity match + author exclusion (DEC-028 step 2/3).
+        if first_line in (
+            "Reviewer agent: APPROVED", "Reviewer agent: CHANGES_REQUESTED"
+        ):
+            if comment_author in remote_baseline and comment_author != author_login:
+                verdict = (
+                    "APPROVED" if first_line.endswith("APPROVED")
+                    else "CHANGES_REQUESTED"
+                )
+                _record_latest(remote_latest, comment_author, verdict, comment_ts)
 
         # Local path: name match in the body line; author-exclusion relaxed.
-        if local_name:
-            local_approved = f"Reviewer agent (local, {local_name}): APPROVED"
-            local_changes = f"Reviewer agent (local, {local_name}): CHANGES_REQUESTED"
-            if first_line == local_approved:
-                local_latest_status = "APPROVED"
-            elif first_line == local_changes:
-                local_latest_status = "CHANGES_REQUESTED"
+        local_verdict, local_who = _parse_local_verdict(first_line)
+        if local_verdict is not None and local_who in required_local:
+            _record_latest(local_latest, local_who, local_verdict, comment_ts)
 
-    if remote_login:
-        remote_satisfied = remote_latest_status == "APPROVED"
-    if local_name:
-        local_satisfied = local_latest_status == "APPROVED"
+    # Collapse to the latest verdict per agent (timestamp already selected).
+    remote_status: dict[str, str] = {
+        k: v[0] for k, v in remote_latest.items()
+    }
+    local_status: dict[str, str] = {
+        k: v[0] for k, v in local_latest.items()
+    }
 
-    if (remote_login and remote_satisfied) or (local_name and local_satisfied):
+    # --- DEC-032 D3 composition: per-reviewer OR-across-paths, AND-across-set.
+    def reviewer_satisfied(name: str) -> bool:
+        # A reviewer registered on both paths (a baseline name appearing in
+        # both `remote_registered` and `local_registered`) is satisfied by
+        # either path's fresh APPROVED — DEC-028's per-reviewer OR.
+        if local_status.get(name) == "APPROVED":
+            return True
+        if name in remote_baseline and remote_status.get(name) == "APPROVED":
+            return True
+        return False
+
+    # The required set spans the remote baseline plus the resolved local set.
+    # A remote-only baseline reviewer is required on the remote path; a local
+    # (baseline or contributed) reviewer on the local path.
+    unsatisfied: list[str] = []
+    for name in remote_baseline:
+        if name not in required_local and remote_status.get(name) != "APPROVED":
+            unsatisfied.append(name)
+    for name in required_local:
+        if not reviewer_satisfied(name):
+            unsatisfied.append(name)
+
+    if not unsatisfied:
         passed_via_parts: list[str] = []
-        if remote_satisfied:
-            passed_via_parts.append(f"remote agent (@{remote_login}) APPROVED")
-        if local_satisfied:
-            passed_via_parts.append(f"local agent ({local_name}) APPROVED")
+        for name in remote_baseline:
+            if name not in required_local:
+                passed_via_parts.append(f"remote agent (@{name}) APPROVED")
+        for name in required_local:
+            label = _reviewer_label(name, contributed_by)
+            passed_via_parts.append(f"{label} APPROVED")
         return _GateResult(
             passed=True,
             passed_via="; ".join(passed_via_parts),
         )
 
-    remote_summary = (
-        f"{remote_login}: {remote_latest_status or 'none'}"
-        if remote_login else "(none)"
-    )
-    local_summary = (
-        f"{local_name}: {local_latest_status or 'none'}"
-        if local_name else "(none)"
-    )
     return _GateResult(
         passed=False,
-        refusal_message=(
-            f"[refused] agent-mode approval required but no fresh APPROVED verdict.\n"
-            f"            → resolved mode: agent (source: {mode_source})\n"
-            f"            → remote registered: {remote_summary}\n"
-            f"            → local registered:  {local_summary}\n"
-            f"            → most recent verdicts (post-dating latest commit):\n"
-            f"                  remote: {remote_latest_status or 'none'}\n"
-            f"                  local:  {local_latest_status or 'none'}\n"
-            "            Remediation:\n"
-            "              a) Wait for / trigger the remote agent to post APPROVED.\n"
-            "              b) Run `review-pr <N>` to re-invoke local agent(s).\n"
-            "              c) Merge with `done-work --bypass \"<reason>\"`.\n"
-            "              d) If no agent is configured, set `review.mode: human` "
-            "or use --bypass."
+        refusal_message=_agent_gate_refusal(
+            mode_source=mode_source,
+            remote_baseline=remote_baseline,
+            required_local=required_local,
+            contributed_by=contributed_by,
+            remote_status=remote_status,
+            local_status=local_status,
+            unsatisfied=unsatisfied,
         ),
     )
+
+
+class _Unresolvable:
+    """Sentinel: a resolution step could not establish ground truth.
+
+    Distinct from an *empty* resolved result. An empty `Resolved([])` means
+    "we determined the PR closes no classified issue" — DEC-032 D1's named,
+    intended baseline-only branch (legitimate fail-open). `_Unresolvable`
+    means "we could not determine what the PR closes / could not read an
+    issue's labels" (transient gh failure / malformed JSON) — which must fail
+    *closed* (REFUSE), never collapse to baseline-only and silently drop a
+    genuinely-required contributed reviewer (a retry-/induce-able bypass).
+    """
+
+    def __init__(self, reason: str):
+        self.reason = reason
+
+
+def _resolve_contributed_reviewers(
+    pr_number: int, config: dict, repo_root: Path,
+) -> tuple | _GateResult:
+    """Resolve the contributed reviewer rules required for this PR (DEC-032 D1).
+
+    Returns the tuple of matched `ContributionRule`s on success, or a
+    `_GateResult` refusal when the collection fails closed (D5): a malformed
+    contribution declaration, an unparseable manifest, or a contributed
+    reviewer whose agent is undeployed. Fail-closed is guaranteed by gating
+    on `collection.ok` *before* reading the matched rules — an undeployed
+    contributed reviewer is also surfaced as a blocking collection error, so
+    the gate never proceeds on a smaller (fail-open) set.
+
+    Closing-issue resolution itself can fail closed too: if we cannot
+    determine what the PR closes (transient gh failure resolving
+    `closingIssuesReferences`) or cannot read a closing issue's labels, the
+    contributed set is *unknown*, not empty — so the gate REFUSES rather than
+    proceed on the baseline alone (DEC-032 D5, mirroring the verdict-fetch
+    fail-closed posture below).
+    """
+    collection = collect_contributions(repo_root)
+    if not collection.ok:
+        return _GateResult(
+            passed=False,
+            refusal_message=_contribution_error_refusal(collection),
+        )
+
+    classifications = _closing_issue_classifications(pr_number, config)
+    if isinstance(classifications, _Unresolvable):
+        return _GateResult(
+            passed=False,
+            refusal_message=_closing_issue_unresolvable_refusal(
+                classifications.reason
+            ),
+        )
+    return collection.reviewers_for_issues(classifications)
+
+
+def _closing_issue_classifications(
+    pr_number: int, config: dict,
+) -> list[dict[str, str]] | _Unresolvable:
+    """Classification mapping (e.g. `{workstream: design}`) per closing issue.
+
+    DEC-032 D1's resolution domain is total for the *determinable* cases: a
+    PR closing multiple issues yields one mapping per issue (the caller
+    unions them); a PR closing no classified issue yields an empty list →
+    baseline only. A closing entity with no `workstream:*` label (a sub-task
+    or Milestone carries no classification per DEC-012) yields an empty
+    mapping — matching nothing, so baseline only, which is the named
+    gate-escape DEC-032 D1 calls out.
+
+    But when ground truth cannot be established — `closingIssuesReferences`
+    failed to resolve, or a closing issue's labels could not be read — the
+    result is `_Unresolvable`, NOT an empty list. The two states are
+    different per D1: "PR closes no classified issue" is fail-open
+    (legitimate); "could not determine what the PR closes" is UNKNOWN and
+    must fail closed (the caller REFUSES). Collapsing the latter to baseline
+    only is a retry-/induce-able bypass of a required reviewer.
+    """
+    closing_numbers = _pr_closing_issue_numbers(pr_number, config)
+    if isinstance(closing_numbers, _Unresolvable):
+        return closing_numbers
+    classifications: list[dict[str, str]] = []
+    for issue_number in closing_numbers:
+        issue = gh_get_issue(issue_number, config, fields="labels")
+        if issue is None:
+            # Could not read this issue's labels — its classification is
+            # UNKNOWN, so a contributed reviewer it might require cannot be
+            # dropped. Fail closed (DEC-032 D5) rather than treat as "no
+            # classification → baseline only".
+            return _Unresolvable(
+                f"could not read labels for closing issue #{issue_number}"
+            )
+        try:
+            classification = _classification_from_labels(issue.get("labels") or [])
+        except _MultiWorkstreamError as exc:
+            # Invalid upstream label data (DEC-012 forbids multi-workstream).
+            # Fail closed rather than guess which workstream's reviewer to drop.
+            return _Unresolvable(
+                f"closing issue #{issue_number} has multiple workstream "
+                f"labels ({', '.join(sorted(exc.values))}); DEC-012 declares "
+                "the workstream axis mutually exclusive — fix the labels"
+            )
+        if classification:
+            classifications.append(classification)
+    return classifications
+
+
+def _pr_closing_issue_numbers(
+    pr_number: int, config: dict,
+) -> list[int] | _Unresolvable:
+    """Issue numbers the PR closes, via `gh pr view`'s closingIssuesReferences.
+
+    Distinguishes two states DEC-032 D1 treats differently:
+
+    - **PR closes nothing** (the `closingIssuesReferences` array is present
+      and empty) → `[]`, the "no closing issue" branch → baseline only. This
+      is the legitimate, named fail-open branch.
+    - **Could not determine what the PR closes** (gh non-zero exit, malformed
+      JSON, or the field absent from the payload) → `_Unresolvable`, so the
+      caller fails closed. Returning `[]` here would silently drop a
+      genuinely-required contributed reviewer on a transient gh failure — a
+      retry-/induce-able bypass of a required review.
+    """
+    proc = gh_run(
+        ["gh", "pr", "view", str(pr_number),
+         "--json", "closingIssuesReferences"],
+        config, check=False,
+    )
+    if proc.returncode != 0:
+        return _Unresolvable(
+            f"gh pr view closingIssuesReferences failed: {proc.stderr.strip()}"
+        )
+    try:
+        data = json.loads(proc.stdout)
+    except (ValueError, json.JSONDecodeError):
+        return _Unresolvable(
+            "gh pr view closingIssuesReferences returned malformed JSON"
+        )
+    if not isinstance(data, dict) or "closingIssuesReferences" not in data:
+        return _Unresolvable(
+            "gh pr view payload missing closingIssuesReferences"
+        )
+    refs = data.get("closingIssuesReferences") or []
+    numbers: list[int] = []
+    for ref in refs:
+        if isinstance(ref, dict) and isinstance(ref.get("number"), int):
+            numbers.append(ref["number"])
+    return numbers
+
+
+def _classification_from_labels(labels: list) -> dict[str, str]:
+    """Build the classification mapping from an issue's labels (DEC-012).
+
+    Only the `workstream` axis is keyed at v1 (DEC-032 D1). A `workstream:*`
+    label yields `{workstream: <value>}`; no such label yields `{}` (matching
+    nothing → baseline only).
+
+    **Single workstream per issue.** The `workstream` axis is declared
+    `mutually_exclusive: true` in `schemas/classification.yaml` (DEC-012), so
+    at most one `workstream:*` label is valid on an issue. Returning on the
+    first match is therefore *not* fail-open — there is no second workstream
+    to drop a required reviewer for. We still assert the invariant defensively:
+    if an issue somehow carries multiple distinct `workstream:*` labels (a
+    label-discipline violation upstream), raise rather than silently pick one
+    — silently dropping the others would skip a contributed reviewer required
+    for a dropped workstream (the fail-open hole D5 guards against). A noisy
+    failure surfaces the bad data; the operator fixes the labels (or
+    `--bypass`).
+    """
+    values: list[str] = []
+    for lbl in labels:
+        name = lbl.get("name", "") if isinstance(lbl, dict) else str(lbl)
+        if name.startswith(_WORKSTREAM_LABEL_PREFIX):
+            value = name[len(_WORKSTREAM_LABEL_PREFIX):]
+            if value and value not in values:
+                values.append(value)
+    if not values:
+        return {}
+    if len(values) > 1:
+        raise _MultiWorkstreamError(values)
+    return {"workstream": values[0]}
+
+
+class _MultiWorkstreamError(Exception):
+    """An issue carries multiple `workstream:*` labels (DEC-012 forbids this).
+
+    `workstream` is `mutually_exclusive: true` per `classification.yaml`. More
+    than one value is invalid upstream label data; the gate refuses to guess
+    which workstream's contributed reviewer to honour (silently picking one
+    would drop the others — fail-open). Surfaced as a fail-closed refusal.
+    """
+
+    def __init__(self, values: list[str]):
+        self.values = values
+        super().__init__(
+            "issue carries multiple workstream labels: "
+            + ", ".join(sorted(values))
+        )
+
+
+def _parse_local_verdict(first_line: str) -> tuple[str | None, str | None]:
+    """Parse a local-path verdict line into (verdict, agent-name).
+
+    Recognises DEC-028's local verdict shape
+    `Reviewer agent (local, <name>): APPROVED|CHANGES_REQUESTED`. Returns
+    `(None, None)` for any non-matching line. Generalises the old fixed-name
+    match to any registered local name (the singleton cap lifts, DEC-032 D3).
+    """
+    match = _LOCAL_VERDICT_RE.match(first_line)
+    if match is None:
+        return None, None
+    return match.group("verdict"), match.group("name")
+
+
+def _dedup_preserve_order(names: list[str]) -> list[str]:
+    """De-duplicate a name list, preserving first-seen order (DEC-032 D1)."""
+    seen: set[str] = set()
+    out: list[str] = []
+    for name in names:
+        if name not in seen:
+            seen.add(name)
+            out.append(name)
+    return out
+
+
+def _reviewer_label(name: str, contributed_by: dict[str, str]) -> str:
+    """Human label for a resolved local reviewer, with provenance.
+
+    A contributed reviewer names the capability that required it; a baseline
+    reviewer is unqualified.
+    """
+    capability = contributed_by.get(name)
+    if capability:
+        return f"local agent ({name}, required by capability `{capability}`)"
+    return f"local agent ({name})"
+
+
+def _contribution_error_refusal(collection) -> str:
+    """Refusal text when contribution collection fails closed (DEC-032 D5)."""
+    lines = [
+        "[refused] agent-mode approval gate cannot be resolved — a reviewer "
+        "contribution is unsatisfiable.",
+    ]
+    for err in collection.errors:
+        where = f"capability `{err.capability}`" if err.capability else "manifest"
+        lines.append(f"            → [{err.kind}] {where}: {err.message}")
+    lines.append(
+        "            The required-reviewer set cannot be resolved, so the "
+        "gate refuses rather than merge on a partial set (fail-closed, "
+        "DEC-032 D5)."
+    )
+    lines.append("            Remediation:")
+    lines.append(
+        "              a) Redeploy the contributing capability's agents "
+        "(`pkit ... deploy-agents`), or"
+    )
+    lines.append(
+        "              b) Uninstall the contributing capability if its gate "
+        "is not wanted, or"
+    )
+    lines.append("              c) Fix the malformed contribution declaration, or")
+    lines.append("              d) Merge with `done-work --bypass \"<reason>\"`.")
+    return "\n".join(lines)
+
+
+def _freshness_unresolvable_refusal(pr_number: int | None) -> str:
+    """Refusal text when the latest-commit freshness anchor cannot be set.
+
+    DEC-028 anchors verdict freshness to the latest commit's timestamp. If no
+    commit timestamp can be established, every verdict's freshness is unknown
+    — the gate refuses rather than accept a possibly-stale APPROVED as fresh
+    (fail-closed, DEC-032 D5).
+    """
+    return "\n".join([
+        f"[refused] agent-mode approval gate cannot be resolved for PR "
+        f"#{pr_number} — the latest-commit freshness anchor is unknown.",
+        "            → `gh pr view` returned no commit with a committedDate "
+        "or authoredDate.",
+        "            Verdict freshness is anchored to the latest commit "
+        "(DEC-028); without it a stale APPROVED cannot be distinguished from "
+        "a fresh one, so the gate refuses (fail-closed, DEC-032 D5).",
+        "            Remediation:",
+        "              a) Transient gh failure — retry `done-work`.",
+        "              b) If persistent, merge with "
+        "`done-work --bypass \"<reason>\"`.",
+    ])
+
+
+def _closing_issue_unresolvable_refusal(reason: str) -> str:
+    """Refusal text when the PR's closing-issue classification is unknown.
+
+    A transient gh failure resolving what the PR closes (or reading a closing
+    issue's labels) leaves the contributed-reviewer set *unknown*. The gate
+    refuses rather than proceed on the baseline alone (DEC-032 D5) — the same
+    fail-closed posture the verdict-fetch uses on a gh failure.
+    """
+    return "\n".join([
+        "[refused] agent-mode approval gate cannot be resolved — the PR's "
+        "closing-issue classification is unknown.",
+        f"            → {reason}",
+        "            The contributed-reviewer set cannot be determined, so "
+        "the gate refuses rather than merge on a possibly-incomplete set "
+        "(fail-closed, DEC-032 D5).",
+        "            Remediation:",
+        "              a) Transient gh failure resolving closing issues — "
+        "retry `done-work`.",
+        "              b) If persistent, merge with "
+        "`done-work --bypass \"<reason>\"`.",
+    ])
+
+
+def _agent_gate_refusal(
+    *,
+    mode_source: str,
+    remote_baseline: list[str],
+    required_local: list[str],
+    contributed_by: dict[str, str],
+    remote_status: dict[str, str],
+    local_status: dict[str, str],
+    unsatisfied: list[str],
+) -> str:
+    """Refusal text naming the full resolved required set + who lacks APPROVED.
+
+    Names every required reviewer (baseline + contributed, with provenance)
+    and its most recent fresh verdict, so the operator sees exactly which
+    members of the AND-composed set still need to approve (DEC-032 D3).
+    """
+    lines = [
+        "[refused] agent-mode approval required but the resolved reviewer set "
+        "is not fully satisfied.",
+        f"            → resolved mode: agent (source: {mode_source})",
+        "            → required reviewers (all must have a fresh APPROVED):",
+    ]
+    for name in remote_baseline:
+        if name not in required_local:
+            status = remote_status.get(name) or "none"
+            lines.append(f"                  remote @{name}: {status}")
+    for name in required_local:
+        label = _reviewer_label(name, contributed_by)
+        # A reviewer on both paths shows the best of its two verdicts.
+        status = local_status.get(name)
+        if status != "APPROVED" and name in remote_baseline:
+            status = remote_status.get(name) or status
+        lines.append(f"                  {label}: {status or 'none'}")
+    missing = ", ".join(
+        _reviewer_label(name, contributed_by) if name in required_local
+        else f"remote @{name}"
+        for name in unsatisfied
+    )
+    lines.append(f"            → still missing a fresh APPROVED: {missing}")
+    lines.append("            Remediation:")
+    lines.append(
+        "              a) Wait for / trigger each remote agent to post APPROVED."
+    )
+    lines.append(
+        "              b) Run `review-pr <N>` to re-invoke the local agent(s)."
+    )
+    lines.append("              c) Merge with `done-work --bypass \"<reason>\"`.")
+    lines.append(
+        "              d) If no agent is configured, set `review.mode: human` "
+        "or use --bypass."
+    )
+    return "\n".join(lines)
+
+
+# DEC-028 local-path verdict line, generalised to any registered name.
+_LOCAL_VERDICT_RE = re.compile(
+    r"^Reviewer agent \(local, (?P<name>[^)]+)\): "
+    r"(?P<verdict>APPROVED|CHANGES_REQUESTED)$"
+)
 
 
 # ---- side-effects ----------------------------------------------------
