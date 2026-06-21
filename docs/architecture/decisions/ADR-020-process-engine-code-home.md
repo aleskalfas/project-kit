@@ -1,7 +1,7 @@
 ---
 id: ADR-020
 title: Ship the process engine in the binary, not propagated in-tree
-status: proposed
+status: accepted
 date: 2026-06-21
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
