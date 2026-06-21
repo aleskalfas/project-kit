@@ -72,6 +72,10 @@
         "note": {
           "type": "string",
           "description": "Optional free-form note about what the fact is about."
+        },
+        "snapshot": {
+          "type": "string",
+          "description": "Optional path/URL to a durable local copy (snapshot) of the source, captured when the excerpt was fetched. `source_url` remains the live origin; `snapshot` is the immutable copy, used for revalidation and link-rot insurance. The capability that captures the snapshot owns the bytes; this field only records where the copy lives."
         }
       },
       "description": "One evidence record per excerpt, per [evidence:DEC-002-evidence-record-schema]."

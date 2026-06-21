@@ -51,6 +51,7 @@ records:
 
 - `title` (string) — human-readable label.
 - `note` (string) — what the fact is about, free-form.
+- `snapshot` (string) — optional path/URL to a durable local copy of the source captured at fetch time. `source_url` is the live origin; `snapshot` is the immutable copy, for revalidation and link-rot insurance. The capability that captures it owns the bytes; this field only records the location. (Added as an additive optional field — the kind of evolution the schema anticipates below; no `schema_version` bump, since absent records stay valid.)
 
 ### Schema versioning
 
