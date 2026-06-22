@@ -34,10 +34,42 @@ from project_kit.manifest import read_backbone_manifest
 # (e.g. the claude-code adapter's `.claude/` deploys) via package.yaml.
 _BACKBONE_FOOTPRINT: tuple[str, ...] = (".pkit/",)
 
+# Core's OWN runtime-local ignore set (ADR-009 Amendment 1). The seam analogous
+# to `_BACKBONE_FOOTPRINT`: the runtime-local files core itself owns inside the
+# `.pkit/` subtree, declared here because the backbone has no `package.yaml` to
+# carry them. Naming these is not the layering inversion the amendment forbids —
+# that rule bars core from naming *adapter*/*capability* paths; these are all
+# core-owned.
+#
+# Patterns are repo-root-relative strings declared verbatim, exactly as
+# `footprint` declarations are (the aggregator stores them as-given; the T2
+# `.pkit/.gitignore` renderer owns any rebasing onto the `.pkit/`-relative form
+# the nested carrier wants — Amendment 1, A1 rule 4).
+#
+# The set covers two core surfaces, both of which have no `package.yaml` and so
+# can ONLY declare through this core-level seam (the per-component `package.yaml`
+# declarations are a separate task):
+#   - the **backbone** itself — its Python bytecode caches scattered under
+#     `.pkit/`; and
+#   - the **permissions surface**, which is a backbone-propagated code directory
+#     (synced via `PROPAGATED_AREAS`, like `adapters/`), NOT a COR-011
+#     area/capability — so it has no `package.yaml` of its own and piggybacks
+#     this core-level seam (Amendment 1, A1 rule 2). Its runtime-local files are
+#     PRJ-006's diagnose capture-log + TTL armed marker and the sandbox
+#     provenance sidecar, all under `.pkit/permissions/project/`.
+_BACKBONE_RUNTIME_IGNORE: tuple[str, ...] = (
+    # Backbone: Python bytecode caches anywhere under `.pkit/`.
+    ".pkit/**/__pycache__/",
+    # Permissions surface (piggybacks this seam — no package.yaml of its own).
+    ".pkit/permissions/project/diagnose.yaml",
+    ".pkit/permissions/project/diagnose-log.jsonl",
+    ".pkit/permissions/project/sandbox-provenance.yaml",
+)
+
 _BEGIN = "# >>> pkit footprint — managed by `pkit visibility`; do not edit >>>"
 _END = "# <<< pkit footprint <<<"
 
-_yaml_keys = ("footprint",)
+_yaml_keys = ("footprint", "runtime_ignore")
 
 
 # --- footprint aggregation ---------------------------------------------------
@@ -76,9 +108,52 @@ def footprint(target_root: Path) -> list[str]:
             pkg = _component_package_yaml(target_root, entry.kind, entry.name)
             if pkg is not None:
                 out.extend(_read_footprint_decl(pkg))
+    return _dedupe(out)
+
+
+# --- runtime-ignore aggregation (ADR-009 Amendment 1) ------------------------
+#
+# Mirror image of the footprint aggregation above: the same manifest-walk over
+# installed adapters/capabilities, the same per-component package.yaml reader,
+# the same core-level seam for the surfaces that have no package.yaml. The two
+# keys (`footprint:` / `runtime_ignore:`) sit side-by-side in package.yaml and
+# aggregate identically. This is T1 of EPIC #154 — the *collector*; the
+# `.pkit/.gitignore` renderer that consumes this list is T2.
+
+def _read_runtime_ignore_decl(package_yaml: Path) -> list[str]:
+    """Read a component's `runtime_ignore:` list from package.yaml (tolerant)."""
+    from ruamel.yaml import YAML
+
+    try:
+        data = YAML(typ="safe").load(package_yaml.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return []
+    raw = data.get("runtime_ignore") if isinstance(data, dict) else None
+    if not isinstance(raw, list):
+        return []
+    return [str(x).strip() for x in raw if str(x).strip()]
+
+
+def runtime_ignore(target_root: Path) -> list[str]:
+    """Aggregate runtime-local ignore patterns across installed components
+    (backbone + permissions seam + each adapter/capability's declared
+    `runtime_ignore`). De-duped, order-stable — the source list the T2
+    `.pkit/.gitignore` renderer wholesale-renders from (ADR-009 Amendment 1)."""
+    out: list[str] = list(_BACKBONE_RUNTIME_IGNORE)
+    manifest = read_backbone_manifest(target_root)
+    if manifest is not None:
+        for entry in manifest.components:
+            pkg = _component_package_yaml(target_root, entry.kind, entry.name)
+            if pkg is not None:
+                out.extend(_read_runtime_ignore_decl(pkg))
+    return _dedupe(out)
+
+
+def _dedupe(paths: list[str]) -> list[str]:
+    """Order-stable de-dupe — shared by `footprint` and `runtime_ignore`."""
     seen: set[str] = set()
     deduped: list[str] = []
-    for path in out:
+    for path in paths:
         if path not in seen:
             seen.add(path)
             deduped.append(path)
