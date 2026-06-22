@@ -57,10 +57,6 @@ _BACKBONE_FOOTPRINT: tuple[str, ...] = (".pkit/",)
 #     this core-level seam (Amendment 1, A1 rule 2). Its runtime-local files are
 #     PRJ-006's diagnose capture-log + TTL armed marker and the sandbox
 #     provenance sidecar, all under `.pkit/permissions/project/`.
-#
-# Naming these is not the layering inversion the amendment forbids — that rule
-# bars core from naming *adapter*/*capability* paths; every path here is
-# core-owned.
 _BACKBONE_RUNTIME_IGNORE: tuple[str, ...] = (
     # Backbone: Python bytecode caches anywhere under `.pkit/`.
     ".pkit/**/__pycache__/",
