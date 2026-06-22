@@ -22,7 +22,15 @@ from typing import Any
 
 # A grant's privilege value is the COR-019 token `[privilege-catalog:<id>]`
 # (or a list of them); strip to the bare id for matching against the catalog.
-_TOKEN = re.compile(r"^\[privilege-catalog:([a-z][a-z0-9-]*)\]$")
+# The id half admits an OPTIONAL capability scope (`<cap>:<name>`) so a
+# capability-contributed privilege (ADR-021) is referenced as
+# `[privilege-catalog:trip-planning:ad-hoc-scraping]`. This is the COR-019
+# token-grammar *clarification*: the namespace stays `privilege-catalog`; the
+# id half gains permitted internal structure. The capture group keeps the WHOLE
+# id half (including any embedded `:`), so the token round-trips to the catalog
+# key exactly — a mis-resolved scoped token would empty the grant's privilege
+# match and the deny would silently not bind (a fail-open hazard).
+_TOKEN = re.compile(r"^\[privilege-catalog:([a-z][a-z0-9-]*(?::[a-z][a-z0-9-]*)?)\]$")
 _SEP = re.compile(r"\s*(?:&&|\|\||\||;)\s*")
 _ENVVAR = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 
@@ -676,12 +684,118 @@ def _exists(path: str) -> bool:
     return os.path.isfile(path)
 
 
+def _capability_fragment_catalog(
+    target_root: str, backbone_ids: set[str]
+) -> tuple[dict[str, Any], list[str]]:
+    """Privilege definitions contributed by installed capabilities (ADR-021).
+
+    Walks the manifest ``components:`` list (the same install-state-as-gate the
+    grants walk uses — NOT a glob of ``.pkit/capabilities/``) and for each
+    component of kind ``capability`` reads its catalog fragment at
+    ``.pkit/capabilities/<name>/permissions/privilege-catalog.yaml`` if present.
+    An uninstalled or orphan capability directory contributes nothing.
+
+    Returns ``(merged_privileges, rejections)``: a map of accepted scoped
+    privilege ids → spec (each stamped ``provenance: capability:<name>`` for the
+    reporting surface), and a list of human-readable rejection reasons.
+
+    Three merge constraints (ADR-021), enforced here *before* the catalog
+    reaches ``guardrail_denies`` or ``decide``:
+
+    - **Capability-scoped ids.** A fragment id is rewritten to ``<cap>:<name>``
+      regardless of how the fragment authored it, so attribution is intrinsic
+      and a fragment can only ever introduce ids in its own namespace.
+    - **Collision-rejecting.** A scoped id colliding with a backbone privilege
+      or another capability's already-merged id is rejected (the colliding
+      entry is dropped, not overwritten) — a fragment can never shadow or strip
+      an existing definition.
+    - **Guardrail-forbidding.** A fragment privilege carrying ``guardrail:
+      true`` is rejected (dropped), so a capability can never install a deny
+      that applies to every adopter by default.
+
+    A rejected entry contributes NOTHING to the merged catalog rather than
+    aborting the load: the backbone catalog stays intact, and the capability's
+    own deny grant then references a privilege that does not exist (matching no
+    request) — fail-CLOSED on the fragment's vocabulary, never a false allow.
+
+    Stdlib-safe (ADR-002 / ADR-003 same-code invariant): reads through the
+    existing ``load_yaml`` / ``_stdlib_load_yaml`` fallback and the existing
+    manifest read; no third-party dependency, no ``src/project_kit`` import.
+    """
+    import os.path
+
+    manifest_path = os.path.join(target_root, ".pkit", "manifest.yaml")
+    if not _exists(manifest_path):
+        return {}, []
+    manifest = load_yaml(manifest_path)
+    merged: dict[str, Any] = {}
+    rejections: list[str] = []
+    for component in manifest.get("components", []) or []:
+        if not isinstance(component, dict):
+            continue
+        if component.get("kind") != "capability":
+            continue
+        name = component.get("name")
+        if not name:
+            continue
+        frag_path = os.path.join(
+            target_root, ".pkit", "capabilities", name,
+            "permissions", "privilege-catalog.yaml",
+        )
+        if not _exists(frag_path):
+            continue
+        doc = load_yaml(frag_path)
+        for raw_id, spec in (doc.get("privileges", {}) or {}).items():
+            if not isinstance(spec, dict):
+                continue
+            scoped_id = f"{name}:{raw_id}"
+            if spec.get("guardrail"):
+                rejections.append(
+                    f"{scoped_id}: a capability fragment may not define a "
+                    f"guardrail (rejected)"
+                )
+                continue
+            if scoped_id in backbone_ids or scoped_id in merged:
+                rejections.append(
+                    f"{scoped_id}: id collides with an existing privilege "
+                    f"(rejected)"
+                )
+                continue
+            entry = dict(spec)
+            entry["provenance"] = f"capability:{name}"
+            merged[scoped_id] = entry
+    return merged, rejections
+
+
 def load_catalog(target_root: str) -> dict[str, Any]:
-    """Load the privilege catalog from a target tree's standard location."""
+    """Load the privilege catalog, merging installed capabilities' fragments.
+
+    The merge lives HERE (not in ``load_model``) because both the PreToolUse
+    hook and the ``pkit permissions`` CLI call ``load_catalog`` directly to
+    learn which commands are recognised, and ``guardrail_denies`` runs on
+    whatever this returns — so both readers get the identical merged catalog
+    and the guardrail check gates the result before any deny is derived
+    (ADR-021 decision 1; ADR-002 same-code invariant).
+
+    The backbone catalog (``.pkit/schemas/privilege-catalog.yaml``) is the base;
+    installed capabilities' fragments are merged in additively under the
+    collision-rejecting, guardrail-forbidding rule of
+    ``_capability_fragment_catalog``.
+    """
     import os.path
 
     path = os.path.join(target_root, ".pkit", "schemas", "privilege-catalog.yaml")
-    return load_yaml(path) if _exists(path) else {}
+    catalog = load_yaml(path) if _exists(path) else {}
+    privileges = catalog.setdefault("privileges", {}) if isinstance(catalog, dict) else {}
+    if not isinstance(privileges, dict):
+        return catalog
+    fragments, rejections = _capability_fragment_catalog(target_root, set(privileges))
+    privileges.update(fragments)
+    if rejections:
+        # Surface rejected fragments on the catalog so the reporting layer can
+        # show them; never silent (ADR-021 decision 6 — visibility).
+        catalog["_fragment_rejections"] = rejections
+    return catalog
 
 
 def guardrail_denies(catalog: dict[str, Any]) -> list[dict[str, Any]]:

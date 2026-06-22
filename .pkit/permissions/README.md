@@ -9,7 +9,7 @@ This is **not** a COR-011 area — it has no content layout of its own. It is a 
 
 **Dependency direction (ADR-003):** the CLI and the hook import this; this imports neither `src/project_kit` nor any adapter. Recognizers arrive as catalog *data* (`../schemas/privilege-catalog.yaml`), never as adapter code.
 
-- `decide.py` — `decide(model, catalog, request, posture) → allow|deny|abstain` + the recognizer matcher + `hook_decide()` (fail-open) + the **single model loader** `load_catalog()` / `load_model()` (both the hook and the CLI build the model through these, so they decide identically) + `guardrail_denies()` (synthesizes the baseline `all`/`deny` grants from the privileges the catalog flags `guardrail: true` — the model half of ADR-002's double-lock). Also contains `_stdlib_load_yaml()` — a stdlib-only YAML-subset fallback invoked by `load_yaml()` when `ruamel.yaml` is not importable (e.g. inside macOS Seatbelt where `uv` panics, per ADR-014). **The fallback lives here, in the shared loader, not in the hook** — so the hook and CLI parse via the same code path (ADR-002/ADR-003 same-code invariant). Conformance fixtures live at `tests/test_permission_decide.py` (including parse-equality tests between ruamel and the stdlib fallback on all shipped files); the hook's end-to-end tests at `tests/test_permission_hook.py`.
+- `decide.py` — `decide(model, catalog, request, posture) → allow|deny|abstain` + the recognizer matcher + `hook_decide()` (fail-open) + the **single model loader** `load_catalog()` / `load_model()` (both the hook and the CLI build the model through these, so they decide identically; `load_catalog()` also merges installed capabilities' privilege-catalog fragments per ADR-021 — additive-only, collision-rejecting, guardrail-forbidding) + `guardrail_denies()` (synthesizes the baseline `all`/`deny` grants from the privileges the catalog flags `guardrail: true` — the model half of ADR-002's double-lock). Also contains `_stdlib_load_yaml()` — a stdlib-only YAML-subset fallback invoked by `load_yaml()` when `ruamel.yaml` is not importable (e.g. inside macOS Seatbelt where `uv` panics, per ADR-014). **The fallback lives here, in the shared loader, not in the hook** — so the hook and CLI parse via the same code path (ADR-002/ADR-003 same-code invariant). Conformance fixtures live at `tests/test_permission_decide.py` (including parse-equality tests between ruamel and the stdlib fallback on all shipped files); the hook's end-to-end tests at `tests/test_permission_hook.py`.
 
 - `diagnose_capture.py` — the harness-side **capture** half of the permission-prompt diagnostic loop (per [PRJ-006](../decisions/project/PRJ-006-permission-prompt-diagnostics.md)). Propagated beside `decide.py` and imported by the PreToolUse hook *after* the decision is computed. It is deliberately **separate from `decide.py`** so the decision core stays pure: `capture()` is a side-effect (a "prompt" is a harness behaviour), gated on the deferred (`abstain`) verdict, active only while a TTL-bounded session is armed, and **inert on any failure** — its own internal `try` (plus the hook's outer `try`) guarantees a capture fault can never change a decision or break fail-open. Stdlib-only, same bare-`python3` runtime constraint as `decide.py` (ADR-014). End-to-end tests at `tests/test_permission_hook.py`; unit + redaction/size-cap/inert tests at `tests/test_permission_diagnose.py`.
 
@@ -103,6 +103,35 @@ the existing loop already guarantees this property.
 The capability scripts' internal `gh` calls are **unaffected**: they run inside
 the `pkit` subprocess, below the PreToolUse hook layer — they are not Claude
 Code tool calls and are therefore not subject to hook-based enforcement.
+
+## Capability-contributed privilege *definitions* (ADR-021)
+
+ADR-016 (above) lets a capability ship its own deny *policy*, but the privilege
+the deny references still had to be *defined* in the backbone catalog. ADR-021
+closes that gap: an installed capability may also ship a **privilege-catalog
+fragment** at `.pkit/capabilities/<cap>/permissions/privilege-catalog.yaml`,
+which `load_catalog` merges into the central catalog. A capability now ships a
+privilege **definition and** its deny together, self-contained, with no
+core-catalog edit (which `pkit sync` would overwrite anyway).
+
+The fragment reuses the existing `privilege-catalog.yaml` document shape — **no
+new schema**. Discovery is install-gated like the grants walk: only
+manifest-registered capabilities contribute (an orphan directory contributes
+nothing). The merge rule — **additive-only, collision-rejecting,
+guardrail-forbidding**, with each fragment id rewritten to a capability-scoped
+`<cap>:<name>` key — is ADR-021's; read it for the full semantics and the safety
+rationale. In short: a fragment can extend the recognised *vocabulary* in its own
+namespace but can never overwrite a backbone or peer privilege, and can never
+install a deny on every adopter (a `guardrail: true` fragment entry is rejected).
+A grant references a scoped privilege with the COR-019 token whose id half carries
+the scope (`[privilege-catalog:<cap>:<name>]`, per COR-019's id-scope
+clarification).
+
+`pkit permissions overview` attributes each merged privilege to its contributing
+capability and surfaces any rejected fragment. A fragment privilege is **inert**
+until a grant references it; the narrowing is the deny grant the capability also
+ships (ADR-016's channel, unchanged), and a tool-call deny is a behaviour-shaping
+speed-bump, **not** a security boundary (ADR-004).
 
 ### Deny/negation scopes are intentionally unsupported
 
