@@ -58,7 +58,10 @@ process:
       hooks: [...]                 # deferred  on-move actions (integral | reactive)
       breadth: <ref>               # deferred  this move affects RELATED subjects (cascade / journey-spawn)
 
-  invariants: [...]                # deferred  position-independent always-checks, run by `validate`
+  invariants:                      # core (optional, COR-035)  position-independent always-checks, run by `validate` + surfaced on status
+    - id:    <slug>                # core      stable identifier
+      check: <predicate>           # core      the predicate (same shape as detection/gates); True = holds; indeterminate is fail-closed
+      why:   <prose>               # core      explanatory prose surfaced on a violation
   interface:                       # deferred  composition: { inputs, outcomes } — the public contract
   orchestration: { overflow, cross_gates }   # deferred  altitude-2
 ```
@@ -104,6 +107,27 @@ transitions:
 
 **Deferred** (each its own future decision when a binding needs it, per COR-034): the cross-subject `blocked_on` reasons (`awaiting-subprocess-outcome`, `deadlock`), the **hooks** firing mechanism (notify-on-enter / act-on-resume), and a structured **`selection`** option-set (render options in the prompt text until it ships).
 
+### Invariants — position-independent always-checks (core)
+
+[COR-035](../decisions/core/COR-035-process-invariants.md) un-defers the invariants slot. Where detection answers "where is this subject?" and a gate answers "may it move from here to there?", an **invariant** answers a third, position-independent question: "is something that must *always* be true, true?". A process may declare a list of them on the `process` block; each holds **process-wide** (across every state).
+
+**Authored** (additive — absent on every existing process, which validate byte-unchanged):
+
+```
+process:
+  invariants:
+    - id:    <slug>          # stable identifier (reported by validate + on status)
+      check: <predicate>     # the predicate — SAME shape detection/gates use; True = holds
+      why:   <prose>         # explanatory prose surfaced when the check fails
+```
+
+- **Position-independent.** An invariant is checked irrespective of where the subject is — a property of *being* anywhere in the process, not of *moving*. The engine evaluates it against current reality regardless of the resolved position (an indeterminate or absent position does not stop it being checked).
+- **Read-only, content-free, single-subject.** The engine *runs* each `check` through the **same predicate runner that backs detection and gates** (single-subject, threaded with the subject id) and *reports* the result with the `why` on failure; it never interprets what the invariant means and never reads across subjects (COR-032). An indeterminate `check` (error / timeout / unparseable / unresolved) is **fail-closed** — reported as NOT holding (a check that cannot be confirmed is treated as a violation, mirroring `resume_when`).
+- **Report-only enforcement, surfaced on every status read.** A violation is **surfaced on the status view** (the load-bearing half — an agent reading status sees it every read, and a binding's wrapper declines downstream) and reported by the dedicated **`validate`** operation (`pkit process validate <address>` — narrative or `--json`, exits non-zero on any violation). It does **not** block moves, fail transitions, or remediate; a binding that wants a hard always-gate expresses it as a gate predicate. The status narrative shows only *violations* (to stay terse); `status --json` and `validate` carry the full set.
+- **Determinism preserved.** An invariant is a predicate over reality, exactly like a detection predicate — position stays inferred and the engine stays a deterministic validator.
+
+**Deferred** (each its own future decision when a binding needs it, per COR-035): per-state (`applies-to`) **subset-scoping** and **boundary-enforcement** (move-blocking on violation) — both consumed by composition's **open region** (below) and landing *with* it; invariant **severity** / auto-remediation; and **cross-subject** always-checks (which require the breadth COR-032 holds back). This slot ships the *declaration* + report-only surface only.
+
 ## The two guarantees
 
 - **Deterministic validator.** Given a definition and observable reality, "where is this subject", "may it move here→there", and "is it valid" are *definite* answers. This holds even for dynamic structure (below).
@@ -124,7 +148,7 @@ A process need not be a rigid pipeline. A transition target/gate may be:
 
 - **static** (core) — enumerated in the definition;
 - **resolved** (deferred) — a `resolver(data)` returning which of a *known* set of blocks apply now (deterministic given the data → the engine stays an honest validator);
-- an **open region** (deferred) — a state with no internal edges, bounded only by `invariants` + an explicit exit gate (the engine drops to a deterministic boundary check).
+- an **open region** (deferred) — a state with no internal edges, bounded only by `invariants` + an explicit exit gate (the engine drops to a deterministic boundary check). The `invariants` *declaration* now ships (COR-035), but the open region needs more than that: it needs those invariants in a **boundary-enforcing** posture (constraining legal movement, not report-only) **plus** per-state (`applies-to`) scoping — both still deferred, landing together when the open region ships. So "invariants is a prerequisite for the open region" is true of the declaration only.
 
 In every mode the engine remains a deterministic validator. (Theory: for a finite, known block alphabet this is equivalent to a static graph; the open region is the escape hatch for genuinely open-ended work.)
 
@@ -141,7 +165,7 @@ The backbone exposes the engine as a `pkit process …` surface. The core operat
 | `status` | where the subject is · why · how it got here (journal) · legal moves with live prechecks · next hint — narrative or `--json` |
 | `can-move <to>` | validate a candidate move (gate precheck + authorisation); refuse with a self-explaining reason |
 | `move <to>` | execute a legal move; record the journal entry (and run hooks, deferred) |
-| `validate` | run in-scope invariants (deferred) |
+| `validate` | run the subject's invariants (COR-035) and report which hold / are violated — narrative or `--json`; exits non-zero on any violation |
 
 The engine is **content-free**: it reads any capability's process definition + that subject's reality and resolves/validates against it. Capability commands (the discipline's verb-subject wrappers) supply the definition + subject + any domain side-effects and delegate the state-machine mechanics to the engine.
 

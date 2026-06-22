@@ -3064,5 +3064,33 @@ def process_move(address: str, to_state: str, subject: str | None, actor: str | 
     click.echo("  " + cli_render.style("strong", f"moved to {to_state!r}: {result.reason}"))
 
 
+@process.command("validate")
+@click.argument("address")
+@click.option("--subject", default=None, help="Subject key. Required for a keyed process (COR-032); ignored for a singleton (the fixed key is used).")
+@click.option("--json", "as_json", is_flag=True, default=False,
+              help="Emit structured JSON instead of the narrative view.")
+def process_validate(address: str, subject: str | None, as_json: bool) -> None:
+    """Run the subject's invariants (COR-035); report which hold and which are
+    violated. Read-only; exits non-zero if any invariant is violated."""
+    from project_kit import process as process_mod
+
+    engine = _load_engine(address, subject)
+    try:
+        if as_json:
+            click.echo(process_mod.render_validate_json(engine), nl=False)
+        else:
+            click.echo(process_mod.render_validate_narrative(engine), nl=False)
+        # The renderer already evaluated the invariants; this second call is a
+        # no-op subprocess-wise (the PredicateRunner per-invocation cache returns
+        # the same verdicts) so the exit code cannot disagree with the printed
+        # report. If predicate caching is ever removed/per-call, evaluate once
+        # here and pass the outcomes into the renderer instead.
+        ok = all(inv.holds for inv in engine.evaluate_invariants())
+    except process_mod.ProcessError as exc:
+        raise click.ClickException(str(exc)) from exc
+    if not ok:
+        raise SystemExit(1)
+
+
 if __name__ == "__main__":
     main()

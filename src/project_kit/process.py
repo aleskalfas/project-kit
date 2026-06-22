@@ -11,10 +11,20 @@ detection, static transition targets. A keyed process operates per a supplied
 subject identifier (required — no singleton default) and never enumerates its
 subjects; the engine simply threads that identifier through every predicate it
 runs and through the per-subject journal path. The remaining deferred extension
-points (stored / hybrid detection, hooks, invariants, breadth, resolver /
-open-region targets, composition, cross-subject enumeration/cascade) are not
-implemented here; the shape contract's enums already reject their values, so an
+points (stored / hybrid detection, hooks, breadth, resolver / open-region
+targets, composition, cross-subject enumeration/cascade) are not implemented
+here; the shape contract's enums already reject their values, so an
 unrecognised value fails closed.
+
+Invariants (COR-035): a process may declare position-independent always-checks
+(`invariants: [{id, check, why}]`). The engine runs each `check` through the
+SAME predicate runner that backs detection and gates (single-subject, threaded
+with the subject id) and REPORTS the result — content-free, read-only, never
+across subjects. A violation is surfaced on the status view AND reported by the
+dedicated `validate` operation (report-only: it does not block moves or
+remediate). An indeterminate check is fail-closed (reported as not holding).
+NO subset-scoping / severity — both deferred (they un-defer with composition's
+open region, which needs them boundary-enforcing).
 
 Blocked (COR-034): a subject may declare a first-class `blocked` wait
 (`blocked_on` ∈ {awaiting-human, awaiting-condition}, optional `assignee`) and
@@ -374,6 +384,15 @@ class ProcessDefinition:
         return None
 
     @property
+    def invariants(self) -> list[dict[str, Any]]:
+        """The process's declared invariants (COR-035), or an empty list.
+
+        Each is an `{id, check, why}`, holding process-wide. Additive — a
+        definition declaring none returns `[]` and is byte-unchanged.
+        """
+        return [i for i in self.data.get("invariants", []) if isinstance(i, dict)]
+
+    @property
     def blocked_declaration(self) -> dict[str, Any] | None:
         """The subject's optional `blocked` wait declaration (COR-034), or None.
 
@@ -495,6 +514,28 @@ class MoveResult:
     ok: bool
     reason: str
     journal_entry: dict[str, Any] | None = None
+
+
+@dataclass(frozen=True)
+class InvariantOutcome:
+    """The engine's verdict on one invariant (COR-035).
+
+    `holds` is the boolean the reader acts on: True when the invariant's `check`
+    predicate returned result=True and was determinate. An indeterminate
+    predicate (error / timeout / unparseable / unresolved) is **fail-closed** —
+    `holds` is False (a check that could not be confirmed is treated as a
+    violation, mirroring `resume_when`), and `indeterminate` flags that the
+    failure was an evaluation failure rather than a confirmed False.
+
+    `why` is the declaration's explanatory prose, surfaced on a violation.
+    `reason` is the predicate's own reason (or the indeterminacy explanation).
+    """
+
+    invariant_id: str
+    holds: bool
+    why: str
+    reason: str
+    indeterminate: bool = False
 
 
 class ProcessEngine:
@@ -787,6 +828,64 @@ class ProcessEngine:
             elif event == "blocked-resume":
                 since = None
         return since
+
+    # --- invariants (the position-independent always-checks, COR-035) -----
+
+    def evaluate_invariants(self) -> list[InvariantOutcome]:
+        """Run each declared invariant's `check` and report whether it holds.
+
+        Read-only and content-free (COR-035): the engine RUNS each `check`
+        through the existing predicate runner — single-subject, threaded with
+        the subject id — and REPORTS the result; it never interprets what the
+        invariant means or acts on a violation beyond reporting. It never reads
+        across subjects (COR-032).
+
+        **Position-independent.** Invariants hold process-wide, so they are
+        evaluated against current reality regardless of the subject's position
+        — an indeterminate or absent position does not stop them being checked.
+        (The position is reported alongside as context, not as a precondition.)
+
+        **Fail-closed.** An invariant whose `check` is indeterminate (the
+        predicate errored, timed out, returned unparseable JSON, or could not be
+        resolved) is reported as NOT holding — a check that cannot be confirmed
+        is treated as a violation, mirroring the blocked slot's `resume_when`
+        handling rather than silently passing.
+
+        Reuses the engine's `PredicateRunner` (and its per-invocation
+        `(command, args)` cache), so an invariant sharing a command with a
+        detection or gate predicate is evaluated at most once per invocation.
+        """
+        outcomes: list[InvariantOutcome] = []
+        for invariant in self.definition.invariants:
+            invariant_id = str(invariant.get("id", ""))
+            why = str(invariant.get("why", ""))
+            check = invariant.get("check")
+            if not isinstance(check, dict):
+                # Schema requires `check`; a malformed definition slipping
+                # through is fail-closed (reported as not holding) rather than
+                # silently passing.
+                outcomes.append(
+                    InvariantOutcome(
+                        invariant_id=invariant_id,
+                        holds=False,
+                        why=why,
+                        reason="invariant has no check predicate to evaluate",
+                        indeterminate=True,
+                    )
+                )
+                continue
+            outcome = self.runner.evaluate_detection(check)
+            outcomes.append(
+                InvariantOutcome(
+                    invariant_id=invariant_id,
+                    # Fail-closed: an indeterminate check does NOT hold.
+                    holds=outcome.result and not outcome.indeterminate,
+                    why=why,
+                    reason=outcome.reason,
+                    indeterminate=outcome.indeterminate,
+                )
+            )
+        return outcomes
 
     def can_move(self, to_state: str, actor: str) -> tuple[bool, str, Position]:
         """Validate a candidate move to `to_state`. Returns (allowed, reason,
@@ -1220,6 +1319,20 @@ def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
                 f"[{entry.get('trigger')}] by {entry.get('actor')}"
             )
 
+    # Invariants (COR-035) — surface VIOLATIONS on every status read (the
+    # load-bearing half: an agent reading status sees a violation each read).
+    # Only failures are shown here, to keep status terse; `validate` reports
+    # the full set. A violation that could not be confirmed (indeterminate
+    # check) is fail-closed and surfaced distinctly.
+    violations = [inv for inv in engine.evaluate_invariants() if not inv.holds]
+    if violations:
+        lines.append("")
+        lines.append("  " + cli_render.style("strong", "Invariant violations:"))
+        for inv in violations:
+            marker = "?" if inv.indeterminate else "✗"
+            lines.append(f"    {marker} {inv.invariant_id}" + (f" — {inv.why}" if inv.why else ""))
+            lines.append(f"        {inv.reason}")
+
     # Blocked overlay (COR-034) — the derived, live wait, if any.
     checks = engine.precheck_transitions(position.state_id, actor)
     blocked = engine.evaluate_blocked(position, checks, actor)
@@ -1297,6 +1410,19 @@ def render_status_json(engine: ProcessEngine, actor: str) -> str:
                 "prompt": blocked.prompt,
             }
         ),
+        # COR-035: the position-independent always-checks, evaluated live.
+        # Always present (the full set, so an agent reads every invariant's
+        # state); a violated invariant has holds=False and is the surfaced half.
+        "invariants": [
+            {
+                "id": inv.invariant_id,
+                "holds": inv.holds,
+                "indeterminate": inv.indeterminate,
+                "why": inv.why,
+                "reason": inv.reason,
+            }
+            for inv in engine.evaluate_invariants()
+        ],
         "journal": engine.read_journal(),
         "legal_moves": [
             {
@@ -1311,6 +1437,69 @@ def render_status_json(engine: ProcessEngine, actor: str) -> str:
                 "prompt": c.prompt,
             }
             for c in checks
+        ],
+    }
+    return json.dumps(payload, indent=2, sort_keys=True) + "\n"
+
+
+def render_validate_narrative(engine: ProcessEngine) -> str:
+    """Human narrative for the COR-035 `validate` operation: run the subject's
+    invariants and report which hold and which are violated.
+
+    Read-only — evaluating invariants writes nothing and does not affect
+    position or move-legality."""
+    definition = engine.definition
+    outcomes = engine.evaluate_invariants()
+    lines: list[str] = []
+    lines.append(
+        cli_render.style("title", f"Validate {definition.capability}:{definition.process_id}")
+        + f"  (subject {engine.subject!r}, definition v{definition.version})"
+    )
+    lines.append("")
+    if not outcomes:
+        lines.append("  (no invariants declared)")
+        return "\n".join(lines) + "\n"
+    for inv in outcomes:
+        if inv.holds:
+            marker = "✓"
+        elif inv.indeterminate:
+            marker = "?"
+        else:
+            marker = "✗"
+        lines.append(f"  {marker} {inv.invariant_id}" + (f" — {inv.why}" if inv.why else ""))
+        lines.append(f"        {inv.reason}")
+    violations = [inv for inv in outcomes if not inv.holds]
+    lines.append("")
+    if violations:
+        lines.append(
+            "  " + cli_render.style("strong", f"{len(violations)} invariant(s) violated")
+        )
+    else:
+        lines.append("  " + cli_render.style("strong", "all invariants hold"))
+    return "\n".join(lines) + "\n"
+
+
+def render_validate_json(engine: ProcessEngine) -> str:
+    """Structured `validate` result (COR-035) for an agent / machine consumer.
+
+    Reports each invariant's `{id, holds, why, reason}` plus an `ok` summary
+    (True iff every invariant holds). Read-only."""
+    definition = engine.definition
+    outcomes = engine.evaluate_invariants()
+    payload: dict[str, Any] = {
+        "process": f"{definition.capability}:{definition.process_id}",
+        "subject": engine.subject,
+        "version": definition.version,
+        "ok": all(inv.holds for inv in outcomes),
+        "invariants": [
+            {
+                "id": inv.invariant_id,
+                "holds": inv.holds,
+                "indeterminate": inv.indeterminate,
+                "why": inv.why,
+                "reason": inv.reason,
+            }
+            for inv in outcomes
         ],
     }
     return json.dumps(payload, indent=2, sort_keys=True) + "\n"

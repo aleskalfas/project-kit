@@ -169,9 +169,31 @@
         }
       }
     },
+    "invariant": {
+      "type": "object",
+      "description": "A position-independent always-check (COR-035): a condition that must hold for the subject NO MATTER WHERE it sits in the process. Where detection answers 'where is this subject?' and a gate answers 'may it move here?', an invariant answers 'is something that must ALWAYS be true, true?'. The engine runs the `check` through the SAME predicate runner that backs detection and gates (single-subject, threaded with the subject id) and REPORTS the result with the `why` on failure -- it never interprets what the invariant means and never reads across subjects (COR-032). Report-only: a violation is reported by `validate` and surfaced on the status view; it does NOT block moves or remediate. NO `applies-to`/subset scoping and NO severity -- both explicitly deferred (they un-defer with composition's open region, which needs them boundary-enforcing).",
+      "required": ["id", "check", "why"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "Stable identifier for the invariant (reported by `validate` and on status)."
+        },
+        "check": {
+          "$ref": "#/$defs/predicate",
+          "description": "The predicate the engine evaluates -- the same shape detection and gates use (a registered command returning {result, reason}). True = the invariant holds; the engine uses the predicate's own `result`. Read-only, single-subject. An indeterminate result (error / timeout / unparseable / unresolved) is fail-closed: reported as NOT holding."
+        },
+        "why": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Explanatory prose surfaced when the check fails -- the same `why` convention detection/gates/blocked carry. Tells a reader what is wrong and why it matters."
+        }
+      }
+    },
     "process": {
       "type": "object",
-      "description": "A process definition. additionalProperties permitted for capability-local blocks (e.g. pm's cascade / closure_triggers / pr_state_effect) and named-deferred slots (hooks, invariants, interface, orchestration) until they ship.",
+      "description": "A process definition. additionalProperties permitted for capability-local blocks (e.g. pm's cascade / closure_triggers / pr_state_effect) and named-deferred slots (hooks, interface, orchestration) until they ship.",
       "required": ["id", "version", "subject", "states", "transitions"],
       "additionalProperties": true,
       "properties": {
@@ -194,6 +216,11 @@
         "transitions": {
           "type": "array",
           "items": { "$ref": "#/$defs/transition" }
+        },
+        "invariants": {
+          "type": "array",
+          "description": "Optional, additive (COR-035): position-independent always-checks the engine runs through `validate` and surfaces on status. Each holds process-wide (across every state). Absent on every existing process -- those validate byte-unchanged. NO subset-scoping / severity (deferred).",
+          "items": { "$ref": "#/$defs/invariant" }
         }
       }
     },
