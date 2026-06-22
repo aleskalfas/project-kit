@@ -17,6 +17,7 @@ from project_kit.cli import main
 from project_kit.manifest import (
     BackboneManifest,
     ComponentRegistryEntry,
+    read_backbone_manifest,
     write_backbone_manifest,
 )
 
@@ -63,6 +64,64 @@ def repo(tmp_path: Path) -> Path:
 
 def test_footprint_aggregates_backbone_and_adapter(repo: Path) -> None:
     assert vis.footprint(repo) == [".pkit/", ".claude/skills", ".claude/agents"]
+
+
+# --- runtime-ignore aggregation (ADR-009 Amendment 1) ------------------------
+
+def _install_capability_with_runtime_ignore(
+    root: Path, name: str, runtime_ignore: list[str]
+) -> None:
+    """Fabricate an installed capability whose package.yaml declares
+    `runtime_ignore:`, and register it in the backbone manifest — mirroring how
+    `repo` fabricates the adapter's `footprint:`."""
+    cdir = root / ".pkit" / "capabilities" / name
+    cdir.mkdir(parents=True)
+    body = (
+        f"schema_version: 1\ncomponent:\n  kind: capability\n  name: {name}\n"
+        "  version: 0.1.0\nruntime_ignore:\n"
+        + "".join(f"  - {p}\n" for p in runtime_ignore)
+    )
+    (cdir / "package.yaml").write_text(body, encoding="utf-8")
+    manifest = read_backbone_manifest(root)
+    assert manifest is not None
+    manifest.components.append(ComponentRegistryEntry(
+        kind="capability", name=name,
+        manifest=f".pkit/capabilities/{name}/project/manifest.yaml"))
+    write_backbone_manifest(root, manifest)
+
+
+def test_runtime_ignore_includes_backbone_permissions_seam(repo: Path) -> None:
+    # The core-level seam covers the backbone's own caches and the permissions
+    # surface (no package.yaml — it piggybacks the seam).
+    out = vis.runtime_ignore(repo)
+    assert ".pkit/**/__pycache__/" in out
+    assert ".pkit/permissions/project/diagnose-log.jsonl" in out
+    assert ".pkit/permissions/project/diagnose.yaml" in out
+    assert ".pkit/permissions/project/sandbox-provenance.yaml" in out
+
+
+def test_runtime_ignore_aggregates_component_declaration(repo: Path) -> None:
+    _install_capability_with_runtime_ignore(
+        repo, "demo", [".pkit/capabilities/demo/project/run.log"])
+    out = vis.runtime_ignore(repo)
+    # The component's declared path is present, after the backbone seam.
+    assert ".pkit/capabilities/demo/project/run.log" in out
+    assert out[: len(vis._BACKBONE_RUNTIME_IGNORE)] == list(vis._BACKBONE_RUNTIME_IGNORE)
+
+
+def test_runtime_ignore_is_deduped_and_order_stable(repo: Path) -> None:
+    # A component echoing a backbone-seam path collapses to one entry, in order.
+    _install_capability_with_runtime_ignore(
+        repo, "dup", [".pkit/**/__pycache__/", ".pkit/capabilities/dup/x.log"])
+    out = vis.runtime_ignore(repo)
+    assert out.count(".pkit/**/__pycache__/") == 1
+    assert out == vis._dedupe(out)  # idempotent
+
+
+def test_runtime_ignore_tolerates_component_without_key(repo: Path) -> None:
+    # The adapter in `repo` declares `footprint:` but no `runtime_ignore:` —
+    # absence contributes nothing beyond the backbone seam.
+    assert vis.runtime_ignore(repo) == list(vis._BACKBONE_RUNTIME_IGNORE)
 
 
 # --- info/exclude region + shared/private ------------------------------------

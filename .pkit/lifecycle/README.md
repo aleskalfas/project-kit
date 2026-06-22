@@ -127,12 +127,24 @@ requires_backbone: ">=1.26.0,<2.0.0"
 requires_capabilities:
   - name: project-management
     version: ">=0.20.0,<1.0.0"
+
+# Optional: this component's git-footprint paths outside `.pkit/` (ADR-009).
+# `pkit visibility private` routes these into `.git/info/exclude`.
+footprint:
+  - .claude/skills
+
+# Optional: this component's runtime-local files to git-ignore (ADR-009
+# Amendment 1). Aggregated into the pkit-owned `.pkit/.gitignore`.
+runtime_ignore:
+  - .pkit/capabilities/<name>/project/some-runtime.log
 ```
 
 Fields:
 
 - **`requires_backbone`** — semver range of backbone versions this capability version is compatible with. Evaluated at install and upgrade.
 - **`requires_capabilities`** — optional list of capability dependencies, each a `{name, version}` pair where `version` is a semver range. The lifecycle gates on these at install, upgrade, and uninstall (COR-030). Absence means no dependencies; capabilities without this field are unaffected.
+- **`footprint`** — optional list of git-footprint globs this component deploys outside `.pkit/` (e.g. an adapter's `.claude/` deploys). Aggregated across installed components and routed into the per-clone `.git/info/exclude` by `pkit visibility private` (ADR-009). Absence means the component adds nothing to the footprint beyond the backbone's own `.pkit/`.
+- **`runtime_ignore`** — optional list of runtime-local file globs this component wants git-ignored (e.g. per-clone logs, caches, sidecars under the component's own subtree). Aggregated across installed components and wholesale-rendered into the pkit-owned `.pkit/.gitignore` (ADR-009 Amendment 1). Each component names only paths it owns — core never invents adapter/capability paths. Absence means the component contributes no runtime-ignore lines; the backbone and the propagated permissions surface (which have no `package.yaml`) declare theirs through a core-level seam instead.
 
 ## The component registry
 
