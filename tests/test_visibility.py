@@ -253,11 +253,114 @@ def test_committed_pkit_gitignore_ignores_pm_journal() -> None:
     )
 
 
+# --- visibility interaction of the rendered .pkit/.gitignore (ADR-009 Am.1 A2) -
+#
+# T4 (EPIC #154): pin how the rendered `.pkit/.gitignore` (T2) interacts with the
+# share/hide visibility mechanism (v1). The invariants, per ADR-009 Amendment 1
+# A2 ("Why this honours v1's privacy rationale"):
+#   - private routes the *entire* `.pkit/` tree into `info/exclude`, so the
+#     rendered `.pkit/.gitignore` is excluded along with it — inert, no committed
+#     trace;
+#   - shared commits `.pkit/.gitignore` the ordinary way (a file inside an
+#     already-committed directory adds zero disclosure);
+#   - the adopter's *root* `.gitignore` is NEVER written by either path.
+# The root-`.gitignore` invariant is asserted at the MECHANISM level (the
+# renderer's only output path; the private writer's region content), not merely
+# observed end-state, so it holds under future change. This section deliberately
+# does NOT exercise the footprint / info-exclude boundary beyond what pins these
+# invariants — that boundary is covered by the section below.
+
+
+def test_private_excludes_rendered_pkit_gitignore_no_committed_trace(repo: Path) -> None:
+    # Render the pkit-owned `.pkit/.gitignore`, then go private.
+    vis.render_runtime_ignore(repo)
+    assert (repo / ".pkit" / ".gitignore").is_file()
+    vis.set_visibility(repo, "private", confirm=lambda _m: True)
+    # The whole `.pkit/` tree (the rendered file with it) is routed into
+    # info/exclude — ask git itself whether the rendered file is ignored.
+    res = subprocess.run(
+        ["git", "check-ignore", "-q", ".pkit/.gitignore"],
+        cwd=repo, capture_output=True, text=True, check=False,
+    )
+    assert res.returncode == 0, "private mode must exclude the rendered .pkit/.gitignore"
+    # And it leaves no committed trace: not tracked in the shared tree.
+    assert ".pkit/.gitignore" not in _git(repo, "ls-files")
+
+
+def test_shared_commits_rendered_pkit_gitignore(repo: Path) -> None:
+    # In the default shared mode the rendered file is committable the ordinary
+    # way — not ignored by anything.
+    vis.set_visibility(repo, "shared")
+    vis.render_runtime_ignore(repo)
+    res = subprocess.run(
+        ["git", "check-ignore", "-q", ".pkit/.gitignore"],
+        cwd=repo, capture_output=True, text=True, check=False,
+    )
+    assert res.returncode == 1, "shared mode must not ignore the rendered .pkit/.gitignore"
+    # It can be staged and committed (proves "committed the ordinary way").
+    _git(repo, "add", ".pkit/.gitignore")
+    assert ".pkit/.gitignore" in _git(repo, "diff", "--cached", "--name-only")
+
+
+def test_renderer_only_output_path_is_pkit_gitignore_never_root(repo: Path) -> None:
+    # MECHANISM-level: the renderer's single output target is `.pkit/.gitignore`,
+    # never a root `.gitignore`. Pin the constant AND the actual write target so
+    # a future edit that retargets the writer trips this test.
+    assert vis._RUNTIME_IGNORE_PATH == ".pkit/.gitignore"
+    # The render writes exactly one `.gitignore`, under `.pkit/`. A root one must
+    # not appear.
+    vis.set_visibility(repo, "shared")  # ensure no exclude-region side effects
+    assert not (repo / ".gitignore").exists()
+    vis.render_runtime_ignore(repo)
+    assert (repo / ".pkit" / ".gitignore").is_file()
+    assert not (repo / ".gitignore").exists(), "the renderer must never write a root .gitignore"
+
+
+def test_private_region_never_contains_root_gitignore_line(repo: Path) -> None:
+    # MECHANISM-level: the private-mode writer emits the aggregated `footprint()`
+    # into its info/exclude region and nothing else — that region must never
+    # carry a bare-root `.gitignore` rule (which would ignore the adopter's own
+    # root file). Assert against the region content, not just the end-state.
+    vis.render_runtime_ignore(repo)
+    vis.set_visibility(repo, "private", confirm=lambda _m: True)
+    region = _exclude_region(repo)
+    # Every region line is a declared footprint pattern (or a region delimiter);
+    # none is a root-`.gitignore` rule.
+    assert region, "private mode must write a footprint region"
+    for line in region:
+        assert line not in (".gitignore", "/.gitignore"), (
+            f"private region must not ignore the adopter's root .gitignore (saw {line!r})"
+        )
+    # Positively: the region is exactly the aggregated footprint.
+    assert region == vis.footprint(repo)
+    # And the adopter's root `.gitignore` is untouched on disk either way.
+    assert not (repo / ".gitignore").exists()
+
+
 # --- info/exclude region + shared/private ------------------------------------
 
 def _exclude(repo: Path) -> str:
     p = repo / ".git" / "info" / "exclude"
     return p.read_text(encoding="utf-8") if p.is_file() else ""
+
+
+def _exclude_region(repo: Path) -> list[str]:
+    """The lines pkit wrote inside its delimited info/exclude region (delimiters
+    excluded) — the exact payload the private-mode writer emitted."""
+    text = _exclude(repo)
+    if vis._BEGIN not in text:
+        return []
+    out: list[str] = []
+    collecting = False
+    for line in text.splitlines():
+        if line.strip() == vis._BEGIN:
+            collecting = True
+            continue
+        if line.strip() == vis._END:
+            break
+        if collecting:
+            out.append(line)
+    return out
 
 
 def test_private_writes_region_and_untracks(repo: Path) -> None:
