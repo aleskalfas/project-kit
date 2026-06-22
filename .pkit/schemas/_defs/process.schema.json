@@ -21,6 +21,38 @@
         }
       }
     },
+    "blocked": {
+      "type": "object",
+      "description": "An orthogonal, optional first-class WAIT declaration on a subject (COR-034). NOT a definition state -- it adds no state to the process and cannot explode the state space. It names what the subject waits ON; RESUME differs by reason. For awaiting-human there is NO resume predicate -- the resume IS the person taking the pending move (position advancing off the parked state), and the engine consults no side-predicate. For awaiting-condition the block carries a `resume_when` predicate the engine re-evaluates LIVE and auto-clears when it holds (no human in the loop). The current blocked-ness is always the live evaluation, authoritative over any journal entry (inheriting COR-033's journal-is-intent-log / live-detection-authoritative contract); `since`/`assignee` are the audit colour journaled on enter. additionalProperties false: the shipped wait shape is tight.",
+      "required": ["blocked_on"],
+      "additionalProperties": false,
+      "properties": {
+        "blocked_on": {
+          "enum": ["awaiting-human", "awaiting-condition"],
+          "description": "Why the subject waits -- a reason establishable from ONE subject's reality (COR-032). awaiting-human: a person must act; the resume IS the person taking the pending move (no `resume_when` -- it is forbidden, because a side-predicate could disagree with the move while it is still gate-closed). awaiting-condition: an external fact must become true; carries a `resume_when` predicate (required) that turns true on its own, no human in the loop. Open to ADDITIVE widening: the cross-subject reasons (awaiting-subprocess-outcome, deadlock) join this enum when the engine first gains the right to read across subjects (deferred per COR-034)."
+        },
+        "resume_when": {
+          "$ref": "#/$defs/predicate",
+          "description": "The predicate the engine re-evaluates LIVE (the same predicate runner that backs detection and gates). REQUIRED for awaiting-condition and FORBIDDEN for awaiting-human (enforced by the if/then below): when it holds the subject is no longer blocked and the engine auto-clears the flag. awaiting-human carries no resume_when -- its resume is the person taking the pending move, tracked by position advancing off the parked state, never a side-predicate."
+        },
+        "assignee": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Optional: who owns the wait (the stuck-work view's owner). Content-free -- the engine carries it, the binding interprets it."
+        }
+      },
+      "allOf": [
+        {
+          "description": "COR-034: resume differs by reason. awaiting-condition REQUIRES a `resume_when` (the external fact the engine re-checks live); awaiting-human FORBIDS one (its resume is the person taking the move, never a side-predicate -- a satisfied side-predicate while the move is still gate-closed would falsely report 'not waiting'). Mirrors the prompt-on-user-only enforcement on transitions.",
+          "if": {
+            "properties": { "blocked_on": { "const": "awaiting-condition" } },
+            "required": ["blocked_on"]
+          },
+          "then": { "required": ["resume_when"] },
+          "else": { "not": { "required": ["resume_when"] } }
+        }
+      ]
+    },
     "subject": {
       "type": "object",
       "description": "What the process tracks the position of.",
@@ -39,6 +71,10 @@
         "domain_ref": {
           "type": "string",
           "description": "Pointer to where the subject's domain data lives -- kept distinct from its process position."
+        },
+        "blocked": {
+          "$ref": "#/$defs/blocked",
+          "description": "Optional, additive (COR-034): the subject's wait declaration. Absent on every existing process -- those validate byte-unchanged."
         }
       }
     },
@@ -104,6 +140,13 @@
       "description": "A guarded edge. additionalProperties permitted for capability-local fields (e.g. pr_state_effect, executor, notes).",
       "required": ["from", "to", "trigger", "authorisation"],
       "additionalProperties": true,
+      "allOf": [
+        {
+          "description": "A `prompt` (COR-034) is the question posed to a person, so it is meaningful only on a `user`-authorisation move (the human-pause case). It rides the existing per-move emission the status view already presents; the engine carries it content-free and never interprets it.",
+          "if": { "properties": { "prompt": { "type": "string" } }, "required": ["prompt"] },
+          "then": { "properties": { "authorisation": { "const": "user" } } }
+        }
+      ],
       "properties": {
         "from": { "type": "string", "description": "Source state id, or \"*\" for any." },
         "to": { "type": "string", "description": "Target state id. (A data-resolver target is a deferred extension.)" },
@@ -118,7 +161,12 @@
           "description": "A validation-severity token, e.g. [validation-severity:hard-reject]."
         },
         "why": { "type": "string", "description": "Status view: why this move exists." },
-        "hint": { "type": "string", "description": "Status view: what to run next." }
+        "hint": { "type": "string", "description": "Status view: what to run next." },
+        "prompt": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Optional, additive (COR-034): the QUESTION posed to the person on an `awaiting-human` wait, surfaced on this move in the status view (one additive field on the existing per-move emission). Meaningful only on a `user`-authorisation move (enforced above). The engine carries and surfaces it content-free; the binding owns what it means and what an answer does. A structured option-set (`selection`) is deferred -- render options in the prompt text until it ships."
+        }
       }
     },
     "process": {
@@ -151,8 +199,8 @@
     },
     "journal_entry": {
       "type": "object",
-      "description": "An append-only runtime record the engine writes on each move (the memory + audit trail). Not authored by capabilities; published here so tooling can validate journals.",
-      "required": ["ts", "subject", "to", "trigger", "actor"],
+      "description": "An append-only runtime record the engine writes (the memory + audit trail). Not authored by capabilities; published here so tooling can validate journals. Two kinds: a MOVE entry (the default -- a guarded move was taken; carries to/trigger/actor) and a WAIT entry (COR-034 -- a `blocked` enter/resume event, distinguished by `event`). The journal is the audit trail; the CURRENT blocked-ness is always the live evaluation (for awaiting-human, whether the pending move has been taken; for awaiting-condition, the `resume_when` predicate), authoritative over any entry here.",
+      "required": ["ts", "subject"],
       "additionalProperties": true,
       "properties": {
         "ts": { "type": "string", "format": "date-time" },
@@ -163,8 +211,31 @@
         "actor": { "type": "string" },
         "gate_result": { "type": "string" },
         "severity": { "type": "string" },
-        "bypass_reason": { "type": "string" }
-      }
+        "bypass_reason": { "type": "string" },
+        "event": {
+          "enum": ["blocked-enter", "blocked-resume"],
+          "description": "COR-034: present on a WAIT entry, marking entry into / resume from a blocked wait. Absent on an ordinary move entry."
+        },
+        "blocked_on": {
+          "type": "string",
+          "description": "COR-034: the wait reason recorded on a blocked-enter/resume entry (audit colour)."
+        },
+        "at": {
+          "type": "string",
+          "description": "COR-034: the state id the wait sits at (the subject's position when it entered/resumed the wait)."
+        },
+        "assignee": {
+          "type": "string",
+          "description": "COR-034: who owned the wait, if declared (audit colour)."
+        }
+      },
+      "allOf": [
+        {
+          "description": "A MOVE entry (no `event`) records a guarded move and must carry to/trigger/actor; a WAIT entry (COR-034) carries `event` instead.",
+          "if": { "not": { "required": ["event"] } },
+          "then": { "required": ["to", "trigger", "actor"] }
+        }
+      ]
     }
   }
 }

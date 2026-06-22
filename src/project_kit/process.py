@@ -16,6 +16,52 @@ open-region targets, composition, cross-subject enumeration/cascade) are not
 implemented here; the shape contract's enums already reject their values, so an
 unrecognised value fails closed.
 
+Blocked (COR-034): a subject may declare a first-class `blocked` wait
+(`blocked_on` ∈ {awaiting-human, awaiting-condition}, optional `assignee`) and
+a `user` move may carry a `prompt`. The engine derives whether the subject is
+*currently* blocked LIVE, and **resume differs by reason**:
+
+- **awaiting-human** carries NO `resume_when`. It is blocked while the human is
+  the SOLE way forward: the subject sits at a non-terminal position with an
+  outgoing, not-yet-taken `user` move (gate-open or gate-closed alike) AND no
+  currently-allowed autonomous (`agent-autonomous` / `script`) move the engine
+  could take on its own instead. A gate-open autonomous move IS an escape (the
+  engine can advance without a person -> not awaiting one); a gate-closed
+  autonomous move is NOT. The resume is the person TAKING the user move
+  (position advancing off the parked state). The engine consults no
+  side-predicate — a satisfied side-fact while the move is still gate-closed
+  must NOT report "not waiting".
+- **awaiting-condition** carries a `resume_when` predicate. It is blocked while
+  it has no legal move AND `resume_when` does not yet hold; the engine
+  re-evaluates `resume_when` live and auto-clears when it holds (no human in
+  the loop).
+
+The flag is a derived overlay recomputed every call, never stored truth; the
+enter/resume events are journal entries (no separate emission channel), written
+only on the writing paths (`move` / `reconcile_blocked`) so the read-only
+status view stays side-effect-free. A `move` reconciles the wait against the
+TARGET state it just declared, so a park journals `blocked-enter` at park time.
+Live evaluation is authoritative over any journal entry. Both shipped reasons
+resolve from one subject's reality; the cross-subject reasons and the
+hooks/selection slots stay deferred per COR-034.
+
+Scope notes for this slice:
+
+- *Multi-prompt-per-state is out of scope.* `_current_prompt` surfaces the
+  FIRST outgoing `user` move's prompt; a state with two prompted `user` moves
+  surfaces only one. Carrying several questions per state is a later slice.
+- *`awaiting-condition` parks via `move` (with `assume_state`) are out of
+  scope.* `reconcile_blocked(assume_state=...)` is exercised only for
+  `awaiting-human` parks, where the outgoing `user` move is definitional of the
+  target state, so the synthetic Position is sound. An `awaiting-condition`
+  block's liveness depends on `has_no_legal_move` AND the live `resume_when`
+  predicate against current reality — a combination only meaningful once the
+  subject has actually settled into the parked state. So an `awaiting-condition`
+  wait is reconciled ON DEMAND (the self-clear path: `reconcile_blocked` with NO
+  `assume_state`, deriving from freshly-resolved reality), never at move time.
+  No shipped process parks a subject into an `awaiting-condition` wait via a
+  `move`; this engine does not support that combination.
+
 The engine is invoked only as `pkit process …` (ADR-020): a backbone CLI
 surface, never imported by a capability wrapper. Wrappers call it by
 subprocess. Predicate commands the engine runs are themselves resolved through
@@ -327,6 +373,22 @@ class ProcessDefinition:
                 return value
         return None
 
+    @property
+    def blocked_declaration(self) -> dict[str, Any] | None:
+        """The subject's optional `blocked` wait declaration (COR-034), or None.
+
+        Authored on the `subject` block: `{blocked_on, resume_when?, assignee?}`
+        — `resume_when` is required for `awaiting-condition` and forbidden for
+        `awaiting-human` (the schema enforces this). Additive — a definition
+        without it is byte-unchanged and never blocks.
+        """
+        subject = self.data.get("subject")
+        if isinstance(subject, dict):
+            blocked = subject.get("blocked")
+            if isinstance(blocked, dict):
+                return blocked
+        return None
+
     def state(self, state_id: str) -> dict[str, Any] | None:
         for s in self.states:
             if s.get("id") == state_id:
@@ -351,6 +413,14 @@ class TransitionCheck:
         return str(self.transition.get("trigger", ""))
 
     @property
+    def prompt(self) -> str | None:
+        """The question posed to a person on this move (COR-034), if authored.
+        Surfaced on the status view; carried content-free (the engine never
+        interprets it). Only a `user`-authorisation move carries one."""
+        value = self.transition.get("prompt")
+        return value if isinstance(value, str) and value else None
+
+    @property
     def allowed(self) -> bool:
         return self.outcome.result
 
@@ -372,6 +442,50 @@ class Position:
     state_id: str | None
     indeterminate: bool
     detection_reasons: dict[str, PredicateOutcome] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class BlockedState:
+    """The DERIVED, live blocked overlay on a subject (COR-034).
+
+    NOT stored truth and NOT a definition state — it is recomputed from reality
+    on every evaluation. Blocked-ness is derived per reason (COR-034 "Resume
+    differs by reason"):
+
+    - **awaiting-human** — live while the human is the SOLE way forward: the
+      subject sits at a non-terminal position with an outgoing, not-yet-taken
+      `user` move AND no currently-allowed autonomous (`agent-autonomous` /
+      `script`) move the engine could take on its own instead. Whether the
+      `user` move is currently gate-open (ready to take) or gate-closed (the
+      human must intervene in reality first), it stays awaiting-human until
+      taken. But if a gate-open autonomous move is available, the engine can
+      advance without a person, so the subject is NOT awaiting one (a
+      gate-closed autonomous move is not an escape — the engine cannot take
+      it). The resume is the position advancing off the parked state — the
+      engine consults **no** side-predicate (a `resume_when` is forbidden on
+      this reason). Tying the resume to a side-predicate is wrong precisely
+      because the two can disagree: a satisfied side-fact while the move is
+      still gate-closed would falsely report "not waiting" on a subject that is
+      genuinely stuck.
+
+    - **awaiting-condition** — live while the subject has *no legal move* (the
+      shipped 'no legal move' detection — a non-terminal position with no
+      transition it can take on its own) AND its declared `resume_when`
+      predicate does **not** yet hold; when `resume_when` holds the engine
+      auto-clears the flag (this object is None). No human is in the loop.
+
+    The live evaluation is authoritative over any journal entry (COR-033
+    journal-is-intent-log). `since` and `assignee` are audit colour: `since`
+    is read from the blocked-enter journal entry (the wait's age), `assignee`
+    from the declaration. They never decide blocked-ness.
+    """
+
+    blocked_on: str
+    at: str | None
+    resume_reason: str
+    since: str | None = None
+    assignee: str | None = None
+    prompt: str | None = None
 
 
 @dataclass(frozen=True)
@@ -507,6 +621,173 @@ class ProcessEngine:
             checks.append(TransitionCheck(transition=t, outcome=outcome, has_gate=has_gate))
         return checks
 
+    # --- blocked (the derived human-pause / wait overlay, COR-034) -------
+
+    def has_no_legal_move(
+        self, position: Position, checks: list[TransitionCheck]
+    ) -> bool:
+        """The shipped core 'no legal move' detection (COR-033, named by COR-034).
+
+        True when the subject is parked: it has an inferred, non-terminal,
+        determinate position out of which no transition is currently allowed.
+        A terminal position is *done*, not stuck; an indeterminate or absent
+        position is not a wait the engine can name (fail-closed elsewhere).
+        """
+        if position.indeterminate or position.state_id is None:
+            return False
+        state = self.definition.state(position.state_id) or {}
+        if state.get("terminal"):
+            return False
+        return not any(check.allowed for check in checks)
+
+    def has_pending_human_move(
+        self, position: Position, checks: list[TransitionCheck]
+    ) -> bool:
+        """Whether the subject's *sole forward progress* is an untaken human
+        move (COR-034 awaiting-human rule).
+
+        Awaiting-human iff the human is the only way forward. Concretely, True
+        when ALL of:
+
+        (a) the position is inferred, determinate, and non-terminal;
+        (b) there IS an outgoing `user`-authorisation move that has not yet
+            been taken — whether its gate is currently open (ready to take) or
+            closed (the human must intervene in reality first). A gate-closed
+            `user` move still means the human is who must act, possibly after
+            intervening, so it counts; and
+        (c) there is NO currently-ALLOWED autonomous (`agent-autonomous` /
+            `script`) move the engine could take on its own instead. "Allowed"
+            here means gate-passing (or gateless): a gate-OPEN autonomous move
+            is a real escape — the engine can advance without a person, so the
+            subject is NOT awaiting one. A gate-CLOSED autonomous move is NOT an
+            escape — the engine cannot take it, so it does not lift the wait.
+
+        The subject stays awaiting-human until the `user` move is taken; the
+        resume is the position advancing off this state, which removes the
+        pending move. No side-predicate is consulted (COR-034: a `resume_when`
+        is forbidden for awaiting-human precisely so the two can never disagree).
+        The gate-state of the `user` move is deliberately NOT consulted in (b)
+        for the same reason — only its presence-and-untaken-ness, plus the
+        absence of an autonomous escape in (c), decides the wait.
+        """
+        if position.indeterminate or position.state_id is None:
+            return False
+        state = self.definition.state(position.state_id) or {}
+        if state.get("terminal"):
+            return False
+        has_user_move = False
+        has_autonomous_escape = False
+        for check in checks:
+            authorisation = check.transition.get("authorisation")
+            if authorisation == "user":
+                # Presence + untaken-ness only; gate-state is irrelevant here
+                # (an untaken parked state still has the user move outgoing).
+                has_user_move = True
+            elif authorisation in ("agent-autonomous", "script") and check.allowed:
+                # A gate-passing (or gateless) autonomous move the engine could
+                # take on its own — the subject is not waiting on a person.
+                has_autonomous_escape = True
+        return has_user_move and not has_autonomous_escape
+
+    def evaluate_blocked(
+        self,
+        position: Position,
+        checks: list[TransitionCheck],
+        actor: str,
+    ) -> BlockedState | None:
+        """Derive the subject's CURRENT blocked overlay LIVE (COR-034), or None.
+
+        Recomputed from reality every call — never stored. Resume differs by
+        reason (COR-034 "Resume differs by reason"):
+
+        - **awaiting-human** — blocked while the subject is parked awaiting a
+          person (`has_pending_human_move`): a non-terminal position with an
+          outgoing, not-yet-taken `user` move AND no autonomous escape (a
+          currently-allowed `agent-autonomous` / `script` move the engine could
+          take instead). The resume is the move being taken (position advancing
+          off the parked state); the engine consults **no** `resume_when`
+          side-predicate. So a side-fact existing (e.g. a review file) does NOT
+          clear the block — only taking the move (or an autonomous move becoming
+          available) does.
+
+        - **awaiting-condition** — blocked while the subject has no legal move
+          (`has_no_legal_move`) AND its `resume_when` predicate does **not** yet
+          hold. When `resume_when` holds the flag auto-clears (None); an
+          indeterminate `resume_when` is fail-closed (treated as not-yet-holding
+          — the subject stays blocked rather than silently resuming).
+
+        `since` is read from the latest blocked-enter journal entry (the wait's
+        age); it is audit colour and never decides blocked-ness. The wait's
+        `prompt` (for an `awaiting-human` block) is the question on the current
+        position's outgoing `user` move, surfaced here for convenience.
+        """
+        declaration = self.definition.blocked_declaration
+        if declaration is None:
+            return None
+
+        blocked_on = str(declaration.get("blocked_on", ""))
+        if blocked_on == "awaiting-human":
+            # No side-predicate: blocked iff a pending human move sits ahead.
+            if not self.has_pending_human_move(position, checks):
+                return None
+            resume_reason = "awaiting the person to take the pending move"
+        elif blocked_on == "awaiting-condition":
+            if not self.has_no_legal_move(position, checks):
+                return None
+            resume_when = declaration.get("resume_when")
+            if not isinstance(resume_when, dict):
+                # Schema requires resume_when for awaiting-condition; if a
+                # malformed definition slips through, fail closed (stay blocked)
+                # rather than silently resuming on a missing predicate.
+                resume_reason = "resume_when missing; cannot evaluate self-clear"
+            else:
+                outcome = self.runner.evaluate_detection(resume_when)
+                # resume_when holds (and is determinate) -> auto-clear.
+                if outcome.result and not outcome.indeterminate:
+                    return None
+                resume_reason = outcome.reason or "resume condition not yet met"
+        else:
+            # An unrecognised / future reason: fail closed (no overlay) — the
+            # schema enum already rejects these, so this is engine/definition
+            # skew, not a wait the engine can name.
+            return None
+
+        assignee = declaration.get("assignee")
+        return BlockedState(
+            blocked_on=blocked_on,
+            at=position.state_id,
+            resume_reason=resume_reason,
+            since=self._wait_since(),
+            assignee=assignee if isinstance(assignee, str) and assignee else None,
+            prompt=self._current_prompt(checks),
+        )
+
+    def _current_prompt(self, checks: list[TransitionCheck]) -> str | None:
+        """The question (COR-034) on the current position's `user` move, if any.
+
+        An `awaiting-human` wait poses its question on the move the person must
+        take; surfaced on the per-move emission and lifted onto the blocked
+        overlay for the human-pause view. Content-free passthrough. Returns the
+        FIRST `user` move's prompt — multi-prompt-per-state is out of scope for
+        this slice (see the module docstring's scope notes)."""
+        for check in checks:
+            if check.transition.get("authorisation") == "user" and check.prompt:
+                return check.prompt
+        return None
+
+    def _wait_since(self) -> str | None:
+        """The `ts` of the most recent blocked-enter event still open in the
+        journal (the wait's age), or None. Audit colour only — read from the
+        intent log, never authoritative over the live evaluation."""
+        since: str | None = None
+        for entry in self.read_journal():
+            event = entry.get("event")
+            if event == "blocked-enter":
+                since = entry.get("ts") if isinstance(entry.get("ts"), str) else since
+            elif event == "blocked-resume":
+                since = None
+        return since
+
     def can_move(self, to_state: str, actor: str) -> tuple[bool, str, Position]:
         """Validate a candidate move to `to_state`. Returns (allowed, reason,
         position). Refuses (fail-closed) on an indeterminate position, an
@@ -558,7 +839,120 @@ class ProcessEngine:
         )
         _validate_journal_entry(entry, self.definition)
         self._append_journal(entry)
+        # The move lands the subject at `to_state`; journal the blocked
+        # enter/resume that position implies AT PARK TIME (COR-034 G2), so a
+        # parked awaiting-human wait records its `blocked-enter` now — making
+        # `since` meaningful — rather than lazily, only once the human finally
+        # acts. We reconcile against the TARGET state the move just declared,
+        # not freshly-resolved reality: the domain side-effect detection reads
+        # is applied by the wrapper around this call, so reality may still show
+        # the source state at this instant. The enter/resume EVENTS are journal
+        # entries themselves — there is no separate emission channel.
+        self.reconcile_blocked(actor, assume_state=to_state)
         return MoveResult(ok=True, reason=reason, journal_entry=entry)
+
+    def reconcile_blocked(
+        self, actor: str, assume_state: str | None = None
+    ) -> dict[str, Any] | None:
+        """Bring the journal's wait audit in line with the live blocked overlay
+        (COR-034), appending a `blocked-enter` or `blocked-resume` entry when
+        the live state crossed the journal's last-recorded wait state. Returns
+        the entry it appended, or None when nothing changed.
+
+        This is the journaling seam for the wait: it runs on the `move` path
+        (so a move into a parked position journals the enter AT PARK TIME, and
+        a move that clears it journals the resume), and is exposed so a binding
+        can also reconcile a SELF-clearing `awaiting-condition` wait (whose
+        resume needs no human move) on demand. It is the only blocked path that
+        WRITES — `evaluate_blocked` (used by the read-only status view) never
+        does, so `status` stays side-effect-free (COR-033: status runs
+        predicates live and must be read-only).
+
+        `assume_state` lets the `move` path reconcile against the TARGET state
+        the move just declared, rather than freshly-resolved reality — the
+        domain side-effect detection reads is applied by the wrapper around the
+        move, so reality may still show the source state at the instant the
+        move journals. With no `assume_state`, blocked-ness is derived from live
+        reality (the on-demand `awaiting-condition` self-clear path).
+
+        The journal is the intent log; the CURRENT blocked-ness is always the
+        live `evaluate_blocked`, authoritative over what is journaled here.
+        """
+        if assume_state is not None:
+            # Reconcile as if the subject is AT the move's target (G2): build a
+            # synthetic, determinate position for it and precheck its outgoing
+            # transitions. This journals a parked awaiting-human wait's enter at
+            # park time, even before the wrapper applies the domain side-effect.
+            position = Position(state_id=assume_state, indeterminate=False)
+        else:
+            position = self.resolve_position()
+        checks = self.precheck_transitions(position.state_id, actor)
+        live = self.evaluate_blocked(position, checks, actor)
+        was_blocked = self._journal_says_blocked()
+
+        if live is not None and not was_blocked:
+            entry = self._build_wait_entry("blocked-enter", live)
+        elif live is None and was_blocked:
+            # Resume: report the wait we are leaving (its reason/at from the
+            # open enter entry), not a fresh derivation (the live overlay is
+            # already None).
+            entry = self._build_resume_entry()
+        else:
+            return None
+        _validate_journal_entry(entry, self.definition)
+        self._append_journal(entry)
+        return entry
+
+    def _journal_says_blocked(self) -> bool:
+        """Whether the journal's last wait event left the subject blocked — i.e.
+        a `blocked-enter` not yet followed by a `blocked-resume`. This is the
+        audit trail's view, used only to decide whether a NEW enter/resume entry
+        is owed; it is never authoritative over the live evaluation."""
+        open_wait = False
+        for entry in self.read_journal():
+            event = entry.get("event")
+            if event == "blocked-enter":
+                open_wait = True
+            elif event == "blocked-resume":
+                open_wait = False
+        return open_wait
+
+    def _build_wait_entry(self, event: str, blocked: BlockedState) -> dict[str, Any]:
+        entry: dict[str, Any] = {
+            "ts": datetime.now(UTC).isoformat(),
+            "subject": self.subject,
+            "event": event,
+            "blocked_on": blocked.blocked_on,
+        }
+        if blocked.at is not None:
+            entry["at"] = blocked.at
+        if blocked.assignee is not None:
+            entry["assignee"] = blocked.assignee
+        return entry
+
+    def _build_resume_entry(self) -> dict[str, Any]:
+        """Build a `blocked-resume` entry, carrying forward the reason/position
+        of the open `blocked-enter` it closes (audit colour for the resolved
+        wait)."""
+        entry: dict[str, Any] = {
+            "ts": datetime.now(UTC).isoformat(),
+            "subject": self.subject,
+            "event": "blocked-resume",
+        }
+        last_enter: dict[str, Any] | None = None
+        for j in self.read_journal():
+            if j.get("event") == "blocked-enter":
+                last_enter = j
+            elif j.get("event") == "blocked-resume":
+                last_enter = None
+        if last_enter is not None:
+            if isinstance(last_enter.get("blocked_on"), str):
+                entry["blocked_on"] = last_enter["blocked_on"]
+            if isinstance(last_enter.get("at"), str):
+                entry["at"] = last_enter["at"]
+            if isinstance(last_enter.get("assignee"), str):
+                entry["assignee"] = last_enter["assignee"]
+        return entry
 
     # --- journal ---------------------------------------------------------
 
@@ -826,10 +1220,25 @@ def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
                 f"[{entry.get('trigger')}] by {entry.get('actor')}"
             )
 
+    # Blocked overlay (COR-034) — the derived, live wait, if any.
+    checks = engine.precheck_transitions(position.state_id, actor)
+    blocked = engine.evaluate_blocked(position, checks, actor)
+    if blocked is not None:
+        lines.append("")
+        lines.append(
+            "  " + cli_render.style("strong", f"Blocked: {blocked.blocked_on}")
+        )
+        lines.append(f"        resume when: {blocked.resume_reason}")
+        if blocked.since:
+            lines.append(f"        since: {blocked.since}")
+        if blocked.assignee:
+            lines.append(f"        owner: {blocked.assignee}")
+        if blocked.prompt:
+            lines.append("        " + cli_render.style("strong", f"❓ {blocked.prompt}"))
+
     # Legal moves with live prechecks.
     lines.append("")
     lines.append("  " + cli_render.style("heading", "Legal moves (live precheck):"))
-    checks = engine.precheck_transitions(position.state_id, actor)
     if not checks:
         lines.append("    (none)")
     else:
@@ -846,6 +1255,9 @@ def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
                 line += f" — {why}"
             lines.append(line)
             lines.append(f"        {check.outcome.reason}")
+            # The question posed on this move (COR-034), if it carries one.
+            if check.prompt:
+                lines.append("        " + cli_render.style("strong", f"❓ {check.prompt}"))
             hint = check.transition.get("hint")
             if check.allowed and hint:
                 lines.append("        next: " + cli_render.style("command", str(hint)))
@@ -859,6 +1271,7 @@ def render_status_json(engine: ProcessEngine, actor: str) -> str:
     position = engine.resolve_position()
     checks = engine.precheck_transitions(position.state_id, actor)
     state = definition.state(position.state_id) if position.state_id else None
+    blocked = engine.evaluate_blocked(position, checks, actor)
 
     payload: dict[str, Any] = {
         "process": f"{definition.capability}:{definition.process_id}",
@@ -870,6 +1283,20 @@ def render_status_json(engine: ProcessEngine, actor: str) -> str:
             "meaning": state.get("meaning") if state else None,
             "terminal": bool(state.get("terminal")) if state else None,
         },
+        # COR-034: the DERIVED, live blocked overlay (None when not blocked).
+        # Recomputed every call from reality — never read back as stored truth.
+        "blocked": (
+            None
+            if blocked is None
+            else {
+                "blocked_on": blocked.blocked_on,
+                "at": blocked.at,
+                "resume_reason": blocked.resume_reason,
+                "since": blocked.since,
+                "assignee": blocked.assignee,
+                "prompt": blocked.prompt,
+            }
+        ),
         "journal": engine.read_journal(),
         "legal_moves": [
             {
@@ -880,6 +1307,8 @@ def render_status_json(engine: ProcessEngine, actor: str) -> str:
                 "reason": c.outcome.reason,
                 "why": c.transition.get("why"),
                 "hint": c.transition.get("hint"),
+                # COR-034: the question on this move (None unless authored).
+                "prompt": c.prompt,
             }
             for c in checks
         ],
