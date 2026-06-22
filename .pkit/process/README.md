@@ -30,6 +30,10 @@ process:
     cardinality: singleton          # core: singleton (one journey)  |  core: keyed (many units, e.g. per issue/screen — COR-032)
     key:         <slug>             # core (keyed)  descriptive name of what identifies a unit (e.g. issue-number); engine does not interpret it
     domain_ref:  <pointer>          # core      where the subject's DOMAIN data lives — distinct from its process position
+    blocked:                        # core (optional, COR-034)  a first-class WAIT — orthogonal, NOT a state
+      blocked_on: awaiting-human | awaiting-condition   # core   WHY it waits (open to additive widening; cross-subject reasons deferred)
+      resume_when: <predicate>      # core      REQUIRED for awaiting-condition, FORBIDDEN for awaiting-human; re-evaluated LIVE, auto-clears the flag when it holds
+      assignee:    <owner?>         # core      optional: who owns the wait (audit colour)
 
   states:
     - id:      <slug>               # core
@@ -50,6 +54,7 @@ process:
       severity:      <ref>         # core      a validation-severity token (reused, not re-invented)
       why:           <prose>       # core      status view
       hint:          <command>     # core      what to run next
+      prompt:        <question>    # core (optional, COR-034)  the QUESTION posed on an awaiting-human move (user-auth only)
       hooks: [...]                 # deferred  on-move actions (integral | reactive)
       breadth: <ref>               # deferred  this move affects RELATED subjects (cascade / journey-spawn)
 
@@ -67,7 +72,37 @@ A process declares `subject.cardinality`:
 
 The engine **never enumerates** a keyed process's subjects — it only ever acts on the one it is given. Cross-subject enumeration and cascade across a containment tree are *breadth* (altitude-2) and remain deferred; a binding that needs them carries them capability-local (e.g. pm's parent/child cascade lives in its wrappers, not the engine).
 
-Per-subject **runtime**: a resolved **position** (core), an append-only **journal** (core) — `{ts, subject, from→to, trigger, actor, gate-result, severity, bypass+reason}`, the memory, the how-we-got-here, and the audit trail in one — and a derived **blocked** detection (core, "no legal move") with an optional first-class `blocked{blocked_on, resume_when}` flag (deferred).
+Per-subject **runtime**: a resolved **position** (core), an append-only **journal** (core) — `{ts, subject, from→to, trigger, actor, gate-result, severity, bypass+reason}`, the memory, the how-we-got-here, and the audit trail in one — and a derived **blocked** detection (core, "no legal move") with an optional first-class `blocked{blocked_on, resume_when, assignee?}` wait (core — see below).
+
+### Blocked — a first-class wait (core)
+
+[COR-034](../decisions/core/COR-034-human-pause-gate.md) un-defers the human-pause / blocked slot. A subject may carry a `blocked` declaration on its `subject` block; the engine derives whether the subject is *currently* blocked **live** and clears it per its reason — by the person taking the pending move (`awaiting-human`) or by a `resume_when` predicate turning true (`awaiting-condition`).
+
+**Authored** (in the definition, additive — absent on every existing process, which validate byte-unchanged):
+
+```
+subject:
+  blocked:
+    blocked_on: awaiting-human | awaiting-condition   # WHY it waits (open to additive widening)
+    resume_when: <predicate>                          # awaiting-condition ONLY (required); forbidden for awaiting-human; re-evaluated LIVE, auto-clears
+    assignee:    <owner?>                              # optional: who owns the wait (audit colour)
+
+transitions:
+  - from: ...
+    authorisation: user
+    prompt: <question>                                # optional: the QUESTION posed to the person (awaiting-human)
+```
+
+- **`blocked_on` ships exactly two reasons**, each establishable from *one* subject's reality (COR-032): **`awaiting-human`** (a person must act) and **`awaiting-condition`** (an external fact must become true). The enum is open to additive widening — the cross-subject reasons (`awaiting-subprocess-outcome`, `deadlock`) join it where the engine first reads across subjects (deferred).
+- **The blocked flag is a DERIVED overlay, recomputed live — never stored truth. Resume differs by reason** (COR-034):
+  - **`awaiting-human`** carries **no `resume_when`** (the schema forbids one). It is *currently* blocked while the subject sits at a non-terminal position with an outgoing, **not-yet-taken** `user` move — whether that move's gate is open (ready to take) or closed (the human must intervene in reality first). The **resume is the person taking the move** — the position advancing off the parked state, which removes the pending move. The engine consults **no side-predicate**: a side-fact existing (e.g. a review file) must **not** clear an "approve?" block — only taking the move does. (Tying the resume to a side-predicate is forbidden precisely because the two can disagree: a satisfied side-fact while the move is still gate-closed would falsely report "not waiting" on a subject that is genuinely stuck.)
+  - **`awaiting-condition`** carries a **required `resume_when`** predicate. It is *currently* blocked when (a) it has **no legal move** (the shipped "no legal move" detection — a non-terminal, determinate position out of which no transition is allowed), and (b) its `resume_when` predicate does **not** yet hold. When `resume_when` holds, the engine **auto-clears** the flag — the external fact turning true with no human in the loop. An indeterminate `resume_when` is fail-closed (the subject stays blocked rather than silently resuming).
+- **The wait is journaled on enter and on resume.** Entering a blocked position appends a `blocked-enter` event; clearing it appends a `blocked-resume` event (each a journal entry — there is *no* separate emission/dispatch channel; the deferred **hooks** slot will react to these journaled transitions when it ships). `since` (the wait's age) is read from the open `blocked-enter` entry; `assignee` is carried from the declaration. **The journal is the audit trail; the CURRENT blocked-ness is always the live evaluation** (for `awaiting-human`, whether the pending move has been taken; for `awaiting-condition`, the `resume_when` predicate), **authoritative over any journal entry** (inheriting the journal-is-intent-log / live-detection-authoritative contract below).
+- **Where the journaling happens.** `status` and `evaluate_blocked` are **read-only** (status runs predicates live and must not write). The journaling of enter/resume rides the writing paths only: `move` reconciles the wait against the **target state it just declared**, so a move that parks the subject journals the `blocked-enter` **at park time** — making `since` meaningful immediately, rather than lazily only once the human finally acts — and a move that clears the wait journals the `blocked-resume`. `reconcile_blocked` is also exposed (with no target override) so a binding can journal a self-clearing `awaiting-condition` resume — which needs no human move — on demand against live reality. Because live detection is authoritative, a not-yet-journaled resume never lies about current state.
+- **An `awaiting-human` block carries a `prompt`** — the question — authored on the `user` move and surfaced on that move's per-move emission (and lifted onto the blocked overlay for the human-pause view). The park stops being a silent "your move" and becomes "your move: here's the question." Content-free: the engine carries/surfaces `prompt` and `blocked_on` but never interprets them.
+- **It is orthogonal, not a state.** It annotates the subject at its current position; it adds no state to the process and cannot explode the state space. Position stays inferred; the validator stays deterministic (`resume_when` is a predicate over reality, exactly like detection).
+
+**Deferred** (each its own future decision when a binding needs it, per COR-034): the cross-subject `blocked_on` reasons (`awaiting-subprocess-outcome`, `deadlock`), the **hooks** firing mechanism (notify-on-enter / act-on-resume), and a structured **`selection`** option-set (render options in the prompt text until it ships).
 
 ## The two guarantees
 
