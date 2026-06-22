@@ -212,6 +212,47 @@ def test_rendered_gitignore_actually_matches_declared_path(repo: Path) -> None:
     assert res2.returncode == 1
 
 
+# --- first real per-component declaration: project-management journal --------
+#
+# The fixture-driven tests above prove the per-component reader/render path on
+# synthetic capabilities. This pair pins the FIRST real declaration shipped in
+# the source tree (T3a, EPIC #154): the project-management capability declares
+# its process journal in its own package.yaml, so the path must flow through the
+# real reader and land in the committed `.pkit/.gitignore` that git honours.
+
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+_PM_PACKAGE = (
+    _REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "package.yaml"
+)
+_PM_JOURNAL_DECL = (
+    ".pkit/capabilities/project-management/project/process/**/*.journal.jsonl"
+)
+
+
+def test_pm_capability_declares_journal_in_package_yaml() -> None:
+    # The real reader sees the journal pattern in the shipped package.yaml.
+    assert vis._read_runtime_ignore_decl(_PM_PACKAGE) == [_PM_JOURNAL_DECL]
+
+
+def test_committed_pkit_gitignore_ignores_pm_journal() -> None:
+    # The committed `.pkit/.gitignore` (rendered from the real declarations) must
+    # actually ignore a project-management process-journal path — ask git itself,
+    # against the real rendered file in the source tree.
+    rendered = _REPO_ROOT / ".pkit" / ".gitignore"
+    assert rendered.is_file(), "the source tree must ship a rendered .pkit/.gitignore"
+    sample = (
+        ".pkit/capabilities/project-management/project/process/"
+        "issue-lifecycle/000.journal.jsonl"
+    )
+    res = subprocess.run(
+        ["git", "check-ignore", "-q", sample],
+        cwd=_REPO_ROOT, capture_output=True, text=True, check=False,
+    )
+    assert res.returncode == 0, (
+        "committed .pkit/.gitignore must ignore the pm capability's process journal"
+    )
+
+
 # --- info/exclude region + shared/private ------------------------------------
 
 def _exclude(repo: Path) -> str:
