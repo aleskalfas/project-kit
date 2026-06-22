@@ -60,13 +60,18 @@ from _lib.placeholder_detection import (  # noqa: E402
     PHASE_TRANSITION,
     detect_placeholder_residuals,
 )
+from _lib.closing_issue_fetchers import (  # noqa: E402
+    issue_labels as _issue_labels_fetch,
+    pr_closing_issue_numbers as _pr_closing_issue_numbers_fetch,
+)
 from _lib.review_contributions import collect_contributions  # noqa: E402
 from _lib.review_mode import resolve_mode  # noqa: E402
-
-# `workstream:*` label prefix (DEC-012 classification axis). The required-
-# reviewer resolution (DEC-032 D1) keys contributed match-predicates on the
-# `workstream` axis, read off a closing issue's `workstream:<value>` label.
-_WORKSTREAM_LABEL_PREFIX = "workstream:"
+from _lib.required_reviewers import (  # noqa: E402
+    ERROR_CLOSING_ISSUES,
+    ERROR_COLLECTION,
+    Resolution,
+    resolve_required_local_reviewers,
+)
 
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
@@ -398,18 +403,6 @@ def _check_agent_gate(
             passed=False, refusal_message="error: cannot resolve PR number.",
         )
 
-    # --- DEC-032 D1: resolve the contributed reviewer set for this PR. ----
-    # Recomputed at gate time (D5) from the current manifest + the PR's
-    # current closing-issue classifications. Fail closed on any blocking
-    # error (D5): a malformed declaration or an undeployed contributed agent
-    # is an unsatisfiable required reviewer, never silently dropped.
-    repo_root = capability_root.parent.parent.parent
-    contributed_rules = _resolve_contributed_reviewers(
-        pr_number, config, repo_root
-    )
-    if isinstance(contributed_rules, _GateResult):
-        return contributed_rules  # fail-closed refusal already shaped.
-
     # Baseline required reviewer names per path (DEC-028's static lists).
     remote_baseline = [
         entry.get("github_login")
@@ -422,14 +415,24 @@ def _check_agent_gate(
         if isinstance(entry, dict) and entry.get("name")
     ]
 
-    # The resolved required local set = baseline ∪ contributed, de-duped by
-    # name, preserving baseline-first order (DEC-032 D1).
-    required_local = _dedup_preserve_order(
-        local_baseline + [rule.reviewer for rule in contributed_rules]
+    # --- DEC-032 D1: resolve the required-local set for this PR. -----------
+    # Baseline ∪ contributed, de-duped, via the SHARED resolver `review-pr`
+    # also calls — so the set this gate checks == the set `review-pr` invokes
+    # (invoke-set == gate-set, the whole point of owning resolution once).
+    # Recomputed at gate time (D5) from the current manifest + the PR's
+    # current closing-issue classifications. Fail closed on any blocking
+    # error (D5): a malformed declaration, an undeployed contributed agent,
+    # or an unresolvable closing-issue lookup is never silently dropped.
+    repo_root = capability_root.parent.parent.parent
+    resolution = _resolve_required_local(
+        pr_number, config, repo_root, local_baseline
     )
+    if not resolution.ok:
+        return _resolution_refusal(resolution)
+    required_local = list(resolution.required_local)
     # Provenance for the refusal message: reviewer name → contributing
     # capability (baseline reviewers have no contributing capability).
-    contributed_by = {rule.reviewer: rule.capability for rule in contributed_rules}
+    contributed_by = dict(resolution.contributed_by)
 
     # Fetch comments + author + the latest commit timestamp (one round-trip).
     proc = gh_run(
@@ -576,201 +579,56 @@ def _check_agent_gate(
     )
 
 
-class _Unresolvable:
-    """Sentinel: a resolution step could not establish ground truth.
+def _resolve_required_local(
+    pr_number: int, config: dict, repo_root: Path, local_baseline: list[str],
+) -> Resolution:
+    """Resolve the PR's required-local set via the shared resolver (DEC-032 D1).
 
-    Distinct from an *empty* resolved result. An empty `Resolved([])` means
-    "we determined the PR closes no classified issue" — DEC-032 D1's named,
-    intended baseline-only branch (legitimate fail-open). `_Unresolvable`
-    means "we could not determine what the PR closes / could not read an
-    issue's labels" (transient gh failure / malformed JSON) — which must fail
-    *closed* (REFUSE), never collapse to baseline-only and silently drop a
-    genuinely-required contributed reviewer (a retry-/induce-able bypass).
+    Delegates to `_lib.required_reviewers.resolve_required_local_reviewers` —
+    the SAME resolution `review-pr` calls — injecting the SHARED closing-issue
+    and label fetchers (`_lib.closing_issue_fetchers`, the one definition both
+    consumers import) wired to this script's `gh` helpers and
+    `collect_contributions`. The fetcher lambdas reference `gh_run` /
+    `gh_get_issue` as module globals, looked up at call time, so the agent-gate
+    tests' monkeypatches of `collect_contributions` / `gh_run` / `gh_get_issue`
+    on this module stay effective. Returns a `Resolution`; the caller maps a
+    non-ok result to a `_GateResult` refusal (fail-closed, DEC-032 D5).
     """
-
-    def __init__(self, reason: str):
-        self.reason = reason
-
-
-def _resolve_contributed_reviewers(
-    pr_number: int, config: dict, repo_root: Path,
-) -> tuple | _GateResult:
-    """Resolve the contributed reviewer rules required for this PR (DEC-032 D1).
-
-    Returns the tuple of matched `ContributionRule`s on success, or a
-    `_GateResult` refusal when the collection fails closed (D5): a malformed
-    contribution declaration, an unparseable manifest, or a contributed
-    reviewer whose agent is undeployed. Fail-closed is guaranteed by gating
-    on `collection.ok` *before* reading the matched rules — an undeployed
-    contributed reviewer is also surfaced as a blocking collection error, so
-    the gate never proceeds on a smaller (fail-open) set.
-
-    Closing-issue resolution itself can fail closed too: if we cannot
-    determine what the PR closes (transient gh failure resolving
-    `closingIssuesReferences`) or cannot read a closing issue's labels, the
-    contributed set is *unknown*, not empty — so the gate REFUSES rather than
-    proceed on the baseline alone (DEC-032 D5, mirroring the verdict-fetch
-    fail-closed posture below).
-    """
-    collection = collect_contributions(repo_root)
-    if not collection.ok:
-        return _GateResult(
-            passed=False,
-            refusal_message=_contribution_error_refusal(collection),
-        )
-
-    classifications = _closing_issue_classifications(pr_number, config)
-    if isinstance(classifications, _Unresolvable):
-        return _GateResult(
-            passed=False,
-            refusal_message=_closing_issue_unresolvable_refusal(
-                classifications.reason
-            ),
-        )
-    return collection.reviewers_for_issues(classifications)
-
-
-def _closing_issue_classifications(
-    pr_number: int, config: dict,
-) -> list[dict[str, str]] | _Unresolvable:
-    """Classification mapping (e.g. `{workstream: design}`) per closing issue.
-
-    DEC-032 D1's resolution domain is total for the *determinable* cases: a
-    PR closing multiple issues yields one mapping per issue (the caller
-    unions them); a PR closing no classified issue yields an empty list →
-    baseline only. A closing entity with no `workstream:*` label (a sub-task
-    or Milestone carries no classification per DEC-012) yields an empty
-    mapping — matching nothing, so baseline only, which is the named
-    gate-escape DEC-032 D1 calls out.
-
-    But when ground truth cannot be established — `closingIssuesReferences`
-    failed to resolve, or a closing issue's labels could not be read — the
-    result is `_Unresolvable`, NOT an empty list. The two states are
-    different per D1: "PR closes no classified issue" is fail-open
-    (legitimate); "could not determine what the PR closes" is UNKNOWN and
-    must fail closed (the caller REFUSES). Collapsing the latter to baseline
-    only is a retry-/induce-able bypass of a required reviewer.
-    """
-    closing_numbers = _pr_closing_issue_numbers(pr_number, config)
-    if isinstance(closing_numbers, _Unresolvable):
-        return closing_numbers
-    classifications: list[dict[str, str]] = []
-    for issue_number in closing_numbers:
-        issue = gh_get_issue(issue_number, config, fields="labels")
-        if issue is None:
-            # Could not read this issue's labels — its classification is
-            # UNKNOWN, so a contributed reviewer it might require cannot be
-            # dropped. Fail closed (DEC-032 D5) rather than treat as "no
-            # classification → baseline only".
-            return _Unresolvable(
-                f"could not read labels for closing issue #{issue_number}"
-            )
-        try:
-            classification = _classification_from_labels(issue.get("labels") or [])
-        except _MultiWorkstreamError as exc:
-            # Invalid upstream label data (DEC-012 forbids multi-workstream).
-            # Fail closed rather than guess which workstream's reviewer to drop.
-            return _Unresolvable(
-                f"closing issue #{issue_number} has multiple workstream "
-                f"labels ({', '.join(sorted(exc.values))}); DEC-012 declares "
-                "the workstream axis mutually exclusive — fix the labels"
-            )
-        if classification:
-            classifications.append(classification)
-    return classifications
-
-
-def _pr_closing_issue_numbers(
-    pr_number: int, config: dict,
-) -> list[int] | _Unresolvable:
-    """Issue numbers the PR closes, via `gh pr view`'s closingIssuesReferences.
-
-    Distinguishes two states DEC-032 D1 treats differently:
-
-    - **PR closes nothing** (the `closingIssuesReferences` array is present
-      and empty) → `[]`, the "no closing issue" branch → baseline only. This
-      is the legitimate, named fail-open branch.
-    - **Could not determine what the PR closes** (gh non-zero exit, malformed
-      JSON, or the field absent from the payload) → `_Unresolvable`, so the
-      caller fails closed. Returning `[]` here would silently drop a
-      genuinely-required contributed reviewer on a transient gh failure — a
-      retry-/induce-able bypass of a required review.
-    """
-    proc = gh_run(
-        ["gh", "pr", "view", str(pr_number),
-         "--json", "closingIssuesReferences"],
-        config, check=False,
+    return resolve_required_local_reviewers(
+        pr_number,
+        baseline_local=local_baseline,
+        repo_root=repo_root,
+        closing_issue_numbers=lambda n: _pr_closing_issue_numbers_fetch(
+            n, config, gh_run=gh_run
+        ),
+        issue_labels=lambda n: _issue_labels_fetch(
+            n, config, gh_get_issue=gh_get_issue
+        ),
+        collect_contributions=collect_contributions,
     )
-    if proc.returncode != 0:
-        return _Unresolvable(
-            f"gh pr view closingIssuesReferences failed: {proc.stderr.strip()}"
-        )
-    try:
-        data = json.loads(proc.stdout)
-    except (ValueError, json.JSONDecodeError):
-        return _Unresolvable(
-            "gh pr view closingIssuesReferences returned malformed JSON"
-        )
-    if not isinstance(data, dict) or "closingIssuesReferences" not in data:
-        return _Unresolvable(
-            "gh pr view payload missing closingIssuesReferences"
-        )
-    refs = data.get("closingIssuesReferences") or []
-    numbers: list[int] = []
-    for ref in refs:
-        if isinstance(ref, dict) and isinstance(ref.get("number"), int):
-            numbers.append(ref["number"])
-    return numbers
 
 
-def _classification_from_labels(labels: list) -> dict[str, str]:
-    """Build the classification mapping from an issue's labels (DEC-012).
+def _resolution_refusal(resolution: Resolution) -> _GateResult:
+    """Shape a fail-closed `_GateResult` from a non-ok `Resolution` (D5).
 
-    Only the `workstream` axis is keyed at v1 (DEC-032 D1). A `workstream:*`
-    label yields `{workstream: <value>}`; no such label yields `{}` (matching
-    nothing → baseline only).
-
-    **Single workstream per issue.** The `workstream` axis is declared
-    `mutually_exclusive: true` in `schemas/classification.yaml` (DEC-012), so
-    at most one `workstream:*` label is valid on an issue. Returning on the
-    first match is therefore *not* fail-open — there is no second workstream
-    to drop a required reviewer for. We still assert the invariant defensively:
-    if an issue somehow carries multiple distinct `workstream:*` labels (a
-    label-discipline violation upstream), raise rather than silently pick one
-    — silently dropping the others would skip a contributed reviewer required
-    for a dropped workstream (the fail-open hole D5 guards against). A noisy
-    failure surfaces the bad data; the operator fixes the labels (or
-    `--bypass`).
+    A collection error names the malformed declaration / undeployed agent; an
+    unresolvable closing-issue lookup names what could not be determined. Both
+    refuse rather than proceed on a partial (fail-open) set.
     """
-    values: list[str] = []
-    for lbl in labels:
-        name = lbl.get("name", "") if isinstance(lbl, dict) else str(lbl)
-        if name.startswith(_WORKSTREAM_LABEL_PREFIX):
-            value = name[len(_WORKSTREAM_LABEL_PREFIX):]
-            if value and value not in values:
-                values.append(value)
-    if not values:
-        return {}
-    if len(values) > 1:
-        raise _MultiWorkstreamError(values)
-    return {"workstream": values[0]}
-
-
-class _MultiWorkstreamError(Exception):
-    """An issue carries multiple `workstream:*` labels (DEC-012 forbids this).
-
-    `workstream` is `mutually_exclusive: true` per `classification.yaml`. More
-    than one value is invalid upstream label data; the gate refuses to guess
-    which workstream's contributed reviewer to honour (silently picking one
-    would drop the others — fail-open). Surfaced as a fail-closed refusal.
-    """
-
-    def __init__(self, values: list[str]):
-        self.values = values
-        super().__init__(
-            "issue carries multiple workstream labels: "
-            + ", ".join(sorted(values))
+    error = resolution.error
+    assert error is not None  # `not resolution.ok` guarantees this.
+    if error.kind == ERROR_COLLECTION and error.collection is not None:
+        return _GateResult(
+            passed=False,
+            refusal_message=_contribution_error_refusal(error.collection),
         )
+    if error.kind == ERROR_CLOSING_ISSUES:
+        return _GateResult(
+            passed=False,
+            refusal_message=_closing_issue_unresolvable_refusal(error.message),
+        )
+    # Defensive: any other (unexpected) kind still fails closed.
+    return _GateResult(passed=False, refusal_message=error.message)
 
 
 def _parse_local_verdict(first_line: str) -> tuple[str | None, str | None]:
@@ -785,17 +643,6 @@ def _parse_local_verdict(first_line: str) -> tuple[str | None, str | None]:
     if match is None:
         return None, None
     return match.group("verdict"), match.group("name")
-
-
-def _dedup_preserve_order(names: list[str]) -> list[str]:
-    """De-duplicate a name list, preserving first-seen order (DEC-032 D1)."""
-    seen: set[str] = set()
-    out: list[str] = []
-    for name in names:
-        if name not in seen:
-            seen.add(name)
-            out.append(name)
-    return out
 
 
 def _reviewer_label(name: str, contributed_by: dict[str, str]) -> str:
