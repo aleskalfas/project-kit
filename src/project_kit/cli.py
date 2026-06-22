@@ -1043,6 +1043,45 @@ def permissions_revoke(subject: str, privilege: str) -> None:
     click.echo(perm.revoke(target_root, subject, privilege))
 
 
+@permissions.command("scaffold")
+@click.argument("capability")
+def permissions_scaffold(capability: str) -> None:
+    """Stamp CAPABILITY's permissions/ fragment skeleton (privilege-catalog.yaml + grants.yaml).
+
+    Standalone (not a `new capability` flag) so it serves existing
+    capabilities too. Stamps the two kit-owned fragment files with the
+    correct shapes and inline guidance on both authoring footguns: fragment
+    keys are authored BARE (the loader applies the `<cap>:` scope), a grant
+    references a fragment privilege with the SCOPED token
+    `[privilege-catalog:<cap>:<name>]`, and `guardrail: true` is forbidden in
+    a fragment (per ADR-016 + ADR-021). Refuses an unknown capability; refuses
+    to clobber an existing fragment file.
+    """
+    from project_kit import permissions as perm
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    try:
+        stamped = perm.scaffold_fragment(target_root, capability)
+    except perm.PermissionsError as exc:
+        raise click.ClickException(str(exc)) from exc
+    if not stamped:
+        click.echo(
+            f"Nothing stamped: both fragment files already exist under "
+            f".pkit/capabilities/{capability}/permissions/ (left untouched)."
+        )
+        return
+    for path in stamped:
+        click.echo(f"Stamped: {path.relative_to(target_root)}")
+    click.echo(
+        "Next: replace the illustrative entries with this capability's own "
+        "privilege(s) and deny(ies) — keep fragment keys BARE and reference "
+        f"them with the scoped token `[privilege-catalog:{capability}:<name>]`. "
+        "`pkit schemas validate` lints the grant tokens."
+    )
+
+
 @permissions.command("mode")
 @click.argument("mode", required=False, type=click.Choice(["additive", "managed"]))
 def permissions_mode(mode: str | None) -> None:

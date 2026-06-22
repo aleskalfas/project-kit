@@ -362,9 +362,45 @@ def validate_all(target_root: Path, *, resolve: bool = True) -> ValidationReport
     live in each schema YAML's optional `binds_to:` field and are
     validated implicitly by the schema's existing envelope. Schema
     pair validation alone is the surface here.
+
+    Also runs the capability-fragment grant-token lint (ADR-021): for every
+    installed capability's `permissions/grants.yaml`, each grant's privilege
+    token must resolve to a privilege in the MERGED catalog, or the deny
+    silently does not bind (the bare-vs-scoped fail-open hazard). This pass is
+    scoped to the full project (it needs the manifest + merged catalog), so it
+    runs only in the no-PATH `validate_all` gate, not in `validate_path`.
     """
     pairs = discover_schema_pairs(target_root)
-    return _run_validation(pairs, target_root, resolve=resolve)
+    report = _run_validation(pairs, target_root, resolve=resolve)
+    fragment_issues = _lint_fragment_grant_tokens(target_root)
+    if not fragment_issues:
+        return report
+    return ValidationReport(
+        pairs_checked=report.pairs_checked,
+        issues=report.issues + tuple(fragment_issues),
+    )
+
+
+def _lint_fragment_grant_tokens(target_root: Path) -> list[ValidationIssue]:
+    """Adapt the permissions module's fragment-grant-token lint to ValidationIssues.
+
+    The lint itself (`permissions.lint_capability_fragment_grants`) lives with
+    the permission code because it reuses the decision core's merge + token
+    normaliser to agree with the runtime exactly (ADR-021); this wrapper maps
+    its findings into the validation report so `pkit schemas validate` is the
+    single gate the kit runs on capability-side spec.
+    """
+    from project_kit import permissions as perm
+
+    issues: list[ValidationIssue] = []
+    for finding in perm.lint_capability_fragment_grants(target_root):
+        issues.append(
+            ValidationIssue(
+                location=_rel(finding.grants_path, target_root),
+                message=f"grant token {finding.token!r}: {finding.fix_hint}",
+            )
+        )
+    return issues
 
 
 def validate_path(

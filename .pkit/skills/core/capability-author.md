@@ -15,6 +15,7 @@ reads:
     - PRJ-002
   paths:
     - .pkit/cli/README.md
+    - .pkit/permissions/README.md
     - .pkit/decisions/README.md
     - .pkit/decisions/core/COR-017-capability-pattern.md
     - .pkit/decisions/core/COR-005-bundle-pattern.md
@@ -135,6 +136,24 @@ Skills, agents, scripts, and schemas in a capability follow the same shapes as t
 - Skills and agents may cite *this capability's* decisions in body prose via the `[<name>:DEC-NNN-slug]` form. The validator (`pkit refs validate`) walks capability subtrees and resolves these citations.
 - Scripts can be Python with PEP 723 inline metadata (so adopters can run them via `uv run` without a host project) or shell. If a script needs Python dependencies, declare them inline so the script is self-installing.
 
+### 6b. (Optional) Ship a permission fragment
+
+If the capability needs to **shape its own agents' tool reach** — define a privilege the backbone catalog should not carry, and deny it to one of the capability's agents — it ships a `permissions/` fragment (the capability-contributed privilege-definition + grant mechanism; see `.pkit/permissions/README.md`). Stamp the skeleton:
+
+```
+pkit permissions scaffold <name>
+```
+
+This stamps `.pkit/capabilities/<name>/permissions/privilege-catalog.yaml` (the privilege *definition*) and `grants.yaml` (the deny *policy*), with inline guidance. It refuses an unknown capability and refuses to clobber an existing fragment file. Skip this step entirely if the capability shapes no permissions.
+
+Two footguns the stamped comments call out — and that you must respect when editing the fragment:
+
+- **Fragment privilege keys are authored BARE.** Write `ad-hoc-scraping:`, not `<name>:ad-hoc-scraping:`. The loader rewrites each key to the capability-scoped id `<name>:ad-hoc-scraping`. Writing the scope yourself double-scopes it.
+- **A grant references a fragment privilege with the SCOPED token.** In `grants.yaml`, reference it as `[privilege-catalog:<name>:ad-hoc-scraping]` — the `<name>:` scope is **required**. A bare `[privilege-catalog:ad-hoc-scraping]` resolves to no merged privilege, so the deny silently does **not** bind (a fail-open hazard). A *backbone* privilege is still referenced bare (e.g. `[privilege-catalog:issue-tracker-write]`).
+- **`guardrail: true` is forbidden in a fragment.** A capability may extend the recognised vocabulary but may never install a deny on every adopter by default; the loader rejects such an entry.
+
+`pkit schemas validate` runs a fragment-token-resolution lint over every installed capability's `grants.yaml`: a token resolving to no privilege in the merged catalog fails the gate (catching the bare-vs-scoped mistake even in a hand-authored fragment). Run it after editing the fragment.
+
 ### 7. Self-check
 
 Walk the capability against COR-017's universal-element checklist:
@@ -154,6 +173,8 @@ Before committing, validate the capability mechanically:
 ```
 pkit refs validate                              # capability subtree is parsed cleanly
 ```
+
+If the capability ships a `permissions/` fragment, also run `pkit schemas validate` — its fragment-token-resolution lint confirms each grant token resolves to a real privilege in the merged catalog (catches a bare-vs-scoped token).
 
 Then in a scratch adopter:
 

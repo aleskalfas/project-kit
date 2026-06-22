@@ -79,6 +79,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # or: brew install uv
 | `permissions catalog` | list the privilege catalog (baseline + extensions) | no | yes (read-only) |
 | `permissions overview` | role-grouped catalog view — guardrails vs enablers, provenance, granted-to, live-enforcement status | no | yes (read-only) |
 | `permissions grant <subject> <privilege> [--scope <glob>...] [--deny]` | add/update a grant in the project model, validated against the catalog | yes | no — idempotent (updates a matching grant) |
+| `permissions scaffold <cap>` | stamp a capability's `permissions/` fragment skeleton — `privilege-catalog.yaml` (definition, ADR-021) + `grants.yaml` (deny policy, ADR-016) — with correct shapes + inline footgun guidance (fragment keys are BARE; a grant references a fragment privilege with the SCOPED `[privilege-catalog:<cap>:<name>]` token; `guardrail: true` forbidden). Standalone (serves existing capabilities, not a `new capability` flag). Refuses an unknown capability; refuses to clobber an existing fragment file | yes | no — no-clobber (leaves an authored fragment untouched) |
 | `permissions revoke <subject> <privilege>` | remove a grant from the project model | yes | no — no-ops when absent |
 | `permissions mode [additive\|managed]` | show (no arg) or set the ownership mode | yes (on set) | no |
 | `permissions enable` | turn on live enforcement: register the PreToolUse hook (opt-in) + ensure native guardrail denies (the double-lock) | yes | no — idempotent |
@@ -291,6 +292,8 @@ Read-only check on the **capability-side schemas mechanism**: every YAML schema 
 With `<path>`, runs the same passes scoped to the given file or directory — useful for adopters whose data follows the same conventions outside the capabilities tree.
 
 `--shape-only` skips the resolver pass (useful mid-refactor when a referenced target schema doesn't exist yet).
+
+The no-PATH gate also runs a **fragment-token-resolution lint** (ADR-021): for every installed capability's `permissions/grants.yaml`, each grant's privilege token must resolve to a privilege in the *merged* catalog, or the deny silently does not bind (the bare-vs-scoped fail-open hazard). The lint reuses the decision core's merge (`load_catalog`) and token normaliser (`_privilege_ids`) so it agrees with the runtime exactly; it covers hand-authored fragments, not just those `permissions scaffold` / `permissions grant` produce. An unresolved token fails the gate with a clear message naming the file, the offending token, and the likely fix (usually the missing `<cap>:` scope). This pass is project-scoped (it needs the manifest + merged catalog), so it runs only in `schemas validate` with no `<path>`, not in the path-scoped form.
 
 ### `data validate <path>`
 
