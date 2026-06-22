@@ -12,9 +12,42 @@ subject identifier (required — no singleton default) and never enumerates its
 subjects; the engine simply threads that identifier through every predicate it
 runs and through the per-subject journal path. The remaining deferred extension
 points (stored / hybrid detection, hooks, breadth, resolver / open-region
-targets, composition, cross-subject enumeration/cascade) are not implemented
-here; the shape contract's enums already reject their values, so an
-unrecognised value fails closed.
+targets, cross-subject enumeration/cascade, overflow/hand-off orchestration) are
+not implemented here; the shape contract's enums already reject their values, so
+an unrecognised value fails closed.
+
+Composition (COR-036): the engine's one genuinely-new capability — it RESOLVES
+another process's terminal outcome and exposes it as an input to a parent's
+gate. A `subprocess` state `runs: <capability>:<process-id>`; while a subject is
+parked there, the engine instantiates an inner ProcessEngine on the inner
+address + a DETERMINATE inner subject (singleton, or a supplied keyed id — a
+keyed inner with no id is fail-closed, COR-032's required-subject rule) and reads
+the inner's currently-detected position via the inner engine's own
+`resolve_position`. A `subprocess-outcome` gate on the parent passes iff that
+inner position is exactly the gate's named terminal `outcome`. This read is
+SINGLE-LEVEL by construction (depth 1): resolving the inner runs only the inner's
+own DETECTION predicates — it does NOT recurse through the inner's own
+subprocess-outcome gates — so resolution always terminates on bounded depth, and
+that bounded depth (not the guard below) is what keeps it terminating today. It
+resolves ONE inner subject and NEVER enumerates a keyed inner's subjects (that
+breadth is cascade, deferred). An ACYCLICITY GUARD (the active resolution stack
+on each engine — its own address plus every inner above it) refuses an inner
+whose address is already on the stack, failing closed like an unrecognised gate
+kind. Because resolution does not recurse through subprocess gates, the stack
+never deepens past the single inner being loaded — so in practice the guard fires
+only on the DIRECT self-embed (A runs A, where the inner address equals the
+engine's own seeded address). A transitive cycle (A runs B runs A) is not
+reachable as a recursion today (resolving A reads B's detected position and
+stops; it never descends into B's gate back to A), so it cannot deepen the stack;
+it is bounded-safe incidentally, not by the guard. The guard is retained as cheap,
+correct insurance and as the right seam to extend if nesting-through-gates is ever
+added (at which point the transitive case becomes reachable and the stack catches
+it). While the inner has not reached a wired terminal outcome, the parent is parked as the
+`awaiting-subprocess-outcome` blocked reason — an AUTO-CLEARING overlay reusing
+COR-034's model, where the "condition" is the single-level subprocess resolution
+carried by the subprocess-outcome gates (no `resume_when`; it clears when a wired outcome
+resolves and a legal move opens). All coupling lives in the parent; the inner
+references nothing upward, so it stays reusable. Resolution is READ-ONLY.
 
 Invariants (COR-035): a process may declare position-independent always-checks
 (`invariants: [{id, check, why}]`). The engine runs each `check` through the
@@ -393,6 +426,29 @@ class ProcessDefinition:
         return [i for i in self.data.get("invariants", []) if isinstance(i, dict)]
 
     @property
+    def interface(self) -> dict[str, Any] | None:
+        """The process's public embedding contract (COR-036) `{inputs, outcomes}`,
+        or None. Documentation of the embedding contract — the engine resolves a
+        reached outcome from the inner's live terminal regardless of whether the
+        inner declares `interface`. Additive — a process omitting it is byte-
+        unchanged."""
+        value = self.data.get("interface")
+        return value if isinstance(value, dict) else None
+
+    def subprocess_of(self, state_id: str | None) -> dict[str, Any] | None:
+        """The `subprocess` embedding declaration on `state_id` (COR-036), or None.
+
+        A state carrying `subprocess: {runs, subject?, inputs?}` embeds an inner
+        process; the engine resolves that inner's terminal outcome while the
+        subject is parked here. A state without it is an ordinary node.
+        """
+        state = self.state(state_id) if state_id is not None else None
+        if state is None:
+            return None
+        value = state.get("subprocess")
+        return value if isinstance(value, dict) else None
+
+    @property
     def blocked_declaration(self) -> dict[str, Any] | None:
         """The subject's optional `blocked` wait declaration (COR-034), or None.
 
@@ -538,20 +594,67 @@ class InvariantOutcome:
     indeterminate: bool = False
 
 
+@dataclass(frozen=True)
+class SubprocessResolution:
+    """The engine's resolution of an embedded inner process's terminal outcome
+    (COR-036) — the single genuinely-new cross-process answer.
+
+    `outcome` is the inner process's reached terminal state id, or None when the
+    inner has not yet reached *any* terminal state (the parent is still waiting
+    on it). `indeterminate` is the fail-closed flag: the inner could not be
+    resolved (a cyclic embedding, an unresolvable inner address, a keyed inner
+    with no supplied subject, or an indeterminate inner position). When set,
+    `outcome` is None and `reason` explains why — and every `subprocess-outcome`
+    gate reading it fails closed, exactly like an unrecognised gate kind.
+
+    Single-inner: this resolves ONE determinate inner subject. It never
+    enumerates a keyed inner's subjects (that breadth is cascade, deferred).
+    """
+
+    address: str
+    outcome: str | None
+    indeterminate: bool
+    reason: str
+
+
 class ProcessEngine:
     """Resolves position, validates + executes moves, renders status for one
     process definition + subject. Stateless across invocations (COR-033): every
-    call rediscovers reality by running detection predicates live."""
+    call rediscovers reality by running detection predicates live.
+
+    Composition (COR-036): a state may embed an inner process (`subprocess`).
+    The engine resolves that inner's terminal outcome by instantiating an inner
+    engine on the inner address + a determinate inner subject and reading the
+    inner's currently-detected position via its own `resolve_position`. That read
+    is single-level (depth 1): it runs only the inner's detection predicates, not
+    the inner's own subprocess-outcome gates, so resolution terminates on bounded
+    depth. `_resolution_stack` is the chain of process addresses currently being
+    resolved (this engine's address plus every inner above it); an inner address
+    already on the stack fails closed (COR-036's acyclicity guard, distinct from
+    COR-034's peer deadlock). Because resolution does not recurse through
+    subprocess gates, the stack never deepens past the one inner being loaded, so
+    in practice the guard catches only the direct self-embed (A runs A); a
+    transitive cycle (A runs B runs A) is bounded-safe incidentally, not by the
+    guard. The guard is retained as the correct seam to extend if
+    nesting-through-gates is ever added.
+    """
 
     def __init__(
         self,
         definition: ProcessDefinition,
         repo_root: Path,
         subject: str = SINGLETON_SUBJECT,
+        resolution_stack: tuple[str, ...] = (),
     ) -> None:
         self.definition = definition
         self.repo_root = repo_root
         self.subject = subject
+        # COR-036: the active resolution chain. This engine's own address is on
+        # the stack so a self-embed (A runs A) is caught; an inner engine extends
+        # it when instantiated. Seeded here when empty so a top-level engine still
+        # guards against embedding itself.
+        own_address = f"{definition.capability}:{definition.process_id}"
+        self._resolution_stack = resolution_stack or (own_address,)
         self.runner = PredicateRunner(
             capability=definition.capability,
             capability_dir=definition.capability_dir,
@@ -565,16 +668,22 @@ class ProcessEngine:
         definition: ProcessDefinition,
         repo_root: Path,
         subject: str | None,
+        resolution_stack: tuple[str, ...] = (),
     ) -> ProcessEngine:
         """Build an engine, resolving the subject per the definition's cardinality.
 
         singleton -> the supplied subject is ignored; the fixed SINGLETON_SUBJECT
         is used (one journey per process).
         keyed (COR-032) -> a subject is REQUIRED; absent it, raise a clear
-        ProcessError (no singleton default for a keyed process).
+        ProcessError (no singleton default for a keyed process). For an embedded
+        inner this enforces COR-036's required-subject rule: a keyed inner must
+        be given its determinate subject id.
 
         An unrecognised cardinality fails closed as a ProcessError rather than
         silently defaulting.
+
+        `resolution_stack` threads COR-036's active resolution chain so an
+        instantiated inner engine inherits the cycle guard.
         """
         cardinality = definition.cardinality
         if cardinality == "keyed":
@@ -584,9 +693,14 @@ class ProcessEngine:
                     "(cardinality: keyed); --subject is required (it identifies which "
                     f"{definition.subject_key or 'unit'} to act on)."
                 )
-            return cls(definition, repo_root, subject=subject)
+            return cls(definition, repo_root, subject=subject, resolution_stack=resolution_stack)
         if cardinality == "singleton":
-            return cls(definition, repo_root, subject=SINGLETON_SUBJECT)
+            return cls(
+                definition,
+                repo_root,
+                subject=SINGLETON_SUBJECT,
+                resolution_stack=resolution_stack,
+            )
         raise ProcessError(
             f"process {definition.capability}:{definition.process_id} declares "
             f"unsupported subject cardinality {cardinality!r}; failing closed "
@@ -633,6 +747,130 @@ class ProcessEngine:
             state_id=None, indeterminate=any_indeterminate, detection_reasons=reasons
         )
 
+    # --- composition: resolve one inner outcome (COR-036) -----------------
+
+    def resolve_subprocess_outcome(self, state_id: str | None) -> SubprocessResolution | None:
+        """Resolve the terminal outcome of the inner process embedded at
+        `state_id` (COR-036), or None when `state_id` is not a subprocess state.
+
+        This is the genuinely-new engine capability: it asks one inner process
+        "have you reached a finish, and which one?" by instantiating an inner
+        engine on the inner address + a determinate inner subject and reading the
+        inner's currently-detected position via the inner engine's own
+        `resolve_position`. The result is exposed to the parent's
+        `subprocess-outcome` gates (below) — an input the OUTER process's
+        detection/gate reads.
+
+        Single-LEVEL by construction (depth 1): `resolve_position` runs only the
+        inner's DETECTION predicates — it does NOT recurse through the inner's own
+        subprocess-outcome gates. So this reads the inner's current position and
+        asks "is it terminal?"; it never descends into a chain of inner-of-inner
+        resolutions. Resolution therefore always terminates on bounded depth.
+
+        Single-inner, never enumerating (COR-032): the inner subject is
+        determinate — the inner is `singleton` (no id), or the `subprocess`
+        declaration supplies the one keyed inner subject id. A keyed inner with no
+        supplied subject is fail-closed (COR-036's required-subject rule).
+
+        Fail-closed (`indeterminate=True`, `outcome=None`) on: an inner address
+        already on the active resolution stack (the acyclicity guard — which,
+        because resolution is single-level and never deepens the stack, in
+        practice fires only on the DIRECT self-embed A runs A), an unresolvable
+        inner address / definition, a keyed inner with no subject, or an
+        indeterminate inner position. A transitive cycle (A runs B runs A) does
+        not reach the guard today: resolving A reads B's detected position and
+        stops, so the stack never reaches A again — it is bounded-safe, not
+        guard-caught. An inner that is determinate but has not reached *any*
+        terminal state returns `outcome=None` with `indeterminate=False` — a
+        CORRECT, non-error wait.
+        """
+        subprocess = self.definition.subprocess_of(state_id)
+        if subprocess is None:
+            return None
+
+        address = subprocess.get("runs")
+        if not isinstance(address, str) or not address:
+            return SubprocessResolution(
+                address="",
+                outcome=None,
+                indeterminate=True,
+                reason="subprocess state declares no inner process address (`runs`)",
+            )
+
+        # The acyclicity guard (COR-036): refuse an inner whose address is already
+        # on this chain. Resolution is single-level (it reads the inner's detected
+        # position, never recursing through the inner's own subprocess gates), so
+        # the stack never deepens past one inner — in practice this fires only on
+        # the direct self-embed (A runs A). It is cheap, correct insurance and the
+        # right seam to extend if nesting-through-gates is ever added. Fail closed,
+        # surfaced, like an unrecognised gate kind.
+        if address in self._resolution_stack:
+            chain = " -> ".join((*self._resolution_stack, address))
+            return SubprocessResolution(
+                address=address,
+                outcome=None,
+                indeterminate=True,
+                reason=f"cyclic embedding refused: {chain} (a process may not embed "
+                "itself, directly or transitively)",
+            )
+
+        try:
+            inner_def = load_definition(self.repo_root, address)
+        except ProcessError as exc:
+            return SubprocessResolution(
+                address=address,
+                outcome=None,
+                indeterminate=True,
+                reason=f"could not load inner process {address!r}: {exc}",
+            )
+
+        # Determinate inner subject: a supplied keyed id, or None for a singleton
+        # (for_subject enforces COR-032's required-subject rule for a keyed inner).
+        inner_subject = subprocess.get("subject")
+        inner_subject = inner_subject if isinstance(inner_subject, str) and inner_subject else None
+        try:
+            inner_engine = ProcessEngine.for_subject(
+                inner_def,
+                self.repo_root,
+                inner_subject,
+                resolution_stack=(*self._resolution_stack, address),
+            )
+        except ProcessError as exc:
+            return SubprocessResolution(
+                address=address,
+                outcome=None,
+                indeterminate=True,
+                reason=f"could not resolve inner subject for {address!r}: {exc}",
+            )
+
+        inner_position = inner_engine.resolve_position()
+        if inner_position.indeterminate:
+            return SubprocessResolution(
+                address=address,
+                outcome=None,
+                indeterminate=True,
+                reason=f"inner process {address!r} position is indeterminate",
+            )
+        inner_state = inner_def.state(inner_position.state_id) if inner_position.state_id else None
+        if inner_state is not None and inner_state.get("terminal"):
+            return SubprocessResolution(
+                address=address,
+                outcome=inner_position.state_id,
+                indeterminate=False,
+                reason=f"inner process {address!r} reached outcome "
+                f"{inner_position.state_id!r}",
+            )
+        # Determinate but not yet at a terminal outcome: a correct wait, not an
+        # error (the parent is awaiting-subprocess-outcome).
+        where = inner_position.state_id or "(no position)"
+        return SubprocessResolution(
+            address=address,
+            outcome=None,
+            indeterminate=False,
+            reason=f"inner process {address!r} has not reached a terminal outcome "
+            f"(currently {where!r})",
+        )
+
     # --- move prechecks --------------------------------------------------
 
     def transitions_from(self, state_id: str | None) -> list[dict[str, Any]]:
@@ -646,11 +884,21 @@ class ProcessEngine:
 
     def precheck_transitions(self, state_id: str | None, actor: str) -> list[TransitionCheck]:
         """Live-precheck every transition out of the current state (COR-033
-        performance note: only transitions *out of* the current state)."""
+        performance note: only transitions *out of* the current state).
+
+        A `subprocess-outcome` gate (COR-036) is computed by the ENGINE, not a
+        capability predicate: the inner process embedded at `state_id` is
+        resolved live and the gate passes iff the inner reached exactly the
+        gate's named `outcome`. The runner's predicate-backed gate kinds are
+        unchanged.
+        """
         checks: list[TransitionCheck] = []
         for t in self.transitions_from(state_id):
             gate = t.get("gate")
-            if isinstance(gate, dict):
+            if isinstance(gate, dict) and gate.get("kind") == "subprocess-outcome":
+                outcome = self._evaluate_subprocess_gate(gate, state_id)
+                has_gate = True
+            elif isinstance(gate, dict):
                 outcome = self.runner.evaluate_gate(gate, actor)
                 has_gate = True
             else:
@@ -661,6 +909,53 @@ class ProcessEngine:
                 has_gate = False
             checks.append(TransitionCheck(transition=t, outcome=outcome, has_gate=has_gate))
         return checks
+
+    def _evaluate_subprocess_gate(
+        self, gate: dict[str, Any], state_id: str | None
+    ) -> PredicateOutcome:
+        """Compute a `subprocess-outcome` gate (COR-036): pass iff the inner
+        process embedded at `state_id` reached the gate's named `outcome`.
+
+        Mirrors the `authorisation-artifact` kind — the ENGINE computes `result`
+        (here from the single-level inner resolution) rather than trusting a
+        predicate. Fail-closed when the resolution is indeterminate (self-embed /
+        unresolvable / keyed-without-subject / indeterminate inner). A determinate inner that has
+        not yet reached the named outcome simply does not pass (the parent waits)
+        — that is NOT indeterminate, it is a closed gate.
+        """
+        expected = gate.get("outcome")
+        if not isinstance(expected, str) or not expected:
+            return PredicateOutcome(
+                result=False,
+                reason="subprocess-outcome gate names no `outcome` to test for",
+                indeterminate=True,
+            )
+        resolution = self.resolve_subprocess_outcome(state_id)
+        if resolution is None:
+            # A subprocess-outcome gate on a state that declares no `subprocess`
+            # is a definition error; fail closed (engine/definition skew).
+            return PredicateOutcome(
+                result=False,
+                reason=f"subprocess-outcome gate on state {state_id!r} which embeds "
+                "no inner process (`subprocess` missing); failing closed",
+                indeterminate=True,
+            )
+        if resolution.indeterminate:
+            return PredicateOutcome(
+                result=False,
+                reason=resolution.reason,
+                indeterminate=True,
+            )
+        passed = resolution.outcome == expected
+        if passed:
+            reason = f"inner reached outcome {expected!r}"
+        elif resolution.outcome is None:
+            reason = resolution.reason  # not yet at any terminal outcome
+        else:
+            reason = f"inner reached outcome {resolution.outcome!r}, not {expected!r}"
+        return PredicateOutcome(
+            result=passed, reason=reason, detail={"outcome": resolution.outcome}
+        )
 
     # --- blocked (the derived human-pause / wait overlay, COR-034) -------
 
@@ -787,6 +1082,26 @@ class ProcessEngine:
                 if outcome.result and not outcome.indeterminate:
                     return None
                 resume_reason = outcome.reason or "resume condition not yet met"
+        elif blocked_on == "awaiting-subprocess-outcome":
+            # COR-036 (single-inner): blocked while parked in a `subprocess`
+            # state whose embedded inner has not reached a WIRED terminal
+            # outcome — i.e. no `subprocess-outcome` gate currently passes, so
+            # the parent has no legal move. AUTO-CLEARING like awaiting-condition,
+            # but the "condition" IS the single-level subprocess resolution
+            # carried by the subprocess-outcome gates (no `resume_when` — the resolution is the
+            # check, re-evaluated live in `has_no_legal_move`). It clears the
+            # instant a wired outcome resolves (a gate opens -> a legal move
+            # exists). A parent parked on an UNWIRED inner outcome stays blocked:
+            # that reflects an incomplete parent definition (the author owns
+            # outcome->transition wiring), not an engine bug.
+            if self.definition.subprocess_of(position.state_id) is None:
+                # The declaration says awaiting-subprocess-outcome but the
+                # position is not a subprocess state — the wait does not apply
+                # here (the subject is not parked in an embedding).
+                return None
+            if not self.has_no_legal_move(position, checks):
+                return None
+            resume_reason = self._subprocess_wait_reason(position.state_id)
         else:
             # An unrecognised / future reason: fail closed (no overlay) — the
             # schema enum already rejects these, so this is engine/definition
@@ -815,6 +1130,16 @@ class ProcessEngine:
             if check.transition.get("authorisation") == "user" and check.prompt:
                 return check.prompt
         return None
+
+    def _subprocess_wait_reason(self, state_id: str | None) -> str:
+        """The human-readable reason an `awaiting-subprocess-outcome` wait
+        (COR-036) is still live — the inner process's live resolution status
+        (which inner, what it has/has-not reached). Audit colour only; the
+        live decider is `has_no_legal_move` above."""
+        resolution = self.resolve_subprocess_outcome(state_id)
+        if resolution is None:
+            return "awaiting an embedded inner process to reach a wired outcome"
+        return resolution.reason
 
     def _wait_since(self) -> str | None:
         """The `ts` of the most recent blocked-enter event still open in the
@@ -1304,6 +1629,18 @@ def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
         )
         if state.get("terminal"):
             lines.append("    (terminal state)")
+        # COR-036: when parked in a subprocess state, surface the embedded inner
+        # process and its live-resolved outcome (the parent's position here IS
+        # the inner's outcome, composed).
+        resolution = engine.resolve_subprocess_outcome(position.state_id)
+        if resolution is not None:
+            lines.append(f"    embeds {resolution.address}")
+            if resolution.indeterminate:
+                lines.append(f"    inner indeterminate: {resolution.reason}")
+            elif resolution.outcome is not None:
+                lines.append(f"    inner outcome: {resolution.outcome}")
+            else:
+                lines.append(f"    inner: {resolution.reason}")
 
     # How it got here (journal).
     journal = engine.read_journal()
@@ -1385,6 +1722,9 @@ def render_status_json(engine: ProcessEngine, actor: str) -> str:
     checks = engine.precheck_transitions(position.state_id, actor)
     state = definition.state(position.state_id) if position.state_id else None
     blocked = engine.evaluate_blocked(position, checks, actor)
+    # COR-036: the live cross-process resolution when parked in a subprocess
+    # state (None when the current state embeds no inner process).
+    resolution = engine.resolve_subprocess_outcome(position.state_id)
 
     payload: dict[str, Any] = {
         "process": f"{definition.capability}:{definition.process_id}",
@@ -1395,6 +1735,19 @@ def render_status_json(engine: ProcessEngine, actor: str) -> str:
             "indeterminate": position.indeterminate,
             "meaning": state.get("meaning") if state else None,
             "terminal": bool(state.get("terminal")) if state else None,
+            # COR-036: the embedded inner process's resolved outcome (None when
+            # the current state embeds none). `outcome` is the inner's reached
+            # terminal, or null while it has not finished (a correct wait).
+            "subprocess": (
+                None
+                if resolution is None
+                else {
+                    "runs": resolution.address,
+                    "outcome": resolution.outcome,
+                    "indeterminate": resolution.indeterminate,
+                    "reason": resolution.reason,
+                }
+            ),
         },
         # COR-034: the DERIVED, live blocked overlay (None when not blocked).
         # Recomputed every call from reality — never read back as stored truth.

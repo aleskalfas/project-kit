@@ -31,7 +31,7 @@ process:
     key:         <slug>             # core (keyed)  descriptive name of what identifies a unit (e.g. issue-number); engine does not interpret it
     domain_ref:  <pointer>          # core      where the subject's DOMAIN data lives — distinct from its process position
     blocked:                        # core (optional, COR-034)  a first-class WAIT — orthogonal, NOT a state
-      blocked_on: awaiting-human | awaiting-condition   # core   WHY it waits (open to additive widening; cross-subject reasons deferred)
+      blocked_on: awaiting-human | awaiting-condition | awaiting-subprocess-outcome   # core   WHY it waits (awaiting-subprocess-outcome is COR-036, single-inner; open to additive widening — deadlock deferred)
       resume_when: <predicate>      # core      REQUIRED for awaiting-condition, FORBIDDEN for awaiting-human; re-evaluated LIVE, auto-clears the flag when it holds
       assignee:    <owner?>         # core      optional: who owns the wait (audit colour)
 
@@ -41,8 +41,12 @@ process:
       detection:
         mode:      inferred         # core: inferred (predicate over reality)  |  deferred: stored | hybrid
         predicate: <ref>            # core      a checkable predicate
+      subprocess:                   # core (optional, COR-036)  this state EMBEDS an inner process
+        runs:    <capability>:<id>  # core      the inner process address
+        subject: <inner-id?>        # core      determinate inner subject id (REQUIRED for a keyed inner; omitted for singleton)
+        inputs:  { ... }            # core      static input values supplied to the inner on entry
       entry:    <guard?>            # core      start state? guarded; MULTIPLE entries allowed
-      terminal: <bool>             # core      end state? (also a process OUTCOME for composition)
+      terminal: <bool>             # core      end state? (also a process OUTCOME for composition — COR-036)
 
   transitions:
     - from: <state> | "*"          # core      back-edges + self-loops expressible
@@ -50,7 +54,8 @@ process:
       trigger:       <command>     # core      the named action
       authorisation: user | agent-autonomous | script   # core   WHO may move
       gate:                        # core      WHAT must hold — must be checkable (see below)
-        kind: deterministic | authorisation-artifact
+        kind: deterministic | authorisation-artifact | subprocess-outcome   # core: subprocess-outcome (COR-036) — engine-computed from an embedded inner outcome
+        outcome: <inner-state>     # core (subprocess-outcome)  the inner OUTCOME this move leaves the subprocess state on
       severity:      <ref>         # core      a validation-severity token (reused, not re-invented)
       why:           <prose>       # core      status view
       hint:          <command>     # core      what to run next
@@ -62,8 +67,10 @@ process:
     - id:    <slug>                # core      stable identifier
       check: <predicate>           # core      the predicate (same shape as detection/gates); True = holds; indeterminate is fail-closed
       why:   <prose>               # core      explanatory prose surfaced on a violation
-  interface:                       # deferred  composition: { inputs, outcomes } — the public contract
-  orchestration: { overflow, cross_gates }   # deferred  altitude-2
+  interface:                       # core (optional, COR-036)  composition: { inputs, outcomes } — the public embedding contract
+    inputs:   [{ name, meaning?, required? }]   # core      what the inner needs to start
+    outcomes: [{ name, meaning? }]              # core      named terminal states a parent may wire
+  orchestration: { overflow, cross_gates }   # deferred  altitude-2 (overflow / hand-off — concurrent spawn)
 ```
 
 ### Subject cardinality (core)
@@ -96,16 +103,17 @@ transitions:
     prompt: <question>                                # optional: the QUESTION posed to the person (awaiting-human)
 ```
 
-- **`blocked_on` ships exactly two reasons**, each establishable from *one* subject's reality (COR-032): **`awaiting-human`** (a person must act) and **`awaiting-condition`** (an external fact must become true). The enum is open to additive widening — the cross-subject reasons (`awaiting-subprocess-outcome`, `deadlock`) join it where the engine first reads across subjects (deferred).
+- **`blocked_on` ships three reasons**, each establishable from *one* subject's reality (COR-032): **`awaiting-human`** (a person must act), **`awaiting-condition`** (an external fact must become true), and **`awaiting-subprocess-outcome`** (COR-036, single-inner: the subject is parked in a `subprocess` state whose embedded inner has not yet reached a wired terminal outcome — see Composition below). The enum stays open to additive widening — the remaining cross-subject reason `deadlock` (a peer-subject cycle) joins it where the engine first reads across a *crowd* of subjects (deferred).
 - **The blocked flag is a DERIVED overlay, recomputed live — never stored truth. Resume differs by reason** (COR-034):
   - **`awaiting-human`** carries **no `resume_when`** (the schema forbids one). It is *currently* blocked while the subject sits at a non-terminal position with an outgoing, **not-yet-taken** `user` move — whether that move's gate is open (ready to take) or closed (the human must intervene in reality first). The **resume is the person taking the move** — the position advancing off the parked state, which removes the pending move. The engine consults **no side-predicate**: a side-fact existing (e.g. a review file) must **not** clear an "approve?" block — only taking the move does. (Tying the resume to a side-predicate is forbidden precisely because the two can disagree: a satisfied side-fact while the move is still gate-closed would falsely report "not waiting" on a subject that is genuinely stuck.)
   - **`awaiting-condition`** carries a **required `resume_when`** predicate. It is *currently* blocked when (a) it has **no legal move** (the shipped "no legal move" detection — a non-terminal, determinate position out of which no transition is allowed), and (b) its `resume_when` predicate does **not** yet hold. When `resume_when` holds, the engine **auto-clears** the flag — the external fact turning true with no human in the loop. An indeterminate `resume_when` is fail-closed (the subject stays blocked rather than silently resuming).
+  - **`awaiting-subprocess-outcome`** (COR-036, single-inner) carries **no `resume_when`** (the schema forbids one, like `awaiting-human`). It is *currently* blocked while the subject sits in a `subprocess` state with **no legal move** — i.e. no `subprocess-outcome` gate currently passes, because the embedded inner process has not reached a *wired* terminal outcome. It is **auto-clearing** like `awaiting-condition`, but the "condition" *is* the recursive resolution carried by the `subprocess-outcome` gates (re-evaluated live in the "no legal move" check) — when a wired inner outcome resolves, a gate opens, a legal move exists, and the wait clears with no human in the loop. A parent parked on an **unwired** inner outcome stays correctly blocked (the author owns outcome→transition wiring, not the engine).
 - **The wait is journaled on enter and on resume.** Entering a blocked position appends a `blocked-enter` event; clearing it appends a `blocked-resume` event (each a journal entry — there is *no* separate emission/dispatch channel; the deferred **hooks** slot will react to these journaled transitions when it ships). `since` (the wait's age) is read from the open `blocked-enter` entry; `assignee` is carried from the declaration. **The journal is the audit trail; the CURRENT blocked-ness is always the live evaluation** (for `awaiting-human`, whether the pending move has been taken; for `awaiting-condition`, the `resume_when` predicate), **authoritative over any journal entry** (inheriting the journal-is-intent-log / live-detection-authoritative contract below).
 - **Where the journaling happens.** `status` and `evaluate_blocked` are **read-only** (status runs predicates live and must not write). The journaling of enter/resume rides the writing paths only: `move` reconciles the wait against the **target state it just declared**, so a move that parks the subject journals the `blocked-enter` **at park time** — making `since` meaningful immediately, rather than lazily only once the human finally acts — and a move that clears the wait journals the `blocked-resume`. `reconcile_blocked` is also exposed (with no target override) so a binding can journal a self-clearing `awaiting-condition` resume — which needs no human move — on demand against live reality. Because live detection is authoritative, a not-yet-journaled resume never lies about current state.
 - **An `awaiting-human` block carries a `prompt`** — the question — authored on the `user` move and surfaced on that move's per-move emission (and lifted onto the blocked overlay for the human-pause view). The park stops being a silent "your move" and becomes "your move: here's the question." Content-free: the engine carries/surfaces `prompt` and `blocked_on` but never interprets them.
 - **It is orthogonal, not a state.** It annotates the subject at its current position; it adds no state to the process and cannot explode the state space. Position stays inferred; the validator stays deterministic (`resume_when` is a predicate over reality, exactly like detection).
 
-**Deferred** (each its own future decision when a binding needs it, per COR-034): the cross-subject `blocked_on` reasons (`awaiting-subprocess-outcome`, `deadlock`), the **hooks** firing mechanism (notify-on-enter / act-on-resume), and a structured **`selection`** option-set (render options in the prompt text until it ships).
+**Deferred** (each its own future decision when a binding needs it, per COR-034): the remaining cross-subject `blocked_on` reason `deadlock` (a peer-subject cycle — distinct from COR-036's acyclicity guard), the **hooks** firing mechanism (notify-on-enter / act-on-resume), and a structured **`selection`** option-set (render options in the prompt text until it ships). (`awaiting-subprocess-outcome` shipped with composition — COR-036.)
 
 ### Invariants — position-independent always-checks (core)
 
@@ -152,9 +160,45 @@ A process need not be a rigid pipeline. A transition target/gate may be:
 
 In every mode the engine remains a deterministic validator. (Theory: for a finite, known block alphabet this is equivalent to a static graph; the open region is the escape hatch for genuinely open-ended work.)
 
-## Composition (deferred)
+## Composition — cross-process outcome resolution (core)
 
-A process exposes a public **interface** = `inputs` (what it needs to start) + `outcomes` (its named terminal states). A parent embeds it via a `subprocess` state that `runs: <capability>:<process-id>`, supplies inputs on entry, and wires the child's outcomes to its own transitions. **All coupling lives in the parent**; the child references nothing upward, so it is reusable and parent-agnostic. Two timings: *nest/call* (parent waits for an outcome) and *overflow/hand-off* (terminal spawns/unblocks another process, concurrent).
+[COR-036](../decisions/core/COR-036-process-composition.md) un-defers the composition slot and gives the engine its one genuinely-new capability: **resolve another process's terminal outcome** and read it as an input to a parent's gate. A process exposes a public **interface** = `inputs` (what it needs to start) + `outcomes` (its named terminal states — a `terminal: true` state *is* an outcome). A parent embeds *one* inner process via a **`subprocess` state** that `runs: <capability>:<process-id>`, supplies the inner's inputs on entry, and wires the inner's outcomes to its own outgoing transitions. **All coupling lives in the parent**; the child references nothing upward, so it is reusable and parent-agnostic.
+
+This ships the **nest/call** timing (a parent waits for an inner outcome). The **overflow/hand-off** timing (a terminal state spawning or unblocking a *concurrent* sibling process — altitude-2 orchestration) and the **enumerate-and-fold aggregate** across many inner subjects (cascade) remain deferred.
+
+**Authored** (additive — absent on every existing process, which validate byte-unchanged):
+
+```
+process:
+  interface:                       # the public embedding contract
+    inputs:   [{ name, meaning?, required? }]
+    outcomes: [{ name, meaning? }]   # each names a terminal state id
+  states:
+    - id: <subprocess-state>
+      meaning: <prose>
+      detection: { mode: inferred, predicate: <ref> }   # "is the subject parked in this stage?" — the parent's own reality
+      subprocess:
+        runs:    <capability>:<process-id>   # the inner process address
+        subject: <inner-id?>                 # REQUIRED for a keyed inner (COR-032); omitted for a singleton inner
+        inputs:  { <name>: <value> }         # static input values supplied to the inner on entry
+  transitions:
+    - from: <subprocess-state>
+      to:   <next>
+      authorisation: agent-autonomous
+      gate:
+        kind: subprocess-outcome             # the ENGINE computes this — no capability predicate
+        outcome: <inner-terminal-state>      # the move opens iff the inner reached exactly this outcome
+```
+
+- **One *determinate* inner — the engine never enumerates.** The engine resolves the outcome of **one** inner process whose subject is determinate: either the inner is `singleton` (no id), or the `subprocess.subject` supplies the one keyed inner id. A keyed inner with no supplied subject is **fail-closed** (COR-032's required-subject rule). It resolves *that one* and never enumerates a keyed inner's subjects — folding across many is the **cascade** consumer (deferred), which calls this resolution once per subject it enumerates.
+- **The resolution is a recursive engine instantiation.** While the subject is parked in a `subprocess` state, the engine builds a *new* inner engine on the inner address + the determinate inner subject and reads the inner's terminal via the inner engine's own `resolve_position`. A `subprocess-outcome` gate on the parent is computed by the **engine** (not a capability predicate, like the `authorisation-artifact` kind): it passes iff the inner reached exactly the gate's named `outcome`. Resolution is **read-only** (running `status` resolves the inner but writes neither journal).
+- **No cycles — the acyclicity guard.** A process may not embed itself, directly or transitively (A runs A; A runs B runs A). The engine tracks the active resolution stack (each engine's own address plus every inner above it) and refuses an address already on the stack, **failing closed** (surfaced, like an unrecognised gate kind) — a cyclic resolution never terminates, so it has no definite answer. This is distinct from COR-034's deferred `deadlock` (a peer-subject cycle, a different graph).
+- **Waiting on the inner — `awaiting-subprocess-outcome`.** While the inner has not reached a *wired* terminal outcome, the parent has no satisfiable outgoing move and is parked as the `awaiting-subprocess-outcome` blocked reason (above) — an auto-clearing overlay whose "condition" is the live resolution. A parent parked on an **unwired** inner outcome is *correctly* still waiting (the author owns outcome→transition wiring), not a bug to special-case.
+- **Determinism preserved (P3/P6).** A subprocess state's position *is* the inner's terminal outcome — itself inferred-from-reality by the inner's own deterministic detection. "Where is the subject?" reduces to "what outcome did the inner reach?", a composed definite answer; with cycles forbidden the composition terminates. Position stays inferred; the validator stays deterministic.
+
+The `status` view surfaces the embedded inner and its live-resolved outcome (narrative: an `embeds <address>` / `inner outcome: <x>` line; `--json`: a `position.subprocess` object with `{runs, outcome, indeterminate, reason}`).
+
+**Deferred** (each its own future decision when a binding needs it, per COR-036): the **enumerate-and-fold aggregate** + the **many-inner aggregate wait** across a keyed inner's subjects (cascade — it *consumes* this single-inner resolution as its per-subject step); the **overflow / hand-off** (concurrent spawn) timing and the broader **orchestration** altitude.
 
 ## The engine
 
@@ -201,7 +245,7 @@ Because detection is authoritative, the seam is self-correcting in the failure c
 
 1. Author a process definition as the capability's own instance schema at `.pkit/capabilities/<capability>/schemas/<process>.yaml`, declaring conformance to the shape contract (`../../../schemas/_defs/process.schema.json`).
 2. Drive it through the capability's verb-subject commands, which call the engine.
-3. The process is addressable elsewhere as `<capability>:<process-id>` (used by composition and orchestration, deferred).
+3. The process is addressable elsewhere as `<capability>:<process-id>` — a parent embeds it by that address through a `subprocess` state (composition, COR-036). Orchestration (concurrent hand-off) remains deferred.
 
 The existing schema-binding grammar (COR-023) is unchanged; capabilities stay independent, self-describing peers.
 
