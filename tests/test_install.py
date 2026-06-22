@@ -162,6 +162,20 @@ def test_install_kit_dry_run_writes_nothing(tmp_target: Path) -> None:
     assert not (tmp_target / ".pkit").exists()
 
 
+def test_install_kit_renders_runtime_ignore_gitignore(tmp_target: Path) -> None:
+    # The core-tier renderer (ADR-009 Amendment 1, T2) runs on install,
+    # producing a pkit-owned `.pkit/.gitignore`.
+    install.install_kit(tmp_target)
+    gi = tmp_target / ".pkit" / ".gitignore"
+    assert gi.is_file()
+    assert "pkit-owned" in gi.read_text(encoding="utf-8")
+
+
+def test_install_kit_dry_run_does_not_render_gitignore(tmp_target: Path) -> None:
+    install.install_kit(tmp_target, dry_run=True)
+    assert not (tmp_target / ".pkit" / ".gitignore").exists()
+
+
 def test_find_target_root_resolves_git_repo(tmp_target: Path) -> None:
     nested = tmp_target / "deep" / "nested" / "dir"
     nested.mkdir(parents=True)

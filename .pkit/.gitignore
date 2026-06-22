@@ -1,0 +1,9 @@
+# pkit-owned — rendered wholesale by `pkit install` / `pkit sync` from each
+# installed component's `runtime_ignore:` declaration (ADR-009 Amendment 1).
+# DO NOT EDIT: regenerated from scratch every run; hand edits are overwritten.
+# An uninstalled component's lines are simply absent on the next render.
+
+**/__pycache__/
+permissions/project/diagnose.yaml
+permissions/project/diagnose-log.jsonl
+permissions/project/sandbox-provenance.yaml

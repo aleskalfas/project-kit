@@ -44,7 +44,7 @@ def test_sync_self_host_runs_deploy_primitives_only(monkeypatch: pytest.MonkeyPa
     source_repo = install.find_source_kit().parent
     monkeypatch.chdir(source_repo)
 
-    called = {"deploy": 0}
+    called = {"deploy": 0, "render": 0}
 
     def _spy_deploy(_ctx: install.InstallContext) -> None:
         called["deploy"] += 1
@@ -52,12 +52,32 @@ def test_sync_self_host_runs_deploy_primitives_only(monkeypatch: pytest.MonkeyPa
     def _no_propagate(*_args: object, **_kwargs: object) -> None:
         raise AssertionError("self-host sync must not propagate (copy onto source)")
 
+    # Spy the core-tier renderer so we assert it runs on the self-host path
+    # WITHOUT writing `.pkit/.gitignore` into the real source tree.
+    def _spy_render(_ctx: install.InstallContext) -> None:
+        called["render"] += 1
+
     monkeypatch.setattr(install, "run_installed_adapter_primitives", _spy_deploy)
     monkeypatch.setattr(install, "_install_area", _no_propagate)
+    monkeypatch.setattr(install, "_render_runtime_ignore", _spy_render)
 
     sync.run_sync(source_repo)  # must not raise
 
     assert called["deploy"] == 1
+    # The renderer is a CORE step, not an adapter primitive — it must run on the
+    # self-host short-circuit too (ADR-009 Amendment 1, T2), or backbone /
+    # capability runtime ignores would never render without an adapter.
+    assert called["render"] == 1
+
+
+def test_sync_renders_runtime_ignore_on_normal_path(installed_target: Path) -> None:
+    # The normal (non-self-host) sync path renders `.pkit/.gitignore` at the
+    # core tier — proving the renderer is wired into BOTH sync code paths.
+    (installed_target / ".pkit" / ".gitignore").unlink(missing_ok=True)
+    sync.run_sync(installed_target)
+    gi = installed_target / ".pkit" / ".gitignore"
+    assert gi.is_file()
+    assert "pkit-owned" in gi.read_text(encoding="utf-8")
 
 
 def test_sync_runs_idempotently_after_install(installed_target: Path) -> None:

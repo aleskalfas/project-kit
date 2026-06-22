@@ -57,6 +57,12 @@ def run_sync(target_root: Path, dry_run: bool = False) -> None:
             click.echo("  (dry-run — no changes will be written)")
         click.echo()
         install.run_installed_adapter_primitives(ctx)
+        # Render `.pkit/.gitignore` at the CORE tier (ADR-009 Amendment 1, T2).
+        # The self-host path runs ONLY the adapter-primitives runner and skips
+        # propagation — but the renderer is a core step, not an adapter
+        # primitive, so it must run here too or backbone/capability runtime
+        # ignores would never render in self-host (or any adapter-less) sync.
+        install._render_runtime_ignore(ctx)  # pyright: ignore[reportPrivateUsage]
         click.echo()
         click.echo("Self-host sync complete (deploy primitives re-run).")
         return
@@ -97,6 +103,14 @@ def run_sync(target_root: Path, dry_run: bool = False) -> None:
     install.run_installed_adapter_primitives(ctx)
 
     _update_recorded_backbone_version(target_root, source_kit, ctx)
+
+    # Render `.pkit/.gitignore` at the CORE tier (ADR-009 Amendment 1, T2) —
+    # wholesale from the current installed components' `runtime_ignore:`
+    # declarations. A core step (sibling to propagation), not an adapter
+    # primitive, so it covers backbone + capability declarations regardless of
+    # whether an adapter is installed.
+    install._render_runtime_ignore(ctx)  # pyright: ignore[reportPrivateUsage]
+
     click.echo()
     click.echo("Sync complete.")
 

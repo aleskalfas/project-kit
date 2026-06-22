@@ -160,6 +160,101 @@ def _dedupe(paths: list[str]) -> list[str]:
     return deduped
 
 
+# --- runtime-ignore renderer (ADR-009 Amendment 1, T2) -----------------------
+#
+# The renderer that *consumes* the `runtime_ignore()` collector above and
+# wholesale-regenerates the pkit-owned `.pkit/.gitignore`. Lives at the CORE
+# tier (a sibling to `runtime_ignore()`), invoked directly from the install path
+# and BOTH sync paths — NOT from the adapter-primitives runner, which is adapter
+# tier and would skip backbone/capability declarations when no adapter is
+# installed (the layering inversion ADR-009 forbids).
+
+_RUNTIME_IGNORE_PATH = ".pkit/.gitignore"
+
+_RUNTIME_IGNORE_HEADER = (
+    "# pkit-owned — rendered wholesale by `pkit install` / `pkit sync` from each\n"
+    "# installed component's `runtime_ignore:` declaration (ADR-009 Amendment 1).\n"
+    "# DO NOT EDIT: regenerated from scratch every run; hand edits are overwritten.\n"
+    "# An uninstalled component's lines are simply absent on the next render.\n"
+)
+
+
+def _render_pattern(pattern: str) -> str:
+    """Rebase a repo-root-relative `runtime_ignore` pattern onto the form the
+    nested `.pkit/.gitignore` needs.
+
+    Patterns are stored repo-root-relative by the T1 collector (e.g.
+    `.pkit/permissions/project/diagnose.yaml`, `.pkit/**/__pycache__/`). A nested
+    `.gitignore` matches patterns relative to *its own* directory (`.pkit/`), so
+    the `.pkit/` prefix is stripped on render — `.pkit/permissions/.../x` becomes
+    `permissions/.../x`, which the file at `.pkit/.gitignore` matches correctly
+    (Amendment 1, A1 rule 4). A pattern that is not under `.pkit/` cannot be
+    covered by this carrier (none are in today's set); it is rendered verbatim
+    rather than silently dropped, so a misdeclaration is visible in the output
+    rather than swallowed.
+    """
+    prefix = ".pkit/"
+    if pattern.startswith(prefix):
+        stripped = pattern[len(prefix):]
+        return stripped if stripped else pattern
+    return pattern
+
+
+def render_runtime_ignore_content(target_root: Path) -> str:
+    """Build the full text of `.pkit/.gitignore` from the aggregated
+    `runtime_ignore()` declarations. Pure: no filesystem writes, deterministic
+    for a given set of installed components (so re-rendering is byte-identical).
+    """
+    patterns = [_render_pattern(p) for p in runtime_ignore(target_root)]
+    body = "".join(f"{p}\n" for p in patterns)
+    return _RUNTIME_IGNORE_HEADER + ("\n" + body if body else "")
+
+
+def render_runtime_ignore(target_root: Path, *, dry_run: bool = False) -> str:
+    """Wholesale-regenerate `.pkit/.gitignore` from current installed
+    components' `runtime_ignore:` declarations (ADR-009 Amendment 1, T2).
+
+    Idempotent: re-running on unchanged declarations produces byte-identical
+    output and rewrites the same content. `--dry-run` prints a would-render
+    summary (pattern count, component count) and writes nothing.
+
+    Returns a one-line status message for the caller to echo.
+    """
+    patterns = runtime_ignore(target_root)
+    component_count = _runtime_ignore_component_count(target_root)
+    content = render_runtime_ignore_content(target_root)
+
+    if dry_run:
+        return cli_render.style(
+            "strong",
+            f"  would render  {_RUNTIME_IGNORE_PATH} "
+            f"({len(patterns)} pattern(s) from {component_count} component(s))",
+        )
+
+    path = target_root / ".pkit" / ".gitignore"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
+    return cli_render.style(
+        "strong",
+        f"  rendered      {_RUNTIME_IGNORE_PATH} "
+        f"({len(patterns)} pattern(s) from {component_count} component(s))",
+    )
+
+
+def _runtime_ignore_component_count(target_root: Path) -> int:
+    """Count the components contributing to the runtime-ignore render: the
+    backbone seam (always one) plus each installed adapter/capability whose
+    `package.yaml` declares a non-empty `runtime_ignore:`."""
+    count = 1  # the backbone/permissions core seam (_BACKBONE_RUNTIME_IGNORE)
+    manifest = read_backbone_manifest(target_root)
+    if manifest is not None:
+        for entry in manifest.components:
+            pkg = _component_package_yaml(target_root, entry.kind, entry.name)
+            if pkg is not None and _read_runtime_ignore_decl(pkg):
+                count += 1
+    return count
+
+
 # --- git helpers -------------------------------------------------------------
 
 def _git(target_root: Path, *args: str) -> subprocess.CompletedProcess[str]:
