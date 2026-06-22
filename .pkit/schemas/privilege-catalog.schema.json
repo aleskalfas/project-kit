@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "privilege-catalog.schema.json",
   "title": "Privilege catalog",
-  "description": "Formal shape of privilege-catalog.yaml — the named privileges an agent may be permitted to do (per COR-028). Each entry declares a recognizer (structured matcher over Bash commands and/or harness tool names, with a regex escape hatch) and an optional scope dimension. Namespace owner: permission-grants references entries via the typed token `[privilege-catalog:<id>]` (COR-019). Companion per COR-018 / the .pkit/schemas/ area conventions.",
+  "description": "Formal shape of privilege-catalog.yaml — the named privileges an agent may be permitted to do (per COR-028). Each entry declares a recognizer (structured matcher over Bash commands and/or harness tool names, with a regex escape hatch) and an optional scope dimension. Namespace owner: permission-grants references entries via the typed token `[privilege-catalog:<id>]` (COR-019). Companion per COR-018 / the .pkit/schemas/ area conventions. An installed capability MAY ship a fragment of this same shape at `.pkit/capabilities/<cap>/permissions/privilege-catalog.yaml`, which the loader merges into the central catalog (the merge rule — additive, collision-rejecting, capability-scoped — is ADR-021's). Authoring constraints on a fragment: write keys as bare kebab-case ids (the loader applies the `<cap>:` scope), and `guardrail` is forbidden in a fragment.",
   "x-pkit-id-collection": "/privileges",
   "type": "object",
   "required": ["schema_version", "privileges"],
@@ -22,8 +22,8 @@
   "$defs": {
     "privilege_ref": {
       "type": "string",
-      "pattern": "^\\[privilege-catalog:[a-z][a-z0-9-]*\\]$",
-      "description": "Narrowed cross-schema reference pattern for the privilege-catalog namespace (per COR-019). Consumers $ref this rather than redeclaring the pattern."
+      "pattern": "^\\[privilege-catalog:[a-z][a-z0-9-]*(?::[a-z][a-z0-9-]*)?\\]$",
+      "description": "Narrowed cross-schema reference pattern for the privilege-catalog namespace (per COR-019). Consumers $ref this rather than redeclaring the pattern. The id half MAY carry a capability scope (`<cap>:<name>`, e.g. `[privilege-catalog:trip-planning:ad-hoc-scraping]`) for a capability-contributed privilege per ADR-021 — the COR-019 token-grammar clarification."
     },
     "bash_matcher": {
       "type": "object",

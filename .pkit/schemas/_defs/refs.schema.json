@@ -6,8 +6,8 @@
   "$defs": {
     "reference_token": {
       "type": "string",
-      "pattern": "^\\[[a-z][a-z0-9-]*:[a-z][a-z0-9-]*\\]$",
-      "description": "Generic cross-schema reference token per COR-019. Form: `[<namespace>:<id>]`. Both namespace and id are kebab-case starting with a lowercase letter."
+      "pattern": "^\\[[a-z][a-z0-9-]*:[a-z][a-z0-9-]*(?::[a-z][a-z0-9-]*)?\\]$",
+      "description": "Generic cross-schema reference token per COR-019. Form: `[<namespace>:<id>]`. The namespace is a single kebab-case segment. The id half is kebab-case and MAY carry one further colon-separated segment to scope the reference to a contributing source (`[<namespace>:<scope>:<id>]`), per COR-019's id-scope clarification. All segments are kebab-case starting with a lowercase letter."
     },
     "source": {
       "type": "object",

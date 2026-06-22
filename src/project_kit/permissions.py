@@ -91,7 +91,10 @@ def _load_model(target_root: Path) -> dict[str, Any]:
 
 # ---- shared helpers --------------------------------------------------------
 
-_BARE = re.compile(r"^\[privilege-catalog:([a-z][a-z0-9-]*)\]$")
+# Admits the optional capability scope in the id half (`<cap>:<name>`) so a
+# capability-contributed privilege (ADR-021) round-trips here exactly as it
+# does in the decision core's `_TOKEN`. Backbone single-segment ids still match.
+_BARE = re.compile(r"^\[privilege-catalog:([a-z][a-z0-9-]*(?::[a-z][a-z0-9-]*)?)\]$")
 # A simple settings allow/deny pattern like `Bash(gh:*)` or `Bash(git push --force:*)`.
 _BASH_RULE = re.compile(r"^Bash\((.+?)(?::\*)?\)$")
 _TOOL_RULE = re.compile(r"^([A-Z][A-Za-z]+)$")
@@ -370,6 +373,18 @@ def overview(target_root: Path) -> str:
     egress_lines = _egress_report_lines(target_root)
     if egress_lines:
         lines.extend(egress_lines)
+    # Rejected capability-catalog fragments (ADR-021 decision 6 — visibility):
+    # never let a fragment fail to merge silently. The loader stamps rejection
+    # reasons on the catalog; surface them loudly so an operator sees a
+    # capability whose privilege did NOT enter the catalog (and why).
+    rejections = catalog.get("_fragment_rejections") or []
+    if rejections:
+        lines += [
+            "",
+            cli_render.style("heading", "REJECTED CAPABILITY FRAGMENTS — a fragment privilege did NOT merge (ADR-021)"),
+        ]
+        for reason in rejections:
+            lines.append(f"  ⚠ {reason}")
     lines += [
         "",
         cli_render.style("heading", "GUARDRAILS — always denied for every agent; the safety floor you cannot grant around"),
@@ -540,7 +555,10 @@ def _gap_report(target_root: Path, proj: dict[str, Any]) -> list[str]:
 # ---- mutation: grant / revoke / mode ---------------------------------------
 
 _SUBJECT = re.compile(r"^(all|operator|agent:[a-z][a-z0-9-]*)$")
-_PRIV_ID = re.compile(r"^[a-z][a-z0-9-]*$")
+# A bare privilege id: a backbone single segment, or a capability-scoped
+# `<cap>:<name>` (ADR-021). `grant`/`revoke` accept either; the token built
+# from it (`[privilege-catalog:<id>]`) round-trips through the widened `_BARE`.
+_PRIV_ID = re.compile(r"^[a-z][a-z0-9-]*(?::[a-z][a-z0-9-]*)?$")
 
 
 class PermissionsError(Exception):

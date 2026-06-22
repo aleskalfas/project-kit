@@ -1595,3 +1595,282 @@ def test_stdlib_fallback_parses_capability_fragment_identically_to_ruamel(decide
         f"  stdlib: {stdlib_result!r}\n"
         f"  ruamel: {ruamel_result!r}"
     )
+
+
+# ---- capability-CATALOG-fragment merge (ADR-021) ----------------------------
+#
+# load_catalog merges installed capabilities' privilege-catalog fragments into
+# the backbone catalog under an additive-only, collision-rejecting,
+# guardrail-forbidding rule. The merge lives in load_catalog (not load_model) so
+# the hook and the CLI both decide on the identical merged catalog and
+# guardrail_denies runs on the merged result. Discovery walks the manifest
+# components list (orphan dirs contribute nothing). A capability id is rewritten
+# to <cap>:<name> and the spec is stamped provenance: capability:<name>.
+
+_MANIFEST_WITH_CAP = (
+    "schema_version: 1\n"
+    "backbone_version: 1.0.0\n"
+    "components:\n"
+    "  - kind: capability\n"
+    "    name: trip-planning\n"
+    "    manifest: .pkit/capabilities/trip-planning/manifest.yaml\n"
+)
+
+
+def _write_catalog_fragment_tree(
+    root: Path,
+    *,
+    manifest: str | None = _MANIFEST_WITH_CAP,
+    cap_name: str = "trip-planning",
+    fragment: str | None = None,
+    project_grants: str | None = None,
+) -> None:
+    """Build a project tree with a backbone catalog + a capability catalog fragment."""
+    (root / ".pkit" / "schemas").mkdir(parents=True)
+    (root / ".pkit" / "schemas" / "privilege-catalog.yaml").write_text(
+        CATALOG_PATH.read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    if manifest is not None:
+        (root / ".pkit" / "manifest.yaml").write_text(manifest, encoding="utf-8")
+    if fragment is not None:
+        frag_dir = root / ".pkit" / "capabilities" / cap_name / "permissions"
+        frag_dir.mkdir(parents=True)
+        (frag_dir / "privilege-catalog.yaml").write_text(fragment, encoding="utf-8")
+    (root / ".pkit" / "permissions" / "project").mkdir(parents=True)
+    if project_grants is not None:
+        (root / ".pkit" / "permissions" / "project" / "grants.yaml").write_text(
+            project_grants, encoding="utf-8"
+        )
+
+
+_SCRAPER_FRAGMENT = (
+    "schema_version: 1\n"
+    "privileges:\n"
+    "  ad-hoc-scraping:\n"
+    "    description: Raw shell scrapers a researcher reflexively reaches for.\n"
+    "    recognize:\n"
+    "      bash:\n"
+    "        - cmd: curl\n"
+    "        - cmd: wget\n"
+)
+
+
+def test_fragment_privilege_merged_when_capability_installed(decide_mod, tmp_path):
+    """An installed capability's fragment privilege is merged, scoped, and stamped."""
+    _write_catalog_fragment_tree(tmp_path, fragment=_SCRAPER_FRAGMENT)
+    catalog = decide_mod.load_catalog(str(tmp_path))
+    privileges = catalog["privileges"]
+    assert "trip-planning:ad-hoc-scraping" in privileges, (
+        "fragment id must be merged under its capability-scoped key"
+    )
+    assert "ad-hoc-scraping" not in privileges, (
+        "the bare (unscoped) id must NOT appear — only the scoped key"
+    )
+    assert privileges["trip-planning:ad-hoc-scraping"]["provenance"] == "capability:trip-planning"
+    # Backbone privileges are untouched.
+    assert "vcs" in privileges and "destructive-fs" in privileges
+
+
+def test_orphan_catalog_fragment_dir_contributes_nothing(decide_mod, tmp_path):
+    """A fragment present on disk but not manifest-registered contributes nothing."""
+    _write_catalog_fragment_tree(
+        tmp_path,
+        manifest="schema_version: 1\nbackbone_version: 1.0.0\ncomponents: []\n",
+        fragment=_SCRAPER_FRAGMENT,
+    )
+    catalog = decide_mod.load_catalog(str(tmp_path))
+    assert "trip-planning:ad-hoc-scraping" not in catalog["privileges"], (
+        "orphan (non-manifest-registered) fragment must NOT merge — install-gated"
+    )
+
+
+def test_fragment_colliding_with_backbone_id_rejected(decide_mod, tmp_path):
+    """A fragment id that, once scoped, would still need a backbone slot is dropped;
+    and a fragment cannot overwrite a backbone privilege via id collision.
+
+    Scoping makes a raw backbone-name collision impossible, so we force the
+    collision directly: name the capability so its scoped id equals a backbone
+    id is not constructible — instead assert the scoped id never overwrites
+    the backbone recognizer (the real safety property)."""
+    # Fragment tries to redefine `vcs` (a backbone id). Scoped, it becomes
+    # `trip-planning:vcs` — which does NOT collide — so the backbone `vcs` recognizer
+    # must be intact and the scoped variant is a separate, inert id.
+    fragment = (
+        "schema_version: 1\n"
+        "privileges:\n"
+        "  vcs:\n"
+        "    description: hijack attempt.\n"
+        "    recognize:\n"
+        "      bash:\n"
+        "        - cmd: echo\n"
+    )
+    _write_catalog_fragment_tree(tmp_path, fragment=fragment)
+    catalog = decide_mod.load_catalog(str(tmp_path))
+    # Backbone `vcs` recognizer is untouched (still matches git, not echo).
+    assert catalog["privileges"]["vcs"]["recognize"]["bash"] == [{"cmd": "git"}], (
+        "a fragment must never overwrite a backbone privilege's recognizer"
+    )
+
+
+def test_fragment_id_collision_with_backbone_scoped_name_rejected(decide_mod, tmp_path):
+    """When a scoped fragment id WOULD collide with an existing key, it is rejected
+    (dropped, not overwriting) and the rejection is surfaced on the catalog."""
+    # Pre-seed the backbone catalog with a key that equals the scoped form the
+    # fragment will produce, to exercise the collision branch directly.
+    (tmp_path / ".pkit" / "schemas").mkdir(parents=True)
+    backbone = (
+        "schema_version: 1\n"
+        "privileges:\n"
+        "  'trip-planning:ad-hoc-scraping':\n"
+        "    description: pre-existing backbone entry.\n"
+        "    recognize:\n"
+        "      bash:\n"
+        "        - cmd: ls\n"
+    )
+    (tmp_path / ".pkit" / "schemas" / "privilege-catalog.yaml").write_text(
+        backbone, encoding="utf-8"
+    )
+    (tmp_path / ".pkit" / "manifest.yaml").write_text(_MANIFEST_WITH_CAP, encoding="utf-8")
+    frag_dir = tmp_path / ".pkit" / "capabilities" / "trip-planning" / "permissions"
+    frag_dir.mkdir(parents=True)
+    (frag_dir / "privilege-catalog.yaml").write_text(_SCRAPER_FRAGMENT, encoding="utf-8")
+
+    catalog = decide_mod.load_catalog(str(tmp_path))
+    # The pre-existing entry is intact (not overwritten by the fragment).
+    assert catalog["privileges"]["trip-planning:ad-hoc-scraping"]["recognize"]["bash"] == [
+        {"cmd": "ls"}
+    ], "collision must drop the fragment entry, never overwrite the existing one"
+    rejections = catalog.get("_fragment_rejections") or []
+    assert any("collides" in r for r in rejections), (
+        "a collision must be surfaced on the catalog (visibility — ADR-021 §6)"
+    )
+
+
+def test_fragment_guardrail_rejected(decide_mod, tmp_path):
+    """A fragment privilege carrying guardrail: true is rejected (dropped), never
+    merged — a capability may not install a deny that applies to every adopter."""
+    fragment = (
+        "schema_version: 1\n"
+        "privileges:\n"
+        "  forbidden-floor:\n"
+        "    description: sneaky global deny.\n"
+        "    guardrail: true\n"
+        "    recognize:\n"
+        "      bash:\n"
+        "        - cmd: ssh\n"
+    )
+    _write_catalog_fragment_tree(tmp_path, fragment=fragment)
+    catalog = decide_mod.load_catalog(str(tmp_path))
+    assert "trip-planning:forbidden-floor" not in catalog["privileges"], (
+        "a guardrail-bearing fragment privilege must NOT merge"
+    )
+    rejections = catalog.get("_fragment_rejections") or []
+    assert any("guardrail" in r for r in rejections), (
+        "a rejected guardrail must be surfaced (visibility — ADR-021 §6)"
+    )
+    # And it never becomes a global deny: guardrail_denies sees only backbone.
+    denies = decide_mod.guardrail_denies(catalog)
+    assert not any(
+        "forbidden-floor" in str(g.get("privilege")) for g in denies
+    ), "a rejected fragment guardrail must never synthesize a global deny"
+
+
+def test_scoped_token_round_trips_deny_binds_not_fail_open(decide_mod, tmp_path):
+    """The load-bearing fail-open guard: a deny grant referencing a scoped
+    fragment privilege by its `[privilege-catalog:<cap>:<name>]` token must
+    actually bind to the merged privilege (deny), not resolve to nothing.
+
+    A mis-resolved scoped token would empty the grant's privilege match and the
+    deny would silently not bind (fail-open). This proves exact round-trip."""
+    project_grants = (
+        "schema_version: 1\n"
+        "grants:\n"
+        "  - subject: agent:researcher\n"
+        "    privilege: '[privilege-catalog:trip-planning:ad-hoc-scraping]'\n"
+        "    effect: deny\n"
+    )
+    _write_catalog_fragment_tree(
+        tmp_path, fragment=_SCRAPER_FRAGMENT, project_grants=project_grants
+    )
+    catalog = decide_mod.load_catalog(str(tmp_path))
+    model = decide_mod.load_model(str(tmp_path), catalog)
+    # The token must normalise to the scoped catalog key exactly.
+    assert decide_mod._privilege_ids(
+        "[privilege-catalog:trip-planning:ad-hoc-scraping]"
+    ) == {"trip-planning:ad-hoc-scraping"}
+    # The deny binds: researcher running `curl …` is DENIED.
+    decision, reason = decide_mod.decide(
+        model, catalog,
+        {"type": "bash", "command": "curl https://example.com",
+         "cwd": "/r", "subject": "agent:researcher"},
+    )
+    assert decision == "deny", f"scoped deny must bind, got {decision} ({reason})"
+
+
+def test_recognizer_overlap_deny_wins_per_subject(decide_mod, tmp_path):
+    """A fragment recognizer may overlap a command another privilege also matches.
+    Both ids hit; deny-wins composition applies per the subject's grants — the
+    capability fences only the subjects its own deny grant names."""
+    # Fragment recognizes `git` (overlapping the backbone vcs privilege).
+    fragment = (
+        "schema_version: 1\n"
+        "privileges:\n"
+        "  scm-scrape:\n"
+        "    description: overlaps vcs on git.\n"
+        "    recognize:\n"
+        "      bash:\n"
+        "        - cmd: git\n"
+    )
+    project_grants = (
+        "schema_version: 1\n"
+        "grants:\n"
+        "  - subject: agent:researcher\n"
+        "    privilege: '[privilege-catalog:trip-planning:scm-scrape]'\n"
+        "    effect: deny\n"
+        "  - subject: agent:builder\n"
+        "    privilege: '[privilege-catalog:vcs]'\n"
+        "    effect: allow\n"
+    )
+    _write_catalog_fragment_tree(
+        tmp_path, fragment=fragment, project_grants=project_grants
+    )
+    catalog = decide_mod.load_catalog(str(tmp_path))
+    model = decide_mod.load_model(str(tmp_path), catalog)
+    # researcher is denied git (the overlapping fragment deny binds).
+    d_res, _ = decide_mod.decide(
+        model, catalog,
+        {"type": "bash", "command": "git status", "cwd": "/r", "subject": "agent:researcher"},
+    )
+    assert d_res == "deny", "the capability's deny fences ITS named subject on the overlap"
+    # builder is unaffected — it has a vcs allow and no scm-scrape deny.
+    d_build, _ = decide_mod.decide(
+        model, catalog,
+        {"type": "bash", "command": "git status", "cwd": "/r", "subject": "agent:builder"},
+    )
+    assert d_build == "allow", "a third party is NOT narrowed by a capability's deny"
+
+
+def test_no_fragment_no_manifest_is_inert(decide_mod, tmp_path):
+    """With no manifest at all, load_catalog returns the backbone catalog unchanged."""
+    (tmp_path / ".pkit" / "schemas").mkdir(parents=True)
+    (tmp_path / ".pkit" / "schemas" / "privilege-catalog.yaml").write_text(
+        CATALOG_PATH.read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    catalog = decide_mod.load_catalog(str(tmp_path))
+    assert "vcs" in catalog["privileges"]
+    assert "_fragment_rejections" not in catalog
+
+
+def test_stdlib_fallback_parses_catalog_fragment_identically_to_ruamel(decide_mod, tmp_path):
+    """Same-code invariant (ADR-002): the stdlib fallback must merge a catalog
+    fragment identically to the ruamel path, so the macOS-Seatbelt hook decides
+    the same as the CLI."""
+    try:
+        from ruamel.yaml import YAML  # noqa: F401
+    except ImportError:
+        pytest.skip("ruamel.yaml not available")
+    stdlib_result = decide_mod._stdlib_load_yaml(_SCRAPER_FRAGMENT)
+    import io
+    from ruamel.yaml import YAML as _Y
+    ruamel_result = _Y(typ="safe").load(io.StringIO(_SCRAPER_FRAGMENT)) or {}
+    assert stdlib_result == ruamel_result
