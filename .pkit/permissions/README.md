@@ -133,6 +133,25 @@ until a grant references it; the narrowing is the deny grant the capability also
 ships (ADR-016's channel, unchanged), and a tool-call deny is a behaviour-shaping
 speed-bump, **not** a security boundary (ADR-004).
 
+### Authoring a fragment (`pkit permissions scaffold <cap>`)
+
+Both fragment files are hand-authored and kit-owned. To stamp the skeleton with
+the correct shapes and inline footgun guidance, run `pkit permissions scaffold
+<cap>` (paired with the `capability-author` skill, step 6b). It stamps
+`privilege-catalog.yaml` + `grants.yaml` into the capability's `permissions/`
+dir, refuses an unknown capability, and refuses to clobber an existing fragment.
+
+Two footguns the scaffold guidance captures: a fragment privilege key is authored
+**bare** (the loader applies the `<cap>:` scope), and a grant references it with
+the **scoped** token `[privilege-catalog:<cap>:<name>]`. A *bare* grant token
+against a fragment privilege resolves to no merged privilege, so the deny
+silently does **not** bind — the fail-open hazard ADR-021 names. `pkit schemas
+validate` runs a **fragment-token-resolution lint** over every installed
+capability's `grants.yaml` that catches exactly this: a grant token resolving to
+no privilege in the merged catalog fails the gate. The lint reuses
+`load_catalog`'s merge and `decide.py`'s token normaliser, so it agrees with the
+runtime exactly (a token it passes is a token the hook binds).
+
 ### Deny/negation scopes are intentionally unsupported
 
 Negation globs (`!*.ru`) in a domain-scoped grant are **explicitly rejected** with an error rather than silently accepted or partially enforced. Rationale (ADR-004 §61): a tool-layer denylist is a false boundary — an agent's raw `bash curl` bypasses it at the sandbox layer, which is agent-blind. Advertising negation enforcement would overstate fidelity and violate COR-028's honesty discipline. Only positive allow-lists are supported; if you need to block a host, remove it from the allow-list rather than adding a negation glob.

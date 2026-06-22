@@ -25,6 +25,7 @@ import importlib.util
 import json
 import os
 import re
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -654,6 +655,210 @@ def revoke(target_root: Path, subject: str, privilege: str) -> str:
         return f"no grant matched {subject} {privilege}; nothing to revoke."
     _dump_yaml(_grants_path(target_root), doc)
     return f"revoked: {subject} {privilege}"
+
+
+# ---- scaffold: capability permission fragment (ADR-016 + ADR-021) ----------
+#
+# `pkit permissions scaffold <cap>` stamps the two kit-owned fragment files a
+# capability ships in its own `permissions/` directory:
+#   - privilege-catalog.yaml — the privilege DEFINITION half (ADR-021)
+#   - grants.yaml            — the deny POLICY half (ADR-016)
+# Both are hand-authored today, and a misauthored token fails QUIETLY (a bare
+# `[privilege-catalog:<name>]` instead of the scoped `[privilege-catalog:<cap>:
+# <name>]` matches no merged privilege, so the deny silently does not bind —
+# the fail-open hazard ADR-021 names). The stamped files carry inline comment
+# guidance capturing both footguns so the author lands the scoped form. The
+# `pkit schemas validate` fragment-token lint (lint_capability_fragment_grants)
+# is the structural backstop that catches a bare token if the comment is missed.
+
+_FRAGMENT_CATALOG_TEMPLATE = """\
+schema_version: 1
+# Capability-contributed privilege-catalog FRAGMENT (ADR-021).
+#
+# Discovered by `load_catalog` via the manifest walk — merged into the central
+# catalog ONLY when the `{name}` capability is an installed component.
+#
+# Footguns (read before authoring):
+#   1. Author keys BARE (kebab-case, no scope prefix). The loader rewrites each
+#      key to the capability-scoped id `{name}:<key>`. So the entry below
+#      becomes `{name}:ad-hoc-scraping` in the merged catalog, and a grant must
+#      reference it with the SCOPED token (see grants.yaml). Do NOT write the
+#      `{name}:` prefix here — that would double-scope it.
+#   2. `guardrail: true` is FORBIDDEN in a fragment. A capability may extend the
+#      recognised vocabulary but may never install a deny on every adopter by
+#      default; the loader REJECTS a fragment entry carrying it.
+#
+# Replace the illustrative entry below with this capability's own privilege(s),
+# or delete this file if the capability ships no privilege definition.
+privileges:
+  ad-hoc-scraping:
+    description: <one-line, domain-readable description of what this privilege permits>
+    recognize:
+      bash:
+        - cmd: curl
+        - cmd: wget
+"""
+
+_FRAGMENT_GRANTS_TEMPLATE = """\
+schema_version: 1
+# Capability-contributed intent-grant FRAGMENT (ADR-016).
+#
+# Discovered by `load_model` via the manifest walk — applies ONLY when the
+# `{name}` capability is an installed component. On the deny side a capability
+# grant survives via deny-wins; the operator overrides it with an explicit
+# allow grant in their own `project/grants.yaml`.
+#
+# Footgun: reference a capability-contributed privilege (defined in this
+# capability's privilege-catalog.yaml fragment) with the SCOPED token
+# `[privilege-catalog:{name}:<name>]` — the `{name}:` scope is REQUIRED.
+# A BARE `[privilege-catalog:<name>]` resolves to no merged privilege, so the
+# deny silently does NOT bind (a fail-open hazard). A backbone privilege is
+# still referenced bare (e.g. `[privilege-catalog:issue-tracker-write]`).
+#
+# Replace the illustrative grant below with this capability's own deny(ies),
+# or delete this file if the capability ships no grant policy.
+grants:
+  - subject: agent:<this-capability-agent>
+    privilege: '[privilege-catalog:{name}:ad-hoc-scraping]'
+    effect: deny
+"""
+
+
+def scaffold_fragment(target_root: Path, capability: str) -> list[Path]:
+    """Stamp a capability's `permissions/` fragment skeleton (ADR-016 + ADR-021).
+
+    Writes `.pkit/capabilities/<capability>/permissions/{privilege-catalog,
+    grants}.yaml` with the correct shapes and inline guidance on both authoring
+    footguns (bare fragment keys vs the scoped grant token; the guardrail ban).
+
+    Refuses an unknown capability (no `package.yaml`) and refuses to clobber an
+    existing fragment file — the same no-overwrite discipline the other
+    `new`/scaffold commands hold. Returns the paths stamped (a subset of the
+    two, since an already-present file is left untouched).
+    """
+    if not _PRIV_ID.match(capability) or ":" in capability:
+        raise PermissionsError(
+            f"invalid capability name {capability!r}; expected kebab-case."
+        )
+    cap_dir = target_root / ".pkit" / "capabilities" / capability
+    if not (cap_dir / "package.yaml").is_file():
+        raise PermissionsError(
+            f"unknown capability {capability!r}: no "
+            f"{cap_dir.relative_to(target_root)}/package.yaml. Scaffold the "
+            f"capability first (`pkit new capability {capability}`), or check "
+            f"the name."
+        )
+    perms_dir = cap_dir / "permissions"
+    perms_dir.mkdir(parents=True, exist_ok=True)
+    stamped: list[Path] = []
+    for filename, template in (
+        ("privilege-catalog.yaml", _FRAGMENT_CATALOG_TEMPLATE),
+        ("grants.yaml", _FRAGMENT_GRANTS_TEMPLATE),
+    ):
+        path = perms_dir / filename
+        if path.is_file():
+            continue  # no-clobber: leave an authored fragment untouched
+        path.write_text(template.format(name=capability), encoding="utf-8")
+        stamped.append(path)
+    return stamped
+
+
+# ---- lint: capability-fragment grant-token resolution (ADR-021) ------------
+#
+# A grant's privilege token must resolve to a privilege that EXISTS in the
+# merged catalog, or the deny silently does not bind (the bare-vs-scoped
+# fail-open hazard ADR-021 names: `[privilege-catalog:ad-hoc-scraping]` authored
+# where the merged id is `<cap>:ad-hoc-scraping`). `decide.py` matches against
+# the merged catalog at runtime, so this lint MUST resolve through the SAME
+# merge (`load_catalog`) and the SAME token normaliser (`_privilege_ids`) to
+# agree with the runtime exactly — a divergent reimplementation could pass a
+# token the hook then fails to bind. Covers HAND-authored fragments (it walks
+# the on-disk grants.yaml of every installed capability), not just the ones the
+# `permissions grant` command writes.
+
+
+@dataclass(frozen=True)
+class FragmentGrantIssue:
+    """One unresolved grant token in a capability's grants fragment."""
+
+    capability: str
+    grants_path: Path
+    token: str
+    fix_hint: str
+
+
+def lint_capability_fragment_grants(target_root: Path) -> list[FragmentGrantIssue]:
+    """Check every installed capability's grants fragment for tokens that
+    resolve to no privilege in the MERGED catalog (ADR-021's fail-open hazard).
+
+    Reuses the decision core's `load_catalog` (the same merge the hook runs) and
+    `_privilege_ids` (the same token normaliser), so a token this lint passes is
+    a token the runtime binds — and one it FAILS is one the runtime would
+    silently drop. Walks the manifest `components:` list for kind=capability
+    (install-state-as-gate, matching the runtime walk); a capability without a
+    `permissions/grants.yaml` contributes nothing. Returns one issue per
+    unresolved token.
+
+    No-ops (returns []) when the project has no propagated decision core or no
+    manifest — without either there is no permission subsystem to lint against
+    (e.g. a bare schema-only tree).
+    """
+    decide_path = target_root / ".pkit" / "permissions" / "decide.py"
+    manifest_path = target_root / ".pkit" / "manifest.yaml"
+    if not decide_path.is_file() or not manifest_path.is_file():
+        return []
+    mod = _decide_mod(target_root)
+    catalog = mod.load_catalog(str(target_root))
+    known_ids = set(catalog.get("privileges", {}))
+
+    manifest = _load_yaml(manifest_path)
+    issues: list[FragmentGrantIssue] = []
+    for component in manifest.get("components", []) or []:
+        if not isinstance(component, dict) or component.get("kind") != "capability":
+            continue
+        name = component.get("name")
+        if not name:
+            continue
+        grants_path = (
+            target_root / ".pkit" / "capabilities" / name / "permissions" / "grants.yaml"
+        )
+        if not grants_path.is_file():
+            continue
+        doc = _load_yaml(grants_path)
+        for grant in doc.get("grants", []) or []:
+            if not isinstance(grant, dict):
+                continue
+            raw = grant.get("privilege")
+            tokens = raw if isinstance(raw, list) else [raw]
+            # Resolve per-token so the message names the exact offending token.
+            for token in tokens:
+                if not isinstance(token, str):
+                    continue
+                ids = mod._privilege_ids(token)
+                if ids & known_ids:
+                    continue
+                bare = token[len("[privilege-catalog:"):-1] if token.startswith("[privilege-catalog:") and token.endswith("]") else None
+                scoped_guess = f"[privilege-catalog:{name}:{bare}]" if bare and ":" not in bare else None
+                fix = (
+                    f"token resolves to no privilege in the merged catalog. If "
+                    f"this references {name}'s own fragment privilege, it likely "
+                    f"needs the `{name}:` scope: {scoped_guess}."
+                    if scoped_guess
+                    else (
+                        "token resolves to no privilege in the merged catalog — "
+                        "check the privilege id, the `<cap>:` scope, and that the "
+                        "defining capability is installed."
+                    )
+                )
+                issues.append(
+                    FragmentGrantIssue(
+                        capability=name,
+                        grants_path=grants_path,
+                        token=token,
+                        fix_hint=fix,
+                    )
+                )
+    return issues
 
 
 def show_mode(target_root: Path) -> str:
