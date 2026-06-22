@@ -167,7 +167,24 @@ def install_kit(target_root: Path, dry_run: bool = False) -> None:
     run_installed_adapter_primitives(ctx)
 
     _stamp_backbone_manifest(ctx)
+    _render_runtime_ignore(ctx)
     _print_next_steps(ctx)
+
+
+def _render_runtime_ignore(ctx: InstallContext) -> None:
+    """Wholesale-regenerate `.pkit/.gitignore` at the CORE tier (ADR-009
+    Amendment 1, T2).
+
+    Runs *after* the manifest is stamped so the component walk sees every
+    registered adapter/capability. Deliberately a core step — NOT an adapter
+    primitive — so backbone + capability `runtime_ignore:` declarations render
+    even when no adapter is installed (the layering inversion ADR-009 forbids).
+    Local import to keep `visibility`'s heavier deps off the install hot path
+    and avoid an import-time cycle.
+    """
+    from project_kit import visibility
+
+    click.echo(visibility.render_runtime_ignore(ctx.target_root, dry_run=ctx.dry_run))
 
 
 def _stamp_backbone_manifest(ctx: InstallContext) -> None:
