@@ -22,6 +22,8 @@ The seam holds by inspection: `workflow.yaml`'s `states` and `transitions` map o
 
 **D3 — pm-local fields stay.** `cascade`, `closure_triggers`, `pr_state_effect`, `source`, `display_name` remain in `workflow.yaml` (the engine ignores them); pm's wrappers continue to run the cascade + closure semantics. The shared shape is not polluted with pm domain fields.
 
+> **Amended in part by [DEC-034](DEC-034-cascade-slot-binding.md).** Once the shared cascade slot shipped ([COR-037](../../../decisions/core/COR-037-process-cascade.md)), pm's **closure** cascade was rebound onto it (the slot is itself content-free, so D3's boundary rationale is preserved). The *other* D3 fields (`closure_triggers`, `pr_state_effect`, `source`, `display_name`) and pm's **forward** cascade remain capability-local as decided here.
+
 **D4 — Predicate commands.** pm ships read-only detector/gate commands (lifting `move-issue`'s inference: branch-exists, PR-merged + cross-authority, checkboxes-ticked) that return the structured JSON the engine's predicate runner expects, registered in `package.yaml`.
 
 **D5 — Delegate to the engine.** `move-issue` and the verb-subject wrappers delegate the state-machine mechanics (position / validation / journal) to `pkit process`; pm retains its domain side-effects (branch/PR creation, assignment, cascade, closure).
