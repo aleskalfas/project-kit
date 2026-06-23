@@ -2005,6 +2005,53 @@ def test_chained_cd_strips_to_final_granted_command(decide_mod, catalog):
     assert d == "allow", why
 
 
+# ---- pipe-in-remainder: inherited porosity, unchanged by the cd-strip -------
+#
+# `|` is NOT in `_UNTRUSTED` (it does not force an abstain). Pipe handling is
+# inherited UNCHANGED from the bare-command path — `segments()` already splits
+# on `|` and matches the granted first segment. These tests pin that behavior so
+# a future `_UNTRUSTED` edit can't silently flip it (the rationale lives at the
+# `_UNTRUSTED` definition in decide.py). The cd-strip neither creates nor worsens
+# pipe porosity; the real boundary for `| sh` is the OS sandbox (ADR-004).
+
+
+def test_cd_prefix_then_legitimate_pipe_allows(decide_mod, catalog):
+    """`cd /x && gh pr list | jq .` ALLOWS — the legitimate-pipe win is preserved.
+    `gh` is granted (issue-tracker); the `jq` segment matches no grant but a
+    non-match is not a deny, so the granted first segment carries the allow. A
+    quote-free `jq .` is used so the win, not the `_UNTRUSTED` abstain, is what's
+    pinned. The cd-strip leaves the pipe untouched."""
+    d, why = decide_mod.decide(MODEL, catalog, _bash("cd /x && gh pr list | jq .", "operator"))
+    assert d == "allow", why
+
+
+def test_cd_prefix_then_pipe_to_destructive_denies(decide_mod, catalog):
+    """`cd /x && gh pr list | rm -rf ~` DENIES — deny-wins survives a pipe through
+    the cd-strip recursion: the `rm -rf` segment hits the destructive-fs guardrail
+    after the leading cd is stripped."""
+    d, why = decide_mod.decide(MODEL, catalog, _bash("cd /x && gh pr list | rm -rf ~", "operator"))
+    assert d == "deny", why
+    assert "destructive-fs" in why
+
+
+def test_cd_prefix_then_pipe_to_shell_matches_bare_form(decide_mod, catalog):
+    """`cd /x && gh pr list | sh` resolves to EXACTLY the bare `gh pr list | sh`
+    verdict — proving the cd-strip is verdict-preserving over a pipe-to-shell. The
+    `| sh` porosity (whatever it is today) is INHERITED from the bare-command path,
+    not a cd-strip artifact; `|` is deliberately absent from `_UNTRUSTED`. The real
+    boundary for `| sh` is the OS sandbox (ADR-004)."""
+    cd_decision, cd_why = decide_mod.decide(
+        MODEL, catalog, _bash("cd /x && gh pr list | sh", "operator")
+    )
+    bare_decision, _ = decide_mod.decide(
+        MODEL, catalog, _bash("gh pr list | sh", "operator")
+    )
+    assert cd_decision == bare_decision, (
+        f"cd-prefixed pipe-to-shell must match the bare form's verdict; "
+        f"got cd={cd_decision!r}, bare={bare_decision!r}: {cd_why}"
+    )
+
+
 def test_cd_strip_hook_and_decide_parity(decide_mod, catalog):
     """The cd-strip lives in the shared core, so hook_decide and decide agree on
     a cd-prefixed compound (ADR-002 / ADR-003 same-code invariant)."""

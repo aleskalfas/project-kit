@@ -48,6 +48,18 @@ _CD_SEP = re.compile(r"\s*(?:&&|;)\s*")
 # redirection. Their presence in the remainder of a cd-stripped compound makes
 # the decision ABSTAIN — never auto-allow — because a per-segment matcher is
 # structurally blind to what these compose into.
+#
+# `|` is DELIBERATELY EXCLUDED from this set (it does not force an abstain).
+# Pipe-composition porosity (e.g. `gh … | sh`) is inherited UNCHANGED from the
+# existing bare-command path: `segments()` already splits on `|` and the
+# decision matches on the granted first segment, so `gh … | sh` decides the
+# same with or without a leading `cd`. The cd-strip neither creates nor worsens
+# it — `cd /x && gh … | sh` resolves to exactly the bare `gh … | sh` verdict.
+# Adding `|` here would (a) re-introduce prompts on legitimate pipes like
+# `gh … | jq` and (b) only HALF-fix pipe-to-shell — the bare form `gh … | sh`
+# would stay porous — an inconsistent asymmetry for no real gain. The honest
+# boundary for `| sh` is the OS sandbox (ADR-004: this layer is a speed-bump,
+# not a boundary). Pipe handling is out of scope for ADR-025 Phase 1.
 _UNTRUSTED = re.compile(r"""['"`<>]|\$\(""")
 # A bare `cd <path>` first segment: literally `cd` then exactly one path token
 # with no shell metacharacter and not a flag. The token is intentionally
@@ -261,7 +273,8 @@ def decide(
     # auto-approves exactly as `gh pr list` would. Conservative on two axes:
     #   - it strips ONLY a bare `cd` (`_strip_leading_cd` returns None otherwise,
     #     so a tricky `cd "/x; rm -rf ~" && …` falls through to the full-command
-    #     path and its deny still binds — deny-wins is never weakened); and
+    #     path, where it is decided whole and at worst abstains — never silently
+    #     allowed); and
     #   - if the remainder carries anything the dumb splitter can't be trusted on
     #     (a quote, `$()`, a backtick, a `<` / `>` redirection), it ABSTAINS
     #     rather than auto-allowing (ADR-004 dp-4, fail-closed-on-uncertainty).

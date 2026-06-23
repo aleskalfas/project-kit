@@ -55,6 +55,8 @@ A compound Bash command reaches `decide()` as one string. The decision core spli
 
   - **A remainder carrying an untrusted construct ABSTAINS** — if the remainder after the strip contains a quote, `$()`, a backtick, or a `<` / `>` redirection (anything the dumb splitter can't be trusted on), the decision is **abstain (prompt)**, never auto-allow. So `cd /x && echo z > ~/f` and `cd /x && gh $(rm -rf ~)` prompt rather than slip through.
 
+  - **Pipe handling is unchanged** — the cd-strip does not touch pipes. `|` is not a cd-separator and does not force an abstain, so pipe-composition porosity (e.g. `gh … | sh`) is **inherited unchanged** from the bare-command path: `cd /x && gh … | sh` decides exactly as bare `gh … | sh` does. The honest boundary for `| sh` is the OS sandbox (ADR-004: this layer is a speed-bump, not a boundary), and pipe handling is out of scope for ADR-025 Phase 1.
+
   The broader "auto-approve any compound whose every segment is independently safe" widening is **rejected as unsound** (a per-segment matcher is blind to composition) and deferred per COR-007 — the leading-`cd` strip is the only widening taken. See ADR-025.
 
 ## Default-agent subject resolution
