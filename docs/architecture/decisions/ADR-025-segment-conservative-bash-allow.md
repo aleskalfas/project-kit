@@ -1,7 +1,7 @@
 ---
 id: ADR-025
 title: Segment-conservative compound Bash auto-approve
-status: proposed
+status: accepted
 date: 2026-06-24
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
