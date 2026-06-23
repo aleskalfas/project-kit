@@ -61,10 +61,14 @@ at a time via the per-subject `membership` predicate ("does THIS subject belong 
 this parent?"). Each confirmed member's outcome is resolved by COR-036's
 single-inner resolution (the per-subject step, reused — not a rival path), and the
 reducer FOLDS them: `all` = every member reached the named outcome; `count` = at
-least `threshold` did. The fold is FAIL-CLOSED — any member whose outcome is
-unresolved/indeterminate holds the whole fold unresolved (the gate stays shut),
-and the EMPTY set does NOT vacuously open the gate (an `all` over zero members is
-fail-closed, a determinate "not yet", never true). A cascade-gated parent parks on
+least `threshold` did. The fold is FAIL-CLOSED on members — any member whose
+outcome is unresolved/indeterminate holds the whole fold unresolved (the gate
+stays shut). The DETERMINATELY-empty set is decided by the binding's `on_empty`
+policy (COR-037 amended): `fail-closed` (the default / absent) keeps the gate
+shut, `satisfied` opens it ("nothing to wait on"); either way the answer is
+DETERMINATE. Indeterminate membership / enumeration OVERRIDES `on_empty` — a
+broken read that confirms zero members is held unresolved, never fail-OPENED by
+`satisfied`. A cascade-gated parent parks on
 the `awaiting-cascade-outcome` blocked reason — an AUTO-CLEARING overlay reusing
 COR-034's model (no `resume_when`; the live fold IS its condition), clearing when
 the fold resolves and a legal move opens. SINGLE-LEVEL breadth: the fold adds
@@ -666,11 +670,15 @@ class CascadeResolution:
     False and the gate stays shut — the parent keeps waiting, never reading a
     false "all reached X".
 
-    The EMPTY set (no members yet) does NOT vacuously open the gate: an `all`
-    over zero members is fail-closed (`opened=False`, `indeterminate=False` — a
-    determinate, correct "not yet", not an evaluation failure). `reached` /
-    `total` are the audit colour (how many of how many members reached the named
-    outcome).
+    The DETERMINATELY-EMPTY set (no members) is resolved by the binding's
+    `on_empty` policy (COR-037 amended), always DETERMINATELY
+    (`indeterminate=False`): `fail-closed` (the default / absent) gives
+    `opened=False` ("not yet"); `satisfied` gives `opened=True` ("nothing to wait
+    on"). Indeterminate membership / enumeration OVERRIDES `on_empty` — a broken
+    read that confirms zero members is held `indeterminate=True` (gate shut), not
+    treated as an empty set, so `satisfied` never fail-OPENS on a broken read.
+    `reached` / `total` are the audit colour (how many of how many members
+    reached the named outcome).
 
     Single-level breadth (COR-037): the engine resolves each member's outcome via
     COR-036's single-inner resolution (the per-subject step) and folds — it adds
@@ -987,12 +995,19 @@ class ProcessEngine:
           predicate errored / timed out for a candidate) likewise holds the whole
           fold UNRESOLVED — symmetric with an unresolved member outcome — rather
           than silently dropping the candidate (a determinate `result is False`
-          still cleanly excludes a real non-member). The EMPTY set does NOT
-          vacuously open the gate — an `all`/`count` over zero members is
-          fail-closed (a determinate "not yet", not an evaluation failure); the
-          empty set covers BOTH "no candidates existed" and "candidates existed
-          but none were members" (they intentionally collapse — neither opens the
-          gate).
+          still cleanly excludes a real non-member). The DETERMINATELY-EMPTY set
+          (enumeration completed, every membership resolved determinately, zero
+          confirmed members) is resolved by the binding's `on_empty` policy
+          (COR-037 amended): `fail-closed` (the DEFAULT, and absent) keeps the
+          gate shut ("not yet"); `satisfied` opens it ("nothing to wait on"). Both
+          answers are DETERMINATE; the policy only chooses which way the
+          determinate answer points. PRECEDENCE: indeterminate membership /
+          enumeration OVERRIDES `on_empty` (the guards above fire first), so a
+          broken read that confirms zero members is NOT an empty set — it stays
+          indeterminate and the gate stays shut even under `satisfied`. The empty
+          set covers BOTH "no candidates existed" and "candidates existed but none
+          were members" (they intentionally collapse); the reducer is not
+          evaluated on it, so `on_empty` governs `all` and `count` alike.
 
         Read-only: it runs predicates and resolves member outcomes live, writing
         nothing.
@@ -1032,6 +1047,12 @@ class ProcessEngine:
         op = reducer.get("op")
         outcome = reducer.get("outcome")
         threshold = reducer.get("threshold")
+        # COR-037 (amended): the binding-supplied policy for a DETERMINATELY-empty
+        # member set. Absent ⇒ `fail-closed` (the conservative default), so an
+        # existing cascade declaration is byte-unchanged. Only `satisfied` opts
+        # the empty set into opening the gate; anything else (including a malformed
+        # value the schema would reject) is treated as the safe default.
+        empty_satisfies = cascade.get("on_empty") == "satisfied"
         if op not in ("all", "count") or not isinstance(outcome, str) or not outcome:
             return self._cascade_failed(
                 address, reducer, "cascade reducer names no valid op / outcome; failing closed"
@@ -1063,12 +1084,17 @@ class ProcessEngine:
             # parent?" per candidate).
             belongs = self._cascade_member_belongs(membership_predicate, member_id)
             if belongs.indeterminate:
-                # An INDETERMINATE membership test (the predicate errored / timed
-                # out) holds the WHOLE fold unresolved (fail-closed) — symmetric
-                # with an unresolved member OUTCOME below. We must not silently
-                # drop the candidate (that would look like "fewer members" and
-                # could let an `all` vacuously pass); the gate stays shut until
-                # the membership of every candidate is determinate.
+                # PRECEDENCE GUARD (COR-037 amended): indeterminate membership
+                # OVERRIDES `on_empty`. An INDETERMINATE membership test (the
+                # predicate errored / timed out) holds the WHOLE fold unresolved
+                # (fail-closed) — symmetric with an unresolved member OUTCOME
+                # below. We must not silently drop the candidate (that would look
+                # like "fewer members" and could let an `all` vacuously pass, or
+                # let a broken read collapse to an empty set that `satisfied`
+                # would fail-OPEN). This early return fires BEFORE the empty-set /
+                # `on_empty` branch, so a wholesale membership-read failure that
+                # confirms zero members is never mistaken for a determinate empty
+                # set: it stays indeterminate, gate shut, even under `satisfied`.
                 return CascadeResolution(
                     address=address,
                     op=op,
@@ -1109,9 +1135,32 @@ class ProcessEngine:
             if member_outcome == outcome:
                 reached += 1
 
-        # The empty set is fail-closed: an `all`/`count` over zero members does
-        # NOT vacuously open the gate (a determinate "not yet", not indeterminate).
+        # The DETERMINATELY-empty set (COR-037 amended): enumeration completed
+        # without error, every candidate's membership resolved determinately, and
+        # zero confirmed members remain. We only reach here BECAUSE the precedence
+        # guards above did not fire — `candidates is None` (broken enumeration) and
+        # any indeterminate membership both return earlier, so this branch can
+        # never be entered on a broken read. The binding's `on_empty` policy
+        # decides the gate, and BOTH possible answers stay DETERMINATE (never
+        # `indeterminate`): `satisfied` opens it ("nothing to wait on"),
+        # `fail-closed` (and absent/default) keeps it shut ("not yet"). The reducer
+        # is NOT evaluated on an empty set — so a `count` threshold cannot open the
+        # gate by its own vacuous arithmetic; `on_empty` governs the empty case for
+        # `all` and `count` alike.
         if total == 0:
+            if empty_satisfies:
+                reason = (
+                    f"no members of {address!r} belong to parent {self.subject!r} "
+                    "yet; the empty set is `satisfied` (nothing to wait on) — the "
+                    "gate opens (determinate)"
+                )
+            else:
+                reason = (
+                    f"no members of {address!r} belong to parent {self.subject!r} "
+                    "yet (no candidates, or candidates existed but none were "
+                    "members — the two collapse); the empty set is `fail-closed` "
+                    "(the default) — the gate stays shut (determinate)"
+                )
             return CascadeResolution(
                 address=address,
                 op=op,
@@ -1119,12 +1168,9 @@ class ProcessEngine:
                 threshold=threshold if op == "count" else None,
                 reached=0,
                 total=0,
-                opened=False,
+                opened=empty_satisfies,
                 indeterminate=False,
-                reason=f"no members of {address!r} belong to parent {self.subject!r} "
-                "yet (no candidates, or candidates existed but none were members — "
-                "the two collapse); the empty set does not vacuously open the gate "
-                "(fail-closed)",
+                reason=reason,
             )
 
         if op == "all":

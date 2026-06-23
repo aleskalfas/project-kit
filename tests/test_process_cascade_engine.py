@@ -152,6 +152,20 @@ def _count_reducer(threshold: int) -> str:
     return f"      op: count\n      outcome: verified\n      threshold: {threshold}\n"
 
 
+def _set_on_empty(repo: Path, policy: str) -> None:
+    """Append an `on_empty: <policy>` line to the cascade declaration of the
+    already-built fixture's area-discovery process (COR-037 amended). The cascade
+    block sits between `cascade:` and `states:`; we insert the policy under the
+    `cascade:` mapping (sibling of `runs` / `reducer`)."""
+    outer_def = repo / ".pkit" / "capabilities" / "fixture" / "schemas" / "area-discovery.yaml"
+    text = outer_def.read_text(encoding="utf-8")
+    # Insert as a sibling of `runs:` inside the cascade mapping (2-space indent).
+    marker = "  cascade:\n"
+    assert marker in text, "fixture cascade block not found"
+    text = text.replace(marker, marker + f"    on_empty: {policy}\n", 1)
+    outer_def.write_text(text, encoding="utf-8")
+
+
 def _write_script(path: Path, body: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("#!/usr/bin/env python3\n" + body, encoding="utf-8")
@@ -456,6 +470,123 @@ def test_count_fold_empty_set_is_fail_closed(cascade_repo) -> None:
     assert fold.total == 0
     assert fold.opened is False
     assert fold.indeterminate is False
+
+
+# --- the `on_empty` policy on the determinately-empty set (COR-037 amended) --
+
+
+def test_empty_set_satisfied_opens_determinately(cascade_repo) -> None:
+    # `on_empty: satisfied` + a DETERMINATELY-empty set (enumeration completed,
+    # zero candidates) -> the gate OPENS, determinately. "Nothing to wait on"
+    # (project-management's childless-container closure).
+    repo = cascade_repo(_ALL_REDUCER)  # no POIs added
+    _set_on_empty(repo, "satisfied")
+    fold = _outer(repo).resolve_cascade_outcome()
+    assert fold is not None
+    assert fold.total == 0
+    assert fold.opened is True
+    assert fold.indeterminate is False  # determinate "satisfied", not an eval failure
+    assert _close_check(_outer(repo)).allowed is True
+
+
+def test_empty_set_fail_closed_explicit_stays_shut(cascade_repo) -> None:
+    # `on_empty: fail-closed` declared explicitly + empty -> gate stays shut,
+    # determinately (same as the conservative default, but opted-in by name).
+    repo = cascade_repo(_ALL_REDUCER)
+    _set_on_empty(repo, "fail-closed")
+    fold = _outer(repo).resolve_cascade_outcome()
+    assert fold is not None
+    assert fold.total == 0
+    assert fold.opened is False
+    assert fold.indeterminate is False
+    assert _close_check(_outer(repo)).allowed is False
+
+
+def test_empty_set_absent_on_empty_defaults_fail_closed(cascade_repo) -> None:
+    # Backward-compat: a cascade with NO `on_empty` field + empty -> the default
+    # fail-closed behaviour (gate shut). This is what keeps existing declarations
+    # and trip-planning's grounding behaviour byte-unchanged (additive).
+    repo = cascade_repo(_ALL_REDUCER)  # no on_empty line written
+    fold = _outer(repo).resolve_cascade_outcome()
+    assert fold is not None
+    assert fold.total == 0
+    assert fold.opened is False
+    assert fold.indeterminate is False
+
+
+def test_satisfied_does_not_fail_open_on_broken_membership_read(cascade_repo) -> None:
+    # THE KEY PRECEDENCE TEST (COR-037 amended): `on_empty: satisfied` is declared,
+    # but the `membership` predicate ERRORS for every candidate. Indeterminate
+    # membership OVERRIDES `on_empty` -- a broken read that "confirms" zero members
+    # is NOT a determinate empty set; it is indeterminate, and the gate stays SHUT.
+    # This proves `satisfied` cannot fail-OPEN on a broken read (the precedence
+    # guard fires before the empty-set / on_empty branch).
+    repo = cascade_repo(_ALL_REDUCER)
+    _set_on_empty(repo, "satisfied")
+    _add_poi(repo, "p1", "a1", "verified")
+    _add_poi(repo, "p2", "a1", "verified")
+    scripts = repo / ".pkit" / "capabilities" / "fixture" / "scripts"
+    _write_script(scripts / "poi_in_area.py", "import sys\nsys.exit(7)\n")
+    fold = _outer(repo, "a1").resolve_cascade_outcome()
+    assert fold is not None
+    assert fold.indeterminate is True  # membership unresolved -> fold unresolved
+    assert fold.opened is False  # NOT opened by `satisfied` -- the precedence holds
+    assert _close_check(_outer(repo, "a1")).allowed is False
+
+
+def test_satisfied_does_not_fail_open_on_broken_members_source(cascade_repo) -> None:
+    # Companion to the above: the `members` SOURCE (candidate enumeration) errors.
+    # `candidates is None` returns indeterminate BEFORE the empty-set branch, so
+    # again `satisfied` cannot fail-open on a broken enumeration read.
+    repo = cascade_repo(_ALL_REDUCER)
+    _set_on_empty(repo, "satisfied")
+    scripts = repo / ".pkit" / "capabilities" / "fixture" / "scripts"
+    _write_script(scripts / "area_pois.py", "import sys\nsys.exit(9)\n")
+    fold = _outer(repo, "a1").resolve_cascade_outcome()
+    assert fold is not None
+    assert fold.indeterminate is True  # enumeration unresolved -> fold unresolved
+    assert fold.opened is False  # NOT opened by `satisfied`
+    assert _close_check(_outer(repo, "a1")).allowed is False
+
+
+def test_count_empty_set_satisfied_opens(cascade_repo) -> None:
+    # `on_empty` governs `count` too: an empty set + `satisfied` OPENS, even though
+    # the count reducer (threshold 1) would never be satisfied by zero reached.
+    # Proves the reducer is NOT evaluated on the empty set -- on_empty decides.
+    repo = cascade_repo(_count_reducer(1))
+    _set_on_empty(repo, "satisfied")
+    fold = _outer(repo).resolve_cascade_outcome()
+    assert fold is not None
+    assert fold.total == 0
+    assert fold.opened is True
+    assert fold.indeterminate is False
+
+
+def test_count_empty_set_fail_closed_stays_shut(cascade_repo) -> None:
+    # `count` + empty + `fail-closed` -> shut. With the count≥0 arithmetic, a
+    # threshold of 0 could otherwise vacuously open; on_empty forecloses that.
+    repo = cascade_repo(_count_reducer(1))
+    _set_on_empty(repo, "fail-closed")
+    fold = _outer(repo).resolve_cascade_outcome()
+    assert fold is not None
+    assert fold.total == 0
+    assert fold.opened is False
+    assert fold.indeterminate is False
+
+
+def test_non_empty_behaviour_unchanged_under_satisfied(cascade_repo) -> None:
+    # `on_empty: satisfied` only touches the EMPTY case: a NON-empty set still
+    # folds by the reducer (a draft member holds the fold unresolved, exactly as
+    # without on_empty). on_empty must not leak into the non-empty path.
+    repo = cascade_repo(_ALL_REDUCER)
+    _set_on_empty(repo, "satisfied")
+    _add_poi(repo, "p1", "a1", "verified")
+    _add_poi(repo, "p2", "a1", "draft")
+    fold = _outer(repo).resolve_cascade_outcome()
+    assert fold is not None
+    assert fold.total == 2
+    assert fold.indeterminate is True  # p2 draft -> unresolved, not satisfied-open
+    assert fold.opened is False
 
 
 # --- fail-closed on an unresolved member ----------------------------------
