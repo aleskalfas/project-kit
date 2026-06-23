@@ -26,7 +26,9 @@ from __future__ import annotations
 
 import os
 import re
+import shutil
 import sys
+import textwrap
 from collections.abc import Mapping, Sequence
 from typing import IO
 
@@ -113,6 +115,134 @@ def strip_ansi(text: str) -> str:
     """Remove SGR escape sequences — the inverse used by the never-load-bearing
     invariant test (``strip_ansi(render(color)) == render(plain)``)."""
     return _ANSI_RE.sub("", text)
+
+
+# --- prose-wrapping leaf (ADR-024) ------------------------------------------
+
+# The no-hard-wrap sentinel (ADR-024 §3): a resolved width of 0 means
+# "hanging-indent only, never reflow a long line". Piped / non-TTY /
+# indeterminable streams resolve to this *regardless of COLUMNS* — the
+# deliberate divergence from ADR-011's override precedence (a stray COLUMNS must
+# not inject width-driven breaks into piped output).
+NO_WRAP = 0
+
+# The content minimum below which a resolved width is treated as no-wrap
+# (ADR-024 §3 "minimum-width floor"): there is no sane reflow into a column
+# narrower than the indentation plus a few characters, so a degenerate narrow
+# width degrades to the readable piped form instead of one-char-per-line output.
+_MIN_CONTENT_WIDTH = 20
+
+# Process-wide resolved wrap width (ADR-024 §3). Resolved once at the command
+# boundary (the same factoring as the colour decision — the (report, str) return
+# pattern means a string-builder cannot see the print stream); read by wrap(),
+# which never sniffs isatty() itself. Default off → no-wrap unless a boundary
+# explicitly resolves it (keeps library/test imports inert).
+_wrap_width = NO_WRAP
+
+
+def resolve_width(flag: int | None = None, *, stream: IO[str] | None = None) -> int:
+    """Resolve the process-wide wrap width once, at the command boundary.
+
+    Policy (ADR-024 §3), the deliberate divergence from ADR-011's colour
+    precedence: **piped / non-TTY / indeterminable is always no-wrap, regardless
+    of COLUMNS** — a stray COLUMNS in the environment must never inject
+    width-driven breaks into piped output. On a TTY the width is an explicit
+    ``flag`` (a future ``--width``) if given, else ``COLUMNS`` if set and valid,
+    else ``shutil.get_terminal_size((80, …)).columns``; a zero / nonsensical
+    reading (below the floor) is treated as indeterminate → no-wrap rather than
+    pathological one-char-per-line output. Sets and returns the decision."""
+    st = stream if stream is not None else sys.stdout
+    on_tty = bool(getattr(st, "isatty", lambda: False)())
+    if not on_tty:
+        # Piped wins over COLUMNS (ADR-024 §3) — unconditionally no-wrap.
+        set_wrap_width(NO_WRAP)
+        return NO_WRAP
+
+    if flag is not None and flag > 0:
+        width = flag
+    else:
+        env_columns = _columns_from_env()
+        width = (
+            env_columns
+            if env_columns is not None
+            else shutil.get_terminal_size((80, 24)).columns
+        )
+
+    # Guard a zero / nonsensical reading (ADR-024 §3): any value below the floor
+    # (a 0-column get_terminal_size, a degenerate COLUMNS) is indeterminate →
+    # no-wrap, never pathological one-char-per-line output.
+    decision = width if width >= _MIN_CONTENT_WIDTH else NO_WRAP
+    set_wrap_width(decision)
+    return decision
+
+
+def _columns_from_env() -> int | None:
+    """Read an integer COLUMNS from the environment, or None when unset or
+    unparseable. A parsed value (even 0 / negative) is returned and left to the
+    minimum-width floor to reject — so a degenerate COLUMNS degrades to no-wrap
+    rather than silently falling back to the terminal size (ADR-024 §3:
+    COLUMNS sets the width only when on a TTY)."""
+    raw = os.environ.get("COLUMNS")
+    if not raw:
+        return None
+    try:
+        return int(raw)
+    except ValueError:
+        return None
+
+
+def set_wrap_width(width: int) -> None:
+    """Set the resolved wrap width directly (boundary / test use). Mirrors
+    ``set_color`` for the width axis (ADR-024 §3)."""
+    global _wrap_width
+    _wrap_width = width
+
+
+def wrap(text: str, *, indent: str, hang: str = "", width: int | None = None) -> list[str]:
+    """Lay out one author-supplied prose field into indented lines (ADR-024).
+
+    The one place prose breaks. Two transformations, split by ADR-024 §2:
+
+    - **Hanging-indent is unconditional.** Author newlines (``\\n``) always
+      produce continuation lines: the first line is ``indent + <text>``, every
+      continuation is ``indent + hang + <text>``. Applied even when no width is
+      resolved, because a multi-line field flush at column 0 is unreadable on the
+      human (porcelain) surface regardless of terminal width.
+    - **Width hard-wrap is TTY-gated.** When the resolved width is a positive
+      column count, an over-long single line is additionally reflowed to that
+      width, measured on **visible** width (``strip_ansi`` length). Long tokens
+      *overflow* the column rather than break mid-token
+      (``break_long_words=False``) — a path / URL / command-role string stays
+      copy-pasteable (ADR-024 §3). The text passed here must be **plain** (wrap
+      *before* ``style()``); the caller styles the returned lines.
+
+    ``width=None`` reads the module-resolved ``_wrap_width``; ``NO_WRAP`` (the
+    sentinel, or a width below the indent+hang+floor) means hanging-indent only.
+    """
+    resolved = _wrap_width if width is None else width
+    author_lines = str(text).split("\n")
+    cont_prefix = indent + hang
+
+    # Minimum-width floor (ADR-024 §3): a width that leaves less than the content
+    # minimum after the deepest indentation is treated as no-wrap.
+    if resolved > 0 and resolved - len(cont_prefix) < _MIN_CONTENT_WIDTH:
+        resolved = NO_WRAP
+
+    out: list[str] = []
+    for i, line in enumerate(author_lines):
+        prefix = indent if i == 0 else cont_prefix
+        if resolved <= 0:
+            out.append(prefix + line)
+            continue
+        # Hard-wrap this author-line to the visible column. textwrap measures the
+        # plain text (we never pass styled text here, per ADR-024 §4), so its
+        # character count is the visible width.
+        avail = max(resolved - len(prefix), 1)
+        pieces = textwrap.wrap(
+            line, width=avail, break_long_words=False, break_on_hyphens=False
+        ) or [""]
+        out.extend(prefix + piece for piece in pieces)
+    return out
 
 
 # --- semantic-data part constructors (A': dicts, not types) ------------------

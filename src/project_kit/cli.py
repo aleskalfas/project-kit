@@ -83,6 +83,11 @@ def main(ctx: click.Context, color: str) -> None:
     # Mirror the decision onto ctx.color so Click's echo honours it rather than
     # re-deciding (and stripping our SGR) by its own tty sniff.
     ctx.color = cli_render.resolve_color(color)
+    # The second environment dimension, resolved the same way (ADR-024 §3): wrap
+    # width once at the boundary, so wrap() never sniffs isatty() itself. Piped
+    # is always no-wrap regardless of COLUMNS (the deliberate divergence from
+    # colour's override precedence).
+    cli_render.resolve_width()
     if ctx.invoked_subcommand is None:
         click.echo(ctx.get_help())
 

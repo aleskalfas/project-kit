@@ -2161,14 +2161,19 @@ def _prompt_lines(prompt: str, base_indent: str) -> list[str]:
     """Render a (possibly multi-line) author-supplied prompt as `❓ <text>` with
     EVERY line indented under the move — the first line carries the `❓ ` marker,
     continuation lines align under its text (so a wrapped multi-line prompt does
-    not dump continuation lines flush at column 0). Each line is styled."""
+    not dump continuation lines flush at column 0). Each line is styled.
+
+    A thin caller over `cli_render.wrap()` (ADR-024 §5): the `❓ ` marker is the
+    first-line prefix, baked into the plain text before wrapping; `hang="  "`
+    aligns continuation lines under the text after the two-column marker. `wrap`
+    lays out the plain bytes (so width is measured on visible width); `style` is
+    applied per returned line, never measured."""
     raw_lines = str(prompt).split("\n")
-    cont_indent = base_indent + "  "  # align continuation under the text after "❓ "
-    out = [base_indent + cli_render.style("strong", f"❓ {raw_lines[0]}")]
-    out.extend(
-        cont_indent + cli_render.style("strong", line) for line in raw_lines[1:]
-    )
-    return out
+    # The marker is a first-line prefix; prepend it to the first author line so
+    # wrap's hanging-indent and width-reflow treat it as part of line one.
+    raw_lines[0] = f"❓ {raw_lines[0]}"
+    plain = cli_render.wrap("\n".join(raw_lines), indent=base_indent, hang="  ")
+    return [cli_render.style("strong", line) for line in plain]
 
 
 def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
@@ -2247,7 +2252,9 @@ def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
         for inv in violations:
             marker = "?" if inv.indeterminate else "✗"
             lines.append(f"    {marker} {inv.invariant_id}" + (f" — {inv.why}" if inv.why else ""))
-            lines.append(f"        {inv.reason}")
+            # invariant reason is an own-line author/predicate prose field
+            # (ADR-024): hanging-indent always, width-wrap on a TTY.
+            lines.extend(cli_render.wrap(inv.reason, indent="        "))
 
     # Blocked overlay (COR-034) — the derived, live wait, if any.
     checks = engine.precheck_transitions(position.state_id, actor)
@@ -2257,7 +2264,16 @@ def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
         lines.append(
             "  " + cli_render.style("strong", f"Blocked: {blocked.blocked_on}")
         )
-        lines.append(f"        resume when: {blocked.resume_reason}")
+        # resume_reason is an own-line author-supplied prose field (ADR-024):
+        # the "resume when: " label is a fixed-width first-line prefix; hang
+        # aligns continuation lines under the reason text.
+        lines.extend(
+            cli_render.wrap(
+                f"resume when: {blocked.resume_reason}",
+                indent="        ",
+                hang="             ",  # len("resume when: ") = 13
+            )
+        )
         if blocked.since:
             lines.append(f"        since: {blocked.since}")
         if blocked.assignee:
@@ -2283,7 +2299,9 @@ def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
             if why:
                 line += f" — {why}"
             lines.append(line)
-            lines.append(f"        {check.outcome.reason}")
+            # check.outcome.reason is an own-line prose field (ADR-024):
+            # hanging-indent always, width-wrap on a TTY.
+            lines.extend(cli_render.wrap(check.outcome.reason, indent="        "))
             # The question posed on this move (COR-034), if it carries one.
             if check.prompt:
                 lines.extend(_prompt_lines(check.prompt, "        "))
