@@ -23,7 +23,10 @@ ALL-DETERMINATE branches (every member resolved terminal, a mix of `verified`
 and `dismissed`, none still moving) that genuinely exercise the reducer's
 `reached >= threshold` / `reached == total` comparison rather than
 short-circuiting on an unresolved member; fail-closed on an unresolved member;
-fail-closed on an INDETERMINATE membership test (C1); self-cascade acyclicity;
+fail-closed on an INDETERMINATE membership test (C1); the self-addressed cascade
+boundary (a parent folding SIBLING subjects of its OWN process resolves — the
+common keyed-fold case, e.g. pm's issue-contains-issue closure; only the SAME
+(address, subject) self-embed is refused as a true cycle, PR #213);
 fail-closed on the empty set (NOT vacuously open); membership enumerated via
 predicate (a POI outside the area is never folded, even verified); the
 aggregate-wait auto-clear; read-only; behaviour-preserving for cascade-free
@@ -39,7 +42,9 @@ from pathlib import Path
 import pytest
 
 from project_kit.process import (
+    SINGLETON_SUBJECT,
     ProcessEngine,
+    ProcessError,
     load_definition,
     render_status_json,
     render_status_narrative,
@@ -663,17 +668,23 @@ def test_indeterminate_membership_holds_fold_unresolved(cascade_repo) -> None:
     assert _close_check(_outer(repo, "a1")).allowed is False
 
 
-# --- self-cascade acyclicity ----------------------------------------------
+# --- self-cascade: same process over OWN subjects (COR-037, the keyed-fold) ---
+#
+# The boundary the (address, subject)-keyed guard draws (PR #213 regression fix):
+# a process whose `cascade.runs` is its OWN address is the COMMON, LEGITIMATE
+# case — a parent subject N folding over SIBLING subjects M≠N of the same process
+# (issues containing issues, in pm's closure cascade). It must RESOLVE, not
+# cyclic-refuse. Only a member whose own subject EQUALS the parent's — the SAME
+# (address, subject) — is a true cyclic self-embed and stays refused fail-closed.
+# The address-only guard PR #212 shipped refused the whole same-process fold
+# (`project-management:issue-lifecycle -> project-management:issue-lifecycle`),
+# breaking container closure via cascade-eligibility.
 
 
-def test_self_cascade_is_refused_as_cyclic(cascade_repo) -> None:
-    # G2: a process whose `cascade.runs` is its OWN address must fail closed — the
-    # inherited acyclicity guard (the parent's own address seeds its resolution
-    # stack) refuses resolving a member as an embedding of the parent process
-    # itself, exactly like a cyclic single-inner embedding. Proves the guard fires
-    # on the cascade path, not just the COR-036 subprocess path.
-    repo = cascade_repo(_ALL_REDUCER)
-    # Point the cascade at the area-discovery process itself.
+def _point_cascade_at_self(repo: Path) -> None:
+    """Repoint the fixture area-discovery cascade at its OWN address, so the fold
+    embeds the same process at each member's subject (mirrors pm's closure cascade
+    whose `runs:` is `project-management:issue-lifecycle` over issue children)."""
     outer_def = repo / ".pkit" / "capabilities" / "fixture" / "schemas" / "area-discovery.yaml"
     outer_def.write_text(
         outer_def.read_text(encoding="utf-8").replace(
@@ -681,15 +692,116 @@ def test_self_cascade_is_refused_as_cyclic(cascade_repo) -> None:
         ),
         encoding="utf-8",
     )
-    # Supply one candidate that membership confirms, so the fold actually reaches
-    # the per-member resolution (where the cyclic guard fires).
+
+
+def test_self_addressed_cascade_over_a_sibling_subject_resolves_not_cyclic(cascade_repo) -> None:
+    # THE REGRESSION TEST. Parent area `a1` folds over a SIBLING area `a2` of the
+    # SAME process. Same address, DIFFERENT subject -> NOT a cycle -> must resolve
+    # (the member is read single-level at its own detected position), never the
+    # `cyclic embedding refused` the address-only guard wrongly raised.
+    #
+    # Built the way PRODUCTION does: via `ProcessEngine.for_subject` (the
+    # `pkit process cascade` / `_load_engine` path), which seeds the resolution
+    # stack with the parent's own (address, subject) -> exactly the condition under
+    # which PR #212's address-only guard refused the fold. The earlier fixture
+    # resolved via a directly-constructed engine but ALSO seeded (own_address,) and
+    # still mis-refused; this test pins the production construction explicitly so a
+    # future address-only regression cannot slip past on a construction technicality.
+    # The reducer names `discovered` — the area-discovery process's OWN terminal
+    # state — because the cascade now folds members of THAT same process (not the
+    # poi-verification child whose terminal is `verified`).
+    repo = cascade_repo("      op: all\n      outcome: discovered\n")
+    _point_cascade_at_self(repo)
+    # `a1` (parent) folds one sibling member `a2`. `a2` is a real, distinct subject
+    # of the same process; membership confirms it (its declared area == parent a1).
+    (repo / "_membership-parent").write_text("a1", encoding="utf-8")
     (repo / "_area-a1").write_text("a2\n", encoding="utf-8")
     (repo / "_poi-area-a2").write_text("a1", encoding="utf-8")
-    fold = _outer(repo, "a1").resolve_cascade_outcome()
+    # `a2`'s OWN area-process position: terminal `discovered` -> the member reaches
+    # the named outcome, and the `all` fold over the single sibling OPENS.
+    (repo / "_area-state-a2").write_text("discovered", encoding="utf-8")
+
+    definition = load_definition(repo, "fixture:area-discovery")
+    engine = ProcessEngine.for_subject(definition, repo, "a1")  # production construction
+    fold = engine.resolve_cascade_outcome()
+
     assert fold is not None
-    assert fold.indeterminate is True  # the self-embed is refused -> member unresolved
+    assert "cyclic" not in fold.reason.lower(), fold.reason  # NOT refused as a cycle
+    assert fold.indeterminate is False
+    assert fold.opened is True  # the sibling reached `discovered`; the `all` fold opens
+    assert fold.reached == 1
+    assert fold.total == 1
+
+
+def test_self_addressed_cascade_over_a_sibling_holds_when_member_unfinished(
+    cascade_repo,
+) -> None:
+    # Same self-addressed fold, but the sibling `a2` is still `discovering`
+    # (non-terminal, has not reached the named `verified`/`discovered` outcome).
+    # The member RESOLVES single-level (the guard does not refuse it — same address,
+    # different subject), but it has not reached the fold's outcome, so the `all`
+    # fold holds UNRESOLVED per the established cascade fail-closed semantics
+    # (a member without the named outcome holds the whole fold). The load-bearing
+    # assertion for PR #213: the hold is NOT a `cyclic embedding refused` — the
+    # member was resolved, not guard-refused. The fold's reason carries the
+    # member's own "has not reached a terminal outcome (currently 'discovering')".
+    repo = cascade_repo(_ALL_REDUCER)
+    _point_cascade_at_self(repo)
+    (repo / "_membership-parent").write_text("a1", encoding="utf-8")
+    (repo / "_area-a1").write_text("a2\n", encoding="utf-8")
+    (repo / "_poi-area-a2").write_text("a1", encoding="utf-8")
+    # `a2` has no `_area-state-a2` marker -> detection defaults to `discovering`.
+
+    definition = load_definition(repo, "fixture:area-discovery")
+    engine = ProcessEngine.for_subject(definition, repo, "a1")
+    fold = engine.resolve_cascade_outcome()
+
+    assert fold is not None
+    # Load-bearing: the fold RESOLVED single-level (held on the member's own
+    # unfinished state), it was NOT guard-refused as a cyclic self-embed.
+    assert "cyclic" not in fold.reason.lower(), fold.reason
+    assert fold.opened is False
+    assert fold.reached == 0
+    assert fold.total == 1
+
+
+def test_self_addressed_cascade_over_the_OWN_subject_is_refused_as_cyclic(cascade_repo) -> None:
+    # THE TRUE CYCLE, still refused fail-closed. Parent area `a1` folds a member
+    # that is ALSO `a1` — the SAME (address, subject) as the parent on the
+    # resolution stack. That would recurse infinitely (a1 of P embedding a1 of P),
+    # so the acyclicity guard refuses it: indeterminate, gate shut, reason names
+    # the cyclic embedding. This is the boundary's other side — same address AND
+    # same subject is the only thing the pair-keyed guard now refuses.
+    repo = cascade_repo(_ALL_REDUCER)
+    _point_cascade_at_self(repo)
+    # The single member IS the parent subject `a1` (membership confirms a1 belongs
+    # to a1: its declared area is itself).
+    (repo / "_membership-parent").write_text("a1", encoding="utf-8")
+    (repo / "_area-a1").write_text("a1\n", encoding="utf-8")
+    (repo / "_poi-area-a1").write_text("a1", encoding="utf-8")
+
+    definition = load_definition(repo, "fixture:area-discovery")
+    engine = ProcessEngine.for_subject(definition, repo, "a1")
+    fold = engine.resolve_cascade_outcome()
+
+    assert fold is not None
+    assert fold.indeterminate is True  # the same-(address, subject) self-embed is refused
     assert fold.opened is False
     assert "cyclic" in fold.reason.lower() or "embedding" in fold.reason.lower()
+
+
+def test_singleton_sentinel_is_reserved_as_a_keyed_subject_id(cascade_repo) -> None:
+    # The acyclicity stack keys on (address, subject) pairs, with SINGLETON_SUBJECT
+    # ("_") standing in for a singleton's absent subject. A keyed subject literally
+    # named "_" would alias that sentinel on the stack and mis-fire the guard, so a
+    # keyed subject id equal to the sentinel is reserved — fail-closed.
+    repo = cascade_repo(_ALL_REDUCER)
+    definition = load_definition(repo, "fixture:area-discovery")  # keyed
+    with pytest.raises(ProcessError, match="reserved"):
+        ProcessEngine.for_subject(definition, repo, SINGLETON_SUBJECT)
+    # a normal keyed subject id is unaffected
+    engine = ProcessEngine.for_subject(definition, repo, "a1")
+    assert engine.subject == "a1"
 
 
 # --- the awaiting-cascade-outcome aggregate wait (auto-clearing) -----------

@@ -31,18 +31,23 @@ subprocess-outcome gates — so resolution always terminates on bounded depth, a
 that bounded depth (not the guard below) is what keeps it terminating today. It
 resolves ONE inner subject and NEVER enumerates a keyed inner's subjects (that
 breadth is cascade, deferred). An ACYCLICITY GUARD (the active resolution stack
-on each engine — its own address plus every inner above it) refuses an inner
-whose address is already on the stack, failing closed like an unrecognised gate
-kind. Because resolution does not recurse through subprocess gates, the stack
-never deepens past the single inner being loaded — so in practice the guard fires
-only on the DIRECT self-embed (A runs A, where the inner address equals the
-engine's own seeded address). A transitive cycle (A runs B runs A) is not
-reachable as a recursion today (resolving A reads B's detected position and
-stops; it never descends into B's gate back to A), so it cannot deepen the stack;
-it is bounded-safe incidentally, not by the guard. The guard is retained as cheap,
-correct insurance and as the right seam to extend if nesting-through-gates is ever
-added (at which point the transitive case becomes reachable and the stack catches
-it). While the inner has not reached a wired terminal outcome, the parent is parked as the
+on each engine — its own (address, subject) PAIR plus every inner above it)
+refuses an inner whose (address, subject) PAIR is already on the stack, failing
+closed like an unrecognised gate kind. It keys on the PAIR, not the address alone
+(COR-037): a cascade folds a parent subject N over SIBLING subjects M≠N of the
+SAME process — same address, different subject — which is a legitimate fold, not
+a cycle; refusing it on address alone was the PR #212 regression. Only the SAME
+(address, subject) re-entry is a true cycle. Because resolution does not recurse
+through subprocess/cascade gates, the stack never deepens past the single inner
+being loaded — so in practice the guard fires only on the DIRECT same-subject
+self-embed (A subject S runs A subject S, where the inner (address, subject)
+equals the engine's own seeded pair). A transitive cycle (A runs B runs A, same
+subject) is not reachable as a recursion today (resolving A reads B's detected
+position and stops; it never descends into B's gate back to A), so it cannot
+deepen the stack; it is bounded-safe incidentally, not by the guard. The guard is
+retained as cheap, correct insurance and as the right seam to extend if
+nesting-through-gates is ever added (at which point the transitive case becomes
+reachable and the stack catches it). While the inner has not reached a wired terminal outcome, the parent is parked as the
 `awaiting-subprocess-outcome` blocked reason — an AUTO-CLEARING overlay reusing
 COR-034's model, where the "condition" is the single-level subprocess resolution
 carried by the subprocess-outcome gates (no `resume_when`; it clears when a wired outcome
@@ -73,8 +78,11 @@ the `awaiting-cascade-outcome` blocked reason — an AUTO-CLEARING overlay reusi
 COR-034's model (no `resume_when`; the live fold IS its condition), clearing when
 the fold resolves and a legal move opens. SINGLE-LEVEL breadth: the fold adds
 breadth across a finite member set, never depth (it does not recurse the members'
-own subprocess/cascade gates); the acyclicity guard is inherited so a cascade
-whose child is the parent process is refused. READ-ONLY. Out of scope (COR-037
+own subprocess/cascade gates); the acyclicity guard is inherited, keyed on the
+(address, subject) PAIR — so a cascade whose child is the parent process itself
+RESOLVES (the common case: parent subject N folding over sibling subjects M≠N),
+and only a member at the SAME subject as the parent is refused as a true cyclic
+self-embed. READ-ONLY. Out of scope (COR-037
 named-deferred): forward/position cascade, peer-cycle deadlock, cross-subject
 invariants, richer reducers (ratios/weighted/custom).
 
@@ -708,15 +716,20 @@ class ProcessEngine:
     inner's currently-detected position via its own `resolve_position`. That read
     is single-level (depth 1): it runs only the inner's detection predicates, not
     the inner's own subprocess-outcome gates, so resolution terminates on bounded
-    depth. `_resolution_stack` is the chain of process addresses currently being
-    resolved (this engine's address plus every inner above it); an inner address
-    already on the stack fails closed (COR-036's acyclicity guard, distinct from
-    COR-034's peer deadlock). Because resolution does not recurse through
-    subprocess gates, the stack never deepens past the one inner being loaded, so
-    in practice the guard catches only the direct self-embed (A runs A); a
-    transitive cycle (A runs B runs A) is bounded-safe incidentally, not by the
-    guard. The guard is retained as the correct seam to extend if
-    nesting-through-gates is ever added.
+    depth. `_resolution_stack` is the chain of (process address, subject) PAIRS
+    currently being resolved (this engine's own (address, subject) plus every
+    inner above it); an inner whose (address, subject) PAIR is already on the
+    stack fails closed (COR-036's acyclicity guard, distinct from COR-034's peer
+    deadlock). The guard keys on the PAIR, not the address alone (COR-037): a
+    cascade folds a parent subject N over SIBLING subjects M≠N of the SAME process
+    — same address, different subject — which is legitimate, not a cycle; only the
+    SAME (address, subject) re-entry is a true cycle. Because resolution does not
+    recurse through subprocess/cascade gates, the stack never deepens past the one
+    inner being loaded, so in practice the guard catches only the direct
+    same-subject self-embed (A subject S runs A subject S); a transitive cycle (A
+    runs B runs A, same subject) is bounded-safe incidentally, not by the guard.
+    The guard is retained as the correct seam to extend if nesting-through-gates
+    is ever added.
     """
 
     def __init__(
@@ -724,17 +737,25 @@ class ProcessEngine:
         definition: ProcessDefinition,
         repo_root: Path,
         subject: str = SINGLETON_SUBJECT,
-        resolution_stack: tuple[str, ...] = (),
+        resolution_stack: tuple[tuple[str, str], ...] = (),
     ) -> None:
         self.definition = definition
         self.repo_root = repo_root
         self.subject = subject
-        # COR-036: the active resolution chain. This engine's own address is on
-        # the stack so a self-embed (A runs A) is caught; an inner engine extends
-        # it when instantiated. Seeded here when empty so a top-level engine still
-        # guards against embedding itself.
+        # COR-036/COR-037: the active resolution chain, keyed on the
+        # (address, subject) PAIR — not the address alone. This engine's own
+        # (address, subject) is on the stack so a self-embed of the SAME subject
+        # (A subject S embedding A subject S) is caught; an inner engine extends
+        # it when instantiated. Keying on the pair is what lets cascade fold a
+        # parent subject N over a SIBLING subject M≠N of the same process P: same
+        # address, different subject is NOT a cycle (the per-member step reads the
+        # member's terminal position single-level, it does not recurse the
+        # member's own cascade), so it must resolve rather than cyclic-refuse.
+        # A genuine same-(address, subject) re-entry is still refused fail-closed.
+        # Seeded here when empty so a top-level engine still guards against
+        # embedding its own subject.
         own_address = f"{definition.capability}:{definition.process_id}"
-        self._resolution_stack = resolution_stack or (own_address,)
+        self._resolution_stack = resolution_stack or ((own_address, subject),)
         self.runner = PredicateRunner(
             capability=definition.capability,
             capability_dir=definition.capability_dir,
@@ -748,7 +769,7 @@ class ProcessEngine:
         definition: ProcessDefinition,
         repo_root: Path,
         subject: str | None,
-        resolution_stack: tuple[str, ...] = (),
+        resolution_stack: tuple[tuple[str, str], ...] = (),
     ) -> ProcessEngine:
         """Build an engine, resolving the subject per the definition's cardinality.
 
@@ -762,8 +783,9 @@ class ProcessEngine:
         An unrecognised cardinality fails closed as a ProcessError rather than
         silently defaulting.
 
-        `resolution_stack` threads COR-036's active resolution chain so an
-        instantiated inner engine inherits the cycle guard.
+        `resolution_stack` threads COR-036's active resolution chain (a tuple of
+        (address, subject) pairs) so an instantiated inner engine inherits the
+        cycle guard.
         """
         cardinality = definition.cardinality
         if cardinality == "keyed":
@@ -772,6 +794,18 @@ class ProcessEngine:
                     f"process {definition.capability}:{definition.process_id} is keyed "
                     "(cardinality: keyed); --subject is required (it identifies which "
                     f"{definition.subject_key or 'unit'} to act on)."
+                )
+            if subject == SINGLETON_SUBJECT:
+                # SINGLETON_SUBJECT stands in for a singleton's absent subject in the
+                # acyclicity stack's (address, subject) pair. A keyed subject literally
+                # named "_" would alias that sentinel — a keyed (addr, "_") becoming
+                # indistinguishable from a singleton (addr, SINGLETON) on the stack and
+                # mis-firing the guard. Reserve it: fail closed rather than admit the
+                # collision (no real binding uses "_" as an id — issue numbers, etc.).
+                raise ProcessError(
+                    f"process {definition.capability}:{definition.process_id}: subject id "
+                    f"{SINGLETON_SUBJECT!r} is reserved (it is the singleton sentinel used "
+                    "in the acyclicity stack); a keyed subject may not be named it."
                 )
             return cls(definition, repo_root, subject=subject, resolution_stack=resolution_stack)
         if cardinality == "singleton":
@@ -852,17 +886,19 @@ class ProcessEngine:
         declaration supplies the one keyed inner subject id. A keyed inner with no
         supplied subject is fail-closed (COR-036's required-subject rule).
 
-        Fail-closed (`indeterminate=True`, `outcome=None`) on: an inner address
-        already on the active resolution stack (the acyclicity guard — which,
-        because resolution is single-level and never deepens the stack, in
-        practice fires only on the DIRECT self-embed A runs A), an unresolvable
-        inner address / definition, a keyed inner with no subject, or an
-        indeterminate inner position. A transitive cycle (A runs B runs A) does
-        not reach the guard today: resolving A reads B's detected position and
-        stops, so the stack never reaches A again — it is bounded-safe, not
-        guard-caught. An inner that is determinate but has not reached *any*
-        terminal state returns `outcome=None` with `indeterminate=False` — a
-        CORRECT, non-error wait.
+        Fail-closed (`indeterminate=True`, `outcome=None`) on: an inner whose
+        (address, subject) PAIR is already on the active resolution stack (the
+        acyclicity guard — which keys on the pair, not the address alone, so a
+        cascade over a SIBLING subject of the same process is permitted; because
+        resolution is single-level and never deepens the stack, in practice it
+        fires only on the DIRECT same-subject self-embed A subject S runs A
+        subject S), an unresolvable inner address / definition, a keyed inner with
+        no subject, or an indeterminate inner position. A transitive cycle (A runs
+        B runs A, same subject) does not reach the guard today: resolving A reads
+        B's detected position and stops, so the stack never reaches A again — it
+        is bounded-safe, not guard-caught. An inner that is determinate but has
+        not reached *any* terminal state returns `outcome=None` with
+        `indeterminate=False` — a CORRECT, non-error wait.
         """
         subprocess = self.definition.subprocess_of(state_id)
         if subprocess is None:
@@ -885,21 +921,39 @@ class ProcessEngine:
                 reason="subprocess state declares no inner process address (`runs`)",
             )
 
-        # The acyclicity guard (COR-036): refuse an inner whose address is already
-        # on this chain. Resolution is single-level (it reads the inner's detected
-        # position, never recursing through the inner's own subprocess gates), so
-        # the stack never deepens past one inner — in practice this fires only on
-        # the direct self-embed (A runs A). It is cheap, correct insurance and the
-        # right seam to extend if nesting-through-gates is ever added. Fail closed,
-        # surfaced, like an unrecognised gate kind.
-        if address in self._resolution_stack:
-            chain = " -> ".join((*self._resolution_stack, address))
+        # Determinate inner subject: a supplied keyed id, or None for a singleton
+        # (for_subject enforces COR-032's required-subject rule for a keyed inner).
+        inner_subject = subprocess.get("subject")
+        inner_subject = inner_subject if isinstance(inner_subject, str) and inner_subject else None
+        # The (address, subject) the inner engine will actually run as — the key
+        # the acyclicity guard tests. A singleton inner runs at SINGLETON_SUBJECT
+        # (no declared subject); a keyed inner runs at its supplied id. This is the
+        # value the inner's own seed (own_address, subject) would carry, so a true
+        # re-entry of the SAME (address, subject) matches it exactly.
+        inner_key = (address, inner_subject if inner_subject is not None else SINGLETON_SUBJECT)
+
+        # The acyclicity guard (COR-036/COR-037): refuse an inner whose
+        # (address, SUBJECT) pair is already on this chain — a genuine cycle
+        # (process A subject S embedding A subject S, directly or transitively →
+        # infinite recursion). It keys on the PAIR, not the address alone:
+        # cascade legitimately folds parent subject N over SIBLING subjects M≠N of
+        # the SAME process P (same address, different subject), and that is NOT a
+        # cycle — the per-member step reads the member's terminal position
+        # single-level and never recurses the member's own cascade, so resolution
+        # still terminates. Refusing it on address alone was the PR #212 regression
+        # that broke same-process container closure. Resolution is single-level (it
+        # reads the inner's detected position, never recursing through the inner's
+        # own subprocess/cascade gates), so the stack never deepens past one inner —
+        # in practice this fires only on the direct self-embed (A subject S runs A
+        # subject S). Fail closed, surfaced, like an unrecognised gate kind.
+        if inner_key in self._resolution_stack:
+            chain = " -> ".join(f"{addr}#{subj}" for addr, subj in (*self._resolution_stack, inner_key))
             return SubprocessResolution(
                 address=address,
                 outcome=None,
                 indeterminate=True,
                 reason=f"cyclic embedding refused: {chain} (a process may not embed "
-                "itself, directly or transitively)",
+                "itself at the same subject, directly or transitively)",
             )
 
         try:
@@ -912,16 +966,12 @@ class ProcessEngine:
                 reason=f"could not load inner process {address!r}: {exc}",
             )
 
-        # Determinate inner subject: a supplied keyed id, or None for a singleton
-        # (for_subject enforces COR-032's required-subject rule for a keyed inner).
-        inner_subject = subprocess.get("subject")
-        inner_subject = inner_subject if isinstance(inner_subject, str) and inner_subject else None
         try:
             inner_engine = ProcessEngine.for_subject(
                 inner_def,
                 self.repo_root,
                 inner_subject,
-                resolution_stack=(*self._resolution_stack, address),
+                resolution_stack=(*self._resolution_stack, inner_key),
             )
         except ProcessError as exc:
             return SubprocessResolution(
@@ -1279,8 +1329,26 @@ class ProcessEngine:
         step — it reads the member's detected position and asks "is it terminal?";
         it does NOT recurse the member's own subprocess/cascade gates (cascade adds
         breadth across the member set, not depth). The acyclicity guard still
-        holds (this engine's resolution stack is inherited), so a cascade whose
-        child is the parent process itself is refused like a cyclic embedding.
+        holds (this engine's resolution stack is inherited), but it keys on the
+        (address, SUBJECT) pair: a cascade whose child is the parent process
+        ITSELF is the common, legitimate case (a parent subject N folding over
+        SIBLING subjects M≠N of the same process — issues containing issues, in
+        pm's closure cascade) and RESOLVES, because each member's (address, M) pair
+        differs from the parent's (address, N) on the stack. Only a member whose
+        own subject equals the parent's — the SAME (address, subject) — is refused
+        as a true cyclic self-embed (the parent folding over its own subject would
+        recurse infinitely). Keying on the pair (not the address alone) is the
+        PR #212-regression fix: the address-only guard wrongly refused the whole
+        same-process fold.
+
+        A multi-subject same-process cycle (parent subject `s` folds member `t`,
+        whose own cascade would in turn fold `s`) is bounded-safe too — NOT by the
+        guard catching it, but because this per-member step reads `t`'s terminal
+        position single-level (`resolve_position`, detection only) and never
+        re-enters cascade/subprocess resolution, so `t`'s cascade back to `s` is
+        never walked. Same bounded-by-construction argument as the `A→B→A`
+        transitive composition case; the pair key never has to see the `s→t→s`
+        chain because the chain is never expanded.
         """
         resolution = self._resolve_inner({"runs": address, "subject": member_id})
         if resolution.indeterminate:
