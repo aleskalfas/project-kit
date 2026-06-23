@@ -2,6 +2,9 @@
 authors:
   - Ales Kalfas <ales.kalfas@ibm.com>
 started: 2026-06-23
+retired: 2026-06-24
+produced:
+  - DEC-036
 ---
 
 # project-management on brownfield repos — adapting to an immutable substrate
