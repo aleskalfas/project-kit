@@ -3064,6 +3064,67 @@ def process_move(address: str, to_state: str, subject: str | None, actor: str | 
     click.echo("  " + cli_render.style("strong", f"moved to {to_state!r}: {result.reason}"))
 
 
+@process.command("cascade")
+@click.argument("address")
+@click.option("--subject", default=None, help="Subject key. Required for a keyed process (COR-032); ignored for a singleton (the fixed key is used).")
+@click.option("--json", "as_json", is_flag=True, default=False,
+              help="Emit structured JSON instead of the narrative view.")
+def process_cascade(address: str, subject: str | None, as_json: bool) -> None:
+    """Resolve the subject's declared cascade fold (COR-037) and report it.
+
+    Reads the parent's `process.cascade` declaration, folds the named child
+    process's member outcomes, and reports the single yes/no (`opened`) the
+    fold resolves to — plus its determinacy and audit colour (reached/total).
+
+    This exposes the engine's fold INDEPENDENTLY of a cascade-gated transition
+    (which `status`/`can-move` require), so a wrapper can read the children-half
+    of a composite eligibility decision and combine it with other gates itself
+    (DEC-034: pm's close-eligibility is the conjunction of the checkbox gate AND
+    this fold). Read-only; exits non-zero when the fold is NOT open (unresolved/
+    fail-closed or a determinate "not yet").
+    """
+    import json
+
+    from project_kit import process as process_mod
+
+    engine = _load_engine(address, subject)
+    try:
+        resolution = engine.resolve_cascade_outcome()
+    except process_mod.ProcessError as exc:
+        raise click.ClickException(str(exc)) from exc
+    if resolution is None:
+        if as_json:
+            click.echo(json.dumps({"cascade": None}, indent=2, sort_keys=True))
+        else:
+            click.echo("  (process declares no cascade)")
+        raise SystemExit(1)
+    if as_json:
+        click.echo(
+            json.dumps(
+                {
+                    "cascade": {
+                        "runs": resolution.address,
+                        "op": resolution.op,
+                        "outcome": resolution.outcome,
+                        "threshold": resolution.threshold,
+                        "reached": resolution.reached,
+                        "total": resolution.total,
+                        "opened": resolution.opened,
+                        "indeterminate": resolution.indeterminate,
+                        "reason": resolution.reason,
+                    }
+                },
+                indent=2,
+                sort_keys=True,
+            )
+        )
+    else:
+        marker = "✓" if resolution.opened else ("?" if resolution.indeterminate else "✗")
+        click.echo(f"  {marker} folds {resolution.address} ({resolution.op}): {resolution.reason}")
+    if not resolution.opened:
+        raise SystemExit(1)
+
+
 @process.command("validate")
 @click.argument("address")
 @click.option("--subject", default=None, help="Subject key. Required for a keyed process (COR-032); ignored for a singleton (the fixed key is used).")

@@ -289,13 +289,53 @@ def main() -> int:
             )
             return 1
 
-        # Eligibility half 2 — every child closed.
-        open_children = _find_open_children(args.issue_number, config)
-        if open_children is None:
-            return 3
-        if open_children:
-            print("\n[refused] not cascade-eligible — open child issue(s) remain:")
-            for n in open_children:
+        # Eligibility half 2 — every child closed (the CHILDREN-HALF of the
+        # conjunction). DEC-034 / DEC-033 D5: the wrapper no longer folds this
+        # itself — it reads the process ENGINE's shared cascade resolution
+        # (`pkit process cascade`), which folds the issue-lifecycle `all`-over-
+        # `done` declaration in workflow.yaml. The close rule stays the
+        # CONJUNCTION of (half 1) the checkbox gate above AND (half 2) this fold.
+        #
+        #   opened == True   -> every child reached `done` (or childless via
+        #                       on_empty: satisfied) -> children-half satisfied.
+        #   opened == False, indeterminate == False
+        #                    -> a determinate "not yet": an open child holds the
+        #                       fold (matches "open child blocks eligibility",
+        #                       DEC-016 roll-forward included) -> refuse.
+        #   indeterminate == True
+        #                    -> the fold could not be resolved (a reachable engine
+        #                       that could not fold: broken members/membership read
+        #                       or an unresolved member); HOLD fail-closed -> refuse
+        #                       (never fail-open), per COR-037 precedence.
+        #   fold is None     -> `pkit` itself was unreachable (could not even invoke
+        #                       the engine); also HOLD fail-closed -> refuse.
+        # Both indeterminate and None are fail-closed holds; they differ only in
+        # exit code (1 = engine reachable but refused/held; 3 = engine unreachable),
+        # so callers/CI can tell a policy refusal from an environment failure. Keep
+        # the 3-vs-1 split: it is a deliberate two-failure-surface contract, not noise.
+        fold = _engine_cascade_fold(args.issue_number)
+        if fold is None or fold.get("indeterminate"):
+            reason = fold.get("reason") if isinstance(fold, dict) else None
+            print(
+                "\n[refused] could not resolve the children-half of cascade "
+                "eligibility (held fail-closed):",
+                file=sys.stderr,
+            )
+            print(f"  → {reason or 'the process engine could not fold the children.'}",
+                  file=sys.stderr)
+            print(
+                "  → re-run once `gh` is reachable and every child's state is "
+                "readable; the container holds until the fold resolves.",
+                file=sys.stderr,
+            )
+            return 3 if fold is None else 1
+        if not fold.get("opened"):
+            print("\n[refused] not cascade-eligible — not every child has closed:")
+            print(f"  · fold: {fold.get('reason', '')}")
+            # Diagnostic colour only (the engine fold above is the DECISION): list
+            # the still-open children so the user knows what to close.
+            open_children = _find_open_children(args.issue_number, config)
+            for n in open_children or []:
                 print(f"  - #{n}")
             print(
                 "\n  → close every child first; the container becomes eligible "
@@ -411,6 +451,48 @@ def _check_parent_eligibility(parent_num: int, config: dict) -> None:
         f"  · parent #{parent_num} open; checkboxes complete — "
         "eligible to close pending sibling check"
     )
+
+
+# ---- process-engine cascade delegation (DEC-034 / DEC-033 D5) -------
+#
+# The CHILDREN-HALF of close-eligibility is the shared process engine's
+# cascade fold (`pkit process cascade`, COR-037), invoked by subprocess
+# (never imported, ADR-020). The fold reads workflow.yaml's
+# `process.cascade` (all-over-`done` over the parent's child issues). The
+# wrapper keeps the OTHER half — the DEC-007 checkbox gate — local, and
+# ANDs the two. close-issue does not recompute the fold itself.
+
+PROCESS_ADDRESS = "project-management:issue-lifecycle"
+
+
+def _engine_cascade_fold(parent_num: int) -> dict | None:
+    """Read the parent's children-half cascade fold from the engine.
+
+    Returns the fold dict `{opened, indeterminate, reached, total, reason, ...}`
+    (the `process cascade --json` payload's `cascade` object), or None when the
+    engine cannot be reached at all (a missing `pkit`, a crash) — the caller maps
+    None to a fail-closed HOLD (never an auto-open). A reachable engine that
+    cannot resolve the fold reports `indeterminate: true` (also a HOLD); a
+    determinate fold reports `opened` true/false.
+    """
+    argv = [
+        "pkit", "process", "cascade", PROCESS_ADDRESS,
+        "--subject", str(parent_num), "--json",
+    ]
+    try:
+        proc = subprocess.run(argv, capture_output=True, text=True, check=False)
+    except (OSError, FileNotFoundError):
+        return None
+    # The command exits non-zero when the fold is NOT open (by design); the JSON
+    # on stdout is authoritative regardless of exit code, so parse it either way.
+    try:
+        payload = json.loads(proc.stdout)
+    except (json.JSONDecodeError, ValueError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    cascade = payload.get("cascade")
+    return cascade if isinstance(cascade, dict) else None
 
 
 def _find_open_children(parent_num: int, config: dict) -> list[int] | None:

@@ -109,23 +109,34 @@ def branch_matches_issue(branch: str, issue_number: int) -> bool:
     return bool(re.match(rf"^[a-z]+/{issue_number}-", branch))
 
 
-def names_parent(child_body: str, parent_number: int) -> bool:
-    """True when a child issue body's first parent-ref line points at
-    `parent_number` (e.g. `EPIC: #42`).
+def parent_ref(child_body: str) -> int | None:
+    """The parent issue number named on a child body's FIRST parent-ref line
+    (e.g. `EPIC: #42` -> 42), or None when the body declares no parent-ref.
 
-    Mirrors move-issue's `_walk_parent_chain` recognition (one parent-ref line
-    by convention, on the first non-blank lines)."""
+    The methodology's hierarchy source of truth: one parent-ref line by
+    convention, on the first non-blank line (mirrors move-issue /
+    close-issue's `_walk_parent_chain` recognition). The first non-blank line
+    must match `<Word>: #<n>`; otherwise the body names no parent."""
     if not child_body:
-        return False
+        return None
     for line in child_body.splitlines():
         s = line.strip()
         if not s:
             continue
         m = re.match(r"^([A-Za-z]+):\s+#(\d+)", s)
         if not m:
-            return False
-        return int(m.group(2)) == parent_number
-    return False
+            return None
+        return int(m.group(2))
+    return None
+
+
+def names_parent(child_body: str, parent_number: int) -> bool:
+    """True when a child issue body's first parent-ref line points at
+    `parent_number` (e.g. `EPIC: #42`).
+
+    Mirrors move-issue's `_walk_parent_chain` recognition (one parent-ref line
+    by convention, on the first non-blank lines)."""
+    return parent_ref(child_body) == parent_number
 
 
 def state_is_active(state: str) -> bool:

@@ -2,7 +2,7 @@ schema_version: 2
 component:
   kind: capability
   name: project-management
-  version: 0.25.0
+  version: 0.26.0
 description: Project-management discipline realized from the pm-workflow methodology — issue hierarchy, state machine, body validation, naming conventions — encoded as schemas a methodology-agnostic engine (skills + agent) consumes at runtime.
 requires_backbone: ">=1.102.0,<2.0.0"
 aliases:
@@ -164,6 +164,12 @@ commands:
   parent-active-descendant:
     script: scripts/parent-active-descendant.py
     help: "Process predicate (DEC-033): read-only pm-local descendant walk; reports whether an issue has an in-progress-or-further child. Never used by the engine for position; consulted by cascade logic."
+  cascade-members:
+    script: scripts/cascade-members.py
+    help: "Cascade members source (DEC-034 / COR-037): read-only; returns {members: [...]} — every child of the parent issue (the closure-fold candidate set). Invoked by the process engine."
+  cascade-membership:
+    script: scripts/cascade-membership.py
+    help: "Cascade membership test (DEC-034 / COR-037): read-only; result=True iff the candidate issue declares a parent-ref (a hierarchy member). Invoked by the process engine, one subject at a time."
   enable-default-agent:
     script: scripts/enable-default-agent.py
     help: "Activate the project-manager default-agent overlay for the claude-code harness (per DEC-030). Copies the capability-shipped overlay template to adopter-owned state and re-runs pkit sync."
