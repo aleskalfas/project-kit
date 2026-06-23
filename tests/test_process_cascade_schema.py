@@ -127,6 +127,42 @@ def test_malformed_cascade_runs_address_rejected() -> None:
     assert _errors(d), "`runs` must be a <capability>:<process-id> address"
 
 
+def test_cascade_on_empty_satisfied_accepted() -> None:
+    # COR-037 amended: the optional `on_empty` policy accepts `satisfied`.
+    d = _base_definition()
+    cascade = _all_cascade()
+    cascade["on_empty"] = "satisfied"
+    d["cascade"] = cascade
+    assert _errors(d) == []
+
+
+def test_cascade_on_empty_fail_closed_accepted() -> None:
+    d = _base_definition()
+    cascade = _all_cascade()
+    cascade["on_empty"] = "fail-closed"
+    d["cascade"] = cascade
+    assert _errors(d) == []
+
+
+def test_cascade_on_empty_invalid_value_rejected() -> None:
+    # The enum is closed to exactly two values; anything else is rejected.
+    d = _base_definition()
+    cascade = _all_cascade()
+    cascade["on_empty"] = "satisfied-maybe"
+    d["cascade"] = cascade
+    assert _errors(d), "`on_empty` is a closed two-value enum (fail-closed | satisfied)"
+
+
+def test_cascade_absent_on_empty_validates_default() -> None:
+    # Additive guarantee: a cascade with NO `on_empty` field validates unchanged
+    # (the engine defaults it to fail-closed). This is why the change owes no
+    # migration -- the field is optional, defaulting to the prior behaviour.
+    d = _base_definition()
+    d["cascade"] = _all_cascade()  # no on_empty key
+    assert "on_empty" not in d["cascade"]
+    assert _errors(d) == []
+
+
 def test_cascade_outcome_gate_accepted() -> None:
     d = _base_definition()
     d["cascade"] = _all_cascade()

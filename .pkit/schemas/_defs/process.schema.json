@@ -134,7 +134,7 @@
       "properties": {
         "kind": {
           "enum": ["deterministic", "authorisation-artifact", "subprocess-outcome", "cascade-outcome"],
-          "description": "deterministic: the predicate's `result` decides. authorisation-artifact: the predicate returns {exists, produced_by}; the ENGINE computes result = exists && produced_by != actor (cross-authority). subprocess-outcome (COR-036): the ENGINE recursively resolves the embedding `subprocess` state's inner process to a terminal outcome and computes result = (inner reached the named `outcome`); no capability predicate. cascade-outcome (COR-037): the ENGINE folds the outcomes of the process's declared `cascade` child members and computes result from the reducer (all / count-against-threshold), fail-closed on any unresolved member and on the empty set; no capability predicate and no per-gate `outcome` (the named outcome lives in the cascade reducer)."
+          "description": "deterministic: the predicate's `result` decides. authorisation-artifact: the predicate returns {exists, produced_by}; the ENGINE computes result = exists && produced_by != actor (cross-authority). subprocess-outcome (COR-036): the ENGINE recursively resolves the embedding `subprocess` state's inner process to a terminal outcome and computes result = (inner reached the named `outcome`); no capability predicate. cascade-outcome (COR-037): the ENGINE folds the outcomes of the process's declared `cascade` child members and computes result from the reducer (all / count-against-threshold), fail-closed on any unresolved member; the DETERMINATELY-empty set is decided by the cascade's `on_empty` policy (fail-closed default / satisfied), while indeterminate membership overrides it and stays unresolved; no capability predicate and no per-gate `outcome` (the named outcome lives in the cascade reducer)."
         },
         "predicate": { "$ref": "#/$defs/predicate" },
         "outcome": {
@@ -270,7 +270,7 @@
     },
     "cascade_reducer": {
       "type": "object",
-      "description": "COR-037: how the engine FOLDS the resolved outcomes of a cascade's members into one yes/no. Two operations, one enumerate-and-fold machine differing only in the reducer. `all`: every member reached the named `outcome` (grounded by pm closure + trip-planning all-verified). `count`: at least `threshold` members reached the named `outcome` (a saturation floor). Both are fail-closed: any member whose outcome is unresolved/indeterminate holds the fold unresolved, and the EMPTY set does NOT vacuously open the gate (an `all` over zero members is fail-closed, not true). Richer reducers (ratios / weighted / custom) stay deferred per COR-037.",
+      "description": "COR-037: how the engine FOLDS the resolved outcomes of a cascade's members into one yes/no. Two operations, one enumerate-and-fold machine differing only in the reducer. `all`: every member reached the named `outcome` (grounded by pm closure + trip-planning all-verified). `count`: at least `threshold` members reached the named `outcome` (a saturation floor). Both are fail-closed on members: any member whose outcome is unresolved/indeterminate holds the fold unresolved. On a DETERMINATELY-empty set the reducer is NOT evaluated -- the cascade's `on_empty` policy decides instead (so a `count` threshold cannot open the gate by its own vacuous arithmetic), with indeterminate membership overriding it. Richer reducers (ratios / weighted / custom) stay deferred per COR-037.",
       "required": ["op", "outcome"],
       "additionalProperties": false,
       "properties": {
@@ -286,7 +286,7 @@
         "threshold": {
           "type": "integer",
           "minimum": 1,
-          "description": "Required for `count`, forbidden for `all` (enforced below): the saturation floor -- the fold opens iff at least this many members reached the named `outcome`. A threshold over the empty set is fail-closed (zero is never >= a floor of one or more)."
+          "description": "Required for `count`, forbidden for `all` (enforced below): the saturation floor -- the fold opens iff at least this many members reached the named `outcome`. The reducer is NOT evaluated on an empty set -- the cascade's `on_empty` policy decides the empty case (not this arithmetic)."
         }
       },
       "allOf": [
@@ -300,7 +300,7 @@
     },
     "cascade": {
       "type": "object",
-      "description": "COR-037: a parent process's declaration that it FOLDS the outcomes of ONE named child process's members into a gate. The single sanctioned, bounded crossing of COR-032's never-enumerate line: the engine reads across subjects ONLY through this one declared child relation, scoped to one parent subject, and ONLY by a capability-supplied membership predicate run one subject at a time -- never a containment tree the engine holds, never a general subject-listing API. Direction is child -> parent, coupling in the parent (the child references nothing upward and stays reusable). The `members` predicate yields the parent-scoped candidate members; the `membership` predicate confirms each candidate belongs to this parent; each confirmed member's outcome is resolved by COR-036's single-inner resolution; the `reducer` folds them; a `cascade-outcome` gate reads the fold. Optional and additive -- a process omitting it is unaffected. A process declares at most one cascade.",
+      "description": "COR-037: a parent process's declaration that it FOLDS the outcomes of ONE named child process's members into a gate. The single sanctioned, bounded crossing of COR-032's never-enumerate line: the engine reads across subjects ONLY through this one declared child relation, scoped to one parent subject, and ONLY by a capability-supplied membership predicate run one subject at a time -- never a containment tree the engine holds, never a general subject-listing API. Direction is child -> parent, coupling in the parent (the child references nothing upward and stays reusable). The `members` predicate yields the parent-scoped candidate members; the `membership` predicate confirms each candidate belongs to this parent; each confirmed member's outcome is resolved by COR-036's single-inner resolution; the `reducer` folds them; a `cascade-outcome` gate reads the fold. The optional `on_empty` policy decides a determinately-empty member set. Optional and additive -- a process omitting it is unaffected. A process declares at most one cascade.",
       "required": ["runs", "members", "membership", "reducer"],
       "additionalProperties": false,
       "properties": {
@@ -317,7 +317,11 @@
           "$ref": "#/$defs/predicate",
           "description": "The per-subject membership test 'does THIS subject belong to this parent?' (COR-037). Run through the existing single-subject predicate runner, one candidate at a time (threaded with the candidate's subject id), returning {result, reason}. Confirms each candidate the `members` source yielded actually belongs to this parent before its outcome is folded -- the content-free, one-subject-at-a-time crossing COR-032 holds the line at."
         },
-        "reducer": { "$ref": "#/$defs/cascade_reducer" }
+        "reducer": { "$ref": "#/$defs/cascade_reducer" },
+        "on_empty": {
+          "enum": ["fail-closed", "satisfied"],
+          "description": "COR-037 (amended): the binding-supplied policy for a DETERMINATELY-empty member set -- the membership evaluation completed without error and confirmed NO candidate in the relation's pool is a member. `fail-closed` (the DEFAULT when absent) keeps the gate shut (an area with zero points-of-interest is not 'fully discovered'); `satisfied` opens it ('nothing to wait on' -- project-management's childless-container closure). Either way the empty answer is DETERMINATE; the policy only chooses which way it points. A closed two-value enumeration (exactly two grounded bindings split this edge -- not an open hook). PRECEDENCE: `on_empty` applies ONLY to a determinate-empty set -- if candidate enumeration or any membership evaluation errors / is indeterminate, the fold is held UNRESOLVED regardless of `on_empty` (including under `satisfied`); a wholesale membership-read failure that confirms zero members is NOT an empty set, it is indeterminate and the gate stays shut. `on_empty` also governs the empty case for BOTH reducers (`all` and `count`): on an empty set the reducer is not evaluated, so a `count` threshold cannot open the gate by its own vacuous arithmetic. Absent on every existing cascade declaration -- those validate byte-unchanged and keep the conservative fail-closed behaviour."
+        }
       }
     },
     "process": {
