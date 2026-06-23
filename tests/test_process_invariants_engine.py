@@ -224,12 +224,66 @@ def test_validate_json_shape(fixture_repo: Path) -> None:
     assert by_id["derive-dont-store"]["indeterminate"] is True
 
 
+def test_validate_json_is_byte_stable_across_color_and_width(fixture_repo: Path) -> None:
+    # The load-bearing invariant (ADR-024): render_validate_json never calls wrap()
+    # and is byte-identical regardless of colour / width / COLUMNS — scriptability
+    # rests on --json, not the human narrative.
+    from project_kit import cli_render
+
+    _set_evidence(fixture_repo, ok=False)
+    eng = _engine(fixture_repo)
+    baseline = render_validate_json(eng)
+    try:
+        cli_render.set_color(True)
+        assert render_validate_json(eng) == baseline
+        cli_render.set_wrap_width(40)
+        assert render_validate_json(eng) == baseline
+        cli_render.set_wrap_width(cli_render.NO_WRAP)
+        assert render_validate_json(eng) == baseline
+    finally:
+        cli_render.set_color(False)
+        cli_render.set_wrap_width(cli_render.NO_WRAP)
+
+
 def test_validate_narrative_lists_invariants(fixture_repo: Path) -> None:
     _set_evidence(fixture_repo, ok=False)
     text = render_validate_narrative(_engine(fixture_repo))
     assert "evidence-backed" in text
     assert "uncited claim found" in text
     assert "violated" in text
+
+
+def test_validate_narrative_wraps_why_and_reason(fixture_repo: Path) -> None:
+    # #230: the validate command's `why` (inline suffix) + `reason` (own line)
+    # wrap through cli_render.wrap — continuations hang at 8 spaces, not column 0.
+    import re
+
+    from project_kit import cli_render
+
+    _set_evidence(fixture_repo, ok=False)
+    try:
+        cli_render.set_wrap_width(50)
+        text = render_validate_narrative(_engine(fixture_repo))
+    finally:
+        cli_render.set_wrap_width(cli_render.NO_WRAP)
+    plain = [re.sub(r"\x1b\[[0-9;]*m", "", ln) for ln in text.splitlines()]
+    # the why wraps: reconstruct it across the line-1 tail + 8-space continuations
+    idx = next(i for i, ln in enumerate(plain)
+               if ln.lstrip().startswith("✗ ") and " — " in ln)
+    tail = plain[idx].split(" — ", 1)[1]
+    conts = []
+    for ln in plain[idx + 1:]:
+        if ln.startswith("        ") and ln.strip():
+            conts.append(ln.strip())
+        else:
+            break
+    reconstructed = " ".join([tail, *conts])
+    assert "Every factual claim must resolve to an evidence record." in reconstructed
+    # and no prose line dumped flush at column 0 below the title (the title is col 0)
+    body = plain[2:]  # skip title + blank
+    assert not any(ln and not ln[0].isspace() and "violated" not in ln
+                   and "invariant" not in ln.lower() for ln in body), \
+        "no prose continuation should dump flush at column 0"
 
 
 def test_validate_position_independent_when_no_position(fixture_repo: Path) -> None:
