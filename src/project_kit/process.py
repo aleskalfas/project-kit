@@ -2487,8 +2487,23 @@ def render_validate_narrative(engine: ProcessEngine) -> str:
             marker = "?"
         else:
             marker = "✗"
-        lines.append(f"  {marker} {inv.invariant_id}" + (f" — {inv.why}" if inv.why else ""))
-        lines.append(f"        {inv.reason}")
+        inv_prefix = f"  {marker} {inv.invariant_id}"
+        if inv.why:
+            # `why` is an inline-suffix author prose field (ADR-024): the tail of
+            # `<marker> <id> — <why>` after a variable-width prefix. wrap() reserves
+            # the prefix's visible width on line 1 and hangs continuations at the
+            # 8-space sub-line rhythm (matching the reason line below).
+            visible_prefix = f"{inv_prefix} — "
+            prose = cli_render.wrap(
+                inv.why, indent="        ", first_line_indent=len(visible_prefix)
+            )
+            lines.append(f"{inv_prefix} — {prose[0]}")
+            lines.extend(prose[1:])
+        else:
+            lines.append(inv_prefix)
+        # reason is an own-line author/predicate prose field (ADR-024):
+        # hanging-indent always, width-wrap on a TTY.
+        lines.extend(cli_render.wrap(inv.reason, indent="        "))
     violations = [inv for inv in outcomes if not inv.holds]
     lines.append("")
     if violations:
