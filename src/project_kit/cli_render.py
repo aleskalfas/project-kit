@@ -227,7 +227,9 @@ def wrap(text: str, *, indent: str, hang: str = "", width: int | None = None,
 
     - ``out[0]`` carries the line-1 prose tail with **no leading indent** — the
       caller concatenates its own styled prefix + ``out[0]``. The line-1 prose
-      budget reserves the prefix: ``width - len(indent) - first_line_indent``.
+      budget reserves the prefix: ``width - first_line_indent`` (``first_line_indent``
+      already counts every leading visible column of line 1, so ``len(indent)`` is
+      NOT subtracted again — ``out[0]`` carries no ``indent``).
     - ``out[1:]`` are continuation lines indented at ``indent + hang`` verbatim,
       ready to append as-is.
 
@@ -284,6 +286,9 @@ def wrap(text: str, *, indent: str, hang: str = "", width: int | None = None,
         # Inline-suffix line 1: piece 0 reserves the caller's prefix width; the
         # remainder reflows at the continuation budget (the sub-line rhythm), so a
         # long state-id / trigger does not collapse the continuation width.
+        # line 1's budget is deliberately NOT floored (only cont_prefix is, above):
+        # break_long_words=False bounds the degradation — a tiny line1_avail emits
+        # one whole word and reflows the rest at cont_avail, never one char per line.
         line1_avail = max(resolved - line1_consume, 1)
         cont_avail = max(resolved - len(cont_prefix), 1)
         pieces = textwrap.wrap(

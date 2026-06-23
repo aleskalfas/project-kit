@@ -268,12 +268,27 @@ def test_invariant_why_wraps_with_continuation_at_eight_spaces(fixture_repo: Pat
         cli_render.set_wrap_width(cli_render.NO_WRAP)
     plain = [re.sub(r"\x1b\[[0-9;]*m", "", ln) for ln in text.splitlines()]
     # the marker+id+start-of-why is one line ending mid-why (it wrapped)
-    inv_line = next(ln for ln in plain if ln.lstrip().startswith("✗ ") and " — " in ln)
+    idx = next(i for i, ln in enumerate(plain)
+               if plain[i].lstrip().startswith("✗ ") and " — " in plain[i])
+    inv_line = plain[idx]
     assert inv_line.startswith("    ✗ ")  # 4-space invariant line
-    # at least one why continuation hangs at 8 spaces (NOT flush at column 0)
-    cont = [ln for ln in plain if ln.startswith("        ") and ln.strip()
-            and not ln.lstrip().startswith(("✗", "?"))]
-    assert cont, "expected a wrapped why/reason continuation hung at 8 spaces"
+    # Reconstruct the why across the line-1 tail + the 8-space continuation lines
+    # that immediately follow, and assert the FULL why text reappears. G2: this
+    # isolates the why-continuation from the reason line below (which also wraps at
+    # 8 spaces) — if the why-continuation were dropped, the tail would run straight
+    # into the reason and the full why sentence would NOT reconstruct.
+    tail = inv_line.split(" — ", 1)[1]
+    conts = []
+    for ln in plain[idx + 1:]:
+        if ln.startswith("        ") and ln.strip():
+            conts.append(ln.strip())
+        else:
+            break
+    assert conts and all(ln.startswith("        ") for ln in plain[idx + 1:idx + 1 + len(conts)])
+    reconstructed = " ".join([tail, *conts])
+    assert "Every factual claim must resolve to an evidence record." in reconstructed, (
+        "the why must wrap with its continuation hung at 8 spaces, not dump flush"
+    )
 
 
 def test_violation_surfaces_on_status_json(fixture_repo: Path) -> None:
