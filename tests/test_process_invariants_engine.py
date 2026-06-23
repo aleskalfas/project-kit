@@ -251,6 +251,31 @@ def test_violation_surfaces_on_status_narrative(fixture_repo: Path) -> None:
     assert "evidence-backed" in text
 
 
+def test_invariant_why_wraps_with_continuation_at_eight_spaces(fixture_repo: Path) -> None:
+    # ADR-024 follow-up (#223): the invariant `why` is an inline suffix of
+    # `    ✗ <id> — <why>`. Under a narrow width it must wrap with continuation
+    # lines hung at the 8-space sub-line rhythm (matching the reason line), NOT
+    # dumped flush at column 0.
+    import re
+
+    from project_kit import cli_render
+
+    _set_evidence(fixture_repo, ok=False)
+    try:
+        cli_render.set_wrap_width(50)
+        text = render_status_narrative(_engine(fixture_repo), actor="agent")
+    finally:
+        cli_render.set_wrap_width(cli_render.NO_WRAP)
+    plain = [re.sub(r"\x1b\[[0-9;]*m", "", ln) for ln in text.splitlines()]
+    # the marker+id+start-of-why is one line ending mid-why (it wrapped)
+    inv_line = next(ln for ln in plain if ln.lstrip().startswith("✗ ") and " — " in ln)
+    assert inv_line.startswith("    ✗ ")  # 4-space invariant line
+    # at least one why continuation hangs at 8 spaces (NOT flush at column 0)
+    cont = [ln for ln in plain if ln.startswith("        ") and ln.strip()
+            and not ln.lstrip().startswith(("✗", "?"))]
+    assert cont, "expected a wrapped why/reason continuation hung at 8 spaces"
+
+
 def test_violation_surfaces_on_status_json(fixture_repo: Path) -> None:
     _set_evidence(fixture_repo, ok=False)
     payload = json.loads(render_status_json(_engine(fixture_repo), actor="agent"))

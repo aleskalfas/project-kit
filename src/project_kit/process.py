@@ -2201,10 +2201,28 @@ def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
         lines.append("    no state's detection predicate matched current reality")
     else:
         state = definition.state(position.state_id) or {}
-        lines.append(
-            "  " + cli_render.style("strong", f"Where: {position.state_id}")
-            + (f" — {state.get('meaning')}" if state.get("meaning") else "")
-        )
+        meaning = state.get("meaning")
+        if meaning:
+            # `meaning` is an inline-suffix author prose field (ADR-024 follow-up):
+            # the tail of `Where: <state> — <meaning>`, after a variable-width
+            # styled prefix. wrap() reserves the prefix's visible width on line 1
+            # and hangs continuations at the 4-space sub-detail rhythm (NOT under
+            # the variable prefix, which collapses when a state id runs long).
+            visible_prefix = f"  Where: {position.state_id} — "
+            prose = cli_render.wrap(
+                meaning,
+                indent="    ",
+                first_line_indent=len(visible_prefix),
+            )
+            styled_prefix = (
+                "  " + cli_render.style("strong", f"Where: {position.state_id} — ")
+            )
+            lines.append(styled_prefix + prose[0])
+            lines.extend(prose[1:])
+        else:
+            lines.append(
+                "  " + cli_render.style("strong", f"Where: {position.state_id}")
+            )
         if state.get("terminal"):
             lines.append("    (terminal state)")
         # COR-036: when parked in a subprocess state, surface the embedded inner
@@ -2251,7 +2269,23 @@ def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
         lines.append("  " + cli_render.style("strong", "Invariant violations:"))
         for inv in violations:
             marker = "?" if inv.indeterminate else "✗"
-            lines.append(f"    {marker} {inv.invariant_id}" + (f" — {inv.why}" if inv.why else ""))
+            inv_prefix = f"    {marker} {inv.invariant_id}"
+            if inv.why:
+                # `why` is an inline-suffix author prose field (ADR-024 follow-up):
+                # the tail of `<marker> <id> — <why>`, after a variable-width prefix.
+                # wrap() reserves the prefix's visible width on line 1 and hangs
+                # continuations at the 8-space sub-line rhythm (matching the reason
+                # line below), NOT under the variable prefix.
+                visible_prefix = f"{inv_prefix} — "
+                prose = cli_render.wrap(
+                    inv.why,
+                    indent="        ",
+                    first_line_indent=len(visible_prefix),
+                )
+                lines.append(f"{inv_prefix} — {prose[0]}")
+                lines.extend(prose[1:])
+            else:
+                lines.append(inv_prefix)
             # invariant reason is an own-line author/predicate prose field
             # (ADR-024): hanging-indent always, width-wrap on a TTY.
             lines.extend(cli_render.wrap(inv.reason, indent="        "))
@@ -2294,11 +2328,24 @@ def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
                 marker = "✓"
             else:
                 marker = "✗"
-            line = f"    {marker} {check.to}  [{check.trigger}]"
+            move_prefix = f"    {marker} {check.to}  [{check.trigger}]"
             why = check.transition.get("why")
             if why:
-                line += f" — {why}"
-            lines.append(line)
+                # `why` is an inline-suffix author prose field (ADR-024 follow-up):
+                # the tail of `<marker> <to> [<trigger>] — <why>`, after a
+                # variable-width prefix. wrap() reserves the prefix's visible width
+                # on line 1 and hangs continuations at the 8-space sub-line rhythm
+                # (the legal-move's sub-detail depth), NOT under the variable prefix.
+                visible_prefix = f"{move_prefix} — "
+                prose = cli_render.wrap(
+                    why,
+                    indent="        ",
+                    first_line_indent=len(visible_prefix),
+                )
+                lines.append(f"{move_prefix} — {prose[0]}")
+                lines.extend(prose[1:])
+            else:
+                lines.append(move_prefix)
             # check.outcome.reason is an own-line prose field (ADR-024):
             # hanging-indent always, width-wrap on a TTY.
             lines.extend(cli_render.wrap(check.outcome.reason, indent="        "))

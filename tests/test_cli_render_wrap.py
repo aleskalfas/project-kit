@@ -7,10 +7,36 @@ machine surface that must never call `wrap()`).
 """
 from __future__ import annotations
 
+import textwrap
+
 import pytest
 
 from project_kit import cli_render
 from project_kit.cli_render import NO_WRAP, resolve_width, set_wrap_width, strip_ansi, wrap
+
+
+def _original_wrap(text: str, *, indent: str, hang: str = "",
+                   width: int | None = None) -> list[str]:
+    """A frozen copy of wrap()'s pre-follow-up (own-line only) behaviour, used as
+    the oracle for the byte-identity guarantee that first_line_indent=0 / the
+    default does not change any existing caller's output."""
+    resolved = cli_render._wrap_width if width is None else width
+    author_lines = str(text).split("\n")
+    cont_prefix = indent + hang
+    if resolved > 0 and resolved - len(cont_prefix) < cli_render._MIN_CONTENT_WIDTH:
+        resolved = NO_WRAP
+    out: list[str] = []
+    for i, line in enumerate(author_lines):
+        prefix = indent if i == 0 else cont_prefix
+        if resolved <= 0:
+            out.append(prefix + line)
+            continue
+        avail = max(resolved - len(prefix), 1)
+        pieces = textwrap.wrap(
+            line, width=avail, break_long_words=False, break_on_hyphens=False
+        ) or [""]
+        out.extend(prefix + piece for piece in pieces)
+    return out
 
 
 @pytest.fixture(autouse=True)
@@ -174,3 +200,108 @@ def test_resolve_sets_the_module_global(monkeypatch):
     # wrap() with width=None reads the freshly-resolved module global.
     out = wrap("a b c d e f g h i j k l m n o p q r s t u v", indent="")
     assert all(len(line) <= 90 for line in out)
+
+
+# --- inline-suffix first_line_indent (ADR-024 follow-up) ---------------------
+
+def test_first_line_indent_default_is_byte_identical_to_no_prefix():
+    # first_line_indent=0 (the default) must be byte-for-byte the prior behaviour
+    # for the own-line callers — line 1 is indent + text, continuations hang.
+    set_wrap_width(40)
+    text = "the quick brown fox jumps over the lazy dog again and again"
+    baseline = wrap(text, indent="  ", hang="  ")
+    with_default = wrap(text, indent="  ", hang="  ", first_line_indent=0)
+    assert with_default == baseline
+
+
+def test_first_line_indent_default_byte_identical_no_wrap_multiline():
+    set_wrap_width(NO_WRAP)
+    text = "first author line\nsecond author line"
+    baseline = wrap(text, indent="    ", hang="  ")
+    assert wrap(text, indent="    ", hang="  ", first_line_indent=0) == baseline
+
+
+def test_first_line_emits_no_indent_so_caller_appends_after_its_prefix():
+    # In the inline-suffix case the caller owns line 1's styled prefix; wrap()
+    # returns the line-1 prose tail with NO leading indent, ready to concatenate.
+    set_wrap_width(NO_WRAP)
+    out = wrap("the meaning prose", indent="    ", first_line_indent=22)
+    assert out == ["the meaning prose"]  # no indent on line 1
+
+
+def test_continuations_hang_at_the_given_indent_not_under_the_prefix():
+    # Continuation lines land at indent (+hang), the established sub-line rhythm,
+    # NOT aligned under the variable-width prefix.
+    set_wrap_width(30)
+    # A 24-char prefix is consumed on line 1; prose budget on line 1 is small,
+    # continuations get the full indent budget.
+    out = wrap("alpha beta gamma delta epsilon zeta eta theta",
+               indent="    ", first_line_indent=24)
+    assert len(out) > 1
+    assert out[0] == out[0].lstrip()  # line 1 has no leading indent
+    for cont in out[1:]:
+        assert cont.startswith("    ")  # continuations hang at the 4-space indent
+
+
+def test_line_one_budget_reserves_the_prefix_width():
+    # The line-1 prose budget is width - len(indent) - first_line_indent. With a
+    # wide prefix, line 1 carries fewer words than a continuation line.
+    set_wrap_width(40)
+    text = "one two three four five six seven eight nine ten"
+    # Prefix consumes 30 of the 40 columns → line-1 budget is 10.
+    out = wrap(text, indent="  ", first_line_indent=30)
+    assert len(out[0]) <= 10  # line-1 prose fits the reserved 10-col budget
+    # Continuations get width - len(indent) = 38 columns.
+    for cont in out[1:]:
+        assert len(cont) <= 40
+
+
+def test_no_wrap_keeps_inline_suffix_on_one_line_but_hangs_author_newlines():
+    # Piped (NO_WRAP): no width breaks, but the prose's own hard newlines still
+    # hang at the continuation indent (the prose can carry author newlines).
+    set_wrap_width(NO_WRAP)
+    out = wrap("first half\nsecond half", indent="      ", first_line_indent=18)
+    assert out == ["first half", "      second half"]
+
+
+def test_floor_applies_with_a_prefix_degrading_to_no_wrap():
+    # The min-width floor is measured on the continuation prefix (indent+hang), so
+    # a narrow width degrades to no-wrap regardless of the first_line_indent.
+    set_wrap_width(NO_WRAP)
+    long_line = "this is a single long line that would otherwise wrap"
+    out = wrap(long_line, indent="          ", hang="", width=15, first_line_indent=20)
+    assert out == [long_line]  # line 1 no-wrap, no indent (inline-suffix case)
+
+
+def test_long_token_overflows_with_a_prefix_too():
+    # break_long_words=False carries over: a too-long token on line 1 overflows
+    # its reserved budget rather than breaking mid-token.
+    set_wrap_width(50)
+    token = "/srv/app/data/cache/intermediate/snapshots/region/payload.bin"
+    out = wrap(token, indent="  ", first_line_indent=30)
+    assert out == [token]  # whole token, overflowing the reserved line-1 budget
+
+
+@pytest.mark.parametrize("indent", ["", "  ", "    ", "        ", "          "])
+@pytest.mark.parametrize("hang", ["", "  ", "             "])
+@pytest.mark.parametrize("width", [NO_WRAP, 15, 20, 25, 30, 40, 60, 80, 120])
+@pytest.mark.parametrize("text", [
+    "hello",
+    "first\nsecond\nthird",
+    "the quick brown fox jumps over the lazy dog again and again and again",
+    "a b c d e f g h i j k l m n o p q r s t u v w x y z",
+    "multi line\nwith a very long second line that should definitely wrap somewhere",
+    "/srv/very/long/path/that/overflows/the/column/without/breaking.bin tail words",
+])
+def test_first_line_indent_zero_is_byte_identical_to_the_original_wrap(
+    indent, hang, width, text
+):
+    # The original (pre-follow-up) wrap used a single per-author-line budget at
+    # `indent` and hung author-newline continuations at `indent+hang`. This pins
+    # that exact byte output for first_line_indent=0 / default across a grid of
+    # indents, hangs, widths, and prose shapes — the floor/break/no-wrap semantics
+    # all carry over unchanged.
+    expected = _original_wrap(text, indent=indent, hang=hang, width=width)
+    assert wrap(text, indent=indent, hang=hang, width=width) == expected
+    assert wrap(text, indent=indent, hang=hang, width=width, first_line_indent=0) \
+        == expected
