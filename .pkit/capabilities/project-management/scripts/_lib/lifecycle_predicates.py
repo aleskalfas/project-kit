@@ -145,7 +145,7 @@ def parent_has_active_descendant(parent_number: int) -> dict[str, Any]:
     if capability_root is None:
         return _indeterminate("project-management capability not found")
     config = _config(capability_root)
-    children = _list_open_issues(config)
+    children = _list_issues(config)
     if children is None:
         return _indeterminate("could not list issues (gh failure)")
     if children is _GH_CEILING:
@@ -177,10 +177,114 @@ def parent_has_active_descendant(parent_number: int) -> dict[str, Any]:
     }
 
 
-def _list_open_issues(config: dict[str, Any]) -> Any:
-    """List issues for the descendant walk. Returns the parsed list, `None` on a
-    gh failure, or the `_GH_CEILING` sentinel when the result hits the pagination
-    ceiling (there may be unseen rows -> the caller maps that to indeterminate).
+def cascade_members(parent_number: int) -> dict[str, Any]:
+    """COR-037 cascade `members` predicate for the issue-lifecycle closure fold
+    (DEC-034): the parent-scoped candidate-member SOURCE.
+
+    Returns `{members: ["<n>", ...]}` — the issue numbers (as strings, the
+    engine's subject ids) of EVERY child of `parent_number`, open and closed
+    alike. A child is one whose body parent-ref first line names this parent
+    (`infer.names_parent`) — the SAME hierarchy source close-issue's
+    `_find_open_children` walks (the methodology's tree-of-record), so the
+    member set is identical to what pm computes today.
+
+    The full set (not just open children) is intentional: the engine resolves
+    EACH member's lifecycle outcome and the `all`-over-`done` reducer folds them.
+    A closed child resolves to the terminal `done`; an open child resolves to a
+    non-terminal state (outcome unresolved) and so HOLDS the fold — reproducing
+    "an open child blocks eligibility" without this predicate filtering by state.
+    Read live, run ONCE threaded with the parent subject (COR-037).
+
+    This is the SOLE parent-scoping authority for the fold. The engine does not
+    thread the folding parent to the `membership` predicate (COR-032's single-
+    subject line), so `cascade_membership` structurally cannot re-scope to this
+    parent — if this source were ever made over-broad (e.g. emitting every
+    hierarchy child regardless of parent), `membership` would NOT catch it.
+    Parent-faithfulness lives here and only here.
+
+    Indeterminate (the engine holds the whole fold fail-closed) on a gh failure
+    or a pagination-ceiling hit — never a confident "no children" on a partial
+    read (that could let an `all` vacuously satisfy via `on_empty`).
+    """
+    capability_root = _capability_root()
+    if capability_root is None:
+        return _indeterminate("project-management capability not found")
+    config = _config(capability_root)
+    issues = _list_issues(config)
+    if issues is None:
+        return _indeterminate("could not list issues (gh failure)")
+    if issues is _GH_CEILING:
+        return _indeterminate(
+            f"issue list hit the pagination ceiling ({_OPEN_ISSUES_LIMIT}); "
+            "the child set may be incomplete"
+        )
+    members: list[str] = []
+    for child in issues:
+        number = child.get("number")
+        if not isinstance(number, int) or number == parent_number:
+            continue
+        if infer.names_parent(str(child.get("body") or ""), parent_number):
+            members.append(str(number))
+    return {
+        "members": members,
+        "reason": (
+            f"#{parent_number} has {len(members)} child member(s): "
+            f"{', '.join('#' + m for m in members)}"
+            if members
+            else f"#{parent_number} has no child members"
+        ),
+    }
+
+
+def cascade_membership(child_number: int) -> dict[str, Any]:
+    """COR-037 cascade `membership` predicate for the closure fold (DEC-034):
+    the per-subject confirmation that THIS candidate is a real child member.
+
+    The engine threads ONLY the candidate's subject id to a membership predicate
+    (the single-subject runner, COR-032's never-hold-a-tree line) — the folding
+    parent's id is NOT passed to the predicate. So this confirmation answers from
+    the child's OWN reality alone: `result=True` iff the child's body declares a
+    parent-ref first line (`infer.parent_ref`) — i.e. it is a hierarchy member at
+    all. The PARENT-SCOPING (does it belong to THIS parent?) is enforced
+    authoritatively upstream by `cascade_members`, which reads the SAME body
+    parent-ref and emits ONLY children naming the folding parent; the two read one
+    source, so they cannot disagree. This per-candidate step is NOT a parent-
+    scoping check (it has no parent to compare against) — its load-bearing jobs are
+    a liveness re-read (the child still declares *a* parent-ref before its outcome
+    is folded) and, crucially, turning an indeterminate read (a gh failure) into a
+    whole-fold fail-closed hold per COR-037, rather than silently dropping the
+    candidate. It does NOT and cannot re-scope a wrongly-listed foreign-parent
+    child back out — that guarantee rests entirely on `cascade_members`.
+
+    See the implementation report's "membership / parent-threading" note: the
+    engine's single-subject membership contract does not thread the parent, so
+    pm's per-parent specificity lives in `cascade_members`.
+    """
+    capability_root = _capability_root()
+    if capability_root is None:
+        return _indeterminate("project-management capability not found")
+    config = _config(capability_root)
+    issue = _fetch_issue(child_number, config, "body")
+    if issue is None:
+        return _indeterminate(f"could not read issue #{child_number} (gh failure)")
+    parent = infer.parent_ref(str(issue.get("body") or ""))
+    return {
+        "result": parent is not None,
+        "reason": (
+            f"#{child_number} names #{parent} as parent (a hierarchy member)"
+            if parent is not None
+            else f"#{child_number} declares no parent-ref (not a hierarchy member)"
+        ),
+        "detail": {"parent_ref": parent},
+    }
+
+
+def _list_issues(config: dict[str, Any]) -> Any:
+    """List EVERY issue (`--state all`) for a child/descendant walk. Returns the
+    parsed list, `None` on a gh failure, or the `_GH_CEILING` sentinel when the
+    result hits the pagination ceiling (there may be unseen rows -> the caller
+    maps that to indeterminate). Shared by the descendant walk (forward-cascade
+    reasoning) and the cascade `members` candidate-set source (DEC-034).
     """
     try:
         proc = gh_run(

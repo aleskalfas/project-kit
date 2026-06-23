@@ -392,7 +392,7 @@ def _stub_fetch_issue(monkeypatch: pytest.MonkeyPatch, issue: dict) -> None:
 def _stub_list_issues(monkeypatch: pytest.MonkeyPatch, issues: list[dict]) -> None:
     monkeypatch.setattr(predicates, "_capability_root", lambda: REPO_ROOT)
     monkeypatch.setattr(predicates, "_config", lambda _root: {})
-    monkeypatch.setattr(predicates, "_list_open_issues", lambda _c: issues)
+    monkeypatch.setattr(predicates, "_list_issues", lambda _c: issues)
 
 
 def _stub_merged_pr(monkeypatch: pytest.MonkeyPatch, pr: dict | None) -> None:

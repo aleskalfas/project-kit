@@ -5,12 +5,19 @@
 # ../../../schemas/_defs/process.schema.json (the `process` $def). The
 # engine (in the `pkit` binary, ADR-020) owns the state-machine
 # mechanics — position, validation, journal — and reads `states` +
-# `transitions` + each `detection`/`gate` predicate. The pm-LOCAL
-# blocks below the process (`cascade`, `closure_triggers`) and the
-# pm-local fields on states/transitions (`display_name`, `applies_to`,
-# `command`, `pr_state_effect`, `authorisation`, `executor`, `severity`,
-# `notes`) are ignored by the engine and consumed by pm's wrappers —
-# the substrate stays content-free (DEC-033 D3).
+# `transitions` + each `detection`/`gate` predicate, PLUS the shared
+# `process.cascade` declaration (COR-037 / DEC-034: pm's closure fold,
+# rebound onto the substrate's cascade slot). The pm-LOCAL TOP-LEVEL
+# blocks (the sibling `cascade` carrying FORWARD/downward, and
+# `closure_triggers`) and the pm-local fields on states/transitions
+# (`display_name`, `applies_to`, `command`, `pr_state_effect`,
+# `authorisation`, `executor`, `severity`, `notes`) are ignored by the
+# engine and consumed by pm's wrappers — the substrate stays content-free
+# (DEC-033 D3, amended by DEC-034: closure → shared slot; forward → local).
+# NOTE the two same-named `cascade` constructs are disambiguated by NESTING:
+# the engine reads ONLY `process.cascade` (the closure fold); the top-level
+# `cascade:` sibling (forward/downward) is wrapper-only. See the in-line note
+# at the shared declaration.
 #
 # Five states (todo → backlog → in-progress → review → done) the
 # methodology drives every issue through. Each state's `detection`
@@ -21,7 +28,7 @@
 # State ORDER additionally encodes that precedence (the engine returns
 # the first matching detection), so it is load-bearing.
 
-schema_version: 3
+schema_version: 4
 
 source:
   upstream: pm-workflow
@@ -31,7 +38,7 @@ source:
 
 process:
   id: issue-lifecycle
-  version: 3
+  version: 4
   subject:
     cardinality: keyed
     key: issue-number
@@ -308,10 +315,48 @@ process:
         because the work-flow phase hasn't changed — the reviewer is
         still waiting; only the PR-readiness flipped.
 
+  # --- SHARED cascade slot (COR-037) — the CLOSURE fold, DEC-034 ----------
+  # This `cascade:` is the SHARED-shape declaration the engine reads
+  # (`process.cascade`): pm's "a parent closes once every child is done" rule,
+  # rebound from bespoke wrapper logic onto the substrate everyone else uses.
+  #
+  # NAME DISAMBIGUATION (DEC-034 Implications): there are now TWO same-named
+  # `cascade` constructs in this file, distinguished by NESTING LEVEL —
+  #   * THIS one, nested INSIDE `process:` (so `process.cascade`), is the only
+  #     `cascade` the engine reads (load_definition passes the `process:` block
+  #     as the engine's `data`, and the engine reads `data.get("cascade")`); and
+  #   * the pm-LOCAL `cascade:` block below, a TOP-LEVEL sibling of `process:`
+  #     (forward / downward only), which the engine never looks at.
+  # The CLOSURE sub-block was moved OUT of the local block into this shared
+  # declaration; forward / downward stay local and wrapper-driven (DEC-034
+  # amends DEC-033 D3: closure → shared slot; forward → stays local).
+  #
+  # The fold supplies the CHILDREN-HALF of close-eligibility only. The full
+  # close rule is the CONJUNCTION of (a) the `gate-checkboxes-ticked`
+  # deterministic gate on the close transitions (UNCHANGED, separate per-
+  # transition gate) AND (b) this fold — read+AND'd by the close-issue wrapper.
+  cascade:
+    runs: project-management:issue-lifecycle   # children are issues — the same keyed process
+    members:
+      run: cascade-members         # parent-scoped: every child of the parent (the candidate set)
+    membership:
+      run: cascade-membership      # per-subject: confirm the candidate is a hierarchy member
+    reducer:
+      op: all                      # every child must have reached the terminal `done`
+      outcome: done                # the terminal state reached by BOTH pr-merge completion AND won't-do
+    on_empty: satisfied            # a CHILDLESS container's children-half is satisfied (DEC-034):
+                                   # closes via the checkbox gate alone, identical to pm today. A
+                                   # broken membership read still HOLDS the fold (COR-037 precedence:
+                                   # indeterminate membership overrides on_empty — never fail-open).
+
 # --- pm-LOCAL blocks (engine ignores; pm wrappers consume) -----------------
-# DEC-033 D3: cascade + closure_triggers are pm-domain breadth/closure
-# semantics and stay capability-local so the shared substrate stays
-# content-free.
+# DEC-033 D3 (amended by DEC-034): the FORWARD cascade + closure_triggers are
+# pm-domain semantics and stay capability-local so the shared substrate stays
+# content-free. The CLOSURE cascade moved onto the shared slot above
+# (process.cascade); only forward / downward remain here.
+#
+# This top-level `cascade:` is a SIBLING of `process:` — NOT `process.cascade`
+# — so the engine never reads it (see the disambiguation note above).
 
 cascade:
   forward:
@@ -332,21 +377,6 @@ cascade:
       - "[issue-types:umbrella]"
     idempotent: true
     requires_user_authorisation: false
-
-  closure:
-    direction: upward
-    behaviour: |
-      Semi-automatic. When the last open child of a parent closes, the
-      parent becomes eligible to close — but never auto-closes. The
-      agent validates the parent's close criteria (Feature acceptance
-      criteria ticked, EPIC success criteria met, Umbrella purpose
-      served) and prompts the user to authorise closure for each level.
-    applies_to_levels:
-      - "[issue-types:epic]"
-      - "[issue-types:feature]"
-      - "[issue-types:umbrella]"
-    idempotent: false
-    requires_user_authorisation: true
 
   downward:
     direction: none
