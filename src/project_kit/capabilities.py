@@ -410,18 +410,23 @@ class CollisionFinding:
 def detect_collisions(
     target_root: Path,
     capability_source: CapabilitySource,
+    exclude: str | None = None,
 ) -> list[CollisionFinding]:
     """Find naming collisions between a capability's artifacts and already-installed content.
 
     Today checks: skills + agents. Capability decisions are namespaced
     by the capability's directory name, so they cannot collide.
+
+    `exclude` is threaded to `_collect_existing_artifact_names` to skip a
+    capability's own installed tree in the existing-names walk (see #225);
+    existing callers default to None and are unaffected.
     """
     findings: list[CollisionFinding] = []
     # Skills collision: walk capability's skills/ and check against existing skills.
     cap_skills = capability_source.path / "skills"
     if cap_skills.is_dir():
         existing_skill_names = _collect_existing_artifact_names(
-            target_root, "skills"
+            target_root, "skills", exclude=exclude
         )
         for sk_file in sorted(cap_skills.iterdir()):
             if sk_file.is_file() and sk_file.suffix == ".md":
@@ -439,7 +444,7 @@ def detect_collisions(
     cap_agents = capability_source.path / "agents"
     if cap_agents.is_dir():
         existing_agent_names = _collect_existing_artifact_names(
-            target_root, "agents"
+            target_root, "agents", exclude=exclude
         )
         for ag_file in sorted(cap_agents.iterdir()):
             if ag_file.is_file() and ag_file.suffix == ".md":
@@ -725,13 +730,18 @@ def detect_incubated_collisions(
     tree — surfaces them as collisions against themselves. For the register
     path every such self-collision is a false positive: the capability *is*
     its own source, nothing is being copied over it. This filters them out
-    by the same rule `detect_upgrade_collisions` uses (drop any finding whose
-    target lives under the capability's own tree), leaving only genuine
-    collisions against *other* installed content.
+    by passing the capability's name as `exclude`, so the existing-names walk
+    skips the capability's own tree entirely — making detection order-
+    independent and semantically correct (a capability cannot shadow itself),
+    leaving only genuine collisions against *other* installed content (#225).
     """
     own_dir = target_root / ".pkit" / "capabilities" / capability_source.name
     findings: list[CollisionFinding] = []
-    for finding in detect_collisions(target_root, capability_source):
+    for finding in detect_collisions(
+        target_root, capability_source, exclude=capability_source.name
+    ):
+        # `exclude` above is the primary guard; this post-hoc filter is a
+        # harmless belt-and-suspenders against any future self-collision path.
         try:
             finding.target_path.relative_to(own_dir)
         except ValueError:
@@ -1183,11 +1193,19 @@ def _parse_requires_capabilities(
     return tuple(out)
 
 
-def _collect_existing_artifact_names(target_root: Path, area: str) -> dict[str, Path]:
+def _collect_existing_artifact_names(
+    target_root: Path, area: str, exclude: str | None = None
+) -> dict[str, Path]:
     """Gather all installed artifact names (skills or agents) keyed by name.
 
     Walks the area's `core/` + `project/` plus every installed
     capability's `<area>/` directory. Returns name → path mapping.
+
+    `exclude` names a capability directory to skip in the installed-
+    capabilities walk. An incubated capability's own tree lives under
+    `.pkit/capabilities/<name>/` too, so without this it could shadow
+    another capability's same-named artifact (last-writer-wins over an
+    unsorted `iterdir()`) and mask a genuine collision (#225).
     """
     out: dict[str, Path] = {}
     # Area core + project
@@ -1207,6 +1225,8 @@ def _collect_existing_artifact_names(target_root: Path, area: str) -> dict[str, 
     if caps_dir.is_dir():
         for cap in caps_dir.iterdir():
             if not cap.is_dir():
+                continue
+            if exclude is not None and cap.name == exclude:
                 continue
             cap_area = cap / area
             if not cap_area.is_dir():
