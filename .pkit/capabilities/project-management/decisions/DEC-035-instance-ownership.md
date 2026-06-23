@@ -1,7 +1,7 @@
 ---
 id: DEC-035
 title: Instance ownership — distinguish concurrent clones of one identity
-status: proposed
+status: accepted
 date: 2026-06-23
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
