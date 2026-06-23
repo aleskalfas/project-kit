@@ -118,6 +118,13 @@ slice (the sibling `cli-output-conventions` note); this note is the whole.
   Legend + Commands footer; computed-width columns; one line per idea. The
   detailed spec is the sibling note.
 - Deterministic ordering (sort), so output is diffable and testable.
+- **Author-supplied prose fields wrap through `cli_render.wrap()`.**
+  Hanging-indent of author newlines is unconditional; hard-wrap to terminal
+  width is TTY-only and resolved once at the command boundary (piped is always
+  no-wrap, regardless of `COLUMNS`); long tokens overflow rather than breaking
+  mid-token. The human narrative is porcelain and is **never** a parsed
+  surface — a script reads the `--json` sibling, which never wraps and is
+  byte-stable across TTY / `COLUMNS` / piped. (Per ADR-024.)
 
 ### Tables
 - **Primary identifier is the leftmost column;** lifecycle state and metadata
@@ -201,6 +208,17 @@ The field converges (gh, kubectl, docker, aws) on: a sensible human default
 - **Colour / `NO_COLOR` / non-TTY rendering.** The output note leans on aligned
   columns and glyphs; pin what happens when piped or `NO_COLOR` is set (drop
   colour, keep alignment). Adjacent to the no-TTY-format-switch rule above.
+  - *Colour half resolved* — ADR-011: a TTY-aware semantic styling layer
+    (`style(role, text)`), one gate, resolved once at the command boundary,
+    dropping colour when piped / `NO_COLOR` / `--color never` while keeping
+    alignment; never load-bearing (`strip_ansi(styled) == plain`).
+  - *Width / wrapping sibling resolved* — ADR-024: author-supplied prose wraps
+    through `cli_render.wrap()`; hanging-indent of author newlines is
+    unconditional, hard-wrap to terminal width is TTY-only and resolved once at
+    the boundary (piped is always no-wrap, regardless of `COLUMNS`), long tokens
+    overflow rather than break mid-token. The `--json` machine sibling never
+    wraps and is byte-stable across TTY / `COLUMNS` / piped — the load-bearing
+    invariant scriptability rests on (see the Output section above).
 - **Pagination / large human tables.** The tables rule defers power-slicing to
   `--json | jq`, but `--json` isn't offered everywhere — so what does a large
   *human* table do (page? truncate with a count? nothing)? Open.

@@ -1686,6 +1686,46 @@ def test_detect_incubated_collisions_flags_other_installed(
     assert any(c.artifact_name == "shared" and c.artifact_kind == "skill" for c in findings)
 
 
+def test_detect_incubated_collisions_is_order_independent(
+    kit_target: Path, kit_source: Path
+) -> None:
+    """A collision against another installed capability is flagged regardless of
+    filesystem iteration order (#225).
+
+    Names are chosen so the incubated capability sorts *after* the other
+    installed one (`zz-incubated` > `aa-other`): under the old last-writer-wins
+    walk over an unsorted `iterdir()`, a sorted-iteration filesystem would let
+    the incubated capability's own `shared` skill overwrite the map entry, and
+    the post-hoc self-collision filter would then silently drop the finding.
+
+    The order-independence is pinned by asserting the surfaced finding's
+    `target_path` resolves under the *other* capability's tree — never the
+    incubated one — so it cannot be mistaken for (and filtered as) a
+    self-collision under any iteration order.
+    """
+    other_dir = kit_target / ".pkit" / "capabilities" / "aa-other"
+    incubated_dir = kit_target / ".pkit" / "capabilities" / "zz-incubated"
+
+    _stage_capability_in_source(kit_source, "aa-other", with_skills=("shared",))
+    shipped = caps.find_capability_in_source(kit_source, "aa-other")
+    assert shipped is not None
+    caps.install_capability(kit_target, shipped)
+
+    _stage_capability_in_repo(kit_target, "zz-incubated", with_skills=("shared",))
+    incubated = caps.find_capability_in_repo(kit_target, "zz-incubated")
+    assert incubated is not None
+
+    findings = caps.detect_incubated_collisions(kit_target, incubated)
+    shared = [c for c in findings if c.artifact_name == "shared" and c.artifact_kind == "skill"]
+    assert len(shared) == 1, findings
+    # The collision must point at the *other* capability's skill, not the
+    # incubated one's own copy — otherwise it could be filtered as a self-
+    # collision (which is exactly the #225 regression).
+    shared[0].target_path.relative_to(other_dir)
+    with pytest.raises(ValueError):
+        shared[0].target_path.relative_to(incubated_dir)
+
+
 # --- pkit capabilities register (COR-031 capstone) --------------------
 
 

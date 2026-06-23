@@ -38,6 +38,7 @@ import pytest
 
 import re
 
+from project_kit import cli_render
 from project_kit.process import (
     ProcessEngine,
     _prompt_lines,
@@ -398,6 +399,87 @@ def test_status_render_is_read_only(paused_repo: Path) -> None:
     render_status_json(_engine(paused_repo), actor="agent")
     render_status_narrative(_engine(paused_repo), actor="agent")
     assert not _engine(paused_repo).read_journal(), "status must not write the journal"
+
+
+# --- ADR-024: --json byte-stability (load-bearing) + narrative net (weaker) --
+
+
+@pytest.fixture(autouse=True)
+def _reset_render_env():
+    """The --json byte-stability tests vary colour + wrap width deliberately;
+    restore the inert defaults so no state leaks across tests."""
+    cli_render.set_color(False)
+    cli_render.set_wrap_width(cli_render.NO_WRAP)
+    yield
+    cli_render.set_color(False)
+    cli_render.set_wrap_width(cli_render.NO_WRAP)
+
+
+def test_json_is_byte_stable_across_color_and_width(paused_repo: Path) -> None:
+    # The load-bearing invariant (ADR-024 §4): render_status_json never calls
+    # wrap() and never styles, so its bytes are identical regardless of colour,
+    # a TTY width, the no-wrap sentinel, or COLUMNS. The prose analogue of
+    # ADR-011's strip_ansi(styled) == plain.
+    _set_state(paused_repo, "parked")
+
+    def _json() -> str:
+        return render_status_json(_engine(paused_repo), actor="agent")
+
+    cli_render.set_color(False)
+    cli_render.set_wrap_width(cli_render.NO_WRAP)
+    baseline = _json()
+
+    # (a) colour on
+    cli_render.set_color(True)
+    assert _json() == baseline
+    cli_render.set_color(False)
+
+    # (b) a TTY width
+    cli_render.set_wrap_width(40)
+    assert _json() == baseline
+
+    # (c) the no-wrap sentinel
+    cli_render.set_wrap_width(cli_render.NO_WRAP)
+    assert _json() == baseline
+
+    # (d) COLUMNS set (must not reach the machine surface)
+    import os
+
+    prev = os.environ.get("COLUMNS")
+    os.environ["COLUMNS"] = "30"
+    try:
+        cli_render.set_wrap_width(30)
+        assert _json() == baseline
+    finally:
+        if prev is None:
+            os.environ.pop("COLUMNS", None)
+        else:
+            os.environ["COLUMNS"] = prev
+
+
+def test_piped_narrative_gains_no_width_driven_breaks(paused_repo: Path) -> None:
+    # The weaker presentation net (ADR-024 §4): when width resolves to no-wrap
+    # (piped / indeterminable), the narrative contains no WIDTH-introduced breaks
+    # — a long single-line author field stays on one line. (Hanging-indent of
+    # author newlines still applies — that is structural, not a width break.)
+    _set_state(paused_repo, "parked")
+    cli_render.set_wrap_width(cli_render.NO_WRAP)
+    text = render_status_narrative(_engine(paused_repo), actor="agent")
+    plain = _ANSI.sub("", text)
+    # The fixture's prompt is a single (long-ish) line; piped, it stays whole.
+    assert "Approve this work, or send it back?" in plain
+
+
+def test_piped_narrative_still_hangs_multi_line_prose(paused_repo: Path) -> None:
+    # Even piped (no-wrap), a multi-line author field's continuation lines are
+    # hanging-indented, never flush at column 0 (ADR-024 §2 — unconditional).
+    cli_render.set_wrap_width(cli_render.NO_WRAP)
+    multi = "Approve the overflow?\nThe hand-off is the spec\nplus the renderings."
+    out = _prompt_lines(multi, "        ")
+    plains = [_ANSI.sub("", line) for line in out]
+    assert plains[0] == "        ❓ Approve the overflow?"
+    for cont in plains[1:]:
+        assert cont.startswith("          ")  # hanging-indented, not column 0
 
 
 # --- awaiting-condition: divergence (gate vs resume_when) -----------------
