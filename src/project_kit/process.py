@@ -2157,6 +2157,20 @@ def _validate_journal_entry(entry: dict[str, Any], definition: ProcessDefinition
 # --- rendering ------------------------------------------------------------
 
 
+def _prompt_lines(prompt: str, base_indent: str) -> list[str]:
+    """Render a (possibly multi-line) author-supplied prompt as `❓ <text>` with
+    EVERY line indented under the move — the first line carries the `❓ ` marker,
+    continuation lines align under its text (so a wrapped multi-line prompt does
+    not dump continuation lines flush at column 0). Each line is styled."""
+    raw_lines = str(prompt).split("\n")
+    cont_indent = base_indent + "  "  # align continuation under the text after "❓ "
+    out = [base_indent + cli_render.style("strong", f"❓ {raw_lines[0]}")]
+    out.extend(
+        cont_indent + cli_render.style("strong", line) for line in raw_lines[1:]
+    )
+    return out
+
+
 def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
     """Human narrative: where · why · how it got here · legal moves with live
     prechecks · next hint."""
@@ -2249,7 +2263,7 @@ def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
         if blocked.assignee:
             lines.append(f"        owner: {blocked.assignee}")
         if blocked.prompt:
-            lines.append("        " + cli_render.style("strong", f"❓ {blocked.prompt}"))
+            lines.extend(_prompt_lines(blocked.prompt, "        "))
 
     # Legal moves with live prechecks.
     lines.append("")
@@ -2272,7 +2286,7 @@ def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
             lines.append(f"        {check.outcome.reason}")
             # The question posed on this move (COR-034), if it carries one.
             if check.prompt:
-                lines.append("        " + cli_render.style("strong", f"❓ {check.prompt}"))
+                lines.extend(_prompt_lines(check.prompt, "        "))
             hint = check.transition.get("hint")
             if check.allowed and hint:
                 lines.append("        next: " + cli_render.style("command", str(hint)))

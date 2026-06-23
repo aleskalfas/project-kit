@@ -36,12 +36,17 @@ from pathlib import Path
 
 import pytest
 
+import re
+
 from project_kit.process import (
     ProcessEngine,
+    _prompt_lines,
     load_definition,
     render_status_json,
     render_status_narrative,
 )
+
+_ANSI = re.compile(r"\x1b\[[0-9;]*m")
 
 # awaiting-human: `parked` has one outgoing move — a `user` approve gated by an
 # authorisation artifact, carrying a prompt. NO `resume_when` (forbidden for
@@ -356,6 +361,29 @@ def test_prompt_surfaces_on_narrative_status(paused_repo: Path) -> None:
     text = render_status_narrative(_engine(paused_repo), actor="agent")
     assert "Blocked: awaiting-human" in text
     assert "Approve this work, or send it back?" in text
+
+
+def test_single_line_prompt_renders_one_indented_marker_line() -> None:
+    out = _prompt_lines("Approve this?", "        ")
+    assert len(out) == 1
+    plain = _ANSI.sub("", out[0])
+    assert plain == "        ❓ Approve this?"
+
+
+def test_multi_line_prompt_indents_every_continuation_line() -> None:
+    # The #215 bug: a multi-line author-supplied prompt dumped continuation lines
+    # flush at column 0. Every line must be indented under the move; none flush-left.
+    prompt = "Approve the overflow?\nThe hand-off is the spec\nplus the renderings."
+    out = _prompt_lines(prompt, "        ")
+    assert len(out) == 3
+    plains = [_ANSI.sub("", line) for line in out]
+    # first line carries the marker, indented
+    assert plains[0] == "        ❓ Approve the overflow?"
+    # continuation lines are indented (aligned under the text), NOT at column 0
+    for cont in plains[1:]:
+        assert cont.startswith("          "), cont          # 8 base + 2 align
+    assert plains[1].strip() == "The hand-off is the spec"
+    assert plains[2].strip() == "plus the renderings."
 
 
 def test_json_blocked_is_null_when_not_blocked(paused_repo: Path) -> None:
