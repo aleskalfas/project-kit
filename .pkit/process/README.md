@@ -31,7 +31,7 @@ process:
     key:         <slug>             # core (keyed)  descriptive name of what identifies a unit (e.g. issue-number); engine does not interpret it
     domain_ref:  <pointer>          # core      where the subject's DOMAIN data lives — distinct from its process position
     blocked:                        # core (optional, COR-034)  a first-class WAIT — orthogonal, NOT a state
-      blocked_on: awaiting-human | awaiting-condition | awaiting-subprocess-outcome   # core   WHY it waits (awaiting-subprocess-outcome is COR-036, single-inner; open to additive widening — deadlock deferred)
+      blocked_on: awaiting-human | awaiting-condition | awaiting-subprocess-outcome | awaiting-cascade-outcome   # core   WHY it waits (awaiting-subprocess-outcome is COR-036, single-inner; awaiting-cascade-outcome is COR-037, the aggregate fold wait; open to additive widening — deadlock deferred)
       resume_when: <predicate>      # core      REQUIRED for awaiting-condition, FORBIDDEN for awaiting-human; re-evaluated LIVE, auto-clears the flag when it holds
       assignee:    <owner?>         # core      optional: who owns the wait (audit colour)
 
@@ -54,14 +54,23 @@ process:
       trigger:       <command>     # core      the named action
       authorisation: user | agent-autonomous | script   # core   WHO may move
       gate:                        # core      WHAT must hold — must be checkable (see below)
-        kind: deterministic | authorisation-artifact | subprocess-outcome   # core: subprocess-outcome (COR-036) — engine-computed from an embedded inner outcome
+        kind: deterministic | authorisation-artifact | subprocess-outcome | cascade-outcome   # core: subprocess-outcome (COR-036) — engine-computed from an embedded inner outcome; cascade-outcome (COR-037) — engine-computed from the process's `cascade` fold
         outcome: <inner-state>     # core (subprocess-outcome)  the inner OUTCOME this move leaves the subprocess state on
       severity:      <ref>         # core      a validation-severity token (reused, not re-invented)
       why:           <prose>       # core      status view
       hint:          <command>     # core      what to run next
       prompt:        <question>    # core (optional, COR-034)  the QUESTION posed on an awaiting-human move (user-auth only)
       hooks: [...]                 # deferred  on-move actions (integral | reactive)
-      breadth: <ref>               # deferred  this move affects RELATED subjects (cascade / journey-spawn)
+
+  cascade:                         # core (optional, COR-037)  fold ONE child process's member outcomes into a gate
+    runs:    <capability>:<id>     # core      the one named child process whose members are folded
+    members:    <predicate>        # core      parent-scoped candidate-member SOURCE (returns { members: [...] }); the engine never enumerates the child's subjects
+    membership: <predicate>        # core      per-subject "does THIS subject belong to this parent?" test (run one at a time)
+    reducer:
+      op:        all | count       # core      all = every member reached `outcome`  |  count = at least `threshold` did
+      outcome:   <child-state>     # core      the child OUTCOME each member is folded against
+      threshold: <int>             # core (count)  the saturation floor (forbidden for `all`)
+  # the parent gate it feeds is a transition `gate: { kind: cascade-outcome }` (no predicate / outcome — the fold IS the check)
 
   invariants:                      # core (optional, COR-035)  position-independent always-checks, run by `validate` + surfaced on status
     - id:    <slug>                # core      stable identifier
@@ -80,7 +89,7 @@ A process declares `subject.cardinality`:
 - **`singleton`** — one journey per process. No subject identifier; the engine tracks the single journey under a fixed internal key.
 - **`keyed`** (COR-032) — many units under one definition, each at its own position (e.g. one per issue). The engine operates **per a supplied subject identifier**: it resolves *that* subject's position, validates and executes *its* moves, and writes *its* journal, threading the identifier through every predicate it runs (as the predicate's first argv). The identifier is **required** for a keyed process — there is no singleton default; `pkit process … --subject <id>` must be given, and the engine errors clearly if it is missing. A keyed subject may declare a descriptive `key` naming what identifies a unit (e.g. `issue-number`); the engine does not interpret it, but subject identifiers must be safe to use in the per-subject journal path.
 
-The engine **never enumerates** a keyed process's subjects — it only ever acts on the one it is given. Cross-subject enumeration and cascade across a containment tree are *breadth* (altitude-2) and remain deferred; a binding that needs them carries them capability-local (e.g. pm's parent/child cascade lives in its wrappers, not the engine).
+The engine **never enumerates** a keyed process's subjects — it only ever acts on the one it is given. The **one** sanctioned, bounded exception is the **cascade fold** (COR-037, below): a parent reads across the members of *one declared child process* scoped to one parent subject, and only through a capability-supplied membership predicate run one subject at a time — never a containment tree the engine holds, never a general subject-listing API. Everywhere else the never-enumerate discipline is unchanged; pm's *forward* (position) cascade stays capability-local until a binding demands the shared form.
 
 Per-subject **runtime**: a resolved **position** (core), an append-only **journal** (core) — `{ts, subject, from→to, trigger, actor, gate-result, severity, bypass+reason}`, the memory, the how-we-got-here, and the audit trail in one — and a derived **blocked** detection (core, "no legal move") with an optional first-class `blocked{blocked_on, resume_when, assignee?}` wait (core — see below).
 
@@ -103,17 +112,18 @@ transitions:
     prompt: <question>                                # optional: the QUESTION posed to the person (awaiting-human)
 ```
 
-- **`blocked_on` ships three reasons**, each establishable from *one* subject's reality (COR-032): **`awaiting-human`** (a person must act), **`awaiting-condition`** (an external fact must become true), and **`awaiting-subprocess-outcome`** (COR-036, single-inner: the subject is parked in a `subprocess` state whose embedded inner has not yet reached a wired terminal outcome — see Composition below). The enum stays open to additive widening — the remaining cross-subject reason `deadlock` (a peer-subject cycle) joins it where the engine first reads across a *crowd* of subjects (deferred).
+- **`blocked_on` ships four reasons.** Three are establishable from *one* subject's reality (COR-032): **`awaiting-human`** (a person must act), **`awaiting-condition`** (an external fact must become true), and **`awaiting-subprocess-outcome`** (COR-036, single-inner: the subject is parked in a `subprocess` state whose embedded inner has not yet reached a wired terminal outcome — see Composition below). The fourth, **`awaiting-cascade-outcome`** (COR-037), is the single sanctioned *cross-subject* fold wait: the subject is parked at a state whose outgoing `cascade-outcome` gate folds across one declared child process's members and has not yet resolved open (see Cascade below). The enum stays open to additive widening — the remaining cross-subject reason `deadlock` (a peer-subject cycle) joins it where the engine reads across a crowd of subjects in a *waiting* posture (deferred; the cascade fold is acyclic by construction — it waits only on members' already-resolved terminal outcomes).
 - **The blocked flag is a DERIVED overlay, recomputed live — never stored truth. Resume differs by reason** (COR-034):
   - **`awaiting-human`** carries **no `resume_when`** (the schema forbids one). It is *currently* blocked while the subject sits at a non-terminal position with an outgoing, **not-yet-taken** `user` move — whether that move's gate is open (ready to take) or closed (the human must intervene in reality first). The **resume is the person taking the move** — the position advancing off the parked state, which removes the pending move. The engine consults **no side-predicate**: a side-fact existing (e.g. a review file) must **not** clear an "approve?" block — only taking the move does. (Tying the resume to a side-predicate is forbidden precisely because the two can disagree: a satisfied side-fact while the move is still gate-closed would falsely report "not waiting" on a subject that is genuinely stuck.)
   - **`awaiting-condition`** carries a **required `resume_when`** predicate. It is *currently* blocked when (a) it has **no legal move** (the shipped "no legal move" detection — a non-terminal, determinate position out of which no transition is allowed), and (b) its `resume_when` predicate does **not** yet hold. When `resume_when` holds, the engine **auto-clears** the flag — the external fact turning true with no human in the loop. An indeterminate `resume_when` is fail-closed (the subject stays blocked rather than silently resuming).
   - **`awaiting-subprocess-outcome`** (COR-036, single-inner) carries **no `resume_when`** (the schema forbids one, like `awaiting-human`). It is *currently* blocked while the subject sits in a `subprocess` state with **no legal move** — i.e. no `subprocess-outcome` gate currently passes, because the embedded inner process has not reached a *wired* terminal outcome. It is **auto-clearing** like `awaiting-condition`, but the "condition" *is* the recursive resolution carried by the `subprocess-outcome` gates (re-evaluated live in the "no legal move" check) — when a wired inner outcome resolves, a gate opens, a legal move exists, and the wait clears with no human in the loop. A parent parked on an **unwired** inner outcome stays correctly blocked (the author owns outcome→transition wiring, not the engine).
+  - **`awaiting-cascade-outcome`** (COR-037, the aggregate fold wait) carries **no `resume_when`** (the schema forbids one, like `awaiting-subprocess-outcome`). It is *currently* blocked while the subject sits at a state whose outgoing `cascade-outcome` gate has **no legal move** — i.e. the fold over the declared child's members has not resolved open. It is **auto-clearing**, the "condition" being the live fold itself (re-evaluated live in the "no legal move" check) — when the fold resolves open (all members reached the outcome, or the threshold is met), the gate opens, a legal move exists, and the wait clears with no human in the loop. Fail-closed throughout: any unresolved member, and the empty member set, hold the fold shut (the parent stays correctly blocked).
 - **The wait is journaled on enter and on resume.** Entering a blocked position appends a `blocked-enter` event; clearing it appends a `blocked-resume` event (each a journal entry — there is *no* separate emission/dispatch channel; the deferred **hooks** slot will react to these journaled transitions when it ships). `since` (the wait's age) is read from the open `blocked-enter` entry; `assignee` is carried from the declaration. **The journal is the audit trail; the CURRENT blocked-ness is always the live evaluation** (for `awaiting-human`, whether the pending move has been taken; for `awaiting-condition`, the `resume_when` predicate), **authoritative over any journal entry** (inheriting the journal-is-intent-log / live-detection-authoritative contract below).
 - **Where the journaling happens.** `status` and `evaluate_blocked` are **read-only** (status runs predicates live and must not write). The journaling of enter/resume rides the writing paths only: `move` reconciles the wait against the **target state it just declared**, so a move that parks the subject journals the `blocked-enter` **at park time** — making `since` meaningful immediately, rather than lazily only once the human finally acts — and a move that clears the wait journals the `blocked-resume`. `reconcile_blocked` is also exposed (with no target override) so a binding can journal a self-clearing `awaiting-condition` resume — which needs no human move — on demand against live reality. Because live detection is authoritative, a not-yet-journaled resume never lies about current state.
 - **An `awaiting-human` block carries a `prompt`** — the question — authored on the `user` move and surfaced on that move's per-move emission (and lifted onto the blocked overlay for the human-pause view). The park stops being a silent "your move" and becomes "your move: here's the question." Content-free: the engine carries/surfaces `prompt` and `blocked_on` but never interprets them.
 - **It is orthogonal, not a state.** It annotates the subject at its current position; it adds no state to the process and cannot explode the state space. Position stays inferred; the validator stays deterministic (`resume_when` is a predicate over reality, exactly like detection).
 
-**Deferred** (each its own future decision when a binding needs it, per COR-034): the remaining cross-subject `blocked_on` reason `deadlock` (a peer-subject cycle — distinct from COR-036's acyclicity guard), the **hooks** firing mechanism (notify-on-enter / act-on-resume), and a structured **`selection`** option-set (render options in the prompt text until it ships). (`awaiting-subprocess-outcome` shipped with composition — COR-036.)
+**Deferred** (each its own future decision when a binding needs it, per COR-034): the remaining cross-subject `blocked_on` reason `deadlock` (a peer-subject cycle — distinct from COR-036's acyclicity guard and from COR-037's acyclic-by-construction fold wait), the **hooks** firing mechanism (notify-on-enter / act-on-resume), and a structured **`selection`** option-set (render options in the prompt text until it ships). (`awaiting-subprocess-outcome` shipped with composition — COR-036; `awaiting-cascade-outcome` shipped with cascade — COR-037.)
 
 ### Invariants — position-independent always-checks (core)
 
@@ -164,7 +174,7 @@ In every mode the engine remains a deterministic validator. (Theory: for a finit
 
 [COR-036](../decisions/core/COR-036-process-composition.md) un-defers the composition slot and gives the engine its one genuinely-new capability: **resolve another process's terminal outcome** and read it as an input to a parent's gate. A process exposes a public **interface** = `inputs` (what it needs to start) + `outcomes` (its named terminal states — a `terminal: true` state *is* an outcome). A parent embeds *one* inner process via a **`subprocess` state** that `runs: <capability>:<process-id>`, supplies the inner's inputs on entry, and wires the inner's outcomes to its own outgoing transitions. **All coupling lives in the parent**; the child references nothing upward, so it is reusable and parent-agnostic.
 
-This ships the **nest/call** timing (a parent waits for an inner outcome). The **overflow/hand-off** timing (a terminal state spawning or unblocking a *concurrent* sibling process — altitude-2 orchestration) and the **enumerate-and-fold aggregate** across many inner subjects (cascade) remain deferred.
+This ships the **nest/call** timing (a parent waits for an inner outcome). The **enumerate-and-fold aggregate** across many inner subjects (cascade) builds *on* this single-inner resolution as its per-subject step and ships in [COR-037](../decisions/core/COR-037-process-cascade.md) (see Cascade below). The **overflow/hand-off** timing (a terminal state spawning or unblocking a *concurrent* sibling process — altitude-2 orchestration) remains deferred.
 
 **Authored** (additive — absent on every existing process, which validate byte-unchanged):
 
@@ -198,7 +208,50 @@ process:
 
 The `status` view surfaces the embedded inner and its live-resolved outcome (narrative: an `embeds <address>` / `inner outcome: <x>` line; `--json`: a `position.subprocess` object with `{runs, outcome, indeterminate, reason}`).
 
-**Deferred** (each its own future decision when a binding needs it, per COR-036): the **enumerate-and-fold aggregate** + the **many-inner aggregate wait** across a keyed inner's subjects (cascade — it *consumes* this single-inner resolution as its per-subject step); the **overflow / hand-off** (concurrent spawn) timing and the broader **orchestration** altitude.
+**Deferred** (each its own future decision when a binding needs it, per COR-036): the **overflow / hand-off** (concurrent spawn) timing and the broader **orchestration** altitude. (The **enumerate-and-fold aggregate** + **many-inner aggregate wait** across a keyed inner's subjects shipped as cascade — COR-037, below — *consuming* this single-inner resolution as its per-subject step.)
+
+## Cascade — fold one child process's member outcomes (core)
+
+[COR-037](../decisions/core/COR-037-process-cascade.md) un-defers the last of the substrate's breadth slots: a parent process may look across **all** the members of **one named child process** that belong to it and ask one question — "did *every* one reach outcome X?" (or "did at least N?") — then let that answer open a parent gate. This is the **one** sanctioned, tightly-bounded place where the engine reads across many subjects, crossing the line COR-032 drew (*the engine never enumerates*) **minimally**: only through one declared child relation scoped to one parent subject, and only via a capability-supplied predicate run one subject at a time. It is **not** a general re-opening of enumeration.
+
+**Direction is child → parent, coupling in the parent** — the same discipline composition set: the parent declares the fold over one named child; the child references nothing upward and stays reusable. The fold **consumes COR-036's single-inner resolution as its per-subject step** (it never invents a rival cross-process path) — so cascade adds **breadth** across a finite member set, never **depth** (it does not recurse the members' own subprocess/cascade gates).
+
+**Authored** (additive — absent on every existing process, which validate byte-unchanged):
+
+```
+process:
+  cascade:                               # the parent's child → parent fold declaration
+    runs:    <capability>:<process-id>   # the one named child process whose members are folded
+    members:    <predicate>              # parent-scoped candidate-member SOURCE — returns { members: ["id", ...] }
+    membership: <predicate>              # per-subject "does THIS subject belong to this parent?" test
+    reducer:
+      op:        all | count             # all = every member reached `outcome`  |  count = at least `threshold` did
+      outcome:   <child-terminal-state>  # the child OUTCOME each member is folded against
+      threshold: <int>                   # required for `count`, forbidden for `all`
+  states:
+    - id: <waiting-state>
+      meaning: <prose>
+      detection: { mode: inferred, predicate: <ref> }
+  subject:
+    blocked: { blocked_on: awaiting-cascade-outcome }   # the aggregate wait while the fold has not opened
+  transitions:
+    - from: <waiting-state>
+      to:   <closed>
+      authorisation: agent-autonomous
+      gate:
+        kind: cascade-outcome            # the ENGINE folds the `cascade` declaration — no predicate, no per-gate outcome
+```
+
+- **The binding supplies the set; the engine folds.** The engine does **not** hold or discover a containment tree. It obtains the parent-scoped candidate member ids from the `members` predicate (run **once**, threaded with **this** parent subject, returning `{ members: [...] }` — read live, determinate at the instant, never a stored or open-ended global listing), then confirms each candidate with the per-subject `membership` predicate (run **one subject at a time** through the single-subject runner — "does this subject belong to this parent?"). The `members` predicate is the **candidate-set seam** — content-free and binding-supplied, mirroring how detection gets its inputs; the engine never receives or holds a global subject list.
+- **Two fold operations.** `all` — every member reached the reducer's named `outcome`. `count` — at least `threshold` members reached it (a saturation floor). One enumerate-and-fold machine, two reducers. Richer reducers (ratios / weighted / custom) stay **deferred** (they land when a binding needs one).
+- **Fail-closed.** Any member whose outcome is **unresolved/indeterminate** (still moving, parked, indeterminate) holds the whole fold **unresolved** — the gate stays shut, never a false "all reached X". An **indeterminate membership test** (the `membership` predicate errored / timed out for a candidate) likewise holds the whole fold **unresolved** — symmetric with an unresolved member outcome — rather than silently dropping the candidate (a dropped candidate would look like "fewer members" and could let an `all` vacuously pass); a determinate `result: false` still cleanly **excludes** a real non-member. The **empty set** (a parent with no members of that child yet) is **fail-closed too**: an `all`/`count` over zero members does **not** vacuously open the gate (a determinate "not yet", never true) — and it covers **both** "no candidates existed" and "candidates existed but none were members" (the two intentionally collapse; neither opens the gate).
+- **The aggregate wait — `awaiting-cascade-outcome`.** A cascade-gated parent parks on an auto-clearing overlay reusing COR-034's model (no `resume_when` — the live fold *is* its condition), clearing the instant the fold resolves open and a legal move exists. **Acyclic by construction:** the parent waits only on its members' already-resolved **terminal** outcomes, and a terminal subject waits on nothing, so the aggregate wait cannot join a wait cycle — the deferred `deadlock` reason is safe here by construction, not by hope.
+- **Read-only, deterministic, single-level.** Resolving the fold runs predicates and resolves member outcomes **live**, writing nothing; the fold is a deterministic reduction over a finite member set (P3/P6 hold — each member outcome is a composed definite answer, the membership set a live re-read of a deterministic predicate). The acyclicity guard is inherited, so a cascade whose child is the parent process is refused like a cyclic embedding.
+- **Known limitation (accepted, ship-narrow).** Predicate evaluation is **not memoised across the breadth of a fold**: the `members` predicate runs through the parent runner's per-invocation cache, but each member's outcome and membership are resolved through a **fresh, uncached** runner, and within one `status` render `resolve_cascade_outcome` is invoked 2–3× (precheck gate + `position.cascade` surface + the blocked wait-reason) × N members — so member predicates re-run per call. Accepted for the narrow ship (the member sets the bindings fold are small); a shared per-render fold cache is **deferred** until a binding's set size makes it pay.
+
+The `status` view surfaces the live fold when the current state has the cascade-gated move (narrative: a `folds <address> (<op>)` / `fold: <reached>/<total> …` line; `--json`: a `position.cascade` object with `{runs, op, outcome, threshold, reached, total, opened, indeterminate, reason}`).
+
+**Deferred** (each its own future decision when a binding needs it, per COR-037): **forward / position cascade** (bump a parent up to match its furthest child — a position reduction, not a terminal-outcome fold; pm keeps it capability-local); **richer reducers** (ratios / weighted / custom); **overflow / hand-off** (a terminal state spawning or unblocking a concurrent sibling — altitude-2 orchestration); **peer-cycle deadlock** detection and **cross-subject invariants** (different cross-subject machines, each its own slot).
 
 ## The engine
 

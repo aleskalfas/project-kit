@@ -28,8 +28,8 @@
       "additionalProperties": false,
       "properties": {
         "blocked_on": {
-          "enum": ["awaiting-human", "awaiting-condition", "awaiting-subprocess-outcome"],
-          "description": "Why the subject waits -- a reason establishable from ONE subject's reality (COR-032). awaiting-human: a person must act; the resume IS the person taking the pending move (no `resume_when` -- it is forbidden, because a side-predicate could disagree with the move while it is still gate-closed). awaiting-condition: an external fact must become true; carries a `resume_when` predicate (required) that turns true on its own, no human in the loop. awaiting-subprocess-outcome (COR-036, single-inner): the subject is parked in a `subprocess` state whose embedded inner process has not yet reached a wired terminal outcome; auto-clearing like awaiting-condition (the 'condition' is 'the inner reached outcome X', re-evaluated LIVE by the recursive resolution), so it carries NO `resume_when` (the resolution IS its condition). The remaining cross-subject reason (deadlock -- a peer-subject cycle) stays deferred per COR-034; this enum is open to further additive widening when the engine gains the right to read across a crowd of subjects."
+          "enum": ["awaiting-human", "awaiting-condition", "awaiting-subprocess-outcome", "awaiting-cascade-outcome"],
+          "description": "Why the subject waits -- a reason establishable from ONE subject's reality (COR-032), except awaiting-cascade-outcome which is the single sanctioned cross-subject FOLD wait (COR-037). awaiting-human: a person must act; the resume IS the person taking the pending move (no `resume_when` -- it is forbidden, because a side-predicate could disagree with the move while it is still gate-closed). awaiting-condition: an external fact must become true; carries a `resume_when` predicate (required) that turns true on its own, no human in the loop. awaiting-subprocess-outcome (COR-036, single-inner): the subject is parked in a `subprocess` state whose embedded inner process has not yet reached a wired terminal outcome; auto-clearing like awaiting-condition (the 'condition' is 'the inner reached outcome X', re-evaluated LIVE by the recursive resolution), so it carries NO `resume_when` (the resolution IS its condition). awaiting-cascade-outcome (COR-037, the AGGREGATE wait): the subject is parked at a state whose outgoing `cascade-outcome` gate folds across the members of one declared child process and has not yet resolved open; auto-clearing like awaiting-subprocess-outcome (the 'condition' IS the live fold), so it carries NO `resume_when`. The remaining cross-subject reason (deadlock -- a peer-subject cycle) stays deferred per COR-034; this enum is open to further additive widening."
         },
         "resume_when": {
           "$ref": "#/$defs/predicate",
@@ -128,13 +128,13 @@
     },
     "gate": {
       "type": "object",
-      "description": "What must hold for a move. Always reduces to a checkable, deterministic answer (COR-033 P4). Most kinds reduce to a capability `predicate`; the `subprocess-outcome` kind (COR-036) is computed by the ENGINE from an embedded inner process's resolved terminal outcome and carries no predicate (the resolution is the check).",
+      "description": "What must hold for a move. Always reduces to a checkable, deterministic answer (COR-033 P4). Most kinds reduce to a capability `predicate`; the `subprocess-outcome` kind (COR-036) is computed by the ENGINE from an embedded inner process's resolved terminal outcome, and the `cascade-outcome` kind (COR-037) from the ENGINE's fold over one declared child process's members -- both carry no predicate (the resolution / fold is the check).",
       "required": ["kind"],
       "additionalProperties": false,
       "properties": {
         "kind": {
-          "enum": ["deterministic", "authorisation-artifact", "subprocess-outcome"],
-          "description": "deterministic: the predicate's `result` decides. authorisation-artifact: the predicate returns {exists, produced_by}; the ENGINE computes result = exists && produced_by != actor (cross-authority). subprocess-outcome (COR-036): the ENGINE recursively resolves the embedding `subprocess` state's inner process to a terminal outcome and computes result = (inner reached the named `outcome`); no capability predicate -- the resolution is the check."
+          "enum": ["deterministic", "authorisation-artifact", "subprocess-outcome", "cascade-outcome"],
+          "description": "deterministic: the predicate's `result` decides. authorisation-artifact: the predicate returns {exists, produced_by}; the ENGINE computes result = exists && produced_by != actor (cross-authority). subprocess-outcome (COR-036): the ENGINE recursively resolves the embedding `subprocess` state's inner process to a terminal outcome and computes result = (inner reached the named `outcome`); no capability predicate. cascade-outcome (COR-037): the ENGINE folds the outcomes of the process's declared `cascade` child members and computes result from the reducer (all / count-against-threshold), fail-closed on any unresolved member and on the empty set; no capability predicate and no per-gate `outcome` (the named outcome lives in the cascade reducer)."
         },
         "predicate": { "$ref": "#/$defs/predicate" },
         "outcome": {
@@ -145,10 +145,14 @@
       },
       "allOf": [
         {
-          "description": "A `deterministic` or `authorisation-artifact` gate REQUIRES a capability `predicate` to evaluate; a `subprocess-outcome` gate FORBIDS one (the engine computes it from the recursive resolution) and instead REQUIRES the `outcome` it tests for.",
-          "if": { "properties": { "kind": { "const": "subprocess-outcome" } }, "required": ["kind"] },
-          "then": { "required": ["outcome"], "not": { "required": ["predicate"] } },
-          "else": { "required": ["predicate"], "not": { "required": ["outcome"] } }
+          "description": "A `deterministic` or `authorisation-artifact` gate REQUIRES a capability `predicate` to evaluate; a `subprocess-outcome` gate FORBIDS one (the engine computes it from the recursive resolution) and instead REQUIRES the `outcome` it tests for; a `cascade-outcome` gate (COR-037) FORBIDS both a `predicate` and a per-gate `outcome` (the engine folds the process's `cascade` declaration; the named outcome lives in the reducer).",
+          "if": { "properties": { "kind": { "const": "cascade-outcome" } }, "required": ["kind"] },
+          "then": { "not": { "anyOf": [{ "required": ["predicate"] }, { "required": ["outcome"] }] } },
+          "else": {
+            "if": { "properties": { "kind": { "const": "subprocess-outcome" } }, "required": ["kind"] },
+            "then": { "required": ["outcome"], "not": { "required": ["predicate"] } },
+            "else": { "required": ["predicate"], "not": { "required": ["outcome"] } }
+          }
         }
       ]
     },
@@ -264,6 +268,58 @@
         }
       }
     },
+    "cascade_reducer": {
+      "type": "object",
+      "description": "COR-037: how the engine FOLDS the resolved outcomes of a cascade's members into one yes/no. Two operations, one enumerate-and-fold machine differing only in the reducer. `all`: every member reached the named `outcome` (grounded by pm closure + trip-planning all-verified). `count`: at least `threshold` members reached the named `outcome` (a saturation floor). Both are fail-closed: any member whose outcome is unresolved/indeterminate holds the fold unresolved, and the EMPTY set does NOT vacuously open the gate (an `all` over zero members is fail-closed, not true). Richer reducers (ratios / weighted / custom) stay deferred per COR-037.",
+      "required": ["op", "outcome"],
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "enum": ["all", "count"],
+          "description": "all: the fold opens iff EVERY member reached the named `outcome`. count: the fold opens iff AT LEAST `threshold` members reached the named `outcome`."
+        },
+        "outcome": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The child process OUTCOME (a terminal state id of the named child) each member is folded against (`all` = every member at it; `count` = how many members reached it)."
+        },
+        "threshold": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Required for `count`, forbidden for `all` (enforced below): the saturation floor -- the fold opens iff at least this many members reached the named `outcome`. A threshold over the empty set is fail-closed (zero is never >= a floor of one or more)."
+        }
+      },
+      "allOf": [
+        {
+          "description": "A `count` reducer REQUIRES a `threshold` (the saturation floor); an `all` reducer FORBIDS one (it is every-member, not count-against-threshold).",
+          "if": { "properties": { "op": { "const": "count" } }, "required": ["op"] },
+          "then": { "required": ["threshold"] },
+          "else": { "not": { "required": ["threshold"] } }
+        }
+      ]
+    },
+    "cascade": {
+      "type": "object",
+      "description": "COR-037: a parent process's declaration that it FOLDS the outcomes of ONE named child process's members into a gate. The single sanctioned, bounded crossing of COR-032's never-enumerate line: the engine reads across subjects ONLY through this one declared child relation, scoped to one parent subject, and ONLY by a capability-supplied membership predicate run one subject at a time -- never a containment tree the engine holds, never a general subject-listing API. Direction is child -> parent, coupling in the parent (the child references nothing upward and stays reusable). The `members` predicate yields the parent-scoped candidate members; the `membership` predicate confirms each candidate belongs to this parent; each confirmed member's outcome is resolved by COR-036's single-inner resolution; the `reducer` folds them; a `cascade-outcome` gate reads the fold. Optional and additive -- a process omitting it is unaffected. A process declares at most one cascade.",
+      "required": ["runs", "members", "membership", "reducer"],
+      "additionalProperties": false,
+      "properties": {
+        "runs": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$",
+          "description": "The one named child process address `<capability>:<process-id>` whose member outcomes are folded. Each member is resolved as a determinate single-inner resolution (COR-036) -- a keyed child member is resolved by its own subject id (the member id the predicates yield)."
+        },
+        "members": {
+          "$ref": "#/$defs/predicate",
+          "description": "The candidate-set SOURCE (the seam the engine reads the set through, mirroring how detection gets its inputs -- content-free, binding-supplied). Run ONCE threaded with the PARENT subject id, it returns the parent-scoped candidate member subject ids as {members: [\"id\", ...]} (read live -- determinate at the instant, never a stored or open-ended global listing). The engine never enumerates the child's subjects itself; it asks the binding for this parent's candidates."
+        },
+        "membership": {
+          "$ref": "#/$defs/predicate",
+          "description": "The per-subject membership test 'does THIS subject belong to this parent?' (COR-037). Run through the existing single-subject predicate runner, one candidate at a time (threaded with the candidate's subject id), returning {result, reason}. Confirms each candidate the `members` source yielded actually belongs to this parent before its outcome is folded -- the content-free, one-subject-at-a-time crossing COR-032 holds the line at."
+        },
+        "reducer": { "$ref": "#/$defs/cascade_reducer" }
+      }
+    },
     "process": {
       "type": "object",
       "description": "A process definition. additionalProperties permitted for capability-local blocks (e.g. pm's cascade / closure_triggers / pr_state_effect) and named-deferred slots (hooks, orchestration) until they ship.",
@@ -298,6 +354,10 @@
         "interface": {
           "$ref": "#/$defs/interface",
           "description": "Optional, additive (COR-036): the process's public embedding contract ({inputs, outcomes}). Absent on every existing process -- those validate byte-unchanged."
+        },
+        "cascade": {
+          "$ref": "#/$defs/cascade",
+          "description": "Optional, additive (COR-037): the parent's child -> parent outcome-fold declaration ({runs, members, membership, reducer}), read by a `cascade-outcome` gate. Absent on every existing process -- those validate byte-unchanged. A process declares at most one cascade."
         }
       }
     },

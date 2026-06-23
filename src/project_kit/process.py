@@ -49,6 +49,31 @@ carried by the subprocess-outcome gates (no `resume_when`; it clears when a wire
 resolves and a legal move opens). All coupling lives in the parent; the inner
 references nothing upward, so it stays reusable. Resolution is READ-ONLY.
 
+Cascade (COR-037): the single sanctioned cross-subject FOLD. A parent process may
+declare a `cascade: {runs, members, membership, reducer}` that folds the outcomes
+of ALL members of ONE named child process belonging to this parent subject into a
+single yes/no a `cascade-outcome` gate reads. It crosses COR-032's never-enumerate
+line MINIMALLY and only here: the engine does NOT hold or discover a containment
+tree — it asks the binding for the parent-scoped candidate member ids through the
+capability-supplied `members` predicate (run ONCE, threaded with the parent
+subject, returning `{members: [...]}`), then confirms each candidate one subject
+at a time via the per-subject `membership` predicate ("does THIS subject belong to
+this parent?"). Each confirmed member's outcome is resolved by COR-036's
+single-inner resolution (the per-subject step, reused — not a rival path), and the
+reducer FOLDS them: `all` = every member reached the named outcome; `count` = at
+least `threshold` did. The fold is FAIL-CLOSED — any member whose outcome is
+unresolved/indeterminate holds the whole fold unresolved (the gate stays shut),
+and the EMPTY set does NOT vacuously open the gate (an `all` over zero members is
+fail-closed, a determinate "not yet", never true). A cascade-gated parent parks on
+the `awaiting-cascade-outcome` blocked reason — an AUTO-CLEARING overlay reusing
+COR-034's model (no `resume_when`; the live fold IS its condition), clearing when
+the fold resolves and a legal move opens. SINGLE-LEVEL breadth: the fold adds
+breadth across a finite member set, never depth (it does not recurse the members'
+own subprocess/cascade gates); the acyclicity guard is inherited so a cascade
+whose child is the parent process is refused. READ-ONLY. Out of scope (COR-037
+named-deferred): forward/position cascade, peer-cycle deadlock, cross-subject
+invariants, richer reducers (ratios/weighted/custom).
+
 Invariants (COR-035): a process may declare position-independent always-checks
 (`invariants: [{id, check, why}]`). The engine runs each `check` through the
 SAME predicate runner that backs detection and gates (single-subject, threaded
@@ -435,6 +460,17 @@ class ProcessDefinition:
         value = self.data.get("interface")
         return value if isinstance(value, dict) else None
 
+    @property
+    def cascade(self) -> dict[str, Any] | None:
+        """The process's `cascade` declaration (COR-037), or None.
+
+        A parent declares at most one `cascade: {runs, members, membership,
+        reducer}` — the child→parent outcome-fold a `cascade-outcome` gate reads.
+        Additive — a process omitting it returns None and is byte-unchanged.
+        """
+        value = self.data.get("cascade")
+        return value if isinstance(value, dict) else None
+
     def subprocess_of(self, state_id: str | None) -> dict[str, Any] | None:
         """The `subprocess` embedding declaration on `state_id` (COR-036), or None.
 
@@ -617,6 +653,42 @@ class SubprocessResolution:
     reason: str
 
 
+@dataclass(frozen=True)
+class CascadeResolution:
+    """The engine's FOLD over one declared child process's members (COR-037) —
+    the single sanctioned cross-subject read.
+
+    `opened` is the boolean a `cascade-outcome` gate acts on: True when the fold
+    resolves OPEN (`all` = every member reached the named outcome; `count` = at
+    least `threshold` did). `indeterminate` is the fail-closed flag: at least one
+    member's outcome could not be resolved (still moving, parked, indeterminate),
+    OR the cascade declaration / child address is unusable. When set, `opened` is
+    False and the gate stays shut — the parent keeps waiting, never reading a
+    false "all reached X".
+
+    The EMPTY set (no members yet) does NOT vacuously open the gate: an `all`
+    over zero members is fail-closed (`opened=False`, `indeterminate=False` — a
+    determinate, correct "not yet", not an evaluation failure). `reached` /
+    `total` are the audit colour (how many of how many members reached the named
+    outcome).
+
+    Single-level breadth (COR-037): the engine resolves each member's outcome via
+    COR-036's single-inner resolution (the per-subject step) and folds — it adds
+    breadth across a finite member set, never depth (it does not recurse the
+    members' own subprocess/cascade gates).
+    """
+
+    address: str
+    op: str
+    outcome: str | None
+    threshold: int | None
+    reached: int
+    total: int
+    opened: bool
+    indeterminate: bool
+    reason: str
+
+
 class ProcessEngine:
     """Resolves position, validates + executes moves, renders status for one
     process definition + subject. Stateless across invocations (COR-033): every
@@ -787,7 +859,15 @@ class ProcessEngine:
         subprocess = self.definition.subprocess_of(state_id)
         if subprocess is None:
             return None
+        return self._resolve_inner(subprocess)
 
+    def _resolve_inner(self, subprocess: dict[str, Any]) -> SubprocessResolution:
+        """Resolve one determinate inner process's terminal outcome from an
+        embedding declaration `{runs, subject?}` (COR-036) — the shared per-subject
+        step. `resolve_subprocess_outcome` calls it for a parked `subprocess`
+        state; cascade (COR-037) calls it once per member, supplying a synthetic
+        embedding of the cascade's child at the member's subject id. Same
+        single-level resolution + acyclicity guard either way; never enumerates."""
         address = subprocess.get("runs")
         if not isinstance(address, str) or not address:
             return SubprocessResolution(
@@ -871,6 +951,296 @@ class ProcessEngine:
             f"(currently {where!r})",
         )
 
+    # --- cascade: fold one child process's member outcomes (COR-037) ------
+
+    def resolve_cascade_outcome(self) -> CascadeResolution | None:
+        """Fold the outcomes of this process's declared `cascade` child members
+        (COR-037), or None when the process declares no cascade.
+
+        This is the single sanctioned cross-subject read — the engine looks
+        across ALL members of ONE named child process that belong to THIS parent
+        subject and folds their outcomes into one yes/no that a `cascade-outcome`
+        gate reads. It crosses COR-032's never-enumerate line minimally and only
+        here:
+
+        - **The binding supplies the set; the engine folds.** The engine does NOT
+          hold or discover a containment tree. It obtains the parent-scoped
+          candidate member ids from the capability-supplied `members` predicate
+          (run ONCE, threaded with THIS parent subject), then confirms each
+          candidate with the per-subject `membership` predicate (run one subject
+          at a time through the existing single-subject runner — "does this
+          subject belong to this parent?"). The engine never receives or holds a
+          global subject list; it asks the binding for this parent's candidates
+          and tests them one at a time. (The `members` predicate is the
+          candidate-set SEAM: content-free and binding-supplied, mirroring how
+          detection gets its inputs — see the schema's `cascade.members`.)
+        - **Per-member resolution reuses COR-036.** Each confirmed member's
+          outcome is resolved by the SAME single-inner resolution composition
+          uses (`resolve_subprocess_outcome` against a synthetic embedding of the
+          child at the member's subject) — not a rival path. So the fold is
+          single-LEVEL breadth: it adds breadth across a finite member set, never
+          depth (it does not recurse a member's own subprocess/cascade gates).
+        - **Fold (fail-closed).** `all` = every member reached the reducer's named
+          outcome; `count` = at least `threshold` did. ANY member whose outcome is
+          unresolved/indeterminate holds the fold UNRESOLVED (`indeterminate`,
+          gate stays shut). An INDETERMINATE membership test (the `membership`
+          predicate errored / timed out for a candidate) likewise holds the whole
+          fold UNRESOLVED — symmetric with an unresolved member outcome — rather
+          than silently dropping the candidate (a determinate `result is False`
+          still cleanly excludes a real non-member). The EMPTY set does NOT
+          vacuously open the gate — an `all`/`count` over zero members is
+          fail-closed (a determinate "not yet", not an evaluation failure); the
+          empty set covers BOTH "no candidates existed" and "candidates existed
+          but none were members" (they intentionally collapse — neither opens the
+          gate).
+
+        Read-only: it runs predicates and resolves member outcomes live, writing
+        nothing.
+
+        KNOWN LIMITATION (accepted, ship-narrow — COR-037): predicate evaluation
+        is not memoised across the breadth of a fold. The `members` predicate runs
+        through the parent runner's per-invocation cache, but each member's outcome
+        and membership are resolved through a FRESH, uncached runner; and within a
+        single `status` render `resolve_cascade_outcome` is invoked 2–3× (precheck
+        gate + `position.cascade` surface + the blocked wait-reason) × N members —
+        so member predicates re-run per call. This is accepted for the narrow ship
+        (the member sets the bindings fold are small); a shared per-render fold
+        cache is deferred until a binding's set size makes it pay.
+        """
+        cascade = self.definition.cascade
+        if cascade is None:
+            return None
+
+        address = cascade.get("runs")
+        reducer = cascade.get("reducer")
+        members_predicate = cascade.get("members")
+        membership_predicate = cascade.get("membership")
+        if (
+            not isinstance(address, str)
+            or not address
+            or not isinstance(reducer, dict)
+            or not isinstance(members_predicate, dict)
+            or not isinstance(membership_predicate, dict)
+        ):
+            return self._cascade_failed(
+                address if isinstance(address, str) else "",
+                reducer,
+                "cascade declaration is incomplete (needs runs / members / "
+                "membership / reducer); failing closed",
+            )
+
+        op = reducer.get("op")
+        outcome = reducer.get("outcome")
+        threshold = reducer.get("threshold")
+        if op not in ("all", "count") or not isinstance(outcome, str) or not outcome:
+            return self._cascade_failed(
+                address, reducer, "cascade reducer names no valid op / outcome; failing closed"
+            )
+        if op == "count" and not isinstance(threshold, int):
+            return self._cascade_failed(
+                address,
+                reducer,
+                "cascade `count` reducer names no integer threshold; failing closed",
+            )
+
+        # The candidate-set source: ask the binding for THIS parent's candidate
+        # member ids (one predicate, threaded with the parent subject). The
+        # engine never enumerates the child's subjects itself.
+        candidates = self._cascade_candidates(members_predicate)
+        if candidates is None:
+            return self._cascade_failed(
+                address,
+                reducer,
+                f"could not read cascade members for parent {self.subject!r} "
+                "(the `members` predicate was indeterminate); failing closed",
+            )
+
+        reached = 0
+        total = 0
+        for member_id in candidates:
+            # Confirm membership one subject at a time (COR-032's line: the engine
+            # never holds a tree; it asks "does THIS subject belong to this
+            # parent?" per candidate).
+            belongs = self._cascade_member_belongs(membership_predicate, member_id)
+            if belongs.indeterminate:
+                # An INDETERMINATE membership test (the predicate errored / timed
+                # out) holds the WHOLE fold unresolved (fail-closed) — symmetric
+                # with an unresolved member OUTCOME below. We must not silently
+                # drop the candidate (that would look like "fewer members" and
+                # could let an `all` vacuously pass); the gate stays shut until
+                # the membership of every candidate is determinate.
+                return CascadeResolution(
+                    address=address,
+                    op=op,
+                    outcome=outcome,
+                    threshold=threshold if op == "count" else None,
+                    reached=reached,
+                    total=total,
+                    opened=False,
+                    indeterminate=True,
+                    reason=f"membership of candidate {member_id!r} of {address!r} "
+                    "is indeterminate (the `membership` predicate errored / timed "
+                    "out); the fold stays unresolved (fail-closed)",
+                )
+            if not belongs.result:
+                # A determinate non-member: cleanly excluded (a real non-member),
+                # not folded.
+                continue
+            total += 1
+            member_outcome, member_reason = self._resolve_member_outcome(address, member_id)
+            if member_outcome is None:
+                # Unresolved / indeterminate member holds the WHOLE fold unresolved
+                # (fail-closed) — the gate stays shut, never a false "all reached X".
+                # The member's own resolution reason is surfaced so a distinct
+                # cause (still-moving vs a cyclic self-embed refused by the
+                # inherited acyclicity guard) is visible on the fold.
+                return CascadeResolution(
+                    address=address,
+                    op=op,
+                    outcome=outcome,
+                    threshold=threshold if op == "count" else None,
+                    reached=reached,
+                    total=total,
+                    opened=False,
+                    indeterminate=True,
+                    reason=f"member {member_id!r} of {address!r} has no resolved "
+                    f"outcome yet; the fold stays unresolved (fail-closed): {member_reason}",
+                )
+            if member_outcome == outcome:
+                reached += 1
+
+        # The empty set is fail-closed: an `all`/`count` over zero members does
+        # NOT vacuously open the gate (a determinate "not yet", not indeterminate).
+        if total == 0:
+            return CascadeResolution(
+                address=address,
+                op=op,
+                outcome=outcome,
+                threshold=threshold if op == "count" else None,
+                reached=0,
+                total=0,
+                opened=False,
+                indeterminate=False,
+                reason=f"no members of {address!r} belong to parent {self.subject!r} "
+                "yet (no candidates, or candidates existed but none were members — "
+                "the two collapse); the empty set does not vacuously open the gate "
+                "(fail-closed)",
+            )
+
+        if op == "all":
+            opened = reached == total
+            reason = (
+                f"all {total} member(s) reached {outcome!r}"
+                if opened
+                else f"{reached}/{total} member(s) reached {outcome!r} (not all)"
+            )
+        else:  # count
+            assert isinstance(threshold, int)
+            opened = reached >= threshold
+            reason = (
+                f"{reached}/{total} member(s) reached {outcome!r} "
+                f"(threshold {threshold}{'; met' if opened else '; not met'})"
+            )
+        return CascadeResolution(
+            address=address,
+            op=op,
+            outcome=outcome,
+            threshold=threshold if op == "count" else None,
+            reached=reached,
+            total=total,
+            opened=opened,
+            indeterminate=False,
+            reason=reason,
+        )
+
+    def _cascade_failed(
+        self, address: str, reducer: Any, reason: str
+    ) -> CascadeResolution:
+        """A fail-closed cascade resolution for a malformed declaration (the gate
+        reads it as indeterminate, like an unrecognised gate kind)."""
+        op = reducer.get("op") if isinstance(reducer, dict) else None
+        outcome = reducer.get("outcome") if isinstance(reducer, dict) else None
+        threshold = reducer.get("threshold") if isinstance(reducer, dict) else None
+        return CascadeResolution(
+            address=address,
+            op=op if isinstance(op, str) else "",
+            outcome=outcome if isinstance(outcome, str) else None,
+            threshold=threshold if isinstance(threshold, int) else None,
+            reached=0,
+            total=0,
+            opened=False,
+            indeterminate=True,
+            reason=reason,
+        )
+
+    def _cascade_candidates(self, members_predicate: dict[str, Any]) -> list[str] | None:
+        """Read the parent-scoped candidate member ids from the `members`
+        predicate (COR-037 candidate-set seam), or None if indeterminate.
+
+        Run ONCE, threaded with THIS parent's subject (the runner's `subject`),
+        the predicate returns `{members: ["id", ...]}` — the candidate set the
+        engine folds over. This is the content-free seam the engine reads the set
+        through; the engine never enumerates the child's subjects itself.
+        """
+        payload = self.runner._run(members_predicate)
+        if payload is None:
+            return None
+        raw = payload.get("members")
+        if not isinstance(raw, list):
+            return None
+        # Preserve order, drop non-string / empty ids defensively.
+        return [str(m) for m in raw if isinstance(m, str) and m]
+
+    def _cascade_member_belongs(
+        self, membership_predicate: dict[str, Any], member_id: str
+    ) -> PredicateOutcome:
+        """Confirm one candidate belongs to this parent (COR-037), asking the
+        per-subject `membership` predicate "does THIS subject belong to this
+        parent?". Run through a per-member runner so the predicate is threaded
+        with the candidate's subject id (single-subject, one at a time — the
+        engine never holds a tree).
+
+        Returns the raw `PredicateOutcome` so the caller can act on the three
+        distinct answers (COR-037, fail-closed): a determinate `result=True`
+        member is folded; a determinate `result=False` non-member is cleanly
+        excluded; and an INDETERMINATE membership test holds the whole fold
+        unresolved rather than silently dropping the candidate (a dropped
+        candidate would look like "fewer members" and could let an `all`
+        vacuously pass)."""
+        member_runner = PredicateRunner(
+            capability=self.definition.capability,
+            capability_dir=self.definition.capability_dir,
+            repo_root=self.repo_root,
+            subject=member_id,
+        )
+        return member_runner.evaluate_detection(membership_predicate)
+
+    def _resolve_member_outcome(
+        self, address: str, member_id: str
+    ) -> tuple[str | None, str]:
+        """Resolve ONE member's terminal outcome via COR-036's single-inner
+        resolution (the per-subject step the fold reuses). Returns
+        `(outcome, reason)`: `outcome` is the member's terminal state id, or None
+        when the member has not reached a terminal outcome or could not be
+        resolved (either way the fold treats it as unresolved → fail-closed). The
+        `reason` is the resolution's own reason, surfaced so the fold can show a
+        distinct cause (still-moving vs a cyclic self-embed) on an unresolved
+        member.
+
+        The member is resolved exactly as composition resolves an embedded inner:
+        a synthetic embedding `{runs: <child address>, subject: <member id>}` run
+        through the shared `_resolve_inner`. So this is the single-LEVEL per-subject
+        step — it reads the member's detected position and asks "is it terminal?";
+        it does NOT recurse the member's own subprocess/cascade gates (cascade adds
+        breadth across the member set, not depth). The acyclicity guard still
+        holds (this engine's resolution stack is inherited), so a cascade whose
+        child is the parent process itself is refused like a cyclic embedding.
+        """
+        resolution = self._resolve_inner({"runs": address, "subject": member_id})
+        if resolution.indeterminate:
+            return None, resolution.reason
+        return resolution.outcome, resolution.reason
+
     # --- move prechecks --------------------------------------------------
 
     def transitions_from(self, state_id: str | None) -> list[dict[str, Any]]:
@@ -897,6 +1267,9 @@ class ProcessEngine:
             gate = t.get("gate")
             if isinstance(gate, dict) and gate.get("kind") == "subprocess-outcome":
                 outcome = self._evaluate_subprocess_gate(gate, state_id)
+                has_gate = True
+            elif isinstance(gate, dict) and gate.get("kind") == "cascade-outcome":
+                outcome = self._evaluate_cascade_gate()
                 has_gate = True
             elif isinstance(gate, dict):
                 outcome = self.runner.evaluate_gate(gate, actor)
@@ -955,6 +1328,39 @@ class ProcessEngine:
             reason = f"inner reached outcome {resolution.outcome!r}, not {expected!r}"
         return PredicateOutcome(
             result=passed, reason=reason, detail={"outcome": resolution.outcome}
+        )
+
+    def _evaluate_cascade_gate(self) -> PredicateOutcome:
+        """Compute a `cascade-outcome` gate (COR-037): pass iff the process's
+        declared `cascade` fold resolves OPEN.
+
+        Mirrors the `subprocess-outcome` kind — the ENGINE computes `result`
+        (here from the fold over the child's members) rather than trusting a
+        predicate. Fail-closed (indeterminate) when the fold is unresolved (any
+        member unresolved, or a malformed cascade declaration); a determinate fold
+        that has not opened (not all reached X / threshold not met / empty set)
+        simply does not pass (the parent waits) — that is NOT indeterminate, it is
+        a closed gate."""
+        resolution = self.resolve_cascade_outcome()
+        if resolution is None:
+            # A cascade-outcome gate on a process that declares no `cascade` is a
+            # definition error; fail closed (engine/definition skew).
+            return PredicateOutcome(
+                result=False,
+                reason="cascade-outcome gate on a process that declares no `cascade`; "
+                "failing closed",
+                indeterminate=True,
+            )
+        return PredicateOutcome(
+            result=resolution.opened,
+            reason=resolution.reason,
+            indeterminate=resolution.indeterminate,
+            detail={
+                "op": resolution.op,
+                "outcome": resolution.outcome,
+                "reached": resolution.reached,
+                "total": resolution.total,
+            },
         )
 
     # --- blocked (the derived human-pause / wait overlay, COR-034) -------
@@ -1102,6 +1508,26 @@ class ProcessEngine:
             if not self.has_no_legal_move(position, checks):
                 return None
             resume_reason = self._subprocess_wait_reason(position.state_id)
+        elif blocked_on == "awaiting-cascade-outcome":
+            # COR-037 (the AGGREGATE wait): blocked while parked at a state whose
+            # outgoing `cascade-outcome` gate has not yet resolved OPEN — i.e. the
+            # fold over the declared child's members has not opened, so the parent
+            # has no legal move. AUTO-CLEARING like awaiting-subprocess-outcome,
+            # but the "condition" IS the live FOLD carried by the cascade-outcome
+            # gate (no `resume_when` — the fold is the check, re-evaluated live in
+            # `has_no_legal_move`). It clears the instant the fold resolves open (a
+            # gate opens -> a legal move exists). Acyclic by construction: the
+            # parent waits only on its members' already-resolved terminal outcomes,
+            # and a terminal subject waits on nothing, so the aggregate wait cannot
+            # join a wait cycle (COR-037).
+            if not self._has_cascade_gated_move(position.state_id):
+                # The declaration says awaiting-cascade-outcome but the position
+                # has no outgoing cascade-outcome gate — the wait does not apply
+                # here (the subject is not parked at the fold).
+                return None
+            if not self.has_no_legal_move(position, checks):
+                return None
+            resume_reason = self._cascade_wait_reason()
         else:
             # An unrecognised / future reason: fail closed (no overlay) — the
             # schema enum already rejects these, so this is engine/definition
@@ -1139,6 +1565,25 @@ class ProcessEngine:
         resolution = self.resolve_subprocess_outcome(state_id)
         if resolution is None:
             return "awaiting an embedded inner process to reach a wired outcome"
+        return resolution.reason
+
+    def _has_cascade_gated_move(self, state_id: str | None) -> bool:
+        """Whether the current state has an outgoing `cascade-outcome` gated
+        transition (COR-037) — the position at which the aggregate wait applies."""
+        for t in self.transitions_from(state_id):
+            gate = t.get("gate")
+            if isinstance(gate, dict) and gate.get("kind") == "cascade-outcome":
+                return True
+        return False
+
+    def _cascade_wait_reason(self) -> str:
+        """The human-readable reason an `awaiting-cascade-outcome` wait (COR-037)
+        is still live — the cascade fold's live status (how many of how many
+        members reached the named outcome). Audit colour only; the live decider is
+        `has_no_legal_move` above."""
+        resolution = self.resolve_cascade_outcome()
+        if resolution is None:
+            return "awaiting a declared cascade fold to resolve open"
         return resolution.reason
 
     def _wait_since(self) -> str | None:
@@ -1641,6 +2086,12 @@ def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
                 lines.append(f"    inner outcome: {resolution.outcome}")
             else:
                 lines.append(f"    inner: {resolution.reason}")
+        # COR-037: when the process declares a cascade and the current state has
+        # the cascade-gated move, surface the live fold over the child's members.
+        cascade = engine.resolve_cascade_outcome()
+        if cascade is not None and engine._has_cascade_gated_move(position.state_id):
+            lines.append(f"    folds {cascade.address} ({cascade.op})")
+            lines.append(f"    fold: {cascade.reason}")
 
     # How it got here (journal).
     journal = engine.read_journal()
@@ -1725,6 +2176,13 @@ def render_status_json(engine: ProcessEngine, actor: str) -> str:
     # COR-036: the live cross-process resolution when parked in a subprocess
     # state (None when the current state embeds no inner process).
     resolution = engine.resolve_subprocess_outcome(position.state_id)
+    # COR-037: the live cascade fold when the current state has the cascade-gated
+    # move (None when the process declares no cascade or it does not apply here).
+    cascade = (
+        engine.resolve_cascade_outcome()
+        if engine._has_cascade_gated_move(position.state_id)
+        else None
+    )
 
     payload: dict[str, Any] = {
         "process": f"{definition.capability}:{definition.process_id}",
@@ -1746,6 +2204,23 @@ def render_status_json(engine: ProcessEngine, actor: str) -> str:
                     "outcome": resolution.outcome,
                     "indeterminate": resolution.indeterminate,
                     "reason": resolution.reason,
+                }
+            ),
+            # COR-037: the live fold over the declared child's members (None when
+            # no cascade-gated move applies here). `opened` is the fold's yes/no.
+            "cascade": (
+                None
+                if cascade is None
+                else {
+                    "runs": cascade.address,
+                    "op": cascade.op,
+                    "outcome": cascade.outcome,
+                    "threshold": cascade.threshold,
+                    "reached": cascade.reached,
+                    "total": cascade.total,
+                    "opened": cascade.opened,
+                    "indeterminate": cascade.indeterminate,
+                    "reason": cascade.reason,
                 }
             ),
         },
