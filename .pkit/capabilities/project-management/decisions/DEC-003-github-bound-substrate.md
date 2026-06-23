@@ -11,6 +11,8 @@ source:
   captured_at: 2026-05-21
 ---
 
+> **Partially superseded by [DEC-036](DEC-036-substrate-pluggable-adoption.md).** The "concrete-is-sharper — no mapping/indirection layer" rationale (leg b, the rejected "GitHub-bound with mapping notes" alternative's *concreteness* argument) is overturned for brownfield adopters: axes resolve *through* a `substrate-map.yaml`. What stands intact: **GitHub remains the only bound tracker** and the Issues / sub-issues / Milestones / Projects v2 / GraphQL substrate vocabulary below — the remap is intra-GitHub (label→label, title-prefix, open/closed), not a tracker-neutral abstraction, so this record's cross-tracker-decay concern (leg a) is *not* reopened.
+
 ## Context
 
 A project-management capability has to commit to a substrate. Either it names a specific tracker's primitives directly (Issues, Milestones, Projects v2 fields, GraphQL mutations), or it abstracts the tracker behind a generic vocabulary (work-item, parent-ref, status-field, classification-field) and leaves binding to adopter configuration. The substrate choice ripples through every schema (do field names match GitHub's API surface?), every skill (does the agent target a tracker abstraction or a specific tracker's CLI?), and every adopter's install (is the capability ready to run, or does it need a tracker adapter first?).
