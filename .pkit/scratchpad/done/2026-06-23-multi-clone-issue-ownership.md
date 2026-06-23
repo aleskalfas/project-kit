@@ -2,6 +2,9 @@
 authors:
   - Aleš Kalfas <kalfas.ales@gmail.com>
 started: 2026-06-23
+retired: 2026-06-23
+produced:
+  - DEC-035
 ---
 
 # Multi-clone issue ownership
@@ -96,6 +99,26 @@ A pull landed two pm decisions that reshape the substrate this feature rides. Ne
 
 Opt-in, default-off, activated solely by setting a **clone-local, gitignored instance id** (`set-instance <N>`, pool default 4). Ownership is carried by a GitHub **`instance:N` label** (created lazily on first use; the `(assignee, instance:N)` pair is the owner) — never the assignee handle (impossible on GitHub), never a committed config. An instance owns a **realm**: issues are stamped at **creation** (the whole filed tree — containers + leaves), with `start-work` claiming **unclaimed-commons** issues (legacy / human-filed / pre-feature). Released on terminal transitions + `handoff-issue`. Work is redistributed by **reclaim — both push (`--to-instance N`) and pull (`--to-instance self`), single or subtree (`--recursive`)** — the sanctioned cross-realm path. Ordinary lifecycle verbs acting on **another** realm's issue are **bypassable-with-audit** (reclaim is the clean alternative). Listings **show everything, signed** by realm (`● mine / ○ instance N / · unclaimed`), `--mine` to narrow. Naming discipline: the concept is **instance ownership**, never "membership" (collides with DEC-021 team membership and DEC-034/COR-037 cascade membership).
 
+## Post-review refinements (2026-06-23, after critic + architect)
+
+The adversarial gate (critic + architect) found the *visibility* half clean but the *enforcement* half cracked. Resolutions so far:
+
+- **D4 reframed — "catch-and-fix", not "prevent" (resolves the critic's false-confidence finding RF-2).** A gate in the pkit verbs stops the *everyday* clash (acting on an issue already visibly another clone's). The *same-instant* clash (two clones claim the same free issue before either's tag is visible) cannot be truly prevented — GitHub offers no atomic test-and-set on a label (claim is read-then-write, two steps). So the verb, right after stamping, **re-reads**; if it sees two instance tags, it has detected a collision and one clone **auto-backs-off** (removes its tag, abandons the claim, tells the user). Catch-and-resolve, not a lock. Honest framing required in the DEC: everyday clashes blocked; rare same-instant clashes detected-and-auto-resolved; no hard mutex is possible on GitHub labels.
+- **Tie-break — lowest instance number wins (user, 2026-06-23).** Both clones compute the winner identically from the two tags they see (no coordination, no referee): lowest `instance:N` keeps the issue; the higher-numbered clone backs off and notifies. Chosen over earliest-by-timestamp because it needs no event-history read, can't tie on the same second, and *which* of one user's clones wins is irrelevant — only that both agree instantly. Relies on clones having **distinct** numbers (the `set-instance` discipline; the one user-error to guard against).
+
+### Resolved after review (was open; now settled)
+
+- **RF-1 — owner model when creator ≠ assignee — RESOLVED (user, 2026-06-23): keep the `(assignee, instance:N)` pair; the instance pool is per-assignee; strip the tag on assignee change.**
+  - The `instance:N` tag is meaningful only **paired with its assignee** — `instance:2` is *that assignee's* clone 2. Each assignee has their own pool of up to 4; a different assignee's `instance:2` is a distinct thing; an assignee who runs no clones never engages the feature.
+  - **On assignee change to a different person, strip the instance tag** — it belonged to the prior assignee; the new assignee re-claims with their own clone (or leaves it unclaimed if they don't use clones).
+  - **Filing for another** (`create-issue --assignee bob` by Alice's clone): the assignee is Bob from the start, so Alice's clone-tag does not stick (assignee ≠ the tagging clone's human) — same rule as an assignee change. Bob claims it himself when he picks it up.
+  - **Reclaim between one person's own clones** (Alice clone 1 → Alice clone 2) is **not** an assignee change (same human) — only the `instance:N` flips; assignee unchanged. This is the D6 push/pull path and is unaffected by the strip-on-assignee-change rule.
+  - Note (deferred edge, not blocking): the lowest-number-wins tie-break (RF-2) is unambiguous within one assignee's distinct-numbered clones — the actual use case. A cross-*human* same-instant race (Alice-clone-1 vs Bob-clone-1) would collide on the bare `instance:1` label; left as a deferred edge given the single-user scope (advisory/catch-and-fix covers it loosely; revisit if a real multi-human-clone adopter appears).
+- **G-1 / whole-tree-vs-leaf claim — RESOLVED (user, 2026-06-23): whole-tree (B).** Containers carry the creator's instance tag from creation; the creator owns the whole filed arc. The two consequences this raises are handled, not waved away:
+  - **Stale-tag-on-cascade-close (the G-1 bug):** when a container auto-closes via the COR-037 fold, the pm **closure wrapper that observes the fold result strips the instance tag** as a pm-domain side-effect — the same wrapper seam branch-creation uses (architect's clean boundary). The engine fold stays realm-blind (never reads/writes the tag); the pm wrapper does the cleanup. So no container closes wearing a stale tag, and ownership never leaks into the engine.
+  - **Partial-realm states** (clone 2 reclaims 2 of clone 1's 5 children) are **legible, not a bug**: each issue carries its own tag and the signed listing (D5) shows it — "EPIC clone-1; children #12,#13 clone-2." That's accurate reporting of a real distribution, which is the whole point of reclaim (D6).
+- **handoff-issue contract extension** — architect ESCALATION: the `--to-instance` reclaim flags extend an accepted command (DEC-026); needs human sign-off + a reciprocal note at DEC time.
+
 ## Status
 
-**Design complete — D1–D7 all resolved.** Aligned to pm 1.114.0 (post DEC-033 rebind + DEC-034 cascade-slot-binding). Ready to crystallise. Next: run the resolved design past `critic` (and `architect` — it adds an ownership axis, touches the post-rebind verb seam, introduces a clone-local config, and adds a write-side stamping path across `create-issue` / `start-work` / `handoff-issue` / listing); then author a pm `DEC-NNN` (**instance ownership**) via `decision-author` and slice the implementation into an EPIC + Tasks (batch-plan), retiring this note with `pkit scratchpad done multi-clone-issue-ownership --produced DEC-NNN`.
+**Design mostly resolved; 2 open points + 1 escalation after the adversarial gate (see above).** Earlier D1–D7 all resolved, Aligned to pm 1.114.0 (post DEC-033 rebind + DEC-034 cascade-slot-binding). Ready to crystallise. Next: run the resolved design past `critic` (and `architect` — it adds an ownership axis, touches the post-rebind verb seam, introduces a clone-local config, and adds a write-side stamping path across `create-issue` / `start-work` / `handoff-issue` / listing); then author a pm `DEC-NNN` (**instance ownership**) via `decision-author` and slice the implementation into an EPIC + Tasks (batch-plan), retiring this note with `pkit scratchpad done multi-clone-issue-ownership --produced DEC-NNN`.
