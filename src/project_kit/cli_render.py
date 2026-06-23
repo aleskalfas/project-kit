@@ -198,7 +198,8 @@ def set_wrap_width(width: int) -> None:
     _wrap_width = width
 
 
-def wrap(text: str, *, indent: str, hang: str = "", width: int | None = None) -> list[str]:
+def wrap(text: str, *, indent: str, hang: str = "", width: int | None = None,
+         first_line_indent: int = 0) -> list[str]:
     """Lay out one author-supplied prose field into indented lines (ADR-024).
 
     The one place prose breaks. Two transformations, split by ADR-024 §2:
@@ -216,12 +217,33 @@ def wrap(text: str, *, indent: str, hang: str = "", width: int | None = None) ->
       copy-pasteable (ADR-024 §3). The text passed here must be **plain** (wrap
       *before* ``style()``); the caller styles the returned lines.
 
+    ``first_line_indent`` is the visible width **already consumed on line 1** by a
+    caller-built prefix sitting before the prose tail — the inline-suffix case
+    (ADR-024 follow-up): ``Where: <state> — <meaning>`` and
+    ``<marker> <to> [<trigger>] — <why>``, where the prefix is a runtime-variable,
+    already-styled string this leaf must not re-derive. To keep ``wrap`` style-free
+    and its return contract intact, the caller passes only the prefix's **visible
+    width** (not the styled prefix itself), so:
+
+    - ``out[0]`` carries the line-1 prose tail with **no leading indent** — the
+      caller concatenates its own styled prefix + ``out[0]``. The line-1 prose
+      budget reserves the prefix: ``width - first_line_indent`` (``first_line_indent``
+      already counts every leading visible column of line 1, so ``len(indent)`` is
+      NOT subtracted again — ``out[0]`` carries no ``indent``).
+    - ``out[1:]`` are continuation lines indented at ``indent + hang`` verbatim,
+      ready to append as-is.
+
+    With ``first_line_indent=0`` (the default) the prefix reservation is zero and
+    line 1 is ``indent + <text>`` exactly as before — byte-for-byte identical to
+    the pre-follow-up behaviour for the own-line callers.
+
     ``width=None`` reads the module-resolved ``_wrap_width``; ``NO_WRAP`` (the
     sentinel, or a width below the indent+hang+floor) means hanging-indent only.
     """
     resolved = _wrap_width if width is None else width
     author_lines = str(text).split("\n")
     cont_prefix = indent + hang
+    inline_suffix = first_line_indent > 0
 
     # Minimum-width floor (ADR-024 §3): a width that leaves less than the content
     # minimum after the deepest indentation is treated as no-wrap.
@@ -230,18 +252,56 @@ def wrap(text: str, *, indent: str, hang: str = "", width: int | None = None) ->
 
     out: list[str] = []
     for i, line in enumerate(author_lines):
-        prefix = indent if i == 0 else cont_prefix
+        # Only the very first emitted line (first author-line, first width-piece)
+        # wears the inline-suffix line-1 treatment: empty emitted prefix + the
+        # caller's prefix width reserved. Every other line — a later author-line,
+        # OR a width-wrap continuation of any author-line — hangs at the
+        # continuation prefix, the established sub-line rhythm. When NOT an
+        # inline suffix (first_line_indent=0), line 1 is the own-line indent and
+        # this collapses to the original single-budget behaviour exactly.
+        if i == 0 and inline_suffix:
+            emit_prefix, line1_consume = "", first_line_indent
+        elif i == 0:
+            emit_prefix, line1_consume = indent, len(indent)
+        else:
+            emit_prefix, line1_consume = cont_prefix, len(cont_prefix)
+
         if resolved <= 0:
-            out.append(prefix + line)
+            out.append(emit_prefix + line)
             continue
+
         # Hard-wrap this author-line to the visible column. textwrap measures the
         # plain text (we never pass styled text here, per ADR-024 §4), so its
         # character count is the visible width.
-        avail = max(resolved - len(prefix), 1)
+        if not (i == 0 and inline_suffix):
+            # Own-line author-line: a single budget for all its width-pieces,
+            # exactly as before — preserves byte-identity for first_line_indent=0.
+            avail = max(resolved - line1_consume, 1)
+            pieces = textwrap.wrap(
+                line, width=avail, break_long_words=False, break_on_hyphens=False
+            ) or [""]
+            out.extend(emit_prefix + piece for piece in pieces)
+            continue
+
+        # Inline-suffix line 1: piece 0 reserves the caller's prefix width; the
+        # remainder reflows at the continuation budget (the sub-line rhythm), so a
+        # long state-id / trigger does not collapse the continuation width.
+        # line 1's budget is deliberately NOT floored (only cont_prefix is, above):
+        # break_long_words=False bounds the degradation — a tiny line1_avail emits
+        # one whole word and reflows the rest at cont_avail, never one char per line.
+        line1_avail = max(resolved - line1_consume, 1)
+        cont_avail = max(resolved - len(cont_prefix), 1)
         pieces = textwrap.wrap(
-            line, width=avail, break_long_words=False, break_on_hyphens=False
+            line, width=line1_avail, break_long_words=False, break_on_hyphens=False
         ) or [""]
-        out.extend(prefix + piece for piece in pieces)
+        out.append(emit_prefix + pieces[0])
+        if len(pieces) > 1:
+            remainder = " ".join(pieces[1:])
+            cont_pieces = textwrap.wrap(
+                remainder, width=cont_avail,
+                break_long_words=False, break_on_hyphens=False,
+            ) or [""]
+            out.extend(cont_prefix + piece for piece in cont_pieces)
     return out
 
 

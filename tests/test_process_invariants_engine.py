@@ -251,6 +251,46 @@ def test_violation_surfaces_on_status_narrative(fixture_repo: Path) -> None:
     assert "evidence-backed" in text
 
 
+def test_invariant_why_wraps_with_continuation_at_eight_spaces(fixture_repo: Path) -> None:
+    # ADR-024 follow-up (#223): the invariant `why` is an inline suffix of
+    # `    ✗ <id> — <why>`. Under a narrow width it must wrap with continuation
+    # lines hung at the 8-space sub-line rhythm (matching the reason line), NOT
+    # dumped flush at column 0.
+    import re
+
+    from project_kit import cli_render
+
+    _set_evidence(fixture_repo, ok=False)
+    try:
+        cli_render.set_wrap_width(50)
+        text = render_status_narrative(_engine(fixture_repo), actor="agent")
+    finally:
+        cli_render.set_wrap_width(cli_render.NO_WRAP)
+    plain = [re.sub(r"\x1b\[[0-9;]*m", "", ln) for ln in text.splitlines()]
+    # the marker+id+start-of-why is one line ending mid-why (it wrapped)
+    idx = next(i for i, ln in enumerate(plain)
+               if plain[i].lstrip().startswith("✗ ") and " — " in plain[i])
+    inv_line = plain[idx]
+    assert inv_line.startswith("    ✗ ")  # 4-space invariant line
+    # Reconstruct the why across the line-1 tail + the 8-space continuation lines
+    # that immediately follow, and assert the FULL why text reappears. G2: this
+    # isolates the why-continuation from the reason line below (which also wraps at
+    # 8 spaces) — if the why-continuation were dropped, the tail would run straight
+    # into the reason and the full why sentence would NOT reconstruct.
+    tail = inv_line.split(" — ", 1)[1]
+    conts = []
+    for ln in plain[idx + 1:]:
+        if ln.startswith("        ") and ln.strip():
+            conts.append(ln.strip())
+        else:
+            break
+    assert conts and all(ln.startswith("        ") for ln in plain[idx + 1:idx + 1 + len(conts)])
+    reconstructed = " ".join([tail, *conts])
+    assert "Every factual claim must resolve to an evidence record." in reconstructed, (
+        "the why must wrap with its continuation hung at 8 spaces, not dump flush"
+    )
+
+
 def test_violation_surfaces_on_status_json(fixture_repo: Path) -> None:
     _set_evidence(fixture_repo, ok=False)
     payload = json.loads(render_status_json(_engine(fixture_repo), actor="agent"))

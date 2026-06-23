@@ -482,6 +482,109 @@ def test_piped_narrative_still_hangs_multi_line_prose(paused_repo: Path) -> None
         assert cont.startswith("          ")  # hanging-indented, not column 0
 
 
+# --- ADR-024 follow-up: inline-suffix prose (meaning, transition why) --------
+
+# A long `meaning` (on the parked state) and a long `why` (on the parked→done
+# move) — the two inline-suffix fields the first cut deferred. Long enough that a
+# TTY width forces continuation lines.
+_LONG_MEANING = (
+    "Parked awaiting a human reviewer who must read the rendered hand-off, "
+    "weigh it against the brief, and either approve the work or send it back "
+    "with notes for another pass."
+)
+_LONG_WHY = (
+    "Approve only once a reviewer has signed off on the rendered output and "
+    "confirmed it matches the brief, the constraints, and the accepted "
+    "decisions it draws on."
+)
+
+
+def _set_long_prose(repo: Path) -> None:
+    """Rewrite the parked state's `meaning` and the approve move's `why` with
+    long prose, so the inline-suffix wrap is exercised on a TTY width."""
+    defn = repo / ".pkit" / "capabilities" / "fixture" / "schemas" / "pause-demo.yaml"
+    text = defn.read_text(encoding="utf-8")
+    text = text.replace(
+        "      meaning: Parked awaiting a human reviewer.",
+        f"      meaning: {_LONG_MEANING}",
+    )
+    text = text.replace(
+        "      why: Approve once a reviewer has signed off.",
+        f"      why: {_LONG_WHY}",
+    )
+    defn.write_text(text, encoding="utf-8")
+
+
+def test_long_meaning_wraps_with_continuations_at_four_spaces(paused_repo: Path) -> None:
+    # `meaning` is the tail of `Where: <state> — <meaning>`. On a TTY width it
+    # wraps; continuations land at the 4-space sub-detail rhythm (NOT column 0,
+    # NOT aligned under the variable `Where: <state> — ` prefix).
+    _set_long_prose(paused_repo)
+    _set_state(paused_repo, "parked")
+    cli_render.set_wrap_width(60)
+    text = render_status_narrative(_engine(paused_repo), actor="agent")
+    plain = _ANSI.sub("", text)
+    lines = plain.splitlines()
+    where_idx = next(i for i, ln in enumerate(lines) if ln.startswith("  Where:"))
+    assert lines[where_idx].startswith("  Where: parked — ")
+    # The next line is a meaning continuation (the meaning is long enough to wrap).
+    cont = lines[where_idx + 1]
+    assert cont.startswith("    ")  # 4-space sub-detail rhythm
+    assert not cont.startswith("     ")  # exactly 4, not deeper
+    assert cont.strip()  # carries prose, not blank
+
+
+def test_long_why_wraps_with_continuations_at_eight_spaces(paused_repo: Path) -> None:
+    # `why` is the tail of `<marker> <to> [<trigger>] — <why>`. On a TTY width it
+    # wraps; continuations land at the 8-space legal-move sub-line rhythm.
+    _set_long_prose(paused_repo)
+    _set_state(paused_repo, "parked")
+    cli_render.set_wrap_width(60)
+    text = render_status_narrative(_engine(paused_repo), actor="agent")
+    plain = _ANSI.sub("", text)
+    lines = plain.splitlines()
+    move_idx = next(
+        i for i, ln in enumerate(lines) if ln.lstrip().startswith(("✓", "✗", "?"))
+        and "[approve]" in ln
+    )
+    assert " — " in lines[move_idx]  # the why suffix opened on the move line
+    cont = lines[move_idx + 1]
+    assert cont.startswith("        ")  # 8-space sub-line rhythm
+    assert not cont.startswith("         ")  # exactly 8, not deeper
+    assert cont.strip()
+
+
+def test_piped_inline_suffixes_gain_no_width_breaks(paused_repo: Path) -> None:
+    # Piped (NO_WRAP): the long meaning/why stay on their single composed line —
+    # no width-driven breaks (the weaker presentation net, ADR-024 §4).
+    _set_long_prose(paused_repo)
+    _set_state(paused_repo, "parked")
+    cli_render.set_wrap_width(cli_render.NO_WRAP)
+    text = render_status_narrative(_engine(paused_repo), actor="agent")
+    plain = _ANSI.sub("", text)
+    # Each long field survives intact on one composed line.
+    assert f"  Where: parked — {_LONG_MEANING}" in plain
+    assert f" — {_LONG_WHY}" in plain
+
+
+def test_json_byte_stable_with_long_inline_suffixes(paused_repo: Path) -> None:
+    # The load-bearing invariant holds with the inline-suffix fields populated:
+    # render_status_json never calls wrap(), so its bytes are identical across
+    # width settings even with long meaning/why.
+    _set_long_prose(paused_repo)
+    _set_state(paused_repo, "parked")
+
+    def _json() -> str:
+        return render_status_json(_engine(paused_repo), actor="agent")
+
+    cli_render.set_wrap_width(cli_render.NO_WRAP)
+    baseline = _json()
+    cli_render.set_wrap_width(60)
+    assert _json() == baseline
+    cli_render.set_wrap_width(cli_render.NO_WRAP)
+    assert _json() == baseline
+
+
 # --- awaiting-condition: divergence (gate vs resume_when) -----------------
 
 # DIVERGENCE: the `verify` move's exit gate reads `_gate`, while the subject's
