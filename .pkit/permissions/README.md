@@ -41,6 +41,22 @@ Grant scope globs constrain the reach of an allow grant. The dimension matched d
 
 - **No scope** (absent): the grant is unconstrained — any cwd / any host.
 
+## Compound commands (segment splitting + leading-`cd` strip)
+
+A compound Bash command reaches `decide()` as one string. The decision core splits it on `&&` / `||` / `|` / `;` with a **dumb regex segmenter** (no shell parser — see ADR-025 for the altitude rationale: the hook runs bare `python3` in-sandbox, where hosting an adversarial-input parser would trade an abstain-on-doubt splitter for parsing fragility) and decides on the per-segment matches. Two prefix-strips reduce false prompts over already-granted intent:
+
+- **Env-prefix strip** (`segments()`): a leading `export` / `VAR=value` on a segment is dropped before matching, so `export GH_HOST=x && gh pr list` matches `gh pr list`.
+
+- **Leading-`cd` strip** (ADR-025 Phase 1): when the **first** segment is a bare `cd <path>` followed by `&&` / `;`, the core drops it and decides on the remainder against the unchanged grant model — `cd src && gh pr list` auto-approves exactly as `gh pr list` would. It is a prompt-reduction over already-granted intent, **never a new grant** (`cd` only changes the cwd, which the intent layer does not confine), and the remainder is decided at the **original** cwd (the strip can never grant a directory-scoped privilege the un-stripped command lacked).
+
+  The strip is deliberately conservative on two axes, both fail-closed (ADR-004 decision point 4):
+
+  - **Only a bare `cd`** is stripped — a single path arg, no quotes, no `$()`, no backtick, no redirection, no flags. A `cd "/x; rm -rf ~" && …` is *not* a bare `cd`, so it is not stripped and falls through to the full-command path, where its deny still binds. Deny-wins is never weakened.
+
+  - **A remainder carrying an untrusted construct ABSTAINS** — if the remainder after the strip contains a quote, `$()`, a backtick, or a `<` / `>` redirection (anything the dumb splitter can't be trusted on), the decision is **abstain (prompt)**, never auto-allow. So `cd /x && echo z > ~/f` and `cd /x && gh $(rm -rf ~)` prompt rather than slip through.
+
+  The broader "auto-approve any compound whose every segment is independently safe" widening is **rejected as unsound** (a per-segment matcher is blind to composition) and deferred per COR-007 — the leading-`cd` strip is the only widening taken. See ADR-025.
+
 ## Default-agent subject resolution
 
 The hook resolves the subject for every PreToolUse call.  Subject resolution
