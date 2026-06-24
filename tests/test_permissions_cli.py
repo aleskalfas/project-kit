@@ -963,6 +963,11 @@ def test_exclude_needs_command_or_flag(tmp_path, monkeypatch):
 
 
 def test_setup_autonomy_applies_accommodations_and_nudges_widening(tmp_path, monkeypatch):
+    from project_kit import permissions as perm
+    # This test exercises the NUDGE-ONLY (optional widening) path; neutralise the
+    # required-exclusion auto-apply (its own tests below) so the run is
+    # deterministic regardless of the host platform / installed uv version.
+    monkeypatch.setattr(perm, "_uv_required_exclusion", lambda _r: False)
     proj = _with_adapter(_setup(tmp_path))
     (proj / "uv.lock").write_text("")
     (proj / "Dockerfile").write_text("FROM x")
@@ -983,6 +988,11 @@ def test_setup_autonomy_applies_accommodations_and_nudges_widening(tmp_path, mon
 
 
 def test_setup_autonomy_down_reports_accommodation_residual(tmp_path, monkeypatch):
+    from project_kit import permissions as perm
+    # Deterministic across hosts: neutralise the required-exclusion auto-apply so
+    # the residual under test is the narrowing accommodation + the operator's
+    # manual docker widening (the required exclusion has its own teardown test).
+    monkeypatch.setattr(perm, "_uv_required_exclusion", lambda _r: False)
     proj = _with_adapter(_setup(tmp_path))
     (proj / "uv.lock").write_text("")
     _run(proj, monkeypatch, "setup", "autonomy")
@@ -990,6 +1000,215 @@ def test_setup_autonomy_down_reports_accommodation_residual(tmp_path, monkeypatc
     out = _run(proj, monkeypatch, "setup", "autonomy", "down")
     assert "narrowing accommodations remain" in out and "uv" in out
     assert "WIDENING exclusions remain" in out and "docker" in out
+
+
+# ---- required-exclusion auto-apply + self-heal (ADR-027, #256) ---------------
+#   Auto-apply the macOS uv exclusion ONLY when necessity is verified (version
+#   floor) and a uv repo marker is present; never on Linux, new-uv, or bare PATH.
+#   Distinct `_required` provenance, correct status attribution, self-heal, and
+#   teardown reversal. Tests mock `_read_uv_version` (the robust subprocess read)
+#   and `sys.platform` so they are deterministic on any host.
+
+from packaging.version import Version as _V  # noqa: E402
+
+
+def _force_uv(monkeypatch, *, platform="darwin", version="0.9.8"):
+    """Make the auto-apply predicate deterministic: pin the platform and the
+    installed uv version. version=None simulates uv unreadable / absent."""
+    from project_kit import permissions as perm
+    monkeypatch.setattr("sys.platform", platform)
+    monkeypatch.setattr(perm, "_read_uv_version",
+                        lambda: (_V(version) if version else None))
+
+
+def test_required_exclusion_auto_applies_on_macos_old_uv_with_marker(tmp_path, monkeypatch):
+    _force_uv(monkeypatch, platform="darwin", version="0.9.8")
+    proj = _with_adapter(_setup(tmp_path))
+    (proj / "uv.lock").write_text("")                 # real project use
+    out = _run(proj, monkeypatch, "setup", "autonomy")
+    # Loud, dedicated block (NOT folded into the quiet "accommodations:" line).
+    assert "Required exclusion (platform-mandatory" in out
+    assert "REQUIRED exclusion auto-applied: `uv`" in out
+    assert "OUTSIDE the OS box — UNCONFINED" in out
+    # Applied via the real primitive → lands in live settings excludedCommands.
+    assert "uv" in _sb(proj)["excludedCommands"]
+    # Distinct provenance tag — `_required`, NOT `_manual`.
+    prov_path = proj / ".pkit" / "permissions" / "project" / "sandbox-provenance.yaml"
+    from ruamel.yaml import YAML as _YAML
+    doc = _YAML(typ="safe").load(prov_path.open())
+    req = [e for e in doc["entries"]
+           if e.get("kind") == "exclude-command" and e.get("value") == "uv"]
+    assert req and req[0]["toolkit"] == "_required"
+    assert all(e.get("toolkit") != "_manual" for e in req)
+    # Not surfaced as a nudge too (would be double-reported).
+    assert "`uv` — REQUIRED on macOS" not in out
+
+
+@pytest.mark.parametrize("version", ["0.9.8", "0.9.9", "1.5.0"])
+def test_required_exclusion_auto_applies_on_every_version_while_no_fix(
+        tmp_path, monkeypatch, version):
+    # With no known-fixed release (the default), the Seatbelt panic is present in
+    # EVERY uv release — so auto-apply must fire on any readable version, NOT just
+    # at/below the first known-bad. The 0.9.9 case is the regression guard: the
+    # old `installed <= known-bad-floor` ceiling wrongly nudged it instead of
+    # auto-applying (0.9.9 <= 0.9.8 is False).
+    from project_kit import permissions as perm
+    assert perm._UV_KNOWN_FIXED_RELEASE is None      # default: no fix known
+    _force_uv(monkeypatch, platform="darwin", version=version)
+    proj = _with_adapter(_setup(tmp_path))
+    (proj / "uv.lock").write_text("")
+    out = _run(proj, monkeypatch, "setup", "autonomy")
+    assert "REQUIRED exclusion auto-applied: `uv`" in out
+    assert "uv" in _sb(proj)["excludedCommands"]
+    assert "`uv` — REQUIRED on macOS" not in out      # not also nudged
+
+
+def test_required_exclusion_auto_applies_below_fixed_release(tmp_path, monkeypatch):
+    # A known-fixed release is set, but the installed uv is still below it → the
+    # panic still occurs → auto-apply.
+    from project_kit import permissions as perm
+    monkeypatch.setattr(perm, "_UV_KNOWN_FIXED_RELEASE", "0.10.0")
+    _force_uv(monkeypatch, platform="darwin", version="0.9.9")
+    proj = _with_adapter(_setup(tmp_path))
+    (proj / "uv.lock").write_text("")
+    out = _run(proj, monkeypatch, "setup", "autonomy")
+    assert "REQUIRED exclusion auto-applied: `uv`" in out
+    assert "uv" in _sb(proj)["excludedCommands"]
+
+
+@pytest.mark.parametrize("version", ["0.10.0", "0.10.1"])
+def test_required_exclusion_not_applied_at_or_above_fixed_release(
+        tmp_path, monkeypatch, version):
+    # At OR above the known-fixed release the box can host the command → no
+    # auto-apply (the boundary is exclusive: < fixed required, >= fixed not).
+    from project_kit import permissions as perm
+    monkeypatch.setattr(perm, "_UV_KNOWN_FIXED_RELEASE", "0.10.0")
+    _force_uv(monkeypatch, platform="darwin", version=version)
+    proj = _with_adapter(_setup(tmp_path))
+    (proj / "uv.lock").write_text("")
+    out = _run(proj, monkeypatch, "setup", "autonomy")
+    assert "REQUIRED exclusion auto-applied" not in out
+    assert "excludedCommands" not in _sb(proj)
+
+
+def test_required_exclusion_not_applied_on_linux(tmp_path, monkeypatch):
+    _force_uv(monkeypatch, platform="linux", version="0.9.8")
+    proj = _with_adapter(_setup(tmp_path))
+    (proj / "uv.lock").write_text("")
+    out = _run(proj, monkeypatch, "setup", "autonomy")
+    assert "REQUIRED exclusion auto-applied" not in out
+    assert "excludedCommands" not in _sb(proj)
+
+
+def test_required_exclusion_not_applied_on_fixed_uv(tmp_path, monkeypatch):
+    # A uv at/above a known-fixed release: the box can host the command again.
+    from project_kit import permissions as perm
+    monkeypatch.setattr(perm, "_UV_KNOWN_FIXED_RELEASE", "0.10.0")
+    _force_uv(monkeypatch, platform="darwin", version="0.10.0")
+    proj = _with_adapter(_setup(tmp_path))
+    (proj / "uv.lock").write_text("")
+    out = _run(proj, monkeypatch, "setup", "autonomy")
+    assert "REQUIRED exclusion auto-applied" not in out
+    assert "excludedCommands" not in _sb(proj)
+
+
+def test_required_exclusion_not_applied_without_repo_marker(tmp_path, monkeypatch):
+    # macOS + old uv on PATH but NO uv.lock / pyproject.toml → not real project use.
+    _force_uv(monkeypatch, platform="darwin", version="0.9.8")
+    proj = _with_adapter(_setup(tmp_path))
+    out = _run(proj, monkeypatch, "setup", "autonomy")
+    assert "REQUIRED exclusion auto-applied" not in out
+    assert "excludedCommands" not in _sb(proj)
+
+
+def test_required_exclusion_not_applied_when_uv_unreadable(tmp_path, monkeypatch):
+    # Necessity cannot be VERIFIED (uv version unreadable) → do not auto-apply.
+    _force_uv(monkeypatch, platform="darwin", version=None)
+    proj = _with_adapter(_setup(tmp_path))
+    (proj / "uv.lock").write_text("")
+    out = _run(proj, monkeypatch, "setup", "autonomy")
+    assert "REQUIRED exclusion auto-applied" not in out
+    assert "excludedCommands" not in _sb(proj)
+
+
+def test_required_exclusion_status_attribution(tmp_path, monkeypatch):
+    _force_uv(monkeypatch, platform="darwin", version="0.9.8")
+    proj = _with_adapter(_setup(tmp_path))
+    (proj / "uv.lock").write_text("")
+    _run(proj, monkeypatch, "setup", "autonomy")
+    # An operator-set manual exclusion alongside the auto-applied required one.
+    _run(proj, monkeypatch, "sandbox", "exclude", "gh")
+    out = _run(proj, monkeypatch, "sandbox")    # no subcommand = status
+    # uv attributed as auto-applied (required), gh as operator-set — not vice versa.
+    assert "uv — auto-applied (required" in out
+    assert "gh — operator-set" in out
+
+
+def test_required_exclusion_self_heals_when_uv_fixed(tmp_path, monkeypatch):
+    # First run on old uv applies the required exclusion.
+    _force_uv(monkeypatch, platform="darwin", version="0.9.8")
+    proj = _with_adapter(_setup(tmp_path))
+    (proj / "uv.lock").write_text("")
+    # A separate operator manual carve-out that self-heal must NEVER touch.
+    _run(proj, monkeypatch, "sandbox", "exclude", "gh")
+    _run(proj, monkeypatch, "setup", "autonomy")
+    assert "uv" in _sb(proj)["excludedCommands"]
+    # uv upgraded past a fixed release → re-run self-heals the required entry.
+    from project_kit import permissions as perm
+    monkeypatch.setattr(perm, "_UV_KNOWN_FIXED_RELEASE", "0.10.0")
+    _force_uv(monkeypatch, platform="darwin", version="0.10.0")
+    out = _run(proj, monkeypatch, "setup", "autonomy")
+    assert "self-healed: `uv`" in out
+    assert "uv" not in _sb(proj).get("excludedCommands", [])
+    # The operator's manual gh exclusion is untouched.
+    assert "gh" in _sb(proj)["excludedCommands"]
+    prov_path = proj / ".pkit" / "permissions" / "project" / "sandbox-provenance.yaml"
+    from ruamel.yaml import YAML as _YAML
+    doc = _YAML(typ="safe").load(prov_path.open())
+    tags = {(e.get("value"), e.get("toolkit")) for e in doc["entries"]
+            if e.get("kind") == "exclude-command"}
+    assert ("gh", "_manual") in tags
+    assert ("uv", "_required") not in tags
+
+
+def test_required_exclusion_teardown_reverses_it_not_manual(tmp_path, monkeypatch):
+    _force_uv(monkeypatch, platform="darwin", version="0.9.8")
+    proj = _with_adapter(_setup(tmp_path))
+    (proj / "uv.lock").write_text("")
+    _run(proj, monkeypatch, "sandbox", "exclude", "gh")    # operator manual widening
+    _run(proj, monkeypatch, "setup", "autonomy")
+    out = _run(proj, monkeypatch, "setup", "autonomy", "down")
+    # Teardown reverses the auto-applied required exclusion and reports it.
+    assert "auto-applied `uv` exclusion removed" in out
+    assert "uv" not in _sb(proj).get("excludedCommands", [])
+    # The operator's manual gh exclusion stays (reported as residual widening).
+    assert "gh" in _sb(proj)["excludedCommands"]
+    assert "WIDENING exclusions remain" in out and "gh" in out
+
+
+def test_required_exclusion_idempotent_no_double_apply(tmp_path, monkeypatch):
+    _force_uv(monkeypatch, platform="darwin", version="0.9.8")
+    proj = _with_adapter(_setup(tmp_path))
+    (proj / "uv.lock").write_text("")
+    _run(proj, monkeypatch, "setup", "autonomy")
+    out = _run(proj, monkeypatch, "setup", "autonomy")    # re-run
+    # Already excluded → no second apply line, single excludedCommands entry.
+    assert _sb(proj)["excludedCommands"].count("uv") == 1
+    assert "REQUIRED exclusion auto-applied" not in out
+
+
+def test_optional_widening_stays_nudge_only_under_auto_apply(tmp_path, monkeypatch):
+    # Even with the required-exclusion auto-apply live, optional widenings
+    # (docker) are NEVER auto-applied — they stay nudge-only.
+    _force_uv(monkeypatch, platform="darwin", version="0.9.8")
+    proj = _with_adapter(_setup(tmp_path))
+    (proj / "uv.lock").write_text("")
+    (proj / "Dockerfile").write_text("FROM x")
+    out = _run(proj, monkeypatch, "setup", "autonomy")
+    assert "uv" in _sb(proj)["excludedCommands"]          # required: applied
+    assert "docker" not in _sb(proj)["excludedCommands"]  # optional: NOT applied
+    assert "`docker` — optional" in out                   # docker still nudged
+    assert "`pkit permissions sandbox exclude docker`" in out
 
 
 def test_setup_autonomy_seeds_profile_recommendations(tmp_path, monkeypatch):
