@@ -500,6 +500,14 @@ fail-closed fold semantics for free over the derived state.
   per-site convention; it also continuously verifies the ~26-site refactor stays
   done. Both halves together are the resolution-layer expression of EPIC #217
   constraint 1.
+- **Known boundary of guard half (b):** the grep/AST guard keys on a *literal* axis
+  prefix in source (`f"type:{v}"`, `"type:" + v`, `":".join`, `.format`) — it
+  catches every construction *shape* present today (scan-all over all non-seam
+  scripts), but a *variable*-prefix construction (`prefix_var + value` where
+  `prefix_var == "type:"`) evades it by design — that is the seam's own shape, which
+  is why the seam module is the one allow-listed exception. No call site does this
+  today; flagged so a future author does not mistake the guard for total. The seam
+  being the sole *named* exception is what keeps that boundary safe.
 - **The ~26-site refactor is in-scope for the trunk Feature.** Routing every
   write-path label through the seam (retiring the inline `f"type:{...}"` /
   `f"state:..."` constructions in `create-issue` / `move-issue` / `bootstrap` /

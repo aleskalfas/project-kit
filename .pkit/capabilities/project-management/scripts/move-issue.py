@@ -65,6 +65,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
+from _lib import axis_labels  # noqa: E402
 from _lib import lifecycle_inference as infer  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib.hooks import fire_hooks  # noqa: E402
@@ -469,11 +470,12 @@ def _compute_plan(
 ) -> Plan:
     if has_board:
         return Plan(issue_number=issue_number, add_label=None, remove_label=None)
-    # Label substrate.
-    new_label = f"state:{target_state}"
+    # Label substrate. Axis-label built only through the seam (ADR-026
+    # sole-constructor); greenfield resolves to the kit's own `state:<value>`.
+    new_label = axis_labels.label("state", target_state)
     old_label = None
     for lbl in labels:
-        if lbl.startswith("state:") and lbl != new_label:
+        if axis_labels.is_axis_label(lbl, "state") and lbl != new_label:
             old_label = lbl
             break
     return Plan(

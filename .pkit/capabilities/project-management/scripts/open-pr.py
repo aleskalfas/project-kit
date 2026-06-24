@@ -52,6 +52,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
+from _lib import axis_labels  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib.hooks import fire_hooks  # noqa: E402
 from _lib.membership import (  # noqa: E402
@@ -304,10 +305,9 @@ def _extract_issue_number(branch: str) -> int | None:
 def _conv_type_from_issue_labels(labels: list[str], classification: dict) -> str | None:
     """Map the issue's type:* label to the PR's Conventional Commits <type>."""
     mapping = classification.get("pr_type_mapping") or []
-    type_labels = [lbl for lbl in labels if lbl.startswith("type:")]
-    if not type_labels:
+    issue_label_value = axis_labels.read("type", labels)
+    if issue_label_value is None:
         return None
-    issue_label_value = type_labels[0].removeprefix("type:")
     for entry in mapping:
         if not isinstance(entry, dict):
             continue

@@ -59,6 +59,12 @@ from _lib.review_mode import (  # noqa: E402
 
 
 # Same mapping start-work uses.
+# TODO(Task B / DEC-036): these dict keys are read-sites that depend on the
+# greenfield `type:<value>` label encoding. In a brownfield substrate a
+# `[Feature]` title-prefix won't match these keys — the type read must go
+# through the seam's brownfield-aware `axis_labels.read("type", ...)` so the
+# mapping keys on the resolved kit value, not the raw label. Left as a static
+# read-map for Task A (greenfield only).
 TYPE_LABEL_TO_PREFIX = {
     "type:feature": "feat",
     "type:bug": "fix",

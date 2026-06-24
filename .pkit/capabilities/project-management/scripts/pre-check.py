@@ -44,6 +44,7 @@ from ruamel.yaml.error import YAMLError
 # pre-check and the DEC-032 contribution collector, per COR-007) and the
 # DEC-032 contribution collector itself (reused, not re-implemented).
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _lib import axis_labels  # noqa: E402
 from _lib.agents import agent_deploy_path, agent_is_deployed  # noqa: E402
 from _lib.review_contributions import collect_contributions  # noqa: E402
 
@@ -555,13 +556,15 @@ def _check_labels(
     type_values = (
         classification.get("axes", {}).get("type", {}).get("values", [])
     )
-    missing_type = [v for v in type_values if f"type:{v}" not in existing]
+    missing_type = [
+        v for v in type_values if axis_labels.label("type", v) not in existing
+    ]
     if missing_type:
         results.append(
             CheckResult(
                 "required `type:*` labels exist",
                 "fail",
-                f"missing: {', '.join('type:' + v for v in missing_type)}",
+                f"missing: {', '.join(axis_labels.label('type', v) for v in missing_type)}",
                 remediation="Run `bootstrap` to create the missing labels.",
             )
         )
@@ -588,14 +591,14 @@ def _check_labels(
             classification.get("axes", {}).get("priority", {}).get("values", [])
         )
         missing_priority = [
-            v for v in priority_values if f"priority:{v}" not in existing
+            v for v in priority_values if axis_labels.label("priority", v) not in existing
         ]
         if missing_priority:
             results.append(
                 CheckResult(
                     "required `priority:*` labels exist",
                     "fail",
-                    f"missing: {', '.join('priority:' + v for v in missing_priority)}",
+                    f"missing: {', '.join(axis_labels.label('priority', v) for v in missing_priority)}",
                     remediation="Run `bootstrap` to create the missing labels.",
                 )
             )
@@ -610,14 +613,14 @@ def _check_labels(
 
         workstreams = _resolve_workstream_slugs_for_check(capability_root, config or {})
         missing_workstream = [
-            w for w in workstreams if f"workstream:{w}" not in existing
+            w for w in workstreams if axis_labels.label("workstream", w) not in existing
         ]
         if missing_workstream:
             results.append(
                 CheckResult(
                     "required `workstream:*` labels exist",
                     "fail",
-                    f"missing: {', '.join('workstream:' + w for w in missing_workstream)}",
+                    f"missing: {', '.join(axis_labels.label('workstream', w) for w in missing_workstream)}",
                     remediation="Run `bootstrap` to create the missing labels.",
                 )
             )
@@ -937,12 +940,14 @@ def _check_state_labels(capability_root: Path) -> CheckResult:
     except (json.JSONDecodeError, KeyError, TypeError):
         existing = set()
 
-    missing = [sid for sid in state_ids if f"state:{sid}" not in existing]
+    missing = [
+        sid for sid in state_ids if axis_labels.label("state", sid) not in existing
+    ]
     if missing:
         return CheckResult(
             "required `state:*` labels exist (label-fallback)",
             "fail",
-            f"missing: {', '.join('state:' + s for s in missing)}",
+            f"missing: {', '.join(axis_labels.label('state', s) for s in missing)}",
             remediation=(
                 "Run `pkit project-management bootstrap` to create the missing "
                 "state labels. These are the substrate for the move-issue state "

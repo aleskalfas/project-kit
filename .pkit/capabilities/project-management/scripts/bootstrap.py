@@ -48,6 +48,10 @@ from typing import Any
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
+_HERE = Path(__file__).parent
+sys.path.insert(0, str(_HERE))
+from _lib import axis_labels  # noqa: E402
+
 
 CAPABILITY_NAME = "project-management"
 ADOPTER_CONFIG_PATH = "project/config.yaml"
@@ -216,7 +220,9 @@ def _compute_plan(
 
     def _plan_axis(axis: str, values: list[str]) -> None:
         for v in values:
-            name = f"{axis}:{v}"
+            # Axis-label built only through the seam (ADR-026 sole-constructor);
+            # greenfield resolves to the kit's own `<axis>:<value>`.
+            name = axis_labels.label(axis, v)
             if name in existing_labels:
                 label_exists.append(name)
             else:
@@ -466,7 +472,7 @@ def _file_starter_epic(*, dry_run: bool) -> Action:
             "--body",
             body,
             "--label",
-            "type:maintenance",
+            axis_labels.label("type", "maintenance"),
         ],
         capture_output=True,
         text=True,

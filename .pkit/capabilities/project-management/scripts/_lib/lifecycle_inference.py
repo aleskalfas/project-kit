@@ -36,6 +36,8 @@ from __future__ import annotations
 
 import re
 
+from _lib import axis_labels
+
 # Canonical state ordering (matches move-issue's `order` lists).
 STATE_ORDER = ["todo", "backlog", "in-progress", "review", "done"]
 
@@ -67,9 +69,9 @@ def infer_current_state(
     """
     if state == "closed":
         return "done"
-    for lbl in labels:
-        if lbl.startswith("state:"):
-            return lbl.removeprefix("state:")
+    label_state = axis_labels.read("state", labels)
+    if label_state is not None:
+        return label_state
     if milestone:
         return "backlog"
     return "todo"

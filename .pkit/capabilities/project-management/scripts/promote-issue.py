@@ -58,6 +58,7 @@ from ruamel.yaml import YAML
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
+from _lib import axis_labels  # noqa: E402
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 from _lib.milestone import resolve_milestone  # noqa: E402
 from _lib.membership import (  # noqa: E402
@@ -215,7 +216,7 @@ def main() -> int:
         else:
             idempotent_detail = "audit recorded"
         print(
-            f"\n[ok] #{args.issue_number} already at state:{current_state} "
+            f"\n[ok] #{args.issue_number} already at {axis_labels.label('state', current_state)} "
             f"({idempotent_detail}; no state transition needed)."
         )
         return 0
@@ -261,11 +262,11 @@ def _detect_state_from_labels(issue_number: int, config: dict) -> str | None:
     except (ValueError, KeyError, TypeError):
         return None
     labels = data.get("labels") or []
-    for label in labels:
-        name = label.get("name", "") if isinstance(label, dict) else ""
-        if name.startswith("state:"):
-            return name.removeprefix("state:")
-    return None
+    names = [
+        label.get("name", "") if isinstance(label, dict) else ""
+        for label in labels
+    ]
+    return axis_labels.read("state", names)
 
 
 # ---- gates --------------------------------------------------------------

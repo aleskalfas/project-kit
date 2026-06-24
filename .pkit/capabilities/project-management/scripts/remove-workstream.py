@@ -42,6 +42,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
+from _lib import axis_labels  # noqa: E402
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
@@ -125,10 +126,10 @@ def main() -> int:
     # Issue-count precondition.
     n = None
     if not has_board and not args.skip_label:
-        n = _gh_count_label_uses(f"workstream:{args.slug}", config)
+        n = _gh_count_label_uses(axis_labels.label("workstream", args.slug), config)
         if n is not None and n > 0 and not args.force:
             print(
-                f"[refused] {n} issue(s) still tagged `workstream:{args.slug}`. "
+                f"[refused] {n} issue(s) still tagged `{axis_labels.label('workstream', args.slug)}`. "
                 "Re-tag them (or use `merge-workstream` to consolidate into "
                 "another slug) first.\n"
                 "  → Pass --force to remove anyway (will leave orphan labels).",
@@ -141,7 +142,7 @@ def main() -> int:
     if n is not None:
         print(f"  affected issues: {n}")
     if not has_board and not args.skip_label:
-        print(f"  label:          delete `workstream:{args.slug}`")
+        print(f"  label:          delete `{axis_labels.label('workstream', args.slug)}`")
 
     if args.dry_run:
         print("\n[dry-run] nothing written; no gh invocation.")
@@ -170,7 +171,7 @@ def main() -> int:
     if not has_board and not args.skip_label:
         if not _gh_label_delete(args.slug, config):
             print(
-                f"[warn] gh label delete `workstream:{args.slug}` failed.",
+                f"[warn] gh label delete `{axis_labels.label('workstream', args.slug)}` failed.",
                 file=sys.stderr,
             )
 
@@ -210,7 +211,7 @@ def _gh_count_label_uses(label: str, config: dict) -> int | None:
 def _gh_label_delete(slug: str, config: dict) -> bool:
     try:
         proc = gh_run(
-            ["gh", "label", "delete", f"workstream:{slug}", "--yes"],
+            ["gh", "label", "delete", axis_labels.label("workstream", slug), "--yes"],
             config,
             check=False,
         )

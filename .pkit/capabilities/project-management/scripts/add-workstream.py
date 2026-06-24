@@ -43,6 +43,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
+from _lib import axis_labels  # noqa: E402
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
@@ -180,7 +181,7 @@ def main() -> int:
         print(f"  reason:      {new_entry['deprecated_reason']}")
     print(f"  target file: {workstreams_path(capability_root)}")
     if not has_board and not args.skip_label:
-        print(f"  label:       create `workstream:{args.slug}` (label-substrate)")
+        print(f"  label:       create `{axis_labels.label('workstream', args.slug)}` (label-substrate)")
 
     if args.dry_run:
         print("\n[dry-run] nothing written; no gh invocation.")
@@ -306,7 +307,7 @@ def _gh_label_create(slug: str, config: dict) -> bool:
                 "gh",
                 "label",
                 "create",
-                f"workstream:{slug}",
+                axis_labels.label("workstream", slug),
                 "--color",
                 "0e8a16",
                 "--description",
