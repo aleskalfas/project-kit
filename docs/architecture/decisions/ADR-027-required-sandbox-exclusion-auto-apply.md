@@ -1,7 +1,7 @@
 ---
 id: ADR-027
 title: setup autonomy auto-applies a necessity-verified mandatory sandbox exclusion
-status: proposed
+status: accepted
 date: 2026-06-24
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
