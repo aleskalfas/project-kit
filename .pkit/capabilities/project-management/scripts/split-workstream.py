@@ -48,6 +48,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
+from _lib import axis_labels  # noqa: E402
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
@@ -168,12 +169,12 @@ def main() -> int:
 
     print(f"split-workstream: {args.source} → {', '.join(args.into)}")
     if args.default:
-        print(f"  default retag: workstream:{args.source} → workstream:{args.default}")
+        print(f"  default retag: {axis_labels.label('workstream', args.source)} → {axis_labels.label('workstream', args.default)}")
     else:
         print("  default retag: <none> — issues will be flagged but not retagged")
 
     if not has_board and not args.skip_labels:
-        count = _gh_count_label_uses(f"workstream:{args.source}", config)
+        count = _gh_count_label_uses(axis_labels.label("workstream", args.source), config)
         print(
             f"  source label uses: {count if count is not None else '?'} issue(s)"
         )
@@ -213,7 +214,7 @@ def main() -> int:
             # Delete the source label.
             try:
                 gh_run(
-                    ["gh", "label", "delete", f"workstream:{args.source}", "--yes"],
+                    ["gh", "label", "delete", axis_labels.label("workstream", args.source), "--yes"],
                     config,
                     check=False,
                 )
@@ -268,7 +269,7 @@ def _gh_label_create(slug: str, config: dict) -> bool:
                 "gh",
                 "label",
                 "create",
-                f"workstream:{slug}",
+                axis_labels.label("workstream", slug),
                 "--color",
                 "0e8a16",
                 "--description",
@@ -291,7 +292,7 @@ def _gh_split_retag(source: str, default: str, config: dict) -> None:
                 "issue",
                 "list",
                 "--label",
-                f"workstream:{source}",
+                axis_labels.label("workstream", source),
                 "--state",
                 "all",
                 "--limit",
@@ -319,9 +320,9 @@ def _gh_split_retag(source: str, default: str, config: dict) -> None:
                     "edit",
                     str(n),
                     "--add-label",
-                    f"workstream:{default}",
+                    axis_labels.label("workstream", default),
                     "--remove-label",
-                    f"workstream:{source}",
+                    axis_labels.label("workstream", source),
                 ],
                 config,
                 check=False,

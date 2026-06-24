@@ -47,6 +47,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
+from _lib import axis_labels  # noqa: E402
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
@@ -147,9 +148,9 @@ def main() -> int:
     impact: dict[str, int] = {}
     if not has_board and not args.skip_labels:
         for loser in args.losers:
-            n = _gh_count_label_uses(f"workstream:{loser}", config)
+            n = _gh_count_label_uses(axis_labels.label("workstream", loser), config)
             impact[loser] = n
-            print(f"  loser {loser!r}: {n if n is not None else '?'} issue(s) tagged workstream:{loser}")
+            print(f"  loser {loser!r}: {n if n is not None else '?'} issue(s) tagged {axis_labels.label('workstream', loser)}")
     else:
         for loser in args.losers:
             print(f"  loser {loser!r}: (board-substrate or --skip-labels; gh label ops skipped)")
@@ -236,7 +237,7 @@ def _gh_merge_label(loser: str, survivor: str, config: dict) -> bool:
                 "issue",
                 "list",
                 "--label",
-                f"workstream:{loser}",
+                axis_labels.label("workstream", loser),
                 "--state",
                 "all",
                 "--limit",
@@ -266,9 +267,9 @@ def _gh_merge_label(loser: str, survivor: str, config: dict) -> bool:
                     "edit",
                     str(n),
                     "--add-label",
-                    f"workstream:{survivor}",
+                    axis_labels.label("workstream", survivor),
                     "--remove-label",
-                    f"workstream:{loser}",
+                    axis_labels.label("workstream", loser),
                 ],
                 config,
                 check=False,
@@ -284,7 +285,7 @@ def _gh_merge_label(loser: str, survivor: str, config: dict) -> bool:
     # 3. Delete the loser label.
     try:
         delete = gh_run(
-            ["gh", "label", "delete", f"workstream:{loser}", "--yes"],
+            ["gh", "label", "delete", axis_labels.label("workstream", loser), "--yes"],
             config,
             check=False,
         )
@@ -292,7 +293,7 @@ def _gh_merge_label(loser: str, survivor: str, config: dict) -> bool:
         return False
     if delete.returncode != 0 and "not found" not in delete.stderr:
         print(
-            f"[warn] failed to delete `workstream:{loser}`: {delete.stderr.strip()}",
+            f"[warn] failed to delete `{axis_labels.label('workstream', loser)}`: {delete.stderr.strip()}",
             file=sys.stderr,
         )
     return True

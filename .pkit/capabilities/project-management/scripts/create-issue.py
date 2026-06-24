@@ -50,6 +50,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
+from _lib import axis_labels  # noqa: E402
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 from _lib.hooks import fire_hooks  # noqa: E402
 from _lib.membership import (  # noqa: E402
@@ -363,17 +364,18 @@ def main() -> int:
         )
         return 2
 
-    # Labels.
-    labels = [f"type:{args.kind}"]
+    # Labels. Axis-labels are constructed only through the seam (ADR-026
+    # sole-constructor); greenfield resolves to the kit's own `<axis>:<value>`.
+    labels = [axis_labels.label("type", args.kind)]
     if not has_board:
-        labels.append(f"priority:{args.priority}")
-        labels.append(f"workstream:{args.workstream}")
+        labels.append(axis_labels.label("priority", args.priority))
+        labels.append(axis_labels.label("workstream", args.workstream))
 
     # Pre-flight summary.
     print("about to create issue:")
     print(f"  title:      {full_title}")
     print(f"  type:       {args.type}  (structural)")
-    print(f"  kind:       type:{args.kind}  (classification label)")
+    print(f"  kind:       {axis_labels.label('type', args.kind)}  (classification label)")
     print(f"  priority:   {args.priority}")
     if args.workstream:
         print(f"  workstream: {args.workstream}")

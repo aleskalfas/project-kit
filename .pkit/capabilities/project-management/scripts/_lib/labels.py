@@ -19,20 +19,21 @@ from __future__ import annotations
 import sys
 from typing import TYPE_CHECKING
 
+from _lib import axis_labels
+
 if TYPE_CHECKING:
     from _lib.gh import gh_run as _gh_run_type  # pragma: no cover
 
 # Labels that must be removed on any terminal close.  Kept as a module-level
 # constant so callers can reference it for diagnostics without hardcoding the
-# list themselves.
-NON_TERMINAL_STATE_LABELS: tuple[str, ...] = (
-    "state:todo",
-    "state:backlog",
-    "state:in-progress",
-    "state:review",
+# list themselves.  Built through the axis-label seam (ADR-026 sole-constructor);
+# greenfield resolves to the kit's own `state:<value>`.
+NON_TERMINAL_STATE_LABELS: tuple[str, ...] = tuple(
+    axis_labels.label("state", v)
+    for v in ("todo", "backlog", "in-progress", "review")
 )
 
-TERMINAL_STATE_LABEL = "state:done"
+TERMINAL_STATE_LABEL = axis_labels.label("state", "done")
 
 
 def reconcile_state_labels_to_done(

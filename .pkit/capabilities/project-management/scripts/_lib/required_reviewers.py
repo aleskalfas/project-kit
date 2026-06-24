@@ -63,6 +63,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 
+from _lib import axis_labels
+
 try:
     from _lib.review_contributions import (
         ContributionCollection,
@@ -81,7 +83,7 @@ except ImportError:  # pragma: no cover - exercised via spec-loaded fallback
 # reviewer resolution keys contributed match-predicates on the `workstream`
 # axis, read off a closing issue's `workstream:<value>` label. Single place
 # to widen when a second axis is keyed.
-WORKSTREAM_LABEL_PREFIX = "workstream:"
+WORKSTREAM_LABEL_PREFIX = axis_labels.prefix("workstream")
 
 
 # ---- failure kinds (structured, not string-matched) ------------------

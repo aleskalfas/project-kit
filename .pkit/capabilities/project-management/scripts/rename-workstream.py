@@ -43,6 +43,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
+from _lib import axis_labels  # noqa: E402
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
@@ -132,7 +133,7 @@ def main() -> int:
     print(f"rename-workstream: {args.old} → {args.new}")
     print(f"  file:        {path}")
     if not has_board and not args.skip_label:
-        print(f"  label:       rename `workstream:{args.old}` → `workstream:{args.new}`")
+        print(f"  label:       rename `{axis_labels.label('workstream', args.old)}` → `{axis_labels.label('workstream', args.new)}`")
 
     if args.dry_run:
         print("\n[dry-run] nothing written; no gh invocation.")
@@ -195,9 +196,9 @@ def _gh_label_rename(old: str, new: str, config: dict) -> bool:
                 "gh",
                 "label",
                 "edit",
-                f"workstream:{old}",
+                axis_labels.label("workstream", old),
                 "--name",
-                f"workstream:{new}",
+                axis_labels.label("workstream", new),
             ],
             config,
             check=False,
@@ -208,7 +209,7 @@ def _gh_label_rename(old: str, new: str, config: dict) -> bool:
         return True
     if "not found" in proc.stderr:
         print(
-            f"[info] label `workstream:{old}` not present; nothing to rename.",
+            f"[info] label `{axis_labels.label('workstream', old)}` not present; nothing to rename.",
             file=sys.stderr,
         )
         return True

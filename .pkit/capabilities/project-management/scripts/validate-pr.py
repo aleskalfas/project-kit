@@ -51,6 +51,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
+from _lib import axis_labels  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
@@ -342,7 +343,7 @@ def _gather_closing_type_labels(closing_issues: list[int]) -> list[str]:
             continue
         for lbl in issue.get("labels") or []:
             name = lbl.get("name") if isinstance(lbl, dict) else str(lbl)
-            if isinstance(name, str) and name.startswith("type:"):
+            if isinstance(name, str) and axis_labels.is_axis_label(name, "type"):
                 out.append(name)
     return out
 
@@ -352,7 +353,7 @@ def _expected_conv_types(type_labels: list[str], classification: dict) -> list[s
     mapping = classification.get("pr_type_mapping") or []
     out: list[str] = []
     for label in type_labels:
-        value = label.removeprefix("type:")
+        value = axis_labels.read("type", [label])
         for entry in mapping:
             if not isinstance(entry, dict):
                 continue

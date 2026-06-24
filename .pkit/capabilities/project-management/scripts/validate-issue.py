@@ -45,6 +45,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
+from _lib import axis_labels  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
@@ -226,7 +227,7 @@ def _validate_issue(
             )
 
     # Classification axes (per DEC-012).
-    type_labels = [lbl for lbl in labels if lbl.startswith("type:")]
+    type_labels = [lbl for lbl in labels if axis_labels.is_axis_label(lbl, "type")]
     if len(type_labels) == 0:
         findings.append(
             Finding(
@@ -247,8 +248,8 @@ def _validate_issue(
 
     has_board = bool(config.get("has_projects_v2_board", False))
     if not has_board:
-        priority_labels = [lbl for lbl in labels if lbl.startswith("priority:")]
-        workstream_labels = [lbl for lbl in labels if lbl.startswith("workstream:")]
+        priority_labels = [lbl for lbl in labels if axis_labels.is_axis_label(lbl, "priority")]
+        workstream_labels = [lbl for lbl in labels if axis_labels.is_axis_label(lbl, "workstream")]
         if len(priority_labels) == 0:
             findings.append(
                 Finding(

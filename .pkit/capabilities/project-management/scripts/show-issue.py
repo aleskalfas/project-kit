@@ -40,6 +40,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
+from _lib import axis_labels  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
@@ -132,13 +133,16 @@ def _summarise(issue: dict, issue_types: dict, body_format: dict) -> dict:
     parent_ref = _first_body_line(body)
     required_sections = _required_section_status(structural_type, body, body_format)
 
-    type_labels = [lbl for lbl in labels if lbl.startswith("type:")]
-    priority_labels = [lbl for lbl in labels if lbl.startswith("priority:")]
-    workstream_labels = [lbl for lbl in labels if lbl.startswith("workstream:")]
+    type_labels = [lbl for lbl in labels if axis_labels.is_axis_label(lbl, "type")]
+    priority_labels = [lbl for lbl in labels if axis_labels.is_axis_label(lbl, "priority")]
+    workstream_labels = [lbl for lbl in labels if axis_labels.is_axis_label(lbl, "workstream")]
     other_labels = [
         lbl
         for lbl in labels
-        if not any(lbl.startswith(p) for p in ("type:", "priority:", "workstream:"))
+        if not any(
+            axis_labels.is_axis_label(lbl, ax)
+            for ax in ("type", "priority", "workstream")
+        )
     ]
 
     return {

@@ -52,6 +52,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
+from _lib import axis_labels  # noqa: E402
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
@@ -61,8 +62,10 @@ from _lib.membership import (  # noqa: E402
 
 SELF_TEST_TITLE = "[Task] pkit self-test — DELETE ME"
 SELF_TEST_MILESTONE = "pkit-self-test"
-SELF_TEST_LABEL_SENTINEL = "state:todo"
-SELF_TEST_LABELS_PRIORITY = "priority:Low"
+# Axis-labels built only through the seam (ADR-026 sole-constructor); greenfield
+# resolves to the kit's own `state:todo` / `priority:Low`.
+SELF_TEST_LABEL_SENTINEL = axis_labels.label("state", "todo")
+SELF_TEST_LABELS_PRIORITY = axis_labels.label("priority", "Low")
 SELF_TEST_BODY = """\
 ## What
 
@@ -196,9 +199,9 @@ def _step_create_issue(
     config: dict, has_board: bool, state: SelfTestState
 ) -> int | None:
     """Step 1: create the throwaway issue and return its number."""
-    labels = ["priority:Low"]
+    labels = [SELF_TEST_LABELS_PRIORITY]
     if not has_board:
-        labels.append("state:todo")
+        labels.append(SELF_TEST_LABEL_SENTINEL)
 
     label_args: list[str] = []
     for lbl in labels:
@@ -505,7 +508,10 @@ def _print_dry_run_plan(has_board: bool) -> None:
     """Print what the self-test would do without running it."""
     print("plan (dry-run):")
     print(f"  1. Create issue: '{SELF_TEST_TITLE}'")
-    print(f"     labels: priority:Low" + (", state:todo" if not has_board else ""))
+    print(
+        f"     labels: {SELF_TEST_LABELS_PRIORITY}"
+        + (f", {SELF_TEST_LABEL_SENTINEL}" if not has_board else "")
+    )
     print(f"  2. Ensure milestone '{SELF_TEST_MILESTONE}' exists; attach to issue")
     print("  3. move-issue --to backlog --yes (todo → backlog state transition)")
     print("  4. move-issue --to in-progress --yes (backlog → in-progress)")
