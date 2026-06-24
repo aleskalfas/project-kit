@@ -779,6 +779,10 @@ def test_setup_autonomy_first_run_stands_up_and_stops_at_restart(tmp_path, monke
     assert "goal reached" not in out  # never declared on configuration alone
     data = _settings(proj)
     assert data["sandbox"]["enabled"] is True and data["sandbox"]["failIfUnavailable"] is True
+    # ADR-028: the autonomy posture seals the unsandboxed escape by default —
+    # strict fail-over is written as part of standing up confinement.
+    assert data["sandbox"]["allowUnsandboxedCommands"] is False
+    assert "unsandboxed escape sealed" in out
     assert any("permission-hook" in h.get("command", "")
                for e in data["hooks"]["PreToolUse"] for h in e.get("hooks", []))
 
@@ -851,6 +855,88 @@ def test_setup_autonomy_no_dangerous_flag(tmp_path, monkeypatch):
     proj = _with_adapter(_setup(tmp_path))
     out = _run_fail(proj, monkeypatch, "setup", "autonomy", "--dangerously-allow-unconfined")
     assert "no such option" in out.lower() or "No such option" in out
+
+
+# ---- ADR-028: setup autonomy seals the unsandboxed escape (strict default) ---
+
+def test_setup_autonomy_seals_unsandboxed_escape_by_default(tmp_path, monkeypatch):
+    # ADR-028 cond. 1+2: standing up the autonomy posture writes
+    # `allowUnsandboxedCommands: false` by composing the EXISTING strict path —
+    # the per-command `dangerouslyDisableSandbox` escape is inert under autonomy.
+    proj = _with_adapter(_setup(tmp_path))
+    out = _run(proj, monkeypatch, "setup", "autonomy")
+    assert "unsandboxed escape sealed" in out
+    assert _settings(proj)["sandbox"]["allowUnsandboxedCommands"] is False
+
+
+def test_setup_autonomy_seal_is_idempotent_and_reported_on_resume(tmp_path, monkeypatch):
+    # Re-running setup autonomy keeps the seal and reports it as already-sealed.
+    proj = _with_adapter(_setup(tmp_path))
+    _run(proj, monkeypatch, "setup", "autonomy")
+    out = _run(proj, monkeypatch, "setup", "autonomy")
+    assert "already — OS sandbox enabled" in out and "escape sealed" in out
+    assert _settings(proj)["sandbox"]["allowUnsandboxedCommands"] is False
+
+
+def test_setup_autonomy_seal_orthogonal_to_macos_exclusion(tmp_path, monkeypatch):
+    # ADR-028 cond. 3 (the dp-3 keystone probe): the macOS pkit/uv
+    # `excludedCommands` exclusion (ADR-014) STILL RESOLVES with the seal on.
+    # Different keys, different layers — the seal must not break the path that
+    # makes macOS autonomy work. We force the macOS old-uv predicate so the
+    # required exclusion auto-applies, then assert BOTH the seal AND the
+    # exclusion are present and honoured together.
+    _force_uv(monkeypatch, platform="darwin", version="0.9.8")
+    proj = _with_adapter(_setup(tmp_path))
+    (proj / "uv.lock").write_text("")
+    out = _run(proj, monkeypatch, "setup", "autonomy")
+    sb = _sb(proj)
+    # The seal is written (strict default).
+    assert sb["allowUnsandboxedCommands"] is False
+    # AND the macOS exclusion still resolves under strict — uv carved out of the
+    # box, on a different key, untouched by the seal.
+    assert "uv" in sb["excludedCommands"]
+    assert "REQUIRED exclusion auto-applied: `uv`" in out
+    # status honours both at once: the escape is sealed, the exclusion reported.
+    status = _run(proj, monkeypatch, "sandbox")
+    assert "unsandboxed escape sealed (strict)" in status
+    assert "uv — auto-applied (required" in status
+
+
+def test_setup_autonomy_seal_is_reversible_via_non_strict_enable(tmp_path, monkeypatch):
+    # ADR-028 cond. 5/6: the escape survives outside the posture — `sandbox
+    # enable` without --strict turns the seal off, restoring the operator's
+    # `dangerouslyDisableSandbox` stopgap. Strict is the only (reversible) lever.
+    proj = _with_adapter(_setup(tmp_path))
+    _run(proj, monkeypatch, "setup", "autonomy")
+    assert _settings(proj)["sandbox"]["allowUnsandboxedCommands"] is False
+    out = _run(proj, monkeypatch, "sandbox", "enable")    # no --strict
+    assert "strict off" in out and "escape restored" in out
+    assert "allowUnsandboxedCommands" not in _settings(proj)["sandbox"]
+
+
+def test_sandbox_status_reports_seal_honestly(tmp_path, monkeypatch):
+    # ADR-028 cond. 4: status reports the LIVE `allowUnsandboxedCommands` value,
+    # never a fail-open claim. Sealed only when the key is actually false.
+    proj = _with_adapter(_setup(tmp_path))
+    # Plain enable (no strict) → escape is OPEN, reported honestly as not sealed.
+    _run(proj, monkeypatch, "sandbox", "enable")
+    out = _run(proj, monkeypatch, "sandbox")
+    assert "unsandboxed escape OPEN" in out
+    assert "sealed (strict)" not in out
+    # Strict enable → sealed, reported as such.
+    _run(proj, monkeypatch, "sandbox", "enable", "--strict")
+    out = _run(proj, monkeypatch, "sandbox")
+    assert "unsandboxed escape sealed (strict)" in out
+
+
+def test_setup_autonomy_seal_leaves_decide_py_untouched(tmp_path, monkeypatch):
+    # ADR-028 cond. 6: the seal is settings/posture only — decide.py is not
+    # modified by standing up autonomy (the same-code invariant, ADR-003).
+    proj = _with_adapter(_setup(tmp_path))
+    decide = proj / ".pkit" / "permissions" / "decide.py"
+    before = decide.read_text()
+    _run(proj, monkeypatch, "setup", "autonomy")
+    assert decide.read_text() == before
 
 
 # ---- confinement allowances (ADR-008, #281) ----------------------------------
