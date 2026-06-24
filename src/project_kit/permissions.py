@@ -3246,6 +3246,16 @@ def _required_verifier(command: str) -> Callable[[Path], bool] | None:
     return None
 
 
+# Fail fast at import if a candidate names a verifier that does not resolve — a
+# future third member with a typo'd verifier name surfaces here, not as a KeyError
+# mid-`setup autonomy` (W1 hardening for the ADR-030 declared-set seam).
+for _cand_cmd, _cand_verifier in _REQUIRED_CANDIDATES:
+    assert _cand_verifier in globals(), (
+        f"_REQUIRED_CANDIDATES: {_cand_cmd!r} binds verifier {_cand_verifier!r} "
+        f"which does not resolve in this module"
+    )
+
+
 def _widening_desc(tool: str, cmd: str) -> tuple[str, str]:
     """The nudge label + body for one widening exclusion — required-vs-optional
     copy chosen at runtime (see _widening_required_on_platform). Returns

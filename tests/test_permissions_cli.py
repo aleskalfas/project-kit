@@ -1646,10 +1646,15 @@ def test_gh_required_exclusion_revertable_via_remove(tmp_path, monkeypatch):
 
 def test_decide_py_untouched_by_gh_work():
     # ADR-030 condition 8: the permission-decision core is unaffected by this work.
+    # The decision core lives at .pkit/permissions/decide.py (NOT src/...); assert
+    # the path exists so a future rename can't silently re-vacuum this guard.
     import subprocess
+    root = Path(__file__).resolve().parent.parent
+    decide_py = root / ".pkit" / "permissions" / "decide.py"
+    assert decide_py.is_file(), f"decide.py not found at expected path: {decide_py}"
     r = subprocess.run(
-        ["git", "diff", "--name-only", "main", "--", "src/project_kit/decide.py"],
-        cwd=str(Path(__file__).resolve().parent.parent),
+        ["git", "diff", "--name-only", "main", "--", ".pkit/permissions/decide.py"],
+        cwd=str(root),
         capture_output=True, text=True, check=False,
     )
     assert r.stdout.strip() == "", f"decide.py must be untouched, got: {r.stdout!r}"
