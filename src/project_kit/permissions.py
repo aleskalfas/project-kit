@@ -3429,10 +3429,14 @@ def _relocate_tracked_required_exclusions(target_root: Path) -> list[str]:
         the conservative call is don't move what you didn't author).
 
     No un-exclude window (the live-throughout guarantee): the local copy is
-    written FIRST, then the committed copy is stripped. Between the two writes the
-    entry is in BOTH files; after the strip it is in local only — so the runtime
-    union (`_sandbox_block`, which deep-merges both files) ALWAYS contains the
-    command. A reader / hook never sees it absent from both files at any point.
+    written first WHEN NEEDED — the entry is in local BEFORE it leaves the
+    committed file, so the union never un-excludes. When the entry is already in
+    local (a half-done prior run), that first write is skipped and we go straight
+    to the strip; this is still safe because local already carries the command, so
+    the union is unbroken across the strip. In the write-then-strip case the entry
+    is briefly in BOTH files; after the strip it is in local only. Either way the
+    runtime union (`_sandbox_block`, which deep-merges both files) ALWAYS contains
+    the command — a reader / hook never sees it absent from both files at any point.
 
     Idempotent: an entry already only in `settings.local.json` (absent from the
     committed file) is a no-op; re-running converges with no double-write.
@@ -3490,6 +3494,46 @@ def _relocate_tracked_required_exclusions(target_root: Path) -> list[str]:
     ]
 
 
+def _untagged_required_candidate_advisories(target_root: Path) -> list[str]:
+    """Advise (don't act) when a required-CANDIDATE command sits UNTAGGED in the
+    committed `settings.json` — a relocation candidate the prior pass SKIPPED for
+    lack of provenance (can't confirm pkit authored it, so it stays put; correct
+    but, until now, silent). Matches the operator's inform-me preference: name the
+    drift and the one-command fix rather than leaving it unexplained.
+
+    Detect: command in `_REQUIRED_CANDIDATES` AND present in the committed file's
+    `excludedCommands` AND neither `_required`- NOR `_manual`-provenanced. A
+    `_manual` entry is a deliberate operator carve-out (not drift) and is NEVER
+    advised on; a `_required` entry was already relocated by the pass above."""
+    prov = _load_provenance(target_root)
+    tagged = {
+        e.get("value") for e in prov
+        if e.get("toolkit") in (_REQUIRED_TOOLKIT, "_manual")
+        and e.get("kind") == "exclude-command"
+    }
+    candidate_cmds = {cmd for cmd, _ in _REQUIRED_CANDIDATES}
+
+    committed = _read_settings(target_root)
+    committed_sb = committed.get("sandbox")
+    if not isinstance(committed_sb, dict):
+        return []
+    committed_excl = committed_sb.get("excludedCommands")
+    if not isinstance(committed_excl, list):
+        return []
+
+    untagged = [
+        cmd for cmd in committed_excl
+        if cmd in candidate_cmds and cmd not in tagged
+    ]
+    return [
+        f"note: an untagged `{cmd}` exclusion is in your committed settings.json — "
+        f"pkit won't move what it didn't author. Run "
+        f"`pkit permissions sandbox exclude --remove {cmd}` then re-run setup to "
+        f"relocate it cleanly, or remove the line by hand."
+        for cmd in untagged
+    ]
+
+
 def _setup_required_exclusions(target_root: Path) -> tuple[list[str], list[str]]:
     """Auto-apply (and self-heal) the platform-MANDATORY, necessity-verified
     sandbox exclusion — the one carve-out from ADR-008 rule 4's "never applied by
@@ -3533,6 +3577,12 @@ def _setup_required_exclusions(target_root: Path) -> tuple[list[str], list[str]]
     # [3/4] confinement continuations (the runtime effect is UNCHANGED — the
     # command stays excluded throughout — so they confirm rather than alarm).
     confirmed.extend(_relocate_tracked_required_exclusions(target_root))
+
+    # Advisory pass (untagged required-candidate drift): the relocation above
+    # could only MOVE provenanced entries; an untagged committed exclusion for a
+    # required candidate is left untouched but, until now, silently. Surface a
+    # one-command-fix note as a quiet [3/4] continuation — inform, don't act.
+    confirmed.extend(_untagged_required_candidate_advisories(target_root))
 
     prov = _load_provenance(target_root)
     required_entries = {

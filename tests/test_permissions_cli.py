@@ -1482,13 +1482,17 @@ def test_required_exclusion_already_in_place_is_reported_not_silent(tmp_path, mo
 
 # ---- relocate a pre-ADR-029 tracked-file required exclusion (Task #275) -------
 
-def _seed_tracked_excl(proj: Path, cmd: str, *, toolkit: str | None) -> None:
+def _seed_tracked_excl(
+    proj: Path, cmd: str, *, toolkit: str | None, floor: dict | None = None
+) -> None:
     """Seed a pre-ADR-029 drift: `cmd` in the COMMITTED settings.json's
     excludedCommands, with an optional provenance tag. toolkit=None leaves the
     entry UNTAGGED (no provenance record) to model a pre-ADR-027 / foreign entry.
 
-    Merges into the committed settings so the adapter floor (denyRead etc.) the
-    relocation must NOT touch is present alongside the widening."""
+    `floor` (when given) merges non-`excludedCommands` keys into the committed
+    sandbox block alongside the widening — the committed confinement floor
+    (`filesystem.denyRead`, `failIfUnavailable`, …) the relocation must NOT touch.
+    Lets a test assert ONLY `excludedCommands` leaves the committed file."""
     from ruamel.yaml import YAML as _YAML
     settings_path = proj / ".claude" / "settings.json"
     data = json.loads(settings_path.read_text()) if settings_path.is_file() else {}
@@ -1496,6 +1500,8 @@ def _seed_tracked_excl(proj: Path, cmd: str, *, toolkit: str | None) -> None:
     excl = sb.setdefault("excludedCommands", [])
     if cmd not in excl:
         excl.append(cmd)
+    if floor:
+        sb.update(floor)
     settings_path.parent.mkdir(parents=True, exist_ok=True)
     settings_path.write_text(json.dumps(data, indent=2) + "\n")
     if toolkit is not None:
@@ -1517,7 +1523,12 @@ def test_required_exclusion_relocated_from_tracked_to_local_on_setup(tmp_path, m
     _force_uv(monkeypatch, platform="darwin", version="0.9.8")
     proj = _with_adapter(_setup(tmp_path))
     (proj / "uv.lock").write_text("")                 # uv still required → not self-healed
-    _seed_tracked_excl(proj, "uv", toolkit="_required")
+    # Seed the widening ALONGSIDE a committed confinement floor: a credential
+    # denyRead and the fail-closed flag. The strip must take ONLY excludedCommands
+    # and leave the floor behind (the "must NOT clobber the committed floor"
+    # property — proven by inspection but now ASSERTED).
+    floor = {"filesystem": {"denyRead": ["~/.ssh"]}, "failIfUnavailable": True}
+    _seed_tracked_excl(proj, "uv", toolkit="_required", floor=floor)
     # Precondition: the drift is in the COMMITTED file, and live in the union.
     assert "uv" in _sb_committed(proj)["excludedCommands"]
     assert "uv" in _sb(proj)["excludedCommands"]
@@ -1527,6 +1538,14 @@ def test_required_exclusion_relocated_from_tracked_to_local_on_setup(tmp_path, m
     # Relocated: committed file no longer carries the widening; local does.
     assert "excludedCommands" not in _sb_committed(proj)
     assert "uv" in _sb_local(proj).get("excludedCommands", [])
+    # Floor survival: ONLY excludedCommands left the committed file — the
+    # non-widening floor keys SEEDED here are STILL present after the strip.
+    # (setup's own strict enable unions MORE denyRead entries in; the load-bearing
+    # check is that the pre-existing `~/.ssh` survived the relocation, not exact
+    # list identity.)
+    committed_after = _sb_committed(proj)
+    assert "~/.ssh" in committed_after.get("filesystem", {}).get("denyRead", [])
+    assert committed_after.get("failIfUnavailable") is True
     # The runtime union is UNCHANGED — the command stays excluded throughout.
     assert "uv" in _sb(proj)["excludedCommands"]
     # Reported, not silent.
@@ -1632,6 +1651,80 @@ def test_relocation_does_not_touch_decide_py(tmp_path, monkeypatch):
     before = decide.read_text()
     _run(proj, monkeypatch, "setup", "autonomy")
     assert decide.read_text() == before
+
+
+def test_relocated_required_exclusion_self_heals_from_local_when_no_longer_required(
+    tmp_path, monkeypatch
+):
+    # #275 ledger consistency end-to-end: seed a `_required` uv exclusion in the
+    # TRACKED settings.json → setup relocates it to settings.local.json → uv then
+    # becomes no-longer-required (fixed release) → next setup SELF-HEALS it, and
+    # the removal lands on the LOCAL file (where the relocation moved it). This
+    # pins the invariant the critic flagged as implicit: relocation moves the
+    # entry to exactly the file the remove-router (`sandbox exclude --remove`)
+    # already assumes, so the provenance ledger still resolves after the move.
+    _force_uv(monkeypatch, platform="darwin", version="0.9.8")  # uv required
+    proj = _with_adapter(_setup(tmp_path))
+    (proj / "uv.lock").write_text("")
+    _seed_tracked_excl(proj, "uv", toolkit="_required")
+
+    _run(proj, monkeypatch, "setup", "autonomy")               # relocates to local
+    assert "excludedCommands" not in _sb_committed(proj)
+    assert "uv" in _sb_local(proj).get("excludedCommands", [])
+
+    # Now make uv no-longer-required (fixed release) and re-run.
+    _force_uv(monkeypatch, platform="darwin", version="0.10.0")
+    monkeypatch.setattr("project_kit.permissions._UV_KNOWN_FIXED_RELEASE", "0.10.0")
+    out = _run(proj, monkeypatch, "setup", "autonomy")
+
+    # Self-heal REMOVED the relocated exclusion from the LOCAL file — the
+    # remove-router found it where relocation put it.
+    assert "uv" not in _sb_local(proj).get("excludedCommands", [])
+    assert "uv" not in _sb(proj).get("excludedCommands", [])   # gone from the union
+    assert "self-healed: `uv` is no longer a required exclusion" in out
+
+
+def test_untagged_required_candidate_emits_advisory(tmp_path, monkeypatch):
+    # #275 inform-me: an UNTAGGED required-candidate exclusion in the committed
+    # settings.json is left untouched (can't confirm pkit authored it) but no
+    # longer SILENTLY — a one-command-fix advisory appears in [3/4].
+    _force_uv(monkeypatch, platform="darwin", version="0.10.0")  # uv NOT required
+    monkeypatch.setattr("project_kit.permissions._UV_KNOWN_FIXED_RELEASE", "0.10.0")
+    proj = _with_adapter(_setup(tmp_path))
+    _seed_tracked_excl(proj, "uv", toolkit=None)  # untagged candidate
+
+    out = _run(proj, monkeypatch, "setup", "autonomy")
+
+    assert "an untagged `uv` exclusion is in your committed settings.json" in out
+    assert "pkit permissions sandbox exclude --remove uv" in out
+    # Still untouched — advise, don't act.
+    assert "uv" in _sb_committed(proj)["excludedCommands"]
+
+
+def test_manual_candidate_exclusion_gets_no_advisory(tmp_path, monkeypatch):
+    # #275: a `_manual` carve-out is a deliberate operator choice, not drift — it
+    # gets NO advisory even though the command is a required candidate.
+    _force_uv(monkeypatch, platform="darwin", version="0.10.0")  # uv NOT required
+    monkeypatch.setattr("project_kit.permissions._UV_KNOWN_FIXED_RELEASE", "0.10.0")
+    proj = _with_adapter(_setup(tmp_path))
+    _seed_tracked_excl(proj, "gh", toolkit="_manual")  # operator carve-out
+
+    out = _run(proj, monkeypatch, "setup", "autonomy")
+
+    assert "an untagged `gh` exclusion" not in out
+    assert "won't move what it didn't author" not in out
+
+
+def test_no_advisory_when_nothing_untagged(tmp_path, monkeypatch):
+    # #275: with no untagged required-candidate drift in the committed file, the
+    # advisory does NOT appear (no false-positive note).
+    _force_uv(monkeypatch, platform="darwin", version="0.10.0")  # uv NOT required
+    monkeypatch.setattr("project_kit.permissions._UV_KNOWN_FIXED_RELEASE", "0.10.0")
+    proj = _with_adapter(_setup(tmp_path))
+
+    out = _run(proj, monkeypatch, "setup", "autonomy")
+
+    assert "won't move what it didn't author" not in out
 
 
 def test_optional_widening_stays_nudge_only_under_auto_apply(tmp_path, monkeypatch):
