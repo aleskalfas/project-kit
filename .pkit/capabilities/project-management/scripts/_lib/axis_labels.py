@@ -374,6 +374,143 @@ def axis_default(
     return default if isinstance(default, str) and default else None
 
 
+# ----- the derive-predicate READ arm (ADR-026 §5, DEC-033 detector swap) --
+# The write side (`resolve_write`) refuses to invent a write-label for a
+# `derive`-bound axis — state is written by opening/closing the issue, not by
+# labelling it. This is the matching READ: under a present map that binds
+# `state` to a `derive` predicate, position resolves from the open/closed
+# substrate (+ a blocked label), NOT a kit `state:*` label. It is the seam half
+# the lifecycle detector (`lifecycle_inference.infer_current_state`) swaps in.
+
+
+# The conventional label name a derive-from-open/closed binding reads to detect
+# the `blocked` collapsed state (the AUJ `Blocked` label, DEC-036 / ADR-026 §5).
+# Matched case-insensitively. Centralised here — the one place the derive READ
+# and any future `blocked-label:` schema knob would agree on the name — rather
+# than open-coded at the predicate. The `derive` binding's `states` conditions
+# are prose (the schema defers the condition grammar to this engine), so the
+# blocked-label name is the engine's convention, fixed by ADR-026 §5's reduced
+# state set, not parsed from that prose.
+BLOCKED_LABEL_NAME = "Blocked"
+
+# The two derived non-terminal state ids ADR-026 §5's reduced state set keeps.
+# `done` (the terminal) is the kit's own terminal value (so DEC-034's closure
+# fold reads the SAME terminal under a derive binding as in greenfield — no
+# special-casing in the fold). `open` is the collapsed open-ish state (Todo /
+# Backlog / In-progress all read as one `open` under open/closed). `blocked`
+# comes from the label. These are the ids a derive binding declares under
+# `states:` and the ids this READ returns — distinct from the kit's five-state
+# greenfield set (`STATE_ORDER`), which a derive map does not use.
+DERIVE_STATE_OPEN = "open"
+DERIVE_STATE_BLOCKED = "blocked"
+DERIVE_STATE_DONE = "done"
+
+
+def state_derive_binding(
+    substrate_map: SubstrateMap | None,
+) -> dict[str, Any] | None:
+    """The ``state`` axis's ``derive`` binding mapping, or ``None``.
+
+    Returns the inner ``derive`` mapping (the ``{from, states}`` predicate
+    shape) only when a map is present AND binds ``state`` to a ``derive``
+    predicate. ``None`` in every other case — no map (greenfield), ``state``
+    bound to ``label`` / ``title-prefix``, ``unsupported``, absent, or malformed.
+
+    This is the single predicate a position reader checks to decide whether to
+    SWAP its kit-``state:*`` read for the open/closed derive read (ADR-026 §5).
+    ``None`` ⇒ keep the kit-label read (greenfield parity); a mapping ⇒ resolve
+    position from the substrate via :func:`derive_state`.
+    """
+    if substrate_map is None:
+        return None
+    binding = substrate_map.axes.get("state")
+    if not isinstance(binding, dict):
+        return None
+    derive = binding.get("derive")
+    return derive if isinstance(derive, dict) else None
+
+
+def has_blocked_label(labels: list[str]) -> bool:
+    """True when ``labels`` carries the conventional ``Blocked`` label.
+
+    Case-insensitive match on :data:`BLOCKED_LABEL_NAME` — the open/closed
+    derive predicate's signal for the ``blocked`` collapsed state (ADR-026 §5).
+    """
+    target = BLOCKED_LABEL_NAME.casefold()
+    return any(name.casefold() == target for name in labels)
+
+
+def derive_state(*, is_closed: bool, labels: list[str]) -> str:
+    """Resolve the derived lifecycle position from the open/closed substrate.
+
+    The ADR-026 §5 reduced-state-set predicate, first-matching-detection wins
+    (DEC-033): a derive-from-open/closed binding cannot distinguish the
+    greenfield open-ish states (Todo / Backlog / In-progress all read as
+    ``open``), so it resolves exactly three positions —
+
+      * ``closed``                         ⇒ :data:`DERIVE_STATE_DONE`
+      * open AND a ``Blocked`` label        ⇒ :data:`DERIVE_STATE_BLOCKED`
+      * open, no ``Blocked`` label          ⇒ :data:`DERIVE_STATE_OPEN`
+
+    Crucially this reads ONLY the open/closed state (+ the blocked label); it
+    **ignores any kit ``state:*`` label entirely** (the wedge ADR-026 §5 and
+    #265's docstring named — a leftover ``state:todo`` must NOT shadow the
+    open/closed read under a derive map). ``closed`` takes precedence over the
+    blocked label so a closed-but-still-``Blocked``-labelled issue reads
+    ``done`` (closed is terminal; the stale label does not hold it open) —
+    matching the write side, where the open/closed substrate is authoritative
+    and the kit writes/strips no ``state:*`` label.
+    """
+    if is_closed:
+        return DERIVE_STATE_DONE
+    if has_blocked_label(labels):
+        return DERIVE_STATE_BLOCKED
+    return DERIVE_STATE_OPEN
+
+
+def resolve_read(
+    axis: str, labels: list[str], substrate_map: SubstrateMap | None
+) -> str | None:
+    """Read ``axis``'s value from an issue's ``labels`` THROUGH the map.
+
+    The read counterpart to :func:`resolve_write` for the LABEL-carried arms
+    (greenfield and ``label``-bound). It returns the kit's own methodology value
+    on ``axis`` (e.g. ``High`` for priority), resolving the adopter's substrate
+    back to the kit vocabulary, or ``None`` when the axis carries no value here:
+
+    * **No map (greenfield)** ⇒ the kit's own ``<axis>:`` read (:func:`read`) —
+      byte-identical to today.
+    * **Map present, axis bound to ``label``** ⇒ the kit value whose remapped
+      adopter label is present (reverse of the ``label`` ``remap``). ``None`` if
+      none of the adopter's mapped labels is on the issue.
+    * **Map present, axis ``derive``-bound / ``title-prefix`` / ``unsupported`` /
+      absent** ⇒ ``None``. A derived axis is read by :func:`derive_state` from
+      open/closed, NOT from a label; a title-prefix axis is read from the title,
+      not the labels; an unsupported/absent axis carries no value the seam reads.
+
+    This is deliberately the LABEL-arm reverse-remap only — the ``state`` axis's
+    ``derive`` read goes through :func:`derive_state` (it needs the open/closed
+    signal this function does not take). Kept separate so a derive read can never
+    accidentally fall back to a label read.
+    """
+    if substrate_map is None:
+        return read(axis, labels)
+    binding = substrate_map.axes.get(axis)
+    if not isinstance(binding, dict):
+        return None
+    label_binding = binding.get("label")
+    if isinstance(label_binding, dict):
+        remap = label_binding.get("remap")
+        if isinstance(remap, dict):
+            present = set(labels)
+            for kit_value, adopter_label in remap.items():
+                if isinstance(adopter_label, str) and adopter_label in present:
+                    return str(kit_value)
+        return None
+    # derive / title-prefix / unsupported / malformed — not a label read.
+    return None
+
+
 # ----- greenfield identity arm (Task A — byte-unchanged) ------------------
 # These are the no-map arm of the ternary above. Every one of the ~38 call
 # sites Task A routed calls these; their greenfield behaviour is frozen by

@@ -221,23 +221,27 @@ def main() -> int:
         )
         return 2
 
-    # Position: read from the engine (DEC-033 D7 — read, don't re-infer). The
-    # engine's detectors reproduce this script's inference precedence, so the
-    # result is identical; fall back to the local inference only when the engine
-    # is unreachable (e.g. `pkit` not on PATH), so a move is never blocked.
-    current_state = _engine_position(args.issue_number)
-    if current_state is None:
-        current_state = _infer_current_state(
-            state=state, milestone=milestone, labels=labels
-        )
-
-    has_board = bool(config.get("has_projects_v2_board", False))
-
     # The adopter's optional substrate-map (ADR-026): None ⇒ greenfield (state
     # is a `state:*` label); a present map may bind state to a `derive`
     # predicate ⇒ no kit state label is written (the open/closed substrate
-    # carries it). Loaded once and threaded through every plan computation.
+    # carries it). Loaded once and threaded through both position inference and
+    # every plan computation. Loaded BEFORE the position read so the local
+    # fallback below is map-aware (agrees with the engine's map-aware detection).
     substrate_map = axis_labels.load_substrate_map(capability_root)
+
+    # Position: read from the engine (DEC-033 D7 — read, don't re-infer). The
+    # engine's detectors reproduce this script's inference precedence (and are
+    # now map-aware, ADR-026 §5), so the result is identical; fall back to the
+    # local inference only when the engine is unreachable (e.g. `pkit` not on
+    # PATH), so a move is never blocked. The fallback is threaded the same map so
+    # it agrees with the engine under a present derive binding.
+    current_state = _engine_position(args.issue_number)
+    if current_state is None:
+        current_state = _infer_current_state(
+            state=state, milestone=milestone, labels=labels, substrate_map=substrate_map
+        )
+
+    has_board = bool(config.get("has_projects_v2_board", False))
 
     # Idempotency check: issue is already at the requested state.
     #
@@ -636,7 +640,11 @@ def _infer_structural_type(
 
 
 def _infer_current_state(
-    *, state: str, milestone: dict | None, labels: list[str]
+    *,
+    state: str,
+    milestone: dict | None,
+    labels: list[str],
+    substrate_map: "axis_labels.SubstrateMap | None" = None,
 ) -> str:
     """Best-effort live state inference.
 
@@ -646,8 +654,16 @@ def _infer_current_state(
     inference and the engine's detection agree by construction — behaviour
     parity (DEC-033). Kept as a thin local alias so the rest of this script (and
     `_cascade_parent`) reads naturally.
+
+    Map-aware (ADR-026 §5): pass the adopter's `substrate_map` so this local
+    fallback agrees with the engine's (now map-aware) detection under a present
+    derive map — position resolves from open/closed, not a kit `state:*` label.
+    `None` (the default) keeps the kit `state:*` precedence byte-unchanged, so
+    callers that do not thread a map see today's behaviour exactly.
     """
-    return infer.infer_current_state(state=state, milestone=milestone, labels=labels)
+    return infer.infer_current_state(
+        state=state, milestone=milestone, labels=labels, substrate_map=substrate_map
+    )
 
 
 def _walk_parent_chain(body: str) -> list[int]:
@@ -864,9 +880,17 @@ def _cascade_parent(
         state=str(parent.get("state", "")).lower(),
         milestone=parent.get("milestone") or {},
         labels=parent_labels,
+        substrate_map=substrate_map,
     )
     # Cap the cascade target: containers top out at in-progress.
     cascade_target = _cascade_forward_target(target_state)
+    # Under a derive binding the forward cascade is an INTENTIONAL no-op: parent_state
+    # is the collapsed `open`/`blocked` (not in STATE_ORDER), so `_state_is_behind`
+    # returns False and we exit here — and even if reached, `_compute_plan` would
+    # DEGRADE the `state:*` write (no kit label written under a derive map). This is
+    # correct (the open-ish collapse means there is no meaningful forward bump, and
+    # you cannot write a kit `state:*` label under derive); do NOT "fix" the
+    # ValueError-tolerant `_state_is_behind` into a crash on these derived ids.
     if not _state_is_behind(parent_state, cascade_target):
         return True  # already at or beyond the capped target.
     plan = _compute_plan(
