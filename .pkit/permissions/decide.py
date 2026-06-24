@@ -34,6 +34,39 @@ _TOKEN = re.compile(r"^\[privilege-catalog:([a-z][a-z0-9-]*(?::[a-z][a-z0-9-]*)?
 _SEP = re.compile(r"\s*(?:&&|\|\||\||;)\s*")
 _ENVVAR = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 
+# The leading-`cd` strip (ADR-025 Phase 1). A bare `cd <path>` prefix changes
+# only the cwd — which the intent layer never confines — so stripping it reveals
+# the already-granted intent of the remainder; it grants nothing new. We strip
+# ONLY a bare `cd <single-path-arg>`: no quotes, no `$()`, no backtick, no
+# redirection, no flags. Anything more complex is NOT stripped (falls through to
+# existing behaviour). `_CD_SEP` matches the FIRST `&&` / `;` separator (the only
+# separators that sequence a directory change before a granted command — a bare
+# `cd src | gh …` makes no shell sense, so `|` / `||` are deliberately excluded).
+_CD_SEP = re.compile(r"\s*(?:&&|;)\s*")
+# Constructs the dumb splitter cannot be trusted on (ADR-004 dp-4 / ADR-025
+# decision 2): a quote, command substitution `$(`, a backtick, or a `<` / `>`
+# redirection. Their presence in the remainder of a cd-stripped compound makes
+# the decision ABSTAIN — never auto-allow — because a per-segment matcher is
+# structurally blind to what these compose into.
+#
+# `|` is DELIBERATELY EXCLUDED from this set (it does not force an abstain).
+# Pipe-composition porosity (e.g. `gh … | sh`) is inherited UNCHANGED from the
+# existing bare-command path: `segments()` already splits on `|` and the
+# decision matches on the granted first segment, so `gh … | sh` decides the
+# same with or without a leading `cd`. The cd-strip neither creates nor worsens
+# it — `cd /x && gh … | sh` resolves to exactly the bare `gh … | sh` verdict.
+# Adding `|` here would (a) re-introduce prompts on legitimate pipes like
+# `gh … | jq` and (b) only HALF-fix pipe-to-shell — the bare form `gh … | sh`
+# would stay porous — an inconsistent asymmetry for no real gain. The honest
+# boundary for `| sh` is the OS sandbox (ADR-004: this layer is a speed-bump,
+# not a boundary). Pipe handling is out of scope for ADR-025 Phase 1.
+_UNTRUSTED = re.compile(r"""['"`<>]|\$\(""")
+# A bare `cd <path>` first segment: literally `cd` then exactly one path token
+# with no shell metacharacter and not a flag. The token is intentionally
+# restrictive — the moment it carries anything the splitter can't trust, we do
+# not strip.
+_BARE_CD = re.compile(r"""^cd\s+([^\s'"`$<>|&;()]+)$""")
+
 
 # ---- command segmentation + recognizer matcher ----------------------------
 
@@ -49,6 +82,30 @@ def segments(command: str) -> list[list[str]]:
         if toks:
             out.append(toks)
     return out
+
+
+def _strip_leading_cd(command: str) -> str | None:
+    """If `command` is a compound whose FIRST segment is a bare `cd <path>`
+    followed by `&&` / `;`, return the remainder (everything after that first
+    separator). Otherwise return None — meaning "do not strip; fall through to
+    existing behaviour" (ADR-025 Phase 1).
+
+    Mirrors the leading-`export` / `VAR=` strip in `segments()` in spirit, but
+    operates on the raw command string (the cwd-change has no privilege of its
+    own to recognise) and is deliberately conservative: it strips ONLY a bare
+    `cd` with a single path arg carrying no shell metacharacter. A `cd` with a
+    quote, `$()`, backtick, redirection, a flag, or more than one arg is NOT a
+    bare `cd`, so we return None and let the unchanged path decide — never a
+    silent strip of something the dumb splitter can't trust.
+    """
+    parts = _CD_SEP.split(command.strip(), maxsplit=1)
+    if len(parts) != 2:
+        return None
+    first, remainder = parts
+    if not _BARE_CD.match(first.strip()):
+        return None
+    remainder = remainder.strip()
+    return remainder or None
 
 
 def _matches_bash(rule: dict[str, Any], toks: list[str]) -> bool:
@@ -209,6 +266,30 @@ def decide(
     """
     posture = posture or model.get("posture", "lenient")
     subject = request["subject"]
+
+    # Leading-`cd` strip (ADR-025 Phase 1). When a bash command's first segment
+    # is a bare `cd <path> &&` / `cd <path> ;`, drop it and decide on the
+    # remainder against the unchanged grant model — `cd src && gh pr list`
+    # auto-approves exactly as `gh pr list` would. Conservative on two axes:
+    #   - it strips ONLY a bare `cd` (`_strip_leading_cd` returns None otherwise,
+    #     so a tricky `cd "/x; rm -rf ~" && …` falls through to the full-command
+    #     path, where it is decided whole and at worst abstains — never silently
+    #     allowed); and
+    #   - if the remainder carries anything the dumb splitter can't be trusted on
+    #     (a quote, `$()`, a backtick, a `<` / `>` redirection), it ABSTAINS
+    #     rather than auto-allowing (ADR-004 dp-4, fail-closed-on-uncertainty).
+    # The remainder is decided at the ORIGINAL cwd: stripping `cd` can never
+    # grant a directory-scoped privilege the un-stripped command lacked.
+    if request.get("type") == "bash":
+        remainder = _strip_leading_cd(request.get("command", ""))
+        if remainder is not None:
+            if _UNTRUSTED.search(remainder):
+                return "abstain", (
+                    "leading-cd strip: remainder carries an untrusted construct "
+                    "(quote / $() / backtick / redirection) — fail closed"
+                )
+            return decide(model, catalog, {**request, "command": remainder}, posture)
+
     hits = recognized_privileges(catalog, request)
     privileges_catalog = catalog.get("privileges", {})
     matched_allow = False

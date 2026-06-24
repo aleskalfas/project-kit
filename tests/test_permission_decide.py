@@ -1874,3 +1874,189 @@ def test_stdlib_fallback_parses_catalog_fragment_identically_to_ruamel(decide_mo
     from ruamel.yaml import YAML as _Y
     ruamel_result = _Y(typ="safe").load(io.StringIO(_SCRAPER_FRAGMENT)) or {}
     assert stdlib_result == ruamel_result
+
+
+# ---- leading-cd strip (ADR-025 Phase 1 / issue #240) ------------------------
+#
+# A compound Bash command whose FIRST segment is a bare `cd <path>` followed by
+# `&&` / `;` has the cd stripped, and the remainder is decided against the
+# unchanged grant model. The strip is a prompt-reduction over already-granted
+# intent (`cd src && gh pr list` auto-approves as `gh pr list` would), NEVER a
+# new grant. It inherits ADR-004 dp-4 fail-closed-on-uncertainty wholesale: a
+# remainder carrying a quote / `$()` / backtick / `<` / `>` redirection ABSTAINS
+# (prompts), never auto-allows. Deny-wins is unchanged — a deny in the full
+# command (a tricky quoted cd) or in the remainder (rm -rf) still binds.
+#
+# MODEL grants `operator` issue-tracker (gh) + vcs + kit + repo-read; baseline
+# guardrail denies cover destructive-fs / privilege-escalation / vcs-history-rewrite.
+
+
+def test_strip_leading_cd_returns_remainder_for_bare_cd(decide_mod):
+    """A bare `cd <path> &&` / `cd <path> ;` prefix is stripped to the remainder."""
+    assert decide_mod._strip_leading_cd("cd /x && gh pr list") == "gh pr list"
+    assert decide_mod._strip_leading_cd("cd src; gh pr list") == "gh pr list"
+    assert decide_mod._strip_leading_cd("cd ../rel && git status") == "git status"
+
+
+def test_strip_leading_cd_does_not_strip_complex_cd(decide_mod):
+    """A cd that is anything more than a bare single-path arg is NOT stripped
+    (returns None → fall through). Quotes, substitution, backtick, redirection,
+    flags, and multi-arg cd all defeat the strip — conservatism by abstention."""
+    assert decide_mod._strip_leading_cd('cd "/x; rm -rf ~" && gh pr list') is None
+    assert decide_mod._strip_leading_cd("cd $(pwd) && gh pr list") is None
+    assert decide_mod._strip_leading_cd("cd `pwd` && gh pr list") is None
+    assert decide_mod._strip_leading_cd("cd -P /x && gh pr list") is None  # flag
+    assert decide_mod._strip_leading_cd("cd a b && gh pr list") is None    # two args
+    assert decide_mod._strip_leading_cd("cd /x | gh pr list") is None      # not && / ;
+    assert decide_mod._strip_leading_cd("cd /x") is None                   # no remainder
+    assert decide_mod._strip_leading_cd("gh pr list") is None              # no leading cd
+
+
+def test_cd_prefix_then_granted_gh_auto_approves(decide_mod, catalog):
+    """`cd /x && gh pr list` (gh granted) auto-approves — the prompt the leading
+    cd used to force is gone. This is the headline ADR-025 case."""
+    d, why = decide_mod.decide(MODEL, catalog, _bash("cd /x && gh pr list", "operator"))
+    assert d == "allow", why
+
+
+def test_cd_prefix_does_not_weaken_destructive_deny(decide_mod, catalog):
+    """`cd /x && rm -rf /` still DENIES — stripping cd never weakens a deny; the
+    remainder rm -rf is itself recognized as destructive-fs and the guardrail binds."""
+    d, why = decide_mod.decide(MODEL, catalog, _bash("cd /x && rm -rf /", "operator"))
+    assert d == "deny", why
+    assert "destructive-fs" in why
+
+
+def test_cd_prefix_with_redirection_in_remainder_abstains(decide_mod, catalog):
+    """`cd /x && echo z > ~/f` ABSTAINS — the `>` redirection in the remainder is
+    a construct the dumb splitter can't be trusted on, so fail closed (never
+    auto-allow), per ADR-004 dp-4."""
+    d, why = decide_mod.decide(MODEL, catalog, _bash("cd /x && echo z > ~/f", "operator"))
+    assert d == "abstain", why
+    assert "untrusted" in why.lower() or "fail closed" in why.lower()
+
+
+def test_tricky_quoted_cd_is_not_stripped_and_never_silently_allowed(decide_mod, catalog):
+    """`cd "/x; rm -rf ~" && gh pr list` — the quoted cd is NOT a bare cd, so it is
+    NOT stripped. It falls through to the full-command path, where the dumb
+    splitter leaks the `rm -rf ~` into a segment and the destructive-fs guardrail
+    denies. The one property that MUST hold: never a silent auto-allow."""
+    d, why = decide_mod.decide(
+        MODEL, catalog, _bash('cd "/x; rm -rf ~" && gh pr list', "operator")
+    )
+    assert d != "allow", f"a tricky quoted cd must never silently auto-allow; got {d!r}: {why}"
+
+
+def test_cd_prefix_with_command_substitution_in_remainder_abstains(decide_mod, catalog):
+    """`cd /x && gh $(rm -rf ~)` ABSTAINS — the `$()` substitution smuggles a
+    second command the per-segment matcher cannot see, so fail closed. (This is a
+    TIGHTENING: the pre-ADR-025 dumb path would have matched the bare `gh` and
+    auto-allowed it.)"""
+    d, why = decide_mod.decide(MODEL, catalog, _bash("cd /x && gh $(rm -rf ~)", "operator"))
+    assert d == "abstain", why
+    assert "untrusted" in why.lower() or "fail closed" in why.lower()
+
+
+def test_cd_prefix_with_backtick_in_remainder_abstains(decide_mod, catalog):
+    """A backtick in the remainder of a cd-stripped compound also fails closed."""
+    d, why = decide_mod.decide(MODEL, catalog, _bash("cd /x && gh `rm -rf ~`", "operator"))
+    assert d == "abstain", why
+
+
+def test_bare_cd_with_no_granted_remainder_abstains(decide_mod, catalog):
+    """A bare `cd /x` with no separator/remainder is not a strip case; it falls
+    through and abstains (cd matches no grant; lenient posture defers)."""
+    d, _ = decide_mod.decide(MODEL, catalog, _bash("cd /x", "operator"))
+    assert d == "abstain"
+
+
+def test_cd_prefix_then_ungranted_remainder_abstains(decide_mod, catalog):
+    """`cd /x && <ungranted>` abstains — the strip reveals the remainder, which
+    matches no allow grant, so lenient posture defers (no new grant invented)."""
+    d, _ = decide_mod.decide(MODEL, catalog, _bash("cd /x && unknowncmd --flag", "operator"))
+    assert d == "abstain"
+
+
+def test_cd_prefix_then_ungranted_remainder_denies_under_strict(decide_mod, catalog):
+    """Under strict posture the ungranted remainder of a cd-stripped compound
+    denies — the strip changes only WHICH command is decided, not the posture."""
+    d, _ = decide_mod.decide(
+        MODEL, catalog, _bash("cd /x && unknowncmd --flag", "operator"), posture="strict"
+    )
+    assert d == "deny"
+
+
+def test_cd_prefix_composes_with_env_prefix_strip(decide_mod, catalog):
+    """`cd /x && export Y=1 && gh pr list` allows — after the cd strip the
+    remainder `export Y=1 && gh pr list` re-enters decide(), where the existing
+    env-prefix strip in segments() handles the export. The two strips compose."""
+    d, why = decide_mod.decide(
+        MODEL, catalog, _bash("cd /x && export Y=1 && gh pr list", "operator")
+    )
+    assert d == "allow", why
+
+
+def test_chained_cd_strips_to_final_granted_command(decide_mod, catalog):
+    """Chained bare cds (`cd /a && cd /b && gh pr list`) strip recursively to the
+    final granted command — each cd is only a cwd change, never a grant."""
+    d, why = decide_mod.decide(
+        MODEL, catalog, _bash("cd /a && cd /b && gh pr list", "operator")
+    )
+    assert d == "allow", why
+
+
+# ---- pipe-in-remainder: inherited porosity, unchanged by the cd-strip -------
+#
+# `|` is NOT in `_UNTRUSTED` (it does not force an abstain). Pipe handling is
+# inherited UNCHANGED from the bare-command path — `segments()` already splits
+# on `|` and matches the granted first segment. These tests pin that behavior so
+# a future `_UNTRUSTED` edit can't silently flip it (the rationale lives at the
+# `_UNTRUSTED` definition in decide.py). The cd-strip neither creates nor worsens
+# pipe porosity; the real boundary for `| sh` is the OS sandbox (ADR-004).
+
+
+def test_cd_prefix_then_legitimate_pipe_allows(decide_mod, catalog):
+    """`cd /x && gh pr list | jq .` ALLOWS — the legitimate-pipe win is preserved.
+    `gh` is granted (issue-tracker); the `jq` segment matches no grant but a
+    non-match is not a deny, so the granted first segment carries the allow. A
+    quote-free `jq .` is used so the win, not the `_UNTRUSTED` abstain, is what's
+    pinned. The cd-strip leaves the pipe untouched."""
+    d, why = decide_mod.decide(MODEL, catalog, _bash("cd /x && gh pr list | jq .", "operator"))
+    assert d == "allow", why
+
+
+def test_cd_prefix_then_pipe_to_destructive_denies(decide_mod, catalog):
+    """`cd /x && gh pr list | rm -rf ~` DENIES — deny-wins survives a pipe through
+    the cd-strip recursion: the `rm -rf` segment hits the destructive-fs guardrail
+    after the leading cd is stripped."""
+    d, why = decide_mod.decide(MODEL, catalog, _bash("cd /x && gh pr list | rm -rf ~", "operator"))
+    assert d == "deny", why
+    assert "destructive-fs" in why
+
+
+def test_cd_prefix_then_pipe_to_shell_matches_bare_form(decide_mod, catalog):
+    """`cd /x && gh pr list | sh` resolves to EXACTLY the bare `gh pr list | sh`
+    verdict — proving the cd-strip is verdict-preserving over a pipe-to-shell. The
+    `| sh` porosity (whatever it is today) is INHERITED from the bare-command path,
+    not a cd-strip artifact; `|` is deliberately absent from `_UNTRUSTED`. The real
+    boundary for `| sh` is the OS sandbox (ADR-004)."""
+    cd_decision, cd_why = decide_mod.decide(
+        MODEL, catalog, _bash("cd /x && gh pr list | sh", "operator")
+    )
+    bare_decision, _ = decide_mod.decide(
+        MODEL, catalog, _bash("gh pr list | sh", "operator")
+    )
+    assert cd_decision == bare_decision, (
+        f"cd-prefixed pipe-to-shell must match the bare form's verdict; "
+        f"got cd={cd_decision!r}, bare={bare_decision!r}: {cd_why}"
+    )
+
+
+def test_cd_strip_hook_and_decide_parity(decide_mod, catalog):
+    """The cd-strip lives in the shared core, so hook_decide and decide agree on
+    a cd-prefixed compound (ADR-002 / ADR-003 same-code invariant)."""
+    cmd = "cd /x && gh pr list"
+    d_decide, _ = decide_mod.decide(MODEL, catalog, _bash(cmd, "operator"))
+    payload = {"tool_name": "Bash", "tool_input": {"command": cmd}, "cwd": "/r"}
+    d_hook, _ = decide_mod.hook_decide(MODEL, catalog, payload)  # no agent_type → operator
+    assert d_decide == d_hook == "allow"
