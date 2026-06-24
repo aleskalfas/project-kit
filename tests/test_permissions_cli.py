@@ -1462,6 +1462,24 @@ def test_required_exclusion_idempotent_no_double_apply(tmp_path, monkeypatch):
     assert "REQUIRED exclusion auto-applied" not in out
 
 
+def test_required_exclusion_already_in_place_is_reported_not_silent(tmp_path, monkeypatch):
+    # #274: when the required exclusion is ALREADY in place (re-run / prior setup),
+    # the no-op auto-apply must still report it — a silent gap left the operator
+    # unsure the platform-mandatory exclusion was handled.
+    _force_uv(monkeypatch, platform="darwin", version="0.9.8")
+    proj = _with_adapter(_setup(tmp_path))
+    (proj / "uv.lock").write_text("")
+    _run(proj, monkeypatch, "setup", "autonomy")          # first run applies it
+    assert "uv" in _sb(proj)["excludedCommands"]          # precondition: present
+    out = _run(proj, monkeypatch, "setup", "autonomy")    # re-run: no-op apply
+    # The already-in-place confirmation is visible…
+    assert "required exclusion: ✓ `uv` already excluded" in out
+    assert "platform-mandatory" in out and "ADR-027" in out
+    # …and it does NOT claim it applied the exclusion fresh this run.
+    assert "REQUIRED exclusion auto-applied" not in out
+    assert "OUTSIDE the OS box — UNCONFINED" not in out
+
+
 def test_optional_widening_stays_nudge_only_under_auto_apply(tmp_path, monkeypatch):
     # Even with the required-exclusion auto-apply live, optional widenings
     # (docker) are NEVER auto-applied — they stay nudge-only.

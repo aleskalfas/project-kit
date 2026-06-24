@@ -3294,11 +3294,15 @@ def _setup_accommodations(target_root: Path, profile: str) -> tuple[list[str], l
     return applied, nudges
 
 
-def _setup_required_exclusions(target_root: Path) -> list[str]:
+def _setup_required_exclusions(target_root: Path) -> tuple[list[str], list[str]]:
     """Auto-apply (and self-heal) the platform-MANDATORY, necessity-verified
     sandbox exclusion — the one carve-out from ADR-008 rule 4's "never applied by
-    setup", sanctioned by ADR-027. Returns the loud report lines for the setup
-    block (empty when nothing to do).
+    setup", sanctioned by ADR-027. Returns (loud_lines, confirmed_lines):
+    `loud_lines` feed the own "pkit applied it for you" block (a boundary just
+    lowered — self-heal + fresh apply); `confirmed_lines` are quiet [3/4]
+    confinement-continuation confirmations for the no-op case (the exclusion was
+    already in place — nothing applied, but reported so it isn't a silent gap).
+    Both empty when there's nothing to say.
 
     Apply (conditions 1-5): when `_uv_required_exclusion` verifies the macOS uv
     Seatbelt panic still occurs AND uv is not already excluded, shell to the real
@@ -3309,19 +3313,25 @@ def _setup_required_exclusions(target_root: Path) -> list[str]:
     `settings.json`, so there is nothing for an operator to keep uncommitted.
     `sandbox_exclude` touches nothing else.
 
+    Already in place: when the exclusion is required AND already excluded (the
+    auto-apply is a no-op), report a quiet confirmation rather than going silent —
+    the operator needs to see the platform-mandatory exclusion is handled, just as
+    the strict seal and accommodations are confirmed even when already present.
+
     Self-heal (condition 6): when a previously auto-applied `_required` exclusion
     is no longer required (uv upgraded past a fixed release, or we're on Linux),
     REMOVE it through the same primitive and report the removal. Only `_required`
     entries are touched — an operator's `_manual` carve-out of the same command is
     never removed here (the distinct tag is what keeps teardown honest)."""
     if not _adapter_installed(target_root, "claude-code"):
-        return []
+        return [], []
     prov = _load_provenance(target_root)
     required_entries = {
         e.get("value") for e in prov
         if e.get("toolkit") == _REQUIRED_TOOLKIT and e.get("kind") == "exclude-command"
     }
-    lines: list[str] = []
+    loud: list[str] = []
+    confirmed: list[str] = []
 
     # Self-heal first: drop any auto-applied required exclusion no longer warranted.
     # Today the only required command is `uv`; generalise by re-checking each.
@@ -3329,7 +3339,7 @@ def _setup_required_exclusions(target_root: Path) -> list[str]:
         still_required = cmd == "uv" and _uv_required_exclusion(target_root)
         if not still_required:
             sandbox_exclude(target_root, cmd, remove=True, toolkit=_REQUIRED_TOOLKIT)
-            lines.append(
+            loud.append(
                 f"  self-healed: `{cmd}` is no longer a required exclusion "
                 f"(uv at/above a fixed release, or not macOS) — removed; it runs "
                 f"inside the box again."
@@ -3337,16 +3347,18 @@ def _setup_required_exclusions(target_root: Path) -> list[str]:
 
     # Apply: the macOS uv exclusion when the panic is verified to still occur.
     if _uv_required_exclusion(target_root):
+        # Read LIVE union state (committed + per-machine local) so the branch
+        # reflects what the box actually excludes, not just what we'd write.
         sb = _sandbox_block(target_root)
         already = "uv" in set(sb.get("excludedCommands") or [])
         if not already:
             sandbox_exclude(target_root, "uv", toolkit=_REQUIRED_TOOLKIT)
-            lines.append(
+            loud.append(
                 "  ⚠ REQUIRED exclusion auto-applied: `uv` (and `pkit`, which runs "
                 "via `uv run`) now runs OUTSIDE the OS box — UNCONFINED, with full "
                 "host filesystem and network reach."
             )
-            lines.append(
+            loud.append(
                 "    macOS-mandatory and necessity-verified: uv "
                 f"{_UV_KNOWN_BAD_FLOOR}-class hits a fixed Seatbelt panic the box "
                 "cannot host (ADR-014/ADR-027). NOT recorded in any committed file "
@@ -3354,7 +3366,14 @@ def _setup_required_exclusions(target_root: Path) -> list[str]:
                 "`probe`; still gated by the permission hook. A fixed uv "
                 "self-disables this on the next setup run."
             )
-    return lines
+        else:
+            # No-op apply: the required exclusion is already in place. Confirm it
+            # quietly so the operator isn't left unsure it's handled (Task #274).
+            confirmed.append(
+                "required exclusion: ✓ `uv` already excluded "
+                "(platform-mandatory, necessity-verified — ADR-027)"
+            )
+    return loud, confirmed
 
 
 def setup_autonomy(target_root: Path, profile: str = "autonomous") -> tuple[str, bool]:
@@ -3419,11 +3438,16 @@ def setup_autonomy(target_root: Path, profile: str = "autonomous") -> tuple[str,
     else:
         lines.append(f"{cont}accommodations: none needed (no known tool detected)")
 
-    # Required-exclusion auto-apply + self-heal (ADR-027). Loud, in its OWN block
-    # — NOT folded into the quiet narrowing "accommodations:" line, because this
-    # one LOWERS the box for a command the platform cannot confine. Held with the
-    # other action blocks so it lands after the step spine + verdict.
-    required_lines = _setup_required_exclusions(target_root)
+    # Required-exclusion auto-apply + self-heal (ADR-027). The LOUD lines (fresh
+    # apply / self-heal) go in their OWN block — NOT folded into the quiet
+    # narrowing "accommodations:" line, because they LOWER the box for a command
+    # the platform cannot confine; held with the other action blocks below. The
+    # CONFIRMED lines (the exclusion was already in place — a no-op) are quiet
+    # [3/4] confinement continuations alongside "accommodations:", so the
+    # already-handled platform-mandatory exclusion is visible, not silent (#274).
+    required_lines, required_confirmed = _setup_required_exclusions(target_root)
+    for line in required_confirmed:
+        lines.append(f"{cont}{line}")
 
     # Action blocks are HELD and appended after the step spine + verdict, so they
     # don't interrupt [3/4]→[4/4]. The REQUIRED-exclusion block leads (it reports
