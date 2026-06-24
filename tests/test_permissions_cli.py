@@ -523,6 +523,27 @@ def test_sandbox_disable_flips_enabled_only(tmp_path, monkeypatch):
     assert "already disabled" in _run(proj, monkeypatch, "sandbox", "disable")
 
 
+def test_sandbox_disable_reports_local_enabled_override(tmp_path, monkeypatch):
+    # `disable` flips only the COMMITTED `enabled`, but the runtime is the union
+    # and `enabled` is scalar local-wins (ADR-029). If settings.local.json carries
+    # a per-machine `enabled: true` (the harness /sandbox panel writes there — a
+    # key pkit does not own), the box stays ON. disable must NOT silently claim the
+    # box is off; it must report the override honestly.
+    proj = _with_adapter(_setup(tmp_path))
+    _run(proj, monkeypatch, "sandbox", "enable")          # committed enabled=true
+    local_path = proj / ".claude" / "settings.local.json"
+    local = json.loads(local_path.read_text()) if local_path.is_file() else {}
+    local.setdefault("sandbox", {})["enabled"] = True     # per-machine override
+    local_path.write_text(json.dumps(local))
+    out = _run(proj, monkeypatch, "sandbox", "disable")
+    # Committed floor was cleared, but the union still resolves ON.
+    assert _settings(proj)["sandbox"]["enabled"] is False
+    assert _sb(proj)["enabled"] is True
+    # Honest report: names the local override; does NOT claim the box is now off.
+    assert "still ON" in out and "settings.local.json" in out
+    assert "sandbox disabled (enabled: false" not in out
+
+
 def test_sandbox_status_off_and_on(tmp_path, monkeypatch):
     proj = _with_adapter(_setup(tmp_path))
     out = _run(proj, monkeypatch, "sandbox")               # no subcommand = status
@@ -1154,6 +1175,11 @@ def test_exclude_is_loud_and_not_committed(tmp_path, monkeypatch):
     assert "WIDENING" in out and "UNCONFINED" in out
     assert "NOT recorded in any committed file" in out
     assert "docker" in _sb(proj)["excludedCommands"]
+    # ADR-029 routing: the widening lands ONLY in the gitignored local file; the
+    # committed file never carries it (fails if `_route_local` regressed and routed
+    # the widening back to committed).
+    assert "docker" in _sb_local(proj).get("excludedCommands", [])
+    assert "excludedCommands" not in _sb_committed(proj)
     # never written to permission-config
     cfgp = proj / ".pkit" / "permissions" / "project" / "config.yaml"
     if cfgp.is_file():
@@ -1243,6 +1269,11 @@ def test_required_exclusion_auto_applies_on_macos_old_uv_with_marker(tmp_path, m
     assert "OUTSIDE the OS box — UNCONFINED" in out
     # Applied via the real primitive → lands in live settings excludedCommands.
     assert "uv" in _sb(proj)["excludedCommands"]
+    # ADR-029 routing: the required exclusion is a widening → ONLY the gitignored
+    # local file carries it; the committed file never does (fails if `_route_local`
+    # regressed and routed the widening back to committed).
+    assert "uv" in _sb_local(proj).get("excludedCommands", [])
+    assert "excludedCommands" not in _sb_committed(proj)
     # Distinct provenance tag — `_required`, NOT `_manual`.
     prov_path = proj / ".pkit" / "permissions" / "project" / "sandbox-provenance.yaml"
     from ruamel.yaml import YAML as _YAML

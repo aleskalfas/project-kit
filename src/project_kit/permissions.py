@@ -1540,8 +1540,14 @@ def sandbox_enable(target_root: Path, strict: bool = False,
 
 
 def sandbox_disable(target_root: Path) -> str:
-    """Turn the OS sandbox off (`enabled: false`), leaving operator keys
-    (excludedCommands, denyRead floor, …) in place. Idempotent."""
+    """Turn the OS sandbox off (`enabled: false`) in the committed floor, leaving
+    operator keys (excludedCommands, denyRead floor, …) in place. Idempotent.
+
+    Reports honestly when the gitignored `settings.local.json` carries its own
+    per-machine `sandbox.enabled: true`: that key is local-wins in the runtime
+    union (ADR-029) and is harness-owned (the `/sandbox` panel writes it), so the
+    box stays ON despite the committed flip — this does not claim success in that
+    case, it names the override."""
     path = _settings_path(target_root)
     if not path.is_file():
         return "sandbox already disabled: no .claude/settings.json.\n"
@@ -1551,6 +1557,21 @@ def sandbox_disable(target_root: Path) -> str:
         return "sandbox already disabled.\n"
     sb["enabled"] = False
     _write_settings(target_root, settings)
+    # `enabled` is part of the COMMITTED baseline floor pkit owns; we just cleared
+    # it there. But the runtime is the UNION (ADR-029) and `enabled` is a scalar
+    # (local-wins). If the gitignored `settings.local.json` carries its own
+    # `enabled: true` — the harness `/sandbox` panel writes per-machine sandbox
+    # state there, a key pkit does NOT own — the box stays ON despite this flip.
+    # Don't reach into that operator/harness-owned key; report the override
+    # honestly rather than falsely claiming the box is off.
+    if _sandbox_block(target_root).get("enabled") is True:
+        return (
+            "committed `enabled: false` written, but the OS sandbox is still ON: "
+            "`.claude/settings.local.json` carries a per-machine `sandbox.enabled: "
+            "true` that overrides the committed floor (local-wins, ADR-029). pkit "
+            "does not own that key — turn the box off via the harness `/sandbox` "
+            "panel (or remove `sandbox.enabled` from settings.local.json).\n"
+        )
     return (
         "sandbox disabled (enabled: false — other sandbox keys left in place; "
         "scripting prompts again).\n" + _RESTART_NOTE + "\n"
@@ -3282,11 +3303,11 @@ def _setup_required_exclusions(target_root: Path) -> list[str]:
     Apply (conditions 1-5): when `_uv_required_exclusion` verifies the macOS uv
     Seatbelt panic still occurs AND uv is not already excluded, shell to the real
     `sandbox_exclude` primitive under the distinct `_required` provenance tag and
-    fire the existing UNCONFINED banner. Written only to the per-machine live
-    settings file (`.claude/settings.json`) — condition 4; `sandbox_exclude`
-    touches nothing else. In a conventional adopter layout that file is
-    per-machine; in a repo that tracks it the operator must keep the
-    auto-applied exclusion uncommitted.
+    fire the existing UNCONFINED banner. The exclusion is a widening, so
+    `sandbox_exclude` routes it to the gitignored `settings.local.json` (ADR-029)
+    — condition 4 by construction: a widening never lands in the committed
+    `settings.json`, so there is nothing for an operator to keep uncommitted.
+    `sandbox_exclude` touches nothing else.
 
     Self-heal (condition 6): when a previously auto-applied `_required` exclusion
     is no longer required (uv upgraded past a fixed release, or we're on Linux),
