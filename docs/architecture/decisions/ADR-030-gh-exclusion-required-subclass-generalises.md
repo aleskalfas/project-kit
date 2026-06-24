@@ -1,7 +1,7 @@
 ---
 id: ADR-030
 title: gh joins the auto-applied required-exclusion set on macOS (the subclass generalises to a verified set)
-status: proposed
+status: accepted
 date: 2026-06-24
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
