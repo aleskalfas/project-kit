@@ -2,6 +2,9 @@
 authors:
   - Aleš Kalfas <kalfas.ales@gmail.com>
 started: 2026-06-24
+retired: 2026-06-24
+produced:
+  - DEC-037
 ---
 
 # Brownfield adoption ceremonies — attribute auto-population, hooks, presets
