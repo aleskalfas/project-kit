@@ -221,6 +221,24 @@ seam.** That refactor is precisely what converts "never write an unmanaged label
 from per-call-site discipline (remember not to format the wrong literal) into a
 structural property (there is no other way to obtain a write-label at all).
 
+*Clarifying note (as-built): the seam is the resolution **module**, not a single
+function. Within it the greenfield identity primitive (`label(axis, value) →
+"<axis>:<value>"`, the byte-stable Task-A constructor) is kept distinct from the
+write-path resolver (`resolve_write(axis, value, map)`, which composes over
+`label` in the no-map case and fails closed to a degrade sentinel on a
+bound/unsupported/value-unresolvable axis). Sole-constructor (part (i)) means
+"every write-label originates in this module" — it does **not** mean `label`
+itself becomes map-aware; folding the map into `label` would overload the
+greenfield primitive's total `(axis, value) → str` contract with a partial,
+map-dependent one and break the read/identity call sites that rely on it. So the
+~26-site refactor routes write sites from `label` to `resolve_write`; until it
+lands, those sites stay on `label` (correct in greenfield, the only mode exercised
+today) and sole-constructor is **provisioned but not yet structural**. The
+grep/AST guard (Implications, half (b)) enforces "no inline `<axis>:<value>`
+literal" — calling `label` passes it because `label` is the seam — so the guard
+holds across the deferral; what it does not yet assert is write-sites-call-
+`resolve_write`, which is the refactor's own scope.*
+
 **Part (ii) — when an axis is `unsupported`, absent-from-a-present-map, or
 *indeterminate* (a `derive` predicate errored, a binding is malformed), the seam
 emits no write-label.** It resolves to *degrade* (advisory / disabled), never to a
@@ -543,6 +561,5 @@ fail-closed fold semantics for free over the derived state.
   degradation; they are consistent with DEC-036's *what* (D4 keeps containment
   hard; point 3 names the missing-knob gap as in-scope schema work) and require
   **no DEC-036 amendment**. Does not restate DEC-036; cites it as the decision.
-- **Acceptance gate.** This record is `proposed` — a forward design contract the
-  maintainer accepts before the trunk implementation builds against it (per
-  PRJ-005). It is **not** self-accepted.
+- **Acceptance gate.** Accepted by the maintainer before the trunk implementation
+  built against it (per PRJ-005) — a forward design contract, not self-accepted.

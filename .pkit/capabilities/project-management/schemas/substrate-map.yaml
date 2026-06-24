@@ -1,0 +1,92 @@
+# Substrate map — bind each methodology axis onto an immutable tracker.
+#
+# OPTIONAL adopter-side file (per [project-management:DEC-036-substrate-
+# pluggable-adoption], read-path contract ADR-026). A brownfield project
+# that cannot create the kit's own `<axis>:<value>` labels writes one of
+# these at `project/substrate-map.yaml`, declaring per axis HOW that axis
+# is encoded in their existing tracker — or that it is `unsupported`, in
+# which case the feature needing it degrades rather than refusing.
+#
+# Activation is emergent, never a `mode` flag (DEC-036 D2):
+#   - NO substrate-map.yaml at all  ⇒ greenfield. Every axis reads the
+#     kit's own `<axis>:<value>` labels directly, byte-unchanged.
+#   - A map PRESENT ⇒ per axis, the read seam resolves a ternary:
+#       * bound        — resolve through the declared binding;
+#       * unsupported  — degrade (advisory / disabled);
+#       * ABSENT from a present map — treated as `unsupported`, NOT
+#         greenfield. This is the load-bearing rule: an adopter who omits
+#         an axis they cannot serve gets degradation, never a silent
+#         fall-back to writing a label they cannot create (ADR-026).
+#
+# Per axis EXACTLY ONE binding (`oneOf` in the companion):
+#   - label:        a value→value remap onto existing labels (e.g. priority
+#                   High→P0). The resolved substrate is the adopter's OWN
+#                   label string, never the kit's `<axis>:<value>` form.
+#   - title-prefix: a value→prefix remap onto a title convention.
+#   - derive:       a detection predicate (lifecycle-state; the DEC-033
+#                   detector swap over open/closed). The predicate ENGINE
+#                   is sibling Wave-2 work — this declares the shape only.
+#   - unsupported:  the axis has no native encoding; degrade.
+# Any binding MAY carry an optional `default:` — a substrate value the
+# writer seeds when the caller supplies none. The read seam never invents
+# it; it is a write-side note.
+#
+# A methodology value with no entry in a bound axis's remap is
+# *value-unresolvable within a bound axis* (ADR-026 fourth arm): it
+# degrades only the rules depending on THAT value, never the axis as a
+# whole — so the type-keyed Feature-in-Feature containment invariant stays
+# HARD even when `[Feature]` has no title-prefix (DEC-036 D4).
+#
+# The body below is the AUJ-shaped reference instance — a valid example
+# that doubles as this schema's self-test (validated by
+# `pkit schemas validate`) and as a copy-paste starting point. A real
+# adopter writes their own `project/substrate-map.yaml`.
+
+schema_version: 1
+
+# Adopter-data binding (per COR-023): a project's substrate-map.yaml
+# matches this schema. Adopter files SHOULD also carry the self-describing
+# top-level field `pkit_schema: project-management:substrate-map`.
+binds_to:
+  - "**/substrate-map.yaml"
+
+pkit_schema: project-management:substrate-map
+
+axes:
+  # Priority: native P0/P1/P2 labels already exist on the tracker.
+  priority:
+    label:
+      remap:
+        High: P0
+        Medium: P1
+        Low: P2
+    default: P1
+
+  # Type: a `[Task]` / `[Epic]` title-prefix convention. NOTE: no
+  # `[Feature]` / `[Umbrella]` prefix exists — so `feature` and `umbrella`
+  # are value-unresolvable within this bound axis (ADR-026 fourth arm).
+  # That degrades only rules depending on those values; the type axis as a
+  # whole is served, and the Feature-in-Feature containment invariant
+  # stays HARD.
+  type:
+    title-prefix:
+      remap:
+        task: "[Task]"
+        epic: "[Epic]"
+
+  # Workstream: the tracker has no workstream encoding — explicitly
+  # unsupported (equivalent to omitting the key; written for the record).
+  workstream:
+    unsupported: true
+
+  # Lifecycle-state: derived from open/closed + a blocked label (the
+  # DEC-033 detector swap). The reduced state set collapses the open-ish
+  # states to one. The predicate engine that reads this is sibling Wave-2
+  # work; this declares the binding shape only.
+  state:
+    derive:
+      from: open-closed
+      states:
+        open: "issue is open and not labelled Blocked"
+        blocked: "issue is open and labelled Blocked"
+        done: "issue is closed"

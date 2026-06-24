@@ -195,6 +195,21 @@ def _run_all_checks(capability_root: Path) -> list[CheckResult]:
     config, config_result = _check_adopter_config(config_path)
     results.append(config_result)
 
+    # Substrate map — read once (per DEC-036 / ADR-026). `None` ⇒ greenfield
+    # (no map): every axis is served via the kit's own labels, so the label
+    # checks below run exactly as before. A map present flips the axis checks
+    # from hard-refuse-on-missing-label to a capability matrix (served via
+    # binding / advisory / disabled) — pre-check degrades, never refuses.
+    substrate_map = axis_labels.load_substrate_map(capability_root)
+    if substrate_map is not None:
+        # A present map that the loader fail-closed to degrade-all (no axes)
+        # is ambiguous between a typo'd file and a deliberate all-`unsupported`
+        # config — the loader cannot tell them apart and reports neither. Probe
+        # the file distinctly so a malformed map is diagnosable, not silent
+        # (G-3 / the loader docstring's promise).
+        results.append(_check_substrate_map_parse(capability_root))
+        results.extend(_check_substrate_capability_matrix(substrate_map))
+
     # 3b. gh: block validation + host-pinned auth (per DEC-023).
     if config is not None:
         results.append(_check_gh_block(config))
@@ -218,11 +233,15 @@ def _run_all_checks(capability_root: Path) -> list[CheckResult]:
         )
 
     # 6. Required labels (classification axes + state labels in label-fallback).
-    results.extend(_check_labels(capability_root, config, has_board))
+    #    A bound/unsupported axis (substrate_map present) degrades rather than
+    #    demanding the kit's own labels exist; greenfield is unchanged.
+    results.extend(_check_labels(capability_root, config, has_board, substrate_map))
 
-    # 6b. State labels presence (label-fallback mode only).
+    # 6b. State labels presence (label-fallback mode only). A `state` axis bound
+    #     to a `derive` predicate (or unsupported) has no `state:*` labels to
+    #     check — degrade, don't refuse.
     if not has_board:
-        results.append(_check_state_labels(capability_root))
+        results.append(_check_state_labels(capability_root, substrate_map))
 
     # 7. Default branch matches config.
     results.append(_check_default_branch(config))
@@ -245,8 +264,11 @@ def _run_all_checks(capability_root: Path) -> list[CheckResult]:
         results.extend(_check_review_block(config, capability_root))
 
     # 13. Title-prefix alignment (sample of open issues cross-validated
-    #     against issue-types.yaml + classification.yaml prefixes).
-    results.extend(_check_title_prefix_alignment(capability_root))
+    #     against issue-types.yaml + classification.yaml prefixes). Under a
+    #     present map the `type` axis may be bound to the adopter's own title
+    #     prefixes (or unsupported/derived) — so the kit's prefix vocabulary is
+    #     not the right yardstick and a mismatch must degrade, never refuse.
+    results.extend(_check_title_prefix_alignment(capability_root, substrate_map))
 
     return results
 
@@ -507,12 +529,163 @@ def _check_board(board_id: int | str | None) -> CheckResult:
     return CheckResult("Projects v2 board", "ok", f"board #{board_id} resolves")
 
 
+def _axis_expects_kit_labels(
+    axis: str, substrate_map: "axis_labels.SubstrateMap | None"
+) -> bool:
+    """Whether the kit's own `<axis>:*` labels should exist for ``axis``.
+
+    Only in greenfield (no substrate-map). With a map present, NO axis uses the
+    kit's own labels — a bound axis resolves to the adopter's substrate, an
+    unsupported/absent axis degrades — so the kit-label existence check is
+    skipped and replaced by the capability-matrix line. This is the read-path's
+    expression of "never demand a label the adopter cannot create".
+    """
+    return substrate_map is None
+
+
+def _axis_label_check_skipped(
+    axis: str, substrate_map: "axis_labels.SubstrateMap | None"
+) -> CheckResult:
+    """The skip line for an axis whose kit-labels are not checked under a map."""
+    disposition = axis_labels.axis_disposition(axis, substrate_map)
+    if disposition == "served":
+        return CheckResult(
+            f"`{axis}:*` kit labels",
+            "skip",
+            f"axis `{axis}` bound to the adopter's substrate via "
+            f"substrate-map.yaml — kit `{axis}:*` labels not required.",
+        )
+    return CheckResult(
+        f"`{axis}:*` kit labels",
+        "skip",
+        f"axis `{axis}` unsupported/absent in substrate-map.yaml — degraded, "
+        f"kit `{axis}:*` labels not required.",
+    )
+
+
+def _check_substrate_map_parse(capability_root: Path) -> CheckResult:
+    """Report whether a present ``substrate-map.yaml`` actually parses + is shaped.
+
+    The loader (:func:`axis_labels.load_substrate_map`) fail-closes a present-
+    but-unparseable / mis-shaped map to *degrade-all* (a :class:`SubstrateMap`
+    with no axes) — which is byte-identical to a deliberate all-``unsupported``
+    config. That is the safe write-path posture, but it makes a typo'd map
+    *silent*: the operator sees every axis degrade with no hint that the file is
+    broken rather than intentionally empty. pre-check already re-reads the file,
+    so a distinct parse/shape probe is cheap and closes that diagnosability gap
+    (G-3).
+
+    This is a lightweight shape probe, not the full JSON-Schema validation
+    (`pkit schemas validate` owns that). It distinguishes three states:
+      * parses to a well-formed ``axes:`` mapping ⇒ ``ok``;
+      * present but YAML-unparseable, not a mapping, or no ``axes:`` mapping ⇒
+        ``fail`` with a "fix the file" remediation (NOT a refusal of the run —
+        the matrix still degrades every axis; this only makes the cause visible).
+    """
+    path = capability_root / axis_labels.SUBSTRATE_MAP_RELATIVE_PATH
+    try:
+        data = YAML(typ="safe").load(path.read_text(encoding="utf-8")) or {}
+    except (OSError, YAMLError) as exc:
+        return CheckResult(
+            "substrate-map.yaml parses",
+            "fail",
+            f"present but unparseable ({exc}) — every axis is degrading because "
+            f"the file could not be read, NOT because the adopter declared it.",
+            remediation=(
+                "Fix the YAML syntax in project/substrate-map.yaml, then re-run. "
+                "Until it parses, all axes degrade (fail-closed); this is a "
+                "broken file, not a deliberate all-`unsupported` config."
+            ),
+        )
+    if not isinstance(data, dict) or not isinstance(data.get("axes"), dict):
+        return CheckResult(
+            "substrate-map.yaml shape",
+            "fail",
+            "present but invalid — top-level must be a mapping with an `axes:` "
+            "mapping. Every axis is degrading because the map is mis-shaped, NOT "
+            "because the adopter declared each axis unsupported.",
+            remediation=(
+                "Give project/substrate-map.yaml an `axes:` mapping (per-axis "
+                "binding). Run `pkit schemas validate` for the full check. Until "
+                "it is well-shaped, all axes degrade (fail-closed)."
+            ),
+        )
+    return CheckResult(
+        "substrate-map.yaml parses + shaped",
+        "ok",
+        f"{path} parses; {len(data['axes'])} axis binding(s) declared",
+    )
+
+
+def _check_substrate_capability_matrix(
+    substrate_map: "axis_labels.SubstrateMap",
+) -> list[CheckResult]:
+    """Report the per-axis capability matrix when a substrate-map is present.
+
+    Per DEC-036 / ADR-026: with a map present, each methodology axis is either
+    *served* (resolves through a declared binding) or *unsupported* (explicitly
+    marked, or absent from the map — absent ≡ unsupported, the load-bearing
+    rule). This surfaces the matrix as an informational block so the operator
+    sees, up front, which axes the substrate can express. It never fails — a
+    degraded axis is a supported brownfield state, not a misconfiguration.
+
+    The seam's `axis_disposition` is the single source of truth for served-vs-
+    degraded; pre-check renders it, it does not re-derive it.
+    """
+    results: list[CheckResult] = [
+        CheckResult(
+            "substrate-map present",
+            "ok",
+            "brownfield mode — axes resolve through project/substrate-map.yaml "
+            "(per DEC-036). Greenfield default is no map.",
+        )
+    ]
+    for axis in axis_labels.AXES:
+        disposition = axis_labels.axis_disposition(axis, substrate_map)
+        if disposition == "served":
+            binding = substrate_map.axes.get(axis, {})
+            kind = next(
+                (k for k in ("label", "title-prefix", "derive") if k in binding),
+                "?",
+            )
+            results.append(CheckResult(
+                f"axis `{axis}` served",
+                "ok",
+                f"bound via `{kind}`",
+            ))
+        else:
+            # Absent or explicitly unsupported — degrade, don't refuse.
+            reason = (
+                "explicitly `unsupported`"
+                if axis in substrate_map.axes
+                else "absent from the map (treated as unsupported, NOT greenfield)"
+            )
+            results.append(CheckResult(
+                f"axis `{axis}` degraded",
+                "skip",
+                f"{reason}; rules depending on it soften to advisory where a "
+                f"severity knob exists, else stay at their authored severity "
+                f"(ADR-026 no-knob-stays-hard).",
+            ))
+    return results
+
+
 def _check_labels(
     capability_root: Path,
     config: dict[str, Any] | None,
     has_board: bool,
+    substrate_map: "axis_labels.SubstrateMap | None" = None,
 ) -> list[CheckResult]:
-    """Verify the methodology's required labels exist on the repo."""
+    """Verify the methodology's required labels exist on the repo.
+
+    Greenfield (``substrate_map is None``): every axis is served via the kit's
+    own labels, so each axis's labels must exist — the original hard-refuse
+    behaviour, unchanged. With a map present, an axis bound to the adopter's own
+    substrate (or unsupported) does NOT require the kit's `<axis>:*` labels: the
+    capability matrix (`_check_substrate_capability_matrix`) already reported its
+    disposition, so the per-axis kit-label check is skipped for it rather than
+    failing on labels the adopter cannot create.
+    """
     results: list[CheckResult] = []
 
     # Read classification.yaml for the type / priority axes.
@@ -552,30 +725,37 @@ def _check_labels(
     except (json.JSONDecodeError, KeyError, TypeError):
         existing = set()
 
-    # Required labels: type:* always (type is always-as-label).
-    type_values = (
-        classification.get("axes", {}).get("type", {}).get("values", [])
-    )
-    missing_type = [
-        v for v in type_values if axis_labels.label("type", v) not in existing
-    ]
-    if missing_type:
-        results.append(
-            CheckResult(
-                "required `type:*` labels exist",
-                "fail",
-                f"missing: {', '.join(axis_labels.label('type', v) for v in missing_type)}",
-                remediation="Run `bootstrap` to create the missing labels.",
-            )
-        )
+    # Required labels: type:* always (type is always-as-label) — UNLESS a
+    # substrate-map binds the axis to the adopter's own substrate, in which case
+    # the kit's `type:*` labels are not expected to exist (the matrix already
+    # reported the axis's disposition; fail-closed — the seam never resolves a
+    # bound/unsupported axis to a kit-label write).
+    if not _axis_expects_kit_labels("type", substrate_map):
+        results.append(_axis_label_check_skipped("type", substrate_map))
     else:
-        results.append(
-            CheckResult(
-                "required `type:*` labels exist",
-                "ok",
-                f"all {len(type_values)} labels present",
-            )
+        type_values = (
+            classification.get("axes", {}).get("type", {}).get("values", [])
         )
+        missing_type = [
+            v for v in type_values if axis_labels.label("type", v) not in existing
+        ]
+        if missing_type:
+            results.append(
+                CheckResult(
+                    "required `type:*` labels exist",
+                    "fail",
+                    f"missing: {', '.join(axis_labels.label('type', v) for v in missing_type)}",
+                    remediation="Run `bootstrap` to create the missing labels.",
+                )
+            )
+        else:
+            results.append(
+                CheckResult(
+                    "required `type:*` labels exist",
+                    "ok",
+                    f"all {len(type_values)} labels present",
+                )
+            )
 
     # In label-fallback mode, also check priority:* and workstream:*.
     if has_board:
@@ -587,30 +767,36 @@ def _check_labels(
             )
         )
     else:
-        priority_values = (
-            classification.get("axes", {}).get("priority", {}).get("values", [])
-        )
-        missing_priority = [
-            v for v in priority_values if axis_labels.label("priority", v) not in existing
-        ]
-        if missing_priority:
-            results.append(
-                CheckResult(
-                    "required `priority:*` labels exist",
-                    "fail",
-                    f"missing: {', '.join(axis_labels.label('priority', v) for v in missing_priority)}",
-                    remediation="Run `bootstrap` to create the missing labels.",
-                )
-            )
+        if not _axis_expects_kit_labels("priority", substrate_map):
+            results.append(_axis_label_check_skipped("priority", substrate_map))
         else:
-            results.append(
-                CheckResult(
-                    "required `priority:*` labels exist",
-                    "ok",
-                    f"all {len(priority_values)} labels present",
-                )
+            priority_values = (
+                classification.get("axes", {}).get("priority", {}).get("values", [])
             )
+            missing_priority = [
+                v for v in priority_values if axis_labels.label("priority", v) not in existing
+            ]
+            if missing_priority:
+                results.append(
+                    CheckResult(
+                        "required `priority:*` labels exist",
+                        "fail",
+                        f"missing: {', '.join(axis_labels.label('priority', v) for v in missing_priority)}",
+                        remediation="Run `bootstrap` to create the missing labels.",
+                    )
+                )
+            else:
+                results.append(
+                    CheckResult(
+                        "required `priority:*` labels exist",
+                        "ok",
+                        f"all {len(priority_values)} labels present",
+                    )
+                )
 
+        if not _axis_expects_kit_labels("workstream", substrate_map):
+            results.append(_axis_label_check_skipped("workstream", substrate_map))
+            return results
         workstreams = _resolve_workstream_slugs_for_check(capability_root, config or {})
         missing_workstream = [
             w for w in workstreams if axis_labels.label("workstream", w) not in existing
@@ -885,14 +1071,24 @@ def _print_human(results: list[CheckResult]) -> None:
 # ----- state labels check (label-fallback mode) -----------------------
 
 
-def _check_state_labels(capability_root: Path) -> CheckResult:
+def _check_state_labels(
+    capability_root: Path,
+    substrate_map: "axis_labels.SubstrateMap | None" = None,
+) -> CheckResult:
     """Verify all lifecycle state:* labels exist on the repo.
 
     Only relevant in label-fallback mode (has_projects_v2_board: false).
     Reads the canonical state IDs from workflow.yaml and checks each
     state:<id> label is present on the remote. Reports [fail] with a
     remediation pointer to `bootstrap` when any are missing.
+
+    With a substrate-map present, the `state` axis no longer reads `state:*`
+    labels — it is bound to a `derive` predicate (open/closed + a blocked label,
+    the DEC-033 detector swap) or is unsupported. Either way the kit's `state:*`
+    labels are not required; degrade to a skip rather than refuse.
     """
+    if not _axis_expects_kit_labels("state", substrate_map):
+        return _axis_label_check_skipped("state", substrate_map)
     workflow_path = capability_root / "schemas" / "workflow.yaml"
     try:
         wf_data = YAML(typ="safe").load(workflow_path.read_text(encoding="utf-8")) or {}
@@ -967,18 +1163,67 @@ def _check_state_labels(capability_root: Path) -> CheckResult:
 _TITLE_PREFIX_SAMPLE_LIMIT = 50
 
 
-def _check_title_prefix_alignment(capability_root: Path) -> list[CheckResult]:
+def _check_title_prefix_alignment(
+    capability_root: Path,
+    substrate_map: "axis_labels.SubstrateMap | None" = None,
+) -> list[CheckResult]:
     """Cross-validate open issue titles against known prefix vocabularies.
 
     Reads issue-types.yaml and classification.yaml to build the full set
     of recognised prefixes, then samples up to _TITLE_PREFIX_SAMPLE_LIMIT
-    open issues and flags any whose title prefix is unrecognised. Surfaces
-    mismatches as warnings (not hard-rejects) since historical drift is
-    expected.
+    open issues and flags any whose title prefix is unrecognised.
+
+    Greenfield (``substrate_map is None``) — unchanged: the kit owns the title
+    format, so an unrecognised or absent prefix is a hard ``fail`` (the original
+    behaviour). This is the only mode in which this check returns ``fail``.
+
+    Present map — the `type` axis may be bound to the ADOPTER's own title
+    prefixes, derived, unsupported, or absent. The kit's prefix vocabulary is no
+    longer the authority, so this check must DEGRADE, never refuse (per DEC-036 /
+    ADR-026 "degrades, never refuses" — this was the one remaining hard-refuse
+    path on the brownfield forcing case). Two sub-cases:
+
+      * `type` bound to `title-prefix` ⇒ validate against the ADOPTER's declared
+        prefixes (the binding's remap values), reported as advisory (``skip``)
+        rather than ``fail`` — drift is the adopter's to fix, not a refusal.
+      * `type` not served via kit-labels in any other way (bound to label/derive,
+        unsupported, or absent) ⇒ the kit prefix vocabulary does not apply; skip
+        the alignment entirely (the capability matrix already reported `type`'s
+        disposition).
+
+    In no present-map sub-case (native prefix, no-prefix, or unrecognised) does
+    this return ``fail``.
     """
     # Build the known-prefix set.
     issue_types_path = capability_root / "schemas" / "issue-types.yaml"
     classification_path = capability_root / "schemas" / "classification.yaml"
+
+    # Under a present map, the kit's prefix vocabulary is not the yardstick;
+    # decide up front whether to validate against the adopter's prefixes or skip.
+    adopter_prefixes: set[str] | None = None
+    if substrate_map is not None:
+        type_binding = substrate_map.axes.get("type") or {}
+        prefix_binding = type_binding.get("title-prefix")
+        if isinstance(prefix_binding, dict) and isinstance(
+            prefix_binding.get("remap"), dict
+        ):
+            # `type` bound to title-prefix: validate against the adopter's own
+            # declared prefixes (advisory), not the kit set.
+            adopter_prefixes = {
+                str(p)
+                for p in prefix_binding["remap"].values()
+                if isinstance(p, str) and p
+            }
+        else:
+            # `type` bound to label/derive, unsupported, or absent — the kit
+            # prefix vocabulary does not apply. Skip, do not refuse.
+            return [CheckResult(
+                "title-prefix alignment",
+                "skip",
+                "`type` axis is not served via kit title-prefixes under "
+                "substrate-map.yaml — kit prefix vocabulary does not apply "
+                "(see the capability matrix for `type`'s disposition).",
+            )]
 
     known_prefixes: set[str] = set()
     try:
@@ -1008,11 +1253,22 @@ def _check_title_prefix_alignment(capability_root: Path) -> list[CheckResult]:
         if isinstance(kind_prefix, str) and kind_prefix:
             known_prefixes.add(kind_prefix)
 
+    # Under a present map with `type` bound to title-prefix, the ADOPTER's own
+    # prefixes are the yardstick — and findings are advisory, never `fail`.
+    advisory = adopter_prefixes is not None
+    if adopter_prefixes is not None:
+        # The remap values are the full bracketed prefixes (e.g. "[Task]");
+        # strip the brackets to match the `bracket_re` capture group below.
+        known_prefixes = {p.strip("[]") for p in adopter_prefixes}
+
     if not known_prefixes:
         return [CheckResult(
             "title-prefix alignment",
             "skip",
-            "could not load schemas (issue-types.yaml / classification.yaml)",
+            "could not load schemas (issue-types.yaml / classification.yaml)"
+            if not advisory
+            else "substrate-map.yaml binds `type` to title-prefix but declares "
+            "no prefixes — nothing to validate against (degraded, not refused).",
         )]
 
     # Fetch a sample of open issues.
@@ -1064,42 +1320,69 @@ def _check_title_prefix_alignment(capability_root: Path) -> list[CheckResult]:
     results: list[CheckResult] = []
     sampled = len(issues)
 
+    # Under a present map this whole check is advisory: a mismatch or a
+    # no-prefix issue degrades to a `skip` finding, never a `fail`. Greenfield
+    # keeps the original hard `fail`. `known_prefixes` here is the adopter's own
+    # declared prefixes when advisory, the kit set otherwise.
     if mismatches:
-        results.append(CheckResult(
-            "title-prefix alignment",
-            "fail",
-            (
-                f"{len(mismatches)} issue(s) in sample of {sampled} have unrecognised "
-                f"prefix: {', '.join(mismatches)}"
-            ),
-            remediation=(
-                "Update the issue titles or the prefix vocabulary in "
-                "issue-types.yaml / classification.yaml. Known prefixes: "
-                + ", ".join(f"[{p}]" for p in sorted(known_prefixes)) + "."
-            ),
-        ))
+        if advisory:
+            results.append(CheckResult(
+                "title-prefix alignment",
+                "skip",
+                f"{len(mismatches)} issue(s) in sample of {sampled} carry a prefix "
+                f"not in the adopter's declared substrate-map prefixes "
+                f"({', '.join(mismatches)}) — advisory under substrate-map.yaml, "
+                f"not a refusal. Adopter prefixes: "
+                + ", ".join(f"[{p}]" for p in sorted(known_prefixes)) + ".",
+            ))
+        else:
+            results.append(CheckResult(
+                "title-prefix alignment",
+                "fail",
+                (
+                    f"{len(mismatches)} issue(s) in sample of {sampled} have unrecognised "
+                    f"prefix: {', '.join(mismatches)}"
+                ),
+                remediation=(
+                    "Update the issue titles or the prefix vocabulary in "
+                    "issue-types.yaml / classification.yaml. Known prefixes: "
+                    + ", ".join(f"[{p}]" for p in sorted(known_prefixes)) + "."
+                ),
+            ))
     else:
         results.append(CheckResult(
             "title-prefix alignment",
             "ok",
-            f"all {sampled} sampled open issue(s) have recognised prefixes",
+            f"all {sampled} sampled open issue(s) have recognised prefixes"
+            + (" (validated against adopter substrate-map prefixes)" if advisory else ""),
         ))
 
     if no_prefix:
-        results.append(CheckResult(
-            "title-prefix: issues without bracket prefix",
-            "fail",
-            (
-                f"{len(no_prefix)} issue(s) in sample have no `[Prefix] ` title: "
-                f"{', '.join(f'#{n}' for n in no_prefix[:10])}"
+        if advisory:
+            results.append(CheckResult(
+                "title-prefix: issues without bracket prefix",
+                "skip",
+                f"{len(no_prefix)} issue(s) in sample have no `[Prefix] ` title "
+                f"({', '.join(f'#{n}' for n in no_prefix[:10])}"
                 + (" ..." if len(no_prefix) > 10 else "")
-            ),
-            remediation=(
-                "Issue titles must start with a `[Prefix] ` bracket per the "
-                "methodology's title format rules. Use edit-issue or the "
-                "project-manager to fix the titles."
-            ),
-        ))
+                + ") — advisory under substrate-map.yaml; a brownfield tracker "
+                "need not bracket-prefix every issue.",
+            ))
+        else:
+            results.append(CheckResult(
+                "title-prefix: issues without bracket prefix",
+                "fail",
+                (
+                    f"{len(no_prefix)} issue(s) in sample have no `[Prefix] ` title: "
+                    f"{', '.join(f'#{n}' for n in no_prefix[:10])}"
+                    + (" ..." if len(no_prefix) > 10 else "")
+                ),
+                remediation=(
+                    "Issue titles must start with a `[Prefix] ` bracket per the "
+                    "methodology's title format rules. Use edit-issue or the "
+                    "project-manager to fix the titles."
+                ),
+            ))
 
     return results
 

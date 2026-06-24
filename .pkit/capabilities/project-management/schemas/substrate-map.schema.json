@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "substrate-map.schema.json",
+  "title": "Substrate map — adopter axis→substrate bindings (brownfield)",
+  "description": "Formal shape of substrate-map.yaml — the OPTIONAL adopter-side file by which a brownfield project binds each methodology axis (type, priority, workstream, state) onto whatever its immutable tracker already encodes (per project-management:DEC-036, read-path contract ADR-026). The file's presence is the activation signal: ABSENT ⇒ greenfield (every axis reads the kit's own labels, byte-unchanged); PRESENT ⇒ each axis resolves through its declared binding, and any axis NOT listed degrades (treated as `unsupported`, NOT greenfield). Per axis EXACTLY ONE binding: `label` (a value→value remap onto existing labels), `title-prefix` (a value→prefix remap), `derive` (a detection predicate, lifecycle-state), or `unsupported: true`. Document-shaped schema: the file IS the resource (no id collection). Companion per COR-018 / the .pkit/schemas/ area conventions.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "axes"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "pkit_schema": {
+      "type": "string",
+      "description": "Self-describing adopter-data binding (per COR-023). Expected value: 'project-management:substrate-map'."
+    },
+    "binds_to": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Per-schema fallback binding (per COR-023). Present on the capability-side schema YAML so the resolver can match an adopter substrate-map.yaml file without an explicit `pkit_schema:` field."
+    },
+    "source": {
+      "$ref": "refs.schema.json#/$defs/source"
+    },
+    "axes": {
+      "type": "object",
+      "description": "Per-axis bindings. A key MAY be omitted entirely — an omitted axis in a present map is treated as `unsupported`, NOT greenfield (DEC-036 / ADR-026 the load-bearing rule). Only the four methodology axes are recognised; unknown keys are rejected.",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "$ref": "#/$defs/axis_binding",
+          "description": "How the `type` axis is encoded in this tracker. The Feature-in-Feature containment invariant is keyed on `type` and stays HARD regardless of this binding (DEC-036 D4)."
+        },
+        "priority": {
+          "$ref": "#/$defs/axis_binding",
+          "description": "How the `priority` axis is encoded (e.g. native P0/P1/P2 labels via a `label` remap)."
+        },
+        "workstream": {
+          "$ref": "#/$defs/axis_binding",
+          "description": "How the `workstream` axis is encoded, or `unsupported: true` when the tracker has no workstream encoding."
+        },
+        "state": {
+          "$ref": "#/$defs/axis_binding",
+          "description": "How the lifecycle-state axis is encoded. Typically a `derive` predicate over open/closed + a blocked label (the DEC-033 detector swap), not a label remap."
+        }
+      }
+    }
+  },
+  "$defs": {
+    "axis_binding": {
+      "type": "object",
+      "description": "Exactly one binding per axis: `label`, `title-prefix`, `derive`, or `unsupported: true`. An optional `default` (a substrate value to seed on writes) MAY accompany any of them.",
+      "additionalProperties": false,
+      "properties": {
+        "default": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Optional substrate value to seed on a write when the caller supplies none (e.g. `P1` for a priority axis bound to native priority labels). A read-side note for the writer; the read seam never invents it."
+        },
+        "label": {
+          "$ref": "#/$defs/label_binding"
+        },
+        "title-prefix": {
+          "$ref": "#/$defs/title_prefix_binding"
+        },
+        "derive": {
+          "$ref": "#/$defs/derive_binding"
+        },
+        "unsupported": {
+          "type": "boolean",
+          "const": true,
+          "description": "Mark the axis explicitly unsupported — the feature needing it degrades (advisory/disabled). Equivalent to omitting the axis from a present map; written explicitly when the adopter wants the intent on record."
+        }
+      },
+      "oneOf": [
+        { "required": ["label"], "not": { "anyOf": [ { "required": ["title-prefix"] }, { "required": ["derive"] }, { "required": ["unsupported"] } ] } },
+        { "required": ["title-prefix"], "not": { "anyOf": [ { "required": ["label"] }, { "required": ["derive"] }, { "required": ["unsupported"] } ] } },
+        { "required": ["derive"], "not": { "anyOf": [ { "required": ["label"] }, { "required": ["title-prefix"] }, { "required": ["unsupported"] } ] } },
+        { "required": ["unsupported"], "not": { "anyOf": [ { "required": ["label"] }, { "required": ["title-prefix"] }, { "required": ["derive"] } ] } }
+      ]
+    },
+    "label_binding": {
+      "type": "object",
+      "description": "Bind the axis to an existing label set via a kit-value→adopter-label remap. The resolved substrate is the adopter's OWN label string (e.g. `P0`), never the kit's `<axis>:<value>` form.",
+      "additionalProperties": false,
+      "required": ["remap"],
+      "properties": {
+        "remap": {
+          "type": "object",
+          "description": "Map from a methodology value (the kit's own, e.g. `High`) to the adopter's existing label name (e.g. `P0`). A methodology value with NO entry here is value-unresolvable within this bound axis — it degrades only the rules depending on that value, never the axis as a whole (ADR-026 fourth arm).",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "title_prefix_binding": {
+      "type": "object",
+      "description": "Bind the axis to a title-prefix convention via a kit-value→prefix remap (e.g. `task → [Task]`). The resolved substrate is the prefix string the adopter already uses in issue titles.",
+      "additionalProperties": false,
+      "required": ["remap"],
+      "properties": {
+        "remap": {
+          "type": "object",
+          "description": "Map from a methodology value to the adopter's title-prefix string. A methodology value with no entry is value-unresolvable (the AUJ `[Task]`/`[Epic]`-but-no-`[Feature]` case, ADR-026 fourth arm).",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "derive_binding": {
+      "type": "object",
+      "description": "Bind the axis to a detection predicate over tracker reality — the DEC-033 detector swap for lifecycle-state (open/closed + a blocked label) in place of `state:*` labels. The predicate ENGINE (first-matching-detection-wins, reduced state set) lands with the detector work; this schema declares the binding shape only.",
+      "additionalProperties": false,
+      "required": ["states"],
+      "properties": {
+        "from": {
+          "type": "string",
+          "description": "The tracker signal the predicate reads (e.g. `open-closed`). Forward-declared; the detector engine that consumes it is sibling Wave-2 work.",
+          "minLength": 1
+        },
+        "states": {
+          "type": "object",
+          "description": "Map from a derived (collapsed) state id to the condition that detects it. The condition grammar is the detector engine's concern; declared here as a string per state so the binding is well-formed ahead of the engine.",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}
