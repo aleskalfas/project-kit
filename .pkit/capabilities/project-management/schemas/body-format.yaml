@@ -104,7 +104,13 @@ universal_body_rules:
       `parent_ref_form` in issue-types.yaml (e.g., `EPIC: #42`). The
       `Integration:` pre-line — when present — precedes it with no
       blank line between; the parent-ref is followed by a blank line,
-      then the content.
+      then the content. This is the parent-REQUIREDNESS rule: under
+      `hierarchy: advisory` (a flat brownfield tracker, per
+      [project-management:DEC-036] D4) it degrades to
+      `[validation-severity:warning]` — a parent-ref is recorded as
+      body-text when given, but a missing one is not gated. Greenfield /
+      `hierarchy: gated` keeps the hard-reject below. The containment
+      invariants in issue-types.yaml are NOT softened by advisory mode.
     severity: "[validation-severity:hard-reject]"
   - rule: |
       No h1 (`# ...`) headings — the issue title is the h1. Sections

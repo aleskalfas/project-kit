@@ -50,7 +50,8 @@ AUJ_MAP = axis_labels.SubstrateMap(
                 "states": {"open": "open & not Blocked", "done": "closed"},
             }
         },
-    }
+    },
+    hierarchy="advisory",  # AUJ is a flat tracker (DEC-036 D4).
 )
 
 
@@ -89,6 +90,67 @@ def test_malformed_binding_fails_closed_to_unsupported() -> None:
     """A binding mapping with none of the four arms is malformed ⇒ degrade."""
     bad = axis_labels.SubstrateMap(axes={"priority": {"default": "P1"}})
     assert axis_labels.axis_disposition("priority", bad) == "unsupported"
+
+
+# --- the hierarchy declaration: hierarchy_disposition (DEC-036 D4, #272) ---
+
+
+def test_no_map_hierarchy_is_gated() -> None:
+    """No substrate-map ⇒ greenfield: hierarchy is gated (parent-requiredness
+    gated exactly as today, byte-unchanged)."""
+    assert axis_labels.hierarchy_disposition(None) == "gated"
+
+
+def test_advisory_map_hierarchy_is_advisory() -> None:
+    assert axis_labels.hierarchy_disposition(AUJ_MAP) == "advisory"
+
+
+def test_present_map_without_hierarchy_key_is_gated() -> None:
+    """A present map that binds axes but declares no `hierarchy:` keeps the gated
+    default — an OMITTED hierarchy key is NOT advisory (the conservative
+    direction for a requiredness rule, unlike absent-axis ≡ unsupported)."""
+    no_key = axis_labels.SubstrateMap(axes={"priority": {"label": {"remap": {"High": "P0"}}}})
+    assert no_key.hierarchy == "gated"
+    assert axis_labels.hierarchy_disposition(no_key) == "gated"
+
+
+def test_explicit_gated_map_is_gated() -> None:
+    gated = axis_labels.SubstrateMap(axes={}, hierarchy="gated")
+    assert axis_labels.hierarchy_disposition(gated) == "gated"
+
+
+def test_hierarchy_disposition_accepts_a_parsed_map_or_none() -> None:
+    """The helper takes either a parsed SubstrateMap or None directly (the
+    in-process call shape callers use after loading the map once)."""
+    assert axis_labels.hierarchy_disposition(AUJ_MAP) == "advisory"
+    assert axis_labels.hierarchy_disposition(None) == "gated"
+
+
+def test_parse_hierarchy_fails_safe_to_gated() -> None:
+    """A mistyped / absent hierarchy value parses to gated, never advisory — a
+    typo must not silently drop the parent-requiredness gate."""
+    assert axis_labels._parse_hierarchy("advisory") == "advisory"
+    assert axis_labels._parse_hierarchy("gated") == "gated"
+    assert axis_labels._parse_hierarchy("flat") == "gated"
+    assert axis_labels._parse_hierarchy(None) == "gated"
+    assert axis_labels._parse_hierarchy("") == "gated"
+
+
+def test_hierarchy_does_not_affect_axis_disposition() -> None:
+    """Hierarchy mode is ORTHOGONAL to axis disposition — declaring advisory does
+    not change whether an axis is served/unsupported. The two are separate
+    questions (parent-requiredness vs. label substrate)."""
+    advisory = axis_labels.SubstrateMap(
+        axes={"priority": {"label": {"remap": {"High": "P0"}}}, "workstream": {"unsupported": True}},
+        hierarchy="advisory",
+    )
+    gated = axis_labels.SubstrateMap(
+        axes={"priority": {"label": {"remap": {"High": "P0"}}}, "workstream": {"unsupported": True}},
+        hierarchy="gated",
+    )
+    for m in (advisory, gated):
+        assert axis_labels.axis_disposition("priority", m) == "served"
+        assert axis_labels.axis_disposition("workstream", m) == "unsupported"
 
 
 # --- bound resolution: resolve_write --------------------------------------

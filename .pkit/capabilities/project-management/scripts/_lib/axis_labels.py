@@ -130,6 +130,27 @@ class _Degrade:
 
 DEGRADE: _Degrade = _Degrade()
 
+# The two hierarchy-declaration modes a present map may carry under its
+# top-level `hierarchy:` key (DEC-036 D4). Hierarchy is NOT a label-encoded axis
+# (the `label` / `title-prefix` / `derive` binding kinds do not fit a parent-ref
+# MODE), so it lives at the map's top level, beside `axes:`, not under it.
+#   gated    — the greenfield default. Parent-refs are REQUIRED where a type
+#              declares `parent_ref_optional: false`, and the requirement is
+#              gated (hard-reject) exactly as today.
+#   advisory — a flat tracker. The parent-requiredness rules DEGRADE to advisory
+#              (warning): a parent-ref is recorded as body-text when given but is
+#              NOT required and NOT gated, so `create-issue` never demands a
+#              parent the repo cannot express. The CONTAINMENT invariants stay
+#              HARD regardless (DEC-036 D4) — advisory relaxes *requiredness*, it
+#              never softens the *nesting* rules.
+HierarchyMode = Literal["gated", "advisory"]
+HIERARCHY_GATED: HierarchyMode = "gated"
+HIERARCHY_ADVISORY: HierarchyMode = "advisory"
+
+# The map's top-level key that carries the hierarchy mode. Absent ⇒ `gated`.
+HIERARCHY_KEY = "hierarchy"
+
+
 # An axis's capability disposition — the seam's binary read of the ADR-026
 # ternary, the signal a degrading consumer (pre-check's capability matrix)
 # reports.
@@ -162,9 +183,16 @@ class SubstrateMap:
     no-map (greenfield) case is represented by ``None``, never by an empty
     ``SubstrateMap``. That keeps "the file exists but lists no axes" (every axis
     degrades) distinct from "no file" (every axis is greenfield).
+
+    ``hierarchy`` is the top-level parent-ref MODE (``gated`` / ``advisory``),
+    distinct from the per-axis bindings in ``axes`` — hierarchy is not a
+    label-encoded axis (DEC-036 D4). An absent or unrecognised ``hierarchy:``
+    key parses to ``gated`` (the greenfield default), so a present map with no
+    ``hierarchy:`` key keeps today's gated parent-requiredness.
     """
 
     axes: dict[str, dict[str, Any]]
+    hierarchy: HierarchyMode = HIERARCHY_GATED
 
 
 def load_substrate_map(capability_root: Path | None = None) -> SubstrateMap | None:
@@ -211,7 +239,19 @@ def load_substrate_map(capability_root: Path | None = None) -> SubstrateMap | No
         for axis, binding in raw_axes.items():
             if isinstance(axis, str) and isinstance(binding, dict):
                 axes[axis] = binding
-    return SubstrateMap(axes=axes)
+    return SubstrateMap(axes=axes, hierarchy=_parse_hierarchy(data.get(HIERARCHY_KEY)))
+
+
+def _parse_hierarchy(raw: Any) -> HierarchyMode:
+    """Coerce the raw ``hierarchy:`` value to a known mode, defaulting to gated.
+
+    Fail-safe (toward requiredness-on): an absent, mistyped, or unrecognised
+    ``hierarchy:`` value parses to :data:`HIERARCHY_GATED`, never to advisory.
+    Only the explicit string ``"advisory"`` relaxes parent-requiredness — a typo
+    must not silently drop the gate. (The schema rejects an unrecognised value
+    at validate time; this is the runtime belt to that schema suspenders.)
+    """
+    return HIERARCHY_ADVISORY if raw == HIERARCHY_ADVISORY else HIERARCHY_GATED
 
 
 # ----- the ternary resolution API (ADR-026) ------------------------------
@@ -250,6 +290,48 @@ def axis_disposition(
         return "served"
     # A binding mapping with none of the four arms is malformed; fail closed.
     return "unsupported"
+
+
+def hierarchy_disposition(
+    source: "Path | SubstrateMap | None" = None,
+) -> HierarchyMode:
+    """The hierarchy MODE in effect — ``gated`` (default) or ``advisory``.
+
+    ``source`` may be a capability-root :class:`Path` (the map is loaded from
+    it), an already-parsed :class:`SubstrateMap`, or ``None`` (load from the
+    discovered capability root). The resolution, per DEC-036 D4:
+
+    * **No ``substrate-map.yaml`` at all** ⇒ :data:`HIERARCHY_GATED`
+      (greenfield — parent-requiredness gated exactly as today, byte-unchanged).
+    * **A map present with no ``hierarchy:`` key** ⇒ :data:`HIERARCHY_GATED`
+      (a brownfield adopter who binds axes but says nothing about hierarchy keeps
+      the gated default — an omitted key is NOT advisory, the conservative
+      direction for a *requiredness* rule).
+    * **A map present with ``hierarchy: advisory``** ⇒ :data:`HIERARCHY_ADVISORY`
+      (a flat tracker — parent-requiredness degrades to advisory; the parent-ref
+      is recorded body-text when given, never required, never gated).
+    * **A map present with ``hierarchy: gated``** ⇒ :data:`HIERARCHY_GATED`
+      (explicit greenfield-equivalent gating).
+
+    Note the asymmetry with :func:`axis_disposition`: an axis ABSENT from a
+    present map degrades (absent ≡ unsupported), but hierarchy ABSENT from a
+    present map stays GATED. Hierarchy is a parent-ref MODE, not a substrate an
+    adopter must be able to encode — there is no "unmanaged label" to fall
+    through to, so the load-bearing absent-≡-unsupported rule does not apply;
+    the safe default for a requiredness rule is to keep requiring.
+
+    CONTAINMENT IS NOT AFFECTED by this disposition. ``advisory`` relaxes only
+    the parent-*requiredness* rules; the ``issue-types.yaml`` containment
+    invariants (Feature-in-Feature, EPIC-in-EPIC, …) stay HARD in both modes
+    (DEC-036 D4). This function answers only "is a parent-ref required?", never
+    "may this nesting exist?".
+    """
+    if isinstance(source, SubstrateMap):
+        return source.hierarchy
+    substrate_map = load_substrate_map(source)
+    if substrate_map is None:
+        return HIERARCHY_GATED
+    return substrate_map.hierarchy
 
 
 def workstream_mutator_refusal(

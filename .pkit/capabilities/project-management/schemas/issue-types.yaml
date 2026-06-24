@@ -34,6 +34,7 @@ types:
     parent_issue_types: []
     parent_ref_form: "Milestone: [#<N>](../milestone/<N>)"
     parent_ref_optional: true
+    parent_ref_required_severity: "[validation-severity:hard-reject]"
     has_body: true
     body_has_acceptance_criteria: false
     gets_branch_and_pr: false
@@ -48,6 +49,7 @@ types:
     parent_issue_types: [epic, milestone]
     parent_ref_form: "EPIC: #<N> or Milestone: [#<N>](../milestone/<N>)"
     parent_ref_optional: false
+    parent_ref_required_severity: "[validation-severity:hard-reject]"
     has_body: true
     body_has_acceptance_criteria: true
     gets_branch_and_pr: false
@@ -62,6 +64,7 @@ types:
     parent_issue_types: [epic, umbrella, milestone]
     parent_ref_form: "EPIC: #<N> or Umbrella: #<N> or Milestone: [#<N>](../milestone/<N>)"
     parent_ref_optional: false
+    parent_ref_required_severity: "[validation-severity:hard-reject]"
     has_body: true
     body_has_acceptance_criteria: false
     gets_branch_and_pr: false
@@ -77,10 +80,18 @@ types:
     parent_issue_types: [feature, umbrella, epic, milestone]
     parent_ref_form: "Feature: #<N> or Umbrella: #<N> or EPIC: #<N> or Milestone: [#<N>](../milestone/<N>)"
     parent_ref_optional: false
+    parent_ref_required_severity: "[validation-severity:hard-reject]"
     has_body: true
     body_has_acceptance_criteria: true
     gets_branch_and_pr: true
 
+# The containment invariants are the LOAD-BEARING distinction of DEC-036 D4:
+# they carry NO `*_severity` knob, by design. The parent-REQUIREDNESS rules
+# (the per-type `parent_ref_required_severity` above) soften to advisory under
+# `hierarchy: advisory`; these nesting rules do NOT. A flat brownfield tracker
+# can still malform a nesting (Feature-in-Feature, EPIC-in-EPIC) and is STILL
+# rejected. Having no knob to flip is what keeps them hard by construction (the
+# no-knob-stays-hard fail-safe, ADR-026 §2) — do not add a severity field here.
 containment_invariants:
   - rule: |
       EPIC does not contain EPIC.

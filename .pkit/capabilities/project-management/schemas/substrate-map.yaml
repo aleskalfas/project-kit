@@ -37,6 +37,19 @@
 # whole — so the type-keyed Feature-in-Feature containment invariant stays
 # HARD even when `[Feature]` has no title-prefix (DEC-036 D4).
 #
+# A separate top-level `hierarchy:` key (NOT under `axes:` — hierarchy is a
+# parent-ref MODE, not a label-encoded axis) declares how parent-
+# REQUIREDNESS is enforced (DEC-036 D4):
+#   - gated     (default / greenfield, also the value when the key is
+#               ABSENT) — parent-refs required where a type sets
+#               `parent_ref_optional: false`, gated as a hard-reject.
+#   - advisory  (flat tracker) — the parent-requiredness rules degrade to
+#               advisory (warning); a parent-ref is recorded body-text when
+#               given, but is NOT required and NOT gated. create-issue never
+#               demands a parent the repo cannot express.
+# The CONTAINMENT invariants (Feature-in-Feature, EPIC-in-EPIC, …) stay
+# HARD in BOTH modes — advisory relaxes only requiredness, never nesting.
+#
 # The body below is the AUJ-shaped reference instance — a valid example
 # that doubles as this schema's self-test (validated by
 # `pkit schemas validate`) and as a copy-paste starting point. A real
@@ -51,6 +64,11 @@ binds_to:
   - "**/substrate-map.yaml"
 
 pkit_schema: project-management:substrate-map
+
+# AUJ is a flat tracker with no machine-checkable parent-refs, so parent-
+# requiredness degrades to advisory. The containment invariants stay HARD
+# regardless (DEC-036 D4).
+hierarchy: advisory
 
 axes:
   # Priority: native P0/P1/P2 labels already exist on the tracker.

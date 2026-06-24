@@ -96,6 +96,11 @@
           "type": "boolean",
           "description": "Whether the parent-ref first line may be omitted. True for EPIC when unscheduled (no Milestone yet); false otherwise."
         },
+        "parent_ref_required_severity": {
+          "type": "string",
+          "pattern": "^\\[validation-severity:[a-z][a-z0-9-]*\\]$",
+          "description": "Severity of the parent-REQUIREDNESS rule when `parent_ref_optional` is false — the `*_severity` knob DEC-036 named as in-scope schema work (the 'honest gap' fix). Greenfield / `hierarchy: gated` reads it as authored (`[validation-severity:hard-reject]`); under `hierarchy: advisory` (a flat brownfield tracker, DEC-036 D4) the consumer degrades it to `[validation-severity:warning]` so a parent-ref the repo cannot express is recorded body-text, not gated. This knob softens ONLY parent-requiredness; it does NOT touch the containment_invariants, which stay HARD by carrying no knob (the no-knob-stays-hard fail-safe, ADR-026 §2). Defaults to hard-reject when omitted."
+        },
         "has_body": {
           "type": "boolean",
           "description": "Whether this type has a markdown issue body. True for all four issue types."

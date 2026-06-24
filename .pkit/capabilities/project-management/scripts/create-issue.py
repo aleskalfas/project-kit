@@ -123,8 +123,11 @@ def main() -> int:
         default=None,
         help=(
             "Parent issue number. Substituted into the body template's "
-            "first parent-ref line. Validated against issue-types.yaml's "
-            "containment graph."
+            "first parent-ref line. create-issue enforces parent-*requiredness* "
+            "only (whether a parent-ref is required for this type, degradable "
+            "via the hierarchy mode); it does NOT gate issue-types.yaml's "
+            "containment graph at filing — the containment_invariants are a "
+            "prose invariant, not a create-time gate."
         ),
     )
     parser.add_argument(
@@ -244,22 +247,58 @@ def main() -> int:
         )
         return 2
 
-    # Validate parent type (if --parent given).
+    # The adopter's optional substrate-map (ADR-026 / DEC-036). None ⇒
+    # greenfield. Loaded here (not just for label resolution below) because the
+    # hierarchy MODE it declares governs whether the parent-requiredness check
+    # just below gates or merely advises.
+    substrate_map = axis_labels.load_substrate_map(capability_root)
+    hierarchy = axis_labels.hierarchy_disposition(substrate_map)
+
+    # Validate parent type (if --parent given) / parent-REQUIREDNESS.
+    #
+    # Parent-requiredness softens per the hierarchy MODE (DEC-036 D4). The
+    # mechanism is a short-circuit, not a token re-resolution: under
+    # `hierarchy: advisory` (a flat brownfield tracker with no machine-checkable
+    # parent-refs) `_parent_requiredness_is_gated` returns False BEFORE consulting
+    # the authored severity, so create-issue NEVER demands a parent the repo
+    # cannot express — a parent-ref is still recorded as body-text when --parent
+    # is given. The per-type `parent_ref_required_severity` field is the authored
+    # default consulted only on the gated arm (greenfield / `hierarchy: gated`),
+    # where it keeps the hard-reject exactly as before. (Resolving the authored
+    # severity THROUGH the DEC-014 token path under advisory is deferred —
+    # ADR-026; today advisory simply short-circuits the gate.) This softens ONLY
+    # requiredness; the containment invariants stay hard (they carry no knob —
+    # the no-knob-stays-hard fail-safe).
     parent_issue_types = type_entry.get("parent_issue_types") or []
     parent_ref_optional = bool(type_entry.get("parent_ref_optional", False))
     milestone_is_valid_parent = "milestone" in parent_issue_types
-    if (
+    parent_ref_missing = (
         args.parent is None
         and not parent_ref_optional
         and not (args.milestone is not None and milestone_is_valid_parent)
-    ):
-        print(
-            f"error: --parent is required for issue type {args.type!r}. "
+    )
+    if parent_ref_missing:
+        gated = _parent_requiredness_is_gated(type_entry, hierarchy)
+        message = (
+            f"--parent is required for issue type {args.type!r}. "
             f"Permitted parent types: {', '.join(parent_issue_types) or '<none>'}. "
-            f"You may pass --milestone instead when milestone is a permitted parent.",
+            f"You may pass --milestone instead when milestone is a permitted parent."
+        )
+        if gated:
+            print(
+                f"error: {message} "
+                "If your tracker is flat / brownfield, set `hierarchy: advisory` "
+                "in substrate-map.yaml so parent-refs are recorded but not "
+                "required.",
+                file=sys.stderr,
+            )
+            return 2
+        # advisory hierarchy: degrade to a warning, proceed parentless.
+        print(
+            f"[advisory] {message} (not gated under hierarchy: advisory — "
+            "filing without a parent-ref)",
             file=sys.stderr,
         )
-        return 2
 
     # Resolve --milestone (accepts number OR title; per #217).
     # Normalises `args.milestone` to the int form so downstream code
@@ -369,7 +408,7 @@ def main() -> int:
     # resolves to the kit's own `<axis>:<value>`; a present map resolves to the
     # adopter's substrate value, or omits the label entirely (DEGRADE) on an
     # unsupported/absent/value-unresolvable axis — never coerced to a kit write.
-    substrate_map = axis_labels.load_substrate_map(capability_root)
+    # `substrate_map` was loaded above (it also governs hierarchy mode).
     labels, label_advisories, resolved_by_axis = _build_labels(
         kind=args.kind,
         priority=args.priority,
@@ -569,6 +608,42 @@ def _resolve_repo_name_with_owner_safe() -> str:
 
 
 # ---- schema helpers --------------------------------------------------
+
+
+# The validation-severity token a hard (gating) parent-requiredness rule carries,
+# and the warning token it degrades to under advisory hierarchy. Centralised so
+# the create-issue gate and any future validator agree on the spelling.
+_SEVERITY_HARD_REJECT = "[validation-severity:hard-reject]"
+_SEVERITY_WARNING = "[validation-severity:warning]"
+
+
+def _parent_requiredness_is_gated(
+    type_entry: dict,
+    hierarchy: str,
+) -> bool:
+    """Whether a MISSING required parent-ref hard-rejects (gates) or just warns.
+
+    The hierarchy MODE governs this via a short-circuit, NOT a token
+    re-resolution (DEC-036 D4):
+
+    * ``hierarchy == "advisory"`` ⇒ return ``False`` (not gated) immediately,
+      BEFORE the authored severity is consulted. create-issue files parentless
+      and advises. The ``parent_ref_required_severity`` field is deliberately not
+      read on this arm — advisory short-circuits the gate regardless of the
+      authored default. (Resolving that authored token through the DEC-014 path
+      under advisory is deferred per ADR-026; the short-circuit is what ships.)
+    * otherwise (``gated`` / greenfield) ⇒ the per-type
+      ``parent_ref_required_severity`` field is the authored default (hard-reject
+      when the schema omits it); return ``True`` when it is ``hard-reject`` — the
+      byte-unchanged greenfield gate.
+
+    This governs ONLY parent-requiredness. The containment invariants carry no
+    such knob and are never reached here — they stay hard by construction.
+    """
+    if hierarchy == axis_labels.HIERARCHY_ADVISORY:
+        return False
+    authored = type_entry.get("parent_ref_required_severity", _SEVERITY_HARD_REJECT)
+    return authored == _SEVERITY_HARD_REJECT
 
 
 def _read_yaml(path: Path, yaml_loader: YAML) -> dict:
