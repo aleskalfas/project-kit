@@ -2117,9 +2117,12 @@ def _reach_attempt(path: Path) -> str:
 #   detectable, committable to permission-config, auto-applied by setup.
 #
 #   widening — carves a command OUT of the box to run unconfined
-#   (excludedCommands) or weakens TLS. Applied ONLY by the loud, per-invocation,
-#   never-persisted `sandbox exclude` gesture; never committed, never detected,
-#   never applied by setup; always reported as a boundary reduction.
+#   (excludedCommands) or weakens TLS. Applied ONLY by the loud, per-invocation
+#   `sandbox exclude` gesture; written to the per-machine live settings file
+#   (`.claude/settings.json`) and not detected or applied by setup; always
+#   reported as a boundary reduction. In a conventional adopter layout that file
+#   is per-machine; in a repo that tracks it the operator must keep the widening
+#   uncommitted.
 #
 # Single writer + provenance: every sandbox-block list mutation routes through
 # `_apply_allowances` / `_remove_allowances`, which record what pkit authored in
@@ -2819,17 +2822,23 @@ def _widening_required_on_platform(tool: str, cmd: str) -> bool:
     return tool in ("uv", "pkit") or cmd in ("uv", "pkit")
 
 
-# The macOS uv Seatbelt panic (ADR-014): uv 0.9.8 is the current known-bad
-# release — it hits a fixed SCDynamicStore mach-service denial that no narrowing
-# accommodation fixes, so the command must run OUTSIDE the box. The auto-apply
-# carve-out (ADR-027 condition 1) fires only when the panic STILL OCCURS, gated
-# on this version floor: an installed uv AT OR BELOW the known-bad release is
-# still affected. There is no known-FIXED release yet — when one ships, set
+# The macOS uv Seatbelt panic (ADR-014): a fixed SCDynamicStore mach-service
+# denial that no narrowing accommodation fixes, so the command must run OUTSIDE
+# the box. The panic is present in EVERY current uv release until an upstream fix
+# ships — so the auto-apply carve-out (ADR-027 condition 1) is gated on the
+# FIXED release, not on a known-bad ceiling: an installed uv is still affected
+# whenever it is BELOW the known-fixed release (and, while no fix is known, ALL
+# readable versions are affected). Gating on a known-bad ceiling would be wrong —
+# the day a still-broken uv ships above the first known-bad release, a ceiling
+# test would (incorrectly) stop auto-applying.
+#
+# There is no known-FIXED release yet (`None`) — when one ships, set
 # `_UV_KNOWN_FIXED_RELEASE` to it; a uv at or above it leaves the box able to
 # host the command, so auto-apply self-disables (and self-heal removes any entry
-# it previously applied). Until a fix is known we treat "no fixed release exists"
-# as "still required" (the conservative, necessity-verified reading).
-_UV_KNOWN_BAD_FLOOR = "0.9.8"
+# it previously applied). `_UV_KNOWN_BAD_FLOOR` records the FIRST observed
+# known-bad release for documentation/provenance only — it does NOT gate
+# auto-apply (see `_uv_required_exclusion`).
+_UV_KNOWN_BAD_FLOOR = "0.9.8"          # informational: first observed known-bad
 _UV_KNOWN_FIXED_RELEASE: str | None = None
 
 # Distinct provenance tag for the auto-applied platform-REQUIRED exclusion
@@ -2876,8 +2885,11 @@ def _uv_required_exclusion(target_root: Path) -> bool:
         where uv runs confined once its cache is accommodated — condition 2);
       - a uv repo marker is present (real project use — `uv.lock` / `pyproject`
         via the toolkit's own detect globs — condition 3, not bare PATH);
-      - the installed uv is at/below the known-bad release AND no known-fixed
-        release supersedes it — i.e. the SystemConfiguration panic still occurs.
+      - the installed uv is BELOW the known-fixed release — i.e. the
+        SystemConfiguration panic still occurs. The panic is in every release
+        until a fix ships, so while `_UV_KNOWN_FIXED_RELEASE is None` EVERY
+        readable version qualifies (we do NOT gate on a known-bad ceiling — an
+        above-ceiling still-unfixed uv must keep auto-applying).
 
     A uv at/above a known-fixed release returns False → the box can host the
     command again, so auto-apply self-disables and self-heal (condition 6)
@@ -2897,9 +2909,9 @@ def _uv_required_exclusion(target_root: Path) -> bool:
         # NOT auto-apply (the keystone is verified-not-believed). The nudge path
         # still surfaces the gesture for the operator to run by hand.
         return False
-    if _UV_KNOWN_FIXED_RELEASE is not None and installed >= Version(_UV_KNOWN_FIXED_RELEASE):
-        return False
-    return installed <= Version(_UV_KNOWN_BAD_FLOOR)
+    # Gate on the FIXED release: no fix known (None) → every readable version is
+    # affected → required; otherwise required iff still below the fix.
+    return _UV_KNOWN_FIXED_RELEASE is None or installed < Version(_UV_KNOWN_FIXED_RELEASE)
 
 
 def _widening_desc(tool: str, cmd: str) -> tuple[str, str]:
@@ -3045,8 +3057,11 @@ def _setup_required_exclusions(target_root: Path) -> list[str]:
     Apply (conditions 1-5): when `_uv_required_exclusion` verifies the macOS uv
     Seatbelt panic still occurs AND uv is not already excluded, shell to the real
     `sandbox_exclude` primitive under the distinct `_required` provenance tag and
-    fire the existing UNCONFINED banner. Never persisted to a committed file
-    (condition 4 — `sandbox_exclude` only ever writes per-machine live settings).
+    fire the existing UNCONFINED banner. Written only to the per-machine live
+    settings file (`.claude/settings.json`) — condition 4; `sandbox_exclude`
+    touches nothing else. In a conventional adopter layout that file is
+    per-machine; in a repo that tracks it the operator must keep the
+    auto-applied exclusion uncommitted.
 
     Self-heal (condition 6): when a previously auto-applied `_required` exclusion
     is no longer required (uv upgraded past a fixed release, or we're on Linux),

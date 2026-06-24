@@ -1044,6 +1044,53 @@ def test_required_exclusion_auto_applies_on_macos_old_uv_with_marker(tmp_path, m
     assert "`uv` — REQUIRED on macOS" not in out
 
 
+@pytest.mark.parametrize("version", ["0.9.8", "0.9.9", "1.5.0"])
+def test_required_exclusion_auto_applies_on_every_version_while_no_fix(
+        tmp_path, monkeypatch, version):
+    # With no known-fixed release (the default), the Seatbelt panic is present in
+    # EVERY uv release — so auto-apply must fire on any readable version, NOT just
+    # at/below the first known-bad. The 0.9.9 case is the regression guard: the
+    # old `installed <= known-bad-floor` ceiling wrongly nudged it instead of
+    # auto-applying (0.9.9 <= 0.9.8 is False).
+    from project_kit import permissions as perm
+    assert perm._UV_KNOWN_FIXED_RELEASE is None      # default: no fix known
+    _force_uv(monkeypatch, platform="darwin", version=version)
+    proj = _with_adapter(_setup(tmp_path))
+    (proj / "uv.lock").write_text("")
+    out = _run(proj, monkeypatch, "setup", "autonomy")
+    assert "REQUIRED exclusion auto-applied: `uv`" in out
+    assert "uv" in _sb(proj)["excludedCommands"]
+    assert "`uv` — REQUIRED on macOS" not in out      # not also nudged
+
+
+def test_required_exclusion_auto_applies_below_fixed_release(tmp_path, monkeypatch):
+    # A known-fixed release is set, but the installed uv is still below it → the
+    # panic still occurs → auto-apply.
+    from project_kit import permissions as perm
+    monkeypatch.setattr(perm, "_UV_KNOWN_FIXED_RELEASE", "0.10.0")
+    _force_uv(monkeypatch, platform="darwin", version="0.9.9")
+    proj = _with_adapter(_setup(tmp_path))
+    (proj / "uv.lock").write_text("")
+    out = _run(proj, monkeypatch, "setup", "autonomy")
+    assert "REQUIRED exclusion auto-applied: `uv`" in out
+    assert "uv" in _sb(proj)["excludedCommands"]
+
+
+@pytest.mark.parametrize("version", ["0.10.0", "0.10.1"])
+def test_required_exclusion_not_applied_at_or_above_fixed_release(
+        tmp_path, monkeypatch, version):
+    # At OR above the known-fixed release the box can host the command → no
+    # auto-apply (the boundary is exclusive: < fixed required, >= fixed not).
+    from project_kit import permissions as perm
+    monkeypatch.setattr(perm, "_UV_KNOWN_FIXED_RELEASE", "0.10.0")
+    _force_uv(monkeypatch, platform="darwin", version=version)
+    proj = _with_adapter(_setup(tmp_path))
+    (proj / "uv.lock").write_text("")
+    out = _run(proj, monkeypatch, "setup", "autonomy")
+    assert "REQUIRED exclusion auto-applied" not in out
+    assert "excludedCommands" not in _sb(proj)
+
+
 def test_required_exclusion_not_applied_on_linux(tmp_path, monkeypatch):
     _force_uv(monkeypatch, platform="linux", version="0.9.8")
     proj = _with_adapter(_setup(tmp_path))

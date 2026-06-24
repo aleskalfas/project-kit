@@ -47,14 +47,19 @@ toolkits:
         effect: widening
         value: "uv"
         note: >-
-          macOS only — runs uv (and pkit, which runs via `uv run`) OUTSIDE the
-          box. uv 0.9.8 hits a fixed SCDynamicStore Seatbelt panic that no
-          narrowing accommodation fixes (ADR-014), so the command must run
-          unconfined. Platform-mandatory, not an operator convenience: on
-          Linux/bubblewrap uv runs confined once its cache is accommodated, so
-          this widening does not apply there. `setup autonomy` auto-applies this
-          ONLY when the installed uv is at/below the known-bad release (ADR-027);
-          a fixed uv self-disables it. Still gated by the permission hook.
+          macOS only — runs the command `uv` OUTSIDE the box. uv hits a fixed
+          SCDynamicStore Seatbelt panic that no narrowing accommodation fixes
+          (ADR-014), present in every release until an upstream fix ships, so the
+          command must run unconfined. Excluding `uv` covers `pkit` only via
+          `uv run pkit` (head token `uv`); a directly-installed `pkit`
+          console-script (head token `pkit`) is not covered by this exclusion.
+          Platform-mandatory, not an operator convenience: on Linux/bubblewrap uv
+          runs confined once its cache is accommodated, so this widening does not
+          apply there. `setup autonomy` auto-applies this whenever the installed
+          uv is below the known-fixed release (and, while none is known, on every
+          readable version) — gated on the fix, never on a known-bad ceiling
+          (ADR-027); a fixed uv self-disables it. Still gated by the permission
+          hook.
 
   node:
     description: Node / npm / pnpm — write their shared caches outside the project.
