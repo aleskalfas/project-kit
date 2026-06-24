@@ -492,7 +492,11 @@ def test_sandbox_enable_strict_locks_fail_over(tmp_path, monkeypatch):
     proj = _with_adapter(_setup(tmp_path))
     out = _run(proj, monkeypatch, "sandbox", "enable", "--strict")
     assert "strict" in out
-    assert _settings(proj)["sandbox"]["allowUnsandboxedCommands"] is False
+    # ADR-029: the seal is a deviation → routed to the gitignored local file,
+    # NEVER the committed floor; the union read still sees it live.
+    assert _sb_local(proj)["allowUnsandboxedCommands"] is False
+    assert "allowUnsandboxedCommands" not in _sb_committed(proj)
+    assert _sb(proj)["allowUnsandboxedCommands"] is False
 
 
 def test_sandbox_dangerous_flag_is_loud_and_not_persisted_as_default(tmp_path, monkeypatch):
@@ -510,11 +514,34 @@ def test_sandbox_disable_flips_enabled_only(tmp_path, monkeypatch):
     _run(proj, monkeypatch, "sandbox", "enable", "--strict")
     out = _run(proj, monkeypatch, "sandbox", "disable")
     assert "disabled" in out and "not hot-reloaded" in out
-    sb = _settings(proj)["sandbox"]
+    sb = _settings(proj)["sandbox"]              # committed file: baseline + floor
     assert sb["enabled"] is False
-    assert sb["allowUnsandboxedCommands"] is False         # operator keys left in place
     assert "~/.ssh" in sb["filesystem"]["denyRead"]
+    # The seal is a deviation in the gitignored file; disable flips only the
+    # committed `enabled`, so the seal survives there (ADR-029).
+    assert _sb_local(proj)["allowUnsandboxedCommands"] is False
     assert "already disabled" in _run(proj, monkeypatch, "sandbox", "disable")
+
+
+def test_sandbox_disable_reports_local_enabled_override(tmp_path, monkeypatch):
+    # `disable` flips only the COMMITTED `enabled`, but the runtime is the union
+    # and `enabled` is scalar local-wins (ADR-029). If settings.local.json carries
+    # a per-machine `enabled: true` (the harness /sandbox panel writes there — a
+    # key pkit does not own), the box stays ON. disable must NOT silently claim the
+    # box is off; it must report the override honestly.
+    proj = _with_adapter(_setup(tmp_path))
+    _run(proj, monkeypatch, "sandbox", "enable")          # committed enabled=true
+    local_path = proj / ".claude" / "settings.local.json"
+    local = json.loads(local_path.read_text()) if local_path.is_file() else {}
+    local.setdefault("sandbox", {})["enabled"] = True     # per-machine override
+    local_path.write_text(json.dumps(local))
+    out = _run(proj, monkeypatch, "sandbox", "disable")
+    # Committed floor was cleared, but the union still resolves ON.
+    assert _settings(proj)["sandbox"]["enabled"] is False
+    assert _sb(proj)["enabled"] is True
+    # Honest report: names the local override; does NOT claim the box is now off.
+    assert "still ON" in out and "settings.local.json" in out
+    assert "sandbox disabled (enabled: false" not in out
 
 
 def test_sandbox_status_off_and_on(tmp_path, monkeypatch):
@@ -780,8 +807,11 @@ def test_setup_autonomy_first_run_stands_up_and_stops_at_restart(tmp_path, monke
     data = _settings(proj)
     assert data["sandbox"]["enabled"] is True and data["sandbox"]["failIfUnavailable"] is True
     # ADR-028: the autonomy posture seals the unsandboxed escape by default —
-    # strict fail-over is written as part of standing up confinement.
-    assert data["sandbox"]["allowUnsandboxedCommands"] is False
+    # strict fail-over is written as part of standing up confinement. ADR-029:
+    # the seal is a deviation → it lands in the gitignored local file, not the
+    # committed floor (which carries enabled/failIfUnavailable).
+    assert "allowUnsandboxedCommands" not in data["sandbox"]
+    assert _sb_local(proj)["allowUnsandboxedCommands"] is False
     assert "unsandboxed escape sealed" in out
     assert any("permission-hook" in h.get("command", "")
                for e in data["hooks"]["PreToolUse"] for h in e.get("hooks", []))
@@ -866,7 +896,9 @@ def test_setup_autonomy_seals_unsandboxed_escape_by_default(tmp_path, monkeypatc
     proj = _with_adapter(_setup(tmp_path))
     out = _run(proj, monkeypatch, "setup", "autonomy")
     assert "unsandboxed escape sealed" in out
-    assert _settings(proj)["sandbox"]["allowUnsandboxedCommands"] is False
+    # ADR-029: the seal routes to the gitignored local file, not the committed one.
+    assert _sb_local(proj)["allowUnsandboxedCommands"] is False
+    assert "allowUnsandboxedCommands" not in _sb_committed(proj)
 
 
 def test_setup_autonomy_seal_is_idempotent_and_reported_on_resume(tmp_path, monkeypatch):
@@ -875,7 +907,7 @@ def test_setup_autonomy_seal_is_idempotent_and_reported_on_resume(tmp_path, monk
     _run(proj, monkeypatch, "setup", "autonomy")
     out = _run(proj, monkeypatch, "setup", "autonomy")
     assert "already — OS sandbox enabled" in out and "escape sealed" in out
-    assert _settings(proj)["sandbox"]["allowUnsandboxedCommands"] is False
+    assert _sb_local(proj)["allowUnsandboxedCommands"] is False
 
 
 def test_setup_autonomy_seal_orthogonal_to_macos_exclusion(tmp_path, monkeypatch):
@@ -919,10 +951,10 @@ def test_setup_autonomy_seal_is_reversible_via_non_strict_enable(tmp_path, monke
     # `dangerouslyDisableSandbox` stopgap. Strict is the only (reversible) lever.
     proj = _with_adapter(_setup(tmp_path))
     _run(proj, monkeypatch, "setup", "autonomy")
-    assert _settings(proj)["sandbox"]["allowUnsandboxedCommands"] is False
+    assert _sb_local(proj)["allowUnsandboxedCommands"] is False
     out = _run(proj, monkeypatch, "sandbox", "enable")    # no --strict
     assert "strict off" in out and "escape restored" in out
-    assert "allowUnsandboxedCommands" not in _settings(proj)["sandbox"]
+    assert "allowUnsandboxedCommands" not in _sb(proj)
 
 
 def _prov_entries(proj: Path) -> list:
@@ -959,12 +991,12 @@ def test_non_strict_enable_clears_pkit_authored_seal_and_its_provenance(tmp_path
     # provenance entry (ledger kept in sync with settings).
     proj = _with_adapter(_setup(tmp_path))
     _run(proj, monkeypatch, "sandbox", "enable", "--strict")
-    assert _settings(proj)["sandbox"]["allowUnsandboxedCommands"] is False
+    assert _sb_local(proj)["allowUnsandboxedCommands"] is False
     assert any(e.get("kind") == "seal" and e.get("toolkit") == "_strict"
                for e in _prov_entries(proj)), "strict enable must record seal provenance"
     out = _run(proj, monkeypatch, "sandbox", "enable")    # no --strict
     assert "escape restored" in out
-    assert "allowUnsandboxedCommands" not in _settings(proj)["sandbox"]
+    assert "allowUnsandboxedCommands" not in _sb(proj)
     assert not any(e.get("kind") == "seal" for e in _prov_entries(proj)), \
         "seal provenance must be cleared alongside the settings"
 
@@ -976,15 +1008,15 @@ def test_seal_round_trips_setup_autonomy_then_non_strict_then_resetup(tmp_path, 
     # re-applicable; the ledger stays consistent across the round-trip.
     proj = _with_adapter(_setup(tmp_path))
     _run(proj, monkeypatch, "setup", "autonomy")
-    assert _settings(proj)["sandbox"]["allowUnsandboxedCommands"] is False
+    assert _sb_local(proj)["allowUnsandboxedCommands"] is False
     assert any(e.get("kind") == "seal" for e in _prov_entries(proj))
 
     _run(proj, monkeypatch, "sandbox", "enable")          # non-strict: reverse
-    assert "allowUnsandboxedCommands" not in _settings(proj)["sandbox"]
+    assert "allowUnsandboxedCommands" not in _sb(proj)
     assert not any(e.get("kind") == "seal" for e in _prov_entries(proj))
 
     _run(proj, monkeypatch, "setup", "autonomy")          # re-seal
-    assert _settings(proj)["sandbox"]["allowUnsandboxedCommands"] is False
+    assert _sb_local(proj)["allowUnsandboxedCommands"] is False
     assert any(e.get("kind") == "seal" for e in _prov_entries(proj))
 
 
@@ -1015,11 +1047,74 @@ def test_setup_autonomy_seal_leaves_decide_py_untouched(tmp_path, monkeypatch):
 
 # ---- confinement allowances (ADR-008, #281) ----------------------------------
 
-def _sb(proj: Path) -> dict:
-    p = proj / ".claude" / "settings.json"
+def _sb_file(proj: Path, name: str) -> dict:
+    p = proj / ".claude" / name
     if not p.is_file():
         return {}
     return json.loads(p.read_text()).get("sandbox", {})
+
+
+def _sb_committed(proj: Path) -> dict:
+    """The sandbox block in the COMMITTED settings.json only (ADR-029 routing
+    assertions: the narrowing floor + baseline live here, never a widening)."""
+    return _sb_file(proj, "settings.json")
+
+
+def _sb_local(proj: Path) -> dict:
+    """The sandbox block in the GITIGNORED settings.local.json only (ADR-029:
+    widenings + per-machine deviations live here)."""
+    return _sb_file(proj, "settings.local.json")
+
+
+def _merge_sb(committed: dict, local: dict) -> dict:
+    """Mirror the harness deep-merge (arrays union, scalars local-wins) so a test
+    reading `_sb` sees the EFFECTIVE runtime block — the union across both files,
+    exactly what `_sandbox_block` produces."""
+    out: dict = {}
+    for key in set(committed) | set(local):
+        cv, lv = committed.get(key), local.get(key)
+        if isinstance(cv, list) or isinstance(lv, list):
+            merged = list(cv or [])
+            for item in (lv or []):
+                if item not in merged:
+                    merged.append(item)
+            out[key] = merged
+        elif isinstance(cv, dict) or isinstance(lv, dict):
+            out[key] = _merge_sb(cv or {}, lv or {})
+        else:
+            out[key] = lv if key in local else cv
+    return out
+
+
+def _sb(proj: Path) -> dict:
+    """The EFFECTIVE sandbox block — the runtime union of settings.json and
+    settings.local.json (ADR-029). Tests that only care WHETHER an entry is live
+    use this; tests asserting WHICH file an entry routed to use `_sb_committed`
+    / `_sb_local`."""
+    return _merge_sb(_sb_committed(proj), _sb_local(proj))
+
+
+def test_merge_preserves_committed_denyread_floor_under_local_widening():
+    """ADR-029 load-bearing property (pkit's own union mirror): a committed
+    `denyRead` credential floor SURVIVES when the local file adds only a
+    widening (`excludedCommands`). The floor must not be dropped by the split —
+    exercises the production `_merge_sandbox_blocks`, the union every reader uses."""
+    from project_kit import permissions as perm
+
+    committed = {
+        "enabled": True,
+        "failIfUnavailable": True,
+        "filesystem": {"denyRead": ["~/.ssh", "~/.config/gh"]},
+    }
+    local = {"excludedCommands": ["uv"], "allowUnsandboxedCommands": False}
+    merged = perm._merge_sandbox_blocks(committed, local)
+    # Floor survives (filesystem-array merge):
+    assert merged["filesystem"]["denyRead"] == ["~/.ssh", "~/.config/gh"]
+    # Local widening present:
+    assert merged["excludedCommands"] == ["uv"]
+    # Scalars: committed baseline preserved, local seal wins:
+    assert merged["failIfUnavailable"] is True
+    assert merged["allowUnsandboxedCommands"] is False
 
 
 def test_toolkit_list_marks_effect(tmp_path, monkeypatch):
@@ -1103,6 +1198,11 @@ def test_exclude_is_loud_and_not_committed(tmp_path, monkeypatch):
     assert "WIDENING" in out and "UNCONFINED" in out
     assert "NOT recorded in any committed file" in out
     assert "docker" in _sb(proj)["excludedCommands"]
+    # ADR-029 routing: the widening lands ONLY in the gitignored local file; the
+    # committed file never carries it (fails if `_route_local` regressed and routed
+    # the widening back to committed).
+    assert "docker" in _sb_local(proj).get("excludedCommands", [])
+    assert "excludedCommands" not in _sb_committed(proj)
     # never written to permission-config
     cfgp = proj / ".pkit" / "permissions" / "project" / "config.yaml"
     if cfgp.is_file():
@@ -1192,6 +1292,11 @@ def test_required_exclusion_auto_applies_on_macos_old_uv_with_marker(tmp_path, m
     assert "OUTSIDE the OS box — UNCONFINED" in out
     # Applied via the real primitive → lands in live settings excludedCommands.
     assert "uv" in _sb(proj)["excludedCommands"]
+    # ADR-029 routing: the required exclusion is a widening → ONLY the gitignored
+    # local file carries it; the committed file never does (fails if `_route_local`
+    # regressed and routed the widening back to committed).
+    assert "uv" in _sb_local(proj).get("excludedCommands", [])
+    assert "excludedCommands" not in _sb_committed(proj)
     # Distinct provenance tag — `_required`, NOT `_manual`.
     prov_path = proj / ".pkit" / "permissions" / "project" / "sandbox-provenance.yaml"
     from ruamel.yaml import YAML as _YAML
