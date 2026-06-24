@@ -974,7 +974,8 @@ def test_setup_autonomy_applies_accommodations_and_nudges_widening(tmp_path, mon
     # on its own line; Title-case header + whitespace zoning, NO horizontal rules
     # (per the CLI output convention). Never applied.
     assert "Next — run these yourself" in out
-    assert "docker: runs UNCONFINED" in out
+    # docker is an OPTIONAL widening (not the macOS-mandatory uv/pkit) → "optional" copy
+    assert "`docker` — optional" in out and "run unconfined" in out
     assert "`pkit permissions sandbox exclude docker`" in out   # backtick-wrapped, own line
     assert "────" not in out          # no drawn rules (convention)
     assert "── NEXT" not in out        # no divider header either
@@ -1165,7 +1166,7 @@ def test_gh_detected_via_repo_marker(tmp_path, monkeypatch):
     proj = _with_adapter(_setup(tmp_path))
     (proj / ".github").mkdir()
     out = _run(proj, monkeypatch, "setup", "autonomy")
-    assert "gh: runs UNCONFINED" in out and "sandbox exclude gh" in out
+    assert "`gh` — optional" in out and "sandbox exclude gh" in out
     assert "gh" not in _sb(proj).get("excludedCommands", [])   # nudge only
 
 
@@ -1179,7 +1180,89 @@ def test_gh_detected_via_path(tmp_path, monkeypatch):
     stub.chmod(0o755)
     monkeypatch.setenv("PATH", f"{bindir}:{__import__('os').environ['PATH']}")
     out = _run(proj, monkeypatch, "setup", "autonomy")
-    assert "gh: runs UNCONFINED" in out and "sandbox exclude gh" in out
+    assert "`gh` — optional" in out and "sandbox exclude gh" in out
+
+
+# ---- setup-autonomy NEXT block: wrapping + required-vs-optional copy (#247) ---
+#   (a) a long widening desc hang-indents continuation lines under the 4-space
+#       label (6 spaces), never flush to column 0.
+#   (b) the macOS-mandatory uv/pkit exclusion renders REQUIRED copy; an optional
+#       one (gh) renders "optional" copy. Distinction computed at runtime.
+#   (c) the `sandbox exclude` command line is present and unbroken (own line, not
+#       mid-token wrapped).
+
+def _next_steps(widening, *, platform, width, host=None):
+    """Render _setup_next_steps with a forced platform + wrap width, no signing
+    (a nonexistent root → no git → empty signing). Returns the line list."""
+    import unittest.mock as _mock
+
+    from project_kit import cli_render
+    from project_kit import permissions as perm
+
+    saved = cli_render._wrap_width
+    cli_render.set_wrap_width(width)
+    try:
+        with _mock.patch("sys.platform", platform):
+            return perm._setup_next_steps(Path("/nonexistent-xyz"), widening, host or [])
+    finally:
+        cli_render.set_wrap_width(saved)
+
+
+def test_next_step_long_desc_hangs_at_six_spaces_not_column_zero():
+    # Narrow width forces the optional copy to wrap; continuations must hang at
+    # indent(4) + hang(2) = 6 spaces, never at column 0 (the bug being fixed).
+    out = _next_steps([("gh", "gh")], platform="linux", width=50)
+    # the label anchors line 1 at the 4-space margin
+    label_lines = [ln for ln in out if ln.startswith("    `gh` — optional:")]
+    assert label_lines, "expected the label at the 4-space margin"
+    # body continuations hang at exactly 6 spaces (not 8 = the command line)
+    conts = [ln for ln in out
+             if ln.startswith("      ") and not ln.startswith("        ")]
+    assert conts, "expected a hung continuation line at 6 spaces"
+    for ln in conts:
+        assert not ln.startswith("       ")        # exactly 6, not 7+
+        assert ln[6] != " "                         # content begins at col 6
+    # nothing in the block wrapped flush to column 0
+    block = out[2:]  # skip the leading blank + heading
+    assert not any(ln and not ln.startswith(" ") for ln in block)
+
+
+def test_next_step_macos_uv_required_copy():
+    out = _next_steps([("uv", "uv")], platform="darwin", width=0)
+    text = "\n".join(out)
+    assert "`uv` — REQUIRED on macOS" in text
+    assert "fixed Seatbelt panic" in text and "ADR-014" in text
+    assert "Still gated by the permission hook." in text
+    # the exclude command is present, on its own line, unbroken
+    assert "        `pkit permissions sandbox exclude uv`" in out
+
+
+def test_next_step_pkit_also_required_on_macos():
+    # The mandatory match keys on uv OR pkit, by tool name or cmd value.
+    out = _next_steps([("pkit", "pkit")], platform="darwin", width=0)
+    assert "`pkit` — REQUIRED on macOS" in "\n".join(out)
+
+
+def test_next_step_gh_optional_copy_on_macos():
+    # gh is NOT uv/pkit → optional even on macOS.
+    out = _next_steps([("gh", "gh")], platform="darwin", width=0)
+    text = "\n".join(out)
+    assert "`gh` — optional" in text and "REQUIRED" not in text
+    assert "        `pkit permissions sandbox exclude gh`" in out
+
+
+def test_next_step_uv_optional_off_macos():
+    # Off macOS, even uv is optional (the Seatbelt panic is macOS-specific).
+    out = _next_steps([("uv", "uv")], platform="linux", width=0)
+    text = "\n".join(out)
+    assert "`uv` — optional" in text and "REQUIRED" not in text
+
+
+def test_next_step_exclude_command_line_unbroken_under_narrow_width():
+    # Even at a punishing width the command token overflows (copy-pasteable),
+    # never breaks mid-token.
+    out = _next_steps([("gh", "gh")], platform="linux", width=20)
+    assert "        `pkit permissions sandbox exclude gh`" in out
 
 
 # ---- run-once SSH stability tip (#299) ---------------------------------------

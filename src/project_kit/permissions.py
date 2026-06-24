@@ -2770,6 +2770,44 @@ def _setup_stability_tip(target_root: Path) -> list[str]:
     ]
 
 
+def _widening_required_on_platform(tool: str, cmd: str) -> bool:
+    """Is this widening exclusion MANDATORY on the current platform (vs an
+    operator's optional choice)? Derived AT RUNTIME — never a toolkit-schema field
+    (architect: derive it, don't schematise). The one mandatory case today: on
+    macOS, `uv` / `pkit` cannot run inside the Seatbelt box (a fixed Seatbelt
+    panic, no setting fixes it — ADR-014), so excluding them is not optional.
+    Everything else (e.g. `gh`) is an optional widening the operator may accept."""
+    import sys as _sys
+    if _sys.platform != "darwin":
+        return False
+    return tool in ("uv", "pkit") or cmd in ("uv", "pkit")
+
+
+def _widening_desc(tool: str, cmd: str) -> tuple[str, str]:
+    """The nudge label + body for one widening exclusion — required-vs-optional
+    copy chosen at runtime (see _widening_required_on_platform). Returns
+    (label, body): the label is the short head that anchors the item at the
+    4-space margin; the body is the explanatory prose the caller hang-wraps under
+    it. Both plain (the caller styles / wraps the returned text)."""
+    if _widening_required_on_platform(tool, cmd):
+        return (
+            f"`{tool}` — REQUIRED on macOS:",
+            (
+                "`uv` can't run inside the box (a fixed Seatbelt panic; no "
+                "setting fixes it), so it must run unconfined. Not optional — "
+                "the documented macOS stance (ADR-014). Still gated by the "
+                "permission hook."
+            ),
+        )
+    return (
+        f"`{tool}` — optional:",
+        (
+            f"excluding it lets `{cmd}` run unconfined (widening). Only do this "
+            "if you want it to work in a sandboxed session."
+        ),
+    )
+
+
 def _setup_next_steps(target_root: Path, widening: list[tuple[str, str]],
                       host_nudges: list[tuple[str, str]]) -> list[str]:
     """Render the consolidated NEXT block: explicit gestures the project needs but
@@ -2785,19 +2823,37 @@ def _setup_next_steps(target_root: Path, widening: list[tuple[str, str]],
     # output convention (.pkit/cli/README.md "Command output conventions"): zones
     # are marked by header case + whitespace, never drawn rules. Each command
     # goes on its own indented line so it's copy-paste-obvious.
-    def _item(desc: str, command: str) -> list[str]:
-        return ["", f"    {desc}:", f"        `{command}`"]
+    #
+    # The description is author prose: route it through cli_render.wrap (ADR-024)
+    # so long / multi-line copy hangs under the 4-space label (continuations at 6
+    # spaces) instead of wrapping flush to column 0. The command is a copy-paste
+    # token, NOT prose — it stays on its own un-wrapped line at 8 spaces
+    # (backtick-quoted), styled as before.
+    # Each item: a label anchored at the 4-space margin, an optional body of
+    # explanatory prose, then the command on its own un-wrapped 8-space line
+    # (a copy-paste token, never wrapped). The body is author prose routed through
+    # cli_render.wrap (ADR-024): the label is the inline line-1 prefix
+    # (first_line_indent = its visible width), so the body's continuation lines
+    # hang under it at indent(4) + hang(2) = 6 spaces instead of wrapping flush to
+    # column 0. A bodyless item is just the label line.
+    def _item(label: str, command: str, body: str = "") -> list[str]:
+        if not body:
+            head = cli_render.wrap(label, indent="    ", hang="  ")
+        else:
+            prefix = f"    {label} "
+            tail = cli_render.wrap(body, indent="    ", hang="  ",
+                                   first_line_indent=len(prefix))
+            head = [prefix + tail[0], *tail[1:]]
+        return ["", *head, f"        `{command}`"]
 
     out = ["", "  " + cli_render.style("heading", "Next — run these yourself (setup never lowers the box for you)")]
     for tool, cmd in widening:
-        out += _item(
-            f"{tool}: runs UNCONFINED outside the box (widening)",
-            f"pkit permissions sandbox exclude {cmd}",
-        )
+        label, body = _widening_desc(tool, cmd)
+        out += _item(label, f"pkit permissions sandbox exclude {cmd}", body)
     if signing:
-        out += _item(f"{signing[0]} (narrowing — box stays confined)", signing[1])
+        out += _item(f"{signing[0]} (narrowing — box stays confined):", signing[1])
     for desc, command in host_nudges:
-        out += _item(desc, command)
+        out += _item(f"{desc}:", command)
     out += [
         "",
         "    (each persists once run; `accommodate` choices re-apply on every future setup.)",
