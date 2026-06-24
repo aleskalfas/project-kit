@@ -232,6 +232,61 @@ def test_title_pattern_for_returns_none_on_empty_schema(ci) -> None:
     assert ci._title_pattern_for({}, "task") is None
 
 
+# --- parent-requiredness gate under hierarchy mode (DEC-036 D4, #272) -----
+
+
+def test_parent_requiredness_gated_under_greenfield(ci) -> None:
+    """Greenfield / `hierarchy: gated`: a required parent-ref hard-rejects (gates).
+    Byte-unchanged from today's behaviour."""
+    type_entry = {"parent_ref_required_severity": "[validation-severity:hard-reject]"}
+    assert ci._parent_requiredness_is_gated(type_entry, "gated") is True
+
+
+def test_parent_requiredness_gated_default_when_knob_absent(ci) -> None:
+    """A type with no `parent_ref_required_severity` defaults to hard-reject — the
+    greenfield gate holds even before the knob is authored."""
+    assert ci._parent_requiredness_is_gated({}, "gated") is True
+
+
+def test_parent_requiredness_advisory_under_advisory_hierarchy(ci) -> None:
+    """`hierarchy: advisory`: the parent-requiredness rule degrades to a warning —
+    NOT gated. create-issue files parentless and advises. This is the relaxation
+    flat brownfield trackers need (a parent the repo can't express)."""
+    type_entry = {"parent_ref_required_severity": "[validation-severity:hard-reject]"}
+    assert ci._parent_requiredness_is_gated(type_entry, "advisory") is False
+
+
+def test_parent_requiredness_advisory_softens_even_without_explicit_knob(ci) -> None:
+    """Advisory softens regardless of the authored knob — the mode is what
+    degrades requiredness; the knob just confirms a rule exists to degrade."""
+    assert ci._parent_requiredness_is_gated({}, "advisory") is False
+
+
+def test_advisory_softens_requiredness_gate_real_guard(ci) -> None:
+    """REAL guard over shipped code (requiredness side): the final assertion
+    exercises the production `ci._parent_requiredness_is_gated`, confirming
+    advisory does NOT gate. Unlike the containment `_illustration` tests in
+    test_pm_substrate_map_schema.py (which model a non-existent production
+    function locally), the requiredness gate IS a real function, so this guards
+    its behaviour directly.
+
+    The `buggy_is_gated` below is a LOCAL model of the inverse bug — advisory
+    wrongly KEEPING the gate — shown only to make the failure mode the real
+    assertion catches explicit. It is not production code.
+    """
+    def buggy_is_gated(type_entry, hierarchy):  # noqa: ARG001
+        # BUG: ignores the hierarchy mode, always gates.
+        return True
+
+    # Under advisory the buggy model still gates...
+    assert buggy_is_gated({}, "advisory") is True
+    # ...which a not-gated assertion would reject:
+    with pytest.raises(AssertionError):
+        assert buggy_is_gated({}, "advisory") is False
+    # The REAL production function correctly does NOT gate under advisory.
+    assert ci._parent_requiredness_is_gated({}, "advisory") is False
+
+
 # --- gh issue create milestone form (#223 regression) -----------------
 
 

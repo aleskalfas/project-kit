@@ -146,6 +146,13 @@ def main() -> int:
     if issue is None:
         return 2
 
+    # The adopter's hierarchy MODE (DEC-036 D4). Governs whether a missing /
+    # malformed parent-ref first line hard-rejects (gated / greenfield) or
+    # degrades to a warning (advisory) — the body-format.yaml parent-ref rule
+    # is one of the two parent-requiredness rules advisory relaxes. None map ⇒
+    # gated (greenfield, byte-unchanged).
+    hierarchy = axis_labels.hierarchy_disposition(capability_root)
+
     findings = _validate_issue(
         issue=issue,
         issue_types=issue_types,
@@ -155,6 +162,7 @@ def main() -> int:
         mandatory_state=mandatory_state,
         capability_root=capability_root,
         phase=args.phase,
+        hierarchy=hierarchy,
     )
 
     if args.json:
@@ -191,6 +199,7 @@ def _validate_issue(
     mandatory_state: dict | None = None,
     capability_root: Path | None = None,
     phase: str = PHASE_TRANSITION,
+    hierarchy: str = axis_labels.HIERARCHY_GATED,
 ) -> list[Finding]:
     findings: list[Finding] = []
     title = str(issue.get("title", ""))
@@ -372,14 +381,41 @@ def _validate_issue(
                     )
                 elif not _ISSUE_PARENT_RE.match(first_line):
                     # Neither milestone form nor a valid issue-parent ref.
-                    findings.append(
-                        Finding(
-                            SEVERITY_HARD_REJECT,
-                            "body.parent-ref",
-                            f"first body line does not match the parent-ref "
-                            f"form {parent_ref_form!r}; got {first_line!r}.",
+                    #
+                    # Hierarchy-aware per DEC-036 D4: the body-format.yaml
+                    # parent-ref rule is one of the two parent-requiredness rules
+                    # advisory relaxes. Under `hierarchy: advisory` (a flat
+                    # brownfield tracker that records the parent-ref as plain
+                    # body-text, or has none) this degrades to a warning so the
+                    # flat adopter is NOT walled at the first transition after
+                    # create-issue already let them file parentless. Under
+                    # `gated` / greenfield it stays a hard-reject, byte-unchanged.
+                    # (Containment is untouched — advisory relaxes requiredness,
+                    # never nesting.)
+                    if hierarchy == axis_labels.HIERARCHY_ADVISORY:
+                        findings.append(
+                            Finding(
+                                SEVERITY_WARNING,
+                                "body.parent-ref",
+                                f"first body line does not match the parent-ref "
+                                f"form {parent_ref_form!r}; got {first_line!r}. "
+                                f"Advisory under hierarchy: advisory — a flat "
+                                f"tracker is not required to carry a "
+                                f"machine-checkable parent-ref.",
+                            )
                         )
-                    )
+                    else:
+                        findings.append(
+                            Finding(
+                                SEVERITY_HARD_REJECT,
+                                "body.parent-ref",
+                                f"first body line does not match the parent-ref "
+                                f"form {parent_ref_form!r}; got {first_line!r}. "
+                                f"If your tracker is flat / brownfield, set "
+                                f"`hierarchy: advisory` in substrate-map.yaml so "
+                                f"parent-refs are recorded but not required.",
+                            )
+                        )
 
         # Residual-placeholder detection per DEC-031.
         if capability_root is not None:

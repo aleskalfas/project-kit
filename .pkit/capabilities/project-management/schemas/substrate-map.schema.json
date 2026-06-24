@@ -29,6 +29,11 @@
     "source": {
       "$ref": "refs.schema.json#/$defs/source"
     },
+    "hierarchy": {
+      "type": "string",
+      "enum": ["gated", "advisory"],
+      "description": "Parent-ref MODE — how parent-REQUIREDNESS is enforced (per project-management:DEC-036 D4). NOT a label-encoded axis (the `label`/`title-prefix`/`derive` binding kinds do not fit a parent-ref mode), so it lives at the map's top level, beside `axes`, not under it. `gated` (the default when this key is ABSENT, and the greenfield behaviour): parent-refs are required where a type sets `parent_ref_optional: false`, gated as a hard-reject. `advisory`: a flat tracker — the parent-requiredness rules degrade to advisory (warning); a parent-ref is recorded as body-text when given but is NOT required and NOT gated, so create-issue never demands a parent the repo cannot express. The CONTAINMENT invariants (Feature-in-Feature, EPIC-in-EPIC, …) stay HARD in BOTH modes — `advisory` relaxes only requiredness, never the nesting rules. An absent key ⇒ `gated` (NOT advisory: the safe direction for a requiredness rule)."
+    },
     "axes": {
       "type": "object",
       "description": "Per-axis bindings. A key MAY be omitted entirely — an omitted axis in a present map is treated as `unsupported`, NOT greenfield (DEC-036 / ADR-026 the load-bearing rule). Only the four methodology axes are recognised; unknown keys are rejected.",

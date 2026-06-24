@@ -390,6 +390,62 @@ def test_epic_without_parent_ref_is_ok_because_parent_is_optional(
     assert "body.parent-ref" not in _labels(findings)
 
 
+def test_missing_parent_ref_degrades_to_warning_under_advisory_hierarchy(
+    vi, issue_types, titles, body_format, label_fallback_config
+) -> None:
+    """DEC-036 D4: the body-format.yaml parent-ref rule is one of the two
+    parent-requiredness rules `hierarchy: advisory` relaxes. A flat-tracker issue
+    with NO machine-checkable parent-ref first line must NOT hard-reject at
+    validate-issue — otherwise a flat adopter who files parentless through
+    create-issue (advisory) hits a wall at the first transition. Under advisory
+    the finding degrades to a warning (still surfaced, never gated)."""
+    issue = _make_issue(
+        title="[Task] Install the Claude Code CLI inside the sandbox",
+        # Body opens directly with content; no parent-ref line.
+        body="## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone.",
+        labels=["type:feature", "priority:Medium", "workstream:cli"],
+    )
+    findings = vi._validate_issue(
+        issue=issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        config=label_fallback_config,
+        hierarchy=vi.axis_labels.HIERARCHY_ADVISORY,
+    )
+    parent_findings = [f for f in findings if f.label == "body.parent-ref"]
+    # Still surfaced — but as a warning, NOT a hard-reject.
+    assert len(parent_findings) == 1
+    assert parent_findings[0].severity == vi.SEVERITY_WARNING
+    # No hard-reject anywhere on the parent-ref axis under advisory.
+    assert vi.SEVERITY_HARD_REJECT not in _severities(parent_findings)
+
+
+def test_missing_parent_ref_still_hard_rejects_under_greenfield(
+    vi, issue_types, titles, body_format, label_fallback_config
+) -> None:
+    """Greenfield parity (the other direction): with no substrate-map the
+    hierarchy defaults to gated, so the SAME parentless body that degrades under
+    advisory still hard-rejects. The default `hierarchy` arg is gated, so a caller
+    that passes nothing gets the byte-unchanged greenfield gate."""
+    issue = _make_issue(
+        title="[Task] Install the Claude Code CLI inside the sandbox",
+        body="## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone.",
+        labels=["type:feature", "priority:Medium", "workstream:cli"],
+    )
+    findings = vi._validate_issue(
+        issue=issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        config=label_fallback_config,
+        # hierarchy omitted ⇒ gated default (greenfield).
+    )
+    parent_findings = [f for f in findings if f.label == "body.parent-ref"]
+    assert len(parent_findings) == 1
+    assert parent_findings[0].severity == vi.SEVERITY_HARD_REJECT
+
+
 # --- universal body rules --------------------------------------------
 
 
