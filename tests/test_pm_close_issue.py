@@ -34,10 +34,12 @@ LIB_PATH = (
 
 sys.path.insert(0, str(LIB_PATH))
 from _lib.labels import (  # noqa: E402
-    NON_TERMINAL_STATE_LABELS,
-    TERMINAL_STATE_LABEL,
+    NON_TERMINAL_STATE_VALUES,
+    TERMINAL_STATE_VALUE,
+    _resolve_state_labels,
     reconcile_state_labels_to_done,
 )
+from _lib import axis_labels  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -217,15 +219,73 @@ def test_find_open_children_returns_none_on_gh_failure(ci, monkeypatch) -> None:
 # state:done, no stale label).
 
 
-def test_reconcile_constants_are_correct() -> None:
-    """The non-terminal set and the terminal label match the workflow states."""
-    assert TERMINAL_STATE_LABEL == "state:done"
-    assert set(NON_TERMINAL_STATE_LABELS) == {
+def test_reconcile_state_values_are_correct() -> None:
+    """The state-value set matches the workflow states (the per-call resolver
+    turns these into concrete labels through the seam)."""
+    assert TERMINAL_STATE_VALUE == "done"
+    assert set(NON_TERMINAL_STATE_VALUES) == {
+        "todo",
+        "backlog",
+        "in-progress",
+        "review",
+    }
+
+
+def test_resolve_state_labels_greenfield_identity() -> None:
+    """No map ⇒ the resolver returns the kit's own `state:*` labels — the
+    byte-identical greenfield behaviour the eager constants used to hold."""
+    terminal, non_terminal = _resolve_state_labels(None)
+    assert terminal == "state:done"
+    assert set(non_terminal) == {
         "state:todo",
         "state:backlog",
         "state:in-progress",
         "state:review",
     }
+
+
+def test_resolve_state_labels_derive_bound_degrades_to_none() -> None:
+    """A present map binding `state` to a derive predicate ⇒ no kit `state:*`
+    label is written or removed (the RF-1 fix): the resolver returns
+    `(None, ())`, so reconcile becomes a no-op on the label substrate."""
+    derive_map = axis_labels.SubstrateMap(
+        axes={"state": {"derive": {"from": "open-closed"}}}
+    )
+    terminal, non_terminal = _resolve_state_labels(derive_map)
+    assert terminal is None
+    assert non_terminal == ()
+
+
+def test_resolve_state_labels_unsupported_degrades_to_none() -> None:
+    """A present map marking `state` unsupported (or omitting it) ⇒ degrade."""
+    unsupported_map = axis_labels.SubstrateMap(axes={"state": {"unsupported": True}})
+    assert _resolve_state_labels(unsupported_map) == (None, ())
+    absent_map = axis_labels.SubstrateMap(axes={"priority": {"unsupported": True}})
+    assert _resolve_state_labels(absent_map) == (None, ())
+
+
+def test_resolve_state_labels_label_bound_uses_adopter_substrate() -> None:
+    """A present map binding `state` to an adopter label set resolves the
+    terminal + non-terminal targets to the adopter's OWN labels, never the
+    kit's `state:*`."""
+    label_map = axis_labels.SubstrateMap(
+        axes={
+            "state": {
+                "label": {
+                    "remap": {
+                        "todo": "Status/Todo",
+                        "in-progress": "Status/Doing",
+                        "done": "Status/Done",
+                    }
+                }
+            }
+        }
+    )
+    terminal, non_terminal = _resolve_state_labels(label_map)
+    assert terminal == "Status/Done"
+    # Only the two non-terminal values WITH a remap entry resolve; the rest
+    # value-degrade and are dropped from the removal set (never kit-written).
+    assert set(non_terminal) == {"Status/Todo", "Status/Doing"}
 
 
 def test_reconcile_noop_when_already_correct() -> None:
@@ -354,6 +414,127 @@ def test_reconcile_adds_done_when_missing_and_no_stale_labels() -> None:
     assert cmd[add_idx + 1] == "state:done"
     # No --remove-label args since no stale labels present
     assert "--remove-label" not in cmd
+
+
+# ---- RF-1 (#265) — brownfield close must NOT write a kit state:done label ---
+#
+# `close-issue` calls `reconcile_state_labels_to_done` on all three close modes.
+# Before the RF-1 fix the helper built its write target from an import-time
+# eager `axis_labels.label("state","done")` (the map-blind greenfield-identity
+# constructor), so a present-map adopter whose `state` axis is derive-bound or
+# unsupported got `state:done` written onto a brownfield issue — a constraint-1
+# ("never write an unmanaged label") violation. The fix threads the substrate
+# map and resolves through `resolve_write`, skipping the add on DEGRADE.
+
+DERIVE_STATE_MAP = axis_labels.SubstrateMap(
+    axes={
+        "state": {
+            "derive": {
+                "from": "open-closed",
+                "states": {"open": "open", "done": "closed"},
+            }
+        }
+    }
+)
+
+
+def test_reconcile_derive_bound_writes_no_state_label() -> None:
+    """A derive-bound `state` map ⇒ reconcile issues NO gh edit (no kit
+    `state:done` add, no removal): the open/closed substrate carries state."""
+    mock_gh_run = MagicMock()
+    result = reconcile_state_labels_to_done(
+        42,
+        ["state:in-progress", "type:bug"],  # a stale kit label present
+        config={},
+        gh_run=mock_gh_run,
+        substrate_map=DERIVE_STATE_MAP,
+    )
+    assert result is True
+    mock_gh_run.assert_not_called()
+
+
+def test_reconcile_unsupported_state_writes_no_state_label() -> None:
+    """An `unsupported` (or absent) `state` axis under a present map ⇒ reconcile
+    is a no-op on the label substrate (no kit `state:done`)."""
+    mock_gh_run = MagicMock()
+    result = reconcile_state_labels_to_done(
+        42,
+        ["state:review"],
+        config={},
+        gh_run=mock_gh_run,
+        substrate_map=axis_labels.SubstrateMap(axes={"state": {"unsupported": True}}),
+    )
+    assert result is True
+    mock_gh_run.assert_not_called()
+
+
+def test_mutation_brownfield_close_coerced_eager_label_leak_is_caught() -> None:
+    """MUTATION-PROOF (RF-1): model the pre-fix bug — an eager
+    `axis_labels.label("state","done")` write target that ignores the map — and
+    confirm the fail-closed assertion catches the kit `state:done` leaking onto
+    a brownfield (derive-bound) issue; then confirm the real reconcile does NOT
+    issue any gh edit under that map."""
+    # The pre-fix construction: map-blind eager identity constructor.
+    buggy_terminal = axis_labels.label("state", "done")
+    assert buggy_terminal == "state:done"  # the kit's own label, ignoring the map
+
+    def assert_no_kit_state_write(cmds: list[list[str]]) -> None:
+        for cmd in cmds:
+            for i, arg in enumerate(cmd):
+                if arg == "--add-label":
+                    assert not cmd[i + 1].startswith("state:"), cmd[i + 1]
+
+    # Model what the buggy helper WOULD have emitted under the derive map.
+    buggy_cmds = [["gh", "issue", "edit", "42", "--add-label", buggy_terminal]]
+    with pytest.raises(AssertionError):
+        assert_no_kit_state_write(buggy_cmds)
+
+    # The real helper fails closed: no gh edit at all under the derive map.
+    captured: list[list[str]] = []
+
+    def fake_gh_run(cmd, config, *, check=True, **kwargs):
+        captured.append(cmd)
+        proc = MagicMock()
+        proc.returncode = 0
+        proc.stderr = ""
+        return proc
+
+    result = reconcile_state_labels_to_done(
+        42,
+        ["state:in-progress"],
+        config={},
+        gh_run=fake_gh_run,
+        substrate_map=DERIVE_STATE_MAP,
+    )
+    assert result is True
+    assert captured == []  # no gh edit issued
+    assert_no_kit_state_write(captured)
+
+
+def test_reconcile_greenfield_unchanged_with_explicit_none_map() -> None:
+    """Greenfield parity: passing `substrate_map=None` (the default) keeps the
+    exact pre-rewire add-`state:done` / remove-stale behaviour."""
+    captured: list[list[str]] = []
+
+    def fake_gh_run(cmd, config, *, check=True, **kwargs):
+        captured.append(cmd)
+        proc = MagicMock()
+        proc.returncode = 0
+        proc.stderr = ""
+        return proc
+
+    result = reconcile_state_labels_to_done(
+        42,
+        ["state:in-progress"],
+        config={},
+        gh_run=fake_gh_run,
+        substrate_map=None,
+    )
+    assert result is True
+    assert len(captured) == 1
+    cmd = captured[0]
+    assert cmd[cmd.index("--add-label") + 1] == "state:done"
+    assert cmd[cmd.index("--remove-label") + 1] == "state:in-progress"
 
 
 # ---- regression #65 — _check_parent_eligibility NameError on config --------

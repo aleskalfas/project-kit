@@ -220,8 +220,13 @@ def _compute_plan(
 
     def _plan_axis(axis: str, values: list[str]) -> None:
         for v in values:
-            # Axis-label built only through the seam (ADR-026 sole-constructor);
-            # greenfield resolves to the kit's own `<axis>:<value>`.
+            # Axis-label built only through the seam (ADR-026 sole-constructor).
+            # bootstrap is the GREENFIELD label-palette provisioner — it
+            # intentionally uses `label()` (kit identity), not `resolve_write`:
+            # provisioning the kit's own labels IS its job. Brownfield adoption
+            # against a present substrate-map enters via `adopt-existing` (#264),
+            # not bootstrap — so this map-blind construction is greenfield-by-
+            # construction, outside the write-rewire (#262/#265) scope.
             name = axis_labels.label(axis, v)
             if name in existing_labels:
                 label_exists.append(name)

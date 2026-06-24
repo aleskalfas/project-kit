@@ -66,6 +66,30 @@ def infer_current_state(
 
     Precedence (DO NOT reorder — parity-critical, DEC-033):
     closed -> done; first `state:*` label; milestone -> backlog; else todo.
+
+    SIBLING GAP — substrate-map derive READ (#265 / #263, lifecycle).
+    --------------------------------------------------------------------
+    This reader is NOT substrate-map-aware: it reads the FIRST kit `state:*`
+    label (via ``axis_labels.read``) before the open/closed fallback. Under a
+    PRESENT substrate-map that binds ``state`` to a ``derive`` predicate, the
+    correct position comes from the open/closed (+ predicate) substrate, NOT a
+    kit label — but #265 deliberately scopes only the WRITE side (create-issue /
+    move-issue / close-issue no longer WRITE a kit `state:*` label on a
+    derive/unsupported map). The derive READ — swapping this label read for a
+    predicate evaluation under a derive binding — is the lifecycle detector
+    engine's job (DEC-033's detector swap), which is NOT built yet.
+
+    Consequence to be honest about: a LEFTOVER kit `state:*` label on an issue
+    under a present derive map would still be returned here, SHADOWING the
+    open/closed read and potentially wedging the issue at the stale label's
+    state. #265 does NOT fix this — derive-bound state does NOT work end-to-end
+    until the derive READ detector lands (#263/lifecycle). The write side is
+    safe (no NEW kit `state:*` label is written under such a map, and reconcile
+    strips none), so this gap only bites on labels left over from BEFORE the map
+    was declared; the sibling work is the proper fix. Making this reader
+    map-aware here was rejected: it backs the parity-critical engine detectors
+    (`lifecycle_predicates`) and, absent the predicate engine, could only replace
+    a visible wedge with a silently-wrong position — strictly worse.
     """
     if state == "closed":
         return "done"

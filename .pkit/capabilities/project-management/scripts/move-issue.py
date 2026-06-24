@@ -233,6 +233,12 @@ def main() -> int:
 
     has_board = bool(config.get("has_projects_v2_board", False))
 
+    # The adopter's optional substrate-map (ADR-026): None ⇒ greenfield (state
+    # is a `state:*` label); a present map may bind state to a `derive`
+    # predicate ⇒ no kit state label is written (the open/closed substrate
+    # carries it). Loaded once and threaded through every plan computation.
+    substrate_map = axis_labels.load_substrate_map(capability_root)
+
     # Idempotency check: issue is already at the requested state.
     #
     # Must run BEFORE the transition-table lookup so that callers (e.g.
@@ -255,6 +261,7 @@ def main() -> int:
                 target_state=args.to,
                 has_board=False,
                 labels=labels,
+                substrate_map=substrate_map,
             )
             # Only act when there is a stale label to remove (the add is
             # idempotent but skip the gh round-trip if nothing to fix).
@@ -354,6 +361,7 @@ def main() -> int:
         target_state=args.to,
         has_board=has_board,
         labels=labels,
+        substrate_map=substrate_map,
     )
     _print_plan(plan)
 
@@ -421,7 +429,7 @@ def main() -> int:
     # Forward cascade.
     if cascade_targets and not args.no_cascade:
         for parent_num in cascade_targets:
-            ok = _cascade_parent(parent_num, args.to, config)
+            ok = _cascade_parent(parent_num, args.to, config, substrate_map)
             if not ok:
                 print(
                     f"[warn] cascade on #{parent_num} did not complete cleanly.",
@@ -467,12 +475,24 @@ def _compute_plan(
     target_state: str,
     has_board: bool,
     labels: list[str],
+    substrate_map: "axis_labels.SubstrateMap | None" = None,
 ) -> Plan:
     if has_board:
         return Plan(issue_number=issue_number, add_label=None, remove_label=None)
-    # Label substrate. Axis-label built only through the seam (ADR-026
-    # sole-constructor); greenfield resolves to the kit's own `state:<value>`.
-    new_label = axis_labels.label("state", target_state)
+    # Label substrate. The state write is RESOLVED through the seam's write-path
+    # resolver (ADR-026 sole-constructor + fail-closed): greenfield (no
+    # substrate-map) resolves to the kit's own `state:<value>`; a present map
+    # that binds state via a `derive` predicate (or marks it unsupported / omits
+    # it) returns DEGRADE — and on a derive-bound state the open/closed substrate
+    # CARRIES the state, so the kit writes (and removes) NO `state:*` label
+    # (ADR-026 §5). The wrapper's domain side-effects still fire — only this
+    # label write degrades.
+    new_label_resolved = axis_labels.resolve_write("state", target_state, substrate_map)
+    if not isinstance(new_label_resolved, str):
+        # DEGRADE: state lives on the open/closed substrate, not a kit label.
+        # Touch no `state:*` label (neither add the new nor strip a prior one).
+        return Plan(issue_number=issue_number, add_label=None, remove_label=None)
+    new_label = new_label_resolved
     old_label = None
     for lbl in labels:
         if axis_labels.is_axis_label(lbl, "state") and lbl != new_label:
@@ -816,7 +836,12 @@ def _cascade_forward_target(child_target: str) -> str:
     return order[min(child_idx, cap_idx)]
 
 
-def _cascade_parent(parent_num: int, target_state: str, config: dict) -> bool:
+def _cascade_parent(
+    parent_num: int,
+    target_state: str,
+    config: dict,
+    substrate_map: "axis_labels.SubstrateMap | None" = None,
+) -> bool:
     """Forward cascade — bump parent if it's behind.
 
     Conservative implementation: read parent state; if parent is behind
@@ -850,6 +875,7 @@ def _cascade_parent(parent_num: int, target_state: str, config: dict) -> bool:
         target_state=cascade_target,
         has_board=False,  # cascade only fires for label substrate
         labels=parent_labels,
+        substrate_map=substrate_map,
     )
     print(
         f"[cascade] bumping parent #{parent_num}: "

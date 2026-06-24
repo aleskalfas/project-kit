@@ -205,12 +205,15 @@ def test_bootstrap_compute_plan_constructs_byte_identical_labels(
 
 
 def test_lib_labels_terminal_and_non_terminal_sets_byte_identical() -> None:
-    """`_lib.labels` builds the close-reconcile label set through the seam; the
-    set must match the frozen literals close-issue relied on."""
+    """`_lib.labels` resolves the close-reconcile label set through the seam; in
+    greenfield (no map) the set must be byte-identical to the frozen literals
+    close-issue relied on. The set is now resolved PER CALL from the map (RF-1,
+    #265) — `_resolve_state_labels(None)` is the greenfield arm."""
     from _lib import labels as labels_mod
 
-    assert labels_mod.TERMINAL_STATE_LABEL == "state:done"
-    assert labels_mod.NON_TERMINAL_STATE_LABELS == (
+    terminal, non_terminal = labels_mod._resolve_state_labels(None)
+    assert terminal == "state:done"
+    assert non_terminal == (
         "state:todo",
         "state:backlog",
         "state:in-progress",
