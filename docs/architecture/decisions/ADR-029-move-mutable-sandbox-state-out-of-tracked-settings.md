@@ -1,7 +1,7 @@
 ---
 id: ADR-029
 title: Route sandbox state by boundary effect — narrowing floor committed, widening gitignored
-status: proposed
+status: accepted
 date: 2026-06-24
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
