@@ -33,6 +33,7 @@ from __future__ import annotations
 import json
 import stat
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -385,6 +386,27 @@ def test_multi_line_prompt_indents_every_continuation_line() -> None:
         assert cont.startswith("          "), cont          # 8 base + 2 align
     assert plains[1].strip() == "The hand-off is the spec"
     assert plains[2].strip() == "plus the renderings."
+
+
+def test_prompt_lines_routes_through_cli_render_wrap() -> None:
+    # COR-007 (one wrapper, all call sites use it): _prompt_lines must DELEGATE
+    # its hanging-indent geometry to cli_render.wrap(), not re-hand-roll the
+    # split/indent. This locks the dedup against a regression that re-implements
+    # the indent locally — such a regression would still pass the output-shape
+    # tests above, so it is asserted directly here. _prompt_lines owns only the
+    # ❓ marker + `strong` styling; wrap() supplies the geometry.
+    with patch.object(cli_render, "wrap", wraps=cli_render.wrap) as spy:
+        out = _prompt_lines("Approve the overflow?\nThe hand-off is the spec.", "        ")
+    spy.assert_called_once()
+    # The marker is baked onto line 1 as wrap()'s plain input (so wrap measures
+    # and lays out its visible width); the base indent threads through verbatim.
+    (text_arg,), kwargs = spy.call_args
+    assert text_arg.startswith("❓ Approve the overflow?")
+    assert kwargs["indent"] == "        "
+    # Output is still the styled marker line + a hanging-indented continuation.
+    plains = [_ANSI.sub("", line) for line in out]
+    assert plains[0] == "        ❓ Approve the overflow?"
+    assert plains[1].startswith("          ")
 
 
 def test_json_blocked_is_null_when_not_blocked(paused_repo: Path) -> None:
