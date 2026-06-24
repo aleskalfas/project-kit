@@ -27,11 +27,14 @@ import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ruamel.yaml import YAML
 
 from project_kit import cli_render
+
+if TYPE_CHECKING:
+    from packaging.version import Version
 
 _yaml = YAML(typ="safe")
 
@@ -1265,12 +1268,15 @@ def _auto_accommodate_narrowing_toolkits(target_root: Path) -> str:
     Returns a human-readable note for the `sandbox enable` output, or an
     empty string when no toolkit is detected."""
     toolkits = _load_toolkits(target_root)
-    # Only toolkits with at least one narrowing allowance AND no widening
-    # allowances qualify for auto-application (safe-to-detect class per ADR-008).
+    # Any toolkit with at least one NARROWING allowance qualifies — we apply ONLY
+    # its narrowing allowances (`_narrowing` filters out widening per allowance).
+    # A toolkit may now be MIXED (the `uv` toolkit carries both its `~/.cache/uv`
+    # narrowing cache and its macOS `exclude-command` widening — ADR-027); the
+    # narrowing half is still safe-to-auto-apply, and the widening half is never
+    # written here (it rides the explicit-gesture / required-auto-apply paths).
     candidates = {
         name: spec for name, spec in toolkits.items()
         if _narrowing(spec.get("allowances", []))
-        and not _widening(spec.get("allowances", []))
     }
     detected = [t for t in _detect_tools(target_root, candidates) if t in candidates]
     if not detected:
@@ -1513,7 +1519,28 @@ def sandbox_status(target_root: Path) -> str:
     )
     excluded = sb.get("excludedCommands") or []
     if excluded:
-        lines.append(f"  excluded        {len(excluded)} command(s) run outside the box (operator-set)")
+        # Attribute each excluded command by its provenance tag (ADR-027 cond. 3):
+        # `_required` = pkit auto-applied a platform-mandatory exclusion; `_manual`
+        # (or any other tag / no tag) = an operator's hand-added carve-out. The
+        # reader tolerates BOTH old `_manual` and new `_required` entries.
+        prov = _load_provenance(target_root)
+        required_cmds = {
+            e.get("value") for e in prov
+            if e.get("toolkit") == _REQUIRED_TOOLKIT and e.get("kind") == "exclude-command"
+        }
+        auto = [c for c in excluded if c in required_cmds]
+        operator = [c for c in excluded if c not in required_cmds]
+        lines.append(f"  excluded        {len(excluded)} command(s) run outside the box")
+        if auto:
+            lines.append(
+                f"                  {', '.join(sorted(auto))} — auto-applied (required: "
+                f"platform-mandatory, necessity-verified — ADR-027)"
+            )
+        if operator:
+            lines.append(
+                f"                  {', '.join(sorted(operator))} — operator-set "
+                f"(explicit `sandbox exclude` gesture)"
+            )
     # Mandatory egress reporting (ADR-015 narrowing-but-reported): surface every
     # applied allow-host host with source + the verbatim honesty gloss.
     egress_lines = _egress_report_lines(target_root)
@@ -2596,11 +2623,16 @@ def accommodate(target_root: Path, tools: tuple[str, ...] | list[str],
 
 
 def sandbox_exclude(target_root: Path, command: str, remove: bool = False,
-                    weaker_tls: bool = False) -> str:
+                    weaker_tls: bool = False, toolkit: str = "_manual") -> str:
     """The WIDENING gesture (ADR-008 rule 4): carve a command out of the box so
     it runs UNCONFINED. Loud, per-invocation, NEVER persisted to committed
-    config, never proposed by detect, never applied by setup. Provenance-tagged
-    under the synthetic toolkit `_manual` so teardown can find it."""
+    config, never proposed by detect. Provenance-tagged under a synthetic toolkit
+    so teardown / self-heal can find it: `_manual` for an operator gesture, and
+    `_required` for the necessity-verified platform-mandatory exclusion that
+    `setup autonomy` auto-applies (ADR-027 — the one carve-out from rule 4's
+    "never applied by setup"). The single writer for the exclusion stays this
+    primitive (ADR-027 condition 5 "owns nothing"): the auto-apply path passes
+    `toolkit=_REQUIRED_TOOLKIT` rather than introducing a second writer."""
     if not _adapter_installed(target_root, "claude-code"):
         raise PermissionsError(
             "the claude-code adapter is not installed; the sandbox is harness-specific."
@@ -2611,12 +2643,12 @@ def sandbox_exclude(target_root: Path, command: str, remove: bool = False,
     )
     target = "weaker TLS isolation" if weaker_tls else f"`{command}`"
     if remove:
-        # Remove just this manual entry (provenance-scoped to _manual).
+        # Remove just this entry, provenance-scoped to the requested toolkit tag.
         settings = _read_settings(target_root)
         sb = settings.get("sandbox")
         prov = _load_provenance(target_root)
         key = ("weaker-tls", None) if weaker_tls else ("exclude-command", command)
-        kept = [e for e in prov if e.get("toolkit") != "_manual"
+        kept = [e for e in prov if e.get("toolkit") != toolkit
                 or (e["kind"], e.get("value")) != key]
         if isinstance(sb, dict):
             if weaker_tls:
@@ -2629,7 +2661,7 @@ def sandbox_exclude(target_root: Path, command: str, remove: bool = False,
         _dump_provenance(target_root, kept)
         return f"removed exclusion: {target} now runs inside the box again.\n"
 
-    notes = _apply_allowances(target_root, [allowance], "_manual")
+    notes = _apply_allowances(target_root, [allowance], toolkit)
     return (
         f"⚠ WIDENING the boundary: {target} now runs OUTSIDE the OS box — UNCONFINED, "
         f"with full host filesystem and network reach.\n"
@@ -2776,11 +2808,98 @@ def _widening_required_on_platform(tool: str, cmd: str) -> bool:
     (architect: derive it, don't schematise). The one mandatory case today: on
     macOS, `uv` / `pkit` cannot run inside the Seatbelt box (a fixed Seatbelt
     panic, no setting fixes it — ADR-014), so excluding them is not optional.
-    Everything else (e.g. `gh`) is an optional widening the operator may accept."""
+    Everything else (e.g. `gh`) is an optional widening the operator may accept.
+
+    This is the LOOSER platform+name predicate. It drives the NUDGE path only.
+    The AUTO-APPLY path (ADR-027) needs the version-floor conjunct on top — see
+    `_uv_required_exclusion`."""
     import sys as _sys
     if _sys.platform != "darwin":
         return False
     return tool in ("uv", "pkit") or cmd in ("uv", "pkit")
+
+
+# The macOS uv Seatbelt panic (ADR-014): uv 0.9.8 is the current known-bad
+# release — it hits a fixed SCDynamicStore mach-service denial that no narrowing
+# accommodation fixes, so the command must run OUTSIDE the box. The auto-apply
+# carve-out (ADR-027 condition 1) fires only when the panic STILL OCCURS, gated
+# on this version floor: an installed uv AT OR BELOW the known-bad release is
+# still affected. There is no known-FIXED release yet — when one ships, set
+# `_UV_KNOWN_FIXED_RELEASE` to it; a uv at or above it leaves the box able to
+# host the command, so auto-apply self-disables (and self-heal removes any entry
+# it previously applied). Until a fix is known we treat "no fixed release exists"
+# as "still required" (the conservative, necessity-verified reading).
+_UV_KNOWN_BAD_FLOOR = "0.9.8"
+_UV_KNOWN_FIXED_RELEASE: str | None = None
+
+# Distinct provenance tag for the auto-applied platform-REQUIRED exclusion
+# (ADR-027 condition 3). NOT `_manual` (operator-set) — so status, teardown, and
+# self-heal can tell a pkit-required carve-out from an operator's hand-added one.
+_REQUIRED_TOOLKIT = "_required"
+
+
+def _read_uv_version() -> Version | None:
+    """Read the installed uv's version robustly, as a packaging Version (or None
+    when uv is absent / unparseable). Used by the auto-apply necessity check
+    (ADR-027 condition 1) — the sandbox is off during `setup autonomy`, so the
+    subprocess runs unconfined and can reach the binary. Tolerates the
+    `uv 0.9.8 (Homebrew 2025-11-07)` shape (take the second whitespace token)."""
+    import shutil
+    import subprocess
+
+    from packaging.version import InvalidVersion, Version
+
+    exe = shutil.which("uv")
+    if not exe:
+        return None
+    try:
+        r = subprocess.run([exe, "--version"], capture_output=True, text=True,
+                           check=False, timeout=10)
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return None
+    if r.returncode != 0:
+        return None
+    parts = (r.stdout or "").strip().split()
+    if len(parts) < 2:
+        return None
+    try:
+        return Version(parts[1])
+    except InvalidVersion:
+        return None
+
+
+def _uv_required_exclusion(target_root: Path) -> bool:
+    """The AUTO-APPLY conjunct (ADR-027 condition 1) for the macOS uv exclusion:
+    necessity-VERIFIED, not merely believed. True only when ALL hold:
+
+      - the platform is macOS (the looser predicate; never on Linux/bubblewrap,
+        where uv runs confined once its cache is accommodated — condition 2);
+      - a uv repo marker is present (real project use — `uv.lock` / `pyproject`
+        via the toolkit's own detect globs — condition 3, not bare PATH);
+      - the installed uv is at/below the known-bad release AND no known-fixed
+        release supersedes it — i.e. the SystemConfiguration panic still occurs.
+
+    A uv at/above a known-fixed release returns False → the box can host the
+    command again, so auto-apply self-disables and self-heal (condition 6)
+    removes any entry it previously applied. The looser platform+name predicate
+    (`_widening_required_on_platform`) stays for the NUDGE path; this is the
+    version-gated AUTO path only."""
+    if not _widening_required_on_platform("uv", "uv"):
+        return False
+    toolkits = _load_toolkits(target_root)
+    if "uv" not in _detect_tools(target_root, toolkits):
+        return False
+    from packaging.version import Version
+
+    installed = _read_uv_version()
+    if installed is None:
+        # macOS + repo marker but uv unreadable: cannot VERIFY necessity, so do
+        # NOT auto-apply (the keystone is verified-not-believed). The nudge path
+        # still surfaces the gesture for the operator to run by hand.
+        return False
+    if _UV_KNOWN_FIXED_RELEASE is not None and installed >= Version(_UV_KNOWN_FIXED_RELEASE):
+        return False
+    return installed <= Version(_UV_KNOWN_BAD_FLOOR)
 
 
 def _widening_desc(tool: str, cmd: str) -> tuple[str, str]:
@@ -2907,8 +3026,74 @@ def _setup_accommodations(target_root: Path, profile: str) -> tuple[list[str], l
         for w in _widening(toolkits[t].get("allowances", [])):
             cmd = w.get("value")
             if w.get("kind") == "exclude-command" and cmd and cmd not in excluded:
+                # The platform-REQUIRED, version-verified exclusion is auto-applied
+                # by setup (ADR-027), not nudged — drop it from the nudge list so
+                # it isn't surfaced twice. Optional widenings (gh/docker) and the
+                # required one on an unverifiable/fixed uv still nudge here.
+                if t == "uv" and cmd == "uv" and _uv_required_exclusion(target_root):
+                    continue
                 nudges.append((t, cmd))
     return applied, nudges
+
+
+def _setup_required_exclusions(target_root: Path) -> list[str]:
+    """Auto-apply (and self-heal) the platform-MANDATORY, necessity-verified
+    sandbox exclusion — the one carve-out from ADR-008 rule 4's "never applied by
+    setup", sanctioned by ADR-027. Returns the loud report lines for the setup
+    block (empty when nothing to do).
+
+    Apply (conditions 1-5): when `_uv_required_exclusion` verifies the macOS uv
+    Seatbelt panic still occurs AND uv is not already excluded, shell to the real
+    `sandbox_exclude` primitive under the distinct `_required` provenance tag and
+    fire the existing UNCONFINED banner. Never persisted to a committed file
+    (condition 4 — `sandbox_exclude` only ever writes per-machine live settings).
+
+    Self-heal (condition 6): when a previously auto-applied `_required` exclusion
+    is no longer required (uv upgraded past a fixed release, or we're on Linux),
+    REMOVE it through the same primitive and report the removal. Only `_required`
+    entries are touched — an operator's `_manual` carve-out of the same command is
+    never removed here (the distinct tag is what keeps teardown honest)."""
+    if not _adapter_installed(target_root, "claude-code"):
+        return []
+    prov = _load_provenance(target_root)
+    required_entries = {
+        e.get("value") for e in prov
+        if e.get("toolkit") == _REQUIRED_TOOLKIT and e.get("kind") == "exclude-command"
+    }
+    lines: list[str] = []
+
+    # Self-heal first: drop any auto-applied required exclusion no longer warranted.
+    # Today the only required command is `uv`; generalise by re-checking each.
+    for cmd in sorted(c for c in required_entries if c):
+        still_required = cmd == "uv" and _uv_required_exclusion(target_root)
+        if not still_required:
+            sandbox_exclude(target_root, cmd, remove=True, toolkit=_REQUIRED_TOOLKIT)
+            lines.append(
+                f"  self-healed: `{cmd}` is no longer a required exclusion "
+                f"(uv at/above a fixed release, or not macOS) — removed; it runs "
+                f"inside the box again."
+            )
+
+    # Apply: the macOS uv exclusion when the panic is verified to still occur.
+    if _uv_required_exclusion(target_root):
+        sb = _sandbox_block(target_root)
+        already = "uv" in set(sb.get("excludedCommands") or [])
+        if not already:
+            sandbox_exclude(target_root, "uv", toolkit=_REQUIRED_TOOLKIT)
+            lines.append(
+                "  ⚠ REQUIRED exclusion auto-applied: `uv` (and `pkit`, which runs "
+                "via `uv run`) now runs OUTSIDE the OS box — UNCONFINED, with full "
+                "host filesystem and network reach."
+            )
+            lines.append(
+                "    macOS-mandatory and necessity-verified: uv "
+                f"{_UV_KNOWN_BAD_FLOOR}-class hits a fixed Seatbelt panic the box "
+                "cannot host (ADR-014/ADR-027). NOT recorded in any committed file "
+                "(per-machine only); reported by `sandbox status` and counted by "
+                "`probe`; still gated by the permission hook. A fixed uv "
+                "self-disables this on the next setup run."
+            )
+    return lines
 
 
 def setup_autonomy(target_root: Path, profile: str = "autonomous") -> tuple[str, bool]:
@@ -2963,11 +3148,27 @@ def setup_autonomy(target_root: Path, profile: str = "autonomous") -> tuple[str,
     else:
         lines.append(f"{cont}accommodations: none needed (no known tool detected)")
 
+    # Required-exclusion auto-apply + self-heal (ADR-027). Loud, in its OWN block
+    # — NOT folded into the quiet narrowing "accommodations:" line, because this
+    # one LOWERS the box for a command the platform cannot confine. Held with the
+    # other action blocks so it lands after the step spine + verdict.
+    required_lines = _setup_required_exclusions(target_root)
+
     # Action blocks are HELD and appended after the step spine + verdict, so they
-    # don't interrupt [3/4]→[4/4]. `Next` = explicit gestures you run; the
-    # stability tip is `Optional`. Order signals priority (Next before Optional).
+    # don't interrupt [3/4]→[4/4]. The REQUIRED-exclusion block leads (it reports
+    # a boundary pkit just lowered for you, loudly); `Next` = explicit gestures
+    # you run; the stability tip is `Optional`. Order signals priority.
+    required_block: list[str] = []
+    if required_lines:
+        required_block = [
+            "",
+            "  " + cli_render.style("heading",
+                                    "Required exclusion (platform-mandatory; pkit applied it for you)"),
+            *required_lines,
+        ]
     action_blocks = (
-        _setup_next_steps(target_root, nudges, host_nudges)
+        required_block
+        + _setup_next_steps(target_root, nudges, host_nudges)
         + _setup_stability_tip(target_root)
     )
 
@@ -3024,6 +3225,20 @@ def setup_autonomy_down(target_root: Path) -> str:
         "  confinement   ✓ " + ("sandbox already off" if "already" in msg
                                 else "sandbox disabled (restart to drop the running box)")
     )
+    # Reverse the auto-applied REQUIRED exclusion pkit stood up (ADR-027 cond. 6 /
+    # ADR-007 rule 7): setup applied it, so teardown removes it through the same
+    # primitive and reports it. Operator `_manual` carve-outs are NOT touched here
+    # — those stay residual (reported below) because pkit never set them.
+    prov = _load_provenance(target_root)
+    auto_required = [
+        e.get("value") for e in prov
+        if e.get("toolkit") == _REQUIRED_TOOLKIT and e.get("kind") == "exclude-command"
+    ]
+    for cmd in sorted(c for c in auto_required if c):
+        sandbox_exclude(target_root, cmd, remove=True, toolkit=_REQUIRED_TOOLKIT)
+        lines.append(
+            f"  required excl ✓ auto-applied `{cmd}` exclusion removed — back inside the box"
+        )
     model = _load_model(target_root)
     active = model.get("active_profile")
     lines += ["", "  " + cli_render.style("heading", "residual (deliberately left — review it):")]
@@ -3035,8 +3250,11 @@ def setup_autonomy_down(target_root: Path) -> str:
         )
     else:
         lines.append("    · no active profile; manual grants (if any) remain in the model")
+    # Re-read provenance: the required-exclusion removal above rewrote it.
     prov = _load_provenance(target_root)
-    narrowing_left = [e for e in prov if e.get("toolkit") != "_manual"]
+    # Widening = operator `_manual` carve-outs (the `_required` ones were just
+    # reversed). Narrowing = everything else (toolkit accommodations).
+    narrowing_left = [e for e in prov if e.get("toolkit") not in ("_manual", _REQUIRED_TOOLKIT)]
     widening_left = [e for e in prov if e.get("toolkit") == "_manual"]
     if narrowing_left:
         tools = sorted({e.get("toolkit") for e in narrowing_left})

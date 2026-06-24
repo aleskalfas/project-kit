@@ -43,6 +43,18 @@ toolkits:
         effect: narrowing
         value: "~/.cache/uv"
         note: uv's shared package cache; confined writes can't reach it otherwise.
+      - kind: exclude-command
+        effect: widening
+        value: "uv"
+        note: >-
+          macOS only — runs uv (and pkit, which runs via `uv run`) OUTSIDE the
+          box. uv 0.9.8 hits a fixed SCDynamicStore Seatbelt panic that no
+          narrowing accommodation fixes (ADR-014), so the command must run
+          unconfined. Platform-mandatory, not an operator convenience: on
+          Linux/bubblewrap uv runs confined once its cache is accommodated, so
+          this widening does not apply there. `setup autonomy` auto-applies this
+          ONLY when the installed uv is at/below the known-bad release (ADR-027);
+          a fixed uv self-disables it. Still gated by the permission hook.
 
   node:
     description: Node / npm / pnpm — write their shared caches outside the project.
