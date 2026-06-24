@@ -22,11 +22,19 @@ Closes a GitHub issue via either path declared in workflow.yaml's
     `cascade-eligibility-close` trigger this script previously only reported.
     Closes via `gh issue close --reason completed`.
 
-Both paths reconcile the issue's ``state:*`` labels after closing: any
+All three paths reconcile the issue's ``state:*`` labels after closing: any
 non-terminal label (``state:todo``, ``state:backlog``, ``state:in-progress``,
 ``state:review``) is removed and ``state:done`` is ensured.  The reconcile
 logic is shared with ``move-issue`` via ``_lib.labels.reconcile_state_labels_to_done``
 so there is no duplicated label-mutation code.
+
+The ``state`` write is RESOLVED through the substrate-map seam (ADR-026
+sole-constructor + fail-closed), the same as ``move-issue``: greenfield (no
+``substrate-map.yaml``) writes the kit's own ``state:done``; a present map that
+binds ``state`` to a ``derive`` predicate (or marks it ``unsupported`` / omits
+it) writes NO kit ``state:*`` label — the open/closed substrate carries terminal
+state, so closing the issue *is* the state write (ADR-026 §5). The map is loaded
+once in :func:`main` and threaded into every reconcile call.
 
 Membership gate per DEC-021 runs at startup.
 
@@ -58,6 +66,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
+from _lib import axis_labels  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib.hooks import fire_hooks  # noqa: E402
 from _lib.labels import reconcile_state_labels_to_done  # noqa: E402
@@ -162,6 +171,13 @@ def main() -> int:
         capability_root / "schemas" / "issue-types.yaml", yaml_loader
     )
 
+    # The adopter's optional substrate-map (ADR-026): None ⇒ greenfield (state
+    # is a `state:*` label); a present map may bind `state` to a `derive`
+    # predicate (or mark it unsupported / omit it) ⇒ the kit writes NO `state:*`
+    # label on close (the open/closed substrate carries terminal state). Loaded
+    # once here and threaded into every reconcile call below (RF-1, #265).
+    substrate_map = axis_labels.load_substrate_map(capability_root)
+
     issue = _gh_get_issue(args.issue_number, config)
     if issue is None:
         return 2
@@ -227,8 +243,11 @@ def main() -> int:
         # Reconcile state:* labels — remove any non-terminal label and ensure
         # state:done.  Shared routine from _lib.labels (same logic as
         # move-issue's reconcile path) so there is no duplicated label logic.
+        # Map-aware (RF-1): under a present derive/unsupported `state` map this
+        # writes no kit `state:*` label (the open/closed substrate carries it).
         if not reconcile_state_labels_to_done(
-            args.issue_number, labels, config, gh_run=gh_run
+            args.issue_number, labels, config, gh_run=gh_run,
+            substrate_map=substrate_map,
         ):
             return 3
         print(f"\n[ok] closed #{args.issue_number} (wont-do).")
@@ -250,7 +269,8 @@ def main() -> int:
         # terminal label must be correct.
         if not args.dry_run:
             if not reconcile_state_labels_to_done(
-                args.issue_number, labels, config, gh_run=gh_run
+                args.issue_number, labels, config, gh_run=gh_run,
+                substrate_map=substrate_map,
             ):
                 return 3
         print(f"\n[ok] noted pr-merge close for #{args.issue_number}.")
@@ -368,7 +388,8 @@ def main() -> int:
         if not _gh_close_issue(args.issue_number, reason="completed", config=config):
             return 3
         if not reconcile_state_labels_to_done(
-            args.issue_number, labels, config, gh_run=gh_run
+            args.issue_number, labels, config, gh_run=gh_run,
+            substrate_map=substrate_map,
         ):
             return 3
         print(

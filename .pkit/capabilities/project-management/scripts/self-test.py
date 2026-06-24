@@ -62,10 +62,29 @@ from _lib.membership import (  # noqa: E402
 
 SELF_TEST_TITLE = "[Task] pkit self-test — DELETE ME"
 SELF_TEST_MILESTONE = "pkit-self-test"
-# Axis-labels built only through the seam (ADR-026 sole-constructor); greenfield
-# resolves to the kit's own `state:todo` / `priority:Low`.
-SELF_TEST_LABEL_SENTINEL = axis_labels.label("state", "todo")
-SELF_TEST_LABELS_PRIORITY = axis_labels.label("priority", "Low")
+# Seed-axis values for the throwaway issue, resolved through the map-aware seam
+# (ADR-026) per run — NOT eager kit-label constants. Greenfield resolves to the
+# kit's own `state:todo` / `priority:Low`; a present substrate-map that degrades
+# the axis OMITS the label, so self-test never writes an unmanaged label even on
+# its throwaway issue (the constraint-1 invariant holds on this path too).
+SELF_TEST_STATE_VALUE = "todo"
+SELF_TEST_PRIORITY_VALUE = "Low"
+
+
+def _seed_labels(capability_root, has_board: bool) -> list[str]:
+    """The throwaway issue's seed labels, resolved through `resolve_write`. A
+    DEGRADE'd axis (present-map unsupported / derive / value-unresolvable) is
+    omitted — never coerced to a kit label."""
+    substrate_map = axis_labels.load_substrate_map(capability_root)
+    out: list[str] = []
+    priority = axis_labels.resolve_write("priority", SELF_TEST_PRIORITY_VALUE, substrate_map)
+    if isinstance(priority, str):
+        out.append(priority)
+    if not has_board:
+        state = axis_labels.resolve_write("state", SELF_TEST_STATE_VALUE, substrate_map)
+        if isinstance(state, str):
+            out.append(state)
+    return out
 SELF_TEST_BODY = """\
 ## What
 
@@ -162,13 +181,13 @@ def main() -> int:
     print()
 
     if args.dry_run:
-        _print_dry_run_plan(has_board)
+        _print_dry_run_plan(capability_root, has_board)
         return 0
 
     state = SelfTestState()
 
     # Step 1: create throwaway issue.
-    issue_number = _step_create_issue(config, has_board, state)
+    issue_number = _step_create_issue(capability_root, config, has_board, state)
     if issue_number is None:
         _print_summary(state)
         return 1
@@ -196,15 +215,11 @@ def main() -> int:
 
 
 def _step_create_issue(
-    config: dict, has_board: bool, state: SelfTestState
+    capability_root, config: dict, has_board: bool, state: SelfTestState
 ) -> int | None:
     """Step 1: create the throwaway issue and return its number."""
-    labels = [SELF_TEST_LABELS_PRIORITY]
-    if not has_board:
-        labels.append(SELF_TEST_LABEL_SENTINEL)
-
     label_args: list[str] = []
-    for lbl in labels:
+    for lbl in _seed_labels(capability_root, has_board):
         label_args.extend(["--label", lbl])
 
     try:
@@ -504,14 +519,12 @@ def _ensure_milestone(title: str, config: dict) -> tuple[int | None, bool]:
         return None, False
 
 
-def _print_dry_run_plan(has_board: bool) -> None:
+def _print_dry_run_plan(capability_root, has_board: bool) -> None:
     """Print what the self-test would do without running it."""
+    seed = _seed_labels(capability_root, has_board)
     print("plan (dry-run):")
     print(f"  1. Create issue: '{SELF_TEST_TITLE}'")
-    print(
-        f"     labels: {SELF_TEST_LABELS_PRIORITY}"
-        + (f", {SELF_TEST_LABEL_SENTINEL}" if not has_board else "")
-    )
+    print(f"     labels: {', '.join(seed) if seed else '(none — axes degraded under substrate-map)'}")
     print(f"  2. Ensure milestone '{SELF_TEST_MILESTONE}' exists; attach to issue")
     print("  3. move-issue --to backlog --yes (todo → backlog state transition)")
     print("  4. move-issue --to in-progress --yes (backlog → in-progress)")

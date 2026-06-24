@@ -364,18 +364,33 @@ def main() -> int:
         )
         return 2
 
-    # Labels. Axis-labels are constructed only through the seam (ADR-026
-    # sole-constructor); greenfield resolves to the kit's own `<axis>:<value>`.
-    labels = [axis_labels.label("type", args.kind)]
-    if not has_board:
-        labels.append(axis_labels.label("priority", args.priority))
-        labels.append(axis_labels.label("workstream", args.workstream))
+    # Labels. Axis-labels are RESOLVED through the seam's write-path resolver
+    # (ADR-026 sole-constructor + fail-closed): greenfield (no substrate-map)
+    # resolves to the kit's own `<axis>:<value>`; a present map resolves to the
+    # adopter's substrate value, or omits the label entirely (DEGRADE) on an
+    # unsupported/absent/value-unresolvable axis — never coerced to a kit write.
+    substrate_map = axis_labels.load_substrate_map(capability_root)
+    labels, label_advisories, resolved_by_axis = _build_labels(
+        kind=args.kind,
+        priority=args.priority,
+        workstream=args.workstream,
+        has_board=has_board,
+        substrate_map=substrate_map,
+    )
+    for advisory in label_advisories:
+        print(f"[advisory] {advisory}", file=sys.stderr)
 
     # Pre-flight summary.
     print("about to create issue:")
     print(f"  title:      {full_title}")
     print(f"  type:       {args.type}  (structural)")
-    print(f"  kind:       {axis_labels.label('type', args.kind)}  (classification label)")
+    # The classification label as resolved — read from the `_build_labels`
+    # result (G-2, #265) so the displayed value and the APPLIED label cannot
+    # diverge (one resolution, not two). Absent ⇒ DEGRADE (unsupported / absent /
+    # value-unresolvable `type` axis) ⇒ not labelled.
+    kind_label = resolved_by_axis.get("type")
+    kind_display = kind_label if kind_label else "(not labelled — axis unsupported)"
+    print(f"  kind:       {kind_display}  (classification label)")
     print(f"  priority:   {args.priority}")
     if args.workstream:
         print(f"  workstream: {args.workstream}")
@@ -458,6 +473,81 @@ def _warn_placeholder_residuals(
     )
     for _sev, label, detail in findings:
         print(f"[warning] {label}: {detail}", file=sys.stderr)
+
+
+def _build_labels(
+    *,
+    kind: str,
+    priority: str,
+    workstream: str | None,
+    has_board: bool,
+    substrate_map: "axis_labels.SubstrateMap | None",
+) -> tuple[list[str], list[str], dict[str, str]]:
+    """Resolve the applied-label list for a new issue through the seam (ADR-026).
+
+    Returns ``(labels, advisories, resolved_by_axis)`` where ``resolved_by_axis``
+    maps each axis that RESOLVED to its applied label string (a DEGRADE'd axis is
+    absent from the dict). Callers that need to DISPLAY a resolved label read it
+    from this dict rather than re-resolving — so the displayed value and the
+    applied label share one resolution and cannot diverge (G-2, #265).
+
+    Each axis (``type`` via ``kind``, ``priority``, ``workstream``) is resolved
+    with :func:`axis_labels.resolve_write`:
+
+      * greenfield (``substrate_map is None``) ⇒ the kit's own
+        ``<axis>:<value>`` label, byte-identical to the pre-rewire output;
+      * a present map, axis bound ⇒ the adopter's own substrate value;
+      * a present map, axis unsupported / absent / value-unresolvable ⇒
+        :data:`axis_labels.DEGRADE`, which is **omitted from the label list**
+        (fail-closed — never coerced to a kit write) and recorded as an
+        advisory line.
+
+    Where the adopter declared a per-axis ``default:`` and the resolved value
+    is missing, the seam's :func:`axis_labels.axis_default` supplies it before
+    resolution. ``priority`` / ``workstream`` are only carried in label-fallback
+    mode (no board), exactly as before — under a board those axes live on the
+    Projects v2 fields, not on labels.
+
+    DEGRADE is filtered structurally: it is a non-str singleton, so the
+    ``isinstance(resolved, str)`` gate skips it. This is the call-site half of
+    ADR-026 part (ii) — a degrade has no write.
+    """
+    labels: list[str] = []
+    advisories: list[str] = []
+    resolved_by_axis: dict[str, str] = {}
+
+    # type axis (carried as the classification `type:<kind>` label / its remap).
+    # priority + workstream are only label-carried in label-fallback mode — under
+    # a board they live on the Projects v2 fields, not on labels. The value may
+    # be blank (workstream is nullable); the adopter's per-axis `default:` seeds
+    # it before resolution.
+    axes_to_apply: list[tuple[str, str | None]] = [("type", kind)]
+    if not has_board:
+        axes_to_apply.append(("priority", priority))
+        axes_to_apply.append(("workstream", workstream))
+
+    for axis, value in axes_to_apply:
+        # Apply the adopter's declared per-axis default only when the caller
+        # gave no explicit value (workstream is the only nullable axis here;
+        # type/priority always carry an argparse default).
+        resolved_value = value or axis_labels.axis_default(axis, substrate_map)
+        if not resolved_value:
+            # No value and no default — nothing to label on this axis. This is
+            # the greenfield workstream-omitted case (a board adopter never
+            # reaches here for workstream; a label-fallback adopter is required
+            # to pass --workstream upstream), so it is not an advisory.
+            continue
+        resolved = axis_labels.resolve_write(axis, resolved_value, substrate_map)
+        if isinstance(resolved, str):
+            labels.append(resolved)
+            resolved_by_axis[axis] = resolved
+        else:
+            advisories.append(
+                f"axis {axis!r} unsupported under your substrate-map — not labelled "
+                f"(value {resolved_value!r})"
+            )
+
+    return labels, advisories, resolved_by_axis
 
 
 def _extract_issue_number_from_url(url: str) -> int | None:

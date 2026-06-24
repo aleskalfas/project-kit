@@ -49,6 +49,15 @@ _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import axis_labels  # noqa: E402
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
+
+# Constraint-1 gate (RF-2, #265): the workstream-label MUTATORS mutate kit
+# `workstream:*` labels via `gh label`. Under a PRESENT substrate-map whose
+# `workstream` axis is `unsupported` (or absent), this would violate "never write
+# an unmanaged label" — so the mutator calls
+# `axis_labels.workstream_mutator_refusal(...)` after the membership check and
+# REFUSES before any `gh label` op when it trips. Greenfield is unchanged; the
+# richer present-map behaviour stays the adopt-existing Feature #264.
+
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
     check_membership,
@@ -97,6 +106,13 @@ def main() -> int:
     membership = check_membership(members, invoker)
     if not membership.allowed:
         print(membership.refusal_message, file=sys.stderr)
+        return 1
+
+    # Constraint-1 gate (RF-2, #265): refuse before any `gh label` op when the
+    # workstream axis is unsupported/absent under a present substrate-map.
+    refusal = axis_labels.workstream_mutator_refusal(capability_root)
+    if refusal is not None:
+        print(f"[refused] {refusal}", file=sys.stderr)
         return 1
 
     if args.survivor in args.losers:

@@ -252,6 +252,45 @@ def axis_disposition(
     return "unsupported"
 
 
+def workstream_mutator_refusal(
+    capability_root: Path | None = None,
+) -> str | None:
+    """The constraint-1 gate for the workstream-label MUTATORS (RF-2, #265).
+
+    The five mutators (``add`` / ``remove`` / ``merge`` / ``rename`` /
+    ``split-workstream``) create / delete / rename kit ``workstream:*`` labels via
+    ``gh label``. Under a PRESENT substrate-map whose ``workstream`` axis is
+    ``unsupported`` (or absent — absent ≡ unsupported, the load-bearing rule),
+    creating a kit ``workstream:*`` label would violate "never write an unmanaged
+    label" (DEC-036, EPIC #217 constraint 1).
+
+    Returns an advisory string the caller prints before refusing (exit 1) when
+    the gate trips, or ``None`` when the mutator may proceed:
+
+    * **Greenfield** (no map) ⇒ ``None`` — the kit's ``workstream:*`` labels ARE
+      the adopter's substrate; mutators run unchanged.
+    * **Map present, ``workstream`` SERVED** (bound to ``label`` / ``title-prefix``
+      / ``derive``) ⇒ ``None`` here — but note this minimal gate does NOT yet do
+      the richer present-map mutator behaviour (validate-against-the-bound-set /
+      retag); that is the ``adopt-existing`` Feature #264. This function only
+      blocks the constraint-1 violation (the ``unsupported`` arm).
+    * **Map present, ``workstream`` ``unsupported`` / absent** ⇒ a refusal string.
+
+    This is deliberately the MINIMAL safe gate, not the full present-map mutator
+    feature: it prevents an unmanaged label ever being created, and defers the
+    richer behaviour to #264.
+    """
+    substrate_map = load_substrate_map(capability_root)
+    if axis_disposition("workstream", substrate_map) == "unsupported":
+        return (
+            "workstream is unsupported under your substrate-map; this label "
+            "mutator is disabled — manage your workstream substrate directly. "
+            "(Richer present-map workstream management — validate-against-the-"
+            "bound-set, retag — is tracked as the adopt-existing Feature #264.)"
+        )
+    return None
+
+
 def resolve_write(
     axis: str, value: str, substrate_map: SubstrateMap | None
 ) -> str | _Degrade:
