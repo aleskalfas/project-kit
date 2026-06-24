@@ -1094,6 +1094,29 @@ def _sb(proj: Path) -> dict:
     return _merge_sb(_sb_committed(proj), _sb_local(proj))
 
 
+def test_merge_preserves_committed_denyread_floor_under_local_widening():
+    """ADR-029 load-bearing property (pkit's own union mirror): a committed
+    `denyRead` credential floor SURVIVES when the local file adds only a
+    widening (`excludedCommands`). The floor must not be dropped by the split —
+    exercises the production `_merge_sandbox_blocks`, the union every reader uses."""
+    from project_kit import permissions as perm
+
+    committed = {
+        "enabled": True,
+        "failIfUnavailable": True,
+        "filesystem": {"denyRead": ["~/.ssh", "~/.config/gh"]},
+    }
+    local = {"excludedCommands": ["uv"], "allowUnsandboxedCommands": False}
+    merged = perm._merge_sandbox_blocks(committed, local)
+    # Floor survives (filesystem-array merge):
+    assert merged["filesystem"]["denyRead"] == ["~/.ssh", "~/.config/gh"]
+    # Local widening present:
+    assert merged["excludedCommands"] == ["uv"]
+    # Scalars: committed baseline preserved, local seal wins:
+    assert merged["failIfUnavailable"] is True
+    assert merged["allowUnsandboxedCommands"] is False
+
+
 def test_toolkit_list_marks_effect(tmp_path, monkeypatch):
     out = _run(_setup(tmp_path), monkeypatch, "sandbox", "toolkit", "list")
     assert "uv" in out and "narrowing" in out
