@@ -124,9 +124,23 @@ toolkits:
         effect: widening
         value: "gh"
         note: >-
-          runs gh OUTSIDE the box (full host reach). Needed because gh's TLS
-          handshake fails under Seatbelt; not a confinement reduction you should
-          accept silently — egress from gh is not bounded by the sandbox.
+          macOS only — runs the command `gh` OUTSIDE the box. gh's Go TLS
+          handshake hits a fixed `com.apple.SecurityServer` Seatbelt mach-service
+          denial that no narrowing accommodation fixes (ADR-014/ADR-030): Go on
+          darwin ignores cert files (`SSL_CERT_FILE` is a no-op), so no
+          `allow-read` reaches past the blocked mach-service. Permanent on macOS
+          until Claude Code or gh ships a fix — no version coordinate, so no
+          version-floor self-heal (unlike `uv`); reviewed on Claude Code updates.
+          Platform-mandatory, not an operator convenience: on Linux/bubblewrap gh
+          runs confined, so this widening does not apply there. `setup autonomy`
+          auto-applies this on macOS WHENEVER the `.github/` detect glob is present
+          (real project use — never bare gh-on-PATH; ADR-030 condition 4); it
+          self-heals (removes the auto-applied entry) on Linux or once the marker
+          is gone. Excluding `gh` leaves its network egress UNCONFINED (ADR-004
+          §61) — a materially larger boundary statement than `uv`'s local runtime,
+          named loudly at apply. `git`-over-HTTPS is unaffected (OpenSSL, not
+          Security.framework). Revert: `pkit permissions sandbox exclude --remove
+          gh`. Still gated by the permission hook.
 
   docker:
     description: Docker / docker-compose — incompatible with the sandbox; must run outside the box.

@@ -1494,6 +1494,172 @@ def test_optional_widening_stays_nudge_only_under_auto_apply(tmp_path, monkeypat
     assert "`pkit permissions sandbox exclude docker`" in out
 
 
+# ---- gh required-exclusion auto-apply + self-heal (ADR-030, #279) ------------
+#   gh joins the macOS auto-applied required set, detect-fenced to `.github/`.
+#   Permanent (no version coordinate) → no version-floor; self-heals on Linux /
+#   when the marker is gone. Loud egress banner; lands in settings.local.json with
+#   `_required` provenance; already-in-place confirmed (#274); docker stays nudge.
+#   Tests neutralise the uv member (no uv.lock marker) so gh is exercised alone.
+
+def _force_gh(monkeypatch, *, platform="darwin"):
+    """Pin the platform for the gh verifier (no version coordinate to mock —
+    ADR-030 condition 3: gh's necessity is platform-permanent + detect-fenced)."""
+    monkeypatch.setattr("sys.platform", platform)
+
+
+def _gh_prov_entries(proj: Path) -> list[dict]:
+    from ruamel.yaml import YAML as _YAML
+    prov_path = proj / ".pkit" / "permissions" / "project" / "sandbox-provenance.yaml"
+    doc = _YAML(typ="safe").load(prov_path.open())
+    return [e for e in (doc or {}).get("entries", [])
+            if e.get("kind") == "exclude-command" and e.get("value") == "gh"]
+
+
+def test_gh_required_exclusion_auto_applies_on_macos_with_github_marker(tmp_path, monkeypatch):
+    _force_gh(monkeypatch, platform="darwin")
+    proj = _with_adapter(_setup(tmp_path))
+    (proj / ".github").mkdir()                            # real project use
+    out = _run(proj, monkeypatch, "setup", "autonomy")
+    # Loud, dedicated block — and the egress-cost banner naming UNCONFINED egress.
+    assert "Required exclusion (platform-mandatory" in out
+    assert "REQUIRED exclusion auto-applied: `gh` runs OUTSIDE the box" in out
+    assert "network egress is UNCONFINED (ADR-004 §61)" in out
+    # Applied via the real primitive → lands in live settings excludedCommands.
+    assert "gh" in _sb(proj)["excludedCommands"]
+    # ADR-029 routing: a widening → ONLY the gitignored local file carries it.
+    assert "gh" in _sb_local(proj).get("excludedCommands", [])
+    assert "gh" not in _sb_committed(proj).get("excludedCommands", [])
+    # Distinct `_required` provenance, NOT `_manual`.
+    req = _gh_prov_entries(proj)
+    assert req and req[0]["toolkit"] == "_required"
+    assert all(e.get("toolkit") != "_manual" for e in req)
+    # Not also surfaced as a nudge (would be double-reported).
+    assert "`gh` — optional" not in out
+    assert "`gh` — REQUIRED on macOS" not in out
+
+
+def test_gh_required_exclusion_not_applied_on_linux(tmp_path, monkeypatch):
+    # On Linux gh runs confined → no auto-apply; it stays an optional nudge.
+    _force_gh(monkeypatch, platform="linux")
+    proj = _with_adapter(_setup(tmp_path))
+    (proj / ".github").mkdir()
+    out = _run(proj, monkeypatch, "setup", "autonomy")
+    assert "REQUIRED exclusion auto-applied: `gh`" not in out
+    assert "gh" not in _sb(proj).get("excludedCommands", [])
+    assert "`gh` — optional" in out                       # nudge-only on Linux
+
+
+def test_gh_required_exclusion_not_applied_without_github_marker(tmp_path, monkeypatch):
+    # macOS but NO `.github/` → detect-fence (ADR-030 condition 4) blocks auto-apply.
+    _force_gh(monkeypatch, platform="darwin")
+    proj = _with_adapter(_setup(tmp_path))
+    out = _run(proj, monkeypatch, "setup", "autonomy")
+    assert "REQUIRED exclusion auto-applied: `gh`" not in out
+    assert "gh" not in _sb(proj).get("excludedCommands", [])
+
+
+def test_gh_required_exclusion_not_applied_on_bare_path_without_marker(tmp_path, monkeypatch):
+    # macOS + gh on PATH but NO `.github/` → never fires on bare gh-on-PATH
+    # (ADR-030 condition 4). The looser predicate may NUDGE it, but the auto path
+    # must not apply.
+    _force_gh(monkeypatch, platform="darwin")
+    proj = _with_adapter(_setup(tmp_path))
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    stub = bindir / "gh"
+    stub.write_text("#!/bin/sh\n")
+    stub.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{bindir}:{__import__('os').environ['PATH']}")
+    out = _run(proj, monkeypatch, "setup", "autonomy")
+    assert "REQUIRED exclusion auto-applied: `gh`" not in out
+    assert "gh" not in _sb(proj).get("excludedCommands", [])
+
+
+def test_gh_required_exclusion_status_attribution(tmp_path, monkeypatch):
+    _force_gh(monkeypatch, platform="darwin")
+    proj = _with_adapter(_setup(tmp_path))
+    (proj / ".github").mkdir()
+    _run(proj, monkeypatch, "setup", "autonomy")
+    out = _run(proj, monkeypatch, "sandbox")              # no subcommand = status
+    # gh attributed honestly as auto-applied (required), not operator-set.
+    assert "gh — auto-applied (required" in out
+    assert "gh — operator-set" not in out
+
+
+def test_gh_required_exclusion_already_in_place_is_confirmed_not_silent(tmp_path, monkeypatch):
+    # #274 pattern for gh: the no-op re-run still reports the already-in-place
+    # exclusion rather than going silent.
+    _force_gh(monkeypatch, platform="darwin")
+    proj = _with_adapter(_setup(tmp_path))
+    (proj / ".github").mkdir()
+    _run(proj, monkeypatch, "setup", "autonomy")          # first run applies it
+    assert "gh" in _sb(proj)["excludedCommands"]
+    out = _run(proj, monkeypatch, "setup", "autonomy")    # re-run: no-op apply
+    assert "required exclusion: ✓ `gh` already excluded" in out
+    assert "ADR-030" in out
+    # …and it does NOT claim a fresh apply this run.
+    assert "REQUIRED exclusion auto-applied: `gh`" not in out
+
+
+def test_gh_required_exclusion_self_heals_on_linux_not_manual(tmp_path, monkeypatch):
+    # Auto-applied on macOS, then the platform moves to Linux (gh runs confined) →
+    # the `_required` gh entry self-heals; an operator `_manual` carve-out does not.
+    _force_gh(monkeypatch, platform="darwin")
+    proj = _with_adapter(_setup(tmp_path))
+    (proj / ".github").mkdir()
+    _run(proj, monkeypatch, "sandbox", "exclude", "docker")   # operator manual widening
+    _run(proj, monkeypatch, "setup", "autonomy")
+    assert "gh" in _sb(proj)["excludedCommands"]
+    # Now on Linux: re-run self-heals the required gh entry.
+    _force_gh(monkeypatch, platform="linux")
+    out = _run(proj, monkeypatch, "setup", "autonomy")
+    assert "self-healed: `gh`" in out
+    assert "gh" not in _sb(proj).get("excludedCommands", [])
+    # The operator's manual docker exclusion is untouched.
+    assert "docker" in _sb(proj)["excludedCommands"]
+
+
+def test_gh_auto_apply_leaves_docker_nudge_only(tmp_path, monkeypatch):
+    # Under live gh auto-apply, docker stays optional/nudge — never auto-applied
+    # (ADR-030 condition 5: docker fails the three-part test).
+    _force_gh(monkeypatch, platform="darwin")
+    proj = _with_adapter(_setup(tmp_path))
+    (proj / ".github").mkdir()
+    (proj / "Dockerfile").write_text("FROM x")
+    out = _run(proj, monkeypatch, "setup", "autonomy")
+    assert "gh" in _sb(proj)["excludedCommands"]          # required: applied
+    assert "docker" not in _sb(proj)["excludedCommands"]  # optional: NOT applied
+    assert "`docker` — optional" in out
+    assert "`pkit permissions sandbox exclude docker`" in out
+
+
+def test_gh_required_exclusion_revertable_via_remove(tmp_path, monkeypatch):
+    # ADR-030 condition 7: individually revertable by `sandbox exclude --remove gh`.
+    _force_gh(monkeypatch, platform="darwin")
+    proj = _with_adapter(_setup(tmp_path))
+    (proj / ".github").mkdir()
+    _run(proj, monkeypatch, "setup", "autonomy")
+    assert "gh" in _sb(proj)["excludedCommands"]
+    _run(proj, monkeypatch, "sandbox", "exclude", "--remove", "gh")
+    assert "gh" not in _sb(proj).get("excludedCommands", [])
+
+
+def test_decide_py_untouched_by_gh_work():
+    # ADR-030 condition 8: the permission-decision core is unaffected by this work.
+    # The decision core lives at .pkit/permissions/decide.py (NOT src/...); assert
+    # the path exists so a future rename can't silently re-vacuum this guard.
+    import subprocess
+    root = Path(__file__).resolve().parent.parent
+    decide_py = root / ".pkit" / "permissions" / "decide.py"
+    assert decide_py.is_file(), f"decide.py not found at expected path: {decide_py}"
+    r = subprocess.run(
+        ["git", "diff", "--name-only", "main", "--", ".pkit/permissions/decide.py"],
+        cwd=str(root),
+        capture_output=True, text=True, check=False,
+    )
+    assert r.stdout.strip() == "", f"decide.py must be untouched, got: {r.stdout!r}"
+
+
 def test_setup_autonomy_seeds_profile_recommendations(tmp_path, monkeypatch):
     # A project profile recommending uv is seeded into config on first setup run.
     proj = _with_adapter(_setup(tmp_path))
@@ -1665,6 +1831,10 @@ def test_setup_no_signing_config_no_signing_nudge(tmp_path, monkeypatch):
 
 
 def test_gh_detected_via_repo_marker(tmp_path, monkeypatch):
+    # On Linux gh runs confined → it's an OPTIONAL nudge surfaced by its `.github/`
+    # marker (never auto-applied). (macOS auto-apply is exercised by the ADR-030
+    # block below.) Pin platform so the assertion is deterministic on any host.
+    monkeypatch.setattr("sys.platform", "linux")
     proj = _with_adapter(_setup(tmp_path))
     (proj / ".github").mkdir()
     out = _run(proj, monkeypatch, "setup", "autonomy")
@@ -1673,7 +1843,9 @@ def test_gh_detected_via_repo_marker(tmp_path, monkeypatch):
 
 
 def test_gh_detected_via_path(tmp_path, monkeypatch):
-    # No repo marker; gh "on PATH" via a stub bin dir prepended to PATH.
+    # No repo marker; gh "on PATH" via a stub bin dir prepended to PATH. On Linux
+    # gh is an optional nudge (no auto-apply). Pin platform for determinism.
+    monkeypatch.setattr("sys.platform", "linux")
     proj = _with_adapter(_setup(tmp_path))
     bindir = tmp_path / "bin"
     bindir.mkdir()
@@ -1745,9 +1917,21 @@ def test_next_step_pkit_also_required_on_macos():
     assert "`pkit` — REQUIRED on macOS" in "\n".join(out)
 
 
-def test_next_step_gh_optional_copy_on_macos():
-    # gh is NOT uv/pkit → optional even on macOS.
+def test_next_step_gh_required_copy_on_macos():
+    # ADR-030: gh joins the macOS required set → REQUIRED copy on darwin, naming
+    # the UNCONFINED network egress (distinct from uv's local-runtime wording).
     out = _next_steps([("gh", "gh")], platform="darwin", width=0)
+    text = "\n".join(out)
+    assert "`gh` — REQUIRED on macOS" in text
+    assert "UNCONFINED" in text and "ADR-004 §61" in text
+    assert "Still gated by the permission hook." in text
+    assert "        `pkit permissions sandbox exclude gh`" in out
+
+
+def test_next_step_gh_optional_copy_off_macos():
+    # Off macOS gh runs confined → it stays an optional widening (the looser
+    # required predicate is darwin-only).
+    out = _next_steps([("gh", "gh")], platform="linux", width=0)
     text = "\n".join(out)
     assert "`gh` — optional" in text and "REQUIRED" not in text
     assert "        `pkit permissions sandbox exclude gh`" in out

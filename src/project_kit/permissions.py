@@ -25,6 +25,7 @@ import importlib.util
 import json
 import os
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -3041,21 +3042,34 @@ def _setup_stability_tip(target_root: Path) -> list[str]:
     ]
 
 
+# Names that the looser nudge predicate treats as platform-mandatory on macOS:
+# the declared candidate commands (`uv`, `gh` — ADR-030), plus `pkit` aliased to
+# `uv`'s required-ness (excluding `uv` covers `pkit` only via `uv run pkit`, head
+# token `uv`). Data-driven off `_REQUIRED_CANDIDATES` so a new candidate becomes
+# nudge-required automatically — no second hardcoded name-set to keep in sync.
+def _required_candidate_names() -> set[str]:
+    return {cmd for cmd, _ in _REQUIRED_CANDIDATES} | {"pkit"}
+
+
 def _widening_required_on_platform(tool: str, cmd: str) -> bool:
     """Is this widening exclusion MANDATORY on the current platform (vs an
     operator's optional choice)? Derived AT RUNTIME — never a toolkit-schema field
-    (architect: derive it, don't schematise). The one mandatory case today: on
-    macOS, `uv` / `pkit` cannot run inside the Seatbelt box (a fixed Seatbelt
-    panic, no setting fixes it — ADR-014), so excluding them is not optional.
-    Everything else (e.g. `gh`) is an optional widening the operator may accept.
+    (architect: derive it, don't schematise). The mandatory cases on macOS: a
+    command in the declared required candidate set (`uv`, `gh` — ADR-030) cannot
+    run inside the Seatbelt box (a fixed mach-service denial, no setting fixes it —
+    ADR-014), so excluding it is not optional; `pkit` is aliased to `uv`. Anything
+    NOT in the candidate set (e.g. `docker`) is an optional widening the operator
+    may accept.
 
-    This is the LOOSER platform+name predicate. It drives the NUDGE path only.
-    The AUTO-APPLY path (ADR-027) needs the version-floor conjunct on top — see
-    `_uv_required_exclusion`."""
+    This is the LOOSER platform+name predicate (no detect-fence / version conjunct).
+    It drives the NUDGE-copy path only — whether a widening reads as "REQUIRED on
+    macOS" vs "optional". The AUTO-APPLY path (ADR-027/ADR-030) needs each member's
+    full verifier on top — see `_REQUIRED_CANDIDATES` and `_required_verifier`."""
     import sys as _sys
     if _sys.platform != "darwin":
         return False
-    return tool in ("uv", "pkit") or cmd in ("uv", "pkit")
+    names = _required_candidate_names()
+    return tool in names or cmd in names
 
 
 # The macOS uv Seatbelt panic (ADR-014): a fixed SCDynamicStore mach-service
@@ -3160,6 +3174,88 @@ def _uv_required_exclusion(target_root: Path) -> bool:
     return _UV_KNOWN_FIXED_RELEASE is None or installed < Version(_UV_KNOWN_FIXED_RELEASE)
 
 
+def _gh_required_exclusion(target_root: Path) -> bool:
+    """The AUTO-APPLY conjunct (ADR-030 conditions 1-4) for the macOS gh exclusion:
+    necessity-VERIFIED, not believed. True only when ALL hold:
+
+      - the platform is macOS (the `com.apple.SecurityServer` mach-service denial
+        is Seatbelt-specific; on Linux/bubblewrap gh runs confined — condition 4);
+      - the `.github/` detect glob is present (real project use of gh — workflows,
+        issue templates, a GitHub-hosted repo — condition 4, NEVER bare gh-on-PATH).
+
+    Unlike `_uv_required_exclusion` there is NO version coordinate: gh's failure is
+    PLATFORM-PERMANENT on macOS (Go's crypto/x509 reaches a blocked mach-service;
+    SSL_CERT_FILE is a darwin no-op, so no cert accommodation reaches past it —
+    ADR-030 condition 3 / Evidence 1-2). The verdict is reviewed on Claude Code /
+    gh updates, not auto-healed by a version check. So this verifier is a pure
+    platform-AND-detect conjunct: macOS AND `.github/` detected → required, full
+    stop. There is no installed-version read because there is nothing a version
+    could falsify (a verifier that gated on a version would never fire — ADR-030
+    "Why permanent-reviewed rather than version-gated")."""
+    import sys as _sys
+    if _sys.platform != "darwin":
+        return False
+    toolkits = _load_toolkits(target_root)
+    return "gh" in _detect_tools(target_root, toolkits)
+
+
+# The DECLARED candidate set for the auto-applied, platform-mandatory REQUIRED
+# subclass (ADR-027, generalised to a verified set by ADR-030 condition 6). This
+# is the COR-007 extraction triggered by the arrival of the SECOND member: the
+# per-member knowledge that used to live as three inline `uv` literals
+# (`_widening_required_on_platform`, the nudge-skip, the self-heal `cmd == "uv"`)
+# is lifted into one auditable table the writer reads.
+#
+# What is DATA here is only the candidate set + per-member verifier-binding: which
+# commands are eligible, and which runtime verifier governs each member's
+# necessity. The necessity VERDICT stays runtime-derived (the #247 / ADR-030
+# stance) — "required: true" is NEVER frozen into committed data; the verifier is
+# consulted live against platform / version / evidence state on every run.
+#
+# Each member declares:
+#   command       — the head token excluded from the box (the `sandbox exclude`
+#                   value).
+#   verifier_name — the NAME of the runtime necessity check (target_root -> bool),
+#                   resolved against this module at CALL time (not captured as a
+#                   reference) so the verdict tracks the live function — the
+#                   indirection keeps the verifier swappable for tests and makes
+#                   the binding plain auditable data, not a frozen closure. `uv` →
+#                   the version-floor verifier (self-disables on a fixed release);
+#                   `gh` → the macOS-permanent-reviewed verifier (platform +
+#                   `.github/` detect, no version coordinate — ADR-030 condition 3).
+# Platform and detect-fence are encoded INSIDE each verifier (they differ per
+# member: uv gates on a uv repo marker + version floor, gh on `.github/` + the
+# permanent mach-service denial), so the table binds the command to its verifier
+# and the verifier owns the member-specific conjuncts.
+_REQUIRED_CANDIDATES: tuple[tuple[str, str], ...] = (
+    ("uv", "_uv_required_exclusion"),
+    ("gh", "_gh_required_exclusion"),
+)
+
+
+def _required_verifier(command: str) -> Callable[[Path], bool] | None:
+    """The runtime necessity verifier bound to a candidate command, or None if the
+    command is not in the declared required candidate set. Resolves the bound
+    verifier NAME against the live module (so a test-swapped verifier is honoured).
+    Used by the self-heal loop and the apply loop to re-check each `_required`
+    candidate against its OWN member's verifier (ADR-030 condition 6) instead of a
+    hardcoded `cmd == "uv"`."""
+    for cmd, verifier_name in _REQUIRED_CANDIDATES:
+        if cmd == command:
+            return globals()[verifier_name]
+    return None
+
+
+# Fail fast at import if a candidate names a verifier that does not resolve — a
+# future third member with a typo'd verifier name surfaces here, not as a KeyError
+# mid-`setup autonomy` (W1 hardening for the ADR-030 declared-set seam).
+for _cand_cmd, _cand_verifier in _REQUIRED_CANDIDATES:
+    assert _cand_verifier in globals(), (
+        f"_REQUIRED_CANDIDATES: {_cand_cmd!r} binds verifier {_cand_verifier!r} "
+        f"which does not resolve in this module"
+    )
+
+
 def _widening_desc(tool: str, cmd: str) -> tuple[str, str]:
     """The nudge label + body for one widening exclusion — required-vs-optional
     copy chosen at runtime (see _widening_required_on_platform). Returns
@@ -3167,6 +3263,18 @@ def _widening_desc(tool: str, cmd: str) -> tuple[str, str]:
     4-space margin; the body is the explanatory prose the caller hang-wraps under
     it. Both plain (the caller styles / wraps the returned text)."""
     if _widening_required_on_platform(tool, cmd):
+        if cmd == "gh" or tool == "gh":
+            return (
+                f"`{tool}` — REQUIRED on macOS:",
+                (
+                    "`gh` can't run inside the box (a fixed Seatbelt mach-service "
+                    "denial; no setting fixes it), so it must run unconfined — its "
+                    "network egress is then UNCONFINED (ADR-004 §61). Not optional — "
+                    "the documented macOS stance (ADR-014/ADR-030). `setup autonomy` "
+                    "auto-applies this in a `.github/` project. Still gated by the "
+                    "permission hook."
+                ),
+            )
         return (
             f"`{tool}` — REQUIRED on macOS:",
             (
@@ -3284,11 +3392,16 @@ def _setup_accommodations(target_root: Path, profile: str) -> tuple[list[str], l
         for w in _widening(toolkits[t].get("allowances", [])):
             cmd = w.get("value")
             if w.get("kind") == "exclude-command" and cmd and cmd not in excluded:
-                # The platform-REQUIRED, version-verified exclusion is auto-applied
-                # by setup (ADR-027), not nudged — drop it from the nudge list so
-                # it isn't surfaced twice. Optional widenings (gh/docker) and the
-                # required one on an unverifiable/fixed uv still nudge here.
-                if t == "uv" and cmd == "uv" and _uv_required_exclusion(target_root):
+                # A platform-REQUIRED, necessity-verified exclusion is auto-applied
+                # by setup (ADR-027/ADR-030), not nudged — drop it from the nudge
+                # list so it isn't surfaced twice. Data-driven: ask the command's
+                # candidate-set verifier whether the auto path WILL apply it (uv
+                # below a fix + marker; gh on macOS + `.github/`). Optional widenings
+                # (docker) and a required candidate the verifier declines (an
+                # unverifiable / fixed uv, gh off macOS or without `.github/`) still
+                # nudge here.
+                verifier = _required_verifier(cmd)
+                if verifier is not None and verifier(target_root):
                     continue
                 nudges.append((t, cmd))
     return applied, nudges
@@ -3334,46 +3447,95 @@ def _setup_required_exclusions(target_root: Path) -> tuple[list[str], list[str]]
     confirmed: list[str] = []
 
     # Self-heal first: drop any auto-applied required exclusion no longer warranted.
-    # Today the only required command is `uv`; generalise by re-checking each.
+    # Data-driven (ADR-030 condition 6): re-check each previously auto-applied
+    # `_required` entry against ITS OWN member's verifier in the declared candidate
+    # set — no hardcoded `cmd == "uv"` literal. An entry whose command is no longer
+    # a candidate (e.g. its member was removed) has no verifier → not still
+    # required → self-healed, which is the safe convergence.
     for cmd in sorted(c for c in required_entries if c):
-        still_required = cmd == "uv" and _uv_required_exclusion(target_root)
+        verifier = _required_verifier(cmd)
+        still_required = verifier is not None and verifier(target_root)
         if not still_required:
             sandbox_exclude(target_root, cmd, remove=True, toolkit=_REQUIRED_TOOLKIT)
             loud.append(
                 f"  self-healed: `{cmd}` is no longer a required exclusion "
-                f"(uv at/above a fixed release, or not macOS) — removed; it runs "
-                f"inside the box again."
+                f"(no longer macOS-mandatory — uv past a fixed release, gh on Linux, "
+                f"or marker gone) — removed; it runs inside the box again."
             )
 
-    # Apply: the macOS uv exclusion when the panic is verified to still occur.
-    if _uv_required_exclusion(target_root):
-        # Read LIVE union state (committed + per-machine local) so the branch
-        # reflects what the box actually excludes, not just what we'd write.
+    # Apply: each candidate whose verifier confirms necessity AT RUNTIME (the
+    # verdict is never frozen into data — ADR-030 condition 6). Read LIVE union
+    # state (committed + per-machine local) so each branch reflects what the box
+    # actually excludes, not just what we'd write. Per-member apply copy is loud
+    # and member-specific (uv names its local-runtime carve-out; gh names its
+    # UNCONFINED network egress — ADR-030 condition 2).
+    for cmd, _verifier_name in _REQUIRED_CANDIDATES:
+        verifier = _required_verifier(cmd)
+        if verifier is None or not verifier(target_root):
+            continue
         sb = _sandbox_block(target_root)
-        already = "uv" in set(sb.get("excludedCommands") or [])
+        already = cmd in set(sb.get("excludedCommands") or [])
         if not already:
-            sandbox_exclude(target_root, "uv", toolkit=_REQUIRED_TOOLKIT)
-            loud.append(
-                "  ⚠ REQUIRED exclusion auto-applied: `uv` (and `pkit`, which runs "
-                "via `uv run`) now runs OUTSIDE the OS box — UNCONFINED, with full "
-                "host filesystem and network reach."
-            )
-            loud.append(
-                "    macOS-mandatory and necessity-verified: uv "
-                f"{_UV_KNOWN_BAD_FLOOR}-class hits a fixed Seatbelt panic the box "
-                "cannot host (ADR-014/ADR-027). NOT recorded in any committed file "
-                "(per-machine only); reported by `sandbox status` and counted by "
-                "`probe`; still gated by the permission hook. A fixed uv "
-                "self-disables this on the next setup run."
-            )
+            sandbox_exclude(target_root, cmd, toolkit=_REQUIRED_TOOLKIT)
+            loud.extend(_required_apply_lines(cmd))
         else:
             # No-op apply: the required exclusion is already in place. Confirm it
-            # quietly so the operator isn't left unsure it's handled (Task #274).
-            confirmed.append(
-                "required exclusion: ✓ `uv` already excluded "
-                "(platform-mandatory, necessity-verified — ADR-027)"
-            )
+            # quietly so the operator isn't left unsure it's handled (Task #274 /
+            # ADR-030 condition 2 — the already-in-place gh case is confirmed too).
+            confirmed.append(_required_confirm_line(cmd))
     return loud, confirmed
+
+
+def _required_apply_lines(cmd: str) -> list[str]:
+    """The LOUD apply banner for a freshly auto-applied `_required` exclusion —
+    member-specific (ADR-030 condition 2). `uv` names its local-runtime carve-out;
+    `gh` names its UNCONFINED network egress (the materially larger boundary
+    statement — ADR-004 §61). A candidate with no bespoke copy falls back to a
+    generic loud line so the set never applies silently."""
+    if cmd == "uv":
+        return [
+            "  ⚠ REQUIRED exclusion auto-applied: `uv` (and `pkit`, which runs "
+            "via `uv run`) now runs OUTSIDE the OS box — UNCONFINED, with full "
+            "host filesystem and network reach.",
+            "    macOS-mandatory and necessity-verified: uv "
+            f"{_UV_KNOWN_BAD_FLOOR}-class hits a fixed Seatbelt panic the box "
+            "cannot host (ADR-014/ADR-027). NOT recorded in any committed file "
+            "(per-machine only); reported by `sandbox status` and counted by "
+            "`probe`; still gated by the permission hook. A fixed uv "
+            "self-disables this on the next setup run.",
+        ]
+    if cmd == "gh":
+        return [
+            "  ⚠ REQUIRED exclusion auto-applied: `gh` runs OUTSIDE the box — its "
+            "network egress is UNCONFINED (ADR-004 §61). Full host reach for a "
+            "command whose whole purpose is talking to GitHub.",
+            "    macOS-mandatory and necessity-verified: gh's Go TLS handshake "
+            "hits a fixed `com.apple.SecurityServer` Seatbelt denial the box "
+            "cannot host (ADR-014/ADR-030); no cert accommodation reaches past it "
+            "(SSL_CERT_FILE is a darwin no-op). Detect-fenced to `.github/` "
+            "projects. PERMANENT — no version self-heal; reviewed on Claude Code "
+            "updates. NOT recorded in any committed file (per-machine only); "
+            "reported by `sandbox status`; still gated by the permission hook. "
+            "Revert: `pkit permissions sandbox exclude --remove gh`.",
+        ]
+    return [
+        f"  ⚠ REQUIRED exclusion auto-applied: `{cmd}` now runs OUTSIDE the OS box "
+        "— UNCONFINED. Platform-mandatory, necessity-verified (ADR-027/ADR-030)."
+    ]
+
+
+def _required_confirm_line(cmd: str) -> str:
+    """The quiet already-in-place confirmation for a `_required` exclusion (#274 /
+    ADR-030 condition 2) — member-specific so gh's egress note differs from uv's."""
+    if cmd == "gh":
+        return (
+            "required exclusion: ✓ `gh` already excluded "
+            "(macOS-mandatory, egress UNCONFINED — ADR-030)"
+        )
+    return (
+        f"required exclusion: ✓ `{cmd}` already excluded "
+        "(platform-mandatory, necessity-verified — ADR-027)"
+    )
 
 
 def setup_autonomy(target_root: Path, profile: str = "autonomous") -> tuple[str, bool]:
