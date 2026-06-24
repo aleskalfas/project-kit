@@ -1,7 +1,7 @@
 ---
 id: ADR-028
 title: setup autonomy seals the unsandboxed escape (strict default)
-status: proposed
+status: accepted
 date: 2026-06-24
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
