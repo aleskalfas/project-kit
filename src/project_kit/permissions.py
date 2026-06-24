@@ -3407,6 +3407,133 @@ def _setup_accommodations(target_root: Path, profile: str) -> tuple[list[str], l
     return applied, nudges
 
 
+def _relocate_tracked_required_exclusions(target_root: Path) -> list[str]:
+    """Relocate a pre-ADR-029 `_required` exclusion sitting in the TRACKED
+    `settings.json` into the gitignored `settings.local.json` (Task #275).
+
+    ADR-029 routes NEW widenings to the local file, but a required exclusion
+    applied by a pre-ADR-029 `setup autonomy` run still sits in the tracked
+    `settings.json` as working-copy drift. The auto-apply idempotency guard
+    ("already excluded in the union? skip") never relocates it, so the rule-4
+    drift lingers. This pass closes that residual at runtime — the convergence
+    IS the migration mechanism (no one-shot lifecycle script; #275 judgment).
+
+    Scope (the safety criterion — ADR-008 rule 2 provenance-scoped):
+      - A required-CANDIDATE command (in `_REQUIRED_CANDIDATES`) present in the
+        committed file's `excludedCommands` AND `_required`-provenanced (pkit
+        authored it) is MOVED.
+      - An operator `_manual` carve-out is NEVER relocated.
+      - An UNTAGGED/foreign committed entry (no provenance record for it) is left
+        UNTOUCHED — even for a required-candidate command, because we cannot
+        positively confirm pkit authored it (a pre-ADR-027 entry may be untagged;
+        the conservative call is don't move what you didn't author).
+
+    No un-exclude window (the live-throughout guarantee): the local copy is
+    written first WHEN NEEDED — the entry is in local BEFORE it leaves the
+    committed file, so the union never un-excludes. When the entry is already in
+    local (a half-done prior run), that first write is skipped and we go straight
+    to the strip; this is still safe because local already carries the command, so
+    the union is unbroken across the strip. In the write-then-strip case the entry
+    is briefly in BOTH files; after the strip it is in local only. Either way the
+    runtime union (`_sandbox_block`, which deep-merges both files) ALWAYS contains
+    the command — a reader / hook never sees it absent from both files at any point.
+
+    Idempotent: an entry already only in `settings.local.json` (absent from the
+    committed file) is a no-op; re-running converges with no double-write.
+
+    Returns report lines (one per relocation) for the [3/4] confinement block."""
+    prov = _load_provenance(target_root)
+    required_provenanced = {
+        e.get("value") for e in prov
+        if e.get("toolkit") == _REQUIRED_TOOLKIT and e.get("kind") == "exclude-command"
+    }
+    candidate_cmds = {cmd for cmd, _ in _REQUIRED_CANDIDATES}
+
+    committed = _read_settings(target_root)
+    committed_sb = committed.get("sandbox")
+    if not isinstance(committed_sb, dict):
+        return []
+    committed_excl = committed_sb.get("excludedCommands")
+    if not isinstance(committed_excl, list):
+        return []
+
+    # Only required-candidate, `_required`-provenanced entries that are actually
+    # in the committed file are relocation candidates. `_manual` and untagged
+    # entries are absent from `required_provenanced`, so they fall away here.
+    to_move = [
+        cmd for cmd in committed_excl
+        if cmd in candidate_cmds and cmd in required_provenanced
+    ]
+    if not to_move:
+        return []
+
+    # Step 1 — write the LOCAL copy first (the union still has the committed copy,
+    # so the command stays excluded throughout). Add only what's missing locally.
+    local = _read_settings_local(target_root)
+    local_sb = local.setdefault("sandbox", {})
+    local_excl = local_sb.setdefault("excludedCommands", [])
+    local_added = False
+    for cmd in to_move:
+        if cmd not in local_excl:
+            local_excl.append(cmd)
+            local_added = True
+    if local_added:
+        _write_settings_local(target_root, local)
+
+    # Step 2 — now strip the committed copy (local already carries it, so the
+    # union is unchanged across this write — no un-exclude window).
+    committed_sb["excludedCommands"] = [c for c in committed_excl if c not in to_move]
+    if not committed_sb["excludedCommands"]:
+        committed_sb.pop("excludedCommands", None)
+    _write_settings(target_root, committed)
+
+    return [
+        f"relocated `{cmd}` exclusion to settings.local.json "
+        f"(was in tracked settings.json — ADR-029)"
+        for cmd in to_move
+    ]
+
+
+def _untagged_required_candidate_advisories(target_root: Path) -> list[str]:
+    """Advise (don't act) when a required-CANDIDATE command sits UNTAGGED in the
+    committed `settings.json` — a relocation candidate the prior pass SKIPPED for
+    lack of provenance (can't confirm pkit authored it, so it stays put; correct
+    but, until now, silent). Matches the operator's inform-me preference: name the
+    drift and the one-command fix rather than leaving it unexplained.
+
+    Detect: command in `_REQUIRED_CANDIDATES` AND present in the committed file's
+    `excludedCommands` AND neither `_required`- NOR `_manual`-provenanced. A
+    `_manual` entry is a deliberate operator carve-out (not drift) and is NEVER
+    advised on; a `_required` entry was already relocated by the pass above."""
+    prov = _load_provenance(target_root)
+    tagged = {
+        e.get("value") for e in prov
+        if e.get("toolkit") in (_REQUIRED_TOOLKIT, "_manual")
+        and e.get("kind") == "exclude-command"
+    }
+    candidate_cmds = {cmd for cmd, _ in _REQUIRED_CANDIDATES}
+
+    committed = _read_settings(target_root)
+    committed_sb = committed.get("sandbox")
+    if not isinstance(committed_sb, dict):
+        return []
+    committed_excl = committed_sb.get("excludedCommands")
+    if not isinstance(committed_excl, list):
+        return []
+
+    untagged = [
+        cmd for cmd in committed_excl
+        if cmd in candidate_cmds and cmd not in tagged
+    ]
+    return [
+        f"note: an untagged `{cmd}` exclusion is in your committed settings.json — "
+        f"pkit won't move what it didn't author. Run "
+        f"`pkit permissions sandbox exclude --remove {cmd}` then re-run setup to "
+        f"relocate it cleanly, or remove the line by hand."
+        for cmd in untagged
+    ]
+
+
 def _setup_required_exclusions(target_root: Path) -> tuple[list[str], list[str]]:
     """Auto-apply (and self-heal) the platform-MANDATORY, necessity-verified
     sandbox exclusion — the one carve-out from ADR-008 rule 4's "never applied by
@@ -3438,13 +3565,30 @@ def _setup_required_exclusions(target_root: Path) -> tuple[list[str], list[str]]
     never removed here (the distinct tag is what keeps teardown honest)."""
     if not _adapter_installed(target_root, "claude-code"):
         return [], []
+
+    loud: list[str] = []
+    confirmed: list[str] = []
+
+    # Relocation pass first (Task #275): move any pre-ADR-029 `_required` exclusion
+    # that drifted into the TRACKED `settings.json` over to the gitignored
+    # `settings.local.json`, restoring rule-4's never-committed-by-construction
+    # guarantee on already-installed machines. Runs before self-heal/apply so the
+    # union below reflects the relocated state. The relocation lines are quiet
+    # [3/4] confinement continuations (the runtime effect is UNCHANGED — the
+    # command stays excluded throughout — so they confirm rather than alarm).
+    confirmed.extend(_relocate_tracked_required_exclusions(target_root))
+
+    # Advisory pass (untagged required-candidate drift): the relocation above
+    # could only MOVE provenanced entries; an untagged committed exclusion for a
+    # required candidate is left untouched but, until now, silently. Surface a
+    # one-command-fix note as a quiet [3/4] continuation — inform, don't act.
+    confirmed.extend(_untagged_required_candidate_advisories(target_root))
+
     prov = _load_provenance(target_root)
     required_entries = {
         e.get("value") for e in prov
         if e.get("toolkit") == _REQUIRED_TOOLKIT and e.get("kind") == "exclude-command"
     }
-    loud: list[str] = []
-    confirmed: list[str] = []
 
     # Self-heal first: drop any auto-applied required exclusion no longer warranted.
     # Data-driven (ADR-030 condition 6): re-check each previously auto-applied
