@@ -31,6 +31,7 @@ _HERE = Path(__file__).parent.parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
+from _lib import axis_labels  # noqa: E402
 from _lib import lifecycle_inference as infer  # noqa: E402
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import resolve_capability_root  # noqa: E402
@@ -112,18 +113,27 @@ def detect_state(issue_number: int, target_state: str) -> dict[str, Any]:
     Because every state's detector shares this single resolver, the detectors
     are mutually exclusive — exactly one matches — so the engine's
     "first-matching-state" rule reproduces move-issue regardless of state order.
+
+    Map-aware (ADR-026 §5): the adopter's substrate-map is loaded and threaded
+    into `infer_current_state`, so under a present map binding `state` to a
+    `derive` predicate the position resolves from open/closed (+ a blocked label)
+    rather than a kit `state:*` label. No map ⇒ the kit `state:*` precedence,
+    byte-unchanged.
     """
     capability_root = _capability_root()
     if capability_root is None:
         return _indeterminate("project-management capability not found")
     config = _config(capability_root)
+    substrate_map = axis_labels.load_substrate_map(capability_root)
     issue = _fetch_issue(issue_number, config, "state,milestone,labels")
     if issue is None:
         return _indeterminate(f"could not read issue #{issue_number} (gh failure)")
     state = str(issue.get("state", "")).lower()
     milestone = issue.get("milestone") or {}
     labels = _issue_labels(issue)
-    resolved = infer.infer_current_state(state=state, milestone=milestone, labels=labels)
+    resolved = infer.infer_current_state(
+        state=state, milestone=milestone, labels=labels, substrate_map=substrate_map
+    )
     return {
         "result": resolved == target_state,
         "reason": f"#{issue_number} inferred state is {resolved!r}",
@@ -145,6 +155,7 @@ def parent_has_active_descendant(parent_number: int) -> dict[str, Any]:
     if capability_root is None:
         return _indeterminate("project-management capability not found")
     config = _config(capability_root)
+    substrate_map = axis_labels.load_substrate_map(capability_root)
     children = _list_issues(config)
     if children is None:
         return _indeterminate("could not list issues (gh failure)")
@@ -162,6 +173,7 @@ def parent_has_active_descendant(parent_number: int) -> dict[str, Any]:
             state=str(child.get("state", "")).lower(),
             milestone=child.get("milestone") or {},
             labels=_issue_labels(child),
+            substrate_map=substrate_map,
         )
         if infer.state_is_active(child_state):
             active.append(int(child.get("number", 0)))
