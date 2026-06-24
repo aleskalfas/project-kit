@@ -911,7 +911,17 @@ HOOK_MATCHER = "*"
 
 
 def _settings_path(target_root: Path) -> Path:
+    """The COMMITTED settings file — the shared baseline + narrowing floor. In a
+    repo that tracks `.claude/`, this ships to every checkout (ADR-029)."""
     return target_root / ".claude" / "settings.json"
+
+
+def _settings_local_path(target_root: Path) -> Path:
+    """The GITIGNORED per-machine settings file — the widening + per-machine
+    deviations (ADR-029). Claude Code deep-merges this over `settings.json`, so a
+    widening routed here never lands in a committed file (ADR-008 rule 4 by
+    construction). Its sandbox keys are read back via `_sandbox_block`'s union."""
+    return target_root / ".claude" / "settings.local.json"
 
 
 def _core_settings_denies(target_root: Path) -> list[str]:
@@ -949,6 +959,24 @@ def _read_settings(target_root: Path) -> dict[str, Any]:
 
 def _write_settings(target_root: Path, data: dict[str, Any]) -> None:
     path = _settings_path(target_root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+
+
+def _read_settings_local(target_root: Path) -> dict[str, Any]:
+    """Read the gitignored per-machine settings file (ADR-029). Empty dict when
+    absent. Same JSON-fault discipline as `_read_settings`."""
+    path = _settings_local_path(target_root)
+    if not path.is_file():
+        return {}
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise PermissionsError(f"{path} is not readable JSON: {exc}") from exc
+
+
+def _write_settings_local(target_root: Path, data: dict[str, Any]) -> None:
+    path = _settings_local_path(target_root)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
@@ -1229,18 +1257,60 @@ _RESTART_NOTE = (
 )
 
 
+def _sandbox_block_in(data: dict[str, Any]) -> dict[str, Any]:
+    sb = data.get("sandbox") if isinstance(data, dict) else None
+    return sb if isinstance(sb, dict) else {}
+
+
+def _merge_sandbox_blocks(committed: dict[str, Any], local: dict[str, Any]) -> dict[str, Any]:
+    """Deep-merge two `sandbox` blocks the way Claude Code does at runtime
+    (ADR-029, verified against the sandboxing docs): array-valued keys
+    (`excludedCommands`, `filesystem.denyRead`/`allowRead`/`allowWrite`,
+    `network.allowedHosts`/`allowUnixSockets`) UNION across scopes — the
+    committed floor survives when the local file adds entries; scalar keys
+    (`enabled`, `failIfUnavailable`, `allowUnsandboxedCommands`, …) take the
+    local (higher-precedence) value with the rest preserved.
+
+    The union read this produces is what lets every reader (`sandbox status`,
+    `disable`, the self-heal, the seal/provenance checks) find an authored entry
+    in whichever file its classification routed it to (ADR-029 cond. 5)."""
+    out: dict[str, Any] = {}
+    for key in set(committed) | set(local):
+        cv, lv = committed.get(key), local.get(key)
+        if isinstance(cv, list) or isinstance(lv, list):
+            merged_list = list(cv or [])
+            for item in (lv or []):
+                if item not in merged_list:
+                    merged_list.append(item)
+            out[key] = merged_list
+        elif isinstance(cv, dict) or isinstance(lv, dict):
+            out[key] = _merge_sandbox_blocks(cv or {}, lv or {})
+        else:
+            out[key] = lv if key in local else cv
+    return out
+
+
 def _sandbox_block(target_root: Path) -> dict[str, Any]:
-    """The live `sandbox` settings block. Read-only; degrades to {} on a
-    missing/unreadable settings file (used by `overview` and `sandbox status`)."""
-    path = _settings_path(target_root)
+    """The EFFECTIVE live `sandbox` block — the runtime union of the committed
+    `settings.json` floor and the gitignored `settings.local.json` widenings,
+    deep-merged exactly as Claude Code merges them (ADR-029). Read-only;
+    degrades to {} when neither file is present/readable. Used by `overview`,
+    `sandbox status`, the self-heal, and the seal checks, all of which must see
+    an authored entry regardless of which file routing landed it in."""
+    committed = _sandbox_block_in(_read_settings_or_empty(target_root, _settings_path(target_root)))
+    local = _sandbox_block_in(_read_settings_or_empty(target_root, _settings_local_path(target_root)))
+    return _merge_sandbox_blocks(committed, local)
+
+
+def _read_settings_or_empty(target_root: Path, path: Path) -> dict[str, Any]:
+    """Tolerant JSON read for the read-only union surfaces — {} on absent or
+    unreadable, never raising (status/overview must not crash on a bad file)."""
     if not path.is_file():
         return {}
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
+        return json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return {}
-    sb = data.get("sandbox") if isinstance(data, dict) else None
-    return sb if isinstance(sb, dict) else {}
 
 
 def _auto_accommodate_narrowing_toolkits(target_root: Path) -> str:
@@ -1321,6 +1391,13 @@ def sandbox_enable(target_root: Path, strict: bool = False,
             "the claude-code adapter is not installed in this project; the "
             "sandbox is harness-specific, so there is nothing to enable."
         )
+    # ADR-029 routing: the baseline + narrowing floor (`enabled`,
+    # `autoAllowBashIfSandboxed`, `failIfUnavailable`, the credential `denyRead`
+    # floor) is COMMITTED → `settings.json`. The `allowUnsandboxedCommands` seal
+    # is a per-machine deviation → the gitignored `settings.local.json`. This one
+    # primitive owns both destinations and routes each key (ADR-029 cond. 2). The
+    # seal's PRESENCE is read off the runtime union (`_sandbox_block`) so the
+    # reversibility check finds it wherever it lives.
     settings = _read_settings(target_root)
     sb = settings.setdefault("sandbox", {})
     changes: list[str] = []
@@ -1344,9 +1421,14 @@ def sandbox_enable(target_root: Path, strict: bool = False,
             else "FAIL-OPEN (failIfUnavailable: false)"
         )
 
+    # The seal is a widening/deviation → routed to the per-machine local file.
+    # Its current value is read from the runtime union (committed + local).
+    seal_now = _sandbox_block(target_root).get("allowUnsandboxedCommands")
     if strict:
-        if sb.get("allowUnsandboxedCommands") is not False:
-            sb["allowUnsandboxedCommands"] = False
+        if seal_now is not False:
+            local = _read_settings_local(target_root)
+            local.setdefault("sandbox", {})["allowUnsandboxedCommands"] = False
+            _write_settings_local(target_root, local)
             changes.append("strict mode (allowUnsandboxedCommands: false)")
         # Record that pkit authored the seal (ADR-028 cond. 5 / ADR-008 rule 2):
         # the provenance entry is what lets a later non-strict enable reverse
@@ -1362,11 +1444,14 @@ def sandbox_enable(target_root: Path, strict: bool = False,
         # `dangerouslyDisableSandbox` stopgap outside the autonomy posture. A
         # `false` with NO pkit provenance is an operator's hand-set choice — left
         # UNTOUCHED (ADR-008 rule 2: never wipe an operator's hand-set entry). The
-        # key is single-writer-owned by this primitive; clearing it here is its own
-        # verb's effect, not a second writer. Provenance is cleared alongside the
-        # settings to keep the ledger and the live config in sync.
-        if sb.get("allowUnsandboxedCommands") is False and _seal_is_pkit_authored(target_root):
-            del sb["allowUnsandboxedCommands"]
+        # seal lives in the per-machine local file (ADR-029) — clear it there, and
+        # clear the provenance alongside to keep ledger and live config in sync.
+        if seal_now is False and _seal_is_pkit_authored(target_root):
+            local = _read_settings_local(target_root)
+            local_sb = local.get("sandbox")
+            if isinstance(local_sb, dict):
+                local_sb.pop("allowUnsandboxedCommands", None)
+                _write_settings_local(target_root, local)
             _clear_seal_provenance(target_root)
             changes.append("strict off (unsandboxed escape restored)")
 
@@ -2189,6 +2274,30 @@ _ALLOWANCE_KEY = {
     "exclude-command": (None, "excludedCommands"),
 }
 
+# ADR-029 routing key: which allowance kinds are WIDENING (boundary-lowering) and
+# so route to the gitignored `settings.local.json`, never the committed file.
+# Everything else (narrowing floor + baseline) routes to `settings.json`. This is
+# the SAME narrowing/widening classification ADR-008 already encodes — the writer
+# invents no second axis; it reads the effect off the entry (`exclude-command`
+# and `weaker-tls` are the widening kinds, ADR-008 rule 1). The single sandbox-
+# block writer (`_apply_allowances` / `_remove_allowances`) consults this to
+# choose the destination FILE; there is still exactly one writer, now routing
+# (ADR-008 rule 2 / ADR-029 cond. 2 — emphatically not two writers).
+_WIDENING_ALLOWANCE_KINDS = {"exclude-command", "weaker-tls"}
+
+
+def _route_local(allowance: dict) -> bool:
+    """True when this allowance is WIDENING and so belongs in the gitignored
+    per-machine file (ADR-029). The destination is keyed to ADR-008's effect
+    classification: `effect: widening` OR a known widening kind routes local; the
+    narrowing floor + baseline stays committed. Keying on both the declared
+    `effect` and the kind keeps the rule robust to a caller that omits `effect`
+    on a structurally-widening kind."""
+    return (
+        allowance.get("effect") == "widening"
+        or allowance.get("kind") in _WIDENING_ALLOWANCE_KINDS
+    )
+
 
 def _narrowing(allowances: list[dict]) -> list[dict]:
     return [a for a in allowances if a.get("effect") == "narrowing"]
@@ -2265,9 +2374,17 @@ def _apply_allowances(target_root: Path, allowances: list[dict], toolkit: str) -
     allow-host allowance is unambiguously widening — it must never be written by
     this path (which is the narrowing / auto-apply writer). Callers that reach
     this function with such a value have a programming error; we refuse rather
-    than silently open unbounded egress."""
-    settings = _read_settings(target_root)
-    sb = settings.setdefault("sandbox", {})
+    than silently open unbounded egress.
+
+    ADR-029 routing: this single writer routes each allowance to its destination
+    FILE by ADR-008's narrowing/widening classification (`_route_local`) — a
+    widening (`exclude-command`, `weaker-tls`) lands in the gitignored
+    `settings.local.json` so it can never be committed; the narrowing floor +
+    baseline land in the committed `settings.json`. One writer, routing — not two
+    writers (ADR-008 rule 2 / ADR-029 cond. 2)."""
+    committed = _read_settings(target_root)
+    local = _read_settings_local(target_root)
+    committed_dirty = local_dirty = False
     prov = _load_provenance(target_root)
     seen = {(e["kind"], e.get("value")) for e in prov}
     notes: list[str] = []
@@ -2279,19 +2396,35 @@ def _apply_allowances(target_root: Path, allowances: list[dict], toolkit: str) -
                 f"every host) and must not be auto-applied. Use `pkit permissions sandbox "
                 f"exclude --weaker-tls` or the explicit widening path (ADR-015 fork 6)."
             )
+        # Route to the committed floor or the gitignored per-machine file.
+        if _route_local(a):
+            target, sb = local, local.setdefault("sandbox", {})
+        else:
+            target, sb = committed, committed.setdefault("sandbox", {})
+        touched = False
         if kind == "weaker-tls":
             if sb.get("enableWeakerNetworkIsolation") is not True:
                 sb["enableWeakerNetworkIsolation"] = True
                 notes.append("enableWeakerNetworkIsolation: true")
+                touched = True
         else:
             lst = _allowance_list(sb, kind)
             if lst is not None and value not in lst:
                 lst.append(value)
                 notes.append(f"{kind} {value}")
+                touched = True
+        if touched:
+            if target is local:
+                local_dirty = True
+            else:
+                committed_dirty = True
         if (kind, value) not in seen:
             prov.append({"kind": kind, "value": value, "toolkit": toolkit})
             seen.add((kind, value))
-    _write_settings(target_root, settings)
+    if committed_dirty:
+        _write_settings(target_root, committed)
+    if local_dirty:
+        _write_settings_local(target_root, local)
     _dump_provenance(target_root, prov)
     return notes
 
@@ -2300,9 +2433,16 @@ def _remove_allowances(target_root: Path, toolkit: str) -> list[str]:
     """Remove the sandbox-block entries a toolkit contributed — but ONLY pkit-
     authored entries (in provenance) no longer claimed by another toolkit still
     in provenance. Operator hand-added entries are never in provenance, so are
-    never removed (ADR-002 §52 footgun avoided). Returns human notes."""
-    settings = _read_settings(target_root)
-    sb = settings.get("sandbox")
+    never removed (ADR-002 §52 footgun avoided). Returns human notes.
+
+    ADR-029 routing: removal is the mirror of `_apply_allowances` — each entry is
+    dropped from the file its classification routed it to (a widening from the
+    gitignored `settings.local.json`, the narrowing floor from the committed
+    `settings.json`), keyed by the same `_route_local` discriminator. Still one
+    writer, routing on both ends."""
+    committed = _read_settings(target_root)
+    local = _read_settings_local(target_root)
+    committed_dirty = local_dirty = False
     prov = _load_provenance(target_root)
     mine = [e for e in prov if e.get("toolkit") == toolkit]
     if not mine:
@@ -2310,20 +2450,30 @@ def _remove_allowances(target_root: Path, toolkit: str) -> list[str]:
     remaining = [e for e in prov if e.get("toolkit") != toolkit]
     still_claimed = {(e["kind"], e.get("value")) for e in remaining}
     notes: list[str] = []
-    if isinstance(sb, dict):
-        for e in mine:
-            kind, value = e["kind"], e.get("value")
-            if (kind, value) in still_claimed:
-                continue  # another active toolkit still needs it
-            if kind == "weaker-tls":
-                if sb.pop("enableWeakerNetworkIsolation", None) is not None:
-                    notes.append("enableWeakerNetworkIsolation removed")
-            else:
-                lst = _allowance_list(sb, kind)
-                if lst is not None and value in lst:
-                    lst.remove(value)
-                    notes.append(f"{kind} {value} removed")
-        _write_settings(target_root, settings)
+    for e in mine:
+        kind, value = e["kind"], e.get("value")
+        if (kind, value) in still_claimed:
+            continue  # another active toolkit still needs it
+        target = local if _route_local(e) else committed
+        sb = target.get("sandbox")
+        if not isinstance(sb, dict):
+            continue
+        if kind == "weaker-tls":
+            if sb.pop("enableWeakerNetworkIsolation", None) is not None:
+                notes.append("enableWeakerNetworkIsolation removed")
+                local_dirty = local_dirty or target is local
+                committed_dirty = committed_dirty or target is committed
+        else:
+            lst = _allowance_list(sb, kind)
+            if lst is not None and value in lst:
+                lst.remove(value)
+                notes.append(f"{kind} {value} removed")
+                local_dirty = local_dirty or target is local
+                committed_dirty = committed_dirty or target is committed
+    if committed_dirty:
+        _write_settings(target_root, committed)
+    if local_dirty:
+        _write_settings_local(target_root, local)
     _dump_provenance(target_root, remaining)
     return notes
 
@@ -2709,7 +2859,9 @@ def sandbox_exclude(target_root: Path, command: str, remove: bool = False,
     target = "weaker TLS isolation" if weaker_tls else f"`{command}`"
     if remove:
         # Remove just this entry, provenance-scoped to the requested toolkit tag.
-        settings = _read_settings(target_root)
+        # The exclusion is a WIDENING, so it lives in the gitignored per-machine
+        # file (ADR-029) — drop it from there, not the committed floor.
+        settings = _read_settings_local(target_root)
         sb = settings.get("sandbox")
         prov = _load_provenance(target_root)
         key = ("weaker-tls", None) if weaker_tls else ("exclude-command", command)
@@ -2722,7 +2874,7 @@ def sandbox_exclude(target_root: Path, command: str, remove: bool = False,
                 lst = _allowance_list(sb, "exclude-command")
                 if lst is not None and command in lst:
                     lst.remove(command)
-            _write_settings(target_root, settings)
+            _write_settings_local(target_root, settings)
         _dump_provenance(target_root, kept)
         return f"removed exclusion: {target} now runs inside the box again.\n"
 
@@ -2731,7 +2883,8 @@ def sandbox_exclude(target_root: Path, command: str, remove: bool = False,
         f"⚠ WIDENING the boundary: {target} now runs OUTSIDE the OS box — UNCONFINED, "
         f"with full host filesystem and network reach.\n"
         f"  {'applied' if notes else 'already excluded'}. This is NOT recorded in any "
-        f"committed file (it lowers the floor; per-operator + per-machine only).\n"
+        f"committed file — it lowers the floor, so it is routed to the gitignored "
+        f"`.claude/settings.local.json` (per-operator + per-machine only, ADR-029).\n"
         f"  It is reported by `pkit permissions sandbox status` and counted by "
         f"`pkit permissions probe`.\n" + _RESTART_NOTE + "\n"
     )
