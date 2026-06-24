@@ -779,6 +779,10 @@ def test_setup_autonomy_first_run_stands_up_and_stops_at_restart(tmp_path, monke
     assert "goal reached" not in out  # never declared on configuration alone
     data = _settings(proj)
     assert data["sandbox"]["enabled"] is True and data["sandbox"]["failIfUnavailable"] is True
+    # ADR-028: the autonomy posture seals the unsandboxed escape by default —
+    # strict fail-over is written as part of standing up confinement.
+    assert data["sandbox"]["allowUnsandboxedCommands"] is False
+    assert "unsandboxed escape sealed" in out
     assert any("permission-hook" in h.get("command", "")
                for e in data["hooks"]["PreToolUse"] for h in e.get("hooks", []))
 
@@ -851,6 +855,162 @@ def test_setup_autonomy_no_dangerous_flag(tmp_path, monkeypatch):
     proj = _with_adapter(_setup(tmp_path))
     out = _run_fail(proj, monkeypatch, "setup", "autonomy", "--dangerously-allow-unconfined")
     assert "no such option" in out.lower() or "No such option" in out
+
+
+# ---- ADR-028: setup autonomy seals the unsandboxed escape (strict default) ---
+
+def test_setup_autonomy_seals_unsandboxed_escape_by_default(tmp_path, monkeypatch):
+    # ADR-028 cond. 1+2: standing up the autonomy posture writes
+    # `allowUnsandboxedCommands: false` by composing the EXISTING strict path —
+    # the per-command `dangerouslyDisableSandbox` escape is inert under autonomy.
+    proj = _with_adapter(_setup(tmp_path))
+    out = _run(proj, monkeypatch, "setup", "autonomy")
+    assert "unsandboxed escape sealed" in out
+    assert _settings(proj)["sandbox"]["allowUnsandboxedCommands"] is False
+
+
+def test_setup_autonomy_seal_is_idempotent_and_reported_on_resume(tmp_path, monkeypatch):
+    # Re-running setup autonomy keeps the seal and reports it as already-sealed.
+    proj = _with_adapter(_setup(tmp_path))
+    _run(proj, monkeypatch, "setup", "autonomy")
+    out = _run(proj, monkeypatch, "setup", "autonomy")
+    assert "already — OS sandbox enabled" in out and "escape sealed" in out
+    assert _settings(proj)["sandbox"]["allowUnsandboxedCommands"] is False
+
+
+def test_setup_autonomy_seal_orthogonal_to_macos_exclusion(tmp_path, monkeypatch):
+    # ADR-028 cond. 3 (the dp-3 keystone probe): the macOS pkit/uv
+    # `excludedCommands` exclusion (ADR-014) STILL RESOLVES with the seal on.
+    # Different keys, different layers — the seal must not break the path that
+    # makes macOS autonomy work. We force the macOS old-uv predicate so the
+    # required exclusion auto-applies, then assert BOTH the seal AND the
+    # exclusion are present and honoured together.
+    _force_uv(monkeypatch, platform="darwin", version="0.9.8")
+    proj = _with_adapter(_setup(tmp_path))
+    (proj / "uv.lock").write_text("")
+    out = _run(proj, monkeypatch, "setup", "autonomy")
+    sb = _sb(proj)
+    # The seal is written (strict default).
+    assert sb["allowUnsandboxedCommands"] is False
+    assert "REQUIRED exclusion auto-applied: `uv`" in out
+
+    # The keystone: not "the key sits in the dict" but "the exclusion still
+    # RESOLVES". Drive the real resolution entry point — `sandbox status`, the
+    # path that consumes `excludedCommands` and resolves it (attributed by
+    # provenance) into the reported out-of-box set — UNDER the live seal, and
+    # assert the resolved auto out-of-box set still contains `uv`. Same keys,
+    # same settings, seal on; the resolution path must be unbroken.
+    assert sb["allowUnsandboxedCommands"] is False, "seal must be live for the probe"
+    status = _run(proj, monkeypatch, "sandbox")
+    # The seal resolves to "sealed" AND the exclusion resolves to the auto-applied
+    # out-of-box line — both honoured at once, different keys / different layers.
+    assert "unsandboxed escape sealed (strict)" in status
+    assert "uv — auto-applied (required" in status
+    # The resolved out-of-box set (what `excludedCommands` resolves to) contains uv.
+    excluded_line = next(
+        line for line in status.splitlines() if "command(s) run outside the box" in line
+    )
+    assert "1 command(s)" in excluded_line
+
+
+def test_setup_autonomy_seal_is_reversible_via_non_strict_enable(tmp_path, monkeypatch):
+    # ADR-028 cond. 5/6: the escape survives outside the posture — `sandbox
+    # enable` without --strict turns the seal off, restoring the operator's
+    # `dangerouslyDisableSandbox` stopgap. Strict is the only (reversible) lever.
+    proj = _with_adapter(_setup(tmp_path))
+    _run(proj, monkeypatch, "setup", "autonomy")
+    assert _settings(proj)["sandbox"]["allowUnsandboxedCommands"] is False
+    out = _run(proj, monkeypatch, "sandbox", "enable")    # no --strict
+    assert "strict off" in out and "escape restored" in out
+    assert "allowUnsandboxedCommands" not in _settings(proj)["sandbox"]
+
+
+def _prov_entries(proj: Path) -> list:
+    """Read the sandbox-provenance ledger entries (empty when absent)."""
+    from ruamel.yaml import YAML as _YAML
+    p = proj / ".pkit" / "permissions" / "project" / "sandbox-provenance.yaml"
+    if not p.is_file():
+        return []
+    with p.open() as fh:
+        return (_YAML(typ="safe").load(fh) or {}).get("entries", []) or []
+
+
+def test_non_strict_enable_preserves_operator_hand_set_seal(tmp_path, monkeypatch):
+    # ADR-008 rule 2 regression guard: an operator who hand-sets
+    # `allowUnsandboxedCommands: false` (NO pkit provenance) keeps it across a
+    # non-strict `sandbox enable`. pkit reverses only the *posture's* pkit-set
+    # seal (ADR-028 cond. 5), never an operator's hand-hardened box. This is the
+    # case the unprovenanced `del` broke.
+    proj = _with_adapter(_setup(
+        tmp_path,
+        settings=json.dumps({"sandbox": {"enabled": True, "allowUnsandboxedCommands": False}}),
+    ))
+    # No seal provenance exists — the operator set it by raw edit.
+    assert not any(e.get("kind") == "seal" for e in _prov_entries(proj))
+    out = _run(proj, monkeypatch, "sandbox", "enable")    # no --strict
+    # The operator's seal is UNTOUCHED — never cleared, never reported as restored.
+    assert _settings(proj)["sandbox"]["allowUnsandboxedCommands"] is False
+    assert "escape restored" not in out
+
+
+def test_non_strict_enable_clears_pkit_authored_seal_and_its_provenance(tmp_path, monkeypatch):
+    # ADR-028 cond. 5: pkit sets the seal via `--strict` → provenance recorded →
+    # a non-strict enable reverses the posture's own seal AND removes its
+    # provenance entry (ledger kept in sync with settings).
+    proj = _with_adapter(_setup(tmp_path))
+    _run(proj, monkeypatch, "sandbox", "enable", "--strict")
+    assert _settings(proj)["sandbox"]["allowUnsandboxedCommands"] is False
+    assert any(e.get("kind") == "seal" and e.get("toolkit") == "_strict"
+               for e in _prov_entries(proj)), "strict enable must record seal provenance"
+    out = _run(proj, monkeypatch, "sandbox", "enable")    # no --strict
+    assert "escape restored" in out
+    assert "allowUnsandboxedCommands" not in _settings(proj)["sandbox"]
+    assert not any(e.get("kind") == "seal" for e in _prov_entries(proj)), \
+        "seal provenance must be cleared alongside the settings"
+
+
+def test_seal_round_trips_setup_autonomy_then_non_strict_then_resetup(tmp_path, monkeypatch):
+    # Coherence: setup autonomy seals (provenanced) → non-strict enable reverses
+    # it (settings + provenance cleared) → a fresh setup autonomy re-seals
+    # (provenance recorded again). The posture seal is fully reversible and
+    # re-applicable; the ledger stays consistent across the round-trip.
+    proj = _with_adapter(_setup(tmp_path))
+    _run(proj, monkeypatch, "setup", "autonomy")
+    assert _settings(proj)["sandbox"]["allowUnsandboxedCommands"] is False
+    assert any(e.get("kind") == "seal" for e in _prov_entries(proj))
+
+    _run(proj, monkeypatch, "sandbox", "enable")          # non-strict: reverse
+    assert "allowUnsandboxedCommands" not in _settings(proj)["sandbox"]
+    assert not any(e.get("kind") == "seal" for e in _prov_entries(proj))
+
+    _run(proj, monkeypatch, "setup", "autonomy")          # re-seal
+    assert _settings(proj)["sandbox"]["allowUnsandboxedCommands"] is False
+    assert any(e.get("kind") == "seal" for e in _prov_entries(proj))
+
+
+def test_sandbox_status_reports_seal_honestly(tmp_path, monkeypatch):
+    # ADR-028 cond. 4: status reports the LIVE `allowUnsandboxedCommands` value,
+    # never a fail-open claim. Sealed only when the key is actually false.
+    proj = _with_adapter(_setup(tmp_path))
+    # Plain enable (no strict) → escape is OPEN, reported honestly as not sealed.
+    _run(proj, monkeypatch, "sandbox", "enable")
+    out = _run(proj, monkeypatch, "sandbox")
+    assert "unsandboxed escape OPEN" in out
+    assert "sealed (strict)" not in out
+    # Strict enable → sealed, reported as such.
+    _run(proj, monkeypatch, "sandbox", "enable", "--strict")
+    out = _run(proj, monkeypatch, "sandbox")
+    assert "unsandboxed escape sealed (strict)" in out
+
+
+def test_setup_autonomy_seal_leaves_decide_py_untouched(tmp_path, monkeypatch):
+    # ADR-028 cond. 6: the seal is settings/posture only — decide.py is not
+    # modified by standing up autonomy (the same-code invariant, ADR-003).
+    proj = _with_adapter(_setup(tmp_path))
+    decide = proj / ".pkit" / "permissions" / "decide.py"
+    before = decide.read_text()
+    _run(proj, monkeypatch, "setup", "autonomy")
+    assert decide.read_text() == before
 
 
 # ---- confinement allowances (ADR-008, #281) ----------------------------------

@@ -1348,9 +1348,27 @@ def sandbox_enable(target_root: Path, strict: bool = False,
         if sb.get("allowUnsandboxedCommands") is not False:
             sb["allowUnsandboxedCommands"] = False
             changes.append("strict mode (allowUnsandboxedCommands: false)")
-    # not strict → leave the key untouched: the harness default (fail-over via
-    # the normal permission flow) is the reconciled-safe default, and an
-    # operator's explicit choice survives.
+        # Record that pkit authored the seal (ADR-028 cond. 5 / ADR-008 rule 2):
+        # the provenance entry is what lets a later non-strict enable reverse
+        # the *posture's* seal while leaving an operator's hand-set `false`
+        # untouched. Idempotent — a re-seal is a no-op on the ledger.
+        _record_seal_provenance(target_root)
+    else:
+        # not strict → the unsandboxed escape is OPEN: restore the harness default
+        # (fail-over via the normal permission flow) by dropping the seal — but
+        # ONLY when pkit authored it (provenance present). This is the reversibility
+        # lever ADR-028 cond. 5 names: `sandbox enable` without --strict reverses
+        # the *posture's* pkit-set seal, so the operator regains the
+        # `dangerouslyDisableSandbox` stopgap outside the autonomy posture. A
+        # `false` with NO pkit provenance is an operator's hand-set choice — left
+        # UNTOUCHED (ADR-008 rule 2: never wipe an operator's hand-set entry). The
+        # key is single-writer-owned by this primitive; clearing it here is its own
+        # verb's effect, not a second writer. Provenance is cleared alongside the
+        # settings to keep the ledger and the live config in sync.
+        if sb.get("allowUnsandboxedCommands") is False and _seal_is_pkit_authored(target_root):
+            del sb["allowUnsandboxedCommands"]
+            _clear_seal_provenance(target_root)
+            changes.append("strict off (unsandboxed escape restored)")
 
     fs = sb.setdefault("filesystem", {})
     deny = fs.setdefault("denyRead", [])
@@ -1509,6 +1527,17 @@ def sandbox_status(target_root: Path) -> str:
         + ("strict — locked; failing commands can't retry outside the box" if strict
            else "default — failing commands retry outside the box via the normal "
                 "permission flow (never auto-allowed)")
+    )
+    # Honest reported state of the live `allowUnsandboxedCommands` value (ADR-028
+    # cond. 4): sealed only when the key is actually false — never a fail-open
+    # claim of a boundary the configuration does not hold.
+    lines.append(
+        "  unsandboxed escape "
+        + ("sealed (strict) — the per-command `dangerouslyDisableSandbox` escape "
+           "is inert; an agent can't silently disable the box" if strict
+           else "OPEN — the per-command `dangerouslyDisableSandbox` escape can "
+                "disable the box for a call; run `sandbox enable --strict` "
+                "(or `setup autonomy`) to seal it")
     )
     lines.append(
         "  credential floor "
@@ -2299,6 +2328,39 @@ def _remove_allowances(target_root: Path, toolkit: str) -> list[str]:
     return notes
 
 
+def _seal_is_pkit_authored(target_root: Path) -> bool:
+    """True when a `seal` provenance entry tagged `_SEAL_TOOLKIT` is present —
+    i.e. pkit wrote `allowUnsandboxedCommands: false` (via `sandbox enable
+    --strict` / `setup autonomy`). False when the live `false` has no such
+    provenance: an operator hand-set it. This is the ADR-008 rule-2 guard for
+    the non-strict clear path — pkit reverses only its own seal (ADR-028 cond.
+    5), never an operator's hand choice."""
+    return any(e.get("kind") == _SEAL_KIND and e.get("toolkit") == _SEAL_TOOLKIT
+               for e in _load_provenance(target_root))
+
+
+def _record_seal_provenance(target_root: Path) -> None:
+    """Record that pkit authored the unsandboxed-escape seal (ADR-028 cond. 5 /
+    ADR-008 rule 2: single provenance ledger). Idempotent — de-duplicated on the
+    (kind, toolkit) pair, so re-running strict enable / setup autonomy is a
+    no-op on the ledger."""
+    if _seal_is_pkit_authored(target_root):
+        return
+    prov = _load_provenance(target_root)
+    prov.append({"kind": _SEAL_KIND, "value": None, "toolkit": _SEAL_TOOLKIT})
+    _dump_provenance(target_root, prov)
+
+
+def _clear_seal_provenance(target_root: Path) -> None:
+    """Drop pkit's seal provenance entry (keeping the ledger in sync with the
+    settings on the non-strict clear). Idempotent."""
+    prov = _load_provenance(target_root)
+    remaining = [e for e in prov
+                 if not (e.get("kind") == _SEAL_KIND and e.get("toolkit") == _SEAL_TOOLKIT)]
+    if len(remaining) != len(prov):
+        _dump_provenance(target_root, remaining)
+
+
 # ---- host-environment detection (ADR-010) ----------------------------------
 #
 # Narrowing socket accommodations whose source is a HOST fact (the SSH-agent
@@ -2846,6 +2908,16 @@ _UV_KNOWN_FIXED_RELEASE: str | None = None
 # self-heal can tell a pkit-required carve-out from an operator's hand-added one.
 _REQUIRED_TOOLKIT = "_required"
 
+# Distinct provenance tag for the pkit-authored unsandboxed-escape SEAL
+# (`allowUnsandboxedCommands: false`, ADR-028). The seal is the autonomy
+# posture's pkit-set default — distinct from an operator who hand-sets `false`
+# (no provenance). The tag is what lets the non-strict `sandbox enable` clear
+# reverse ONLY the posture's own seal (ADR-028 cond. 5) while leaving an
+# operator's hand-set choice untouched (ADR-008 rule 2). `kind: "seal"` is a
+# scalar-key provenance entry, not a list-allowance like `exclude-command`.
+_SEAL_TOOLKIT = "_strict"
+_SEAL_KIND = "seal"
+
 
 def _read_uv_version() -> Version | None:
     """Read the installed uv's version robustly, as a packaging Version (or None
@@ -3137,17 +3209,27 @@ def setup_autonomy(target_root: Path, profile: str = "autonomous") -> tuple[str,
             "  [2/4] enforcement   ✓ done — PreToolUse hook registered + "
             "native guardrail denies ensured"
         )
-    # [3/4] confinement — the OS sandbox, always fail-closed. Primitive:
-    # sandbox_enable (no flag pass-through per ADR-007 rule 6).
+    # [3/4] confinement — the OS sandbox, always fail-closed AND strict. Primitive:
+    # sandbox_enable with strict=True (no flag pass-through per ADR-007 rule 6).
+    # Strict is the autonomy posture's default (ADR-028): it composes the existing
+    # `sandbox enable --strict` write (`allowUnsandboxedCommands: false`) so the
+    # per-command `dangerouslyDisableSandbox` escape is inert under autonomy — an
+    # agent cannot silently disable the box. The seal is the existing primitive's
+    # effect (no new writer, "owns nothing" per ADR-007 rule 2), reversible by
+    # turning strict off (`sandbox enable` without --strict, or autonomy down).
     sb = _sandbox_block(target_root)
     was_on = sb.get("enabled") is True
-    if was_on and sb.get("failIfUnavailable") is True:
-        lines.append("  [3/4] confinement   ✓ already — OS sandbox enabled (fail-closed)")
+    sealed = sb.get("allowUnsandboxedCommands") is False
+    if was_on and sb.get("failIfUnavailable") is True and sealed:
+        lines.append(
+            "  [3/4] confinement   ✓ already — OS sandbox enabled "
+            "(fail-closed, unsandboxed escape sealed)"
+        )
     else:
-        sandbox_enable(target_root)
+        sandbox_enable(target_root, strict=True)
         lines.append(
             "  [3/4] confinement   ✓ done — OS sandbox enabled "
-            "(fail-closed, credential denyRead floor)"
+            "(fail-closed, strict — unsandboxed escape sealed, credential denyRead floor)"
         )
 
     # Confinement accommodations (ADR-008 + ADR-010 host): make the box usable —
