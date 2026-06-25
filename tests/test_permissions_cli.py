@@ -458,7 +458,12 @@ def test_sandbox_enable_writes_fail_closed_block(tmp_path, monkeypatch):
     assert "sandbox enabled" in out
     assert "not hot-reloaded" in out                       # restart note
     sb = _settings(proj)["sandbox"]
-    assert sb["enabled"] is True
+    # ADR-032: `enabled` is harness-co-owned → routes to the gitignored local
+    # file (the `/sandbox` panel's home), NOT the committed floor. pkit no longer
+    # authors a parallel committed `enabled` key.
+    assert "enabled" not in sb
+    assert _sb_local(proj)["enabled"] is True
+    assert _sb(proj)["enabled"] is True                    # union resolves on
     assert sb["autoAllowBashIfSandboxed"] is True
     assert sb["failIfUnavailable"] is True                 # the ADR-004 invariant
     assert "allowUnsandboxedCommands" not in sb            # reconciled: harness default
@@ -509,39 +514,53 @@ def test_sandbox_dangerous_flag_is_loud_and_not_persisted_as_default(tmp_path, m
     assert _settings(proj)["sandbox"]["failIfUnavailable"] is True
 
 
-def test_sandbox_disable_flips_enabled_only(tmp_path, monkeypatch):
+def test_sandbox_disable_flips_enabled_in_local_leaves_floor(tmp_path, monkeypatch):
     proj = _with_adapter(_setup(tmp_path))
     _run(proj, monkeypatch, "sandbox", "enable", "--strict")
     out = _run(proj, monkeypatch, "sandbox", "disable")
     assert "disabled" in out and "not hot-reloaded" in out
-    sb = _settings(proj)["sandbox"]              # committed file: baseline + floor
-    assert sb["enabled"] is False
+    # ADR-032: disable writes the single per-machine `enabled: false` the harness
+    # reads (local file), so the union resolves OFF.
+    assert _sb_local(proj)["enabled"] is False
+    assert _sb(proj)["enabled"] is False
+    # The committed floor survives — disable only touches `enabled`.
+    sb = _settings(proj)["sandbox"]
     assert "~/.ssh" in sb["filesystem"]["denyRead"]
-    # The seal is a deviation in the gitignored file; disable flips only the
-    # committed `enabled`, so the seal survives there (ADR-029).
+    # The seal is a deviation in the gitignored file; disable leaves it.
     assert _sb_local(proj)["allowUnsandboxedCommands"] is False
     assert "already disabled" in _run(proj, monkeypatch, "sandbox", "disable")
 
 
-def test_sandbox_disable_reports_local_enabled_override(tmp_path, monkeypatch):
-    # `disable` flips only the COMMITTED `enabled`, but the runtime is the union
-    # and `enabled` is scalar local-wins (ADR-029). If settings.local.json carries
-    # a per-machine `enabled: true` (the harness /sandbox panel writes there — a
-    # key pkit does not own), the box stays ON. disable must NOT silently claim the
-    # box is off; it must report the override honestly.
+def test_sandbox_enable_then_disable_resolves_off(tmp_path, monkeypatch):
+    # ADR-032 regression for the believed-off-but-on disable bug: pre-ADR-032 pkit
+    # flipped a COMMITTED `enabled` while the harness-local `enabled: true` kept the
+    # box on, so disable left the union ON. Now enable writes the local key the
+    # harness reads, and disable writes the SAME local key off → the union resolves
+    # OFF. This is the load-bearing fix.
     proj = _with_adapter(_setup(tmp_path))
-    _run(proj, monkeypatch, "sandbox", "enable")          # committed enabled=true
-    local_path = proj / ".claude" / "settings.local.json"
-    local = json.loads(local_path.read_text()) if local_path.is_file() else {}
-    local.setdefault("sandbox", {})["enabled"] = True     # per-machine override
-    local_path.write_text(json.dumps(local))
-    out = _run(proj, monkeypatch, "sandbox", "disable")
-    # Committed floor was cleared, but the union still resolves ON.
-    assert _settings(proj)["sandbox"]["enabled"] is False
-    assert _sb(proj)["enabled"] is True
-    # Honest report: names the local override; does NOT claim the box is now off.
-    assert "still ON" in out and "settings.local.json" in out
-    assert "sandbox disabled (enabled: false" not in out
+    _run(proj, monkeypatch, "sandbox", "enable")
+    assert _sb(proj)["enabled"] is True                    # union on after enable
+    assert _sb_local(proj)["enabled"] is True              # written to the local key
+    _run(proj, monkeypatch, "sandbox", "disable")
+    assert _sb(proj)["enabled"] is False                   # union OFF — actually off
+    assert _sb_local(proj)["enabled"] is False             # the harness-read key is off
+
+
+def test_sandbox_disable_clears_drifted_committed_enabled(tmp_path, monkeypatch):
+    # A pre-ADR-032 committed `enabled: true` (drift) must not keep the box on via
+    # the union after disable. disable writes local `enabled: false` (local-wins)
+    # AND clears the stale committed source, so nothing in the union claims on.
+    proj = _with_adapter(_setup(tmp_path))
+    _run(proj, monkeypatch, "sandbox", "enable")           # local enabled=true
+    # Inject a drifted committed enabled: true (the regression this guards).
+    committed_path = proj / ".claude" / "settings.json"
+    committed = json.loads(committed_path.read_text())
+    committed.setdefault("sandbox", {})["enabled"] = True
+    committed_path.write_text(json.dumps(committed))
+    _run(proj, monkeypatch, "sandbox", "disable")
+    assert _settings(proj)["sandbox"]["enabled"] is False  # stale committed cleared
+    assert _sb_local(proj)["enabled"] is False
+    assert _sb(proj)["enabled"] is False                   # union OFF
 
 
 def test_sandbox_status_off_and_on(tmp_path, monkeypatch):
@@ -805,7 +824,12 @@ def test_setup_autonomy_first_run_stands_up_and_stops_at_restart(tmp_path, monke
     assert "restart the session" in out
     assert "goal reached" not in out  # never declared on configuration alone
     data = _settings(proj)
-    assert data["sandbox"]["enabled"] is True and data["sandbox"]["failIfUnavailable"] is True
+    # ADR-032: `enabled` routes to the local harness-co-owned file; the committed
+    # floor keeps only the operator-invariant `failIfUnavailable`.
+    assert "enabled" not in data["sandbox"]
+    assert _sb_local(proj)["enabled"] is True
+    assert _sb(proj)["enabled"] is True
+    assert data["sandbox"]["failIfUnavailable"] is True
     # ADR-028: the autonomy posture seals the unsandboxed escape by default —
     # strict fail-over is written as part of standing up confinement. ADR-029:
     # the seal is a deviation → it lands in the gitignored local file, not the
@@ -868,7 +892,10 @@ def test_setup_autonomy_down_reports_residuals_loudly(tmp_path, monkeypatch):
     assert "STILL ACTIVE in the model" in out and "UNENFORCED" in out
     assert "profile activate read-only" in out
     data = _settings(proj)
-    assert data["sandbox"]["enabled"] is False
+    # ADR-032: disable writes `enabled: false` to the local harness-co-owned file;
+    # the union resolves OFF. The committed floor keeps the operator keys.
+    assert _sb_local(proj)["enabled"] is False
+    assert _sb(proj)["enabled"] is False
     assert "~/.ssh" in data["sandbox"]["filesystem"]["denyRead"]   # operator keys left
     # Idempotent re-run.
     out = _run(proj, monkeypatch, "setup", "autonomy", "down")
@@ -1727,6 +1754,161 @@ def test_no_advisory_when_nothing_untagged(tmp_path, monkeypatch):
     assert "won't move what it didn't author" not in out
 
 
+# ---- per-machine relocation pass (ADR-032 socket + enabled, #303) -------------
+
+def _seed_committed_socket(proj: Path, sock: str, *, tagged: bool) -> None:
+    """Seed a pre-ADR-032 drift: a host socket path in the COMMITTED
+    settings.json's network.allowUnixSockets, optionally with a `socket:`
+    provenance tag (tagged=False models a foreign/untagged entry pkit must not
+    move)."""
+    from ruamel.yaml import YAML as _YAML
+    sp = proj / ".claude" / "settings.json"
+    data = json.loads(sp.read_text()) if sp.is_file() else {}
+    net = data.setdefault("sandbox", {}).setdefault("network", {})
+    net.setdefault("allowUnixSockets", []).append(sock)
+    sp.parent.mkdir(parents=True, exist_ok=True)
+    sp.write_text(json.dumps(data, indent=2) + "\n")
+    if tagged:
+        pp = proj / ".pkit" / "permissions" / "project" / "sandbox-provenance.yaml"
+        pp.parent.mkdir(parents=True, exist_ok=True)
+        entries = []
+        if pp.is_file():
+            entries = _YAML(typ="safe").load(pp.open()).get("entries", []) or []
+        entries.append({"kind": "allow-unix-socket", "value": sock,
+                        "toolkit": "socket:ssh-agent"})
+        with pp.open("w") as fh:
+            _YAML().dump({"schema_version": 1, "entries": entries}, fh)
+
+
+def test_relocate_drifted_committed_socket_to_local(tmp_path, monkeypatch):
+    # ADR-032: a host socket path baked into the tracked settings.json (the live
+    # regression) is MOVED to the gitignored settings.local.json on the next
+    # `setup autonomy`. Provenance-scoped (only the `socket:`-tagged path moves).
+    proj = _with_adapter(_setup(tmp_path))
+    sock = "/Users/someone/.1password/agent.sock"
+    _seed_committed_socket(proj, sock, tagged=True)
+    assert sock in _sb_committed(proj)["network"]["allowUnixSockets"]
+    assert sock in _sb(proj)["network"]["allowUnixSockets"]
+
+    out = _run(proj, monkeypatch, "setup", "autonomy")
+
+    # Relocated: gone from committed, present in local; union unchanged.
+    assert sock not in _sb_committed(proj).get("network", {}).get("allowUnixSockets", [])
+    assert sock in _sb_local(proj)["network"]["allowUnixSockets"]
+    assert sock in _sb(proj)["network"]["allowUnixSockets"]
+    assert "relocated host socket" in out and sock in out
+
+
+def test_relocate_does_not_move_untagged_committed_socket(tmp_path, monkeypatch):
+    # ADR-032 provenance-scope: an UNTAGGED socket in the committed file is left
+    # untouched — don't move what pkit didn't author.
+    proj = _with_adapter(_setup(tmp_path))
+    sock = "/Users/someone/.foreign/agent.sock"
+    _seed_committed_socket(proj, sock, tagged=False)
+
+    out = _run(proj, monkeypatch, "setup", "autonomy")
+
+    assert sock in _sb_committed(proj)["network"]["allowUnixSockets"]  # untouched
+    assert sock not in _sb_local(proj).get("network", {}).get("allowUnixSockets", [])
+    assert "relocated host socket" not in out
+
+
+def test_relocate_drifted_committed_enabled_to_local(tmp_path, monkeypatch):
+    # ADR-032: a drifted committed `enabled: true` is moved to the harness-co-owned
+    # local key on setup; the committed source is cleared so the union has no
+    # residual ON source other than the (intended) local one.
+    proj = _with_adapter(_setup(tmp_path))
+    sp = proj / ".claude" / "settings.json"
+    sp.parent.mkdir(parents=True, exist_ok=True)
+    sp.write_text(json.dumps({"sandbox": {"enabled": True}}, indent=2) + "\n")
+
+    out = _run(proj, monkeypatch, "setup", "autonomy")
+
+    assert _sb_committed(proj).get("enabled") is False  # stale committed cleared
+    assert _sb_local(proj)["enabled"] is True           # moved to harness-co-owned key
+    assert _sb(proj)["enabled"] is True                 # union still on (live-throughout)
+    assert "relocated `enabled`" in out
+
+
+def test_relocate_per_machine_no_clobber_live_local_enabled(tmp_path, monkeypatch):
+    # ADR-032 no-clobber (#288): when the local file ALREADY asserts `enabled`, the
+    # relocation pass must not overwrite that live value — it strips only the stale
+    # committed source. Exercised on the relocation function directly (calling
+    # `setup autonomy` would then deliberately re-enable the box, masking the
+    # property under test). Local `enabled: false` (operator turned it off) wins.
+    from project_kit import permissions as perm
+    proj = _with_adapter(_setup(tmp_path))
+    sp = proj / ".claude" / "settings.json"
+    sp.parent.mkdir(parents=True, exist_ok=True)
+    sp.write_text(json.dumps({"sandbox": {"enabled": True}}, indent=2) + "\n")
+    lp = proj / ".claude" / "settings.local.json"
+    lp.write_text(json.dumps({"sandbox": {"enabled": False}}, indent=2) + "\n")
+
+    reports = perm._relocate_per_machine_sandbox_state(proj)
+
+    # The live local `false` was NOT clobbered; only the stale committed cleared.
+    assert _sb_local(proj)["enabled"] is False
+    assert _sb_committed(proj).get("enabled") is False
+    assert any("enabled" in r for r in reports)
+
+
+def test_relocate_per_machine_is_idempotent(tmp_path, monkeypatch):
+    # ADR-032: once relocated (socket only in local, no committed drift), a re-run
+    # is a no-op — no second relocation line, no double-write into local.
+    proj = _with_adapter(_setup(tmp_path))
+    sock = "/Users/someone/.1password/agent.sock"
+    _seed_committed_socket(proj, sock, tagged=True)
+    _run(proj, monkeypatch, "setup", "autonomy")              # first run relocates
+    assert sock not in _sb_committed(proj).get("network", {}).get("allowUnixSockets", [])
+
+    out = _run(proj, monkeypatch, "setup", "autonomy")         # re-run: no-op
+    assert "relocated host socket" not in out
+    assert _sb_local(proj)["network"]["allowUnixSockets"].count(sock) == 1
+    assert sock in _sb(proj)["network"]["allowUnixSockets"]    # still live
+
+
+def test_relocate_per_machine_leaves_committed_floors(tmp_path, monkeypatch):
+    # ADR-032 Rule A operator-invariant floors are NEVER relocated: a credential
+    # denyRead floor, failIfUnavailable, autoAllowBashIfSandboxed, allowedHosts
+    # seeded committed survive the per-machine relocation pass untouched.
+    proj = _with_adapter(_setup(tmp_path))
+    sock = "/Users/someone/.1password/agent.sock"
+    sp = proj / ".claude" / "settings.json"
+    sp.parent.mkdir(parents=True, exist_ok=True)
+    sp.write_text(json.dumps({"sandbox": {
+        "enabled": True,                                   # relocatable
+        "failIfUnavailable": True,                         # floor — stays
+        "autoAllowBashIfSandboxed": True,                  # floor — stays
+        "filesystem": {"denyRead": ["~/.ssh"]},            # floor — stays
+        "network": {"allowedHosts": ["api.github.com"],    # floor — stays
+                    "allowUnixSockets": [sock]},           # host socket — relocatable
+    }}, indent=2) + "\n")
+    _seed_committed_socket(proj, sock, tagged=True)  # tag the socket so it moves
+
+    _run(proj, monkeypatch, "setup", "autonomy")
+
+    committed = _sb_committed(proj)
+    # Floors untouched in the committed file:
+    assert committed.get("failIfUnavailable") is True
+    assert committed.get("autoAllowBashIfSandboxed") is True
+    assert "~/.ssh" in committed["filesystem"]["denyRead"]
+    assert "api.github.com" in committed["network"]["allowedHosts"]
+    # Per-machine fields relocated out of committed:
+    assert sock not in committed["network"].get("allowUnixSockets", [])
+    assert committed.get("enabled") is False
+
+
+def test_relocate_per_machine_does_not_touch_decide_py(tmp_path, monkeypatch):
+    # ADR-032: the relocation is settings-only — decide.py (the decision core) is
+    # never written by this path. The guard test points at .pkit/permissions/decide.py.
+    proj = _with_adapter(_setup(tmp_path))
+    _seed_committed_socket(proj, "/Users/someone/.1password/agent.sock", tagged=True)
+    decide = proj / ".pkit" / "permissions" / "decide.py"
+    before = decide.read_text()
+    _run(proj, monkeypatch, "setup", "autonomy")
+    assert decide.read_text() == before
+
+
 def test_optional_widening_stays_nudge_only_under_auto_apply(tmp_path, monkeypatch):
     # Even with the required-exclusion auto-apply live, optional widenings
     # (docker) are NEVER auto-applied — they stay nudge-only.
@@ -1969,7 +2151,14 @@ def test_accommodate_socket_writes_per_machine_not_committed(tmp_path, monkeypat
     out = _run(proj, monkeypatch, "sandbox", "accommodate", "--socket", sock, "--name", "mything")
     assert "socket accommodated (mything)" in out and "NOT committed" in out
     assert sock in _sb(proj)["network"]["allowUnixSockets"]
-    # Never written to committed config.
+    # ADR-032 Rule A: the socket is a host-derived value (`socket:` provenance) →
+    # it routes to the gitignored settings.local.json DESPITE being narrowing. The
+    # committed settings.json must NEVER carry the resolved host path (the live
+    # regression ADR-032 fixes — effect-axis routing alone sent the narrowing
+    # socket to the committed floor).
+    assert sock in _sb_local(proj).get("network", {}).get("allowUnixSockets", [])
+    assert sock not in _sb_committed(proj).get("network", {}).get("allowUnixSockets", [])
+    # Never written to committed config.yaml either.
     cfgp = proj / ".pkit" / "permissions" / "project" / "config.yaml"
     if cfgp.is_file():
         assert "mything" not in cfgp.read_text() and sock not in cfgp.read_text()
@@ -2010,6 +2199,10 @@ def test_setup_autonomy_auto_resolves_live_ssh_auth_sock(tmp_path, monkeypatch):
         srv.close()
     assert "ssh-agent socket" in out and "accommodations:" in out
     assert str(sock_path) in _sb(proj)["network"]["allowUnixSockets"]
+    # ADR-032: the host socket (socket:ssh-agent provenance) lands in the
+    # gitignored local file, NOT the committed floor — even from the setup path.
+    assert str(sock_path) in _sb_local(proj).get("network", {}).get("allowUnixSockets", [])
+    assert str(sock_path) not in _sb_committed(proj).get("network", {}).get("allowUnixSockets", [])
 
 
 def test_setup_autonomy_dead_ssh_sock_nudges_not_applies(tmp_path, monkeypatch):
