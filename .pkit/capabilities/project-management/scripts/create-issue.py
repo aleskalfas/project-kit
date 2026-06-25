@@ -469,21 +469,43 @@ def main() -> int:
     print(f"\n[ok] created: {issue_url}")
 
     # Auto-add to board for board-substrate adopters (per DEC-019).
+    #
+    # Capture the created board-item node id (and resolve the project node id)
+    # so the `after_create_issue` `set-board-field` hook can seed the non-label
+    # field default onto THIS new item (DEC-037 §3 — the non-label per-create
+    # default; the same field write the one-time back-fill drives over the
+    # corpus). Without these two ids the hook skips ("no board-item id in
+    # context"), so the Projects-v2 field default would never seed on create.
+    # The milestone default (`assign-milestone`) needs only the issue number
+    # and seeds regardless.
+    board_item_id: str | None = None
+    project_node_id: str | None = None
     if has_board and board_id:
-        if not _gh_add_to_board(board_id, issue_url, config):
+        board_item_id = _gh_add_to_board(board_id, issue_url, config)
+        if board_item_id is None:
             print(
                 f"[warn] issue created but failed to add to board v2/{board_id}.",
                 file=sys.stderr,
             )
+        else:
+            owner = _owner_from_issue_url(issue_url)
+            project_node_id = _resolve_project_node_id(board_id, owner, config)
 
     # Fire lifecycle hooks per DEC-024. Report-and-continue contract:
-    # hook failures don't propagate to this script's exit code.
+    # hook failures don't propagate to this script's exit code. The board-item
+    # / project node ids let the `set-board-field` hook target the new item;
+    # both stay absent in label-fallback mode (no board), where that hook is a
+    # no-op skip by design.
     issue_number = _extract_issue_number_from_url(issue_url)
+    issue_context: dict[str, Any] = {"number": issue_number, "title": full_title}
+    if board_item_id is not None:
+        issue_context["board_item_id"] = board_item_id
     fire_hooks(
         "after_create_issue",
         context={
-            "issue": {"number": issue_number, "title": full_title},
+            "issue": issue_context,
             "repo": _resolve_repo_name_with_owner_safe(),
+            "project_node_id": project_node_id,
         },
         config=config,
         capability_root=capability_root,
@@ -807,16 +829,36 @@ def _gh_create_issue(
     return proc.stdout.strip() or None
 
 
-def _gh_add_to_board(board_id: int, issue_url: str, config: dict) -> bool:
+def _owner_from_issue_url(issue_url: str) -> str | None:
+    """Extract the `<owner>` segment from a github issue URL, or ``None``.
+
+    Both the board membership write (inside ``_gh_add_to_board``) and the
+    project-node-id resolution (``main`` → ``_resolve_project_node_id``) scope to
+    the issue's owner. They parse it independently at each site from the same
+    source URL, so the two agree by construction (pure regex over one input).
+    """
+    m = re.match(r"https?://[^/]+/([^/]+)/", issue_url)
+    return m.group(1) if m else None
+
+
+def _gh_add_to_board(board_id: int, issue_url: str, config: dict) -> str | None:
     """Add an issue to a Projects v2 board via gh project item-add.
 
     The owner is derived from the issue URL (github.com/<owner>/<repo>/...).
+
+    Returns the created board *item* node id on success (so the
+    `after_create_issue` `set-board-field` hook can target the new item per
+    DEC-037 §3 — the non-label field default), or ``None`` on any failure.
+    The item id is captured here, at the one moment it is freshly known,
+    rather than re-resolved with a board-wide GraphQL scan (the way the
+    one-time back-fill must, since it has no fresh item to read).
+
+    `gh project item-add --format json` returns the created item as
+    ``{"id": "<item-node-id>", ...}``; we read `.id` off that.
     """
-    # Extract owner from issue URL.
-    m = re.match(r"https?://[^/]+/([^/]+)/", issue_url)
-    if not m:
-        return False
-    owner = m.group(1)
+    owner = _owner_from_issue_url(issue_url)
+    if owner is None:
+        return None
     cmd = [
         "gh",
         "project",
@@ -826,12 +868,50 @@ def _gh_add_to_board(board_id: int, issue_url: str, config: dict) -> bool:
         owner,
         "--url",
         issue_url,
+        "--format",
+        "json",
     ]
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
     except FileNotFoundError:
-        return False
-    return proc.returncode == 0
+        return None
+    if proc.returncode != 0:
+        return None
+    try:
+        payload = json.loads(proc.stdout)
+    except (json.JSONDecodeError, ValueError):
+        return None
+    item_id = payload.get("id") if isinstance(payload, dict) else None
+    return item_id if isinstance(item_id, str) and item_id else None
+
+
+def _resolve_project_node_id(board_id: int, owner: str | None, config: dict) -> str | None:
+    """Resolve the Projects-v2 *project* node id from the board NUMBER.
+
+    The `set-board-field` hook's field-value write needs the project's GraphQL
+    node id, but the adopter only declares the board *number*
+    (`projects_v2_board_id`). This resolves number → node id via `gh project
+    view --format json` (`.id`), the same read `back-fill.py`'s
+    `_resolve_project_node_id` and `pre-check` use — kept here as the per-create
+    half of that one resolution shape. A READ only; returns ``None`` when the
+    board does not resolve (the hook then skips with "no board configured"
+    rather than guessing).
+    """
+    view_args = ["gh", "project", "view", str(board_id), "--format", "json"]
+    if owner:
+        view_args += ["--owner", owner]
+    try:
+        proc = subprocess.run(view_args, capture_output=True, text=True, check=False)
+    except FileNotFoundError:
+        return None
+    if proc.returncode != 0:
+        return None
+    try:
+        payload = json.loads(proc.stdout)
+    except (json.JSONDecodeError, ValueError):
+        return None
+    node_id = payload.get("id") if isinstance(payload, dict) else None
+    return node_id if isinstance(node_id, str) and node_id else None
 
 
 if __name__ == "__main__":

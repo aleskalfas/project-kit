@@ -309,6 +309,13 @@ def _hook_set_board_field(
             detail=f"would set field_id={field_id} on item_id={item_id} ({which})",
         )
 
+    # No pre-write idempotency guard here (unlike `assign-milestone` /
+    # `post-comment`): benign because of HOW THE CALLER fires this hook, not a
+    # handler property — the kit's only caller is `after_create_issue`, firing
+    # exactly once on a freshly-created item. A future replay or non-create
+    # caller (re-firing on an item that may already carry the field value) would
+    # need a value-equality guard before the write to stay idempotent.
+    #
     # Construct + execute the field-value write through the sole constructor
     # (ADR-031); apply DEC-024's report-and-continue posture to its result.
     if substrate_writes is None:  # pragma: no cover - defensive import fallback
