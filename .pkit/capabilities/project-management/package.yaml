@@ -2,7 +2,7 @@ schema_version: 2
 component:
   kind: capability
   name: project-management
-  version: 0.33.0
+  version: 0.34.0
 description: Project-management discipline realized from the pm-workflow methodology — issue hierarchy, state machine, body validation, naming conventions — encoded as schemas a methodology-agnostic engine (skills + agent) consumes at runtime.
 requires_backbone: ">=1.102.0,<2.0.0"
 aliases:
@@ -26,6 +26,9 @@ commands:
   back-fill:
     script: scripts/back-fill.py
     help: "Corpus back-fill — the auditable propose-and-cite ceremony (per DEC-037 §2 / ADR-031). Default (report) enumerates proposed per-issue non-label substrate writes (Projects-v2 field value; milestone) from the after_create_issue hooks, cites why each is proposed, gates on the residual pre-check subset, and mutates nothing; --json emits the machine-stable plan. --apply drives the reviewed plan to writes under the audited skip/report posture (re-validates each issue at apply time: drift→skip, already-set→skip; confirmation-gated, --yes for CI; non-zero exit on any write failure). --emit-script emits an idempotent re-checking script the adopter runs themselves (pm writes nothing). --plan <file> applies/emits from a saved --json plan."
+  adopt-existing:
+    script: scripts/adopt-existing.py
+    help: "Brownfield onboarding ceremony — inventory + draft, never apply (per DEC-037 §1). Inventories the live tracker through gh READS only (labels + usage, title-prefix patterns, open/closed + a Blocked convention, Projects-v2 fields, milestones), infers + DRAFTS a candidate substrate-map.yaml, and prints an AUDIT report showing the EVIDENCE for each inferred binding (with coverage/confidence signals) so the human's acceptance is informed, not reflexive. Self-checks the draft against substrate-map.schema.json. Mutates NOTHING — never writes the live map, never edits a label/field/issue, never installs. --out writes the DRAFT to a review file (refuses the live map path); --json emits the inventory+inferences+draft+schema-check machine-readably."
   add-member:
     script: scripts/add-member.py
     help: Add a member to the team-membership roster (per DEC-021). Open mode allows self-add; closed mode requires invoker to be a current member.
