@@ -118,6 +118,19 @@ layout are not — they land with the trunk Feature, citing DEC-037. The sites:
    and is not subsumed. The guard's allow-list must name this boundary precisely
    (Implications, guard half (b)).
 
+**Two further milestone sites the scan-all surfaced (as-built).** This enumeration
+is as-of-authoring; the guard's authority is the **scan-all over every pm script**
+(half (b)), not this hand list — and that scan, run at implementation, surfaced two
+*additional* post-hoc milestone writes the four-item tally above missed:
+`promote-issue.py`'s milestone attach on promotion and `self-test.py`'s milestone
+attach. Both are the *same* substrate (post-hoc `gh issue edit --milestone`) and now
+route through the primitive, bringing the converged total to **six covered sites**
+(the two DEC-024 handlers, `create-issue`'s at-create write, `promote-issue`,
+`self-test` — with board-membership still named out). That the scan caught two sites
+this enumeration missed is precisely why the guard is scan-all rather than an
+allow-list of known sites: the enumeration is a reading aid, the scan is the
+contract's enforcement surface.
+
 The architecturally-significant pins, each carrying an alternative DEC-037 already
 rejected or this ADR holds against:
 
@@ -149,11 +162,20 @@ these `gh` calls inline except that one module.
 ### 1. Sole-constructor invariant for non-label substrate writes
 
 Each covered non-label substrate — **a Projects-v2 single-select/text field
-value** (`gh project item-edit`) and **a milestone assignment** (`gh issue edit
+value** and **a milestone assignment** (`gh issue edit
 --milestone` *and* `gh issue create --milestone`) — has **exactly one construction
 point**: a single `_lib` module function builds and executes the `gh` write. A
 mutating script obtains that write **only by asking the primitive**; it **never**
 string-builds the `gh project item-edit` / `gh issue …--milestone` argv inline.
+
+The field-value substrate spans **two `gh` forms**: `gh project item-edit` and the
+GraphQL mutation `gh api graphql … updateProjectV2ItemFieldValue`. Both write the
+*same* Projects-v2 field-value substrate by two routes (same substrate, different
+verb — as milestone spans two verbs below); both route through the one field-value
+construction point, and the guard (point 4) flags either form constructed inline.
+No `updateProjectV2ItemFieldValue` site exists in the tree today; the contract and
+guard cover it ahead of a reach that needs it (#122 may), so the GraphQL form
+cannot grow as an un-converged inline write.
 
 This is the direct parallel of ADR-026's label sole-constructor (part (i)): there,
 the seam is the only place an axis label is constructed on a write path; here, the
@@ -433,7 +455,8 @@ constructor and the guard precise.
   emit-through-primitive), the same shape as ADR-026's guard: (a) a **construction
   test** — the primitive constructs/executes the covered writes and the converged sites
   obtain their write *from* it; **and** (b) a **grep/AST guard** — no script
-  string-builds `gh project item-edit … --field-id` or `gh issue …--milestone` argv
+  string-builds `gh project item-edit … --field-id`, its GraphQL twin `gh api graphql
+  … updateProjectV2ItemFieldValue`, or `gh issue …--milestone` argv
   inline except the sole-constructor module. Without half (b) the construction test
   passes while a stray inline write bypasses the primitive — the four-site scatter
   re-growing unnoticed. Half (b) is what makes it structural and continuously verifies

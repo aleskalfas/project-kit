@@ -190,25 +190,33 @@ def test_post_audit_comment_propagates_failure(pi, monkeypatch, capsys) -> None:
 # ---- _attach_milestone -------------------------------------------------
 
 
+def _substrate_writes_module(pi):
+    """The substrate-writes primitive `promote-issue` routes its milestone write
+    through (ADR-031). `_attach_milestone` now constructs + executes the write via
+    this module, so the `gh` call lands on the primitive's `_gh_call`, not on
+    `pi.gh_run` — patch it there."""
+    return sys.modules[pi.write_milestone.__module__]
+
+
 def test_attach_milestone_success(pi, monkeypatch) -> None:
-    def fake_gh_run(args, config, **kwargs):
+    def fake_gh_call(args, config):
         import subprocess
         assert args[1:5] == ["issue", "edit", "42", "--milestone"]
         assert args[5] == "v1.0"
         return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
 
-    monkeypatch.setattr(pi, "gh_run", fake_gh_run)
+    monkeypatch.setattr(_substrate_writes_module(pi), "_gh_call", fake_gh_call)
     assert pi._attach_milestone(42, "v1.0", {}) is True
 
 
 def test_attach_milestone_failure(pi, monkeypatch, capsys) -> None:
-    def fake_gh_run(args, config, **kwargs):
+    def fake_gh_call(args, config):
         import subprocess
         return subprocess.CompletedProcess(
             args=args, returncode=1, stdout="", stderr="cannot attach"
         )
 
-    monkeypatch.setattr(pi, "gh_run", fake_gh_run)
+    monkeypatch.setattr(_substrate_writes_module(pi), "_gh_call", fake_gh_call)
     assert pi._attach_milestone(42, "v1.0", {}) is False
     assert "cannot attach" in capsys.readouterr().err
 

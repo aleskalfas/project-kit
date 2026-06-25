@@ -54,6 +54,7 @@ _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import axis_labels  # noqa: E402
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
+from _lib.substrate_writes import write_milestone  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
     resolve_capability_root,
@@ -281,27 +282,16 @@ def _step_promote(
         f"#{ms_number}{' (created)' if just_created else ' (existing)'}",
     )
 
-    # Attach milestone to issue.
-    try:
-        proc = gh_run(
-            [
-                "gh", "issue", "edit",
-                str(issue_number),
-                "--milestone", SELF_TEST_MILESTONE,
-            ],
-            config,
-            check=False,
-        )
-    except FileNotFoundError:
-        state.record("attach milestone to issue", False, "`gh` not on PATH")
-        return False
-
-    if proc.returncode != 0:
-        state.record(
-            "attach milestone to issue",
-            False,
-            f"gh issue edit failed: {proc.stderr.strip()}",
-        )
+    # Attach milestone to issue. Route the write through the sole constructor
+    # (ADR-031); apply this script's own record-and-return posture to the neutral
+    # result. The result distinguishes "`gh` not on PATH" (executed=False) from a
+    # non-zero exit (executed=True), preserving the prior two-case reporting.
+    result = write_milestone(config, issue_number=issue_number, title=SELF_TEST_MILESTONE)
+    if not result.ok:
+        if not result.executed:
+            state.record("attach milestone to issue", False, "`gh` not on PATH")
+        else:
+            state.record("attach milestone to issue", False, result.detail)
         return False
 
     state.record("attach milestone to issue", True, f"#{issue_number} → {SELF_TEST_MILESTONE}")

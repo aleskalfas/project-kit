@@ -61,6 +61,7 @@ sys.path.insert(0, str(_HERE))
 from _lib import axis_labels  # noqa: E402
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 from _lib.milestone import resolve_milestone  # noqa: E402
+from _lib.substrate_writes import write_milestone  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
     check_membership,
@@ -315,16 +316,11 @@ def _post_audit_comment_idempotent(
 
 
 def _attach_milestone(issue_number: int, title: str, config: dict) -> bool:
-    proc = gh_run(
-        ["gh", "issue", "edit", str(issue_number), "--milestone", title],
-        config,
-        check=False,
-    )
-    if proc.returncode != 0:
-        print(
-            f"error: gh issue edit --milestone failed: {proc.stderr.strip()}",
-            file=sys.stderr,
-        )
+    # Route the milestone write through the sole constructor (ADR-031); apply
+    # this script's own report-and-return-bool posture to the neutral result.
+    result = write_milestone(config, issue_number=issue_number, title=title)
+    if not result.ok:
+        print(f"error: {result.detail}", file=sys.stderr)
         return False
     return True
 
