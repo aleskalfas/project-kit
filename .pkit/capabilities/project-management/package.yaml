@@ -2,7 +2,7 @@ schema_version: 2
 component:
   kind: capability
   name: project-management
-  version: 0.30.1
+  version: 0.31.0
 description: Project-management discipline realized from the pm-workflow methodology — issue hierarchy, state machine, body validation, naming conventions — encoded as schemas a methodology-agnostic engine (skills + agent) consumes at runtime.
 requires_backbone: ">=1.102.0,<2.0.0"
 aliases:
@@ -23,6 +23,9 @@ commands:
   migrate:
     script: scripts/migrate.py
     help: Reconcile adopter state after a capability upgrade (per-change confirmation; refuses to run on pre-check failure).
+  back-fill:
+    script: scripts/back-fill.py
+    help: Corpus back-fill — the auditable propose-and-cite REPORT half (per DEC-037 §2). Enumerates proposed per-issue non-label substrate writes (Projects-v2 field value; milestone) from the after_create_issue hooks, cites why each is proposed, gates on the residual pre-check subset (auth/repo/map-parse). Mutates nothing — the report is the gate.
   add-member:
     script: scripts/add-member.py
     help: Add a member to the team-membership roster (per DEC-021). Open mode allows self-add; closed mode requires invoker to be a current member.

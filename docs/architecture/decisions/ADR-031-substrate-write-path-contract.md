@@ -289,8 +289,12 @@ twin of ADR-026's fail-closed:
 - **Residual-pre-check gate.** The back-fill refuses on the subset of `pre-check`
   that still hard-fails in brownfield (DEC-036 made `pre-check` degrade to a
   capability matrix rather than hard-refuse): `gh` auth invalid, repo inaccessible,
-  or `substrate-map.yaml` fails to parse. Those break the plan's assumptions; a
-  merely-degraded axis does not.
+  `substrate-map.yaml` fails to parse, or — a fourth member (DEC-037 §2) — a covered
+  `set-board-field` intent is declared yet the Projects-v2 board node-id cannot be
+  resolved at all (a conjunction computed after intent resolution; a global
+  precondition surfaced once, distinct from the per-issue not-on-board `blocked`
+  case; a milestone-only back-fill does not gate on it). Those break the plan's
+  assumptions; a merely-degraded axis does not.
 - **`--emit-script` draft-not-apply.** The bulk driver supports emitting the reviewed
   mutations as an idempotent script the adopter runs themselves, the symmetric
   draft-not-apply form (parallel to `adopt-existing`'s draft-not-apply). This hands
@@ -470,7 +474,8 @@ constructor and the guard precise.
   either mis-flag membership or mis-allow a stray field-value write.
 - **The four back-fill safety properties bind the bulk driver** — re-validate-at-apply
   (skip+report drift), per-issue value-equality idempotency, residual-pre-check gate
-  (auth / repo-access / map-parse), `--emit-script` draft-not-apply. They are the
+  (auth / repo-access / map-parse / declared-field-intent-but-board-unresolvable, the
+  fourth member per DEC-037 §2), `--emit-script` draft-not-apply. They are the
   write-path analogue of ADR-026's read-path fail-closed; they are properties of the
   *bulk driver* over a live corpus, not of the construction primitive (which the
   per-event hook path reuses without them). Value-*correctness* stays the adopter
