@@ -1,0 +1,793 @@
+{"ts": 1782302144, "subject": "agent:reviewer", "tool": "Bash", "command": "pkit migrations check-diff \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782302145, "subject": "agent:reviewer", "tool": "Bash", "command": "pkit decisions validate \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782302151, "subject": "agent:reviewer", "tool": "Bash", "command": "echo \u2026[redacted] | grep \u2026[redacted] || echo \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782302158, "subject": "agent:reviewer", "tool": "Bash", "command": "echo \u2026[redacted] | head || true; echo \u2026[redacted] | grep \u2026[redacted] || echo \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782302177, "subject": "agent:reviewer", "tool": "Bash", "command": "gh pr comment 254 \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782302206, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782302234, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | tail \u2026[redacted] && ls \u2026[redacted] && ls \u2026[redacted] && gh issue view 251 \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782304489, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782304705, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | tail \u2026[redacted] | tail \u2026[redacted] | head \u2026[redacted] | tr \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782304798, "subject": "agent:project-manager", "tool": "Agent", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782304802, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782304803, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782304803, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782304808, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782304810, "subject": "agent:software-engineer", "tool": "Bash", "command": "git log \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782304816, "subject": "agent:software-engineer", "tool": "Bash", "command": "ls \u2026[redacted] && echo \u2026[redacted] && ls \u2026[redacted] && echo \u2026[redacted] && find tests \u2026[redacted] && echo \u2026[redacted] && ls \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782304823, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782304823, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782304828, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782304828, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782304833, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782304835, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted] | head; echo \u2026[redacted] | head", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782304841, "subject": "agent:software-engineer", "tool": "Bash", "command": "find \u2026[redacted] | grep \u2026[redacted] | head", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782304845, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782304852, "subject": "agent:software-engineer", "tool": "Bash", "command": "cat \u2026[redacted] || echo \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782304860, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted] | head; echo \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782304865, "subject": "agent:software-engineer", "tool": "Bash", "command": "find \u2026[redacted] | head", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782304870, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782304871, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782304879, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782304888, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted] | head", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782304893, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted] | head; echo \u2026[redacted] && head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782304900, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782304904, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782304904, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782304920, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pkit new schema \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782304923, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782304924, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782304956, "subject": "agent:software-engineer", "tool": "Write", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782304979, "subject": "agent:software-engineer", "tool": "Write", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782304985, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pkit schemas validate \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782304995, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run python \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305000, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305010, "subject": "agent:software-engineer", "tool": "Bash", "command": "ls \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305015, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305020, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305023, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305028, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305046, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305135, "subject": "agent:software-engineer", "tool": "Write", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305145, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pytest \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305154, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305163, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305169, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305187, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305195, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305203, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305222, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305232, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305236, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305240, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305249, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305254, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pytest \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305268, "subject": "agent:software-engineer", "tool": "Bash", "command": "sed \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305321, "subject": "agent:software-engineer", "tool": "Write", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305329, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305336, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305375, "subject": "agent:software-engineer", "tool": "Write", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305406, "subject": "agent:software-engineer", "tool": "Write", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305410, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pytest \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305415, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pytest \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305420, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pytest \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305548, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305555, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pkit decisions validate \u2026[redacted] | tail \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305559, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305563, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pkit migrations check-diff \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305569, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted] | head; echo \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305576, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted] | head; echo \u2026[redacted] | head; echo \u2026[redacted] | grep \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305583, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305586, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305592, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted] | head; echo \u2026[redacted] | head", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305598, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pytest \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305619, "subject": "agent:software-engineer", "tool": "Bash", "command": "git status \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305627, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pkit migrations check-diff \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305735, "subject": "agent:project-manager", "tool": "Agent", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305740, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305740, "subject": "agent:critic", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305746, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305747, "subject": "agent:critic", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305747, "subject": "agent:critic", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305747, "subject": "agent:critic", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305749, "subject": "agent:project-manager", "tool": "Agent", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305752, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305753, "subject": "agent:architect", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305753, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305754, "subject": "agent:architect", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305754, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305757, "subject": "agent:architect", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305758, "subject": "agent:critic", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305758, "subject": "agent:architect", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305758, "subject": "agent:architect", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305759, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305761, "subject": "agent:architect", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305762, "subject": "agent:architect", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305763, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305764, "subject": "agent:critic", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305765, "subject": "agent:critic", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305766, "subject": "agent:architect", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305771, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305771, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305774, "subject": "agent:architect", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305779, "subject": "agent:architect", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305779, "subject": "agent:architect", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305781, "subject": "agent:critic", "tool": "Grep", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305783, "subject": "agent:architect", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305784, "subject": "agent:architect", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305789, "subject": "agent:architect", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305791, "subject": "agent:architect", "tool": "Grep", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305855, "subject": "agent:architect", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305866, "subject": "agent:architect", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305944, "subject": "agent:project-manager", "tool": "Agent", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305947, "subject": "agent:software-engineer", "tool": "Bash", "command": "git branch \u2026[redacted] && git status \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305948, "subject": "agent:software-engineer", "tool": "Bash", "command": "ls \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305953, "subject": "agent:software-engineer", "tool": "Bash", "command": "find \u2026[redacted] | head; echo \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305954, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305955, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305959, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305960, "subject": "agent:project-manager", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305960, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305965, "subject": "agent:project-manager", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305968, "subject": "agent:software-engineer", "tool": "Bash", "command": "cat \u2026[redacted] | grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305968, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305974, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305974, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305987, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782305996, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782306006, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782306012, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782306031, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782306035, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782306047, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782306051, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782306067, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782306084, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782306097, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782306108, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782306116, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782306140, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782306157, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782306163, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782306175, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782306180, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pytest \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782306191, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782306194, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pytest \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782306199, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pytest \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782306216, "subject": "agent:project-manager", "tool": "Bash", "command": "uv run pytest \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782306323, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pkit decisions validate \u2026[redacted] | tail \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782306327, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pkit migrations check-diff \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782306331, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782306335, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pytest \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782306386, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | tail \u2026[redacted] && uv run pkit decisions validate \u2026[redacted] | tail \u2026[redacted] && uv run pkit schemas validate \u2026[redacted] | tail \u2026[redacted] | tail \u2026[redacted] && cat \u2026[redacted] && grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782306395, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] && git status \u2026[redacted] | wc \u2026[redacted] && git status \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782306414, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | DEGRADE singleton \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782306434, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | DEGRADE` \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782311701, "subject": "agent:project-manager", "tool": "Agent", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782311706, "subject": "agent:reviewer", "tool": "Bash", "command": "git fetch origin \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782311707, "subject": "agent:reviewer", "tool": "Bash", "command": "gh pr view 261 \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782311711, "subject": "agent:reviewer", "tool": "Bash", "command": "git diff \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782311712, "subject": "agent:reviewer", "tool": "Bash", "command": "gh issue view 258 \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782311718, "subject": "agent:reviewer", "tool": "Bash", "command": "git diff \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782311718, "subject": "agent:reviewer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782311723, "subject": "agent:reviewer", "tool": "Bash", "command": "grep \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782311725, "subject": "agent:reviewer", "tool": "Bash", "command": "git show \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782311730, "subject": "agent:reviewer", "tool": "Bash", "command": "git checkout \u2026[redacted] | head", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782311734, "subject": "agent:reviewer", "tool": "Bash", "command": "git checkout main \u2026[redacted] | head; echo \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782311738, "subject": "agent:reviewer", "tool": "Bash", "command": "git reset \u2026[redacted] | tail \u2026[redacted] | head; echo \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782311744, "subject": "agent:reviewer", "tool": "Bash", "command": "git restore \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782311750, "subject": "agent:reviewer", "tool": "Bash", "command": "git status \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782311755, "subject": "agent:reviewer", "tool": "Bash", "command": "git branch \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782311761, "subject": "agent:reviewer", "tool": "Bash", "command": "pkit migrations check-diff \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782311762, "subject": "agent:reviewer", "tool": "Bash", "command": "pkit decisions validate \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782311762, "subject": "agent:reviewer", "tool": "Bash", "command": "pkit schemas validate \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782311768, "subject": "agent:reviewer", "tool": "Bash", "command": "git diff \u2026[redacted] | grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782311791, "subject": "agent:reviewer", "tool": "Bash", "command": "gh pr comment 261 \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782311812, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782311855, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | head", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782311860, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] && git branch \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782311865, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782311887, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | tail \u2026[redacted] && gh issue view 258 \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782312088, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | sed \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782312402, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782312481, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782312559, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782312573, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782312591, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | tail \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782312770, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782312895, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | tail \u2026[redacted] | tail \u2026[redacted] | head \u2026[redacted] | tr \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313005, "subject": "agent:project-manager", "tool": "Agent", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313008, "subject": "agent:software-engineer", "tool": "Bash", "command": "git status && git branch \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313009, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313013, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313014, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313019, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313025, "subject": "agent:software-engineer", "tool": "Bash", "command": "ls \u2026[redacted] && echo \u2026[redacted] && grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313029, "subject": "agent:software-engineer", "tool": "Bash", "command": "find \u2026[redacted] | xargs grep \u2026[redacted] | grep \u2026[redacted] | grep \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313032, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313036, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313041, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313047, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313053, "subject": "agent:software-engineer", "tool": "Bash", "command": "ls \u2026[redacted] | grep \u2026[redacted] | grep \u2026[redacted] | head; echo \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313056, "subject": "agent:software-engineer", "tool": "Bash", "command": "cat \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313063, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pytest \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313078, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313093, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313110, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313116, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313122, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313127, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313131, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313135, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313141, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313148, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted] | head; echo \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313154, "subject": "agent:software-engineer", "tool": "Bash", "command": "ls \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313160, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313170, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313221, "subject": "agent:software-engineer", "tool": "Write", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313225, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pytest \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313242, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313244, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pytest \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313249, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313263, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313264, "subject": "agent:project-manager", "tool": "Bash", "command": "grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313271, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313276, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313286, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313295, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313302, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313305, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313311, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313314, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313321, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313324, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313331, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313335, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pytest \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313453, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pytest \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313578, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pkit decisions validate \u2026[redacted] | tail \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313584, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pkit migrations check-diff \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313589, "subject": "agent:software-engineer", "tool": "Bash", "command": "cat \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313593, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313598, "subject": "agent:software-engineer", "tool": "Bash", "command": "until grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313629, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pkit version bump \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313640, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313644, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313650, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pkit decisions validate \u2026[redacted] | tail \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313660, "subject": "agent:software-engineer", "tool": "Bash", "command": "git status && echo \u2026[redacted] && git diff \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313729, "subject": "agent:project-manager", "tool": "Agent", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313733, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313734, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313739, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313739, "subject": "agent:critic", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313743, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313744, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313749, "subject": "agent:critic", "tool": "Grep", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313751, "subject": "agent:critic", "tool": "Grep", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313756, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313756, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313764, "subject": "agent:critic", "tool": "Grep", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313765, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313774, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313774, "subject": "agent:critic", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313779, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313785, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313786, "subject": "agent:critic", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313786, "subject": "agent:critic", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313792, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313793, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313795, "subject": "agent:project-manager", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313796, "subject": "agent:project-manager", "tool": "Grep", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313803, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313811, "subject": "agent:critic", "tool": "Grep", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313969, "subject": "agent:project-manager", "tool": "Agent", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313973, "subject": "agent:software-engineer", "tool": "Bash", "command": "git branch \u2026[redacted] && git status \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313975, "subject": "agent:software-engineer", "tool": "Bash", "command": "find \u2026[redacted] | grep \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313979, "subject": "agent:software-engineer", "tool": "Bash", "command": "find \u2026[redacted] | grep \u2026[redacted] | head; echo \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313980, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313983, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313984, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313988, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313995, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782313999, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314000, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314006, "subject": "agent:software-engineer", "tool": "Bash", "command": "cd \u2026[redacted] && for f in \u2026[redacted]", "reason": "leading-cd strip: remainder carries an untrusted construct (quote / $() / backtick / redirection) \u2014 fail closed"}
+{"ts": 1782314011, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314016, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314020, "subject": "agent:software-engineer", "tool": "Bash", "command": "for f in merge-workstream rename-workstream \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314024, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314025, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314026, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314030, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314035, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314041, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314082, "subject": "agent:software-engineer", "tool": "Write", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314087, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314094, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314097, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314105, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314121, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314144, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314148, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314154, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314160, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314167, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314174, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314178, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314184, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314192, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314208, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314220, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314225, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314232, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314241, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314245, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314254, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314259, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314262, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314269, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314273, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314278, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314282, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314290, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314294, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314300, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314305, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314308, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314319, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314336, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314347, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314354, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314359, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314365, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314373, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314378, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314384, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314390, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314395, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314403, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314408, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314424, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314429, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314440, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314469, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314480, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314484, "subject": "agent:software-engineer", "tool": "Bash", "command": "ls \u2026[redacted] | grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314487, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314496, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314527, "subject": "agent:software-engineer", "tool": "Write", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314533, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pytest \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314538, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pytest \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314542, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pytest \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314661, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pytest \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314661, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pkit decisions validate \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314666, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pkit schemas validate \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314667, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pkit migrations check-diff \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314671, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pytest \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314798, "subject": "agent:software-engineer", "tool": "Bash", "command": "sleep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314803, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314806, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314812, "subject": "agent:software-engineer", "tool": "Bash", "command": "until \u2026[redacted] && grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314916, "subject": "agent:project-manager", "tool": "Agent", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314919, "subject": "agent:critic", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314920, "subject": "agent:critic", "tool": "Grep", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314923, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314924, "subject": "agent:critic", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314929, "subject": "agent:critic", "tool": "Grep", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314936, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314937, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314944, "subject": "agent:critic", "tool": "Grep", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314953, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314954, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314960, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314965, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314969, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314970, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314971, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314972, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314980, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314981, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314987, "subject": "agent:critic", "tool": "Grep", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314988, "subject": "agent:critic", "tool": "Grep", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314994, "subject": "agent:critic", "tool": "Grep", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782314997, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315002, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315011, "subject": "agent:critic", "tool": "Grep", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315015, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315016, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315024, "subject": "agent:critic", "tool": "Grep", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315027, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315037, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315042, "subject": "agent:critic", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315044, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315050, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315051, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315060, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315068, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315130, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] && sed \u2026[redacted] && sed \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315141, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315150, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315162, "subject": "agent:project-manager", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315183, "subject": "agent:project-manager", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315195, "subject": "agent:project-manager", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315203, "subject": "agent:project-manager", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315208, "subject": "agent:project-manager", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315214, "subject": "agent:project-manager", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315221, "subject": "agent:project-manager", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315229, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] || echo \u2026[redacted] && echo \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315242, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315254, "subject": "agent:project-manager", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315262, "subject": "agent:project-manager", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315268, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] && uv run python \u2026[redacted] | tail \u2026[redacted] && uv run pkit decisions validate \u2026[redacted] | tail \u2026[redacted] && uv run pkit schemas validate \u2026[redacted] | tail \u2026[redacted] | tail \u2026[redacted] && grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315390, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] && git status \u2026[redacted] | wc \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315410, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315431, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] & RF-2 mutator-gate constraint-1 \u2026[redacted] & contract-faithful). EOF uv run python \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315829, "subject": "agent:project-manager", "tool": "Agent", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315832, "subject": "agent:reviewer", "tool": "Bash", "command": "git fetch origin \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315833, "subject": "agent:reviewer", "tool": "Bash", "command": "gh pr view 267 \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315838, "subject": "agent:reviewer", "tool": "Bash", "command": "git diff \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315839, "subject": "agent:reviewer", "tool": "Bash", "command": "gh issue view 265 \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315843, "subject": "agent:reviewer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315845, "subject": "agent:reviewer", "tool": "Bash", "command": "pkit migrations check-diff \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315849, "subject": "agent:reviewer", "tool": "Bash", "command": "grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315850, "subject": "agent:reviewer", "tool": "Bash", "command": "pkit decisions validate \u2026[redacted] | tail \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315856, "subject": "agent:reviewer", "tool": "Bash", "command": "git diff \u2026[redacted] | head; echo \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315858, "subject": "agent:reviewer", "tool": "Bash", "command": "git diff \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315862, "subject": "agent:reviewer", "tool": "Bash", "command": "git diff \u2026[redacted] | grep \u2026[redacted] ; echo \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315863, "subject": "agent:reviewer", "tool": "Bash", "command": "git diff \u2026[redacted] | grep \u2026[redacted] ; echo \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315883, "subject": "agent:reviewer", "tool": "Bash", "command": "gh pr comment 267 \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782315900, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782316397, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | tail \u2026[redacted] && grep \u2026[redacted] && gh issue view 262 \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782316420, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | tail \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782320420, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782320569, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782320633, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | tail \u2026[redacted] | tail \u2026[redacted] | head \u2026[redacted] | tr \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782320762, "subject": "agent:project-manager", "tool": "Agent", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782320767, "subject": "agent:software-engineer", "tool": "Bash", "command": "git branch \u2026[redacted] && git status", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782320768, "subject": "agent:software-engineer", "tool": "Bash", "command": "find \u2026[redacted] | grep \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782320772, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782320773, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782320777, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782320781, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782320782, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782320787, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782320787, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782320797, "subject": "agent:software-engineer", "tool": "Bash", "command": "echo \u2026[redacted] && find \u2026[redacted] | xargs grep \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782320801, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782320801, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782320806, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted] | head; echo \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782320811, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782320820, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782320824, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782320831, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted] | grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782320845, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted] | grep \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782320848, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782320859, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782320870, "subject": "agent:software-engineer", "tool": "Bash", "command": "ls \u2026[redacted] | grep \u2026[redacted] ; echo \u2026[redacted] | head; find \u2026[redacted] | head", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782320874, "subject": "agent:software-engineer", "tool": "Bash", "command": "find \u2026[redacted] | grep \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782320877, "subject": "agent:software-engineer", "tool": "Bash", "command": "find \u2026[redacted] | xargs grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782320881, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782320897, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782320901, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782320912, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782320948, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782320977, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782320991, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782320998, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321010, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321020, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321034, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321038, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321048, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321059, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321065, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321078, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321090, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321100, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321104, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pytest \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321115, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pytest \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321228, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321233, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321325, "subject": "agent:software-engineer", "tool": "Write", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321328, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pytest \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321343, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321353, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321356, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pytest \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321359, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pytest \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321468, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pkit decisions validate \u2026[redacted] | tail \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321473, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pkit migrations check-diff \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321479, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pytest \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321487, "subject": "agent:software-engineer", "tool": "Bash", "command": "cat \u2026[redacted] | grep \u2026[redacted] | head; grep \u2026[redacted] | head", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321491, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321494, "subject": "agent:software-engineer", "tool": "Bash", "command": "ls \u2026[redacted] | grep \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321497, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321504, "subject": "agent:software-engineer", "tool": "Bash", "command": "git log \u2026[redacted] | head; echo \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321510, "subject": "agent:software-engineer", "tool": "Bash", "command": "git show d250d82 \u2026[redacted] | grep \u2026[redacted] | grep \u2026[redacted] | head", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321515, "subject": "agent:software-engineer", "tool": "Bash", "command": "git log \u2026[redacted] | grep \u2026[redacted] | head; echo \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321523, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321526, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321531, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pytest \u2026[redacted] | tail \u2026[redacted] | tail \u2026[redacted] | grep \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321652, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted] | grep \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321656, "subject": "agent:software-engineer", "tool": "Bash", "command": "git status \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321734, "subject": "agent:project-manager", "tool": "Agent", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321737, "subject": "agent:critic", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321737, "subject": "agent:critic", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321737, "subject": "agent:critic", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321738, "subject": "agent:critic", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321738, "subject": "agent:critic", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321738, "subject": "agent:critic", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321739, "subject": "agent:critic", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321739, "subject": "agent:critic", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321743, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321744, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321746, "subject": "agent:project-manager", "tool": "Agent", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321746, "subject": "agent:critic", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321749, "subject": "agent:architect", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321750, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321750, "subject": "agent:architect", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321750, "subject": "agent:architect", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321750, "subject": "agent:architect", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321750, "subject": "agent:architect", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321751, "subject": "agent:architect", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321753, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321753, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321754, "subject": "agent:architect", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321755, "subject": "agent:architect", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321756, "subject": "agent:architect", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321758, "subject": "agent:critic", "tool": "Grep", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321759, "subject": "agent:critic", "tool": "Grep", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321760, "subject": "agent:architect", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321761, "subject": "agent:architect", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321761, "subject": "agent:architect", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321763, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321767, "subject": "agent:architect", "tool": "Grep", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321769, "subject": "agent:architect", "tool": "Grep", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321773, "subject": "agent:architect", "tool": "Grep", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321773, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321774, "subject": "agent:critic", "tool": "Grep", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321780, "subject": "agent:critic", "tool": "Grep", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321792, "subject": "agent:critic", "tool": "Grep", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321802, "subject": "agent:critic", "tool": "Grep", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321803, "subject": "agent:critic", "tool": "Grep", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321815, "subject": "agent:critic", "tool": "WebFetch", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321821, "subject": "agent:critic", "tool": "Grep", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321905, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] && sed \u2026[redacted] && sed \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321922, "subject": "agent:project-manager", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321928, "subject": "agent:project-manager", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321933, "subject": "agent:project-manager", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321938, "subject": "agent:project-manager", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321943, "subject": "agent:project-manager", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321953, "subject": "agent:project-manager", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321959, "subject": "agent:project-manager", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321968, "subject": "agent:project-manager", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321984, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | tail \u2026[redacted] && uv run python \u2026[redacted] && echo OK echo \u2026[redacted] && uv run pkit decisions validate \u2026[redacted] | tail \u2026[redacted] && uv run pkit migrations check-diff \u2026[redacted] | tail \u2026[redacted] && grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782321994, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] && uv run python \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782322118, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782322143, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782322243, "subject": "agent:project-manager", "tool": "Agent", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782322246, "subject": "agent:reviewer", "tool": "Bash", "command": "git fetch origin \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782322247, "subject": "agent:reviewer", "tool": "Bash", "command": "gh pr view 271 \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782322250, "subject": "agent:reviewer", "tool": "Bash", "command": "git diff \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782322251, "subject": "agent:reviewer", "tool": "Bash", "command": "gh issue view 269 \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782322258, "subject": "agent:reviewer", "tool": "Bash", "command": "git show \u2026[redacted] | grep \u2026[redacted] | grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782322259, "subject": "agent:reviewer", "tool": "Bash", "command": "cat \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782322266, "subject": "agent:reviewer", "tool": "Bash", "command": "git stash list \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782322271, "subject": "agent:reviewer", "tool": "Bash", "command": "git checkout main \u2026[redacted] | head; echo \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782322274, "subject": "agent:reviewer", "tool": "Bash", "command": "git checkout \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782322279, "subject": "agent:reviewer", "tool": "Bash", "command": "git worktree add \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782322282, "subject": "agent:reviewer", "tool": "Bash", "command": "cd \u2026[redacted] && pkit decisions validate \u2026[redacted] | tail \u2026[redacted] | tail \u2026[redacted]", "reason": "leading-cd strip: remainder carries an untrusted construct (quote / $() / backtick / redirection) \u2014 fail closed"}
+{"ts": 1782322283, "subject": "agent:reviewer", "tool": "Bash", "command": "grep \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782322288, "subject": "agent:reviewer", "tool": "Bash", "command": "git diff \u2026[redacted] | head; echo \u2026[redacted] | grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782322295, "subject": "agent:reviewer", "tool": "Bash", "command": "git worktree remove \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782322314, "subject": "agent:reviewer", "tool": "Bash", "command": "gh pr comment 271 \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782322333, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782323899, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | tail \u2026[redacted] && gh issue view 268 \u2026[redacted] | sed \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782323997, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | tail \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324334, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324370, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | tail \u2026[redacted] | tail \u2026[redacted] | head \u2026[redacted] | tr \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324715, "subject": "agent:project-manager", "tool": "Agent", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324719, "subject": "agent:software-engineer", "tool": "Bash", "command": "git branch \u2026[redacted] && git status \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324720, "subject": "agent:software-engineer", "tool": "Bash", "command": "find \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324724, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324724, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324729, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324729, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324734, "subject": "agent:software-engineer", "tool": "Bash", "command": "cd \u2026[redacted] && echo \u2026[redacted] && ls \u2026[redacted] && echo \u2026[redacted] && ls \u2026[redacted] && echo \u2026[redacted] && ls \u2026[redacted] && echo \u2026[redacted] && grep \u2026[redacted] | head", "reason": "leading-cd strip: remainder carries an untrusted construct (quote / $() / backtick / redirection) \u2014 fail closed"}
+{"ts": 1782324738, "subject": "agent:software-engineer", "tool": "Bash", "command": "ls \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324742, "subject": "agent:software-engineer", "tool": "Bash", "command": "ls \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324743, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324743, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324747, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324752, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324756, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324757, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324762, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324764, "subject": "agent:software-engineer", "tool": "Bash", "command": "ls \u2026[redacted] | grep \u2026[redacted] | grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324769, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324774, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted] | grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324778, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324783, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324787, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324792, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324793, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324801, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted] | head", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324806, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324819, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324823, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted] | head", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324827, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324828, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324834, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted] | head; echo \u2026[redacted] | head", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324842, "subject": "agent:software-engineer", "tool": "Bash", "command": "git log \u2026[redacted] | grep \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324855, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324865, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324875, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324892, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324902, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324912, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324917, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324930, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324937, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324942, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324948, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324953, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324962, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324971, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324989, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782324995, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325008, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325018, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run python \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325022, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pytest \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325026, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pkit schemas validate \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325031, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325051, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325055, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325064, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325083, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325099, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325109, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325132, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325137, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pytest \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325142, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pytest \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325256, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pytest \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325380, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pkit schemas validate \u2026[redacted] | tail \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325383, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pkit migrations check-diff \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325389, "subject": "agent:software-engineer", "tool": "Bash", "command": "git diff \u2026[redacted] | grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325394, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325399, "subject": "agent:software-engineer", "tool": "Bash", "command": "git diff \u2026[redacted] | grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325404, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325409, "subject": "agent:software-engineer", "tool": "Bash", "command": "until \u2026[redacted] && grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325424, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325427, "subject": "agent:project-manager", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325431, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run python \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325434, "subject": "agent:software-engineer", "tool": "Bash", "command": "git diff \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325497, "subject": "agent:project-manager", "tool": "Agent", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325502, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325503, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325505, "subject": "agent:critic", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325506, "subject": "agent:critic", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325506, "subject": "agent:critic", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325506, "subject": "agent:critic", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325510, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325510, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325511, "subject": "agent:project-manager", "tool": "Agent", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325513, "subject": "agent:architect", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325514, "subject": "agent:architect", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325514, "subject": "agent:architect", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325515, "subject": "agent:architect", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325515, "subject": "agent:architect", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325515, "subject": "agent:architect", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325515, "subject": "agent:architect", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325517, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325517, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325518, "subject": "agent:architect", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325518, "subject": "agent:architect", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325522, "subject": "agent:architect", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325522, "subject": "agent:critic", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325522, "subject": "agent:critic", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325523, "subject": "agent:architect", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325523, "subject": "agent:architect", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325523, "subject": "agent:critic", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325523, "subject": "agent:critic", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325524, "subject": "agent:critic", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325524, "subject": "agent:critic", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325527, "subject": "agent:architect", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325528, "subject": "agent:critic", "tool": "Grep", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325528, "subject": "agent:architect", "tool": "Grep", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325528, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325532, "subject": "agent:architect", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325532, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325533, "subject": "agent:architect", "tool": "Grep", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325537, "subject": "agent:architect", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325538, "subject": "agent:critic", "tool": "Grep", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325542, "subject": "agent:architect", "tool": "Grep", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325544, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325545, "subject": "agent:architect", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325551, "subject": "agent:architect", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325552, "subject": "agent:critic", "tool": "Grep", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325553, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325559, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325568, "subject": "agent:critic", "tool": "Grep", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325570, "subject": "agent:critic", "tool": "Grep", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325576, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325582, "subject": "agent:critic", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325588, "subject": "agent:critic", "tool": "Glob", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325590, "subject": "agent:critic", "tool": "Grep", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325751, "subject": "agent:project-manager", "tool": "Agent", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325755, "subject": "agent:software-engineer", "tool": "Bash", "command": "git branch \u2026[redacted] && git status \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325756, "subject": "agent:software-engineer", "tool": "Bash", "command": "ls \u2026[redacted] && cat \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325761, "subject": "agent:software-engineer", "tool": "Bash", "command": "cat \u2026[redacted] | head \u2026[redacted] && echo \u2026[redacted] && find \u2026[redacted] && ls \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325762, "subject": "agent:software-engineer", "tool": "Bash", "command": "git diff \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325766, "subject": "agent:software-engineer", "tool": "Bash", "command": "cat \u2026[redacted] | grep \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325767, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325771, "subject": "agent:software-engineer", "tool": "Bash", "command": "cat \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325773, "subject": "agent:software-engineer", "tool": "Bash", "command": "find \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325776, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325782, "subject": "agent:software-engineer", "tool": "Bash", "command": "find \u2026[redacted] | grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325784, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325792, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325798, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325802, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325805, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325809, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325817, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325824, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325835, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325841, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325845, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325851, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325862, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted] | head; echo \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325867, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325874, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325880, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted] | head; echo \u2026[redacted] | head \u2026[redacted] | grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325884, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325887, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325891, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325892, "subject": "agent:project-manager", "tool": "Bash", "command": "ls \u2026[redacted] | grep \u2026[redacted] | grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325894, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325898, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325911, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325916, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325928, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325935, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325940, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325954, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325966, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325972, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325977, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782325992, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782326002, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782326036, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782326040, "subject": "agent:software-engineer", "tool": "Bash", "command": "grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782326046, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782326060, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782326077, "subject": "agent:software-engineer", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782326081, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pytest \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782326084, "subject": "agent:software-engineer", "tool": "Bash", "command": "ls \u2026[redacted] | grep \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782326087, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pytest \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782326206, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pkit decisions validate \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782326207, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pkit schemas validate \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782326209, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pkit migrations check-diff \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782326215, "subject": "agent:software-engineer", "tool": "Bash", "command": "git diff \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782326222, "subject": "agent:software-engineer", "tool": "Bash", "command": "uv run pytest \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782326228, "subject": "agent:software-engineer", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782326272, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | tail \u2026[redacted] && uv run pkit decisions validate \u2026[redacted] | tail \u2026[redacted] && uv run pkit schemas validate \u2026[redacted] | tail \u2026[redacted] | tail \u2026[redacted] && grep \u2026[redacted] && git status \u2026[redacted] | wc \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782326292, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782326316, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782326355, "subject": "agent:project-manager", "tool": "Agent", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782326359, "subject": "agent:reviewer", "tool": "Bash", "command": "git fetch origin \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782326360, "subject": "agent:reviewer", "tool": "Bash", "command": "gh pr view 277 \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782326364, "subject": "agent:reviewer", "tool": "Bash", "command": "gh issue view 272 \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782326365, "subject": "agent:reviewer", "tool": "Bash", "command": "git diff \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782326370, "subject": "agent:reviewer", "tool": "Bash", "command": "git diff \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782326376, "subject": "agent:reviewer", "tool": "Bash", "command": "git checkout \u2026[redacted] | tail \u2026[redacted] && echo \u2026[redacted] && pkit migrations check-diff \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782326379, "subject": "agent:reviewer", "tool": "Bash", "command": "pkit decisions validate \u2026[redacted] | tail \u2026[redacted] && echo \u2026[redacted] && pkit schemas validate \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782326384, "subject": "agent:reviewer", "tool": "Bash", "command": "git diff \u2026[redacted] | grep \u2026[redacted] || echo \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782326385, "subject": "agent:reviewer", "tool": "Bash", "command": "git diff \u2026[redacted] | grep \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782326388, "subject": "agent:reviewer", "tool": "Bash", "command": "git checkout main \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782326403, "subject": "agent:reviewer", "tool": "Bash", "command": "gh pr comment 277 \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782326424, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782326617, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | tail \u2026[redacted] | tail \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782330548, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] && ls \u2026[redacted] | grep \u2026[redacted] | sort \u2026[redacted] | uniq | tail \u2026[redacted] && ls \u2026[redacted] | tail \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782330617, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | tail \u2026[redacted] | tail \u2026[redacted] | head \u2026[redacted] | tr \u2026[redacted] && cat \u2026[redacted] | head \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782330786, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782330908, "subject": "agent:project-manager", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782330909, "subject": "agent:project-manager", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782330926, "subject": "agent:project-manager", "tool": "Read", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}

@@ -1,0 +1,8 @@
+{"ts": 1782244157, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | sort \u2026[redacted] | sort \u2026[redacted] | tail \u2026[redacted]", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782246443, "subject": "agent:project-manager", "tool": "Bash", "command": "cd \u2026[redacted] | tail \u2026[redacted] | grep cross-capability", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782246458, "subject": "agent:project-manager", "tool": "Agent", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782246507, "subject": "agent:project-manager", "tool": "Write", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782246640, "subject": "agent:project-manager", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782246646, "subject": "agent:project-manager", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782246941, "subject": "agent:project-manager", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
+{"ts": 1782246947, "subject": "agent:project-manager", "tool": "Edit", "command": "", "reason": "lenient posture: defer to the harness's normal flow"}
