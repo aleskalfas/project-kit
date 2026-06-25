@@ -189,6 +189,29 @@ def test_create_issue_applies_axis_default_when_value_blank(ci) -> None:
     assert "area/core" in labels
 
 
+def test_create_issue_filer_value_overrides_axis_default(ci) -> None:
+    """The per-axis `default:` fills ONLY when the filer supplies none (DEC-037 §3
+    filer-override). A filer-supplied workstream wins over the declared default."""
+    map_with_ws_default = axis_labels.SubstrateMap(
+        axes={
+            "workstream": {
+                "label": {"remap": {"cli": "area/cli", "core": "area/core"}},
+                "default": "core",
+            },
+        }
+    )
+    # Caller passes `cli` ⇒ the filer value resolves; the default `core` does NOT.
+    labels, _, _ = ci._build_labels(
+        kind="task",
+        priority="High",
+        workstream="cli",
+        has_board=False,
+        substrate_map=map_with_ws_default,
+    )
+    assert "area/cli" in labels
+    assert "area/core" not in labels
+
+
 def test_create_issue_greenfield_parity_byte_identical(ci) -> None:
     """No map ⇒ the exact same label list as the pre-rewire output: the kit's own
     `type:<kind>` (+ `priority:*` / `workstream:*` in label-fallback mode)."""

@@ -356,3 +356,344 @@ def test_gh_create_issue_omits_milestone_flag_when_none(ci, monkeypatch) -> None
     )
 
     assert "--milestone" not in captured["cmd"]
+
+
+# --- board-item / project-node resolution for the set-board-field hook ----
+# (DEC-037 §3 — the non-label per-create field default. The hook needs the
+#  new item's node id + the project node id, captured/resolved here at create.)
+
+
+def test_owner_from_issue_url_extracts_the_owner(ci) -> None:
+    assert ci._owner_from_issue_url("https://github.com/acme/repo/issues/9") == "acme"
+
+
+def test_owner_from_issue_url_none_on_malformed(ci) -> None:
+    assert ci._owner_from_issue_url("not-a-url") is None
+
+
+def test_add_to_board_returns_created_item_id(ci, monkeypatch) -> None:
+    """`_gh_add_to_board` reads the created item's node id off
+    `gh project item-add --format json` so the `set-board-field` hook can
+    target THIS new item. Without this, the field default never seeds."""
+    captured: dict = {}
+
+    class _Proc:
+        returncode = 0
+        stdout = '{"id": "PVTI_newitem", "title": "x"}'
+        stderr = ""
+
+    def fake_run(cmd, *args, **kwargs):
+        captured["cmd"] = cmd
+        return _Proc()
+
+    monkeypatch.setattr(ci.subprocess, "run", fake_run)
+
+    item_id = ci._gh_add_to_board(
+        7, "https://github.com/acme/repo/issues/9", config={}
+    )
+    assert item_id == "PVTI_newitem"
+    # The membership write asks for json so the item id is recoverable.
+    assert "--format" in captured["cmd"]
+    assert captured["cmd"][captured["cmd"].index("--format") + 1] == "json"
+
+
+def test_add_to_board_none_on_gh_failure(ci, monkeypatch) -> None:
+    class _Proc:
+        returncode = 1
+        stdout = ""
+        stderr = "boom"
+
+    monkeypatch.setattr(ci.subprocess, "run", lambda *a, **k: _Proc())
+    assert (
+        ci._gh_add_to_board(7, "https://github.com/acme/repo/issues/9", config={})
+        is None
+    )
+
+
+def test_add_to_board_none_on_unparseable_json(ci, monkeypatch) -> None:
+    class _Proc:
+        returncode = 0
+        stdout = "not json"
+        stderr = ""
+
+    monkeypatch.setattr(ci.subprocess, "run", lambda *a, **k: _Proc())
+    assert (
+        ci._gh_add_to_board(7, "https://github.com/acme/repo/issues/9", config={})
+        is None
+    )
+
+
+def test_resolve_project_node_id_reads_id_off_project_view(ci, monkeypatch) -> None:
+    """Board NUMBER → project node id via `gh project view --format json`
+    (`.id`) — the same read back-fill / pre-check use."""
+    captured: dict = {}
+
+    class _Proc:
+        returncode = 0
+        stdout = '{"id": "PVT_project", "number": 7}'
+        stderr = ""
+
+    def fake_run(cmd, *args, **kwargs):
+        captured["cmd"] = cmd
+        return _Proc()
+
+    monkeypatch.setattr(ci.subprocess, "run", fake_run)
+
+    node_id = ci._resolve_project_node_id(7, "acme", config={})
+    assert node_id == "PVT_project"
+    assert captured["cmd"][:3] == ["gh", "project", "view"]
+    assert "--owner" in captured["cmd"]
+
+
+def test_resolve_project_node_id_none_when_board_unresolvable(ci, monkeypatch) -> None:
+    class _Proc:
+        returncode = 1
+        stdout = ""
+        stderr = "no such project"
+
+    monkeypatch.setattr(ci.subprocess, "run", lambda *a, **k: _Proc())
+    assert ci._resolve_project_node_id(7, "acme", config={}) is None
+
+
+# --- main() integration: the create-context ASSEMBLY (#295) ----------------
+# The unit tests above prove the helpers return the right ids and that the hook
+# seeds GIVEN a hand-built context. These drive the REAL main() to pin the wiring
+# the fix actually repairs: that after a successful create + board-add, main()
+# ASSEMBLES a context whose `issue.board_item_id` + top-level `project_node_id`
+# are populated — the exact `{number,title}`-only context that bug #295 fixed —
+# and that the REAL `set-board-field` hook reads those keys and reaches the seam.
+#
+# The hook runs for real here (a staged hooks.yaml + the real fire_hooks the
+# script imports), so the asserted keys are the ones `_lib/hooks.py` actually
+# reads. A future refactor that renames `board_item_id` / `project_node_id` in
+# EITHER file drifts the cross-file contract and fails this test (critic Gap 4 +
+# Gap 5).
+
+
+def _stage_capability_tree(tmp_path: Path, *, has_board: bool) -> Path:
+    """Stage a minimal but REAL pm capability tree main() can run against.
+
+    Carries just enough for the create + (optional) board path: the schemas
+    main() reads, a Task template, an adopter config (board on/off), an empty
+    members file (open mode — any identity passes), and a hooks.yaml declaring
+    the `set-board-field` hook so the REAL fire_hooks exercises the assembled
+    context end-to-end.
+    """
+    root = tmp_path / ".pkit" / "capabilities" / "project-management"
+    (root / "schemas").mkdir(parents=True)
+    (root / "templates").mkdir(parents=True)
+    (root / "project").mkdir(parents=True)
+
+    (root / "schemas" / "issue-types.yaml").write_text(
+        "types:\n"
+        "  task:\n"
+        "    title_prefix: Task\n"
+        "    title_case: title\n"
+        "    parent_issue_types: [feature, umbrella, epic, milestone]\n"
+        "    parent_ref_form: 'Feature: #<N>'\n"
+        "    parent_ref_optional: false\n"
+        "    parent_ref_required_severity: '[validation-severity:hard-reject]'\n",
+        encoding="utf-8",
+    )
+    (root / "schemas" / "titles.yaml").write_text(
+        "formats:\n"
+        "  issue-task:\n"
+        "    pattern: '^\\[(Task|Bug|Docs|Test|Refactor|Chore)\\] .+$'\n",
+        encoding="utf-8",
+    )
+    (root / "schemas" / "body-format.yaml").write_text("sections: {}\n", encoding="utf-8")
+
+    (root / "templates" / "Task.md").write_text(
+        "---\nname: Task\n---\nFeature: #\n\n## What\nfoo\n", encoding="utf-8"
+    )
+
+    config_lines = ["workstreams: [spyre]\n"]
+    if has_board:
+        config_lines.append("has_projects_v2_board: true\n")
+        config_lines.append("projects_v2_board_id: 7\n")
+    (root / "project" / "config.yaml").write_text("".join(config_lines), encoding="utf-8")
+
+    # Empty members → open mode (membership passes for any resolved identity).
+    (root / "project" / "members.yaml").write_text("members: []\n", encoding="utf-8")
+
+    # The set-board-field hook: this is what reads the assembled context keys.
+    (root / "project" / "hooks.yaml").write_text(
+        "schema_version: 1\n"
+        "hooks:\n"
+        "  after_create_issue:\n"
+        "    - kind: set-board-field\n"
+        "      field_id: PVTF_workstream\n"
+        "      single_select_option_id: OPT_spyre\n",
+        encoding="utf-8",
+    )
+    return root
+
+
+def _gh_command_dispatcher(create_url: str):
+    """Build a fake subprocess.run that answers the gh calls main() makes.
+
+    Routes on the gh subcommand: `issue create` → the created URL; `project
+    item-add` → the new item node id; `project view` → the project node id;
+    `repo view` → owner/name. Any other gh call returns a benign empty success.
+    """
+
+    def fake_run(cmd, *args, **kwargs):
+        class _Proc:
+            returncode = 0
+            stdout = ""
+            stderr = ""
+
+        proc = _Proc()
+        joined = " ".join(str(c) for c in cmd)
+        if "issue" in cmd and "create" in cmd:
+            proc.stdout = create_url + "\n"
+        elif "project" in cmd and "item-add" in cmd:
+            proc.stdout = '{"id": "PVTI_newitem", "title": "x"}'
+        elif "project" in cmd and "view" in cmd:
+            proc.stdout = '{"id": "PVT_project", "number": 7}'
+        elif "repo" in cmd and "view" in cmd:
+            proc.stdout = "acme/repo"
+        elif "api" in cmd and "user" in joined:
+            proc.stdout = "filer-login"
+        return proc
+
+    return fake_run
+
+
+def test_main_board_path_assembles_context_hook_reads_and_seeds(
+    ci, tmp_path, monkeypatch
+) -> None:
+    """BOARD path: after create + board-add, main() fires the hook with a
+    context carrying `issue.board_item_id` and top-level `project_node_id`
+    (the keys `_lib/hooks.py` reads), and the REAL set-board-field hook reaches
+    the seam targeting the NEW item — the wiring #295 repairs."""
+    root = _stage_capability_tree(tmp_path, has_board=True)
+
+    monkeypatch.setattr(
+        ci.subprocess,
+        "run",
+        _gh_command_dispatcher("https://github.com/acme/repo/issues/42"),
+    )
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+    monkeypatch.setattr(
+        ci.sys,
+        "argv",
+        [
+            "create-issue.py",
+            "--type", "task",
+            "--title", "do a thing",
+            "--parent", "1",
+            "--workstream", "spyre",
+            "--capability-root", str(root),
+            "--yes",
+        ],
+    )
+
+    # The seam the hook reaches lives on the hooks module create-issue imported.
+    # Resolve it BEFORE wrapping ci.fire_hooks (the wrapper's __module__ is this
+    # test, not the hooks module).
+    hooks_module = _hooks_module(ci)
+
+    # Capture the REAL context main() hands fire_hooks, without stubbing the
+    # hook out — the wrapped real fire_hooks still runs the staged set-board-field
+    # hook, so the seam capture below proves the keys were read, not just present.
+    captured_context: dict = {}
+    real_fire_hooks = ci.fire_hooks
+
+    def capturing_fire_hooks(event, context, config, **kwargs):
+        captured_context.update(context)
+        return real_fire_hooks(event, context, config, **kwargs)
+
+    monkeypatch.setattr(ci, "fire_hooks", capturing_fire_hooks)
+
+    # Patch write_field_value on that hooks module to capture the field write
+    # the hook drives.
+    seam_call: dict = {}
+
+    class _WriteResult:
+        ok = True
+        detail = "set field"
+        error = None
+
+    def fake_write(config, **kwargs):
+        seam_call.update(kwargs)
+        return _WriteResult()
+
+    monkeypatch.setattr(hooks_module.substrate_writes, "write_field_value", fake_write)
+
+    rc = ci.main()
+    assert rc == 0
+
+    # Gap 4: main() ASSEMBLED the populated context (not the {number,title}-only
+    # shape #295 fixed).
+    assert captured_context["issue"]["board_item_id"] == "PVTI_newitem"
+    assert captured_context["project_node_id"] == "PVT_project"
+
+    # Gap 5: the REAL hook read those keys and reached the seam for the NEW item.
+    assert seam_call["item_id"] == "PVTI_newitem"
+    assert seam_call["project_id"] == "PVT_project"
+    assert seam_call["field_id"] == "PVTF_workstream"
+    assert seam_call["single_select_option_id"] == "OPT_spyre"
+
+
+def test_main_label_fallback_path_omits_board_keys_hook_skips(
+    ci, tmp_path, monkeypatch
+) -> None:
+    """LABEL-FALLBACK path (no board configured): main() assembles a context
+    with NEITHER `issue.board_item_id` NOR a populated `project_node_id`, so the
+    REAL set-board-field hook skips and no field write is attempted."""
+    root = _stage_capability_tree(tmp_path, has_board=False)
+
+    monkeypatch.setattr(
+        ci.subprocess,
+        "run",
+        _gh_command_dispatcher("https://github.com/acme/repo/issues/43"),
+    )
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+    monkeypatch.setattr(
+        ci.sys,
+        "argv",
+        [
+            "create-issue.py",
+            "--type", "task",
+            "--title", "do a thing",
+            "--parent", "1",
+            "--workstream", "spyre",
+            "--capability-root", str(root),
+            "--yes",
+        ],
+    )
+
+    hooks_module = _hooks_module(ci)
+
+    captured_context: dict = {}
+    real_fire_hooks = ci.fire_hooks
+
+    def capturing_fire_hooks(event, context, config, **kwargs):
+        captured_context.update(context)
+        return real_fire_hooks(event, context, config, **kwargs)
+
+    monkeypatch.setattr(ci, "fire_hooks", capturing_fire_hooks)
+
+    def boom(*a, **k):  # pragma: no cover — must not be reached
+        raise AssertionError("no field write may run on the label-fallback path")
+
+    monkeypatch.setattr(hooks_module.substrate_writes, "write_field_value", boom)
+
+    rc = ci.main()
+    assert rc == 0
+
+    # Neither board key is populated → the hook (had it run) reads nothing to
+    # target, and skips. The seam `boom` above asserts no write was attempted.
+    assert "board_item_id" not in captured_context["issue"]
+    assert captured_context["project_node_id"] is None
+
+
+def _hooks_module(ci):
+    """The hooks module object create-issue.py imported its `fire_hooks` from.
+
+    create-issue does `from _lib.hooks import fire_hooks`, so the function's
+    `__module__` names the loaded hooks module; reach it through sys.modules to
+    patch the `substrate_writes` seam the hook actually calls.
+    """
+    return sys.modules[ci.fire_hooks.__module__]

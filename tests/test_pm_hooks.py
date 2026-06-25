@@ -201,6 +201,120 @@ def test_assign_milestone_missing_title_yields_failure(hooks, capability_root) -
     assert "title" in results[0].error
 
 
+# --- set-board-field handler (the non-label per-create field default) ----
+# DEC-037 §3: the `set-board-field` hook seeds a Projects-v2 field default
+# (the AUJ `workstream=Spyre` case) on a new issue. It needs the new item's
+# board node id + the project node id in context — exactly what create-issue
+# now threads in. These tests pin that the create-context shape drives a write,
+# and that the label-fallback shape (no item id) skips by design.
+
+_SET_BOARD_FIELD_HOOK = (
+    "schema_version: 1\n"
+    "hooks:\n"
+    "  after_create_issue:\n"
+    "    - kind: set-board-field\n"
+    "      field_id: PVTF_workstream\n"
+    "      single_select_option_id: OPT_spyre\n"
+)
+
+
+def test_set_board_field_seeds_via_seam_with_create_context(
+    hooks, capability_root, monkeypatch
+) -> None:
+    """With the create-context shape (board_item_id on the issue + a
+    project_node_id), the `set-board-field` hook drives a field-value write
+    through the seam — the non-label per-create default actually seeds."""
+    (capability_root / "project" / "hooks.yaml").write_text(
+        _SET_BOARD_FIELD_HOOK, encoding="utf-8"
+    )
+
+    captured: dict = {}
+
+    class _Result:
+        ok = True
+        detail = "set field"
+        error = None
+
+    def fake_write(config, **kwargs):
+        captured.update(kwargs)
+        return _Result()
+
+    monkeypatch.setattr(hooks.substrate_writes, "write_field_value", fake_write)
+
+    results = hooks.fire_hooks(
+        "after_create_issue",
+        context={
+            "issue": {"number": 9, "title": "x", "board_item_id": "PVTI_new"},
+            "repo": "acme/repo",
+            "project_node_id": "PVT_project",
+        },
+        config={},
+        capability_root=capability_root,
+    )
+
+    assert len(results) == 1
+    assert results[0].status == "ok"
+    # The write targeted THIS new item, on the configured field/option.
+    assert captured["item_id"] == "PVTI_new"
+    assert captured["project_id"] == "PVT_project"
+    assert captured["field_id"] == "PVTF_workstream"
+    assert captured["single_select_option_id"] == "OPT_spyre"
+
+
+def test_set_board_field_skips_without_item_id(
+    hooks, capability_root, monkeypatch
+) -> None:
+    """Label-fallback shape (no board → no board_item_id in context): the hook
+    skips by design rather than guessing an item. No write is attempted."""
+    (capability_root / "project" / "hooks.yaml").write_text(
+        _SET_BOARD_FIELD_HOOK, encoding="utf-8"
+    )
+
+    def boom(*a, **k):  # pragma: no cover — must not be reached
+        raise AssertionError("write_field_value must not run without an item id")
+
+    monkeypatch.setattr(hooks.substrate_writes, "write_field_value", boom)
+
+    results = hooks.fire_hooks(
+        "after_create_issue",
+        context={"issue": {"number": 9, "title": "x"}, "repo": "acme/repo"},
+        config={},
+        capability_root=capability_root,
+    )
+    assert len(results) == 1
+    assert results[0].status == "skipped"
+    assert "board-item id" in results[0].detail
+
+
+def test_set_board_field_skips_without_project_node_id(
+    hooks, capability_root, monkeypatch
+) -> None:
+    """Item id present but the project node id did not resolve: skip, no write
+    (never guess the project the item belongs to)."""
+    (capability_root / "project" / "hooks.yaml").write_text(
+        _SET_BOARD_FIELD_HOOK, encoding="utf-8"
+    )
+
+    def boom(*a, **k):  # pragma: no cover — must not be reached
+        raise AssertionError("write_field_value must not run without a project id")
+
+    monkeypatch.setattr(hooks.substrate_writes, "write_field_value", boom)
+
+    results = hooks.fire_hooks(
+        "after_create_issue",
+        context={
+            "issue": {"number": 9, "title": "x", "board_item_id": "PVTI_new"},
+            "repo": "acme/repo",
+            "project_node_id": None,
+        },
+        config={},
+        capability_root=capability_root,
+    )
+    assert len(results) == 1
+    assert results[0].status == "skipped"
+    assert "Projects v2 board" in results[0].detail
+
+
 # --- post-comment handler -----------------------------------------------
 
 
