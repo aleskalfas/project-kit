@@ -21,6 +21,16 @@ The same aggregator runs in two places, so the gate can't drift:
 
 Add a check by editing `scripts/check.sh` once; both the hook and CI pick it up. (`ruff` and `pyright` are configured in `pyproject.toml` but the tree doesn't yet pass them, so they're **not** gated — adopting them is a separate cleanup.)
 
+**Optional task runner.** A [`mise.toml`](mise.toml) provides convenience aliases over the underlying `uv run ...` commands — `mise tasks` lists them, `mise run check` runs the lint/format/typecheck/test bundle. After cloning, run `mise trust` once to enable the task runner: mise gates untrusted config by design, so a fresh clone prints a "not trusted" error on every shell until you do. Not using mise? Run the `uv run ...` commands (or `./scripts/check.sh`) directly — mise is sugar, not a requirement.
+
+**Switching the global `pkit` (dev vs pinned).** There's one `pkit` on PATH; "switching versions" means controlling what it points at. The `mise.toml` wraps the incantations so you don't have to remember them:
+
+- `mise run pkit:dev` — point the global `pkit` at **this checkout** (editable; source edits go live via the PRJ-001 dispatcher).
+- `mise run pkit:pin` — switch back to the **pinned release** (the PRJ-004 git install).
+- `mise run pkit:which` — show which one is currently active.
+
+`pkit:dev` makes *one* checkout globally active, so across multiple clones you re-run it (or just use `uv run pkit` in-tree, which always binds to the current checkout and touches no global state). Both tasks mutate `~/.local/bin/pkit` (or `$UV_TOOL_BIN_DIR`); `pkit:pin` only ever removes a *symlink*, never a real binary.
+
 ---
 
 ## How the methodology is structured
