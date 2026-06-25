@@ -430,6 +430,101 @@ def test_load_model_no_active_profile_no_layer(decide_mod, tmp_path):
     assert len(model["grants"]) == 3  # guardrails only
 
 
+# ---- active_profile per-machine source (ADR-032 / #304) --------------------
+#
+# `active_profile` is a decision-model input read by the live hook through
+# `load_model` → `active_profile`. ADR-032 moves it to a per-machine sidecar
+# with a permanent `config.yaml` fallback; these assert the resolution and the
+# enforcement-unchanged guarantee (the hook still layers the profile's grants).
+
+def _profile_sidecar_tree(root: Path, *, profile_name: str,
+                          sidecar: str | None, config: str):
+    (root / ".pkit" / "schemas").mkdir(parents=True)
+    (root / ".pkit" / "schemas" / "privilege-catalog.yaml").write_text(
+        CATALOG_PATH.read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    pdir = root / ".pkit" / "permissions" / "project" / "profiles"
+    pdir.mkdir(parents=True)
+    (pdir / f"{profile_name}.yaml").write_text(
+        "schema_version: 1\ndescription: t\nposture: lenient\n"
+        "grants:\n  - subject: all\n    privilege: \"[privilege-catalog:vcs]\"\n"
+        "    effect: allow\n",
+        encoding="utf-8",
+    )
+    proj = root / ".pkit" / "permissions" / "project"
+    (proj / "config.yaml").write_text(config, encoding="utf-8")
+    if sidecar is not None:
+        (proj / "active-profile.yaml").write_text(sidecar, encoding="utf-8")
+
+
+def test_active_profile_resolves_from_sidecar(decide_mod, tmp_path):
+    # The sidecar is the source of truth; config.yaml carries no active_profile.
+    _profile_sidecar_tree(
+        tmp_path, profile_name="team",
+        sidecar="schema_version: 1\nactive_profile: team\n",
+        config="schema_version: 1\nownership_mode: additive\nposture: lenient\n",
+    )
+    cfg = decide_mod.load_yaml(
+        str(tmp_path / ".pkit" / "permissions" / "project" / "config.yaml"))
+    assert decide_mod.active_profile(str(tmp_path), cfg) == "team"
+
+
+def test_active_profile_falls_back_to_config(decide_mod, tmp_path):
+    # An adopter mid-migration: no sidecar yet, active_profile still in config.
+    _profile_sidecar_tree(
+        tmp_path, profile_name="team", sidecar=None,
+        config=("schema_version: 1\nownership_mode: additive\nposture: lenient\n"
+                "active_profile: team\n"),
+    )
+    cfg = decide_mod.load_yaml(
+        str(tmp_path / ".pkit" / "permissions" / "project" / "config.yaml"))
+    assert decide_mod.active_profile(str(tmp_path), cfg) == "team"
+
+
+def test_active_profile_sidecar_wins_over_config(decide_mod, tmp_path):
+    # Sidecar takes precedence over a stale config value (post-relocation safety).
+    _profile_sidecar_tree(
+        tmp_path, profile_name="team",
+        sidecar="schema_version: 1\nactive_profile: team\n",
+        config=("schema_version: 1\nownership_mode: additive\nposture: lenient\n"
+                "active_profile: stale\n"),
+    )
+    cfg = decide_mod.load_yaml(
+        str(tmp_path / ".pkit" / "permissions" / "project" / "config.yaml"))
+    assert decide_mod.active_profile(str(tmp_path), cfg) == "team"
+
+
+def test_load_model_layers_profile_from_sidecar(decide_mod, tmp_path):
+    # Enforcement unchanged: with active_profile in the sidecar, load_model still
+    # layers the profile's grants and the model decides the same.
+    _profile_sidecar_tree(
+        tmp_path, profile_name="team",
+        sidecar="schema_version: 1\nactive_profile: team\n",
+        config="schema_version: 1\nownership_mode: additive\nposture: lenient\n",
+    )
+    catalog = decide_mod.load_catalog(str(tmp_path))
+    model = decide_mod.load_model(str(tmp_path), catalog)
+    assert model["active_profile"] == "team"
+    d, _ = decide_mod.decide(model, catalog, _bash("git status", "operator"))
+    assert d == "allow"  # the profile's `all` vcs grant is live
+
+
+def test_load_model_layers_profile_from_config_fallback(decide_mod, tmp_path):
+    # No-regression mid-migration: active_profile only in config.yaml — load_model
+    # STILL layers the profile (a frozen old loader would have, too; the point is
+    # the new loader keeps doing so via the fallback).
+    _profile_sidecar_tree(
+        tmp_path, profile_name="team", sidecar=None,
+        config=("schema_version: 1\nownership_mode: additive\nposture: lenient\n"
+                "active_profile: team\n"),
+    )
+    catalog = decide_mod.load_catalog(str(tmp_path))
+    model = decide_mod.load_model(str(tmp_path), catalog)
+    assert model["active_profile"] == "team"
+    d, _ = decide_mod.decide(model, catalog, _bash("git status", "operator"))
+    assert d == "allow"
+
+
 # ---- stdlib YAML-subset fallback (ADR-014 pt.1 / ADR-002/003 same-code) -----
 #
 # Critical invariant: the stdlib fallback in load_yaml() MUST parse the real

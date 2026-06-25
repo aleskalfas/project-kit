@@ -894,17 +894,52 @@ def guardrail_denies(catalog: dict[str, Any]) -> list[dict[str, Any]]:
     return out
 
 
+def active_profile(target_root: str, config: dict[str, Any]) -> Any:
+    """Resolve the active permission profile name for a target tree (ADR-032).
+
+    `active_profile` is per-machine state (an operator's autonomy choice), so it
+    lives in a gitignored per-machine sidecar (`active-profile.yaml`, declared
+    `runtime_ignore`), NOT in the tracked `config.yaml`. This is the SINGLE
+    resolution point — the source of truth both the hook and the CLI read
+    through (ADR-002/ADR-003 same-code invariant), so each operator's hook layers
+    their own profile while the shared `config.yaml` policy stays committed.
+
+    Resolution order: the sidecar's `active_profile` key, then a `config.yaml`
+    fallback. The fallback is PERMANENT (issue #304): an adopter installed before
+    ADR-032 — or mid-migration before the next `setup autonomy` relocation —
+    still has `active_profile` in `config.yaml`, and reading it there keeps
+    enforcement unchanged for them. The fallback is the simplest safe rule (read
+    sidecar, else config) and costs nothing once the value is relocated, so it
+    stays rather than being a removable migration crutch.
+
+    Stdlib-safe (same-code invariant): reads through the shared `load_yaml` /
+    `_stdlib_load_yaml` fallback; no third-party dependency, no
+    `src/project_kit` import — decide.py runs as bare python in-sandbox."""
+    import os.path
+
+    sidecar = os.path.join(
+        target_root, ".pkit", "permissions", "project", "active-profile.yaml"
+    )
+    if _exists(sidecar):
+        name = load_yaml(sidecar).get("active_profile")
+        if name:
+            return name
+    return config.get("active_profile")
+
+
 def _active_profile_grants(target_root: str, config: dict[str, Any]) -> list[dict[str, Any]]:
     """Grants contributed by the active permission profile (per ADR-005), if any.
 
     The profile is a LAYER, never an owner: its grants sit between the guardrail
     denies and the adopter's own grants.yaml, and the adopter's grants are
     unioned last so a manual `grant`/`revoke` is never overwritten by a profile.
-    Resolves the active profile name (`config.active_profile`) project-first
-    (`project/profiles/<name>.yaml`) then shipped (`profiles/<name>.yaml`)."""
+    Resolves the active profile name via `active_profile` (the per-machine
+    sidecar, with `config.yaml` fallback — ADR-032), then the profile file
+    project-first (`project/profiles/<name>.yaml`) then shipped
+    (`profiles/<name>.yaml`)."""
     import os.path
 
-    name = config.get("active_profile")
+    name = active_profile(target_root, config)
     if not name:
         return []
     for base in (
@@ -989,7 +1024,12 @@ def load_model(target_root: str, catalog: dict[str, Any]) -> dict[str, Any]:
     return {
         "posture": config.get("posture", "lenient"),
         "ownership_mode": config.get("ownership_mode", "additive"),
-        "active_profile": config.get("active_profile"),
+        # `active_profile` is a decision-model input (it layers the profile's
+        # grants below), and per ADR-032 it lives in the per-machine sidecar with
+        # a `config.yaml` fallback — resolved through the single `active_profile`
+        # helper so the hook and the CLI read the same per-machine source. This is
+        # an ADDITIVE source-edit: `decide()`'s verdict path is byte-identical.
+        "active_profile": active_profile(target_root, config),
         "grants": (
             guardrail_denies(catalog)
             + _capability_fragment_grants(target_root)
