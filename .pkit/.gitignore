@@ -7,4 +7,5 @@
 permissions/project/diagnose.yaml
 permissions/project/diagnose-log.jsonl
 permissions/project/sandbox-provenance.yaml
+permissions/project/active-profile.yaml
 capabilities/project-management/project/process/**/*.journal.jsonl
