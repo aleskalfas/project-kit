@@ -1,7 +1,7 @@
 ---
 id: ADR-032
 title: Per-machine value-provenance + activation routing axis (composes with ADR-029's effect axis)
-status: proposed
+status: accepted
 date: 2026-06-25
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
