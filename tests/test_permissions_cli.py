@@ -418,8 +418,13 @@ def test_profile_activate_sets_active_and_layers_grants(tmp_path, monkeypatch):
     proj = _setup(tmp_path)
     out = _run(proj, monkeypatch, "profile", "activate", "non-destructive", "--no-apply")
     assert "active" in out
+    # ADR-032: `active_profile` is per-machine — it goes to the gitignored sidecar,
+    # NOT the tracked config.yaml (which keeps only shared policy keys).
+    sidecar = (proj / ".pkit" / "permissions" / "project" / "active-profile.yaml").read_text()
+    assert "active_profile: non-destructive" in sidecar
     cfg = (proj / ".pkit" / "permissions" / "project" / "config.yaml").read_text()
-    assert "active_profile: non-destructive" in cfg
+    assert "active_profile" not in cfg
+    assert "ownership_mode" in cfg and "posture" in cfg  # policy keys retained
     # the profile's grants are now live in the model (explain shows them, layered)
     out = _run(proj, monkeypatch, "explain")
     assert "vcs" in out and "issue-tracker" in out
@@ -445,6 +450,93 @@ def test_profile_activate_does_not_clobber_manual_grants(tmp_path, monkeypatch):
 def test_profile_activate_unknown_refused(tmp_path, monkeypatch):
     out = _run_fail(_setup(tmp_path), monkeypatch, "profile", "activate", "nope")
     assert "no profile named" in out
+
+
+# ---- active_profile per-machine sidecar + relocation (ADR-032 / #304) -------
+
+from project_kit import permissions as _perm  # noqa: E402
+
+
+def test_active_profile_accessor_reads_sidecar(tmp_path, monkeypatch):
+    proj = _setup(tmp_path)
+    _run(proj, monkeypatch, "profile", "activate", "read-only", "--no-apply")
+    # The single accessor resolves the sidecar value the setter wrote.
+    assert _perm._active_profile(proj) == "read-only"
+
+
+def test_active_profile_accessor_config_fallback(tmp_path, monkeypatch):
+    # Adopter mid-migration: active_profile still in config.yaml, no sidecar.
+    proj = _setup(tmp_path, config=(
+        "schema_version: 1\nownership_mode: additive\nposture: lenient\n"
+        "active_profile: read-only\n"))
+    assert not (proj / ".pkit" / "permissions" / "project" / "active-profile.yaml").exists()
+    assert _perm._active_profile(proj) == "read-only"
+
+
+def test_active_profile_sidecar_wins_over_config(tmp_path, monkeypatch):
+    proj = _setup(tmp_path, config=(
+        "schema_version: 1\nownership_mode: additive\nposture: lenient\n"
+        "active_profile: stale\n"))
+    _perm._set_active_profile(proj, "read-only")
+    assert _perm._active_profile(proj) == "read-only"
+
+
+def test_relocate_active_profile_moves_config_to_sidecar(tmp_path, monkeypatch):
+    proj = _setup(tmp_path, config=(
+        "schema_version: 1\nownership_mode: additive\nposture: lenient\n"
+        "confinement_accommodations: []\n"
+        "active_profile: read-only\n"))
+    moved = _perm._relocate_tracked_active_profile(proj)
+    assert len(moved) == 1 and "read-only" in moved[0]
+    # Sidecar now carries the value...
+    sidecar = (proj / ".pkit" / "permissions" / "project" / "active-profile.yaml").read_text()
+    assert "active_profile: read-only" in sidecar
+    # ...and config.yaml is stripped of active_profile but keeps its policy keys.
+    cfg = (proj / ".pkit" / "permissions" / "project" / "config.yaml").read_text()
+    assert "active_profile" not in cfg
+    for key in ("ownership_mode", "posture", "schema_version", "confinement_accommodations"):
+        assert key in cfg
+
+
+def test_relocate_active_profile_idempotent(tmp_path, monkeypatch):
+    proj = _setup(tmp_path, config=(
+        "schema_version: 1\nownership_mode: additive\nposture: lenient\n"
+        "active_profile: read-only\n"))
+    first = _perm._relocate_tracked_active_profile(proj)
+    second = _perm._relocate_tracked_active_profile(proj)
+    assert len(first) == 1 and second == []  # second run is a no-op
+    assert _perm._active_profile(proj) == "read-only"
+
+
+def test_relocate_active_profile_no_clobber_live_sidecar(tmp_path, monkeypatch):
+    # A live sidecar value is NEVER overwritten by a (stale) config copy (#288).
+    proj = _setup(tmp_path, config=(
+        "schema_version: 1\nownership_mode: additive\nposture: lenient\n"
+        "active_profile: stale-in-config\n"))
+    _perm._set_active_profile(proj, "live-in-sidecar")
+    _perm._relocate_tracked_active_profile(proj)
+    assert _perm._active_profile(proj) == "live-in-sidecar"  # sidecar wins, unharmed
+    cfg = (proj / ".pkit" / "permissions" / "project" / "config.yaml").read_text()
+    assert "active_profile" not in cfg  # stale config copy is stripped
+
+
+def test_relocate_active_profile_noop_when_absent(tmp_path, monkeypatch):
+    proj = _setup(tmp_path, config=(
+        "schema_version: 1\nownership_mode: additive\nposture: lenient\n"))
+    assert _perm._relocate_tracked_active_profile(proj) == []
+
+
+def test_same_code_hook_and_cli_agree_on_sidecar_profile(tmp_path, monkeypatch):
+    # The same-code invariant (ADR-002/003): hook and CLI both build their model
+    # via load_model, so both see the per-machine active_profile from the sidecar.
+    proj = _setup(tmp_path)
+    _run(proj, monkeypatch, "profile", "activate", "non-destructive", "--no-apply")
+    dm = _perm._decide_mod(proj)
+    catalog = _perm._load_catalog(proj)
+    model = dm.load_model(str(proj), catalog)  # the loader the hook uses
+    assert model["active_profile"] == "non-destructive"
+    # CLI accessor agrees with the model-loader source.
+    assert _perm._active_profile(proj) == "non-destructive"
 
 
 # ---- sandbox confinement (ADR-004 / ADR-005, #274) ---------------------------
@@ -839,6 +931,24 @@ def test_setup_autonomy_first_run_stands_up_and_stops_at_restart(tmp_path, monke
     assert "unsandboxed escape sealed" in out
     assert any("permission-hook" in h.get("command", "")
                for e in data["hooks"]["PreToolUse"] for h in e.get("hooks", []))
+
+
+def test_setup_autonomy_relocates_config_active_profile_to_sidecar(tmp_path, monkeypatch):
+    # An adopter installed before ADR-032 has `active_profile: autonomous` already
+    # in config.yaml. `setup autonomy` finds the profile already active (via the
+    # config fallback) AND relocates it to the per-machine sidecar, stripping it
+    # from the tracked config.yaml (no-clobber, reported).
+    proj = _with_adapter(_setup(tmp_path, config=(
+        "schema_version: 1\nownership_mode: additive\nposture: lenient\n"
+        "active_profile: autonomous\n")))
+    out = _run(proj, monkeypatch, "setup", "autonomy")
+    assert "relocated active profile `autonomous` to active-profile.yaml" in out
+    sidecar = (proj / ".pkit" / "permissions" / "project" / "active-profile.yaml").read_text()
+    assert "active_profile: autonomous" in sidecar
+    cfg = (proj / ".pkit" / "permissions" / "project" / "config.yaml").read_text()
+    assert "active_profile" not in cfg
+    # Enforcement is unchanged: the profile is still the active one in the model.
+    assert _perm._active_profile(proj) == "autonomous"
 
 
 def test_setup_autonomy_resumes_and_reports_pending_outside_box(tmp_path, monkeypatch):
@@ -2073,20 +2183,108 @@ def test_gh_required_exclusion_revertable_via_remove(tmp_path, monkeypatch):
     assert "gh" not in _sb(proj).get("excludedCommands", [])
 
 
-def test_decide_py_untouched_by_gh_work():
-    # ADR-030 condition 8: the permission-decision core is unaffected by this work.
-    # The decision core lives at .pkit/permissions/decide.py (NOT src/...); assert
-    # the path exists so a future rename can't silently re-vacuum this guard.
+def _extract_func_source(source: str, name: str) -> str:
+    """Byte-exact source of a top-level `def <name>` OR module-level assignment
+    `<name> = ...` from a module's text, by AST line span (decorators included).
+    Used to freeze the `decide()` VERDICT path — both the functions it composes
+    and the module-level verdict regexes those functions close over."""
+    import ast
+    tree = ast.parse(source)
+    lines = source.splitlines()
+    for node in tree.body:
+        if isinstance(node, ast.FunctionDef) and node.name == name:
+            start = (node.decorator_list[0].lineno if node.decorator_list
+                     else node.lineno) - 1
+            return "\n".join(lines[start:node.end_lineno])
+        if isinstance(node, ast.Assign) and any(
+            isinstance(t, ast.Name) and t.id == name for t in node.targets
+        ):
+            return "\n".join(lines[node.lineno - 1:node.end_lineno])
+    raise AssertionError(f"function or assignment {name!r} not found in module source")
+
+
+def test_decide_verdict_path_byte_identical_to_main():
+    # ADR-032 (corrected): `load_model` gains an additive edit to read
+    # `active_profile` from its per-machine home, so decide.py is NOT frozen
+    # whole-file. What MUST stay byte-identical is the `decide()` VERDICT path —
+    # the verdict logic, not the model-loader. Guard exactly that function (and
+    # the pure helpers it composes) against `main`, not the whole file.
     import subprocess
     root = Path(__file__).resolve().parent.parent
     decide_py = root / ".pkit" / "permissions" / "decide.py"
     assert decide_py.is_file(), f"decide.py not found at expected path: {decide_py}"
-    r = subprocess.run(
-        ["git", "diff", "--name-only", "main", "--", ".pkit/permissions/decide.py"],
-        cwd=str(root),
-        capture_output=True, text=True, check=False,
+
+    working = decide_py.read_text(encoding="utf-8")
+
+    # Resolve the baseline against the first available ref. CI (actions/checkout)
+    # leaves `main` only as the remote-tracking `origin/main` — the local branch
+    # `main` does not exist there — so prefer `origin/main`; fall back to local
+    # `main` (dev checkouts) and then the merge-base. `rev-parse --verify --quiet`
+    # tests availability without erroring. If NONE resolve, skip: the guard needs
+    # the base to compare and has nothing to assert against.
+    def _resolves(ref: str) -> bool:
+        return subprocess.run(
+            ["git", "rev-parse", "--verify", "--quiet", ref],
+            cwd=str(root), capture_output=True, text=True, check=False,
+        ).returncode == 0
+
+    base_ref = next(
+        (ref for ref in ("origin/main", "main") if _resolves(ref)),
+        None,
     )
-    assert r.stdout.strip() == "", f"decide.py must be untouched, got: {r.stdout!r}"
+    if base_ref is None:
+        mb = subprocess.run(
+            ["git", "merge-base", "HEAD", "@{upstream}"],
+            cwd=str(root), capture_output=True, text=True, check=False,
+        )
+        if mb.returncode == 0 and mb.stdout.strip():
+            base_ref = mb.stdout.strip()
+    if base_ref is None:
+        pytest.skip(
+            "base ref (origin/main|main) not available — "
+            "byte-identical guard needs the base to compare"
+        )
+
+    r = subprocess.run(
+        ["git", "show", f"{base_ref}:.pkit/permissions/decide.py"],
+        cwd=str(root), capture_output=True, text=True, check=False,
+    )
+    assert r.returncode == 0, (
+        f"could not read decide.py from {base_ref}: {r.stderr!r}"
+    )
+    base = r.stdout
+
+    # The verdict path: `decide()` and `hook_decide()` themselves PLUS every pure
+    # helper they transitively call AND the module-level verdict regexes those
+    # helpers close over. None of these may change under ADR-032 (only
+    # `load_model` / `active_profile` / `_active_profile_grants` may). If a future
+    # change legitimately touches one, that is a verdict-logic change and must be
+    # a deliberate, reviewed edit to this list.
+    #
+    # Transitive call graph (verified against decide.py):
+    #   decide        → _strip_leading_cd, recognized_privileges,
+    #                   _effective_grants, _privilege_ids, _scope_ok  (+ _UNTRUSTED)
+    #   hook_decide   → _read_default_agent, decide
+    #   recognized_privileges → segments (+ _SEP/_ENVVAR), _matches_bash
+    #   _privilege_ids        → (+ _TOKEN)
+    #   _strip_leading_cd     → (+ _CD_SEP, _BARE_CD)
+    #   _scope_ok             → _extract_host
+    frozen = (
+        # entry points
+        "decide", "hook_decide",
+        # pure helpers on the verdict path
+        "segments", "_strip_leading_cd", "_matches_bash",
+        "recognized_privileges", "_privilege_ids", "_scope_ok",
+        "_extract_host", "_effective_grants", "_read_default_agent",
+        # module-level verdict regexes the above close over
+        "_TOKEN", "_SEP", "_ENVVAR", "_CD_SEP", "_UNTRUSTED", "_BARE_CD",
+    )
+    for fn in frozen:
+        assert _extract_func_source(working, fn) == _extract_func_source(base, fn), (
+            f"the `{fn}` verdict path diverged from main — ADR-032 requires it "
+            f"byte-identical (only `load_model` / `active_profile` / "
+            f"`_active_profile_grants` may change)"
+        )
 
 
 def test_setup_autonomy_seeds_profile_recommendations(tmp_path, monkeypatch):

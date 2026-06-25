@@ -582,6 +582,37 @@ def _config_path(target_root: Path) -> Path:
     return _project_dir(target_root) / "config.yaml"
 
 
+def _active_profile_path(target_root: Path) -> Path:
+    return _project_dir(target_root) / "active-profile.yaml"
+
+
+def _active_profile(target_root: Path) -> str | None:
+    """The active permission profile name for this machine (ADR-032).
+
+    Single accessor for every CLI read site. `active_profile` is per-machine
+    state (an operator's autonomy choice), so it lives in the gitignored
+    per-machine sidecar (`active-profile.yaml`); resolution falls back to the
+    tracked `config.yaml` for adopters installed before ADR-032 or mid-migration
+    (the fallback is permanent — issue #304). The resolution lives in the
+    decision core's `active_profile` helper so the CLI and the PreToolUse hook
+    read the SAME per-machine source (ADR-002/ADR-003 same-code invariant)."""
+    cfg = _load_yaml(_config_path(target_root))
+    return _decide_mod(target_root).active_profile(str(target_root), cfg)
+
+
+def _set_active_profile(target_root: Path, name: str) -> None:
+    """Persist the active profile name to the per-machine sidecar (ADR-032).
+
+    The setter — the one write site for `active_profile`. Writes the gitignored
+    sidecar (NOT the tracked `config.yaml`), so an operator's autonomy choice
+    never commits as a team default. `config.yaml` retains only shared policy
+    (`ownership_mode`/`posture`/`schema_version`/`confinement_accommodations`)."""
+    _dump_yaml(
+        _active_profile_path(target_root),
+        {"schema_version": 1, "active_profile": name},
+    )
+
+
 def _dump_yaml(path: Path, data: dict) -> None:
     yaml = YAML()
     yaml.default_flow_style = False
@@ -1821,7 +1852,7 @@ _SHOW_COMMANDS = [
 
 
 def list_profiles(target_root: Path) -> str:
-    active = _load_yaml(_config_path(target_root)).get("active_profile")
+    active = _active_profile(target_root)
     shipped = set(_profile_names(_shipped_profiles_dir(target_root)))
     project = set(_profile_names(_project_profiles_dir(target_root)))
     names = sorted(shipped | project)
@@ -1938,7 +1969,10 @@ def activate_profile(target_root: Path, name: str, apply_after: bool = True) -> 
     cfg = _load_yaml(cfg_path) if cfg_path.is_file() else {}
     cfg.setdefault("schema_version", 1)
     cfg.setdefault("ownership_mode", "additive")
-    cfg["active_profile"] = name
+    # `active_profile` is per-machine (ADR-032): write it to the gitignored
+    # sidecar, never to the tracked `config.yaml`. `config.yaml` keeps only
+    # shared policy (posture/ownership_mode/schema_version/accommodations).
+    _set_active_profile(target_root, name)
     if doc.get("posture"):
         cfg["posture"] = doc["posture"]
     cfg.setdefault("posture", "lenient")
@@ -3640,6 +3674,57 @@ def _relocate_per_machine_sandbox_state(target_root: Path) -> list[str]:
     return reports
 
 
+def _relocate_tracked_active_profile(target_root: Path) -> list[str]:
+    """Relocate a pre-ADR-032 `active_profile` sitting in the TRACKED
+    `config.yaml` over to the gitignored per-machine sidecar (ADR-032, #304).
+
+    [ADR-005](ADR-005) rule 3 put `active_profile` in `config.yaml` as project
+    state; ADR-032 reclassifies it as per-machine (an operator's autonomy
+    choice — its correct value varies by who is at the machine). An adopter
+    installed before ADR-032 still has it in `config.yaml`; this pass moves it to
+    the sidecar on the next `setup autonomy`. The convergence IS the migration
+    mechanism (no one-shot lifecycle script — the COR-010 judgment is stated in
+    the PR; `config.yaml`'s permanent fallback in `active_profile` keeps an
+    un-converged adopter enforcing correctly meanwhile).
+
+    Mirrors `_relocate_per_machine_sandbox_state`'s discipline:
+      - No-clobber, live-throughout (#288): the sidecar destination is written
+        BEFORE the `config.yaml` source is stripped, so the resolution (sidecar
+        then config) never loses the value mid-move. A live sidecar value is
+        NEVER overwritten — if the sidecar already asserts a profile, the
+        config copy is treated as stale and simply stripped.
+      - Idempotent: a `config.yaml` with no `active_profile` is a no-op;
+        re-running converges with no double-write.
+      - `config.yaml` retains its policy keys (`ownership_mode`, `posture`,
+        `schema_version`, `confinement_accommodations`) — only `active_profile`
+        is stripped.
+
+    Returns one report line per relocation for the quiet [3/4] continuation."""
+    cfg_path = _config_path(target_root)
+    cfg = _load_yaml(cfg_path)
+    name = cfg.get("active_profile")
+    if not name:
+        return []
+
+    # Step 1 — write the sidecar first IF it doesn't already carry a live value
+    # (no-clobber). When the sidecar already asserts a profile, the config copy
+    # is stale and we go straight to the strip — resolution prefers the sidecar,
+    # so the runtime view is unbroken across the strip either way.
+    sidecar = _load_yaml(_active_profile_path(target_root))
+    if not sidecar.get("active_profile"):
+        _set_active_profile(target_root, name)
+
+    # Step 2 — strip `active_profile` from the tracked config (the sidecar now
+    # carries it). Policy keys are left in place.
+    cfg.pop("active_profile", None)
+    _dump_yaml(cfg_path, cfg)
+
+    return [
+        f"relocated active profile `{name}` to active-profile.yaml "
+        f"(operator activation, per-machine — was in tracked config.yaml; ADR-032)"
+    ]
+
+
 def _untagged_required_candidate_advisories(target_root: Path) -> list[str]:
     """Advise (don't act) when a required-CANDIDATE command sits UNTAGGED in the
     committed `settings.json` — a relocation candidate the prior pass SKIPPED for
@@ -3861,6 +3946,11 @@ def setup_autonomy(target_root: Path, profile: str = "autonomous") -> tuple[str,
     # union; its lines are quiet [3/4] continuations (the runtime effect is
     # unchanged — values stay live throughout the move).
     per_machine_relocations = _relocate_per_machine_sandbox_state(target_root)
+    # ADR-032 active_profile relocation (#304): move a pre-ADR-032 `active_profile`
+    # out of the TRACKED `config.yaml` into the gitignored sidecar (no-clobber,
+    # write-sidecar-before-strip). Runs alongside the sandbox-state relocation; its
+    # lines are quiet [3/4] continuations.
+    per_machine_relocations += _relocate_tracked_active_profile(target_root)
 
     # [3/4] confinement — the OS sandbox, always fail-closed AND strict. Primitive:
     # sandbox_enable with strict=True (no flag pass-through per ADR-007 rule 6).

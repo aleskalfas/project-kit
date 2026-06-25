@@ -55,8 +55,9 @@ _BACKBONE_FOOTPRINT: tuple[str, ...] = (".pkit/",)
 #     (synced via `PROPAGATED_AREAS`, like `adapters/`), NOT a COR-011
 #     area/capability — so it has no `package.yaml` of its own and piggybacks
 #     this core-level seam (Amendment 1, A1 rule 2). Its runtime-local files are
-#     PRJ-006's diagnose capture-log + TTL armed marker and the sandbox
-#     provenance sidecar, all under `.pkit/permissions/project/`.
+#     PRJ-006's diagnose capture-log + TTL armed marker, the sandbox provenance
+#     sidecar, and the ADR-032 per-machine active-profile sidecar, all under
+#     `.pkit/permissions/project/`.
 _BACKBONE_RUNTIME_IGNORE: tuple[str, ...] = (
     # Backbone: Python bytecode caches anywhere under `.pkit/`.
     ".pkit/**/__pycache__/",
@@ -64,6 +65,9 @@ _BACKBONE_RUNTIME_IGNORE: tuple[str, ...] = (
     ".pkit/permissions/project/diagnose.yaml",
     ".pkit/permissions/project/diagnose-log.jsonl",
     ".pkit/permissions/project/sandbox-provenance.yaml",
+    # Per-machine active-profile sidecar (ADR-032): an operator's autonomy choice
+    # is per-machine, so it lives gitignored, never committed as a team default.
+    ".pkit/permissions/project/active-profile.yaml",
 )
 
 _BEGIN = "# >>> pkit footprint — managed by `pkit visibility`; do not edit >>>"
