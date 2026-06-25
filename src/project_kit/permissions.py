@@ -1392,21 +1392,30 @@ def sandbox_enable(target_root: Path, strict: bool = False,
             "the claude-code adapter is not installed in this project; the "
             "sandbox is harness-specific, so there is nothing to enable."
         )
-    # ADR-029 routing: the baseline + narrowing floor (`enabled`,
-    # `autoAllowBashIfSandboxed`, `failIfUnavailable`, the credential `denyRead`
-    # floor) is COMMITTED → `settings.json`. The `allowUnsandboxedCommands` seal
-    # is a per-machine deviation → the gitignored `settings.local.json`. This one
-    # primitive owns both destinations and routes each key (ADR-029 cond. 2). The
-    # seal's PRESENCE is read off the runtime union (`_sandbox_block`) so the
-    # reversibility check finds it wherever it lives.
+    # ADR-029 + ADR-032 routing: the operator-invariant floor (`autoAllowBash
+    # IfSandboxed`, `failIfUnavailable`, the credential `denyRead` floor) is
+    # COMMITTED → `settings.json`. Two keys route per-machine: the
+    # `allowUnsandboxedCommands` seal (a deviation) AND `enabled` itself —
+    # `enabled` is operator-activated and HARNESS-CO-OWNED (the `/sandbox` panel
+    # writes it into `settings.local.json`), so pkit defers to that local key and
+    # never authors a parallel committed copy (ADR-032 Rule B defer branch — the
+    # split-brain fix for the believed-off-but-on disable bug). This one primitive
+    # owns these destinations and routes each key. Both `enabled` and the seal are
+    # read off the runtime union (`_sandbox_block`) so the checks find them
+    # wherever they live.
     settings = _read_settings(target_root)
     sb = settings.setdefault("sandbox", {})
     changes: list[str] = []
 
-    if sb.get("enabled") is True:
+    # `enabled` routes to the harness-co-owned local file (ADR-032 Rule B). Read
+    # the union so an already-on box (committed OR local) is a no-op; write only
+    # the single local key the harness `/sandbox` panel reads.
+    if _sandbox_block(target_root).get("enabled") is True:
         changes.append("sandbox already enabled")
     else:
-        sb["enabled"] = True
+        local = _read_settings_local(target_root)
+        local.setdefault("sandbox", {})["enabled"] = True
+        _write_settings_local(target_root, local)
         changes.append("enabled the OS sandbox")
     if sb.get("autoAllowBashIfSandboxed") is not True:
         sb["autoAllowBashIfSandboxed"] = True
@@ -1541,41 +1550,42 @@ def sandbox_enable(target_root: Path, strict: bool = False,
 
 
 def sandbox_disable(target_root: Path) -> str:
-    """Turn the OS sandbox off (`enabled: false`) in the committed floor, leaving
+    """Turn the OS sandbox off by writing the single per-machine `enabled: false`
+    the harness `/sandbox` panel reads (ADR-032 Rule B defer branch), leaving
     operator keys (excludedCommands, denyRead floor, …) in place. Idempotent.
 
-    Reports honestly when the gitignored `settings.local.json` carries its own
-    per-machine `sandbox.enabled: true`: that key is local-wins in the runtime
-    union (ADR-029) and is harness-owned (the `/sandbox` panel writes it), so the
-    box stays ON despite the committed flip — this does not claim success in that
-    case, it names the override."""
-    path = _settings_path(target_root)
-    if not path.is_file():
-        return "sandbox already disabled: no .claude/settings.json.\n"
-    settings = _read_settings(target_root)
-    sb = settings.get("sandbox")
-    if not isinstance(sb, dict) or sb.get("enabled") is not True:
+    `enabled` is harness-co-owned and routes to `settings.local.json` (where the
+    panel writes it); the runtime is the deep-merge union and `enabled` is a scalar
+    local-wins key (ADR-029). The believed-off-but-on disable bug was pkit flipping
+    a *committed* `enabled` while the harness-local `enabled: true` kept the box on.
+    The fix: pkit writes the SAME local key, so the union resolves off. A drifted
+    committed `enabled: true` (pre-ADR-032 state) is also cleared so the union has
+    no residual ON source; a credential floor and other committed keys stay put."""
+    # Already off in the union → nothing to do (idempotent).
+    if _sandbox_block(target_root).get("enabled") is not True:
         return "sandbox already disabled.\n"
-    sb["enabled"] = False
-    _write_settings(target_root, settings)
-    # `enabled` is part of the COMMITTED baseline floor pkit owns; we just cleared
-    # it there. But the runtime is the UNION (ADR-029) and `enabled` is a scalar
-    # (local-wins). If the gitignored `settings.local.json` carries its own
-    # `enabled: true` — the harness `/sandbox` panel writes per-machine sandbox
-    # state there, a key pkit does NOT own — the box stays ON despite this flip.
-    # Don't reach into that operator/harness-owned key; report the override
-    # honestly rather than falsely claiming the box is off.
-    if _sandbox_block(target_root).get("enabled") is True:
-        return (
-            "committed `enabled: false` written, but the OS sandbox is still ON: "
-            "`.claude/settings.local.json` carries a per-machine `sandbox.enabled: "
-            "true` that overrides the committed floor (local-wins, ADR-029). pkit "
-            "does not own that key — turn the box off via the harness `/sandbox` "
-            "panel (or remove `sandbox.enabled` from settings.local.json).\n"
-        )
+
+    # Write the single local `enabled: false` — the key the harness reads. Because
+    # `enabled` is scalar local-wins, this resolves the union OFF even when a
+    # committed `enabled: true` is still present (which we also clear below).
+    local = _read_settings_local(target_root)
+    local.setdefault("sandbox", {})["enabled"] = False
+    _write_settings_local(target_root, local)
+
+    # Clear any drifted COMMITTED `enabled: true` (pre-ADR-032, pkit used to author
+    # it there). Leave the rest of the committed floor untouched; only the stale
+    # `enabled` source is stripped so nothing in the union claims the box on.
+    if _settings_path(target_root).is_file():
+        committed = _read_settings(target_root)
+        csb = committed.get("sandbox")
+        if isinstance(csb, dict) and csb.get("enabled") is True:
+            csb["enabled"] = False
+            _write_settings(target_root, committed)
+
     return (
-        "sandbox disabled (enabled: false — other sandbox keys left in place; "
-        "scripting prompts again).\n" + _RESTART_NOTE + "\n"
+        "sandbox disabled (enabled: false in settings.local.json — the key the "
+        "harness reads; other sandbox keys left in place; scripting prompts "
+        "again).\n" + _RESTART_NOTE + "\n"
     )
 
 
@@ -2307,17 +2317,45 @@ _ALLOWANCE_KEY = {
 # (ADR-008 rule 2 / ADR-029 cond. 2 — emphatically not two writers).
 _WIDENING_ALLOWANCE_KINDS = {"exclude-command", "weaker-tls"}
 
+# ADR-032 per-machine axis: the `socket:` provenance-tag prefix marks an entry
+# whose VALUE is host-derived (the SSH-agent socket path resolved from
+# $SSH_AUTH_SOCK — a fact true only on this machine, ADR-010 rule 3). It is the
+# data-driven host-derived-value signal Rule A reads — not a runtime guess; the
+# tag already lives in `sandbox-provenance.yaml`. An entry carrying it routes
+# per-machine REGARDLESS of its (narrowing) boundary effect.
+_PER_MACHINE_TOOLKIT_PREFIX = "socket:"
 
-def _route_local(allowance: dict) -> bool:
-    """True when this allowance is WIDENING and so belongs in the gitignored
-    per-machine file (ADR-029). The destination is keyed to ADR-008's effect
-    classification: `effect: widening` OR a known widening kind routes local; the
-    narrowing floor + baseline stays committed. Keying on both the declared
-    `effect` and the kind keeps the rule robust to a caller that omits `effect`
-    on a structurally-widening kind."""
+
+def _is_per_machine_toolkit(toolkit: str | None) -> bool:
+    """True when the provenance/toolkit tag marks a host-derived value (ADR-032
+    Rule A) — the `socket:<source>` family. The class signal is data-driven off
+    the tag, not inferred at runtime."""
+    return bool(toolkit) and toolkit.startswith(_PER_MACHINE_TOOLKIT_PREFIX)
+
+
+def _route_local(allowance: dict, toolkit: str | None = None) -> bool:
+    """True when this allowance belongs in the gitignored per-machine file rather
+    than the committed floor. Two OR-composed axes (ADR-032 Rule A composing with
+    ADR-029): route local if EITHER
+
+      - ADR-029's effect axis says WIDENING (`effect: widening` OR a known
+        widening kind — `exclude-command`, `weaker-tls`), OR
+      - ADR-032's per-machine axis says host-derived (the `socket:` provenance
+        tag — a value true only on this machine, ADR-010 rule 3).
+
+    Commit only when BOTH axes say shared. The OR composition is load-bearing: a
+    `socket:` entry is genuinely *narrowing* (the effect axis alone would commit
+    it — the live regression ADR-032 fixes), but it is host-derived, so the
+    per-machine axis overrides to local. Operator-activation routing (`enabled`,
+    the seal) is handled at those keys' own write sites, not here, because they
+    are scalar `sandbox`-block keys rather than provenance-tagged list entries.
+
+    Keying on both the declared `effect` and the kind keeps the effect axis
+    robust to a caller that omits `effect` on a structurally-widening kind."""
     return (
         allowance.get("effect") == "widening"
         or allowance.get("kind") in _WIDENING_ALLOWANCE_KINDS
+        or _is_per_machine_toolkit(toolkit)
     )
 
 
@@ -2398,11 +2436,13 @@ def _apply_allowances(target_root: Path, allowances: list[dict], toolkit: str) -
     this function with such a value have a programming error; we refuse rather
     than silently open unbounded egress.
 
-    ADR-029 routing: this single writer routes each allowance to its destination
-    FILE by ADR-008's narrowing/widening classification (`_route_local`) — a
-    widening (`exclude-command`, `weaker-tls`) lands in the gitignored
-    `settings.local.json` so it can never be committed; the narrowing floor +
-    baseline land in the committed `settings.json`. One writer, routing — not two
+    ADR-029 + ADR-032 routing: this single writer routes each allowance to its
+    destination FILE by two OR-composed axes (`_route_local`) — ADR-029's
+    boundary-effect (a widening `exclude-command`/`weaker-tls` goes local) OR
+    ADR-032's per-machine axis (a `socket:`-tagged host-derived value goes local
+    despite its narrowing effect — the live regression that baked a host socket
+    path into the committed floor). The committed floor + baseline land in
+    `settings.json` only when BOTH axes say shared. One writer, routing — not two
     writers (ADR-008 rule 2 / ADR-029 cond. 2)."""
     committed = _read_settings(target_root)
     local = _read_settings_local(target_root)
@@ -2418,8 +2458,10 @@ def _apply_allowances(target_root: Path, allowances: list[dict], toolkit: str) -
                 f"every host) and must not be auto-applied. Use `pkit permissions sandbox "
                 f"exclude --weaker-tls` or the explicit widening path (ADR-015 fork 6)."
             )
-        # Route to the committed floor or the gitignored per-machine file.
-        if _route_local(a):
+        # Route to the committed floor or the gitignored per-machine file. The
+        # toolkit tag is the per-machine signal (ADR-032 Rule A): a `socket:`
+        # host-derived value routes local despite its narrowing effect.
+        if _route_local(a, toolkit):
             target, sb = local, local.setdefault("sandbox", {})
         else:
             target, sb = committed, committed.setdefault("sandbox", {})
@@ -2476,7 +2518,10 @@ def _remove_allowances(target_root: Path, toolkit: str) -> list[str]:
         kind, value = e["kind"], e.get("value")
         if (kind, value) in still_claimed:
             continue  # another active toolkit still needs it
-        target = local if _route_local(e) else committed
+        # Mirror the apply-side per-machine routing (ADR-032): the entry carries
+        # its own `toolkit` tag, so a `socket:` host-derived entry is removed from
+        # the per-machine file it was routed to, not the committed floor.
+        target = local if _route_local(e, e.get("toolkit")) else committed
         sb = target.get("sandbox")
         if not isinstance(sb, dict):
             continue
@@ -3494,6 +3539,107 @@ def _relocate_tracked_required_exclusions(target_root: Path) -> list[str]:
     ]
 
 
+def _relocate_per_machine_sandbox_state(target_root: Path) -> list[str]:
+    """Relocate pre-ADR-032 per-machine sandbox state that drifted into the
+    TRACKED `settings.json` over to the gitignored `settings.local.json` (ADR-032).
+
+    Two per-machine fields are in scope here (NOT `active_profile`, deferred to a
+    separate task):
+
+      - the host SOCKET (`network.allowUnixSockets`) — a `socket:`-provenanced
+        host-derived value (ADR-032 Rule A). Effect-axis routing alone baked the
+        resolved host path (`/Users/<operator>/.1password/agent.sock`) into the
+        committed floor; this moves it to its per-machine home. The committed
+        floor keeps at most the path-free `confinement_accommodations` intent —
+        NEVER the resolved path, which this pass strips.
+      - `enabled` — operator-activated, harness-co-owned (ADR-032 Rule B defer
+        branch). A drifted committed `enabled: true` moves to the local file the
+        harness `/sandbox` panel reads.
+
+    Mirrors `_relocate_tracked_required_exclusions`'s discipline:
+      - No-clobber, live-throughout (#288): the local destination is written
+        BEFORE the committed source is stripped, so the runtime union never loses
+        the value mid-move. A value already present in local is not overwritten.
+      - Provenance-scoped: only a `socket:`-tagged socket value is moved; an
+        untagged/foreign `allowUnixSockets` entry is left UNTOUCHED (don't move
+        what pkit didn't author). `enabled` is a scalar pkit baseline key, moved
+        by presence (it has no per-value provenance tag).
+      - Floors stay committed: `denyRead`, `failIfUnavailable`,
+        `autoAllowBashIfSandboxed`, `allowedHosts` are operator-invariant (Rule A
+        complement) and are never relocated by this pass.
+      - Idempotent: a field already only in `settings.local.json` is a no-op.
+
+    Returns one report line per relocation for the quiet [3/4] continuation."""
+    committed = _read_settings(target_root)
+    committed_sb = committed.get("sandbox")
+    if not isinstance(committed_sb, dict):
+        return []
+
+    reports: list[str] = []
+    local = _read_settings_local(target_root)
+    local_sb = local.setdefault("sandbox", {})
+    local_dirty = committed_dirty = False
+
+    # --- socket (host-derived value, `socket:` provenance, Rule A) -------------
+    prov = _load_provenance(target_root)
+    socket_values = {
+        e.get("value") for e in prov
+        if e.get("kind") == "allow-unix-socket"
+        and _is_per_machine_toolkit(e.get("toolkit"))
+    }
+    committed_net = committed_sb.get("network")
+    committed_sockets = (
+        committed_net.get("allowUnixSockets")
+        if isinstance(committed_net, dict) else None
+    )
+    if isinstance(committed_sockets, list) and socket_values:
+        to_move = [s for s in committed_sockets if s in socket_values]
+        if to_move:
+            # Step 1 — write local first (union still has the committed copy, so
+            # the socket stays accommodated throughout). Add only what's missing.
+            local_net = local_sb.setdefault("network", {})
+            local_sockets = local_net.setdefault("allowUnixSockets", [])
+            for s in to_move:
+                if s not in local_sockets:
+                    local_sockets.append(s)
+                    local_dirty = True
+            # Step 2 — strip the committed copy (local already carries it).
+            committed_net["allowUnixSockets"] = [
+                s for s in committed_sockets if s not in to_move
+            ]
+            if not committed_net["allowUnixSockets"]:
+                committed_net.pop("allowUnixSockets", None)
+            committed_dirty = True
+            reports.extend(
+                f"relocated host socket `{s}` to settings.local.json "
+                f"(host-derived value — was in tracked settings.json; ADR-032)"
+                for s in to_move
+            )
+
+    # --- enabled (operator activation, harness-co-owned, Rule B defer) ---------
+    # A drifted committed `enabled: true` (pre-ADR-032 pkit authored it there).
+    # Move it to the harness-co-owned local key the panel reads.
+    if committed_sb.get("enabled") is True:
+        # Write local first only when local doesn't already assert a value (no
+        # clobber of a live local `enabled`, whoever set it).
+        if "enabled" not in local_sb:
+            local_sb["enabled"] = True
+            local_dirty = True
+        committed_sb["enabled"] = False
+        committed_dirty = True
+        reports.append(
+            "relocated `enabled` to settings.local.json "
+            "(operator activation, harness-co-owned — was in tracked "
+            "settings.json; ADR-032)"
+        )
+
+    if local_dirty:
+        _write_settings_local(target_root, local)
+    if committed_dirty:
+        _write_settings(target_root, committed)
+    return reports
+
+
 def _untagged_required_candidate_advisories(target_root: Path) -> list[str]:
     """Advise (don't act) when a required-CANDIDATE command sits UNTAGGED in the
     committed `settings.json` — a relocation candidate the prior pass SKIPPED for
@@ -3708,6 +3854,14 @@ def setup_autonomy(target_root: Path, profile: str = "autonomous") -> tuple[str,
             "  [2/4] enforcement   ✓ done — PreToolUse hook registered + "
             "native guardrail denies ensured"
         )
+    # Per-machine relocation pass (ADR-032): move pre-ADR-032 host socket /
+    # `enabled` drift out of the TRACKED `settings.json` into the gitignored
+    # `settings.local.json` (no-clobber, write-local-before-strip). Runs BEFORE the
+    # confinement state is read below so a relocated `enabled` is reflected in the
+    # union; its lines are quiet [3/4] continuations (the runtime effect is
+    # unchanged — values stay live throughout the move).
+    per_machine_relocations = _relocate_per_machine_sandbox_state(target_root)
+
     # [3/4] confinement — the OS sandbox, always fail-closed AND strict. Primitive:
     # sandbox_enable with strict=True (no flag pass-through per ADR-007 rule 6).
     # Strict is the autonomy posture's default (ADR-028): it composes the existing
@@ -3743,6 +3897,9 @@ def setup_autonomy(target_root: Path, profile: str = "autonomous") -> tuple[str,
         lines.append(f"{cont}accommodations: {', '.join(applied)} — reachable; box stays confined")
     else:
         lines.append(f"{cont}accommodations: none needed (no known tool detected)")
+    # ADR-032 per-machine relocation report (quiet [3/4] continuations).
+    for line in per_machine_relocations:
+        lines.append(f"{cont}{line}")
 
     # Required-exclusion auto-apply + self-heal (ADR-027). The LOUD lines (fresh
     # apply / self-heal) go in their OWN block — NOT folded into the quiet
