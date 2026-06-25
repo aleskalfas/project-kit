@@ -294,7 +294,14 @@ twin of ADR-026's fail-closed:
   resolved at all (a conjunction computed after intent resolution; a global
   precondition surfaced once, distinct from the per-issue not-on-board `blocked`
   case; a milestone-only back-fill does not gate on it). Those break the plan's
-  assumptions; a merely-degraded axis does not.
+  assumptions; a merely-degraded axis does not. **The gate is re-evaluated *live at
+  apply time*, not trusted from plan time** — even when applying a saved plan
+  (`--plan`), the recorded plan-time verdict is a cheap pre-filter, not the
+  authority; the live gate re-runs because its members (auth, repo-access,
+  board-resolvability) can flip in the same review window that motivates
+  re-validate-at-apply for per-issue state. Trusting only the recorded verdict
+  would leave a global-precondition hole symmetric to the per-issue drift hole the
+  re-validate property closes.
 - **`--emit-script` draft-not-apply.** The bulk driver supports emitting the reviewed
   mutations as an idempotent script the adopter runs themselves, the symmetric
   draft-not-apply form (parallel to `adopt-existing`'s draft-not-apply). This hands

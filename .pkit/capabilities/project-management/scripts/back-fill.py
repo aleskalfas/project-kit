@@ -5,11 +5,11 @@
 #   "ruamel.yaml>=0.18",
 # ]
 # ///
-"""Project-management capability — corpus back-fill (report half, T2a).
+"""Project-management capability — corpus back-fill (report + apply).
 
-The **auditable propose-and-cite report** for the one-time brownfield corpus
-back-fill, per [project-management:DEC-037-adoption-ceremony] §2 and its
-write-path contract [ADR-031](../../../../docs/architecture/decisions/ADR-031-substrate-write-path-contract.md).
+The one-time brownfield corpus back-fill, per
+[project-management:DEC-037-adoption-ceremony] §2 and its write-path contract
+[ADR-031](../../../../docs/architecture/decisions/ADR-031-substrate-write-path-contract.md).
 A brownfield adopter wants a non-label substrate value seeded across every
 existing issue — the AUJ grounding case: each issue's Projects-v2 `workstream`
 field set to `Spyre`, and a time-based milestone assigned. That is a bulk
@@ -17,14 +17,32 @@ transform over hundreds of real, human-owned issues, so DEC-037 §2 makes it a
 ``migrate``-family operation governed by *enumerate → cite → confirm → apply*,
 never a silent mass-edit.
 
-This script is the **enumerate + cite + present** part — and the
-**residual-pre-check gate**. It does NOT mutate anything; applying the plan is
-T2b (a separate task). The four DEC-037 §2 safety properties split across the two
-halves:
+It is the **same back-fill ceremony** in two phases, selected by mode flags
+(DEC-037 §2 frames apply as the apply phase of this ceremony, not a separate
+command):
 
-  * **non-silent** (this half) — the report IS the gate. It enumerates the
+  * **report** (default, T2a) — the **enumerate + cite + present** half. Prints
+    the human-readable report, or ``--json`` emits the machine-stable plan T2b
+    consumes. Mutates nothing — the report IS the gate.
+  * **apply** (``--apply``, T2b) — drive the reviewed plan to writes, under the
+    audited skip/report posture (DEC-037 §2 / ADR-031 §5+§6). Re-validates each
+    issue at apply time; requires a confirmation gesture; the apply-loop and its
+    predicates live in ``_lib/back_fill_apply.py``.
+  * **emit-script** (``--emit-script``, T2b) — the symmetric draft-not-apply form:
+    emit the reviewed mutations as an idempotent script the adopter runs
+    themselves. pm never touches the corpus in this mode.
+
+Apply / emit-script re-derive a fresh plan by default (they re-run the report's
+enumeration so the plan reflects the live repo); pass ``--plan <file.json>`` to
+consume a previously-saved ``--json`` plan instead (its ``schema_version`` is
+pinned to ``back_fill_apply.CONSUMED_PLAN_SCHEMA_VERSION`` and its recorded
+residual gate is honored).
+
+The four DEC-037 §2 safety properties split across the phases:
+
+  * **non-silent** (report half) — the report IS the gate. It enumerates the
     proposed per-issue changes and cites why each is proposed; nothing is written.
-  * **residual-pre-check gate** (this half) — refuse the whole operation if the
+  * **residual-pre-check gate** (both halves) — refuse the whole operation if the
     residual hard-fail subset of ``pre-check`` fails. Four members (DEC-037 §2):
     ``gh`` auth invalid, repo inaccessible, ``substrate-map.yaml`` fails to parse,
     and — the fourth — a covered ``set-board-field`` intent IS declared yet the
@@ -39,11 +57,15 @@ halves:
     matrix rather than hard-refuse, so the gate is NOT "any pre-check failure" —
     only this residual subset that still breaks the plan's assumptions. A merely-
     degraded axis does NOT refuse the back-fill.
-  * **re-validate at apply** and **value-equality idempotency** (T2b) — built by
-    the apply engine, which consumes this report's plan. This half only *reads*
-    each issue's current state and *annotates* whether a write looks already-
-    satisfied, so the human reviewing the report sees it; the binding "skip vs
-    write" decision is T2b's, made against a fresh read at apply time.
+  * **re-validate at apply** and **value-equality idempotency** (apply half) —
+    the report half only *reads* each issue's current state and *annotates*
+    whether a write looks already-satisfied, so the human reviewing the report
+    sees it; the binding "skip vs write" decision is the apply half's, made
+    against a FRESH read at apply time (``_lib/back_fill_apply.classify_change``),
+    never trusting the plan's stale ``observed``/``prediction``.
+  * **--emit-script draft-not-apply** (apply half) — emit the reviewed mutations
+    as an idempotent re-checking script the adopter runs themselves; pm executes
+    no write in this mode.
 
 Where the back-fill intent comes from (the convergence DEC-037 §3/§4 named)
 --------------------------------------------------------------------------
@@ -107,9 +129,16 @@ Or via the dispatcher (per COR-021):
   pkit project-management back-fill
 
 Exit codes:
-  0  report produced (including "no intents declared" / "nothing to propose")
-  2  usage error (capability not found), or the residual pre-check gate refused
-     (auth / repo-access / map-parse) — the report is NOT produced in that case.
+  0  report produced / apply completed with no write failures / emit-script
+     written (including "no intents declared" / "nothing to propose")
+  1  apply mode: one or more writes FAILED (audited skip/report posture — the
+     loop continued and recorded each, but a write failed so the operator is
+     told via a non-zero exit; ADR-031 §6). Skips (idempotent / drift) and
+     blocks are NOT failures and do not set this code.
+  2  usage error (capability not found; bad --plan; mutually-exclusive modes);
+     the residual pre-check gate refused (auth / repo-access / map-parse /
+     declared-field-intent-but-board-unresolvable); or apply was declined at the
+     confirmation gate. No write runs in any of these cases.
 """
 
 from __future__ import annotations
@@ -124,11 +153,9 @@ from typing import Any
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_labels  # noqa: E402
-from _lib import substrate_writes  # noqa: E402
+from _lib import axis_labels, back_fill_apply, substrate_writes  # noqa: E402
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 from _lib.hooks import HOOKS_RELATIVE_PATH, load_hooks_file  # noqa: E402
-
 
 CAPABILITY_NAME = "project-management"
 PLAN_SCHEMA_VERSION = 1
@@ -229,6 +256,48 @@ def main() -> int:
             "typically targets every issue, open and closed."
         ),
     )
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument(
+        "--apply",
+        action="store_true",
+        help=(
+            "APPLY the reviewed plan: re-validate each issue at apply time and "
+            "drive the writes (DEC-037 §2). The highest-blast-radius pm "
+            "operation — requires a confirmation gesture (the reviewed-batch "
+            "confirmation prompt, or --yes / --config for CI pre-approval). "
+            "Mutually exclusive with --emit-script."
+        ),
+    )
+    mode.add_argument(
+        "--emit-script",
+        action="store_true",
+        help=(
+            "Draft-not-apply (DEC-037 §2): emit the reviewed mutations as an "
+            "idempotent re-checking shell script the adopter runs themselves. "
+            "pm executes NO write in this mode. Mutually exclusive with --apply."
+        ),
+    )
+    parser.add_argument(
+        "--plan",
+        type=Path,
+        default=None,
+        help=(
+            "Apply / emit-script from a previously-saved --json plan file instead "
+            "of re-deriving a fresh plan from the live repo. The plan's "
+            "schema_version is pinned, and its recorded residual-pre-check gate is "
+            "honored. WARNING: a saved plan is staler than a freshly-derived one; "
+            "re-validate-at-apply still re-reads each issue, but prefer a fresh "
+            "derivation unless you have a reason to pin the reviewed plan."
+        ),
+    )
+    parser.add_argument(
+        "--yes",
+        action="store_true",
+        help=(
+            "Pre-approve the apply confirmation (CI / non-interactive). Mirrors "
+            "migrate's pre-approval escape hatch. Has no effect outside --apply."
+        ),
+    )
     args = parser.parse_args()
 
     capability_root = _resolve_capability_root(args.capability_root)
@@ -242,36 +311,82 @@ def main() -> int:
         return 2
 
     config = load_adopter_config(capability_root)
+    apply_mode = bool(args.apply or args.emit_script)
 
-    # The residual-pre-check gate, arm 1 (DEC-037 §2). The auth / repo-access /
-    # map-parse checks do not depend on the resolved intents, so they run first;
-    # refuse the whole operation on a residual hard-fail (the report is NOT
-    # produced). The fourth member (declared field intent but board unresolvable)
-    # is a CONJUNCTION over the intents, so it is computed below, after resolution.
+    # --plan consumes a previously-saved plan (apply / emit-script only) — skip the
+    # live build and honor the plan's RECORDED gate (DEC-037 §2 property 3).
+    if args.plan is not None:
+        if not apply_mode:
+            print(
+                "error: --plan applies only to --apply / --emit-script (the report "
+                "phase derives its own plan live).",
+                file=sys.stderr,
+            )
+            return 2
+        return _run_from_saved_plan(args, config, capability_root)
+
+    # Otherwise derive the plan live: run the residual gate, resolve intents,
+    # enumerate the corpus, build the proposed changes.
+    plan, gate_failed = _derive_plan(capability_root, config, args)
+    if gate_failed:
+        return 2  # the gate refusal was already printed by _derive_plan.
+    if plan is None:
+        # No intents declared — nothing to propose. Phase-appropriate message.
+        _print_no_intents(args)
+        return 0
+
+    if apply_mode:
+        return _run_apply_or_emit(args, config, plan)
+
+    # report phase (default).
+    if args.json:
+        print(json.dumps(plan, indent=2))
+    else:
+        if plan["truncated"]:
+            _print_truncation_warning(args.limit)
+        _print_report_from_plan(plan)
+    return 0
+
+
+# ----- plan derivation (shared by report + fresh apply/emit) ----------
+
+
+def _derive_plan(
+    capability_root: Path, config: dict[str, Any], args: argparse.Namespace
+) -> tuple[dict[str, Any] | None, bool]:
+    """Run the gate, resolve intents, enumerate, and build the live plan document.
+
+    Returns ``(plan, gate_failed)``. ``gate_failed`` True means the residual gate
+    refused (the refusal has already been printed); the caller returns 2. A
+    ``None`` plan with ``gate_failed`` False means no intents are declared (nothing
+    to propose) — the caller prints the phase-appropriate "nothing" message.
+
+    The plan is the SAME machine-stable document the report half emits (T2a) —
+    apply / emit-script consume it in-process exactly as if it had been saved and
+    reloaded, so the report and the apply act on one shared plan shape.
+    """
+    # The residual-pre-check gate, arm 1 (DEC-037 §2). Auth / repo-access /
+    # map-parse do not depend on the intents, so they run first.
     gate = _residual_pre_check(capability_root)
     if not gate.passed:
         _print_gate_refusal(gate)
-        return 2
+        return None, True
 
     substrate_map = axis_labels.load_substrate_map(capability_root)
     intents, intent_errors = _resolve_intents(capability_root, substrate_map)
 
-    # Arm 2 (DEC-037 §2 fourth residual member): a covered set-board-field intent
-    # IS declared AND the Projects-v2 board node id cannot be resolved at all. This
-    # is a global precondition failure — surface it once, distinct from the per-
-    # issue "board resolves but this issue isn't on it" case (which stays a per-
-    # issue blocked). A milestone-only back-fill (no field intent) does NOT gate on
-    # the board node id. Compute the node id once here; thread it through.
+    # Arm 2 (the fourth residual member): a covered set-board-field intent IS
+    # declared AND the board node id cannot be resolved at all → global refusal.
     has_field_intent = any(i.kind == "set-board-field" for i in intents)
-    # Only resolve the board node id when a field intent actually needs it — a
-    # milestone-only back-fill must not pay for (or gate on) the board read.
     project_node_id = _resolve_project_node_id(config) if has_field_intent else None
     if has_field_intent and project_node_id is None:
         _add_board_unresolvable_failure(gate)
         _print_gate_refusal(gate)
-        return 2
+        return None, True
 
-    if not args.json:
+    # Context header + gate-pass lines on the human-readable report phase only.
+    human_report_phase = not args.json and not args.apply and not args.emit_script
+    if human_report_phase:
         _print_context_header(capability_root, config)
         _print_gate_pass(gate)
         for err in intent_errors:
@@ -280,16 +395,7 @@ def main() -> int:
             print()
 
     if not intents:
-        if args.json:
-            print(json.dumps(_plan_document([], [], gate, truncated=False), indent=2))
-        else:
-            print(
-                "No back-fill intents declared. The corpus back-fill drives the "
-                f"`{', '.join(BACK_FILL_KINDS)}` hooks on `{BACK_FILL_SOURCE_EVENT}` "
-                f"in {HOOKS_RELATIVE_PATH} (DEC-037 §4); none are declared, so "
-                "there is nothing to propose."
-            )
-        return 0
+        return None, False
 
     issues = _enumerate_corpus(config, limit=args.limit, state=args.state)
     truncated = len(issues) == args.limit
@@ -298,17 +404,176 @@ def main() -> int:
     proposed = _build_proposed_changes(
         intents, issues, item_ids, project_node_id, target_repo
     )
+    return _plan_document(intents, proposed, gate, truncated=truncated), False
 
+
+def _print_no_intents(args: argparse.Namespace) -> None:
+    """The phase-appropriate 'no intents declared' message."""
     if args.json:
-        print(json.dumps(
-            _plan_document(intents, proposed, gate, truncated=truncated), indent=2
-        ))
-    else:
-        if truncated:
-            _print_truncation_warning(args.limit)
-        _print_report(intents, proposed, len(issues))
+        # Emit a well-formed empty plan so a --json consumer parses it cleanly.
+        empty_gate = GateResult(passed=True, checks=[])
+        print(json.dumps(_plan_document([], [], empty_gate, truncated=False), indent=2))
+        return
+    print(
+        "No back-fill intents declared. The corpus back-fill drives the "
+        f"`{', '.join(BACK_FILL_KINDS)}` hooks on `{BACK_FILL_SOURCE_EVENT}` "
+        f"in {HOOKS_RELATIVE_PATH} (DEC-037 §4); none are declared, so "
+        "there is nothing to propose."
+    )
 
-    return 0
+
+# ----- apply / emit-script dispatch -----------------------------------
+
+
+def _run_from_saved_plan(
+    args: argparse.Namespace, config: dict[str, Any], capability_root: Path
+) -> int:
+    """Apply / emit-script from a saved --json plan file.
+
+    Pins the plan's ``schema_version`` (refuse a plan this engine cannot read
+    rather than mis-apply it) and enforces the residual gate (property 3) in TWO
+    layers:
+
+      1. The plan's RECORDED gate verdict is honored as a cheap pre-filter — a plan
+         whose gate did not pass at plan time is refused outright.
+      2. The LIVE gate is re-run before applying (G1). Auth / repo-access / board-
+         resolvability can flip between plan-save and apply (token expired, repo
+         archived, board deleted), and the recorded verdict is stale for exactly
+         those members. The saved plan's enumerated per-issue ``observed``/``argv``
+         is still trusted as the proposal (each issue is re-validated live in the
+         apply loop anyway), but the GLOBAL precondition gate must be fresh — a
+         stale "passed: true" must not authorise writes against now-failing
+         prerequisites.
+    """
+    try:
+        raw = args.plan.read_text(encoding="utf-8")
+        plan = json.loads(raw)
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"error: could not read --plan {args.plan}: {exc}", file=sys.stderr)
+        return 2
+    if not isinstance(plan, dict) or not back_fill_apply.plan_schema_ok(plan):
+        print(
+            f"error: --plan {args.plan} is not a back-fill plan of "
+            f"schema_version {back_fill_apply.CONSUMED_PLAN_SCHEMA_VERSION} "
+            "(refusing to apply a plan this engine cannot read; DEC-037 §2).",
+            file=sys.stderr,
+        )
+        return 2
+    refusal = back_fill_apply.refuse_if_gate_failed(plan)
+    if refusal is not None:
+        print(f"back-fill: REFUSED — {refusal}", file=sys.stderr)
+        return 2
+
+    # G1: re-run the LIVE residual gate — do not trust the recorded verdict for the
+    # auth / repo / board members, any of which can flip after plan-save.
+    live_gate = _residual_gate_for_saved_plan(plan, config, capability_root)
+    if not live_gate.passed:
+        print(
+            "back-fill: REFUSED — the live residual pre-check gate now fails "
+            "(re-checked at apply time; the saved plan's recorded verdict is "
+            "stale for auth / repo / board prerequisites — DEC-037 §2).",
+            file=sys.stderr,
+        )
+        _print_gate_refusal(live_gate)
+        return 2
+
+    return _run_apply_or_emit(args, config, plan)
+
+
+def _residual_gate_for_saved_plan(
+    plan: dict[str, Any], config: dict[str, Any], capability_root: Path
+) -> GateResult:
+    """Re-run the live residual gate against a saved plan (G1).
+
+    The same gate the fresh path runs — auth / repo-access / substrate-map parse
+    (:func:`_residual_pre_check`) plus the fourth member (a declared
+    ``set-board-field`` intent whose Projects-v2 board cannot be resolved live). The
+    board member is keyed off the SAVED plan's declared intents (the plan records
+    each intent's ``kind``), so a plan that declared a field intent re-checks board
+    resolvability against the live board, catching a board deleted since plan-save.
+    """
+    gate = _residual_pre_check(capability_root)
+    if not gate.passed:
+        return gate
+    intents = plan.get("intents")
+    declares_field_intent = isinstance(intents, list) and any(
+        isinstance(i, dict) and i.get("kind") == "set-board-field" for i in intents
+    )
+    if declares_field_intent and _resolve_project_node_id(config) is None:
+        _add_board_unresolvable_failure(gate)
+    return gate
+
+
+def _run_apply_or_emit(
+    args: argparse.Namespace, config: dict[str, Any], plan: dict[str, Any]
+) -> int:
+    """Dispatch the apply (mutating) or emit-script (draft) phase over a plan."""
+    changes = back_fill_apply.planned_changes_from_plan(plan)
+    truncated = bool(plan.get("truncated"))
+
+    if args.emit_script:
+        # Draft-not-apply: pm executes NO write — it prints a script (DEC-037 §2).
+        if truncated:
+            print(
+                "  !! WARNING: plan is TRUNCATED — the emitted script covers only "
+                "the planned subset of the corpus (DEC-037 §2).",
+                file=sys.stderr,
+            )
+        print(back_fill_apply.render_emit_script(changes, truncated=truncated))
+        return 0
+
+    # --apply: the mutating path. Confirm before any write (DEC-037 §2).
+    if truncated:
+        print(
+            "!! WARNING: plan is TRUNCATED — this apply covers only the planned "
+            "subset of the corpus, NOT every issue. Re-derive with a higher "
+            "--limit to apply across the whole corpus (DEC-037 §2).",
+            file=sys.stderr,
+        )
+    if not _confirm_apply(changes, pre_approved=args.yes):
+        print("back-fill: apply declined at the confirmation gate; nothing written.")
+        return 2
+
+    records = back_fill_apply.apply_plan(
+        changes, config, read_fresh=lambda c: _read_fresh_state(c, config)
+    )
+    summary = back_fill_apply.summarise(records)
+    _print_apply_summary(records, summary)
+    return back_fill_apply.exit_code_for(summary)
+
+
+def _confirm_apply(
+    changes: list[back_fill_apply.PlannedChange], *, pre_approved: bool
+) -> bool:
+    """The reviewed-batch confirmation gate (DEC-037 §2 / migrate-family posture).
+
+    The human confirms ONCE for the reviewed batch (per-issue clicks become a
+    rubber-stamp wall at corpus scale — DEC-037 Rationale). ``--yes`` pre-approves
+    for CI, mirroring migrate's escape hatch. In a non-interactive shell with no
+    pre-approval, default to NO (never silently bulk-mutate).
+    """
+    writeable = sum(1 for c in changes if c.argv is not None)
+    print(
+        f"  About to APPLY up to {writeable} write(s) across "
+        f"{len({c.issue_number for c in changes})} issue(s). Each is "
+        "re-validated against the issue's current state immediately before "
+        "writing (drift → skip; already-set → skip)."
+    )
+    if pre_approved:
+        print("  Pre-approved via --yes.")
+        return True
+    if not sys.stdin.isatty():
+        print(
+            "  ! Non-interactive shell and no --yes; refusing to bulk-mutate. "
+            "Re-run from an interactive shell or pass --yes (CI).",
+            file=sys.stderr,
+        )
+        return False
+    try:
+        response = input("  Apply this reviewed batch? [y/N]: ").strip().lower()
+    except EOFError:
+        return False
+    return response in ("y", "yes")
 
 
 # ----- residual pre-check gate ---------------------------------------
@@ -410,7 +675,7 @@ def _load_pre_check_module(capability_root: Path) -> Any | None:
         sys.modules[spec.name] = module
         spec.loader.exec_module(module)
         return module
-    except Exception:  # noqa: BLE001 — a broken sibling must not crash the gate
+    except Exception:
         return None
 
 
@@ -419,7 +684,7 @@ def _load_pre_check_module(capability_root: Path) -> Any | None:
 
 def _resolve_intents(
     capability_root: Path,
-    substrate_map: "axis_labels.SubstrateMap | None",
+    substrate_map: axis_labels.SubstrateMap | None,
 ) -> tuple[list[BackFillIntent], list[str]]:
     """Resolve back-fill intents from the after_create_issue hooks (DEC-037 §4).
 
@@ -465,7 +730,7 @@ def _resolve_intents(
 def _intent_from_set_board_field(
     entry: dict[str, Any],
     citation: str,
-    substrate_map: "axis_labels.SubstrateMap | None",
+    substrate_map: axis_labels.SubstrateMap | None,
 ) -> tuple[BackFillIntent | None, str]:
     field_id = entry.get("field_id")
     option_id = entry.get("single_select_option_id")
@@ -490,7 +755,7 @@ def _intent_from_set_board_field(
 def _intent_from_assign_milestone(
     entry: dict[str, Any],
     citation: str,
-    substrate_map: "axis_labels.SubstrateMap | None",
+    substrate_map: axis_labels.SubstrateMap | None,
 ) -> tuple[BackFillIntent | None, str]:
     title = entry.get("title")
     if not isinstance(title, str) or not title:
@@ -506,7 +771,7 @@ def _intent_from_assign_milestone(
 
 
 def _workstream_default_note(
-    substrate_map: "axis_labels.SubstrateMap | None",
+    substrate_map: axis_labels.SubstrateMap | None,
 ) -> str:
     """Cite the substrate-map per-axis `default:` for workstream when one exists.
 
@@ -983,20 +1248,26 @@ def _print_gate_refusal(gate: GateResult) -> None:
     )
 
 
-def _print_report(
-    intents: list[BackFillIntent],
-    proposed: list[ProposedChange],
-    issue_count: int,
-) -> None:
+def _print_report_from_plan(plan: dict[str, Any]) -> None:
+    """Render the human-readable report from the machine-stable plan document.
+
+    The report and the apply consume the SAME plan shape (the dict ``_derive_plan``
+    builds), so the human report is a view over the exact plan T2b applies — there
+    is no second representation to drift.
+    """
+    intents = plan.get("intents") or []
+    proposed = plan.get("proposed") or []
+    issue_count = len({c.get("issue_number") for c in proposed})
+
     print(f"  {len(intents)} back-fill intent(s) over {issue_count} corpus issue(s):")
     for intent in intents:
-        print(f"    - {_describe_intent(intent)}")
-        print(f"      cite: {_full_citation(intent)}")
+        print(f"    - {_describe_intent_dict(intent)}")
+        print(f"      cite: {intent.get('citation', '')}")
     print()
 
-    would_write = [c for c in proposed if c.prediction == "would-write"]
-    satisfied = [c for c in proposed if c.prediction == "already-satisfied"]
-    blocked = [c for c in proposed if c.prediction == "blocked"]
+    would_write = [c for c in proposed if c.get("prediction") == "would-write"]
+    satisfied = [c for c in proposed if c.get("prediction") == "already-satisfied"]
+    blocked = [c for c in proposed if c.get("prediction") == "blocked"]
 
     print(f"  Proposed per-issue changes ({len(proposed)} total):")
     for change in proposed:
@@ -1004,17 +1275,17 @@ def _print_report(
             "would-write": "[write]  ",
             "already-satisfied": "[noop]   ",
             "blocked": "[blocked]",
-        }[change.prediction]
-        print(f"    {marker} #{change.issue_number} {change.kind}")
-        if change.argv is not None:
-            print(f"               would run: {_render_argv(change.argv)}")
-        if change.observed is not None:
-            print(f"               observed: {change.observed!r}")
-        if change.prediction == "already-satisfied":
+        }.get(change.get("prediction"), "[?]      ")
+        print(f"    {marker} #{change.get('issue_number')} {change.get('kind')}")
+        if change.get("argv") is not None:
+            print(f"               would run: {_render_argv(change['argv'])}")
+        if change.get("observed") is not None:
+            print(f"               observed: {change['observed']!r}")
+        if change.get("prediction") == "already-satisfied":
             print("               (value already matches — likely a no-op; "
                   "re-validated at apply)")
-        if change.prediction == "blocked":
-            print(f"               blocked: {change.blocked_reason}")
+        if change.get("prediction") == "blocked":
+            print(f"               blocked: {change.get('blocked_reason', '')}")
     print()
     print(
         f"  Summary: {len(would_write)} would write, "
@@ -1023,23 +1294,27 @@ def _print_report(
     )
     print(
         "  This report is the gate (DEC-037 §2). NO write has run. Apply this "
-        "plan via the back-fill apply operation, which re-validates each issue "
-        "at apply time (re-validate-at-apply) before writing."
+        "plan via `--apply` (or `--emit-script` for the draft form), which "
+        "re-validates each issue at apply time (re-validate-at-apply) before "
+        "writing."
     )
 
 
-def _describe_intent(intent: BackFillIntent) -> str:
-    if intent.kind == "set-board-field":
+def _describe_intent_dict(intent: dict[str, Any]) -> str:
+    if intent.get("kind") == "set-board-field":
         which = (
-            f"single_select_option_id={intent.single_select_option_id}"
-            if intent.single_select_option_id
-            else f"text_value={intent.text_value!r}"
+            f"single_select_option_id={intent.get('single_select_option_id')}"
+            if intent.get("single_select_option_id")
+            else f"text_value={intent.get('text_value')!r}"
         )
         return (
-            f"set-board-field: Projects-v2 field_id={intent.field_id} → {which} "
-            "(across the corpus)"
+            f"set-board-field: Projects-v2 field_id={intent.get('field_id')} "
+            f"→ {which} (across the corpus)"
         )
-    return f"assign-milestone: milestone={intent.milestone_title!r} (across the corpus)"
+    return (
+        f"assign-milestone: milestone={intent.get('milestone_title')!r} "
+        "(across the corpus)"
+    )
 
 
 def _render_argv(argv: list[str]) -> str:
@@ -1048,6 +1323,188 @@ def _render_argv(argv: list[str]) -> str:
     for token in argv:
         out.append(f'"{token}"' if " " in token else token)
     return " ".join(out)
+
+
+# ----- re-validate-at-apply: fresh per-issue reads (DEC-037 §2) -------
+
+
+def _read_fresh_state(
+    change: back_fill_apply.PlannedChange, config: dict[str, Any]
+) -> back_fill_apply.FreshState:
+    """Read THIS issue's current value for the change's attribute, at apply time.
+
+    This is the re-validate-at-apply read (DEC-037 §2): the value the attribute
+    holds *right now*, immediately before the write decision — never the plan's
+    stale ``observed``. Routes by kind to the milestone read or the board
+    field-value read. A read that fails returns ``read_ok=False`` so the predicate
+    fails closed to a skip (never overwrite against an unconfirmed value).
+    """
+    try:
+        if change.kind == "assign-milestone":
+            return _read_current_milestone(change.issue_number, config)
+        if change.kind == "set-board-field":
+            return _read_current_field_value(change, config)
+    except Exception:
+        # Defensive backstop: a fresh read that throws (an unforeseen response
+        # shape, a transport quirk) must NOT crash the whole corpus loop mid-apply.
+        # Treat it as an indeterminate read → fail closed to a skip for THIS issue
+        # (audited as drift), and let the loop continue. The per-issue reads above
+        # already guard their own navigation; this catches anything they miss.
+        return back_fill_apply.FreshState(current=None, read_ok=False)
+    # Unknown kind — cannot confirm; fail closed.
+    return back_fill_apply.FreshState(current=None, read_ok=False)
+
+
+def _read_current_milestone(
+    issue_number: int, config: dict[str, Any]
+) -> back_fill_apply.FreshState:
+    """The issue's current milestone title (or None if unset); read_ok False on a
+    gh failure."""
+    try:
+        proc = gh_run(
+            ["gh", "issue", "view", str(issue_number), "--json", "milestone"],
+            config,
+            check=False,
+        )
+    except FileNotFoundError:
+        return back_fill_apply.FreshState(current=None, read_ok=False)
+    if proc.returncode != 0:
+        return back_fill_apply.FreshState(current=None, read_ok=False)
+    try:
+        data = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        return back_fill_apply.FreshState(current=None, read_ok=False)
+    ms = data.get("milestone") if isinstance(data, dict) else None
+    title = ms.get("title") if isinstance(ms, dict) else None
+    return back_fill_apply.FreshState(
+        current=title if isinstance(title, str) else None, read_ok=True
+    )
+
+
+def _read_current_field_value(
+    change: back_fill_apply.PlannedChange, config: dict[str, Any]
+) -> back_fill_apply.FreshState:
+    """The board item's current single-select option id (or text) for the change's
+    field — read via the Projects-v2 GraphQL field-values surface.
+
+    Returns ``current`` as the option-id (single-select) or text the field carries
+    now, matching what ``change.target`` compares against (the plan's target is the
+    option-id or text). ``read_ok`` is True ONLY when the response positively
+    confirms the current value — a successful payload whose ``fieldValues.nodes`` is
+    a present list (an empty list is a genuine "unset"; a list containing the field
+    is its value). Every non-confirming shape fails CLOSED (``read_ok=False``): a
+    non-empty ``errors`` array (GraphQL returns exit 0 with ``errors`` populated and
+    ``data`` null on rate-limits / transient errors), or a null/absent ``data`` /
+    ``node`` / ``fieldValues`` at any navigation hop. Failing closed becomes a
+    DRIFTED skip in :func:`classify_change` — never an overwrite against a value we
+    could not actually read.
+
+    This is a READ (a GraphQL ``query``, never the ``updateProjectV2ItemFieldValue``
+    mutation) — it does not touch the corpus.
+    """
+    item_id = change.item_id
+    field_id = change.field_id
+    if not item_id or not field_id:
+        return back_fill_apply.FreshState(current=None, read_ok=False)
+    # Pull the item's field values; match the one whose field id equals field_id.
+    # The query is the SINGLE shared constant the emit-script guard also consumes
+    # (back_fill_apply.FIELD_REREAD_QUERY) — one source of truth, so the --apply
+    # read and the emitted guard can never silently desync.
+    query = back_fill_apply.FIELD_REREAD_QUERY
+    try:
+        proc = gh_run(
+            ["gh", "api", "graphql", "-f", f"query={query}", "-F", f"item={item_id}"],
+            config,
+            check=False,
+        )
+    except FileNotFoundError:
+        return back_fill_apply.FreshState(current=None, read_ok=False)
+    if proc.returncode != 0:
+        return back_fill_apply.FreshState(current=None, read_ok=False)
+    try:
+        payload = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        return back_fill_apply.FreshState(current=None, read_ok=False)
+    if not isinstance(payload, dict):
+        return back_fill_apply.FreshState(current=None, read_ok=False)
+    # GitHub GraphQL routinely returns exit 0 with a populated `errors` array and
+    # a null `data`/`node`/`fieldValues` on rate-limits and transient errors. Any
+    # of those means we did NOT positively read the current value, so we must fail
+    # CLOSED (read_ok=False) — never treat an unread field as a confirmed unset
+    # (which would classify as would-write and overwrite a value we never saw).
+    # Only a successful response whose `fieldValues.nodes` is a PRESENT list yields
+    # read_ok=True: an empty list `[]` is a genuine "no value", a list with the
+    # field is the value, and anything else (null/absent at any hop) is fail-closed.
+    if payload.get("errors"):
+        return back_fill_apply.FreshState(current=None, read_ok=False)
+    data = payload.get("data")
+    node = data.get("node") if isinstance(data, dict) else None
+    field_values = node.get("fieldValues") if isinstance(node, dict) else None
+    nodes = field_values.get("nodes") if isinstance(field_values, dict) else None
+    if not isinstance(nodes, list):
+        # data / node / fieldValues / nodes was null or absent (as opposed to an
+        # empty list) — the read did not positively confirm the current value.
+        return back_fill_apply.FreshState(current=None, read_ok=False)
+    for node in nodes:
+        if not isinstance(node, dict):
+            continue
+        node_field = node.get("field") or {}
+        if not isinstance(node_field, dict) or node_field.get("id") != field_id:
+            continue
+        value = node.get("optionId") or node.get("text")
+        return back_fill_apply.FreshState(
+            current=value if isinstance(value, str) else None, read_ok=True
+        )
+    # Field has no value on this item — confirmed unset.
+    return back_fill_apply.FreshState(current=None, read_ok=True)
+
+
+# ----- apply summary --------------------------------------------------
+
+
+def _print_apply_summary(
+    records: list[back_fill_apply.ApplyRecord],
+    summary: back_fill_apply.ApplySummary,
+) -> None:
+    """Print the per-change audit + the failure summary (ADR-031 §6).
+
+    Every change's outcome is shown (applied / skipped-idempotent / skipped-drift /
+    blocked / failed) with its detail, then a one-line tally. The summary makes a
+    write failure visible even when the loop continued past it — the operator must
+    learn a mutation did not land."""
+    marker = {
+        back_fill_apply.ApplyOutcome.APPLIED: "[applied]  ",
+        back_fill_apply.ApplyOutcome.SKIPPED_IDEMPOTENT: "[noop]     ",
+        back_fill_apply.ApplyOutcome.SKIPPED_DRIFT: "[drift]    ",
+        back_fill_apply.ApplyOutcome.BLOCKED: "[blocked]  ",
+        back_fill_apply.ApplyOutcome.FAILED: "[FAILED]   ",
+    }
+    print()
+    print("  Apply audit (DEC-037 §2 — re-validated each issue at apply time):")
+    for r in records:
+        print(f"    {marker[r.outcome]} #{r.issue_number} {r.kind}")
+        if r.detail:
+            print(f"                 → {r.detail}")
+    print()
+    print(
+        f"  Summary: {summary.applied} applied, "
+        f"{summary.skipped_idempotent} skipped (already satisfied), "
+        f"{summary.skipped_drift} skipped (drift), "
+        f"{summary.blocked} blocked, "
+        f"{summary.failed} FAILED."
+    )
+    if summary.any_failed:
+        print(
+            "  ! One or more writes FAILED — exiting non-zero so the failure is "
+            "not silent (the loop continued and applied every write it could; "
+            "ADR-031 §6). Re-run to retry the failed writes (already-applied "
+            "issues are skipped as idempotent)."
+        )
+    else:
+        print(
+            "  All writes that were attempted succeeded. Re-running is a no-op for "
+            "the already-applied issues (value-equality idempotency)."
+        )
 
 
 # ----- shared resolution helpers -------------------------------------
