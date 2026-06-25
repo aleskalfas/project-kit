@@ -2184,17 +2184,23 @@ def test_gh_required_exclusion_revertable_via_remove(tmp_path, monkeypatch):
 
 
 def _extract_func_source(source: str, name: str) -> str:
-    """Byte-exact source of a top-level `def <name>` from a module's text, by AST
-    line span (decorators included). Used to freeze the `decide()` VERDICT path."""
+    """Byte-exact source of a top-level `def <name>` OR module-level assignment
+    `<name> = ...` from a module's text, by AST line span (decorators included).
+    Used to freeze the `decide()` VERDICT path — both the functions it composes
+    and the module-level verdict regexes those functions close over."""
     import ast
     tree = ast.parse(source)
+    lines = source.splitlines()
     for node in tree.body:
         if isinstance(node, ast.FunctionDef) and node.name == name:
             start = (node.decorator_list[0].lineno if node.decorator_list
                      else node.lineno) - 1
-            lines = source.splitlines()
             return "\n".join(lines[start:node.end_lineno])
-    raise AssertionError(f"function {name!r} not found in module source")
+        if isinstance(node, ast.Assign) and any(
+            isinstance(t, ast.Name) and t.id == name for t in node.targets
+        ):
+            return "\n".join(lines[node.lineno - 1:node.end_lineno])
+    raise AssertionError(f"function or assignment {name!r} not found in module source")
 
 
 def test_decide_verdict_path_byte_identical_to_main():
@@ -2216,14 +2222,36 @@ def test_decide_verdict_path_byte_identical_to_main():
     assert r.returncode == 0, f"could not read decide.py from main: {r.stderr!r}"
     base = r.stdout
 
-    # The verdict path: `decide()` itself plus the pure helpers it calls. None of
-    # these may change under ADR-032 (only `load_model` / the active_profile
-    # source helper may). If a future change legitimately touches one, that is a
-    # verdict-logic change and must be a deliberate, reviewed edit to this list.
-    for fn in ("decide", "hook_decide"):
+    # The verdict path: `decide()` and `hook_decide()` themselves PLUS every pure
+    # helper they transitively call AND the module-level verdict regexes those
+    # helpers close over. None of these may change under ADR-032 (only
+    # `load_model` / `active_profile` / `_active_profile_grants` may). If a future
+    # change legitimately touches one, that is a verdict-logic change and must be
+    # a deliberate, reviewed edit to this list.
+    #
+    # Transitive call graph (verified against decide.py):
+    #   decide        → _strip_leading_cd, recognized_privileges,
+    #                   _effective_grants, _privilege_ids, _scope_ok  (+ _UNTRUSTED)
+    #   hook_decide   → _read_default_agent, decide
+    #   recognized_privileges → segments (+ _SEP/_ENVVAR), _matches_bash
+    #   _privilege_ids        → (+ _TOKEN)
+    #   _strip_leading_cd     → (+ _CD_SEP, _BARE_CD)
+    #   _scope_ok             → _extract_host
+    frozen = (
+        # entry points
+        "decide", "hook_decide",
+        # pure helpers on the verdict path
+        "segments", "_strip_leading_cd", "_matches_bash",
+        "recognized_privileges", "_privilege_ids", "_scope_ok",
+        "_extract_host", "_effective_grants", "_read_default_agent",
+        # module-level verdict regexes the above close over
+        "_TOKEN", "_SEP", "_ENVVAR", "_CD_SEP", "_UNTRUSTED", "_BARE_CD",
+    )
+    for fn in frozen:
         assert _extract_func_source(working, fn) == _extract_func_source(base, fn), (
             f"the `{fn}` verdict path diverged from main — ADR-032 requires it "
-            f"byte-identical (only `load_model`'s active_profile source may change)"
+            f"byte-identical (only `load_model` / `active_profile` / "
+            f"`_active_profile_grants` may change)"
         )
 
 
