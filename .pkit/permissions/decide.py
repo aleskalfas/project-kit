@@ -753,10 +753,15 @@ def load_yaml(path: str) -> dict[str, Any]:
         from ruamel.yaml import YAML as _YAML
         _yaml = _YAML(typ="safe")
         import io as _io
-        return _yaml.load(_io.StringIO(text)) or {}
+        result = _yaml.load(_io.StringIO(text))
     except ImportError:
         result = _stdlib_load_yaml(text)
-        return result if isinstance(result, dict) else {}
+    # Coerce a non-dict document (bare scalar, top-level list, empty/None) to {}
+    # on BOTH parse paths. A hand-corrupted sidecar that parses to a scalar or
+    # list must not make a downstream `.get()` raise under one parser (ruamel,
+    # CLI) while degrading to {} under the other (stdlib, sandboxed hook) — the
+    # same-code invariant (ADR-002/ADR-003) requires identical results.
+    return result if isinstance(result, dict) else {}
 
 
 def _exists(path: str) -> bool:

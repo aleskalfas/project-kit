@@ -494,6 +494,39 @@ def test_active_profile_sidecar_wins_over_config(decide_mod, tmp_path):
     assert decide_mod.active_profile(str(tmp_path), cfg) == "team"
 
 
+@pytest.mark.parametrize("corrupt_sidecar", ["42\n", "- a\n- b\n", "just a string\n"],
+                         ids=["bare-scalar", "top-level-list", "bare-string"])
+@pytest.mark.parametrize("block_ruamel", [False, True], ids=["ruamel", "stdlib"])
+def test_corrupt_sidecar_falls_back_to_config_on_both_parse_paths(
+    decide_mod, tmp_path, monkeypatch, corrupt_sidecar, block_ruamel,
+):
+    # A hand-corrupted active-profile.yaml that parses to a non-dict (bare scalar,
+    # top-level list, bare string) must NOT make active_profile()'s `.get()` raise.
+    # load_yaml coerces a non-dict document to {} on BOTH parse paths (ruamel via
+    # the CLI, stdlib via the sandboxed hook), so resolution degrades to the
+    # config.yaml fallback identically — the same-code invariant (ADR-002/ADR-003).
+    _profile_sidecar_tree(
+        tmp_path, profile_name="team", sidecar=corrupt_sidecar,
+        config=("schema_version: 1\nownership_mode: additive\nposture: lenient\n"
+                "active_profile: team\n"),
+    )
+    if block_ruamel:
+        import builtins
+        real_import = builtins.__import__
+
+        def _block(name, *args, **kwargs):
+            if "ruamel" in name:
+                raise ImportError(f"simulated missing ruamel: {name}")
+            return real_import(name, *args, **kwargs)
+
+        monkeypatch.setattr(builtins, "__import__", _block)
+
+    cfg = decide_mod.load_yaml(
+        str(tmp_path / ".pkit" / "permissions" / "project" / "config.yaml"))
+    # No raise, and the corrupt sidecar yields no name → config.yaml fallback.
+    assert decide_mod.active_profile(str(tmp_path), cfg) == "team"
+
+
 def test_load_model_layers_profile_from_sidecar(decide_mod, tmp_path):
     # Enforcement unchanged: with active_profile in the sidecar, load_model still
     # layers the profile's grants and the model decides the same.
