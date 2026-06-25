@@ -67,5 +67,5 @@ pkit capabilities ...     Manage capabilities: list, install (kit-shipped), regi
 ## Where to go next
 
 - **Adopting or navigating the kit:** [`.pkit/README.md`](.pkit/README.md) — maps every area; start at [`.pkit/decisions/README.md`](.pkit/decisions/README.md) for the foundational pattern.
-- **Working on project-kit itself:** [`CONTRIBUTING.md`](CONTRIBUTING.md) — kit-maintainer guidance (the axiom / project-neutrality / principles-not-inventory disciplines, the acceptance gate, running checks).
+- **Working on project-kit itself:** [`CONTRIBUTING.md`](CONTRIBUTING.md) — kit-maintainer guidance (the axiom / project-neutrality / principles-not-inventory disciplines, the acceptance gate, running checks). First clone: run `mise trust` once to enable the task runner (or run the `uv run ...` commands directly — mise is optional).
 - **Session instructions for AI agents:** [`CLAUDE.md`](CLAUDE.md).

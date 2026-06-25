@@ -1,11 +1,19 @@
 # Local-first task runner for project-kit.
 #
-# mise routes verbs; uv owns Python interpreter management (via
-# `requires-python` in pyproject.toml). No `[tools]` section here — adding
-# one would duplicate the Python pin and create drift risk.
+# Bootstrap chain: mise provisions uv (the one tool pinned below); uv then
+# installs the Python interpreter per `requires-python` in pyproject.toml and
+# syncs dependencies. So a bare machine with only mise reaches a working tree
+# with `mise trust && uv sync`.
 #
-# Adopters who already use mise pick up the pattern. Adopters who don't
-# can run the underlying `uv run ...` commands directly.
+# Python is intentionally NOT pinned here — `requires-python` in pyproject.toml
+# is the single source of truth for the interpreter version. Pinning it in both
+# places would invite drift.
+#
+# Adopters who already use mise pick up the pattern. Adopters who don't can run
+# the underlying `uv run ...` commands directly.
+
+[tools]
+uv = "latest"
 
 [tasks.test]
 description = "Run the test suite (pytest)"
@@ -30,3 +38,37 @@ run = "uv run pyright"
 [tasks.check]
 description = "Run all checks (lint + format:check + typecheck + test)"
 depends = ["lint", "format:check", "typecheck", "test"]
+
+# --- pkit install switching -------------------------------------------------
+# Toggle the global `pkit` between an editable dev install (this checkout) and
+# the pinned release. Dev = symlink the in-tree dispatcher (PRJ-001) onto PATH,
+# routed through `uv run` so source edits are live. Pinned = the PRJ-004 git
+# install. Both resolve the same target path so they reliably toggle one name.
+
+[tasks."pkit:dev"]
+description = "Make THIS checkout the active global `pkit` (editable dev install)"
+run = '''
+target="${UV_TOOL_BIN_DIR:-${XDG_BIN_HOME:-$HOME/.local/bin}}/pkit"
+src="{{config_root}}/.pkit/cli/pkit"
+echo "Linking pkit -> this checkout: $target -> $src"
+ln -sfn "$src" "$target"
+echo "Done. Active pkit is now this checkout (editable). Verify with: mise run pkit:which"
+'''
+
+[tasks."pkit:pin"]
+description = "Switch global `pkit` back to the pinned release (PRJ-004 git install)"
+run = '''
+target="${UV_TOOL_BIN_DIR:-${XDG_BIN_HOME:-$HOME/.local/bin}}/pkit"
+# Only remove a dev symlink — never a real binary.
+if [ -L "$target" ]; then echo "Removing dev symlink: $target"; rm "$target"; fi
+uv tool install --force git+ssh://git@github.com/aleskalfas/project-kit.git
+echo "Done. Active pkit is now the pinned release. Verify with: mise run pkit:which"
+'''
+
+[tasks."pkit:which"]
+description = "Show which `pkit` is active (dev checkout vs pinned)"
+run = '''
+p="$(command -v pkit || true)"
+if [ -z "$p" ]; then echo "no pkit on PATH"; exit 0; fi
+echo "pkit on PATH: $p"; ls -l "$p"; pkit version
+'''
