@@ -60,6 +60,7 @@ from _lib.membership import (  # noqa: E402
     resolve_invoker_identity,
 )
 from _lib.milestone import resolve_milestone  # noqa: E402
+from _lib.substrate_writes import milestone_create_args  # noqa: E402
 from _lib.placeholder_detection import (  # noqa: E402
     PHASE_CREATE,
     detect_placeholder_residuals,
@@ -785,7 +786,11 @@ def _gh_create_issue(
     for label in labels:
         cmd.extend(["--label", label])
     if milestone_title is not None:
-        cmd.extend(["--milestone", milestone_title])
+        # The `--milestone` argv fragment is constructed by the sole constructor
+        # (ADR-031); create-issue only chooses when it fires and splices it into
+        # its own create call (which also carries title / body / labels /
+        # assignee). The create itself executes below.
+        cmd.extend(milestone_create_args(milestone_title))
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
     except FileNotFoundError:

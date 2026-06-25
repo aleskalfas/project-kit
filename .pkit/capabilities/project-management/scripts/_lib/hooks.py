@@ -50,6 +50,18 @@ except ImportError:  # pragma: no cover
     # module by file path and may not have _lib on sys.path).
     gh_run = None  # type: ignore[assignment]
 
+# The sole constructor of the non-label substrate writes (ADR-031). The
+# `set-board-field` / `assign-milestone` handlers below obtain their `gh` write
+# from this primitive rather than string-building the argv inline; the
+# report-and-continue posture they apply to its result stays here (DEC-024).
+try:
+    import substrate_writes  # type: ignore[import-not-found]
+except ImportError:  # pragma: no cover
+    try:
+        from _lib import substrate_writes  # type: ignore[no-redef]
+    except ImportError:  # pragma: no cover
+        substrate_writes = None  # type: ignore[assignment]
+
 
 HOOKS_RELATIVE_PATH = "project/hooks.yaml"
 
@@ -297,27 +309,25 @@ def _hook_set_board_field(
             detail=f"would set field_id={field_id} on item_id={item_id} ({which})",
         )
 
-    args = [
-        "gh", "project", "item-edit",
-        "--id", item_id,
-        "--field-id", field_id,
-        "--project-id", project_id,
-    ]
-    if option_id:
-        args += ["--single-select-option-id", str(option_id)]
-    elif text_value:
-        args += ["--text", str(text_value)]
-
-    proc = _gh_call(args, config)
-    if proc.returncode != 0:
-        raise HookFailure(
-            f"gh project item-edit failed: {proc.stderr.strip() or 'no stderr'}"
-        )
+    # Construct + execute the field-value write through the sole constructor
+    # (ADR-031); apply DEC-024's report-and-continue posture to its result.
+    if substrate_writes is None:  # pragma: no cover - defensive import fallback
+        raise HookFailure("substrate_writes primitive unavailable")
+    result = substrate_writes.write_field_value(
+        config,
+        item_id=item_id,
+        field_id=field_id,
+        project_id=project_id,
+        single_select_option_id=str(option_id) if option_id else None,
+        text_value=str(text_value) if text_value else None,
+    )
+    if not result.ok:
+        raise HookFailure(result.detail)
     return HookResult(
         index=index,
         kind="set-board-field",
         status="ok",
-        detail=f"set field_id={field_id} on item_id={item_id}",
+        detail=result.detail,
     )
 
 
@@ -436,20 +446,22 @@ def _hook_assign_milestone(
             detail=f"milestone={title!r} already set; idempotent skip",
         )
 
-    args = [
-        "gh", "issue", "edit", str(issue_number),
-        "--milestone", title,
-    ]
-    proc = _gh_call(args, config)
-    if proc.returncode != 0:
-        raise HookFailure(
-            f"gh issue edit --milestone failed: {proc.stderr.strip() or 'no stderr'}"
-        )
+    # Construct + execute the milestone write through the sole constructor
+    # (ADR-031); apply DEC-024's report-and-continue posture to its result.
+    if substrate_writes is None:  # pragma: no cover - defensive import fallback
+        raise HookFailure("substrate_writes primitive unavailable")
+    result = substrate_writes.write_milestone(
+        config,
+        issue_number=issue_number,
+        title=title,
+    )
+    if not result.ok:
+        raise HookFailure(result.detail)
     return HookResult(
         index=index,
         kind="assign-milestone",
         status="ok",
-        detail=f"set milestone={title!r} on #{issue_number}",
+        detail=result.detail,
     )
 
 
