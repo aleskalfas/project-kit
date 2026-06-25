@@ -24,7 +24,7 @@ source:
 conventions:
   branch-name:
     surface_kind: branch
-    pattern: '^(feat|fix|docs|test|refactor|chore|ci)/[0-9]+-[a-z0-9][a-z0-9-]*$'
+    pattern: '^(feat|fix|docs|test|refactor|chore|ci|decision)/[0-9]+-[a-z0-9][a-z0-9-]*$'
     description: |
       `<conv-type>/<issue-number>-<slug>`. `<conv-type>` is the
       Conventional Commits prefix derived from the closing Task's
@@ -33,6 +33,15 @@ conventions:
       `<slug>` is the kebab-case derivation of the issue title (see
       `branch_slug_derivation`). One branch per Task; EPIC, Feature,
       Umbrella, Milestone, and sub-tasks do not get branches.
+
+      `decision` is a recognised conv-type per [COR-008] even though no
+      `type:decision` issue label exists and `pr_type_mapping` does not
+      produce it: a PR that lands a decision record (COR / PRJ / DEC /
+      ADR) takes the `decision` conv-type explicitly — chosen for the
+      *content shipped*, overriding the closing Task's mapped type (a
+      decision-authoring Task is classified `type:docs`, but its PR is
+      `decision(<scope>): …`). The merge gate recognises `decision`;
+      it is not an unrecognised-type warning.
     examples_good:
       - "feat/99-install-the-claude-code-cli-inside-the-sandbox"
       - "fix/77-render-tui-playback-cleanly-without-ctrl-l"
