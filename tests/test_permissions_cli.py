@@ -2215,11 +2215,43 @@ def test_decide_verdict_path_byte_identical_to_main():
     assert decide_py.is_file(), f"decide.py not found at expected path: {decide_py}"
 
     working = decide_py.read_text(encoding="utf-8")
+
+    # Resolve the baseline against the first available ref. CI (actions/checkout)
+    # leaves `main` only as the remote-tracking `origin/main` — the local branch
+    # `main` does not exist there — so prefer `origin/main`; fall back to local
+    # `main` (dev checkouts) and then the merge-base. `rev-parse --verify --quiet`
+    # tests availability without erroring. If NONE resolve, skip: the guard needs
+    # the base to compare and has nothing to assert against.
+    def _resolves(ref: str) -> bool:
+        return subprocess.run(
+            ["git", "rev-parse", "--verify", "--quiet", ref],
+            cwd=str(root), capture_output=True, text=True, check=False,
+        ).returncode == 0
+
+    base_ref = next(
+        (ref for ref in ("origin/main", "main") if _resolves(ref)),
+        None,
+    )
+    if base_ref is None:
+        mb = subprocess.run(
+            ["git", "merge-base", "HEAD", "@{upstream}"],
+            cwd=str(root), capture_output=True, text=True, check=False,
+        )
+        if mb.returncode == 0 and mb.stdout.strip():
+            base_ref = mb.stdout.strip()
+    if base_ref is None:
+        pytest.skip(
+            "base ref (origin/main|main) not available — "
+            "byte-identical guard needs the base to compare"
+        )
+
     r = subprocess.run(
-        ["git", "show", "main:.pkit/permissions/decide.py"],
+        ["git", "show", f"{base_ref}:.pkit/permissions/decide.py"],
         cwd=str(root), capture_output=True, text=True, check=False,
     )
-    assert r.returncode == 0, f"could not read decide.py from main: {r.stderr!r}"
+    assert r.returncode == 0, (
+        f"could not read decide.py from {base_ref}: {r.stderr!r}"
+    )
     base = r.stdout
 
     # The verdict path: `decide()` and `hook_decide()` themselves PLUS every pure
