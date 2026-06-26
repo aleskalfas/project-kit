@@ -22,7 +22,7 @@ Behaviour summary (the scripts are the source of truth — read them for the exa
 - **Authorisation gate** — user-authorised transitions (Todo → Backlog; Review → Done; Backlog/Todo → Done; In-progress → Done parent close) require `--yes` from the caller as the explicit authorisation signal; bypassable-with-audit transitions accept `--bypass --bypass-reason "..."` to record an audit comment.
 - **Forward cascade** (DEC-006) — `move-issue.py` walks the parent chain via the body's parent-ref line and bumps any parent that's behind. Skip with `--no-cascade`.
 - **Closure cascade** (DEC-006) — `close-issue.py` surfaces parent-eligibility findings after the close, never auto-closes parents.
-- **Checkbox close-gate** (DEC-007) — `close-issue.py --mode=wont-do` refuses if any `- [ ]` box remains unticked in the body. Override with `--skip-checkbox-gate` (discouraged).
+- **Checkbox close-gate** (DEC-007) — `close-issue.py --mode=wont-do` refuses if any `- [ ]` box remains unticked in the body. Tick the satisfied criteria with `check-criterion <N> <index>...` (per DEC-038) before re-running the close; reach for `--skip-checkbox-gate` only when a criterion is genuinely won't-do (discouraged).
 
 ## How to invoke
 
@@ -48,6 +48,17 @@ pkit project-management close-issue <N> --mode pr-merge [--no-cascade]
 **Reopen:**
 ```
 pkit project-management reopen-issue <N> [--reason "<text>"] [--dry-run] [--yes]
+```
+
+**Tick / untick acceptance criteria** (DEC-038 batch substrate primitives — prefer these over a whole-body `edit-issue` for a checkbox flip; address by 1-based index matching `show-issue --field criteria`, with an optional expected-text guard):
+```
+pkit project-management check-criterion <N> <index> [expected-text] [<index> [expected-text]] ...
+pkit project-management uncheck-criterion <N> <index> [expected-text] ...
+```
+
+**Set classification field(s)** (DEC-038 — declarative, batch, idempotent; reuses create-issue's classification resolution rather than hand-editing labels):
+```
+pkit project-management set-field <N> [--priority X] [--workstream Y] [--parent M] [--dry-run] [--yes]
 ```
 
 Direct-path is equivalent for adopters whose kit predates the dispatcher:
