@@ -4331,6 +4331,159 @@ def _diagnose_command_head(command: str) -> str:
     return ""
 
 
+# ---- prompted-vs-auto-allowed + compound-vs-missing axes (issue #317) --------
+#
+# Two STATIC axes over the logged (redacted) command text — no capture-format
+# change. A captured record is an abstain the *hook* deferred on; the harness then
+# applies the live settings.json (+ settings.local.json) `permissions.allow`
+# patterns. So we can sharpen PRJ-006's "superset" honesty into a real-prompt
+# count, and split each real prompt into a decomposition target vs a genuine gap:
+#
+#   auto-allowed?   match the WHOLE command against the flat settings matcher (a
+#                   single simple command whose leading tokens are exactly a
+#                   `Bash(<prefix>:*)` allow pattern). A match ⇒ the harness
+#                   auto-allows ⇒ NOT a real prompt.
+#   allowlisted-but-compound vs genuinely-missing?
+#                   of the REAL prompts, decompose on shell operators and test each
+#                   non-`cd` segment against the same matcher. Shell-shape AND every
+#                   segment allow-matched ⇒ an allowlisted command defeated only by
+#                   compounding (a decomposition / butter-verb target — the source-
+#                   elimination recommendation); otherwise a genuine allowlist gap.
+#
+# Reuses the existing settings readers (`_live_settings` / `_read_settings_local`),
+# the `_BASH_RULE` parser, and the canonical shell-operator splitter
+# (`decide.segments`) — no new matcher is introduced. Advisory like the group
+# classifier (PRJ-006 sub-decision 3) and still recommend-only: the report applies
+# NOTHING (sub-decision 4); the worst case of a misclassification is a wrong count.
+
+# A tool allow pattern (`Edit`, `Read`, `WebFetch(domain:…)`) — the non-bash half
+# of `permissions.allow`. Captures the bare tool name; `Bash(…)` is excluded (it is
+# the bash matcher's domain) by the caller.
+_DIAGNOSE_TOOL_ALLOW = re.compile(r"^([A-Z][A-Za-z]+)(?:\(.*\))?$")
+
+
+def _diagnose_settings_allow(target_root: Path) -> tuple[list[list[str]], set[str]]:
+    """The live `permissions.allow` patterns from settings.json + settings.local.json,
+    split into the two shapes the harness flat-matches against:
+
+      bash specs   `Bash(<prefix>:*)` patterns parsed to token-prefix specs (Claude
+                   Code's semantics: a pattern auto-allows a command whose leading
+                   tokens are exactly the pattern's).
+      tool allows  bare tool patterns (`Edit`, `Read`, `WebFetch(…)`) the harness
+                   auto-allows a same-tool call against; `Bash` is excluded — bash
+                   calls go through the prefix matcher above.
+
+    Reuses the existing settings readers and the `_BASH_RULE` parser; no new matcher."""
+    raw = list(_live_settings(target_root)["allow"])
+    local = _read_settings_local(target_root)
+    raw += list(local.get("permissions", {}).get("allow", []))
+    specs: list[list[str]] = []
+    seen: set[tuple[str, ...]] = set()
+    tool_allows: set[str] = set()
+    for rule in raw:
+        rule = str(rule)
+        m = _BASH_RULE.match(rule)
+        if m:
+            spec = tuple(m.group(1).split())
+            if spec and spec not in seen:
+                seen.add(spec)
+                specs.append(list(spec))
+            continue
+        t = _DIAGNOSE_TOOL_ALLOW.match(rule)
+        if t and t.group(1) != "Bash":
+            tool_allows.add(t.group(1))
+    return specs, tool_allows
+
+
+def _diagnose_allow_match(toks: list[str], allow_specs: list[list[str]]) -> bool:
+    """True when `toks` (a tokenized command or segment) is auto-allowed by the
+    flat settings matcher — i.e. some allow spec is a leading token-prefix of it
+    (Claude Code's `Bash(<prefix>:*)` semantics)."""
+    return any(spec and toks[: len(spec)] == spec for spec in allow_specs)
+
+
+# Shell-operator splitter, mirroring `decide.segments`, for the rare report on a
+# tree without a propagated decision core (the read-only report must never hard-
+# fail on a missing `decide.py`). The canonical splitter is preferred when present.
+_DIAGNOSE_SEP = re.compile(r"\s*(?:&&|\|\||\||;)\s*")
+_DIAGNOSE_ENVVAR = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
+
+
+def _diagnose_fallback_segments(command: str) -> list[list[str]]:
+    """Local stdlib mirror of `decide.segments`: split on shell operators, strip a
+    leading `export` / `FOO=bar` prefix per segment, tokenize. Used only when the
+    decision core can't be imported."""
+    out: list[list[str]] = []
+    for raw in _DIAGNOSE_SEP.split(command.strip()):
+        toks = raw.split()
+        while toks and (toks[0] == "export" or _DIAGNOSE_ENVVAR.match(toks[0])):
+            toks = toks[1:]
+        if toks:
+            out.append(toks)
+    return out
+
+
+def _diagnose_segments_fn(target_root: Path) -> Any:
+    """The canonical shell-operator splitter (`decide.segments`) when the decision
+    core is present; the local fallback otherwise, so the read-only report degrades
+    gracefully on a tree without `decide.py`."""
+    try:
+        return _decide_mod(target_root).segments
+    except PermissionsError:
+        return _diagnose_fallback_segments
+
+
+def _diagnose_real_segments(command: str, segments_fn: Any) -> list[list[str]]:
+    """The allow-relevant segments of a (possibly compound) command: the canonical
+    shell-operator splitter (which also strips `export` / `FOO=bar` prefixes), with
+    any bare `cd <path>` segment dropped — a cwd change is never an intent target
+    (ADR-025), so it must not count as an uncovered head."""
+    out: list[list[str]] = []
+    for toks in segments_fn(command):
+        if toks and toks[0] != "cd":
+            out.append(toks)
+    return out
+
+
+def _diagnose_outcome(
+    record: dict[str, Any], allow_specs: list[list[str]], tool_allows: set[str],
+    segments_fn: Any,
+) -> tuple[bool, str | None]:
+    """STATIC harness-outcome + compound-shape of one captured deferral, over its
+    logged (redacted) command text. Returns (auto_allowed, compound_class):
+
+      auto_allowed     the flat settings matcher would auto-allow the deferral — a
+                       single simple bash command whose prefix matches a live allow
+                       pattern, OR a non-bash tool call whose tool is allow-listed —
+                       so it is NOT a real prompt.
+      compound_class   for a REAL prompt only: 'allowlisted-but-compound' when it is
+                       shell-shape and every non-`cd` segment is individually
+                       allow-matched (a decomposition / butter-verb target), else
+                       'genuinely-missing' (a real allowlist gap). None when
+                       auto-allowed.
+
+    A shell-shape command is never auto-allowed by the single-pattern flat matcher
+    (the `|`/`&&`/… defeats it), so it always lands as a real prompt and carries a
+    compound_class — exactly the deferral the EPIC's butter verbs target."""
+    command = str(record.get("command", ""))
+    toks = command.split()
+    shell_shape = any(marker in command for marker in _DIAGNOSE_SHELL_SHAPE)
+    if not toks:
+        # A non-bash tool deferral (Read / Edit / Glob …): no command string to
+        # prefix-match, so the harness auto-allows it iff the tool is allow-listed;
+        # an un-allowed tool is a real gap (no compound shape to decompose).
+        if str(record.get("tool", "")) in tool_allows:
+            return True, None
+        return False, "genuinely-missing"
+    if not shell_shape and _diagnose_allow_match(toks, allow_specs):
+        return True, None
+    if shell_shape:
+        segs = _diagnose_real_segments(command, segments_fn)
+        if segs and all(_diagnose_allow_match(s, allow_specs) for s in segs):
+            return False, "allowlisted-but-compound"
+    return False, "genuinely-missing"
+
+
 def _diagnose_classify(record: dict[str, Any]) -> str:
     """Assign a record to a group id. Advisory only (PRJ-006 sub-decision 3):
     re-derives the group from raw command text since the deferral reason carries
@@ -4386,9 +4539,29 @@ def diagnose_report(target_root: Path) -> str:
 
     groups_by_id = {g["id"]: g for g in _DIAGNOSE_GROUPS}
 
+    # The two sharpening axes (issue #317), STATIC over the logged command text:
+    # which captured deferrals the harness would actually PROMPT on (vs auto-allow
+    # via settings.json), and — of those real prompts — which are an allowlisted
+    # command defeated only by compounding (a decomposition / butter-verb target)
+    # vs a genuine allowlist gap. Recommend-only: still applies NOTHING.
+    allow_specs, tool_allows = _diagnose_settings_allow(target_root)
+    segments_fn = _diagnose_segments_fn(target_root)
+    outcome_of = {id(rec): _diagnose_outcome(rec, allow_specs, tool_allows, segments_fn)
+                  for rec in log}
+    auto_allowed_n = sum(1 for auto, _ in outcome_of.values() if auto)
+    real_n = len(log) - auto_allowed_n
+    compound_n = sum(1 for _, c in outcome_of.values() if c == "allowlisted-but-compound")
+    missing_n = sum(1 for _, c in outcome_of.values() if c == "genuinely-missing")
+
     lines = [title, "", header,
-             "  note: this is a SUPERSET of real prompts (the hook sees its own "
-             "deferral, not whether the harness prompted) — read counts as COVERAGE.",
+             "  note: the raw capture is a SUPERSET of real prompts (the hook sees its "
+             "own deferral, not whether the harness prompted) — the axes below sharpen it.",
+             f"  outcome: {real_n} real prompt(s) of {len(log)} captured "
+             f"({auto_allowed_n} auto-allowed by the live settings.json flat matcher "
+             f"— NOT prompts).",
+             f"  of those real prompts: {compound_n} allowlisted-but-compound "
+             f"(decompose / butter-verb — eliminate at source) · {missing_n} genuinely-missing "
+             f"(a real allowlist gap).",
              ""]
 
     rank = 0
@@ -4411,6 +4584,15 @@ def diagnose_report(target_root: Path) -> str:
                 "remediation", "review these commands and decide a remediation")
             lines.append(f"  [{rank}] {gid:14} {len(recs):>3}×   {top}")
             lines.append(f"      → {remediation}")
+            if gid == "shell-shape":
+                comp = sum(1 for r in recs
+                           if outcome_of[id(r)][1] == "allowlisted-but-compound")
+                miss = sum(1 for r in recs
+                           if outcome_of[id(r)][1] == "genuinely-missing")
+                lines.append(
+                    f"      ↳ of these: {comp} allowlisted-but-compound "
+                    f"(butter-verb / decompose — eliminate at source) · "
+                    f"{miss} genuinely-missing (real allowlist gap)")
         lines.append("")
 
     lines += [
