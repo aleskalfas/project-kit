@@ -72,12 +72,32 @@ def main() -> int:
             f"(default: <repo-root>/.pkit/capabilities/{CAPABILITY_NAME}/)."
         ),
     )
-    parser.add_argument(
+    output = parser.add_mutually_exclusive_group()
+    output.add_argument(
         "--json",
         action="store_true",
         help="Emit machine-readable JSON instead of human-readable text.",
     )
+    output.add_argument(
+        "--field",
+        metavar="NAME",
+        default=None,
+        help=(
+            "Print only the value of a single field, with no surrounding "
+            "chrome (scalars bare, lists one per line, sections one "
+            "present/absent line each). Mutually exclusive with --json. "
+            "Valid fields: " + ", ".join(ISSUE_FIELD_NAMES) + "."
+        ),
+    )
     args = parser.parse_args()
+
+    if args.field is not None and args.field not in ISSUE_FIELD_NAMES:
+        print(
+            f"error: unknown field '{args.field}'.\n"
+            f"valid fields: {', '.join(ISSUE_FIELD_NAMES)}",
+            file=sys.stderr,
+        )
+        return 2
 
     capability_root = resolve_capability_root(args.capability_root)
     if capability_root is None:
@@ -105,7 +125,10 @@ def main() -> int:
 
     summary = _summarise(issue, issue_types, body_format)
 
-    if args.json:
+    if args.field is not None:
+        for line in _field_lines_for(summary)[args.field]:
+            print(line)
+    elif args.json:
         print(json.dumps(summary, indent=2))
     else:
         _print_summary(args.issue_number, summary)
@@ -132,6 +155,7 @@ def _summarise(issue: dict, issue_types: dict, body_format: dict) -> dict:
     structural_type = _infer_structural_type(title, issue_types)
     parent_ref = _first_body_line(body)
     required_sections = _required_section_status(structural_type, body, body_format)
+    criteria = _extract_criteria(body)
 
     type_labels = [lbl for lbl in labels if axis_labels.is_axis_label(lbl, "type")]
     priority_labels = [lbl for lbl in labels if axis_labels.is_axis_label(lbl, "priority")]
@@ -159,7 +183,76 @@ def _summarise(issue: dict, issue_types: dict, body_format: dict) -> dict:
         },
         "other_labels": other_labels,
         "required_sections": required_sections,
+        "criteria": criteria,
+        "body": body,
         "url": issue.get("url"),
+    }
+
+
+# The addressable field vocabulary for `--field`. Order is the documented
+# order (and is asserted to match `_field_lines_for`'s keys in the tests).
+ISSUE_FIELD_NAMES = (
+    "title",
+    "type",
+    "state",
+    "assignees",
+    "milestone",
+    "parent",
+    "priority",
+    "workstream",
+    "labels",
+    "criteria",
+    "sections",
+    "body",
+    "url",
+)
+
+
+def _scalar(value: object) -> list[str]:
+    """Render a scalar field as zero or one output line.
+
+    `None` and the empty string render as no output (a bare command for an
+    absent field yields nothing, not a blank line).
+    """
+    if value is None:
+        return []
+    text = str(value)
+    return [text] if text != "" else []
+
+
+def _field_lines_for(s: dict) -> dict[str, list[str]]:
+    """Project the summary into the addressable `--field` vocabulary.
+
+    Each value is the list of output lines for that field: scalars are zero or
+    one line, lists are one item per line, `sections` is one present/absent
+    line per required section. Derived from the same summary the `--json` path
+    serialises — no second fetch.
+    """
+    classification = s.get("classification") or {}
+    all_labels = (
+        list(classification.get("type") or [])
+        + list(classification.get("priority") or [])
+        + list(classification.get("workstream") or [])
+        + list(s.get("other_labels") or [])
+    )
+    sections = [
+        f"{'present' if sec.get('present') else 'absent'} {sec.get('heading')}"
+        for sec in (s.get("required_sections") or [])
+    ]
+    return {
+        "title": _scalar(s.get("title")),
+        "type": _scalar(s.get("structural_type")),
+        "state": _scalar(s.get("state")),
+        "assignees": list(s.get("assignees") or []),
+        "milestone": _scalar(s.get("milestone")),
+        "parent": _scalar(s.get("parent_ref")),
+        "priority": list(classification.get("priority") or []),
+        "workstream": list(classification.get("workstream") or []),
+        "labels": all_labels,
+        "criteria": list(s.get("criteria") or []),
+        "sections": sections,
+        "body": _scalar(s.get("body")),
+        "url": _scalar(s.get("url")),
     }
 
 
@@ -213,6 +306,36 @@ def _infer_structural_type(title: str, issue_types: dict) -> str | None:
 
 def _first_body_line(body: str) -> str:
     return body.lstrip().split("\n", 1)[0] if body.strip() else ""
+
+
+def _extract_criteria(body: str) -> list[str]:
+    """Pull the authored items under the '## Acceptance criteria' section.
+
+    Returns each item's text with the leading bullet and any checkbox marker
+    stripped. Collection starts at the acceptance-criteria heading and stops
+    at the next level-2 heading. A bare skeleton item (`- [ ]` with nothing
+    after it) is excluded — it carries no authored content.
+    """
+    items: list[str] = []
+    in_section = False
+    for raw in body.splitlines():
+        stripped = raw.strip()
+        if stripped.startswith("## "):
+            in_section = "acceptance criteria" in stripped.lower()
+            continue
+        if not in_section:
+            continue
+        bullet = re.match(r"^[-*]\s+(.*)$", stripped)
+        if not bullet:
+            continue
+        text = bullet.group(1)
+        checkbox = re.match(r"^\[[ xX]\]\s*(.*)$", text)
+        if checkbox:
+            text = checkbox.group(1)
+        text = text.strip()
+        if text:
+            items.append(text)
+    return items
 
 
 def _required_section_status(
