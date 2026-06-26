@@ -42,8 +42,24 @@ it **revises the premise PRJ-004 rested on**, which is a legitimate trigger to r
 | **2 — native packages** | `brew install pkit`, `winget install pkit` — feels like any app | tap/registry infra, per-platform | PRJ-004 *deferred* these to a scale threshold |
 | **3 — standalone binary** | one `pkit` executable, no Python/uv visible at all | repackage distribution (PyInstaller / PyOxidizer-class) | rewrites the PRJ-003/004 distribution model |
 
-Higher = more invisible, more infrastructure. Level 1 is the 80/20 (one command, uv
-hidden) and the realistic near-term move *if* PRJ-004 is revisited.
+Higher = more infrastructure. (Caveat discussed: this isn't a clean linear "more hidden"
+axis — these are partly different *delivery channels*, and even the standalone binary can't
+hide `git` / a POSIX shell / `gh` that pkit shells out to. So "fully invisible" isn't
+reachable by climbing; treat the table as a menu of channels, not strict rungs.)
+
+**Operator decision (discussed, plain English): the target is "paste one line and it
+works."** One command the user copies; it checks/installs uv if missing, then installs pkit;
+they never type `uv` or the git URL. This is the download-and-run style PRJ-004 once rejected
+("our users are techies, they don't need it") — choosing it now is a *deliberate reversal*
+justified by the changed audience (non-technical adopters), to be recorded as a PRJ-004
+successor. Two settled points:
+- It is the install experience for *adopters/broad audience*, not the operator's own daily
+  unblock (that's the floor fix).
+- "Paste one line **and it works**" *requires* the floor fix (#333): the one-liner installs
+  fine today, but the user's first real command (`pkit init`) is exactly what crashes — and
+  a smooth path straight into a traceback is the worst failure for a non-technical audience.
+  So: **floor fix first, one-liner as the next layer on top.** The one-liner itself is small
+  once the floor is solid; deferred to "before broad distribution."
 
 ### Two caveats — invisibility is the *top* of the stack, not a substitute for the floor
 
@@ -163,35 +179,63 @@ version. "Mismatch" = those two disagree for a given project.
 B7–B10 are unwritten. So the plans are *directionally right but incomplete*; the router
 solved routing but exposed (didn't cause) the deeper versioning-coherence gap.
 
-## Candidate fix directions for the gap (B4–B6)
+## Fix direction for the gap (B4–B6) — RESOLVED via critic + architect
 
-1. **Bundle `.pkit/` into the wheel** (force-include the tree) + teach `find_source_kit()`
-   to resolve via `importlib.resources` when no source tree sits beside the package.
-   *Lean.* Makes `uv tool install` deliver the PRJ-004 promise; contained packaging +
-   resolution change. Open Q: wheel size; keeping the bundled tree in lockstep with the
-   binary version (they'd ship together — arguably a *feature*, since binary and content
-   would then be the same version by construction).
-2. **Fetch source at sync/upgrade time** from the pinned git ref. Heavier; reintroduces
-   network + auth at upgrade time; but keeps the wheel slim.
-3. **Revise PRJ-004 + README** to declare the tool install operational-only and keep a
-   checkout as the sanctioned propagation path. Cheapest; concedes the gap rather than
-   closing it. Would still need B7–B10.
+Options weighed: (1) **bundle content into the wheel** + resolve via `importlib.resources`;
+(2) fetch source at upgrade time (heavier, reintroduces network/auth — rejected); (3) revise
+PRJ-004 + README to declare the tool install operational-only (concedes the gap, contradicts
+P0 — rejected). **Option 1 chosen.** It makes `uv tool install` deliver the PRJ-004 promise
+*and* collapses a drift axis (binary version == content version by construction), and it's
+the foundation every higher P0 ladder level reuses (native packages, standalone binary all
+still ship content with the code + resolve it as a package resource).
 
-Note: option 1 has a pleasant side effect on the *whole* mismatch problem — if the
-binary ships its own `.pkit/`, then "binary version" and "the content it syncs" are
-identical by construction, collapsing one axis of drift. Worth weighing heavily.
+**Reviewer-corrected shape (the floor fix, #333):**
+
+- **Bundle the *propagation surface*, not "the `.pkit/` tree."** The wheel bundles *what
+  `pkit sync` propagates* — under `project_kit/_kit/` — which by the existing core/project
+  ownership rule automatically *excludes* adopter-owned subtrees: `decisions/project/` (PRJ
+  records — project-kit's own, must not ship as core), `scratchpad/{active,done,dropped}`
+  contents, the maintainer's `manifest.yaml`, `.gitignore`, `__pycache__`. Defining the
+  bundle this way means it can never drift from what sync actually copies.
+- **Critic red flag — the bundle set is bigger than `PROPAGATED_AREAS`.** `capabilities/`
+  and `migrations/` are read from `source_kit` but are NOT in the 10-area propagation list.
+  Bundling only those 10 would leave a pinned install unable to `capabilities install`
+  (capability subsystem silently dead) and unable to run backbone migrations.
+- **Pre-existing bug to fix in-scope:** `migrations/` is not propagated to adopters at all,
+  so backbone migrations have *never run* on any non-self-host adopter (latent — nobody's
+  crossed a migration boundary yet). Architect: fix in this change (same defect class as the
+  `capabilities/` omission; COR-010 presumes migrations reach adopters).
+- **`find_source_kit()` precedence is a CONTRACT:** checkout `.pkit` (detected by
+  `(.pkit/"decisions").is_dir()`) always wins; the bundled `_kit/` is fallback-only, resolved
+  via `importlib.resources` so it can never be mistaken for a checkout. Preserves dev
+  live-edit (B1) + self-host. `as_file()` lifetime must outlive the copy (ExitStack /
+  materialize-once); trace the *zipped*-wheel path, not just unzipped `uv tool`.
+- **Graceful guards:** add a source-missing guard at `sync`/`upgrade` entry (around
+  `read_kit_version`) so any future incomplete bundle fails with a clean ClickException, not
+  a raw `FileNotFoundError`.
+- **Capability bundling = distribution medium, not activation.** All capability *source*
+  ships in the wheel (the "repository"); `capabilities install` is still on-demand into the
+  adopter (COR-017 opt-in boundary intact — the existing available-vs-installed split).
+
+**Architect escalation: ADR-worthy + authorization required.** This establishes a standing
+distribution invariant — *the official install resolves methodology content from bundled
+package data, version-locked to the binary* — that clarifies (does not supersede) PRJ-004's
+wheel-contents implication. Proposed **ADR-033**; lands `proposed`, needs acceptance before
+implementation (gate). COR-007 follow-on flagged: *one* declaration of the kit-owned tree
+consumed by both the build force-include and the propagator (today two hand-maintained lists
+that drift — the `capabilities`/`migrations` omissions are the evidence).
 
 ## Open questions
 
-- Is option 1's "binary carries its content" the actual intended design (so this is a
-  build-config bug), or was operational-only always the intent (so it's a docs/PRJ bug)?
-  → decide before filing the fix; it changes whether the issue is a bug or a PRJ revisit.
-- Should drift detection (B7) be a new `pkit doctor`/`pkit version --check` surface, or
-  folded into existing `status`/`validate`?
-- Does any of this warrant an ADR (binary/content coupling is arguably architectural) vs
-  a PRJ + a bug issue?
-- Self-host nuance: on project-kit itself the source *is* the installed `.pkit/`, so
-  sync/upgrade short-circuit — confirm the fix doesn't disturb the self-host path.
+**Resolved this session (by the reviewer passes):**
+- ~~Is "binary carries its content" intended design or operational-only?~~ → **Intended
+  design.** Architect ratified the binary↔content coupling; the gap is a defect, fix = bundle
+  (option 1). → ADR-033.
+- ~~Does this warrant an ADR?~~ → **Yes**, ADR-033 (clarifies PRJ-004, doesn't supersede).
+- ~~Self-host nuance — does the fix disturb self-host?~~ → **No**, checkout-first precedence
+  keeps self-host resolving to the real `.pkit/`; bundled `_kit/` only used in adopters.
+
+**Still open (the brainstorm to finish):**
 - **P0 scope/timing:** is the tech-agnostic audience in scope *now*, or does it wait for
   PRJ-004's stated revisit threshold (≈25–50 adopters / discoverability need)? P0 argues
   the trigger is *audience*, not *count* — but that's a strategic call to make explicitly.
@@ -199,6 +243,11 @@ identical by construction, collapsing one axis of drift. Worth weighing heavily.
   3 standalone binary)? Each is a different cost/decision.
 - **Windows as a goal?** Is native-Windows (no WSL/Git Bash) in scope for P0, or is
   "smooth on macOS/Linux, WSL on Windows" acceptable? Settling this bounds Layer-2 work.
+- **Drift detection (B7):** a new `pkit doctor` / `pkit version --check` surface, or folded
+  into existing `status`/`validate`? (Less urgent once the binary ships its own content —
+  the official-install drift axis is collapsed; matters mainly for checkout-driven upgrades.)
+- **COR-007 follow-on:** one declaration of the kit-owned tree consumed by both the build
+  force-include and the propagator (`PROPAGATED_AREAS`) — fix now or file separately?
 
 ## Crystallises into (expected)
 
