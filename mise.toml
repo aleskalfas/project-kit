@@ -39,36 +39,61 @@ run = "uv run pyright"
 description = "Run all checks (lint + format:check + typecheck + test)"
 depends = ["lint", "format:check", "typecheck", "test"]
 
-# --- pkit install switching -------------------------------------------------
-# Toggle the global `pkit` between an editable dev install (this checkout) and
-# the pinned release. Dev = symlink the in-tree dispatcher (PRJ-001) onto PATH,
-# routed through `uv run` so source edits are live. Pinned = the PRJ-004 git
-# install. Both resolve the same target path so they reliably toggle one name.
+# --- pkit routing (multi-checkout dev) --------------------------------------
+# `pkit-router` (scripts/pkit-router) is a CWD-aware shim installed ahead of the
+# pinned binary on PATH: inside any project-kit source checkout it runs THAT
+# checkout's working tree (via the PRJ-001 dispatcher); everywhere else it runs
+# the pinned release. The pinned install is the router's fallback, so install
+# both. `pkit:which` diagnoses the wiring.
 
-[tasks."pkit:dev"]
-description = "Make THIS checkout the active global `pkit` (editable dev install)"
+[tasks."pkit:pinned-install"]
+description = "Install/refresh the pinned global pkit release (PRJ-004) — the router's fallback"
 run = '''
-target="${UV_TOOL_BIN_DIR:-${XDG_BIN_HOME:-$HOME/.local/bin}}/pkit"
-src="{{config_root}}/.pkit/cli/pkit"
-echo "Linking pkit -> this checkout: $target -> $src"
-ln -sfn "$src" "$target"
-echo "Done. Active pkit is now this checkout (editable). Verify with: mise run pkit:which"
+set -euo pipefail
+target="$(uv tool dir --bin 2>/dev/null || echo "${UV_TOOL_BIN_DIR:-${XDG_BIN_HOME:-$HOME/.local/bin}}")/pkit"
+# Clear a stray symlink (e.g. a legacy dev symlink) before installing.
+if [ -L "$target" ]; then echo "Removing stray symlink: $target"; rm "$target"; fi
+uv tool install --force git+ssh://git@github.com/aleskalfas/project-kit.git
+echo "Done. Pinned release at $target. Verify with: mise run pkit:which"
 '''
 
-[tasks."pkit:pin"]
-description = "Switch global `pkit` back to the pinned release (PRJ-004 git install)"
+[tasks."pkit:router-install"]
+description = "Install the CWD-aware pkit-router shim ahead of the pinned pkit on PATH"
 run = '''
-target="${UV_TOOL_BIN_DIR:-${XDG_BIN_HOME:-$HOME/.local/bin}}/pkit"
-# Only remove a dev symlink — never a real binary.
-if [ -L "$target" ]; then echo "Removing dev symlink: $target"; rm "$target"; fi
-uv tool install --force git+ssh://git@github.com/aleskalfas/project-kit.git
-echo "Done. Active pkit is now the pinned release. Verify with: mise run pkit:which"
+set -euo pipefail
+src="{{config_root}}/scripts/pkit-router"
+shim_dir="${PKIT_ROUTER_DIR:-$HOME/.pkit/shim}"
+pinned_dir="$(uv tool dir --bin 2>/dev/null || echo "${UV_TOOL_BIN_DIR:-${XDG_BIN_HOME:-$HOME/.local/bin}}")"
+ver="$(awk '/^ROUTER_VERSION=/{sub(/^ROUTER_VERSION=/,"");print $1;exit}' "$src")"
+mkdir -p "$shim_dir"
+install -m 0755 "$src" "$shim_dir/pkit"
+echo "Installed router v$ver -> $shim_dir/pkit"
+resolved="$(command -v pkit || true)"
+if [ "$resolved" != "$shim_dir/pkit" ]; then
+  echo
+  echo "PATH: bare 'pkit' currently resolves to ${resolved:-<none>}."
+  echo "The router must precede the pinned dir ($pinned_dir). Add to your profile, then restart your shell:"
+  echo "    export PATH=\"$shim_dir:\$PATH\""
+else
+  echo "PATH: OK — bare 'pkit' resolves to the router."
+fi
+if [ ! -x "$pinned_dir/pkit" ]; then
+  echo
+  echo "Fallback missing: run 'mise run pkit:pinned-install' so non-source dirs get the stable release."
+fi
 '''
 
 [tasks."pkit:which"]
-description = "Show which `pkit` is active (dev checkout vs pinned)"
+description = "Diagnose pkit routing: active binary, router version, pinned fallback"
 run = '''
+sv() { awk '/^ROUTER_VERSION=/{sub(/^ROUTER_VERSION=/,"");print $1;exit}' "$1" 2>/dev/null; }
 p="$(command -v pkit || true)"
-if [ -z "$p" ]; then echo "no pkit on PATH"; exit 0; fi
-echo "pkit on PATH: $p"; ls -l "$p"; pkit version
+echo "bare 'pkit' resolves to : ${p:-<none>}"
+[ -n "$p" ] && ls -l "$p"
+if [ -n "${PKIT_PINNED_BIN:-}" ]; then pinned="$PKIT_PINNED_BIN"; else pinned="$(uv tool dir --bin 2>/dev/null || echo "${UV_TOOL_BIN_DIR:-${XDG_BIN_HOME:-$HOME/.local/bin}}")/pkit"; fi
+if [ -x "$pinned" ]; then ps="present"; else ps="MISSING — run pkit:pinned-install"; fi
+echo "pinned fallback         : $pinned ($ps)"
+shim="${PKIT_ROUTER_DIR:-$HOME/.pkit/shim}/pkit"
+if [ -x "$shim" ]; then echo "installed router        : $shim (v$(sv "$shim"))"; else echo "installed router        : <not installed — run pkit:router-install>"; fi
+echo "this checkout ships     : router v$(sv "{{config_root}}/scripts/pkit-router")"
 '''
