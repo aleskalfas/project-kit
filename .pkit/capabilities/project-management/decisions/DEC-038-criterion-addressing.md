@@ -56,4 +56,4 @@ The decision (D1) takes index as the primary address and folds text in as an *op
 - **The expected-text guard reuses existing criterion extraction** — the same acceptance-criteria parsing that `show-issue --field criteria` already performs (landed in #318) identifies the line at an index and supplies the text to compare against.
 - **The close-gate is unaffected** — these verbs change *how* a box is ticked, not *what* ticking means; [project-management:DEC-007-checkbox-validation]'s close-gate reads the resulting body exactly as before.
 - **Tests** mirror the enumerated cases in D4 (out-of-range refusal, text-mismatch refusal, ambiguous-wording refusal, already-set no-op, half-batch re-run) and the batch path, alongside the capability's existing idempotence tests.
-- **This record lands as `proposed`.** Per the acceptance gate, #321/W3b must not be authored against it until it is accepted; acceptance is a separate status flip.
+- **Acceptance gate.** #321/W3b builds on this record only now that it is `accepted`; authoring implementation against a `proposed` decision would have violated the gate.
