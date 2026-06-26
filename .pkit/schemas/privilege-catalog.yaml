@@ -47,6 +47,32 @@ privileges:
         # env-prefix stripping (decide.py segments()), so
         # "export GH_HOST=x && gh issue close …" is handled correctly.
         - pattern: '^gh\s+(issue\s+(create|edit|comment|close|reopen)|pr\s+(create|edit|merge|close|reopen))(\s|$)'
+  issue-tracker-read-raw:
+    description: >-
+      Raw gh read views that the project-management capability's clean-output
+      verbs replace (gh issue view, gh pr view, gh pr diff). Deny to force
+      `pkit project-management show-issue` / `show-pr` — the methodology's
+      prompt-free, non-piping read path. Those verbs emit a terse, banner-and-
+      label summary (or `--json`), and `--field <name>` prints a SINGLE value
+      with no chrome, so an agent captures one value as a bare command instead
+      of piping the full `gh` view through grep/tail. Matches ONLY the three
+      replaced views — NOT gh pr checks, gh run, gh api, gh issue/pr list, or
+      any mutation (those stay open here; mutations are covered by
+      issue-tracker-write). NOTE: like issue-tracker-write this is a speed-bump,
+      not a security boundary — per ADR-004 a tool-call denylist is porous
+      (a `bash -c '…'` wrapper or `gh api` evades it); it only removes the
+      reflexive direct-typed raw-view bypass so the clean verb is the path of
+      least resistance.
+    recognize:
+      bash:
+        # Matches the three raw read views the show-* verbs replace:
+        # gh issue view, gh pr view, gh pr diff.  Deliberately narrow — the
+        # alternation pins the exact issue/pr subcommand, so it does NOT match
+        # gh pr checks, gh run view, gh api, gh issue list, or gh pr list.
+        # Runs on the joined token segment after env-prefix stripping
+        # (decide.py segments()), so "export GH_PAGER= && gh pr diff …" is
+        # handled correctly.
+        - pattern: '^gh\s+(issue\s+view|pr\s+(view|diff))(\s|$)'
   kit:
     description: Run the project-kit CLI.
     recognize:

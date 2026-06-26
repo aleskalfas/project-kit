@@ -981,6 +981,136 @@ def test_capability_scripts_internal_gh_not_blocked(decide_mod, catalog):
     assert d == "allow", "pkit invocations must remain allowed for project-manager"
 
 
+# ---- issue-tracker-read-raw deny (issue #319) -------------------------------
+#
+# issue-tracker-read-raw recognizes the three raw read VIEWS the clean show-*
+# verbs replace: gh issue view / gh pr view / gh pr diff.  It does NOT recognize
+# gh pr checks, gh run, gh api, gh issue list, gh pr list, or any mutation.
+#
+# Same deny-precedence property as issue-tracker-write: a project-manager
+# `gh issue view` matches BOTH issue-tracker (broad gh, allowed) and
+# issue-tracker-read-raw (the read-redirect privilege, denied); decide()'s
+# order-independent deny-wins makes the deny win, routing the agent to
+# `pkit project-management show-issue` / `show-pr`.  No decide.py change needed.
+
+_PM_WITH_READ_REDIRECT_MODEL = {
+    "posture": "lenient",
+    "grants": [
+        # guardrail denies (always present)
+        {"subject": "all", "privilege": _tok("privilege-escalation"), "effect": "deny"},
+        {"subject": "all", "privilege": _tok("destructive-fs"), "effect": "deny"},
+        {"subject": "all", "privilege": _tok("vcs-history-rewrite"), "effect": "deny"},
+        # project-manager's production-representative grants
+        {"subject": "agent:project-manager",
+         "privilege": [_tok("vcs"), _tok("issue-tracker"), _tok("kit")], "effect": "allow"},
+        # both capability denies the project-management fragment ships
+        {"subject": "agent:project-manager",
+         "privilege": _tok("issue-tracker-write"), "effect": "deny"},
+        {"subject": "agent:project-manager",
+         "privilege": _tok("issue-tracker-read-raw"), "effect": "deny"},
+    ],
+}
+
+
+@pytest.mark.parametrize("cmd", [
+    "gh issue view 1",
+    "gh issue view 53 --json title,body",
+    "gh pr view 1",
+    "gh pr view 27 --json state",
+    "gh pr diff 1",
+    "gh pr diff 27 --color never",
+    # env-prefix form — the segments() stripper must handle this
+    "export GH_PAGER= && gh pr diff 27",
+])
+def test_pm_raw_read_views_denied(decide_mod, catalog, cmd):
+    """gh issue view / gh pr view / gh pr diff are blocked for project-manager.
+
+    Deny-precedence proof: these also match issue-tracker (broad gh allow), but
+    the explicit deny on issue-tracker-read-raw wins — decide() returns 'deny',
+    redirecting the agent to the clean show-issue / show-pr verbs.
+    """
+    hits = decide_mod.recognized_privileges(catalog, _bash(cmd, "agent:project-manager"))
+    assert "issue-tracker-read-raw" in hits, f"issue-tracker-read-raw should recognize {cmd!r}"
+    d, why = decide_mod.decide(
+        _PM_WITH_READ_REDIRECT_MODEL, catalog, _bash(cmd, "agent:project-manager")
+    )
+    assert d == "deny", f"expected deny for project-manager on {cmd!r}, got {d!r}: {why}"
+    assert "issue-tracker-read-raw" in why
+
+
+@pytest.mark.parametrize("cmd", [
+    # adjacent reads that MUST stay open — the alternation must not over-match
+    "gh pr checks 27",
+    "gh run list",
+    "gh run view 12345",
+    "gh api repos/owner/repo/issues",
+    "gh api -X PATCH repos/o/r/issues/5 -f state=closed",
+    "gh issue list",
+    "gh issue list --state open",
+    "gh issue status",
+    "gh pr list",
+    # mutations — covered by issue-tracker-write, NOT this privilege
+    "gh issue edit 53 --body x",
+    "gh issue comment 53 --body x",
+    "gh pr edit 27 --title y",
+    "gh issue create --title x",
+    "gh pr merge 27 --squash",
+    # near-miss prefixes that must not trip the `view`/`diff` alternation
+    "gh issue viewer",
+    "gh pr difftool",
+])
+def test_pm_adjacent_reads_not_recognized_by_read_redirect(decide_mod, catalog, cmd):
+    """gh pr checks / gh run / gh api / list / mutations are NOT recognized by
+    issue-tracker-read-raw — only the three replaced read views are.
+
+    Proves the recognizer is scoped to view/diff and does not catch checks, run,
+    api, list, or mutations.
+    """
+    hits = decide_mod.recognized_privileges(catalog, _bash(cmd, "agent:project-manager"))
+    assert "issue-tracker-read-raw" not in hits, (
+        f"issue-tracker-read-raw must NOT recognize {cmd!r} (only view/diff), got hits={hits}"
+    )
+
+
+@pytest.mark.parametrize("cmd,expected", [
+    # adjacent reads → allow (issue-tracker allow, no read-raw overlap → no deny)
+    ("gh pr checks 27", "allow"),
+    ("gh run list", "allow"),
+    ("gh issue list", "allow"),
+    ("gh api repos/owner/repo/issues", "allow"),
+    # git / pkit → allow (unaffected by the read-redirect deny)
+    ("git status", "allow"),
+    ("pkit status", "allow"),
+])
+def test_pm_read_redirect_leaves_adjacent_commands_allowed(decide_mod, catalog, cmd, expected):
+    """The read-redirect deny does not block adjacent reads, gh api, git, or pkit —
+    only the three raw read views (gh issue view / gh pr view / gh pr diff)."""
+    d, why = decide_mod.decide(
+        _PM_WITH_READ_REDIRECT_MODEL, catalog, _bash(cmd, "agent:project-manager")
+    )
+    assert d == expected, f"expected {expected!r} for {cmd!r}, got {d!r}: {why}"
+
+
+@pytest.mark.parametrize("cmd", ["gh issue view 1", "gh pr view 1", "gh pr diff 1"])
+def test_read_redirect_does_not_affect_other_subjects(decide_mod, catalog, cmd):
+    """The three reads stay available to other subjects — the deny is per-agent.
+
+    An operator with a broad issue-tracker allow and no read-raw deny still gets
+    ALLOWED for the raw views; the redirect is scoped to agent:project-manager.
+    """
+    operator_model = {
+        "posture": "lenient",
+        "grants": [
+            {"subject": "operator", "privilege": _tok("issue-tracker"), "effect": "allow"},
+            # the capability deny is per-agent, so it does NOT apply to operator
+            {"subject": "agent:project-manager",
+             "privilege": _tok("issue-tracker-read-raw"), "effect": "deny"},
+        ],
+    }
+    d, why = decide_mod.decide(operator_model, catalog, _bash(cmd, "operator"))
+    assert d == "allow", f"raw views must stay allowed for operator on {cmd!r}, got {d!r}: {why}"
+
+
 # ---- end-to-end guard: stdlib path enforces deny grants (issue #55) ---------
 #
 # The critical regression guard for the block-sequence-of-mappings parser fix.

@@ -323,9 +323,14 @@ The project-management capability ships a **capability-contributed permission gr
 - subject: agent:project-manager
   privilege: '[privilege-catalog:issue-tracker-write]'
   effect: deny
+- subject: agent:project-manager
+  privilege: '[privilege-catalog:issue-tracker-read-raw]'
+  effect: deny
 ```
 
-This deny blocks the `project-manager` agent from invoking the mutating `gh` subcommands directly — `gh issue create|edit|comment|close|reopen` and `gh pr create|edit|merge|close|reopen`. The agent reaches the issue tracker exclusively through the capability's validated scripts (`create-issue.py`, `close-issue.py`, `merge-pr.py`, etc.), which enforce the methodology's preconditions and gates (validation, the checkbox close-gate, the approval gate). Raw `gh` reads (`view`/`list`/`status`/`checks`/`diff`), `gh api`, `git`, and `pkit` are unaffected. Note this is a **speed-bump, not a security boundary** — per ADR-004 a tool-call denylist is porous (a `bash -c '…'` wrapper or `gh api -X PATCH … state=closed` evades it); the genuine gate enforcement lives inside the scripts, so the deny only removes the reflexive direct-typed bypass.
+The **first** deny blocks the `project-manager` agent from invoking the mutating `gh` subcommands directly — `gh issue create|edit|comment|close|reopen` and `gh pr create|edit|merge|close|reopen`. The agent reaches the issue tracker exclusively through the capability's validated scripts (`create-issue.py`, `close-issue.py`, `merge-pr.py`, etc.), which enforce the methodology's preconditions and gates (validation, the checkbox close-gate, the approval gate). Note this is a **speed-bump, not a security boundary** — per ADR-004 a tool-call denylist is porous (a `bash -c '…'` wrapper or `gh api -X PATCH … state=closed` evades it); the genuine gate enforcement lives inside the scripts, so the deny only removes the reflexive direct-typed bypass.
+
+The **second** deny (`issue-tracker-read-raw`) is a **read-redirect**: it blocks the three raw read views the clean-output verbs replace — `gh issue view`, `gh pr view`, `gh pr diff` — and routes the agent to `pkit project-management show-issue` / `show-pr` (and their `--field <name>` for a single value, [described above](#read-only-diagnostics--show-issue--show-pr)). Those verbs emit clean output an agent can capture as a *bare* command instead of piping a full `gh` view through `grep`/`tail`. The recognizer is deliberately narrow — **only** those three views; `gh pr checks`, `gh run`, `gh api`, `gh issue list`, and `gh pr list` stay available, as do `git` and `pkit`. Like the mutation deny it is a speed-bump (a deny is auto-rejected by the harness with no operator prompt, so the agent simply adapts to the clean verb).
 
 ### Adopter inheritance — how you get the deny
 
