@@ -3259,3 +3259,92 @@ def test_diagnose_on_status_off_round_trip(tmp_path, monkeypatch):
 def test_diagnose_report_empty(tmp_path, monkeypatch):
     proj = _setup(tmp_path)
     assert "nothing captured" in _run(proj, monkeypatch, "diagnose", "report")
+
+
+# ---- diagnose report: prompted-vs-auto-allowed + compound-vs-missing (#317) --
+
+def _seed_diagnose_log(proj: Path, records: list[dict]) -> None:
+    """Write curated in-memory fixture records to the (gitignored) diagnose log.
+    Deliberately independent of the live capture so the axes are tested on a known
+    shape, not on the local 222-record log."""
+    log = proj / ".pkit" / "permissions" / "project" / "diagnose-log.jsonl"
+    log.parent.mkdir(parents=True, exist_ok=True)
+    log.write_text("".join(json.dumps(r) + "\n" for r in records))
+
+
+# An allow set with the heads the fixtures lean on; `frobnicate` is deliberately
+# uncovered so it reads as a genuine gap.
+_ALLOW_SETTINGS = json.dumps(
+    {"permissions": {"allow": ["Bash(pkit:*)", "Bash(grep:*)", "Bash(git:*)"]}}
+)
+
+
+def test_diagnose_report_bare_allowlisted_is_auto_allowed(tmp_path, monkeypatch):
+    # (a) a bare allowlisted command — the harness flat-matches `Bash(pkit:*)`
+    # against the whole string, so it is auto-allowed and is NOT a real prompt.
+    proj = _setup(tmp_path, settings=_ALLOW_SETTINGS)
+    _seed_diagnose_log(proj, [
+        {"tool": "Bash", "command": "pkit project-management create-issue …[redacted]"},
+    ])
+    out = _run(proj, monkeypatch, "diagnose", "report")
+    assert "0 real prompt(s) of 1 captured" in out
+    assert "1 auto-allowed" in out
+
+
+def test_diagnose_report_piped_allowlisted_is_compound(tmp_path, monkeypatch):
+    # (b) a piped allowlisted command — the pipe defeats the single-pattern flat
+    # matcher (a real prompt), but every segment head is individually allow-matched,
+    # so it is allowlisted-but-compound: a decomposition / butter-verb target.
+    proj = _setup(tmp_path, settings=_ALLOW_SETTINGS)
+    _seed_diagnose_log(proj, [
+        {"tool": "Bash",
+         "command": "pkit project-management create-issue …[redacted] | grep …[redacted]"},
+    ])
+    out = _run(proj, monkeypatch, "diagnose", "report")
+    assert "1 real prompt(s) of 1 captured" in out
+    assert "1 allowlisted-but-compound" in out
+    assert "0 genuinely-missing" in out
+    # And the shell-shape group is tagged with the split.
+    assert "allowlisted-but-compound" in out and "eliminate at source" in out
+
+
+def test_diagnose_report_uncovered_head_is_genuinely_missing(tmp_path, monkeypatch):
+    # (c) a genuinely-uncovered head — no allow pattern matches, so it is a real
+    # prompt and a real allowlist gap.
+    proj = _setup(tmp_path, settings=_ALLOW_SETTINGS)
+    _seed_diagnose_log(proj, [
+        {"tool": "Bash", "command": "frobnicate …[redacted]"},
+    ])
+    out = _run(proj, monkeypatch, "diagnose", "report")
+    assert "1 real prompt(s) of 1 captured" in out
+    assert "1 genuinely-missing" in out
+
+
+def test_diagnose_report_axes_over_mixed_fixture(tmp_path, monkeypatch):
+    # All three shapes together, plus a compound with one uncovered segment
+    # (`frobnicate`) that must read genuinely-missing despite a covered first head.
+    proj = _setup(tmp_path, settings=_ALLOW_SETTINGS)
+    _seed_diagnose_log(proj, [
+        {"tool": "Bash", "command": "pkit project-management create-issue …[redacted]"},
+        {"tool": "Bash",
+         "command": "pkit project-management create-issue …[redacted] | grep …[redacted]"},
+        {"tool": "Bash", "command": "frobnicate …[redacted]"},
+        {"tool": "Bash", "command": "git add …[redacted] && frobnicate …[redacted]"},
+    ])
+    out = _run(proj, monkeypatch, "diagnose", "report")
+    assert "3 real prompt(s) of 4 captured" in out
+    assert "1 auto-allowed" in out
+    assert "1 allowlisted-but-compound" in out
+    assert "2 genuinely-missing" in out
+
+
+def test_diagnose_report_cd_prefix_segment_not_counted_as_gap(tmp_path, monkeypatch):
+    # A bare `cd <path>` segment is a cwd change, never an intent target (ADR-025),
+    # so a `cd … | grep …` compound is allowlisted-but-compound, not a gap.
+    proj = _setup(tmp_path, settings=_ALLOW_SETTINGS)
+    _seed_diagnose_log(proj, [
+        {"tool": "Bash", "command": "cd …[redacted] | grep …[redacted]"},
+    ])
+    out = _run(proj, monkeypatch, "diagnose", "report")
+    assert "1 allowlisted-but-compound" in out
+    assert "0 genuinely-missing" in out
