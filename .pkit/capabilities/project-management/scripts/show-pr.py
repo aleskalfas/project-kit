@@ -75,12 +75,31 @@ def main() -> int:
             f"(default: <repo-root>/.pkit/capabilities/{CAPABILITY_NAME}/)."
         ),
     )
-    parser.add_argument(
+    output = parser.add_mutually_exclusive_group()
+    output.add_argument(
         "--json",
         action="store_true",
         help="Emit machine-readable JSON instead of human-readable text.",
     )
+    output.add_argument(
+        "--field",
+        metavar="NAME",
+        default=None,
+        help=(
+            "Print only the value of a single field, with no surrounding "
+            "chrome (scalars bare, lists one per line). Mutually exclusive "
+            "with --json. Valid fields: " + ", ".join(PR_FIELD_NAMES) + "."
+        ),
+    )
     args = parser.parse_args()
+
+    if args.field is not None and args.field not in PR_FIELD_NAMES:
+        print(
+            f"error: unknown field '{args.field}'.\n"
+            f"valid fields: {', '.join(PR_FIELD_NAMES)}",
+            file=sys.stderr,
+        )
+        return 2
 
     capability_root = resolve_capability_root(args.capability_root)
     if capability_root is None:
@@ -104,7 +123,10 @@ def main() -> int:
         return 2
 
     summary = _summarise(pr)
-    if args.json:
+    if args.field is not None:
+        for line in _field_lines_for(summary)[args.field]:
+            print(line)
+    elif args.json:
         print(json.dumps(summary, indent=2))
     else:
         _print_summary(args.pr_number, summary)
@@ -141,6 +163,77 @@ def _summarise(pr: dict) -> dict:
         "closes": closing_issues,
         "reviewers": reviewers,
         "has_doc_impact_section": has_doc_impact,
+        "body": body,
+    }
+
+
+# The addressable field vocabulary for `--field`. Order is the documented
+# order (and is asserted to match `_field_lines_for`'s keys in the tests).
+PR_FIELD_NAMES = (
+    "title",
+    "state",
+    "draft",
+    "base",
+    "head",
+    "merged-at",
+    "cc-type",
+    "cc-summary",
+    "closes",
+    "reviewers",
+    "doc-impact",
+    "body",
+    "url",
+)
+
+
+def _scalar(value: object) -> list[str]:
+    """Render a scalar field as zero or one output line.
+
+    `None` and the empty string render as no output (a bare command for an
+    absent field yields nothing, not a blank line).
+    """
+    if value is None:
+        return []
+    text = str(value)
+    return [text] if text != "" else []
+
+
+def _bool(value: object) -> list[str]:
+    """Render a boolean field as a single `true`/`false` line."""
+    return ["true" if value else "false"]
+
+
+def _field_lines_for(s: dict) -> dict[str, list[str]]:
+    """Project the summary into the addressable `--field` vocabulary.
+
+    Each value is the list of output lines for that field: scalars are zero or
+    one line, booleans a single true/false line, lists one item per line.
+    Derived from the same summary the `--json` path serialises — no second
+    fetch.
+    """
+    conv = s.get("conventional_commits") or {}
+    cc_type = ""
+    cc_summary = None
+    if conv.get("matched"):
+        cc_type = str(conv.get("type") or "")
+        if conv.get("scope"):
+            cc_type = f"{cc_type}({conv['scope']})"
+        cc_summary = conv.get("summary")
+    closes = [f"#{n}" for n in (s.get("closes") or [])]
+    return {
+        "title": _scalar(s.get("title")),
+        "state": _scalar(s.get("state")),
+        "draft": _bool(s.get("is_draft")),
+        "base": _scalar(s.get("base")),
+        "head": _scalar(s.get("head")),
+        "merged-at": _scalar(s.get("merged_at")),
+        "cc-type": _scalar(cc_type),
+        "cc-summary": _scalar(cc_summary),
+        "closes": closes,
+        "reviewers": list(s.get("reviewers") or []),
+        "doc-impact": _bool(s.get("has_doc_impact_section")),
+        "body": _scalar(s.get("body")),
+        "url": _scalar(s.get("url")),
     }
 
 

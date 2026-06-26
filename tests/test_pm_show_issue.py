@@ -7,11 +7,11 @@ extraction, required-section status check.
 from __future__ import annotations
 
 import importlib.util
+import subprocess
 import sys
 from pathlib import Path
 
 import pytest
-
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
@@ -171,3 +171,118 @@ def test_summarise_handles_no_assignees(si, issue_types, body_format) -> None:
     summary = si._summarise(issue, issue_types, body_format)
     assert summary["assignees"] == []
     assert summary["classification"]["type"] == []
+
+
+# --- acceptance-criteria extraction ----------------------------------
+
+
+def test_extract_criteria_pulls_checkbox_items(si) -> None:
+    body = (
+        "Feature: #1\n\n## What\nbuild it\n\n"
+        "## Acceptance criteria\n"
+        "- [ ] first criterion\n"
+        "- [x] second criterion\n\n"
+        "## Doc impact\n- update README\n"
+    )
+    # Collection starts at the heading and stops at the next level-2 heading,
+    # so the Doc-impact bullet is not pulled in.
+    assert si._extract_criteria(body) == ["first criterion", "second criterion"]
+
+
+def test_extract_criteria_skips_bare_skeleton_item(si) -> None:
+    body = "## Acceptance criteria\n- [ ]\n- [ ] real one\n"
+    assert si._extract_criteria(body) == ["real one"]
+
+
+def test_extract_criteria_empty_when_section_absent(si) -> None:
+    assert si._extract_criteria("## What\n- not criteria\n") == []
+
+
+# --- --field projection ----------------------------------------------
+
+
+@pytest.fixture
+def sample_summary(si, issue_types, body_format) -> dict:
+    issue = {
+        "title": "[Task] Install the Claude Code CLI inside the sandbox",
+        "body": (
+            "Feature: #1\n\n## What\nx\n"
+            "## Acceptance criteria\n- [ ] alpha\n- [ ] beta\n"
+            "## Doc impact\nnone."
+        ),
+        "labels": [
+            {"name": "type:feature"},
+            {"name": "priority:Medium"},
+            {"name": "workstream:cli"},
+            {"name": "good first issue"},
+        ],
+        "assignees": [{"login": "alice"}],
+        "state": "OPEN",
+        "url": "https://github.com/owner/repo/issues/42",
+    }
+    return si._summarise(issue, issue_types, body_format)
+
+
+def test_field_names_match_resolver_keys(si, sample_summary) -> None:
+    # The documented vocabulary must stay in lock-step with what the resolver
+    # actually projects, in order.
+    assert tuple(si._field_lines_for(sample_summary)) == si.ISSUE_FIELD_NAMES
+
+
+def test_field_scalar_is_bare_value(si, sample_summary) -> None:
+    fields = si._field_lines_for(sample_summary)
+    # A scalar field renders as exactly one bare line: no banner, no label.
+    assert fields["state"] == ["open"]
+    assert fields["title"] == [
+        "[Task] Install the Claude Code CLI inside the sandbox"
+    ]
+    # No chrome: the value line carries no "issue #" banner or "  state:" label.
+    for line in fields["state"]:
+        assert "issue #" not in line
+        assert "state:" not in line
+
+
+def test_field_list_is_one_item_per_line(si, sample_summary) -> None:
+    assert si._field_lines_for(sample_summary)["criteria"] == ["alpha", "beta"]
+
+
+def test_field_priority_projects_axis_label(si, sample_summary) -> None:
+    assert si._field_lines_for(sample_summary)["priority"] == ["priority:Medium"]
+
+
+def test_field_absent_scalar_renders_no_lines(si, issue_types, body_format) -> None:
+    summary = si._summarise(
+        {"title": "[Task] x", "body": "Feature: #1", "state": "OPEN"},
+        issue_types,
+        body_format,
+    )
+    # No milestone in the issue -> the field yields no output (not a blank line).
+    assert summary["milestone"] is None
+    assert si._field_lines_for(summary)["milestone"] == []
+
+
+def test_unknown_field_exits_nonzero_and_lists_valid_fields() -> None:
+    # Field validation happens right after parse_args, before any gh/network,
+    # so this runs offline.
+    result = subprocess.run(
+        [sys.executable, str(SCRIPT_PATH), "1", "--field", "not-a-field"],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode != 0
+    assert "unknown field" in result.stderr.lower()
+    # The error must list the valid vocabulary so the caller can self-correct.
+    assert "criteria" in result.stderr
+    assert "state" in result.stderr
+
+
+def test_field_and_json_are_mutually_exclusive() -> None:
+    result = subprocess.run(
+        [sys.executable, str(SCRIPT_PATH), "1", "--field", "state", "--json"],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode != 0
+    assert "not allowed with" in result.stderr.lower()

@@ -209,6 +209,27 @@ All seven are idempotent at the level of observable state — re-running after a
 
 **Review-mode resolution** is settled in [project-management:DEC-027-review-modes] (mode lookup) and [project-management:DEC-028-agent-as-approver-paths] (agent gate).
 
+#### Read-only diagnostics — `show-issue` / `show-pr`
+
+Both surface the methodology-relevant view of an existing issue / PR. Three output modes:
+
+- **Default** — a terse, human-readable summary with banner and labels.
+- **`--json`** — the full summary structure as machine-readable JSON.
+- **`--field <name>`** — print just one field's value with **no surrounding chrome** (no banner, no label, no heading), so an agent can capture a single value as a *bare* command instead of piping the full view through `grep`/`tail`. Scalars print bare; lists print one item per line; `sections` prints one `present`/`absent` line per required section; `body` prints verbatim. An absent field (e.g. a missing milestone) prints nothing and still exits 0.
+
+`--field` and `--json` are mutually exclusive — passing both is a usage error (non-zero exit). An unknown field name fails to stderr listing the valid field set (non-zero exit); the same set is shown in `--help`.
+
+Addressable fields:
+
+- **`show-issue`**: `title`, `type`, `state`, `assignees`, `milestone`, `parent`, `priority`, `workstream`, `labels`, `criteria`, `sections`, `body`, `url`.
+- **`show-pr`**: `title`, `state`, `draft`, `base`, `head`, `merged-at`, `cc-type`, `cc-summary`, `closes`, `reviewers`, `doc-impact`, `body`, `url`.
+
+```
+pkit pm show-issue 318 --field state          # -> in progress's state, e.g. `open`
+pkit pm show-issue 318 --field criteria       # -> one acceptance-criterion per line
+pkit pm show-pr 320 --field cc-type            # -> e.g. `feat(pm)`
+```
+
 Configure the review mode in `project/config.yaml`:
 
 ```yaml

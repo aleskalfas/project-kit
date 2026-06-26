@@ -7,11 +7,11 @@ summary builder.
 from __future__ import annotations
 
 import importlib.util
+import subprocess
 import sys
 from pathlib import Path
 
 import pytest
-
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
@@ -135,3 +135,80 @@ def test_summarise_detects_doc_impact_anywhere_in_body(sp) -> None:
     }
     s = sp._summarise(pr)
     assert s["has_doc_impact_section"] is True
+
+
+# --- --field projection ----------------------------------------------
+
+
+@pytest.fixture
+def sample_summary(sp) -> dict:
+    pr = {
+        "title": "feat(cli): add new dispatcher",
+        "body": "Closes #42\nfixes #43\n\n## Doc impact\nupdated README.",
+        "state": "OPEN",
+        "isDraft": True,
+        "headRefName": "feat/42-add-dispatcher",
+        "baseRefName": "main",
+        "mergedAt": None,
+        "url": "https://github.com/owner/repo/pull/99",
+        "reviewRequests": [{"login": "alice"}, {"login": "bob"}],
+    }
+    return sp._summarise(pr)
+
+
+def test_field_names_match_resolver_keys(sp, sample_summary) -> None:
+    assert tuple(sp._field_lines_for(sample_summary)) == sp.PR_FIELD_NAMES
+
+
+def test_field_scalar_is_bare_value(sp, sample_summary) -> None:
+    fields = sp._field_lines_for(sample_summary)
+    # A scalar field renders as exactly one bare line: no banner, no label.
+    assert fields["state"] == ["open"]
+    assert fields["base"] == ["main"]
+    assert fields["cc-type"] == ["feat(cli)"]
+    for line in fields["state"]:
+        assert "PR #" not in line
+        assert "state:" not in line
+
+
+def test_field_bool_renders_true_false(sp, sample_summary) -> None:
+    assert sp._field_lines_for(sample_summary)["draft"] == ["true"]
+    assert sp._field_lines_for(sample_summary)["doc-impact"] == ["true"]
+
+
+def test_field_list_is_one_item_per_line(sp, sample_summary) -> None:
+    fields = sp._field_lines_for(sample_summary)
+    assert fields["closes"] == ["#42", "#43"]
+    assert fields["reviewers"] == ["alice", "bob"]
+
+
+def test_field_absent_scalar_renders_no_lines(sp) -> None:
+    summary = sp._summarise(
+        {"title": "plain title", "body": "x", "state": "MERGED"}
+    )
+    # Non-Conventional-Commits title -> cc-type yields no output.
+    assert sp._field_lines_for(summary)["cc-type"] == []
+
+
+def test_unknown_field_exits_nonzero_and_lists_valid_fields() -> None:
+    result = subprocess.run(
+        [sys.executable, str(SCRIPT_PATH), "1", "--field", "not-a-field"],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode != 0
+    assert "unknown field" in result.stderr.lower()
+    assert "reviewers" in result.stderr
+    assert "state" in result.stderr
+
+
+def test_field_and_json_are_mutually_exclusive() -> None:
+    result = subprocess.run(
+        [sys.executable, str(SCRIPT_PATH), "1", "--field", "state", "--json"],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode != 0
+    assert "not allowed with" in result.stderr.lower()
