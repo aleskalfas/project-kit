@@ -3158,5 +3158,152 @@ def process_validate(address: str, subject: str | None, as_json: bool) -> None:
         raise SystemExit(1)
 
 
+@process.command("graph")
+@click.option(
+    "--flow", "fmt_flow", is_flag=True, default=False,
+    help="ASCII downstream pipeline (work-flows-this-way) instead of the adjacency view.",
+)
+@click.option(
+    "--mermaid", "fmt_mermaid", is_flag=True, default=False,
+    help="Emit a mermaid flowchart (derived = thick ==>, declared-pull = -->, push = -.->).",
+)
+@click.option(
+    "--json", "fmt_json", is_flag=True, default=False,
+    help="Emit the byte-stable machine form {nodes, edges} (no styling; deterministic order).",
+)
+@click.option("--capability", default=None, help="Atomic filter: keep edges touching this capability.")
+@click.option("--process", "focus_process", default=None, help="Atomic filter: focus on this <capability>:<process-id> (hops counted from it).")
+@click.option("--relation", "relations_csv", default=None, help="Atomic filter: keep only these relation kinds (csv).")
+@click.option("--mode", "mode", type=click.Choice(["pull", "push"]), default=None, help="Atomic filter: keep only edges of this mode.")
+@click.option("--source", "source", type=click.Choice(["derived", "annotated"]), default=None, help="Atomic filter: keep only edges of this source.")
+@click.option("--depth", type=int, default=None, help="Atomic filter: hops from the focused --process (requires --process). Without --direction it is UNDIRECTED (the depth-bounded neighbourhood), distinct from the directed --upstream-of/--downstream-of closures.")
+@click.option("--direction", type=click.Choice(["in", "out"]), default=None, help="Atomic filter: with --process, keep only its out- or in-edges (requires --process).")
+@click.option("--enforced", is_flag=True, default=False, help="Preset = source:derived ∪ relation:gates-on-readiness (the edges that actually block).")
+@click.option("--advisory", is_flag=True, default=False, help="Preset = relation:informational,triggered-by (no runtime block).")
+@click.option("--seams", is_flag=True, default=False, help="Preset = cross-capability edges only.")
+@click.option("--connectors", is_flag=True, default=False, help="Preset = mode:push.")
+@click.option("--declared", is_flag=True, default=False, help="Preset = source:annotated (the inert depends_on layer).")
+@click.option("--derived", is_flag=True, default=False, help="Preset = source:derived (the composition/aggregation layer).")
+@click.option("--cycles", is_flag=True, default=False, help="Preset = edges lying on a dependency cycle.")
+@click.option("--upstream-of", "upstream_of", default=None, help="Preset = transitive closure of what this <addr> depends on.")
+@click.option("--downstream-of", "downstream_of", default=None, help="Preset = transitive closure of what depends on this <addr>.")
+@click.option("--verbose", is_flag=True, default=False, help="Show each edge's `why` (default omits it).")
+def process_graph(
+    fmt_flow: bool,
+    fmt_mermaid: bool,
+    fmt_json: bool,
+    capability: str | None,
+    focus_process: str | None,
+    relations_csv: str | None,
+    mode: str | None,
+    source: str | None,
+    depth: int | None,
+    direction: str | None,
+    enforced: bool,
+    advisory: bool,
+    seams: bool,
+    connectors: bool,
+    declared: bool,
+    derived: bool,
+    cycles: bool,
+    upstream_of: str | None,
+    downstream_of: str | None,
+    verbose: bool,
+) -> None:
+    """Render the configured cross-process topology (COR-038): a READ-ONLY view
+    of process DEFINITIONS.
+
+    \b
+    The render is DERIVED edges (from each definition's subprocess/cascade
+    blocks) ∪ ANNOTATED edges (from each state's depends_on list) — no edge
+    expressible both ways (COR-038's derive-don't-annotate). It reads
+    DECLARATIONS only: it never resolves a live subject position, never runs a
+    predicate, never moves anything (that is the safety point).
+
+    \b
+    Presets are documented EXPANSIONS of the atomic filters (a preset is a named
+    combo, not magic), and AND-combine with any atomic filters you also pass:
+      --enforced      = source:derived ∪ relation:gates-on-readiness
+      --advisory      = relation:informational,triggered-by
+      --seams         = cross-capability edges only
+      --connectors    = mode:push
+      --declared      = source:annotated
+      --derived       = source:derived
+      --cycles        = edges on a dependency cycle
+      --upstream-of   = transitive closure following dependency direction
+      --downstream-of = transitive closure against dependency direction
+
+    \b
+    Composition order (defensible, pinned): when --enforced is combined with a
+    closure or cycle preset (--upstream-of / --downstream-of / --cycles), the
+    closure/cycle detection runs OVER THE ENFORCED-NARROWED edge set -- the
+    enforced union is applied first, then the closure walks only what survived.
+    So `--enforced --upstream-of X` answers "what blocking edges is X
+    (transitively) gated by", not "narrow X's full closure to the blocking
+    edges".
+
+    \b
+    --depth is the depth-bounded NEIGHBOURHOOD of --process. Without --direction
+    it is UNDIRECTED (out- and in-edges both, within N hops) -- distinct from the
+    directed --upstream-of / --downstream-of closures. --depth / --direction
+    require --process (they count hops FROM it); passing either alone is a usage
+    error rather than a silent no-op.
+    """
+    from project_kit import process as process_mod
+    from project_kit import process_graph as pg
+
+    if sum([fmt_flow, fmt_mermaid, fmt_json]) > 1:
+        raise click.ClickException(
+            "choose at most one of --flow / --mermaid / --json (the default is the adjacency view)."
+        )
+    # --depth / --direction count hops FROM the focused --process, so they are
+    # only meaningful with it. They are consumed inside the --process focus pass;
+    # without --process they would be silently ignored (G3), so fail loudly.
+    if focus_process is None and (depth is not None or direction is not None):
+        raise click.ClickException(
+            "--depth / --direction require --process (they count hops from the focused process)."
+        )
+    relations = (
+        frozenset(r.strip() for r in relations_csv.split(",") if r.strip())
+        if relations_csv
+        else frozenset()
+    )
+    base = pg.FilterSpec(
+        capability=capability,
+        process=focus_process,
+        relations=relations,
+        modes=frozenset([mode]) if mode else frozenset(),
+        sources=frozenset([source]) if source else frozenset(),
+        depth=depth,
+        direction=direction,
+    )
+    spec = pg.expand_presets(
+        base,
+        enforced=enforced,
+        advisory=advisory,
+        seams=seams,
+        connectors=connectors,
+        declared=declared,
+        derived=derived,
+        cycles=cycles,
+        upstream_of=upstream_of,
+        downstream_of=downstream_of,
+    )
+    try:
+        repo_root = process_mod.resolve_repo_root()
+        graph = pg.apply_filters(pg.build_graph(repo_root), spec)
+    except process_mod.ProcessError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    if fmt_json:
+        click.echo(pg.render_json(graph), nl=False)
+    elif fmt_mermaid:
+        click.echo(pg.render_mermaid(graph), nl=False)
+    elif fmt_flow:
+        click.echo(pg.render_flow(graph, verbose=verbose), nl=False)
+    else:
+        click.echo(pg.render_adjacency(graph, verbose=verbose), nl=False)
+
+
 if __name__ == "__main__":
     main()
