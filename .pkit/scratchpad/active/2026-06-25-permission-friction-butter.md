@@ -97,3 +97,45 @@ Samples + miner: `./permission-friction-butter-samples/`.
 After each workstream: re-arm `pkit permissions diagnose`, run ordinary issue
 work, re-run the report — the targeted family should be absent. Samples here are
 the before-baseline.
+
+## Outcome (2026-06-26)
+
+EPIC #315 filed with five children; all merged this session, each through the
+full gate chain (producer → convention-compliance / methodology → reviewer →
+CI):
+
+- **#317 W1** (PR #322) — diagnose report sharpened with the prompted-vs-auto-allowed
+  and compound-vs-missing axes. Baseline read: **87 real prompts of 222** captured
+  (135 auto-allowed false positives), **72 allowlisted-but-compound**, 15 genuinely-missing.
+- **#318 W2a** (PR #327) — `--field` targeted output on `show-issue`/`show-pr`.
+- **#319 W2b** (PR #329) — read-redirect deny (`issue-tracker-read-raw`) routing
+  `agent:project-manager` from raw `gh issue/pr view|diff` to the clean verbs.
+- **#320 W3a** (PR #331) — **DEC-038** authored + accepted (index addressing + optional
+  text guard; validate-up-front + idempotent-recovery).
+- **#321 W3b** (PR #334) — `check-criterion`/`uncheck-criterion`/`set-field` batch
+  primitives; dogfooded to tick its own acceptance criteria.
+
+**EPIC #315 remains open at 3/4 success criteria.** The fourth — the before/after
+proof that ordinary issue work now produces zero operator prompts for the targeted
+families — is genuinely pending: it needs a *fresh* post-fix diagnose capture from
+real working sessions, which can't be fabricated. The before-baseline is the
+`permission-friction-butter-samples/` here. To close it: re-arm `pkit permissions
+diagnose on` at the start of a real working session, work normally, then
+`pkit permissions diagnose report` and confirm the read families and the piped-
+`pkit` compound families have dropped.
+
+### Findings surfaced by dogfooding (candidate follow-ups)
+
+1. **The close-gate gates *all* checkboxes, but `check-criterion` only addresses
+   the `## Acceptance criteria` section.** A `## Doc impact` checkbox (or any box
+   outside acceptance criteria) still needs the whole-body `edit-issue` path —
+   observed closing #321. Either widen the verb's addressed sections or document
+   the boundary.
+2. **The criterion extractor recognises `## Acceptance criteria` but not an EPIC's
+   `## Success criteria` heading** — so `show-issue 315 --field criteria` returns
+   empty for an EPIC, and `check-criterion` can't address EPIC success boxes.
+   Worth teaching the extractor the EPIC heading.
+
+Deferred items remain unfiled by design: composite `edit`, the
+`permission-friction-analyst` agent (COR-026-home escalation), and
+pipeline-decomposition. The two findings above are new.
