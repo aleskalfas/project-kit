@@ -72,8 +72,23 @@ resolved="$(command -v pkit || true)"
 if [ "$resolved" != "$shim_dir/pkit" ]; then
   echo
   echo "PATH: bare 'pkit' currently resolves to ${resolved:-<none>}."
-  echo "The router must precede the pinned dir ($pinned_dir). Add to your profile, then restart your shell:"
-  echo "    export PATH=\"$shim_dir:\$PATH\""
+  echo "The router must precede the pinned dir ($pinned_dir). Detected shell: ${SHELL##*/}."
+  echo "Add the line below to the file shown, then restart your shell (or source it):"
+  echo
+  case "${SHELL##*/}" in
+    zsh)
+      echo "    # in ~/.zshrc"
+      echo "    echo 'export PATH=\"$shim_dir:\$PATH\"' >> ~/.zshrc" ;;
+    bash)
+      echo "    # in ~/.bashrc  (macOS Terminal runs login shells -> use ~/.bash_profile there)"
+      echo "    echo 'export PATH=\"$shim_dir:\$PATH\"' >> ~/.bashrc" ;;
+    fish)
+      echo "    # fish (no rc edit needed; persists in fish's universal path)"
+      echo "    fish_add_path $shim_dir" ;;
+    *)
+      echo "    # add to your shell's startup file"
+      echo "    export PATH=\"$shim_dir:\$PATH\"" ;;
+  esac
 else
   echo "PATH: OK — bare 'pkit' resolves to the router."
 fi
