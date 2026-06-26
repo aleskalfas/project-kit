@@ -26,7 +26,7 @@ Add a check by editing `scripts/check.sh` once; both the hook and CI pick it up.
 **Installing the `pkit-router` (optional — for multi-checkout development).** If you work on several project-kit source checkouts *and* adopter projects at once, the `pkit-router` ([`scripts/pkit-router`](scripts/pkit-router)) picks the right `pkit` automatically per directory: inside any project-kit source checkout it runs **that checkout's working tree** (delegating to its `.pkit/cli/pkit` dispatcher); everywhere else it runs the **pinned release**. It's a real executable on PATH, so it works in non-interactive agent shells too (a directory-env hook does *not* — testing confirmed mise's `[env]` venv-activation never applies in those shells). Install it once:
 
 1. **Pinned fallback** — `mise run pkit:pinned-install`. Installs/refreshes the stable release (the PRJ-004 git install) that the router falls back to outside source trees. Resolves the bin dir via `uv tool dir --bin`.
-2. **Router shim** — `mise run pkit:router-install`. Copies the router to `~/.pkit/shim/pkit` and prints the exact `export PATH=…` line for your machine.
+2. **Router shim** — `mise run pkit:router-install`. Copies the router to `~/.pkit/shim/pkit` and prints a copy-paste command tailored to your detected shell (zsh / bash / fish) to put it ahead of the pinned binary on PATH.
 3. **PATH** — add the printed line (e.g. `export PATH="$HOME/.pkit/shim:$PATH"`) to your shell profile, then restart your shell so the shim sits *ahead* of the pinned binary.
 4. **Verify** — `command -v pkit` should resolve to `~/.pkit/shim/pkit`; `mise run pkit:which` reports the active binary, installed router version, and pinned fallback.
 
