@@ -65,7 +65,7 @@ The transition to a registry is itself a future PRJ; this record fixes the chann
 
 ## Implications
 
-- **`pyproject.toml` at the repo root** (per PRJ-003) is required for git-URL install to work. The `[project]` table declares the package name (`project-kit`), version (read from `.pkit/VERSION` or via dynamic versioning), and entry point (`pkit = "project_kit.cli:main"`).
+- **`pyproject.toml` at the repo root** (per PRJ-003) is required for git-URL install to work. The `[project]` table declares the package name (`project-kit`), version (read from `.pkit/VERSION` or via dynamic versioning), and entry point (`pkit = "project_kit.cli:main"`). **The built wheel also bundles the methodology content (the propagation surface) as package data, so the installed binary can `init`/`sync`/`upgrade` without a checkout — see [ADR-033](../../../docs/architecture/decisions/ADR-033-official-install-bundles-content.md), which clarifies (does not supersede) this implication.**
 - **Tagging on bump** is the new convention: after `pkit version bump <segment>` and the bump commit, the workflow tags the commit `v<major>.<minor>.<patch>` and pushes the tag. `pkit version tag --push` automates the tag + push step (per #44); the workflow is `pkit version bump … && git commit && pkit version tag --push`.
 - **Authentication is the user's existing GitHub auth.** SSH key via `~/.ssh/config` for `github.com`, or PAT via `git config credential.helper`. The kit doesn't introduce a new credential surface.
 - **CI / automation use** (e.g., adopter projects that install `pkit` in their CI) needs an SSH deploy key or a PAT in the runner's credential store. This is a per-adopter operational concern; the kit documents the pattern in `CONTRIBUTING.md` once it surfaces.
