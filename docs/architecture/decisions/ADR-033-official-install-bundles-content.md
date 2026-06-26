@@ -8,17 +8,18 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 ## Context
 
-The official adopter install is `uv tool install git+ssh://…project-kit.git` (per PRJ-004).
-The built wheel ships only the Python package (`src/project_kit`) plus the VERSION file — it
-does **not** carry the `.pkit/` methodology tree (decisions, schemas, skills, agents,
-adapters, capabilities, migrations). `find_source_kit()` resolves the propagation source by
-walking the filesystem relative to the installed package (`<pkg>/../../.pkit`), so inside a
-`uv tool` venv it points at a path that does not exist. Consequently the propagation commands
-fail from the official install: `init` raises a clean guard error, while `upgrade`/`sync`
-crash with a raw `FileNotFoundError`. This is issue #333 under EPIC #332.
+The official adopter install (`uv tool install git+ssh://…project-kit.git`, per PRJ-004)
+**cannot actually set up or upgrade an adopter project** — `init`/`sync`/`upgrade` all fail
+from the installed binary. That directly contradicts what PRJ-004 and the CLI README promise
+(the binary "works against any adopting project", listing `init`/`sync`). Issue #333 under
+EPIC #332.
 
-This contradicts what PRJ-004 and the CLI README already promise (that the installed binary
-"works against any adopting project", listing `init`/`sync`). The scratchpad note
+The cause: the built wheel ships only the Python package (`src/project_kit`) plus the VERSION
+file — it does **not** carry the `.pkit/` methodology tree (decisions, schemas, skills,
+agents, adapters, capabilities, migrations). `find_source_kit()` resolves the propagation
+source by walking the filesystem relative to the installed package (`<pkg>/../../.pkit`), so
+inside a `uv tool` venv it points at a path that does not exist — `init` raises a clean guard
+error, while `upgrade`/`sync` crash with a raw `FileNotFoundError`. The scratchpad note
 `.pkit/scratchpad/active/2026-06-26-pkit-install-versioning-model.md` works the design space
 and identifies the root cause and the two-version-axes drift problem (binary version vs the
 adopter's `.pkit/VERSION`).
@@ -32,10 +33,12 @@ falls back to the bundled content otherwise. Concretely:
 ### 1. Bundle the propagation surface, not the whole `.pkit/` tree
 
 The wheel bundles *exactly what `pkit sync` propagates*, under the package path
-`project_kit/_kit/`. By the existing core/project ownership rule this **excludes**
-adopter-owned subtrees — `*/project/` (including `decisions/project/`, project-kit's own PRJ
-records), `scratchpad/{active,done,dropped}` contents, the maintainer's `manifest.yaml`,
-`.gitignore`, `__pycache__`. Defining the bundle as the propagation surface means it can
+`project_kit/_kit/`. The rule — not the list — is what this decides: the existing core/project
+ownership boundary determines what's in. By that rule the bundle **excludes** adopter-owned
+subtrees (for example `*/project/` such as `decisions/project/`, the maintainer's
+`scratchpad/{active,done,dropped}` notes and `manifest.yaml`, and `.gitignore` / `__pycache__`
+— illustrative of the rule's reach, not an authoritative list). Defining the bundle as the
+propagation surface means it can
 never drift from what sync copies.
 
 ### 2. Checkout-first resolution is a contract
