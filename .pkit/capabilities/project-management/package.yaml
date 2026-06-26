@@ -2,7 +2,7 @@ schema_version: 2
 component:
   kind: capability
   name: project-management
-  version: 0.36.0
+  version: 0.37.0
 description: Project-management discipline realized from the pm-workflow methodology — issue hierarchy, state machine, body validation, naming conventions — encoded as schemas a methodology-agnostic engine (skills + agent) consumes at runtime.
 requires_backbone: ">=1.126.0,<2.0.0"
 aliases:
@@ -65,6 +65,15 @@ commands:
   edit-issue:
     script: scripts/edit-issue.py
     help: Methodology-aware body / title edit. Validates the new state against body-format.yaml + titles.yaml before writing; refuses on hard-reject unless --force.
+  check-criterion:
+    script: scripts/check-criterion.py
+    help: "Tick one or more acceptance-criterion checkboxes on an issue, addressed by 1-based index with an optional expected-text guard (per DEC-038). Batch-capable; validates the whole batch up front and refuses before any mutation on a hard inconsistency (out-of-range / text-mismatch / ambiguous guard); idempotent on re-run."
+  uncheck-criterion:
+    script: scripts/uncheck-criterion.py
+    help: "Untick one or more acceptance-criterion checkboxes on an issue — the symmetric counterpart to check-criterion (per DEC-038). Same index + optional-text-guard addressing, validate-up-front whole-batch hard-reject, and idempotent recovery."
+  set-field:
+    script: scripts/set-field.py
+    help: "Declaratively set an issue's priority / workstream / parent classification field(s) in one batch call (per DEC-038). Reuses create-issue's classification resolution (substrate-map-aware); validates up front and refuses before any mutation on an unknown value; idempotent on re-run."
   open-pr:
     script: scripts/open-pr.py
     help: Open a GitHub PR per the methodology's branch + title conventions. Derives the closing issue from the branch name; the Conventional Commits <type> from the issue's type:* label.

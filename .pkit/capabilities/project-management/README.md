@@ -205,6 +205,37 @@ For the standard development flow, seven verb-subject commands compose over `mov
 
 All seven are idempotent at the level of observable state — re-running after a partial failure recovers cleanly. Audit comments use DEC-024's template-stamp markers (`<!-- pkit-hook: <name> -->`) so re-posts detect existing entries and skip.
 
+#### Batch substrate primitives — `check-criterion` / `uncheck-criterion` / `set-field` (per [project-management:DEC-038-criterion-addressing])
+
+Three narrow, batch-capable verbs replace the whole-body fetch-edit-resend that `edit-issue` forces for a single checkbox flip or field change. Each takes narrow input, validates the **whole batch up front**, refuses before any mutation on a hard inconsistency, and applies **idempotently** so a half-applied batch recovers by re-running. Output is a single clean line per result — nothing to pipe through `grep`.
+
+| Command | What it does |
+|---|---|
+| `check-criterion <issue> <index> [text] [<index> [text]] ...` | Tick one or more acceptance-criterion checkboxes, addressed by **1-based index** (matching `show-issue --field criteria`'s numbering) with an optional **expected-text guard**. |
+| `uncheck-criterion <issue> <index> [text] ...` | Untick — the symmetric counterpart; identical addressing and failure model. |
+| `set-field <issue> [--priority X] [--workstream Y] [--parent N]` | Declaratively set classification field(s) in one call. Priority/workstream resolve through the same seam `create-issue` uses (substrate-map-aware); `--parent` rewrites the body's first parent-ref line. Under a Projects-v2 board, priority/workstream live on board fields — `set-field` reports a degrade note and does not touch a label. |
+
+**Addressing a criterion** (`check`/`uncheck`): the **index** is the primary address; the optional **expected-text** is both a wording-based double-check and a guard that the box has not moved between read and write. The guard rule is **equality on the trimmed, checkbox-marker-stripped text** — copy it verbatim from `show-issue --field criteria` output. Each guard follows the index it guards (`check-criterion 239 1 "docs updated" 3`).
+
+**Failure + recovery** (DEC-038 D4) for all three:
+
+- **Index out of range** → refuse the whole batch; report the criterion count. Never create a checkbox.
+- **Expected-text mismatch** (criteria reordered between read and write) → refuse; report the actual line so the caller re-reads. Never tick blind.
+- **Ambiguous guard** (text matches more than one criterion) → refuse and list the matches; ambiguity never silently resolves.
+- **Unknown field value** (`set-field`) → refuse before any mutation, listing the adopter's declared values.
+- **Already in the requested state** → no-op success. Ticking a ticked box, or setting a field to its current value, is not an error.
+- **Half-batch faults mid-apply** → re-run is safe: applied targets no-op, the rest complete.
+
+```
+pkit pm check-criterion 239 1 3 5            # tick criteria 1, 3, 5 in one call
+pkit pm check-criterion 239 2 "docs updated" # tick #2 only if it still reads "docs updated"
+pkit pm uncheck-criterion 239 2              # untick #2 (idempotent)
+pkit pm set-field 239 --priority High --workstream cli   # set both, idempotently
+pkit pm set-field 239 --parent 42            # rewrite the parent-ref line to Feature: #42
+```
+
+All three accept `--dry-run` (validate + show the plan, write nothing) and `--yes` (skip the confirmation prompt), and run the DEC-021 membership gate at startup.
+
 **`close-issue`** is *not* in the seven-command palette — it handles closure outside forward-progress flow: won't-do / abandonment (`--mode=wont-do`), the post-PR-merge cascade hook (`--mode=pr-merge`), and **cascade-eligibility closure** of a container (epic/feature/umbrella) once all its children are closed and its own checkboxes are ticked (`--mode=cascade-eligibility-close`, a non-skippable DEC-007 gate).
 
 **Review-mode resolution** is settled in [project-management:DEC-027-review-modes] (mode lookup) and [project-management:DEC-028-agent-as-approver-paths] (agent gate).
