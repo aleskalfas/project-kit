@@ -23,13 +23,16 @@ Add a check by editing `scripts/check.sh` once; both the hook and CI pick it up.
 
 **Optional task runner.** A [`mise.toml`](mise.toml) provides convenience aliases over the underlying `uv run ...` commands — `mise tasks` lists them, `mise run check` runs the lint/format/typecheck/test bundle. After cloning, run `mise trust` once to enable the task runner: mise gates untrusted config by design, so a fresh clone prints a "not trusted" error on every shell until you do. Not using mise? Run the `uv run ...` commands (or `./scripts/check.sh`) directly — mise is sugar, not a requirement.
 
-**Switching the global `pkit` (dev vs pinned).** There's one `pkit` on PATH; "switching versions" means controlling what it points at. The `mise.toml` wraps the incantations so you don't have to remember them:
+**Installing the `pkit-router` (optional — for multi-checkout development).** If you work on several project-kit source checkouts *and* adopter projects at once, the `pkit-router` ([`scripts/pkit-router`](scripts/pkit-router)) picks the right `pkit` automatically per directory: inside any project-kit source checkout it runs **that checkout's working tree** (delegating to its `.pkit/cli/pkit` dispatcher); everywhere else it runs the **pinned release**. It's a real executable on PATH, so it works in non-interactive agent shells too (a directory-env hook does *not* — testing confirmed mise's `[env]` venv-activation never applies in those shells). Install it once:
 
-- `mise run pkit:dev` — point the global `pkit` at **this checkout** (editable; source edits go live via the PRJ-001 dispatcher).
-- `mise run pkit:pin` — switch back to the **pinned release** (the PRJ-004 git install).
-- `mise run pkit:which` — show which one is currently active.
+1. **Pinned fallback** — `mise run pkit:pinned-install`. Installs/refreshes the stable release (the PRJ-004 git install) that the router falls back to outside source trees. Resolves the bin dir via `uv tool dir --bin`.
+2. **Router shim** — `mise run pkit:router-install`. Copies the router to `~/.pkit/shim/pkit` and prints the exact `export PATH=…` line for your machine.
+3. **PATH** — add the printed line (e.g. `export PATH="$HOME/.pkit/shim:$PATH"`) to your shell profile, then restart your shell so the shim sits *ahead* of the pinned binary.
+4. **Verify** — `command -v pkit` should resolve to `~/.pkit/shim/pkit`; `mise run pkit:which` reports the active binary, installed router version, and pinned fallback.
 
-`pkit:dev` makes *one* checkout globally active, so across multiple clones you re-run it (or just use `uv run pkit` in-tree, which always binds to the current checkout and touches no global state). Both tasks mutate `~/.local/bin/pkit` (or `$UV_TOOL_BIN_DIR`); `pkit:pin` only ever removes a *symlink*, never a real binary.
+The installed shim is a **versioned snapshot**: in a checkout that ships a *newer* `ROUTER_VERSION` than the installed copy, it tells you to re-run step 2 (never the reverse, so divergent checkouts don't thrash). Maintainers bump `ROUTER_VERSION` in `scripts/pkit-router` on any change to it — in the same PR as any layout migration — so installed copies self-detect staleness. The two changes a snapshot *can't* self-detect (relocating `scripts/pkit-router`, or changing the `ROUTER_VERSION=` line format) must carry an explicit reinstall instruction in their migration.
+
+Prefer not to install it? `uv run pkit …` inside a source checkout always binds to that checkout and touches no global state.
 
 ---
 
