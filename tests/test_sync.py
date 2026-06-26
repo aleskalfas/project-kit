@@ -783,3 +783,23 @@ def test_sync_does_not_overwrite_rules_project_md(installed_target: Path) -> Non
     assert project_md.read_text(encoding="utf-8") == adopter_content, (
         "sync clobbered the adopter's project.md"
     )
+
+
+def test_sync_refuses_cleanly_when_source_incomplete(
+    installed_target: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An incomplete resolved source yields a clean ClickException, not a raw crash.
+
+    Guards against a future incomplete bundle (ADR-033 / issue #333): with the
+    resolved source lacking the `decisions/` discriminator, sync must refuse
+    before `read_kit_version` / propagation rather than letting a raw
+    `FileNotFoundError` escape from deep inside. The stand-in source lives off
+    the adopter root so the self-host branch (source.parent == target) is not
+    taken.
+    """
+    incomplete = tmp_path / "broken-source" / ".pkit"
+    incomplete.mkdir(parents=True)  # no decisions/ subdir
+    monkeypatch.setattr(install, "find_source_kit", lambda: incomplete)
+
+    with pytest.raises(click.ClickException, match="methodology source not found"):
+        sync.run_sync(installed_target)

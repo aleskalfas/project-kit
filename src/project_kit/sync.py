@@ -67,6 +67,14 @@ def run_sync(target_root: Path, dry_run: bool = False) -> None:
         click.echo("Self-host sync complete (deploy primitives re-run).")
         return
 
+    # Past the self-host short-circuit: this is a real adopter sync, which reads
+    # `read_kit_version(source_kit)` and propagates trees from `source_kit`.
+    # Guard the resolved source before either, so an incomplete bundle yields a
+    # clean ClickException rather than a raw FileNotFoundError mid-propagation
+    # (ADR-033; issue #333). The self-host branch above is skipped — its source
+    # is the live checkout, which always satisfies the guard.
+    install.refuse_if_source_kit_incomplete(source_kit)
+
     ctx = install.InstallContext(
         target_root=target_root,
         source_kit=source_kit,

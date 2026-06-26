@@ -289,3 +289,65 @@ def test_install_does_not_propagate_rules_project_md(tmp_target: Path) -> None:
         ".pkit/rules/project.md was copied into the adopter tree; "
         "it is adopter-owned and must not propagate"
     )
+
+
+# ── find_source_kit resolution order (ADR-033) ────────────────────────────
+
+
+def test_find_source_kit_prefers_real_checkout() -> None:
+    """In a real project-kit checkout, find_source_kit returns the checkout .pkit/.
+
+    The checkout-first contract (ADR-033 §2): when the package is imported from
+    a source checkout, `__file__` sits at `<repo>/src/project_kit/install.py`,
+    so the real `.pkit/` is two parents up and qualifies via the `decisions/`
+    discriminator. Self-host depends on this preference holding (sync/upgrade
+    detect self-host by `source_kit.parent == target_root`).
+    """
+    resolved = install.find_source_kit()
+    expected = Path(install.__file__).resolve().parents[2] / ".pkit"
+    assert resolved == expected
+    assert (resolved / "decisions").is_dir()
+
+
+def test_find_source_kit_falls_back_to_bundle_when_no_checkout(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """When no checkout .pkit/ qualifies, find_source_kit returns the bundled tree.
+
+    Simulates the official `uv tool` install (no source checkout reachable from
+    the installed package) by forcing the checkout discriminator to fail, and
+    points the bundled resolver at a stand-in `_kit/` layout. The resolver must
+    return that bundled path, never raise.
+    """
+    bundle = tmp_path / "site-packages" / "project_kit" / "_kit"
+    (bundle / "decisions").mkdir(parents=True)
+    (bundle / "VERSION").write_text("9.9.9\n", encoding="utf-8")
+
+    monkeypatch.setattr(install, "_looks_like_source_checkout", lambda _p: False)
+    monkeypatch.setattr(install, "_bundled_source_kit", lambda: bundle)
+
+    resolved = install.find_source_kit()
+    assert resolved == bundle
+
+
+def test_bundled_source_kit_returns_on_disk_path_directly(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """For an unzipped install, the bundled tree is real files — returned directly.
+
+    The `uv tool` case: `importlib.resources.files()` yields a directory that
+    already exists on disk. `_bundled_source_kit` must return it as-is (no
+    temp-dir materialisation, which would be the zipped-wheel path), so the
+    long-lived returned path stays valid for the whole install/upgrade run.
+    """
+    kit = tmp_path / "project_kit" / "_kit"
+    kit.mkdir(parents=True)
+
+    class _FakeTraversable:
+        def joinpath(self, _name: str) -> Path:
+            return kit
+
+    monkeypatch.setattr(install, "files", lambda _pkg: _FakeTraversable())
+
+    resolved = install._bundled_source_kit()  # pyright: ignore[reportPrivateUsage]
+    assert resolved == kit

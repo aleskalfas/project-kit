@@ -33,9 +33,47 @@ pattern = "^(?P<version>[0-9]+\\.[0-9]+\\.[0-9]+)$"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/project_kit"]
+# Never sweep build caches into the bundled methodology tree. (NB: hatchling's
+# `exclude` does not filter force-included paths — the force-include below is a
+# higher-priority mechanism — so it can only prune what the standard package
+# walk picks up. The one stale per-capability `manifest.yaml` that rides along
+# in the capabilities force-include is project-kit's own self-host install-state
+# receipt; it is functionally inert (capability install overwrites it with a
+# freshly-stamped receipt) and is slated for removal by ADR-033's COR-007
+# single-declaration follow-on.)
+exclude = ["**/__pycache__", "**/*.pyc"]
 
+# Bundle the methodology content into the wheel as package data under
+# `project_kit/_kit/` (ADR-033). The bundled set is *exactly the propagation
+# surface* — what `pkit sync` copies — plus capability source (a distribution
+# medium per ADR-033 §3) and migrations. Defining it this way keeps the wheel
+# from ever drifting from what sync propagates.
+#
+# Excluded by construction (adopter- or maintainer-owned, never shipped):
+#   - decisions/project/   project-kit's own PRJ records
+#   - scratchpad/{active,done,dropped}  exploratory notes (only the README ships)
+#   - manifest.yaml        the maintainer's backbone manifest
+#   - .gitignore           rendered runtime artifact, regenerated per-adopter
+#   - __pycache__          build cache (also excluded above)
+# These are achieved by enumerating the included paths rather than the whole
+# tree: `decisions/` lists `core` + `README.md` only; `scratchpad/` lists its
+# `README.md` only.
 [tool.hatch.build.targets.wheel.force-include]
-".pkit/VERSION" = "project_kit/_kit_version.txt"
+".pkit/VERSION" = "project_kit/_kit/VERSION"
+".pkit/decisions/core" = "project_kit/_kit/decisions/core"
+".pkit/decisions/README.md" = "project_kit/_kit/decisions/README.md"
+".pkit/scratchpad/README.md" = "project_kit/_kit/scratchpad/README.md"
+".pkit/schemas" = "project_kit/_kit/schemas"
+".pkit/skills" = "project_kit/_kit/skills"
+".pkit/cli" = "project_kit/_kit/cli"
+".pkit/adapters" = "project_kit/_kit/adapters"
+".pkit/agents" = "project_kit/_kit/agents"
+".pkit/permissions" = "project_kit/_kit/permissions"
+".pkit/rules" = "project_kit/_kit/rules"
+".pkit/process" = "project_kit/_kit/process"
+".pkit/lifecycle" = "project_kit/_kit/lifecycle"
+".pkit/capabilities" = "project_kit/_kit/capabilities"
+".pkit/migrations" = "project_kit/_kit/migrations"
 
 [tool.ruff]
 line-length = 100
