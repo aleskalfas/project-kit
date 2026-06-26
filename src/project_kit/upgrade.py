@@ -41,7 +41,7 @@ import click
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
 from packaging.version import InvalidVersion, Version
 
-from project_kit.install import find_source_kit
+from project_kit.install import find_source_kit, refuse_if_source_kit_incomplete
 from project_kit.manifest import (
     ComponentManifest,
     ComponentRegistryEntry,
@@ -92,6 +92,14 @@ def run_upgrade(target_root: Path, dry_run: bool = False) -> None:
         click.echo()
         run_sync(target_root, dry_run=dry_run)
         return
+
+    # Past the self-host short-circuit: a real adopter upgrade reads
+    # `read_kit_version(source_kit)` next and propagates from `source_kit` via
+    # its sync step. Guard the resolved source first, so an incomplete bundle
+    # surfaces as a clean ClickException rather than a raw FileNotFoundError
+    # inside `read_kit_version` (ADR-033; issue #333). The self-host branch
+    # above is skipped — its source is the live checkout.
+    refuse_if_source_kit_incomplete(source_kit)
 
     target_version = read_kit_version(source_kit)
     current_version = manifest.backbone_version

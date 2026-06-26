@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -85,6 +86,11 @@ def _fake_source(tmp_path: Path, *, version: str, adapter_requires: str | None) 
     src = tmp_path / "fake-source" / ".pkit"
     src.mkdir(parents=True)
     (src / "VERSION").write_text(f"{version}\n", encoding="utf-8")
+    # A `decisions/` subtree is the discriminator that marks this as a real
+    # methodology source (per `find_source_kit` / the source-incomplete guard
+    # added for ADR-033). Without it, `run_upgrade` refuses before reaching the
+    # compatibility check this fixture exists to exercise.
+    (src / "decisions").mkdir()
     if adapter_requires is not None:
         adir = src / "adapters" / "claude-code"
         adir.mkdir(parents=True)
@@ -172,10 +178,17 @@ def test_upgrade_updates_recorded_version_when_run_for_real(
 
 
 def _stage_backbone_migration(
-    target_root: Path, version: str, script_name: str, body: str
+    source_kit: Path, version: str, script_name: str, body: str
 ) -> Path:
-    """Drop a backbone migration script at .pkit/migrations/backbone/<version>/<script>."""
-    version_dir = target_root / ".pkit" / "migrations" / "backbone" / version
+    """Drop a backbone migration script at <source_kit>/migrations/backbone/<version>/<script>.
+
+    Migrations are kit-shipped: they live in the *source* and reach the adopter
+    via the sync step (ADR-033 §4 propagates the `migrations` area). Staging
+    into the source — not the adopter tree — survives the upgrade's sync, which
+    refreshes the adopter's `migrations/` from source. The caller passes a
+    throwaway source copy via `_real_source_copy` so the real repo is untouched.
+    """
+    version_dir = source_kit / "migrations" / "backbone" / version
     version_dir.mkdir(parents=True, exist_ok=True)
     script = version_dir / script_name
     script.write_text(body, encoding="utf-8")
@@ -183,35 +196,60 @@ def _stage_backbone_migration(
     return script
 
 
+def _real_source_copy(tmp_path: Path) -> Path:
+    """Copy the live `.pkit/` source tree into `tmp_path` for tests that mutate it.
+
+    Backbone-migration tests stage extra migration version dirs into the
+    source. Since the upgrade's sync now propagates `migrations/` from source
+    into the adopter (ADR-033 §4), the staged scripts must live in the source
+    to survive that sync — but the real repo source must never be mutated by a
+    test. A throwaway copy gives a complete, syncable source (all areas present)
+    that the test can freely stage into. Returns the copy's `.pkit/` path,
+    suitable for monkeypatching `find_source_kit`.
+    """
+    real_source = install.find_source_kit()
+    dest = tmp_path / "source-copy" / ".pkit"
+    shutil.copytree(real_source, dest)
+    return dest
+
+
 def test_upgrade_runs_backbone_migrations_in_version_order(
-    installed_target: Path,
+    installed_target: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Backbone migration scripts run in semver-then-NNN order against the target root."""
     # Move recorded backbone backwards so upgrade has work to do.
     m = manifest.read_backbone_manifest(installed_target)
     assert m is not None
-    source_version = m.backbone_version
     m.backbone_version = "0.1.0"
     manifest.write_backbone_manifest(installed_target, m)
 
+    source = _real_source_copy(tmp_path)
+    # Patch on both modules: upgrade bound the name at import; sync resolves
+    # its own source via `install.find_source_kit` during the upgrade's sync
+    # step, which is what propagates the staged migrations into the adopter.
+    monkeypatch.setattr(upgrade, "find_source_kit", lambda: source)
+    monkeypatch.setattr(install, "find_source_kit", lambda: source)
+
     trace = installed_target / "backbone-migration-trace.txt"
-    # Stage two migrations in two version dirs. The target source's
-    # version is whatever sync writes (we'll cover up to that range).
+    # Stage two migrations in two version dirs in the (copied) source; they
+    # propagate to the adopter via the upgrade's sync step, then run. The real
+    # source's VERSION is the upgrade target — both 0.2.0 and 0.3.0 fall inside
+    # the (0.1.0, target] window.
     _stage_backbone_migration(
-        installed_target,
+        source,
         "0.2.0",
         "001-first.sh",
         f'#!/usr/bin/env bash\necho "0.2.0/001" >> "{trace}"\n',
     )
     _stage_backbone_migration(
-        installed_target,
+        source,
         "0.3.0",
         "001-second.sh",
         f'#!/usr/bin/env bash\necho "0.3.0/001" >> "{trace}"\n',
     )
-    # A version far above source — should NOT run.
+    # A version far above target — should NOT run.
     _stage_backbone_migration(
-        installed_target,
+        source,
         "99.0.0",
         "001-future.sh",
         f'#!/usr/bin/env bash\necho "99.0.0/001" >> "{trace}"\n',
@@ -238,8 +276,10 @@ def test_upgrade_backbone_migrations_dry_run_does_not_execute(
     manifest.write_backbone_manifest(installed_target, m)
 
     trace = installed_target / "trace.txt"
+    # Dry-run does not sync, so the discovery reads the adopter's own
+    # migrations tree directly — stage there (no source copy needed).
     _stage_backbone_migration(
-        installed_target,
+        installed_target / ".pkit",
         "0.2.0",
         "001-runme.sh",
         f'#!/usr/bin/env bash\necho "ran" >> "{trace}"\n',
@@ -250,7 +290,7 @@ def test_upgrade_backbone_migrations_dry_run_does_not_execute(
 
 
 def test_upgrade_backbone_migration_failure_halts_run(
-    installed_target: Path,
+    installed_target: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A non-zero exit halts the upgrade, surfaced as ClickException."""
     m = manifest.read_backbone_manifest(installed_target)
@@ -258,8 +298,14 @@ def test_upgrade_backbone_migration_failure_halts_run(
     m.backbone_version = "0.1.0"
     manifest.write_backbone_manifest(installed_target, m)
 
+    source = _real_source_copy(tmp_path)
+    # Patch on both modules: upgrade bound the name at import; sync resolves
+    # its own source via `install.find_source_kit` during the upgrade's sync
+    # step, which is what propagates the staged migrations into the adopter.
+    monkeypatch.setattr(upgrade, "find_source_kit", lambda: source)
+    monkeypatch.setattr(install, "find_source_kit", lambda: source)
     _stage_backbone_migration(
-        installed_target,
+        source,
         "0.2.0",
         "001-fails.sh",
         '#!/usr/bin/env bash\necho "boom" >&2\nexit 1\n',
@@ -451,3 +497,22 @@ def test_backbone_upgrade_no_cap_deps_unaffected(
     upgrade.run_upgrade(installed_target)
     captured = capsys.readouterr()
     assert "Already at backbone v" in captured.out
+
+
+def test_upgrade_refuses_cleanly_when_source_incomplete(
+    installed_target: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An incomplete resolved source yields a clean ClickException before read_kit_version.
+
+    Mirrors sync's guard (ADR-033 / issue #333): upgrade must refuse on a source
+    that lacks the `decisions/` discriminator rather than crashing inside
+    `read_kit_version`. The stand-in source lives off the adopter root so the
+    self-host branch is not taken; the fixture already wrote the backbone
+    manifest, so the missing-manifest guard is not what trips.
+    """
+    incomplete = tmp_path / "broken-source" / ".pkit"
+    incomplete.mkdir(parents=True)  # no decisions/ subdir
+    monkeypatch.setattr(upgrade, "find_source_kit", lambda: incomplete)
+
+    with pytest.raises(click.ClickException, match="methodology source not found"):
+        upgrade.run_upgrade(installed_target)

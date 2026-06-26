@@ -8,10 +8,13 @@ flow. `--dry-run` support per COR-004.
 
 from __future__ import annotations
 
+import atexit
 import shutil
 import stat
 import subprocess
+from contextlib import ExitStack
 from dataclasses import dataclass
+from importlib.resources import as_file, files
 from pathlib import Path
 
 import click
@@ -88,6 +91,15 @@ PROPAGATED_AREAS: tuple[str, ...] = (
     "permissions",
     "rules",
     "process",
+    # Backbone migrations must reach the adopter tree: `pkit upgrade` reads
+    # `<target>/.pkit/migrations/backbone/` *after* sync to run pending
+    # backbone migrations (ADR-033 §4 — fixes a pre-existing omission where
+    # migrations were read from the source kit but never propagated). Sync
+    # runs before the migration steps in `run_upgrade`, so listing the area
+    # here is sufficient for ordering. `capabilities` is deliberately NOT
+    # here: capability source is bundled (a distribution medium) but installed
+    # on demand, not auto-propagated to every adopter (ADR-033 §3).
+    "migrations",
 )
 
 
@@ -129,13 +141,65 @@ def find_target_root(start: Path | None = None) -> Path | None:
     return None
 
 
-def find_source_kit() -> Path:
-    """Return the source kit's `.pkit/` directory.
+# A real source checkout's `.pkit/` is distinguished from anything else by the
+# presence of its `decisions/` subtree — the same discriminator
+# `_refuse_if_source_kit_missing` applies. A bare-existence check is not enough:
+# the bundled `_kit/` also exists, but checkout-first resolution (ADR-033 §2)
+# must return the *checkout* when one is present.
+def _looks_like_source_checkout(candidate: Path) -> bool:
+    return (candidate / "decisions").is_dir()
 
-    The Python package's `__file__` is at `<source_repo>/src/project_kit/install.py`.
-    The source kit lives at `<source_repo>/.pkit`.
+
+# Process-lifetime materialisation of the bundled `_kit/` tree, used only when
+# the package is imported from a zipped/zipimport wheel (where `files()` yields
+# a path inside the zip that has no on-disk form). `as_file()` extracts it to a
+# temp dir whose lifetime is bounded by the `with` block; returning a path from
+# inside a closed block would hand callers a deleted directory. We hold the
+# context open for the whole process via a module-level `ExitStack` flushed at
+# interpreter exit, and cache the materialised path so we extract at most once.
+# The common `uv tool` install is unzipped — real files in site-packages — so
+# this path is never taken there (see `_bundled_source_kit`).
+_BUNDLE_EXITSTACK = ExitStack()
+atexit.register(_BUNDLE_EXITSTACK.close)
+_materialised_bundle: Path | None = None
+
+
+def _bundled_source_kit() -> Path:
+    """Return the bundled methodology tree at `project_kit/_kit/` (ADR-033).
+
+    For an unzipped install (the `uv tool` case — real files in site-packages),
+    `files()` yields a directory that already exists on disk; return it
+    directly. For a zipped wheel, materialise the tree once to a
+    process-lifetime temp dir and return that. Either way the returned path is
+    valid for the rest of the process — never a path from inside a closed
+    `as_file()` context.
     """
-    return Path(__file__).resolve().parents[2] / ".pkit"
+    global _materialised_bundle
+
+    resource = files("project_kit").joinpath("_kit")
+    on_disk = Path(str(resource))
+    if on_disk.is_dir():
+        return on_disk
+
+    if _materialised_bundle is None:
+        _materialised_bundle = _BUNDLE_EXITSTACK.enter_context(as_file(resource))
+    return _materialised_bundle
+
+
+def find_source_kit() -> Path:
+    """Return the methodology source kit's `.pkit/`-equivalent directory.
+
+    Checkout-first (ADR-033 §2): when invoked from a real project-kit checkout
+    (`__file__` at `<repo>/src/project_kit/install.py`, so `.pkit/` is two
+    parents up), and that directory looks like a real source tree, return it —
+    preserving dev live-edit and self-host. Otherwise (the official `uv tool`
+    install, where no checkout `.pkit/` exists) fall back to the bundled
+    `project_kit/_kit/` shipped in the wheel.
+    """
+    checkout = Path(__file__).resolve().parents[2] / ".pkit"
+    if _looks_like_source_checkout(checkout):
+        return checkout
+    return _bundled_source_kit()
 
 
 def install_kit(target_root: Path, dry_run: bool = False) -> None:
@@ -243,12 +307,27 @@ def _refuse_if_already_initialised(ctx: InstallContext) -> None:
         )
 
 
-def _refuse_if_source_kit_missing(ctx: InstallContext) -> None:
-    if not (ctx.source_kit / "decisions").is_dir():
+def refuse_if_source_kit_incomplete(source_kit: Path) -> None:
+    """Raise a clean `ClickException` if `source_kit` is not a usable kit tree.
+
+    The discriminator (`decisions/` present) is the same one
+    `find_source_kit` uses to recognise a checkout and `_refuse_if_source_kit_missing`
+    uses to gate init. Sync and upgrade call this at entry — *before*
+    `read_kit_version` / propagation — so a future incomplete bundle (or any
+    resolution that points somewhere without the methodology content) surfaces
+    as a clear operator-facing error rather than a raw `FileNotFoundError`
+    deep inside propagation (ADR-033; issue #333).
+    """
+    if not _looks_like_source_checkout(source_kit):
         raise click.ClickException(
-            f"source kit not found at {ctx.source_kit} (no decisions/ subdirectory).\n"
-            f"       pkit init must be run from project-kit's pkit binary, not a target's copy."
+            f"methodology source not found at {source_kit} (no decisions/ subdirectory).\n"
+            f"       The pkit binary could not resolve its bundled content. Reinstall "
+            f"project-kit, or run from a project-kit checkout."
         )
+
+
+def _refuse_if_source_kit_missing(ctx: InstallContext) -> None:
+    refuse_if_source_kit_incomplete(ctx.source_kit)
 
 
 def _refuse_if_target_is_source(ctx: InstallContext) -> None:

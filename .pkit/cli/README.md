@@ -22,7 +22,7 @@ The full COR-004 surface is implemented: `init`, `sync`, `merge`, `upgrade`, `ca
 uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git
 ```
 
-After this, `pkit` is on PATH; the binary works against any project-kit-adopting project — the runtime resolves the current project's root from CWD at invocation time (via `git rev-parse --show-toplevel`, with a CWD-walk fallback). Re-installing the kit into more adopter projects does **not** require additional installs of pkit.
+After this, `pkit` is on PATH; the binary works against any project-kit-adopting project — the runtime resolves the current project's root from CWD at invocation time (via `git rev-parse --show-toplevel`, with a CWD-walk fallback). Re-installing the kit into more adopter projects does **not** require additional installs of pkit. The methodology content `init` / `sync` / `upgrade` propagate is **bundled in the wheel** (version-locked to the binary), so these commands work from the installed binary without a source checkout (per [ADR-033](../../docs/architecture/decisions/ADR-033-official-install-bundles-content.md)); a checkout, when present, takes precedence so contributors' source edits stay live.
 
 Pin to a specific kit version:
 
