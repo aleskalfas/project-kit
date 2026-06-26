@@ -45,6 +45,11 @@ process:
         runs:    <capability>:<id>  # core      the inner process address
         subject: <inner-id?>        # core      determinate inner subject id (REQUIRED for a keyed inner; omitted for singleton)
         inputs:  { ... }            # core      static input values supplied to the inner on entry
+      depends_on:                   # core (optional, COR-038)  INERT cross-process connection metadata — engine NEVER evaluates it
+        - upstream: <capability>:<id>   # core   the upstream process address (same grammar as subprocess/cascade)
+          relation: informational | gates-on-readiness | triggered-by | constrained-with   # core   CLOSED set (no composed-subprocess/aggregates — those are DERIVED)
+          mode:     pull | push     # core      pull = read on the reader's turn  |  push = mediated OUTSIDE the engine (no eventing)
+          why:      <prose>         # core      REQUIRED reason the render surfaces
       entry:    <guard?>            # core      start state? guarded; MULTIPLE entries allowed
       terminal: <bool>             # core      end state? (also a process OUTCOME for composition — COR-036)
 
@@ -252,6 +257,29 @@ process:
 The `status` view surfaces the live fold when the current state has the cascade-gated move (narrative: a `folds <address> (<op>)` / `fold: <reached>/<total> …` line; `--json`: a `position.cascade` object with `{runs, op, outcome, threshold, reached, total, opened, indeterminate, reason}`).
 
 **Deferred** (each its own future decision when a binding needs it, per COR-037): **forward / position cascade** (bump a parent up to match its furthest child — a position reduction, not a terminal-outcome fold; pm keeps it capability-local); **richer reducers** (ratios / weighted / custom); **overflow / hand-off** (a terminal state spawning or unblocking a concurrent sibling — altitude-2 orchestration); **peer-cycle deadlock** detection and **cross-subject invariants** (different cross-subject machines, each its own slot).
+
+## depends_on — inert cross-process connection metadata (core, COR-038)
+
+[COR-038](../decisions/core/COR-038-process-connections.md) adds a state's `depends_on` list: a label the engine **never acts on** — pure declared metadata, shape-checked so it is uniform and machine-readable, that a future render reads to draw the project's whole configured cross-process wiring. It adds **no engine capability**.
+
+**Authored** (additive — absent on every existing process, which validate byte-unchanged):
+
+```
+states:
+  - id: <state>
+    depends_on:                      # core (optional, COR-038)  one entry per declared connection
+      - upstream: <capability>:<id>  # core      the upstream process address (same grammar as subprocess/cascade)
+        relation: informational | gates-on-readiness | triggered-by | constrained-with   # core   CLOSED set
+        mode:     pull | push        # core      pull = read on the reader's turn  |  push = mediated OUTSIDE the engine
+        why:      <prose>            # core      REQUIRED reason the render surfaces
+```
+
+- **Inert by design — the first declaration the engine never *evaluates*.** The engine's runtime operations (`status`, `can-move`, `move`, `validate`-of-position) **never read `depends_on`**. Its only two readers are static or out-of-engine: the **schema** shape-validates it (well-formed `upstream` address, `relation`/`mode` from their closed sets, `why` present), and a future **render** (a tool outside the engine) reads it to draw the topology. This is one level *more* inert than COR-035's invariants, which the engine *does* evaluate (and surfaces on `status`) — `depends_on` it does not evaluate **at all**. Because the engine never evaluates it, a **malformed entry is a lint error at authoring time** (`schemas validate`), **never a fail-closed gate** — it cannot affect whether any subject may move.
+- **The `relation` set annotates only the edges the engine cannot already see.** `informational` (advisory, no runtime effect); `gates-on-readiness` (names the cross-process edge an opaque gate predicate enforces but declares nowhere); `triggered-by` (an externally / connector-mediated coupling the engine never sees — pairs with `mode: push`); `constrained-with` (a cross-subject invariant named now for visibility, enforcement deferred behind COR-035's cross-subject-invariants slot).
+- **Derive-don't-annotate — `composed-subprocess` / `aggregates` are deliberately NOT relation values.** A composition / aggregation edge is already fully declared by the `subprocess` / `cascade` block the engine owns and resolves; re-stating it as an annotation would be a second copy of a fact whose primary home is that block, and the two **will drift** (single source of truth — COR-006). So the render computes the configured composite as **derived edges** (read from `subprocess` / `cascade`) **∪ annotated edges** (`depends_on`) — every edge expressible exactly one way, no edge both. `depends_on` is precisely *the visibility layer for the edges the engine cannot see.*
+- **`mode: push` introduces no eventing.** The position engine stays **pull-only** (COR-038 point 3): `push` means only "this edge is mediated outside the engine"; the engine never pulls it and records it solely for visibility. No subject is created, advanced, or notified by a fired event inside the engine.
+
+**Deferred** (its own future decision when a consumer exists, per COR-038): the **`pkit process graph` render** that draws the configured composite (derived ∪ annotated edges, each labelled with its relation and mode) — named now, built when it has a consumer (ship-narrow, COR-016). Enforcement of `constrained-with` waits on COR-035's deferred cross-subject invariants slot.
 
 ## The engine
 

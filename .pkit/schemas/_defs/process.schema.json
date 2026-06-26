@@ -91,6 +91,32 @@
         "predicate": { "$ref": "#/$defs/predicate" }
       }
     },
+    "depends_on": {
+      "type": "object",
+      "description": "COR-038: ONE inert, schema-validated cross-process connection a state declares (the entries live in the `depends_on` LIST on a state). INERT by design -- the engine's runtime (`status`/`can-move`/`move`/`validate`-of-position) NEVER reads it: its only readers are the SCHEMA (shape-validates it here) and a future render (out-of-engine, draws the topology). So a malformed entry is a definition-authoring LINT error, never a fail-closed gate -- it cannot affect whether any subject may move. It annotates ONLY the edges the engine cannot already see; an enforced `composed-subprocess` / `aggregates` edge is fully declared by the `subprocess`/`cascade` block the engine owns, so the render DERIVES those (derive-don't-annotate, single-source-of-truth COR-006) and they are deliberately NOT relation values here.",
+      "required": ["upstream", "relation", "mode", "why"],
+      "additionalProperties": false,
+      "properties": {
+        "upstream": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$",
+          "description": "The upstream process address `<capability>:<process-id>` (the same address grammar `subprocess`/`cascade` use). The render reads it to draw the edge; the engine never resolves it."
+        },
+        "relation": {
+          "enum": ["informational", "gates-on-readiness", "triggered-by", "constrained-with"],
+          "description": "COR-038: the CLOSED set of exactly the connections the engine cannot otherwise see. informational: advisory, no runtime effect. gates-on-readiness: names the cross-process edge an opaque gate predicate enforces but declares nowhere. triggered-by: an externally/connector-mediated coupling the engine never sees (pairs with `mode: push`). constrained-with: a cross-subject invariant named now for visibility, enforcement deferred behind COR-035's cross-subject-invariants slot. `composed-subprocess`/`aggregates` are DELIBERATELY ABSENT -- those edges are derived from `subprocess`/`cascade`, never annotated (drift would make the trusted render lie)."
+        },
+        "mode": {
+          "enum": ["pull", "push"],
+          "description": "COR-038: pull = a connection the reader resolves on its own turn by detection over reality. push = mediated OUTSIDE the engine (an external tool / out-of-engine binding glue) -- it introduces NO eventing into the position engine (which stays pull-only, COR-038 point 3); it is recorded SOLELY for visibility."
+        },
+        "why": {
+          "type": "string",
+          "minLength": 1,
+          "description": "COR-038: the required human-readable reason the render surfaces -- why this connection exists. The same `why` convention detection/gates/blocked/invariants carry."
+        }
+      }
+    },
     "state": {
       "type": "object",
       "description": "A node. additionalProperties permitted for capability-local fields (e.g. applies_to).",
@@ -107,6 +133,11 @@
         "subprocess": {
           "$ref": "#/$defs/subprocess",
           "description": "COR-036 (optional, additive): marks this state as embedding an inner process. While the subject is parked here, the engine recursively resolves the inner process's terminal outcome and the parent's outgoing `subprocess-outcome` gates read it. Absent on every existing state -- those validate byte-unchanged."
+        },
+        "depends_on": {
+          "type": "array",
+          "description": "COR-038 (optional, additive): INERT cross-process connection metadata -- a list of declared connections to upstream processes that the engine NEVER evaluates (only the schema shape-validates them, only a future render reads them to draw the topology). Absent on every existing state -- those validate byte-unchanged. Carries ONLY the edges the engine cannot see; composition/aggregation edges are derived from `subprocess`/`cascade` instead (derive-don't-annotate).",
+          "items": { "$ref": "#/$defs/depends_on" }
         },
         "entry": {
           "description": "Marks a start state. `true` = unconditional; an object with `when` = guarded entry (selected when the predicate holds; multiple guarded entries allowed).",
