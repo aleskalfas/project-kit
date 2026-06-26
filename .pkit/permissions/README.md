@@ -103,6 +103,22 @@ validating scripts:
 It does **not** match `gh issue view`, `gh pr view`, `gh api`, or any other `gh`
 subcommand — only mutations.
 
+A companion privilege, `issue-tracker-read-raw`, recognizes the three raw read
+**views** the project-management capability's clean-output verbs replace:
+
+- `gh issue view`
+- `gh pr view`
+- `gh pr diff`
+
+It is denied for `project-manager` by the same capability fragment, routing the
+agent to `pkit project-management show-issue` / `show-pr` (and their `--field
+<name>` for a single value) — the prompt-free, non-piping read path. The
+recognizer is deliberately narrow: it matches **only** those three views, never
+`gh pr checks`, `gh run`, `gh api`, `gh issue list`, or `gh pr list`, and never a
+mutation (those are covered by `issue-tracker-write` or left open). A deny is
+auto-rejected by the harness (no operator prompt), so the agent adapts to the
+clean verb.
+
 ### Where the deny lives (ADR-016)
 
 The deny is a **capability-contributed grant** shipped by the project-management

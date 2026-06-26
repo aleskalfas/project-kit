@@ -2043,6 +2043,23 @@ _PROBES: list[dict[str, Any]] = [
      "command": "gh issue list", "privileges": ["issue-tracker"]},
     {"desc": "issue tracker behind an env prefix — `export FOO=1 && gh pr list`",
      "command": "export FOO=1 && gh pr list", "privileges": ["issue-tracker"]},
+    # Raw read views the clean show-* verbs replace (issue #319). These exercise
+    # BOTH issue-tracker (broad gh allow) and issue-tracker-read-raw (the
+    # read-redirect deny the project-management capability ships); for
+    # project-manager the deny wins → REJECTED, redirecting to show-issue /
+    # show-pr.  For an operator (no deny) they stay ALLOWED.
+    {"desc": "raw issue view (redirected to show-issue) — `gh issue view 1`",
+     "command": "gh issue view 1", "privileges": ["issue-tracker", "issue-tracker-read-raw"]},
+    {"desc": "raw PR view (redirected to show-pr) — `gh pr view 1`",
+     "command": "gh pr view 1", "privileges": ["issue-tracker", "issue-tracker-read-raw"]},
+    {"desc": "raw PR diff (redirected to show-pr) — `gh pr diff 1`",
+     "command": "gh pr diff 1", "privileges": ["issue-tracker", "issue-tracker-read-raw"]},
+    # Adjacent reads the read-redirect deny must NOT catch — they stay on the
+    # broad issue-tracker allow (ALLOWED for project-manager, un-redirected).
+    {"desc": "PR checks — NOT redirected — `gh pr checks 1`",
+     "command": "gh pr checks 1", "privileges": ["issue-tracker"]},
+    {"desc": "workflow runs — NOT redirected — `gh run list`",
+     "command": "gh run list", "privileges": ["issue-tracker"]},
     {"desc": "the kit CLI — `pkit status`",
      "command": "pkit status", "privileges": ["kit"]},
     {"desc": "docker in the project — `docker ps`",
