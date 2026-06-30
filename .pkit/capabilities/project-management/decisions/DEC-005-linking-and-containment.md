@@ -17,6 +17,8 @@ The hierarchy from [project-management:DEC-004-six-level-hierarchy] needs a mech
 
 ## Decision
 
+> **Refined by [project-management:DEC-039-containment-substrate-selection]:** native sub-issues are canonical *where the tracker supports them*; where unavailable (older GHES) or the operator deliberately selects textual, containment degrades to a textual representation (the child-side parent-ref + a render-on-demand children view). This narrows the unconditional "always native" below to native-*where-available* — the native ideal is unchanged; the fallback is project-kit's substrate adaptation per DEC-036.
+
 ### Canonical mechanism: native sub-issues
 
 The capability uses **GitHub's native sub-issues field** as the canonical structural mechanism. The agent reads and writes the `parent` and `subIssues` GraphQL fields on every parent-link mutation. Native sub-issues populate the Projects v2 "Sub-issues progress" board field automatically.
