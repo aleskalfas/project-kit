@@ -573,3 +573,347 @@ def _body_names_parent(body: str, parent_number: int) -> bool:
             return False
         return int(m.group(2)) == parent_number
     return False
+
+
+# =========================================================================
+# Render-on-demand textual children view (DEC-039 D4 / ADR-035 section 4).
+#
+# Where the tracker has no native sub-issues panel (`containment: textual`), a
+# parent has no parent-side children view at all — only the child-side textual
+# refs + `show-tree` on demand. This half supplies that view as a **generated
+# do-not-edit comment on the parent**, written by **FULL OVERWRITE** through one
+# construction point and refreshed by the read path. It is a derived, regenerable
+# view: the child-side ref + the read seam (`resolve_children`) remain the source
+# of truth. **Never an append** — there is exactly one marked comment per parent,
+# found by its marker and updated in place (DEC-039 D4: a stored body block would
+# be a drift-prone second source of truth; an append would churn comments on every
+# child-create).
+#
+# Mode gate: the writer is a **no-op in native mode** (the native sub-issues panel
+# already gives parent-side visibility). The single mode gate is
+# `refresh_children_comment`, which consults the caller-supplied containment mode
+# once and returns a no-op outcome for `native`.
+# =========================================================================
+
+
+# The do-not-edit marker that identifies the generated children comment. An HTML
+# comment so it is INVISIBLE in rendered markdown, yet a stable string the
+# find-existing scan keys on (a human reading the source sees the do-not-edit
+# notice; a human reading the rendered comment sees only the children list under
+# the visible heading). This is the one place the marker text lives — both the
+# renderer (emits it) and the find-existing scan (matches it) reference it, so
+# they cannot drift.
+CHILDREN_VIEW_MARKER = "<!-- pkit:children-view do-not-edit -->"
+
+# The containment-mode value that ENABLES the textual children view. Mirrors
+# ``axis_labels.CONTAINMENT_TEXTUAL`` — duplicated here (a bare string) so this
+# module's writer needs no import of the selector seam (it takes the mode as a
+# plain ``str`` argument; the caller resolves the mode through
+# ``axis_labels.containment_mode`` and passes the value). Any non-``textual``
+# value (``native``, the greenfield default, or anything unrecognised) is a no-op.
+CONTAINMENT_TEXTUAL = "textual"
+
+# The visible heading + do-not-edit notice the rendered comment carries, so a
+# human reading the COMMENT (not the source) also knows not to hand-edit it.
+_CHILDREN_VIEW_HEADING = "### Children (auto-generated — do not edit)"
+_CHILDREN_VIEW_NOTICE = (
+    "_This comment is a regenerable view of this issue's children, refreshed by "
+    "project-kit. Edits are overwritten. The source of truth is each child's "
+    "first-line parent-ref._"
+)
+
+
+class RefreshOutcome(Enum):
+    """The outcome class of one children-comment refresh attempt.
+
+    CREATED    — no marked comment existed; one was posted this call.
+    UPDATED    — the marked comment existed and its body changed; PATCHed.
+    UNCHANGED  — the marked comment existed and the freshly-rendered body equals
+                 its current body (value-equality idempotency) → NO write.
+    SKIPPED    — native mode (the native panel suffices) → the writer is a no-op.
+    FAILED     — a gh read/write failed (auth/network/missing `gh`). Non-fatal to
+                 the caller — the child-side textual ref is the spine.
+    """
+
+    CREATED = "created"
+    UPDATED = "updated"
+    UNCHANGED = "unchanged"
+    SKIPPED = "skipped"
+    FAILED = "failed"
+
+
+@dataclass(frozen=True)
+class RefreshResult:
+    """Outcome of one children-comment refresh — a neutral carrier.
+
+    Failure-posture-neutral in the same spirit as :class:`LinkResult` (ADR-035
+    section 3, ADR-031 point 6): it records what happened; the caller decides what
+    it means. ``create-issue`` treats every outcome as non-fatal — the textual ref
+    is the spine — and reports a one-line note keyed on ``outcome``.
+    """
+
+    outcome: RefreshOutcome
+    detail: str = ""
+
+    @property
+    def ok(self) -> bool:
+        """True when the view is in the desired state after this call (created,
+        updated, already-current, or a deliberate native-mode no-op). Only FAILED
+        is a genuine problem."""
+        return self.outcome is not RefreshOutcome.FAILED
+
+
+def render_children_comment_body(
+    *,
+    parent_number: int,
+    resolution: ChildResolution,
+    titles: dict[int, str] | None = None,
+) -> str:
+    """Render the parent's children-comment body from a :class:`ChildResolution`.
+
+    The rendered view is DERIVED from the read seam's output (DEC-039 D4: the
+    comment is a regenerable view, not a source of truth). The body carries:
+
+      1. the :data:`CHILDREN_VIEW_MARKER` (the find-existing key, invisible in
+         rendered markdown);
+      2. a visible heading + do-not-edit notice so a human reading the rendered
+         comment also knows not to hand-edit it;
+      3. one bullet per resolved child — ``- #<n>`` (GitHub auto-links the issue
+         reference), with the child's title appended when ``titles`` carries it,
+         and a ``(textual)`` provenance marker on a textual-only child (native is
+         the default and unmarked, matching ``show-tree``).
+
+    Children are listed in the resolution's order (sorted by number — the seam
+    already sorts). An empty child set renders an explicit "no children" line so a
+    parent whose last child was removed gets an honest, current view rather than a
+    stale list. The output is deterministic for a given ``(resolution, titles)`` so
+    the idempotency value-equality check (re-render of the same child set → no
+    write) holds.
+    """
+    titles = titles or {}
+    lines = [
+        CHILDREN_VIEW_MARKER,
+        _CHILDREN_VIEW_HEADING,
+        "",
+        _CHILDREN_VIEW_NOTICE,
+        "",
+    ]
+    if not resolution.children:
+        lines.append("_No children._")
+    else:
+        for child in resolution.children:
+            title = titles.get(child.number)
+            label = f"#{child.number}" + (f" — {title}" if title else "")
+            marker = "  _(textual)_" if child.substrate is ChildSubstrate.TEXTUAL else ""
+            lines.append(f"- {label}{marker}")
+    return "\n".join(lines) + "\n"
+
+
+def list_issue_comments_args(*, parent_number: int | str) -> list[str]:
+    """Construct the ``gh api …/comments`` list (GET) argv.
+
+    Reads ``GET /repos/{owner}/{repo}/issues/{parent}/comments`` (paginated) to
+    find the existing marked children comment by its marker — and crucially to get
+    each comment's REST ``id`` (``gh issue view --json comments`` does NOT carry
+    the REST comment id the PATCH needs). The find-existing scan keys on
+    :data:`CHILDREN_VIEW_MARKER` in the comment body.
+    """
+    return [
+        "gh", "api",
+        "--paginate",
+        f"repos/{{owner}}/{{repo}}/issues/{parent_number}/comments",
+    ]
+
+
+def create_comment_args(*, parent_number: int | str, body: str) -> list[str]:
+    """Construct the ``gh api …/comments`` create (POST) argv.
+
+    Posts ``POST /repos/{owner}/{repo}/issues/{parent}/comments`` with the
+    rendered body. ``-f body=<text>`` sends the body as a string field (the
+    comment body is markdown text, not a typed value — ``-f``, not ``-F``). Used
+    only when no marked comment yet exists; an existing one is UPDATED in place
+    (never a second comment — DEC-039 D4's overwrite-not-append invariant).
+    """
+    return [
+        "gh", "api",
+        "-X", "POST",
+        f"repos/{{owner}}/{{repo}}/issues/{parent_number}/comments",
+        "-f", f"body={body}",
+    ]
+
+
+def update_comment_args(*, comment_id: int | str, body: str) -> list[str]:
+    """Construct the ``gh api …/comments/<id>`` update (PATCH) argv.
+
+    PATCHes ``/repos/{owner}/{repo}/issues/comments/{comment_id}`` with the
+    freshly-rendered body — the **full overwrite** that makes the children view a
+    single source (DEC-039 D4 / ADR-035 section 4). The comment id is the REST id
+    read from :func:`list_issue_comments_args`. ``-f body=<text>`` overwrites the
+    whole body (markdown string field). This is the overwrite that replaces the
+    append a naive children view would do.
+    """
+    return [
+        "gh", "api",
+        "-X", "PATCH",
+        f"repos/{{owner}}/{{repo}}/issues/comments/{comment_id}",
+        "-f", f"body={body}",
+    ]
+
+
+# Sentinel distinguishing "the comment list could not be READ" from "read OK,
+# no marked comment present". The distinction is load-bearing: a failed read must
+# be reported FAILED (never treated as absent, which would duplicate-post — the
+# very append/churn DEC-039 D4 forbids), while a clean read with no marked comment
+# is the CREATE path. A distinct singleton (not ``None``) so the two cannot be
+# conflated at the call site.
+class _CommentReadFailed:
+    _instance: _CommentReadFailed | None = None
+
+    def __new__(cls) -> _CommentReadFailed:
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+
+COMMENT_READ_FAILED: _CommentReadFailed = _CommentReadFailed()
+
+
+def find_children_comment(
+    config: dict[str, Any], *, parent_number: int | str
+) -> tuple[int, str] | None | _CommentReadFailed:
+    """Find the parent's existing marked children comment.
+
+    Lists the parent's comments and returns one of three signals — the
+    three-way distinction overwrite-not-append depends on:
+
+      * ``(comment_id, body)`` — the FIRST comment whose body carries
+        :data:`CHILDREN_VIEW_MARKER`. The refresh OVERWRITES this one in place
+        (PATCH), never posting a second comment.
+      * ``None`` — the list was read cleanly and NO marked comment exists. The
+        refresh CREATES one (the first POST).
+      * :data:`COMMENT_READ_FAILED` — the list could NOT be read (missing ``gh``,
+        non-zero exit, unparseable payload). The refresh reports FAILED and writes
+        NOTHING — a failed read is never treated as "absent" (which would
+        duplicate-post, the churn DEC-039 D4 forbids).
+    """
+    args = list_issue_comments_args(parent_number=parent_number)
+    try:
+        proc = _gh_call(args, config)
+    except FileNotFoundError:
+        return COMMENT_READ_FAILED
+    if proc.returncode != 0:
+        return COMMENT_READ_FAILED
+    payload = _parse_concatenated_arrays((proc.stdout or "").strip())
+    if payload is None:
+        return COMMENT_READ_FAILED
+    for entry in payload:
+        if not isinstance(entry, dict):
+            continue
+        body = entry.get("body")
+        if isinstance(body, str) and CHILDREN_VIEW_MARKER in body:
+            cid = entry.get("id")
+            if isinstance(cid, int):
+                return cid, body
+    return None
+
+
+def refresh_children_comment(
+    config: dict[str, Any],
+    *,
+    parent_number: int,
+    corpus: dict[int, str],
+    containment_mode: str,
+    titles: dict[int, str] | None = None,
+) -> RefreshResult:
+    """Refresh the parent's render-on-demand children comment (the ONE writer).
+
+    The single construction point for the textual children view (ADR-035 section
+    3/4): every refresh of the view routes through here; no script string-builds a
+    children-comment write inline. Composes the render + find-existing + overwrite:
+
+      1. **Mode gate (the one point).** In ``native`` mode the native sub-issues
+         panel already gives parent-side visibility, so this is a **no-op**
+         (:attr:`RefreshOutcome.SKIPPED`). Only ``textual`` mode renders + writes.
+      2. **Render** the body from the read seam's resolution
+         (:func:`resolve_children` → :func:`render_children_comment_body`) — the
+         comment is a derived view, the seam stays the source of truth.
+      3. **Find** the existing marked comment (:func:`find_children_comment`). A
+         failed READ is :attr:`RefreshOutcome.FAILED` (never treated as "absent",
+         which would duplicate-post).
+      4. **Idempotency.** If a marked comment exists and its body equals the
+         freshly-rendered body, **skip the write** (:attr:`RefreshOutcome.UNCHANGED`)
+         — no comment-edit churn on a re-render of the same child set.
+      5. **Write by overwrite** — PATCH the existing comment in place
+         (:attr:`RefreshOutcome.UPDATED`), or POST a new one when none exists
+         (:attr:`RefreshOutcome.CREATED`). **Never a second comment** — overwrite,
+         never append (DEC-039 D4).
+
+    Failure-posture-neutral (ADR-035 section 3): never raises; a failed read/write
+    yields :attr:`RefreshOutcome.FAILED` for the caller to report as a one-line
+    note — the child-side textual ref is the spine, so a failed refresh never fails
+    the caller's operation.
+    """
+    if containment_mode != CONTAINMENT_TEXTUAL:
+        return RefreshResult(
+            RefreshOutcome.SKIPPED,
+            detail=(
+                f"containment is {containment_mode!r}; children comment is a no-op "
+                "(the native sub-issues panel gives parent-side visibility)"
+            ),
+        )
+
+    resolution = resolve_children(config, parent_number=parent_number, corpus=corpus)
+    body = render_children_comment_body(
+        parent_number=parent_number, resolution=resolution, titles=titles
+    )
+
+    existing = find_children_comment(config, parent_number=parent_number)
+    if existing is COMMENT_READ_FAILED:
+        # A failed READ is never treated as "absent" (which would duplicate-post);
+        # write nothing and report FAILED (non-fatal — the textual ref is the spine).
+        return RefreshResult(
+            RefreshOutcome.FAILED,
+            detail=(
+                f"could not read #{parent_number}'s comments to find the children "
+                "view; no write attempted (avoiding a duplicate post)"
+            ),
+        )
+    if existing is not None:
+        comment_id, current_body = existing  # type: ignore[misc]
+        if current_body == body:
+            return RefreshResult(
+                RefreshOutcome.UNCHANGED,
+                detail=(
+                    f"children comment on #{parent_number} already current "
+                    f"({len(resolution.children)} child(ren)); no write"
+                ),
+            )
+        args = update_comment_args(comment_id=comment_id, body=body)
+        outcome, verb = RefreshOutcome.UPDATED, "updated"
+    else:
+        args = create_comment_args(parent_number=parent_number, body=body)
+        outcome, verb = RefreshOutcome.CREATED, "created"
+
+    try:
+        proc = _gh_call(args, config)
+    except FileNotFoundError:
+        return RefreshResult(
+            RefreshOutcome.FAILED,
+            detail="`gh` not on PATH; children comment refresh skipped",
+        )
+    if proc.returncode == 0:
+        return RefreshResult(
+            outcome,
+            detail=(
+                f"{verb} children comment on #{parent_number} "
+                f"({len(resolution.children)} child(ren))"
+            ),
+        )
+    stderr = (proc.stderr or "").strip()
+    return RefreshResult(
+        RefreshOutcome.FAILED,
+        detail=(
+            f"children comment refresh on #{parent_number} failed "
+            f"(gh exit {proc.returncode}). stderr: {stderr or 'no stderr'}"
+        ),
+    )
