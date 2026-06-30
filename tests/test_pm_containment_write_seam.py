@@ -301,18 +301,337 @@ def test_create_issue_routes_through_the_primitive() -> None:
 
 
 # =========================================================================
+# Render-on-demand textual children view (DEC-039 D4 / ADR-035 section 4)
+# =========================================================================
+#
+# The parent-side children comment: a generated do-not-edit view written by FULL
+# OVERWRITE through one construction point (`refresh_children_comment`), refreshed
+# by the read path, NEVER an append. Offline — gh is mocked at `_gh_call`.
+
+
+def _resolution(containment, *natives: int, textuals: tuple[int, ...] = ()):
+    """Build a ChildResolution directly (native-wins already applied upstream)."""
+    children = [
+        containment.ResolvedChild(number=n, substrate=containment.ChildSubstrate.NATIVE)
+        for n in natives
+    ] + [
+        containment.ResolvedChild(number=n, substrate=containment.ChildSubstrate.TEXTUAL)
+        for n in textuals
+    ]
+    children.sort(key=lambda c: c.number)
+    return containment.ChildResolution(children=tuple(children), native_supported=True)
+
+
+# --- the rendered body: marker, content matches resolution ---------------
+
+
+def test_render_carries_the_do_not_edit_marker(containment) -> None:
+    """The rendered body carries the find-existing marker AND a visible
+    do-not-edit notice so both a source reader and a comment reader are warned."""
+    body = containment.render_children_comment_body(
+        parent_number=342, resolution=_resolution(containment, 344)
+    )
+    assert containment.CHILDREN_VIEW_MARKER in body
+    assert "do not edit" in body.lower()
+
+
+def test_render_content_matches_resolution(containment) -> None:
+    """Each resolved child appears as a `#<n>` link; a textual-only child is
+    marked `(textual)`, a native child is unmarked (native is the default)."""
+    body = containment.render_children_comment_body(
+        parent_number=342,
+        resolution=_resolution(containment, 344, textuals=(345,)),
+        titles={344: "native child", 345: "textual child"},
+    )
+    assert "- #344 — native child" in body
+    assert "_(textual)_" not in body.split("#344", 1)[1].split("\n", 1)[0]
+    assert "- #345 — textual child  _(textual)_" in body
+    # only the resolved children, no extras.
+    assert "#343" not in body and "#346" not in body
+
+
+def test_render_empty_child_set_is_explicit(containment) -> None:
+    """A parent whose children were all removed renders an explicit no-children
+    line — an honest current view, not a stale list."""
+    body = containment.render_children_comment_body(
+        parent_number=342, resolution=_resolution(containment)
+    )
+    assert containment.CHILDREN_VIEW_MARKER in body
+    assert "No children" in body
+
+
+def test_render_is_deterministic(containment) -> None:
+    """Same resolution → byte-identical body — the property the idempotency
+    value-equality skip depends on."""
+    res = _resolution(containment, 344, 345)
+    a = containment.render_children_comment_body(parent_number=342, resolution=res)
+    b = containment.render_children_comment_body(parent_number=342, resolution=res)
+    assert a == b
+
+
+# --- the argv constructors (sole-constructor) ----------------------------
+
+
+def test_create_comment_args_constructs_the_post(containment) -> None:
+    args = containment.create_comment_args(parent_number=342, body="hello")
+    assert args == [
+        "gh", "api",
+        "-X", "POST",
+        "repos/{owner}/{repo}/issues/342/comments",
+        "-f", "body=hello",
+    ]
+
+
+def test_update_comment_args_constructs_the_patch(containment) -> None:
+    """The OVERWRITE: a PATCH on the comment id, not a second POST/append."""
+    args = containment.update_comment_args(comment_id=99, body="hello")
+    assert args == [
+        "gh", "api",
+        "-X", "PATCH",
+        "repos/{owner}/{repo}/issues/comments/99",
+        "-f", "body=hello",
+    ]
+
+
+# --- find-existing: the marker round-trips -------------------------------
+
+
+def _comments_payload(*entries: tuple[int, str]) -> str:
+    import json as _json
+    body = ", ".join(
+        f'{{"id": {cid}, "body": {_json.dumps(text)}}}' for cid, text in entries
+    )
+    return f"[{body}]"
+
+
+def test_find_children_comment_round_trips_the_marker(containment, monkeypatch) -> None:
+    """A marked comment is found by its marker and its (id, body) returned; an
+    unmarked comment is ignored."""
+    marked = containment.CHILDREN_VIEW_MARKER + "\n### Children\n- #344\n"
+
+    def fake_gh(args, config):
+        return subprocess.CompletedProcess(
+            args, 0,
+            stdout=_comments_payload((1, "a normal human comment"), (7, marked)),
+            stderr="",
+        )
+
+    monkeypatch.setattr(containment, "_gh_call", fake_gh)
+    found = containment.find_children_comment({}, parent_number=342)
+    assert found is not None
+    assert found[0] == 7
+    assert containment.CHILDREN_VIEW_MARKER in found[1]
+
+
+def test_find_children_comment_none_when_absent(containment, monkeypatch) -> None:
+    def fake_gh(args, config):
+        return subprocess.CompletedProcess(
+            args, 0, stdout=_comments_payload((1, "just chatter")), stderr=""
+        )
+
+    monkeypatch.setattr(containment, "_gh_call", fake_gh)
+    assert containment.find_children_comment({}, parent_number=342) is None
+
+
+# --- refresh: native-mode no-op ------------------------------------------
+
+
+def test_refresh_native_mode_is_noop(containment, monkeypatch) -> None:
+    """In native mode the writer is a no-op (the native panel suffices) — no gh
+    call at all, the single mode gate."""
+    def fake_gh(args, config):  # pragma: no cover — must not be reached
+        raise AssertionError("native mode must not touch gh")
+
+    monkeypatch.setattr(containment, "_gh_call", fake_gh)
+    result = containment.refresh_children_comment(
+        {}, parent_number=342, corpus={}, containment_mode="native"
+    )
+    assert result.outcome is containment.RefreshOutcome.SKIPPED
+    assert result.ok is True
+
+
+# --- refresh: create when absent, overwrite (not append) when present ----
+
+
+def test_refresh_creates_when_no_marked_comment(containment, monkeypatch) -> None:
+    """Textual mode, no existing marked comment → POST a new comment (CREATED)."""
+    calls: list[list[str]] = []
+
+    def fake_gh(args, config):
+        calls.append(args)
+        if "/comments" in " ".join(args) and "--paginate" in args:
+            return subprocess.CompletedProcess(args, 0, stdout="[]", stderr="")
+        if "--paginate" in args:  # native sub_issues read → unsupported (textual)
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 404")
+        return subprocess.CompletedProcess(args, 0, stdout="{}", stderr="")
+
+    monkeypatch.setattr(containment, "_gh_call", fake_gh)
+    result = containment.refresh_children_comment(
+        {}, parent_number=342, corpus={344: "Feature: #342\n"}, containment_mode="textual"
+    )
+    assert result.outcome is containment.RefreshOutcome.CREATED
+    # exactly one comment WRITE, and it is a POST to .../comments (not a PATCH).
+    writes = [c for c in calls if "POST" in c and "/comments" in " ".join(c)]
+    assert len(writes) == 1
+
+
+def test_refresh_overwrites_existing_marked_comment_not_appends(
+    containment, monkeypatch
+) -> None:
+    """Textual mode, an existing marked comment whose body is STALE → PATCH it in
+    place (UPDATED). NEVER a second POST — overwrite, not append."""
+    calls: list[list[str]] = []
+    stale = containment.CHILDREN_VIEW_MARKER + "\nstale content\n"
+
+    def fake_gh(args, config):
+        calls.append(args)
+        joined = " ".join(args)
+        if "/comments" in joined and "--paginate" in args:
+            return subprocess.CompletedProcess(
+                args, 0, stdout=_comments_payload((55, stale)), stderr=""
+            )
+        if "--paginate" in args:  # native read → textual fallback
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 404")
+        return subprocess.CompletedProcess(args, 0, stdout="{}", stderr="")
+
+    monkeypatch.setattr(containment, "_gh_call", fake_gh)
+    result = containment.refresh_children_comment(
+        {}, parent_number=342, corpus={344: "Feature: #342\n"}, containment_mode="textual"
+    )
+    assert result.outcome is containment.RefreshOutcome.UPDATED
+    # the write is a PATCH on the comment id — NOT a POST (which would append).
+    patches = [c for c in calls if "PATCH" in c]
+    posts = [c for c in calls if "POST" in c and "/comments" in " ".join(c)]
+    assert len(patches) == 1
+    assert "repos/{owner}/{repo}/issues/comments/55" in patches[0]
+    assert posts == [], "a refresh must overwrite, never post a second comment"
+
+
+# --- refresh: idempotent (same child set → no write) ---------------------
+
+
+def test_refresh_idempotent_when_body_unchanged(containment, monkeypatch) -> None:
+    """When the existing marked comment's body equals the freshly-rendered body,
+    skip the write (UNCHANGED) — no comment-edit churn on a re-render."""
+    # Render the body the same way the refresh will, so the existing comment is
+    # byte-equal to what would be written.
+    res = _resolution(containment, textuals=(344,))
+    current = containment.render_children_comment_body(parent_number=342, resolution=res)
+    calls: list[list[str]] = []
+
+    def fake_gh(args, config):
+        calls.append(args)
+        joined = " ".join(args)
+        if "/comments" in joined and "--paginate" in args:
+            return subprocess.CompletedProcess(
+                args, 0, stdout=_comments_payload((55, current)), stderr=""
+            )
+        if "--paginate" in args:  # native read → textual fallback
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 404")
+        raise AssertionError("no write must happen on an unchanged body")
+
+    monkeypatch.setattr(containment, "_gh_call", fake_gh)
+    result = containment.refresh_children_comment(
+        {}, parent_number=342, corpus={344: "Feature: #342\n"}, containment_mode="textual"
+    )
+    assert result.outcome is containment.RefreshOutcome.UNCHANGED
+    assert not any("PATCH" in c or "POST" in c for c in calls)
+
+
+def test_refresh_content_matches_resolve_children(containment, monkeypatch) -> None:
+    """The written body reflects exactly what resolve_children resolves from the
+    corpus — the comment is a derived view of the seam, not an independent scan."""
+    captured: dict = {}
+
+    def fake_gh(args, config):
+        joined = " ".join(args)
+        if "/comments" in joined and "--paginate" in args:
+            return subprocess.CompletedProcess(args, 0, stdout="[]", stderr="")
+        if "--paginate" in args:  # native read → textual fallback
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 404")
+        # the POST create — capture the body argument.
+        captured["args"] = args
+        return subprocess.CompletedProcess(args, 0, stdout="{}", stderr="")
+
+    monkeypatch.setattr(containment, "_gh_call", fake_gh)
+    corpus = {344: "Feature: #342\n", 345: "Feature: #342\n", 999: "unrelated\n"}
+    containment.refresh_children_comment(
+        {}, parent_number=342, corpus=corpus, containment_mode="textual"
+    )
+    body_field = next(a for a in captured["args"] if a.startswith("body="))
+    assert "#344" in body_field and "#345" in body_field
+    assert "#999" not in body_field  # not a child of 342
+
+
+# --- refresh: failure-posture-neutral ------------------------------------
+
+
+def test_refresh_failed_read_is_failed_not_duplicate_post(containment, monkeypatch) -> None:
+    """A failed comment-LIST read must NOT be treated as 'no comment' (which would
+    duplicate-post) — it is FAILED, non-fatal to the caller."""
+    def fake_gh(args, config):
+        joined = " ".join(args)
+        if "/comments" in joined and "--paginate" in args:
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr="transient")
+        if "--paginate" in args:
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 404")
+        raise AssertionError("must not write when the comment list is unreadable")
+
+    monkeypatch.setattr(containment, "_gh_call", fake_gh)
+    result = containment.refresh_children_comment(
+        {}, parent_number=342, corpus={344: "Feature: #342\n"}, containment_mode="textual"
+    )
+    assert result.outcome is containment.RefreshOutcome.FAILED
+    assert result.ok is False
+
+
+def test_refresh_write_failure_is_failed_not_raised(containment, monkeypatch) -> None:
+    def fake_gh(args, config):
+        joined = " ".join(args)
+        if "/comments" in joined and "--paginate" in args:
+            return subprocess.CompletedProcess(args, 0, stdout="[]", stderr="")
+        if "--paginate" in args:
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 404")
+        return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 500")
+
+    monkeypatch.setattr(containment, "_gh_call", fake_gh)
+    result = containment.refresh_children_comment(
+        {}, parent_number=342, corpus={344: "Feature: #342\n"}, containment_mode="textual"
+    )
+    assert result.outcome is containment.RefreshOutcome.FAILED
+
+
+def test_create_issue_routes_children_view_through_the_primitive() -> None:
+    """create-issue's textual-mode --parent path obtains the children-view refresh
+    from the primitive (half a for the create site), not an inline comment build."""
+    create_src = (SCRIPTS / "create-issue.py").read_text(encoding="utf-8")
+    assert "refresh_children_comment" in create_src
+
+
+# =========================================================================
 # Half (b) — the grep/AST guard
 # =========================================================================
 #
-# Recognises the covered write OPERATION over a resolved argv: `gh api` carrying
-# a `…/sub_issues` POST path. A read (no `-X POST` / no POST) does not match; a
-# coincidental token list does not match.
+# Recognises the covered write OPERATIONS over a resolved argv:
+#   (1) `gh api` carrying a `…/sub_issues` POST path (the native containment
+#       link write — #344), and
+#   (2) `gh api` carrying a `…/comments` POST-or-PATCH path (the render-on-demand
+#       textual children-view write — DEC-039 D4 / ADR-035 section 4).
+# Both are constructed ONLY by the seam (`_lib/containment.py`); any inline build
+# elsewhere is flagged. A read (no POST/PATCH marker) does not match; a
+# coincidental token list does not match; `gh issue comment` (a different verb,
+# used by handoff for an APPEND audit comment, not the `gh api` children-view
+# write) is not the covered operation and does not match.
 
 
 GH = "gh"
 API_SUBCOMMAND = "api"
 SUB_ISSUES_PATH_MARKER = "/sub_issues"
+COMMENTS_PATH_MARKER = "/comments"
 POST_MARKERS = ("POST",)
+# The children-view write is the OVERWRITE (PATCH) of an existing comment OR the
+# POST of the first one — both are the covered children-view write operation.
+COMMENT_WRITE_MARKERS = ("POST", "PATCH")
 
 
 def _all_scanned_scripts() -> list[Path]:
@@ -493,6 +812,25 @@ def _is_sub_issue_write(elements: list[str | None]) -> bool:
     return has_path and has_post
 
 
+def _is_children_comment_write(elements: list[str | None]) -> bool:
+    """`gh api … POST|PATCH …/comments` recognised as an operation.
+
+    The render-on-demand children-view write (DEC-039 D4 / ADR-035 section 4):
+    requires the `gh api` subcommand run, a literal carrying the `/comments`
+    path, AND a POST or PATCH marker (the create or the overwrite). A bare `gh api
+    --paginate …/comments` GET (the find-existing LIST read) lacks the write
+    marker and does NOT match — only the WRITE is covered. `gh issue comment`
+    (handoff's append audit comment) is a different verb (`issue comment`, not
+    `api`) and is not the covered operation.
+    """
+    literals = _literals(elements)
+    if not _has_subsequence(literals, (GH, API_SUBCOMMAND)):
+        return False
+    has_path = any(COMMENTS_PATH_MARKER in lit for lit in literals)
+    has_write = any(marker in literals for marker in COMMENT_WRITE_MARKERS)
+    return has_path and has_write
+
+
 def _candidate_argvs(
     tree: ast.AST,
     names: dict[str, str],
@@ -515,12 +853,22 @@ def _violations(path: Path) -> list[str]:
     out: list[str] = []
     seen: set[int] = set()
     for lineno, elements in _candidate_argvs(tree, names, accumulated):
-        if _is_sub_issue_write(elements) and lineno not in seen:
+        if lineno in seen:
+            continue
+        if _is_sub_issue_write(elements):
             seen.add(lineno)
             out.append(
                 f"{path.name}:{lineno}: inline native sub-issue write "
                 f"(`gh api … POST …/sub_issues`) — route through "
                 f"_lib.containment.add_sub_issue_args / link_sub_issue"
+            )
+        elif _is_children_comment_write(elements):
+            seen.add(lineno)
+            out.append(
+                f"{path.name}:{lineno}: inline children-view comment write "
+                f"(`gh api … POST|PATCH …/comments`) — route through "
+                f"_lib.containment.create_comment_args / update_comment_args / "
+                f"refresh_children_comment"
             )
     return out
 
@@ -618,3 +966,57 @@ def test_guard_does_not_overfire_on_coincidental_token_lists(tmp_path: Path) -> 
 def test_guard_leaves_seam_routed_create_issue_clean() -> None:
     """The live create-issue file routes through the seam — no inline write."""
     assert not _violations(SCRIPTS / "create-issue.py")
+
+
+# --- children-view comment write: the second covered operation -----------
+
+
+def test_guard_detects_inline_children_comment_post(tmp_path: Path) -> None:
+    """An inline `gh api … POST …/comments` build (the children-view CREATE) is
+    flagged — it must route through the seam."""
+    bad = _violations_for_source(
+        tmp_path, "bad_comment_post.py",
+        'args = ["gh", "api", "-X", "POST", '
+        '"repos/{owner}/{repo}/issues/342/comments", "-f", f"body={text}"]\n',
+    )
+    assert bad, "guard failed to flag an inline children-comment POST"
+
+
+def test_guard_detects_inline_children_comment_patch(tmp_path: Path) -> None:
+    """An inline `gh api … PATCH …/comments` build (the children-view OVERWRITE)
+    is flagged — the overwrite is as much a covered write as the create."""
+    bad = _violations_for_source(
+        tmp_path, "bad_comment_patch.py",
+        'args = ["gh", "api", "-X", "PATCH", '
+        'f"repos/{{owner}}/{{repo}}/issues/comments/{cid}", "-f", body]\n',
+    )
+    assert bad, "guard failed to flag an inline children-comment PATCH"
+
+
+def test_guard_does_not_flag_the_comment_list_read(tmp_path: Path) -> None:
+    """The find-existing READ (`gh api --paginate …/comments`, no POST/PATCH) is
+    NOT a covered write — only the write is flagged."""
+    read = _violations_for_source(
+        tmp_path, "comment_read.py",
+        'args = ["gh", "api", "--paginate", '
+        '"repos/{owner}/{repo}/issues/342/comments"]\n',
+    )
+    assert not read, "guard over-fired on a `/comments` GET read (no write marker)"
+
+
+def test_guard_does_not_flag_gh_issue_comment_verb(tmp_path: Path) -> None:
+    """`gh issue comment` (handoff's append audit comment) is a DIFFERENT verb,
+    not the `gh api …/comments` children-view write — it must not be flagged."""
+    other = _violations_for_source(
+        tmp_path, "issue_comment.py",
+        'cmd = ["gh", "issue", "comment", str(n), "--body", body]\n',
+    )
+    assert not other, "guard over-fired on `gh issue comment` (a different verb)"
+
+
+def test_seam_constructs_the_children_comment_write() -> None:
+    """The seam is the one place the children-comment write is built — it MUST
+    contain a covered children-comment write construction (excluded from the scan
+    by name)."""
+    src = SEAM_MODULE.read_text(encoding="utf-8")
+    assert "/comments" in src and "PATCH" in src

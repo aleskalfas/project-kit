@@ -49,7 +49,9 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
+from _lib import axis_labels  # noqa: E402
 from _lib import containment  # noqa: E402
+from _lib import session_guard  # noqa: E402
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
@@ -125,6 +127,19 @@ def main() -> int:
             f"(default: <repo-root>/.pkit/capabilities/{CAPABILITY_NAME}/)."
         ),
     )
+    parser.add_argument(
+        "--refresh-children-views",
+        action="store_true",
+        help=(
+            "TEXTUAL-mode only: refresh each parent's render-on-demand "
+            "do-not-edit children comment (DEC-039 D4 / ADR-035) by full "
+            "overwrite — the explicit refresh path for the parent-side children "
+            "view where the tracker has no native sub-issues panel. Idempotent "
+            "(unchanged child sets are skipped); a no-op in native mode. "
+            "WRITES comments — refused under a foreign-repo session."
+        ),
+    )
+    session_guard.add_override_argument(parser)
     args = parser.parse_args()
 
     capability_root = resolve_capability_root(args.capability_root)
@@ -165,6 +180,18 @@ def main() -> int:
 
     orphans = _detect_orphans(issues, prs)
     tree = _build_tree(issues)
+
+    # Explicit refresh path for the render-on-demand textual children view
+    # (DEC-039 D4 / ADR-035 section 4). In `textual` mode each parent has no
+    # native sub-issues panel, so its parent-side children view is a generated
+    # do-not-edit comment refreshed by full overwrite. show-tree already resolved
+    # every parent's children through the seam (above); --refresh-children-views
+    # writes those resolutions back as comments. A WRITE — gated by the
+    # foreign-repo session guard; a no-op in native mode (the writer's mode gate).
+    if args.refresh_children_views:
+        if not session_guard.enforce(override=args.allow_foreign_repo):
+            return 1
+        _refresh_children_views(issues, capability_root, config)
 
     if args.format == "json":
         out = {
@@ -297,6 +324,50 @@ def _link_parents(issues: dict[int, Issue], config: dict) -> None:
             issues[child.number].parent_number = num
             issue.children.append(child.number)
             issue.child_substrate[child.number] = child.substrate.value
+
+
+def _refresh_children_views(
+    issues: dict[int, Issue], capability_root: Path, config: dict
+) -> None:
+    """Refresh every parent's render-on-demand children comment (textual mode).
+
+    The explicit refresh path for the textual children view (DEC-039 D4 / ADR-035
+    section 4). Routes each parent through the one writer
+    (`containment.refresh_children_comment`), which mode-gates (no-op in native),
+    renders from the seam, finds the existing marked comment, and overwrites it
+    (or creates one) — never an append, idempotent on an unchanged child set.
+
+    The mode gate lives inside the writer: it is consulted once here (so a native
+    repo short-circuits to a single advisory line rather than one no-op call per
+    parent), and the writer re-checks it defensively per call. Failure-posture-
+    neutral — every outcome is a one-line note; none aborts the walk.
+    """
+    mode = axis_labels.containment_mode(capability_root)
+    if mode != axis_labels.CONTAINMENT_TEXTUAL:
+        print(
+            f"[skip] containment is {mode!r}; children-view refresh is a no-op "
+            "(the native sub-issues panel gives parent-side visibility).",
+            file=sys.stderr,
+        )
+        return
+    corpus = {num: issue.body for num, issue in issues.items()}
+    titles = {num: issue.title for num, issue in issues.items() if issue.title}
+    # Only parents that resolved at least one child get a view — a parent with no
+    # children needs no children comment (and the seam would render an empty one).
+    parents = sorted(num for num, issue in issues.items() if issue.children)
+    if not parents:
+        print("[ok] no parents with children to refresh.", file=sys.stderr)
+        return
+    for parent in parents:
+        result = containment.refresh_children_comment(
+            config,
+            parent_number=parent,
+            corpus=corpus,
+            containment_mode=mode,
+            titles=titles,
+        )
+        prefix = "[ok]" if result.ok else "[warn]"
+        print(f"{prefix} {result.detail}", file=sys.stderr)
 
 
 def _first_parent_ref(body: str) -> int | None:

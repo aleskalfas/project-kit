@@ -51,6 +51,7 @@ from ruamel.yaml.error import YAMLError
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import axis_labels  # noqa: E402
+from _lib import containment  # noqa: E402
 from _lib.containment import link_sub_issue  # noqa: E402
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 from _lib.hooks import fire_hooks  # noqa: E402
@@ -523,6 +524,19 @@ def main() -> int:
             f"textual parent-ref to #{args.parent} recorded as the containment record",
             file=sys.stderr,
         )
+        # Render-on-demand textual children view (DEC-039 D4 / ADR-035 section 4):
+        # in textual mode the parent has no native sub-issues panel, so refresh
+        # its generated do-not-edit children comment now that this child's textual
+        # ref is written. Full overwrite of the one marked comment (never an
+        # append); failure-posture-neutral — a failed refresh is a one-line note,
+        # never a create failure (the textual ref is the spine). The mode gate
+        # lives inside `refresh_children_comment`; we are already on the textual
+        # arm, so the call writes.
+        _refresh_parent_children_view(
+            config,
+            parent_number=args.parent,
+            containment_mode=containment,
+        )
 
     # Auto-add to board for board-substrate adopters (per DEC-019).
     #
@@ -671,6 +685,84 @@ def _extract_issue_number_from_url(url: str) -> int | None:
     """Parse the trailing issue number from `gh issue create`'s URL output."""
     m = re.search(r"/issues/(\d+)(?:[/?#].*)?$", url.strip())
     return int(m.group(1)) if m else None
+
+
+def _refresh_parent_children_view(
+    config: dict,
+    *,
+    parent_number: int,
+    containment_mode: str,
+) -> None:
+    """Refresh the parent's render-on-demand children comment in textual mode.
+
+    The create-side refresh TRIGGER for the textual children view (DEC-039 D4 /
+    ADR-035 section 4). Fetches the issue corpus (``{number: body}`` — the textual
+    side of `resolve_children` costs no extra API calls once it is in hand) and a
+    parallel ``{number: title}`` map for nicer rendering, then routes through the
+    one writer (`containment.refresh_children_comment`), which renders, finds the
+    existing marked comment, and overwrites it (or creates one) — never an append,
+    idempotent when the child set is unchanged.
+
+    Failure-posture-neutral: every outcome is reported as a one-line stderr note
+    and NONE fails the create (the child-side textual ref is the spine). A corpus
+    fetch that fails degrades to a corpus carrying just this parent + nothing else,
+    so the render still runs (the textual side simply finds no children there) —
+    but in practice the new child is in the corpus, so the view reflects it.
+    """
+    corpus, titles = _fetch_issue_corpus(config)
+    result = containment.refresh_children_comment(
+        config,
+        parent_number=parent_number,
+        corpus=corpus,
+        containment_mode=containment_mode,
+        titles=titles,
+    )
+    prefix = "[ok]" if result.ok else "[warn]"
+    print(f"{prefix} {result.detail}", file=sys.stderr)
+
+
+def _fetch_issue_corpus(config: dict) -> tuple[dict[int, str], dict[int, str]]:
+    """Fetch ``({number: body}, {number: title})`` for the open issue corpus.
+
+    Used by the children-view refresh so `resolve_children` resolves the textual
+    side (child bodies naming the parent) with no per-issue API call. Reads via
+    `gh issue list --json number,body,title` through the gh helper (DEC-023
+    host/owner pinning). Returns two empty maps on any failure — the caller's
+    refresh is failure-posture-neutral, so a missing corpus degrades to an
+    empty-children render rather than an error.
+    """
+    try:
+        proc = gh_run(
+            [
+                "gh", "issue", "list",
+                "--state", "all",
+                "--limit", "1000",
+                "--json", "number,body,title",
+            ],
+            config,
+            check=False,
+        )
+    except FileNotFoundError:
+        return {}, {}
+    if proc.returncode != 0:
+        return {}, {}
+    try:
+        rows = json.loads(proc.stdout)
+    except (json.JSONDecodeError, ValueError):
+        return {}, {}
+    corpus: dict[int, str] = {}
+    titles: dict[int, str] = {}
+    for row in rows if isinstance(rows, list) else []:
+        if not isinstance(row, dict):
+            continue
+        number = row.get("number")
+        if not isinstance(number, int):
+            continue
+        corpus[number] = str(row.get("body") or "")
+        title = row.get("title")
+        if isinstance(title, str) and title:
+            titles[number] = title
+    return corpus, titles
 
 
 def _resolve_repo_name_with_owner_safe() -> str:

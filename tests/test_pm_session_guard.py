@@ -518,7 +518,10 @@ _READ_ONLY_EXEMPT = frozenset(
         "show-issue.py",
         "show-members.py",
         "show-pr.py",
-        "show-tree.py",
+        # show-tree.py is NOT exempt: it is read-only by default, but its
+        # --refresh-children-views flag WRITES the render-on-demand textual
+        # children comments (DEC-039 D4 / ADR-035), so it enforces the foreign-repo
+        # guard on that path and belongs in the asserted-total mutator scan.
         "show-workstream.py",
         # adopt-existing only ever writes a DRAFT to an explicit `--out` path
         # (and refuses the live map); it resolves no live write target from cwd,
