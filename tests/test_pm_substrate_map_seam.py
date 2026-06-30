@@ -52,6 +52,7 @@ AUJ_MAP = axis_labels.SubstrateMap(
         },
     },
     hierarchy="advisory",  # AUJ is a flat tracker (DEC-036 D4).
+    containment="textual",  # AUJ's instance has no native sub-issues (DEC-039 D2).
 )
 
 
@@ -149,6 +150,67 @@ def test_hierarchy_does_not_affect_axis_disposition() -> None:
         hierarchy="gated",
     )
     for m in (advisory, gated):
+        assert axis_labels.axis_disposition("priority", m) == "served"
+        assert axis_labels.axis_disposition("workstream", m) == "unsupported"
+
+
+# --- the containment declaration: containment_mode (DEC-039 D2 / ADR-035) --
+
+
+def test_no_map_containment_is_native() -> None:
+    """No substrate-map ⇒ greenfield: containment is native (the native sub-issue
+    link fires exactly as today, byte-unchanged)."""
+    assert axis_labels.containment_mode(None) == "native"
+
+
+def test_textual_map_containment_is_textual() -> None:
+    assert axis_labels.containment_mode(AUJ_MAP) == "textual"
+
+
+def test_present_map_without_containment_key_is_native() -> None:
+    """A present map that binds axes but declares no `containment:` keeps the
+    native default — an OMITTED containment key is NOT textual (the safe direction
+    toward the methodology ideal, unlike absent-axis ≡ unsupported)."""
+    no_key = axis_labels.SubstrateMap(axes={"priority": {"label": {"remap": {"High": "P0"}}}})
+    assert no_key.containment == "native"
+    assert axis_labels.containment_mode(no_key) == "native"
+
+
+def test_explicit_native_map_is_native() -> None:
+    native = axis_labels.SubstrateMap(axes={}, containment="native")
+    assert axis_labels.containment_mode(native) == "native"
+
+
+def test_containment_mode_accepts_a_parsed_map_or_none() -> None:
+    """The helper takes either a parsed SubstrateMap or None directly (the
+    in-process call shape callers use after loading the map once)."""
+    assert axis_labels.containment_mode(AUJ_MAP) == "textual"
+    assert axis_labels.containment_mode(None) == "native"
+
+
+def test_parse_containment_fails_safe_to_native() -> None:
+    """A mistyped / absent containment value parses to native, never textual — a
+    typo must not silently suppress the native sub-issue link."""
+    assert axis_labels._parse_containment("textual") == "textual"
+    assert axis_labels._parse_containment("native") == "native"
+    assert axis_labels._parse_containment("none") == "native"
+    assert axis_labels._parse_containment(None) == "native"
+    assert axis_labels._parse_containment("") == "native"
+
+
+def test_containment_does_not_affect_axis_disposition() -> None:
+    """Containment mode is ORTHOGONAL to axis disposition — declaring textual does
+    not change whether an axis is served/unsupported (containment substrate vs.
+    label substrate are separate questions)."""
+    textual = axis_labels.SubstrateMap(
+        axes={"priority": {"label": {"remap": {"High": "P0"}}}, "workstream": {"unsupported": True}},
+        containment="textual",
+    )
+    native = axis_labels.SubstrateMap(
+        axes={"priority": {"label": {"remap": {"High": "P0"}}}, "workstream": {"unsupported": True}},
+        containment="native",
+    )
+    for m in (textual, native):
         assert axis_labels.axis_disposition("priority", m) == "served"
         assert axis_labels.axis_disposition("workstream", m) == "unsupported"
 
