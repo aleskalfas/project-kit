@@ -3348,3 +3348,221 @@ def test_diagnose_report_cd_prefix_segment_not_counted_as_gap(tmp_path, monkeypa
     out = _run(proj, monkeypatch, "diagnose", "report")
     assert "1 allowlisted-but-compound" in out
     assert "0 genuinely-missing" in out
+
+
+# ---- overlay-override detection + consent-gated removal (#399) ---------------
+#
+# `setup autonomy` detects per-machine overlay (settings.local.json) attributes
+# that override the intended (platform-aware) posture, warns loudly, and offers
+# to remove them — consent-gated, editing ONLY the gitignored local file.
+
+def _force_platform(monkeypatch, plat: str) -> None:
+    """Pin sys.platform so the platform-aware intended posture is deterministic
+    (`_intended_sandbox_on` reads it). 'linux' = sandbox viable (intended ON);
+    'darwin' = macOS (intended OFF per #336)."""
+    monkeypatch.setattr("sys.platform", plat)
+
+
+def _write_local(proj: Path, data: dict) -> None:
+    (proj / ".claude").mkdir(parents=True, exist_ok=True)
+    (proj / ".claude" / "settings.local.json").write_text(json.dumps(data, indent=2) + "\n")
+
+
+def test_detect_enabled_false_is_override_on_viable_platform(tmp_path, monkeypatch):
+    # On a platform where the sandbox works, a local `enabled: false` defeats the
+    # confinement half of the posture → flagged as an OVERRIDE.
+    proj = _with_adapter(_setup(tmp_path))
+    _force_platform(monkeypatch, "linux")
+    _write_local(proj, {"sandbox": {"enabled": False}})
+    findings = _perm._detect_overlay_overrides(proj)
+    assert [f.key for f in findings] == ["enabled"]
+    assert findings[0].kind == "override"
+
+
+def test_detect_enabled_false_not_flagged_on_macos(tmp_path, monkeypatch):
+    # On macOS the intended posture is sandbox-OFF (#336), so a local
+    # `enabled: false` AGREES with intent — NOT an override.
+    proj = _with_adapter(_setup(tmp_path))
+    _force_platform(monkeypatch, "darwin")
+    _write_local(proj, {"sandbox": {"enabled": False}})
+    assert _perm._detect_overlay_overrides(proj) == []
+
+
+def test_detect_enabled_true_is_override_on_macos(tmp_path, monkeypatch):
+    # The platform-aware mirror image: on macOS, a local `enabled: true` turns on
+    # a box that bricks the kit's own tools → an OVERRIDE (intended is OFF).
+    proj = _with_adapter(_setup(tmp_path))
+    _force_platform(monkeypatch, "darwin")
+    _write_local(proj, {"sandbox": {"enabled": True}})
+    findings = _perm._detect_overlay_overrides(proj)
+    assert [f.key for f in findings] == ["enabled"]
+    assert findings[0].kind == "override"
+
+
+def test_detect_unseal_is_override(tmp_path, monkeypatch):
+    # `allowUnsandboxedCommands: true` un-seals the strict seal (ADR-028) on any
+    # platform → an OVERRIDE.
+    proj = _with_adapter(_setup(tmp_path))
+    _force_platform(monkeypatch, "linux")
+    _write_local(proj, {"sandbox": {"enabled": True, "allowUnsandboxedCommands": True}})
+    findings = _perm._detect_overlay_overrides(proj)
+    assert [f.key for f in findings] == ["allowUnsandboxedCommands"]
+    assert findings[0].kind == "override"
+
+
+def test_detect_excluded_commands_is_cruft_when_box_off(tmp_path, monkeypatch):
+    # A leftover excludedCommands list with the box off confines nothing → CRUFT,
+    # labelled distinctly from a posture-defeating override.
+    proj = _with_adapter(_setup(tmp_path))
+    _force_platform(monkeypatch, "darwin")  # intended off → box off
+    _write_local(proj, {"sandbox": {"excludedCommands": ["uv", "gh"]}})
+    findings = _perm._detect_overlay_overrides(proj)
+    assert [f.key for f in findings] == ["excludedCommands"]
+    assert findings[0].kind == "cruft"
+
+
+def test_detect_excluded_commands_not_cruft_when_box_intended_on(tmp_path, monkeypatch):
+    # On a viable platform with the box on, excludedCommands is a live exclusion,
+    # not dead cruft — left alone.
+    proj = _with_adapter(_setup(tmp_path))
+    _force_platform(monkeypatch, "linux")
+    _write_local(proj, {"sandbox": {"enabled": True, "excludedCommands": ["uv"]}})
+    assert _perm._detect_overlay_overrides(proj) == []
+
+
+def test_detect_clean_local_finds_nothing(tmp_path, monkeypatch):
+    proj = _with_adapter(_setup(tmp_path))
+    _force_platform(monkeypatch, "linux")
+    # An aligned local file (box on, sealed) is the intended posture — no findings.
+    _write_local(proj, {"sandbox": {"enabled": True, "allowUnsandboxedCommands": False}})
+    assert _perm._detect_overlay_overrides(proj) == []
+
+
+def test_remove_whole_file_when_purely_overriding(tmp_path, monkeypatch):
+    # Local file holds ONLY overriding attributes → whole-file removal.
+    proj = _with_adapter(_setup(tmp_path))
+    _force_platform(monkeypatch, "linux")
+    _write_local(proj, {"sandbox": {"enabled": False}})
+    findings = _perm._detect_overlay_overrides(proj)
+    assert _perm._local_is_purely_overriding(proj, findings) is True
+    reports = _perm._remove_overlay_overrides(proj, findings)
+    assert any("whole" in r for r in reports)
+    assert not (proj / ".claude" / "settings.local.json").is_file()
+
+
+def test_remove_attributes_only_preserves_other_keys(tmp_path, monkeypatch):
+    # Local file carries legit config alongside the override → strip ONLY the
+    # override key, leaving the rest byte-faithful (other sandbox keys + a
+    # top-level permissions block survive verbatim).
+    proj = _with_adapter(_setup(tmp_path))
+    _force_platform(monkeypatch, "linux")
+    _write_local(proj, {
+        "sandbox": {"enabled": True, "allowUnsandboxedCommands": True,
+                    "network": {"allowedHosts": ["example.com"]}},
+        "permissions": {"allow": ["Bash(ls:*)"]},
+    })
+    findings = _perm._detect_overlay_overrides(proj)
+    assert _perm._local_is_purely_overriding(proj, findings) is False
+    _perm._remove_overlay_overrides(proj, findings)
+    data = json.loads((proj / ".claude" / "settings.local.json").read_text())
+    assert "allowUnsandboxedCommands" not in data["sandbox"]   # the override is gone
+    assert data["sandbox"]["enabled"] is True                  # untouched
+    assert data["sandbox"]["network"] == {"allowedHosts": ["example.com"]}  # verbatim
+    assert data["permissions"] == {"allow": ["Bash(ls:*)"]}    # unrelated key preserved
+
+
+def test_removal_idempotent_after_clean(tmp_path, monkeypatch):
+    proj = _with_adapter(_setup(tmp_path))
+    _force_platform(monkeypatch, "linux")
+    _write_local(proj, {"sandbox": {"enabled": False}})
+    findings = _perm._detect_overlay_overrides(proj)
+    _perm._remove_overlay_overrides(proj, findings)
+    # Re-detect on the cleaned state → nothing, and a re-run is a no-op.
+    assert _perm._detect_overlay_overrides(proj) == []
+    assert _perm._remove_overlay_overrides(proj, []) == []
+
+
+def test_report_warns_loudly_and_does_not_remove_without_consent(tmp_path, monkeypatch):
+    # confirm=None → warn-only: the loud block names the attribute + the defeat,
+    # the file is untouched, and the "left in place — no consent" note shows.
+    proj = _with_adapter(_setup(tmp_path))
+    _force_platform(monkeypatch, "linux")
+    _write_local(proj, {"sandbox": {"enabled": False}})
+    findings = _perm._detect_overlay_overrides(proj)
+    lines = _perm._overlay_override_report(proj, findings, confirm=None)
+    text = "\n".join(lines)
+    assert "Overlay overrides" in text
+    assert "enabled: false" in text
+    assert "left in place — no consent" in text
+    assert (proj / ".claude" / "settings.local.json").is_file()  # not removed
+
+
+def test_report_removes_with_consent(tmp_path, monkeypatch):
+    proj = _with_adapter(_setup(tmp_path))
+    _force_platform(monkeypatch, "linux")
+    _write_local(proj, {"sandbox": {"enabled": False}})
+    findings = _perm._detect_overlay_overrides(proj)
+    lines = _perm._overlay_override_report(proj, findings, confirm=lambda _m: True)
+    assert any("removed the whole" in line for line in lines)
+    assert not (proj / ".claude" / "settings.local.json").is_file()
+
+
+def test_report_distinguishes_override_from_cruft_labels(tmp_path, monkeypatch):
+    # Both surfaced; the override gets the ✗ defeat line, the cruft the · inert line.
+    proj = _with_adapter(_setup(tmp_path))
+    _force_platform(monkeypatch, "linux")
+    # Box locally off (override on viable platform) + a dead exclusion list (cruft).
+    _write_local(proj, {"sandbox": {"enabled": False, "excludedCommands": ["uv"]}})
+    findings = _perm._detect_overlay_overrides(proj)
+    kinds = {f.key: f.kind for f in findings}
+    assert kinds == {"enabled": "override", "excludedCommands": "cruft"}
+    text = "\n".join(_perm._overlay_override_report(proj, findings, confirm=None))
+    assert "✗ local `enabled: false`" in text   # override gets the ✗ defeat marker
+    assert "· local `excludedCommands`" in text  # cruft gets the · inert marker
+    assert "inert" in text                       # cruft framing present
+
+
+def test_committed_baseline_never_touched_by_removal(tmp_path, monkeypatch):
+    # The load-bearing safety invariant: removal edits ONLY settings.local.json.
+    proj = _with_adapter(_setup(tmp_path))
+    _force_platform(monkeypatch, "linux")
+    committed_path = proj / ".claude" / "settings.json"
+    _perm._write_settings(proj, {"sandbox": {"enabled": True, "failIfUnavailable": True}})
+    before = committed_path.read_text()
+    _write_local(proj, {"sandbox": {"enabled": False, "allowUnsandboxedCommands": True}})
+    findings = _perm._detect_overlay_overrides(proj)
+    _perm._remove_overlay_overrides(proj, findings)
+    assert committed_path.read_text() == before   # byte-identical, untouched
+
+
+def test_setup_autonomy_cli_unseal_warned_then_reconciled_by_seal_reassert(tmp_path, monkeypatch):
+    # End-to-end compose with #313: a pre-existing local un-seal
+    # (`allowUnsandboxedCommands: true`) is DETECTED pre-confinement and warned
+    # loudly; the confinement step's seal re-assert (#313's auto-enforce) then
+    # flips it to false, so removal re-detects nothing and reports it reconciled.
+    # The two passes compose without double-handling — and the seal ends sealed.
+    proj = _with_adapter(_setup(tmp_path))
+    _force_platform(monkeypatch, "linux")
+    _write_local(proj, {"sandbox": {"enabled": True, "allowUnsandboxedCommands": True}})
+    out = _run(proj, monkeypatch, "setup", "autonomy", "--remove-overrides")
+    assert "Overlay overrides" in out                      # warned loudly
+    assert "allowUnsandboxedCommands: true" in out         # named the override
+    assert "already reconciled" in out                     # seal re-assert resolved it
+    assert _sb_local(proj)["allowUnsandboxedCommands"] is False  # ends SEALED
+
+
+def test_setup_autonomy_cli_warns_only_without_consent(tmp_path, monkeypatch):
+    # Without --remove-overrides and non-interactive, the run completes (no abort)
+    # and warns only. macOS: setup writes enabled:true (pre-#336), which the
+    # detector flags as a macOS override pre-confinement; warn-only leaves the
+    # local file's other keys intact and never aborts the run.
+    proj = _with_adapter(_setup(tmp_path))
+    _force_platform(monkeypatch, "darwin")
+    # An operator un-seal seeded locally → detected pre-confinement, warn-only.
+    _write_local(proj, {"sandbox": {"allowUnsandboxedCommands": True}})
+    out = _run(proj, monkeypatch, "setup", "autonomy")
+    assert "Overlay overrides" in out
+    assert "left in place — no consent" in out
+    assert _sb_local(proj)["allowUnsandboxedCommands"] is False  # seal re-assert still ran
+    # The run completed through to the verdict (no abort on the declined confirm).
+    assert "Result:" in out

@@ -3930,9 +3930,286 @@ def _required_confirm_line(cmd: str) -> str:
     )
 
 
-def setup_autonomy(target_root: Path, profile: str = "autonomous") -> tuple[str, bool]:
+# ---- overlay-override detection (#399) -------------------------------------
+#
+# `setup autonomy` establishes an INTENDED posture (ADR-028 strict seal +
+# auto-allow-when-sandboxed). The gitignored per-machine overlay
+# (`settings.local.json`, ADR-029/032) can silently carry sandbox attributes
+# that DEFEAT that posture — the honesty problem #399 fixes. This pass DETECTS
+# such attributes, classifies each as a genuine OVERRIDE (defeats the posture)
+# or inert CRUFT (harmless leftover), and — consent-gated — REMOVES them.
+#
+# Boundary vs #313: the required-for-autonomy attribute (`autoAllowBash
+# IfSandboxed`) is AUTO-enforced ON by `sandbox_enable` (loud, no ask — its
+# whole payoff). This pass handles the OTHER overrides, which may be the
+# operator's deliberate choice, so they get warn + consent-to-remove, NEVER
+# silent removal. The two compose: #313 is not in this detector's scope.
+#
+# Edits ONLY the gitignored `settings.local.json` — the committed
+# `settings.json` baseline is never read-for-write nor written here.
+
+
+def _intended_sandbox_on(target_root: Path) -> bool:
+    """The platform-correct INTENDED sandbox posture for autonomy (#336/#399).
+
+    On macOS the OS sandbox is non-viable — it bricks the kit's own `gh`/`pkit`
+    (the `excludedCommands` non-functionality + the `denyRead ~/.config/gh` vs
+    gh's own config read; #312/#336) — so the intended posture there is sandbox
+    OFF. On a platform where the box works (Linux/bubblewrap), the intended
+    posture is ON. The override detector judges against THIS, not a fixed state,
+    so `enabled: false` is flagged as an override only where the box is viable.
+
+    `target_root` is accepted for signature stability (a future per-project
+    viability signal could refine this) but is unused today — the judgement is
+    purely platform-derived."""
+    import sys as _sys
+
+    return _sys.platform != "darwin"
+
+
+# An override DEFEATS the intended posture; cruft is INERT (a harmless leftover).
+# Each finding carries: the local-file path to the attribute, a human label, the
+# class, and a remover that edits the local sandbox block in place.
+@dataclass
+class _OverlayFinding:
+    key: str            # the sandbox attribute name, for the report
+    kind: str           # "override" | "cruft"
+    current: str        # current-vs-intended summary for the loud warning
+    why: str            # how it defeats (override) or why it's dead (cruft)
+    restore: str        # how to put it back (reversibility, ADR-007)
+
+    def remove_from(self, local_sb: dict[str, Any]) -> None:
+        local_sb.pop(self.key, None)
+
+
+def _detect_overlay_overrides(target_root: Path) -> list[_OverlayFinding]:
+    """Detect per-machine overlay sandbox attributes that override or conflict
+    with the intended autonomy posture, or are inert cruft (#399).
+
+    Reads ONLY the gitignored `settings.local.json` — an attribute only defeats
+    the posture if it lives in the higher-precedence local file (the committed
+    floor IS the intended posture, never a finding). Classes handled:
+
+      - local `sandbox.enabled` conflicting with the platform-correct intended
+        state → OVERRIDE (on a viable platform `enabled: false` un-confines; on
+        macOS, where intended is OFF, `enabled: true` is the override).
+      - `sandbox.allowUnsandboxedCommands: true` → OVERRIDE: un-seals the strict
+        seal (ADR-028), re-arming the per-command `dangerouslyDisableSandbox`
+        escape autonomy mode exists to inert.
+      - `sandbox.excludedCommands` while the effective sandbox is OFF → CRUFT: a
+        dead exclusion list (nothing is confined, so nothing is excluded-from).
+
+    Order is stable (enabled, seal, then cruft) so the report and removal are
+    deterministic."""
+    local_sb = _sandbox_block_in(_read_settings_local(target_root))
+    if not local_sb:
+        return []
+    intended_on = _intended_sandbox_on(target_root)
+    findings: list[_OverlayFinding] = []
+
+    # --- enabled: conflicts with the platform-correct intended state ----------
+    if "enabled" in local_sb and bool(local_sb.get("enabled")) is not intended_on:
+        if intended_on:
+            findings.append(_OverlayFinding(
+                key="enabled",
+                kind="override",
+                current="local `enabled: false` (intended: true on this platform)",
+                why="leaves the box OFF — commands run unconfined, defeating the "
+                    "confinement half of the autonomy posture",
+                restore="re-run `pkit permissions setup autonomy`, or "
+                        "`pkit permissions sandbox enable`",
+            ))
+        else:
+            findings.append(_OverlayFinding(
+                key="enabled",
+                kind="override",
+                current="local `enabled: true` (intended: false on macOS — #336)",
+                why="turns ON a sandbox that bricks the kit's own `gh`/`pkit` on "
+                    "macOS (non-functional excludedCommands; denyRead vs gh config)",
+                restore="`pkit permissions sandbox disable`",
+            ))
+
+    # --- allowUnsandboxedCommands: true → un-seals the strict seal (ADR-028) ---
+    if local_sb.get("allowUnsandboxedCommands") is True:
+        findings.append(_OverlayFinding(
+            key="allowUnsandboxedCommands",
+            kind="override",
+            current="local `allowUnsandboxedCommands: true` (intended: false — the seal)",
+            why="un-seals the strict seal (ADR-028) — re-arms the per-command "
+                "`dangerouslyDisableSandbox` escape autonomy mode seals shut",
+            restore="re-run `pkit permissions setup autonomy` (re-asserts the seal), "
+                    "or `pkit permissions sandbox enable --strict`",
+        ))
+
+    # --- excludedCommands while the box is OFF → inert cruft -------------------
+    # The effective box is off when intended-off OR a local `enabled: false`
+    # holds it off. A dead exclusion list confines nothing; surfaced as tidy-up,
+    # not autonomy-restoring.
+    box_off = (not intended_on) or (local_sb.get("enabled") is False)
+    if box_off and local_sb.get("excludedCommands"):
+        n = len(local_sb["excludedCommands"])
+        findings.append(_OverlayFinding(
+            key="excludedCommands",
+            kind="cruft",
+            current=f"local `excludedCommands` ({n} entr{'y' if n == 1 else 'ies'}) "
+                    "with the sandbox off",
+            why="inert — nothing is confined, so the exclusion list affects nothing "
+                "(a harmless leftover)",
+            restore="(none needed — it was inert; re-add via `pkit permissions "
+                    "sandbox exclude <cmd>` if you later confine)",
+        ))
+
+    return findings
+
+
+def _local_is_purely_overriding(target_root: Path, findings: list[_OverlayFinding]) -> bool:
+    """True when, after removing every finding's attribute, the whole
+    `settings.local.json` carries NOTHING ELSE of value — so the consent-gated
+    removal can drop the WHOLE file rather than rewrite an empty husk (#399's
+    whole-file-vs-attributes rule). Computed on a deep copy; never mutates."""
+    import copy
+
+    data = copy.deepcopy(_read_settings_local(target_root))
+    local_sb = data.get("sandbox")
+    if isinstance(local_sb, dict):
+        for f in findings:
+            f.remove_from(local_sb)
+        if not local_sb:
+            data.pop("sandbox", None)
+    return not data
+
+
+def _remove_overlay_overrides(
+    target_root: Path, findings: list[_OverlayFinding]
+) -> list[str]:
+    """Apply the consent-gated removal of detected overlay attributes (#399).
+
+    Whole-file when the local file is purely overriding attributes (nothing of
+    value remains); otherwise strip ONLY the finding attributes, leaving every
+    other local key BYTE-FAITHFUL (we mutate the parsed dict and re-serialize,
+    touching no key we did not pop). Edits ONLY the gitignored
+    `settings.local.json` — the committed baseline is never opened for write.
+
+    Returns one report line per removal. Idempotent by construction: called only
+    with a non-empty `findings`, and `_detect_overlay_overrides` returns []
+    once the attributes are gone, so a re-run finds nothing to remove."""
+    if not findings:
+        return []
+    reports: list[str] = []
+    if _local_is_purely_overriding(target_root, findings):
+        path = _settings_local_path(target_root)
+        if path.is_file():
+            path.unlink()
+        reports.append(
+            "removed the whole `settings.local.json` — it held only "
+            "posture-overriding attributes (nothing else of value)"
+        )
+        return reports
+
+    # Attributes-only: strip just the finding keys, preserve the rest exactly.
+    data = _read_settings_local(target_root)
+    local_sb = data.get("sandbox")
+    if isinstance(local_sb, dict):
+        for f in findings:
+            if f.key in local_sb:
+                f.remove_from(local_sb)
+                reports.append(
+                    f"removed `sandbox.{f.key}` from settings.local.json "
+                    f"({'restore: ' + f.restore if f.kind == 'override' else 'inert cruft'})"
+                )
+        if not local_sb:
+            data.pop("sandbox", None)
+    _write_settings_local(target_root, data)
+    return reports
+
+
+def _overlay_override_report(
+    target_root: Path,
+    findings: list[_OverlayFinding],
+    *,
+    confirm: Callable[[str], bool] | None,
+) -> list[str]:
+    """The loud warning block + consent-gated removal for detected overlay
+    overrides (#399). Names each attribute, current-vs-intended, and how it
+    defeats (or, for cruft, why it's inert) — the COR-028 honesty discipline.
+
+    Consent gate: removal happens ONLY when `confirm` is supplied AND returns
+    True. `confirm` is NOT wired to a blanket `--yes` (the trust-gesture
+    exemption — removing the operator's local config is a destructive gesture);
+    without consent this is warn-only and the attributes are left in place.
+    Returns report lines for the `setup autonomy` output."""
+    if not findings:
+        return []
+    overrides = [f for f in findings if f.kind == "override"]
+    cruft = [f for f in findings if f.kind == "cruft"]
+    lines = [
+        "",
+        "  " + cli_render.style(
+            "heading",
+            "Overlay overrides (settings.local.json silently fights the posture)",
+        ),
+    ]
+    for f in overrides:
+        lines.append(f"    ✗ {f.current}")
+        lines.append(f"      → {f.why}")
+    for f in cruft:
+        lines.append(f"    · {f.current}")
+        lines.append(f"      → {f.why}")
+
+    label_remove = "remove to restore autonomy" if overrides else "remove to tidy"
+    label_cruft = " + tidy inert cruft" if (overrides and cruft) else ""
+    prompt = (
+        "\n".join(lines)
+        + "\n\n"
+        + f"  Remove {'these attributes' if len(findings) > 1 else 'this attribute'} "
+        + f"from settings.local.json ({label_remove}{label_cruft})? "
+        + "Only the gitignored per-machine file is touched; the committed "
+        + "baseline is never changed."
+    )
+
+    if confirm is None or not confirm(prompt):
+        lines.append("")
+        lines.append(
+            "    (left in place — no consent. Re-run with consent, or "
+            "`pkit permissions setup autonomy --remove-overrides`, to reconcile.)"
+        )
+        return lines
+
+    # Re-detect at removal time so we strip only what is STILL a finding on the
+    # live local file. In the autonomy flow the confinement step may have already
+    # reconciled a finding between detection and here (e.g. the seal re-assert,
+    # #313's auto-enforce, flipping `allowUnsandboxedCommands` to false) — that
+    # one is no longer an override and must not be removed. The re-detect makes
+    # the two passes compose without double-handling.
+    live = _detect_overlay_overrides(target_root)
+    removed = _remove_overlay_overrides(target_root, live)
+    if not removed:
+        lines.append("")
+        lines.append(
+            "    ✓ already reconciled — nothing left to remove "
+            "(the posture write resolved the conflict)"
+        )
+        return lines
+    lines.append("")
+    for r in removed:
+        lines.append(f"    ✓ {r}")
+    return lines
+
+
+def setup_autonomy(
+    target_root: Path,
+    profile: str = "autonomous",
+    *,
+    confirm: Callable[[str], bool] | None = None,
+) -> tuple[str, bool]:
     """Stand up the autonomy goal (ADR-007 first instance). Returns (report, ok);
-    ok is False only when verification finds the decision layer BROKEN."""
+    ok is False only when verification finds the decision layer BROKEN.
+
+    `confirm` (#399) gates the consent-driven removal of overlay attributes that
+    override the intended posture. It is deliberately NOT wired to a blanket
+    `--yes`: removing the operator's per-machine config is a destructive gesture
+    (the trust-gesture exemption). When `confirm` is None, the overrides are
+    warned-about loudly but left in place."""
     lines = [
         f"Setup goal: autonomy — autonomous agents (ADR-007)   profile: {profile}",
         "",
@@ -3977,6 +4254,12 @@ def setup_autonomy(target_root: Path, profile: str = "autonomous") -> tuple[str,
     # agent cannot silently disable the box. The seal is the existing primitive's
     # effect (no new writer, "owns nothing" per ADR-007 rule 2), reversible by
     # turning strict off (`sandbox enable` without --strict, or autonomy down).
+    # Overlay-override detection (#399) runs on the PRE-confinement local state,
+    # so it reports the operator's OWN overlay attributes (not pkit's about-to-be
+    # written confinement values). The loud report + consent-gated removal is held
+    # for the action blocks below; removal edits ONLY the gitignored local file.
+    overlay_findings = _detect_overlay_overrides(target_root)
+
     sb = _sandbox_block(target_root)
     was_on = sb.get("enabled") is True
     sealed = sb.get("allowUnsandboxedCommands") is False
@@ -4031,8 +4314,16 @@ def setup_autonomy(target_root: Path, profile: str = "autonomous") -> tuple[str,
                                     "Required exclusion (platform-mandatory; pkit applied it for you)"),
             *required_lines,
         ]
+    # Overlay-override report + consent-gated removal (#399), on the findings
+    # captured PRE-confinement above. Held with the other action blocks so it
+    # doesn't interrupt the [3/4]→[4/4] spine. Edits only the gitignored
+    # per-machine file; warn-only without consent (`confirm`).
+    overlay_block = _overlay_override_report(
+        target_root, overlay_findings, confirm=confirm
+    )
     action_blocks = (
         required_block
+        + overlay_block
         + _setup_next_steps(target_root, nudges, host_nudges)
         + _setup_stability_tip(target_root)
     )
