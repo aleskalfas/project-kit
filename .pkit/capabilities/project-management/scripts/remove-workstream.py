@@ -53,6 +53,7 @@ from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 # REFUSES before any `gh label` op when it trips. Greenfield is unchanged; the
 # richer present-map behaviour stays the adopt-existing Feature #264.
 
+from _lib import session_guard  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
     check_membership,
@@ -90,6 +91,7 @@ def main() -> int:
         action="store_true",
         help="Skip the type-the-slug confirmation (use with extreme care).",
     )
+    session_guard.add_override_argument(parser)
     args = parser.parse_args()
 
     capability_root = resolve_capability_root(args.capability_root)
@@ -104,6 +106,14 @@ def main() -> int:
     membership = check_membership(members, invoker)
     if not membership.allowed:
         print(membership.refusal_message, file=sys.stderr)
+        return 1
+
+    # Foreign-repo mutation guard (COR-039 / ADR-034). workstreams.yaml (and the
+    # `gh label delete` below) are resolved from the cwd-walk in
+    # resolve_capability_root, so a `cd /B` redirects this mutation into a
+    # DIFFERENT repo than the session anchor (CLAUDE_PROJECT_DIR); gate that
+    # unless the operator confirms the override. Runs before any write/gh op.
+    if not session_guard.enforce(override=args.allow_foreign_repo):
         return 1
 
     # Constraint-1 gate (RF-2, #265): refuse before any `gh label` op when the

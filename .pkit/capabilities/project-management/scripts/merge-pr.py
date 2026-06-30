@@ -47,6 +47,7 @@ _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib.hooks import fire_hooks  # noqa: E402
+from _lib import session_guard  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
     check_membership,
@@ -108,6 +109,7 @@ def main() -> int:
         action="store_true",
         help="Skip the confirmation prompt.",
     )
+    session_guard.add_override_argument(parser)
     args = parser.parse_args()
 
     capability_root = resolve_capability_root(args.capability_root)
@@ -125,6 +127,11 @@ def main() -> int:
     membership = check_membership(members, invoker)
     if not membership.allowed:
         print(membership.refusal_message, file=sys.stderr)
+        return 1
+
+    # Foreign-repo mutation guard (COR-039 / ADR-034) — gate before the PR
+    # merge: target repo (cwd) vs session anchor (CLAUDE_PROJECT_DIR).
+    if not session_guard.enforce(override=args.allow_foreign_repo):
         return 1
 
     titles = _read_yaml(capability_root / "schemas" / "titles.yaml", yaml_loader)

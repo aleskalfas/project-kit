@@ -40,6 +40,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
+from _lib import session_guard  # noqa: E402
 from _lib.gh import load_adopter_config  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
@@ -103,6 +104,7 @@ def main() -> int:
         "--skip-sync", action="store_true",
         help="Update the live overlay file but skip the pkit sync step. Mostly for tests.",
     )
+    session_guard.add_override_argument(parser)
     args = parser.parse_args()
 
     capability_root = resolve_capability_root(args.capability_root)
@@ -120,6 +122,14 @@ def main() -> int:
     membership = check_membership(members, invoker)
     if not membership.allowed:
         print(membership.refusal_message, file=sys.stderr)
+        return 1
+
+    # Foreign-repo mutation guard (COR-039 / ADR-034). The live overlay file and
+    # the merge-settings.sh run target project_root, which is resolved from the
+    # cwd-walk in resolve_capability_root, so a `cd /B` redirects this write into
+    # a DIFFERENT repo than the session anchor (CLAUDE_PROJECT_DIR); gate that
+    # unless the operator confirms the override. Runs before any write.
+    if not session_guard.enforce(override=args.allow_foreign_repo):
         return 1
 
     if not _adapter_installed(project_root, HARNESS):

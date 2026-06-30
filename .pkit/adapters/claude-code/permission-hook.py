@@ -54,6 +54,56 @@ def _target_root() -> Path:
     return Path(__file__).resolve().parents[3]
 
 
+def _foreign_edit_write_prompt(payload: dict) -> str | None:
+    """The one honest intent-layer catch (ADR-034 point 2): an Edit/Write whose
+    target file path is an ABSOLUTE path OUTSIDE the session anchor's tree.
+
+    Edit/Write carry the literal target path in `tool_input` (unlike a bash
+    command, whose target is buried in argv the dumb segmenter does not parse —
+    ADR-025), so this one tool surface is honestly inspectable. Returns a reason
+    string when the path is foreign (the caller emits an `ask`/prompt), or None
+    when it is in-tree, relative, anchor-undetermined, or not an Edit/Write.
+
+    This is a small catch on the Edit/Write surface only — it is explicitly NOT
+    the foreign-repo lever (that is the pkit self-guard in the mutating program,
+    which covers bash / uv / gh). It does not DENY — only PROMPTs — and it never
+    touches decide.py's bash-path decision core (ADR-034 point 6).
+
+    Honest residual gap: when CLAUDE_PROJECT_DIR is unset the anchor cannot be
+    determined, so this corner does not fire (it does not claim coverage it
+    cannot back). A relative path is left to the harness's normal cwd-relative
+    handling.
+    """
+    tool = payload.get("tool_name")
+    if tool not in ("Edit", "Write"):
+        return None
+    anchor_env = os.environ.get("CLAUDE_PROJECT_DIR")
+    if not anchor_env:
+        return None  # residual gap: no anchor → cannot compare → do not fire.
+    tool_input = payload.get("tool_input")
+    if not isinstance(tool_input, dict):
+        return None
+    raw_path = tool_input.get("file_path") or tool_input.get("path")
+    if not isinstance(raw_path, str) or not raw_path:
+        return None
+    target = Path(raw_path)
+    if not target.is_absolute():
+        return None  # relative paths resolve under cwd — left to normal flow.
+    try:
+        anchor = Path(anchor_env).resolve()
+        resolved = target.resolve()
+    except OSError:
+        return None
+    if resolved == anchor or anchor in resolved.parents:
+        return None  # in-tree — no prompt.
+    return (
+        f"Edit/Write targets an absolute path outside this session's repo "
+        f"(anchor: {anchor}; target: {resolved}). Confirm this cross-repo "
+        f"write is intended (COR-039 / ADR-034 interlock against accidental "
+        f"cross-repo handoff — a prompt, not a wall)."
+    )
+
+
 def main() -> int:
     try:
         payload = json.load(sys.stdin)
@@ -88,7 +138,23 @@ def main() -> int:
     except Exception as exc:  # inert: capture must never affect enforcement
         _debug(f"diagnostic capture fault (inert): {exc!r}")
 
-    if decision in ("allow", "deny"):
+    # Additive foreign-repo corner (ADR-034 point 2): when the decision core
+    # abstained (deferred), an Edit/Write to an absolute foreign path is
+    # upgraded to a PROMPT (`ask`) — the one honestly-inspectable cross-repo
+    # corner at the intent layer. This never overrides an allow/deny from the
+    # core (decide.py is authoritative for what it decides) and never denies —
+    # it only asks. The self-guard in the mutating program (point 1) is the
+    # lever; this is a small catch on the Edit/Write surface only.
+    if decision == "abstain":
+        try:
+            foreign_reason = _foreign_edit_write_prompt(payload)
+        except Exception as exc:  # additive corner must never break fail-open
+            _debug(f"foreign-path check fault → ignore: {exc!r}")
+            foreign_reason = None
+        if foreign_reason is not None:
+            decision, reason = "ask", foreign_reason
+
+    if decision in ("allow", "deny", "ask"):
         print(
             json.dumps(
                 {

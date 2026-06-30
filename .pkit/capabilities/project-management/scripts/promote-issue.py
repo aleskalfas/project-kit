@@ -59,6 +59,7 @@ from ruamel.yaml import YAML
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import axis_labels  # noqa: E402
+from _lib import session_guard  # noqa: E402
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 from _lib.milestone import resolve_milestone  # noqa: E402
 from _lib.substrate_writes import write_milestone  # noqa: E402
@@ -118,6 +119,7 @@ def main() -> int:
         action="store_true",
         help="Skip the confirmation prompt.",
     )
+    session_guard.add_override_argument(parser)
     args = parser.parse_args()
 
     capability_root = resolve_capability_root(args.capability_root)
@@ -132,6 +134,13 @@ def main() -> int:
     membership = check_membership(members, invoker)
     if not membership.allowed:
         print(membership.refusal_message, file=sys.stderr)
+        return 1
+
+    # Foreign-repo mutation guard (COR-039 / ADR-034) — gate before any gh
+    # mutation / the composed move-issue. A confirmed override is threaded
+    # into the move-issue subprocess so the cross-repo gate is confirmed once,
+    # not twice.
+    if not session_guard.enforce(override=args.allow_foreign_repo):
         return 1
 
     # Gate: --reason non-empty (argparse `required` covers empty
@@ -223,7 +232,9 @@ def main() -> int:
         return 0
 
     # Compose over move-issue for the actual state transition.
-    rc = _invoke_move_issue(args.issue_number, "backlog", args.capability_root)
+    rc = _invoke_move_issue(
+        args.issue_number, "backlog", args.capability_root, args.allow_foreign_repo
+    )
     if rc != 0:
         applied = "audit comment + milestone" if milestone_title is not None else "audit comment"
         print(
@@ -326,9 +337,18 @@ def _attach_milestone(issue_number: int, title: str, config: dict) -> bool:
 
 
 def _invoke_move_issue(
-    issue_number: int, target: str, capability_root_arg: Path | None
+    issue_number: int,
+    target: str,
+    capability_root_arg: Path | None,
+    allow_foreign_repo: bool,
 ) -> int:
-    """Shell out to `move-issue.py --to <target>` as the substrate transition."""
+    """Shell out to `move-issue.py --to <target>` as the substrate transition.
+
+    ``allow_foreign_repo`` threads promote-issue's confirmed cross-repo
+    override into the composed move-issue so the foreign-repo gate (COR-039 /
+    ADR-034) is confirmed once at the wrapper, not re-prompted by the inner
+    transition.
+    """
     cmd = [
         sys.executable,
         str(_HERE / "move-issue.py"),
@@ -338,6 +358,8 @@ def _invoke_move_issue(
         "--bypass-reason", "promoted via promote-issue wrapper (audit comment already posted)",
         "--yes",
     ]
+    if allow_foreign_repo:
+        cmd.append("--allow-foreign-repo")
     if capability_root_arg is not None:
         cmd += ["--capability-root", str(capability_root_arg)]
     proc = subprocess.run(cmd, check=False)

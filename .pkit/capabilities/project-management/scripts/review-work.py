@@ -44,6 +44,7 @@ from ruamel.yaml import YAML
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
+from _lib import session_guard  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
@@ -103,6 +104,7 @@ def main() -> int:
     )
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--yes", action="store_true")
+    session_guard.add_override_argument(parser)
     args = parser.parse_args()
 
     capability_root = resolve_capability_root(args.capability_root)
@@ -117,6 +119,12 @@ def main() -> int:
     membership = check_membership(members, invoker)
     if not membership.allowed:
         print(membership.refusal_message, file=sys.stderr)
+        return 1
+
+    # Foreign-repo mutation guard (COR-039 / ADR-034) — gate before the PR
+    # reviewer write / composed move-issue. A confirmed override threads into
+    # move-issue so the gate is confirmed once, not twice.
+    if not session_guard.enforce(override=args.allow_foreign_repo):
         return 1
 
     # Find local branch for issue + validate shape.
@@ -219,7 +227,9 @@ def main() -> int:
             )
 
     # Compose over move-issue for the state transition.
-    rc = _invoke_move_issue(args.issue_number, "review", args.capability_root)
+    rc = _invoke_move_issue(
+        args.issue_number, "review", args.capability_root, args.allow_foreign_repo
+    )
     if rc != 0:
         return rc
 
@@ -329,12 +339,17 @@ def _gh_pr_add_reviewers(pr_number: int, reviewers: list[str], config: dict) -> 
 
 
 def _invoke_move_issue(
-    issue_number: int, target: str, capability_root_arg: Path | None
+    issue_number: int,
+    target: str,
+    capability_root_arg: Path | None,
+    allow_foreign_repo: bool,
 ) -> int:
     cmd = [
         sys.executable, str(_HERE / "move-issue.py"),
         str(issue_number), "--to", target, "--yes",
     ]
+    if allow_foreign_repo:
+        cmd.append("--allow-foreign-repo")
     if capability_root_arg is not None:
         cmd += ["--capability-root", str(capability_root_arg)]
     proc = subprocess.run(cmd, check=False)

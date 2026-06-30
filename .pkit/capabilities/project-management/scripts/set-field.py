@@ -64,6 +64,7 @@ from ruamel.yaml.error import YAMLError
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import axis_labels  # noqa: E402
+from _lib import session_guard  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
@@ -105,6 +106,11 @@ def main() -> int:
     membership = check_membership(members, invoker)
     if not membership.allowed:
         print(membership.refusal_message, file=sys.stderr)
+        return 1
+
+    # Foreign-repo mutation guard (COR-039 / ADR-034) — gate before any gh
+    # mutation: target repo (cwd) vs session anchor (CLAUDE_PROJECT_DIR).
+    if not session_guard.enforce(override=args.allow_foreign_repo):
         return 1
 
     issue_types = _read_yaml(capability_root / "schemas" / "issue-types.yaml", yaml_loader)
@@ -537,6 +543,7 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Skip the confirmation prompt.",
     )
+    session_guard.add_override_argument(parser)
     return parser
 
 
