@@ -1,7 +1,7 @@
 ---
 id: COR-039
 title: Capabilities declare dependencies on external system tools
-status: proposed
+status: accepted
 date: 2026-06-30
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
