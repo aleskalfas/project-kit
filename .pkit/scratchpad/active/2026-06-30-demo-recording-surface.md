@@ -114,6 +114,98 @@ Plus: the engine **switches between the three** as the storyboard progresses.
   (`cliclick`/AppleScript). Mental model: focus the target app to receive keys while OBS
   shows whatever scene. Settle when we build the input backend.
 
+## Critic review — BLOCKER: not architect-ready as written
+
+The OBS-centric design above reads as a confirming narrative whose load-bearing claims break
+on the first disconfirming instance. **Must-fix before architect:**
+
+1. **"No OS window-activation" (A4) is false.** Typing a beat (VS Code, PDF page-advance)
+   needs the target app **OS-focused**; OBS swaps *display*, not *focus*. The per-OS window
+   problem returns on nearly every beat — so A4's "OBS beats ffmpeg for free" comparison is
+   invalid. Honest claim: OBS buys cross-platform *capture/encoding/transitions*, **not**
+   freedom from a per-OS focus seam. Un-park the input model (old Q5) and re-derive A4 on
+   that basis.
+2. **OBS macOS capture is asserted, not verified.** Window Capture is deprecated on macOS 13+
+   (→ ScreenCaptureKit); "captures even when not frontmost" + the scripted-launch/TCC
+   interaction need a 20-min empirical check, not an assumption. RF for the whole spine.
+3. **Determinism unaddressed** for the headline agent/live-GitHub demos. `assert` catches a
+   bad take after the fact; it doesn't make takes repeatable. Needs a position on
+   disposable-repo reset + clean slate, or an explicit "operator-supervised, not CI" scope cut.
+4. **Decision-tension to frame for the architect as real amendments:** DEC-001 (OBS
+   scene-collection/profile is GUI-configured external state → single-source-of-truth breaks
+   unless bounded); DEC-002 (long-lived Playwright / obs-websocket sessions vs the
+   inert-tuple→bash contract); DEC-004 (multiple per-OS seams vs the single-auditable-gate
+   property).
+5. **Scope — likely over-built.** Four new backends + hooks + assert + DEC-004 amendment for
+   "author 9 demos one-by-one" may be too much. Weigh the leaner alternatives below.
+
+### Leaner counter-alternatives (never weighed — do so before committing)
+- **Pre-rendered slide *video* segments** stitched by ffmpeg around the live captures — no
+  live PDF viewer, no page-advance injection, no third app to focus. Loses nothing for a
+  recorded (non-interactive) artifact.
+- **One VS Code window** holding terminal + editor + a markdown-preview pane, captured as a
+  single window — kills most multi-app focus juggling; reuses the existing single-window
+  engine. Browser stays the one genuine second surface.
+- **Human-driven semi-scripted take** + one full-screen capture (no scene scripting, no
+  websocket, no Playwright, no per-OS input seam) — ~20% of the build for demos that are
+  non-repeatable anyway.
+
+Agreement worth keeping: the **swap-one-window-at-a-time decision (A1) is right** — the
+critique is of the *mechanism* (OBS), not the decision. Keeping Playwright over an OBS
+browser-source is correctly reasoned.
+
+## Architect review (ran out-of-order, *before* critic; presupposes OBS)
+
+Filed as Feature **#364** under EPIC #359 (EPIC-under-EPIC forbidden by the schema → Feature
+is the senior allowed child). Architect escalation — **conditional on choosing the OBS path
+(Option A); moot if we pivot leaner (Option B):**
+- **Supersede DEC-004, don't "generalise" it** — OBS relocates the platform coupling (capture
+  + swap become cross-platform; only input injection / PDF viewer / macOS TCC stay per-OS).
+  That's a partial supersession of a foundational decision → use the explicit supersession
+  gesture.
+- **OBS-as-hard-dependency = new failure semantics** (a stateful daemon over a websocket:
+  connection/version/scene-drift). Needs a DEC-001 corollary: the engine establishes all OBS
+  scene state programmatically per take, never from hand-configured GUI state.
+- Structure notes (apply either way): "**backend**" is overloaded — directive families
+  (browser / presentation / assert) register at the DEC-002 Layer-2 seam; OBS / Marp /
+  input-injection are Layer-3 infra that don't. And the **input-injection + `assert` track is
+  lower-risk and should split** from the OBS surface upgrade.
+
+**Reconciliation:** architect refined *how to land OBS*; critic questioned *whether OBS is
+right / not over-scoped*. Critic's challenge is the more fundamental and logically first.
+
+**DECISION — Option A (OBS) chosen.** So architect's escalation items are now **live**: when
+the DECs are authored we must (1) *supersede* DEC-004 (the coupling relocates), and (2) add
+the DEC-001 OBS-dependency corollary (engine establishes all OBS state programmatically).
+Critic's must-fixes (esp. RF-1 input/focus model, RF-2 verify OBS macOS capture, RF-3
+determinism) still gate the build.
+
+## OBS dependency securing + the capability requirements gap (resolved)
+
+**How it works today (verified):** a capability's `package.yaml` declares only
+`requires_backbone` + `requires_capabilities`; install checks only those. There is **no field
+for external system tools**, and no install-time check for OBS/ffmpeg/iTerm2 — the platform
+requirement is enforced at **record time** (DEC-004), not install. So installing
+demo-recording does NOT currently stop you for a missing OBS.
+
+**OS-agnostic securing approach** (no universal GUI-app installer exists → one "ensure-OBS"
+interface, per-OS recipe inside — same seam pattern):
+- Install per-OS: macOS `brew install --cask obs`; Windows `winget install OBSProject.OBSStudio`.
+- **Pin OBS ≥ 28** → obs-websocket built in (no plugin to manage).
+- **Pre-seed the obs-websocket config file** (enable server + port + password) before launch,
+  and **build scene state programmatically** per take → no GUI config step (satisfies the
+  DEC-001 corollary).
+- **Per-take health check** (installed → version → launched → websocket reachable) with clean
+  per-OS remediation (architect escalation #2 / failure semantics).
+- Unavoidable residual: macOS screen-recording **TCC** grant once (no recorder can script it).
+
+**DECISION — add a `requires_system:` capability mechanism, behaviour (a):** declare external
+tools (name + min version + per-OS install hint + probe) in the capability schema; **WARN at
+install** if missing (preserves DEC-004 "author anywhere" neutrality) + **HARD-gate at record**;
+a preflight/`doctor` check verifies. This is a **core capabilities-framework feature**
+(benefits any capability with external deps), so it's a **schema_version bump + migration**,
+not demo-recording-local.
+
 ## Crystallises into
 
 - A **child of EPIC #359** — the demo-recording surface-upgrade track (likely its own child
