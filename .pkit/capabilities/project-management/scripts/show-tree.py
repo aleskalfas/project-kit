@@ -49,6 +49,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
+from _lib import containment  # noqa: E402
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
@@ -74,6 +75,9 @@ class Issue:
     structural_type: str | None  # epic / feature / umbrella / task / None
     parent_number: int | None = None
     children: list[int] = field(default_factory=list)
+    # Per-child substrate provenance from the containment read-seam: maps a
+    # child number to "native" / "textual" (native-wins on conflict, DEC-005).
+    child_substrate: dict[int, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -154,8 +158,10 @@ def main() -> int:
     issues = _parse_issues(issues_raw, issue_types)
     prs = _parse_prs(prs_raw)
 
-    # Build parent relationships.
-    _link_parents(issues)
+    # Build parent relationships through the containment read-seam (native-where-
+    # present / textual-otherwise / native-wins per DEC-005) — show-tree does NOT
+    # parse body parent-refs directly (ADR-026 one-read-seam discipline).
+    _link_parents(issues, config)
 
     orphans = _detect_orphans(issues, prs)
     tree = _build_tree(issues)
@@ -247,16 +253,57 @@ def _infer_structural_type(title: str, issue_types: dict) -> str | None:
     return None
 
 
-def _link_parents(issues: dict[int, Issue]) -> None:
-    """Populate parent_number + children based on body parent-ref lines."""
+def _link_parents(issues: dict[int, Issue], config: dict) -> None:
+    """Populate parent_number + children + child_substrate via the containment
+    read-seam (``_lib.containment.resolve_children``).
+
+    For each candidate parent the seam resolves its children native-where-present
+    / textual-otherwise with native-wins (DEC-005); show-tree never parses body
+    parent-refs itself (ADR-026 one-read-seam discipline). The corpus
+    (``{number: body}``) is handed to the seam so the textual side costs no API
+    calls — the seam's only per-call cost is one native ``…/sub_issues`` GET per
+    candidate parent.
+
+    Cost bound: the native read is issued only for *candidate parents* — issues
+    that are structural containers (epic/feature/umbrella/task) OR are named as a
+    parent by some issue's textual ref — not for every corpus issue. A leaf that
+    is neither cannot hold children under the methodology, so skipping its native
+    read cannot drop a child. (The write seam always writes BOTH substrates, so a
+    native sub-issue also carries a textual ref and thus marks its parent a
+    candidate; a hypothetical native-only child under an otherwise-leaf parent is
+    the sole uncovered edge — accepted to keep the walk from issuing one native
+    call per corpus issue.)
+    """
+    corpus = {num: issue.body for num, issue in issues.items()}
+    textual_parents = {
+        parent
+        for body in corpus.values()
+        for parent in (_first_parent_ref(body),)
+        if parent is not None
+    }
+    container_types = {"epic", "feature", "umbrella", "task"}
     for num, issue in issues.items():
-        parent = _extract_parent_ref(issue.body)
-        if parent is not None and parent in issues:
-            issue.parent_number = parent
-            issues[parent].children.append(num)
+        is_candidate = (
+            issue.structural_type in container_types or num in textual_parents
+        )
+        if not is_candidate:
+            continue
+        resolution = containment.resolve_children(
+            config, parent_number=num, corpus=corpus
+        )
+        for child in resolution.children:
+            if child.number not in issues:
+                continue  # a native child outside the fetched corpus — skip render
+            issues[child.number].parent_number = num
+            issue.children.append(child.number)
+            issue.child_substrate[child.number] = child.substrate.value
 
 
-def _extract_parent_ref(body: str) -> int | None:
+def _first_parent_ref(body: str) -> int | None:
+    """The parent number on a body's first non-blank parent-ref line, for the
+    candidate-parent pre-scan only — the seam still owns authoritative
+    resolution. Kept minimal and local to bounding which parents get a native
+    read; it never decides the rendered child set."""
     if not body:
         return None
     for line in body.splitlines():
@@ -331,6 +378,11 @@ def _issue_to_dict(issue: Issue) -> dict:
         "milestone": issue.milestone,
         "parent_number": issue.parent_number,
         "children": sorted(issue.children),
+        # Provenance from the read-seam: child number -> "native" / "textual".
+        "child_substrate": {
+            str(n): issue.child_substrate.get(n, "textual")
+            for n in sorted(issue.children)
+        },
     }
 
 
@@ -378,20 +430,26 @@ def _print_branch(
     prs: dict[int, PR],
     num: int,
     depth: int,
+    substrate: str | None = None,
 ) -> None:
     issue = issues[num]
     prefix = "  " * depth + ("- " if depth else "")
     type_marker = f"[{issue.structural_type or '?'}]"
     state_marker = f"({issue.state})"
     ms = f" — milestone: {issue.milestone}" if issue.milestone else ""
-    print(f"{prefix}{type_marker} #{num} {state_marker} {issue.title}{ms}")
+    # Only annotate textual-only links — native is the canonical default, so the
+    # marker calls out the projection-only children (DEC-005) without noise.
+    sub_marker = "  [textual]" if substrate == "textual" else ""
+    print(f"{prefix}{type_marker} #{num} {state_marker} {issue.title}{ms}{sub_marker}")
     # Linked PRs.
     linked = [p for p in prs.values() if num in p.closes]
     for p in linked:
         sub = "  " * (depth + 1) + "↪ "
         print(f"{sub}PR #{p.number} ({p.state}) — {p.title}")
     for child in sorted(issue.children):
-        _print_branch(issues, prs, child, depth + 1)
+        _print_branch(
+            issues, prs, child, depth + 1, issue.child_substrate.get(child)
+        )
 
 
 # ---- markdown renderer ----------------------------------------------
@@ -425,16 +483,23 @@ def _md_branch(
     prs: dict[int, PR],
     num: int,
     depth: int,
+    substrate: str | None = None,
 ) -> None:
     issue = issues[num]
     indent = "  " * depth
     state = f" *(closed)*" if issue.state == "closed" else ""
-    print(f"{indent}- **[{issue.structural_type or '?'}] #{num}**{state} {issue.title}")
+    sub_marker = " _(textual)_" if substrate == "textual" else ""
+    print(
+        f"{indent}- **[{issue.structural_type or '?'}] #{num}**{state} "
+        f"{issue.title}{sub_marker}"
+    )
     linked = [p for p in prs.values() if num in p.closes]
     for p in linked:
         print(f"{indent}  - PR #{p.number} ({p.state}) {p.title}")
     for child in sorted(issue.children):
-        _md_branch(issues, prs, child, depth + 1)
+        _md_branch(
+            issues, prs, child, depth + 1, issue.child_substrate.get(child)
+        )
 
 
 # ---- gh wrappers ----------------------------------------------------

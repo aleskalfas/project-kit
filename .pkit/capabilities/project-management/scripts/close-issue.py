@@ -67,6 +67,7 @@ from ruamel.yaml.error import YAMLError
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import axis_labels  # noqa: E402
+from _lib import containment  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib.hooks import fire_hooks  # noqa: E402
 from _lib.labels import reconcile_state_labels_to_done  # noqa: E402
@@ -517,13 +518,18 @@ def _engine_cascade_fold(parent_num: int) -> dict | None:
 
 
 def _find_open_children(parent_num: int, config: dict) -> list[int] | None:
-    """Return the OPEN children of a container — issues whose body parent-ref
-    points at *parent_num*.
+    """Return the OPEN children of a container — diagnostic colour for the
+    refused-cascade message only (the ENGINE fold is the decision).
 
-    Empty list = all children closed (or none); None on gh failure. Children
-    are discovered the same way ``show-tree`` does — by each issue's body
-    parent-ref first line (the methodology's hierarchy source of truth) — so
-    eligibility stays consistent with the rendered tree.
+    Children are resolved through the SAME containment read-seam
+    (``_lib.containment.resolve_children``) the engine's ``cascade_members``
+    predicate and ``show-tree`` use — native sub-issues where present, textual
+    child-side parent-refs otherwise, native-wins (DEC-005). Routing this through
+    the one seam is the ADR-026 point: no consumer re-derives containment by
+    re-parsing body parent-refs. The seam returns ALL children; this helper
+    filters to the still-OPEN ones for the "what to close first" hint.
+
+    Empty list = all children closed (or none); None on gh failure.
     """
     proc = gh_run(
         [
@@ -545,20 +551,22 @@ def _find_open_children(parent_num: int, config: dict) -> list[int] | None:
     except (ValueError, json.JSONDecodeError):
         print("error: gh issue list returned malformed JSON.", file=sys.stderr)
         return None
-    open_children: list[int] = []
+    corpus: dict[int, str] = {}
+    states: dict[int, str] = {}
     for r in rows:
         if not isinstance(r, dict):
             continue
         num = r.get("number")
-        if not isinstance(num, int) or num == parent_num:
+        if not isinstance(num, int):
             continue
-        parents = _walk_parent_chain(str(r.get("body") or ""))
-        if (
-            parents
-            and parents[0] == parent_num
-            and str(r.get("state", "")).lower() != "closed"
-        ):
-            open_children.append(num)
+        corpus[num] = str(r.get("body") or "")
+        states[num] = str(r.get("state", "")).lower()
+    resolution = containment.resolve_children(
+        config, parent_number=parent_num, corpus=corpus
+    )
+    open_children = [
+        n for n in resolution.numbers if states.get(n) != "closed"
+    ]
     return sorted(open_children)
 
 
