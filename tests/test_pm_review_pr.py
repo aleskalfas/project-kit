@@ -105,6 +105,104 @@ def test_format_verdict_strips_blank_body(rpr) -> None:
     assert out == "Reviewer agent (local, critic): APPROVED"
 
 
+# ---- _invoke_agent verdict scan (DEC-028 grammar, anywhere in output) ----
+#
+# The parser must find the FIRST line matching the DEC-028 local-path verdict
+# grammar anywhere in the agent's output — not require it on line 1. LLM
+# reviewers non-deterministically emit preamble, so a line-1-only parse failed
+# intermittently and posted no verdict, stalling the merge (issue #355).
+
+
+def _stub_claude(rpr, monkeypatch, stdout, *, returncode=0, stderr=""):
+    """Make `_invoke_agent` see `claude` on PATH and return `stdout`."""
+    import subprocess
+
+    monkeypatch.setattr(rpr.shutil, "which", lambda _bin: "/usr/bin/claude")
+
+    def fake_run(args, **kwargs):
+        return subprocess.CompletedProcess(
+            args=args, returncode=returncode, stdout=stdout, stderr=stderr,
+        )
+
+    monkeypatch.setattr(rpr.subprocess, "run", fake_run)
+
+
+def test_invoke_verdict_on_first_line(rpr, monkeypatch) -> None:
+    """Regression: a verdict on line 1 still parses (the happy path)."""
+    out = "Reviewer agent (local, reviewer): APPROVED\n\nLooks good."
+    _stub_claude(rpr, monkeypatch, out)
+    verdict, body = rpr._invoke_agent("reviewer", 99, {})
+    assert verdict == "APPROVED"
+    assert body == "\nLooks good."
+
+
+def test_invoke_verdict_after_preamble(rpr, monkeypatch) -> None:
+    """The fix: a verdict preceded by LLM preamble is still found."""
+    out = (
+        "Let me review this PR.\n"
+        "Here is my assessment of the diff:\n"
+        "\n"
+        "Reviewer agent (local, reviewer): CHANGES_REQUESTED\n"
+        "\n"
+        "Finding: fix the off-by-one in foo()."
+    )
+    _stub_claude(rpr, monkeypatch, out)
+    verdict, body = rpr._invoke_agent("reviewer", 99, {})
+    assert verdict == "CHANGES_REQUESTED"
+    assert body == "\nFinding: fix the off-by-one in foo()."
+
+
+def test_invoke_verdict_line_tolerates_surrounding_whitespace(rpr, monkeypatch) -> None:
+    out = "   Reviewer agent (local, reviewer): APPROVED   \n"
+    _stub_claude(rpr, monkeypatch, out)
+    verdict, _body = rpr._invoke_agent("reviewer", 99, {})
+    assert verdict == "APPROVED"
+
+
+def test_invoke_first_match_wins(rpr, monkeypatch) -> None:
+    """Multi-match precedence: the FIRST matching line is the verdict."""
+    out = (
+        "Reviewer agent (local, reviewer): APPROVED\n"
+        "On reflection:\n"
+        "Reviewer agent (local, reviewer): CHANGES_REQUESTED\n"
+    )
+    _stub_claude(rpr, monkeypatch, out)
+    verdict, _body = rpr._invoke_agent("reviewer", 99, {})
+    assert verdict == "APPROVED"
+
+
+def test_invoke_no_match_fails_closed_and_surfaces_full_output(
+    rpr, monkeypatch, capsys,
+) -> None:
+    """No grammar match anywhere → no verdict (caller posts nothing), and the
+    FULL agent output is surfaced to the operator for debugging."""
+    out = "I reviewed the PR but forgot to emit the verdict line.\nSorry!"
+    _stub_claude(rpr, monkeypatch, out)
+    verdict, body = rpr._invoke_agent("reviewer", 99, {})
+    assert verdict is None
+    assert body == ""
+    err = capsys.readouterr().err
+    assert "no DEC-028 verdict line found" in err
+    # Full output present, not a truncated first line.
+    assert "forgot to emit the verdict line" in err
+    assert "Sorry!" in err
+
+
+def test_invoke_verdict_pinned_to_invoked_agent_name(rpr, monkeypatch) -> None:
+    """A verdict line naming a DIFFERENT agent does not satisfy the parse —
+    review-pr only accepts a verdict from the agent it invoked."""
+    out = "Reviewer agent (local, other-agent): APPROVED\n"
+    _stub_claude(rpr, monkeypatch, out)
+    verdict, _body = rpr._invoke_agent("reviewer", 99, {})
+    assert verdict is None
+
+
+def test_invoke_nonzero_exit_returns_no_verdict(rpr, monkeypatch) -> None:
+    _stub_claude(rpr, monkeypatch, "", returncode=1, stderr="boom")
+    verdict, _body = rpr._invoke_agent("reviewer", 99, {})
+    assert verdict is None
+
+
 # ---- _post_comment ----------------------------------------------
 
 
