@@ -103,32 +103,35 @@ severity tokens to file an issue and move it across a board.
   recorded video later.
 
   *Setup (takeaway #1 — "trivial to start, new or existing"):*
-  - **S1 Greenfield setup** — `pkit install` → `pkit init` → `gh issues bootstrap`; from zero
-    to a conventioned repo.
-  - **S2 Brownfield adopt + back-fill** — point pkit at a messy existing repo; **auditable
-    propose-and-cite** back-fill of labels/classification; confirm → apply (the #264 work).
+  - **Set up pkit in a new project** (greenfield) — `pkit install` → `pkit init` →
+    `gh issues bootstrap`; from zero to a conventioned repo.
+  - **Adopt pkit into an existing project + back-fill the issues** (brownfield) — point pkit
+    at a messy repo; **auditable propose-and-cite** back-fill of labels/classification;
+    confirm → apply (the #264 work).
 
   *The work loop (takeaway #2 — "it does the bookkeeping, I can't mess it up"):*
-  - **L1 Happy path** — file → start → PR → merge; labels + board move + closing-cascade
-    happen by themselves.
-  - **L2 The refusal** ⭐ — try to break the process (Done with no merged PR; mismatched PR
-    type) → pkit blocks it with a plain reason. Sells "secured conventions" hardest.
-  - **L3 Chat-to-file** — describe an issue in plain words → agent applies type/priority/
-    workstream + title prefix + parent, no manual labelling.
-  - **L4 Cascade roll-up** — close the last child → parent becomes closure-eligible (and/or
-    forward-cascade: start child → parent → In Progress).
-  - **L5 Scaffold the whole cascade** ⭐ (operator's "biggest asset") — from one conversation,
-    the agent creates the full tree **Milestone → EPIC → Feature → Task → PR**. *(Verify how
-    much of this the agent does today; gap → candidate to build.)*
-  - **L6 Merge-gate** ⭐ — PR cannot merge until the reviewer agent's verdict passes
-    (demonstrated live on #337 this session).
+  - **File an issue and ship it — the everyday loop** — file → start → PR → merge; labels +
+    board move + closing-cascade happen by themselves.
+  - **The process won't let you skip a step** ⭐ — try to break the process (Done with no
+    merged PR; mismatched PR type) → pkit blocks it with a plain reason. Sells "secured
+    conventions" hardest.
+  - **Just describe it — the agent files and labels it** — describe an issue in plain words →
+    agent applies type/priority/workstream + title prefix + parent, no manual labelling.
+  - **Close the last child, the parent rolls up** — close the last child → parent becomes
+    closure-eligible (and/or forward-cascade: start child → parent → In Progress).
+  - **Plan a whole milestone in one conversation** ⭐ (operator's "biggest asset") — from one
+    chat, the agent scaffolds the full tree **Milestone → EPIC → Feature → Task → PR**.
+    *(Verify how much of this the agent does today; gap → candidate to build.)*
+  - **No merge until the reviewer passes** ⭐ — a PR can't merge until the reviewer agent's
+    verdict passes (demonstrated live on #337 this session).
 
   *The long game (mental-model point 3 — the unique sell):*
-  - **L7 Change once, propagate everywhere** — change a convention in the pkit capability →
-    `pkit upgrade` → live in every adopter. Why this beats a hand-written CONTRIBUTING.md.
+  - **Change a convention once, it spreads everywhere** — change a convention in the pkit
+    capability → `pkit upgrade` → live in every adopter. Why this beats a hand-written
+    CONTRIBUTING.md.
 
-  **To verify (flagged, not assumed):** milestone auto-switch/roll on close (A5); how much of
-  L5's full-tree scaffold the agent does today.
+  **To verify (flagged, not assumed):** milestone auto-switch/roll on close; how much of the
+  "plan a whole milestone" full-tree scaffold the agent does today.
 
 - **A7 — the process (operator's plan).** Collect scenarios (here, for now) → **sort by
   priority** → work each **one-by-one**: write a **storyboard** (storyboard-author) → record a
@@ -145,27 +148,27 @@ severity tokens to file an issue and move it across a board.
 
 - **A8 — priority order** (operator-endorsed; reshuffle freely). Narrative flows tangible →
   strategic; leads with both takeaways fast:
-  1. **S1** greenfield setup (trivial to start)
-  2. **L5** scaffold the whole cascade, Milestone→PR (the headline asset)
-  3. **L1** happy-path loop (everyday automation)
-  4. **L2** the refusal (can't mess it up)
-  5. **L6** merge-gate (quality gate)
-  6. **L3** chat-to-file (no manual labels)
-  7. **L4** cascade roll-up
-  8. **S2** brownfield adopt + back-fill (also the operator's real work-project path)
-  9. **L7** change-once-propagate (the closer — why this beats a wiki)
+  1. **Set up pkit in a new project** (trivial to start)
+  2. **Plan a whole milestone in one conversation** — Milestone→PR (the headline asset)
+  3. **File an issue and ship it** (everyday automation)
+  4. **The process won't let you skip a step** (can't mess it up)
+  5. **No merge until the reviewer passes** (quality gate)
+  6. **Just describe it — the agent files it** (no manual labels)
+  7. **Close the last child, the parent rolls up**
+  8. **Adopt pkit into an existing project** (also the operator's real work-project path)
+  9. **Change a convention once, it spreads everywhere** (the closer — why this beats a wiki)
 
-  Build one-by-one per A7: storyboard → record. L5's build must first **verify** how much
-  full-tree scaffold the agent does today (gap → implement). 
+  Build one-by-one per A7: storyboard → record. "Plan a whole milestone" must first **verify**
+  how much full-tree scaffold the agent does today (gap → implement).
 
 ## What we've settled (the walk)
 
-- **A9 — checkpoint + start S1.** This plan is committed as a checkpoint; building begins with
-  **#1 (S1, greenfield setup)** — author its storyboard via the demo-recording capability on
-  this branch. Building S1 first is also where we'll discover what the demo-recording
-  capability needs **extended** (operator's A7 flag).
+- **A9 — checkpoint + start the new-project-setup demo.** This plan is committed as a
+  checkpoint; building begins with **#1, "Set up pkit in a new project"** — author its
+  storyboard via the demo-recording capability on this branch. Building it first is also
+  where we discover what the demo-recording capability needs **extended** (operator's A7 flag).
 
-## S1 build — drafted (branch `docs/minimal-adoption-path`)
+## "Set up pkit in a new project" — drafted (branch `docs/minimal-adoption-path`)
 
 - Bundle at `demo/greenfield-setup/`: `record.yaml` (validates clean), `storyboards/
   greenfield-setup.md` (8 steps), `record.sh`. Step plan: empty-dir `ls` → panes →
@@ -191,9 +194,9 @@ severity tokens to file an issue and move it across a board.
 4. **`assert`/`expect` directive** — `ready` confirms the agent *said* the sentinel, not that
    the issue was actually filed/classified. Optional shell-predicate assertion → reliable takes.
    → These are candidate improvements to the **demo-recording capability** (issues/DECs) and
-   gate a *reliable* S1 recording; at minimum #1+#2 before a real take.
+   gate a *reliable* recording; at minimum #1+#2 before a real take.
 
-### To verify before an actual S1 take
+### To verify before an actual take
 - `claude --agent project-manager` launch command + its readiness signal (harness-dependent).
 - `ready` match patterns for `init` / `bootstrap` / `capabilities install` are **guesses** at
   real output — confirm against actual command output.
@@ -203,14 +206,14 @@ severity tokens to file an issue and move it across a board.
 
 ## Next steps (pick up here)
 
-- Decide the S1 track: (a) verify the unverified bits + build extension #1+#2, then record; or
+- Decide the track for this demo: (a) verify the unverified bits + build extension #1+#2, then record; or
   (b) move to the next scenario's storyboard and batch the demo-recording extensions later.
 - Proceed down the A8 priority order, one scenario at a time (storyboard → record).
 
 ## Crystallises into
 
 - **EPIC #359** — *Lower pkit's adoption barrier … sell the PM value via demos* — is the
-  tracked home for this work. Its children (the demo scenarios S1–L7, the surface-upgrade
+  tracked home for this work. Its children (the demo scenarios, the surface-upgrade
   track) get filed one-by-one as we commit to them; this note retires when they're filed.
 - Likely also: a fast-path adoption doc + project-hygiene conventions. The parked `.pkit/`
   layout decision stays out of scope (per A4).
