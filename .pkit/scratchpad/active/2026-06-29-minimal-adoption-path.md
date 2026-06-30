@@ -207,7 +207,10 @@ severity tokens to file an issue and move it across a board.
   (b) move to the next scenario's storyboard and batch the demo-recording extensions later.
 - Proceed down the A8 priority order, one scenario at a time (storyboard → record).
 
-## Crystallises into (expected — placeholder)
+## Crystallises into
 
-- TBD as the walk narrows (likely: a fast-path adoption doc + possibly a `.pkit/` layout
-  decision + project-hygiene conventions).
+- **EPIC #359** — *Lower pkit's adoption barrier … sell the PM value via demos* — is the
+  tracked home for this work. Its children (the demo scenarios S1–L7, the surface-upgrade
+  track) get filed one-by-one as we commit to them; this note retires when they're filed.
+- Likely also: a fast-path adoption doc + project-hygiene conventions. The parked `.pkit/`
+  layout decision stays out of scope (per A4).

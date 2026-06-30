@@ -114,7 +114,10 @@ Plus: the engine **switches between the three** as the storyboard progresses.
   (`cliclick`/AppleScript). Mental model: focus the target app to receive keys while OBS
   shows whatever scene. Settle when we build the input backend.
 
-## Crystallises into (expected — placeholder)
+## Crystallises into
 
-- TBD: likely new demo-recording DECs (the surface model + per-backend directives) and
-  capability code for the VS Code / browser / narration backends.
+- A **child of EPIC #359** — the demo-recording surface-upgrade track (likely its own child
+  EPIC, since it revises DEC-004 + adds backends and needs `architect` review).
+- Likely new **demo-recording DECs** (the surface model + per-backend directives) and
+  capability code for the OBS / Playwright / presentation / input-injection backends.
+- This note retires when that child EPIC + its DECs are filed.
