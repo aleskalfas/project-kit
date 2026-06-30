@@ -10,6 +10,7 @@ validate.py call path.
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from pathlib import Path
 
@@ -38,6 +39,205 @@ def ci():
     sys.modules[module_name] = module
     spec.loader.exec_module(module)
     return module
+
+
+# --- classification-faithful title prefix (#356, defect 2) -----------------
+# The real schemas drive these — a task's prefix follows the kind label; the
+# non-task structural types ignore kind and use their structural prefix.
+
+_CLASSIFICATION = {
+    "axes": {
+        "type": {
+            "title_prefix_by_value": {
+                "feature": "Task",
+                "bug": "Bug",
+                "docs": "Docs",
+                "test": "Test",
+                "refactor": "Refactor",
+                "maintenance": "Chore",
+            },
+            "structural_restriction": {
+                "allowed_structural_types_per_kind": {
+                    "feature": ["task", "feature", "umbrella", "epic"],
+                    "bug": ["task"],
+                    "docs": ["task"],
+                    "test": ["task"],
+                    "refactor": ["task"],
+                    "maintenance": ["task"],
+                },
+            },
+        },
+    },
+}
+
+
+def test_title_prefix_task_bug_kind_yields_bug(ci) -> None:
+    """A `--kind bug` Task is prefixed `[Bug]`, not `[Task]` (the core of #356)."""
+    type_entry = {"title_prefix": "Task", "title_case": "title"}
+    assert (
+        ci._title_prefix_for(type_entry, _CLASSIFICATION, "task", "bug") == "Bug"
+    )
+
+
+def test_title_prefix_task_feature_kind_yields_task(ci) -> None:
+    type_entry = {"title_prefix": "Task", "title_case": "title"}
+    assert (
+        ci._title_prefix_for(type_entry, _CLASSIFICATION, "task", "feature") == "Task"
+    )
+
+
+def test_title_prefix_task_each_kind_maps_to_its_prefix(ci) -> None:
+    type_entry = {"title_prefix": "Task", "title_case": "title"}
+    expected = {
+        "docs": "Docs",
+        "test": "Test",
+        "refactor": "Refactor",
+        "maintenance": "Chore",
+    }
+    for kind, prefix in expected.items():
+        assert (
+            ci._title_prefix_for(type_entry, _CLASSIFICATION, "task", kind) == prefix
+        )
+
+
+def test_title_prefix_epic_ignores_kind_uses_structural_upper(ci) -> None:
+    """EPIC is not kind-driven: kind defaults to feature, prefix stays `EPIC`
+    (uppercased), NOT `Task` (what title_prefix_by_value['feature'] would give)."""
+    type_entry = {"title_prefix": "EPIC", "title_case": "upper"}
+    assert (
+        ci._title_prefix_for(type_entry, _CLASSIFICATION, "epic", "feature") == "EPIC"
+    )
+
+
+def test_title_prefix_feature_and_umbrella_ignore_kind(ci) -> None:
+    feature_entry = {"title_prefix": "Feature", "title_case": "title"}
+    umbrella_entry = {"title_prefix": "Umbrella", "title_case": "title"}
+    assert (
+        ci._title_prefix_for(feature_entry, _CLASSIFICATION, "feature", "feature")
+        == "Feature"
+    )
+    assert (
+        ci._title_prefix_for(umbrella_entry, _CLASSIFICATION, "umbrella", "feature")
+        == "Umbrella"
+    )
+
+
+def test_title_prefix_degrades_to_structural_on_empty_classification(ci) -> None:
+    """Absent classification ⇒ structural prefix (no crash, no kind-driving)."""
+    type_entry = {"title_prefix": "Task", "title_case": "title"}
+    assert ci._title_prefix_for(type_entry, {}, "task", "bug") == "Task"
+
+
+def test_kind_drives_title_true_only_for_task(ci) -> None:
+    assert ci._kind_drives_title("task", _CLASSIFICATION) is True
+    assert ci._kind_drives_title("epic", _CLASSIFICATION) is False
+    assert ci._kind_drives_title("feature", _CLASSIFICATION) is False
+    assert ci._kind_drives_title("umbrella", _CLASSIFICATION) is False
+
+
+# --- parent-type detection + label (#356, defect 1) ------------------------
+
+
+def _ISSUE_TYPES() -> dict:
+    return {
+        "types": {
+            "epic": {"title_prefix": "EPIC", "title_case": "upper"},
+            "feature": {"title_prefix": "Feature", "title_case": "title"},
+            "umbrella": {"title_prefix": "Umbrella", "title_case": "title"},
+            "task": {"title_prefix": "Task", "title_case": "title"},
+        }
+    }
+
+
+def test_infer_structural_type_from_title_prefix(ci) -> None:
+    types = _ISSUE_TYPES()
+    assert ci._infer_structural_type("[EPIC] Big thesis", types) == "epic"
+    assert ci._infer_structural_type("[Feature] A capability", types) == "feature"
+    assert ci._infer_structural_type("[Umbrella] A bucket", types) == "umbrella"
+    assert ci._infer_structural_type("[Bug] something", types) is None  # not a prefix
+    assert ci._infer_structural_type("no prefix at all", types) is None
+
+
+def test_parent_ref_label_matches_parent_type(ci) -> None:
+    types = _ISSUE_TYPES()
+    assert ci._parent_ref_label(types, "epic") == "EPIC"
+    assert ci._parent_ref_label(types, "feature") == "Feature"
+    assert ci._parent_ref_label(types, "umbrella") == "Umbrella"
+    assert ci._parent_ref_label(types, "nonsense") is None
+
+
+def test_parent_ref_line_uses_detected_parent_label(ci) -> None:
+    """A Task under an EPIC emits `EPIC: #N`, not the first parent_ref_form label."""
+    type_entry = {
+        "parent_ref_form": "Feature: #<N> or Umbrella: #<N> or EPIC: #<N>",
+    }
+    assert (
+        ci._parent_ref_line(type_entry, 128, parent_label="EPIC") == "EPIC: #128"
+    )
+
+
+def test_parent_ref_line_label_none_falls_back_to_first_option(ci) -> None:
+    """Undetectable parent type degrades to the first parent_ref_form label."""
+    type_entry = {
+        "parent_ref_form": "Feature: #<N> or Umbrella: #<N> or EPIC: #<N>",
+    }
+    assert ci._parent_ref_line(type_entry, 128, parent_label=None) == "Feature: #128"
+
+
+def test_detect_parent_structural_type_reads_title_and_infers(ci, monkeypatch) -> None:
+    class _Proc:
+        returncode = 0
+        stdout = '{"title": "[EPIC] A grand thesis"}'
+        stderr = ""
+
+    monkeypatch.setattr(ci.subprocess, "run", lambda *a, **k: _Proc())
+    assert (
+        ci._detect_parent_structural_type(128, {}, _ISSUE_TYPES()) == "epic"
+    )
+
+
+def test_detect_parent_structural_type_none_on_gh_failure(ci, monkeypatch) -> None:
+    class _Proc:
+        returncode = 1
+        stdout = ""
+        stderr = "boom"
+
+    monkeypatch.setattr(ci.subprocess, "run", lambda *a, **k: _Proc())
+    assert ci._detect_parent_structural_type(128, {}, _ISSUE_TYPES()) is None
+
+
+def test_detect_parent_structural_type_none_on_non_json(ci, monkeypatch) -> None:
+    class _Proc:
+        returncode = 0
+        stdout = "not json"
+        stderr = ""
+
+    monkeypatch.setattr(ci.subprocess, "run", lambda *a, **k: _Proc())
+    assert ci._detect_parent_structural_type(128, {}, _ISSUE_TYPES()) is None
+
+
+# --- body-file first-line acceptance (#356, criterion 5) -------------------
+
+
+def test_parent_ref_form_matchers_accept_each_allowed_option(ci) -> None:
+    form = (
+        "Feature: #<N> or Umbrella: #<N> or EPIC: #<N>"
+        " or Milestone: [#<N>](../milestone/<N>)"
+    )
+    matchers = ci._parent_ref_form_matchers(form)
+
+    def accepted(line: str) -> bool:
+        return any(m.match(line) for m in matchers)
+
+    # Every allowed form for the type is accepted as-is.
+    assert accepted("Feature: #1")
+    assert accepted("Umbrella: #2")
+    assert accepted("EPIC: #128")
+    assert accepted("Milestone: [#6](../milestone/6)")
+    # Shapes the validator rejects are not accepted.
+    assert not accepted("EPIC: 128")  # missing the `#`
+    assert not accepted("Milestone: [#6](../milestone/9)")  # mismatched back-ref
+    assert not accepted("just prose")
 
 
 # --- parent-ref line --------------------------------------------------
@@ -844,6 +1044,160 @@ class _FakeLink:
     def __init__(self, detail: str, *, ok: bool) -> None:
         self.detail = detail
         self.ok = ok
+
+
+# --- #356 end-to-end: classification-faithful create via main() ------------
+# These drive the REAL main() against the REAL shipped schemas (issue-types,
+# titles, classification) to prove the two acceptance criteria that the unit
+# tests above only prove piecewise: a Task under an EPIC opens `EPIC: #N`, and
+# `--kind bug` produces a `[Bug]` title.
+
+
+def _stage_real_schema_tree(tmp_path: Path) -> Path:
+    """Stage a capability tree using the REAL shipped schemas + a Task template.
+
+    Symlinks the actual issue-types / titles / classification schemas so the test
+    exercises the real vocabulary (EPIC/Feature/Umbrella/Task, the kind→prefix
+    map) rather than a hand-rolled fixture that could drift from what ships.
+    """
+    root = tmp_path / ".pkit" / "capabilities" / "project-management"
+    (root / "schemas").mkdir(parents=True)
+    (root / "templates").mkdir(parents=True)
+    (root / "project").mkdir(parents=True)
+
+    real_schemas = (
+        REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "schemas"
+    )
+    for name in ("issue-types.yaml", "titles.yaml", "classification.yaml"):
+        (root / "schemas" / name).write_text(
+            (real_schemas / name).read_text(encoding="utf-8"), encoding="utf-8"
+        )
+    (root / "schemas" / "body-format.yaml").write_text(
+        "sections: {}\n", encoding="utf-8"
+    )
+
+    (root / "templates" / "Task.md").write_text(
+        "---\nname: Task\n---\nFeature: #\n\n## What\nfoo\n", encoding="utf-8"
+    )
+    (root / "project" / "config.yaml").write_text(
+        "workstreams: [spyre]\n", encoding="utf-8"
+    )
+    (root / "project" / "members.yaml").write_text("members: []\n", encoding="utf-8")
+    return root
+
+
+def _dispatcher_with_parent_title(create_url: str, parent_title: str):
+    """fake subprocess.run answering `issue view` with a chosen parent title."""
+
+    def fake_run(cmd, *args, **kwargs):
+        class _Proc:
+            returncode = 0
+            stdout = ""
+            stderr = ""
+
+        proc = _Proc()
+        joined = " ".join(str(c) for c in cmd)
+        if "issue" in cmd and "create" in cmd:
+            proc.stdout = create_url + "\n"
+        elif "issue" in cmd and "view" in cmd:
+            proc.stdout = json.dumps({"title": parent_title})
+        elif "repo" in cmd and "view" in cmd:
+            proc.stdout = "acme/repo"
+        elif "api" in cmd and "user" in joined:
+            proc.stdout = "filer-login"
+        return proc
+
+    return fake_run
+
+
+def test_main_task_under_epic_emits_epic_parent_ref(ci, tmp_path, monkeypatch) -> None:
+    """Acceptance 2: filing a Task under EPIC #128 opens the body `EPIC: #128`."""
+    root = _stage_real_schema_tree(tmp_path)
+    monkeypatch.setattr(
+        ci.subprocess,
+        "run",
+        _dispatcher_with_parent_title(
+            "https://github.com/acme/repo/issues/355", "[EPIC] A grand thesis here"
+        ),
+    )
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+    monkeypatch.setattr(ci, "link_sub_issue", lambda *a, **k: _FakeLink("ok", ok=True))
+
+    created: dict = {}
+    real_create = ci._gh_create_issue
+
+    def capturing_create(**kwargs):
+        created.update(kwargs)
+        return real_create(**kwargs)
+
+    monkeypatch.setattr(ci, "_gh_create_issue", capturing_create)
+    monkeypatch.setattr(
+        ci.sys, "argv",
+        [
+            "create-issue.py",
+            "--type", "task",
+            "--title", "fix the faithful create bug here",
+            "--kind", "bug",
+            "--parent", "128",
+            "--workstream", "spyre",
+            "--capability-root", str(root),
+            "--yes",
+        ],
+    )
+    assert ci.main() == 0
+    first_line = created["body"].lstrip().split("\n", 1)[0]
+    assert first_line == "EPIC: #128"
+    assert "Feature: #128" not in created["body"]
+    # Acceptance 3: --kind bug ⇒ [Bug] title prefix.
+    assert created["title"].startswith("[Bug] ")
+
+
+def test_main_body_file_accepts_any_allowed_parent_ref_form(
+    ci, tmp_path, monkeypatch
+) -> None:
+    """Acceptance 5: a --body-file whose first line is any allowed parent-ref form
+    for the type is accepted as-is (here `EPIC: #128` for a Task)."""
+    root = _stage_real_schema_tree(tmp_path)
+    body_file = tmp_path / "body.md"
+    body_file.write_text(
+        "EPIC: #128\n\n## What\n\nthe work\n\n## Acceptance criteria\n\n- [ ] done\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        ci.subprocess,
+        "run",
+        _dispatcher_with_parent_title(
+            "https://github.com/acme/repo/issues/360", "[EPIC] A grand thesis here"
+        ),
+    )
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+    monkeypatch.setattr(ci, "link_sub_issue", lambda *a, **k: _FakeLink("ok", ok=True))
+
+    created: dict = {}
+    real_create = ci._gh_create_issue
+
+    def capturing_create(**kwargs):
+        created.update(kwargs)
+        return real_create(**kwargs)
+
+    monkeypatch.setattr(ci, "_gh_create_issue", capturing_create)
+    monkeypatch.setattr(
+        ci.sys, "argv",
+        [
+            "create-issue.py",
+            "--type", "task",
+            "--title", "file with a prepared body here",
+            "--kind", "bug",
+            "--parent", "128",
+            "--workstream", "spyre",
+            "--body-file", str(body_file),
+            "--capability-root", str(root),
+            "--yes",
+        ],
+    )
+    assert ci.main() == 0
+    # Body used verbatim — the supplied EPIC parent-ref is preserved.
+    assert created["body"].lstrip().split("\n", 1)[0] == "EPIC: #128"
 
 
 # --- the containment substrate selector on --parent (DEC-039 D2 / ADR-035, #357)

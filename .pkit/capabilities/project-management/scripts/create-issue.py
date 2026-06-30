@@ -226,6 +226,9 @@ def main() -> int:
     titles = _read_yaml(
         capability_root / "schemas" / "titles.yaml", yaml_loader
     )
+    classification = _read_yaml(
+        capability_root / "schemas" / "classification.yaml", yaml_loader
+    )
     body_format = _read_yaml(
         capability_root / "schemas" / "body-format.yaml", yaml_loader
     )
@@ -241,11 +244,13 @@ def main() -> int:
         )
         return 2
 
-    # Compose the full title with the type's title_prefix.
-    title_prefix = type_entry.get("title_prefix", args.type.capitalize())
-    title_case = type_entry.get("title_case", "title")
-    if title_case == "upper":
-        title_prefix = str(title_prefix).upper()
+    # Compose the full title prefix. For structural types whose title is
+    # kind-driven (the leaf `task` type, per classification.yaml's
+    # title_prefix_by_value + structural_restriction), the prefix comes from
+    # the kind label so `--kind bug` yields `[Bug]`, matching what validate
+    # enforces. Other structural types (epic/feature/umbrella) carry kind
+    # `feature` implicitly and use their own structural title_prefix.
+    title_prefix = _title_prefix_for(type_entry, classification, args.type, args.kind)
     full_title = f"[{title_prefix}] {args.title.strip()}"
 
     # Validate against titles.yaml's pattern for this surface.
@@ -356,13 +361,26 @@ def main() -> int:
 
     # Compose the body. Two paths per #218:
     #   1. --body-file: read the file's content verbatim. The first
-    #      line must match the parent-ref form (same check the
-    #      validator + edit-issue apply); errors out otherwise.
+    #      line must match one of the type's allowed parent-ref forms
+    #      (the same set validate-body accepts); errors out otherwise.
     #   2. Default: stamp from the type's template + parent-ref line.
+    #
+    # For path 2 the parent-ref label is made faithful to the parent's REAL
+    # structural type (#356): a Task under EPIC #128 opens `EPIC: #128`, not the
+    # first label in parent_ref_form. The parent type is detected from its title
+    # prefix via the same `_infer_structural_type` the validator / show / tree
+    # scripts use; on any detection failure the label degrades to parent_ref_form's
+    # first option (the prior behaviour).
+    parent_label = None
+    if args.parent is not None:
+        parent_type = _detect_parent_structural_type(args.parent, config, issue_types)
+        if parent_type is not None:
+            parent_label = _parent_ref_label(issue_types, parent_type)
     expected_parent_ref = _parent_ref_line(
         type_entry,
         parent_num=args.parent,
         milestone_num=args.milestone,
+        parent_label=parent_label,
     )
     if args.body_file is not None:
         if not args.body_file.is_file():
@@ -379,11 +397,19 @@ def main() -> int:
                 file=sys.stderr,
             )
             return 2
-        first_line = body.lstrip().split("\n", 1)[0]
-        if expected_parent_ref and first_line.strip() != expected_parent_ref.strip():
+        # Accept the first line as-is when it matches ANY allowed parent-ref form
+        # for this type (#356) — the same option set validate-body accepts — rather
+        # than demanding the single recomputed `expected_parent_ref`. This is the
+        # path agents use, supplying their own (correctly-labelled) parent-ref.
+        first_line = body.lstrip().split("\n", 1)[0].strip()
+        matchers = _parent_ref_form_matchers(str(type_entry.get("parent_ref_form", "")))
+        if matchers and not parent_ref_optional and not any(
+            m.match(first_line) for m in matchers
+        ):
             print(
-                f"error: --body-file's first line must be the parent-ref "
-                f"line for this issue type. Expected:\n  {expected_parent_ref}\n"
+                f"error: --body-file's first line must be one of the parent-ref "
+                f"forms for issue type {args.type!r}:\n"
+                f"  {type_entry.get('parent_ref_form', '')}\n"
                 f"Got:\n  {first_line}",
                 file=sys.stderr,
             )
@@ -741,6 +767,163 @@ def _read_members(capability_root: Path, yaml_loader: YAML) -> list[dict]:
     return members if isinstance(members, list) else []
 
 
+def _title_prefix_for(
+    type_entry: dict,
+    classification: dict,
+    structural_type: str,
+    kind: str,
+) -> str:
+    """Derive the rendered ``[Prefix]`` title prefix for a new issue (#356).
+
+    For a structural type whose title is *kind-driven* — the leaf ``task`` type,
+    where classification.yaml restricts non-``feature`` kinds — the prefix is read
+    from ``axes.type.title_prefix_by_value[<kind>]`` so ``--kind bug`` yields
+    ``[Bug]`` (what validate-body enforces against the kind label). All other
+    structural types (epic/feature/umbrella) carry kind ``feature`` implicitly and
+    use their own ``title_prefix`` (with ``title_case`` applied).
+    """
+    if _kind_drives_title(structural_type, classification):
+        prefix_by_value = _title_prefix_by_value(classification)
+        mapped = prefix_by_value.get(kind)
+        if mapped:
+            return str(mapped)
+    rendered = str(type_entry.get("title_prefix", structural_type.capitalize()))
+    if type_entry.get("title_case", "title") == "upper":
+        rendered = rendered.upper()
+    return rendered
+
+
+def _title_prefix_by_value(classification: dict) -> dict:
+    """The ``axes.type.title_prefix_by_value`` map from classification.yaml."""
+    axes = classification.get("axes") if isinstance(classification, dict) else None
+    type_axis = axes.get("type") if isinstance(axes, dict) else None
+    mapping = type_axis.get("title_prefix_by_value") if isinstance(type_axis, dict) else None
+    return mapping if isinstance(mapping, dict) else {}
+
+
+def _kind_drives_title(structural_type: str, classification: dict) -> bool:
+    """Whether the ``type`` (kind) axis drives the title prefix for this type.
+
+    Reads classification.yaml's ``structural_restriction`` rather than hardcoding
+    ``task``: a structural type is kind-driven iff it is reachable by a kind other
+    than the default ``feature`` (today only ``task`` is, per
+    ``allowed_structural_types_per_kind``). Those types take their prefix from the
+    kind label; the rest carry kind ``feature`` and use their structural prefix.
+    Empty/absent classification ⇒ ``False`` (degrade to the structural prefix).
+    """
+    prefix_by_value = _title_prefix_by_value(classification)
+    axes = classification.get("axes") if isinstance(classification, dict) else None
+    type_axis = axes.get("type") if isinstance(axes, dict) else None
+    restriction = (
+        type_axis.get("structural_restriction") if isinstance(type_axis, dict) else None
+    )
+    allowed = (
+        restriction.get("allowed_structural_types_per_kind")
+        if isinstance(restriction, dict)
+        else None
+    )
+    if not isinstance(allowed, dict):
+        return False
+    for kind, types in allowed.items():
+        if kind == DEFAULT_KIND or kind not in prefix_by_value:
+            continue
+        if isinstance(types, list) and structural_type in types:
+            return True
+    return False
+
+
+def _infer_structural_type(title: str, issue_types: dict) -> str | None:
+    """Map an issue's ``[Prefix]`` title to its structural type name.
+
+    Mirrors the helper validate-issue / show-issue / show-tree use, so the
+    parent-type detection here reads a parent's type the same way the rest of the
+    capability does.
+    """
+    types = issue_types.get("types") or {}
+    for type_name, entry in types.items():
+        if not isinstance(entry, dict):
+            continue
+        rendered = str(entry.get("title_prefix", ""))
+        if entry.get("title_case", "title") == "upper":
+            rendered = rendered.upper()
+        if rendered and title.startswith(f"[{rendered}] "):
+            return str(type_name)
+    return None
+
+
+def _parent_ref_label(issue_types: dict, parent_type: str) -> str | None:
+    """The parent-ref label for a parent of structural type ``parent_type``.
+
+    The label is the parent type's own rendered ``title_prefix`` (epic→``EPIC``,
+    feature→``Feature``, umbrella→``Umbrella``) — the same token its
+    ``parent_ref_form`` uses. ``None`` when the parent type is unknown.
+    """
+    entry = (issue_types.get("types") or {}).get(parent_type)
+    if not isinstance(entry, dict):
+        return None
+    rendered = str(entry.get("title_prefix", ""))
+    if entry.get("title_case", "title") == "upper":
+        rendered = rendered.upper()
+    return rendered or None
+
+
+def _detect_parent_structural_type(
+    parent_num: int, config: dict, issue_types: dict
+) -> str | None:
+    """Best-effort read of a parent issue's structural type from its title (#356).
+
+    Reads the parent's title via ``gh issue view`` and infers the structural type
+    so the body's parent-ref label matches the parent's REAL type. Returns ``None``
+    on any failure (gh absent, non-zero exit, non-JSON, missing/unknown title
+    prefix); the caller then degrades to the ``parent_ref_form``'s first option.
+    Quiet by design — a failed detection is a graceful degrade, not an error.
+    """
+    try:
+        proc = gh_run(
+            ["gh", "issue", "view", str(parent_num), "--json", "title"],
+            config,
+            check=False,
+        )
+    except (FileNotFoundError, OSError):
+        return None
+    if proc.returncode != 0:
+        return None
+    try:
+        payload = json.loads(proc.stdout)
+    except (json.JSONDecodeError, ValueError):
+        return None
+    title = payload.get("title") if isinstance(payload, dict) else None
+    if not isinstance(title, str):
+        return None
+    return _infer_structural_type(title, issue_types)
+
+
+def _parent_ref_form_matchers(parent_ref_form: str) -> list[re.Pattern[str]]:
+    """Compile a type's ``parent_ref_form`` into per-option first-line matchers.
+
+    Each `` or ``-separated option becomes a regex matching a concrete first
+    line: ``<Label>: #<N>`` → ``^<Label>:\\s+#\\d+\\s*$`` and the milestone link
+    form → its back-referenced pattern. Used to accept a ``--body-file`` whose
+    first line is ANY allowed parent-ref form for the type (#356), the same option
+    set validate-body accepts.
+    """
+    matchers: list[re.Pattern[str]] = []
+    for raw in str(parent_ref_form).split(" or "):
+        option = raw.strip()
+        if not option:
+            continue
+        if "../milestone/" in option:
+            matchers.append(
+                re.compile(r"^Milestone:\s+\[#(\d+)\]\(\.\./milestone/\1\)\s*$")
+            )
+            continue
+        m = re.match(r"^([A-Za-z]+):\s*#<N>\s*$", option)
+        if m:
+            label = re.escape(m.group(1))
+            matchers.append(re.compile(rf"^{label}:\s+#\d+\s*$"))
+    return matchers
+
+
 def _title_pattern_for(titles: dict, structural_type: str) -> str | None:
     """Look up the titles.yaml regex for the given structural type."""
     formats = titles.get("formats") or {}
@@ -776,6 +959,7 @@ def _parent_ref_line(
     type_entry: dict,
     parent_num: int | None,
     milestone_num: int | None = None,
+    parent_label: str | None = None,
 ) -> str:
     """Build the parent-ref line that goes at the top of the body.
 
@@ -785,7 +969,11 @@ def _parent_ref_line(
         ``Milestone: [#<N>](../milestone/<N>)``
 
     When ``parent_num`` is given, emits the plain ``<Label>: #<N>`` form
-    (issue auto-links are correct for issue parents).
+    (issue auto-links are correct for issue parents). ``parent_label`` is the
+    label matching the PARENT's actual structural type (e.g. ``EPIC`` for a Task
+    filed under an EPIC, #356); when it is ``None`` — the parent type could not
+    be detected — the label degrades to the first option in the type's
+    ``parent_ref_form`` (the prior behaviour).
     """
     if milestone_num is not None and "milestone" in (
         type_entry.get("parent_issue_types") or []
@@ -793,6 +981,8 @@ def _parent_ref_line(
         return f"Milestone: [#{milestone_num}](../milestone/{milestone_num})"
     if parent_num is None:
         return ""
+    if parent_label:
+        return f"{parent_label}: #{parent_num}"
     form = type_entry.get("parent_ref_form", "Parent: #<N>")
     # form is like "Feature: #<N>" or "EPIC: #<N> or Umbrella: #<N>" — pick
     # the first label fragment before the `:` and use it.
