@@ -35,6 +35,23 @@ def st():
     return module
 
 
+def _link_parents_textual_only(st, issues, monkeypatch) -> None:
+    """Run `_link_parents` with the native `…/sub_issues` read stubbed to
+    unsupported (None) → textual-only resolution through the containment seam.
+
+    show-tree no longer parses body parent-refs directly; it routes child
+    building through `_lib.containment.resolve_children` (ADR-026). These linkage
+    tests assert the TEXTUAL projection, so the native side is stubbed off; the
+    native-wins / mixed-mode behaviour is proven in the read-seam test.
+    """
+    monkeypatch.setattr(
+        st.containment,
+        "read_native_child_numbers",
+        lambda _config, *, parent_number: None,
+    )
+    st._link_parents(issues, {})
+
+
 @pytest.fixture
 def issue_types() -> dict:
     return {
@@ -47,31 +64,34 @@ def issue_types() -> dict:
     }
 
 
-# --- parent-ref extraction -------------------------------------------
+# --- candidate-parent pre-scan ref recognition -----------------------
+# show-tree's direct body-ref parser is gone; the seam owns authoritative
+# resolution. `_first_parent_ref` survives only to BOUND which parents get a
+# native read (it never decides the rendered child set) — same recognition.
 
 
-def test_extract_parent_ref_simple(st) -> None:
+def test_first_parent_ref_simple(st) -> None:
     body = "Feature: #42\n\n## What\nfoo"
-    assert st._extract_parent_ref(body) == 42
+    assert st._first_parent_ref(body) == 42
 
 
-def test_extract_parent_ref_epic_form(st) -> None:
+def test_first_parent_ref_epic_form(st) -> None:
     body = "EPIC: #99\n\nbody"
-    assert st._extract_parent_ref(body) == 99
+    assert st._first_parent_ref(body) == 99
 
 
-def test_extract_parent_ref_returns_none_when_no_ref(st) -> None:
+def test_first_parent_ref_returns_none_when_no_ref(st) -> None:
     body = "## What\nplain body."
-    assert st._extract_parent_ref(body) is None
+    assert st._first_parent_ref(body) is None
 
 
-def test_extract_parent_ref_empty_body(st) -> None:
-    assert st._extract_parent_ref("") is None
+def test_first_parent_ref_empty_body(st) -> None:
+    assert st._first_parent_ref("") is None
 
 
-def test_extract_parent_ref_skips_leading_whitespace(st) -> None:
+def test_first_parent_ref_skips_leading_whitespace(st) -> None:
     body = "\n\n   EPIC: #5\nbody"
-    assert st._extract_parent_ref(body) == 5
+    assert st._first_parent_ref(body) == 5
 
 
 # --- structural type inference ---------------------------------------
@@ -156,7 +176,7 @@ def test_parse_prs_empty_closes_when_no_keyword(st) -> None:
 # --- parent linking --------------------------------------------------
 
 
-def test_link_parents_sets_relationships(st, issue_types) -> None:
+def test_link_parents_sets_relationships(st, issue_types, monkeypatch) -> None:
     raw = [
         {
             "number": 1,
@@ -181,7 +201,7 @@ def test_link_parents_sets_relationships(st, issue_types) -> None:
         },
     ]
     issues = st._parse_issues(raw, issue_types)
-    st._link_parents(issues)
+    _link_parents_textual_only(st, issues, monkeypatch)
     assert issues[3].parent_number == 2
     assert issues[2].parent_number == 1
     # EPIC ref to Milestone: parent is M1 (not a real issue number); we
@@ -192,7 +212,7 @@ def test_link_parents_sets_relationships(st, issue_types) -> None:
     assert 2 in issues[1].children
 
 
-def test_link_parents_handles_missing_parent_target(st, issue_types) -> None:
+def test_link_parents_handles_missing_parent_target(st, issue_types, monkeypatch) -> None:
     """Parent ref that doesn't resolve in the loaded set stays unlinked."""
     raw = [
         {
@@ -204,14 +224,14 @@ def test_link_parents_handles_missing_parent_target(st, issue_types) -> None:
         }
     ]
     issues = st._parse_issues(raw, issue_types)
-    st._link_parents(issues)
+    _link_parents_textual_only(st, issues, monkeypatch)
     assert issues[5].parent_number is None
 
 
 # --- orphan detection ------------------------------------------------
 
 
-def test_orphan_task_with_no_parent_ref(st, issue_types) -> None:
+def test_orphan_task_with_no_parent_ref(st, issue_types, monkeypatch) -> None:
     raw = [
         {
             "number": 1,
@@ -222,12 +242,12 @@ def test_orphan_task_with_no_parent_ref(st, issue_types) -> None:
         }
     ]
     issues = st._parse_issues(raw, issue_types)
-    st._link_parents(issues)
+    _link_parents_textual_only(st, issues, monkeypatch)
     orphans = st._detect_orphans(issues, {})
     assert 1 in orphans["open_issues_with_no_parent_ref"]
 
 
-def test_epic_with_no_parent_is_not_orphan(st, issue_types) -> None:
+def test_epic_with_no_parent_is_not_orphan(st, issue_types, monkeypatch) -> None:
     """EPICs legitimately have no parent (parent_ref_optional)."""
     raw = [
         {
@@ -239,7 +259,7 @@ def test_epic_with_no_parent_is_not_orphan(st, issue_types) -> None:
         }
     ]
     issues = st._parse_issues(raw, issue_types)
-    st._link_parents(issues)
+    _link_parents_textual_only(st, issues, monkeypatch)
     orphans = st._detect_orphans(issues, {})
     assert 1 not in orphans["open_issues_with_no_parent_ref"]
 
@@ -271,7 +291,7 @@ def test_pr_with_matching_closing_issue_not_orphan(st, issue_types) -> None:
     assert 99 not in orphans["prs_without_closing_issue_in_repo"]
 
 
-def test_closed_issues_not_counted_as_orphans(st, issue_types) -> None:
+def test_closed_issues_not_counted_as_orphans(st, issue_types, monkeypatch) -> None:
     raw = [
         {
             "number": 1,
@@ -282,6 +302,6 @@ def test_closed_issues_not_counted_as_orphans(st, issue_types) -> None:
         }
     ]
     issues = st._parse_issues(raw, issue_types)
-    st._link_parents(issues)
+    _link_parents_textual_only(st, issues, monkeypatch)
     orphans = st._detect_orphans(issues, {})
     assert 1 not in orphans["open_issues_with_no_parent_ref"]

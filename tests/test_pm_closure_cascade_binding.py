@@ -278,7 +278,18 @@ def _stub_fetch_issue(monkeypatch, issue: dict) -> None:
     monkeypatch.setattr(predicates, "_fetch_issue", lambda _n, _c, _f: issue)
 
 
-def _stub_list_issues(monkeypatch, issues: list[dict]) -> None:
+def _stub_list_issues(
+    monkeypatch, issues: list[dict], *, native: set[int] | None = None
+) -> None:
     monkeypatch.setattr(predicates, "_capability_root", lambda: REPO_ROOT)
     monkeypatch.setattr(predicates, "_config", lambda _root: {})
     monkeypatch.setattr(predicates, "_list_issues", lambda _c: issues)
+    # The cascade member-set now resolves through the containment read-seam, which
+    # issues a native `…/sub_issues` read. Stub it so these (offline) tests never
+    # touch the network: `native=None` means "native unsupported" → textual-only
+    # (the member set is then exactly the body parent-ref walk these tests assert).
+    monkeypatch.setattr(
+        predicates.containment,
+        "read_native_child_numbers",
+        lambda _config, *, parent_number: native,
+    )

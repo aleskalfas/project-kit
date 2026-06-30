@@ -32,6 +32,7 @@ if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
 from _lib import axis_labels  # noqa: E402
+from _lib import containment  # noqa: E402
 from _lib import lifecycle_inference as infer  # noqa: E402
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import resolve_capability_root  # noqa: E402
@@ -195,10 +196,13 @@ def cascade_members(parent_number: int) -> dict[str, Any]:
 
     Returns `{members: ["<n>", ...]}` — the issue numbers (as strings, the
     engine's subject ids) of EVERY child of `parent_number`, open and closed
-    alike. A child is one whose body parent-ref first line names this parent
-    (`infer.names_parent`) — the SAME hierarchy source close-issue's
-    `_find_open_children` walks (the methodology's tree-of-record), so the
-    member set is identical to what pm computes today.
+    alike. Children are resolved through the SAME containment read-seam
+    (`_lib.containment.resolve_children`) `show-tree` uses — native sub-issues
+    where present, textual child-side parent-refs otherwise, native-wins on
+    conflict (DEC-005). Routing both consumers through the one seam is the
+    load-bearing ADR-026 point: the closure fold does NOT re-derive containment
+    by re-parsing body parent-refs in parallel with `show-tree`; there is one
+    reader of "what are this parent's children?", and this is it for the fold.
 
     The full set (not just open children) is intentional: the engine resolves
     EACH member's lifecycle outcome and the `all`-over-`done` reducer folds them.
@@ -230,13 +234,15 @@ def cascade_members(parent_number: int) -> dict[str, Any]:
             f"issue list hit the pagination ceiling ({_OPEN_ISSUES_LIMIT}); "
             "the child set may be incomplete"
         )
-    members: list[str] = []
-    for child in issues:
-        number = child.get("number")
-        if not isinstance(number, int) or number == parent_number:
-            continue
-        if infer.names_parent(str(child.get("body") or ""), parent_number):
-            members.append(str(number))
+    corpus = {
+        number: str(child.get("body") or "")
+        for child in issues
+        if isinstance((number := child.get("number")), int)
+    }
+    resolution = containment.resolve_children(
+        config, parent_number=parent_number, corpus=corpus
+    )
+    members = [str(n) for n in resolution.numbers]
     return {
         "members": members,
         "reason": (

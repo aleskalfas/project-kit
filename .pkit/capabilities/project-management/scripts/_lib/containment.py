@@ -1,10 +1,25 @@
-"""The sole constructor of the native sub-issue (containment) link write.
+"""The sole constructor of the native sub-issue (containment) link write, AND
+the one read seam that resolves a parent's children.
 
 DEC-005 makes **GitHub's native sub-issues field** the canonical structural
 mechanism for the hierarchy parent ↔ child edge: every parent-link mutation must
 set the native link *in addition to* the textual first-line parent-ref. Until
 now the codebase wrote only the textual child-side ref; this module supplies the
 missing native write.
+
+The read counterpart (the second half of this module)
+--------------------------------------------------------
+DEC-005's "native wins" rule is a *read*-time resolution as much as a write-time
+one. Where this module's write half is the sole constructor of the native link,
+its read half (:func:`resolve_children`) is the sole resolver of "what are this
+parent's children?" — native sub-issues where present, textual child-side
+parent-refs otherwise, **native-wins on conflict**. Both `show-tree` and the
+DEC-034 closure-fold child-walk resolve through it, so no consumer re-derives
+containment by parsing body parent-refs directly (ADR-026's one-read-seam
+discipline, mirrored here for the containment axis: a second consumer must not
+re-derive what one seam already resolves). The formal read-path contract for
+this seam will be pinned in the Track-2 containment ADR (architect-owned) when
+that lands; until then this module's docstrings carry the resolution semantics.
 
 A *containment link* is a third non-label substrate, distinct from the two
 ``_lib/substrate_writes`` covers (the Projects-v2 field-value and the milestone
@@ -56,6 +71,7 @@ carries the relationship in that case. A native write never fails the create.
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 from dataclasses import dataclass
 from enum import Enum
@@ -357,3 +373,203 @@ def _gh_call(args: list[str], config: dict[str, Any]) -> subprocess.CompletedPro
     if gh_run is not None:
         return gh_run(args, config, check=False)
     return subprocess.run(args, capture_output=True, text=True, check=False)
+
+
+# =========================================================================
+# Read seam — resolve a parent's children (native-where-present / textual-
+# otherwise / native-wins). The counterpart to the write half above.
+# =========================================================================
+
+
+class ChildSubstrate(Enum):
+    """Which substrate a resolved child came from (DEC-005's two mechanisms).
+
+    NATIVE   — a GitHub native sub-issue of the parent (the canonical mechanism).
+    TEXTUAL  — discovered only via the child's body first-line parent-ref (the
+               projection); present in the corpus but NOT a native sub-issue.
+
+    On conflict (a child present BOTH natively and textually) the child resolves
+    to NATIVE — "native wins" (DEC-005). The substrate is surfaced so a consumer
+    can render or reason about provenance; the child set itself is the union with
+    native-wins dedup.
+    """
+
+    NATIVE = "native"
+    TEXTUAL = "textual"
+
+
+@dataclass(frozen=True)
+class ResolvedChild:
+    """One child of a parent, with the substrate it was resolved from.
+
+    ``number`` is the child issue number (the methodology's stable key, shared by
+    both substrates — the native sub-issues payload carries ``number`` and the
+    textual parent-ref names ``#<number>``). Dedup across the two substrates is by
+    ``number``; ``substrate`` records who won (NATIVE on conflict per DEC-005).
+    """
+
+    number: int
+    substrate: ChildSubstrate
+
+
+@dataclass(frozen=True)
+class ChildResolution:
+    """The resolved child set for one parent, plus how it was resolved.
+
+    Fields:
+      children          — the resolved children, sorted by number, deduped across
+                          substrates with native-wins.
+      native_supported  — False when the native sub-issues read returned
+                          unsupported (404/410/422 / missing ``gh``); the result
+                          is then textual-only (graceful degradation, like the
+                          write side). True when the native read succeeded (even
+                          if it returned zero native children). None is not used —
+                          a failed-but-supported read also yields textual-only
+                          with this False (the consumer cannot tell, and need not:
+                          the textual projection is the documented fallback).
+
+    Convenience accessors keep call sites terse and stop each consumer from
+    re-deriving the same projections off ``children``.
+    """
+
+    children: tuple[ResolvedChild, ...]
+    native_supported: bool
+
+    @property
+    def numbers(self) -> list[int]:
+        """All child numbers (union, native-wins dedup), sorted."""
+        return [c.number for c in self.children]
+
+    @property
+    def native_numbers(self) -> list[int]:
+        """Child numbers that resolved from the NATIVE substrate, sorted."""
+        return sorted(c.number for c in self.children if c.substrate is ChildSubstrate.NATIVE)
+
+    @property
+    def textual_numbers(self) -> list[int]:
+        """Child numbers that resolved from the TEXTUAL substrate only, sorted."""
+        return sorted(c.number for c in self.children if c.substrate is ChildSubstrate.TEXTUAL)
+
+
+def read_native_child_numbers(
+    config: dict[str, Any], *, parent_number: int | str
+) -> set[int] | None:
+    """Return the issue NUMBERS of the parent's native sub-issues.
+
+    Reads ``GET /repos/{owner}/{repo}/issues/{parent}/sub_issues`` (paginated)
+    through the gh helper (DEC-023 host/owner pinning), the same endpoint the
+    write half's idempotency read uses — but keyed on the child ``number`` (the
+    methodology's stable id) rather than the database ``id`` the *write* needs.
+
+    Returns ``None`` when the native read is **unsupported or unreadable** — a
+    404/410/422 (older GHES / feature off), a missing ``gh``, a non-zero exit, or
+    an unparseable payload. ``None`` is the signal to the resolver to fall back to
+    **textual-only** (graceful degradation, the read mirror of the write side's
+    UNSUPPORTED no-op). An empty set is a *successful* read of a parent with no
+    native sub-issues — distinct from ``None``, and it does NOT trigger textual
+    fallback (the parent genuinely has no native children).
+    """
+    args = list_sub_issues_args(parent_number=parent_number)
+    try:
+        proc = _gh_call(args, config)
+    except FileNotFoundError:
+        return None
+    if proc.returncode != 0:
+        return None
+    payload = _parse_concatenated_arrays((proc.stdout or "").strip())
+    if payload is None:
+        return None
+    numbers: set[int] = set()
+    for entry in payload:
+        if isinstance(entry, dict):
+            raw = entry.get("number")
+            if isinstance(raw, int):
+                numbers.add(raw)
+    return numbers
+
+
+def resolve_children(
+    config: dict[str, Any],
+    *,
+    parent_number: int,
+    corpus: dict[int, str],
+) -> ChildResolution:
+    """Resolve a parent's children — native-where-present, textual-otherwise,
+    native-wins on conflict (DEC-005).
+
+    The sole read-seam for "what are this parent's children?" Both ``show-tree``
+    and the DEC-034 closure-fold child-walk resolve through it so neither
+    re-derives containment (the ADR-026 one-read-seam discipline applied to the
+    containment axis).
+
+    Args:
+      parent_number — the parent whose children to resolve.
+      corpus        — the already-fetched issue corpus as ``{number: body}`` for
+                      EVERY issue the caller knows about. The textual side is
+                      resolved from this map with **zero** extra API calls — the
+                      caller has already paid for the corpus fetch (``show-tree``
+                      and the closure-fold both ``gh issue list`` the whole repo
+                      once). See the cost note below.
+
+    Resolution:
+      1. Native side — one ``GET …/sub_issues`` call for THIS parent
+         (:func:`read_native_child_numbers`). Unsupported/unreadable → textual-
+         only (``native_supported=False``).
+      2. Textual side — every corpus issue whose body first-line parent-ref names
+         ``parent_number`` (``_body_names_parent``), excluding the parent itself.
+      3. Union with **native-wins dedup**: a child present both ways is NATIVE; a
+         child present only textually is TEXTUAL; a native child not in the
+         corpus is still NATIVE (mixed-mode — the native panel is authoritative
+         even for a child the textual scan missed).
+
+    API cost (the deliberate shape): the textual side is free (corpus already in
+    hand); the native side is **one call per parent resolved**, NOT per corpus
+    issue. Both consumers resolve children one parent at a time (``show-tree``
+    walks known parents; the closure fold resolves a single container), so native
+    reads scale with *parents queried*, not corpus size. A whole-tree ``show-tree``
+    does pay one native call per node that has children — bounded by the tree's
+    internal-node count, well under the corpus size, and the price of honouring
+    "native wins" without a private GraphQL batch (a batched ``subIssues`` GraphQL
+    pass is a later optimisation, not pinned here — COR-007 speculative-generality
+    restraint).
+    """
+    native = read_native_child_numbers(config, parent_number=parent_number)
+    native_supported = native is not None
+    native_set = native or set()
+
+    textual_set = {
+        number
+        for number, body in corpus.items()
+        if number != parent_number and _body_names_parent(body, parent_number)
+    }
+
+    resolved: list[ResolvedChild] = []
+    for number in native_set:
+        resolved.append(ResolvedChild(number=number, substrate=ChildSubstrate.NATIVE))
+    for number in textual_set - native_set:  # native-wins: skip textual dupes
+        resolved.append(ResolvedChild(number=number, substrate=ChildSubstrate.TEXTUAL))
+    resolved.sort(key=lambda c: c.number)
+    return ChildResolution(children=tuple(resolved), native_supported=native_supported)
+
+
+def _body_names_parent(body: str, parent_number: int) -> bool:
+    """True when a child body's FIRST non-blank line is a parent-ref naming
+    ``parent_number`` (``<Word>: #<n>``).
+
+    The textual-side recognition, identical to the convention every other walker
+    uses (``show-tree._extract_parent_ref``, ``close-issue._walk_parent_chain``,
+    ``lifecycle_inference.parent_ref``). Co-located here so the read seam owns the
+    textual projection too — a consumer routing through the seam never re-parses
+    the body itself.
+    """
+    if not body:
+        return False
+    for line in body.splitlines():
+        s = line.strip()
+        if not s:
+            continue
+        m = re.match(r"^([A-Za-z]+):\s+#(\d+)", s)
+        if not m:
+            return False
+        return int(m.group(2)) == parent_number
+    return False
