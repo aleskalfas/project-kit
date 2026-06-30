@@ -697,3 +697,150 @@ def _hooks_module(ci):
     patch the `substrate_writes` seam the hook actually calls.
     """
     return sys.modules[ci.fire_hooks.__module__]
+
+
+# --- native sub-issue link on --parent (DEC-005, #344) ---------------------
+# create-issue sets GitHub's native sub-issue link IN ADDITION to the textual
+# first-line parent-ref. These drive the real main() with the containment seam
+# stubbed (offline) to prove: the native link is invoked on --parent; the
+# textual ref is still written; and a native no-op (unsupported instance) never
+# fails the create.
+
+
+def test_main_parent_invokes_native_sub_issue_link_and_writes_textual_ref(
+    ci, tmp_path, monkeypatch
+) -> None:
+    """On --parent, main() calls the containment seam to set the native link AND
+    the created issue body still carries the textual first-line parent-ref
+    (DEC-005: native is added, textual is unchanged)."""
+    root = _stage_capability_tree(tmp_path, has_board=False)
+
+    monkeypatch.setattr(
+        ci.subprocess,
+        "run",
+        _gh_command_dispatcher("https://github.com/acme/repo/issues/55"),
+    )
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+
+    # Capture the body passed to the create call (the textual ref must be there).
+    created_body: dict = {}
+    real_create = ci._gh_create_issue
+
+    def capturing_create(**kwargs):
+        created_body["body"] = kwargs["body"]
+        return real_create(**kwargs)
+
+    monkeypatch.setattr(ci, "_gh_create_issue", capturing_create)
+
+    # Stub the containment seam: capture the call, report LINKED (no network).
+    link_calls: list[dict] = []
+
+    def fake_link(config, *, parent_number, child_number):
+        link_calls.append({"parent": parent_number, "child": child_number})
+        return _FakeLink("linked", ok=True)
+
+    monkeypatch.setattr(ci, "link_sub_issue", fake_link)
+    monkeypatch.setattr(
+        ci.sys, "argv",
+        [
+            "create-issue.py",
+            "--type", "task",
+            "--title", "do a thing",
+            "--parent", "1",
+            "--workstream", "spyre",
+            "--capability-root", str(root),
+            "--yes",
+        ],
+    )
+
+    rc = ci.main()
+    assert rc == 0
+    # The native link was invoked for the new child (#55) under parent #1.
+    assert link_calls == [{"parent": 1, "child": 55}]
+    # The textual first-line parent-ref is still written into the body.
+    assert "Feature: #1" in created_body["body"]
+
+
+def test_main_no_parent_does_not_invoke_native_link(ci, tmp_path, monkeypatch) -> None:
+    """Without --parent (milestone parent), the native sub-issue link is NOT
+    invoked — a milestone is not a sub-issue relationship."""
+    root = _stage_capability_tree(tmp_path, has_board=False)
+    # Make milestone an acceptable parent so the no-parent task is allowed.
+    (root / "schemas" / "issue-types.yaml").write_text(
+        "types:\n"
+        "  task:\n"
+        "    title_prefix: Task\n"
+        "    title_case: title\n"
+        "    parent_issue_types: [feature, milestone]\n"
+        "    parent_ref_form: 'Feature: #<N>'\n"
+        "    parent_ref_optional: true\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        ci.subprocess,
+        "run",
+        _gh_command_dispatcher("https://github.com/acme/repo/issues/56"),
+    )
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+
+    def boom(*a, **k):  # pragma: no cover — must not be reached
+        raise AssertionError("native link must not fire without an issue parent")
+
+    monkeypatch.setattr(ci, "link_sub_issue", boom)
+    monkeypatch.setattr(
+        ci.sys, "argv",
+        [
+            "create-issue.py",
+            "--type", "task",
+            "--title", "do a thing",
+            "--workstream", "spyre",
+            "--capability-root", str(root),
+            "--yes",
+        ],
+    )
+    assert ci.main() == 0
+
+
+def test_main_parent_native_link_unsupported_does_not_fail_create(
+    ci, tmp_path, monkeypatch
+) -> None:
+    """A native no-op (unsupported instance) never fails the create — main()
+    still returns 0 and the issue is created with its textual ref."""
+    root = _stage_capability_tree(tmp_path, has_board=False)
+
+    monkeypatch.setattr(
+        ci.subprocess,
+        "run",
+        _gh_command_dispatcher("https://github.com/acme/repo/issues/57"),
+    )
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+
+    monkeypatch.setattr(
+        ci, "link_sub_issue",
+        lambda *a, **k: _FakeLink(
+            "native sub-issues unsupported on this instance; textual ref recorded",
+            ok=False,
+        ),
+    )
+    monkeypatch.setattr(
+        ci.sys, "argv",
+        [
+            "create-issue.py",
+            "--type", "task",
+            "--title", "do a thing",
+            "--parent", "1",
+            "--workstream", "spyre",
+            "--capability-root", str(root),
+            "--yes",
+        ],
+    )
+    assert ci.main() == 0
+
+
+class _FakeLink:
+    """Minimal stand-in for containment.LinkResult — carries `ok` + `detail`."""
+
+    def __init__(self, detail: str, *, ok: bool) -> None:
+        self.detail = detail
+        self.ok = ok

@@ -169,6 +169,8 @@ EPIC bodies may omit the parent-ref line entirely (EPICs are not always schedule
 
 `validate-issue` enforces these forms. The old plain `Milestone: #<N>` form is accepted with a deprecation warning during the grace period; update existing bodies to the link form.
 
+For an **issue parent**, `create-issue --parent <N>` also sets GitHub's **native sub-issue link** between the new child and the parent, *in addition to* the textual first-line ref (per [project-management:DEC-005-linking-and-containment]: native sub-issues are the canonical containment mechanism; the textual ref is the universal spine). The native link is what surfaces the child in the parent's sub-issues panel and feeds the Projects v2 "Sub-issues progress" field. It is idempotent (re-linking an already-linked child is a no-op) and degrades to a no-op where the instance does not support sub-issues (e.g. an older GHES / the feature off) — the textual ref carries the relationship in that case, and a native-link failure never fails the create. A milestone parent (`--milestone`) is not a sub-issue relationship and carries its own native Milestone field, so no sub-issue link is set for it. The native write goes through `scripts/_lib/containment.py` as a single construction point (the ADR-031 sole-constructor discipline applied to the containment substrate), reusable by any future parent-link mutation.
+
 #### Issue body validation — residual placeholder detection (per [project-management:DEC-031-reject-unauthored-placeholder-bodies])
 
 `validate-issue` detects bodies that still carry the stamped template skeleton the author was supposed to fill. Two signals, both derived structurally from the live template at runtime:
