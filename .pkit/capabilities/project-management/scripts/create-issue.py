@@ -61,6 +61,7 @@ from _lib.membership import (  # noqa: E402
     resolve_invoker_identity,
 )
 from _lib.milestone import resolve_milestone  # noqa: E402
+from _lib import session_guard  # noqa: E402
 from _lib.substrate_writes import milestone_create_args  # noqa: E402
 from _lib.placeholder_detection import (  # noqa: E402
     PHASE_CREATE,
@@ -189,6 +190,7 @@ def main() -> int:
         action="store_true",
         help="Skip the confirmation prompt before invoking gh.",
     )
+    session_guard.add_override_argument(parser)
     args = parser.parse_args()
 
     capability_root = resolve_capability_root(args.capability_root)
@@ -208,6 +210,13 @@ def main() -> int:
     membership = check_membership(members, invoker)
     if not membership.allowed:
         print(membership.refusal_message, file=sys.stderr)
+        return 1
+
+    # Foreign-repo mutation guard (COR-039 / ADR-034). Compares the cwd-derived
+    # mutation target against the cd-invariant session anchor (CLAUDE_PROJECT_DIR);
+    # gates a cross-repo mutation (refuse under autonomy / prompt interactively)
+    # unless the operator confirms the override. Runs before any gh mutation.
+    if not session_guard.enforce(override=args.allow_foreign_repo):
         return 1
 
     # Read schemas + adopter config.

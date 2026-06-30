@@ -36,6 +36,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
+from _lib import session_guard  # noqa: E402
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
@@ -61,6 +62,7 @@ def main() -> int:
     parser.add_argument("--capability-root", type=Path, default=None)
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--yes", action="store_true")
+    session_guard.add_override_argument(parser)
     args = parser.parse_args()
 
     if args.name is None and args.description is None and args.status is None and args.deprecated_reason is None:
@@ -82,6 +84,14 @@ def main() -> int:
     membership = check_membership(members, invoker)
     if not membership.allowed:
         print(membership.refusal_message, file=sys.stderr)
+        return 1
+
+    # Foreign-repo mutation guard (COR-039 / ADR-034). workstreams.yaml is
+    # resolved from the cwd-walk in resolve_capability_root, so a `cd /B`
+    # redirects this write into a DIFFERENT repo than the session anchor
+    # (CLAUDE_PROJECT_DIR); gate that unless the operator confirms the
+    # override. Runs before the file write below.
+    if not session_guard.enforce(override=args.allow_foreign_repo):
         return 1
 
     path = workstreams_path(capability_root)

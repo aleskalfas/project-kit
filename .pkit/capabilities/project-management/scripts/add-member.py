@@ -36,6 +36,7 @@ from ruamel.yaml.error import YAMLError
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
+from _lib import session_guard  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
     check_membership,
@@ -86,6 +87,7 @@ def main() -> int:
         action="store_true",
         help="Skip the confirmation prompt before writing.",
     )
+    session_guard.add_override_argument(parser)
     args = parser.parse_args()
 
     capability_root = resolve_capability_root(args.capability_root)
@@ -111,6 +113,14 @@ def main() -> int:
     result = check_membership(members, invoker)
     if not result.allowed:
         print(result.refusal_message, file=sys.stderr)
+        return 1
+
+    # Foreign-repo mutation guard (COR-039 / ADR-034). members.yaml is resolved
+    # from the cwd-walk in resolve_capability_root, so a `cd /B` redirects this
+    # write into a DIFFERENT repo than the session anchor (CLAUDE_PROJECT_DIR);
+    # gate that (refuse under autonomy / prompt interactively) unless the
+    # operator confirms the override. Runs before the file write below.
+    if not session_guard.enforce(override=args.allow_foreign_repo):
         return 1
 
     # Resolve the new entry's identity fields.

@@ -444,6 +444,89 @@ def test_hook_does_not_capture_allow_or_deny(tmp_path):
     assert _read_diag_log(root) == [], "a deny must not be captured"
 
 
+# ---- ADR-034: Edit/Write foreign-path prompt (the one intent-layer corner) --
+#
+# Additive, hook-side only: on an Edit/Write whose tool_input file path is an
+# absolute path OUTSIDE the session anchor (CLAUDE_PROJECT_DIR), the hook
+# upgrades a deferred (abstain) verdict to a PROMPT (`ask`). It never denies and
+# never touches decide.py's bash-path decision core (ADR-034 point 6).
+
+
+def _ask_reason(parsed: dict | None) -> str | None:
+    if parsed is None:
+        return None
+    out = parsed["hookSpecificOutput"]
+    if out["permissionDecision"] != "ask":
+        return None
+    return out["permissionDecisionReason"]
+
+
+def test_hook_prompts_on_foreign_edit_path(tmp_path):
+    """An Edit to an absolute path OUTSIDE the session anchor → ask (prompt)."""
+    root = _tree(tmp_path)
+    foreign = tmp_path / "other-repo" / "file.py"
+    _, parsed = _invoke(root, {
+        "tool_name": "Edit",
+        "tool_input": {"file_path": str(foreign), "old_string": "a", "new_string": "b"},
+        "cwd": str(root),
+    })
+    assert _decision(parsed) == "ask"
+    reason = _ask_reason(parsed)
+    assert "outside this session's repo" in reason
+    # Honest framing: a prompt, not a wall.
+    assert "not a wall" in reason
+
+
+def test_hook_prompts_on_foreign_write_path(tmp_path):
+    """A Write to an absolute foreign path → ask, same as Edit."""
+    root = _tree(tmp_path)
+    foreign = tmp_path / "elsewhere" / "new.txt"
+    _, parsed = _invoke(root, {
+        "tool_name": "Write",
+        "tool_input": {"file_path": str(foreign), "content": "x"},
+        "cwd": str(root),
+    })
+    assert _decision(parsed) == "ask"
+
+
+def test_hook_does_not_prompt_on_in_tree_edit(tmp_path):
+    """An Edit to a path INSIDE the session anchor → no prompt (abstain)."""
+    root = _tree(tmp_path)
+    in_tree = root / "src" / "module.py"
+    _, parsed = _invoke(root, {
+        "tool_name": "Edit",
+        "tool_input": {"file_path": str(in_tree), "old_string": "a", "new_string": "b"},
+        "cwd": str(root),
+    })
+    assert parsed is None, "in-tree Edit must defer (no foreign-path prompt)"
+
+
+def test_hook_does_not_prompt_on_relative_edit_path(tmp_path):
+    """A relative Edit path is left to the harness's cwd-relative handling."""
+    root = _tree(tmp_path)
+    _, parsed = _invoke(root, {
+        "tool_name": "Edit",
+        "tool_input": {"file_path": "relative/file.py", "old_string": "a", "new_string": "b"},
+        "cwd": str(root),
+    })
+    assert parsed is None
+
+
+def test_hook_bash_decision_unchanged_by_foreign_path_corner(tmp_path):
+    """ADR-034 point 6 / same-code invariant: the Bash-path decisions are
+    untouched. A guardrail deny on Bash is still a deny; an abstain still
+    abstains — the Edit/Write corner does not leak into the bash path."""
+    root = _tree(tmp_path)
+    # Guardrail deny still denies.
+    _, parsed = _invoke(root, {"tool_name": "Bash", "tool_input": {"command": "sudo rm x"},
+                               "cwd": str(root)})
+    assert _decision(parsed) == "deny"
+    # Unmodeled lenient bash still abstains (the corner only touches Edit/Write).
+    _, parsed = _invoke(root, {"tool_name": "Bash", "tool_input": {"command": "gh pr list"},
+                               "cwd": str(root)})
+    assert parsed is None
+
+
 def test_hook_capture_failure_is_inert(tmp_path):
     """A BROKEN capture module must never change the decision or break the hook.
     We replace diagnose_capture.py with one whose `capture` raises; the hook's

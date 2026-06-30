@@ -51,6 +51,7 @@ from ruamel.yaml.error import YAMLError
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import axis_labels  # noqa: E402
+from _lib import session_guard  # noqa: E402
 
 
 CAPABILITY_NAME = "project-management"
@@ -124,6 +125,7 @@ def main() -> int:
             "Defaults off so accidental cwd-mismatched runs are caught."
         ),
     )
+    session_guard.add_override_argument(parser)
     args = parser.parse_args()
 
     capability_root = _resolve_capability_root(args.capability_root)
@@ -146,6 +148,12 @@ def main() -> int:
     if gh_err is not None:
         print(f"error: {gh_err}", file=sys.stderr)
         return 2
+
+    # Foreign-repo mutation guard (COR-039 / ADR-034) — bootstrap creates labels
+    # and (optionally) a starter EPIC; gate before any write so an accidental
+    # cwd-mismatched bootstrap (target repo != session anchor) is caught.
+    if not session_guard.enforce(override=args.allow_foreign_repo):
+        return 1
 
     # Read classification.yaml for the canonical label vocabularies.
     classification, class_err = _load_classification(capability_root)

@@ -20,6 +20,7 @@ from pathlib import Path
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
+from _lib import session_guard
 from _lib.criterion_ops import Target, plan_batch
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config
 from _lib.membership import (
@@ -64,6 +65,11 @@ def run_criterion_verb(*, verb: str, target_checked: bool) -> int:
     membership = check_membership(members, invoker)
     if not membership.allowed:
         print(membership.refusal_message, file=sys.stderr)
+        return 1
+
+    # Foreign-repo mutation guard (COR-039 / ADR-034) — gate before the
+    # `gh issue edit` write-back: target repo (cwd) vs session anchor.
+    if not session_guard.enforce(override=args.allow_foreign_repo):
         return 1
 
     issue = gh_get_issue(args.issue_number, config, fields="title,body")
@@ -159,6 +165,7 @@ def _build_parser(verb: str, target_checked: bool) -> argparse.ArgumentParser:
         action="store_true",
         help="Skip the confirmation prompt.",
     )
+    session_guard.add_override_argument(parser)
     return parser
 
 
