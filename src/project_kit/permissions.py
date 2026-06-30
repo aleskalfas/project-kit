@@ -995,6 +995,29 @@ def _write_settings(target_root: Path, data: dict[str, Any]) -> None:
     path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
 
+def _strip_committed_sandbox_enabled(committed: dict[str, Any]) -> bool:
+    """Pop a drifted `sandbox.enabled` from a COMMITTED settings dict in place.
+
+    `enabled` is per-machine and belongs ONLY in `settings.local.json` (ADR-029
+    scalar local-wins; relocated by ADR-032). The committed file must carry no
+    `enabled` source — so this REMOVES the key rather than setting it false
+    (a committed `false` is the same redundant tracked drift, just a stale value;
+    #406). Pops the key whether its value is `true` or `false`, and if that empties
+    the `sandbox` block (`{}`), removes the now-empty block too — no `"sandbox": {}`
+    residue. Any other committed floor keys (denyRead, failIfUnavailable,
+    autoAllowBashIfSandboxed, network, …) keep the block alive and stay untouched.
+
+    Returns True iff it changed `committed`, so callers WRITE only on a real change
+    (idempotent / no-op when there is no committed sandbox block or no `enabled`)."""
+    sb = committed.get("sandbox")
+    if not isinstance(sb, dict) or "enabled" not in sb:
+        return False
+    sb.pop("enabled", None)
+    if not sb:
+        committed.pop("sandbox", None)
+    return True
+
+
 def _read_settings_local(target_root: Path) -> dict[str, Any]:
     """Read the gitignored per-machine settings file (ADR-029). Empty dict when
     absent. Same JSON-fault discipline as `_read_settings`."""
@@ -1603,14 +1626,16 @@ def sandbox_disable(target_root: Path) -> str:
     local.setdefault("sandbox", {})["enabled"] = False
     _write_settings_local(target_root, local)
 
-    # Clear any drifted COMMITTED `enabled: true` (pre-ADR-032, pkit used to author
-    # it there). Leave the rest of the committed floor untouched; only the stale
-    # `enabled` source is stripped so nothing in the union claims the box on.
+    # POP any drifted COMMITTED `enabled` key (pre-ADR-032, pkit used to author it
+    # there). `enabled` is per-machine and belongs ONLY in settings.local.json
+    # (ADR-029/ADR-032); the committed file must carry no `enabled` source at all —
+    # so we REMOVE the key, not set it to false (setting false leaves redundant
+    # tracked residue, the #406 drift). Both a stale `true` AND a stale `false` are
+    # popped. The rest of the committed floor (denyRead, failIfUnavailable, …) stays
+    # untouched; the helper only writes when something actually changed (idempotent).
     if _settings_path(target_root).is_file():
         committed = _read_settings(target_root)
-        csb = committed.get("sandbox")
-        if isinstance(csb, dict) and csb.get("enabled") is True:
-            csb["enabled"] = False
+        if _strip_committed_sandbox_enabled(committed):
             _write_settings(target_root, committed)
 
     return (
@@ -3669,15 +3694,18 @@ def _relocate_per_machine_sandbox_state(target_root: Path) -> list[str]:
 
     # --- enabled (operator activation, harness-co-owned, Rule B defer) ---------
     # A drifted committed `enabled: true` (pre-ADR-032 pkit authored it there).
-    # Move it to the harness-co-owned local key the panel reads.
+    # Move it to the harness-co-owned local key the panel reads, then POP the
+    # committed source — `enabled` belongs ONLY in settings.local.json, so the
+    # committed file must carry no `enabled` key (popping, not setting false; #406,
+    # agreeing with `sandbox_disable`'s strip rather than retaining a stale false).
     if committed_sb.get("enabled") is True:
         # Write local first only when local doesn't already assert a value (no
         # clobber of a live local `enabled`, whoever set it).
         if "enabled" not in local_sb:
             local_sb["enabled"] = True
             local_dirty = True
-        committed_sb["enabled"] = False
-        committed_dirty = True
+        if _strip_committed_sandbox_enabled(committed):
+            committed_dirty = True
         reports.append(
             "relocated `enabled` to settings.local.json "
             "(operator activation, harness-co-owned — was in tracked "

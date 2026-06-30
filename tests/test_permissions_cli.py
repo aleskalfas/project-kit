@@ -638,21 +638,76 @@ def test_sandbox_enable_then_disable_resolves_off(tmp_path, monkeypatch):
     assert _sb_local(proj)["enabled"] is False             # the harness-read key is off
 
 
-def test_sandbox_disable_clears_drifted_committed_enabled(tmp_path, monkeypatch):
+def test_sandbox_disable_pops_drifted_committed_enabled_true(tmp_path, monkeypatch):
     # A pre-ADR-032 committed `enabled: true` (drift) must not keep the box on via
     # the union after disable. disable writes local `enabled: false` (local-wins)
-    # AND clears the stale committed source, so nothing in the union claims on.
+    # AND POPS the stale committed source (not set false; #406) so the committed
+    # file carries no `enabled` key, and nothing in the union claims on.
     proj = _with_adapter(_setup(tmp_path))
     _run(proj, monkeypatch, "sandbox", "enable")           # local enabled=true
-    # Inject a drifted committed enabled: true (the regression this guards).
+    # Inject a drifted committed enabled: true (the regression this guards). Keep a
+    # floor key so the committed sandbox block survives the pop.
     committed_path = proj / ".claude" / "settings.json"
     committed = json.loads(committed_path.read_text())
-    committed.setdefault("sandbox", {})["enabled"] = True
+    csb = committed.setdefault("sandbox", {})
+    csb["enabled"] = True
+    csb.setdefault("filesystem", {})["denyRead"] = ["~/.ssh"]
     committed_path.write_text(json.dumps(committed))
     _run(proj, monkeypatch, "sandbox", "disable")
-    assert _settings(proj)["sandbox"]["enabled"] is False  # stale committed cleared
+    assert "enabled" not in _settings(proj)["sandbox"]     # popped, not set false (#406)
+    assert _settings(proj)["sandbox"]["filesystem"]["denyRead"] == ["~/.ssh"]  # floor intact
     assert _sb_local(proj)["enabled"] is False
     assert _sb(proj)["enabled"] is False                   # union OFF
+
+
+def test_sandbox_disable_pops_stale_committed_enabled_false_residue(tmp_path, monkeypatch):
+    # #406 core regression: a committed `enabled: false` is itself the redundant
+    # tracked residue the old set-to-false branch left behind. disable must POP it,
+    # not leave it — the committed file carries no `enabled` source.
+    proj = _with_adapter(_setup(tmp_path))
+    _run(proj, monkeypatch, "sandbox", "enable")           # local enabled=true (union on)
+    committed_path = proj / ".claude" / "settings.json"
+    committed = json.loads(committed_path.read_text())
+    csb = committed.setdefault("sandbox", {})
+    csb["enabled"] = False                                 # stale residue
+    csb.setdefault("filesystem", {})["denyRead"] = ["~/.ssh"]
+    committed_path.write_text(json.dumps(committed))
+    _run(proj, monkeypatch, "sandbox", "disable")
+    assert "enabled" not in _settings(proj)["sandbox"]     # residue removed
+    assert _settings(proj)["sandbox"]["filesystem"]["denyRead"] == ["~/.ssh"]  # floor intact
+
+
+def test_sandbox_disable_removes_emptied_committed_sandbox_block(tmp_path, monkeypatch):
+    # #406: when popping `enabled` leaves the committed sandbox block empty, the
+    # empty block is cleaned up too — no `"sandbox": {}` residue.
+    proj = _with_adapter(_setup(tmp_path))
+    _run(proj, monkeypatch, "sandbox", "enable")           # local enabled=true (union on)
+    committed_path = proj / ".claude" / "settings.json"
+    committed = json.loads(committed_path.read_text())
+    committed["sandbox"] = {"enabled": True}               # ONLY enabled — block empties
+    committed_path.write_text(json.dumps(committed))
+    _run(proj, monkeypatch, "sandbox", "disable")
+    committed_after = json.loads(committed_path.read_text())
+    assert "sandbox" not in committed_after                # empty block removed
+    assert _sb_local(proj)["enabled"] is False
+    assert _sb(proj)["enabled"] is False                   # union OFF
+
+
+def test_sandbox_disable_noop_when_no_committed_sandbox_block(tmp_path, monkeypatch):
+    # #406 idempotence/safety: disable must not crash or invent a committed sandbox
+    # block when none exists. The committed file is left without one; the local key
+    # carries the authoritative `enabled: false`.
+    proj = _with_adapter(_setup(tmp_path))
+    _run(proj, monkeypatch, "sandbox", "enable")           # local enabled=true (union on)
+    committed_path = proj / ".claude" / "settings.json"
+    committed = json.loads(committed_path.read_text())
+    committed.pop("sandbox", None)                          # no committed sandbox block
+    committed_path.write_text(json.dumps(committed))
+    _run(proj, monkeypatch, "sandbox", "disable")
+    committed_after = json.loads(committed_path.read_text())
+    assert "sandbox" not in committed_after                # none invented
+    assert _sb_local(proj)["enabled"] is False             # authoritative value local
+    assert _sb(proj)["enabled"] is False
 
 
 def test_sandbox_status_off_and_on(tmp_path, monkeypatch):
@@ -1229,6 +1284,47 @@ def _sb(proj: Path) -> dict:
     use this; tests asserting WHICH file an entry routed to use `_sb_committed`
     / `_sb_local`."""
     return _merge_sb(_sb_committed(proj), _sb_local(proj))
+
+
+def test_strip_committed_sandbox_enabled_pops_key_and_reports_change():
+    # #406: the shared strip helper POPS `enabled` (true OR false) and signals it
+    # changed, so callers write only on a real change.
+    from project_kit import permissions as perm
+
+    for value in (True, False):
+        committed = {"sandbox": {"enabled": value, "failIfUnavailable": True}}
+        changed = perm._strip_committed_sandbox_enabled(committed)
+        assert changed is True
+        assert "enabled" not in committed["sandbox"]        # popped, not set false
+        assert committed["sandbox"]["failIfUnavailable"] is True  # other floor untouched
+
+
+def test_strip_committed_sandbox_enabled_removes_emptied_block():
+    # #406: popping the last key removes the now-empty sandbox block (no residue),
+    # but a block holding other floor keys survives with only `enabled` gone.
+    from project_kit import permissions as perm
+
+    only_enabled = {"sandbox": {"enabled": True}}
+    assert perm._strip_committed_sandbox_enabled(only_enabled) is True
+    assert "sandbox" not in only_enabled                     # empty block removed
+
+    with_floors = {"sandbox": {"enabled": True, "filesystem": {"denyRead": ["~/.ssh"]}}}
+    assert perm._strip_committed_sandbox_enabled(with_floors) is True
+    assert with_floors["sandbox"] == {"filesystem": {"denyRead": ["~/.ssh"]}}
+
+
+def test_strip_committed_sandbox_enabled_noop_when_nothing_to_remove():
+    # #406 idempotence: no committed sandbox block, or a block without `enabled`,
+    # is a no-op (returns False, mutates nothing) — caller skips the write.
+    from project_kit import permissions as perm
+
+    no_block: dict = {"permissions": {"deny": []}}
+    assert perm._strip_committed_sandbox_enabled(no_block) is False
+    assert no_block == {"permissions": {"deny": []}}
+
+    no_enabled = {"sandbox": {"failIfUnavailable": True}}
+    assert perm._strip_committed_sandbox_enabled(no_enabled) is False
+    assert no_enabled == {"sandbox": {"failIfUnavailable": True}}
 
 
 def test_merge_preserves_committed_denyread_floor_under_local_widening():
@@ -1924,9 +2020,10 @@ def test_relocate_does_not_move_untagged_committed_socket(tmp_path, monkeypatch)
 
 
 def test_relocate_drifted_committed_enabled_to_local(tmp_path, monkeypatch):
-    # ADR-032: a drifted committed `enabled: true` is moved to the harness-co-owned
-    # local key on setup; the committed source is cleared so the union has no
-    # residual ON source other than the (intended) local one.
+    # ADR-032 / #406: a drifted committed `enabled: true` is moved to the
+    # harness-co-owned local key on setup; the committed source is POPPED (not set
+    # false) so the committed file carries no `enabled` key at all — the union's
+    # only `enabled` source is the (intended) local one.
     proj = _with_adapter(_setup(tmp_path))
     sp = proj / ".claude" / "settings.json"
     sp.parent.mkdir(parents=True, exist_ok=True)
@@ -1934,7 +2031,7 @@ def test_relocate_drifted_committed_enabled_to_local(tmp_path, monkeypatch):
 
     out = _run(proj, monkeypatch, "setup", "autonomy")
 
-    assert _sb_committed(proj).get("enabled") is False  # stale committed cleared
+    assert "enabled" not in _sb_committed(proj)          # popped, not set false (#406)
     assert _sb_local(proj)["enabled"] is True           # moved to harness-co-owned key
     assert _sb(proj)["enabled"] is True                 # union still on (live-throughout)
     assert "relocated `enabled`" in out
@@ -1956,9 +2053,10 @@ def test_relocate_per_machine_no_clobber_live_local_enabled(tmp_path, monkeypatc
 
     reports = perm._relocate_per_machine_sandbox_state(proj)
 
-    # The live local `false` was NOT clobbered; only the stale committed cleared.
+    # The live local `false` was NOT clobbered; the stale committed key is POPPED
+    # (not set false) so the committed file carries no `enabled` source (#406).
     assert _sb_local(proj)["enabled"] is False
-    assert _sb_committed(proj).get("enabled") is False
+    assert "enabled" not in _sb_committed(proj)
     assert any("enabled" in r for r in reports)
 
 
@@ -2005,7 +2103,7 @@ def test_relocate_per_machine_leaves_committed_floors(tmp_path, monkeypatch):
     assert "api.github.com" in committed["network"]["allowedHosts"]
     # Per-machine fields relocated out of committed:
     assert sock not in committed["network"].get("allowUnixSockets", [])
-    assert committed.get("enabled") is False
+    assert "enabled" not in committed  # popped, not set false (#406); floors stay
 
 
 def test_relocate_per_machine_does_not_touch_decide_py(tmp_path, monkeypatch):
