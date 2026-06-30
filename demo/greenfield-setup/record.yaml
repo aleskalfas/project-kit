@@ -1,0 +1,18 @@
+pkit_schema: demo-recording:record-config
+schema_version: 1
+
+# S1 — greenfield setup demo. The bundle (this config + the storyboard) is
+# committed in project-kit's tree; the demo itself DRIVES a throwaway greenfield
+# directory so `pkit init` starts from nothing. Reset that dir to an empty git
+# repo (linked to a disposable GitHub repo for the bootstrap + agent beats)
+# before each take — see the storyboard intro and the extension note in the
+# scratchpad (no before_record hook exists yet to automate this).
+cwd: /tmp/pkit-demo-greenfield
+
+windows:
+  recording: [50, 50, 1330, 850]   # 1280x800 inner capture region
+  control:   [50, 880, 750, 1150]
+
+recordings_dir: ./recordings
+font_size: 18
+font_name: Menlo-Regular

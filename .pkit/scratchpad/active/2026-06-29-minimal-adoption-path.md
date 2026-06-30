@@ -165,10 +165,42 @@ severity tokens to file an issue and move it across a board.
   this branch. Building S1 first is also where we'll discover what the demo-recording
   capability needs **extended** (operator's A7 flag).
 
-## Next steps
+## S1 build — drafted (branch `docs/minimal-adoption-path`)
 
-- Author the **S1 storyboard** (greenfield setup demo) — current.
-- Then proceed down the A8 priority order, one scenario at a time (storyboard → record).
+- Bundle at `demo/greenfield-setup/`: `record.yaml` (validates clean), `storyboards/
+  greenfield-setup.md` (8 steps), `record.sh`. Step plan: empty-dir `ls` → panes →
+  `uv tool install` → `pkit init` → `capabilities install project-management` →
+  `project-management bootstrap` → launch `claude --agent project-manager` → `chat` (file a
+  Task; emit `BOARD-READY`) → `ready` on sentinel → closing narration.
+- **Good news:** the agent-chat beat is *already scriptable* — `chat` types into an AI-TUI
+  pane and `ready` waits for an assistant sentinel. The engine is more capable than assumed.
+
+### demo-recording extension needs (the A7 thread — now concrete)
+1. **`before_record` / setup hook (biggest gap)** — greenfield demo needs a clean slate each
+   take: reset the throwaway dir to an empty repo + reset a disposable GitHub repo. Only
+   `after_record` exists today.
+2. **Disposable-demo-repo + teardown** — `bootstrap` and the agent beat mutate a *live* repo;
+   the engine has no disposable-repo / teardown notion. Pairs with #1.
+3. **First-class "boot agent, wait until ready"** — launching the agent is an ad-hoc `shell`
+   line; `ready` polling a literal string is fragile.
+4. **`assert`/`expect` directive** — `ready` confirms the agent *said* the sentinel, not that
+   the issue was actually filed/classified. Optional shell-predicate assertion → reliable takes.
+   → These are candidate improvements to the **demo-recording capability** (issues/DECs) and
+   gate a *reliable* S1 recording; at minimum #1+#2 before a real take.
+
+### To verify before an actual S1 take
+- `claude --agent project-manager` launch command + its readiness signal (harness-dependent).
+- `ready` match patterns for `init` / `bootstrap` / `capabilities install` are **guesses** at
+  real output — confirm against actual command output.
+- Self-host wrinkle: `pkit demo-recording validate` did **not** dispatch under `uv run pkit`
+  here despite `capabilities list` showing it registered (validated via `scripts/validate.sh`
+  instead). → verify whether capability CLI dispatch is broken in self-host.
+
+## Next steps (pick up here)
+
+- Decide the S1 track: (a) verify the unverified bits + build extension #1+#2, then record; or
+  (b) move to the next scenario's storyboard and batch the demo-recording extensions later.
+- Proceed down the A8 priority order, one scenario at a time (storyboard → record).
 
 ## Crystallises into (expected — placeholder)
 
