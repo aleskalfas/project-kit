@@ -61,6 +61,19 @@ The verdict vocabulary (`APPROVED`, `CHANGES_REQUESTED`) matches GitHub's native
 
 A comment without the `Reviewer agent:` first-line prefix is implicitly informational commentary — no special verdict needed. Comments from the agent without the prefix do not affect the gate.
 
+### Verdict-line grammar and the consumer scan contract
+
+The verdict line is a precise grammar, identical whether it is read off a posted comment or extracted from an agent's raw output. The remote-path form is exactly `Reviewer agent: <VERDICT>`; the local-path form is exactly `Reviewer agent (local, <name>): <VERDICT>` — where `<VERDICT>` is one of `APPROVED` or `CHANGES_REQUESTED`, and the match is taken **after stripping surrounding whitespace** from the candidate line.
+
+A consumer that extracts a verdict from an agent's *raw output* — as opposed to reading an already-posted comment — scans for the **first line anywhere in the output** that matches this grammar, rather than requiring the verdict on the literal first line. The reason is the nature of the producer: a reasoning agent emits its verdict non-deterministically, often after a few lines of preamble (a restatement of the task, a "here is my review", a leading blank line). A parse that insists the verdict sit on line 1 fails intermittently against exactly the producers this path is built for — it posts no verdict and stalls the gate. Scanning the whole output for the first grammar-matching line tolerates incidental preamble without loosening what counts as a verdict: the *grammar* stays exact so the signal is unambiguous, while the *search* for it is lenient about position. Preamble before the matched line is throat-clearing and dropped; commentary after it is the freeform body.
+
+The scan resolves the two edge cases deterministically:
+
+- **Multiple matching lines** — the first match, top-to-bottom, wins. A later, possibly-contradictory verdict line in the same output is ignored; the agent's verdict is taken to be the first one it commits to.
+- **No matching line anywhere** — the consumer **fails closed**: it posts no verdict (so the gate stays unsatisfied) and surfaces the agent's *full* output, not a truncated fragment, so the operator can debug the non-conforming run. A missing or unparseable verdict never silently satisfies the gate and never silently disappears.
+
+This contract is the bridge between the freeform output a reasoning agent produces and the exact-grammar signal the gate-checker consumes (per the gate-checker algorithm below). It also pins the verdict to a single agent: a consumer invoking a named local agent accepts only that agent's grammar form (`<name>` bound), so one agent's output cannot post another's verdict.
+
 ### Two paths, two registration lists
 
 The project declares registered agents in `project/config.yaml`:
@@ -219,6 +232,8 @@ When the most recent verdict is `CHANGES_REQUESTED`, the refusal message surface
 | Verdict format — remote path | First line: `Reviewer agent: APPROVED` or `Reviewer agent: CHANGES_REQUESTED`. Body below is freeform commentary. |
 | Verdict format — local path | First line: `Reviewer agent (local, <name>): APPROVED` or `Reviewer agent (local, <name>): CHANGES_REQUESTED`. `<name>` matches `review.agents.local_registered:` entry. Body below is freeform commentary. |
 | Verdict vocabulary at v1 | `APPROVED` (satisfies gate) and `CHANGES_REQUESTED` (does not satisfy gate). Matches GitHub native PR-review state names for transferable mental model. |
+| Verdict-line grammar | Remote: `Reviewer agent: <VERDICT>`; local: `Reviewer agent (local, <name>): <VERDICT>`; `<VERDICT>` ∈ {`APPROVED`, `CHANGES_REQUESTED`}; matched after stripping surrounding whitespace. |
+| Consumer scan contract | A consumer extracting a verdict from an agent's raw output scans for the first grammar-matching line **anywhere** in the output (not line-1-only — reasoning agents emit preamble). First match wins; no match anywhere → fail closed (no verdict posted, gate unsatisfied, full output surfaced for debugging). |
 | Comments without the prefix | Implicitly informational. Do not affect the gate. |
 | Remote-path identity check | Author matches `review.agents.remote_registered[0].github_login` AND author is not the PR author. |
 | Local-path identity check | Author-exclusion **relaxed** — the developer attests they ran the agent. The local agent name must be in `review.agents.local_registered:` AND a file must exist at `.claude/agents/<name>.md`. |
