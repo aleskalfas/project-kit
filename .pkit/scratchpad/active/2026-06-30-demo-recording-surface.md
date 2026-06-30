@@ -206,6 +206,20 @@ a preflight/`doctor` check verifies. This is a **core capabilities-framework fea
 (benefits any capability with external deps), so it's a **schema_version bump + migration**,
 not demo-recording-local.
 
+## Verification log
+
+- **RF-2 — PASSED ✅ (2026-06-30, operator-verified on macOS, OBS 32.x).** OBS captures a
+  **non-frontmost** window (TextEdit occluded behind another window still shows in OBS). The
+  swap spine holds: *what's shown in the recording is decoupled from OS focus.*
+- **RF-1 — reduced (not yet a blocker).** Because display is decoupled from focus (RF-2), the
+  worst-case "show A while typing into B disturbs capture" doesn't bite — OBS keeps capturing
+  the shown scene regardless of which app is focused. RF-1 shrinks to: *input injection still
+  needs a per-OS step to focus the target app before sending keys* — a known per-OS seam, not
+  a showstopper. Settle when building the input backend.
+- **RF-3 — still open.** Take determinism / clean-slate reset (disposable demo repo + what
+  `assert` does/doesn't buy). Address within the surface DEC or as an explicit
+  "operator-supervised, not CI" scope cut.
+
 ## Crystallises into
 
 - A **child of EPIC #359** — the demo-recording surface-upgrade track (likely its own child
