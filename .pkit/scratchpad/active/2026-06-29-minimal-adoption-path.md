@@ -176,6 +176,11 @@ severity tokens to file an issue and move it across a board.
   pane and `ready` waits for an assistant sentinel. The engine is more capable than assumed.
 
 ### demo-recording extension needs (the A7 thread — now concrete)
+
+> The full **surface upgrade** these feed into is designed in the sibling note
+> [`2026-06-30-demo-recording-surface.md`](2026-06-30-demo-recording-surface.md) (OBS-driven
+> multi-window swap, PDF-presentation-as-driver, Playwright, per-OS seams).
+
 1. **`before_record` / setup hook (biggest gap)** — greenfield demo needs a clean slate each
    take: reset the throwaway dir to an empty repo + reset a disposable GitHub repo. Only
    `after_record` exists today.
