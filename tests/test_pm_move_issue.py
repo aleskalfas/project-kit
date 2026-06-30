@@ -133,6 +133,40 @@ def issue_types() -> dict:
     }
 
 
+@pytest.fixture
+def classification() -> dict:
+    """Compact fixture mirroring classification.yaml's type axis.
+
+    Carries `title_prefix_by_value` (the kind-driven prefixes) and the
+    `structural_restriction.allowed_structural_types_per_kind` mapping the
+    fallback reads to recover a structural type from a `type:*` label.
+    """
+    return {
+        "axes": {
+            "type": {
+                "title_prefix_by_value": {
+                    "feature": "Task",
+                    "bug": "Bug",
+                    "docs": "Docs",
+                    "test": "Test",
+                    "refactor": "Refactor",
+                    "maintenance": "Chore",
+                },
+                "structural_restriction": {
+                    "allowed_structural_types_per_kind": {
+                        "feature": ["task", "feature", "umbrella", "epic"],
+                        "bug": ["task"],
+                        "docs": ["task"],
+                        "test": ["task"],
+                        "refactor": ["task"],
+                        "maintenance": ["task"],
+                    },
+                },
+            },
+        },
+    }
+
+
 # --- known states ---------------------------------------------------
 
 
@@ -333,6 +367,96 @@ def test_infer_structural_type_recognises_each_prefix(mi, issue_types) -> None:
 
 def test_infer_structural_type_none_on_unknown(mi, issue_types) -> None:
     assert mi._infer_structural_type("Plain", issue_types) is None
+
+
+# --- structural type: type:* label fallback (issue #370) -------------
+#
+# When the title prefix is edited away, inference falls back to the issue's
+# `type:*` kind label to recover the structural type. PRECEDENCE: the title
+# prefix wins; the label is consulted only when no prefix matches. A `type:*`
+# label can only ever recover `task` (every non-feature kind maps to the single
+# structural type `task`); a container has no distinguishing `type:*` label, so
+# an edited-away container prefix stays unrecoverable (malformed).
+
+
+def test_infer_structural_type_prefix_wins_over_label(
+    mi, issue_types, classification
+) -> None:
+    """Acceptance 4 — title prefix takes precedence over the `type:*` label.
+
+    A [Feature] container that (oddly) also carries a `type:bug` label still
+    resolves to `feature` from the prefix; the label fallback is never consulted.
+    """
+    assert (
+        mi._infer_structural_type(
+            "[Feature] x", issue_types, classification, ["type:bug"]
+        )
+        == "feature"
+    )
+
+
+def test_infer_structural_type_recovers_task_from_label_when_prefix_absent(
+    mi, issue_types, classification
+) -> None:
+    """Acceptance 1 & 2 — prefix edited away + `type:*` label ⇒ recover `task`."""
+    assert (
+        mi._infer_structural_type(
+            "edited-away title", issue_types, classification, ["type:bug"]
+        )
+        == "task"
+    )
+    # Holds for every task-only kind, not just bug.
+    for kind in ("docs", "test", "refactor", "maintenance"):
+        assert (
+            mi._infer_structural_type(
+                "edited-away title", issue_types, classification, [f"type:{kind}"]
+            )
+            == "task"
+        ), f"kind {kind!r} must recover structural type 'task'"
+
+
+def test_infer_structural_type_container_without_label_is_malformed(
+    mi, issue_types, classification
+) -> None:
+    """Acceptance 3 — container prefix edited away, no `type:*` label ⇒ None.
+
+    A container (EPIC/Feature/Umbrella) carries no distinguishing `type:*`
+    label, so it cannot be recovered and must surface as malformed (None) rather
+    than be silently guessed.
+    """
+    assert (
+        mi._infer_structural_type(
+            "edited-away epic title",
+            issue_types,
+            classification,
+            ["priority:High", "workstream:core"],
+        )
+        is None
+    )
+
+
+def test_infer_structural_type_feature_kind_label_is_ambiguous(
+    mi, issue_types, classification
+) -> None:
+    """A `type:feature` label maps to multiple structural types, so it cannot
+    recover a unique structural type — the fallback returns None rather than
+    guessing (only task-only kinds are unambiguous)."""
+    assert (
+        mi._infer_structural_type(
+            "edited-away title", issue_types, classification, ["type:feature"]
+        )
+        is None
+    )
+
+
+def test_structural_type_from_kind_label_reads_mapping(
+    mi, classification
+) -> None:
+    """The helper reads the kind→structural mapping straight from the schema's
+    `allowed_structural_types_per_kind` (single-valued ⇒ recoverable)."""
+    assert mi._structural_type_from_kind_label(["type:bug"], classification) == "task"
+    assert mi._structural_type_from_kind_label(["type:feature"], classification) is None
+    assert mi._structural_type_from_kind_label(["priority:High"], classification) is None
 
 
 # --- parent-chain walking --------------------------------------------

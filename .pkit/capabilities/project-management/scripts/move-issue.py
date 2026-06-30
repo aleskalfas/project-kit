@@ -219,11 +219,22 @@ def main() -> int:
     state = str(issue.get("state", "")).lower()
     milestone = issue.get("milestone") or {}
 
-    structural_type = _infer_structural_type(title, issue_types, classification)
+    structural_type = _infer_structural_type(
+        title, issue_types, classification, labels
+    )
     if structural_type is None:
+        # Unrecoverable: no [Type] title prefix AND no `type:*` kind label to
+        # fall back on. A Task always carries a `type:*` label (so it recovers
+        # even with the prefix edited away); a container (EPIC/Feature/Umbrella)
+        # has no distinguishing `type:*` label, so an edited-away container
+        # prefix lands here — surfaced as malformed, never silently guessed.
         print(
-            f"error: cannot determine structural type from issue title {title!r}; "
-            "title does not match any known [Type] prefix.",
+            f"error: cannot determine structural type for issue "
+            f"#{args.issue_number}: title {title!r} matches no known [Type] "
+            "prefix and no `type:*` kind label is present to recover a Task "
+            "from.\n"
+            "  → Restore the issue's title prefix (e.g. [EPIC]/[Feature]/"
+            "[Umbrella]/[Task]) so the structural type can be determined.",
             file=sys.stderr,
         )
         return 2
@@ -609,15 +620,25 @@ def _infer_structural_type(
     title: str,
     issue_types: dict,
     classification: dict | None = None,
+    labels: list[str] | None = None,
 ) -> str | None:
-    """Infer the structural type from the title prefix.
+    """Infer the structural type, title prefix first, then the `type:*` label.
 
-    Checks two sources in order:
+    PRECEDENCE: the title prefix wins; the `type:*` kind label is the fallback,
+    consulted only when no prefix matches. (Structural-type inference also runs
+    in create-issue / validate-issue / the engine; a future parity pass per
+    DEC-033 should align those sites with this precedence rule.)
+
+    Sources, in order:
     1. issue-types.yaml `types[*].title_prefix` — the structural-type
        prefixes ([EPIC], [Feature], [Umbrella], [Task]).
     2. classification.yaml `axes.type.title_prefix_by_value` — the
        kind-driven prefixes ([Bug], [Docs], [Test], [Refactor], [Chore]).
        Kind-prefixes are restricted to the `task` structural type.
+    3. FALLBACK — the issue's `type:*` kind label, when no prefix matched.
+       Only ever recovers `task` (see `_structural_type_from_kind_label`); a
+       container with an edited-away prefix has no `type:*` label and stays
+       unrecoverable, surfaced as malformed by the caller.
     """
     types = issue_types.get("types") or {}
     for type_name, entry in types.items():
@@ -643,6 +664,44 @@ def _infer_structural_type(
             if isinstance(kind_prefix, str) and title.startswith(f"[{kind_prefix}] "):
                 return "task"
 
+    # Fallback: recover the structural type from the `type:*` kind label when the
+    # title prefix was edited away. Task-only by construction (see helper).
+    if labels and classification:
+        return _structural_type_from_kind_label(labels, classification)
+
+    return None
+
+
+def _structural_type_from_kind_label(
+    labels: list[str],
+    classification: dict,
+) -> str | None:
+    """Recover the structural type from the issue's `type:*` kind label.
+
+    A `type:*` label carries only *kind* (bug/docs/test/refactor/maintenance/
+    feature) and exists only on Tasks: per classification.yaml's
+    `structural_restriction`, every non-feature kind maps to the single
+    structural type `task`, while feature-kind containers (epic/feature/
+    umbrella) carry no distinguishing `type:*` label. The kind→structural
+    mapping is READ from `allowed_structural_types_per_kind` rather than
+    hardcoded — a kind recovers a structural type only when its allowed-set is
+    unambiguous (exactly one type), which is true for every task-only kind and
+    false for the multi-valued `feature` kind. So this only ever recovers
+    `task`; an ambiguous or unknown kind returns None.
+    """
+    kind = axis_labels.read("type", labels)
+    if kind is None:
+        return None
+    allowed = (
+        classification.get("axes", {})
+        .get("type", {})
+        .get("structural_restriction", {})
+        .get("allowed_structural_types_per_kind", {})
+    )
+    candidates = allowed.get(kind) if isinstance(allowed, dict) else None
+    if isinstance(candidates, list) and len(candidates) == 1:
+        only = candidates[0]
+        return str(only) if isinstance(only, str) else None
     return None
 
 
