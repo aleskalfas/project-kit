@@ -1,5 +1,5 @@
 ---
-id: ADR-034
+id: ADR-035
 title: Resolve containment through one read seam and construct it through one write point — native-where-present, native-wins, textual the universal spine
 status: accepted
 date: 2026-06-30
