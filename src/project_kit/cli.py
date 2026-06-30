@@ -1158,12 +1158,21 @@ def permissions_setup(ctx: click.Context) -> None:
 @permissions_setup.group("autonomy", invoke_without_command=True)
 @click.option("--profile", default="autonomous", show_default=True,
               help="The autonomy profile to activate as the goal's intent layer.")
+@click.option("--remove-overrides", is_flag=True, default=False,
+              help="Auto-confirm removal of per-machine overlay attributes that override "
+                   "the posture (settings.local.json only; never the committed baseline). "
+                   "A deliberate trust gesture — NOT covered by any blanket --yes.")
 @click.pass_context
-def permissions_setup_autonomy(ctx: click.Context, profile: str) -> None:
+def permissions_setup_autonomy(ctx: click.Context, profile: str, remove_overrides: bool) -> None:
     """Stand up autonomous agents: profile + enforcement + OS sandbox, then prove it.
 
     Resumable: re-run after the session restart to verify; finished steps are
-    skipped. The goal is declared reached only when the probe proof passes."""
+    skipped. The goal is declared reached only when the probe proof passes.
+
+    Detects per-machine overlay attributes (settings.local.json) that silently
+    override the intended posture, warns loudly, and offers to remove them —
+    consent-gated. Removal happens only on an interactive confirmation or with
+    `--remove-overrides`; without consent the conflict is warned-about only."""
     if ctx.invoked_subcommand is not None:
         return
     from project_kit import permissions as perm
@@ -1171,8 +1180,22 @@ def permissions_setup_autonomy(ctx: click.Context, profile: str) -> None:
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
+    # The override-removal consent gate (#399): a dedicated trust gesture, never
+    # covered by a blanket --yes. `--remove-overrides` auto-confirms; otherwise
+    # prompt interactively. A declined OR non-interactive prompt means warn-only
+    # (deny), not an aborted setup — an EOF/abort on the confirm is caught and
+    # treated as "no" so a non-tty run still completes the posture, warning only.
+    def _confirm_remove(msg: str) -> bool:
+        if remove_overrides:
+            return True
+        try:
+            return bool(click.confirm(msg))
+        except click.Abort:
+            return False
+
+    confirm = _confirm_remove
     try:
-        report, ok = perm.setup_autonomy(target_root, profile=profile)
+        report, ok = perm.setup_autonomy(target_root, profile=profile, confirm=confirm)
     except perm.PermissionsError as exc:
         raise click.ClickException(str(exc)) from exc
     click.echo(report, nl=False)
