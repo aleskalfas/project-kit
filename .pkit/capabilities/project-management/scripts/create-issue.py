@@ -51,6 +51,7 @@ from ruamel.yaml.error import YAMLError
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import axis_labels  # noqa: E402
+from _lib.containment import link_sub_issue  # noqa: E402
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 from _lib.hooks import fire_hooks  # noqa: E402
 from _lib.membership import (  # noqa: E402
@@ -468,6 +469,25 @@ def main() -> int:
 
     print(f"\n[ok] created: {issue_url}")
 
+    # Set GitHub's native sub-issue link under the parent, IN ADDITION to the
+    # textual first-line parent-ref already written into the body above (DEC-005:
+    # native sub-issues are the canonical containment mechanism; the textual ref
+    # is the universal spine). Only an ISSUE parent is linked natively — a
+    # milestone parent (--milestone) is not a sub-issue relationship and carries
+    # its own native Milestone field, so it is not linked here. The link is
+    # idempotent (value-equality re-link is a no-op, DEC-026) and degrades to a
+    # no-op where the instance lacks sub-issue support — the textual ref carries
+    # the relationship in that case, and a native failure never fails the create.
+    new_issue_number = _extract_issue_number_from_url(issue_url)
+    if args.parent is not None and new_issue_number is not None:
+        link = link_sub_issue(
+            config,
+            parent_number=args.parent,
+            child_number=new_issue_number,
+        )
+        prefix = "[ok]" if link.ok else "[warn]"
+        print(f"{prefix} {link.detail}", file=sys.stderr)
+
     # Auto-add to board for board-substrate adopters (per DEC-019).
     #
     # Capture the created board-item node id (and resolve the project node id)
@@ -496,8 +516,7 @@ def main() -> int:
     # / project node ids let the `set-board-field` hook target the new item;
     # both stay absent in label-fallback mode (no board), where that hook is a
     # no-op skip by design.
-    issue_number = _extract_issue_number_from_url(issue_url)
-    issue_context: dict[str, Any] = {"number": issue_number, "title": full_title}
+    issue_context: dict[str, Any] = {"number": new_issue_number, "title": full_title}
     if board_item_id is not None:
         issue_context["board_item_id"] = board_item_id
     fire_hooks(
