@@ -46,6 +46,12 @@ How an agent talks with the user, independent of any project's tooling.
 
 17. **Reference by meaning, then identifier.** When pointing at a rule, record, or section, state what it actually says in plain language first, then put the identifier in brackets after — "a Task must have a parent (DEC-005 P2.1)". A precise sub-locator is welcome; just write it without cryptic glyphs (no §), and never reference by bare code alone. The reader should learn the substance from the sentence, not have to chase the reference.
 
+## Working across repositories
+
+How a session relates to repos other than the one it is rooted in.
+
+18. **A session mutates only its own repo's context; cross-repo mutation is an operator-gated exception.** A session is rooted in one project's repo and carries *that* repo's governance — its rules, conventions, deployed agents, permission model. Do **not** mutate a *different* project's repo from inside this session by changing directory into it, redirecting a command at it (`-R`, `-C`, an absolute path), or any equivalent: the other repo's governance never loads, so the mutation runs under the wrong project's context (the session-level analogue of editing a file a repo doesn't own — rule 1, one altitude up). *Reading* another repo is fine; the line is at mutation (file writes, commits/pushes, issue/PR changes, decision/state authoring) whose target is the other repo. When a cross-repo mutation is genuinely intended, **stop and surface it to the user** — "this targets a different repo; open a session rooted there, or confirm the cross-repo override" — and never perform it silently. The methodology CLI and its capability scripts enforce this where they own the mutation (refuse-or-prompt on a context-mismatch); this rule covers the paths no methodology code interposes on (a raw `git`/`gh`/shell command). The guard is an honest **interlock against accidental handoff, not a security boundary** — a determined raw command can bypass it, which is exactly why the discipline matters. Rationale and the realization detail live in COR-039 and the permission capability's ADR.
+
 ## Where rationale lives
 
 Each rule cites the record or doc that owns its "why". The umbrella references:
