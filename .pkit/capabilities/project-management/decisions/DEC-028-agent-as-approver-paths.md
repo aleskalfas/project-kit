@@ -38,7 +38,7 @@ This adds a fourth path to `done-work`'s approval-gate OR in `agent` mode (the o
 
 ### The verdict signal
 
-The agent posts a PR comment whose **first line** carries an uppercase verdict, with `Reviewer agent:` prefix. Two verdicts at v1:
+The agent posts a PR comment whose **first line** carries an uppercase verdict, with `Reviewer agent:` prefix. (That first-line placement describes the *posted comment*; a consumer extracting the verdict from an agent's *raw output* instead scans for the verdict line anywhere — see "Verdict-line grammar and the consumer scan contract" below.) Two verdicts at v1:
 
 | Verdict | Effect |
 |---|---|
