@@ -322,7 +322,7 @@ def test_main_milestone_omitted_calls_move_issue(pi, monkeypatch, capsys) -> Non
     move_calls: list = []
     original_invoke = pi._invoke_move_issue
 
-    def capturing_invoke(issue_number, target, cap_root):
+    def capturing_invoke(issue_number, target, cap_root, allow_foreign_repo=False):
         move_calls.append((issue_number, target))
         return 0
 
@@ -415,7 +415,7 @@ def test_main_bad_milestone_does_not_call_move_issue(pi, monkeypatch) -> None:
     """When milestone resolution fails, move-issue must not be called."""
     move_calls: list = []
 
-    def capturing_invoke(issue_number, target, cap_root):
+    def capturing_invoke(issue_number, target, cap_root, allow_foreign_repo=False):
         move_calls.append(target)
         return 0
 

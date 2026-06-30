@@ -42,6 +42,7 @@ from ruamel.yaml import YAML
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
+from _lib import session_guard  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
     check_membership,
@@ -75,6 +76,7 @@ def main() -> int:
     )
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--yes", action="store_true")
+    session_guard.add_override_argument(parser)
     args = parser.parse_args()
 
     capability_root = resolve_capability_root(args.capability_root)
@@ -102,6 +104,11 @@ def main() -> int:
     if not membership.allowed:
         # Open-mode falls through; closed-mode refuses.
         print(membership.refusal_message, file=sys.stderr)
+        return 1
+
+    # Foreign-repo mutation guard (COR-039 / ADR-034) — gate before any gh
+    # mutation: target repo (cwd) vs session anchor (CLAUDE_PROJECT_DIR).
+    if not session_guard.enforce(override=args.allow_foreign_repo):
         return 1
 
     issue = _gh_get_issue(args.issue_number, config)

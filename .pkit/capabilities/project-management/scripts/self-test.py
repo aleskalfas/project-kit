@@ -53,6 +53,7 @@ from ruamel.yaml.error import YAMLError
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import axis_labels  # noqa: E402
+from _lib import session_guard  # noqa: E402
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 from _lib.substrate_writes import write_milestone  # noqa: E402
 from _lib.membership import (  # noqa: E402
@@ -161,6 +162,7 @@ def main() -> int:
             "Useful for debugging a failed run."
         ),
     )
+    session_guard.add_override_argument(parser)
     args = parser.parse_args()
 
     capability_root = resolve_capability_root(args.capability_root)
@@ -184,6 +186,15 @@ def main() -> int:
     if args.dry_run:
         _print_dry_run_plan(capability_root, has_board)
         return 0
+
+    # Foreign-repo mutation guard (COR-039 / ADR-034). self-test creates and
+    # closes a throwaway issue (and milestone) on the GitHub repo resolved from
+    # the cwd-walk in resolve_capability_root, so a `cd /B` redirects these
+    # mutations into a DIFFERENT repo than the session anchor (CLAUDE_PROJECT_DIR);
+    # gate that unless the operator confirms the override. Runs after the
+    # read-only dry-run path returns, before the first gh mutation.
+    if not session_guard.enforce(override=args.allow_foreign_repo):
+        return 1
 
     state = SelfTestState()
 

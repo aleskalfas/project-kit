@@ -50,6 +50,24 @@
 # The CONTAINMENT invariants (Feature-in-Feature, EPIC-in-EPIC, …) stay
 # HARD in BOTH modes — advisory relaxes only requiredness, never nesting.
 #
+# A separate top-level `containment:` key (also NOT under `axes:` —
+# containment is a substrate SELECTOR, not a label-encoded axis) declares
+# HOW the parent ↔ child edge is written (DEC-039 D2, contract ADR-035). A
+# MANUAL operator selector — auto-detection is deferred:
+#   native   (default / greenfield, also the value when the key is ABSENT)
+#            — create-issue --parent sets GitHub's native sub-issue link IN
+#              ADDITION to the textual first-line parent-ref (DEC-005).
+#   textual  — the tracker has no native sub-issues (older GHES) or the
+#              operator prefers textual: the native link is NOT attempted;
+#              only the textual child-side parent-ref is recorded. That ref
+#              is the UNIVERSAL SPINE — written in BOTH modes (DEC-039 D3) —
+#              so it is the containment record in textual mode. The parent-
+#              side textual view is render-on-demand (DEC-039 D4), a separate
+#              build. An absent key ⇒ native (the safe default toward the
+#              methodology ideal). The selector INTENT lives in this committed
+#              map; no resolved value is written back (one-consumer contract,
+#              ADR-035).
+#
 # The body below is the AUJ-shaped reference instance — a valid example
 # that doubles as this schema's self-test (validated by
 # `pkit schemas validate`) and as a copy-paste starting point. A real
@@ -69,6 +87,12 @@ pkit_schema: project-management:substrate-map
 # requiredness degrades to advisory. The containment invariants stay HARD
 # regardless (DEC-036 D4).
 hierarchy: advisory
+
+# AUJ's instance has no native sub-issues, so the containment edge is
+# textual: create-issue --parent records only the textual child-side ref
+# and skips the native sub-issue link (DEC-039 D2). The textual ref is the
+# universal spine, written in both modes (DEC-039 D3).
+containment: textual
 
 axes:
   # Priority: native P0/P1/P2 labels already exist on the tracker.

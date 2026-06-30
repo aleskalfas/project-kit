@@ -182,6 +182,43 @@ def test_reference_instance_declares_advisory_hierarchy() -> None:
     assert data.get("hierarchy") == "advisory"
 
 
+# --- the top-level containment declaration (DEC-039 D2 / ADR-035, #357) ----
+
+
+def test_containment_native_accepted(validator: Draft202012Validator) -> None:
+    doc = _doc({})
+    doc["containment"] = "native"
+    assert _errors(validator, doc) == []
+
+
+def test_containment_textual_accepted(validator: Draft202012Validator) -> None:
+    doc = _doc({})
+    doc["containment"] = "textual"
+    assert _errors(validator, doc) == []
+
+
+def test_containment_absent_accepted(validator: Draft202012Validator) -> None:
+    """The key is optional — an absent `containment:` is well-formed (and reads
+    as `native` at runtime, the greenfield default)."""
+    assert "containment" not in _doc({})
+    assert _errors(validator, _doc({})) == []
+
+
+def test_containment_invalid_value_rejected(validator: Draft202012Validator) -> None:
+    """Only `native` / `textual` — any other value (e.g. a typo `none`) is
+    rejected at validate time so it cannot silently misread at runtime."""
+    doc = _doc({})
+    doc["containment"] = "none"
+    assert _errors(validator, doc)
+
+
+def test_reference_instance_declares_textual_containment() -> None:
+    """The shipped AUJ reference instance is a no-native-sub-issues tracker — it
+    declares `containment: textual` (and the schema accepts it, pinned above)."""
+    data = YAML(typ="safe").load(SUBSTRATE_MAP_YAML.read_text(encoding="utf-8"))
+    assert data.get("containment") == "textual"
+
+
 # --- the parent-requiredness severity knob (DEC-036's honest-gap fix) -----
 
 

@@ -151,6 +151,29 @@ HIERARCHY_ADVISORY: HierarchyMode = "advisory"
 HIERARCHY_KEY = "hierarchy"
 
 
+# The two containment-substrate modes a present map may carry under its top-level
+# `containment:` key (DEC-039 D2, contract ADR-035). Like `hierarchy:`,
+# containment is a MODE, not a label-encoded axis (the `label` / `title-prefix` /
+# `derive` binding kinds do not fit a substrate selector), so it lives at the
+# map's top level, beside `axes:`, not under it. It is a MANUAL operator selector
+# — auto-detection of sub-issue support is deferred (DEC-039).
+#   native  — the greenfield default. The parent ↔ child edge is set via GitHub's
+#             native sub-issue link (the #344 write), IN ADDITION to the textual
+#             first-line parent-ref. The methodology ideal (DEC-005).
+#   textual — the tracker does not support native sub-issues (or the operator
+#             prefers textual): the native link is NOT attempted; only the textual
+#             child-side parent-ref is recorded. That ref is the universal spine —
+#             written in BOTH modes (DEC-039 D3) — so it is the record in textual
+#             mode, and the parent-side view is render-on-demand (DEC-039 D4, the
+#             separate Track-2 build), not a stored block.
+ContainmentMode = Literal["native", "textual"]
+CONTAINMENT_NATIVE: ContainmentMode = "native"
+CONTAINMENT_TEXTUAL: ContainmentMode = "textual"
+
+# The map's top-level key that carries the containment mode. Absent ⇒ `native`.
+CONTAINMENT_KEY = "containment"
+
+
 # An axis's capability disposition — the seam's binary read of the ADR-026
 # ternary, the signal a degrading consumer (pre-check's capability matrix)
 # reports.
@@ -189,10 +212,17 @@ class SubstrateMap:
     label-encoded axis (DEC-036 D4). An absent or unrecognised ``hierarchy:``
     key parses to ``gated`` (the greenfield default), so a present map with no
     ``hierarchy:`` key keeps today's gated parent-requiredness.
+
+    ``containment`` is the top-level containment-substrate MODE (``native`` /
+    ``textual``), likewise distinct from the per-axis bindings (DEC-039 D2,
+    contract ADR-035). An absent or unrecognised ``containment:`` key parses to
+    ``native`` (the greenfield default), so a present map with no
+    ``containment:`` key keeps today's native sub-issue link.
     """
 
     axes: dict[str, dict[str, Any]]
     hierarchy: HierarchyMode = HIERARCHY_GATED
+    containment: ContainmentMode = CONTAINMENT_NATIVE
 
 
 def load_substrate_map(capability_root: Path | None = None) -> SubstrateMap | None:
@@ -239,7 +269,11 @@ def load_substrate_map(capability_root: Path | None = None) -> SubstrateMap | No
         for axis, binding in raw_axes.items():
             if isinstance(axis, str) and isinstance(binding, dict):
                 axes[axis] = binding
-    return SubstrateMap(axes=axes, hierarchy=_parse_hierarchy(data.get(HIERARCHY_KEY)))
+    return SubstrateMap(
+        axes=axes,
+        hierarchy=_parse_hierarchy(data.get(HIERARCHY_KEY)),
+        containment=_parse_containment(data.get(CONTAINMENT_KEY)),
+    )
 
 
 def _parse_hierarchy(raw: Any) -> HierarchyMode:
@@ -252,6 +286,19 @@ def _parse_hierarchy(raw: Any) -> HierarchyMode:
     at validate time; this is the runtime belt to that schema suspenders.)
     """
     return HIERARCHY_ADVISORY if raw == HIERARCHY_ADVISORY else HIERARCHY_GATED
+
+
+def _parse_containment(raw: Any) -> ContainmentMode:
+    """Coerce the raw ``containment:`` value to a known mode, defaulting to native.
+
+    Fail-safe (toward the methodology ideal): an absent, mistyped, or
+    unrecognised ``containment:`` value parses to :data:`CONTAINMENT_NATIVE`,
+    never to textual. Only the explicit string ``"textual"`` selects the textual
+    substrate — a typo must not silently suppress the native sub-issue link. (The
+    schema rejects an unrecognised value at validate time; this is the runtime
+    belt to that schema suspenders.)
+    """
+    return CONTAINMENT_TEXTUAL if raw == CONTAINMENT_TEXTUAL else CONTAINMENT_NATIVE
 
 
 # ----- the ternary resolution API (ADR-026) ------------------------------
@@ -332,6 +379,49 @@ def hierarchy_disposition(
     if substrate_map is None:
         return HIERARCHY_GATED
     return substrate_map.hierarchy
+
+
+def containment_mode(
+    source: "Path | SubstrateMap | None" = None,
+) -> ContainmentMode:
+    """The containment SUBSTRATE in effect — ``native`` (default) or ``textual``.
+
+    ``source`` may be a capability-root :class:`Path` (the map is loaded from
+    it), an already-parsed :class:`SubstrateMap`, or ``None`` (load from the
+    discovered capability root). The resolution, per DEC-039 D2 / ADR-035:
+
+    * **No ``substrate-map.yaml`` at all** ⇒ :data:`CONTAINMENT_NATIVE`
+      (greenfield — the native sub-issue link fires exactly as today,
+      byte-unchanged; the #344 write is unaffected).
+    * **A map present with no ``containment:`` key** ⇒ :data:`CONTAINMENT_NATIVE`
+      (a brownfield adopter who binds axes but says nothing about containment
+      keeps the native default — an omitted key is NOT textual, the conservative
+      direction toward the methodology ideal).
+    * **A map present with ``containment: textual``** ⇒ :data:`CONTAINMENT_TEXTUAL`
+      (the operator selects the textual substrate — the native link is NOT
+      attempted; only the textual child-side parent-ref is recorded).
+    * **A map present with ``containment: native``** ⇒ :data:`CONTAINMENT_NATIVE`
+      (explicit greenfield-equivalent native linking).
+
+    Note the asymmetry with :func:`axis_disposition`, shared with
+    :func:`hierarchy_disposition`: an axis ABSENT from a present map degrades
+    (absent ≡ unsupported), but containment ABSENT from a present map stays
+    NATIVE. Containment is a substrate SELECTOR, not a label-encoded axis an
+    adopter must be able to encode — there is no "unmanaged label" to fall through
+    to, so the load-bearing absent-≡-unsupported rule does not apply; the safe
+    default is the methodology ideal (native), which the read-time degradation in
+    ``_lib/containment`` already handles where an instance lacks support.
+
+    This selector intent lives in the committed map; ADR-035's one-consumer
+    contract means no resolved value is written back — the seam reads, the writer
+    (``create-issue``'s native-link call site) consults this once and gates.
+    """
+    if isinstance(source, SubstrateMap):
+        return source.containment
+    substrate_map = load_substrate_map(source)
+    if substrate_map is None:
+        return CONTAINMENT_NATIVE
+    return substrate_map.containment
 
 
 def workstream_mutator_refusal(

@@ -153,7 +153,7 @@ from typing import Any
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_labels, back_fill_apply, substrate_writes  # noqa: E402
+from _lib import axis_labels, back_fill_apply, session_guard, substrate_writes  # noqa: E402
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 from _lib.hooks import HOOKS_RELATIVE_PATH, load_hooks_file  # noqa: E402
 
@@ -298,6 +298,7 @@ def main() -> int:
             "migrate's pre-approval escape hatch. Has no effect outside --apply."
         ),
     )
+    session_guard.add_override_argument(parser)
     args = parser.parse_args()
 
     capability_root = _resolve_capability_root(args.capability_root)
@@ -312,6 +313,13 @@ def main() -> int:
 
     config = load_adopter_config(capability_root)
     apply_mode = bool(args.apply or args.emit_script)
+
+    # Foreign-repo mutation guard (COR-039 / ADR-034) — only --apply mutates the
+    # live repo (the report and --emit-script write nothing; emit-script hands the
+    # adopter a script they run themselves). Gate the apply path before any write:
+    # target repo (cwd) vs session anchor (CLAUDE_PROJECT_DIR).
+    if args.apply and not session_guard.enforce(override=args.allow_foreign_repo):
+        return 1
 
     # --plan consumes a previously-saved plan (apply / emit-script only) — skip the
     # live build and honor the plan's RECORDED gate (DEC-037 §2 property 3).

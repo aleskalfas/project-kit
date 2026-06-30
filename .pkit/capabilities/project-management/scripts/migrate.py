@@ -41,6 +41,10 @@ from typing import Any
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
+_HERE = Path(__file__).parent
+sys.path.insert(0, str(_HERE))
+from _lib import session_guard  # noqa: E402
+
 
 CAPABILITY_NAME = "project-management"
 MIGRATIONS_SUBDIR = "migrations"
@@ -116,6 +120,7 @@ def main() -> int:
             "mutations. State file is not updated."
         ),
     )
+    session_guard.add_override_argument(parser)
     args = parser.parse_args()
 
     capability_root = _resolve_capability_root(args.capability_root)
@@ -125,6 +130,15 @@ def main() -> int:
             file=sys.stderr,
         )
         return 2
+
+    # Foreign-repo mutation guard (COR-039 / ADR-034). migrate writes
+    # migrations-applied.yaml and runs gh label mutations against the
+    # capability resolved by the cwd-walk in _resolve_capability_root, so a
+    # `cd /B` redirects this into a DIFFERENT repo than the session anchor
+    # (CLAUDE_PROJECT_DIR); gate that unless the operator confirms the override.
+    # Runs before pre-check / the apply loop's first mutation.
+    if not session_guard.enforce(override=args.allow_foreign_repo):
+        return 1
 
     repo = _resolve_repo_name_with_owner()
     _print_context_header(repo, capability_root)
