@@ -14,22 +14,32 @@ validate-up-front / idempotent family). Replaces the whole-body or ad-hoc
 `gh issue edit --add-label` surgery a field change otherwise needs.
 
 Signature (batch-capable — set several fields in one call):
-  set-field <issue> [--priority X] [--workstream Y] [--parent N]
+  set-field <issue> [--kind K] [--priority X] [--workstream Y] [--parent N]
 
+  - --kind        one of the adopter's classification type values; swaps the
+                  prior `type:*` label and realigns the title prefix.
   - --priority    one of the adopter's classification priority values.
   - --workstream  one of the adopter's declared workstream slugs.
   - --parent      a parent issue number; rewrites the body's first parent-ref
                   line to the issue type's `parent_ref_form`.
 
-It does NOT reinvent classification rules — priority/workstream resolve through
-the SAME seam create-issue uses (`axis_labels.resolve_write`, honouring
-substrate-map.yaml), and the parent-ref line uses the same form create-issue
-composes. Under a Projects-v2 board substrate, priority/workstream live on board
-fields, not labels; set-field reports a degrade note and does not touch a label
-(mirroring move-issue's board posture at v1).
+It does NOT reinvent classification rules — kind/priority/workstream resolve
+through the SAME seam create-issue uses (`axis_labels.resolve_write`, honouring
+substrate-map.yaml), the parent-ref line uses the same form create-issue
+composes, and the kind→title-prefix realignment reads classification.yaml's
+`title_prefix_by_value` (the same map create-issue's title composition uses), so
+prefix and label stay coupled. The `type:*` axis is ALWAYS a label (per
+classification.yaml), so --kind labels regardless of board substrate; under a
+Projects-v2 board, priority/workstream instead live on board fields, so set-field
+reports a degrade note and does not touch a label (mirroring move-issue's board
+posture at v1).
 
 Failure + recovery (DEC-038 D4 family): the whole request is validated up front
-(value in the adopter's vocabulary; parent resolvable) and refused before any
+(value in the adopter's vocabulary; parent resolvable; and the requested kind is
+permitted for the issue's structural type — a non-`feature` kind on an
+epic/feature/umbrella is a hard-reject per DEC-011 / classification.yaml's
+`structural_restriction`, since it would manufacture the kind/structural mismatch
+that breaks the closing PR's conv-type derivation) and refused before any
 mutation on a hard inconsistency. Application is idempotent — setting a field to
 the value it already holds is a no-op success, so a partial fault recovers on
 re-run.
@@ -86,9 +96,14 @@ def main() -> int:
     parser = _build_parser()
     args = parser.parse_args()
 
-    if args.priority is None and args.workstream is None and args.parent is None:
+    if (
+        args.kind is None
+        and args.priority is None
+        and args.workstream is None
+        and args.parent is None
+    ):
         print(
-            "error: nothing to set. Pass at least one of --priority, "
+            "error: nothing to set. Pass at least one of --kind, --priority, "
             "--workstream, --parent.",
             file=sys.stderr,
         )
@@ -136,6 +151,34 @@ def main() -> int:
 
     # ---- validate the whole request up front (DEC-038 hard-reject family) ----
     errors: list[str] = []
+
+    valid_kinds = _axis_values(classification, "type")
+    if args.kind is not None and valid_kinds and args.kind not in valid_kinds:
+        errors.append(
+            f"kind {args.kind!r} is not a declared type value "
+            f"({', '.join(sorted(valid_kinds))})"
+        )
+    elif args.kind is not None:
+        # Refuse the kind/structural mismatch DEC-011 declares a hard-reject:
+        # epic/feature/umbrella carry kind `feature` by definition, so swapping
+        # in a non-feature kind while leaving the structural prefix would
+        # manufacture exactly the mismatch that breaks PR-conv-type derivation
+        # (open-pr/validate-pr read the closing issue's type:* label). Check
+        # against `allowed_structural_types_per_kind` (the same lookup
+        # `_kind_drives_title` reads) before any mutation. `--kind feature` on
+        # those types is the allowed kind, so it passes here and lands as a
+        # no-op (label already type:feature, no prefix change).
+        structural_type = _infer_structural_type(title, issue_types, classification)
+        if structural_type is not None and not _kind_allowed_for_structural_type(
+            args.kind, structural_type, classification
+        ):
+            errors.append(
+                f"kind {args.kind!r} is not valid for structural type "
+                f"{structural_type.upper()} — epic/feature/umbrella carry kind "
+                "'feature' by definition (classification.yaml "
+                "structural_restriction / DEC-011). Re-file as a Task if this "
+                "is genuinely bug work."
+            )
 
     valid_priorities = _axis_values(classification, "priority")
     if args.priority is not None and valid_priorities and args.priority not in valid_priorities:
@@ -185,15 +228,35 @@ def main() -> int:
         return 1
 
     # ---- build the plan (idempotent) ----
-    label_results, label_add, label_remove = _plan_labels(
+    results: list[FieldResult] = []
+    label_add: list[str] = []
+    label_remove: list[str] = []
+    new_title: str | None = None
+
+    if args.kind is not None:
+        kind_results, kind_add, kind_remove, new_title = _plan_kind(
+            kind=args.kind,
+            title=title,
+            current_labels=current_labels,
+            issue_types=issue_types,
+            classification=classification,
+            substrate_map=substrate_map,
+        )
+        results.extend(kind_results)
+        label_add.extend(kind_add)
+        label_remove.extend(kind_remove)
+
+    label_results, axis_add, axis_remove = _plan_labels(
         priority=args.priority,
         workstream=args.workstream,
         current_labels=current_labels,
         substrate_map=substrate_map,
         has_board=has_board,
     )
+    results.extend(label_results)
+    label_add.extend(axis_add)
+    label_remove.extend(axis_remove)
 
-    results: list[FieldResult] = list(label_results)
     new_body: str | None = None
     if parent_ref_line is not None:
         new_body, parent_result = _plan_parent(body, parent_ref_line)
@@ -204,7 +267,8 @@ def main() -> int:
         print(f"  [{marker}] {r.message}")
 
     body_changed = new_body is not None and new_body != body
-    any_change = bool(label_add or label_remove) or body_changed
+    title_changed = new_title is not None and new_title != title
+    any_change = bool(label_add or label_remove) or body_changed or title_changed
 
     if not any_change:
         print(f"\n[ok] #{args.issue_number}: no change (all fields already set).")
@@ -221,6 +285,9 @@ def main() -> int:
 
     if label_add or label_remove:
         if not _gh_edit_labels(args.issue_number, label_add, label_remove, config):
+            return 3
+    if title_changed:
+        if not _gh_write_title(args.issue_number, new_title or "", config):
             return 3
     if body_changed:
         if not _gh_write_body(args.issue_number, new_body or "", config):
@@ -311,6 +378,199 @@ def _plan_labels(
         )
 
     return results, to_add, to_remove
+
+
+def _plan_kind(
+    *,
+    kind: str,
+    title: str,
+    current_labels: list[str],
+    issue_types: dict,
+    classification: dict,
+    substrate_map: "axis_labels.SubstrateMap | None",
+) -> tuple[list[FieldResult], list[str], list[str], str | None]:
+    """Resolve a kind change to a `type:*` label swap + title-prefix realignment.
+
+    Reached only for a kind permitted on the issue's structural type — the
+    up-front gate in `main` refuses the kind/structural mismatch DEC-011 declares
+    a hard-reject before any planning runs. In practice that means: a kind-driven
+    (task) issue with any kind, or epic/feature/umbrella with kind `feature` (the
+    kind they carry by definition, which lands as a no-op here).
+
+    The `type` axis is ALWAYS a label (per classification.yaml), so unlike
+    priority/workstream there is no board-degrade path: the kind label resolves
+    through the SAME `axis_labels.resolve_write` create-issue uses, then diffs
+    against the issue's current `type:*` label(s) — already-correct is a no-op,
+    a change removes the stale `type:*` label and adds the new one.
+
+    Title-prefix realignment (the create-issue coupling, reused): the new prefix
+    is read from classification.yaml's `title_prefix_by_value[<kind>]` — the same
+    map create-issue's title composition uses, so prefix and label cannot diverge.
+    The prefix is realigned only when the issue's structural type is kind-driven
+    (the leaf `task`, per `structural_restriction`); for epic/feature/umbrella the
+    only kind that reaches here is `feature`, whose structural prefix is already
+    correct, so no realignment is planned. Returns
+    ``(results, to_add, to_remove, new_title)`` where ``new_title`` is None when
+    no title rewrite is planned.
+    """
+    results: list[FieldResult] = []
+    to_add: list[str] = []
+    to_remove: list[str] = []
+    new_title: str | None = None
+
+    resolved = axis_labels.resolve_write("type", kind, substrate_map)
+    if not isinstance(resolved, str):
+        results.append(
+            FieldResult(
+                field="kind",
+                ok=True,
+                changed=False,
+                message=(
+                    f"kind: unsupported under your substrate-map "
+                    f"(value {kind!r}); not labelled"
+                ),
+            )
+        )
+        return results, to_add, to_remove, new_title
+
+    if resolved in current_labels:
+        results.append(
+            FieldResult(
+                field="kind",
+                ok=True,
+                changed=False,
+                message=f"kind: already {resolved!r} (no-op)",
+            )
+        )
+    else:
+        stale = [
+            lbl for lbl in current_labels
+            if axis_labels.is_axis_label(lbl, "type") and lbl != resolved
+        ]
+        to_remove.extend(stale)
+        to_add.append(resolved)
+        results.append(
+            FieldResult(
+                field="kind",
+                ok=True,
+                changed=True,
+                message=f"kind: set {resolved!r}"
+                + (f" (was {', '.join(stale)})" if stale else ""),
+            )
+        )
+
+    # Realign the title prefix only when the issue's structural type is
+    # kind-driven (today: the leaf `task`). For epic/feature/umbrella the only
+    # kind that reaches here is `feature` (the up-front gate refuses any other),
+    # whose structural prefix already matches — so nothing to realign.
+    structural_type = _infer_structural_type(title, issue_types, classification)
+    if structural_type is not None and _kind_drives_title(
+        structural_type, classification
+    ):
+        target_prefix = _title_prefix_by_value(classification).get(kind)
+        if target_prefix:
+            realigned = _retitle_prefix(title, target_prefix)
+            if realigned is not None and realigned != title:
+                new_title = realigned
+                results.append(
+                    FieldResult(
+                        field="title",
+                        ok=True,
+                        changed=True,
+                        message=f"title: realign prefix to [{target_prefix}]",
+                    )
+                )
+
+    return results, to_add, to_remove, new_title
+
+
+def _retitle_prefix(title: str, target_prefix: str) -> str | None:
+    """Swap a leading `[...]` title prefix for `[<target_prefix>]`.
+
+    Idempotent — an already-correct prefix returns the title unchanged. Returns
+    None when the title has no recognisable `[...] ` prefix to swap (the caller
+    only reaches here for a kind-driven structural type, which is inferred FROM a
+    recognised prefix, so this is a defensive guard rather than an expected path).
+    """
+    m = re.match(r"^\[[^\]]+\]\s+(.*)$", title, flags=re.DOTALL)
+    if not m:
+        return None
+    return f"[{target_prefix}] {m.group(1)}"
+
+
+def _allowed_structural_types_per_kind(classification: dict) -> dict:
+    """The `axes.type.structural_restriction.allowed_structural_types_per_kind` map.
+
+    The single source of truth (classification.yaml) for which structural types
+    each kind may carry — the same table `_kind_drives_title` consults and that
+    DEC-011 names as the kind/structural restriction. Empty/absent ⇒ {}.
+    """
+    axes = classification.get("axes") if isinstance(classification, dict) else None
+    type_axis = axes.get("type") if isinstance(axes, dict) else None
+    restriction = (
+        type_axis.get("structural_restriction") if isinstance(type_axis, dict) else None
+    )
+    allowed = (
+        restriction.get("allowed_structural_types_per_kind")
+        if isinstance(restriction, dict)
+        else None
+    )
+    return allowed if isinstance(allowed, dict) else {}
+
+
+def _kind_allowed_for_structural_type(
+    kind: str, structural_type: str, classification: dict
+) -> bool:
+    """Whether `kind` may be carried by `structural_type` per the restriction.
+
+    Reads `allowed_structural_types_per_kind` (single source of truth). When the
+    table is empty/absent (a thin or board-less classification), there is no
+    restriction to enforce, so this returns True (permissive degrade — the
+    up-front gate refuses nothing it can't ground in the schema).
+    """
+    allowed = _allowed_structural_types_per_kind(classification)
+    if not allowed:
+        return True
+    types = allowed.get(kind)
+    if not isinstance(types, list):
+        # Kind absent from the table ⇒ no declared restriction for it; permit.
+        return True
+    return structural_type in types
+
+
+def _kind_drives_title(structural_type: str, classification: dict) -> bool:
+    """Whether the `type` (kind) axis drives the title prefix for this type.
+
+    Parity with create-issue's helper (#356): reads classification.yaml's
+    `structural_restriction` rather than hardcoding `task`. A structural type is
+    kind-driven iff it is reachable by a kind other than the default `feature`
+    (today only `task` is). Empty/absent classification ⇒ False (degrade to the
+    structural prefix — no realignment).
+    """
+    prefix_by_value = _title_prefix_by_value(classification)
+    allowed = _allowed_structural_types_per_kind(classification)
+    if not allowed:
+        return False
+    for kind, types in allowed.items():
+        if kind == "feature" or kind not in prefix_by_value:
+            continue
+        if isinstance(types, list) and structural_type in types:
+            return True
+    return False
+
+
+def _title_prefix_by_value(classification: dict) -> dict:
+    """The `axes.type.title_prefix_by_value` map from classification.yaml.
+
+    The same map create-issue's title composition reads, so the kind→prefix
+    coupling has one source of truth across filing and correction.
+    """
+    axes = classification.get("axes") if isinstance(classification, dict) else None
+    type_axis = axes.get("type") if isinstance(axes, dict) else None
+    mapping = (
+        type_axis.get("title_prefix_by_value") if isinstance(type_axis, dict) else None
+    )
+    return mapping if isinstance(mapping, dict) else {}
 
 
 def _plan_parent(body: str, parent_ref_line: str) -> tuple[str, FieldResult]:
@@ -465,6 +725,24 @@ def _gh_edit_labels(
     return True
 
 
+def _gh_write_title(issue_number: int, title: str, config: dict) -> bool:
+    """Write the realigned title via `gh issue edit --title` (edit-issue's pattern)."""
+    cmd = ["gh", "issue", "edit", str(issue_number), "--title", title]
+    try:
+        proc = gh_run(cmd, config, check=False)
+    except FileNotFoundError:
+        print("error: `gh` not on PATH. Install GitHub CLI.", file=sys.stderr)
+        return False
+    if proc.returncode != 0:
+        print(
+            f"error: gh issue edit (title) failed (exit {proc.returncode}).\n"
+            f"stderr: {proc.stderr.strip()}",
+            file=sys.stderr,
+        )
+        return False
+    return True
+
+
 def _gh_write_body(issue_number: int, body: str, config: dict) -> bool:
     """Write the rewritten body via `gh issue edit --body-file` (edit-issue's pattern)."""
     with tempfile.NamedTemporaryFile(
@@ -501,13 +779,25 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="set-field",
         description=(
-            "Declaratively set an issue's priority / workstream / parent "
+            "Declaratively set an issue's kind / priority / workstream / parent "
             "classification field(s) in one batch call. Validates up front and "
             "refuses before any mutation on an unknown value; idempotent on "
-            "re-run. Reuses create-issue's classification resolution (DEC-038)."
+            "re-run. Reuses create-issue's classification resolution (DEC-038); "
+            "a kind change swaps the type:* label and realigns the title prefix."
         ),
     )
     parser.add_argument("issue_number", type=int, help="GitHub issue number.")
+    parser.add_argument(
+        "--kind",
+        default=None,
+        help=(
+            "Classification `type:*` value (one of the adopter's classification "
+            "type values, e.g. bug/feature/docs/test/refactor/maintenance). "
+            "Swaps the prior type:* label and realigns the title prefix per "
+            "classification.yaml's title_prefix_by_value when the title is "
+            "kind-driven."
+        ),
+    )
     parser.add_argument(
         "--priority",
         default=None,
