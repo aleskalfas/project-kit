@@ -33,6 +33,7 @@ def _stage_capability_in_source(
     description: str = "Test capability.",
     requires_backbone: str = ">=0.1.0,<99.0.0",
     requires_capabilities: list[dict[str, str]] | None = None,
+    requires_system_yaml: str | None = None,
     with_skills: tuple[str, ...] = (),
     with_agents: tuple[str, ...] = (),
     with_decisions: tuple[str, ...] = (),
@@ -45,6 +46,12 @@ def _stage_capability_in_source(
 
     `requires_capabilities` is a list of ``{name, version}`` dicts written
     into ``requires_capabilities:`` in the package.yaml (COR-030).
+
+    `requires_system_yaml` is a raw YAML fragment (the value side of a
+    top-level ``requires_system:`` key) appended verbatim to the package.yaml
+    (COR-039). Passed as raw YAML rather than a structured object so a test
+    can exercise the per-OS ``install_hint`` / ``probe`` maps and malformed
+    shapes directly.
     """
     cap_dir = source_kit / "capabilities" / name
     cap_dir.mkdir(parents=True, exist_ok=True)
@@ -55,6 +62,9 @@ def _stage_capability_in_source(
             lines.append(f'  - name: {req["name"]}')
             lines.append(f'    version: "{req["version"]}"')
         req_caps_block = "\n" + "\n".join(lines) + "\n"
+    req_system_block = ""
+    if requires_system_yaml is not None:
+        req_system_block = "\nrequires_system:\n" + requires_system_yaml + "\n"
     (cap_dir / "package.yaml").write_text(
         f"""schema_version: 1
 component:
@@ -62,7 +72,7 @@ component:
   name: {name}
   version: {version}
 description: {description}
-requires_backbone: "{requires_backbone}"{req_caps_block}
+requires_backbone: "{requires_backbone}"{req_caps_block}{req_system_block}
 """,
         encoding="utf-8",
     )
@@ -1335,6 +1345,104 @@ def test_read_package_yaml_no_requires_capabilities_is_empty_tuple(kit_source: P
     source = caps.find_capability_in_source(kit_source, "standalone")
     assert source is not None
     assert source.package.requires_capabilities == ()
+
+
+# ============================================================================
+# COR-039: requires_system declaration substrate (parse only, no enforcement)
+# ============================================================================
+
+
+def test_read_package_yaml_parses_requires_system(kit_source: Path) -> None:
+    """requires_system entries parse into SystemDependency tuples with per-OS maps."""
+    _stage_capability_in_source(
+        kit_source,
+        "recorder",
+        requires_system_yaml=(
+            "  - name: obs\n"
+            '    min_version: "30.0.0"\n'
+            "    install_hint:\n"
+            '      macos: "brew install --cask obs"\n'
+            '      linux: "apt install obs-studio"\n'
+            "    probe:\n"
+            '      macos: "obs --version"\n'
+            '      linux: "obs --version"\n'
+        ),
+    )
+    source = caps.find_capability_in_source(kit_source, "recorder")
+    assert source is not None
+    assert len(source.package.requires_system) == 1
+    tool = source.package.requires_system[0]
+    assert tool.name == "obs"
+    assert tool.min_version == "30.0.0"
+    assert tool.install_hint == {
+        "macos": "brew install --cask obs",
+        "linux": "apt install obs-studio",
+    }
+    assert tool.probe == {"macos": "obs --version", "linux": "obs --version"}
+
+
+def test_read_package_yaml_no_requires_system_is_empty_tuple(kit_source: Path) -> None:
+    """A package.yaml with no requires_system field yields an empty tuple."""
+    _stage_capability_in_source(kit_source, "plain")
+    source = caps.find_capability_in_source(kit_source, "plain")
+    assert source is not None
+    assert source.package.requires_system == ()
+
+
+def test_read_package_yaml_requires_system_min_version_optional(kit_source: Path) -> None:
+    """An entry without min_version parses as presence-only (empty min_version)."""
+    _stage_capability_in_source(
+        kit_source,
+        "presence-only",
+        requires_system_yaml=(
+            "  - name: ffmpeg\n"
+            "    probe:\n"
+            '      linux: "ffmpeg -version"\n'
+        ),
+    )
+    source = caps.find_capability_in_source(kit_source, "presence-only")
+    assert source is not None
+    assert len(source.package.requires_system) == 1
+    tool = source.package.requires_system[0]
+    assert tool.name == "ffmpeg"
+    assert tool.min_version == ""
+    assert tool.install_hint == {}
+    assert tool.probe == {"linux": "ffmpeg -version"}
+
+
+def test_read_package_yaml_requires_system_skips_malformed_entries(kit_source: Path) -> None:
+    """Lenient parse: a nameless entry is dropped; well-formed siblings survive."""
+    _stage_capability_in_source(
+        kit_source,
+        "mixed",
+        requires_system_yaml=(
+            "  - min_version: \"1.0.0\"\n"  # no name -> dropped
+            "  - name: docker\n"
+            '    min_version: "24.0.0"\n'
+        ),
+    )
+    source = caps.find_capability_in_source(kit_source, "mixed")
+    assert source is not None
+    assert len(source.package.requires_system) == 1
+    assert source.package.requires_system[0].name == "docker"
+
+
+def test_read_package_yaml_requires_system_ignored_by_existing_consumers(kit_source: Path) -> None:
+    """An additive requires_system field does not disturb other parsed fields."""
+    _stage_capability_in_source(
+        kit_source,
+        "additive",
+        version="2.5.0",
+        requires_backbone=">=1.0.0,<3.0.0",
+        requires_system_yaml='  - name: git\n',
+    )
+    source = caps.find_capability_in_source(kit_source, "additive")
+    assert source is not None
+    # The new field parses, and the pre-existing fields are unaffected.
+    assert source.package.version == "2.5.0"
+    assert source.package.requires_backbone == ">=1.0.0,<3.0.0"
+    assert source.package.requires_capabilities == ()
+    assert len(source.package.requires_system) == 1
 
 
 # --- check_capability_dependencies ---
