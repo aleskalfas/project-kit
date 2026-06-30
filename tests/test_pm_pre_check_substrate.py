@@ -95,6 +95,24 @@ def test_present_map_loads_axes(axis_labels, tmp_path: Path) -> None:
     assert set(sm.axes) == {"priority", "type", "workstream", "state"}
 
 
+def test_present_map_loads_containment_from_file(axis_labels, tmp_path: Path) -> None:
+    """The top-level `containment:` key round-trips through the loader (DEC-039 D2
+    / ADR-035): an explicit `textual` parses to the textual mode, and a body with
+    no `containment:` key defaults to native."""
+    cap_root = tmp_path / "cap"
+    _write_map(cap_root, AUJ_BODY + "containment: textual\n")
+    sm = axis_labels.load_substrate_map(cap_root)
+    assert sm is not None
+    assert sm.containment == "textual"
+    assert axis_labels.containment_mode(sm) == "textual"
+
+    cap_root2 = tmp_path / "cap2"
+    _write_map(cap_root2, AUJ_BODY)
+    sm2 = axis_labels.load_substrate_map(cap_root2)
+    assert sm2 is not None
+    assert sm2.containment == "native"  # absent key ⇒ native default
+
+
 def test_unparseable_map_fails_closed_to_degrade_all(axis_labels, tmp_path: Path) -> None:
     """A present-but-broken map degrades every axis — it never re-enters
     greenfield (fail closed)."""

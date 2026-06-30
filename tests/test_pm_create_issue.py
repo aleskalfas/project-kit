@@ -844,3 +844,152 @@ class _FakeLink:
     def __init__(self, detail: str, *, ok: bool) -> None:
         self.detail = detail
         self.ok = ok
+
+
+# --- the containment substrate selector on --parent (DEC-039 D2 / ADR-035, #357)
+# A `containment:` selector in the adopter's substrate-map gates the native link.
+# `textual` ⇒ skip the native link entirely (the textual child-side ref already
+# written is the record); `native` / absent-map ⇒ fire it as #344 does. These
+# drive the real main() with the containment seam stubbed (offline) and a staged
+# substrate-map to prove each branch of the single decision point.
+
+
+def _write_substrate_map(root: Path, containment: str | None) -> None:
+    """Stage a minimal substrate-map.yaml under the capability tree.
+
+    `containment` None omits the key entirely (so the loader's default — native —
+    applies); a string writes `containment: <value>`. A minimal but schema-valid
+    map (schema_version + an empty axes map) so the loader parses a present map.
+    """
+    body = "schema_version: 1\naxes: {}\n"
+    if containment is not None:
+        body += f"containment: {containment}\n"
+    (root / "project" / "substrate-map.yaml").write_text(body, encoding="utf-8")
+
+
+def test_main_parent_textual_containment_skips_native_link_keeps_textual_ref(
+    ci, tmp_path, monkeypatch
+) -> None:
+    """`containment: textual` ⇒ the native sub-issue link is NOT attempted, but
+    the textual first-line parent-ref is STILL written (the universal spine,
+    DEC-039 D3). The textual ref is the containment record in this mode."""
+    root = _stage_capability_tree(tmp_path, has_board=False)
+    _write_substrate_map(root, "textual")
+
+    monkeypatch.setattr(
+        ci.subprocess,
+        "run",
+        _gh_command_dispatcher("https://github.com/acme/repo/issues/58"),
+    )
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+
+    created_body: dict = {}
+    real_create = ci._gh_create_issue
+
+    def capturing_create(**kwargs):
+        created_body["body"] = kwargs["body"]
+        return real_create(**kwargs)
+
+    monkeypatch.setattr(ci, "_gh_create_issue", capturing_create)
+
+    def boom(*a, **k):  # pragma: no cover — must not be reached
+        raise AssertionError("native link must not fire under containment: textual")
+
+    monkeypatch.setattr(ci, "link_sub_issue", boom)
+    monkeypatch.setattr(
+        ci.sys, "argv",
+        [
+            "create-issue.py",
+            "--type", "task",
+            "--title", "do a thing",
+            "--parent", "1",
+            "--workstream", "spyre",
+            "--capability-root", str(root),
+            "--yes",
+        ],
+    )
+
+    rc = ci.main()
+    assert rc == 0
+    # The textual parent-ref is still the record — written regardless of mode.
+    assert "Feature: #1" in created_body["body"]
+
+
+def test_main_parent_native_containment_invokes_native_link(
+    ci, tmp_path, monkeypatch
+) -> None:
+    """An explicit `containment: native` ⇒ the native sub-issue link fires exactly
+    as #344 (greenfield-equivalent)."""
+    root = _stage_capability_tree(tmp_path, has_board=False)
+    _write_substrate_map(root, "native")
+
+    monkeypatch.setattr(
+        ci.subprocess,
+        "run",
+        _gh_command_dispatcher("https://github.com/acme/repo/issues/59"),
+    )
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+
+    link_calls: list[dict] = []
+
+    def fake_link(config, *, parent_number, child_number):
+        link_calls.append({"parent": parent_number, "child": child_number})
+        return _FakeLink("linked", ok=True)
+
+    monkeypatch.setattr(ci, "link_sub_issue", fake_link)
+    monkeypatch.setattr(
+        ci.sys, "argv",
+        [
+            "create-issue.py",
+            "--type", "task",
+            "--title", "do a thing",
+            "--parent", "1",
+            "--workstream", "spyre",
+            "--capability-root", str(root),
+            "--yes",
+        ],
+    )
+
+    rc = ci.main()
+    assert rc == 0
+    assert link_calls == [{"parent": 1, "child": 59}]
+
+
+def test_main_parent_absent_containment_key_defaults_to_native_link(
+    ci, tmp_path, monkeypatch
+) -> None:
+    """A present map with NO `containment:` key keeps the native default — the
+    native link fires (absent ⇒ native, the safe direction toward the ideal)."""
+    root = _stage_capability_tree(tmp_path, has_board=False)
+    _write_substrate_map(root, None)  # present map, containment key omitted
+
+    monkeypatch.setattr(
+        ci.subprocess,
+        "run",
+        _gh_command_dispatcher("https://github.com/acme/repo/issues/60"),
+    )
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+
+    link_calls: list[dict] = []
+
+    def fake_link(config, *, parent_number, child_number):
+        link_calls.append({"parent": parent_number, "child": child_number})
+        return _FakeLink("linked", ok=True)
+
+    monkeypatch.setattr(ci, "link_sub_issue", fake_link)
+    monkeypatch.setattr(
+        ci.sys, "argv",
+        [
+            "create-issue.py",
+            "--type", "task",
+            "--title", "do a thing",
+            "--parent", "1",
+            "--workstream", "spyre",
+            "--capability-root", str(root),
+            "--yes",
+        ],
+    )
+
+    rc = ci.main()
+    assert rc == 0
+    assert link_calls == [{"parent": 1, "child": 60}]

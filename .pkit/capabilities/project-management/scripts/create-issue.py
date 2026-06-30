@@ -437,6 +437,15 @@ def main() -> int:
         print(f"  workstream: {args.workstream}")
     if args.parent:
         print(f"  parent:     #{args.parent}")
+        # Containment-substrate selector (DEC-039 D2 / ADR-035): show which
+        # parent-link decision the post-create step will take. `native` (and the
+        # greenfield default) links the native sub-issue; `textual` skips it and
+        # records only the textual parent-ref.
+        containment = axis_labels.containment_mode(substrate_map)
+        if containment == axis_labels.CONTAINMENT_TEXTUAL:
+            print("  containment: textual  (native sub-issue link skipped; textual ref only)")
+        else:
+            print("  containment: native   (native sub-issue link + textual ref)")
     if args.milestone:
         print(f"  milestone:  #{args.milestone}")
     print(f"  assignee:   {assignee}")
@@ -478,8 +487,20 @@ def main() -> int:
     # idempotent (value-equality re-link is a no-op, DEC-026) and degrades to a
     # no-op where the instance lacks sub-issue support — the textual ref carries
     # the relationship in that case, and a native failure never fails the create.
+    #
+    # Containment-substrate gate (DEC-039 D2, contract ADR-035): the `containment`
+    # selector in the substrate-map (already loaded above) decides whether the
+    # native link fires. `native` (and the greenfield default — no map) → link as
+    # today; `textual` → SKIP the native link entirely, the textual child-side ref
+    # written above is the record (the universal spine, DEC-039 D3). A single
+    # decision point; the textual ref is written regardless of mode.
     new_issue_number = _extract_issue_number_from_url(issue_url)
-    if args.parent is not None and new_issue_number is not None:
+    containment = axis_labels.containment_mode(substrate_map)
+    if (
+        args.parent is not None
+        and new_issue_number is not None
+        and containment == axis_labels.CONTAINMENT_NATIVE
+    ):
         link = link_sub_issue(
             config,
             parent_number=args.parent,
@@ -487,6 +508,12 @@ def main() -> int:
         )
         prefix = "[ok]" if link.ok else "[warn]"
         print(f"{prefix} {link.detail}", file=sys.stderr)
+    elif args.parent is not None and containment == axis_labels.CONTAINMENT_TEXTUAL:
+        print(
+            f"[ok] containment: textual mode — native sub-issue link skipped; "
+            f"textual parent-ref to #{args.parent} recorded as the containment record",
+            file=sys.stderr,
+        )
 
     # Auto-add to board for board-substrate adopters (per DEC-019).
     #
