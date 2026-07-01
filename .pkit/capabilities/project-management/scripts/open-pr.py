@@ -53,6 +53,7 @@ from ruamel.yaml.error import YAMLError
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import axis_labels  # noqa: E402
+from _lib import provenance  # noqa: E402
 from _lib import session_guard  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib.hooks import fire_hooks  # noqa: E402
@@ -240,6 +241,8 @@ def main() -> int:
     )
     if body is None:
         return 2
+    # Seam: stamp exactly one provenance footer onto the PR body (ADR-036).
+    body = provenance.stamp(body, provenance.read_versions(capability_root))
 
     # Determine base branch.
     base = args.base or str(config.get("default_branch") or "main")
@@ -280,6 +283,9 @@ def main() -> int:
     import re as _re
     pr_number_match = _re.search(r"/pull/(\d+)", url)
     pr_number = int(pr_number_match.group(1)) if pr_number_match else None
+    if pr_number is not None:
+        # One-time immutable filing-version comment on the PR (DEC-041).
+        print(provenance.post_filing_comment(pr_number, capability_root, config, is_pr=True))
     fire_hooks(
         "after_open_pr",
         context={"pr": {"number": pr_number, "title": pr_title}},

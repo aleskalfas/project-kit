@@ -41,6 +41,7 @@ from ruamel.yaml.error import YAMLError
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
+from _lib import provenance  # noqa: E402
 from _lib import session_guard  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
@@ -158,7 +159,8 @@ def main() -> int:
         return 2
 
     current_title = str(pr.get("title", ""))
-    current_body = str(pr.get("body") or "")
+    # Strip the footer on read; the seam re-stamps one on write (ADR-036).
+    current_body = provenance.strip_footer(str(pr.get("body") or ""))
 
     new_title = args.title if args.title is not None else current_title
     new_body = _compute_new_body(current_body, args)
@@ -208,7 +210,7 @@ def main() -> int:
     if not _gh_apply_edit(
         args.pr_number,
         title=new_title,
-        body=new_body,
+        body=provenance.stamp(new_body, provenance.read_versions(capability_root)),
         current_title=current_title,
         config=config,
     ):
