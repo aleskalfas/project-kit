@@ -66,6 +66,7 @@ from ruamel.yaml.error import YAMLError
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import axis_labels  # noqa: E402
+from _lib import classification_rules  # noqa: E402
 from _lib import lifecycle_inference as infer  # noqa: E402
 from _lib import session_guard  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
@@ -692,12 +693,9 @@ def _structural_type_from_kind_label(
     kind = axis_labels.read("type", labels)
     if kind is None:
         return None
-    allowed = (
-        classification.get("axes", {})
-        .get("type", {})
-        .get("structural_restriction", {})
-        .get("allowed_structural_types_per_kind", {})
-    )
+    # The kind→structural table is read through the shared _lib reader — the one
+    # place `allowed_structural_types_per_kind` is parsed (COR-007 single source).
+    allowed = classification_rules.allowed_structural_types_per_kind(classification)
     candidates = allowed.get(kind) if isinstance(allowed, dict) else None
     if isinstance(candidates, list) and len(candidates) == 1:
         only = candidates[0]

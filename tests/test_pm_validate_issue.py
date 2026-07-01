@@ -127,6 +127,36 @@ def body_format() -> dict:
 
 
 @pytest.fixture
+def classification() -> dict:
+    """Minimal classification.yaml fixture carrying the DEC-011 restriction."""
+    return {
+        "axes": {
+            "type": {
+                "title_prefix_by_value": {
+                    "feature": "Task",
+                    "bug": "Bug",
+                    "docs": "Docs",
+                    "test": "Test",
+                    "refactor": "Refactor",
+                    "maintenance": "Chore",
+                },
+                "structural_restriction": {
+                    "allowed_structural_types_per_kind": {
+                        "feature": ["task", "feature", "umbrella", "epic"],
+                        "bug": ["task"],
+                        "docs": ["task"],
+                        "test": ["task"],
+                        "refactor": ["task"],
+                        "maintenance": ["task"],
+                    },
+                    "mismatch_severity": "[validation-severity:hard-reject]",
+                },
+            }
+        }
+    }
+
+
+@pytest.fixture
 def label_fallback_config() -> dict:
     """Adopter config: label-fallback mode (no board)."""
     return {"has_projects_v2_board": False, "workstreams": ["cli", "schemas"]}
@@ -250,6 +280,160 @@ def test_multiple_type_labels_is_hard_reject(
         config=label_fallback_config,
     )
     assert "classification.type.multiple" in _labels(findings)
+
+
+def test_kind_structural_mismatch_at_create_is_hard_reject(
+    vi, issue_types, titles, body_format, classification, label_fallback_config
+) -> None:
+    # A Feature labelled type:bug is the DEC-011 mismatch. At --phase create it
+    # is a hard-reject (refused at the point of manufacture) carrying the
+    # schema's mismatch_severity token.
+    issue = _make_issue(
+        title="[Feature] deliver the widget",
+        body="EPIC: #1\n\n## What\nx.",
+        labels=["type:bug", "priority:Medium", "workstream:cli"],
+    )
+    findings = vi._validate_issue(
+        issue=issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        classification=classification,
+        config=label_fallback_config,
+        phase=vi.PHASE_CREATE,
+    )
+    mismatch = [
+        f for f in findings if f.label == "classification.type.structural-mismatch"
+    ]
+    assert len(mismatch) == 1
+    assert mismatch[0].severity == "hard-reject"
+
+
+def test_kind_structural_mismatch_at_transition_is_warning(
+    vi, issue_types, titles, body_format, classification, label_fallback_config
+) -> None:
+    # Phase-split (#410): the SAME mismatch at --phase transition is a warning,
+    # not a hard-reject — a pre-existing container-kind mismatch corrupts the
+    # closing-PR conv-type derivation (a create-PR concern), not the transition
+    # in flight, so it must not wall traversal of a mismatched live ancestor.
+    issue = _make_issue(
+        title="[Feature] deliver the widget",
+        body="EPIC: #1\n\n## What\nx.",
+        labels=["type:bug", "priority:Medium", "workstream:cli"],
+    )
+    findings = vi._validate_issue(
+        issue=issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        classification=classification,
+        config=label_fallback_config,
+        phase=vi.PHASE_TRANSITION,
+    )
+    mismatch = [
+        f for f in findings if f.label == "classification.type.structural-mismatch"
+    ]
+    assert len(mismatch) == 1
+    assert mismatch[0].severity == "warning"
+    # It must be non-blocking: no hard-reject / bypassable severity on it.
+    assert mismatch[0].severity not in (
+        vi.SEVERITY_HARD_REJECT,
+        vi.SEVERITY_BYPASSABLE,
+    )
+
+
+def test_kind_structural_mismatch_default_phase_is_warning(
+    vi, issue_types, titles, body_format, classification, label_fallback_config
+) -> None:
+    # validate-issue's default phase is transition (DEC-031); an unqualified
+    # call therefore reports the mismatch as a warning rather than blocking.
+    issue = _make_issue(
+        title="[Feature] deliver the widget",
+        body="EPIC: #1\n\n## What\nx.",
+        labels=["type:bug", "priority:Medium", "workstream:cli"],
+    )
+    findings = vi._validate_issue(
+        issue=issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        classification=classification,
+        config=label_fallback_config,
+    )
+    mismatch = [
+        f for f in findings if f.label == "classification.type.structural-mismatch"
+    ]
+    assert len(mismatch) == 1
+    assert mismatch[0].severity == "warning"
+
+
+@pytest.mark.parametrize("phase", ["create", "transition"])
+def test_feature_kind_on_feature_passes(
+    vi, issue_types, titles, body_format, classification, label_fallback_config, phase
+) -> None:
+    # The legitimate case: a [Feature] carrying its implicit kind `feature`.
+    # Clean in BOTH phases — the phase-split only governs mismatch severity.
+    issue = _make_issue(
+        title="[Feature] deliver the widget",
+        body="EPIC: #1\n\n## What\nx.",
+        labels=["type:feature", "priority:Medium", "workstream:cli"],
+    )
+    findings = vi._validate_issue(
+        issue=issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        classification=classification,
+        config=label_fallback_config,
+        phase=phase,
+    )
+    assert "classification.type.structural-mismatch" not in _labels(findings)
+
+
+@pytest.mark.parametrize("phase", ["create", "transition"])
+def test_bug_kind_on_task_passes(
+    vi, issue_types, titles, body_format, classification, label_fallback_config, phase
+) -> None:
+    # A [Bug] Task carrying type:bug is the correct shape — no mismatch finding
+    # in either phase.
+    issue = _make_issue(
+        title="[Bug] fix the crash",
+        body=(
+            "Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n"
+            "## Doc impact\nnone."
+        ),
+        labels=["type:bug", "priority:Medium", "workstream:cli"],
+    )
+    findings = vi._validate_issue(
+        issue=issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        classification=classification,
+        config=label_fallback_config,
+        phase=phase,
+    )
+    assert "classification.type.structural-mismatch" not in _labels(findings)
+
+
+def test_no_mismatch_finding_without_classification(
+    vi, issue_types, titles, body_format, label_fallback_config
+) -> None:
+    # Backward-compat: with no classification passed (or an empty one), the
+    # predicate degrades permissive — no mismatch finding is manufactured.
+    issue = _make_issue(
+        title="[Feature] deliver the widget",
+        body="EPIC: #1\n\n## What\nx.",
+        labels=["type:bug", "priority:Medium", "workstream:cli"],
+    )
+    findings = vi._validate_issue(
+        issue=issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        config=label_fallback_config,
+    )
+    assert "classification.type.structural-mismatch" not in _labels(findings)
 
 
 def test_board_mode_does_not_require_priority_or_workstream_labels(
