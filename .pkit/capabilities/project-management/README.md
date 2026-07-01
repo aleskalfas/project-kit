@@ -32,6 +32,17 @@ The authority signal for distillation is pm-workflow's `main` branch. Capability
 
 The engine is **methodology-agnostic by design**: when the methodology evolves upstream, schemas change; the engine picks up the new rules automatically without skill-code edits. Adding a state, a new issue type, or a new title regex becomes a schema edit.
 
+## Version provenance on issues and PRs
+
+Every issue and PR the capability's scripts file or edit is stamped with the methodology version in force — so when a bug surfaces you can tell whether it was filed before or after a given upgrade, and whether the installed CLI has drifted from the synced project tree. Per [project-management:DEC-041-version-provenance-stamp] (the what/why) and ADR-036 (the write-path contract), the stamp has two parts, both written **only by the scripts** — never by an agent or a human:
+
+- **A one-time filing comment** posted when the issue/PR is created, recording the version it was *born under* (backbone tree, capability, and installed CLI). It is immutable — the load-bearing record that answers "was this filed before or after the buggy upgrade?".
+- **A self-replacing footer** at the foot of the body, showing the version of the *current* touch, with a `⚠` when the installed CLI and the synced tree disagree. The footer carries versions only (no date — the date lives in the comment) so re-stamping is idempotent.
+
+The footer is a methodology-managed region delimited by `<!-- pkit-provenance:start -->` / `:end` sentinels. On every body write the scripts strip any existing region and reissue exactly one, so a doubled or stale footer is structurally impossible; the agent's read path (`show-issue`) strips it, so agents compose against footer-free bodies and never own the footer bytes. Provenance is **best-effort**: a failed stamp never blocks the underlying operation.
+
+**Accepted gap:** issues created before the capability adopted this convention, or by hand in the GitHub web UI, carry no stamp — there is no back-fill obligation. Triage of such an issue falls back to correlating its creation date against the version file's history.
+
 ## Adopter setup
 
 > **Short form**: every `pkit project-management <subcommand>` shown below also works as `pkit pm <subcommand>` — the capability registers `pm` as an alias via `aliases:` in its `package.yaml`. Both resolve to the same dispatch group; pick whichever reads better.
