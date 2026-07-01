@@ -16,6 +16,17 @@ Capability dependencies (COR-030): a capability may declare
 dependency capability's installed version must satisfy. The install
 pre-flight, both upgrade entry points, and the uninstall gate enforce
 this contract. See ``check_capability_dependencies``.
+
+External-tool dependencies (COR-039): a capability may also declare
+``requires_system`` in its ``package.yaml`` — an optional list of external
+system tools (a binary, daemon, or runtime that lives outside the kit),
+each carrying enough to *detect and diagnose* it: a name, a minimum
+version, a per-operating-system install hint, and a per-operating-system
+probe. This module parses the declaration (``SystemDependency``); the
+warn-at-install, gate-at-use, and preflight *enforcement* is a separate
+concern (COR-039 — install warns, the capability gates at use). The
+parser is additive and lenient: an absent field yields an empty tuple,
+and a malformed entry is skipped, exactly as ``requires_capabilities`` is.
 """
 
 from __future__ import annotations
@@ -70,6 +81,41 @@ class CapabilityDependency:
 
 
 @dataclass(frozen=True)
+class SystemDependency:
+    """One entry from the ``requires_system`` list in a ``package.yaml`` (COR-039).
+
+    A declared external system tool — a binary, daemon, or runtime that
+    lives outside the kit. Carries enough to *detect and diagnose* the tool
+    without provisioning it:
+
+    - ``name`` — the tool's name (e.g. ``"obs"``, ``"ffmpeg"``);
+    - ``min_version`` — the lowest acceptable version. Empty string means
+      "presence only, no version floor" — a present tool of any version
+      satisfies it. Stored as a string (not a semver range) because COR-039
+      frames the declaration as a *minimum* version; the enforcement side
+      (COR-039, separate concern) derives the comparison from it;
+    - ``install_hint`` — a mapping of operating-system key (e.g. ``"macos"``,
+      ``"linux"``, ``"windows"``) to a human-readable install instruction.
+      Per-OS because external tools install differently per platform
+      (COR-039 — detection lives in the declaration, per OS, as data per
+      COR-027);
+    - ``probe`` — a mapping of operating-system key to the command the kit
+      runs to test the tool's presence and version. Per-OS for the same
+      reason.
+
+    The two per-OS maps are intentionally open (any OS key is accepted),
+    so the substrate does not pin the set of recognised operating systems —
+    that belongs to the enforcement/preflight side (COR-039), not the
+    declaration parser.
+    """
+
+    name: str
+    min_version: str = ""
+    install_hint: dict[str, str] = field(default_factory=dict)
+    probe: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
 class CapabilityPackage:
     """A capability's package.yaml content, as read from disk."""
 
@@ -78,6 +124,7 @@ class CapabilityPackage:
     description: str
     requires_backbone: str
     requires_capabilities: tuple[CapabilityDependency, ...] = field(default_factory=tuple)
+    requires_system: tuple[SystemDependency, ...] = field(default_factory=tuple)
     schema_version: int = 1
 
 
@@ -1154,12 +1201,14 @@ def _read_package_yaml(path: Path) -> CapabilityPackage | None:
     description = raw.get("description", "")
     requires_backbone = raw.get("requires_backbone", "")
     requires_capabilities = _parse_requires_capabilities(raw.get("requires_capabilities"))
+    requires_system = _parse_requires_system(raw.get("requires_system"))
     return CapabilityPackage(
         name=name,
         version=version,
         description=str(description),
         requires_backbone=str(requires_backbone),
         requires_capabilities=requires_capabilities,
+        requires_system=requires_system,
         schema_version=int(raw.get("schema_version", 1)),
     )
 
@@ -1191,6 +1240,68 @@ def _parse_requires_capabilities(
             continue
         out.append(CapabilityDependency(name=dep_name, version=dep_version))
     return tuple(out)
+
+
+def _parse_requires_system(raw: object) -> tuple[SystemDependency, ...]:
+    """Parse the ``requires_system`` list from a package.yaml value (COR-039).
+
+    Accepts a list of entries, each a dict carrying a tool's detection
+    declaration:
+
+    - ``name`` (required, non-empty string) — the tool's name;
+    - ``min_version`` (optional string) — the minimum acceptable version;
+      absent or non-string means "presence only";
+    - ``install_hint`` (optional mapping) — operating-system key → install
+      instruction; non-string keys/values are dropped;
+    - ``probe`` (optional mapping) — operating-system key → probe command;
+      non-string keys/values are dropped.
+
+    Mirrors ``_parse_requires_capabilities``: lenient and additive. An entry
+    with no usable ``name`` is silently skipped (a future schema-validation
+    pass can surface it); absence of the field (``None``) returns an empty
+    tuple. This is the *declaration substrate* only — it does not run probes
+    or check versions (COR-039 enforcement is a separate concern).
+    """
+    if raw is None:
+        return ()
+    if not isinstance(raw, list):
+        return ()
+    out: list[SystemDependency] = []
+    for entry in raw:
+        if not isinstance(entry, dict):
+            continue
+        tool_name = entry.get("name")
+        if not isinstance(tool_name, str) or not tool_name:
+            continue
+        min_version_raw = entry.get("min_version")
+        min_version = min_version_raw if isinstance(min_version_raw, str) else ""
+        out.append(
+            SystemDependency(
+                name=tool_name,
+                min_version=min_version,
+                install_hint=_parse_per_os_strings(entry.get("install_hint")),
+                probe=_parse_per_os_strings(entry.get("probe")),
+            )
+        )
+    return tuple(out)
+
+
+def _parse_per_os_strings(raw: object) -> dict[str, str]:
+    """Parse a per-operating-system ``{os: string}`` mapping leniently (COR-039).
+
+    Shared by ``requires_system``'s ``install_hint`` and ``probe`` fields,
+    both of which are operating-system-keyed string maps. Drops any entry
+    whose key or value is not a string, and returns an empty dict for an
+    absent or non-mapping value — so a malformed map degrades to "no hint /
+    no probe for any OS" rather than failing the whole package read.
+    """
+    if not isinstance(raw, dict):
+        return {}
+    return {
+        key: value
+        for key, value in raw.items()
+        if isinstance(key, str) and isinstance(value, str)
+    }
 
 
 def _collect_existing_artifact_names(
