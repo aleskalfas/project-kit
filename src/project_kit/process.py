@@ -93,8 +93,21 @@ with the subject id) and REPORTS the result — content-free, read-only, never
 across subjects. A violation is surfaced on the status view AND reported by the
 dedicated `validate` operation (report-only: it does not block moves or
 remediate). An indeterminate check is fail-closed (reported as not holding).
-NO subset-scoping / severity — both deferred (they un-defer with composition's
-open region, which needs them boundary-enforcing).
+
+Open region (COR-040 / ADR-036): an invariant may carry an optional
+`applies_to: <state>` scoping it to one state — the open-region slot. The engine
+FILTERS the invariant report on the resolved position: an UNSCOPED invariant
+stays process-wide (COR-035 unchanged); a SCOPED invariant is evaluated and
+surfaced ONLY when `resolve_position().state_id` equals its region, and is
+not-applicable (not evaluated, not surfaced) both when the subject is in another
+region and under an INDETERMINATE position (the engine cannot confirm the region,
+so it never reports a spurious out-of-region violation). This is a pure position
+filter on the one existing report — NO new evaluator, NO new gate kind, and NO
+invariant→move-blocking primitive: a region's boundary is enforced by its EXIT
+GATE (an ordinary `deterministic` / `authorisation-artifact` gate whose predicate
+references the region's conditions), and COR-035's report-only posture is
+preserved verbatim. A state may be marked `open_region: true` (documentary; the
+engine gates nothing on the flag). Severity / auto-remediation stay deferred.
 
 Blocked (COR-034): a subject may declare a first-class `blocked` wait
 (`blocked_on` ∈ {awaiting-human, awaiting-condition}, optional `assignee`) and
@@ -1724,10 +1737,30 @@ class ProcessEngine:
         invariant means or acts on a violation beyond reporting. It never reads
         across subjects (COR-032).
 
-        **Position-independent.** Invariants hold process-wide, so they are
-        evaluated against current reality regardless of the subject's position
-        — an indeterminate or absent position does not stop them being checked.
-        (The position is reported alongside as context, not as a precondition.)
+        **Position-independent by default; optionally region-scoped (COR-040).**
+        An UNSCOPED invariant (no `applies_to`) holds process-wide, so it is
+        evaluated against current reality regardless of the subject's position —
+        an indeterminate or absent position does not stop it being checked
+        (COR-035 unchanged). An invariant carrying `applies_to: <state>` is
+        REGION-SCOPED (the open-region slot): the engine evaluates and returns it
+        ONLY when the subject's currently-resolved position equals `<state>`.
+        This is a FILTER on the one existing report keyed on
+        `resolve_position().state_id` — the same inferred-from-reality read every
+        other engine path uses — NOT a second evaluator or a move-blocking
+        coupling (a region's boundary is enforced by its exit gate's predicate,
+        not by an invariant; COR-035's report-only posture is preserved verbatim,
+        ADR-036 §1/§2).
+
+        - A scoped invariant whose region is NOT the resolved position is not
+          evaluated and not returned (so an out-of-region check cannot report a
+          spurious violation the operator is elsewhere to act on).
+        - A scoped invariant under an INDETERMINATE position is NOT-APPLICABLE
+          (not evaluated, not returned): the engine cannot confirm which region
+          the subject is in, so it never reports a scoped check as violated on an
+          unknown position (that would be spurious). The indeterminate position
+          is itself the fail-closed signal that blocks `move`. Unscoped
+          invariants continue to evaluate under an indeterminate position,
+          exactly as COR-035 already does.
 
         **Fail-closed.** An invariant whose `check` is indeterminate (the
         predicate errored, timed out, returned unparseable JSON, or could not be
@@ -1738,9 +1771,24 @@ class ProcessEngine:
         Reuses the engine's `PredicateRunner` (and its per-invocation
         `(command, args)` cache), so an invariant sharing a command with a
         detection or gate predicate is evaluated at most once per invocation.
+        The position is read once (through the same cached detection pass) and
+        reused for every scope test.
         """
+        # Read the resolved position once (COR-040): scoped invariants filter on
+        # it. Detection runs through the same per-invocation cache, so this adds
+        # no extra predicate invocations beyond the ones status already makes.
+        position = self.resolve_position()
         outcomes: list[InvariantOutcome] = []
         for invariant in self.definition.invariants:
+            applies_to = invariant.get("applies_to")
+            if isinstance(applies_to, str) and applies_to:
+                # Region-scoped (COR-040): evaluate/surface ONLY when the
+                # subject's resolved position IS this region. An indeterminate
+                # position (state_id is None + indeterminate) or any other region
+                # makes the scoped invariant not-applicable — skipped entirely,
+                # never reported as violated on an unknown/other position.
+                if position.state_id != applies_to:
+                    continue
             invariant_id = str(invariant.get("id", ""))
             why = str(invariant.get("why", ""))
             check = invariant.get("check")
