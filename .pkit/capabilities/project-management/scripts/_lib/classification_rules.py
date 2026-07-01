@@ -7,16 +7,18 @@ only on a Task. Filing (or leaving) a non-``feature`` kind on an
 epic/feature/umbrella is a **hard-reject** — it manufactures the kind/structural
 mismatch that breaks the closing PR's Conventional-Commits ``<type>`` derivation
 (open-pr / validate-pr read the closing issue's ``type:*`` label). This is
-[project-management:DEC-011-title-formats] ("Filing a Feature with ``type:bug``
-is a hard-reject — refused at create-issue and at validate-issue") grounded in
-``classification.yaml``'s ``axes.type.structural_restriction``.
+[project-management:DEC-011-title-formats], grounded in ``classification.yaml``'s
+``axes.type.structural_restriction``: refused outright at create-issue, and by
+validate-issue as a hard-reject at its create phase but a warning at transition
+phase (the mismatch is a create-time concern, not a lifecycle-move one).
 
 This module is the single place that table is read for the consistency check:
-``create-issue`` (refuse the mismatch at filing), ``validate-issue`` (flag an
-existing mismatched issue), and ``set-field`` (refuse a ``--kind`` that would
-introduce the mismatch) all call the predicates here rather than re-deriving the
-lookup. Per COR-007, the third writer to want the gate extracts it rather than
-duplicating the table a third time.
+``create-issue`` (refuse the mismatch at filing), ``validate-issue`` (flag a
+mismatch — hard-reject at create phase, warning at transition phase), and
+``set-field`` (refuse a ``--kind`` that would introduce the mismatch) all call
+the predicates here rather than re-deriving the lookup. Per COR-007, the third
+writer to want the gate extracts it rather than duplicating the table a third
+time.
 
 The module is dependency-free at import time (no YAML load) so any PEP 723 script
 can import it regardless of its declared dependencies — callers load
