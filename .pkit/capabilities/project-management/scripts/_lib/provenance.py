@@ -240,7 +240,13 @@ def post_filing_comment(
     when a comment already carries `FILING_MARKER` (idempotent re-run).
     Returns a one-line human status for the caller to surface.
     """
-    from gh import gh_run  # lazy: pure footer/version helpers need no gh.
+    # Lazy: the pure footer/version helpers need no gh. Resolve whether
+    # imported as a package (`_lib.provenance`, from a script) or by path
+    # (`import gh`, from the test harness).
+    try:
+        from _lib.gh import gh_run
+    except ImportError:
+        from gh import gh_run
 
     versions = read_versions(capability_root)
     kind = "pr" if is_pr else "issue"
