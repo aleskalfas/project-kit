@@ -1,7 +1,7 @@
 ---
 id: COR-040
 title: A process may declare an open region — a free-order state bounded by invariants and an exit gate
-status: proposed
+status: accepted
 date: 2026-07-01
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
