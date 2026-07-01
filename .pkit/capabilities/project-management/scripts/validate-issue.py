@@ -46,6 +46,7 @@ from ruamel.yaml.error import YAMLError
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import axis_labels  # noqa: E402
+from _lib import classification_rules  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
@@ -137,6 +138,9 @@ def main() -> int:
     issue_types = _read_yaml(capability_root / "schemas" / "issue-types.yaml", yaml_loader)
     titles = _read_yaml(capability_root / "schemas" / "titles.yaml", yaml_loader)
     body_format = _read_yaml(capability_root / "schemas" / "body-format.yaml", yaml_loader)
+    classification = _read_yaml(
+        capability_root / "schemas" / "classification.yaml", yaml_loader
+    )
     config = _read_yaml(capability_root / "project" / "config.yaml", yaml_loader)
     mandatory_state = _read_yaml(
         capability_root / "schemas" / "mandatory-issue-state.yaml", yaml_loader
@@ -158,6 +162,7 @@ def main() -> int:
         issue_types=issue_types,
         titles=titles,
         body_format=body_format,
+        classification=classification,
         config=config,
         mandatory_state=mandatory_state,
         capability_root=capability_root,
@@ -195,6 +200,7 @@ def _validate_issue(
     issue_types: dict,
     titles: dict,
     body_format: dict,
+    classification: dict | None = None,
     config: dict,
     mandatory_state: dict | None = None,
     capability_root: Path | None = None,
@@ -254,6 +260,57 @@ def _validate_issue(
                 f"{', '.join(type_labels)}",
             )
         )
+    else:
+        # Exactly one `type:*` label — cross-check the kind against the issue's
+        # structural type (DEC-011's kind/structural restriction). A non-`feature`
+        # kind on an epic/feature/umbrella manufactures the kind/structural
+        # mismatch that breaks the closing PR's Conventional-Commits `<type>`
+        # derivation. This is the validate-issue enforcement point DEC-011 names
+        # ("refused at create-issue and at validate-issue"). Reads
+        # `allowed_structural_types_per_kind` via the SAME shared predicate
+        # create-issue / set-field call — single source of truth. Fires only when
+        # the structural type is known (the title.format finding above already
+        # covers an unrecognised prefix).
+        #
+        # Severity is phase-split (architect review, #410), mirroring the
+        # placeholder-residual phase pattern (detect_placeholder_residuals):
+        #   - `--phase create` — hard-reject: refuse the mismatch at the point of
+        #     manufacture, using the schema's authored `mismatch_severity` token
+        #     (hard-reject in the shipped classification).
+        #   - `--phase transition` (validate-issue's default) — the SAME finding
+        #     at warning: a pre-existing container-kind mismatch corrupts the
+        #     closing-PR conv-type derivation (a create-PR-time concern), NOT the
+        #     transition in flight. Reporting rather than blocking keeps a
+        #     lifecycle transition from being walled on traversal of a mismatched
+        #     live ancestor (e.g. EPIC #128).
+        # Any phase other than `transition` (only `create` today) keeps the
+        # schema-authored severity — the hard-reject is the default posture, and
+        # only the transition gate relaxes it.
+        kind = axis_labels.read("type", labels)
+        if (
+            kind is not None
+            and structural_type is not None
+            and not classification_rules.kind_allowed_for_structural_type(
+                kind, structural_type, classification or {}
+            )
+        ):
+            if phase == PHASE_TRANSITION:
+                severity = SEVERITY_WARNING
+            else:
+                severity = _severity_from_token(
+                    classification_rules.mismatch_severity_token(classification or {})
+                )
+            findings.append(
+                Finding(
+                    severity,
+                    "classification.type.structural-mismatch",
+                    f"kind {kind!r} (its type:* label) is not valid for "
+                    f"structural type {structural_type!r} — epic/feature/umbrella "
+                    "carry kind 'feature' by definition (classification.yaml "
+                    "structural_restriction / DEC-011). Re-file the non-feature "
+                    "kind as a Task, or set the kind to 'feature'.",
+                )
+            )
 
     has_board = bool(config.get("has_projects_v2_board", False))
     if not has_board:

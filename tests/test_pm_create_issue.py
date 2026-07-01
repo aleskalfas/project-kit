@@ -41,6 +41,16 @@ def ci():
     return module
 
 
+@pytest.fixture(scope="module")
+def cr(ci):
+    # The kind ↔ structural / kind-drives-title predicates now live in _lib
+    # (extracted per COR-007 / issue #410). Loading create-issue puts SCRIPTS on
+    # sys.path, so _lib is importable here.
+    from _lib import classification_rules
+
+    return classification_rules
+
+
 # --- classification-faithful title prefix (#356, defect 2) -----------------
 # The real schemas drive these — a task's prefix follows the kind label; the
 # non-task structural types ignore kind and use their structural prefix.
@@ -128,11 +138,11 @@ def test_title_prefix_degrades_to_structural_on_empty_classification(ci) -> None
     assert ci._title_prefix_for(type_entry, {}, "task", "bug") == "Task"
 
 
-def test_kind_drives_title_true_only_for_task(ci) -> None:
-    assert ci._kind_drives_title("task", _CLASSIFICATION) is True
-    assert ci._kind_drives_title("epic", _CLASSIFICATION) is False
-    assert ci._kind_drives_title("feature", _CLASSIFICATION) is False
-    assert ci._kind_drives_title("umbrella", _CLASSIFICATION) is False
+def test_kind_drives_title_true_only_for_task(cr) -> None:
+    assert cr.kind_drives_title("task", _CLASSIFICATION) is True
+    assert cr.kind_drives_title("epic", _CLASSIFICATION) is False
+    assert cr.kind_drives_title("feature", _CLASSIFICATION) is False
+    assert cr.kind_drives_title("umbrella", _CLASSIFICATION) is False
 
 
 # --- parent-type detection + label (#356, defect 1) ------------------------

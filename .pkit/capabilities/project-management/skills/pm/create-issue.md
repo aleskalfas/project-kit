@@ -21,7 +21,7 @@ Behaviour summary (the script is the source of truth — read it for the exact c
 - **Classification labels** — applies `type:<kind>` always; in label-fallback mode (no Projects v2 board) also `priority:<P>` and `workstream:<W>`.
 - **Mandatory assignment** (per [project-management:DEC-019-mandatory-issue-state]) — defaults the assignee to the resolved invoker identity; `--assignee=<login>` overrides.
 - **Auto-add to board** (per DEC-019) — for board-substrate adopters, the new issue is added to the configured Projects v2 board as the final filing step.
-- **Validation refusals** — workstream value not in the adopter's declared list, parent type not in the issue type's `parent_issue_types`, title regex mismatch — all surface as structured error messages before `gh` is invoked.
+- **Validation refusals** — workstream value not in the adopter's declared list, parent type not in the issue type's `parent_issue_types`, title regex mismatch, and a non-`feature` `--kind` on an epic/feature/umbrella (the kind/structural hard-reject per [project-management:DEC-011-title-formats] / `classification.yaml`'s `structural_restriction` — an EPIC/Feature/Umbrella always carries kind `feature`) — all surface as structured error messages before `gh` is invoked.
 
 ## How to invoke
 

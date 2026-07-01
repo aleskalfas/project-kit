@@ -37,6 +37,17 @@ def sf():
     return module
 
 
+@pytest.fixture(scope="module")
+def cr():
+    # The shared kind ↔ structural predicate now lives in _lib (extracted from
+    # set-field per COR-007 / issue #410); the pure permit/refuse + kind-drives
+    # tests assert it directly at its new home.
+    sys.path.insert(0, str(SCRIPTS))
+    from _lib import classification_rules
+
+    return classification_rules
+
+
 @pytest.fixture
 def issue_types() -> dict:
     return {
@@ -243,32 +254,32 @@ def test_plan_kind_idempotent_when_label_and_prefix_match(
     assert any("no-op" in r.message for r in results)
 
 
-def test_kind_mismatch_on_epic_feature_umbrella_is_refused(sf, classification) -> None:
+def test_kind_mismatch_on_epic_feature_umbrella_is_refused(cr, classification) -> None:
     # The up-front gate (DEC-011 / structural_restriction) refuses a non-feature
     # kind on epic/feature/umbrella — it would manufacture the kind/structural
     # mismatch that breaks PR-conv-type derivation. The gate is the SAME table
-    # `_kind_drives_title` reads; assert the predicate that drives it.
-    assert sf._kind_allowed_for_structural_type("bug", "epic", classification) is False
-    assert sf._kind_allowed_for_structural_type("bug", "feature", classification) is False
-    assert sf._kind_allowed_for_structural_type("docs", "umbrella", classification) is False
+    # `kind_drives_title` reads; assert the shared predicate that drives it.
+    assert cr.kind_allowed_for_structural_type("bug", "epic", classification) is False
+    assert cr.kind_allowed_for_structural_type("bug", "feature", classification) is False
+    assert cr.kind_allowed_for_structural_type("docs", "umbrella", classification) is False
 
 
-def test_kind_feature_on_epic_feature_umbrella_is_permitted(sf, classification) -> None:
+def test_kind_feature_on_epic_feature_umbrella_is_permitted(cr, classification) -> None:
     # `feature` IS the kind epic/feature/umbrella carry by definition, so the gate
     # permits it (it lands downstream as a no-op: label already type:feature, no
     # prefix change). Permitted-not-refused is the consistent choice with the
     # up-front check keyed on `allowed_structural_types_per_kind`.
-    assert sf._kind_allowed_for_structural_type("feature", "epic", classification) is True
-    assert sf._kind_allowed_for_structural_type("feature", "feature", classification) is True
-    assert sf._kind_allowed_for_structural_type("feature", "umbrella", classification) is True
+    assert cr.kind_allowed_for_structural_type("feature", "epic", classification) is True
+    assert cr.kind_allowed_for_structural_type("feature", "feature", classification) is True
+    assert cr.kind_allowed_for_structural_type("feature", "umbrella", classification) is True
     # And on a task, every kind is permitted.
-    assert sf._kind_allowed_for_structural_type("bug", "task", classification) is True
+    assert cr.kind_allowed_for_structural_type("bug", "task", classification) is True
 
 
-def test_kind_allowed_permissive_on_empty_classification(sf) -> None:
+def test_kind_allowed_permissive_on_empty_classification(cr) -> None:
     # No restriction table to ground a refusal ⇒ permit (the up-front gate refuses
     # nothing it can't ground in the schema).
-    assert sf._kind_allowed_for_structural_type("bug", "epic", {}) is True
+    assert cr.kind_allowed_for_structural_type("bug", "epic", {}) is True
 
 
 def test_plan_kind_feature_on_feature_issue_is_full_noop(
@@ -298,16 +309,16 @@ def test_retitle_prefix_none_without_prefix(sf) -> None:
     assert sf._retitle_prefix("no prefix here", "Bug") is None
 
 
-def test_kind_drives_title_true_for_task(sf, classification) -> None:
-    assert sf._kind_drives_title("task", classification) is True
+def test_kind_drives_title_true_for_task(cr, classification) -> None:
+    assert cr.kind_drives_title("task", classification) is True
 
 
-def test_kind_drives_title_false_for_feature(sf, classification) -> None:
-    assert sf._kind_drives_title("feature", classification) is False
+def test_kind_drives_title_false_for_feature(cr, classification) -> None:
+    assert cr.kind_drives_title("feature", classification) is False
 
 
-def test_kind_drives_title_false_on_empty_classification(sf) -> None:
-    assert sf._kind_drives_title("task", {}) is False
+def test_kind_drives_title_false_on_empty_classification(cr) -> None:
+    assert cr.kind_drives_title("task", {}) is False
 
 
 def test_unknown_kind_not_in_declared_values(sf, classification) -> None:
