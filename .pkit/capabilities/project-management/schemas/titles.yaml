@@ -166,10 +166,31 @@ formats:
       short (~50 chars), imperative mood, lowercase, no trailing
       period. Multi-issue PRs pick the dominant type and surface a
       warning if the closing issues' types disagree.
+
+      PR titles are restricted to the standard Conventional Commits
+      type set — `feat|fix|docs|test|refactor|chore|ci` — for
+      changelog and tooling compatibility. This is intentionally
+      narrower than the commit/branch conv-type set: `decision` is a
+      valid *commit* and *branch* type per [COR-008] and the
+      git-conventions branch pattern (which permits
+      `decision/<n>-…`), but it is deliberately **not** a PR-title
+      type. Under the squash-merge policy the PR title becomes the
+      landed commit subject on `main` (see git-conventions.yaml's
+      `merge` entry), so a `decision`-typed PR title would put a
+      non-standard type into `git log` history — which this pattern
+      prevents by design.
+
+      Consequence for decision-record PRs: a decision-authoring Task
+      is classified `type:docs`, so its branch may be either
+      `docs/<n>-…` or the content-chosen `decision/<n>-…`, but its
+      **PR title lands as `docs(<scope>): …`** (e.g.
+      `docs(decisions): …`, `docs(pm): …`). A `decision/236-…` branch
+      is fine; its squashed PR/commit subject uses `docs`.
     examples_good:
       - "feat(sandbox): install Claude Code CLI"
       - "fix(tui): render playback cleanly without Ctrl-L"
       - "docs(readme): add quickstart section"
+      - "docs(decisions): add DEC-0NN reconciling commit-type vocabulary"
     examples_bad:
       - title: "[Task] Install the Claude Code CLI inside the sandbox image"
         reason: "Issue-title format is reserved for issues; PRs use Conventional Commits."
@@ -177,6 +198,8 @@ formats:
         reason: "Capital letter and missing Conventional Commits `<type>` prefix."
       - title: "feat: Install CLI."
         reason: "Trailing period and non-imperative capitalisation; soft conventions, warning-level."
+      - title: "decision(pm): add DEC-0NN reconciling commit-type vocabulary"
+        reason: "`decision` is reserved for commit/branch granularity, not PR titles; under squash-merge the PR title becomes the landed commit, so a decision-record PR uses `docs(<scope>): …` (e.g. `docs(pm): …`)."
     validations:
       - rule: "Title matches the Conventional Commits regex (`<type>(<scope>)?: <summary>`)."
         severity: "[validation-severity:hard-reject]"

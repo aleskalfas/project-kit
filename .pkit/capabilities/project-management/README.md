@@ -211,6 +211,12 @@ For the standard development flow, seven verb-subject commands compose over `mov
 
 All seven are idempotent at the level of observable state — re-running after a partial failure recovers cleanly. Audit comments use DEC-024's template-stamp markers (`<!-- pkit-hook: <name> -->`) so re-posts detect existing entries and skip.
 
+#### PR-title conv-types — the standard set, and why decision-record PRs land as `docs`
+
+PR titles are Conventional Commits and are restricted to the **standard type set** — `feat | fix | docs | test | refactor | chore | ci` — for changelog and tooling compatibility (`schemas/titles.yaml`, the `pr` format entry). Merges are squash-with-delete-branch, so the **PR title becomes the landed commit subject** on `main` (`schemas/git-conventions.yaml`, the `merge` entry); keeping PR titles to the standard set keeps `git log` history parseable by standard CC tooling.
+
+This is intentionally narrower than the **branch** conv-type set. The branch pattern additionally permits `decision` (`schemas/git-conventions.yaml`, the `branch-name` entry) per COR-008, so a decision-record branch may be named `decision/<n>-…`. But `decision` is **not** a PR-title type: a decision-record PR is deliberately titled **`docs(<scope>): …`** — e.g. `docs(decisions): …` or `docs(pm): …`. So a `decision/236-…` branch is fine, and its squashed PR/commit subject lands as `docs(…)`. Authors filing a decision-record PR should title it `docs`, not `decision`, up front — the `pr`-title validator hard-rejects a `decision(…)` title.
+
 #### Batch substrate primitives — `check-criterion` / `uncheck-criterion` / `set-field` (per [project-management:DEC-038-criterion-addressing])
 
 Three narrow, batch-capable verbs replace the whole-body fetch-edit-resend that `edit-issue` forces for a single checkbox flip or field change. Each takes narrow input, validates the **whole batch up front**, refuses before any mutation on a hard inconsistency, and applies **idempotently** so a half-applied batch recovers by re-running. Output is a single clean line per result — nothing to pipe through `grep`.
