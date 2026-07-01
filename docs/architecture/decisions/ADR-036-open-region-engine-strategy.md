@@ -1,7 +1,7 @@
 ---
 id: ADR-036
 title: Evaluate an open region as one scoped read plus one ordinary exit gate — region invariants filter to the resolved position, the gate is the sole enforcer, and the cross-authority sign-off stays a gate the engine computes
-status: proposed
+status: accepted
 date: 2026-07-01
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
