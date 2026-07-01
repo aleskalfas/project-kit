@@ -60,6 +60,9 @@ workstreams:                          # one entry per allowed workstream value
   - cli
 # Optional:
 # projects_v2_board_id: 12
+# projects_v2_node_id: PVT_xxx        # board→node-id cache; populated at adoption
+#                                     # (bootstrap writes it; adopt-existing recommends
+#                                     # it) so create-issue skips a per-create read
 # code_path_to_doc_mapping: { src/foo/**: [docs/foo.md] }
 # pre_close_triage_lead_days: 3
 # gh:                                 # per DEC-023 — both fields optional

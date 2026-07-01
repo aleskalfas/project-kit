@@ -204,6 +204,7 @@ class Inventory:
     milestones_in_use: list[str] = field(default_factory=list)
     board_fields: list[dict[str, Any]] = field(default_factory=list)
     has_board: bool = False
+    projects_v2_node_id: str | None = None
 
 
 def take_inventory(
@@ -264,6 +265,7 @@ def take_inventory(
     has_blocked = _observed_blocked_label(labels_raw)
 
     board_fields, has_board = _read_board_fields(config)
+    project_node_id = _read_project_node_id(config) if has_board else None
 
     return Inventory(
         read_ok=True,
@@ -278,6 +280,7 @@ def take_inventory(
         milestones_in_use=sorted(milestones),
         board_fields=board_fields,
         has_board=has_board,
+        projects_v2_node_id=project_node_id,
     )
 
 
@@ -380,6 +383,39 @@ def _read_board_fields(
         return [], True
     out = [f for f in fields if isinstance(f, dict)]
     return out, True
+
+
+def _read_project_node_id(config: dict[str, Any]) -> str | None:
+    """The configured board's Projects-v2 project node id via ``gh project view`` (a READ).
+
+    Resolves board NUMBER → node id the way ``create-issue`` caches and
+    ``back-fill`` reads. A READ only — DEC-037 §1's mutate-nothing invariant holds:
+    adopt-existing RECOMMENDS caching this in config (surfaced in the audit +
+    JSON), it never writes config itself. The human moves the recommendation into
+    place, the same draft-not-apply posture as the substrate-map. Returns ``None``
+    when no board is configured or the read fails.
+    """
+    if not config.get("has_projects_v2_board"):
+        return None
+    board_number = config.get("projects_v2_board_id")
+    if board_number is None:
+        return None
+    owner = _resolve_owner(config)
+    args = ["gh", "project", "view", str(board_number), "--format", "json"]
+    if owner:
+        args += ["--owner", owner]
+    try:
+        proc = gh_run(args, config, check=False)
+    except FileNotFoundError:
+        return None
+    if proc.returncode != 0:
+        return None
+    try:
+        payload = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        return None
+    node_id = payload.get("id") if isinstance(payload, dict) else None
+    return node_id if isinstance(node_id, str) and node_id else None
 
 
 def _resolve_owner(config: dict[str, Any]) -> str | None:
@@ -1129,6 +1165,14 @@ def _print_audit_report(
     if inventory.has_board:
         names = ", ".join(str(f.get("name")) for f in inventory.board_fields)
         print(f"  Projects-v2 board fields: {names or '(none listed)'}")
+        if inventory.projects_v2_node_id:
+            print(
+                f"  Projects-v2 node id: {inventory.projects_v2_node_id} — "
+                "RECOMMENDATION: add `projects_v2_node_id: "
+                f"{inventory.projects_v2_node_id}` to project/config.yaml to skip "
+                "create-issue's per-create `gh project view` read (#310). "
+                "adopt-existing recommends; it does NOT write your config."
+            )
     else:
         print("  Projects-v2 board: none configured")
     print()
@@ -1218,6 +1262,7 @@ def _json_document(
             "board_fields": [
                 str(f.get("name")) for f in inventory.board_fields
             ],
+            "projects_v2_node_id": inventory.projects_v2_node_id,
         },
         "inferences": [
             {

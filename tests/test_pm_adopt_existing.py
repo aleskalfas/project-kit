@@ -174,6 +174,67 @@ def test_inventory_board_fields_read_when_board_configured(ae, monkeypatch) -> N
     assert "Workstream" in names
 
 
+# ===== projects_v2_node_id resolution + recommendation (#310) ============
+# adopt-existing RESOLVES the board→node-id mapping (a READ) and RECOMMENDS
+# caching it in config; it never writes config (the mutate-nothing invariant).
+
+
+def _serve_with_board(node_id: str = "PVT_board"):
+    def serve(args, config=None, **kw):
+        if args[:3] == ["gh", "label", "list"]:
+            return subprocess.CompletedProcess(args, 0, json.dumps([{"name": "P0"}]), "")
+        if args[:3] == ["gh", "issue", "list"]:
+            return subprocess.CompletedProcess(args, 0, json.dumps(AUJ_ISSUES), "")
+        if args[:3] == ["gh", "project", "field-list"]:
+            return subprocess.CompletedProcess(args, 0, json.dumps({"fields": []}), "")
+        if args[:3] == ["gh", "project", "view"]:
+            return subprocess.CompletedProcess(
+                args, 0, json.dumps({"id": node_id, "number": 7}), "")
+        return subprocess.CompletedProcess(args, 0, "{}", "")
+
+    return serve
+
+
+def _board_config() -> dict:
+    return {
+        "has_projects_v2_board": True,
+        "projects_v2_board_id": 7,
+        "gh": {"default_owner": "ai-platform-incubation"},
+    }
+
+
+def test_inventory_resolves_project_node_id_when_board_configured(ae, monkeypatch) -> None:
+    """A configured board ⇒ the inventory resolves the project node id (a READ)."""
+    monkeypatch.setattr(ae, "gh_run", _serve_with_board("PVT_board"))
+    inv = ae.take_inventory(_board_config(), sample_limit=200)
+    assert inv.projects_v2_node_id == "PVT_board"
+
+
+def test_inventory_no_project_node_id_when_no_board(ae, monkeypatch) -> None:
+    """No board configured ⇒ no node id resolved (the field stays None)."""
+    monkeypatch.setattr(ae, "gh_run", _serve_auj_reads)  # _config() has no board
+    inv = ae.take_inventory(_config(), sample_limit=200)
+    assert inv.projects_v2_node_id is None
+
+
+def test_json_document_surfaces_project_node_id(ae, monkeypatch) -> None:
+    """The machine-readable view carries the resolved node id so the human (or a
+    tool) can cache it in config (#310)."""
+    monkeypatch.setattr(ae, "gh_run", _serve_with_board("PVT_board"))
+    inv = ae.take_inventory(_board_config(), sample_limit=200)
+    draft = ae.infer_draft(inv)
+    doc = ae._json_document(
+        inv, draft, draft.substrate_map(), ae.validate_draft(draft.substrate_map(), CAP_ROOT)
+    )
+    assert doc["inventory"]["projects_v2_node_id"] == "PVT_board"
+
+
+def test_project_node_id_view_is_not_a_mutating_call() -> None:
+    """The node-id resolution `gh project view` is a READ — not flagged by the
+    mutate-nothing detector, so it doesn't breach DEC-037 §1."""
+    assert _is_mutating_call(["gh", "project", "view", "7", "--format", "json"]) is False
+
+
 # ===== inference correctness (known corpus shape → expected bindings) =====
 
 
