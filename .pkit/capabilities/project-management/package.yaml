@@ -44,6 +44,9 @@ commands:
   create-milestone:
     script: scripts/create-milestone.py
     help: File a new Milestone in a declared category (per DEC-016). Computes the next number from existing milestones; composes title from category's title_format; posts to GitHub with the `Close trigger:` body line.
+  close-milestone:
+    script: scripts/close-milestone.py
+    help: "Close a Milestone through the validated path (per DEC-016). Respects the close-trigger: content-based refuses while any child issue is open (unless --force); date-based warns + closes (open children need manual rollforward — automation is a follow-up). Appends an audit line to the description; --dry-run previews."
   validate-issue:
     script: scripts/validate-issue.py
     help: Validate an existing GitHub issue against the methodology's body + classification rules — including the DEC-011 kind/structural cross-check (a non-feature type:* label on an epic/feature/umbrella). Findings tagged by severity per validation-severity.yaml.
