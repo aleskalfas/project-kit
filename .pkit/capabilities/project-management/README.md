@@ -248,6 +248,25 @@ All three accept `--dry-run` (validate + show the plan, write nothing) and `--ye
 
 **`close-issue`** is *not* in the seven-command palette — it handles closure outside forward-progress flow: won't-do / abandonment (`--mode=wont-do`), the post-PR-merge cascade hook (`--mode=pr-merge`), and **cascade-eligibility closure** of a container (epic/feature/umbrella) once all its children are closed and its own checkboxes are ticked (`--mode=cascade-eligibility-close`, a non-skippable DEC-007 gate).
 
+#### Milestone lifecycle — `create-milestone` / `close-milestone` (per [project-management:DEC-016-time-bound-containers])
+
+| Command | What it does |
+|---|---|
+| `create-milestone <category> --name "<name>" [--close-trigger T] [--due-on YYYY-MM-DD]` | File a new Milestone in a declared `milestone_categories:` category. Computes the next number, composes the title from the category's `title_format`, and writes the `Close trigger:` first body line. |
+| `close-milestone <n> [--force]` | Close an open Milestone (by number or exact title) through the validated path. |
+
+Both run the DEC-021 membership gate and the COR-039 foreign-repo guard at startup, route every `gh` call through the shared host/owner seam (DEC-023), and accept `--dry-run` (preview, write nothing) and `--yes` (skip the confirmation prompt).
+
+`close-milestone` respects the Milestone's **close-trigger**, read from the `Close trigger:` first line of the description (inferred for an inherited Milestone with no marker: a native due date ⇒ `date-based`, none ⇒ `content-based`, per `time-containers.yaml`):
+
+- **content-based** — closes only when every child issue is closed. An open child **holds** the close (refused) unless you pass `--force`.
+- **date-based** — the date is the trigger, so the Milestone closes even with open children; the command **warns** and lists them.
+- **either** — treated like content-based when open children remain (refuse unless `--force`).
+
+A Milestone's children are resolved the same way the rest of the capability resolves membership: the union of issues carrying the **native GitHub Milestone field** for it and issues whose body carries the textual `Milestone: [#<n>](../milestone/<n>)` ref. Because a Milestone has no comment thread, the audit note is **appended to the description** in the same PATCH that flips `state=closed` (idempotent on re-run), rather than posted as a comment the way `close-issue` does.
+
+> **Not yet automated:** date-based / `either` closes do **not** roll open children forward to the next Milestone (schema `rollforward_behaviour`) — `close-milestone` only warns and lists them, so reassign by hand for now. Automated rollforward, and surfacing "milestone now closeable" from the closure cascade when the last child EPIC closes, are follow-ups.
+
 **Review-mode resolution** is settled in [project-management:DEC-027-review-modes] (mode lookup) and [project-management:DEC-028-agent-as-approver-paths] (agent gate).
 
 #### Read-only diagnostics — `show-issue` / `show-pr`
