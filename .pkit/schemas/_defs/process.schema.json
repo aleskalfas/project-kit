@@ -154,6 +154,10 @@
         "terminal": {
           "type": "boolean",
           "description": "End state; also a process OUTCOME for composition (COR-036) -- a parent reads which terminal state an embedded inner process reached."
+        },
+        "open_region": {
+          "type": "boolean",
+          "description": "COR-040 (optional, additive -- the open-region slot): marks this state as an OPEN REGION -- a free-order phase with no internal edges, where progress accumulates in any order (data changing via the binding's commands, not the engine moving positions) until an explicit EXIT GATE lets the subject leave. It is one normal state distinguished only by (a) region-scoped invariants (`invariant.applies_to: <this state>`) that surface on status as the reason the exit is shut, and (b) exactly one guarded outgoing transition -- its exit gate, an ORDINARY checkable gate (`deterministic` and/or `authorisation-artifact`, COR-033 P4). It adds NO new node kind and NO internal sub-state sublanguage: genuinely-staged inner work is a COMPOSED process (COR-036) the exit gate reads an outcome from, not an internal edge of the region. The engine does NOT gate movement on this flag -- it is documentary/topology metadata; region enforcement is the exit gate's predicate (COR-035's report-only posture preserved verbatim). Absent on every existing state -- those validate byte-unchanged."
         }
       }
     },
@@ -223,7 +227,7 @@
     },
     "invariant": {
       "type": "object",
-      "description": "A position-independent always-check (COR-035): a condition that must hold for the subject NO MATTER WHERE it sits in the process. Where detection answers 'where is this subject?' and a gate answers 'may it move here?', an invariant answers 'is something that must ALWAYS be true, true?'. The engine runs the `check` through the SAME predicate runner that backs detection and gates (single-subject, threaded with the subject id) and REPORTS the result with the `why` on failure -- it never interprets what the invariant means and never reads across subjects (COR-032). Report-only: a violation is reported by `validate` and surfaced on the status view; it does NOT block moves or remediate. NO `applies-to`/subset scoping and NO severity -- both explicitly deferred (they un-defer with composition's open region, which needs them boundary-enforcing).",
+      "description": "A position-independent always-check (COR-035): a condition that must hold for the subject NO MATTER WHERE it sits in the process. Where detection answers 'where is this subject?' and a gate answers 'may it move here?', an invariant answers 'is something that must ALWAYS be true, true?'. The engine runs the `check` through the SAME predicate runner that backs detection and gates (single-subject, threaded with the subject id) and REPORTS the result with the `why` on failure -- it never interprets what the invariant means and never reads across subjects (COR-032). Report-only: a violation is reported by `validate` and surfaced on the status view; it does NOT block moves or remediate. An invariant may optionally scope to one state via `applies_to` (COR-040, the open-region slot); absent scope means process-wide (COR-035 unchanged). Severity stays deferred.",
       "required": ["id", "check", "why"],
       "additionalProperties": false,
       "properties": {
@@ -240,6 +244,11 @@
           "type": "string",
           "minLength": 1,
           "description": "Explanatory prose surfaced when the check fails -- the same `why` convention detection/gates/blocked carry. Tells a reader what is wrong and why it matters."
+        },
+        "applies_to": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "COR-040 (optional, additive -- the open-region slot): the state id this invariant is SCOPED to. Absent => the invariant holds process-wide (COR-035 unchanged, evaluated on every read regardless of position). Present => the engine evaluates and surfaces it ONLY when the subject's currently-resolved position equals this state; when the subject is elsewhere the scoped check is not evaluated (no spurious out-of-region violation), and under an INDETERMINATE position it is not-applicable (not evaluated, not surfaced -- the engine cannot confirm which region the subject is in). This is a FILTER on the existing report keyed on `resolve_position().state_id`; it does NOT couple the invariant to move-blocking (COR-035's report-only posture is preserved verbatim -- a region's boundary is enforced by its exit gate's predicate, not by the invariant). Typically names an `open_region: true` state, but the engine does not require that (the filter is a pure position match)."
         }
       }
     },
