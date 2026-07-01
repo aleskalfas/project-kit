@@ -36,12 +36,23 @@ conventions:
 
       `decision` is a recognised conv-type per [COR-008] even though no
       `type:decision` issue label exists and `pr_type_mapping` does not
-      produce it: a PR that lands a decision record (COR / PRJ / DEC /
-      ADR) takes the `decision` conv-type explicitly — chosen for the
-      *content shipped*, overriding the closing Task's mapped type (a
-      decision-authoring Task is classified `type:docs`, but its PR is
-      `decision(<scope>): …`). The merge gate recognises `decision`;
-      it is not an unrecognised-type warning.
+      produce it: a *branch* that lands a decision record (COR / PRJ /
+      DEC / ADR) may take the `decision` conv-type explicitly — chosen
+      for the *content shipped*, overriding the closing Task's mapped
+      type (a decision-authoring Task is classified `type:docs`, so its
+      branch may be either `docs/<n>-…` or the content-chosen
+      `decision/<n>-…`). The merge gate recognises `decision`; it is
+      not an unrecognised-type warning.
+
+      Note the branch/PR-title asymmetry: `decision` is permitted here
+      as a *branch* conv-type, but it is **not** a permitted PR-title
+      type. Under the squash-merge policy (see the `merge` entry) the
+      PR title becomes the landed commit subject on `main`, and PR
+      titles are held to the standard Conventional Commits set
+      (`feat|fix|docs|test|refactor|chore|ci`) for changelog/tooling
+      compatibility. So a `decision/<n>-…` branch is fine, but its PR
+      title lands as `docs(<scope>): …` (e.g. `docs(decisions): …`) —
+      see the `pr` entry in `titles.yaml` for the full rationale.
     examples_good:
       - "feat/99-install-the-claude-code-cli-inside-the-sandbox"
       - "fix/77-render-tui-playback-cleanly-without-ctrl-l"
