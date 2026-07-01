@@ -52,6 +52,7 @@ _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import axis_labels  # noqa: E402
 from _lib import session_guard  # noqa: E402
+from _lib.gh import gh_run  # noqa: E402
 
 
 CAPABILITY_NAME = "project-management"
@@ -186,7 +187,7 @@ def main() -> int:
         return 0
 
     # ---- execute the plan ----
-    actions = _execute_plan(plan)
+    actions = _execute_plan(plan, capability_root)
     _print_report(actions)
 
     failures = sum(1 for a in actions if a.status == "failed")
@@ -205,10 +206,14 @@ class Plan:
     starter_epic: bool                     # whether to file the starter EPIC
     starter_epic_exists: bool              # whether it's already filed
     skipped_messages: list[str]            # explanatory skip notes (e.g., board mode)
+    board_node_id: str | None = None       # resolved projects_v2_node_id to cache (#310)
+    board_node_id_note: str = ""            # why no id is cached (cached / no board / unresolvable)
 
     def has_creates(self) -> bool:
-        return bool(self.label_creates) or (
-            self.starter_epic and not self.starter_epic_exists
+        return (
+            bool(self.label_creates)
+            or (self.starter_epic and not self.starter_epic_exists)
+            or self.board_node_id is not None
         )
 
 
@@ -279,12 +284,51 @@ def _compute_plan(
     if with_starter_epic:
         starter_epic_exists = _starter_epic_already_filed()
 
+    # Cache the invariant board → project-node-id mapping in config (#310) so
+    # create-issue skips the per-create `gh project view` read. Only in board mode,
+    # and only when not already cached.
+    board_node_id, board_node_id_note = _plan_project_node_id(config, has_board)
+
     return Plan(
         label_creates=label_creates,
         label_exists=label_exists,
         starter_epic=with_starter_epic,
         starter_epic_exists=starter_epic_exists,
         skipped_messages=skipped,
+        board_node_id=board_node_id,
+        board_node_id_note=board_node_id_note,
+    )
+
+
+def _plan_project_node_id(
+    config: dict[str, Any], has_board: bool
+) -> tuple[str | None, str]:
+    """Decide whether to resolve + cache `projects_v2_node_id` (#310).
+
+    Returns ``(node_id_to_cache, note)``. The id is non-None only when a board is
+    configured, no id is cached yet, and the live `gh project view` read resolves
+    one. In label-fallback mode (no board) this is a no-op (``(None, "")``) — the
+    field stays absent, per the issue's "do nothing when no board is in use". The
+    note explains the no-op cases (already cached / no board number / unresolvable)
+    for the plan output.
+    """
+    if not has_board:
+        return None, ""
+    existing = config.get("projects_v2_node_id")
+    if isinstance(existing, str) and existing:
+        return None, f"projects_v2_node_id already cached (`{existing}`); left untouched"
+    board_id = config.get("projects_v2_board_id")
+    if board_id is None:
+        return None, (
+            "projects_v2_node_id — not cached (no projects_v2_board_id configured "
+            "to resolve it from)"
+        )
+    resolved = _resolve_project_node_id(config, board_id)
+    if resolved:
+        return resolved, ""
+    return None, (
+        f"projects_v2_node_id — could not resolve node id for board #{board_id} "
+        "(`gh project view` failed); create-issue will live-resolve per create"
     )
 
 
@@ -300,6 +344,10 @@ def _print_plan(plan: Plan) -> None:
             print("  (starter EPIC already filed; will be left untouched)")
         else:
             print("  + file starter EPIC `[EPIC] Methodology adoption — initial hierarchy`")
+    if plan.board_node_id:
+        print(f"  + cache projects_v2_node_id `{plan.board_node_id}` in config")
+    if plan.board_node_id_note:
+        print(f"  · {plan.board_node_id_note}")
     for msg in plan.skipped_messages:
         print(f"  · {msg}")
     print()
@@ -325,7 +373,7 @@ def _confirm_apply(repo: str) -> bool:
         print("  Please answer y or n.")
 
 
-def _execute_plan(plan: Plan) -> list[Action]:
+def _execute_plan(plan: Plan, capability_root: Path) -> list[Action]:
     """Run the gh mutations declared in the plan."""
     actions: list[Action] = []
     # Group creates by axis so we apply consistent color/description.
@@ -336,6 +384,8 @@ def _execute_plan(plan: Plan) -> list[Action]:
         actions.extend(_apply_label_creates(axis, names))
     for name in plan.label_exists:
         actions.append(Action(f"label `{name}`", "exists", "no-op"))
+    if plan.board_node_id:
+        actions.append(_persist_project_node_id(capability_root, plan.board_node_id))
     if plan.starter_epic and not plan.starter_epic_exists:
         actions.append(_file_starter_epic(dry_run=False))
     elif plan.starter_epic and plan.starter_epic_exists:
@@ -410,6 +460,81 @@ def _starter_epic_already_filed() -> bool:
     except (json.JSONDecodeError, KeyError, TypeError):
         pass
     return False
+
+
+# ----- projects_v2_node_id cache (#310) ------------------------------
+
+
+def _resolve_project_node_id(
+    config: dict[str, Any], board_id: int | str
+) -> str | None:
+    """Resolve board NUMBER → Projects-v2 project node id via `gh project view` (a READ).
+
+    Mirrors ``back-fill.py``'s / ``create-issue.py``'s resolver: scopes to the
+    configured ``gh.default_owner`` (or the current repo's owner) and reads ``.id``
+    off ``gh project view --format json``. Returns ``None`` when gh is absent, the
+    call fails, or the payload carries no id. Bootstrap resolves this ONCE at
+    adoption and caches it so create-issue can skip the per-create read (#310).
+    """
+    owner = _resolve_board_owner(config)
+    view_args = ["gh", "project", "view", str(board_id), "--format", "json"]
+    if owner:
+        view_args += ["--owner", owner]
+    try:
+        proc = gh_run(view_args, config, check=False)
+    except FileNotFoundError:
+        return None
+    if proc.returncode != 0:
+        return None
+    try:
+        payload = json.loads(proc.stdout)
+    except (json.JSONDecodeError, ValueError):
+        return None
+    node_id = payload.get("id") if isinstance(payload, dict) else None
+    return node_id if isinstance(node_id, str) and node_id else None
+
+
+def _resolve_board_owner(config: dict[str, Any]) -> str | None:
+    """The owner to scope the board lookup to: configured ``gh.default_owner``, else
+    the current repo's owner (from ``gh repo view``). ``None`` if neither resolves —
+    ``gh project view`` then falls back to its own default-owner behaviour."""
+    gh_block = config.get("gh") if isinstance(config, dict) else None
+    if isinstance(gh_block, dict):
+        owner = gh_block.get("default_owner")
+        if isinstance(owner, str) and owner:
+            return owner
+    repo = _resolve_repo_name_with_owner()
+    if repo != "<unresolved>" and "/" in repo:
+        return repo.split("/", 1)[0]
+    return None
+
+
+def _persist_project_node_id(capability_root: Path, node_id: str) -> Action:
+    """Write ``projects_v2_node_id: <id>`` into the adopter config (#310).
+
+    Uses ruamel round-trip (not ``typ="safe"``) so the config's comments and
+    formatting survive the rewrite — the config edited here is the same file
+    adopters keep hand-authored comments in. Value-level idempotent: re-running
+    with the same id rewrites the same value.
+    """
+    path = capability_root / ADOPTER_CONFIG_PATH
+    yaml = YAML()  # round-trip preserves comments; typ="safe" would strip them
+    yaml.preserve_quotes = True
+    try:
+        data = yaml.load(path.read_text(encoding="utf-8"))
+    except (OSError, YAMLError) as exc:
+        return Action("projects_v2_node_id", "failed", f"config read failed: {exc}")
+    if not isinstance(data, dict):
+        return Action(
+            "projects_v2_node_id", "failed", "config top-level is not a mapping"
+        )
+    data["projects_v2_node_id"] = node_id
+    try:
+        with path.open("w", encoding="utf-8") as fh:
+            yaml.dump(data, fh)
+    except OSError as exc:
+        return Action("projects_v2_node_id", "failed", f"config write failed: {exc}")
+    return Action("projects_v2_node_id", "created", f"cached `{node_id}` in config")
 
 
 # ----- label fetching ------------------------------------------------

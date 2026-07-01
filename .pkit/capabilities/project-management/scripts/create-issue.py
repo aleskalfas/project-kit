@@ -1219,7 +1219,20 @@ def _resolve_project_node_id(board_id: int, owner: str | None, config: dict) -> 
     half of that one resolution shape. A READ only; returns ``None`` when the
     board does not resolve (the hook then skips with "no board configured"
     rather than guessing).
+
+    Cache-first (#310): the board → node-id mapping is invariant, so the resolved
+    id is cached in adopter config as `projects_v2_node_id` at adoption time
+    (bootstrap / adopt-existing). When that cache is present this returns it and
+    SKIPS the per-create `gh project view` round-trip — the whole point of #310.
+    Only on a cache MISS does it live-resolve. Either path yields the SAME node id;
+    the cache just removes a synchronous read from the hot create path. (This
+    read-through does not write the cache back — population is the adoption
+    ceremonies' job, so a cache miss stays a live read without a create-time write.)
     """
+    cached = config.get("projects_v2_node_id") if isinstance(config, dict) else None
+    if isinstance(cached, str) and cached:
+        return cached
+
     view_args = ["gh", "project", "view", str(board_id), "--format", "json"]
     if owner:
         view_args += ["--owner", owner]
