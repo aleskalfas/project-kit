@@ -393,6 +393,29 @@ Preconditions: the claude-code adapter must be installed in the project (`enable
 
 Rationale for the opt-in default: PM-as-default is a substantial behavioural shift (every `claude` session starts as the project-manager agent, not the general-purpose assistant). Adopters should opt in deliberately once they've decided the trade-off works for their workflow.
 
+### 7. (For capability authors) Contribute a required label
+
+Per [project-management:DEC-042-label-contributions] + [ADR-038](../../../docs/architecture/decisions/ADR-038-contribution-collector.md), another installed capability can declare a **custom label it needs** — e.g. a design capability's `needs-design` marker on UI Features — and pm **provisions it at bootstrap** and **advises at pre-check** if it is missing. This is the label-tier sibling of the reviewer contribution ([project-management:DEC-032-conditional-reviewer-requirements]): the same orphan-safe manifest-walked collection shape, one tier down (labels, not reviewers) and **softer** (advise, not hard-gate).
+
+**Declaration shape.** The contributing capability ships a `label-contributions.yaml` at its own root (`.pkit/capabilities/<cap>/label-contributions.yaml`), carrying a top-level `schema_version` and a `labels:` list of `{id, default_name, color, description}` entries (validated by `schemas/label-contributions.schema.json`):
+
+```yaml
+schema_version: 1
+labels:
+  - id: needs-design
+    default_name: needs-design
+    color: d4c5f9
+    description: Requires design input.
+```
+
+pm collects a declaration purely on its presence in a **manifest-registered** component — no `requires_capabilities: project-management` edge is required (DEC-042 D2); a half-removed capability directory absent from `.pkit/manifest.yaml`'s `components:` is never walked (orphan-safe). The declaration's `schema_version` is validated at read time.
+
+**Bootstrap provisioning.** `bootstrap` creates any missing contributed label through a **per-label create path** carrying that contribution's own `color`/`description`, reusing bootstrap's existing missing-vs-present idempotency diff. A contributed label is **not** a classification-axis label — it does not route through the axis-label sole-constructor (ADR-026); re-running bootstrap once the label exists is a clean no-op.
+
+**The pre-check warn gate.** `pre-check` reports a missing contributed label as a non-blocking **warning** with a "run bootstrap" remediation — never a hard failure. This is a deliberate severity divergence from the reviewer gate: a missing label is self-healing (bootstrap re-provisions it) and its downstream consumer fail-closes on its own predicate, so the stakes are lower. A pm-only adopter (or one whose installed capabilities declare no labels) sees nothing. A malformed / version-mismatched declaration is **skipped and warned**, not fatal — one capability's broken file never blocks pm's whole pre-check (DEC-042 Lifecycle).
+
+**The resolution seam.** A consuming capability resolves a label's name through pm's `resolve_contributed_label(id)` accessor rather than hard-coding the text (DEC-042 D5). It ships **inert** in v1 (returns the declared `default_name`); introducing the seam before any consumer can bypass it means a future adopter override (keyed by the contribution `id`) can relocate the name without touching the contributor. Uninstalling the contributing capability stops the pre-check warning (its declaration leaves the manifest walk); the label itself is not deleted (additive).
+
 ## Permissions
 
 The project-management capability ships a **capability-contributed permission grant** (per ADR-016) at `.pkit/capabilities/project-management/permissions/grants.yaml`. This fragment is automatically composed into the effective permission model whenever this capability is a registered component — no manual copy required.

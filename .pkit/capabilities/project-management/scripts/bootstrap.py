@@ -53,6 +53,10 @@ sys.path.insert(0, str(_HERE))
 from _lib import axis_labels  # noqa: E402
 from _lib import session_guard  # noqa: E402
 from _lib.gh import gh_run  # noqa: E402
+from _lib.label_contributions import (  # noqa: E402
+    LabelContribution,
+    collect_label_contributions,
+)
 
 
 CAPABILITY_NAME = "project-management"
@@ -206,12 +210,19 @@ class Plan:
     starter_epic: bool                     # whether to file the starter EPIC
     starter_epic_exists: bool              # whether it's already filed
     skipped_messages: list[str]            # explanatory skip notes (e.g., board mode)
+    # Contributed labels (per DEC-042): a capability-declared label carrying its
+    # own color/description, created through a per-label path OUTSIDE the axis
+    # sole-constructor. Missing-vs-present is the same idempotency diff.
+    contributed_label_creates: list[LabelContribution]  # to create
+    contributed_label_exists: list[str]                 # names already in repo
+    contributed_label_warnings: list[str]               # skip-and-warn notes (DEC-042)
     board_node_id: str | None = None       # resolved projects_v2_node_id to cache (#310)
     board_node_id_note: str = ""            # why no id is cached (cached / no board / unresolvable)
 
     def has_creates(self) -> bool:
         return (
             bool(self.label_creates)
+            or bool(self.contributed_label_creates)
             or (self.starter_epic and not self.starter_epic_exists)
             or self.board_node_id is not None
         )
@@ -280,6 +291,15 @@ def _compute_plan(
                 "(capability install may be corrupt)."
             )
 
+    # Contributed labels (DEC-042): capabilities registered in the manifest may
+    # declare labels they need; provision any that are missing through a
+    # per-label create path (their own color/description), reusing the same
+    # existing-vs-missing diff. Skip-and-warn: a malformed declaration is warned,
+    # not fatal.
+    contributed_creates, contributed_exists, contributed_warnings = (
+        _plan_contributed_labels(capability_root, existing_labels)
+    )
+
     starter_epic_exists = False
     if with_starter_epic:
         starter_epic_exists = _starter_epic_already_filed()
@@ -295,9 +315,38 @@ def _compute_plan(
         starter_epic=with_starter_epic,
         starter_epic_exists=starter_epic_exists,
         skipped_messages=skipped,
+        contributed_label_creates=contributed_creates,
+        contributed_label_exists=contributed_exists,
+        contributed_label_warnings=contributed_warnings,
         board_node_id=board_node_id,
         board_node_id_note=board_node_id_note,
     )
+
+
+def _plan_contributed_labels(
+    capability_root: Path, existing_labels: set[str]
+) -> tuple[list[LabelContribution], list[str], list[str]]:
+    """Diff capability-contributed labels (DEC-042) against existing repo labels.
+
+    Returns ``(to_create, already_present_names, warnings)``. The collector walks
+    the manifest-registered capabilities orphan-safely; a missing contributed
+    label is planned for creation carrying its own color/description, and a
+    malformed / version-mismatched declaration surfaces as a warning (skip-and-
+    warn, DEC-042) rather than aborting the bootstrap.
+    """
+    repo_root = capability_root.parent.parent.parent
+    collection = collect_label_contributions(repo_root)
+
+    to_create: list[LabelContribution] = []
+    present: list[str] = []
+    for label in collection.labels:
+        if label.default_name in existing_labels:
+            present.append(label.default_name)
+        else:
+            to_create.append(label)
+
+    warnings = [str(w) for w in collection.warnings]
+    return to_create, present, warnings
 
 
 def _plan_project_node_id(
@@ -339,6 +388,18 @@ def _print_plan(plan: Plan) -> None:
             print(f"  + create label `{name}`")
     if plan.label_exists:
         print(f"  ({len(plan.label_exists)} label(s) already exist; will be left untouched)")
+    for label in plan.contributed_label_creates:
+        print(
+            f"  + create contributed label `{label.default_name}` "
+            f"(from capability `{label.capability}`)"
+        )
+    if plan.contributed_label_exists:
+        print(
+            f"  ({len(plan.contributed_label_exists)} contributed label(s) already "
+            f"exist; will be left untouched)"
+        )
+    for warning in plan.contributed_label_warnings:
+        print(f"  ! {warning}")
     if plan.starter_epic:
         if plan.starter_epic_exists:
             print("  (starter EPIC already filed; will be left untouched)")
@@ -384,6 +445,13 @@ def _execute_plan(plan: Plan, capability_root: Path) -> list[Action]:
         actions.extend(_apply_label_creates(axis, names))
     for name in plan.label_exists:
         actions.append(Action(f"label `{name}`", "exists", "no-op"))
+    # Contributed labels (DEC-042): each carries its OWN color/description and is
+    # created through a per-label path — NOT grouped by axis, NOT routed through
+    # the axis sole-constructor (a contributed label is not an axis label).
+    for label in plan.contributed_label_creates:
+        actions.append(_apply_contributed_label_create(label))
+    for name in plan.contributed_label_exists:
+        actions.append(Action(f"contributed label `{name}`", "exists", "no-op"))
     if plan.board_node_id:
         actions.append(_persist_project_node_id(capability_root, plan.board_node_id))
     if plan.starter_epic and not plan.starter_epic_exists:
@@ -430,6 +498,37 @@ def _apply_label_creates(axis: str, names: list[str]) -> list[Action]:
                 )
             )
     return out
+
+
+def _apply_contributed_label_create(label: LabelContribution) -> Action:
+    """Create one capability-contributed label (DEC-042), carrying its own
+    color/description. Parallel to `_apply_label_creates` but per-label rather
+    than axis-grouped, since each contribution declares its own presentation.
+    Never routes through the axis sole-constructor — a contributed label is not
+    a classification-axis label."""
+    proc = subprocess.run(
+        [
+            "gh",
+            "label",
+            "create",
+            label.default_name,
+            "--color",
+            label.color,
+            "--description",
+            label.description,
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    tag = f"contributed label `{label.default_name}`"
+    if proc.returncode == 0:
+        return Action(tag, "created", f"from capability `{label.capability}`")
+    return Action(
+        tag,
+        "failed",
+        f"`gh label create` exit {proc.returncode}: {proc.stderr.strip()}",
+    )
 
 
 def _starter_epic_already_filed() -> bool:

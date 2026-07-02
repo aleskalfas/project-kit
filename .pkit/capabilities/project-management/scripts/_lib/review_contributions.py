@@ -54,9 +54,24 @@ Layering, mirroring the other `_lib` libraries (e.g. `workstreams.py`):
     the manifest, reads each registered capability's declaration, parses it,
     and resolves each `reviewer` against the deployed-agent directory.
 
+Extraction (ADR-038)
+--------------------
+The orphan-safe manifest-walk, per-declaration read, and error taxonomy are no
+longer implemented here — they are the shared contribution-collector core in
+`_lib/contribution_collector.py`, of which this module is the first
+instantiation (`collect_contributions` calls `contribution_collector.collect`
+with the reviewer-specific parser + agent-deployed resolver, at the
+`FAIL_CLOSED` disposition DEC-032 requires). The refactor is behaviour-
+preserving: every public export below keeps its name, shape, and semantics, so
+the #145/#146/#147 consumers are untouched. `ContributionError`,
+`list_registered_capabilities`, and the `ERROR_PARSE` / `ERROR_MALFORMED`
+constants are re-exported from the core so a consumer importing them from here
+still resolves the one definition.
+
 Exports (the types #145/#146/#147 import):
 
     ContributionError       — frozen dataclass: kind + capability + message
+                              (re-exported from contribution_collector)
     ContributionRule        — frozen dataclass: capability, predicate,
                               reviewer, deployed, resolution_error
     ContributionCollection  — frozen dataclass: rules + errors + walked,
@@ -75,6 +90,14 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Any, Callable, Iterable, Mapping
 
+# The shared contribution-collector core (ADR-038). The manifest walk, the
+# per-declaration read, the `ContributionError` type, and the `ERROR_PARSE` /
+# `ERROR_MALFORMED` taxonomy live there now; this module instantiates it.
+try:
+    from _lib import contribution_collector as _cc
+except ImportError:  # pragma: no cover - exercised via spec-loaded fallback
+    import contribution_collector as _cc  # type: ignore[no-redef]
+
 # `_lib` is on sys.path when a script runs (each script inserts its scripts
 # dir); the package-relative import keeps this module importable both as
 # `_lib.review_contributions` and standalone via spec loading in tests.
@@ -82,13 +105,6 @@ try:
     from _lib.agents import agent_is_deployed as _default_agent_is_deployed
 except ImportError:  # pragma: no cover - exercised via spec-loaded fallback
     from agents import agent_is_deployed as _default_agent_is_deployed  # type: ignore[no-redef]
-
-try:
-    from ruamel.yaml import YAML
-    from ruamel.yaml.error import YAMLError
-except ImportError:  # ruamel is in the kit's pyproject; this is defensive.
-    YAML = None  # type: ignore[assignment, misc]
-    YAMLError = Exception  # type: ignore[assignment, misc]
 
 
 # The declaration a contributing capability ships at its own root.
@@ -99,30 +115,20 @@ CONTRIBUTIONS_FILENAME = "review-contributions.yaml"
 # place to widen when a second axis is added.
 SUPPORTED_MATCH_AXES = ("workstream",)
 
-# Error kinds a consumer can branch on (structured, not string-matched).
-ERROR_PARSE = "parse-error"  # YAML failed to parse / read.
-ERROR_MALFORMED = "malformed-declaration"  # declaration shape is invalid.
+# Error kinds a consumer can branch on (structured, not string-matched). The
+# two kind-agnostic classes come from the shared core (one definition); the
+# undeployed-agent class is this kind's own resolution-error class.
+ERROR_PARSE = _cc.ERROR_PARSE  # YAML failed to parse / read.
+ERROR_MALFORMED = _cc.ERROR_MALFORMED  # declaration shape is invalid.
 ERROR_UNDEPLOYED_AGENT = "undeployed-agent"  # rule names a missing agent file.
 
+# The `ContributionError` type is the core's — re-exported so a consumer
+# importing it from either module resolves the same class (isinstance-stable).
+ContributionError = _cc.ContributionError
 
-@dataclass(frozen=True)
-class ContributionError:
-    """A structured problem surfaced while collecting contributions.
-
-    `kind` is one of the module's `ERROR_*` constants so a consumer can
-    branch on the failure class (undeployed agent vs malformed declaration
-    vs parse error) without string-matching `message`. `capability` is the
-    contributing capability the problem came from, or `None` for a
-    repo-level problem (e.g. an unparseable manifest). `message` is the
-    human-readable detail for diagnostics and refusal text.
-    """
-
-    kind: str
-    capability: str | None
-    message: str
-
-    def __str__(self) -> str:  # keep human-readable formatting trivial.
-        return self.message
+# `list_registered_capabilities` is the shared orphan-safe manifest reader —
+# re-exported so its DEC-032 callers and tests keep the same import path.
+list_registered_capabilities = _cc.list_registered_capabilities
 
 
 @dataclass(frozen=True)
@@ -421,70 +427,27 @@ def _parse_match_values(
     return tuple(values)
 
 
-def list_registered_capabilities(manifest_data: Any) -> tuple[str, ...]:
-    """Names of capabilities registered in a parsed backbone manifest.
-
-    Reads `components:` and returns the `name` of every entry whose
-    `kind` is `capability`, in manifest order. This is the orphan-safe
-    source of truth for installed-ness (DEC-030 / DEC-032): a capability
-    directory present on disk but absent from `components:` is NOT walked.
-
-    Tolerates a missing/empty/malformed manifest by returning ().
-    """
-    if not isinstance(manifest_data, dict):
-        return ()
-    components = manifest_data.get("components")
-    if not isinstance(components, list):
-        return ()
-    out: list[str] = []
-    for entry in components:
-        if not isinstance(entry, dict):
-            continue
-        if entry.get("kind") != "capability":
-            continue
-        name = entry.get("name")
-        if isinstance(name, str) and name:
-            out.append(name)
-    return tuple(out)
-
-
-def _default_load_yaml(path: Path) -> Any:
-    """Read + parse a YAML file with ruamel; return None when absent.
-
-    Raises RuntimeError on a parse error so the caller can surface a clear
-    message rather than swallowing malformed input.
-    """
-    if not path.is_file():
-        return None
-    if YAML is None:  # ruamel unavailable — defensive, should not happen.
-        raise RuntimeError("ruamel.yaml is not available to parse YAML")
-    yaml = YAML(typ="safe")
-    try:
-        with path.open("r", encoding="utf-8") as handle:
-            return yaml.load(handle)
-    except YAMLError as exc:
-        raise RuntimeError(f"{path}: YAML parse error: {exc}") from exc
-
-
 def collect_contributions(
     repo_root: Path,
     *,
-    load_yaml: Callable[[Path], Any] = _default_load_yaml,
+    load_yaml: Callable[[Path], Any] = _cc.default_load_yaml,
     agent_is_deployed: Callable[[Path, str], bool] = _default_agent_is_deployed,
 ) -> ContributionCollection:
     """Walk manifest-registered capabilities and collect reviewer rules.
 
     `repo_root` is the project root (the directory holding `.pkit/`). The
-    walk:
+    orphan-safe manifest walk + per-declaration read is the shared
+    contribution-collector core (ADR-038); this function instantiates it with
+    the reviewer-specific parser (`parse_contributions`) and an agent-deployed
+    resolver, at the `FAIL_CLOSED` disposition DEC-032 requires:
 
-      1. Reads `.pkit/manifest.yaml` and lists registered capabilities
-         (orphan-safe — directory presence is irrelevant).
-      2. For each, reads `.pkit/capabilities/<cap>/review-contributions.yaml`
-         if present, parses + validates it.
-      3. For each well-formed rule, checks the `reviewer` corresponds to a
-         deployed agent file. A missing file (DEC-032 D5) does NOT drop the
-         rule — the rule is kept with `deployed=False` and a structured
-         `resolution_error`, AND a matching error is appended, so the
+      1. The core reads `.pkit/manifest.yaml`, lists registered capabilities
+         (orphan-safe — directory presence is irrelevant), and reads each
+         `review-contributions.yaml` if present, parsing + validating it.
+      2. For each well-formed rule, the resolver checks the `reviewer`
+         corresponds to a deployed agent file. A missing file (DEC-032 D5) does
+         NOT drop the rule — the rule is kept with `deployed=False` and a
+         structured `resolution_error`, AND a matching error is surfaced, so the
          requirement stays visible and the gate fails closed.
 
     `load_yaml` and `agent_is_deployed` are injectable so tests (and future
@@ -495,66 +458,46 @@ def collect_contributions(
     Returns a `ContributionCollection`. A non-empty `errors` (equivalently
     `not collection.ok`) means a fail-and-surface condition for the caller
     (gate-checker / review-pr / pre-check); the rules — including any
-    unsatisfiable ones — are still returned so a caller can report on both.
+    unsatisfiable ones — are still returned so a caller can report on both. The
+    review declaration does not pin a `schema_version` at read time (the shape
+    validator tolerates its absence), so no `expected_schema_version` is passed
+    — behaviour-preserving with the pre-ADR-038 collector.
     """
-    manifest_path = repo_root / ".pkit" / "manifest.yaml"
-    try:
-        manifest_data = load_yaml(manifest_path)
-    except RuntimeError as exc:
-        return ContributionCollection(
-            rules=(),
-            errors=(ContributionError(ERROR_PARSE, None, str(exc)),),
+
+    def _resolve(
+        root: Path, capability: str, rule: ContributionRule
+    ) -> tuple[ContributionRule, tuple[ContributionError, ...]]:
+        if agent_is_deployed(root, rule.reviewer):
+            return rule, ()
+        # Undeployed reviewer: keep the requirement VISIBLE and unsatisfiable
+        # rather than dropping it (fail-closed seam, DEC-032 D5).
+        resolution_error = ContributionError(
+            ERROR_UNDEPLOYED_AGENT,
+            capability,
+            f"capability `{capability}` contributes reviewer "
+            f"`{rule.reviewer}` but no deployed agent file exists at "
+            f".claude/agents/{rule.reviewer}.md — redeploy the "
+            f"capability's agents or uninstall the capability.",
         )
-
-    capabilities = list_registered_capabilities(manifest_data)
-
-    rules: list[ContributionRule] = []
-    errors: list[ContributionError] = []
-
-    for capability in capabilities:
-        decl_path = (
-            repo_root
-            / ".pkit"
-            / "capabilities"
-            / capability
-            / CONTRIBUTIONS_FILENAME
+        broken = ContributionRule(
+            capability=rule.capability,
+            predicate=rule.predicate,
+            reviewer=rule.reviewer,
+            deployed=False,
+            resolution_error=resolution_error,
         )
-        try:
-            decl_data = load_yaml(decl_path)
-        except RuntimeError as exc:
-            errors.append(ContributionError(ERROR_PARSE, capability, str(exc)))
-            continue
+        return broken, (resolution_error,)
 
-        cap_rules, cap_errors = parse_contributions(decl_data, capability)
-        errors.extend(cap_errors)
-
-        for rule in cap_rules:
-            if agent_is_deployed(repo_root, rule.reviewer):
-                rules.append(rule)
-                continue
-            # Undeployed reviewer: keep the requirement VISIBLE and
-            # unsatisfiable rather than dropping it (fail-closed seam).
-            resolution_error = ContributionError(
-                ERROR_UNDEPLOYED_AGENT,
-                capability,
-                f"capability `{capability}` contributes reviewer "
-                f"`{rule.reviewer}` but no deployed agent file exists at "
-                f".claude/agents/{rule.reviewer}.md — redeploy the "
-                f"capability's agents or uninstall the capability.",
-            )
-            rules.append(
-                ContributionRule(
-                    capability=rule.capability,
-                    predicate=rule.predicate,
-                    reviewer=rule.reviewer,
-                    deployed=False,
-                    resolution_error=resolution_error,
-                )
-            )
-            errors.append(resolution_error)
-
+    collection = _cc.collect(
+        repo_root,
+        filename=CONTRIBUTIONS_FILENAME,
+        parse_entries=parse_contributions,
+        disposition=_cc.Disposition.FAIL_CLOSED,
+        resolve=_resolve,
+        load_yaml=load_yaml,
+    )
     return ContributionCollection(
-        rules=tuple(rules),
-        errors=tuple(errors),
-        capabilities_walked=capabilities,
+        rules=collection.items,
+        errors=collection.errors,
+        capabilities_walked=collection.capabilities_walked,
     )
