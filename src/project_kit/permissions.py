@@ -1427,6 +1427,72 @@ def _auto_accommodate_narrowing_toolkits(target_root: Path) -> str:
     return note
 
 
+def _os_sandbox_unsupported_here() -> bool:
+    """Is the OS sandbox (Seatbelt / bubblewrap) unusable on the current host?
+
+    True on macOS (#312/#313): this Claude Code's Seatbelt box is incompatible
+    with the autonomy toolchain — the intended `excludedCommands` carve-out is
+    non-functional here, and the credential `denyRead ~/.config/gh` floor
+    collides with gh's own need to read that dir, so `gh` / `pkit` / `git push`
+    break inside the box. Linux/bubblewrap is unaffected (returns False)."""
+    import sys as _sys
+
+    return _sys.platform == "darwin"
+
+
+def _sandbox_enable_macos_gated(target_root: Path) -> str:
+    """The macOS branch of `sandbox_enable` (#312/#313): do NOT enable the OS
+    sandbox. Actively write `sandbox.enabled: false` to the harness-co-owned
+    local file (ADR-032 Rule B — the key the `/sandbox` panel reads) so a box a
+    previous run (or a hand-edit) left ON is CORRECTED to off, then return a
+    loud, specific message naming both blockers. Idempotent: when the union is
+    already off, no write is made.
+
+    Disable-not-just-skip rationale: the failure mode this task exists to fix is
+    a Mac adopter whose toolchain is silently broken BY an enabled box; leaving a
+    stale `enabled: true` in place would perpetuate exactly that. We write the
+    per-machine local key only — the operator's own committed floor
+    (excludedCommands, denyRead, …) is untouched, matching `sandbox_disable`.
+    (Tension worth an architect note: this overrides an operator who may have
+    hand-set `enabled: true` on macOS. On this platform that state is
+    non-functional, so correcting it is the safer default; see report.)"""
+    changes: list[str] = []
+    if _sandbox_block(target_root).get("enabled") is True:
+        local = _read_settings_local(target_root)
+        local.setdefault("sandbox", {})["enabled"] = False
+        _write_settings_local(target_root, local)
+        changes.append(
+            "corrected a non-functional sandbox.enabled: true → false in "
+            "settings.local.json (Seatbelt is incompatible here; autonomy relies "
+            "on the permission hook)"
+        )
+    else:
+        changes.append("sandbox already off")
+
+    lines = [
+        cli_render.style("title",
+                         "OS sandbox NOT enabled — unsupported on macOS (Seatbelt)"),
+        "",
+        "  The OS sandbox is gated OFF on macOS because this Claude Code's",
+        "  Seatbelt box is incompatible with the autonomy toolchain:",
+        "    1. `excludedCommands` (the intended carve-out for gh / git push /",
+        "       pkit) is NON-FUNCTIONAL in this Claude Code — excluded commands",
+        "       still run inside the box.",
+        "    2. the credential `denyRead ~/.config/gh` floor COLLIDES with gh's",
+        "       own need to read that directory, so `gh` / `pkit` / `git push`",
+        "       break inside the box.",
+        "  Enabling it would silently break your toolchain (surfaced live in an",
+        "  adopter). Tracked under #312 / #313.",
+        "",
+        f"  posture on this host: {'; '.join(changes)}.",
+        "",
+        "  The intent layer (permission-model grants / denies) is UNAFFECTED —",
+        "  `pkit permissions setup autonomy` still applies the autonomy profile;",
+        "  only the OS-confinement half is skipped here.",
+    ]
+    return "\n".join(lines) + "\n"
+
+
 def sandbox_enable(target_root: Path, strict: bool = False,
                    dangerously_allow_unconfined: bool = False) -> str:
     """Turn on the OS sandbox with prompt-free scripting, fail-closed.
@@ -1446,6 +1512,12 @@ def sandbox_enable(target_root: Path, strict: bool = False,
             "the claude-code adapter is not installed in this project; the "
             "sandbox is harness-specific, so there is nothing to enable."
         )
+    # Platform gate (#312/#313): the OS sandbox (Seatbelt) is incompatible with
+    # this Claude Code on macOS, so the OS-confinement half is NOT enabled here.
+    # The intent-layer half of the autonomy posture (profile grants/denies) is
+    # applied independently in `setup autonomy` step [1/4] and is unaffected.
+    if _os_sandbox_unsupported_here():
+        return _sandbox_enable_macos_gated(target_root)
     # ADR-029 + ADR-032 routing: the operator-invariant floor (`autoAllowBash
     # IfSandboxed`, `failIfUnavailable`, the credential `denyRead` floor) is
     # COMMITTED → `settings.json`. Two keys route per-machine: the
@@ -4288,20 +4360,35 @@ def setup_autonomy(
     # for the action blocks below; removal edits ONLY the gitignored local file.
     overlay_findings = _detect_overlay_overrides(target_root)
 
-    sb = _sandbox_block(target_root)
-    was_on = sb.get("enabled") is True
-    sealed = sb.get("allowUnsandboxedCommands") is False
-    if was_on and sb.get("failIfUnavailable") is True and sealed:
+    # Platform gate (#312/#313): on macOS the OS-confinement half is skipped —
+    # `sandbox_enable` writes `enabled: false` and returns a loud message. The
+    # [3/4] line reflects that honestly (the box is NOT stood up), and the loud
+    # message is held as an action block below alongside the other reports. The
+    # intent + enforcement halves above already ran, so autonomy is still armed
+    # to the extent this platform supports.
+    macos_confinement_note: list[str] = []
+    if _os_sandbox_unsupported_here():
+        gate_msg = sandbox_enable(target_root, strict=True)
         lines.append(
-            "  [3/4] confinement   ✓ already — OS sandbox enabled "
-            "(fail-closed, unsandboxed escape sealed)"
+            "  [3/4] confinement   ⊘ skipped — OS sandbox unsupported on macOS "
+            "(intent + enforcement still applied; see below)"
         )
+        macos_confinement_note = ["", *gate_msg.rstrip("\n").splitlines()]
     else:
-        sandbox_enable(target_root, strict=True)
-        lines.append(
-            "  [3/4] confinement   ✓ done — OS sandbox enabled "
-            "(fail-closed, strict — unsandboxed escape sealed, credential denyRead floor)"
-        )
+        sb = _sandbox_block(target_root)
+        was_on = sb.get("enabled") is True
+        sealed = sb.get("allowUnsandboxedCommands") is False
+        if was_on and sb.get("failIfUnavailable") is True and sealed:
+            lines.append(
+                "  [3/4] confinement   ✓ already — OS sandbox enabled "
+                "(fail-closed, unsandboxed escape sealed)"
+            )
+        else:
+            sandbox_enable(target_root, strict=True)
+            lines.append(
+                "  [3/4] confinement   ✓ done — OS sandbox enabled "
+                "(fail-closed, strict — unsandboxed escape sealed, credential denyRead floor)"
+            )
 
     # Confinement accommodations (ADR-008 + ADR-010 host): make the box usable —
     # narrowing only, applied automatically. Rendered as a hanging-indent
@@ -4352,9 +4439,31 @@ def setup_autonomy(
     action_blocks = (
         required_block
         + overlay_block
+        + macos_confinement_note
         + _setup_next_steps(target_root, nudges, host_nudges)
         + _setup_stability_tip(target_root)
     )
+
+    # macOS verdict (#312/#313): the OS-confinement half was gated off, so the
+    # goal is "intent + enforcement armed; OS confinement not applicable on this
+    # platform" — NOT the restart-to-enable-box path. Verify only the decision
+    # layer (the half that IS in force here); the confinement floor is N/A.
+    if _os_sandbox_unsupported_here():
+        _report, decisions_ok = probe(target_root, live=False)
+        if not decisions_ok:
+            lines += [
+                "  [4/4] verification  ✗ BROKEN — the live decision layer diverges from the declared model",
+                f"{cont}run `pkit permissions probe` for the per-probe detail",
+                "",
+                "  " + cli_render.style("strong", "Result: BROKEN — fix the decision layer before relying on autonomy."),
+            ]
+            return "\n".join(lines + action_blocks) + "\n", False
+        lines += [
+            "  [4/4] verification  ✓ decision layer proven · OS confinement N/A on macOS (#312/#313)",
+            "",
+            "  " + cli_render.style("strong", "Result: intent + enforcement armed and proven. OS confinement is skipped on macOS (see above)."),
+        ]
+        return "\n".join(lines + action_blocks) + "\n", True
 
     if not was_on:
         # The honest boundary (rule 4): sandbox.enabled is not hot-reloaded.

@@ -12,6 +12,22 @@ from project_kit.cli import main
 REPO = Path(__file__).resolve().parent.parent
 
 
+@pytest.fixture(autouse=True)
+def _default_linux_platform(monkeypatch):
+    """Default every test in this module to a Linux/bubblewrap host so the OS
+    sandbox behaviour is deterministic and host-independent.
+
+    The OS sandbox is platform-gated (#312/#313): it enables on Linux and is
+    refused on macOS. The historical enable-path tests were written on the
+    implicit assumption that enabling works everywhere; pinning the platform to
+    linux here keeps them testing the ENABLE path regardless of the host the
+    suite runs on. Tests that exercise the macOS gate (or the macOS required-
+    exclusion machinery) set `sys.platform` to `darwin` themselves inside the
+    test body (directly or via `_force_uv`); a later setattr wins, so those are
+    unaffected."""
+    monkeypatch.setattr("sys.platform", "linux")
+
+
 def _setup(tmp_path: Path, *, grants: str | None = None, config: str | None = None,
            settings: str | None = None) -> Path:
     """Build a tmp project tree with the real privilege catalog + optional
@@ -1102,39 +1118,28 @@ def test_setup_autonomy_seal_is_idempotent_and_reported_on_resume(tmp_path, monk
     assert _sb_local(proj)["allowUnsandboxedCommands"] is False
 
 
-def test_setup_autonomy_seal_orthogonal_to_macos_exclusion(tmp_path, monkeypatch):
-    # ADR-028 cond. 3 (the dp-3 keystone probe): the macOS pkit/uv
-    # `excludedCommands` exclusion (ADR-014) STILL RESOLVES with the seal on.
-    # Different keys, different layers — the seal must not break the path that
-    # makes macOS autonomy work. We force the macOS old-uv predicate so the
-    # required exclusion auto-applies, then assert BOTH the seal AND the
-    # exclusion are present and honoured together.
+def test_setup_autonomy_macos_gates_off_the_os_sandbox(tmp_path, monkeypatch):
+    # #312/#313: on macOS the OS-confinement half of the autonomy posture is
+    # gated OFF (Seatbelt is incompatible with the toolchain). `setup autonomy`
+    # still applies the intent + enforcement halves, but does NOT stand up the
+    # box: the union resolves OFF and no strict seal is written (the seal is a
+    # sandbox-escape key — moot when there is no box). The [3/4] line reads
+    # "skipped" and the loud gate message names both blockers.
     _force_uv(monkeypatch, platform="darwin", version="0.9.8")
     proj = _with_adapter(_setup(tmp_path))
     (proj / "uv.lock").write_text("")
     out = _run(proj, monkeypatch, "setup", "autonomy")
-    sb = _sb(proj)
-    # The seal is written (strict default).
-    assert sb["allowUnsandboxedCommands"] is False
-    assert "REQUIRED exclusion auto-applied: `uv`" in out
-
-    # The keystone: not "the key sits in the dict" but "the exclusion still
-    # RESOLVES". Drive the real resolution entry point — `sandbox status`, the
-    # path that consumes `excludedCommands` and resolves it (attributed by
-    # provenance) into the reported out-of-box set — UNDER the live seal, and
-    # assert the resolved auto out-of-box set still contains `uv`. Same keys,
-    # same settings, seal on; the resolution path must be unbroken.
-    assert sb["allowUnsandboxedCommands"] is False, "seal must be live for the probe"
-    status = _run(proj, monkeypatch, "sandbox")
-    # The seal resolves to "sealed" AND the exclusion resolves to the auto-applied
-    # out-of-box line — both honoured at once, different keys / different layers.
-    assert "unsandboxed escape sealed (strict)" in status
-    assert "uv — auto-applied (required" in status
-    # The resolved out-of-box set (what `excludedCommands` resolves to) contains uv.
-    excluded_line = next(
-        line for line in status.splitlines() if "command(s) run outside the box" in line
-    )
-    assert "1 command(s)" in excluded_line
+    # Intent + enforcement halves still ran.
+    assert "[1/4] intent" in out and "activated" in out
+    assert "[2/4] enforcement" in out and "hook registered" in out
+    # Confinement half gated off — honestly reported, box NOT enabled.
+    assert "[3/4] confinement   ⊘ skipped" in out
+    assert "unsupported on macOS" in out
+    assert "excludedCommands" in out and "denyRead ~/.config/gh" in out
+    assert "#312" in out and "#313" in out
+    assert _sb(proj).get("enabled") is not True             # union resolves OFF
+    # No strict seal on macOS — it is a sandbox-escape key, moot without a box.
+    assert _sb(proj).get("allowUnsandboxedCommands") is None
 
 
 def test_setup_autonomy_seal_is_reversible_via_non_strict_enable(tmp_path, monkeypatch):
@@ -1629,17 +1634,28 @@ def test_required_exclusion_not_applied_when_uv_unreadable(tmp_path, monkeypatch
     assert "excludedCommands" not in _sb(proj)
 
 
-def test_required_exclusion_status_attribution(tmp_path, monkeypatch):
+def test_required_exclusion_provenance_attribution(tmp_path, monkeypatch):
+    # The required-exclusion machinery still runs on macOS and tags provenance
+    # distinctly (auto-applied `_required` vs operator-set `_manual`), even though
+    # the OS box itself is gated off there (#312/#313) so `sandbox status` no
+    # longer RENDERS the attribution (it reports OFF). We assert the write +
+    # provenance directly — the attribution source of truth.
+    # (Tension flagged for architect: this machinery is now moot on macOS — there
+    # is no box for the exclusions to carve commands out of. See #336 report.)
     _force_uv(monkeypatch, platform="darwin", version="0.9.8")
     proj = _with_adapter(_setup(tmp_path))
     (proj / "uv.lock").write_text("")
     _run(proj, monkeypatch, "setup", "autonomy")
     # An operator-set manual exclusion alongside the auto-applied required one.
     _run(proj, monkeypatch, "sandbox", "exclude", "gh")
-    out = _run(proj, monkeypatch, "sandbox")    # no subcommand = status
-    # uv attributed as auto-applied (required), gh as operator-set — not vice versa.
-    assert "uv — auto-applied (required" in out
-    assert "gh — operator-set" in out
+    prov_path = proj / ".pkit" / "permissions" / "project" / "sandbox-provenance.yaml"
+    from ruamel.yaml import YAML as _YAML
+    doc = _YAML(typ="safe").load(prov_path.open())
+    tags = {(e.get("value"), e.get("toolkit")) for e in doc["entries"]
+            if e.get("kind") == "exclude-command"}
+    assert ("uv", "_required") in tags       # auto-applied, required
+    assert ("gh", "_manual") in tags         # operator-set — distinct tag
+    assert ("uv", "_manual") not in tags     # not mis-attributed
 
 
 def test_required_exclusion_self_heals_when_uv_fixed(tmp_path, monkeypatch):
@@ -2212,15 +2228,23 @@ def test_gh_required_exclusion_not_applied_on_bare_path_without_marker(tmp_path,
     assert "gh" not in _sb(proj).get("excludedCommands", [])
 
 
-def test_gh_required_exclusion_status_attribution(tmp_path, monkeypatch):
+def test_gh_required_exclusion_provenance_attribution(tmp_path, monkeypatch):
+    # As above for gh: the required exclusion is auto-applied + provenance-tagged
+    # `_required` on macOS. The OS box is gated off there (#312/#313), so
+    # `sandbox status` reports OFF rather than rendering the attribution; we
+    # assert the provenance tag directly (the attribution source of truth).
     _force_gh(monkeypatch, platform="darwin")
     proj = _with_adapter(_setup(tmp_path))
     (proj / ".github").mkdir()
     _run(proj, monkeypatch, "setup", "autonomy")
-    out = _run(proj, monkeypatch, "sandbox")              # no subcommand = status
-    # gh attributed honestly as auto-applied (required), not operator-set.
-    assert "gh — auto-applied (required" in out
-    assert "gh — operator-set" not in out
+    assert "gh" in _sb(proj).get("excludedCommands", [])   # still applied
+    prov_path = proj / ".pkit" / "permissions" / "project" / "sandbox-provenance.yaml"
+    from ruamel.yaml import YAML as _YAML
+    doc = _YAML(typ="safe").load(prov_path.open())
+    tags = {(e.get("value"), e.get("toolkit")) for e in doc["entries"]
+            if e.get("kind") == "exclude-command"}
+    assert ("gh", "_required") in tags       # auto-applied, required — not operator-set
+    assert ("gh", "_manual") not in tags
 
 
 def test_gh_required_exclusion_already_in_place_is_confirmed_not_silent(tmp_path, monkeypatch):
@@ -3651,16 +3675,19 @@ def test_setup_autonomy_cli_unseal_warned_then_reconciled_by_seal_reassert(tmp_p
 
 def test_setup_autonomy_cli_warns_only_without_consent(tmp_path, monkeypatch):
     # Without --remove-overrides and non-interactive, the run completes (no abort)
-    # and warns only. macOS: setup writes enabled:true (pre-#336), which the
-    # detector flags as a macOS override pre-confinement; warn-only leaves the
-    # local file's other keys intact and never aborts the run.
+    # and warns only. On Linux the confinement half runs, so the pre-existing
+    # local un-seal is detected pre-confinement and warned; warn-only leaves the
+    # local file's keys intact and never aborts the run.
     proj = _with_adapter(_setup(tmp_path))
-    _force_platform(monkeypatch, "darwin")
+    _force_platform(monkeypatch, "linux")
     # An operator un-seal seeded locally → detected pre-confinement, warn-only.
     _write_local(proj, {"sandbox": {"allowUnsandboxedCommands": True}})
     out = _run(proj, monkeypatch, "setup", "autonomy")
     assert "Overlay overrides" in out
     assert "left in place — no consent" in out
-    assert _sb_local(proj)["allowUnsandboxedCommands"] is False  # seal re-assert still ran
+    # Warn-only: the operator's un-seal is NOT removed (no consent) but the
+    # confinement step's seal re-assert flips it to sealed (this is Linux, where
+    # the box runs).
+    assert _sb_local(proj)["allowUnsandboxedCommands"] is False
     # The run completed through to the verdict (no abort on the declined confirm).
     assert "Result:" in out
