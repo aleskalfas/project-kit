@@ -1498,3 +1498,145 @@ def test_main_parent_absent_containment_key_defaults_to_native_link(
     rc = ci.main()
     assert rc == 0
     assert link_calls == [{"parent": 1, "child": 60}]
+
+
+# --- workstream-requiredness gate honours the substrate-map degrade (#443) --
+# The label-fallback (no board) gate must not demand a `--workstream` when the
+# substrate-map declares the `workstream` axis `unsupported` — the downstream
+# `_build_labels`/`resolve_write` path already DEGRADEs and drops the label, so a
+# brownfield adopter with no workstream substrate can file without a throwaway
+# value. The gate keys on the SAME `axis_disposition` signal that degradation
+# uses, so gate and resolution cannot disagree. Greenfield and a SERVED
+# workstream axis are unchanged (still required); the board path already skips.
+
+
+def _write_workstream_unsupported_map(root: Path) -> None:
+    """Stage a present substrate-map declaring the `workstream` axis unsupported.
+
+    Minimal but schema-shaped: schema_version + an `axes` map binding only
+    `workstream: {unsupported: true}`. Absence would degrade identically
+    (absent ≡ unsupported), but declaring it explicitly makes the intent the
+    test asserts on unambiguous.
+    """
+    (root / "project" / "substrate-map.yaml").write_text(
+        "schema_version: 1\naxes:\n  workstream:\n    unsupported: true\n",
+        encoding="utf-8",
+    )
+
+
+def test_main_label_fallback_workstream_unsupported_files_without_workstream(
+    ci, tmp_path, monkeypatch
+) -> None:
+    """#443: label-fallback + `workstream: unsupported` + no `--workstream` ⇒
+    create SUCCEEDS (rc 0), and no workstream label is written (the axis
+    DEGRADEs downstream, exactly as `_build_labels` already does)."""
+    root = _stage_capability_tree(tmp_path, has_board=False)
+    _write_workstream_unsupported_map(root)
+
+    monkeypatch.setattr(
+        ci.subprocess,
+        "run",
+        _gh_command_dispatcher("https://github.com/acme/repo/issues/61"),
+    )
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+    monkeypatch.setattr(ci, "link_sub_issue", lambda *a, **k: _FakeLink("ok", ok=True))
+
+    created: dict = {}
+    real_create = ci._gh_create_issue
+
+    def capturing_create(**kwargs):
+        created.update(kwargs)
+        return real_create(**kwargs)
+
+    monkeypatch.setattr(ci, "_gh_create_issue", capturing_create)
+    monkeypatch.setattr(
+        ci.sys, "argv",
+        [
+            "create-issue.py",
+            "--type", "task",
+            "--title", "do a thing",
+            "--parent", "1",
+            # NOTE: no --workstream — the whole point of #443.
+            "--capability-root", str(root),
+            "--yes",
+        ],
+    )
+
+    rc = ci.main()
+    assert rc == 0
+    # The workstream axis DEGRADEd: no `workstream:*` label was written.
+    assert not any(lbl.startswith("workstream:") for lbl in created["labels"])
+
+
+def test_main_label_fallback_greenfield_still_requires_workstream(
+    ci, tmp_path, monkeypatch
+) -> None:
+    """The unchanged path: label-fallback with NO substrate-map (greenfield) and
+    no `--workstream` still hard-refuses (rc 2) — the kit's `workstream:*` label
+    IS the adopter's substrate there, so a value is genuinely required."""
+    root = _stage_capability_tree(tmp_path, has_board=False)
+    # No substrate-map staged ⇒ greenfield ⇒ workstream axis is SERVED.
+
+    monkeypatch.setattr(
+        ci.subprocess,
+        "run",
+        _gh_command_dispatcher("https://github.com/acme/repo/issues/62"),
+    )
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+    monkeypatch.setattr(ci, "link_sub_issue", lambda *a, **k: _FakeLink("ok", ok=True))
+    monkeypatch.setattr(
+        ci.sys, "argv",
+        [
+            "create-issue.py",
+            "--type", "task",
+            "--title", "do a thing",
+            "--parent", "1",
+            # No --workstream, and greenfield ⇒ the gate must still fire.
+            "--capability-root", str(root),
+            "--yes",
+        ],
+    )
+
+    assert ci.main() == 2
+
+
+def test_main_label_fallback_workstream_served_map_still_requires_workstream(
+    ci, tmp_path, monkeypatch
+) -> None:
+    """A present map that BINDS `workstream` (SERVED, not unsupported) keeps the
+    requirement — a bound axis has a substrate to write to, so omitting the value
+    is still a refusal (rc 2). This pins that the fix keys on `unsupported`, not
+    merely on the presence of a map."""
+    root = _stage_capability_tree(tmp_path, has_board=False)
+    # A present map binding workstream to a label remap ⇒ SERVED.
+    (root / "project" / "substrate-map.yaml").write_text(
+        "schema_version: 1\n"
+        "axes:\n"
+        "  workstream:\n"
+        "    label:\n"
+        "      remap:\n"
+        "        spyre: Spyre\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        ci.subprocess,
+        "run",
+        _gh_command_dispatcher("https://github.com/acme/repo/issues/63"),
+    )
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+    monkeypatch.setattr(ci, "link_sub_issue", lambda *a, **k: _FakeLink("ok", ok=True))
+    monkeypatch.setattr(
+        ci.sys, "argv",
+        [
+            "create-issue.py",
+            "--type", "task",
+            "--title", "do a thing",
+            "--parent", "1",
+            # No --workstream; the axis is SERVED ⇒ the gate must still fire.
+            "--capability-root", str(root),
+            "--yes",
+        ],
+    )
+
+    assert ci.main() == 2
