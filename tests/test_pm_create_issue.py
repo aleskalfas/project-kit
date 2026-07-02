@@ -633,6 +633,87 @@ def test_add_to_board_none_on_unparseable_json(ci, monkeypatch) -> None:
     )
 
 
+# --- #453: `gh project` calls thread GH_HOST + --owner via the sole-constructor ---
+# `_gh_add_to_board` / `_resolve_project_node_id` route through `gh_project_run`,
+# which threads `GH_HOST` from `config['gh']['host']` and splices `--owner`
+# (prefer `gh.default_owner`, else the URL-derived owner). A raw `subprocess.run`
+# would land on github.com and fail on a GHES/org-owned board. These pin the
+# GHES-shaped fixture (host != github.com, org board) at each routed site, and
+# that the github.com path is undisturbed.
+
+
+def _capture_gh_argv_and_env(ci, monkeypatch) -> dict:
+    """Capture the argv + env the real `gh_run` hands to subprocess.run.
+
+    `gh_project_run` → `gh_run` → `subprocess.run`; patching the shared
+    `subprocess.run` lets the real constructor run (splicing host+owner) so the
+    test observes exactly what would reach `gh`.
+    """
+    captured: dict = {}
+
+    class _Proc:
+        returncode = 0
+        stdout = '{"id": "PVT_x", "number": 7}'
+        stderr = ""
+
+    def fake_run(cmd, *args, **kwargs):
+        captured["cmd"] = cmd
+        captured["env"] = kwargs.get("env", {})
+        return _Proc()
+
+    monkeypatch.setattr(ci.subprocess, "run", fake_run)
+    return captured
+
+
+def test_add_to_board_ghes_threads_host_and_default_owner(ci, monkeypatch) -> None:
+    """GHES fixture: `_gh_add_to_board` runs under the configured host and carries
+    `--owner` from `gh.default_owner` (which wins over the URL-derived owner)."""
+    captured = _capture_gh_argv_and_env(ci, monkeypatch)
+    config = {"gh": {"host": "github.ibm.com", "default_owner": "ai-platform-incubation"}}
+
+    ci._gh_add_to_board(2, "https://github.ibm.com/acme/repo/issues/9", config=config)
+
+    assert captured["env"].get("GH_HOST") == "github.ibm.com"
+    assert "--owner" in captured["cmd"]
+    assert captured["cmd"][captured["cmd"].index("--owner") + 1] == "ai-platform-incubation"
+
+
+def test_add_to_board_ghes_falls_back_to_url_owner(ci, monkeypatch) -> None:
+    """GHES host, no configured owner: the URL-derived owner supplies `--owner`,
+    still under the configured host."""
+    captured = _capture_gh_argv_and_env(ci, monkeypatch)
+    config = {"gh": {"host": "github.ibm.com"}}
+
+    ci._gh_add_to_board(2, "https://github.ibm.com/acme-org/repo/issues/9", config=config)
+
+    assert captured["env"].get("GH_HOST") == "github.ibm.com"
+    assert captured["cmd"][captured["cmd"].index("--owner") + 1] == "acme-org"
+
+
+def test_add_to_board_github_com_path_unchanged(ci, monkeypatch) -> None:
+    """The non-GHES path: no host override in config → GH_HOST is not forced to a
+    GHES value, and `--owner` is the URL-derived owner exactly as before."""
+    captured = _capture_gh_argv_and_env(ci, monkeypatch)
+
+    ci._gh_add_to_board(7, "https://github.com/acme/repo/issues/9", config={})
+
+    # No gh.host in config → no forced GH_HOST override (ambient passes through).
+    assert captured["env"].get("GH_HOST") in (None, "github.com")
+    assert captured["cmd"][captured["cmd"].index("--owner") + 1] == "acme"
+
+
+def test_resolve_project_node_id_ghes_threads_host_and_owner(ci, monkeypatch) -> None:
+    """GHES fixture: `_resolve_project_node_id` (cache miss) runs under the
+    configured host and threads `--owner` from `gh.default_owner`."""
+    captured = _capture_gh_argv_and_env(ci, monkeypatch)
+    config = {"gh": {"host": "github.ibm.com", "default_owner": "ai-platform-incubation"}}
+
+    ci._resolve_project_node_id(2, "url-owner", config=config)
+
+    assert captured["env"].get("GH_HOST") == "github.ibm.com"
+    assert captured["cmd"][captured["cmd"].index("--owner") + 1] == "ai-platform-incubation"
+
+
 def test_resolve_project_node_id_reads_id_off_project_view(ci, monkeypatch) -> None:
     """Board NUMBER → project node id via `gh project view --format json`
     (`.id`) — the same read back-fill / pre-check use."""

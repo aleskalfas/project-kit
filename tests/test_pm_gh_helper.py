@@ -180,3 +180,81 @@ def test_gh_run_respects_caller_kwargs(gh, monkeypatch: pytest.MonkeyPatch) -> N
     assert captured["kwargs"]["env"] == custom_env
     assert captured["kwargs"]["text"] is False
     assert captured["kwargs"]["capture_output"] is False
+
+
+# --- gh_project_run (the #453 sole-constructor) --------------------------
+
+
+def _capture_run(monkeypatch) -> dict:
+    """Monkeypatch subprocess.run to capture argv + env; return the capture dict."""
+    captured: dict = {}
+
+    def fake_run(args, **kwargs):
+        captured["args"] = args
+        captured["kwargs"] = kwargs
+        return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    return captured
+
+
+def test_gh_project_run_threads_host_and_default_owner(gh, monkeypatch) -> None:
+    """GHES host + `gh.default_owner` in config → both are spliced (the #453 core).
+
+    A GHES-shaped fixture (host != github.com, org-owned board) must run under the
+    configured host and carry `--owner` from `gh.default_owner`.
+    """
+    captured = _capture_run(monkeypatch)
+    config = {"gh": {"host": "github.ibm.com", "default_owner": "ai-platform-incubation"}}
+
+    gh.gh_project_run(
+        ["gh", "project", "view", "2", "--format", "json"],
+        config,
+        fallback_owner="url-derived-owner",
+    )
+
+    assert captured["kwargs"]["env"]["GH_HOST"] == "github.ibm.com"
+    assert "--owner" in captured["args"]
+    # default_owner wins over the caller's fallback owner.
+    assert captured["args"][captured["args"].index("--owner") + 1] == "ai-platform-incubation"
+
+
+def test_gh_project_run_default_owner_wins_over_fallback(gh, monkeypatch) -> None:
+    """Owner precedence: configured `gh.default_owner` beats the caller fallback."""
+    captured = _capture_run(monkeypatch)
+    config = {"gh": {"default_owner": "config-owner"}}
+
+    gh.gh_project_run(["gh", "project", "view", "2"], config, fallback_owner="fallback-owner")
+
+    assert captured["args"][captured["args"].index("--owner") + 1] == "config-owner"
+
+
+def test_gh_project_run_falls_back_to_caller_owner(gh, monkeypatch) -> None:
+    """No `gh.default_owner` → the caller's derived `fallback_owner` is spliced."""
+    captured = _capture_run(monkeypatch)
+
+    gh.gh_project_run(["gh", "project", "view", "2"], {}, fallback_owner="url-owner")
+
+    assert captured["args"][captured["args"].index("--owner") + 1] == "url-owner"
+
+
+def test_gh_project_run_no_owner_anywhere_omits_flag(gh, monkeypatch) -> None:
+    """Neither config nor fallback owner → no `--owner` (the pre-#453 ownerless
+    path is preserved, e.g. a user-owned board where gh's own default suffices)."""
+    captured = _capture_run(monkeypatch)
+
+    gh.gh_project_run(["gh", "project", "view", "2"], {}, fallback_owner=None)
+
+    assert "--owner" not in captured["args"]
+
+
+def test_gh_project_run_non_ghes_path_unchanged(gh, monkeypatch) -> None:
+    """github.com host, no configured owner → GH_HOST is github.com and the only
+    owner is the caller's fallback; the non-GHES path is not disturbed."""
+    captured = _capture_run(monkeypatch)
+    config = {"gh": {"host": "github.com"}}
+
+    gh.gh_project_run(["gh", "project", "view", "2"], config, fallback_owner="a-user")
+
+    assert captured["kwargs"]["env"]["GH_HOST"] == "github.com"
+    assert captured["args"][captured["args"].index("--owner") + 1] == "a-user"

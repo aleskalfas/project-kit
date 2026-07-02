@@ -54,7 +54,7 @@ from _lib import axis_labels  # noqa: E402
 from _lib import classification_rules  # noqa: E402
 from _lib import containment  # noqa: E402
 from _lib.containment import link_sub_issue  # noqa: E402
-from _lib.gh import gh_run, load_adopter_config  # noqa: E402
+from _lib.gh import gh_project_run, gh_run, load_adopter_config  # noqa: E402
 from _lib.hooks import fire_hooks  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
@@ -1206,20 +1206,23 @@ def _gh_add_to_board(board_id: int, issue_url: str, config: dict) -> str | None:
     owner = _owner_from_issue_url(issue_url)
     if owner is None:
         return None
+    # Route through the `gh project` sole-constructor (#453): it threads the
+    # configured `GH_HOST` (a raw `subprocess.run` lands on github.com and fails
+    # `unknown owner type` on a GHES/org board, skipping the DEC-024 board-field
+    # hook) and splices `--owner` — preferring `gh.default_owner`, else the
+    # URL-derived `owner` passed here.
     cmd = [
         "gh",
         "project",
         "item-add",
         str(board_id),
-        "--owner",
-        owner,
         "--url",
         issue_url,
         "--format",
         "json",
     ]
     try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        proc = gh_project_run(cmd, config, fallback_owner=owner, check=False)
     except FileNotFoundError:
         return None
     if proc.returncode != 0:
@@ -1257,11 +1260,14 @@ def _resolve_project_node_id(board_id: int, owner: str | None, config: dict) -> 
     if isinstance(cached, str) and cached:
         return cached
 
+    # Route through the `gh project` sole-constructor (#453): a raw
+    # `subprocess.run` here would land on github.com and fail to resolve an
+    # org-owned board's node id on a GHES host. The constructor threads
+    # `GH_HOST` and splices `--owner` (prefer `gh.default_owner`, else the
+    # caller's URL-derived `owner`).
     view_args = ["gh", "project", "view", str(board_id), "--format", "json"]
-    if owner:
-        view_args += ["--owner", owner]
     try:
-        proc = subprocess.run(view_args, capture_output=True, text=True, check=False)
+        proc = gh_project_run(view_args, config, fallback_owner=owner, check=False)
     except FileNotFoundError:
         return None
     if proc.returncode != 0:
