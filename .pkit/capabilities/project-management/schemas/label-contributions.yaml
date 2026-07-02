@@ -1,0 +1,66 @@
+# Label-contribution declaration format (per project-management:DEC-042).
+#
+# This file DOCUMENTS the shape of the `label-contributions.yaml` a
+# *contributing* capability ships at its own root
+# (`.pkit/capabilities/<cap>/label-contributions.yaml`). It is the format
+# reference, paired with `label-contributions.schema.json` which validates an
+# instance. It is NOT itself a live contribution — pm ships no label
+# requirements of its own (a capability declares the labels it needs; pm
+# provisions and advises).
+#
+# Per DEC-042 D1: a capability declares the custom labels it needs, each entry
+# pairing a stable `id` with a `default_name`, `color`, and `description`. pm
+# builds the map by walking the capabilities registered in
+# `.pkit/manifest.yaml`'s `components:` list (orphan-safe, mirroring DEC-030's
+# collect_capability_overlays and the DEC-032 reviewer collector) — not
+# arbitrary directories under `.pkit/capabilities/`.
+#
+# Per DEC-042 D2: collection is soft. pm reads a capability's declaration purely
+# on its presence in a manifest-registered component — it does NOT require the
+# contributor to declare `requires_capabilities: project-management`. The
+# declaration's `schema_version` is validated at read time; a mismatch skips the
+# declaration and warns (never a silent mis-read). A malformed declaration skips
+# THAT contribution and warns — it does not fail-close pm's whole pre-check (the
+# DEC-042 Lifecycle severity divergence from DEC-032's fail-closed reviewer
+# collection: a missing label is self-healing via bootstrap and the consumer
+# fail-closes downstream).
+#
+# Per DEC-042 D3: bootstrap creates any missing contributed label through a
+# per-label create path carrying that contribution's own `color` and
+# `description`, reusing bootstrap's idempotency diff. A contributed label is NOT
+# a classification-axis label — it does not route through the axis-label
+# sole-constructor (ADR-026), whose guard keys on the four axis *shapes*
+# (`type:` / `priority:` / `workstream:` / `state:`) and cannot fire on a bare
+# label.
+#
+# Per DEC-042 D4: pre-check WARNS (does not refuse) on a missing contributed
+# label, conditional on the contributing capability being manifest-registered,
+# with a "run bootstrap" remediation.
+#
+# Per DEC-042 D5: a consuming capability resolves a label's name through
+# pm's `resolve_contributed_label(id)` accessor rather than hard-coding the
+# text. The accessor ships inert in v1 (returns `default_name`); a v2 adopter
+# override keyed by `id` can relocate the name behind the same seam.
+
+schema_version: 1
+
+# `labels` is a list of the labels a capability needs. Each entry pairs a
+# stable `id` (the resolution handle) with the label's `default_name`, `color`
+# (six hex digits, no `#`), and `description`.
+#
+# An empty list — `labels: []` — is VALID and contributes nothing (a capability
+# that ships the file as a placeholder, or temporarily declares no label,
+# without becoming a malformed declaration).
+#
+# The example below is illustrative of the format only — the first real
+# consumer is the `ux-ui-design` capability declaring its `needs-design` marker
+# (per DEC-042's Implications; authored as its own half once this contract
+# ships).
+labels:
+  # A design-capability's marker label on UI Features. The consumer resolves
+  # the name via `resolve_contributed_label("needs-design")`, never by writing
+  # the string `needs-design` into its own code.
+  - id: needs-design
+    default_name: needs-design
+    color: d4c5f9
+    description: "Marks an issue as requiring design input (contributed by a design capability, per project-management:DEC-042)."

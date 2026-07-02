@@ -47,6 +47,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _lib import axis_labels  # noqa: E402
 from _lib.agents import agent_deploy_path, agent_is_deployed  # noqa: E402
 from _lib.review_contributions import collect_contributions  # noqa: E402
+from _lib.label_contributions import collect_label_contributions  # noqa: E402
 
 
 CAPABILITY_NAME = "project-management"
@@ -59,7 +60,10 @@ class CheckResult:
     """One check's outcome."""
 
     label: str
-    status: str  # "ok" | "fail" | "skip"
+    # "ok" | "fail" | "skip" | "warn". Only "fail" flips the exit code; "warn"
+    # is a non-blocking advisory (DEC-042: a missing contributed label means
+    # "run bootstrap", not a hard gate) rendered distinctly from a clean "ok".
+    status: str
     detail: str
     remediation: str | None = None
 
@@ -249,6 +253,12 @@ def _run_all_checks(capability_root: Path) -> list[CheckResult]:
     #     check — degrade, don't refuse.
     if not has_board:
         results.append(_check_state_labels(capability_root, substrate_map))
+
+    # 6c. Contributed labels (DEC-042): a manifest-registered capability may
+    #     declare labels it needs. A missing one WARNS (does not fail) with a
+    #     "run bootstrap" remediation; a pm-only adopter with no contributor
+    #     sees nothing.
+    results.extend(_check_contributed_labels(capability_root))
 
     # 7. Default branch matches config.
     results.append(_check_default_branch(config))
@@ -876,6 +886,97 @@ def _check_labels(
     return results
 
 
+def _check_contributed_labels(capability_root: Path) -> list[CheckResult]:
+    """Advise on capability-contributed labels (DEC-042 D4) — WARN, never fail.
+
+    A capability registered in the manifest may declare labels it needs
+    (`label-contributions.yaml`). This reports a missing contributed label as a
+    non-blocking **warning** with a "run bootstrap" remediation — a deliberate
+    severity divergence from the DEC-032 reviewer gate, which hard-fails: a
+    missing label is self-healing (bootstrap re-provisions it) and its downstream
+    consumer fail-closes on its own predicate, so the stakes are lower.
+
+    Conditional on a contributor being manifest-registered: a pm-only adopter
+    (or one whose installed capabilities declare no labels) collects nothing and
+    this returns no results at all — no noise. A malformed / version-mismatched
+    declaration is surfaced as a warning too (the collector's skip-and-warn
+    disposition), not swallowed. The set is recomputed from the current manifest
+    on each run.
+    """
+    repo_root = capability_root.parent.parent.parent
+    collection = collect_label_contributions(repo_root)
+
+    results: list[CheckResult] = []
+
+    # Surface any skipped-and-warned declaration problems (malformed shape,
+    # schema_version mismatch, parse error) as warnings — visible, not blocking.
+    for warning in collection.warnings:
+        scope = (
+            f"capability `{warning.capability}`"
+            if warning.capability
+            else "label-contribution manifest"
+        )
+        results.append(CheckResult(
+            f"label contribution ({scope})",
+            "warn",
+            str(warning),
+            remediation=(
+                "Fix the capability's label-contributions declaration (or "
+                "uninstall the capability). The contribution is skipped until "
+                "then; pm is not blocked. See DEC-042."
+            ),
+        ))
+
+    if not collection.labels:
+        # No contributor declared a label — stay silent unless a warning above
+        # already spoke. A pm-only adopter sees nothing here.
+        return results
+
+    # Fetch existing labels once to diff the declared set against the repo.
+    proc = subprocess.run(
+        ["gh", "label", "list", "--limit", "500", "--json", "name"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        results.append(CheckResult(
+            "contributed labels accessible",
+            "warn",
+            "`gh label list` failed — cannot verify contributed labels",
+            remediation="Ensure `gh` is authenticated and the repo is accessible.",
+        ))
+        return results
+    try:
+        existing = {label["name"] for label in json.loads(proc.stdout)}
+    except (json.JSONDecodeError, KeyError, TypeError):
+        existing = set()
+
+    missing = [
+        label for label in collection.labels if label.default_name not in existing
+    ]
+    if missing:
+        for label in missing:
+            results.append(CheckResult(
+                f"contributed label `{label.default_name}` exists",
+                "warn",
+                f"missing (required by capability `{label.capability}`)",
+                remediation=(
+                    "Run `pkit project-management bootstrap` to create the "
+                    "missing contributed label(s). This is a warning, not a "
+                    "hard gate (DEC-042)."
+                ),
+            ))
+    else:
+        results.append(CheckResult(
+            "contributed labels exist",
+            "ok",
+            f"all {len(collection.labels)} contributed label(s) present",
+        ))
+
+    return results
+
+
 def _resolve_workstream_slugs_for_check(
     capability_root: Path, config: dict[str, Any]
 ) -> list[str]:
@@ -1093,21 +1194,28 @@ def _check_default_branch(config: dict[str, Any] | None) -> CheckResult:
 
 def _print_human(results: list[CheckResult]) -> None:
     for r in results:
-        marker = {"ok": "[ok]  ", "fail": "[fail]", "skip": "[skip]"}[r.status]
+        marker = {
+            "ok": "[ok]  ",
+            "fail": "[fail]",
+            "skip": "[skip]",
+            "warn": "[warn]",
+        }[r.status]
         print(f"  {marker} {r.label}")
-        if r.status == "fail":
+        if r.status in ("fail", "warn"):
+            # A warn, like a fail, surfaces its detail + remediation — it is
+            # advisory, not silent (DEC-042: "run bootstrap").
             print(f"         → {r.detail}")
             if r.remediation:
                 print(f"         → {r.remediation}")
-        elif r.status == "skip":
-            print(f"         {r.detail}")
         else:
             print(f"         {r.detail}")
     print()
     fails = sum(1 for r in results if r.status == "fail")
+    warns = sum(1 for r in results if r.status == "warn")
     oks = sum(1 for r in results if r.status == "ok")
     skips = sum(1 for r in results if r.status == "skip")
-    summary = f"{fails} fail(s), {skips} skip, {oks} ok"
+    warn_part = f", {warns} warn" if warns else ""
+    summary = f"{fails} fail(s), {skips} skip{warn_part}, {oks} ok"
     if fails:
         print(f"{summary} — pre-check FAILED. Refusing to proceed.")
     else:

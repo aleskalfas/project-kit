@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://project-kit/capabilities/project-management/label-contributions.schema.json",
+  "title": "Label-contribution declaration — schema companion",
+  "description": "JSON Schema for a capability's `label-contributions.yaml` (shipped at `.pkit/capabilities/<cap>/label-contributions.yaml`). Per project-management:DEC-042, a capability declares the custom labels it needs, each pairing a stable `id` with a `default_name`, `color`, and `description`; pm provisions them at bootstrap and warns at pre-check when one is missing, collecting them by walking the manifest-registered capabilities. The matching declaration in `schemas/` documents the format and is paired with this validator.",
+  "type": "object",
+  "required": ["schema_version", "labels"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "description": "The declaration-format version. pm reads version 1; a contributor pinned to a different version has its declaration skipped-and-warned at collect time (the read-time compatibility check, DEC-042 D2).",
+      "type": "integer",
+      "const": 1
+    },
+    "labels": {
+      "description": "List of label requirements. An empty list is valid (a capability that ships the file but declares no label).",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "default_name", "color", "description"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "Stable handle for the contribution. A consumer resolves the label's name through `resolve_contributed_label(id)` rather than hard-coding the text (DEC-042 D5), so a future adopter override can relocate the name behind the seam. Kebab-case.",
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "default_name": {
+            "description": "The label's default GitHub name (what bootstrap creates and pre-check checks for). An adopter override (v2) can relocate it; v1 uses this value.",
+            "type": "string",
+            "minLength": 1
+          },
+          "color": {
+            "description": "The label's GitHub colour — six hexadecimal digits, no leading `#`.",
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{6}$"
+          },
+          "description": {
+            "description": "The label's GitHub description text.",
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}
