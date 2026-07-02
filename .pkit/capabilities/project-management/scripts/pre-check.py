@@ -222,7 +222,14 @@ def _run_all_checks(capability_root: Path) -> list[CheckResult]:
     has_board = bool(config and config.get("has_projects_v2_board"))
     if has_board:
         board_id = config.get("projects_v2_board_id") if config else None
-        results.append(_check_board(board_id))
+        # Thread the repo's OWNER so `_check_board` can resolve an org-owned
+        # board (#444). `_resolve_repo_name_with_owner` returns `owner/name`; the
+        # owner segment is what `gh project view --owner` needs. A `<unresolved>`
+        # result has no `/`, so `owner` stays None and the check falls back to the
+        # cache (if present) or an ownerless view.
+        name_with_owner = _resolve_repo_name_with_owner()
+        board_owner = name_with_owner.split("/", 1)[0] if "/" in name_with_owner else None
+        results.append(_check_board(board_id, config=config, owner=board_owner))
     else:
         results.append(
             CheckResult(
@@ -496,7 +503,11 @@ def _check_repo_accessible() -> CheckResult:
     return CheckResult("repo accessible", "ok", name)
 
 
-def _check_board(board_id: int | str | None) -> CheckResult:
+def _check_board(
+    board_id: int | str | None,
+    config: dict | None = None,
+    owner: str | None = None,
+) -> CheckResult:
     if board_id is None:
         return CheckResult(
             "Projects v2 board id",
@@ -507,23 +518,58 @@ def _check_board(board_id: int | str | None) -> CheckResult:
                 "the board number from `gh project list`."
             ),
         )
-    # `gh project view` accepts the board number and a --owner.
-    # We don't know the owner here without additional config; rely on
-    # `gh project view <id>` working with the default org.
+
+    # Resolving an ORG-OWNED board (#444). The prior check ran a bare
+    # `gh project view <n>` with no `--owner`, which false-negatives on an
+    # org-owned board: an ownerless `gh project view 2` fails, while
+    # `gh project view 2 --owner <org>` (or the cached node id) resolves it.
+    # The runtime create path already gets this right —
+    # `create-issue._resolve_project_node_id` is cache-first on
+    # `projects_v2_node_id`, and `_gh_add_to_board` threads `--owner`. This
+    # health check mirrors that ordering so it accepts exactly the boards the
+    # runtime accepts.
+    #
+    # CHOICE (cache-first, then owner-threaded fallback): trust a cached
+    # `projects_v2_node_id` as sufficient evidence the board resolves before
+    # making any API call. The tradeoff is CACHE STALENESS vs. an extra
+    # owner-threaded round-trip — a cached id could in principle be stale (the
+    # board deleted/recreated since adoption). We accept that here deliberately:
+    # (a) the runtime create path trusts the SAME cache to seed board fields, so
+    # a health check that distrusted it would false-alarm on a config the
+    # runtime happily uses — the check must not be stricter than the thing it
+    # gates; and (b) pre-check is read-only, so a stale-cache pass surfaces at
+    # the first real board write (which re-resolves), not as silent corruption.
+    # On a cache MISS we live-resolve with `--owner` threaded from the repo's
+    # `owner/name`, which is what fixes the org-owned false-negative.
+    cached_node_id = config.get("projects_v2_node_id") if isinstance(config, dict) else None
+    if isinstance(cached_node_id, str) and cached_node_id:
+        return CheckResult(
+            "Projects v2 board",
+            "ok",
+            f"board #{board_id} resolves (cached node id in config)",
+        )
+
+    view_args = ["gh", "project", "view", str(board_id), "--format", "json"]
+    if owner:
+        view_args += ["--owner", owner]
     proc = subprocess.run(
-        ["gh", "project", "view", str(board_id), "--format", "json"],
+        view_args,
         capture_output=True,
         text=True,
         check=False,
     )
     if proc.returncode != 0:
+        owner_hint = f" --owner {owner}" if owner else ""
         return CheckResult(
             "Projects v2 board",
             "fail",
-            f"`gh project view {board_id}` failed",
+            f"`gh project view {board_id}{owner_hint}` failed",
             remediation=(
                 "Verify the board id with `gh project list --owner <org>`. "
-                "Update `projects_v2_board_id` in the config if it has moved."
+                "Update `projects_v2_board_id` in the config if it has moved. "
+                "For an org-owned board, ensure the repo's owner owns the board "
+                "(the check threads `--owner` from the repo), or cache the "
+                "board's node id as `projects_v2_node_id` at adoption."
             ),
         )
     return CheckResult("Projects v2 board", "ok", f"board #{board_id} resolves")
