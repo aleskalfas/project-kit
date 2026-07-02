@@ -3,7 +3,13 @@
 Every pm script that shells out to `gh` routes through this module so the
 adopter's `project/config.yaml` `gh:` block — not ambient shell state —
 determines which host and owner the call lands on. The public surface:
-`gh_env`, `gh_owner_flag`, `gh_run`, `gh_get_issue`, `load_adopter_config`.
+`gh_env`, `gh_owner_flag`, `gh_run`, `gh_project_run`, `gh_get_issue`,
+`load_adopter_config`.
+
+`gh project` calls route through the `gh_project_run` sole-constructor (not
+`gh_run` directly): unlike `gh issue create`, `gh project` does not infer the
+host from the repo remote and needs an explicit `--owner` for an org-owned
+board, so the constructor always splices both (per DEC-023 + #453).
 
 Adopter config shape (both fields optional; absence = delegate to ambient):
 
@@ -64,6 +70,49 @@ def gh_owner_flag(config: dict[str, Any]) -> list[str]:
     if isinstance(owner, str) and owner:
         return ["--owner", owner]
     return []
+
+
+def gh_project_run(
+    args: list[str],
+    config: dict[str, Any],
+    *,
+    fallback_owner: str | None = None,
+    **kwargs: Any,
+) -> subprocess.CompletedProcess[str]:
+    """The **sole constructor** for a `gh project` invocation (host + owner spliced).
+
+    `gh project` subcommands — unlike `gh issue create` — do NOT infer the host
+    from the repo remote and REQUIRE an explicit `--owner` for an org-owned board.
+    A raw `subprocess.run(["gh", "project", ...])` therefore lands on
+    `github.com` with no owner and false-negatives on a GitHub Enterprise host or
+    an org-owned board (the #453 failure). Routing every `gh project` call through
+    this one constructor makes that regression structurally unreachable — the
+    ADR-026 axis-label-seam pattern applied to project calls: no call site
+    string-appends `--owner` or picks a host itself.
+
+    What it splices:
+
+    * **host** — always, by delegating to :func:`gh_run` (which threads
+      `GH_HOST` from `config['gh']['host']`, config-wins-over-ambient per DEC-023).
+    * **owner** — prefer `config['gh']['default_owner']` (via
+      :func:`gh_owner_flag`); else the caller's `fallback_owner` (derived from the
+      issue URL or the repo remote); else no `--owner` at all (delegating to
+      `gh`'s own default-owner behaviour, the pre-#453 ownerless path). This is
+      the same precedence the ad-hoc `_resolve_board_owner` helpers already use,
+      lifted into the constructor so no call site re-implements it.
+
+    `args` MUST NOT already contain `--owner` — this constructor owns that flag.
+    Callers pass the bare `["gh", "project", <verb>, ...]` argv and their derived
+    owner as `fallback_owner`; the constructor decides the effective owner and
+    splices it after the argv (before any trailing kwargs to `gh_run`).
+
+    Returns the CompletedProcess unchanged (via :func:`gh_run`); callers interpret
+    exit code and stdout/stderr per the operation's contract.
+    """
+    owner_flag = gh_owner_flag(config)
+    if not owner_flag and fallback_owner:
+        owner_flag = ["--owner", fallback_owner]
+    return gh_run([*args, *owner_flag], config, **kwargs)
 
 
 def gh_run(

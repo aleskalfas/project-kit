@@ -7,11 +7,13 @@ node id resolves). The runtime create path already gets this right —
 `create-issue._resolve_project_node_id` is cache-first on `projects_v2_node_id`
 and `_gh_add_to_board` threads `--owner`. This mirrors that ordering.
 
-These exercise `_check_board` directly with `subprocess.run` monkeypatched, so
-no network is touched. They pin: the cache short-circuits (no gh call); a cache
-miss threads `--owner` and passes for an org-owned board; the repo-owned board
-path (owner threaded, view succeeds) is unchanged; and a genuine failure still
-reports `fail`.
+Since #453, `_check_board` routes its live view through the `gh_project_run`
+sole-constructor (which threads `GH_HOST` and splices `--owner`), so these
+exercise `_check_board` with `gh_project_run` monkeypatched (not `subprocess.run`
+directly), so no network is touched. They pin: the cache short-circuits (no gh
+call); a cache miss threads `--owner` and passes for an org-owned board; a GHES
+config reaches the constructor host-and-owner-complete; the repo-owned board path
+is unchanged; and a genuine failure still reports `fail`.
 """
 
 from __future__ import annotations
@@ -58,22 +60,40 @@ def test_check_board_cached_node_id_short_circuits_no_gh_call(pc, monkeypatch) -
     def boom(*a, **k):  # pragma: no cover — must not be reached on a cache hit
         raise AssertionError("no gh call may run when projects_v2_node_id is cached")
 
-    monkeypatch.setattr(pc.subprocess, "run", boom)
+    monkeypatch.setattr(pc, "gh_project_run", boom)
     result = pc._check_board(2, config={"projects_v2_node_id": "PVT_cached"})
     assert result.status == "ok"
     assert "cached node id" in result.detail
 
 
+def _patch_project_run(pc, monkeypatch, captured: dict):
+    """Monkeypatch `pc.gh_project_run` to record the argv+config it is called with.
+
+    `_check_board` now routes through the `gh_project_run` sole-constructor
+    (#453), which owns host-threading and owner-splicing. These tests exercise
+    `_check_board`'s use of the constructor, not the constructor's internals
+    (those live in test_pm_gh_helper.py) — so the fake models what the real
+    constructor would produce: it splices `--owner` from `gh.default_owner` (config)
+    or the `fallback_owner` the caller passes, whichever resolves first.
+    """
+    def fake_project_run(args, config, *, fallback_owner=None, **kwargs):
+        gh_block = config.get("gh") if isinstance(config, dict) else None
+        default_owner = gh_block.get("default_owner") if isinstance(gh_block, dict) else None
+        owner = default_owner or fallback_owner
+        argv = [*args, *(["--owner", owner] if owner else [])]
+        captured["cmd"] = argv
+        captured["config"] = config
+        captured["fallback_owner"] = fallback_owner
+        return captured["proc_for"](argv)
+
+    monkeypatch.setattr(pc, "gh_project_run", fake_project_run)
+
+
 def test_check_board_empty_cache_falls_through_to_live_view(pc, monkeypatch) -> None:
     """An empty-string cache value is treated as absent → live-resolve (not a
     spurious pass on a blank node id)."""
-    captured: dict = {}
-
-    def fake_run(cmd, *a, **k):
-        captured["cmd"] = cmd
-        return _Proc(0, stdout='{"id": "PVT_live", "number": 2}')
-
-    monkeypatch.setattr(pc.subprocess, "run", fake_run)
+    captured: dict = {"proc_for": lambda cmd: _Proc(0, stdout='{"id": "PVT_live", "number": 2}')}
+    _patch_project_run(pc, monkeypatch, captured)
     result = pc._check_board(2, config={"projects_v2_node_id": ""}, owner="an-org")
     assert result.status == "ok"
     assert captured["cmd"][:3] == ["gh", "project", "view"]
@@ -81,30 +101,43 @@ def test_check_board_empty_cache_falls_through_to_live_view(pc, monkeypatch) -> 
 
 def test_check_board_org_owned_threads_owner_and_passes(pc, monkeypatch) -> None:
     """#444 core: on a cache miss the check threads `--owner`, which resolves an
-    org-owned board that a bare `gh project view` would false-negative on."""
-    captured: dict = {}
-
-    def fake_run(cmd, *a, **k):
-        captured["cmd"] = cmd
+    org-owned board that a bare `gh project view` would false-negative on. The
+    owner reaches the constructor as `fallback_owner` (no `gh.default_owner` here)."""
+    def proc_for(cmd):
         # Model the org-owned board: only the owner-threaded view succeeds.
         if "--owner" in cmd:
             return _Proc(0, stdout='{"id": "PVT_org", "number": 2}')
         return _Proc(1, stderr="owner-less lookup failed")
 
-    monkeypatch.setattr(pc.subprocess, "run", fake_run)
+    captured: dict = {"proc_for": proc_for}
+    _patch_project_run(pc, monkeypatch, captured)
     result = pc._check_board(2, config={}, owner="ai-platform-incubation")
     assert result.status == "ok"
+    assert captured["fallback_owner"] == "ai-platform-incubation"
     assert "--owner" in captured["cmd"]
+    assert captured["cmd"][captured["cmd"].index("--owner") + 1] == "ai-platform-incubation"
+
+
+def test_check_board_ghes_host_and_default_owner_threaded(pc, monkeypatch) -> None:
+    """A GHES-shaped config (host != github.com, `gh.default_owner` set) reaches
+    the constructor with its full config so the call runs under the configured
+    host, and `gh.default_owner` supplies `--owner` (#453)."""
+    captured: dict = {"proc_for": lambda cmd: _Proc(0, stdout='{"id": "PVT_ghes", "number": 2}')}
+    _patch_project_run(pc, monkeypatch, captured)
+    config = {"gh": {"host": "github.ibm.com", "default_owner": "ai-platform-incubation"}}
+    result = pc._check_board(2, config=config, owner="repo-derived-owner")
+    assert result.status == "ok"
+    # The full config (carrying gh.host) is handed to the constructor, which
+    # threads GH_HOST from it; and gh.default_owner supplies --owner.
+    assert captured["config"] is config
     assert captured["cmd"][captured["cmd"].index("--owner") + 1] == "ai-platform-incubation"
 
 
 def test_check_board_repo_owned_owner_threaded_passes(pc, monkeypatch) -> None:
     """The repo-owned board path is unchanged: the owner-threaded view succeeds
     and the check passes (the owner is harmless when the board is repo-owned)."""
-    def fake_run(cmd, *a, **k):
-        return _Proc(0, stdout='{"id": "PVT_repo", "number": 5}')
-
-    monkeypatch.setattr(pc.subprocess, "run", fake_run)
+    captured: dict = {"proc_for": lambda cmd: _Proc(0, stdout='{"id": "PVT_repo", "number": 5}')}
+    _patch_project_run(pc, monkeypatch, captured)
     result = pc._check_board(5, config={}, owner="a-user")
     assert result.status == "ok"
     assert "board #5 resolves" in result.detail
@@ -115,10 +148,8 @@ def test_check_board_genuine_failure_still_fails(pc, monkeypatch) -> None:
     still reports `fail` — the fix widens what passes, it does not mask failures.
     The failure detail names the owner-threaded command so the remediation is
     actionable."""
-    def fake_run(cmd, *a, **k):
-        return _Proc(1, stderr="no such project")
-
-    monkeypatch.setattr(pc.subprocess, "run", fake_run)
+    captured: dict = {"proc_for": lambda cmd: _Proc(1, stderr="no such project")}
+    _patch_project_run(pc, monkeypatch, captured)
     result = pc._check_board(9, config={}, owner="an-org")
     assert result.status == "fail"
     assert "--owner an-org" in result.detail
@@ -128,13 +159,8 @@ def test_check_board_no_owner_no_cache_uses_ownerless_view(pc, monkeypatch) -> N
     """With neither a cache nor a resolvable owner, the check falls back to the
     bare (ownerless) `gh project view` — preserving the prior behaviour for the
     case where the owner could not be resolved (`<unresolved>`)."""
-    captured: dict = {}
-
-    def fake_run(cmd, *a, **k):
-        captured["cmd"] = cmd
-        return _Proc(0, stdout='{"id": "PVT_x", "number": 3}')
-
-    monkeypatch.setattr(pc.subprocess, "run", fake_run)
+    captured: dict = {"proc_for": lambda cmd: _Proc(0, stdout='{"id": "PVT_x", "number": 3}')}
+    _patch_project_run(pc, monkeypatch, captured)
     result = pc._check_board(3, config={}, owner=None)
     assert result.status == "ok"
     assert "--owner" not in captured["cmd"]
