@@ -75,6 +75,7 @@ _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import axis_labels  # noqa: E402
 from _lib import classification_rules  # noqa: E402
+from _lib import provenance  # noqa: E402
 from _lib import session_guard  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import (  # noqa: E402
@@ -142,7 +143,8 @@ def main() -> int:
     if issue is None:
         return 2
     title = str(issue.get("title", ""))
-    body = str(issue.get("body") or "")
+    # Strip the footer on read; the seam re-stamps one on write (ADR-036).
+    body = provenance.strip_footer(str(issue.get("body") or ""))
     current_labels = [
         lbl.get("name", "") if isinstance(lbl, dict) else str(lbl)
         for lbl in (issue.get("labels") or [])
@@ -295,7 +297,10 @@ def main() -> int:
         if not _gh_write_title(args.issue_number, new_title or "", config):
             return 3
     if body_changed:
-        if not _gh_write_body(args.issue_number, new_body or "", config):
+        stamped = provenance.stamp(
+            new_body or "", provenance.read_versions(capability_root)
+        )
+        if not _gh_write_body(args.issue_number, stamped, config):
             return 3
 
     print(f"\n[ok] #{args.issue_number}: updated.")

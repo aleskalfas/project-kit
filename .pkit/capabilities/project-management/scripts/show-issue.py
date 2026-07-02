@@ -41,6 +41,7 @@ from ruamel.yaml.error import YAMLError
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import axis_labels  # noqa: E402
+from _lib import provenance  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
@@ -137,7 +138,9 @@ def main() -> int:
 
 def _summarise(issue: dict, issue_types: dict, body_format: dict) -> dict:
     title = str(issue.get("title", ""))
-    body = str(issue.get("body") or "")
+    # Read-side strip (ADR-036): the agent composes edits against
+    # footer-free text, so it never sees or mishandles the footer bytes.
+    body = provenance.strip_footer(str(issue.get("body") or ""))
     labels = [
         lbl.get("name", "") if isinstance(lbl, dict) else str(lbl)
         for lbl in (issue.get("labels") or [])

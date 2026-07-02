@@ -2,7 +2,7 @@ schema_version: 2
 component:
   kind: capability
   name: project-management
-  version: 0.45.0
+  version: 0.46.0
 description: Project-management discipline realized from the pm-workflow methodology — issue hierarchy, state machine, body validation, naming conventions — encoded as schemas a methodology-agnostic engine (skills + agent) consumes at runtime.
 requires_backbone: ">=1.126.0,<2.0.0"
 aliases:

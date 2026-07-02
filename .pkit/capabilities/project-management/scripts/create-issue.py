@@ -63,6 +63,7 @@ from _lib.membership import (  # noqa: E402
     resolve_invoker_identity,
 )
 from _lib.milestone import resolve_milestone  # noqa: E402
+from _lib import provenance  # noqa: E402
 from _lib import session_guard  # noqa: E402
 from _lib.substrate_writes import milestone_create_args  # noqa: E402
 from _lib.placeholder_detection import (  # noqa: E402
@@ -525,6 +526,9 @@ def main() -> int:
             print("aborted.", file=sys.stderr)
             return 0
 
+    # Seam: stamp exactly one provenance footer onto the initial body (ADR-036).
+    body = provenance.stamp(body, provenance.read_versions(capability_root))
+
     # Invoke gh issue create.
     issue_url = _gh_create_issue(
         title=full_title,
@@ -556,6 +560,10 @@ def main() -> int:
     # written above is the record (the universal spine, DEC-039 D3). A single
     # decision point; the textual ref is written regardless of mode.
     new_issue_number = _extract_issue_number_from_url(issue_url)
+    if new_issue_number is not None:
+        # One-time immutable filing-version comment (DEC-041): the
+        # load-bearing record of the version this issue was born under.
+        print(provenance.post_filing_comment(new_issue_number, capability_root, config))
     containment = axis_labels.containment_mode(substrate_map)
     if (
         args.parent is not None

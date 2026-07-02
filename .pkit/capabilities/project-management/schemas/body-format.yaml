@@ -157,6 +157,40 @@ integration_marker:
   agent_managed: true
   removal_authorisation_severity: "[validation-severity:bypassable-with-audit]"
 
+# Methodology-managed version-provenance footer (per DEC-041 / ADR-036).
+# A sentinel-delimited region the capability's scripts maintain at the
+# foot of an issue/PR body; agents and humans never author or edit it.
+# The write seam (ADR-036) keeps exactly one region here via
+# strip-then-append-exactly-one; this entry is the read/validation-side
+# contract — how the region is recognised, stripped before scanning, and
+# shape-constrained so an un-stripped footer stays inert.
+provenance_marker:
+  start_marker: "<!-- pkit-provenance:start -->"
+  end_marker: "<!-- pkit-provenance:end -->"
+  position: |
+    Trailing: the region occupies the very end of the body, after all
+    content. The write seam (per ADR-036) appends exactly one region
+    there; nothing follows it.
+  agent_managed: true
+  strip_before_scan: true
+  strip_rule: |
+    Strip from `start_marker` through end-of-document before the body
+    validators and checkbox extractors scan. Stripping to EOF — rather
+    than matching a start/end pair — removes complete, partial, orphaned,
+    or doubled regions alike; it is the read/validation-side twin of the
+    write-side strip-then-append-exactly-one seam in ADR-036. Because the
+    footer is methodology-managed (agent_managed: true), it is exempt
+    from the required-section, checkbox, and universal body rules — it is
+    never validated as body content.
+  shape_constraints:
+    - "No leading list bullet (`- ` or `* `): the region must not parse as a list item or checkbox."
+    - "No Markdown heading (ATX `#` or setext) inside the region."
+    - "The separator line must not be able to render as a setext-heading underline (no bare `---`/`===` directly beneath a text line)."
+    - "No `file:line` reference token."
+    - "No surviving template-placeholder prose."
+    - "No checkbox (`- [ ]` / `- [x]`)."
+  misplacement_severity: "[validation-severity:warning]"
+
 checkbox_rules:
   validation_timing: |
     Every check is an audit record of validation by the actor who

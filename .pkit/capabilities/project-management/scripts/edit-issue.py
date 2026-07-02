@@ -50,6 +50,7 @@ _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib import session_guard  # noqa: E402
+from _lib import provenance  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
     check_membership,
@@ -184,7 +185,10 @@ def main() -> int:
         return 2
 
     current_title = str(issue.get("title", ""))
-    current_body = str(issue.get("body") or "")
+    # Work footer-free internally: strip any provenance region on read so
+    # the edit, validation, and --append all operate on real body content;
+    # the seam re-stamps exactly one footer on write (ADR-036).
+    current_body = provenance.strip_footer(str(issue.get("body") or ""))
 
     # Compute the new title + body.
     new_title = args.title if args.title is not None else current_title
@@ -243,7 +247,9 @@ def main() -> int:
         if not _gh_comment(args.issue_number, "\n".join(audit_lines)):
             return 3
 
-    if not _gh_apply_edit(args.issue_number, title=new_title, body=new_body, current_title=current_title, config=config):
+    # Seam: write exactly one current footer (strip-then-append-one).
+    stamped_body = provenance.stamp(new_body, provenance.read_versions(capability_root))
+    if not _gh_apply_edit(args.issue_number, title=new_title, body=stamped_body, current_title=current_title, config=config):
         return 3
 
     print(f"\n[ok] edited #{args.issue_number}.")

@@ -20,6 +20,7 @@ from pathlib import Path
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
+from _lib import provenance
 from _lib import session_guard
 from _lib.criterion_ops import Target, plan_batch
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config
@@ -75,7 +76,9 @@ def run_criterion_verb(*, verb: str, target_checked: bool) -> int:
     issue = gh_get_issue(args.issue_number, config, fields="title,body")
     if issue is None:
         return 2
-    body = str(issue.get("body") or "")
+    # Work footer-free: strip on read so criterion indices are unaffected;
+    # the seam re-stamps exactly one footer on write (ADR-036).
+    body = provenance.strip_footer(str(issue.get("body") or ""))
 
     # Context header (standard pm-script scaffolding).
     action = "tick" if target_checked else "untick"
@@ -112,7 +115,10 @@ def run_criterion_verb(*, verb: str, target_checked: bool) -> int:
             print("aborted.", file=sys.stderr)
             return 0
 
-    if not _gh_write_body(args.issue_number, plan.new_body or "", config):
+    stamped = provenance.stamp(
+        plan.new_body or "", provenance.read_versions(capability_root)
+    )
+    if not _gh_write_body(args.issue_number, stamped, config):
         return 3
 
     print(f"\n[ok] #{args.issue_number}: updated.")

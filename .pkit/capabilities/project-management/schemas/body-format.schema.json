@@ -10,6 +10,7 @@
     "bodies",
     "universal_body_rules",
     "integration_marker",
+    "provenance_marker",
     "checkbox_rules",
     "sub_task_promotion"
   ],
@@ -43,6 +44,10 @@
     "integration_marker": {
       "$ref": "#/$defs/integration_marker_block",
       "description": "Shape and semantics of the optional `Integration: integration/<slug>` pre-line that the agent stamps and removes on owning-issue designation."
+    },
+    "provenance_marker": {
+      "$ref": "#/$defs/provenance_marker_block",
+      "description": "Shape and semantics of the methodology-managed version-provenance footer (DEC-041 / ADR-036): a trailing sentinel-delimited region, stripped before scanning and shape-constrained so an un-stripped footer stays inert."
     },
     "checkbox_rules": {
       "$ref": "#/$defs/checkbox_rules_block",
@@ -140,6 +145,52 @@
         "removal_authorisation_severity": {
           "$ref": "validation-severity.schema.json#/$defs/severity_ref",
           "description": "Severity applied when a human removes the marker without author authorisation (MET-008 scope-change rule)."
+        }
+      }
+    },
+    "provenance_marker_block": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start_marker", "end_marker", "position", "agent_managed", "strip_before_scan", "strip_rule", "shape_constraints", "misplacement_severity"],
+      "properties": {
+        "start_marker": {
+          "type": "string",
+          "minLength": 1,
+          "description": "HTML-comment sentinel that opens the region."
+        },
+        "end_marker": {
+          "type": "string",
+          "minLength": 1,
+          "description": "HTML-comment sentinel that closes the region."
+        },
+        "position": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Where the region sits — trailing, at the very end of the body after all content."
+        },
+        "agent_managed": {
+          "type": "boolean",
+          "description": "Whether the capability's scripts own the region (agents and humans never author or edit it)."
+        },
+        "strip_before_scan": {
+          "type": "boolean",
+          "description": "Whether the body validators and checkbox extractors strip the region before scanning."
+        },
+        "strip_rule": {
+          "type": "string",
+          "minLength": 1,
+          "description": "How to strip the region — from start_marker through end-of-document, removing complete/partial/orphaned/doubled regions alike."
+        },
+        "shape_constraints": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1,
+          "uniqueItems": true,
+          "description": "What the emitted footer must not contain, so an un-stripped footer cannot collide with a scanned construct."
+        },
+        "misplacement_severity": {
+          "$ref": "validation-severity.schema.json#/$defs/severity_ref",
+          "description": "Severity applied when a provenance region appears anywhere but its sanctioned trailing position."
         }
       }
     },
