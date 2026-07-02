@@ -411,3 +411,31 @@ def test_no_capability_root_no_placeholder_check(
     assert placeholder_findings == [], (
         "placeholder check must be skipped when capability_root is None"
     )
+
+
+# --- regression: _gather_closing_type_labels must receive config --------
+
+
+def test_gather_closing_type_labels_threads_config(vp, monkeypatch) -> None:
+    """Regression for the `config` NameError in _gather_closing_type_labels.
+
+    The function referenced `config` without receiving it, so any PR with a
+    `Closes #N` crashed validate-pr (NameError) *before* the DEC-031
+    placeholder check could run — silently disabling skeleton-body
+    rejection for PRs. The fix threads `config` in as a parameter; this
+    locks it: config must be passed through to the issue fetch, and the
+    call must not raise.
+    """
+    seen: dict[str, object] = {}
+
+    def fake_get_issue(n: int, config: dict) -> dict:
+        seen["config"] = config
+        return {"labels": [{"name": "type:feature"}, {"name": "priority:High"}]}
+
+    monkeypatch.setattr(vp, "_gh_get_issue", fake_get_issue)
+
+    cfg = {"gh": {"host": "example.com"}}
+    result = vp._gather_closing_type_labels([7], cfg)
+
+    assert result == ["type:feature"]
+    assert seen["config"] is cfg  # threaded through, not an undefined name

@@ -51,6 +51,7 @@ from ruamel.yaml.error import YAMLError
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import axis_labels  # noqa: E402
+from _lib import classification_rules  # noqa: E402
 from _lib import containment  # noqa: E402
 from _lib.containment import link_sub_issue  # noqa: E402
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
@@ -242,6 +243,30 @@ def main() -> int:
     if not isinstance(type_entry, dict):
         print(
             f"error: issue-types.yaml has no entry for type {args.type!r}.",
+            file=sys.stderr,
+        )
+        return 2
+
+    # Refuse the kind/structural mismatch DEC-011 declares a hard-reject, up
+    # front before any gh mutation. An epic/feature/umbrella carries kind
+    # `feature` by definition, so filing one with a non-feature `--kind` would
+    # manufacture the mismatch that breaks the closing PR's Conventional-Commits
+    # `<type>` derivation (open-pr / validate-pr read the closing issue's
+    # `type:*` label). The check reads `allowed_structural_types_per_kind` via
+    # the shared predicate — the SAME reader set-field and validate-issue use.
+    # A kind permitted on the type (any kind on `task`; `feature` on the others)
+    # passes. Empty/absent classification degrades permissively (nothing to
+    # ground the refusal on).
+    if not classification_rules.kind_allowed_for_structural_type(
+        args.kind, args.type, classification
+    ):
+        print(
+            f"error: --kind {args.kind!r} is not valid for structural type "
+            f"{args.type!r} — epic/feature/umbrella carry kind 'feature' by "
+            "definition (classification.yaml structural_restriction / "
+            "[project-management:DEC-011-title-formats]). File this as a Task "
+            "(--type task) if it is genuinely bug/docs/test/refactor/chore work, "
+            "or as a --kind feature cluster if it delivers a coherent capability.",
             file=sys.stderr,
         )
         return 2
@@ -882,8 +907,8 @@ def _title_prefix_for(
     structural types (epic/feature/umbrella) carry kind ``feature`` implicitly and
     use their own ``title_prefix`` (with ``title_case`` applied).
     """
-    if _kind_drives_title(structural_type, classification):
-        prefix_by_value = _title_prefix_by_value(classification)
+    if classification_rules.kind_drives_title(structural_type, classification):
+        prefix_by_value = classification_rules.title_prefix_by_value(classification)
         mapped = prefix_by_value.get(kind)
         if mapped:
             return str(mapped)
@@ -891,45 +916,6 @@ def _title_prefix_for(
     if type_entry.get("title_case", "title") == "upper":
         rendered = rendered.upper()
     return rendered
-
-
-def _title_prefix_by_value(classification: dict) -> dict:
-    """The ``axes.type.title_prefix_by_value`` map from classification.yaml."""
-    axes = classification.get("axes") if isinstance(classification, dict) else None
-    type_axis = axes.get("type") if isinstance(axes, dict) else None
-    mapping = type_axis.get("title_prefix_by_value") if isinstance(type_axis, dict) else None
-    return mapping if isinstance(mapping, dict) else {}
-
-
-def _kind_drives_title(structural_type: str, classification: dict) -> bool:
-    """Whether the ``type`` (kind) axis drives the title prefix for this type.
-
-    Reads classification.yaml's ``structural_restriction`` rather than hardcoding
-    ``task``: a structural type is kind-driven iff it is reachable by a kind other
-    than the default ``feature`` (today only ``task`` is, per
-    ``allowed_structural_types_per_kind``). Those types take their prefix from the
-    kind label; the rest carry kind ``feature`` and use their structural prefix.
-    Empty/absent classification ⇒ ``False`` (degrade to the structural prefix).
-    """
-    prefix_by_value = _title_prefix_by_value(classification)
-    axes = classification.get("axes") if isinstance(classification, dict) else None
-    type_axis = axes.get("type") if isinstance(axes, dict) else None
-    restriction = (
-        type_axis.get("structural_restriction") if isinstance(type_axis, dict) else None
-    )
-    allowed = (
-        restriction.get("allowed_structural_types_per_kind")
-        if isinstance(restriction, dict)
-        else None
-    )
-    if not isinstance(allowed, dict):
-        return False
-    for kind, types in allowed.items():
-        if kind == DEFAULT_KIND or kind not in prefix_by_value:
-            continue
-        if isinstance(types, list) and structural_type in types:
-            return True
-    return False
 
 
 def _infer_structural_type(title: str, issue_types: dict) -> str | None:
@@ -1241,7 +1227,20 @@ def _resolve_project_node_id(board_id: int, owner: str | None, config: dict) -> 
     half of that one resolution shape. A READ only; returns ``None`` when the
     board does not resolve (the hook then skips with "no board configured"
     rather than guessing).
+
+    Cache-first (#310): the board → node-id mapping is invariant, so the resolved
+    id is cached in adopter config as `projects_v2_node_id` at adoption time
+    (bootstrap / adopt-existing). When that cache is present this returns it and
+    SKIPS the per-create `gh project view` round-trip — the whole point of #310.
+    Only on a cache MISS does it live-resolve. Either path yields the SAME node id;
+    the cache just removes a synchronous read from the hot create path. (This
+    read-through does not write the cache back — population is the adoption
+    ceremonies' job, so a cache miss stays a live read without a create-time write.)
     """
+    cached = config.get("projects_v2_node_id") if isinstance(config, dict) else None
+    if isinstance(cached, str) and cached:
+        return cached
+
     view_args = ["gh", "project", "view", str(board_id), "--format", "json"]
     if owner:
         view_args += ["--owner", owner]

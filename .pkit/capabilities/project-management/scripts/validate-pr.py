@@ -155,7 +155,7 @@ def main() -> int:
 
     # Fetch closing-issue type labels (best-effort) for cross-check.
     closing_issues = _extract_closing_issues(pr_body)
-    closing_type_labels = _gather_closing_type_labels(closing_issues)
+    closing_type_labels = _gather_closing_type_labels(closing_issues, config)
 
     findings = _validate_pr(
         pr_title=pr_title,
@@ -335,7 +335,7 @@ def _extract_closing_issues(pr_body: str) -> list[int]:
     return out
 
 
-def _gather_closing_type_labels(closing_issues: list[int]) -> list[str]:
+def _gather_closing_type_labels(closing_issues: list[int], config: dict) -> list[str]:
     out: list[str] = []
     for n in closing_issues:
         issue = _gh_get_issue(n, config)

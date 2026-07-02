@@ -71,6 +71,9 @@ workstreams:                          # one entry per allowed workstream value
   - cli
 # Optional:
 # projects_v2_board_id: 12
+# projects_v2_node_id: PVT_xxx        # board→node-id cache; populated at adoption
+#                                     # (bootstrap writes it; adopt-existing recommends
+#                                     # it) so create-issue skips a per-create read
 # code_path_to_doc_mapping: { src/foo/**: [docs/foo.md] }
 # pre_close_triage_lead_days: 3
 # gh:                                 # per DEC-023 — both fields optional
@@ -222,6 +225,12 @@ For the standard development flow, seven verb-subject commands compose over `mov
 
 All seven are idempotent at the level of observable state — re-running after a partial failure recovers cleanly. Audit comments use DEC-024's template-stamp markers (`<!-- pkit-hook: <name> -->`) so re-posts detect existing entries and skip.
 
+#### PR-title conv-types — the standard set, and why decision-record PRs land as `docs`
+
+PR titles are Conventional Commits and are restricted to the **standard type set** — `feat | fix | docs | test | refactor | chore | ci` — for changelog and tooling compatibility (`schemas/titles.yaml`, the `pr` format entry). Merges are squash-with-delete-branch, so the **PR title becomes the landed commit subject** on `main` (`schemas/git-conventions.yaml`, the `merge` entry); keeping PR titles to the standard set keeps `git log` history parseable by standard CC tooling.
+
+This is intentionally narrower than the **branch** conv-type set. The branch pattern additionally permits `decision` (`schemas/git-conventions.yaml`, the `branch-name` entry) per COR-008, so a decision-record branch may be named `decision/<n>-…`. But `decision` is **not** a PR-title type: a decision-record PR is deliberately titled **`docs(<scope>): …`** — e.g. `docs(decisions): …` or `docs(pm): …`. So a `decision/236-…` branch is fine, and its squashed PR/commit subject lands as `docs(…)`. Authors filing a decision-record PR should title it `docs`, not `decision`, up front — the `pr`-title validator hard-rejects a `decision(…)` title.
+
 #### Batch substrate primitives — `check-criterion` / `uncheck-criterion` / `set-field` (per [project-management:DEC-038-criterion-addressing])
 
 Three narrow, batch-capable verbs replace the whole-body fetch-edit-resend that `edit-issue` forces for a single checkbox flip or field change. Each takes narrow input, validates the **whole batch up front**, refuses before any mutation on a hard inconsistency, and applies **idempotently** so a half-applied batch recovers by re-running. Output is a single clean line per result — nothing to pipe through `grep`.
@@ -258,6 +267,25 @@ pkit pm set-field 239 --parent 42            # rewrite the parent-ref line to Fe
 All three accept `--dry-run` (validate + show the plan, write nothing) and `--yes` (skip the confirmation prompt), and run the DEC-021 membership gate at startup.
 
 **`close-issue`** is *not* in the seven-command palette — it handles closure outside forward-progress flow: won't-do / abandonment (`--mode=wont-do`), the post-PR-merge cascade hook (`--mode=pr-merge`), and **cascade-eligibility closure** of a container (epic/feature/umbrella) once all its children are closed and its own checkboxes are ticked (`--mode=cascade-eligibility-close`, a non-skippable DEC-007 gate).
+
+#### Milestone lifecycle — `create-milestone` / `close-milestone` (per [project-management:DEC-016-time-bound-containers])
+
+| Command | What it does |
+|---|---|
+| `create-milestone <category> --name "<name>" [--close-trigger T] [--due-on YYYY-MM-DD]` | File a new Milestone in a declared `milestone_categories:` category. Computes the next number, composes the title from the category's `title_format`, and writes the `Close trigger:` first body line. |
+| `close-milestone <n> [--force]` | Close an open Milestone (by number or exact title) through the validated path. |
+
+Both run the DEC-021 membership gate and the COR-039 foreign-repo guard at startup, route every `gh` call through the shared host/owner seam (DEC-023), and accept `--dry-run` (preview, write nothing) and `--yes` (skip the confirmation prompt).
+
+`close-milestone` respects the Milestone's **close-trigger**, read from the `Close trigger:` first line of the description (inferred for an inherited Milestone with no marker: a native due date ⇒ `date-based`, none ⇒ `content-based`, per `time-containers.yaml`):
+
+- **content-based** — closes only when every child issue is closed. An open child **holds** the close (refused) unless you pass `--force`.
+- **date-based** — the date is the trigger, so the Milestone closes even with open children; the command **warns** and lists them.
+- **either** — treated like content-based when open children remain (refuse unless `--force`).
+
+A Milestone's children are resolved the same way the rest of the capability resolves membership: the union of issues carrying the **native GitHub Milestone field** for it and issues whose body carries the textual `Milestone: [#<n>](../milestone/<n>)` ref. Because a Milestone has no comment thread, the audit note is **appended to the description** in the same PATCH that flips `state=closed` (idempotent on re-run), rather than posted as a comment the way `close-issue` does.
+
+> **Not yet automated:** date-based / `either` closes do **not** roll open children forward to the next Milestone (schema `rollforward_behaviour`) — `close-milestone` only warns and lists them, so reassign by hand for now. Automated rollforward, and surfacing "milestone now closeable" from the closure cascade when the last child EPIC closes, are follow-ups.
 
 **Review-mode resolution** is settled in [project-management:DEC-027-review-modes] (mode lookup) and [project-management:DEC-028-agent-as-approver-paths] (agent gate).
 

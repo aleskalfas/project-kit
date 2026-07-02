@@ -41,6 +41,16 @@ def ci():
     return module
 
 
+@pytest.fixture(scope="module")
+def cr(ci):
+    # The kind ↔ structural / kind-drives-title predicates now live in _lib
+    # (extracted per COR-007 / issue #410). Loading create-issue puts SCRIPTS on
+    # sys.path, so _lib is importable here.
+    from _lib import classification_rules
+
+    return classification_rules
+
+
 # --- classification-faithful title prefix (#356, defect 2) -----------------
 # The real schemas drive these — a task's prefix follows the kind label; the
 # non-task structural types ignore kind and use their structural prefix.
@@ -128,11 +138,11 @@ def test_title_prefix_degrades_to_structural_on_empty_classification(ci) -> None
     assert ci._title_prefix_for(type_entry, {}, "task", "bug") == "Task"
 
 
-def test_kind_drives_title_true_only_for_task(ci) -> None:
-    assert ci._kind_drives_title("task", _CLASSIFICATION) is True
-    assert ci._kind_drives_title("epic", _CLASSIFICATION) is False
-    assert ci._kind_drives_title("feature", _CLASSIFICATION) is False
-    assert ci._kind_drives_title("umbrella", _CLASSIFICATION) is False
+def test_kind_drives_title_true_only_for_task(cr) -> None:
+    assert cr.kind_drives_title("task", _CLASSIFICATION) is True
+    assert cr.kind_drives_title("epic", _CLASSIFICATION) is False
+    assert cr.kind_drives_title("feature", _CLASSIFICATION) is False
+    assert cr.kind_drives_title("umbrella", _CLASSIFICATION) is False
 
 
 # --- parent-type detection + label (#356, defect 1) ------------------------
@@ -653,6 +663,147 @@ def test_resolve_project_node_id_none_when_board_unresolvable(ci, monkeypatch) -
 
     monkeypatch.setattr(ci.subprocess, "run", lambda *a, **k: _Proc())
     assert ci._resolve_project_node_id(7, "acme", config={}) is None
+
+
+# --- cache-first node-id resolution (#310) ---------------------------------
+# The board→node-id mapping is invariant, so it's cached in config as
+# `projects_v2_node_id` at adoption. create-issue consults the cache first and
+# only live-resolves (a `gh project view` read) on a cache miss.
+
+
+def test_resolve_project_node_id_uses_cached_config_without_gh_view(ci, monkeypatch) -> None:
+    """Cache HIT (#310): a `projects_v2_node_id` in config is returned directly and
+    NO `gh project view` (subprocess) call is issued — the per-create read is skipped."""
+    def boom(*a, **k):  # pragma: no cover — must not be reached on a cache hit
+        raise AssertionError("no gh call may run when projects_v2_node_id is cached")
+
+    monkeypatch.setattr(ci.subprocess, "run", boom)
+    node_id = ci._resolve_project_node_id(
+        7, "acme", config={"projects_v2_node_id": "PVT_cached"}
+    )
+    assert node_id == "PVT_cached"
+
+
+def test_resolve_project_node_id_live_resolves_on_cache_miss(ci, monkeypatch) -> None:
+    """Cache MISS (field absent): fall back to the live `gh project view` read,
+    preserving the pre-#310 behaviour exactly."""
+    captured: dict = {}
+
+    class _Proc:
+        returncode = 0
+        stdout = '{"id": "PVT_live", "number": 7}'
+        stderr = ""
+
+    def fake_run(cmd, *a, **k):
+        captured["cmd"] = cmd
+        return _Proc()
+
+    monkeypatch.setattr(ci.subprocess, "run", fake_run)
+    node_id = ci._resolve_project_node_id(7, "acme", config={})
+    assert node_id == "PVT_live"
+    assert captured["cmd"][:3] == ["gh", "project", "view"]
+
+
+def test_resolve_project_node_id_empty_cache_falls_back_to_live(ci, monkeypatch) -> None:
+    """An empty-string cache value is treated as absent → live-resolve (not a
+    spurious empty node id)."""
+    ran = {"n": 0}
+
+    class _Proc:
+        returncode = 0
+        stdout = '{"id": "PVT_live"}'
+        stderr = ""
+
+    def fake_run(cmd, *a, **k):
+        ran["n"] += 1
+        return _Proc()
+
+    monkeypatch.setattr(ci.subprocess, "run", fake_run)
+    assert (
+        ci._resolve_project_node_id(7, "acme", config={"projects_v2_node_id": ""})
+        == "PVT_live"
+    )
+    assert ran["n"] == 1
+
+
+def test_main_board_path_uses_cached_node_id_no_project_view(
+    ci, tmp_path, monkeypatch
+) -> None:
+    """BOARD path end-to-end with `projects_v2_node_id` cached in config: main()
+    reaches the hook with the CACHED project_node_id and issues NO `gh project
+    view` call — the per-create read #310 eliminates on the common path."""
+    root = _stage_capability_tree(tmp_path, has_board=True)
+    # Cache the node id in the staged adopter config.
+    config_path = root / "project" / "config.yaml"
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8") + "projects_v2_node_id: PVT_cached\n",
+        encoding="utf-8",
+    )
+
+    project_view_calls = {"n": 0}
+
+    def fake_run(cmd, *args, **kwargs):
+        class _Proc:
+            returncode = 0
+            stdout = ""
+            stderr = ""
+
+        proc = _Proc()
+        if "issue" in cmd and "create" in cmd:
+            proc.stdout = "https://github.com/acme/repo/issues/42\n"
+        elif "project" in cmd and "item-add" in cmd:
+            proc.stdout = '{"id": "PVTI_newitem", "title": "x"}'
+        elif "project" in cmd and "view" in cmd:
+            project_view_calls["n"] += 1
+            proc.stdout = '{"id": "PVT_live", "number": 7}'
+        elif "repo" in cmd and "view" in cmd:
+            proc.stdout = "acme/repo"
+        return proc
+
+    monkeypatch.setattr(ci.subprocess, "run", fake_run)
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+    monkeypatch.setattr(
+        ci.sys,
+        "argv",
+        [
+            "create-issue.py",
+            "--type", "task",
+            "--title", "do a thing",
+            "--parent", "1",
+            "--workstream", "spyre",
+            "--capability-root", str(root),
+            "--yes",
+        ],
+    )
+
+    hooks_module = _hooks_module(ci)
+
+    captured_context: dict = {}
+    real_fire_hooks = ci.fire_hooks
+
+    def capturing_fire_hooks(event, context, config, **kwargs):
+        captured_context.update(context)
+        return real_fire_hooks(event, context, config, **kwargs)
+
+    monkeypatch.setattr(ci, "fire_hooks", capturing_fire_hooks)
+
+    class _WriteResult:
+        ok = True
+        detail = "set field"
+        error = None
+
+    monkeypatch.setattr(
+        hooks_module.substrate_writes,
+        "write_field_value",
+        lambda config, **kwargs: _WriteResult(),
+    )
+
+    rc = ci.main()
+    assert rc == 0
+    # The cache hit means NO `gh project view` was ever issued...
+    assert project_view_calls["n"] == 0
+    # ...and the context carries the CACHED id, not a live-resolved one.
+    assert captured_context["project_node_id"] == "PVT_cached"
 
 
 # --- main() integration: the create-context ASSEMBLY (#295) ----------------

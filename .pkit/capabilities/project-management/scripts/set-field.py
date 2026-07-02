@@ -74,6 +74,7 @@ from ruamel.yaml.error import YAMLError
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import axis_labels  # noqa: E402
+from _lib import classification_rules  # noqa: E402
 from _lib import provenance  # noqa: E402
 from _lib import session_guard  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
@@ -166,13 +167,17 @@ def main() -> int:
         # in a non-feature kind while leaving the structural prefix would
         # manufacture exactly the mismatch that breaks PR-conv-type derivation
         # (open-pr/validate-pr read the closing issue's type:* label). Check
-        # against `allowed_structural_types_per_kind` (the same lookup
-        # `_kind_drives_title` reads) before any mutation. `--kind feature` on
-        # those types is the allowed kind, so it passes here and lands as a
-        # no-op (label already type:feature, no prefix change).
+        # against `allowed_structural_types_per_kind` (the shared predicate in
+        # _lib/classification_rules — the SAME reader create-issue and
+        # validate-issue use) before any mutation. `--kind feature` on those
+        # types is the allowed kind, so it passes here and lands as a no-op
+        # (label already type:feature, no prefix change).
         structural_type = _infer_structural_type(title, issue_types, classification)
-        if structural_type is not None and not _kind_allowed_for_structural_type(
-            args.kind, structural_type, classification
+        if (
+            structural_type is not None
+            and not classification_rules.kind_allowed_for_structural_type(
+                args.kind, structural_type, classification
+            )
         ):
             errors.append(
                 f"kind {args.kind!r} is not valid for structural type "
@@ -469,10 +474,10 @@ def _plan_kind(
     # kind that reaches here is `feature` (the up-front gate refuses any other),
     # whose structural prefix already matches — so nothing to realign.
     structural_type = _infer_structural_type(title, issue_types, classification)
-    if structural_type is not None and _kind_drives_title(
+    if structural_type is not None and classification_rules.kind_drives_title(
         structural_type, classification
     ):
-        target_prefix = _title_prefix_by_value(classification).get(kind)
+        target_prefix = classification_rules.title_prefix_by_value(classification).get(kind)
         if target_prefix:
             realigned = _retitle_prefix(title, target_prefix)
             if realigned is not None and realigned != title:
@@ -501,81 +506,6 @@ def _retitle_prefix(title: str, target_prefix: str) -> str | None:
     if not m:
         return None
     return f"[{target_prefix}] {m.group(1)}"
-
-
-def _allowed_structural_types_per_kind(classification: dict) -> dict:
-    """The `axes.type.structural_restriction.allowed_structural_types_per_kind` map.
-
-    The single source of truth (classification.yaml) for which structural types
-    each kind may carry — the same table `_kind_drives_title` consults and that
-    DEC-011 names as the kind/structural restriction. Empty/absent ⇒ {}.
-    """
-    axes = classification.get("axes") if isinstance(classification, dict) else None
-    type_axis = axes.get("type") if isinstance(axes, dict) else None
-    restriction = (
-        type_axis.get("structural_restriction") if isinstance(type_axis, dict) else None
-    )
-    allowed = (
-        restriction.get("allowed_structural_types_per_kind")
-        if isinstance(restriction, dict)
-        else None
-    )
-    return allowed if isinstance(allowed, dict) else {}
-
-
-def _kind_allowed_for_structural_type(
-    kind: str, structural_type: str, classification: dict
-) -> bool:
-    """Whether `kind` may be carried by `structural_type` per the restriction.
-
-    Reads `allowed_structural_types_per_kind` (single source of truth). When the
-    table is empty/absent (a thin or board-less classification), there is no
-    restriction to enforce, so this returns True (permissive degrade — the
-    up-front gate refuses nothing it can't ground in the schema).
-    """
-    allowed = _allowed_structural_types_per_kind(classification)
-    if not allowed:
-        return True
-    types = allowed.get(kind)
-    if not isinstance(types, list):
-        # Kind absent from the table ⇒ no declared restriction for it; permit.
-        return True
-    return structural_type in types
-
-
-def _kind_drives_title(structural_type: str, classification: dict) -> bool:
-    """Whether the `type` (kind) axis drives the title prefix for this type.
-
-    Parity with create-issue's helper (#356): reads classification.yaml's
-    `structural_restriction` rather than hardcoding `task`. A structural type is
-    kind-driven iff it is reachable by a kind other than the default `feature`
-    (today only `task` is). Empty/absent classification ⇒ False (degrade to the
-    structural prefix — no realignment).
-    """
-    prefix_by_value = _title_prefix_by_value(classification)
-    allowed = _allowed_structural_types_per_kind(classification)
-    if not allowed:
-        return False
-    for kind, types in allowed.items():
-        if kind == "feature" or kind not in prefix_by_value:
-            continue
-        if isinstance(types, list) and structural_type in types:
-            return True
-    return False
-
-
-def _title_prefix_by_value(classification: dict) -> dict:
-    """The `axes.type.title_prefix_by_value` map from classification.yaml.
-
-    The same map create-issue's title composition reads, so the kind→prefix
-    coupling has one source of truth across filing and correction.
-    """
-    axes = classification.get("axes") if isinstance(classification, dict) else None
-    type_axis = axes.get("type") if isinstance(axes, dict) else None
-    mapping = (
-        type_axis.get("title_prefix_by_value") if isinstance(type_axis, dict) else None
-    )
-    return mapping if isinstance(mapping, dict) else {}
 
 
 def _plan_parent(body: str, parent_ref_line: str) -> tuple[str, FieldResult]:

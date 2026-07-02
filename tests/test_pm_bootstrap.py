@@ -201,3 +201,110 @@ def test_compute_plan_omits_state_labels_in_board_mode(
     assert state_creates == [], "Board mode: state labels should not be in creates"
     state_skipped = any("state:*" in msg for msg in plan.skipped_messages)
     assert state_skipped, "Board mode: should have a skip message for state:* labels"
+
+
+# --- projects_v2_node_id cache population (#310) ----------------------------
+# In board mode bootstrap resolves the invariant board→node-id mapping ONCE and
+# caches it in config so create-issue skips the per-create `gh project view` read.
+
+
+def test_compute_plan_plans_node_id_when_board_uncached(
+    bs, tmp_path, classification, monkeypatch
+) -> None:
+    """Board configured + no cached node id ⇒ the plan resolves + will cache it."""
+    monkeypatch.setattr(bs, "_fetch_existing_labels", lambda: set())
+    monkeypatch.setattr(
+        bs, "_resolve_project_node_id", lambda config, board_id: "PVT_resolved"
+    )
+    config = {"has_projects_v2_board": True, "projects_v2_board_id": 7}
+    plan = bs._compute_plan(
+        config=config,
+        classification=classification,
+        has_board=True,
+        with_starter_epic=False,
+        capability_root=tmp_path,
+    )
+    assert plan.board_node_id == "PVT_resolved"
+    assert plan.has_creates() is True
+
+
+def test_compute_plan_skips_node_id_when_already_cached(
+    bs, tmp_path, classification, monkeypatch
+) -> None:
+    """An already-cached projects_v2_node_id is left untouched — no re-resolution."""
+    monkeypatch.setattr(bs, "_fetch_existing_labels", lambda: set())
+
+    def boom(*a, **k):  # pragma: no cover — must not be reached when already cached
+        raise AssertionError("must not resolve when the node id is already cached")
+
+    monkeypatch.setattr(bs, "_resolve_project_node_id", boom)
+    config = {
+        "has_projects_v2_board": True,
+        "projects_v2_board_id": 7,
+        "projects_v2_node_id": "PVT_existing",
+    }
+    plan = bs._compute_plan(
+        config=config,
+        classification=classification,
+        has_board=True,
+        with_starter_epic=False,
+        capability_root=tmp_path,
+    )
+    assert plan.board_node_id is None
+    assert "already cached" in plan.board_node_id_note
+
+
+def test_compute_plan_no_node_id_in_label_fallback(
+    bs, tmp_path, classification, monkeypatch
+) -> None:
+    """Label-fallback mode (no board) ⇒ no node id resolved or cached (left absent)."""
+    schemas_dir = tmp_path / "schemas"
+    schemas_dir.mkdir()
+    (schemas_dir / "workflow.yaml").write_text(
+        "states:\n  - id: todo\n  - id: done\n", encoding="utf-8"
+    )
+    monkeypatch.setattr(bs, "_fetch_existing_labels", lambda: set())
+
+    def boom(*a, **k):  # pragma: no cover — must not be reached in label-fallback mode
+        raise AssertionError("no node id resolution in label-fallback mode")
+
+    monkeypatch.setattr(bs, "_resolve_project_node_id", boom)
+    plan = bs._compute_plan(
+        config={},
+        classification=classification,
+        has_board=False,
+        with_starter_epic=False,
+        capability_root=tmp_path,
+    )
+    assert plan.board_node_id is None
+    assert plan.board_node_id_note == ""
+
+
+def test_persist_project_node_id_writes_config_preserving_comments(bs, tmp_path) -> None:
+    """The cache write lands `projects_v2_node_id` in config and preserves comments
+    (ruamel round-trip, not typ='safe')."""
+    config_path = tmp_path / "project" / "config.yaml"
+    config_path.parent.mkdir(parents=True)
+    config_path.write_text(
+        "# adopter config comment\n"
+        "schema_version: 1\n"
+        "has_projects_v2_board: true\n"
+        "projects_v2_board_id: 7\n",
+        encoding="utf-8",
+    )
+    action = bs._persist_project_node_id(tmp_path, "PVT_xyz")
+    assert action.status == "created"
+    text = config_path.read_text(encoding="utf-8")
+    assert "projects_v2_node_id: PVT_xyz" in text
+    assert "# adopter config comment" in text  # comments survive the rewrite
+
+
+def test_persist_project_node_id_is_idempotent(bs, tmp_path) -> None:
+    """Re-running the cache write with the same id rewrites the same value once."""
+    config_path = tmp_path / "project" / "config.yaml"
+    config_path.parent.mkdir(parents=True)
+    config_path.write_text("schema_version: 1\n", encoding="utf-8")
+    bs._persist_project_node_id(tmp_path, "PVT_xyz")
+    bs._persist_project_node_id(tmp_path, "PVT_xyz")
+    text = config_path.read_text(encoding="utf-8")
+    assert text.count("projects_v2_node_id:") == 1

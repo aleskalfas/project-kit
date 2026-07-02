@@ -97,11 +97,12 @@ def test_invariant_missing_why_rejected() -> None:
 
 
 def test_invariant_unknown_subfield_rejected() -> None:
-    # additionalProperties false on the invariant object: no `applies-to`,
-    # no `severity` (both explicitly deferred per COR-035).
+    # additionalProperties false on the invariant object: `severity` stays
+    # deferred (COR-035), and the mis-spelled hyphenated `applies-to` is rejected
+    # (the recognised open-region field is `applies_to`, underscore, per COR-040).
     definition = _base_definition()
     definition["invariants"] = [
-        {"id": "x", "check": {"run": "c"}, "why": "w", "applies-to": ["open"]}
+        {"id": "x", "check": {"run": "c"}, "why": "w", "applies-to": "open"}
     ]
     assert _errors(definition) != []
 
