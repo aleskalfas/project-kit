@@ -233,6 +233,54 @@ def test_title_prefix_binding_resolves_known_values() -> None:
     assert axis_labels.resolve_write("type", "epic", AUJ_MAP) == "[Epic]"
 
 
+# --- the binding KIND accessor: axis_is_title_carried (#454) ---------------
+# A label writer consults this to honour the binding kind on the write path: a
+# `title-prefix`-bound axis lives in the TITLE, not a label, so the writer
+# contributes NO label for it — distinct from `resolve_write` (returns the
+# substrate string) and `axis_disposition` (served vs unsupported).
+
+# A `type` axis whose title-prefix remap DOES carry `feature: "[Feature]"` — the
+# #454 collision fixture (the AUJ reference map omits it; the adopter's real map
+# includes it, and `--kind feature` is the default kind that then resolves to a
+# `[Feature]` string).
+TYPE_TITLE_PREFIX_WITH_FEATURE = axis_labels.SubstrateMap(
+    axes={
+        "type": {"title-prefix": {"remap": {
+            "task": "[Task]", "epic": "[EPIC]",
+            "feature": "[Feature]", "umbrella": "[Umbrella]",
+        }}},
+        "priority": {"label": {"remap": {"High": "P0"}}},
+    }
+)
+
+
+def test_title_prefix_axis_is_title_carried() -> None:
+    """A `title-prefix`-bound axis is title-carried (writes no label)."""
+    assert axis_labels.axis_is_title_carried("type", AUJ_MAP) is True
+    assert axis_labels.axis_is_title_carried("type", TYPE_TITLE_PREFIX_WITH_FEATURE) is True
+
+
+def test_label_bound_axis_is_not_title_carried() -> None:
+    """A `label`-bound axis is label-carried, not title-carried — it still writes
+    its label (the greenfield-analogue path a brownfield adopter opts into)."""
+    assert axis_labels.axis_is_title_carried("priority", AUJ_MAP) is False
+
+
+def test_derive_and_unsupported_and_absent_are_not_title_carried() -> None:
+    """derive / unsupported / absent axes are not title-carried either (derive is
+    open/closed, unsupported/absent carry nothing) — only `title-prefix` is."""
+    assert axis_labels.axis_is_title_carried("state", AUJ_MAP) is False  # derive
+    assert axis_labels.axis_is_title_carried("workstream", AUJ_MAP) is False  # unsupported
+    partial = axis_labels.SubstrateMap(axes={"priority": {"label": {"remap": {"High": "P0"}}}})
+    assert axis_labels.axis_is_title_carried("type", partial) is False  # absent
+
+
+def test_greenfield_axis_is_not_title_carried() -> None:
+    """No map (greenfield) ⇒ every axis is label-carried, not title-carried."""
+    for axis in axis_labels.AXES:
+        assert axis_labels.axis_is_title_carried(axis, None) is False
+
+
 def test_no_map_resolve_write_is_greenfield_identity() -> None:
     """No map ⇒ resolve_write returns the kit's own label (greenfield identity);
     byte-identical to `label`."""

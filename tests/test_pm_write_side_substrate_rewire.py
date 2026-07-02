@@ -17,7 +17,9 @@ This file covers the create-issue / move-issue pair:
   * `create-issue._build_labels` — the applied-label list is constructed by
     `resolve_write` per axis. Under a present map it emits the adopter's MAPPED
     substrate labels and NEVER the kit's `type:`/`priority:`/`workstream:` labels;
-    an unsupported axis is omitted (advisory), not kit-written. A per-axis
+    an unsupported axis is omitted (advisory), not kit-written. A `title-prefix`-
+    bound axis is TITLE-carried, so it contributes NO label and NO advisory (#454)
+    — distinct from a degraded axis (omitted WITH an advisory). A per-axis
     `default:` seeds an axis the caller left blank. The resolved-by-axis map it
     returns is the single source the pre-flight display reads (G-2).
   * `move-issue._compute_plan` — the `state` write routes through
@@ -113,20 +115,25 @@ def test_create_issue_emits_mapped_priority_label_not_kit_label(ci) -> None:
     assert not any(lbl.startswith(("priority:", "type:", "workstream:")) for lbl in labels)
 
 
-def test_create_issue_emits_mapped_type_prefix_label(ci) -> None:
-    """`--kind task` (the classification `type` axis) resolves to `[Task]`,
-    the adopter's title-prefix substrate, never `type:task`."""
+def test_create_issue_title_prefix_type_writes_no_label(ci) -> None:
+    """A `title-prefix`-bound `type` axis is carried in the TITLE, not a label, so
+    `_build_labels` emits NO label for it — not even for a value that resolves to
+    a prefix like `[Task]` (#454). The prefix `[Task]` is a TITLE prefix (applied
+    by issue-types.yaml's `title_prefix`); the tracker has no `[Task]` LABEL, so
+    writing it as a `gh --label` would hard-fail. (Superseded the pre-#454 test
+    that asserted `labels == ["[Task]"]` — that emitted a non-existent label.)"""
     labels, _, resolved = ci._build_labels(
         kind="task",
         priority="High",
         workstream=None,
-        has_board=True,  # board ⇒ only the type axis is labelled
+        has_board=True,  # board ⇒ only the type axis would be labelled
         substrate_map=AUJ_MAP,
     )
-    assert labels == ["[Task]"]
-    # G-2: the resolved-by-axis map carries the same value the pre-flight
-    # display reads, so display and applied label cannot diverge.
-    assert resolved["type"] == "[Task]"
+    assert labels == []
+    # The title-carried axis is absent from the resolved-by-axis map — the
+    # pre-flight display reads "(not labelled …)" for it, and no bracket string
+    # ever reaches a label.
+    assert "type" not in resolved
 
 
 def test_create_issue_omits_unsupported_workstream_with_advisory(ci) -> None:
@@ -146,9 +153,14 @@ def test_create_issue_omits_unsupported_workstream_with_advisory(ci) -> None:
     assert "workstream" not in resolved
 
 
-def test_create_issue_omits_value_unresolvable_type_with_advisory(ci) -> None:
-    """`--kind feature` has no `[Feature]` prefix in the AUJ map (the fourth arm,
-    value-unresolvable) ⇒ omitted, advisory; never `type:feature`."""
+def test_create_issue_title_prefix_type_no_label_no_advisory(ci) -> None:
+    """`--kind feature` under the title-prefix-bound `type` axis writes NO label
+    and — crucially — emits NO advisory: the axis is title-carried (served in the
+    title), not DEGRADEd (#454). This is distinct from an unsupported/value-
+    unresolvable axis, which omits WITH an advisory. Before #454 this same call
+    resolved `feature` to the `[Feature]` STRING and applied it as a label, hard-
+    failing `gh` with `'[Feature]' not found`; now the whole axis is skipped
+    before resolution, so no bracket string is ever produced as a label."""
     labels, advisories, resolved = ci._build_labels(
         kind="feature",
         priority="High",
@@ -158,9 +170,9 @@ def test_create_issue_omits_value_unresolvable_type_with_advisory(ci) -> None:
     )
     assert labels == []
     assert "type:feature" not in labels
-    assert any("type" in a for a in advisories), advisories
-    # value-unresolvable type ⇒ absent from resolved-by-axis ⇒ display shows
-    # "(not labelled …)" (G-2: no independent re-resolution to diverge).
+    # Title-carried, not degraded ⇒ NO advisory for the type axis.
+    assert not any("type" in a for a in advisories), advisories
+    # Absent from resolved-by-axis ⇒ display shows "(not labelled …)".
     assert "type" not in resolved
 
 

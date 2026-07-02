@@ -706,7 +706,11 @@ def _build_labels(
       * a present map, axis unsupported / absent / value-unresolvable ⇒
         :data:`axis_labels.DEGRADE`, which is **omitted from the label list**
         (fail-closed — never coerced to a kit write) and recorded as an
-        advisory line.
+        advisory line;
+      * a present map, axis bound via ``title-prefix`` ⇒ the axis is carried in
+        the TITLE, not a label, so it contributes **no label** and no advisory
+        (:func:`axis_labels.axis_is_title_carried`, #454). This is distinct from
+        DEGRADE: the axis is served (in the title), just not label-carried.
 
     Where the adopter declared a per-axis ``default:`` and the resolved value
     is missing, the seam's :func:`axis_labels.axis_default` supplies it before
@@ -733,6 +737,17 @@ def _build_labels(
         axes_to_apply.append(("workstream", workstream))
 
     for axis, value in axes_to_apply:
+        # A `title-prefix`-bound axis is carried in the TITLE (applied via
+        # issue-types.yaml's `title_prefix`), not a label — so it contributes NO
+        # write-label (#454). Skipping here BEFORE resolution is deliberate: for
+        # such an axis `resolve_write` returns the prefix STRING (e.g. `[Feature]`
+        # for `--kind feature` when the map remaps `feature: "[Feature]"`), which
+        # a naive writer would apply as a `gh --label` — but the tracker has no
+        # bracket labels, so `gh issue create` hard-fails `'[Feature]' not found`.
+        # This is not a DEGRADE (the axis IS served, in the title); it is simply
+        # not a LABEL axis, so no advisory is emitted.
+        if axis_labels.axis_is_title_carried(axis, substrate_map):
+            continue
         # Apply the adopter's declared per-axis default only when the caller
         # gave no explicit value (workstream is the only nullable axis here;
         # type/priority always carry an argparse default).

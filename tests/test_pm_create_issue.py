@@ -1721,3 +1721,117 @@ def test_main_label_fallback_workstream_served_map_still_requires_workstream(
     )
 
     assert ci.main() == 2
+
+
+# --- #454: a title-prefix-bound axis writes NO label -----------------------
+# In brownfield with a `substrate-map.yaml` binding the `type` axis via
+# `title-prefix` (structural remap task:[Task], feature:[Feature], …),
+# `--kind feature` used to resolve `feature` through the `type` axis to the
+# STRING `[Feature]`, which `_build_labels` applied as a `gh --label` — but there
+# are no bracket labels (the brackets are TITLE prefixes), so `gh issue create`
+# hard-failed `'[Feature]' not found`. `--kind feature` (the default kind) is the
+# sole kind whose name collides with the structural-type remap key. The fix: a
+# title-prefix-bound axis is title-carried, so it contributes NO write-label.
+
+
+def _type_title_prefix_map(ci):
+    """A brownfield map binding `type` via title-prefix WITH a `feature:` entry.
+
+    This is the #454 collision shape (the reference AUJ map omits `feature`; the
+    adopter's real map includes it). `priority` is label-bound so the greenfield-
+    analogue label path stays exercised alongside the title-carried type axis.
+    """
+    return ci.axis_labels.SubstrateMap(
+        axes={
+            "type": {"title-prefix": {"remap": {
+                "task": "[Task]", "epic": "[EPIC]",
+                "feature": "[Feature]", "umbrella": "[Umbrella]",
+            }}},
+            "priority": {"label": {"remap": {"High": "P0", "Medium": "P1", "Low": "P2"}}},
+        }
+    )
+
+
+def test_build_labels_title_prefix_type_kind_feature_writes_no_label(ci) -> None:
+    """#454 core: `--kind feature` under a title-prefix-bound `type` axis writes
+    NO `[Feature]` label — the axis is title-carried, so it contributes no label
+    (and no advisory: it is served in the title, not degraded)."""
+    substrate_map = _type_title_prefix_map(ci)
+    labels, advisories, resolved_by_axis = ci._build_labels(
+        kind="feature",
+        priority="Medium",
+        workstream=None,
+        has_board=False,
+        substrate_map=substrate_map,
+    )
+    assert "[Feature]" not in labels
+    assert "type" not in resolved_by_axis
+    # Not a DEGRADE → no "unsupported" advisory for the type axis.
+    assert not any("type" in a for a in advisories)
+
+
+def test_build_labels_title_prefix_type_no_label_for_any_kind(ci) -> None:
+    """The title-carried skip is per-AXIS, not per-value: a kind whose value DOES
+    resolve to a prefix (`task` → `[Task]`) also writes no label — the whole
+    `type` axis is title-carried, so no bracket string ever reaches a label."""
+    substrate_map = _type_title_prefix_map(ci)
+    for kind in ("task", "feature", "epic", "umbrella"):
+        labels, _adv, resolved = ci._build_labels(
+            kind=kind,
+            priority="Medium",
+            workstream=None,
+            has_board=False,
+            substrate_map=substrate_map,
+        )
+        assert not any(lbl.startswith("[") for lbl in labels), kind
+        assert "type" not in resolved, kind
+
+
+def test_build_labels_title_prefix_map_still_writes_label_bound_axis(ci) -> None:
+    """The fix is scoped to the title-carried axis: a `label`-bound axis in the
+    SAME map still writes its remapped label (here `priority: Medium` → `P1`),
+    so the map's other axes are unaffected."""
+    substrate_map = _type_title_prefix_map(ci)
+    labels, _adv, resolved = ci._build_labels(
+        kind="feature",
+        priority="Medium",
+        workstream=None,
+        has_board=False,
+        substrate_map=substrate_map,
+    )
+    assert "P1" in labels
+    assert resolved["priority"] == "P1"
+
+
+def test_build_labels_greenfield_type_still_writes_kit_label(ci) -> None:
+    """The greenfield (no-map) path is unchanged: `--kind feature` still writes
+    the kit's own `type:feature` label — the title-carried skip only fires under a
+    title-prefix binding, never in greenfield."""
+    labels, _adv, resolved = ci._build_labels(
+        kind="feature",
+        priority="Medium",
+        workstream=None,
+        has_board=False,
+        substrate_map=None,
+    )
+    assert "type:feature" in labels
+    assert resolved["type"] == "type:feature"
+
+
+def test_build_labels_label_bound_type_still_writes_its_label(ci) -> None:
+    """A `label`-bound (greenfield-analogue) `type` axis still writes its remapped
+    label — the skip keys on the `title-prefix` binding KIND, not merely on the
+    presence of a map, so a brownfield adopter who label-binds `type` is
+    unaffected."""
+    label_bound = ci.axis_labels.SubstrateMap(
+        axes={"type": {"label": {"remap": {"feature": "kind/feature"}}}}
+    )
+    labels, _adv, resolved = ci._build_labels(
+        kind="feature",
+        priority="Medium",
+        workstream=None,
+        has_board=False,
+        substrate_map=label_bound,
+    )
+    assert "kind/feature" in labels
+    assert resolved["type"] == "kind/feature"
