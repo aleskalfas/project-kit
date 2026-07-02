@@ -138,7 +138,7 @@ def main() -> int:
 
 def _summarise(issue: dict, issue_types: dict, body_format: dict) -> dict:
     title = str(issue.get("title", ""))
-    # Read-side strip (ADR-036): the agent composes edits against
+    # Read-side strip (ADR-037): the agent composes edits against
     # footer-free text, so it never sees or mishandles the footer bytes.
     body = provenance.strip_footer(str(issue.get("body") or ""))
     labels = [

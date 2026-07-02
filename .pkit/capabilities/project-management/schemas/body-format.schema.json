@@ -47,7 +47,7 @@
     },
     "provenance_marker": {
       "$ref": "#/$defs/provenance_marker_block",
-      "description": "Shape and semantics of the methodology-managed version-provenance footer (DEC-041 / ADR-036): a trailing sentinel-delimited region, stripped before scanning and shape-constrained so an un-stripped footer stays inert."
+      "description": "Shape and semantics of the methodology-managed version-provenance footer (DEC-041 / ADR-037): a trailing sentinel-delimited region, stripped before scanning and shape-constrained so an un-stripped footer stays inert."
     },
     "checkbox_rules": {
       "$ref": "#/$defs/checkbox_rules_block",

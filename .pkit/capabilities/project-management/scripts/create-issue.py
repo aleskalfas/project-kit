@@ -526,7 +526,7 @@ def main() -> int:
             print("aborted.", file=sys.stderr)
             return 0
 
-    # Seam: stamp exactly one provenance footer onto the initial body (ADR-036).
+    # Seam: stamp exactly one provenance footer onto the initial body (ADR-037).
     body = provenance.stamp(body, provenance.read_versions(capability_root))
 
     # Invoke gh issue create.

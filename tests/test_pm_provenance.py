@@ -1,7 +1,7 @@
 """Tests for the version-provenance helper (_lib/provenance.py).
 
 Covers the load-bearing strip-then-append-exactly-one invariant of
-ADR-036 (doubling is structurally impossible under arbitrary incoming
+ADR-037 (doubling is structurally impossible under arbitrary incoming
 body state), the footer shape constraints from body-format.yaml's
 `provenance_marker` entry, version resolution, and a lock asserting the
 module's sentinel constants match the schema (single source of truth).

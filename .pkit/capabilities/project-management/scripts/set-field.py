@@ -143,7 +143,7 @@ def main() -> int:
     if issue is None:
         return 2
     title = str(issue.get("title", ""))
-    # Strip the footer on read; the seam re-stamps one on write (ADR-036).
+    # Strip the footer on read; the seam re-stamps one on write (ADR-037).
     body = provenance.strip_footer(str(issue.get("body") or ""))
     current_labels = [
         lbl.get("name", "") if isinstance(lbl, dict) else str(lbl)

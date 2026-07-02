@@ -187,7 +187,7 @@ def main() -> int:
     current_title = str(issue.get("title", ""))
     # Work footer-free internally: strip any provenance region on read so
     # the edit, validation, and --append all operate on real body content;
-    # the seam re-stamps exactly one footer on write (ADR-036).
+    # the seam re-stamps exactly one footer on write (ADR-037).
     current_body = provenance.strip_footer(str(issue.get("body") or ""))
 
     # Compute the new title + body.
