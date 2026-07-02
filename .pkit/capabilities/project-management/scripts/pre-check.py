@@ -46,6 +46,7 @@ from ruamel.yaml.error import YAMLError
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _lib import axis_labels  # noqa: E402
 from _lib.agents import agent_deploy_path, agent_is_deployed  # noqa: E402
+from _lib.gh import gh_project_run  # noqa: E402
 from _lib.review_contributions import collect_contributions  # noqa: E402
 from _lib.label_contributions import collect_label_contributions  # noqa: E402
 
@@ -559,15 +560,12 @@ def _check_board(
             f"board #{board_id} resolves (cached node id in config)",
         )
 
+    # Route through the `gh project` sole-constructor (#453): it threads the
+    # configured `GH_HOST` (a raw `subprocess.run` would land on github.com and
+    # false-negative on a GHES host) and splices `--owner` — preferring
+    # `gh.default_owner`, else the repo-derived `owner` passed here.
     view_args = ["gh", "project", "view", str(board_id), "--format", "json"]
-    if owner:
-        view_args += ["--owner", owner]
-    proc = subprocess.run(
-        view_args,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    proc = gh_project_run(view_args, config or {}, fallback_owner=owner, check=False)
     if proc.returncode != 0:
         owner_hint = f" --owner {owner}" if owner else ""
         return CheckResult(

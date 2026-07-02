@@ -339,6 +339,45 @@ def axis_disposition(
     return "unsupported"
 
 
+def axis_is_title_carried(
+    axis: str, substrate_map: SubstrateMap | None
+) -> bool:
+    """Whether ``axis`` is carried in the issue TITLE (not a label) under the map.
+
+    True only when a map is present AND binds ``axis`` via ``title-prefix``. A
+    title-prefix axis's substrate is the title prefix (applied on the write path
+    by ``issue-types.yaml``'s ``title_prefix``), NOT a ``gh --label`` — so a label
+    writer must contribute NO label for such an axis.
+
+    This is the seam accessor a label writer consults to honour the binding KIND
+    on the write path (#454). Without it, a writer that keys only on
+    :func:`resolve_write`'s return value writes the prefix string (e.g. ``[Feature]``)
+    as a LABEL — but the tracker has no such bracket label (the brackets are title
+    prefixes only), so ``gh issue create`` hard-fails ``'[Feature]' not found``.
+    The collision surfaces on ``--kind feature`` under a brownfield map that binds
+    ``type`` via ``title-prefix`` with a ``feature:`` remap entry (the default
+    kind's name colliding with the structural-type key).
+
+    Note this reads the binding KIND, distinct from :func:`resolve_write` (which
+    returns the resolved substrate STRING) and :func:`axis_disposition` (served vs
+    unsupported). Kept in the seam — the sole reader of binding shape (ADR-026) —
+    so a writer never sniffs ``substrate_map.axes[...]`` itself.
+
+    * **No map (greenfield)** ⇒ ``False`` — greenfield axes are label-carried.
+    * **Map present, axis bound to ``title-prefix``** ⇒ ``True``.
+    * **Map present, axis bound to ``label`` / ``derive`` / ``unsupported`` /
+      absent / malformed** ⇒ ``False`` — none of those is title-carried (an
+      unsupported/absent axis carries nothing; a ``derive`` axis is open/closed;
+      a ``label`` axis is label-carried).
+    """
+    if substrate_map is None:
+        return False
+    binding = substrate_map.axes.get(axis)
+    if not isinstance(binding, dict):
+        return False
+    return "title-prefix" in binding
+
+
 def hierarchy_disposition(
     source: "Path | SubstrateMap | None" = None,
 ) -> HierarchyMode:
