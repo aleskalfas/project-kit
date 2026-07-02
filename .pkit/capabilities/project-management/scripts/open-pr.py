@@ -53,6 +53,7 @@ from ruamel.yaml.error import YAMLError
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import axis_labels  # noqa: E402
+from _lib import classification_rules  # noqa: E402
 from _lib import provenance  # noqa: E402
 from _lib import session_guard  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
@@ -316,17 +317,16 @@ def _extract_issue_number(branch: str) -> int | None:
 
 
 def _conv_type_from_issue_labels(labels: list[str], classification: dict) -> str | None:
-    """Map the issue's type:* label to the PR's Conventional Commits <type>."""
-    mapping = classification.get("pr_type_mapping") or []
+    """Map the issue's type:* label to the PR's Conventional Commits <type>.
+
+    Reads the kit type value off the `type:*` label through the ADR-026 seam,
+    then maps it via classification.yaml's `pr_type_mapping` through the shared
+    `classification_rules` reader — the one place that table is parsed, shared
+    with start-work / review-work's branch-prefix derivation (COR-007)."""
     issue_label_value = axis_labels.read("type", labels)
     if issue_label_value is None:
         return None
-    for entry in mapping:
-        if not isinstance(entry, dict):
-            continue
-        if entry.get("issue_label_value") == issue_label_value:
-            return str(entry.get("pr_conv_type", ""))
-    return None
+    return classification_rules.conv_type_for_kind(issue_label_value, classification)
 
 
 def _summary_from_issue_title(title: str) -> str:

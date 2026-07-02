@@ -44,7 +44,7 @@ from ruamel.yaml import YAML
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import session_guard  # noqa: E402
+from _lib import axis_labels, classification_rules, session_guard  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
@@ -57,24 +57,6 @@ from _lib.review_mode import (  # noqa: E402
     reviewer_role_from_config,
     role_based_reviewers,
 )
-
-
-# Same mapping start-work uses.
-# TODO(Task B / DEC-036): these dict keys are read-sites that depend on the
-# greenfield `type:<value>` label encoding. In a brownfield substrate a
-# `[Feature]` title-prefix won't match these keys — the type read must go
-# through the seam's brownfield-aware `axis_labels.read("type", ...)` so the
-# mapping keys on the resolved kit value, not the raw label. Left as a static
-# read-map for Task A (greenfield only).
-TYPE_LABEL_TO_PREFIX = {
-    "type:feature": "feat",
-    "type:bug": "fix",
-    "type:docs": "docs",
-    "type:refactor": "refactor",
-    "type:test": "test",
-    "type:maintenance": "chore",
-    "type:chore": "chore",
-}
 
 
 def main() -> int:
@@ -114,6 +96,7 @@ def main() -> int:
 
     yaml_loader = YAML(typ="safe")
     config = load_adopter_config(capability_root)
+    classification = _read_classification(capability_root, yaml_loader)
     members = _read_members(capability_root, yaml_loader)
     invoker = resolve_invoker_identity(config=config)
     membership = check_membership(members, invoker)
@@ -140,11 +123,12 @@ def main() -> int:
     issue = _gh_get_issue(args.issue_number, config)
     if issue is None:
         return 2
+    title = str(issue.get("title", ""))
     labels = [
         lbl.get("name", "") if isinstance(lbl, dict) else str(lbl)
         for lbl in (issue.get("labels") or [])
     ]
-    expected_prefix = _derive_branch_prefix(labels)
+    expected_prefix = _derive_branch_prefix(labels, title, classification)
     branch_prefix_match = re.match(r"^([a-z]+)/", branch)
     branch_prefix = branch_prefix_match.group(1) if branch_prefix_match else None
     if expected_prefix and branch_prefix and expected_prefix != branch_prefix:
@@ -258,11 +242,28 @@ def _find_issue_branch(issue_number: int) -> str | None:
     return None
 
 
-def _derive_branch_prefix(labels: list[str]) -> str | None:
-    for label in labels:
-        if label in TYPE_LABEL_TO_PREFIX:
-            return TYPE_LABEL_TO_PREFIX[label]
-    return None
+def _derive_branch_prefix(
+    labels: list[str], title: str, classification: dict
+) -> str | None:
+    """The conventional-commit prefix the branch is validated against (DEC-013).
+
+    Resolves the kit type *value* through the ADR-026 read seam, then maps it to
+    the conv-type via classification.yaml's `pr_type_mapping` — identical to
+    start-work's derivation (both read the one shared table, per COR-007):
+
+    * greenfield / label substrate ⇒ `axis_labels.read("type", labels)`;
+    * brownfield `title-prefix` substrate ⇒ `classification_rules.kind_from_title`,
+      where no `type:*` label exists to read.
+
+    The label arm is tried first so greenfield stays byte-identical. `None` when
+    neither arm resolves a recognised value — the caller then skips the
+    prefix/branch cross-check rather than failing on an underivable type."""
+    kind = axis_labels.read("type", labels)
+    if kind is None:
+        kind = classification_rules.kind_from_title(title, classification)
+    if kind is None:
+        return None
+    return classification_rules.conv_type_for_kind(kind, classification)
 
 
 def _derive_pr_title(issue: dict, branch: str) -> str:
@@ -366,6 +367,23 @@ def _read_members(capability_root: Path, yaml_loader: YAML) -> list[dict]:
         return []
     members = data.get("members") if isinstance(data, dict) else None
     return members if isinstance(members, list) else []
+
+
+def _read_classification(capability_root: Path, yaml_loader: YAML) -> dict:
+    """The parsed classification.yaml, or {} when absent/unparseable.
+
+    Feeds the branch-prefix cross-check's type-value → conv-type lookup
+    (`pr_type_mapping`) and the title-prefix reverse read. A thin or missing
+    schema degrades to {} — the prefix then resolves to None and the DEC-013
+    branch cross-check is skipped rather than misfiring."""
+    path = capability_root / "schemas" / "classification.yaml"
+    if not path.is_file():
+        return {}
+    try:
+        data = yaml_loader.load(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return data if isinstance(data, dict) else {}
 
 
 if __name__ == "__main__":
