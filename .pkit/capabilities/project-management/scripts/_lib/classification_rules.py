@@ -20,6 +20,17 @@ the predicates here rather than re-deriving the lookup. Per COR-007, the third
 writer to want the gate extracts it rather than duplicating the table a third
 time.
 
+It is likewise the single reader of the *value → conv-type* bridge
+(:func:`conv_type_for_kind` over ``pr_type_mapping``) and of the *title-prefix →
+value* reverse read (:func:`kind_from_title` over ``title_prefix_by_value``):
+``open-pr`` derives the PR title's Conventional-Commits ``<type>`` and
+``start-work`` / ``review-work`` derive the branch prefix (DEC-013) through these
+readers rather than each carrying a private ``type:*`` → prefix dict. Feeding the
+kit *value* (resolved via ``axis_labels.read`` on the label arm, or
+:func:`kind_from_title` on the title-prefix arm) into one lookup is what makes the
+conv-type resolve identically greenfield and brownfield (the ADR-026 read-path
+seam applied to the branch-prefix derivation).
+
 The module is dependency-free at import time (no YAML load) so any PEP 723 script
 can import it regardless of its declared dependencies — callers load
 ``classification.yaml`` themselves and pass the parsed dict in. It is content-free
@@ -123,6 +134,62 @@ def title_prefix_by_value(classification: dict) -> dict:
         type_axis.get("title_prefix_by_value") if isinstance(type_axis, dict) else None
     )
     return mapping if isinstance(mapping, dict) else {}
+
+
+def kind_from_title(title: str, classification: dict) -> str | None:
+    """The kit type *value* a ``[Prefix]`` title carries, or ``None``.
+
+    The reverse of :func:`title_prefix_by_value`: given an issue title like
+    ``"[Bug] hostname mismatch"`` and the classification's
+    ``title_prefix_by_value`` map (``{bug: Bug, ...}``), recover the kit's own
+    kind value (``bug``). This is the read side of the ``type`` axis's
+    ``title-prefix`` substrate — the arm ``axis_labels.read("type", labels)``
+    cannot serve, because a brownfield adopter carries the kind in the bracket
+    prefix and no ``type:*`` label exists to read. Mirrors how
+    ``move-issue._structural_type_from_title`` reads the prefix (``title``
+    ``startswith(f"[{prefix}] ")``), so the two title reads agree by construction.
+
+    Empty / absent map ⇒ ``None`` (no title-prefix vocabulary to match). A title
+    with no recognised bracket prefix ⇒ ``None`` (the caller decides the
+    fallback). First match wins over the map's iteration order; the shipped map
+    is one-to-one so ordering is immaterial.
+    """
+    prefix_by_value = title_prefix_by_value(classification)
+    for value, prefix in prefix_by_value.items():
+        if isinstance(prefix, str) and prefix and title.startswith(f"[{prefix}] "):
+            return str(value)
+    return None
+
+
+def conv_type_for_kind(kind: str, classification: dict) -> str | None:
+    """The closing PR's Conventional-Commits ``<type>`` for kit kind ``kind``.
+
+    The single reader of ``classification.yaml``'s top-level ``pr_type_mapping``
+    (``[{issue_label_value: bug, pr_conv_type: fix}, ...]``) — the table that
+    bridges an issue's kit type value to the branch/PR conv-type. ``open-pr``
+    (PR-title derivation), ``start-work`` and ``review-work`` (branch-prefix
+    derivation, DEC-013) all read the SAME table here rather than each carrying a
+    private ``type:*`` → prefix dict (COR-007 single source; the private dicts in
+    the two work-wrappers were the ADR-026 read-bypass this consolidates).
+
+    ``kind`` is the kit's own value (``bug`` / ``feature`` / ...), NOT a raw
+    ``type:*`` label — callers resolve the value first, through
+    ``axis_labels.read("type", labels)`` (label arm) or :func:`kind_from_title`
+    (title-prefix arm), so greenfield and brownfield feed the same lookup. Empty /
+    absent mapping, or a ``kind`` with no entry ⇒ ``None`` (the caller decides
+    whether that is an error or a default).
+    """
+    axes_source = classification if isinstance(classification, dict) else {}
+    mapping = axes_source.get("pr_type_mapping") or []
+    if not isinstance(mapping, list):
+        return None
+    for entry in mapping:
+        if not isinstance(entry, dict):
+            continue
+        if entry.get("issue_label_value") == kind:
+            conv_type = entry.get("pr_conv_type")
+            return str(conv_type) if isinstance(conv_type, str) and conv_type else None
+    return None
 
 
 def kind_drives_title(structural_type: str, classification: dict) -> bool:

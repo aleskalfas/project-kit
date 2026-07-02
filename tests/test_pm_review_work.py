@@ -9,7 +9,6 @@ from pathlib import Path
 
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = (
     REPO_ROOT / ".pkit" / "capabilities" / "project-management"
@@ -31,16 +30,54 @@ def rw():
 
 
 # ---- _derive_branch_prefix --------------------------------------------
+#
+# review-work's derivation is the verbatim twin of start-work's: kit type value
+# through the ADR-026 read seam (label OR title-prefix), mapped via
+# classification.yaml's `pr_type_mapping`. Same fixture, same two arms.
+
+_CLASSIFICATION = {
+    "axes": {
+        "type": {
+            "title_prefix_by_value": {
+                "feature": "Task",
+                "bug": "Bug",
+                "docs": "Docs",
+                "test": "Test",
+                "refactor": "Refactor",
+                "maintenance": "Chore",
+            },
+        },
+    },
+    "pr_type_mapping": [
+        {"issue_label_value": "feature", "pr_conv_type": "feat"},
+        {"issue_label_value": "bug", "pr_conv_type": "fix"},
+        {"issue_label_value": "docs", "pr_conv_type": "docs"},
+        {"issue_label_value": "test", "pr_conv_type": "test"},
+        {"issue_label_value": "refactor", "pr_conv_type": "refactor"},
+        {"issue_label_value": "maintenance", "pr_conv_type": "chore"},
+    ],
+}
 
 
 def test_derive_branch_prefix_returns_expected(rw) -> None:
-    assert rw._derive_branch_prefix(["type:feature"]) == "feat"
-    assert rw._derive_branch_prefix(["type:bug"]) == "fix"
-    assert rw._derive_branch_prefix(["type:docs"]) == "docs"
+    assert rw._derive_branch_prefix(["type:feature"], "[Task] x", _CLASSIFICATION) == "feat"
+    assert rw._derive_branch_prefix(["type:bug"], "[Bug] x", _CLASSIFICATION) == "fix"
+    assert rw._derive_branch_prefix(["type:docs"], "[Docs] x", _CLASSIFICATION) == "docs"
 
 
 def test_derive_branch_prefix_missing_returns_none(rw) -> None:
-    assert rw._derive_branch_prefix(["priority:High"]) is None
+    assert rw._derive_branch_prefix(["priority:High"], "no prefix", _CLASSIFICATION) is None
+
+
+def test_derive_branch_prefix_brownfield_bug_title_no_label(rw) -> None:
+    """DEC-013 cross-check must resolve `fix` for a brownfield `[Bug]`-titled Task
+    that carries NO type:* label — via the title-prefix arm of the seam."""
+    assert rw._derive_branch_prefix([], "[Bug] hostname mismatch", _CLASSIFICATION) == "fix"
+
+
+def test_derive_branch_prefix_greenfield_label_still_wins(rw) -> None:
+    """Greenfield stays byte-identical: the `type:bug` label resolves `fix`."""
+    assert rw._derive_branch_prefix(["type:bug"], "no bracket prefix", _CLASSIFICATION) == "fix"
 
 
 # ---- _derive_pr_title --------------------------------------------------

@@ -42,7 +42,7 @@ from ruamel.yaml import YAML
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import session_guard  # noqa: E402
+from _lib import axis_labels, classification_rules, session_guard  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
@@ -50,24 +50,6 @@ from _lib.membership import (  # noqa: E402
     resolve_capability_root,
     resolve_invoker_identity,
 )
-
-
-# Default mapping of `type:*` label to conventional-commit prefix.
-# TODO(Task B / DEC-036): these dict keys are read-sites that depend on the
-# greenfield `type:<value>` label encoding. In a brownfield substrate a
-# `[Feature]` title-prefix won't match these keys — the type read must go
-# through the seam's brownfield-aware `axis_labels.read("type", ...)` so the
-# mapping keys on the resolved kit value, not the raw label. Left as a static
-# read-map for Task A (greenfield only).
-TYPE_LABEL_TO_PREFIX = {
-    "type:feature": "feat",
-    "type:bug": "fix",
-    "type:docs": "docs",
-    "type:refactor": "refactor",
-    "type:test": "test",
-    "type:maintenance": "chore",
-    "type:chore": "chore",
-}
 
 
 def main() -> int:
@@ -95,6 +77,7 @@ def main() -> int:
 
     yaml_loader = YAML(typ="safe")
     config = load_adopter_config(capability_root)
+    classification = _read_classification(capability_root, yaml_loader)
     members = _read_members(capability_root, yaml_loader)
     invoker = resolve_invoker_identity(config=config)
     membership = check_membership(members, invoker)
@@ -130,17 +113,20 @@ def main() -> int:
         )
         return 2
 
-    # Derive branch name from issue title + type:* label.
+    # Derive branch name from issue title + type axis. The type value resolves
+    # through the ADR-026 read seam — a greenfield `type:*` label OR a brownfield
+    # `[Prefix]` title — so the branch prefix is correct on both substrates.
     title = str(issue.get("title", ""))
     labels = [
         lbl.get("name", "") if isinstance(lbl, dict) else str(lbl)
         for lbl in (issue.get("labels") or [])
     ]
-    prefix = _derive_branch_prefix(labels)
+    prefix = _derive_branch_prefix(labels, title, classification)
     if prefix is None:
         print(
-            f"error: issue #{args.issue_number} has no recognised type:* label. "
-            f"Expected one of {', '.join(sorted(TYPE_LABEL_TO_PREFIX))}.",
+            f"error: could not derive a branch prefix for issue #{args.issue_number}: "
+            "no recognised type:* label and no known [Prefix] title. Expected a "
+            "type value classification.yaml maps to a conv-type (via pr_type_mapping).",
             file=sys.stderr,
         )
         return 2
@@ -212,12 +198,29 @@ def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
     return gh_get_issue(issue_number, config, fields="title,labels,assignees,state")
 
 
-def _derive_branch_prefix(labels: list[str]) -> str | None:
-    """Pick the conventional-commit prefix from the issue's type:* label."""
-    for label in labels:
-        if label in TYPE_LABEL_TO_PREFIX:
-            return TYPE_LABEL_TO_PREFIX[label]
-    return None
+def _derive_branch_prefix(
+    labels: list[str], title: str, classification: dict
+) -> str | None:
+    """The conventional-commit branch prefix for an issue's type axis.
+
+    Resolves the kit type *value* through the ADR-026 read seam, then maps it to
+    the conv-type via classification.yaml's `pr_type_mapping` (the same table
+    open-pr's PR-title derivation reads — one source, per COR-007):
+
+    * greenfield / label substrate ⇒ the value off the `type:*` label
+      (`axis_labels.read("type", labels)`);
+    * brownfield `title-prefix` substrate ⇒ the value off the `[Prefix]` title
+      (`classification_rules.kind_from_title`), where no `type:*` label exists.
+
+    The label arm is tried first so greenfield stays byte-identical; the title
+    arm is the fallback that fixes the brownfield break. `None` when neither arm
+    resolves a value the mapping recognises (caller reports the error)."""
+    kind = axis_labels.read("type", labels)
+    if kind is None:
+        kind = classification_rules.kind_from_title(title, classification)
+    if kind is None:
+        return None
+    return classification_rules.conv_type_for_kind(kind, classification)
 
 
 def _slug_from_title(title: str) -> str:
@@ -317,6 +320,23 @@ def _read_members(capability_root: Path, yaml_loader: YAML) -> list[dict]:
         return []
     members = data.get("members") if isinstance(data, dict) else None
     return members if isinstance(members, list) else []
+
+
+def _read_classification(capability_root: Path, yaml_loader: YAML) -> dict:
+    """The parsed classification.yaml, or {} when absent/unparseable.
+
+    Feeds the type-value → conv-type lookup (`pr_type_mapping`) and the
+    title-prefix reverse read the branch-prefix derivation goes through. A thin
+    or missing schema degrades to {} — `_derive_branch_prefix` then resolves no
+    prefix and the caller reports the derivation failure."""
+    path = capability_root / "schemas" / "classification.yaml"
+    if not path.is_file():
+        return {}
+    try:
+        data = yaml_loader.load(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return data if isinstance(data, dict) else {}
 
 
 if __name__ == "__main__":
