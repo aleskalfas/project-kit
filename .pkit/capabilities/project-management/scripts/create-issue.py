@@ -365,8 +365,24 @@ def main() -> int:
         milestone_title = resolved.title
 
     # Workstream requirement when in label-fallback mode.
+    #
+    # The gate honours the substrate-map degradation (#443): it demands a
+    # `--workstream` only when the value would actually be WRITTEN. A brownfield
+    # adopter whose substrate-map declares the `workstream` axis `unsupported`
+    # (or omits it — absent ≡ unsupported, the load-bearing rule) has no
+    # workstream substrate to write to; `_build_labels`/`resolve_write` DEGRADE
+    # and drop the label downstream (L470-493 above resolve it via the seam), so
+    # requiring a value the next stage discards is a false gate. We consult the
+    # SAME signal that downstream degradation keys on — `axis_disposition`, which
+    # is `resolve_write`'s DEGRADE arm expressed as a disposition — so the gate
+    # and the resolution can never disagree. A SERVED workstream axis (bound, or
+    # greenfield where the kit's `workstream:*` label IS the adopter's substrate)
+    # still requires the value, exactly as before.
     has_board = bool(config.get("has_projects_v2_board", False))
-    if not has_board and args.workstream is None:
+    workstream_served = (
+        axis_labels.axis_disposition("workstream", substrate_map) == "served"
+    )
+    if not has_board and workstream_served and args.workstream is None:
         print(
             "error: --workstream is required in label-fallback mode "
             "(no Projects v2 board configured in project/config.yaml).",
