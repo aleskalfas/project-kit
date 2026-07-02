@@ -1,6 +1,6 @@
 """Guard: no pm script writes an issue/PR body outside the provenance seam.
 
-ADR-036 item 4. The provenance footer is maintained by exactly one seam
+ADR-037 item 4. The provenance footer is maintained by exactly one seam
 (`_lib/provenance.stamp`). This is a *scan-all* over every pm script —
 not an allow-list of known sites — asserting that any script which
 constructs an issue/PR body write also routes through the seam. A new
@@ -52,7 +52,7 @@ def test_every_body_write_routes_through_the_seam() -> None:
     assert not offenders, (
         "these scripts construct an issue/PR body write "
         f'({_BODY_WRITE_MARKER}) without routing through {_SEAM_CALL} '
-        "(ADR-036 item 4): " + ", ".join(offenders)
+        "(ADR-037 item 4): " + ", ".join(offenders)
     )
 
 

@@ -241,7 +241,7 @@ def main() -> int:
     )
     if body is None:
         return 2
-    # Seam: stamp exactly one provenance footer onto the PR body (ADR-036).
+    # Seam: stamp exactly one provenance footer onto the PR body (ADR-037).
     body = provenance.stamp(body, provenance.read_versions(capability_root))
 
     # Determine base branch.

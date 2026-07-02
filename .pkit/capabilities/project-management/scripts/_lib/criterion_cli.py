@@ -77,7 +77,7 @@ def run_criterion_verb(*, verb: str, target_checked: bool) -> int:
     if issue is None:
         return 2
     # Work footer-free: strip on read so criterion indices are unaffected;
-    # the seam re-stamps exactly one footer on write (ADR-036).
+    # the seam re-stamps exactly one footer on write (ADR-037).
     body = provenance.strip_footer(str(issue.get("body") or ""))
 
     # Context header (standard pm-script scaffolding).

@@ -1,7 +1,7 @@
 """Version-provenance stamp for issue/PR bodies + filing comments.
 
 Realizes [project-management:DEC-041-version-provenance-stamp] (the what/why)
-under the write-path contract of ADR-036. Two records, two jobs:
+under the write-path contract of ADR-037. Two records, two jobs:
 
 - **Filing comment** — a one-time, immutable comment the creating scripts
   post, recording the methodology version the issue/PR was *born under*.
@@ -9,7 +9,7 @@ under the write-path contract of ADR-036. Two records, two jobs:
 - **Footer** — a self-replacing, versions-only region at the foot of the
   body carrying the version of the *current* touch.
 
-This module is the **sole constructor** of both (ADR-036): every
+This module is the **sole constructor** of both (ADR-037): every
 body-writing script routes its written-back body through `stamp()`, and
 every creating script posts via `post_filing_comment()`. The agent never
 authors the footer bytes.

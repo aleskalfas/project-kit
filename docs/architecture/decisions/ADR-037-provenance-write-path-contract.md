@@ -1,5 +1,5 @@
 ---
-id: ADR-036
+id: ADR-037
 title: Maintain the provenance footer through one strip-then-reissue seam the agent never owns
 status: accepted
 date: 2026-06-30

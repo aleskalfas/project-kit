@@ -157,10 +157,10 @@ integration_marker:
   agent_managed: true
   removal_authorisation_severity: "[validation-severity:bypassable-with-audit]"
 
-# Methodology-managed version-provenance footer (per DEC-041 / ADR-036).
+# Methodology-managed version-provenance footer (per DEC-041 / ADR-037).
 # A sentinel-delimited region the capability's scripts maintain at the
 # foot of an issue/PR body; agents and humans never author or edit it.
-# The write seam (ADR-036) keeps exactly one region here via
+# The write seam (ADR-037) keeps exactly one region here via
 # strip-then-append-exactly-one; this entry is the read/validation-side
 # contract — how the region is recognised, stripped before scanning, and
 # shape-constrained so an un-stripped footer stays inert.
@@ -169,7 +169,7 @@ provenance_marker:
   end_marker: "<!-- pkit-provenance:end -->"
   position: |
     Trailing: the region occupies the very end of the body, after all
-    content. The write seam (per ADR-036) appends exactly one region
+    content. The write seam (per ADR-037) appends exactly one region
     there; nothing follows it.
   agent_managed: true
   strip_before_scan: true
@@ -178,7 +178,7 @@ provenance_marker:
     validators and checkbox extractors scan. Stripping to EOF — rather
     than matching a start/end pair — removes complete, partial, orphaned,
     or doubled regions alike; it is the read/validation-side twin of the
-    write-side strip-then-append-exactly-one seam in ADR-036. Because the
+    write-side strip-then-append-exactly-one seam in ADR-037. Because the
     footer is methodology-managed (agent_managed: true), it is exempt
     from the required-section, checkbox, and universal body rules — it is
     never validated as body content.

@@ -159,7 +159,7 @@ def main() -> int:
         return 2
 
     current_title = str(pr.get("title", ""))
-    # Strip the footer on read; the seam re-stamps one on write (ADR-036).
+    # Strip the footer on read; the seam re-stamps one on write (ADR-037).
     current_body = provenance.strip_footer(str(pr.get("body") or ""))
 
     new_title = args.title if args.title is not None else current_title
