@@ -12,7 +12,7 @@ The design rules governing the CLI's shape — why these commands exist and not 
 
 The CLI is implemented in Python (per PRJ-003), with `.pkit/cli/pkit` as a thin proxy that exec's the Python runtime via `uv` and bypasses to the adapter's shell scripts for `deploy-skills` / `merge-settings` (which are shell to the bone — primitives the adapter ships, not surface commands).
 
-The full COR-004 surface is implemented: `init`, `sync`, `merge`, `upgrade`, `capabilities install / register / uninstall / upgrade / list` (per COR-017 + COR-031), `status`, `validate`, `version`, `version bump`, `new decision`, the authoring commands (`area`, `adapter`, `capability`, `agent`, `storyboard`, `schema`, `migration`), and the scratchpad commands (`new scratchpad`, `scratchpad done`, `scratchpad drop`) per COR-012. Each authoring command ships paired with its skill under `.pkit/skills/core/<name>-author/` per COR-005's "Skill / command pairing". (The `bundle` command family was retired in COR-027 — capabilities subsumed the bundle role.)
+The full COR-004 surface is implemented: `init`, `sync`, `merge`, `upgrade`, `capabilities install / register / uninstall / upgrade / list` (per COR-017 + COR-031), `status`, `validate`, `version`, `version bump`, `release plan / apply / check` (per PRJ-002), `new decision`, the authoring commands (`area`, `adapter`, `capability`, `agent`, `storyboard`, `schema`, `migration`), and the scratchpad commands (`new scratchpad`, `scratchpad done`, `scratchpad drop`) per COR-012. Each authoring command ships paired with its skill under `.pkit/skills/core/<name>-author/` per COR-005's "Skill / command pairing". (The `bundle` command family was retired in COR-027 — capabilities subsumed the bundle role.)
 
 ## Installing pkit on PATH
 
@@ -107,6 +107,9 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # or: brew install uv
 | `permissions profile activate <name> [--no-apply]` | activate a profile: set posture + layer its grants under your own (never overwriting manual grants), then `apply` unless `--no-apply`. Does not enable the hook | yes | no — idempotent (overwrite + swap) |
 | `version` | show CLI version + project's recorded core-layer version | no | yes (read-only) |
 | `version bump <segment>` | bump `.pkit/VERSION` (`segment` = `patch` / `minor` / `major`); see PRJ-002 | yes | no — each call increments |
+| `release plan` | preview the release computed from pending changesets (PRJ-002); see `.pkit/release/README.md` | no | yes (read-only) |
+| `release apply` | consume changesets → write versions + broaden `requires_backbone` + changelog (the sole main-only writer, PRJ-002 D3); tagging is a separate step (`version tag`) | yes | no — writes a release |
+| `release check --base <ref>` | CI guard: fail a PR whose surface change ships no changeset (escape hatch: `none` changeset / `skip-changeset` label) | no | yes (read-only) |
 
 ## Lifecycle commands
 
@@ -324,7 +327,11 @@ The command parses the current version, validates it as semver, computes the new
 
 After writing the new backbone version, the command **auto-broadens** the `requires_backbone` upper bound on every kit-shipped `package.yaml` under `$SOURCE_KIT` whose existing range no longer includes the new backbone version. The new upper bound is `<NEW_MAJOR.(NEW_MINOR+1).0`. Components whose range still covers the new version are untouched (so patch bumps that stay within the current minor line are no-ops on `requires_backbone`). Component authors who deliberately want a tighter range narrow it manually after the bump.
 
-The bump commit lands inside the same PR as the surface change it accompanies (per PRJ-002), so reviewers see both in one diff. Recommended commit message: `chore(versioning): bump backbone <old> -> <new>`.
+Under the current PRJ-002 policy, feature branches **declare** version intent via a changeset rather than bumping in-branch; `version bump` remains fully functional during cutover (introduce → migrate → retire) and is what the release step's writes are equivalent to. Recommended commit message when it is used: `chore(versioning): bump backbone <old> -> <new>`.
+
+### `release plan` / `release apply` / `release check`
+
+The declared, release-driven version path (PRJ-002 D1–D4). Feature branches drop a **changeset** file under `.changes/unreleased/`; the release step on `main` is the sole writer of version state. `release plan` previews the computed release; `release apply` consumes the changesets, computes each tier's new version from current `main`, broadens `requires_backbone` (the broaden moves here, PRJ-002 D4), updates `CHANGELOG.md`, and deletes the consumed changesets. Tagging stays a separate anchored step (`pkit version tag --push` on `main` after the release commit lands), matching the bump/tag split. `release check --base <ref>` is the CI surface-without-changeset guard, with a `none`-changeset / `skip-changeset`-label escape hatch. The full mechanics — changeset format, contributor workflow, and the guard's honest limits — live in the release-flow spec (`.pkit/release/README.md`).
 
 ## Standard flags
 

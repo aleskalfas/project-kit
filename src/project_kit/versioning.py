@@ -57,6 +57,41 @@ _PEP440_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)(?:(a|b|rc)(\d+))?$")
 _REQUIRES_BACKBONE_RE = re.compile(r'(requires_backbone:\s*"[^"]*,<)(\d+)\.(\d+)\.(\d+)')
 
 
+def _apply_segment(major: int, minor: int, patch: int, segment: Segment) -> tuple[int, int, int]:
+    """Apply a semver `segment` bump to a `(major, minor, patch)` trio.
+
+    Per PRJ-002: `major` resets minor+patch to 0 (the 0.x -> 1.0.0
+    milestone and post-1.0 spec breakage both go through here); `minor`
+    resets patch to 0; `patch` increments patch. Pure — the single place
+    the segment arithmetic lives, shared by `bump_version` (which also
+    writes) and `next_version` (which only computes).
+    """
+    if segment == "major":
+        return major + 1, 0, 0
+    if segment == "minor":
+        return major, minor + 1, 0
+    return major, minor, patch + 1  # patch
+
+
+def next_version(current: str, segment: Segment) -> str:
+    """Compute the next version string for `segment` from `current`.
+
+    Pure — writes nothing, broadens nothing. Strips any pre-release
+    suffix before computing (a segment bump leaves the pre-release line,
+    mirroring `bump_version`). Raises `click.ClickException` on
+    non-PEP-440 input. Used by the release step (per PRJ-002 D3) to
+    compute each tier's new version from the current state on `main`.
+    """
+    match = _PEP440_RE.match(current)
+    if match is None:
+        raise click.ClickException(
+            f"version {current!r} is not valid PEP 440 (expected major.minor.patch[(a|b|rc)N])"
+        )
+    major, minor, patch = (int(g) for g in match.group(1, 2, 3))
+    major, minor, patch = _apply_segment(major, minor, patch, segment)
+    return f"{major}.{minor}.{patch}"
+
+
 def bump_version(source_kit: Path, segment: Segment, pre: PreKind | None = None) -> tuple[str, str]:
     """Bump `.pkit/VERSION` and broaden kit-shipped components' requires_backbone.
 
@@ -83,20 +118,7 @@ def bump_version(source_kit: Path, segment: Segment, pre: PreKind | None = None)
         )
 
     major, minor, patch = (int(g) for g in match.group(1, 2, 3))
-
-    if segment == "major":
-        # Per PRJ-002: major is reserved for the 1.0.0 milestone and
-        # post-1.0 spec breakage. Pre-1.0, breaking changes typically
-        # land as minor bumps — but the 0.x -> 1.0.0 transition itself
-        # IS a major bump and is explicitly allowed.
-        major += 1
-        minor = 0
-        patch = 0
-    elif segment == "minor":
-        minor += 1
-        patch = 0
-    else:  # patch
-        patch += 1
+    major, minor, patch = _apply_segment(major, minor, patch, segment)
 
     new_version = f"{major}.{minor}.{patch}"
     if pre is not None:

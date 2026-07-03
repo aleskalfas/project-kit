@@ -1,0 +1,42 @@
+# changie config — contributor convenience for authoring changeset files
+# (PRJ-002 D1). DEV-ONLY: changie is provisioned through mise ([tools] in
+# mise.toml), never bundled in the wheel, never a runtime dependency, never
+# required to install or use pkit. A changeset is equally hand-writable; the
+# CI guard and `pkit release` read the FILE, not the tool.
+#
+# changie's native `component` + `kind` + `body` fields map onto the schema
+# `project_kit.changesets` parses: component (backbone / an adapter / a
+# capability), kind = the semver SEGMENT, body = the note. pkit — not changie
+# — generates the changelog and consumes these files at release time, so
+# changie is used purely for `changie new` (authoring), not `changie batch`.
+changesDir: .changes
+unreleasedDir: unreleased
+headerPath: ""
+changelogPath: CHANGELOG.md
+versionExt: md
+
+# The tiers a changeset can name. Keep in sync with the versioned components
+# (backbone + each kit-shipped adapter/capability); `pkit release check`
+# rediscovers them from package.yaml, so a drift here only affects `changie
+# new`'s prompt, never correctness.
+components:
+  - backbone
+  - claude-code
+  - project-management
+  - evidence
+  - demo-recording
+  - software-engineering
+componentFormat: '### {{.Component}}'
+
+# `kind` carries the semver segment. `none` is the escape hatch (declares a
+# component's tree was touched but no surface moved).
+kinds:
+  - label: patch
+  - label: minor
+  - label: major
+  - label: none
+
+# Collision-free filenames: component + segment + timestamp + a random
+# suffix, so parallel PRs never collide on a changeset filename. Mirrors
+# `project_kit.changesets.changeset_filename`.
+fragmentFileFormat: "{{.Component}}-{{.Kind}}-{{.Time.Format \"20060102-150405\"}}-{{ randAlphaNum 8 | lower }}"

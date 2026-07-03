@@ -9,6 +9,9 @@ name: checks
 on:
   pull_request:
     branches: [main]
+    # `labeled`/`unlabeled` so the changeset guard's `skip-changeset` escape
+    # hatch actually re-runs the check when the label is added/removed.
+    types: [opened, synchronize, reopened, labeled, unlabeled]
   push:
     branches: [main]
 
@@ -37,3 +40,14 @@ jobs:
           # PR: diff against the PR base. Push to main: against main (no-op diff).
           PKIT_CHECK_BASE: origin/${{ github.event.pull_request.base.ref || 'main' }}
         run: ./scripts/check.sh
+
+      # Surface-without-changeset guard (PRJ-002). PR-scoped: it needs the PR
+      # base ref and the PR labels (the `skip-changeset` escape hatch), neither
+      # of which a local pre-push hook has — so it lives here, not in
+      # scripts/check.sh. Escape hatches: a `none` changeset for the component,
+      # or the `skip-changeset` label (surfaced below as PKIT_CHANGESET_SKIP).
+      - name: Changeset guard (surface change ⇒ changeset)
+        if: github.event_name == 'pull_request'
+        env:
+          PKIT_CHANGESET_SKIP: ${{ contains(github.event.pull_request.labels.*.name, 'skip-changeset') && '1' || '' }}
+        run: uv run pkit release check --base "origin/${{ github.event.pull_request.base.ref }}"
