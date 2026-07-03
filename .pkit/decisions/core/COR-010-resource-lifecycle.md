@@ -33,6 +33,8 @@ Both tiers use semantic versioning (`major.minor.patch`). Components express com
 
 A backbone change affects every adopter (the methodology itself moved); a component change might only affect adopters who installed that component. Independent versioning lets bundle / adapter authors release without bumping the whole methodology, and lets adopters upgrade selectively, with the semver range catching incompatibilities at upgrade time.
 
+**The dependency direction cannot invert.** A component declares its dependency *on* the backbone; the reverse must never hold. A component — and especially an opt-in one such as a capability — must not govern a process the backbone depends on for its own existence. Any process the backbone needs in order to exist, evolve, or ship — cutting the backbone's own releases is the archetype — belongs to the backbone tier. Locating it in a component would make the always-present core depend on an optional, independently-versioned piece, inverting the two-tier direction and breaking for any adopter who never installed that component. This is the discriminator when a responsibility is ambiguous ("is this the backbone's, or a component's?"): if the backbone's own existence depends on it, it is backbone.
+
 ### Per-component manifests + backbone registry
 
 Project-side state is split per component, with the backbone manifest acting as registry. The backbone manifest carries the recorded backbone version + a list of installed components, each pointing at its per-component manifest file. Each component owns its own manifest at the component's own project-side path.
