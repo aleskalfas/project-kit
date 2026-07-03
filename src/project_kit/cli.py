@@ -9,6 +9,7 @@ the rest of new).
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -40,6 +41,12 @@ from project_kit.scratchpads import (
     stamp_new_scratchpad,
     transition_to_done,
     transition_to_dropped,
+)
+from project_kit.release import (
+    ReleasePlan,
+    apply_release,
+    check_changesets,
+    compute_release,
 )
 from project_kit.status import report_status
 from project_kit.sync import run_sync
@@ -302,6 +309,116 @@ def _cast_pre(value: str | None) -> PreKind | None:
     if value == "b":
         return "b"
     return "rc"
+
+
+@main.group()
+def release() -> None:
+    """Declared, release-driven version writes (PRJ-002).
+
+    Feature branches *declare* version intent with changeset files under
+    `.changes/unreleased/`; this group is the sole writer of version state,
+    designed to run on `main` via a release PR. See `.pkit/release/README.md`.
+    """
+
+
+@release.command("plan")
+def release_plan() -> None:
+    """Preview the release computed from pending changesets (read-only)."""
+    source_kit = find_source_kit()
+    plan = compute_release(source_kit)
+    _print_release_plan(plan)
+
+
+@release.command("apply")
+@click.option(
+    "--tag",
+    is_flag=True,
+    default=False,
+    help="Also cut the tag now. Off by default — tag is a separate step "
+    "(`pkit version tag --push`) after the release commit lands on main.",
+)
+@click.option("--push", is_flag=True, default=False, help="With --tag, push the tag to origin.")
+@click.option("--yes", is_flag=True, default=False, help="Skip the confirmation prompt (CI).")
+def release_apply(tag: bool, push: bool, yes: bool) -> None:
+    """Consume changesets and write versions + changelog (the release write).
+
+    The sole main-only writer of version state (PRJ-002 D3). Run from a
+    release PR against `main` — not on every merge. Tagging is a separate,
+    anchored step by default; see `pkit version tag`.
+    """
+    source_kit = find_source_kit()
+    plan = compute_release(source_kit)
+    _print_release_plan(plan)
+    if plan.is_empty:
+        apply_release(source_kit, plan, tag=tag, push=push)
+        return
+    if not yes:
+        click.confirm("Write these versions and consume the changesets?", abort=True)
+    apply_release(source_kit, plan, tag=tag, push=push)
+
+
+@release.command("check")
+@click.option(
+    "--base",
+    default="origin/main",
+    show_default=True,
+    help="Diff base for surface detection (the PR base ref).",
+)
+@click.option(
+    "--skip",
+    is_flag=True,
+    default=None,
+    help="Escape hatch: pass unconditionally. Also honoured via the "
+    "PKIT_CHANGESET_SKIP env var (wired from the `skip-changeset` PR label).",
+)
+def release_check(base: str, skip: bool | None) -> None:
+    """CI guard: fail if a surface-touched component ships no changeset.
+
+    Escape hatch: a `none` changeset for the component, or the
+    `skip-changeset` label (PKIT_CHANGESET_SKIP env). Surface is a human
+    judgment (PRJ-002 D2) — this path heuristic can mis-fire; the override exists.
+    """
+    source_kit = find_source_kit()
+    skip_active = bool(skip) or _env_flag("PKIT_CHANGESET_SKIP")
+    result = check_changesets(source_kit, base, skip=skip_active)
+
+    if result.skipped:
+        click.echo("changeset guard: skipped (escape hatch active).")
+        return
+    if not result.touched:
+        click.echo("changeset guard: no surface-touched components — ok.")
+        return
+    click.echo(f"changeset guard: touched {', '.join(result.touched)}")
+    if result.ok:
+        click.echo("changeset guard: every touched component has a changeset — ok.")
+        return
+    raise click.ClickException(
+        "surface change without a changeset for: "
+        + ", ".join(result.missing)
+        + ".\n  Add one with `changie new` (per .pkit/release/README.md), hand-write a "
+        "changeset under .changes/unreleased/, drop a `none` changeset if it is not a "
+        "surface change, or apply the `skip-changeset` label."
+    )
+
+
+def _env_flag(name: str) -> bool:
+    """True when an env var is set to a truthy value (`1`/`true`/`yes`)."""
+    return os.environ.get(name, "").strip().lower() in {"1", "true", "yes"}
+
+
+def _print_release_plan(plan: ReleasePlan) -> None:
+    if plan.is_empty:
+        click.echo("Release plan: no version moves.")
+    else:
+        click.echo("Release plan:")
+        for rel in plan.releases:
+            click.echo(
+                f"  {rel.component.name}: {rel.old_version} -> "
+                f"{rel.new_version} ({rel.segment})"
+            )
+            for note in rel.notes:
+                click.echo(f"    - {note}")
+    click.echo(f"  changesets to consume: {len(plan.consumed)}")
 
 
 @main.command()

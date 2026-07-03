@@ -19,4 +19,4 @@ Closes #<issue-number>
 - [ ] New architectural decisions recorded under `.pkit/decisions/`.
 - [ ] Tracker state reflects this PR — issue moved to Review (or Done if no review needed), follow-ups filed as new issues.
 - [ ] Migration added if a breaking change in kit-owned content.
-- [ ] Surface change? If yes, version bumped via `pkit version bump <segment>` (per PRJ-002). If no, skip.
+- [ ] Surface change? If yes, add a changeset declaring the bump — `changie new` or hand-write one under `.changes/unreleased/` (per PRJ-002; see `.pkit/release/README.md`). This PR does **not** edit `.pkit/VERSION` or a component's `version` — the release step writes those on `main`. If not a surface change, drop a `none` changeset or apply the `skip-changeset` label. *(Cutover: the legacy in-branch `pkit version bump <segment>` still works until the release path is retired.)*

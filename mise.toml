@@ -14,6 +14,15 @@
 
 [tools]
 uv = "latest"
+# changie: contributor convenience for authoring changeset files (PRJ-002 D1).
+# DEV-ONLY and adopter-invisible — never bundled in the wheel, never a runtime
+# dependency, never required to install or use pkit. Changesets are equally
+# hand-writable; `pkit release` reads the FILE, not the tool.
+changie = "latest"
+
+[tasks.changeset]
+description = "Author a changeset declaring version intent (PRJ-002; wraps `changie new`)"
+run = "changie new"
 
 [tasks.test]
 description = "Run the test suite (pytest)"
