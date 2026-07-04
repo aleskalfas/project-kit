@@ -24,6 +24,8 @@ uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git
 
 After this, `pkit` is on PATH; the binary works against any project-kit-adopting project — the runtime resolves the current project's root from CWD at invocation time (via `git rev-parse --show-toplevel`, with a CWD-walk fallback). Re-installing the kit into more adopter projects does **not** require additional installs of pkit. The methodology content `init` / `sync` / `upgrade` propagate is **bundled in the wheel** (version-locked to the binary), so these commands work from the installed binary without a source checkout (per [ADR-033](../../docs/architecture/decisions/ADR-033-official-install-bundles-content.md)); a checkout, when present, takes precedence so contributors' source edits stay live.
 
+**One install for everyone — no separate router.** The installed binary is CWD- and pin-aware (per [ADR-039](../../docs/architecture/decisions/ADR-039-pkit-entry-point-router.md)): on every invocation it cheaply picks a route *before* loading the CLI. Inside a project-kit source checkout it runs that checkout's working tree; in an adopter that pins a version (`.pkit/VERSION`) different from the running binary it runs that pinned version under `uvx …@<pin>` (an unresolvable pin degrades loudly to running self, never a hard fail); otherwise it runs in-process. Adopters and contributors therefore share this **single** install — there is no separate shim to put on PATH. Escape hatches: `PKIT_NO_ROUTE=1` forces in-process execution; `PKIT_ROUTED=1` is the internal loop guard the re-exec'd process inherits.
+
 Pin to a specific kit version:
 
 ```

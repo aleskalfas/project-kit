@@ -48,15 +48,15 @@ run = "uv run pyright"
 description = "Run all checks (lint + format:check + typecheck + test)"
 depends = ["lint", "format:check", "typecheck", "test"]
 
-# --- pkit routing (multi-checkout dev) --------------------------------------
-# `pkit-router` (scripts/pkit-router) is a CWD-aware shim installed ahead of the
-# pinned binary on PATH: inside any project-kit source checkout it runs THAT
-# checkout's working tree (via the PRJ-001 dispatcher); everywhere else it runs
-# the pinned release. The pinned install is the router's fallback, so install
-# both. `pkit:which` diagnoses the wiring.
+# --- pkit install + routing (one install for everyone) ----------------------
+# There is ONE install: the global pkit release (PRJ-004). It routes itself per
+# CWD and pin (ADR-039) — inside a project-kit source checkout it runs THAT
+# checkout's working tree (via the PRJ-001 dispatcher); in an adopter that pins
+# a different version it runs that pinned wheel; otherwise it runs itself. No
+# separate router shim to install. `pkit:which` diagnoses the wiring.
 
 [tasks."pkit:pinned-install"]
-description = "Install/refresh the pinned global pkit release (PRJ-004) — the router's fallback"
+description = "Install/refresh the global pkit release (PRJ-004) — routes natively per ADR-039"
 quiet = true
 run = '''
 set -euo pipefail
@@ -64,63 +64,18 @@ target="$(uv tool dir --bin 2>/dev/null || echo "${UV_TOOL_BIN_DIR:-${XDG_BIN_HO
 # Clear a stray symlink (e.g. a legacy dev symlink) before installing.
 if [ -L "$target" ]; then echo "Removing stray symlink: $target"; rm "$target"; fi
 uv tool install --force git+ssh://git@github.com/aleskalfas/project-kit.git
-echo "Done. Pinned release at $target. Verify with: mise run pkit:which"
-'''
-
-[tasks."pkit:router-install"]
-description = "Install the CWD-aware pkit-router shim ahead of the pinned pkit on PATH"
-quiet = true
-run = '''
-set -euo pipefail
-src="{{config_root}}/scripts/pkit-router"
-shim_dir="${PKIT_ROUTER_DIR:-$HOME/.pkit/shim}"
-pinned_dir="$(uv tool dir --bin 2>/dev/null || echo "${UV_TOOL_BIN_DIR:-${XDG_BIN_HOME:-$HOME/.local/bin}}")"
-ver="$(awk '/^ROUTER_VERSION=/{sub(/^ROUTER_VERSION=/,"");print $1;exit}' "$src")"
-mkdir -p "$shim_dir"
-install -m 0755 "$src" "$shim_dir/pkit"
-echo "Installed router v$ver -> $shim_dir/pkit"
-resolved="$(command -v pkit || true)"
-if [ "$resolved" != "$shim_dir/pkit" ]; then
-  echo
-  echo "PATH: bare 'pkit' currently resolves to ${resolved:-<none>}."
-  echo "The router must precede the pinned dir ($pinned_dir). Detected shell: ${SHELL##*/}."
-  echo "Add the line below to the file shown, then restart your shell (or source it):"
-  echo
-  case "${SHELL##*/}" in
-    zsh)
-      echo "    # in ~/.zshrc"
-      echo "    echo 'export PATH=\"$shim_dir:\$PATH\"' >> ~/.zshrc" ;;
-    bash)
-      echo "    # in ~/.bashrc  (macOS Terminal runs login shells -> use ~/.bash_profile there)"
-      echo "    echo 'export PATH=\"$shim_dir:\$PATH\"' >> ~/.bashrc" ;;
-    fish)
-      echo "    # fish (no rc edit needed; persists in fish's universal path)"
-      echo "    fish_add_path $shim_dir" ;;
-    *)
-      echo "    # add to your shell's startup file"
-      echo "    export PATH=\"$shim_dir:\$PATH\"" ;;
-  esac
-else
-  echo "PATH: OK — bare 'pkit' resolves to the router."
-fi
-if [ ! -x "$pinned_dir/pkit" ]; then
-  echo
-  echo "Fallback missing: run 'mise run pkit:pinned-install' so non-source dirs get the stable release."
-fi
+echo "Done. Global release at $target (routes per CWD + pin). Verify with: mise run pkit:which"
 '''
 
 [tasks."pkit:which"]
-description = "Diagnose pkit routing: active binary, pkit versions, pinned fallback, router version"
+description = "Diagnose pkit routing: active binary, its version, the global install, this checkout"
 quiet = true
 run = '''
-sv() { awk '/^ROUTER_VERSION=/{sub(/^ROUTER_VERSION=/,"");print $1;exit}' "$1" 2>/dev/null; }
 binver() { "$1" version 2>/dev/null | awk '{print $NF}'; }   # version of a direct binary
 p="$(command -v pkit || true)"
 echo "bare 'pkit' resolves to : ${p:-<none>}"
 [ -n "$p" ] && ls -l "$p"
 if [ -n "${PKIT_PINNED_BIN:-}" ]; then pinned="$PKIT_PINNED_BIN"; else pinned="$(uv tool dir --bin 2>/dev/null || echo "${UV_TOOL_BIN_DIR:-${XDG_BIN_HOME:-$HOME/.local/bin}}")/pkit"; fi
-if [ -x "$pinned" ]; then echo "pinned (adopters)       : $pinned  ->  pkit $(binver "$pinned")"; else echo "pinned (adopters)       : $pinned  ->  MISSING (run pkit:pinned-install)"; fi
-shim="${PKIT_ROUTER_DIR:-$HOME/.pkit/shim}/pkit"
-if [ -x "$shim" ]; then echo "installed router        : $shim  ->  router v$(sv "$shim")"; else echo "installed router        : <not installed — run pkit:router-install>"; fi
-echo "this checkout (dev)     : backbone $(cat "{{config_root}}/.pkit/VERSION" 2>/dev/null), router v$(sv "{{config_root}}/scripts/pkit-router")  <- what bare 'pkit' runs from here"
+if [ -x "$pinned" ]; then echo "global install          : $pinned  ->  pkit $(binver "$pinned")"; else echo "global install          : $pinned  ->  MISSING (run pkit:pinned-install)"; fi
+echo "this checkout (dev)     : backbone $(cat "{{config_root}}/.pkit/VERSION" 2>/dev/null)  <- what bare 'pkit' runs from here (route 1)"
 '''
