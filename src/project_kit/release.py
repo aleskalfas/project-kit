@@ -36,6 +36,7 @@ from project_kit.changesets import (
     load_changesets,
     segment_rank,
 )
+from project_kit.migrations import _VERSION_DIR_RE, parse_version_tuple
 
 # Rewrites a component's `version:` line in its package.yaml. Anchored to a
 # leading indent so top-level `schema_version:` is never matched; regex (not
@@ -241,6 +242,79 @@ def _delete_changesets(changesets: list[Changeset]) -> None:
         cs.path.unlink(missing_ok=True)
     if changesets:
         click.echo(f"Consumed {len(changesets)} changeset(s).")
+
+
+# --- Automation-facing summary + migration-dir alignment -----------------
+
+
+def release_summary(source_kit: Path, plan: ReleasePlan) -> dict[str, object]:
+    """A machine-readable summary of a computed release, for automation.
+
+    Emitted as JSON by `pkit release plan --json` so the release-PR workflow
+    can decide whether to open a release PR (`empty`), name the branch/tag
+    (`backbone_version`), render the PR body (`releases`), and surface the
+    migration-dir prediction warnings (`migration_warnings`).
+    """
+    backbone = plan.backbone
+    return {
+        "empty": plan.is_empty,
+        "backbone_version": backbone.new_version if backbone is not None else None,
+        "releases": [
+            {
+                "component": rel.component.name,
+                "old_version": rel.old_version,
+                "new_version": rel.new_version,
+                "segment": rel.segment,
+                "notes": list(rel.notes),
+            }
+            for rel in plan.releases
+        ],
+        "changesets_consumed": len(plan.consumed),
+        "migration_warnings": migration_dir_mismatches(source_kit, plan),
+    }
+
+
+def migration_dir_mismatches(source_kit: Path, plan: ReleasePlan) -> list[str]:
+    """Backbone migration dirs whose predicted version the release won't cut.
+
+    Migration dirs are named `<X.Y.0>` and authored in the same change-set as
+    the surface change they migrate (COR-010) — so their name *predicts* the
+    release version before the release step computes it. A dir naming a version
+    above the current `.pkit/VERSION` that the computed release will NOT produce
+    is an orphaned prediction (the migration-dir-prediction coupling flagged on
+    #465). Returns human-readable warnings; empty when aligned.
+
+    Non-fatal by design: surface is a human judgment (PRJ-002 D2) and a dir may
+    legitimately target a later release, so this only warns — it never blocks.
+    Backbone-only: per-component tags/dirs are out of scope (PRJ-004).
+    """
+    root = source_kit / "migrations" / "backbone"
+    if not root.is_dir():
+        return []
+
+    current = (source_kit / "VERSION").read_text(encoding="utf-8").strip()
+    current_minor = parse_version_tuple(current)[:2]
+    backbone = plan.backbone
+    computed_minor = parse_version_tuple(backbone.new_version)[:2] if backbone is not None else None
+
+    warnings: list[str] = []
+    for entry in sorted(root.iterdir()):
+        if not (entry.is_dir() and _VERSION_DIR_RE.match(entry.name)):
+            continue
+        dir_minor = parse_version_tuple(entry.name)[:2]
+        if dir_minor <= current_minor:
+            continue  # at/below the released version — history, not a prediction
+        if computed_minor is None:
+            warnings.append(
+                f"migration dir backbone/{entry.name} predicts a backbone release, but "
+                f"the computed release moves no backbone version (stale prediction? see #465)."
+            )
+        elif dir_minor != computed_minor:
+            warnings.append(
+                f"migration dir backbone/{entry.name} does not match the computed backbone "
+                f"release {backbone.new_version} (stale version prediction? see #465)."
+            )
+    return warnings
 
 
 # --- The surface-without-changeset CI guard (PRJ-002 implications) -------

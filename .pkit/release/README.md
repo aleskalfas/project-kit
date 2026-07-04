@@ -93,6 +93,65 @@ release commit, which does not exist yet when `apply` runs. The sequence:
 commit (e.g. re-running on `main` after merge). A component-only release (no
 backbone move) cuts no tag — PRJ-004 tags the backbone `.pkit/VERSION`.
 
+## Automated flow (CI)
+
+Two workflows under `.github/workflows/` turn the manual sequence above into a
+human-gated automation. They **never auto-merge** — a human reviews and merges
+the release PR; the automation only proposes and, post-merge, tags.
+
+**1. `release-pr.yml` — open the release PR.** Triggered by `workflow_dispatch`
+(manual) or a weekly `schedule`. It:
+
+- Computes the release from the pending changesets (`pkit release plan --json`)
+  and **no-ops cleanly** when nothing moves a version (an empty release, or only
+  `none` changesets — those wait for the next real release rather than opening a
+  version-less PR).
+- Creates a `release/v<new-backbone>` branch off `main`, runs `pkit release
+  apply --yes` (versions + broaden + `CHANGELOG.md`, consuming the changesets),
+  commits `chore(release): v<new-backbone>`, pushes, and opens a **release PR**
+  whose body shows the computed bumps and the generated changelog for review.
+- Is **idempotent**: if a release PR is already open (any head under
+  `release/`), it skips rather than opening a duplicate.
+- Does **not** tag — the tag must point at the *merged* release commit (PRJ-004),
+  which does not exist until the human merges. Tagging is workflow 2.
+
+**2. `release-tag.yml` — tag post-merge.** Runs on `push` to `main`. Detection
+is **VERSION-driven, not message-driven** (a release PR may land as a merge,
+squash, or rebase, so the head commit's message is unreliable): if the tag
+matching `.pkit/VERSION` does not yet exist, it cuts it via `pkit version tag
+--push`. Naturally **idempotent** — a non-release push doesn't change
+`.pkit/VERSION`, so that version's tag already exists and the job no-ops.
+Backbone tag only (per-component tags were dropped by design, PRJ-004).
+
+### Token handling (read before relying on downstream CI)
+
+The default `GITHUB_TOKEN` opens the release PR, but by GitHub's loop-prevention
+rule a PR it opens does **not** trigger `on: pull_request` workflows — so
+`checks.yml` would not auto-run on the release PR. Two ways this is handled:
+
+- **Preferred:** set a repo/environment secret **`RELEASE_PAT`** (a PAT or
+  fine-grained token with `contents` + `pull-requests` write). `release-pr.yml`
+  uses it when present, so the PR triggers `checks.yml` normally.
+- **Without it:** the workflow still works; a maintainer kicks the PR's checks
+  (re-run or an empty commit), and `checks.yml` runs on `push` to `main` after
+  the merge regardless. Pushing the tag with `GITHUB_TOKEN` likewise won't fire
+  a future `on: push: tags:` workflow — there are none today; `RELEASE_PAT`
+  covers that case if one is added.
+
+Workflow permissions are minimal: `release-pr.yml` gets `contents: write`
+(branch) + `pull-requests: write` (the PR); `release-tag.yml` gets `contents:
+write` (the tag). Neither has merge authority.
+
+### Migration-dir prediction warning (#465)
+
+Migration dirs are named `<X.Y.0>` and authored in the same change-set as the
+surface they migrate (COR-010) — so the name *predicts* the release version
+before the release computes it. `pkit release plan` (and `apply`) warn when a
+backbone migration dir above the current `.pkit/VERSION` does **not** match the
+computed release version — an orphaned prediction (the coupling flagged on
+\#465). The warning is **non-fatal** (surface is a human judgment) and rides
+along in the release PR body via the `--json` summary's `migration_warnings`.
+
 ### Cutover — the old path still works
 
 This is the **introduce** step of introduce → migrate → retire. `pkit version

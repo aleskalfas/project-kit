@@ -221,3 +221,77 @@ def test_cutover_legacy_version_bump_still_works(tmp_path: Path) -> None:
     plan = release.compute_release(source_kit)
     assert plan.backbone is not None
     assert plan.backbone.new_version == "1.6.1"
+
+
+def _add_migration_dir(source_kit: Path, version: str) -> None:
+    (source_kit / "migrations" / "backbone" / version).mkdir(parents=True, exist_ok=True)
+
+
+def test_release_summary_shape_for_backbone_move(tmp_path: Path) -> None:
+    source_kit = _make_kit(tmp_path)
+    _add(source_kit, "backbone", "minor", "a new command", "a.yaml")
+    plan = release.compute_release(source_kit)
+
+    summary = release.release_summary(source_kit, plan)
+    assert summary["empty"] is False
+    assert summary["backbone_version"] == "1.6.0"
+    assert summary["changesets_consumed"] == 1
+    assert summary["migration_warnings"] == []
+    releases = summary["releases"]
+    assert isinstance(releases, list)
+    assert releases[0]["component"] == "backbone"
+    assert releases[0]["old_version"] == "1.5.0"
+    assert releases[0]["new_version"] == "1.6.0"
+    assert releases[0]["segment"] == "minor"
+    assert releases[0]["notes"] == ["a new command"]
+
+
+def test_release_summary_empty_plan(tmp_path: Path) -> None:
+    source_kit = _make_kit(tmp_path)
+    plan = release.compute_release(source_kit)
+
+    summary = release.release_summary(source_kit, plan)
+    assert summary["empty"] is True
+    assert summary["backbone_version"] is None
+    assert summary["releases"] == []
+
+
+def test_migration_dir_no_warning_when_dir_matches_computed(tmp_path: Path) -> None:
+    source_kit = _make_kit(tmp_path)
+    _add(source_kit, "backbone", "minor", "x", "a.yaml")  # 1.5.0 -> 1.6.0
+    _add_migration_dir(source_kit, "1.6.0")
+    plan = release.compute_release(source_kit)
+
+    assert release.migration_dir_mismatches(source_kit, plan) == []
+
+
+def test_migration_dir_warns_on_stale_prediction(tmp_path: Path) -> None:
+    source_kit = _make_kit(tmp_path)
+    _add(source_kit, "backbone", "minor", "x", "a.yaml")  # computes 1.6.0
+    _add_migration_dir(source_kit, "1.7.0")  # predicts a version the release won't cut
+    plan = release.compute_release(source_kit)
+
+    warnings = release.migration_dir_mismatches(source_kit, plan)
+    assert len(warnings) == 1
+    assert "backbone/1.7.0" in warnings[0]
+    assert "1.6.0" in warnings[0]
+
+
+def test_migration_dir_ignores_released_history(tmp_path: Path) -> None:
+    source_kit = _make_kit(tmp_path)
+    _add(source_kit, "backbone", "minor", "x", "a.yaml")
+    _add_migration_dir(source_kit, "1.5.0")  # == current VERSION, already-released history
+    plan = release.compute_release(source_kit)
+
+    assert release.migration_dir_mismatches(source_kit, plan) == []
+
+
+def test_migration_dir_warns_when_release_moves_no_backbone(tmp_path: Path) -> None:
+    source_kit = _make_kit(tmp_path)
+    _add(source_kit, "claude-code", "minor", "adapter feature", "a.yaml")  # no backbone move
+    _add_migration_dir(source_kit, "1.6.0")  # future backbone dir with nothing to cut
+    plan = release.compute_release(source_kit)
+
+    warnings = release.migration_dir_mismatches(source_kit, plan)
+    assert len(warnings) == 1
+    assert "backbone/1.6.0" in warnings[0]

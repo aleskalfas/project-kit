@@ -47,6 +47,8 @@ from project_kit.release import (
     apply_release,
     check_changesets,
     compute_release,
+    migration_dir_mismatches,
+    release_summary,
 )
 from project_kit.status import report_status
 from project_kit.sync import run_sync
@@ -322,11 +324,24 @@ def release() -> None:
 
 
 @release.command("plan")
-def release_plan() -> None:
+@click.option(
+    "--json",
+    "as_json",
+    is_flag=True,
+    default=False,
+    help="Emit the computed release as JSON (for the release-PR automation).",
+)
+def release_plan(as_json: bool) -> None:
     """Preview the release computed from pending changesets (read-only)."""
+    import json
+
     source_kit = find_source_kit()
     plan = compute_release(source_kit)
+    if as_json:
+        click.echo(json.dumps(release_summary(source_kit, plan), indent=2))
+        return
     _print_release_plan(plan)
+    _warn_migration_mismatches(source_kit, plan)
 
 
 @release.command("apply")
@@ -349,6 +364,7 @@ def release_apply(tag: bool, push: bool, yes: bool) -> None:
     source_kit = find_source_kit()
     plan = compute_release(source_kit)
     _print_release_plan(plan)
+    _warn_migration_mismatches(source_kit, plan)
     if plan.is_empty:
         apply_release(source_kit, plan, tag=tag, push=push)
         return
@@ -404,6 +420,12 @@ def release_check(base: str, skip: bool | None) -> None:
 def _env_flag(name: str) -> bool:
     """True when an env var is set to a truthy value (`1`/`true`/`yes`)."""
     return os.environ.get(name, "").strip().lower() in {"1", "true", "yes"}
+
+
+def _warn_migration_mismatches(source_kit: Path, plan: ReleasePlan) -> None:
+    """Echo any migration-dir prediction warnings (non-fatal; see #465)."""
+    for warning in migration_dir_mismatches(source_kit, plan):
+        click.echo(f"  warning: {warning}")
 
 
 def _print_release_plan(plan: ReleasePlan) -> None:
