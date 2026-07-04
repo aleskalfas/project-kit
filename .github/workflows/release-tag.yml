@@ -1,0 +1,77 @@
+name: release-tag
+
+# Post-merge tagging. When a release lands on main (the merged
+# `chore(release):` commit that bumped .pkit/VERSION), cut the backbone tag
+# from .pkit/VERSION via `pkit version tag --push`.
+#
+# Detection is VERSION-driven, not commit-message-driven, on purpose: a release
+# PR may reach main as a merge commit, a squash, or a rebase, so the head
+# commit's message is not reliable. Instead: on any push to main, if the tag
+# matching .pkit/VERSION does not yet exist, cut it. That is naturally
+# idempotent (skips when the tag exists) and merge-method-agnostic. Non-release
+# pushes don't change .pkit/VERSION, so their tag already exists → no-op.
+#
+# Backbone tag only — per-component tags were dropped by design (PRJ-004 /
+# .pkit/release/README.md).
+#
+# Token note: pushing a tag with the default GITHUB_TOKEN does not trigger
+# `on: push: tags:` workflows (loop-prevention). There are none today; add a
+# RELEASE_PAT secret (used below when present) if a tag-triggered release build
+# is added later and must fire from this tag.
+
+on:
+  push:
+    branches: [main]
+
+# Push the tag.
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history so tag creation sees prior tags)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_PAT || github.token }}
+
+      # Cheap gate: only proceed when .pkit/VERSION lacks its matching tag.
+      # Runs on every push to main, but the uv steps below are skipped unless a
+      # tag is actually needed.
+      - name: Detect an untagged release on main
+        id: detect
+        run: |
+          set -euo pipefail
+          version="$(cat .pkit/VERSION)"
+          tag="v${version}"
+          if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null \
+             || git ls-remote --exit-code --tags origin "refs/tags/${tag}" >/dev/null 2>&1; then
+            echo "Tag ${tag} already exists — nothing to do."
+            echo "tag_needed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag_needed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Python
+        if: steps.detect.outputs.tag_needed == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        if: steps.detect.outputs.tag_needed == 'true'
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install project (clean resolve)
+        if: steps.detect.outputs.tag_needed == 'true'
+        run: uv sync
+
+      - name: Tag the backbone release and push
+        if: steps.detect.outputs.tag_needed == 'true'
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          uv run pkit version tag --push

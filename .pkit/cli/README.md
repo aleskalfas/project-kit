@@ -109,7 +109,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # or: brew install uv
 | `permissions profile activate <name> [--no-apply]` | activate a profile: set posture + layer its grants under your own (never overwriting manual grants), then `apply` unless `--no-apply`. Does not enable the hook | yes | no — idempotent (overwrite + swap) |
 | `version` | show CLI version + project's recorded core-layer version | no | yes (read-only) |
 | `version bump <segment>` | bump `.pkit/VERSION` (`segment` = `patch` / `minor` / `major`); see PRJ-002 | yes | no — each call increments |
-| `release plan` | preview the release computed from pending changesets (PRJ-002); see `.pkit/release/README.md` | no | yes (read-only) |
+| `release plan [--json]` | preview the release computed from pending changesets (PRJ-002); `--json` emits a machine-readable summary for the release-PR automation; see `.pkit/release/README.md` | no | yes (read-only) |
 | `release apply` | consume changesets → write versions + broaden `requires_backbone` + changelog (the sole main-only writer, PRJ-002 D3); tagging is a separate step (`version tag`) | yes | no — writes a release |
 | `release check --base <ref>` | CI guard: fail a PR whose surface change ships no changeset (escape hatch: `none` changeset / `skip-changeset` label) | no | yes (read-only) |
 

@@ -1,0 +1,141 @@
+name: release-pr
+
+# Opens a reviewable release PR from the pending changesets — the automated
+# form of the manual sequence in .pkit/release/README.md (apply → commit →
+# open the PR). NEVER auto-merges: a human reviews the version bumps + the
+# generated changelog and merges. Post-merge tagging is release-tag.yml.
+#
+# Trigger it manually (workflow_dispatch) or let the weekly schedule sweep
+# pending changesets; both no-op cleanly when nothing moves a version.
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    # Weekly, Monday 09:00 UTC. A no-op when no changeset moves a version.
+    - cron: "0 9 * * 1"
+
+# Minimal scope: push the release branch (contents) and open the PR
+# (pull-requests). No merge permission — a human merges the PR.
+permissions:
+  contents: write
+  pull-requests: write
+
+# Token note: the default GITHUB_TOKEN opens the PR but, by GitHub's
+# loop-prevention rule, a PR it opens does NOT trigger `on: pull_request`
+# workflows — so checks.yml would not auto-run on the release PR. Provide a
+# repo/environment secret RELEASE_PAT (a PAT or fine-grained token with
+# contents+pull-requests write) to have the PR trigger checks; without it the
+# workflow still works, but a maintainer must kick the PR's checks (re-run /
+# empty commit) — and checks.yml runs on push to main after the merge anyway.
+env:
+  GH_TOKEN: ${{ secrets.RELEASE_PAT || github.token }}
+
+jobs:
+  release-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history so the release computes from main's state)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_PAT || github.token }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install project (clean resolve)
+        run: uv sync
+
+      # Compute the release BEFORE applying (apply consumes the changesets), so
+      # the branch name, PR title, and PR body can use it. `empty` is true when
+      # no changeset moves a version — the clean no-op case (also true when only
+      # `none` changesets are pending; they are swept up by the next real
+      # release rather than warranting a version-less PR).
+      - name: Compute the release plan
+        id: plan
+        run: |
+          plan="$(uv run pkit release plan --json)"
+          printf '%s' "$plan" > "${RUNNER_TEMP}/release-plan.json"
+          {
+            echo "empty=$(printf '%s' "$plan" | jq -r '.empty')"
+            echo "version=$(printf '%s' "$plan" | jq -r '.backbone_version // ""')"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: No-op when nothing to release
+        if: steps.plan.outputs.empty == 'true'
+        run: echo "No pending changesets move a version — nothing to release."
+
+      # Deterministic release branch from the computed backbone version (falls
+      # back to the run id for a component-only release with no backbone move).
+      - name: Derive the release branch name
+        id: branch
+        if: steps.plan.outputs.empty != 'true'
+        run: |
+          if [ -n "${{ steps.plan.outputs.version }}" ]; then
+            echo "name=release/v${{ steps.plan.outputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=release/${{ github.run_id }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Idempotency: if a release PR is already open (any head under release/),
+      # do not open a second one — a human is already reviewing it.
+      - name: Skip if a release PR is already open
+        id: existing
+        if: steps.plan.outputs.empty != 'true'
+        run: |
+          open="$(gh pr list --state open --json headRefName \
+            --jq '[.[] | select(.headRefName | startswith("release/"))] | length')"
+          echo "count=${open}" >> "$GITHUB_OUTPUT"
+          if [ "${open}" != "0" ]; then
+            echo "A release PR is already open — skipping."
+          fi
+
+      - name: Apply the release and open the PR
+        if: steps.plan.outputs.empty != 'true' && steps.existing.outputs.count == '0'
+        run: |
+          set -euo pipefail
+          branch="${{ steps.branch.outputs.name }}"
+          version="${{ steps.plan.outputs.version }}"
+          plan="${RUNNER_TEMP}/release-plan.json"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "${branch}"
+
+          # Write versions + CHANGELOG and consume the changesets. No tag here:
+          # the tag points at the MERGED release commit and is cut post-merge by
+          # release-tag.yml (PRJ-004 / .pkit/release/README.md).
+          uv run pkit release apply --yes
+
+          title="chore(release): v${version:-$(date -u +%Y-%m-%d)}"
+          git add -A
+          git commit -m "${title}"
+          git push --set-upstream origin "${branch}"
+
+          # PR body: the computed bumps, any migration-dir prediction warnings
+          # (#465), and the freshly generated changelog entry (the top block of
+          # CHANGELOG.md) for human review.
+          body="${RUNNER_TEMP}/pr-body.md"
+          {
+            echo "Automated release PR — review the version bumps and changelog, then merge."
+            echo "Merging tags the backbone version post-merge (release-tag.yml). Do not squash away the version bump."
+            echo
+            echo "## Version bumps"
+            jq -r '.releases[] | "- \(.component): \(.old_version) → \(.new_version) (\(.segment))"' "${plan}"
+            warnings="$(jq -r '.migration_warnings[]?' "${plan}")"
+            if [ -n "${warnings}" ]; then
+              echo
+              echo "## Migration-dir warnings (see #465)"
+              printf '%s\n' "${warnings}" | sed 's/^/- /'
+            fi
+            echo
+            echo "## Generated changelog"
+            awk '/^## / { if (seen++) exit } seen' CHANGELOG.md
+          } > "${body}"
+
+          gh pr create --base main --head "${branch}" --title "${title}" --body-file "${body}"
