@@ -1,8 +1,0 @@
-component: backbone
-kind: none
-body: >
-  Router stamps PKIT_CLI_VERSION from the checkout's .pkit/VERSION in
-  source-checkout mode, so the provenance footer reports cli=tree and no longer
-  posts a spurious drift tag. Confined to route 1 (a project-kit source
-  checkout); adopters on the installed/pinned paths are unaffected, so this
-  moves no adopter surface.

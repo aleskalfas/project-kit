@@ -1,0 +1,8 @@
+component: backbone
+kind: patch
+category: Fixed
+body: >
+  Filing an issue or PR from a project-kit source checkout no longer posts a
+  spurious version-drift note — the tool now reports its version as the
+  checked-out tree's version.
+pr: https://github.com/aleskalfas/project-kit/pull/489
