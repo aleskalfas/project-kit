@@ -236,6 +236,24 @@ matching `.pkit/VERSION` does not yet exist, it cuts it via `pkit version tag
 `.pkit/VERSION`, so that version's tag already exists and the job no-ops.
 Backbone tag only (per-component tags were dropped by design, PRJ-004).
 
+### One-time repo setup (enable the automation)
+
+Before the first automated release, enable one repository setting — without it
+`release-pr.yml` fails at `gh pr create` with *"GitHub Actions is not permitted
+to create or approve pull requests"* (observed cutting v1.140.0):
+
+- [ ] **Settings → Actions → General → Workflow permissions** → check **"Allow
+  GitHub Actions to create and approve pull requests."** This is a repo/org
+  toggle that gates *every* Actions-created PR; the workflow's own
+  `pull-requests: write` permission is necessary but **not sufficient** without
+  it.
+- [ ] *(Optional, recommended)* add a **`RELEASE_PAT`** secret so `checks.yml`
+  runs on the release PR automatically — see Token handling below. Without it the
+  release PR still opens; its CI just has to be kicked manually.
+
+That is the whole setup — both workflows already ship in `.github/workflows/`;
+nothing else is needed to turn the automation on for a repo.
+
 ### Token handling (read before relying on downstream CI)
 
 The default `GITHUB_TOKEN` opens the release PR, but by GitHub's loop-prevention
