@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.141.1 — 2026-07-05
+
+### Fixed
+- Filing an issue or PR from a project-kit source checkout no longer posts a spurious version-drift note — the tool now reports its version as the checked-out tree's version. ([#489])
+
+[#489]: https://github.com/aleskalfas/project-kit/pull/489
+
 ## 1.141.0 — 2026-07-05
 
 ### Added
