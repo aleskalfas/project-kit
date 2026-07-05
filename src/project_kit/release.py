@@ -831,3 +831,167 @@ def _gh_pr_merge(pr_number: int, subject: str, repo_root: Path) -> None:
         raise click.ClickException(
             f"`gh pr merge {pr_number}` failed: {result.stderr.strip()}"
         )
+
+
+# --- The notes-only GitHub Release (#485) --------------------------------
+#
+# The verb is neutral: publish a tag's CHANGELOG.md section as a Release
+# body, carrying NO artifact — no file, tarball, or wheel, and no
+# `--generate-notes`. "Publish notes, attach nothing" is definitional to
+# publishing *notes*, not a project-specific gesture; the repo is derived
+# from the ambient `gh` context (no hardcoded owner/repo), like the #475
+# release-merge wrappers.
+#
+# The no-artifact *posture* is project-kit's own distribution choice
+# (PRJ-004: install stays the git tag, an artifact channel is rejected) and
+# carries no force in an adopter's repo — an adopter is free to attach
+# artifacts. For project-kit the Release stays a notes overlay on the tag,
+# which PRJ-004 explicitly foresaw ("release notes can land later as a
+# GitHub Releases overlay without changing the install path").
+
+
+def extract_changelog_section(text: str, version: str) -> str:
+    """Extract one version's section from `CHANGELOG.md` text.
+
+    Returns the lines from that version's `## <version> …` / `## [<version>] …`
+    release heading up to (not including) the next release-section (`## `)
+    heading — which naturally includes the section's trailing `[#N]:`
+    reference-link block, so the notes' links resolve standalone. Reuses
+    `_CHANGELOG_VERSION_HEADING_RE` to recognise a well-formed version heading.
+    Raises `click.ClickException` when no section matches `version`.
+    """
+    lines = text.splitlines()
+    start = next(
+        (i for i, raw in enumerate(lines) if _heading_version(raw.rstrip()) == version),
+        None,
+    )
+    if start is None:
+        raise click.ClickException(
+            f"{CHANGELOG_NAME} has no section for version {version!r} — expected a "
+            f"`## {version}` (or `## [{version}]`) heading. Run `pkit release apply` "
+            "first, or check the version."
+        )
+    end = next(
+        (j for j in range(start + 1, len(lines)) if lines[j].rstrip().startswith("## ")),
+        len(lines),
+    )
+    return "\n".join(lines[start:end]).rstrip() + "\n"
+
+
+def _heading_version(line: str) -> str | None:
+    """The version token of a well-formed `## <version> …` heading, else None.
+
+    A date-only section (`## <date>`) has no version and yields None — it never
+    matches a requested version. Brackets are stripped so the canonical KaC
+    `## [<version>]` idiom matches the same version as the generator's plain form.
+    """
+    if not _CHANGELOG_VERSION_HEADING_RE.match(line):
+        return None
+    return line[3:].lstrip().split()[0].strip("[]")
+
+
+def publish_release_notes(repo_root: Path, version: str, *, dry_run: bool = False) -> str:
+    """Publish (or update) a notes-only GitHub Release for tag `v<version>`.
+
+    Extracts the version's `CHANGELOG.md` section as the Release body and
+    creates the Release for tag `v<version>` — or updates its notes when the
+    Release already exists (idempotent: re-running edits rather than errors).
+    The Release carries **no artifact** (no file / tarball / wheel and no
+    `--generate-notes`): it is a notes overlay on the git-tag install path
+    (PRJ-004), never an artifact channel. Repo is derived from the ambient
+    `gh` context (no hardcoded owner/repo). `--dry-run` returns the notes it
+    would publish without calling `gh`. Raises `click.ClickException` when the
+    version has no changelog section or (via `--verify-tag`) the tag is missing.
+    """
+    changelog = repo_root / CHANGELOG_NAME
+    if not changelog.is_file():
+        raise click.ClickException(
+            f"no {CHANGELOG_NAME} at {changelog} — run `pkit release apply` first."
+        )
+    notes = extract_changelog_section(changelog.read_text(encoding="utf-8"), version)
+    tag = f"v{version}"
+
+    if dry_run:
+        return (
+            f"[dry-run] would publish notes-only GitHub Release {tag} "
+            f"(no artifact) with these notes:\n\n{notes}"
+        )
+
+    if _gh_release_exists(tag, repo_root):
+        _gh_release_edit_notes(tag, notes, repo_root)
+        return f"Updated notes-only GitHub Release {tag} (notes only — no artifact)."
+    _gh_release_create_notes(tag, notes, repo_root)
+    return f"Published notes-only GitHub Release {tag} (notes only — no artifact)."
+
+
+def _gh_release_exists(tag: str, repo_root: Path) -> bool:
+    """True when a GitHub Release for `tag` already exists (drives idempotency).
+
+    A non-zero `gh release view` is read as "no such Release" so the caller
+    falls to the create path; a genuinely broken `gh` (missing binary) is a
+    clear error rather than a silent "does not exist".
+    """
+    try:
+        result = subprocess.run(
+            ["gh", "release", "view", tag],
+            capture_output=True,
+            text=True,
+            cwd=repo_root,
+            check=False,
+        )
+    except FileNotFoundError as exc:
+        raise click.ClickException(
+            "`gh` is not on PATH — install the GitHub CLI to publish release notes."
+        ) from exc
+    return result.returncode == 0
+
+
+def _gh_release_create_notes(tag: str, notes: str, repo_root: Path) -> None:
+    """Create a notes-only Release for `tag` — notes body, NO artifact.
+
+    `--verify-tag` makes `gh` refuse when the git tag does not exist (the clear
+    missing-tag error). Deliberately no positional file argument and no
+    `--generate-notes`: the Release is a pure notes overlay on the tag install
+    path (PRJ-004), never an artifact channel. Title is the tag.
+    """
+    try:
+        result = subprocess.run(
+            ["gh", "release", "create", tag, "--title", tag, "--notes", notes,
+             "--verify-tag"],
+            capture_output=True,
+            text=True,
+            cwd=repo_root,
+            check=False,
+        )
+    except FileNotFoundError as exc:
+        raise click.ClickException(
+            "`gh` is not on PATH — install the GitHub CLI to publish release notes."
+        ) from exc
+    if result.returncode != 0:
+        raise click.ClickException(
+            f"`gh release create {tag}` failed: {result.stderr.strip()}"
+        )
+
+
+def _gh_release_edit_notes(tag: str, notes: str, repo_root: Path) -> None:
+    """Update an existing Release's notes for `tag` — notes only, NO artifact.
+
+    Edits only the notes body (the idempotent re-run path); title and the
+    no-artifact posture are unchanged.
+    """
+    try:
+        result = subprocess.run(
+            ["gh", "release", "edit", tag, "--notes", notes],
+            capture_output=True,
+            text=True,
+            cwd=repo_root,
+            check=False,
+        )
+    except FileNotFoundError as exc:
+        raise click.ClickException(
+            "`gh` is not on PATH — install the GitHub CLI to publish release notes."
+        ) from exc
+    if result.returncode != 0:
+        raise click.ClickException(
+            f"`gh release edit {tag}` failed: {result.stderr.strip()}"
+        )

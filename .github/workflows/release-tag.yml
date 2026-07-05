@@ -75,3 +75,18 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           uv run pkit version tag --push
+
+      # Only after a tag was just cut: publish a notes-only GitHub Release so
+      # the release page shows what changed (body = this version's CHANGELOG.md
+      # section). NO artifact — a notes overlay on the tag install path
+      # (PRJ-004), never a file/wheel channel. Idempotent (updates if the
+      # Release already exists); a run that cut no tag skips this step entirely,
+      # so it never errors on a non-release push.
+      - name: Publish the notes-only GitHub Release
+        if: steps.detect.outputs.tag_needed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PAT || github.token }}
+        run: |
+          set -euo pipefail
+          version="$(cat .pkit/VERSION)"
+          uv run pkit release publish-notes "$version"
