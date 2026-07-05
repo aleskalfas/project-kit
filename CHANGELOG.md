@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.141.0 — 2026-07-05
+
+### Added
+- Format problems in changeset and changelog files — an unknown category, an empty or malformed entry, or a broken changelog heading — are now caught before they land. ([#478])
+- Completing a release PR now has its own checked command, so finishing a release no longer needs a hand-run raw merge.
+- Each release now publishes a GitHub Release whose page shows that version's changelog, so you can see what changed at a glance. ([#485])
+
+### Changed
+- The changelog now follows Keep a Changelog and Common Changelog — plain, user-facing entries grouped by category, newest first. ([#477])
+
+[#477]: https://github.com/aleskalfas/project-kit/pull/477
+[#478]: https://github.com/aleskalfas/project-kit/pull/478
+[#485]: https://github.com/aleskalfas/project-kit/issues/485
+
 All notable changes to project-kit from `1.140.0` onward are recorded here,
 newest first, following [Keep a Changelog](https://keepachangelog.com) with
 [Common Changelog](https://common-changelog.org) language.

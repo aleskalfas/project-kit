@@ -1,5 +1,0 @@
-component: backbone
-kind: minor
-category: Changed
-body: The changelog now follows Keep a Changelog and Common Changelog — plain, user-facing entries grouped by category, newest first.
-pr: https://github.com/aleskalfas/project-kit/pull/477
