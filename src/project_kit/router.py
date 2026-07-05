@@ -52,6 +52,16 @@ _LOOP_GUARD_ENV = "PKIT_ROUTED"
 # correspondence is a release-discipline property owned by #464 (ADR-039 D3).
 _DISTRIBUTION_GIT_URL = "git+ssh://git@github.com/aleskalfas/project-kit.git"
 
+# Provenance override the CLI honours first (see the pm capability's
+# provenance.py `_read_cli_version`). Route 1 sets it to the checkout's
+# `.pkit/VERSION` so provenance reports `cli == tree`: in a source checkout the
+# running *code* is the tree, but package metadata can lag a `.pkit/VERSION`-only
+# bump (uv's build cache is keyed on `.py` changes, not the VERSION file), which
+# otherwise surfaces as a spurious `cli ≠ tree` drift. Only route 1 sets it —
+# on the pinned (route 2) and self (route 3) paths metadata is already accurate,
+# so a genuine installed-CLI-vs-tree drift must still show.
+_CLI_VERSION_ENV = "PKIT_CLI_VERSION"
+
 
 def main(argv: list[str] | None = None) -> None:
     """Console-script entry point: route, then run whichever process should serve.
@@ -77,7 +87,7 @@ def _route(argv: list[str], environ) -> None:  # type: ignore[no-untyped-def]
         # Route 1. Execs the dispatcher and never returns; on a broken checkout
         # (dispatcher missing / not executable) it warns and returns so we run
         # self rather than silently misrouting — we do NOT fall on to a pin.
-        _exec_source_dispatcher(root, argv)
+        _exec_source_dispatcher(root, argv, environ)
         return
 
     # Route 2 candidate: an adopter project. It pins the version it installed
@@ -145,11 +155,21 @@ def _resolve_pin(root: Path) -> str | None:
     is exactly the right pin, and it needs no new file. Returns None when there
     is no readable, non-empty VERSION (→ no pin → run self).
     """
+    return _read_pkit_version(root)
+
+
+def _read_pkit_version(root: Path) -> str | None:
+    """Read `root/.pkit/VERSION`, stripped; None when missing/unreadable/empty.
+
+    Defensive and stdlib-only — a plain file read, cheap enough for the hot path
+    (ADR-039). Shared by the pin resolver (route 2) and the route-1 CLI-version
+    stamp so the two never diverge on how the VERSION file is read.
+    """
     try:
-        pin = (root / ".pkit" / "VERSION").read_text(encoding="utf-8").strip()
+        text = (root / ".pkit" / "VERSION").read_text(encoding="utf-8").strip()
     except OSError:
         return None
-    return pin or None
+    return text or None
 
 
 def _running_version() -> str:
@@ -163,7 +183,7 @@ def _running_version() -> str:
 # --- Route executors -----------------------------------------------------------
 
 
-def _exec_source_dispatcher(root: Path, argv: list[str]) -> None:
+def _exec_source_dispatcher(root: Path, argv: list[str], environ) -> None:  # type: ignore[no-untyped-def]
     """Route 1: exec the checkout's `.pkit/cli/pkit`. Returns only on degrade.
 
     Sets no loop guard: the dispatcher runs `python -m project_kit`, which does
@@ -173,12 +193,30 @@ def _exec_source_dispatcher(root: Path, argv: list[str]) -> None:
     """
     dispatcher = root / ".pkit" / "cli" / "pkit"
     if os.access(dispatcher, os.X_OK):
+        _stamp_cli_version(root, environ)
         os.execv(str(dispatcher), [str(dispatcher), *argv])  # replaces this process
     _warn(
         f"source checkout at {root} but {dispatcher} is missing or not "
         f"executable — running this binary ({_running_version()}) instead. "
         f"Re-run `pkit sync` to restore the dispatcher."
     )
+
+
+def _stamp_cli_version(root: Path, environ) -> None:  # type: ignore[no-untyped-def]
+    """Inject `PKIT_CLI_VERSION = <checkout .pkit/VERSION>` for the dispatched
+    process, so provenance reports `cli == tree` in a source checkout.
+
+    Respects an explicit override: leaves an already-set value untouched. Reads
+    the VERSION file defensively — a missing/unreadable/empty file leaves the
+    var unset rather than guessing, so provenance falls back to package metadata
+    exactly as before. `environ` is this process's `os.environ`, which the
+    subsequent `os.execv` hands to the dispatched child.
+    """
+    if environ.get(_CLI_VERSION_ENV):
+        return
+    version = _read_pkit_version(root)
+    if version is not None:
+        environ[_CLI_VERSION_ENV] = version
 
 
 def _run_pinned(pin: str, running: str, argv: list[str], environ) -> None:  # type: ignore[no-untyped-def]

@@ -11,6 +11,7 @@ spawned; the routing *decision* is what is under test.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -47,8 +48,13 @@ def no_exec(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(router.os, "execv", fake_execv)
 
 
-def _make_source_checkout(root: Path, *, dispatcher_executable: bool = True) -> Path:
-    """Materialise the minimal markers of a project-kit source checkout."""
+def _make_source_checkout(
+    root: Path, *, dispatcher_executable: bool = True, version: str | None = None
+) -> Path:
+    """Materialise the minimal markers of a project-kit source checkout.
+
+    Writes a `.pkit/VERSION` when `version` is given; omits it otherwise (the
+    missing-VERSION case route 1 must tolerate)."""
     (root / "src" / "project_kit").mkdir(parents=True)
     (root / "src" / "project_kit" / "__init__.py").write_text("", encoding="utf-8")
     (root / ".git").mkdir()
@@ -57,6 +63,8 @@ def _make_source_checkout(root: Path, *, dispatcher_executable: bool = True) -> 
     dispatcher = cli_dir / "pkit"
     dispatcher.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
     dispatcher.chmod(0o755 if dispatcher_executable else 0o644)
+    if version is not None:
+        (root / ".pkit" / "VERSION").write_text(version + "\n", encoding="utf-8")
     return dispatcher
 
 
@@ -151,6 +159,50 @@ def test_route1_degrades_to_self_when_dispatcher_not_executable(
     assert "not executable" in err or "missing" in err
 
 
+# --- Route 1: PKIT_CLI_VERSION stamp (spurious-drift fix, #488) -----------------
+
+
+def test_route1_stamps_cli_version_from_tree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, no_exec: None
+) -> None:
+    _make_source_checkout(tmp_path, version="1.141.0")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv(router._CLI_VERSION_ENV, raising=False)
+
+    with pytest.raises(_ExecCalled):
+        router.main(["version"])
+
+    # The dispatched child inherits os.environ; the tree version is stamped so
+    # provenance reads cli == tree.
+    assert os.environ[router._CLI_VERSION_ENV] == "1.141.0"
+
+
+def test_route1_does_not_overwrite_explicit_cli_version(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, no_exec: None
+) -> None:
+    _make_source_checkout(tmp_path, version="1.141.0")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv(router._CLI_VERSION_ENV, "9.9.9")  # explicit override
+
+    with pytest.raises(_ExecCalled):
+        router.main(["version"])
+
+    assert os.environ[router._CLI_VERSION_ENV] == "9.9.9"  # left untouched
+
+
+def test_route1_leaves_cli_version_unset_when_tree_version_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, no_exec: None
+) -> None:
+    _make_source_checkout(tmp_path)  # no .pkit/VERSION written
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv(router._CLI_VERSION_ENV, raising=False)
+
+    with pytest.raises(_ExecCalled):  # missing VERSION must not crash the route
+        router.main(["version"])
+
+    assert router._CLI_VERSION_ENV not in os.environ  # no guess, stays unset
+
+
 # --- Route 2: pin mismatch → re-exec the pinned wheel --------------------------
 
 
@@ -183,6 +235,7 @@ def test_route2_reexecs_pinned_version_and_propagates_exit(
 ) -> None:
     _make_adopter(tmp_path, "1.100.0")
     monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv(router._CLI_VERSION_ENV, raising=False)
     monkeypatch.setattr(router, "_running_version", lambda: "1.139.0")
     # Probe resolves (rc 0), then the real command exits 3.
     calls = _patch_subprocess(monkeypatch, [_FakeCompleted(0), _FakeCompleted(3)])
@@ -192,6 +245,10 @@ def test_route2_reexecs_pinned_version_and_propagates_exit(
 
     assert excinfo.value.code == 3
     assert ran_self == []  # ran the pinned command, not self
+    # Route 2 must NOT stamp the CLI version: the pinned wheel reports its own
+    # accurate metadata, so a genuine cli ≠ tree drift stays visible.
+    assert router._CLI_VERSION_ENV not in calls[1]["kwargs"]["env"]
+    assert router._CLI_VERSION_ENV not in os.environ
     # Two invocations: the --version probe, then the real command.
     assert len(calls) == 2
     probe_cmd = calls[0]["cmd"]
@@ -250,6 +307,7 @@ def test_route3_runs_self_on_version_match(
 ) -> None:
     _make_adopter(tmp_path, "1.139.0")
     monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv(router._CLI_VERSION_ENV, raising=False)
     monkeypatch.setattr(router, "_running_version", lambda: "1.139.0")
     ran = _patch_subprocess(monkeypatch, [])  # nothing should be spawned
 
@@ -257,6 +315,8 @@ def test_route3_runs_self_on_version_match(
 
     assert ran_self == [True]
     assert ran == []
+    # Route 3 (match) leaves the CLI version unstamped — metadata is accurate.
+    assert router._CLI_VERSION_ENV not in os.environ
 
 
 def test_route3_runs_self_when_adopter_has_no_pin(
