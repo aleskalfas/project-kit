@@ -19,6 +19,7 @@ calls these functions, and translates errors.
 
 from __future__ import annotations
 
+import json
 import re
 import subprocess
 from dataclasses import dataclass
@@ -605,3 +606,228 @@ def lint_release_format(source_kit: Path, *, skip: bool = False) -> LintResult:
         violations.extend(lint_changelog(changelog.read_text(encoding="utf-8")))
 
     return LintResult(violations=violations, skipped=skip)
+
+
+# --- The sanctioned release-PR merge path (#475) -------------------------
+#
+# A release PR (`chore(release): vX` on a `release/*` head) closes no issue, so
+# the pm capability's issue-PR merge gate — which *requires* a `Closes #N`
+# reference — legitimately refuses it. That gate is universal (adopters install
+# it) and must stay project-neutral: a "release PR" is project-kit's own
+# release-flow concept and does not belong in it (COR-014). This is the release
+# flow's own merge verb — it already owns the release-PR lifecycle
+# (the release flow opens the PR and tags it post-merge). It is
+# guarded to `release/*` heads so it is not a general issue-PR-gate bypass, and
+# it is project-neutral: it merges a PR *by number*, deriving the repo from the
+# ambient `gh` context (the git remote), with no hardcoded owner/repo.
+
+# The head-branch prefix `release-pr.yml` uses for the release branch, and the
+# Conventional-Commits title prefix it commits under — the two markers that
+# identify a release PR. Both are project-kit's release-flow convention.
+RELEASE_BRANCH_PREFIX = "release/"
+RELEASE_TITLE_PREFIX = "chore(release):"
+
+# CheckRun conclusions / StatusContext states that count as "not blocking a
+# merge". SKIPPED and NEUTRAL are non-failures; everything else that is not
+# SUCCESS (a failure, or a still-running/pending check) blocks the merge.
+_CHECK_PASSING_OUTCOMES = frozenset({"SUCCESS", "NEUTRAL", "SKIPPED"})
+
+
+@dataclass(frozen=True)
+class ReleasePrState:
+    """The GitHub PR fields the release-merge gate reads (parsed from `gh`)."""
+
+    number: int
+    title: str
+    state: str  # OPEN / MERGED / CLOSED (normalised upper-case)
+    head_ref: str  # the PR's head branch (headRefName)
+    url: str
+    mergeable: str  # MERGEABLE / CONFLICTING / UNKNOWN (normalised upper-case)
+    checks_passing: bool
+    failing_checks: tuple[str, ...]  # names (+ outcome) of non-passing checks
+
+
+@dataclass(frozen=True)
+class ReleaseMergeDecision:
+    """The gate's verdict on a release PR."""
+
+    action: str  # "merge" | "already-done" | "refuse"
+    message: str
+
+
+def summarize_checks(rollup: list[dict] | None) -> tuple[bool, tuple[str, ...]]:
+    """Reduce a `statusCheckRollup` to (all-passing, non-passing-check-labels).
+
+    Handles both node shapes GitHub returns: a CheckRun carries `status`
+    (COMPLETED / IN_PROGRESS / QUEUED) + `conclusion` (SUCCESS / FAILURE / …);
+    a StatusContext carries `state` (SUCCESS / FAILURE / PENDING / ERROR). A
+    check passes only when its outcome is a non-failing terminal one; a
+    still-running check blocks (a release PR must be green before merging). An
+    empty rollup (no checks configured) is treated as passing.
+    """
+    failing: list[str] = []
+    for check in rollup or []:
+        name = check.get("name") or check.get("context") or "check"
+        state = str(check.get("state") or "").upper()
+        status = str(check.get("status") or "").upper()
+        conclusion = str(check.get("conclusion") or "").upper()
+        if state:  # StatusContext
+            outcome = state
+        elif status and status != "COMPLETED":  # CheckRun still running/queued
+            outcome = status
+        else:  # completed CheckRun
+            outcome = conclusion or "PENDING"
+        if outcome not in _CHECK_PASSING_OUTCOMES:
+            failing.append(f"{name} ({outcome})")
+    return (not failing, tuple(failing))
+
+
+def parse_release_pr(raw: dict) -> ReleasePrState:
+    """Build a `ReleasePrState` from the JSON `gh pr view --json …` returns."""
+    passing, failing = summarize_checks(raw.get("statusCheckRollup"))
+    return ReleasePrState(
+        number=int(raw.get("number", 0)),
+        title=str(raw.get("title", "")),
+        state=str(raw.get("state", "")).upper(),
+        head_ref=str(raw.get("headRefName", "")),
+        url=str(raw.get("url", "")),
+        mergeable=str(raw.get("mergeable", "")).upper(),
+        checks_passing=passing,
+        failing_checks=failing,
+    )
+
+
+def evaluate_release_pr(pr: ReleasePrState) -> ReleaseMergeDecision:
+    """Decide whether a release PR may be merged — pure, no I/O.
+
+    Guards first that the PR *is* a release PR (a `release/*` head under a
+    `chore(release):` title); a non-release PR is refused with a pointer to the
+    issue-PR gate. An already-merged or closed PR reports cleanly (idempotent —
+    not an error). An open release PR merges only when GitHub reports it
+    mergeable and every required check is green.
+    """
+    if not pr.head_ref.startswith(RELEASE_BRANCH_PREFIX):
+        return ReleaseMergeDecision(
+            "refuse",
+            f"PR #{pr.number} head branch {pr.head_ref!r} is not a release branch "
+            f"({RELEASE_BRANCH_PREFIX}*). `pkit release merge` only merges release PRs; "
+            f"use `pkit project-management merge-pr {pr.number}` for an issue PR.",
+        )
+    if not pr.title.startswith(RELEASE_TITLE_PREFIX):
+        return ReleaseMergeDecision(
+            "refuse",
+            f"PR #{pr.number} title {pr.title!r} is not a release title (expected a "
+            f"{RELEASE_TITLE_PREFIX!r} prefix). Refusing to merge a non-release PR "
+            f"through `pkit release merge`.",
+        )
+    if pr.state == "MERGED":
+        return ReleaseMergeDecision(
+            "already-done", f"PR #{pr.number} is already merged — nothing to do."
+        )
+    if pr.state == "CLOSED":
+        return ReleaseMergeDecision(
+            "already-done", f"PR #{pr.number} is closed (not merged) — nothing to merge."
+        )
+    if pr.state != "OPEN":
+        return ReleaseMergeDecision(
+            "refuse", f"PR #{pr.number} is in an unexpected state {pr.state!r}."
+        )
+    if pr.mergeable == "CONFLICTING":
+        return ReleaseMergeDecision(
+            "refuse",
+            f"PR #{pr.number} has merge conflicts — resolve them before merging.",
+        )
+    if pr.mergeable != "MERGEABLE":
+        return ReleaseMergeDecision(
+            "refuse",
+            f"PR #{pr.number} mergeability is {pr.mergeable or 'UNKNOWN'!r} (GitHub may "
+            "still be computing it) — retry shortly.",
+        )
+    if not pr.checks_passing:
+        return ReleaseMergeDecision(
+            "refuse",
+            f"PR #{pr.number} required checks are not all green: "
+            f"{', '.join(pr.failing_checks)}. Not merging a red or in-progress release PR.",
+        )
+    return ReleaseMergeDecision(
+        "merge", f"PR #{pr.number} is a mergeable release PR with green checks."
+    )
+
+
+def merge_release_pr(repo_root: Path, pr_number: int, *, dry_run: bool = False) -> str:
+    """Merge a release PR through the sanctioned path — returns a status line.
+
+    Fetches the PR (repo derived from the ambient `gh` context — no hardcoded
+    owner/repo), evaluates the gate, and squash-merges + deletes the branch when
+    it passes. Does **not** tag: the flow's post-merge tag step cuts the backbone
+    tag on the resulting push to `main` (VERSION-driven). Raises
+    `click.ClickException` on a refusal; reports cleanly for an already
+    merged/closed PR.
+    """
+    pr = parse_release_pr(_gh_pr_view(pr_number, repo_root))
+    decision = evaluate_release_pr(pr)
+    if decision.action == "refuse":
+        raise click.ClickException(decision.message)
+    if decision.action == "already-done":
+        return decision.message
+
+    if dry_run:
+        return (
+            f"[dry-run] would squash-merge PR #{pr.number} ({pr.title!r}) and delete "
+            f"branch {pr.head_ref!r}; nothing merged."
+        )
+    _gh_pr_merge(pr.number, pr.title, repo_root)
+    return (
+        f"Merged release PR #{pr.number} ({pr.url}); deleted branch {pr.head_ref!r}.\n"
+        "  Not tagged here: the post-merge tag step cuts the backbone tag on the push "
+        "to main (VERSION-driven)."
+    )
+
+
+def _gh_pr_view(pr_number: int, repo_root: Path) -> dict:
+    """`gh pr view <n> --json …` from `repo_root`, parsed to a dict."""
+    fields = "number,title,state,headRefName,mergeable,url,statusCheckRollup"
+    try:
+        result = subprocess.run(
+            ["gh", "pr", "view", str(pr_number), "--json", fields],
+            capture_output=True,
+            text=True,
+            cwd=repo_root,
+            check=False,
+        )
+    except FileNotFoundError as exc:
+        raise click.ClickException(
+            "`gh` is not on PATH — install the GitHub CLI to merge a release PR."
+        ) from exc
+    if result.returncode != 0:
+        raise click.ClickException(
+            f"`gh pr view {pr_number}` failed: {result.stderr.strip()}"
+        )
+    return json.loads(result.stdout)
+
+
+def _gh_pr_merge(pr_number: int, subject: str, repo_root: Path) -> None:
+    """Squash-merge PR `pr_number` and delete its branch, from `repo_root`.
+
+    Forces the squash-commit subject to the PR title (`--subject`) so a
+    single-commit release PR still lands under the `chore(release):` title
+    rather than the commit message — the same discipline the issue-PR merge
+    applies.
+    """
+    try:
+        result = subprocess.run(
+            ["gh", "pr", "merge", str(pr_number), "--squash", "--delete-branch",
+             "--subject", subject],
+            capture_output=True,
+            text=True,
+            cwd=repo_root,
+            check=False,
+        )
+    except FileNotFoundError as exc:
+        raise click.ClickException(
+            "`gh` is not on PATH — install the GitHub CLI to merge a release PR."
+        ) from exc
+    if result.returncode != 0:
+        raise click.ClickException(
+            f"`gh pr merge {pr_number}` failed: {result.stderr.strip()}"
+        )
