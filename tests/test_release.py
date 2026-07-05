@@ -49,6 +49,24 @@ def _add(source_kit: Path, component: str, kind: str, body: str, name: str) -> N
     )
 
 
+def _write_categorised(
+    source_kit: Path,
+    component: str,
+    kind: str,
+    body: str,
+    category: str,
+    name: str,
+    *,
+    pr: str | None = None,
+) -> None:
+    directory = changesets.unreleased_dir(source_kit.parent)
+    directory.mkdir(parents=True, exist_ok=True)
+    text = f"component: {component}\nkind: {kind}\nbody: {body}\ncategory: {category}\n"
+    if pr is not None:
+        text += f'pr: "{pr}"\n'
+    (directory / name).write_text(text, encoding="utf-8")
+
+
 def test_compute_takes_highest_segment_per_component(tmp_path: Path) -> None:
     source_kit = _make_kit(tmp_path)
     _add(source_kit, "backbone", "patch", "a small fix", "a.yaml")
@@ -127,7 +145,8 @@ def test_apply_generates_changelog_from_notes(tmp_path: Path) -> None:
     changelog = (source_kit.parent / "CHANGELOG.md").read_text()
     assert "# Changelog" in changelog
     assert "## 1.6.0 — 2026-07-03" in changelog
-    assert "### backbone (1.5.0 → 1.6.0)" in changelog
+    # No category on the changeset → defaults to `Changed`; backbone entry plain.
+    assert "### Changed" in changelog
     assert "- Add `pkit release`." in changelog
 
 
@@ -204,7 +223,72 @@ def test_render_changelog_keys_component_only_release_by_date(tmp_path: Path) ->
     _add(source_kit, "claude-code", "minor", "adapter feature", "a.yaml")
     plan = release.compute_release(source_kit)
     entry = release.render_changelog_entry(plan, date(2026, 7, 3))
-    assert entry.startswith("## 2026-07-03 — 2026-07-03")
+    # No backbone move → the section keys by date alone (no `<version> — date`).
+    assert entry.startswith("## 2026-07-03\n")
+    # The inline component tag surfaces which component moved and to what.
+    assert "**claude-code 0.6.0** — adapter feature" in entry
+
+
+def test_render_groups_entries_by_category(tmp_path: Path) -> None:
+    source_kit = _make_kit(tmp_path)
+    _write_categorised(source_kit, "backbone", "minor", "New thing.", "Added", "a.yaml")
+    _write_categorised(source_kit, "backbone", "patch", "Broken thing.", "Fixed", "b.yaml")
+    plan = release.compute_release(source_kit)
+    entry = release.render_changelog_entry(plan, date(2026, 7, 3))
+
+    assert "### Added\n- New thing." in entry
+    assert "### Fixed\n- Broken thing." in entry
+    # Canonical KaC order: Added precedes Fixed.
+    assert entry.index("### Added") < entry.index("### Fixed")
+
+
+def test_render_tags_non_backbone_component_inline(tmp_path: Path) -> None:
+    source_kit = _make_kit(tmp_path)
+    _write_categorised(source_kit, "backbone", "minor", "Backbone thing.", "Added", "a.yaml")
+    _write_categorised(source_kit, "claude-code", "minor", "Adapter thing.", "Added", "b.yaml")
+    plan = release.compute_release(source_kit)
+    entry = release.render_changelog_entry(plan, date(2026, 7, 3))
+
+    # Section keys on the backbone version; the backbone entry is plain, the
+    # non-backbone one is tagged inline with its own name + new version.
+    assert entry.startswith("## 1.6.0 — 2026-07-03")
+    assert "- Backbone thing." in entry
+    assert "- **claude-code 0.6.0** — Adapter thing." in entry
+
+
+def test_render_resolves_pr_links_in_trailing_block(tmp_path: Path) -> None:
+    source_kit = _make_kit(tmp_path)
+    _write_categorised(source_kit, "backbone", "minor", "A change.", "Changed", "a.yaml", pr="465")
+    _write_categorised(
+        source_kit,
+        "backbone",
+        "patch",
+        "A URL-linked fix.",
+        "Fixed",
+        "b.yaml",
+        pr="https://example.test/pull/470",
+    )
+    plan = release.compute_release(source_kit)
+    entry = release.render_changelog_entry(plan, date(2026, 7, 3))
+
+    # Inline `([#N])` on the entry, definition resolved at the foot.
+    assert "- A change. ([#465])" in entry
+    assert "- A URL-linked fix. ([#470])" in entry
+    assert "[#465]: 465" in entry
+    assert "[#470]: https://example.test/pull/470" in entry
+    # The link block sits below the entries.
+    assert entry.index("### Changed") < entry.index("[#465]: 465")
+
+
+def test_render_omits_link_when_pr_absent(tmp_path: Path) -> None:
+    source_kit = _make_kit(tmp_path)
+    _write_categorised(source_kit, "backbone", "minor", "No PR here.", "Added", "a.yaml")
+    plan = release.compute_release(source_kit)
+    entry = release.render_changelog_entry(plan, date(2026, 7, 3))
+
+    assert "- No PR here." in entry
+    assert "([#" not in entry  # no inline link
+    assert "]: " not in entry  # no trailing reference block
 
 
 def test_cutover_legacy_version_bump_still_works(tmp_path: Path) -> None:

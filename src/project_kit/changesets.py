@@ -17,11 +17,22 @@ plain `changie new` writes exactly what this parser reads):
     component: backbone          # `backbone`, or a component (adapter/capability) name
     kind: minor                  # the semver SEGMENT: patch | minor | major | none
     body: Add the `pkit release` command.   # the note
+    category: Added              # optional Keep-a-Changelog group (see below)
+    pr: 465                      # optional PR reference for the changelog link
 
-changie writes a couple of extra fields (`time`, `custom`); they are
-ignored here. `none` is the escape hatch — a declared "this touched a
-component's tree but is not a surface change", consumed at release without
-moving a version.
+`category` and `pr` are optional and read from either the top level (a
+hand-written changeset) or a nested `custom:` map (what `changie new` writes
+via the `custom:` block in `.changie.yaml`). `category` is one of the
+Keep-a-Changelog groups (`Added`, `Changed`, `Fixed`, `Removed`,
+`Deprecated`, `Security`); it is **orthogonal to the `kind` segment** (a
+`patch` may be `Fixed` or `Changed`) and defaults at render time when absent.
+It is irrelevant for `none` changesets, which move no version. `pr` is
+captured at author time (release-time derivation is unreliable under
+squash/rebase) and the changelog degrades gracefully when it is absent.
+
+changie also writes a `time` field; it is ignored here. `none` is the escape
+hatch — a declared "this touched a component's tree but is not a surface
+change", consumed at release without moving a version.
 """
 
 from __future__ import annotations
@@ -58,6 +69,8 @@ class Changeset:
     segment: str  # one of SEGMENTS
     note: str
     path: Path
+    category: str | None = None  # optional Keep-a-Changelog group; defaulted at render
+    pr: str | None = None  # optional PR reference for the changelog link
 
 
 @dataclass(frozen=True)
@@ -155,11 +168,22 @@ def parse_changeset(path: Path) -> Changeset:
             f"changeset {path.name} has kind {segment!r} — expected one of {', '.join(SEGMENTS)}"
         )
 
+    # `category` / `pr` are optional and accepted either top-level (a
+    # hand-written changeset) or under changie's nested `custom:` map. A
+    # missing value is never an error — the changelog defaults the category
+    # and omits the link.
+    custom = data.get("custom")
+    custom = custom if isinstance(custom, dict) else {}
+    category = custom.get("category") or data.get("category")
+    pr = custom.get("pr") or data.get("pr")
+
     return Changeset(
         component=str(component),
         segment=str(segment),
         note=str(note).strip(),
         path=path,
+        category=str(category).strip() if category else None,
+        pr=str(pr).strip() if pr else None,
     )
 
 

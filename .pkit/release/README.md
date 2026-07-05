@@ -62,6 +62,119 @@ The CI guard and `pkit release` read the **file**, not the tool
 `ruamel.yaml`); nothing under `project_kit/_kit/`, no `pyproject` runtime
 dependency, and no install doc references it.
 
+## Changelog format + language discipline
+
+`pkit release` generates `CHANGELOG.md` in the **[Keep a
+Changelog](https://keepachangelog.com)** format with **[Common
+Changelog](https://common-changelog.org)** language. This section is the
+contract a contributor and a future maintainer follow.
+
+### Format — Keep a Changelog
+
+One section per release, **newest first**, dated, with entries **grouped by
+category** under the universal Keep-a-Changelog set:
+
+> `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Security`
+
+```markdown
+## 1.141.0 — 2026-07-05
+
+### Added
+- Ship the `pkit release check` guard. ([#470])
+
+### Changed
+- pkit now runs the version each project pins, so one install works everywhere. ([#465])
+
+[#465]: https://github.com/aleskalfas/project-kit/pull/465
+[#470]: https://github.com/aleskalfas/project-kit/pull/470
+```
+
+### Multi-tier grouping (the load-bearing rule)
+
+project-kit versions **two tiers** — the backbone and each kit-shipped
+component (adapter / capability) — but Keep a Changelog assumes *one* version
+per section. The reconciliation:
+
+- A release section is **keyed by the backbone version + date** (the same
+  identity a backbone tag carries — annotated tags track `.pkit/VERSION` and
+  are backbone-only, per PRJ-004).
+- A **backbone** entry is written plain. A **non-backbone component** entry is
+  **tagged inline** with its name and new version — `**project-management 0.5.0**
+  — <entry>` — because its version differs from the section's backbone key.
+- A **component-only release** (a component moves but the backbone does not)
+  has no backbone version to key on, so the section **keys by date alone** and
+  the inline component tags are what surface *which* component(s) moved and to
+  what version.
+
+**Rationale (do not "fix" this back).** Keying the section on the backbone
+version and carrying component versions inline is a **deliberate deviation from
+strict one-version-per-section Keep a Changelog**. It keeps the changelog
+faithful to the two-tier semver + compatibility model the project dogfoods
+(COR-010, which gives the backbone and each component independent version
+lines) and to the backbone-only tag identity (PRJ-004). A future maintainer
+who "corrects" the changelog to one version per section would break that
+alignment — the deviation is intentional.
+
+Note the altitude split: the **format** above (categories, backbone-keyed
+section, inline component tags) is what the shipped `pkit release` generator
+produces for *every* adopter — it is universal tool behaviour derived from the
+two-tier model (COR-010), not an adopter-optional choice. Only the **language**
+discipline below (plain, user-facing sentences, no in-body jargon/refs) is an
+editorial policy this project layers on top of that output.
+
+### Language — Common Changelog
+
+Each entry is **one plain sentence describing the user-visible outcome**, not
+the mechanism:
+
+- Capital start, period end; one sentence.
+- **No internal jargon or references in the body** — no ADR / COR / PR numbers,
+  no module or shim names the reader can't see. Say what changed *for the
+  reader*, not how it was built.
+- The **only** reference is a trailing `([#N])` link resolved in a block at the
+  foot of the section.
+
+Contrast — before/after, drawn from the `1.140.0` entry:
+
+> ✗ *Fold the `pkit-router` shim's CWD-aware routing into the installed `pkit`
+> entry point (ADR-039)…*
+>
+> ✓ *pkit now automatically runs the version each project pins, so one install
+> works everywhere.* `([#465])`
+
+### The changeset fields behind it
+
+Two optional fields on a changeset drive the format:
+
+- **`category`** — the Keep-a-Changelog group above. It is **orthogonal to the
+  `kind` segment**: a `patch` may be `Fixed` *or* `Changed`, a `minor` may be
+  `Added` *or* `Changed` — **never derive one from the other**. `category` is
+  **optional** (defaults to `Changed` at render) and **irrelevant for `none`**
+  changesets, which move no version.
+- **`pr`** — the PR reference for the `([#N])` link. It is **optional and
+  captured at author time**: the release step does *not* derive it, because
+  squash / rebase makes the commit→PR mapping unreliable (the same reason
+  release tagging is `.pkit/VERSION`-driven, not message-driven). The value is
+  used **verbatim** as the link target (the shipped generator is
+  project-neutral and cannot synthesise a repo URL), and its trailing number
+  is the `#N` label — so **give a full PR URL for a live link**; a bare number
+  still labels the entry but resolves to a non-linking reference. **When `pr`
+  is absent the entry simply carries no link** — the format degrades
+  gracefully.
+
+Both may be given **top-level** in a hand-written changeset or under changie's
+**`custom:`** map (what `changie new` writes); the parser reads either. A
+changeset remains fully **hand-writable** — the `category` / `pr` keys are just
+two more optional lines:
+
+```yaml
+component: backbone
+kind: minor
+body: pkit now runs the version each project pins, so one install works everywhere.
+category: Changed
+pr: https://github.com/aleskalfas/project-kit/pull/465
+```
+
 ## The release step — `pkit release`
 
 The sole main-only writer of version state (PRJ-002 D3). Run from a **release

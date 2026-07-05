@@ -68,6 +68,25 @@ BACKBONE_SURFACE_PREFIXES: tuple[str, ...] = (
 CHANGELOG_NAME = "CHANGELOG.md"
 
 
+# The Keep-a-Changelog category set, in its canonical display order. This is
+# the universal KaC grouping — hardcoded here because it is a fixed, shared
+# convention, not a project-specific list. `Changed` is the default when a
+# changeset declares no category.
+CHANGELOG_CATEGORIES: tuple[str, ...] = (
+    "Added",
+    "Changed",
+    "Deprecated",
+    "Removed",
+    "Fixed",
+    "Security",
+)
+DEFAULT_CATEGORY = "Changed"
+
+# Extracts the trailing number from a `pr` value so a bare number (`465`) or a
+# full URL (`.../pull/465`) both yield the `[#465]` link label.
+_PR_NUMBER_RE = re.compile(r"(\d+)\D*$")
+
+
 @dataclass(frozen=True)
 class ComponentRelease:
     """A single tier's computed bump within a release."""
@@ -76,7 +95,12 @@ class ComponentRelease:
     segment: str  # the highest non-`none` segment across the tier's changesets
     old_version: str
     new_version: str
-    notes: list[str]
+    changesets: list[Changeset]  # the source changesets (carry notes + categories)
+
+    @property
+    def notes(self) -> list[str]:
+        """The non-empty changelog notes, in changeset order."""
+        return [cs.note for cs in self.changesets if cs.note]
 
 
 @dataclass(frozen=True)
@@ -128,7 +152,7 @@ def compute_release(source_kit: Path) -> ReleasePlan:
                 segment=top,
                 old_version=component.version,
                 new_version=versioning.next_version(component.version, top),  # type: ignore[arg-type]
-                notes=[cs.note for cs in group if cs.note],
+                changesets=group,
             )
         )
 
@@ -203,20 +227,61 @@ def _write_component_version(rel: ComponentRelease) -> None:
 
 
 def render_changelog_entry(plan: ReleasePlan, when: date) -> str:
-    """Render the markdown block for this release from the changeset notes.
+    """Render the Keep-a-Changelog block for this release.
 
-    Keyed by the backbone's new version when the backbone moved, else by
-    date (a component-only release has no backbone tag to key on).
+    The section is keyed by the backbone's new version + date when the
+    backbone moved, else by date alone (a component-only release has no
+    backbone tag to key on). Entries are grouped under Keep-a-Changelog
+    category headings; a component that is *not* the backbone is tagged inline
+    with its name + new version so a date-keyed section still surfaces which
+    component moved. `pr` references become reference-style `([#N])` links,
+    resolved in a block at the foot of the section (omitted when absent).
     """
     backbone = plan.backbone
-    heading = backbone.new_version if backbone is not None else when.isoformat()
-    lines = [f"## {heading} — {when.isoformat()}", ""]
+    if backbone is not None:
+        lines = [f"## {backbone.new_version} — {when.isoformat()}", ""]
+    else:
+        lines = [f"## {when.isoformat()}", ""]
+
+    grouped: dict[str, list[str]] = {}
+    refs: dict[str, str] = {}  # link label -> target, for the trailing block
     for rel in plan.releases:
-        lines.append(f"### {rel.component.name} ({rel.old_version} → {rel.new_version})")
-        for note in rel.notes:
-            lines.append(f"- {note}")
+        is_backbone = rel.component.name == BACKBONE
+        for cs in rel.changesets:
+            if not cs.note:
+                continue
+            text = cs.note
+            if not is_backbone:
+                text = f"**{rel.component.name} {rel.new_version}** — {text}"
+            if cs.pr:
+                label = _pr_label(cs.pr)
+                if label is not None:
+                    text = f"{text} ([#{label}])"
+                    refs.setdefault(label, cs.pr)
+            grouped.setdefault(cs.category or DEFAULT_CATEGORY, []).append(text)
+
+    # Canonical KaC order first; any unrecognised category is preserved after,
+    # so a typo is visible in the output rather than silently dropped.
+    ordered = list(CHANGELOG_CATEGORIES) + [c for c in grouped if c not in CHANGELOG_CATEGORIES]
+    for category in ordered:
+        entries = grouped.get(category)
+        if not entries:
+            continue
+        lines.append(f"### {category}")
+        lines.extend(f"- {entry}" for entry in entries)
         lines.append("")
+
+    if refs:
+        lines.extend(f"[#{label}]: {refs[label]}" for label in sorted(refs, key=int))
+        lines.append("")
+
     return "\n".join(lines).rstrip() + "\n"
+
+
+def _pr_label(pr: str) -> str | None:
+    """The `#N` link label for a `pr` value (a bare number or a PR URL)."""
+    match = _PR_NUMBER_RE.search(pr)
+    return match.group(1) if match else None
 
 
 def _write_changelog(repo_root: Path, plan: ReleasePlan, when: date) -> None:
