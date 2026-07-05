@@ -1,4 +1,0 @@
-component: backbone
-kind: minor
-category: Added
-body: Completing a release PR now has its own checked command, so finishing a release no longer needs a hand-run raw merge.
