@@ -453,3 +453,155 @@ def check_changesets(source_kit: Path, base: str, *, skip: bool = False) -> Guar
     declared = {cs.component for cs in load_changesets(source_kit.parent)}
     missing = [name for name in touched if name not in declared]
     return GuardResult(touched=touched, missing=missing, skipped=skip)
+
+
+# --- The changeset + changelog format lint (the OBJECTIVE subset) ---------
+#
+# A *format* lint distinct from the surface guard above: the guard asks
+# "does a surface change carry a changeset?"; this asks "is the changeset /
+# changelog *well-formed*?". It validates only the mechanically-checkable
+# subset — category enum, body shape, changelog heading structure — and makes
+# no attempt at the plain-language / no-jargon discipline, which is human
+# judgment left to the guide (`.pkit/release/README.md`) and review. Same
+# honest stance as the guard: a **reminder, not a proof**, with an escape
+# hatch for the cases an objective rule necessarily mis-fires on.
+
+# A body that is *only* one of these bare references is the objective proxy for
+# the "no in-body jargon / references" rule — an entry that says nothing to a
+# reader who cannot resolve the reference. Full-match (whole stripped body).
+_BARE_REF_RE = re.compile(r"(?:#\d+|ADR-\d+|DEC-\d+|COR-\d+|https?://\S+)", re.IGNORECASE)
+
+# Accepted release-section (`## `) heading shapes. Two forms the generator
+# emits (see `render_changelog_entry`): a version optionally dated, or a
+# date-only section (a component-only release with no backbone key). The `—`
+# em-dash is what the generator writes; a plain `-` and the canonical KaC
+# `[version]` brackets are also accepted so a hand-edit in either idiom passes.
+_CHANGELOG_VERSION_HEADING_RE = re.compile(
+    r"^## \[?\d+\.\d+\.\d+\]?(?: [—-] \d{4}-\d{2}-\d{2})?$"
+)
+_CHANGELOG_DATE_HEADING_RE = re.compile(r"^## \d{4}-\d{2}-\d{2}$")
+
+
+@dataclass(frozen=True)
+class FormatViolation:
+    """One objective format problem the lint found."""
+
+    source: str  # where it is, e.g. `changeset foo.yaml` or `CHANGELOG.md:12`
+    message: str  # what is wrong (and, where useful, how to fix)
+
+
+@dataclass(frozen=True)
+class LintResult:
+    """Outcome of the format lint across all changesets + the changelog."""
+
+    violations: list[FormatViolation]
+    skipped: bool  # the escape hatch was active
+
+    @property
+    def ok(self) -> bool:
+        return self.skipped or not self.violations
+
+
+def lint_changeset(cs: Changeset) -> list[FormatViolation]:
+    """Objective format checks for one changeset.
+
+    Category (when present) must be a Keep-a-Changelog group. Body checks only
+    apply to changesets that move a version (`segment != "none"`) — a `none`
+    changeset never produces a changelog line, so its body carries no
+    changelog-format obligation. A body that does become a changelog line must
+    be non-empty, not *solely* a bare reference, capitalized, and end with a
+    period.
+    """
+    where = f"changeset {cs.path.name}"
+    violations: list[FormatViolation] = []
+
+    if cs.category is not None and cs.category not in CHANGELOG_CATEGORIES:
+        violations.append(
+            FormatViolation(
+                where,
+                f"unknown category {cs.category!r} — expected one of "
+                f"{', '.join(CHANGELOG_CATEGORIES)}.",
+            )
+        )
+
+    if cs.segment == "none":
+        return violations  # no changelog line ⇒ no body-format obligation
+
+    body = cs.note
+    if not body:
+        violations.append(FormatViolation(where, "body is empty."))
+        return violations  # the remaining body checks are moot without a body
+
+    if _BARE_REF_RE.fullmatch(body):
+        violations.append(
+            FormatViolation(
+                where,
+                f"body is only the bare reference {body!r} — write a plain, "
+                "user-facing sentence describing the change.",
+            )
+        )
+    if body[0].islower():
+        violations.append(
+            FormatViolation(where, f"body should start capitalized: {body!r}.")
+        )
+    if not body.endswith("."):
+        violations.append(FormatViolation(where, f"body should end with a period: {body!r}."))
+
+    return violations
+
+
+def lint_changelog(text: str) -> list[FormatViolation]:
+    """Objective structural checks for `CHANGELOG.md`.
+
+    Only the heading *structure* is checked — release-section (`## `) headings
+    must match the generator's shape, and category (`### `) headings must be a
+    known Keep-a-Changelog group. The entry text itself is not linted (its
+    plain-language quality is human judgment, per the guide).
+    """
+    violations: list[FormatViolation] = []
+    for lineno, raw in enumerate(text.splitlines(), start=1):
+        line = raw.rstrip()
+        where = f"{CHANGELOG_NAME}:{lineno}"
+        if line.startswith("### "):
+            category = line[4:].strip()
+            if category not in CHANGELOG_CATEGORIES:
+                violations.append(
+                    FormatViolation(
+                        where,
+                        f"unknown category heading {category!r} — expected one of "
+                        f"{', '.join(CHANGELOG_CATEGORIES)}.",
+                    )
+                )
+        elif line.startswith("## "):
+            if not (
+                _CHANGELOG_VERSION_HEADING_RE.match(line)
+                or _CHANGELOG_DATE_HEADING_RE.match(line)
+            ):
+                violations.append(
+                    FormatViolation(
+                        where,
+                        f"malformed release heading {line!r} — expected "
+                        "`## <version> — <date>` or `## <date>`.",
+                    )
+                )
+    return violations
+
+
+def lint_release_format(source_kit: Path, *, skip: bool = False) -> LintResult:
+    """Run the objective format lint over pending changesets + `CHANGELOG.md`.
+
+    Passes (ok) when every changeset and the changelog are well-formed, or when
+    the escape hatch is active (`skip=True`, wired from a `--skip` flag / the
+    `PKIT_CHANGELOG_LINT_SKIP` env var). Reads committed files only; it needs
+    no PR context, so it runs in the shared check aggregator.
+    """
+    repo_root = source_kit.parent
+    violations: list[FormatViolation] = []
+    for cs in load_changesets(repo_root):
+        violations.extend(lint_changeset(cs))
+
+    changelog = repo_root / CHANGELOG_NAME
+    if changelog.is_file():
+        violations.extend(lint_changelog(changelog.read_text(encoding="utf-8")))
+
+    return LintResult(violations=violations, skipped=skip)

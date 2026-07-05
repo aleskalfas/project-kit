@@ -47,6 +47,7 @@ from project_kit.release import (
     apply_release,
     check_changesets,
     compute_release,
+    lint_release_format,
     migration_dir_mismatches,
     release_summary,
 )
@@ -414,6 +415,46 @@ def release_check(base: str, skip: bool | None) -> None:
         + ".\n  Add one with `changie new` (per .pkit/release/README.md), hand-write a "
         "changeset under .changes/unreleased/, drop a `none` changeset if it is not a "
         "surface change, or apply the `skip-changeset` label."
+    )
+
+
+@release.command("lint")
+@click.option(
+    "--skip",
+    is_flag=True,
+    default=None,
+    help="Escape hatch: pass unconditionally. Also honoured via the "
+    "PKIT_CHANGELOG_LINT_SKIP env var.",
+)
+def release_lint(skip: bool | None) -> None:
+    """Format lint: the OBJECTIVE changeset + CHANGELOG.md format subset.
+
+    Checks the mechanically-verifiable subset only — a changeset's category is
+    a Keep-a-Changelog group, its body is a non-empty sentence (not a bare
+    reference, capitalized, period-ended), and `CHANGELOG.md` headings are
+    well-formed. It does *not* judge plain language / jargon — that is the
+    guide plus review. A reminder, not a proof; see `.pkit/release/README.md`.
+
+    Reads committed files only (no PR context), so it runs in the shared check
+    aggregator. Escape hatch: `--skip` or the PKIT_CHANGELOG_LINT_SKIP env var.
+    """
+    source_kit = find_source_kit()
+    skip_active = bool(skip) or _env_flag("PKIT_CHANGELOG_LINT_SKIP")
+    result = lint_release_format(source_kit, skip=skip_active)
+
+    if result.skipped:
+        click.echo("changelog lint: skipped (escape hatch active).")
+        return
+    if result.ok:
+        click.echo("changelog lint: changesets + CHANGELOG.md are well-formed — ok.")
+        return
+    detail = "\n".join(f"  {v.source}: {v.message}" for v in result.violations)
+    raise click.ClickException(
+        "changeset / changelog format problems (the objective subset):\n"
+        + detail
+        + "\n  Fix the entries above, or apply the escape hatch (--skip / "
+        "PKIT_CHANGELOG_LINT_SKIP) if an objective rule mis-fired. See the "
+        "format guide in .pkit/release/README.md."
     )
 
 
