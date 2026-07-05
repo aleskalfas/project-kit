@@ -50,6 +50,7 @@ from project_kit.release import (
     lint_release_format,
     merge_release_pr,
     migration_dir_mismatches,
+    publish_release_notes,
     release_summary,
 )
 from project_kit.status import report_status
@@ -481,6 +482,29 @@ def release_merge(pr: int, dry_run: bool) -> None:
     """
     source_kit = find_source_kit()
     click.echo(merge_release_pr(source_kit.parent, pr, dry_run=dry_run))
+
+
+@release.command("publish-notes")
+@click.argument("version")
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Print the notes that would be published without calling `gh`.",
+)
+def release_publish_notes(version: str, dry_run: bool) -> None:
+    """Publish a notes-only GitHub Release for `v<version>` from CHANGELOG.md.
+
+    Extracts that version's `CHANGELOG.md` section and creates the GitHub
+    Release for tag `v<version>` with the section as its body — or updates the
+    notes if the Release already exists (idempotent). The Release carries **no
+    artifact**: it is a notes overlay on the git-tag install path (PRJ-004),
+    never a file / tarball / wheel channel. Repo is derived from the ambient
+    `gh` context (no hardcoded owner/repo). A missing tag is a clear error;
+    `--dry-run` prints the notes without calling `gh`.
+    """
+    source_kit = find_source_kit()
+    click.echo(publish_release_notes(source_kit.parent, version, dry_run=dry_run))
 
 
 def _env_flag(name: str) -> bool:

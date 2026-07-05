@@ -1,0 +1,5 @@
+component: backbone
+kind: minor
+category: Added
+body: Each release now publishes a GitHub Release whose page shows that version's changelog, so you can see what changed at a glance.
+pr: https://github.com/aleskalfas/project-kit/issues/485

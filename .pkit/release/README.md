@@ -185,6 +185,7 @@ PR** a human merges — it is *not* auto-run on every merge.
 | `pkit release plan` | no | Preview the computed release (which tiers move, to what, and the notes). |
 | `pkit release apply` | yes | Consume changesets → compute each tier from current `main` → write versions → broaden `requires_backbone` → update `CHANGELOG.md` → delete consumed changesets. Confirms first (`--yes` for CI). Tagging is a separate step (below); `--tag`/`--push` opt in. |
 | `pkit release merge <pr>` | yes (merges) | Merge a release PR (the sanctioned path — below). Guarded to `release/*` heads; merges only an open, mergeable, green PR; squash + delete-branch. Does not tag. `--dry-run` reports without merging. |
+| `pkit release publish-notes <version>` | no (publishes) | Publish a **notes-only** GitHub Release for tag `v<version>`, body = that version's `CHANGELOG.md` section (below). Idempotent (updates if it exists); **no artifact**. `--dry-run` prints the notes without calling `gh`. |
 | `pkit release check` | no | The CI guard (below). |
 
 `apply` in order: writes each tier's version (`.pkit/VERSION` for the backbone,
@@ -240,6 +241,38 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
 
 It stays **human-gated**: a human decides to run it; nothing auto-merges.
 
+### Release notes — `pkit release publish-notes <version>`
+
+Cutting a release leaves a bare git tag; the GitHub release page
+(`…/releases/tag/vX`) then shows nothing about *what changed*. `pkit release
+publish-notes <version>` fills that gap: it extracts that version's
+`CHANGELOG.md` section (the lines from its `## <version> …` heading up to the
+next release heading, including the section's trailing `[#N]:` link block) and
+publishes it as the body of a GitHub Release for tag `v<version>`.
+
+- **Notes only — never an artifact (the guard).** The Release carries **no
+  file, tarball, or wheel**, and does not use `--generate-notes` (the section
+  is supplied verbatim). The no-artifact posture is project-kit's distribution
+  choice — see **PRJ-004** for the why; in short, install stays the git URL at a
+  tag, and the Release is a **notes overlay** on that tag, never an
+  artifact/download channel. Do not add an upload.
+- **Idempotent.** Re-running **updates** the Release's notes rather than
+  erroring; it creates the Release the first time and edits it thereafter. A
+  **missing tag is a clear error** (the create path passes `--verify-tag`, so
+  `gh` refuses to publish notes for a tag that does not exist).
+- **`--dry-run`** prints the notes it would publish without calling `gh`.
+- **Project-neutral.** The repo is derived from the ambient `gh` context (the
+  git remote in the working directory), with no hardcoded owner/repo — the same
+  discipline as `pkit release merge`.
+
+It slots into the sequence after the tag is cut:
+
+    pkit version tag --push            # on main: cut v<new-backbone> (PRJ-004)
+    pkit release publish-notes <new-backbone>   # notes-only Release for that tag
+
+In CI this runs automatically inside `release-tag.yml` (below), right after the
+tag is cut.
+
 ## Automated flow (CI)
 
 Two workflows under `.github/workflows/` turn the manual sequence above into a
@@ -263,12 +296,15 @@ automation only proposes and, post-merge, tags.
 - Does **not** tag — the tag must point at the *merged* release commit (PRJ-004),
   which does not exist until the human merges. Tagging is workflow 2.
 
-**2. `release-tag.yml` — tag post-merge.** Runs on `push` to `main`. Detection
-is **VERSION-driven, not message-driven** (a release PR may land as a merge,
-squash, or rebase, so the head commit's message is unreliable): if the tag
-matching `.pkit/VERSION` does not yet exist, it cuts it via `pkit version tag
---push`. Naturally **idempotent** — a non-release push doesn't change
-`.pkit/VERSION`, so that version's tag already exists and the job no-ops.
+**2. `release-tag.yml` — tag + notes post-merge.** Runs on `push` to `main`.
+Detection is **VERSION-driven, not message-driven** (a release PR may land as a
+merge, squash, or rebase, so the head commit's message is unreliable): if the
+tag matching `.pkit/VERSION` does not yet exist, it cuts it via `pkit version
+tag --push`, then — **only when it just cut a tag** — publishes the notes-only
+GitHub Release for that version via `pkit release publish-notes` (body = the
+`CHANGELOG.md` section; **no artifact**, per the guard above). Naturally
+**idempotent** — a non-release push doesn't change `.pkit/VERSION`, so that
+version's tag already exists, the publish step is skipped, and the job no-ops.
 Backbone tag only (per-component tags were dropped by design, PRJ-004).
 
 ### One-time repo setup (enable the automation)
@@ -306,7 +342,8 @@ rule a PR it opens does **not** trigger `on: pull_request` workflows — so
 
 Workflow permissions are minimal: `release-pr.yml` gets `contents: write`
 (branch) + `pull-requests: write` (the PR); `release-tag.yml` gets `contents:
-write` (the tag). Neither has merge authority.
+write` (the tag **and** the notes-only Release — both are `contents`). Neither
+has merge authority.
 
 ### Migration-dir prediction warning (#465)
 
