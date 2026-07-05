@@ -48,6 +48,7 @@ from project_kit.release import (
     check_changesets,
     compute_release,
     lint_release_format,
+    merge_release_pr,
     migration_dir_mismatches,
     release_summary,
 )
@@ -456,6 +457,30 @@ def release_lint(skip: bool | None) -> None:
         "PKIT_CHANGELOG_LINT_SKIP) if an objective rule mis-fired. See the "
         "format guide in .pkit/release/README.md."
     )
+
+
+@release.command("merge")
+@click.argument("pr", type=int)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Report what would be merged without merging.",
+)
+def release_merge(pr: int, dry_run: bool) -> None:
+    """Merge a release PR — the sanctioned path for a `chore(release):` PR.
+
+    A release PR closes no issue, so the issue-PR merge gate (`pkit
+    project-management merge-pr`) legitimately refuses it. This verb is the
+    release flow's own merge: it is guarded to `release/*` heads (a non-release
+    PR is refused, pointing at the issue-PR gate), merges only when the PR is
+    open, mergeable, and its required checks are green, and squash-merges +
+    deletes the branch. It does **not** tag — `release-tag.yml` cuts the
+    backbone tag on the resulting push to `main` (PRJ-004). Human-gated: a human
+    decides to run it; nothing auto-merges.
+    """
+    source_kit = find_source_kit()
+    click.echo(merge_release_pr(source_kit.parent, pr, dry_run=dry_run))
 
 
 def _env_flag(name: str) -> bool:

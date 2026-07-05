@@ -184,6 +184,7 @@ PR** a human merges — it is *not* auto-run on every merge.
 |---|---|---|
 | `pkit release plan` | no | Preview the computed release (which tiers move, to what, and the notes). |
 | `pkit release apply` | yes | Consume changesets → compute each tier from current `main` → write versions → broaden `requires_backbone` → update `CHANGELOG.md` → delete consumed changesets. Confirms first (`--yes` for CI). Tagging is a separate step (below); `--tag`/`--push` opt in. |
+| `pkit release merge <pr>` | yes (merges) | Merge a release PR (the sanctioned path — below). Guarded to `release/*` heads; merges only an open, mergeable, green PR; squash + delete-branch. Does not tag. `--dry-run` reports without merging. |
 | `pkit release check` | no | The CI guard (below). |
 
 `apply` in order: writes each tier's version (`.pkit/VERSION` for the backbone,
@@ -199,18 +200,52 @@ PRJ-004 tags the *committed* `.pkit/VERSION`, so the tag must point at the
 release commit, which does not exist yet when `apply` runs. The sequence:
 
     pkit release apply                 # on the release branch: write versions + changelog
-    # commit the release; open/merge the release PR to main
+    # commit the release; open the release PR to main
+    pkit release merge <pr>            # merge the release PR (checked; squash + delete branch)
+    # release-tag.yml cuts v<new-backbone> on the push to main — or, fully manual:
     pkit version tag --push            # on main: cut v<new-backbone> (PRJ-004)
 
 `apply --tag` is an opt-in shortcut for when HEAD is *already* the release
 commit (e.g. re-running on `main` after merge). A component-only release (no
 backbone move) cuts no tag — PRJ-004 tags the backbone `.pkit/VERSION`.
 
+### Merging the release PR — `pkit release merge <pr>`
+
+A release PR closes **no issue** — it is a release, not issue work — so the
+project-management capability's issue-PR merge gate (`pkit
+project-management merge-pr`) legitimately **refuses** it: that gate *requires*
+a `Closes #N` reference. That gate is the **universal** pm capability adopters
+install, and a "release PR" (the `release/*` branch + `chore(release):` title)
+is project-kit's **own** release-flow concept — so baking a release exemption
+into the project-neutral issue-PR gate would leak project-specific convention
+into it (COR-014). Instead the release flow owns its own merge verb, beside the
+`release-pr.yml` that opens the PR and the `release-tag.yml` that tags it.
+
+`pkit release merge <pr>`:
+
+- **Guards to release PRs only.** It refuses unless the PR's head branch is
+  `release/*` **and** its title is a `chore(release):` one — a non-release PR is
+  refused with a pointer back to `pkit project-management merge-pr`. It is not a
+  general issue-PR-gate bypass.
+- **Checks preconditions.** The PR must be open, mergeable, and have all
+  required checks green; a conflicting, red, or still-running PR is refused with
+  a clear reason.
+- **Merges** by squash + delete-branch (the project's merge convention). No
+  `Closes #N` requirement — a release PR has none.
+- **Does not tag.** `release-tag.yml` cuts the backbone tag on the resulting
+  push to `main` (VERSION-driven, PRJ-004); the merge and the tag stay split.
+- **Reports cleanly** when the PR is already merged or closed (idempotent — not
+  an error), and derives the repo from the ambient `gh` context (no hardcoded
+  owner/repo), so it is project-neutral.
+
+It stays **human-gated**: a human decides to run it; nothing auto-merges.
+
 ## Automated flow (CI)
 
 Two workflows under `.github/workflows/` turn the manual sequence above into a
-human-gated automation. They **never auto-merge** — a human reviews and merges
-the release PR; the automation only proposes and, post-merge, tags.
+human-gated automation. They **never auto-merge** — a human reviews the release
+PR and merges it with `pkit release merge <pr>` (the sanctioned path above); the
+automation only proposes and, post-merge, tags.
 
 **1. `release-pr.yml` — open the release PR.** Triggered by `workflow_dispatch`
 (manual) or a weekly `schedule`. It:
