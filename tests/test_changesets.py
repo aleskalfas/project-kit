@@ -95,6 +95,57 @@ def test_parse_changeset_ignores_extra_changie_fields(tmp_path: Path) -> None:
     assert cs.segment == "patch"
 
 
+def test_parse_changeset_reads_category_and_pr_top_level(tmp_path: Path) -> None:
+    source_kit = _make_kit(tmp_path)
+    directory = changesets.unreleased_dir(source_kit.parent)
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / "cs.yaml"
+    path.write_text(
+        "component: backbone\nkind: minor\nbody: A thing.\ncategory: Added\npr: 465\n",
+        encoding="utf-8",
+    )
+    cs = changesets.parse_changeset(path)
+    assert cs.category == "Added"
+    assert cs.pr == "465"
+
+
+def test_parse_changeset_reads_category_and_pr_from_custom(tmp_path: Path) -> None:
+    """changie writes the extra fields under a nested `custom:` map."""
+    source_kit = _make_kit(tmp_path)
+    directory = changesets.unreleased_dir(source_kit.parent)
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / "cs.yaml"
+    path.write_text(
+        "component: backbone\n"
+        "kind: minor\n"
+        "body: A thing.\n"
+        "custom:\n"
+        "  category: Fixed\n"
+        "  pr: 'https://example.test/pull/470'\n",
+        encoding="utf-8",
+    )
+    cs = changesets.parse_changeset(path)
+    assert cs.category == "Fixed"
+    assert cs.pr == "https://example.test/pull/470"
+
+
+def test_parse_changeset_defaults_category_and_pr_to_none_when_absent(tmp_path: Path) -> None:
+    source_kit = _make_kit(tmp_path)
+    path = _write_changeset(source_kit, "backbone", "minor", "A thing.", "cs.yaml")
+    cs = changesets.parse_changeset(path)
+    assert cs.category is None
+    assert cs.pr is None
+
+
+def test_parse_changeset_none_kind_needs_no_category(tmp_path: Path) -> None:
+    """A `none` changeset carries no category and still parses cleanly."""
+    source_kit = _make_kit(tmp_path)
+    path = _write_changeset(source_kit, "backbone", "none", "docs only", "cs.yaml")
+    cs = changesets.parse_changeset(path)
+    assert cs.segment == "none"
+    assert cs.category is None
+
+
 def test_parse_changeset_refuses_unknown_kind(tmp_path: Path) -> None:
     source_kit = _make_kit(tmp_path)
     path = _write_changeset(source_kit, "backbone", "huge", "x", "cs.yaml")

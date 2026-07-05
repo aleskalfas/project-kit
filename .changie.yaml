@@ -36,6 +36,29 @@ kinds:
   - label: major
   - label: none
 
+# Extra changelog metadata, written under `custom:` in each fragment and read
+# by `project_kit.changesets` (top-level OR `custom:`). Both are optional:
+# `category` is the Keep-a-Changelog group (orthogonal to `kind`; defaulted at
+# render, irrelevant for `none`), and `pr` is the PR reference used to build
+# the changelog's `([#N])` link (captured here at author time — release-time
+# derivation is unreliable under squash/rebase).
+custom:
+  - key: category
+    label: Category (Keep a Changelog)
+    type: enum
+    optional: true
+    enumOptions:
+      - Added
+      - Changed
+      - Deprecated
+      - Removed
+      - Fixed
+      - Security
+  - key: pr
+    label: PR number or URL (optional)
+    type: string
+    optional: true
+
 # Collision-free filenames: component + segment + timestamp + a random
 # suffix, so parallel PRs never collide on a changeset filename. Mirrors
 # `project_kit.changesets.changeset_filename`.

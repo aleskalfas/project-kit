@@ -2,5 +2,10 @@
 
 ## 1.140.0 — 2026-07-04
 
-### backbone (1.139.0 → 1.140.0)
-- Fold the `pkit-router` shim's CWD-aware routing into the installed `pkit` entry point (ADR-039). The binary now routes per CWD and pin before loading the CLI — running a source checkout's working tree, an adopter's pinned version under `uvx` (degrading loudly to self on an unresolvable pin), or itself — so adopters and contributors share one install. Retires `scripts/pkit-router` and the `pkit:router-install` task; ships a migration nudging any stale dev-machine shim off PATH.
+### Changed
+- pkit now automatically runs the version each project pins, so one install works everywhere. ([#465])
+
+### Removed
+- The separate router shim — pkit installs one binary for everyone now. ([#465])
+
+[#465]: https://github.com/aleskalfas/project-kit/pull/465
