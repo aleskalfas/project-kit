@@ -303,6 +303,59 @@ D2); the guard is a **path heuristic** and cannot be exact:
 The backbone-surface prefixes and per-component subtrees are reviewable data in
 `project_kit/release.py` — tune them as the tree evolves.
 
+## The changeset + changelog format lint
+
+`pkit release lint` validates the **objective, mechanically-checkable subset**
+of the format contract above. It is a *format* check distinct from the surface
+guard: the guard asks "does a surface change carry a changeset?"; the lint asks
+"is the changeset / changelog **well-formed**?". It reads committed files only
+(no PR base ref, no labels), so — unlike `release check` — it rides in the
+shared aggregator (`scripts/check.sh`), which both the local pre-push hook and
+`checks.yml` run. Run it locally with `pkit release lint`.
+
+**What it checks (objective only):**
+
+1. **Changeset category** — when a changeset carries a `category`, it must be
+   one of the Keep-a-Changelog groups (`Added` · `Changed` · `Deprecated` ·
+   `Removed` · `Fixed` · `Security`). Absent is fine (it defaults at render);
+   an *unknown* category fails.
+2. **Changeset body** — for a version-moving changeset (not `none`), the body
+   must be non-empty, **not solely a bare reference** (`#478` / `ADR-013` /
+   `DEC-001` / `COR-010` / a bare URL — the objective proxy for "no
+   jargon-only entry"), start capitalized, and end with a period. A `none`
+   changeset produces no changelog line, so its body is not linted (its
+   category still is).
+3. **`CHANGELOG.md` structure** — release-section (`## `) headings match the
+   generator's shape (`## <version> — <date>` or a date-only `## <date>`; the
+   canonical KaC `## [<version>] - <date>` is also accepted), and every
+   category (`### `) heading is a known group. Only heading **structure** is
+   checked — the entry text itself is not.
+
+**What it does NOT check (and why).** It makes **no attempt** at the
+plain-language / no-in-body-jargon discipline (the "Language — Common
+Changelog" section above). Whether an entry is a plain, user-facing sentence
+free of internal jargon is **human judgment**, left to the guide and to review
+— exactly the line the surface guard draws for "is this a surface change?".
+
+**Limits (read this).** Like the surface guard, the lint is a **reminder, not
+a proof**:
+
+- The capital-start check **false-positives** on a legitimate entry that opens
+  with an inherently lowercase identifier (e.g. an entry beginning `pkit …`, as
+  the `1.140.0` changelog entry does — that entry is *not* linted because the
+  lint reads changelog *structure* only, but a changeset body written the same
+  way would trip it). Override with the escape hatch.
+- It cannot judge whether a well-formed sentence is *actually* plain and
+  jargon-free — a body that is grammatically perfect but full of module names
+  passes the lint and is caught only in review.
+
+**Escape hatch:** `pkit release lint --skip`, or set `PKIT_CHANGELOG_LINT_SKIP`
+(any of `1`/`true`/`yes`) — passes unconditionally, for the rare case an
+objective rule mis-fires.
+
+The category set and heading shapes are reviewable constants in
+`project_kit/release.py` (`CHANGELOG_CATEGORIES` and the heading regexes).
+
 ## Related
 
 - [PRJ-002](../decisions/project/PRJ-002-version-bump-policy.md) — the policy.

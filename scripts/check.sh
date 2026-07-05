@@ -36,6 +36,7 @@ run "tests"              uv run pytest -q
 run "schemas validate"   uv run pkit schemas validate
 run "decisions validate" uv run pkit decisions validate
 run "migrations check"   uv run pkit migrations check-diff --base "${BASE}"
+run "changelog lint"     uv run pkit release lint
 
 echo
 if [ "${fail}" -ne 0 ]; then
