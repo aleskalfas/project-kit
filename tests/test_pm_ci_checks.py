@@ -68,6 +68,79 @@ def test_summarize_empty_rollup_passes(ci) -> None:
     assert ci.summarize_checks(None) == (True, ())
 
 
+# --- stale-run dedupe (#504): latest run per check wins --------------
+# Mirrors tests/test_release_merge.py's dedupe cases — same shared fixture
+# shape, kept in lockstep with the core reducer.
+
+
+def test_summarize_latest_success_beats_stale_failure(ci) -> None:
+    rollup = [
+        {"name": "checks", "status": "COMPLETED", "conclusion": "FAILURE",
+         "startedAt": "2026-06-01T16:30:00Z", "completedAt": "2026-06-01T16:34:00Z"},
+        {"name": "checks", "status": "COMPLETED", "conclusion": "SUCCESS",
+         "startedAt": "2026-06-01T16:35:00Z", "completedAt": "2026-06-01T16:39:00Z"},
+    ]
+    assert ci.summarize_checks(rollup) == (True, ())
+
+
+def test_summarize_latest_failure_beats_stale_success(ci) -> None:
+    rollup = [
+        {"name": "checks", "status": "COMPLETED", "conclusion": "SUCCESS",
+         "completedAt": "2026-06-01T16:30:00Z"},
+        {"name": "checks", "status": "COMPLETED", "conclusion": "FAILURE",
+         "completedAt": "2026-06-01T16:39:00Z"},
+    ]
+    assert ci.summarize_checks(rollup) == (False, ("checks (FAILURE)",))
+
+
+def test_summarize_single_genuine_failure_still_blocks(ci) -> None:
+    rollup = [
+        {"name": "checks", "status": "COMPLETED", "conclusion": "FAILURE",
+         "completedAt": "2026-06-01T16:39:00Z"},
+    ]
+    assert ci.summarize_checks(rollup) == (False, ("checks (FAILURE)",))
+
+
+def test_summarize_latest_pending_blocks(ci) -> None:
+    rollup = [
+        {"name": "checks", "status": "COMPLETED", "conclusion": "SUCCESS",
+         "completedAt": "2026-06-01T16:30:00Z"},
+        {"name": "checks", "status": "IN_PROGRESS", "conclusion": "",
+         "startedAt": "2026-06-01T16:40:00Z"},
+    ]
+    assert ci.summarize_checks(rollup) == (False, ("checks (IN_PROGRESS)",))
+
+
+def test_summarize_distinct_checks_dedupe_independently(ci) -> None:
+    rollup = [
+        {"name": "lint", "status": "COMPLETED", "conclusion": "FAILURE",
+         "completedAt": "2026-06-01T16:30:00Z"},
+        {"name": "lint", "status": "COMPLETED", "conclusion": "SUCCESS",
+         "completedAt": "2026-06-01T16:39:00Z"},
+        {"name": "tests", "status": "COMPLETED", "conclusion": "SUCCESS",
+         "completedAt": "2026-06-01T16:31:00Z"},
+        {"name": "tests", "status": "COMPLETED", "conclusion": "FAILURE",
+         "completedAt": "2026-06-01T16:40:00Z"},
+    ]
+    assert ci.summarize_checks(rollup) == (False, ("tests (FAILURE)",))
+
+
+def test_summarize_statuscontext_dedupes_on_createdat(ci) -> None:
+    rollup = [
+        {"context": "legacy", "state": "FAILURE", "createdAt": "2026-06-01T16:30:00Z"},
+        {"context": "legacy", "state": "SUCCESS", "createdAt": "2026-06-01T16:39:00Z"},
+    ]
+    assert ci.summarize_checks(rollup) == (True, ())
+
+
+def test_summarize_untimed_ties_prefer_last_listed(ci) -> None:
+    rollup = [
+        {"name": "checks", "status": "COMPLETED", "conclusion": "FAILURE"},
+        {"name": "checks", "status": "COMPLETED", "conclusion": "SUCCESS"},
+    ]
+    assert ci.summarize_checks(rollup) == (True, ())
+
+
 # --- evaluate_ci_gate --------------------------------------------------
 
 

@@ -46,6 +46,87 @@ def test_summarize_checks_empty_is_passing() -> None:
     assert release.summarize_checks(None) == (True, ())
 
 
+# --- stale-run dedupe (#504): latest run per check wins --------------
+
+
+def test_summarize_checks_latest_success_beats_stale_failure() -> None:
+    # A check that failed (16:34) then re-ran green (16:39) — the merge must not
+    # be blocked by the retained stale FAILURE. Latest wins.
+    rollup = [
+        {"name": "checks", "status": "COMPLETED", "conclusion": "FAILURE",
+         "startedAt": "2026-06-01T16:30:00Z", "completedAt": "2026-06-01T16:34:00Z"},
+        {"name": "checks", "status": "COMPLETED", "conclusion": "SUCCESS",
+         "startedAt": "2026-06-01T16:35:00Z", "completedAt": "2026-06-01T16:39:00Z"},
+    ]
+    assert release.summarize_checks(rollup) == (True, ())
+
+
+def test_summarize_checks_latest_failure_beats_stale_success() -> None:
+    # Reverse ordering: an older SUCCESS, a newer FAILURE — the latest run
+    # (FAILURE) must block.
+    rollup = [
+        {"name": "checks", "status": "COMPLETED", "conclusion": "SUCCESS",
+         "completedAt": "2026-06-01T16:30:00Z"},
+        {"name": "checks", "status": "COMPLETED", "conclusion": "FAILURE",
+         "completedAt": "2026-06-01T16:39:00Z"},
+    ]
+    assert release.summarize_checks(rollup) == (False, ("checks (FAILURE)",))
+
+
+def test_summarize_checks_single_genuine_failure_still_blocks() -> None:
+    rollup = [
+        {"name": "checks", "status": "COMPLETED", "conclusion": "FAILURE",
+         "completedAt": "2026-06-01T16:39:00Z"},
+    ]
+    assert release.summarize_checks(rollup) == (False, ("checks (FAILURE)",))
+
+
+def test_summarize_checks_latest_pending_blocks() -> None:
+    # An older green run superseded by a fresh in-progress re-run must block.
+    rollup = [
+        {"name": "checks", "status": "COMPLETED", "conclusion": "SUCCESS",
+         "completedAt": "2026-06-01T16:30:00Z"},
+        {"name": "checks", "status": "IN_PROGRESS", "conclusion": "",
+         "startedAt": "2026-06-01T16:40:00Z"},
+    ]
+    assert release.summarize_checks(rollup) == (False, ("checks (IN_PROGRESS)",))
+
+
+def test_summarize_checks_distinct_checks_dedupe_independently() -> None:
+    # Two distinct checks, each with a stale then latest run; each is reduced on
+    # its own latest — `lint` ends green, `tests` ends red.
+    rollup = [
+        {"name": "lint", "status": "COMPLETED", "conclusion": "FAILURE",
+         "completedAt": "2026-06-01T16:30:00Z"},
+        {"name": "lint", "status": "COMPLETED", "conclusion": "SUCCESS",
+         "completedAt": "2026-06-01T16:39:00Z"},
+        {"name": "tests", "status": "COMPLETED", "conclusion": "SUCCESS",
+         "completedAt": "2026-06-01T16:31:00Z"},
+        {"name": "tests", "status": "COMPLETED", "conclusion": "FAILURE",
+         "completedAt": "2026-06-01T16:40:00Z"},
+    ]
+    assert release.summarize_checks(rollup) == (False, ("tests (FAILURE)",))
+
+
+def test_summarize_checks_statuscontext_dedupes_on_createdat() -> None:
+    # Legacy StatusContext nodes dedupe on `context` + `createdAt`; latest wins.
+    rollup = [
+        {"context": "legacy", "state": "FAILURE", "createdAt": "2026-06-01T16:30:00Z"},
+        {"context": "legacy", "state": "SUCCESS", "createdAt": "2026-06-01T16:39:00Z"},
+    ]
+    assert release.summarize_checks(rollup) == (True, ())
+
+
+def test_summarize_checks_untimed_ties_prefer_last_listed() -> None:
+    # No timestamps at all — fall through to GitHub's chronological order and
+    # keep the last-listed run (the green re-run).
+    rollup = [
+        {"name": "checks", "status": "COMPLETED", "conclusion": "FAILURE"},
+        {"name": "checks", "status": "COMPLETED", "conclusion": "SUCCESS"},
+    ]
+    assert release.summarize_checks(rollup) == (True, ())
+
+
 # --- parsing ---------------------------------------------------------
 
 
