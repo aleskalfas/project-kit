@@ -1,0 +1,8 @@
+component: project-management
+kind: none
+body: >
+  Design landing for multi-instance ownership & coordination (DEC-043/044/045,
+  ADR-041; reciprocal notes on DEC-035 and DEC-009) touched the project-management
+  capability decisions tree with no adopter-observable surface — design-ahead, the
+  implementation ships in later Features (#509-#513 under EPIC #508). Declared
+  `none`. No changelog line.

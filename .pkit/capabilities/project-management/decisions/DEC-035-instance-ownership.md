@@ -53,6 +53,17 @@ that term already carries two meanings: team membership in
    no instance id set behaves exactly as today — no marking, no guard, no
    signing. The presence of the id is the sole activation gate.
 
+   > **Refined by [DEC-045](DEC-045-named-per-user-instances.md).** Opt-in and
+   > additive on top of the numeric id: a clone's identity may also carry a
+   > human-readable **name** (e.g. `data`, `map`), and a **per-user-local topology
+   > file** (never committed) may list the person's named instances and the
+   > workstreams each *references* for routing. The *expected* owner of an issue is
+   > then derived from its workstream's referencing instance (feeding the pm-layer
+   > guard only — realm-blindness preserved); where the reference is absent or
+   > shared, the guard falls back to the flat numeric commons behaviour described
+   > here. The numeric model, the ownership marker, and the clash mechanics are
+   > unchanged and remain the fallback — refinement-in-place, not a supersession.
+
 2. **Ownership is carried by an `instance:N` GitHub label, paired with the
    assignee.** The label reuses the label substrate of
    [project-management:DEC-012-classification-axes] but is **not** a
@@ -62,6 +73,15 @@ that term already carries two meanings: team membership in
    pair**: the pool of instance numbers (default 4) is *per-assignee*, so one
    assignee's `instance:2` is distinct from another's. Labels are created lazily
    on first use, so default `bootstrap` is untouched.
+
+   > **Refined by [DEC-043](DEC-043-ownership-substrate-selection.md).** The
+   > ownership marker's substrate is now *selectable*, "substrate-where-available":
+   > the `instance:N` label described here is one binding, kept for repos that can
+   > create labels; where they cannot, the marker is carried by a per-instance
+   > append-only comment log (source of truth) plus a derived, regenerable
+   > owner-mirror in the issue description. Comment-create is per-object atomic, so
+   > the same-instant tie-break in point 6 holds unchanged. Refinement-in-place,
+   > not a supersession — this label mechanism and the clash-guard semantics stand.
 
 3. **A clone claims at creation, for the whole tree.** `create-issue` stamps the
    creating clone's instance label; the clone owns the entire filed arc

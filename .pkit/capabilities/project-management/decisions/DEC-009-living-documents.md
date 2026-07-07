@@ -56,6 +56,15 @@ The aggregate close-gate from [project-management:DEC-007-checkbox-validation] s
 
 The optional `Integration: integration/<slug>` pre-line on the issue body — see [project-management:DEC-013-branch-and-pr-conventions] — counts as **scope content**. Removing the marker from a descendant body without owner authorisation is a scope-changing edit at severity `[validation-severity:bypassable-with-audit]` per [`schemas/body-format.yaml`](../schemas/body-format.yaml)'s `integration_marker.removal_authorisation_severity`.
 
+### Capability-derived regions are a third, distinct class
+
+> **Refined by [DEC-043](DEC-043-ownership-substrate-selection.md) / [pkit:ADR-041].** The wording-vs-scope taxonomy above governs **human-or-PM-authored** body content. A **capability-derived region** — a clearly-fenced, do-not-edit block the capability *generates and regenerates* from a source of truth living elsewhere — is a **third class this record did not previously model**, and neither the wording nor the scope rule applies to it:
+>
+> - It is **not wording** (no human authored it) and **not scope** (editing it authorises nothing — the spec of record lives in the source substrate, not the region).
+> - A human edit to it is **neither free nor gated**: it is simply **overwritten on the next render**, safely, because the region is derived and the read seam regenerates it from its spine. This is a *lighter* interaction than gated scope content — there is nothing to authorise and nothing to lose.
+>
+> The motivating instance is the instance-ownership description mirror (DEC-043's derived owner-mirror, whose regeneration spine is the comment log; contract pinned in [pkit:ADR-041]). The rule for validate-body: **recognise a fenced capability-derived region and exempt it from both the wording and scope checks** — do not treat a stray human edit to it as a scope violation, and do not gate the capability's own regeneration of it.
+
 ## Rationale
 
 Treating issue bodies as frozen-at-filing produces drift in the other direction: implementations diverge from outdated specs, and reviewers don't catch it because the spec wasn't updated. Treating them as fully editable removes the discipline that makes the spec meaningful. The middle path — wording free, scope gated, ticks sticky — preserves the spec's authority while allowing genuine refinement.
