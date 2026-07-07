@@ -1,7 +1,0 @@
-component: backbone
-kind: patch
-category: Changed
-body: >
-  The changeset-guard error now points a decision-only PR to the right choice — a
-  `none` changeset for a design-ahead decision, or a real changeset for a
-  self-executing rule change.
