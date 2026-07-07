@@ -415,8 +415,11 @@ def release_check(base: str, skip: bool | None) -> None:
         "surface change without a changeset for: "
         + ", ".join(result.missing)
         + ".\n  Add one with `changie new` (per .pkit/release/README.md), hand-write a "
-        "changeset under .changes/unreleased/, drop a `none` changeset if it is not a "
-        "surface change, or apply the `skip-changeset` label."
+        "changeset under .changes/unreleased/, drop a `none` changeset if it moves no "
+        "user-facing surface, or apply the `skip-changeset` label."
+        "\n  Decision-only PR (COR/PRJ/ADR/DEC)? Declare `none` for a design-ahead "
+        "decision (the feature ships in a later PR) or a real changeset for a "
+        "self-executing rule change — see PRJ-002."
     )
 
 
