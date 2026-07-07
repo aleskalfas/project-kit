@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.142.0 — 2026-07-07
+
+### Added
+- Releasing a capability now keeps its compatibility claim current — the release step widens the released component's supported backbone range to the version it was released under, and a new `pkit release check-shareable` reports whether a capability is ready for another repository to consume. ([#494])
+- **project-management 0.48.0** — The merge commands now refuse a pull request whose CI is red or still running, so an approved review can no longer land a failing build; a red check can be overridden deliberately with `--bypass-ci "<reason>"`, which records an audit note. ([#498])
+
+### Changed
+- The changeset-guard error now guides a decision-only PR to the right choice — a `none` changeset for a design-ahead decision, or a real one for a self-executing rule change. ([#497])
+
+[#494]: https://github.com/aleskalfas/project-kit/issues/494
+[#497]: https://github.com/aleskalfas/project-kit/issues/497
+[#498]: https://github.com/aleskalfas/project-kit/issues/498
+
 ## 1.141.1 — 2026-07-05
 
 ### Fixed

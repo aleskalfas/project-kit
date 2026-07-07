@@ -1,9 +1,0 @@
-component: backbone
-kind: minor
-category: Added
-body: >
-  Releasing a capability now keeps its compatibility claim current: the release
-  step widens the released component's supported backbone range to cover the
-  version it was released under, and a new pre-sharing check reports whether a
-  capability is ready to be shared for another repository to consume.
-pr: "494"
