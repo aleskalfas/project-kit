@@ -266,6 +266,18 @@ pkit pm set-field 239 --parent 42            # rewrite the parent-ref line to Fe
 
 All three accept `--dry-run` (validate + show the plan, write nothing) and `--yes` (skip the confirmation prompt), and run the DEC-021 membership gate at startup.
 
+#### Clone-local instance identity — `set-instance` (per [project-management:DEC-035-instance-ownership])
+
+`set-instance` records **which of your clones this is** — the opt-in, per-clone activation gate for instance ownership. One person running several clones of the repo gives each a numeric instance id; the id is written to a **git-ignored** runtime file under the capability's `project/instance/` directory (declared in `package.yaml`'s `runtime_ignore:`), so it never commits and never leaves the clone. A clone with **no id set is byte-for-byte unchanged** — no ownership marking, no clash guard, no signed listing (the presence of the id is the sole activation gate).
+
+| Command | What it does |
+|---|---|
+| `set-instance <N>` | Set this clone's instance id to `N` (a positive integer). |
+| `set-instance --show` | Print the current id, or `unset`. |
+| `set-instance --clear` | Unset — revert to the non-participating no-op default. |
+
+Setting the id touches no issue — the per-issue ownership *marker* is written by the lifecycle commands (`create-issue` / `start-work` / `handoff-issue`), which read this id. That marker's substrate is selectable (`comment` default, or `label`) per [project-management:DEC-043-ownership-substrate-selection]; the identity here is orthogonal to that choice.
+
 **`close-issue`** is *not* in the seven-command palette — it handles closure outside forward-progress flow: won't-do / abandonment (`--mode=wont-do`), the post-PR-merge cascade hook (`--mode=pr-merge`), and **cascade-eligibility closure** of a container (epic/feature/umbrella) once all its children are closed and its own checkboxes are ticked (`--mode=cascade-eligibility-close`, a non-skippable DEC-007 gate).
 
 #### Milestone lifecycle — `create-milestone` / `close-milestone` (per [project-management:DEC-016-time-bound-containers])

@@ -1,0 +1,11 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+body: >
+  Add the `set-instance` command — set (or `--show` / `--clear`) this clone's
+  opt-in, per-clone numeric instance id, the activation gate for instance
+  ownership when one person runs several clones of a repo (DEC-035). The id is
+  written to a git-ignored runtime file and read by the ownership lifecycle; a
+  clone with no id set is unchanged. The claim / clash-guard / signed-listing
+  behaviour that acts on the id follows in subsequent changes.

@@ -229,11 +229,18 @@ _PM_PACKAGE = (
 _PM_JOURNAL_DECL = (
     ".pkit/capabilities/project-management/project/process/**/*.journal.jsonl"
 )
+# The clone-local instance-id runtime file (DEC-035 / set-instance, #518) — a
+# second per-clone runtime declaration alongside the process journal.
+_PM_INSTANCE_DECL = ".pkit/capabilities/project-management/project/instance/*.json"
 
 
 def test_pm_capability_declares_journal_in_package_yaml() -> None:
-    # The real reader sees the journal pattern in the shipped package.yaml.
-    assert vis._read_runtime_ignore_decl(_PM_PACKAGE) == [_PM_JOURNAL_DECL]
+    # The real reader sees both per-clone runtime patterns in the shipped
+    # package.yaml, in declaration order.
+    assert vis._read_runtime_ignore_decl(_PM_PACKAGE) == [
+        _PM_JOURNAL_DECL,
+        _PM_INSTANCE_DECL,
+    ]
 
 
 def test_committed_pkit_gitignore_ignores_pm_journal() -> None:
