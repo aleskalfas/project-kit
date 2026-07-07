@@ -405,6 +405,25 @@ with `pkit release check --base origin/main`.
 2. The **`skip-changeset` label** — surfaced to the guard as
    `PKIT_CHANGESET_SKIP=1`; passes unconditionally.
 
+**Release-PR exemption (automatic, no label).** A release PR *is*
+`pkit release apply`'s output — it bumps `.pkit/VERSION` + each moving
+`package.yaml`, prepends `CHANGELOG.md`, and **deletes** the consumed
+`.changes/unreleased/*` changesets. That diff would trip the guard (VERSION +
+`package.yaml` are surface) while the changesets it would need are exactly the
+ones it just consumed. The guard recognises this by **diff shape** — if the
+change set is *only* that footprint (VERSION modified, `CHANGELOG.md`
+added/modified, each `package.yaml` touching only its `version:` /
+`requires_backbone:` lines, and `.changes/unreleased/*` files deleted, with
+**nothing else**), it is the release itself, not a new surface change, and
+passes with no `skip-changeset` label. The signal is by diff shape rather than
+branch name so it is self-contained (works locally and in CI, on any branch, in
+any adopter's repo) and cannot be spoofed by a branch name; it is strict — a
+single stray file outside the footprint (e.g. a `src/` edit riding along) makes
+the diff no longer release-shaped, so the guard runs normally and the exemption
+can never smuggle real surface through. `.github/workflows/checks.yml` also
+skips the guard step for a `release/*` head as belt-and-braces on top of this
+guard-level check.
+
 **Limits (read this).** Surface is ultimately a **human judgment** (PRJ-002
 D2); the guard is a **path heuristic** and cannot be exact:
 

@@ -122,3 +122,122 @@ def test_touched_components_maps_prefixes_and_subtrees(tmp_path: Path) -> None:
     ]
     touched = release.touched_components(components, files)
     assert set(touched) == {"backbone", "claude-code"}
+
+
+# --- The release-PR exemption (#503): a release-apply footprint is exempt ---
+
+
+def _apply_release_footprint(
+    source_kit: Path, *, extra_files: dict[str, str] | None = None
+) -> None:
+    """Stage exactly `pkit release apply`'s output on the current branch.
+
+    Bumps `.pkit/VERSION`, bumps the adapter's `package.yaml` version, prepends
+    `CHANGELOG.md`, and deletes any pending changesets — the diff a release PR
+    carries. `extra_files` injects unrelated edits to build a *mixed* diff.
+    """
+    repo = source_kit.parent
+
+    (source_kit / "VERSION").write_text("1.6.0\n", encoding="utf-8")
+
+    pkg = source_kit / "adapters" / "claude-code" / "package.yaml"
+    pkg.write_text(
+        "schema_version: 1\ncomponent:\n  kind: adapter\n  name: claude-code\n"
+        '  version: 0.6.0\nrequires_backbone: ">=0.1.0,<2.0.0"\n',
+        encoding="utf-8",
+    )
+
+    (repo / "CHANGELOG.md").write_text(
+        "# Changelog\n\n## 1.6.0 — 2026-07-07\n\n### Changed\n\n- A release.\n",
+        encoding="utf-8",
+    )
+
+    for cs in changesets.unreleased_dir(repo).glob("*.yaml"):
+        cs.unlink()
+
+    for relpath, content in (extra_files or {}).items():
+        target = repo / relpath
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(content, encoding="utf-8")
+
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "chore(release): v1.6.0")
+
+
+def test_release_shaped_diff_is_exempt_without_a_label(tmp_path: Path) -> None:
+    """A pure release-apply footprint passes the guard with no label / changeset."""
+    source_kit = _make_repo(tmp_path)
+    # A pending changeset that the release consumes (deleted in the footprint).
+    _add_changeset(source_kit, "backbone", "minor")
+    repo = source_kit.parent
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "add changeset")
+
+    _apply_release_footprint(source_kit)
+
+    result = release.check_changesets(source_kit, "main")
+    assert release.is_release_diff(source_kit, "main")
+    assert result.release_exempt
+    assert result.ok
+
+
+def test_normal_surface_change_still_needs_a_changeset(tmp_path: Path) -> None:
+    """A plain `src/` edit is not release-shaped and still fails with no changeset."""
+    source_kit = _make_repo(tmp_path)
+    _commit_change(source_kit, "src/project_kit/foo.py")
+    assert not release.is_release_diff(source_kit, "main")
+    result = release.check_changesets(source_kit, "main")
+    assert not result.release_exempt
+    assert result.missing == ["backbone"]
+    assert not result.ok
+
+
+def test_mixed_release_plus_src_edit_is_not_exempt(tmp_path: Path) -> None:
+    """Release footprint PLUS an unrelated `src/` edit must NOT be exempted —
+    the exemption cannot smuggle real surface through."""
+    source_kit = _make_repo(tmp_path)
+    _apply_release_footprint(
+        source_kit, extra_files={"src/project_kit/foo.py": "real surface change\n"}
+    )
+    assert not release.is_release_diff(source_kit, "main")
+    result = release.check_changesets(source_kit, "main")
+    assert not result.release_exempt
+    assert "backbone" in result.missing
+    assert not result.ok
+
+
+def test_release_shaped_manifest_with_extra_line_is_not_exempt(tmp_path: Path) -> None:
+    """A `package.yaml` whose diff touches more than version-state lines is a
+    real manifest edit, not release-shaped."""
+    source_kit = _make_repo(tmp_path)
+    repo = source_kit.parent
+
+    (source_kit / "VERSION").write_text("1.6.0\n", encoding="utf-8")
+    pkg = source_kit / "adapters" / "claude-code" / "package.yaml"
+    # Adds a `description:` line alongside the version bump — not version-state.
+    pkg.write_text(
+        "schema_version: 1\ncomponent:\n  kind: adapter\n  name: claude-code\n"
+        '  version: 0.6.0\n  description: new\nrequires_backbone: ">=0.1.0,<2.0.0"\n',
+        encoding="utf-8",
+    )
+    (repo / "CHANGELOG.md").write_text(
+        "# Changelog\n\n## 1.6.0 — 2026-07-07\n\n### Changed\n\n- A release.\n",
+        encoding="utf-8",
+    )
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "chore(release): v1.6.0")
+
+    assert not release.is_release_diff(source_kit, "main")
+    result = release.check_changesets(source_kit, "main")
+    assert not result.release_exempt
+
+
+def test_docs_only_diff_is_not_a_release(tmp_path: Path) -> None:
+    """A non-surface, non-footprint diff is not release-shaped (and needs no
+    exemption — the guard already passes it)."""
+    source_kit = _make_repo(tmp_path)
+    _commit_change(source_kit, "docs/notes.md")
+    assert not release.is_release_diff(source_kit, "main")
+    result = release.check_changesets(source_kit, "main")
+    assert not result.release_exempt
+    assert result.ok  # not surface at all

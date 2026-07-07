@@ -36,6 +36,7 @@ from project_kit.changesets import (
     discover_components,
     load_changesets,
     segment_rank,
+    unreleased_dir,
 )
 from project_kit.migrations import _VERSION_DIR_RE, parse_version_tuple
 
@@ -440,10 +441,11 @@ class GuardResult:
     touched: list[str]  # components whose surface the diff touched
     missing: list[str]  # touched components with no changeset (the violations)
     skipped: bool  # the escape hatch (label / --skip) was active
+    release_exempt: bool = False  # the diff is a release-apply footprint (below)
 
     @property
     def ok(self) -> bool:
-        return self.skipped or not self.missing
+        return self.skipped or self.release_exempt or not self.missing
 
 
 def changed_files(repo_root: Path, base: str) -> list[str]:
@@ -487,12 +489,149 @@ def _matches_prefix(path: str, prefixes: tuple[str, ...]) -> bool:
     return any(path == p or path.startswith(p) for p in prefixes)
 
 
+# --- Release-PR exemption: recognise the release-apply footprint ----------
+#
+# A release PR (opened by release-pr.yml) is `pkit release apply`'s own output:
+# it bumps `.pkit/VERSION` + each moving `package.yaml`, prepends `CHANGELOG.md`,
+# and *deletes* the consumed `.changes/unreleased/*` changesets. That diff trips
+# the surface guard (VERSION + package.yaml are surface) while the changesets it
+# would need are exactly the files it just consumed — so it would fail with no
+# `skip-changeset` label. It is not a *new* surface change; it is the release of
+# already-declared ones. We exempt it by *diff shape* — the change set is only
+# release-apply's own footprint — rather than by branch name or an env signal:
+# a diff-shape signal is self-contained (works locally + in CI, on any branch,
+# in any adopter's repo) and cannot be spoofed by naming a branch `release/*`.
+# The signal is intentionally strict: if *any* changed file falls outside the
+# footprint (e.g. a stray `src/` edit), the diff is NOT the release itself and
+# the guard runs normally — so the exemption can never smuggle real surface
+# through. The CI belt (checks.yml skipping the step for a `release/*` head) is
+# defence-in-depth on top of this primary, self-contained guard-level check.
+
+# The only two `package.yaml` keys `apply` rewrites: the component version and
+# (on broaden) its requires_backbone bound. A `package.yaml` in a release diff
+# is release-shaped only if every changed line is one of these — anything else
+# is a real manifest edit riding along, which must not be exempted.
+_RELEASE_VERSION_LINE_RE = re.compile(r"^\s*version:\s*\d+\.\d+\.\d+\s*$")
+_RELEASE_REQUIRES_LINE_RE = re.compile(r"^\s*requires_backbone:\s*.+$")
+
+
+def _diff_name_status(repo_root: Path, base: str) -> list[tuple[str, str]]:
+    """(`status`, path) for each change between `base` and HEAD.
+
+    Status is git's `--name-status` letter (`A`/`M`/`D`/…). Mirrors
+    `changed_files`' merge-base scoping (`base...HEAD`). A rename (`Rxxx`) yields
+    its destination path — the source is not part of the release footprint, so a
+    rename is simply not release-shaped and falls through to the normal guard.
+    """
+    result = subprocess.run(
+        ["git", "diff", "--name-status", f"{base}...HEAD"],
+        capture_output=True,
+        text=True,
+        cwd=repo_root,
+        check=True,
+    )
+    entries: list[tuple[str, str]] = []
+    for line in result.stdout.splitlines():
+        if not line.strip():
+            continue
+        parts = line.split("\t")
+        status = parts[0]
+        path = parts[-1]  # last field is the (destination) path
+        entries.append((status[0], path))
+    return entries
+
+
+def _file_diff_lines(repo_root: Path, base: str, path: str) -> list[str]:
+    """The content (`+`/`-`) lines of one file's diff, hunk headers stripped."""
+    result = subprocess.run(
+        ["git", "diff", f"{base}...HEAD", "--", path],
+        capture_output=True,
+        text=True,
+        cwd=repo_root,
+        check=True,
+    )
+    lines: list[str] = []
+    for raw in result.stdout.splitlines():
+        if raw.startswith(("+++", "---")):
+            continue  # file headers, not content
+        if raw.startswith(("+", "-")):
+            lines.append(raw[1:])
+    return lines
+
+
+def _is_release_shaped_manifest(repo_root: Path, base: str, path: str) -> bool:
+    """True when a `package.yaml`'s diff touches only version-state lines.
+
+    Every added/removed content line must be a `version:` or `requires_backbone:`
+    line — the two `apply` rewrites. A blank changed line is tolerated (a
+    whitespace-only hunk edge). Any other changed line means a real manifest edit
+    rode along, so the file is not release-shaped.
+    """
+    for line in _file_diff_lines(repo_root, base, path):
+        if not line.strip():
+            continue
+        if _RELEASE_VERSION_LINE_RE.match(line) or _RELEASE_REQUIRES_LINE_RE.match(line):
+            continue
+        return False
+    return True
+
+
+def is_release_diff(source_kit: Path, base: str) -> bool:
+    """True when the diff vs `base` is exactly `pkit release apply`'s footprint.
+
+    The footprint, and nothing else:
+
+    - `.pkit/VERSION` modified;
+    - `CHANGELOG.md` added or modified;
+    - each moving component's `package.yaml` modified, touching only its
+      `version:` / `requires_backbone:` lines (verified line-by-line);
+    - `.changes/unreleased/*` changesets **deleted** (consumed).
+
+    Any changed file outside this shape (a `src/` edit, a doc, a new file under a
+    component subtree) makes the answer False — the diff is then treated as an
+    ordinary PR and the surface guard runs. An empty diff is not a release.
+    """
+    repo_root = source_kit.parent
+    version_rel = _repo_rel(repo_root, source_kit / "VERSION")
+    unreleased_rel = _repo_rel(repo_root, unreleased_dir(repo_root)) + "/"
+
+    entries = _diff_name_status(repo_root, base)
+    if not entries:
+        return False
+
+    saw_footprint = False  # at least one version-state file (not just deletes)
+    for status, path in entries:
+        version_state = (
+            (path == version_rel and status == "M")
+            or (path == CHANGELOG_NAME and status in ("A", "M"))
+            or (
+                path.endswith("/package.yaml")
+                and status == "M"
+                and _is_release_shaped_manifest(repo_root, base, path)
+            )
+        )
+        if version_state:
+            saw_footprint = True
+        elif path.startswith(unreleased_rel) and status == "D":
+            pass  # a consumed changeset — expected, but not sufficient alone
+        else:
+            return False  # anything else ⇒ not the release itself
+    return saw_footprint
+
+
+def _repo_rel(repo_root: Path, path: Path) -> str:
+    """`path` as a POSIX repo-root-relative string (matches git's path form)."""
+    return path.relative_to(repo_root).as_posix()
+
+
 def check_changesets(source_kit: Path, base: str, *, skip: bool = False) -> GuardResult:
     """Run the surface-without-changeset guard against the diff vs `base`.
 
-    Passes (ok) when every surface-touched component has at least one
-    changeset naming it (any kind, including `none`), or when the escape
-    hatch is active (`skip=True`, wired from the `skip-changeset` PR label).
+    Passes (ok) when every surface-touched component has at least one changeset
+    naming it (any kind, including `none`), when the escape hatch is active
+    (`skip=True`, wired from the `skip-changeset` PR label), or when the diff is
+    a **release PR** — exactly `pkit release apply`'s footprint (`is_release_diff`),
+    which has legitimately consumed the changesets it would otherwise need.
     """
     components = discover_components(source_kit)
     files = changed_files(source_kit.parent, base)
@@ -500,7 +639,10 @@ def check_changesets(source_kit: Path, base: str, *, skip: bool = False) -> Guar
 
     declared = {cs.component for cs in load_changesets(source_kit.parent)}
     missing = [name for name in touched if name not in declared]
-    return GuardResult(touched=touched, missing=missing, skipped=skip)
+    release_exempt = bool(missing) and is_release_diff(source_kit, base)
+    return GuardResult(
+        touched=touched, missing=missing, skipped=skip, release_exempt=release_exempt
+    )
 
 
 # --- The changeset + changelog format lint (the OBJECTIVE subset) ---------
