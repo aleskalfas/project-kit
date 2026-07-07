@@ -389,6 +389,12 @@ D2); the guard is a **path heuristic** and cannot be exact:
   outside the heuristic's prefixes (see `BACKBONE_SURFACE_PREFIXES` in
   `project_kit/release.py`) slips through. The guard is a reminder, not a
   proof; reviewers still judge surface.
+- **Decision-only PRs** (a COR / PRJ / ADR / DEC) trip the guard on purpose —
+  `.pkit/decisions/` is a backbone-surface prefix. Declare **`none`** for a
+  *design-ahead* decision (the feature ships in a later implementation PR that
+  carries the real changeset) or a **real** changeset for a *self-executing*
+  rule change (its text is itself an adopter-observable behaviour change). The
+  design-ahead-vs-self-executing test is spelled out in PRJ-002.
 
 The backbone-surface prefixes and per-component subtrees are reviewable data in
 `project_kit/release.py` — tune them as the tree evolves.

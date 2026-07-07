@@ -1,0 +1,7 @@
+component: backbone
+kind: none
+body: >
+  Remediation for PR #496: the COR-041 + ADR-040 decision landing touched the
+  backbone decisions tree with no user-facing surface (design-ahead — the
+  externally-sourced mechanism ships in a later implementation PR), so it is
+  declared `none`. No changelog line.
