@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.142.1 — 2026-07-07
+
+### Fixed
+- The changeset guard now exempts a release PR — a diff that is exactly `pkit release apply`'s footprint (version bumps, an updated CHANGELOG, and the consumed changesets deleted) passes with no `skip-changeset` label, because it is the release of already-declared changes, not a new surface change. A stray file outside that footprint keeps the guard firing, so the exemption never smuggles real surface through. ([#503])
+- `pkit release merge`'s CI gate now dedupes a PR's check rollup to the latest run per check before deciding pass or fail. GitHub keeps every run of a check, so one that failed and was then re-run green (a fix-and-repush, a label re-trigger) previously left a stale failure that wrongly refused the merge; the gate now agrees with what `gh pr checks` reports. ([#504])
+- **project-management 0.48.1** — The merge gate behind `merge-pr` and `done-work` now dedupes a PR's check rollup to the latest run per check before deciding pass or fail. GitHub keeps every run of a check, so one that failed and was then re-run green (a fix-and-repush, a label re-trigger) previously left a stale failure that wrongly refused the merge; the gate now agrees with what `gh pr checks` reports. ([#504])
+
+[#503]: 503
+[#504]: 504
+
 ## 1.142.0 — 2026-07-07
 
 ### Added
