@@ -428,23 +428,21 @@ def render_mirror_body(body: str, region: str) -> str:
 # ---- selector resolution ------------------------------------------------
 
 
-def resolve_substrate(config: dict[str, Any] | None) -> str:
+def resolve_substrate(settings: dict[str, Any] | None) -> str:
     """Resolve the active ownership substrate (DEC-043 D2), default ``comment``.
 
-    Read from the instance-ownership schema home in the adopter config — **not**
-    ``substrate-map.yaml`` (DEC-043 D2: keeping it out of that file avoids tripping
-    DEC-036 emergent activation on an ownership-only opt-in). The default is
-    ``comment`` (fails safe on label-locked repos); ``label`` is the explicit
-    opt-in and is only valid where labels are creatable (a precondition bootstrap
-    establishes — not re-derived here).
+    ``settings`` is the adopter's parsed ``instance-ownership.yaml`` — this marker's
+    own schema home, **not** ``substrate-map.yaml`` (whose mere presence would
+    degrade unlisted axes under DEC-036 emergent activation) — or ``None`` / ``{}``
+    when the file is absent. Absent ⇒ the safe default ``comment`` (works on
+    label-locked repos); ``label`` is the explicit opt-in, valid only where labels
+    are creatable (a precondition bootstrap establishes — not re-derived here). An
+    unrecognised value falls back to the safe default.
     """
-    if not config:
+    if not settings:
         return DEFAULT_SUBSTRATE
-    io = config.get("instance_ownership") or {}
-    sub = io.get("substrate")
-    if sub in SUBSTRATES:
-        return sub
-    return DEFAULT_SUBSTRATE
+    sub = settings.get("substrate")
+    return sub if sub in SUBSTRATES else DEFAULT_SUBSTRATE
 
 
 def gh_call(args: list[str], config: dict[str, Any]) -> Any:

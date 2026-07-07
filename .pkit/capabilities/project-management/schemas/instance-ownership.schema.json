@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "instance-ownership.schema.json",
+  "title": "Instance-ownership substrate selector",
+  "description": "Formal shape of instance-ownership.yaml — the substrate that carries the DEC-035 instance-ownership marker (DEC-043 D2): `comment` (a label-free append-only event log plus a derived description mirror, the default) or `label` (the DEC-035 `instance:N` label, opt-in where labels are creatable). Resolution/write contract: ADR-041. Deliberately its own home, not a slot in classification.yaml and not substrate-map.yaml (DEC-036 emergent activation). Document-shaped schema: the file IS the resource (no top-level id collection). Companion per COR-018.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "substrate"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "source": {
+      "$ref": "refs.schema.json#/$defs/source"
+    },
+    "binds_to": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Repo-relative globs matching the adopter-data files this schema validates (COR-023 fallback binding)."
+    },
+    "pkit_schema": {
+      "type": "string",
+      "description": "Self-describing adopter-data binding tag, `project-management:instance-ownership` (COR-023)."
+    },
+    "substrate": {
+      "type": "string",
+      "enum": [
+        "comment",
+        "label"
+      ],
+      "description": "Which substrate carries the ownership marker. `comment` (the default the seam applies when this file is absent) is label-free — an append-only event-comment log plus a derived description mirror; `label` opts into the DEC-035 `instance:N` label substrate and is valid only where labels are creatable."
+    }
+  }
+}

@@ -243,9 +243,10 @@ def test_selector_defaults_to_comment(io) -> None:
 
 
 def test_selector_reads_own_schema_home(io) -> None:
-    assert io.resolve_substrate({"instance_ownership": {"substrate": "label"}}) == "label"
+    # `settings` is the parsed instance-ownership.yaml (top-level `substrate`).
+    assert io.resolve_substrate({"substrate": "label"}) == "label"
     # An unknown value falls back to the safe default.
-    assert io.resolve_substrate({"instance_ownership": {"substrate": "bogus"}}) == "comment"
+    assert io.resolve_substrate({"substrate": "bogus"}) == "comment"
 
 
 # ========================================================================
