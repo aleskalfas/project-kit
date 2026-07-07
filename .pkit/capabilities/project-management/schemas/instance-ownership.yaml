@@ -1,0 +1,43 @@
+# Instance-ownership substrate selector — which substrate carries the marker.
+#
+# OPTIONAL adopter-side file (per [project-management:DEC-043-ownership-
+# substrate-selection] D2). The ownership marker ([project-management:DEC-035-
+# instance-ownership]: which of one person's concurrent clones owns an issue)
+# binds to a SELECTABLE substrate: a label-free append-only COMMENT log plus a
+# derived description mirror (the default), or the DEC-035 `instance:N` LABEL
+# where labels are creatable. The read/write seam that resolves through this
+# selector is `scripts/_lib/instance_ownership.py`; the contract is [pkit:ADR-041].
+#
+# This is deliberately its OWN schema home — NOT a slot in classification.yaml
+# (ownership is not a classification axis, DEC-035 point 2) and NOT
+# substrate-map.yaml (whose mere presence degrades every unlisted axis under
+# DEC-036 emergent activation; an ownership-only opt-in must not trip that).
+#
+# Absence of this file ⇒ the safe default `comment` (works on label-locked
+# repos). An adopter whose repo CAN create labels and prefers the label
+# substrate writes `substrate: label`.
+#
+# The comment-stamp grammar and the description-mirror render format are NOT
+# here — they are owned by the audit-log facility schema ([project-management:
+# DEC-044-audit-log-facility]); this file carries only the substrate selection.
+#
+# The body below is a valid reference instance (the shipped default) that
+# doubles as this schema's self-test. A real adopter writes their own
+# `project/instance-ownership.yaml` only to override the default.
+
+schema_version: 1
+
+# Adopter-data binding (per COR-023): a project's instance-ownership.yaml matches
+# this schema. Adopter files SHOULD also carry the self-describing top-level
+# field `pkit_schema: project-management:instance-ownership`.
+binds_to:
+  - "**/instance-ownership.yaml"
+
+pkit_schema: project-management:instance-ownership
+
+# `comment` (default): label-free — per-instance append-only event comments are
+#   the source of truth, with a derived owner-mirror regenerated into the issue
+#   description. Safe on repos that cannot create labels.
+# `label`: the DEC-035 `instance:N` label substrate — opt-in, valid only where
+#   labels are creatable (a precondition bootstrap establishes).
+substrate: comment
