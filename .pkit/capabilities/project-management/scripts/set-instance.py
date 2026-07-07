@@ -38,6 +38,7 @@ from pathlib import Path
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
+from _lib import session_guard  # noqa: E402
 from _lib.instance_identity import (  # noqa: E402
     clear_instance_id,
     read_instance_id,
@@ -71,6 +72,7 @@ def main() -> int:
             f"(default: <repo-root>/.pkit/capabilities/{CAPABILITY_NAME}/)."
         ),
     )
+    session_guard.add_override_argument(parser)
     args = parser.parse_args()
 
     capability_root = resolve_capability_root(args.capability_root)
@@ -83,9 +85,29 @@ def main() -> int:
         return 2
 
     if args.show:
+        # Read-only — no mutation, so the foreign-repo guard does not apply.
         current = read_instance_id(capability_root)
         print(f"instance: {current}" if current is not None else "instance: unset")
         return 0
+
+    # Validate arguments before any mutation.
+    if not args.clear:
+        if args.instance is None:
+            print(
+                "error: provide an instance number, or use --show / --clear.",
+                file=sys.stderr,
+            )
+            return 3
+        if args.instance < 1:
+            print("error: instance id must be a positive integer.", file=sys.stderr)
+            return 3
+
+    # Foreign-repo mutation guard (COR-039 / ADR-034): both --clear and a set write
+    # the runtime file under capability_root, which --capability-root (or a cwd-walk)
+    # can point at a DIFFERENT repo than the session anchor. Gate the write — refuse
+    # under autonomy, prompt interactively — unless the operator confirms override.
+    if not session_guard.enforce(override=args.allow_foreign_repo):
+        return 1
 
     if args.clear:
         removed = clear_instance_id(capability_root)
@@ -95,16 +117,6 @@ def main() -> int:
             else "no instance id was set — nothing to clear."
         )
         return 0
-
-    if args.instance is None:
-        print(
-            "error: provide an instance number, or use --show / --clear.",
-            file=sys.stderr,
-        )
-        return 3
-    if args.instance < 1:
-        print("error: instance id must be a positive integer.", file=sys.stderr)
-        return 3
 
     path = write_instance_id(capability_root, args.instance)
     print(f"this clone is now instance {args.instance}.")
