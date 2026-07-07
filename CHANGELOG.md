@@ -7,8 +7,8 @@
 - `pkit release merge`'s CI gate now dedupes a PR's check rollup to the latest run per check before deciding pass or fail. GitHub keeps every run of a check, so one that failed and was then re-run green (a fix-and-repush, a label re-trigger) previously left a stale failure that wrongly refused the merge; the gate now agrees with what `gh pr checks` reports. ([#504])
 - **project-management 0.48.1** — The merge gate behind `merge-pr` and `done-work` now dedupes a PR's check rollup to the latest run per check before deciding pass or fail. GitHub keeps every run of a check, so one that failed and was then re-run green (a fix-and-repush, a label re-trigger) previously left a stale failure that wrongly refused the merge; the gate now agrees with what `gh pr checks` reports. ([#504])
 
-[#503]: 503
-[#504]: 504
+[#503]: https://github.com/aleskalfas/project-kit/issues/503
+[#504]: https://github.com/aleskalfas/project-kit/issues/504
 
 ## 1.142.0 — 2026-07-07
 
