@@ -419,6 +419,12 @@ def release_check(base: str, skip: bool | None) -> None:
     if result.skipped:
         click.echo("changeset guard: skipped (escape hatch active).")
         return
+    if result.release_exempt:
+        click.echo(
+            "changeset guard: release PR — diff is exactly `pkit release apply`'s "
+            "footprint (version bumps + CHANGELOG + consumed changesets); exempt — ok."
+        )
+        return
     if not result.touched:
         click.echo("changeset guard: no surface-touched components — ok.")
         return

@@ -46,8 +46,15 @@ jobs:
       # of which a local pre-push hook has — so it lives here, not in
       # scripts/check.sh. Escape hatches: a `none` changeset for the component,
       # or the `skip-changeset` label (surfaced below as PKIT_CHANGESET_SKIP).
+      #
+      # Release PRs (`release/*` head from release-pr.yml) are skipped here as a
+      # belt: their diff is exactly `pkit release apply`'s footprint (version
+      # bumps + CHANGELOG + the changesets it just consumed), which would trip
+      # the guard with no changeset present. The guard *also* self-exempts that
+      # diff shape (release.py `is_release_diff`) — the primary, self-contained
+      # check — so this `if:` guard is defence-in-depth, not the sole line.
       - name: Changeset guard (surface change ⇒ changeset)
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && !startsWith(github.head_ref, 'release/')
         env:
           PKIT_CHANGESET_SKIP: ${{ contains(github.event.pull_request.labels.*.name, 'skip-changeset') && '1' || '' }}
         run: uv run pkit release check --base "origin/${{ github.event.pull_request.base.ref }}"
