@@ -42,6 +42,7 @@ from project_kit.manifest import (
     ComponentRegistryEntry,
     read_backbone_manifest,
     read_capability_origin,
+    set_capability_origin as _manifest_set_capability_origin,
     write_backbone_manifest,
     write_component_manifest,
 )
@@ -1302,6 +1303,18 @@ def _register_in_backbone_manifest(
     ]
     backbone.components.append(entry)
     write_backbone_manifest(target_root, backbone)
+
+
+def set_capability_origin(target_root: Path, name: str, origin: str) -> bool:
+    """Set a registered capability's ``origin`` in place (COR-031 D2).
+
+    Thin wrapper over the manifest helper, kept on this module so callers reach
+    origin state through the capabilities API alongside ``read_capability_origin``
+    and ``installed_capability_origins``. Returns ``True`` when the existing
+    registry entry's origin changed, ``False`` when the capability is not
+    registered or already holds that origin.
+    """
+    return _manifest_set_capability_origin(target_root, name, origin)
 
 
 def _unregister_from_backbone_manifest(target_root: Path, name: str) -> None:

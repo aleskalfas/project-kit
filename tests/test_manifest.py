@@ -11,6 +11,7 @@ from project_kit.manifest import (
     ComponentRegistryEntry,
     read_backbone_manifest,
     read_capability_origin,
+    set_capability_origin,
     write_backbone_manifest,
 )
 
@@ -179,6 +180,64 @@ def test_read_capability_origin_accessor(tmp_path: Path) -> None:
     assert read_capability_origin(tmp_path, "shipped") == ORIGIN_KIT_SHIPPED
     # Unregistered name → safe default.
     assert read_capability_origin(tmp_path, "nope") == ORIGIN_KIT_SHIPPED
+
+
+def test_set_capability_origin_upgrades_existing_entry(tmp_path: Path) -> None:
+    """Setting origin on an origin-unset entry rewrites only that field (COR-031 D2)."""
+    (tmp_path / ".pkit").mkdir()
+    write_backbone_manifest(
+        tmp_path,
+        BackboneManifest(
+            backbone_version="0.9.0",
+            components=[
+                ComponentRegistryEntry(
+                    kind="capability",
+                    name="homegrown",
+                    manifest=".pkit/capabilities/homegrown/manifest.yaml",
+                ),
+                ComponentRegistryEntry(
+                    kind="capability",
+                    name="other",
+                    manifest=".pkit/capabilities/other/manifest.yaml",
+                ),
+            ],
+        ),
+    )
+    assert read_capability_origin(tmp_path, "homegrown") == ORIGIN_KIT_SHIPPED
+
+    changed = set_capability_origin(tmp_path, "homegrown", ORIGIN_INCUBATED_IN_REPO)
+    assert changed is True
+    assert read_capability_origin(tmp_path, "homegrown") == ORIGIN_INCUBATED_IN_REPO
+    # Sibling entry untouched.
+    assert read_capability_origin(tmp_path, "other") == ORIGIN_KIT_SHIPPED
+
+
+def test_set_capability_origin_noop_when_already_set(tmp_path: Path) -> None:
+    """Setting the origin it already holds reports no change and writes nothing."""
+    (tmp_path / ".pkit").mkdir()
+    write_backbone_manifest(
+        tmp_path,
+        BackboneManifest(
+            backbone_version="0.9.0",
+            components=[
+                ComponentRegistryEntry(
+                    kind="capability",
+                    name="homegrown",
+                    manifest=".pkit/capabilities/homegrown/manifest.yaml",
+                    origin=ORIGIN_INCUBATED_IN_REPO,
+                ),
+            ],
+        ),
+    )
+    assert set_capability_origin(tmp_path, "homegrown", ORIGIN_INCUBATED_IN_REPO) is False
+    assert read_capability_origin(tmp_path, "homegrown") == ORIGIN_INCUBATED_IN_REPO
+
+
+def test_set_capability_origin_returns_false_when_absent(tmp_path: Path) -> None:
+    """No matching registry entry → no change."""
+    (tmp_path / ".pkit").mkdir()
+    write_backbone_manifest(tmp_path, BackboneManifest(backbone_version="0.9.0"))
+    assert set_capability_origin(tmp_path, "nope", ORIGIN_INCUBATED_IN_REPO) is False
 
 
 def test_write_uses_block_style_not_flow_style(tmp_path: Path) -> None:

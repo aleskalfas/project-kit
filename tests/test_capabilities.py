@@ -1792,9 +1792,10 @@ def test_cli_register_not_in_repo_errors(
     assert "no capability named 'nonexistent' is authored in this repo" in result.output
 
 
-def test_cli_register_refuses_when_already_installed(
+def test_cli_register_already_incubated_is_clean_noop(
     kit_target: Path, kit_source: Path, monkeypatch
 ) -> None:
+    """Registering an already-incubated capability is a clean, idempotent no-op."""
     _stage_capability_in_repo(kit_target, "homegrown")
     from project_kit import cli as cli_mod
 
@@ -1802,8 +1803,9 @@ def test_cli_register_refuses_when_already_installed(
     runner = CliRunner()
     assert runner.invoke(main, ["capabilities", "register", "homegrown"]).exit_code == 0
     result = runner.invoke(main, ["capabilities", "register", "homegrown"])
-    assert result.exit_code != 0
-    assert "already installed" in result.output
+    assert result.exit_code == 0, result.output
+    assert "already registered as incubated-in-repo; nothing to do" in result.output
+    assert read_capability_origin(kit_target, "homegrown") == ORIGIN_INCUBATED_IN_REPO
 
 
 def test_cli_register_refuses_on_unsatisfied_dependency(
@@ -1887,6 +1889,102 @@ def test_cli_register_surfaces_kit_source_overlap(
     assert result.exit_code == 0, result.output
     assert "also ships from kit source" in result.output
     assert read_capability_origin(kit_target, "homegrown") == ORIGIN_INCUBATED_IN_REPO
+
+
+def _manually_register_origin_unset(kit_target: Path, name: str) -> None:
+    """Reproduce the old manual workaround: register in the backbone manifest
+    with origin unset (defaults to kit-shipped, omitted from serialization).
+
+    This is the state `register` must now adopt: the subtree is in place and
+    the entry exists, but with no origin protecting it from sync (COR-031 D2).
+    """
+    caps._register_in_backbone_manifest(kit_target, name)
+
+
+def test_cli_register_adopts_manually_registered_origin_unset(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """Register adopts an already-registered, origin-unset capability as incubated-in-repo."""
+    _stage_capability_in_repo(
+        kit_target, "homegrown", with_skills=("home-skill",), with_agents=("home-agent",)
+    )
+    _manually_register_origin_unset(kit_target, "homegrown")
+    assert read_capability_origin(kit_target, "homegrown") == ORIGIN_KIT_SHIPPED
+
+    skill_path = (
+        kit_target / ".pkit" / "capabilities" / "homegrown" / "skills" / "home-skill.md"
+    )
+    skill_before = skill_path.read_text(encoding="utf-8")
+
+    from project_kit import cli as cli_mod
+    from project_kit import install as install_mod
+
+    monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
+    # The adopt path must not re-copy or re-deploy: spy on the deploy primitive.
+    calls = {"deploy": 0}
+    monkeypatch.setattr(
+        install_mod,
+        "run_installed_adapter_primitives",
+        lambda _ctx: calls.__setitem__("deploy", calls["deploy"] + 1),
+    )
+    result = CliRunner().invoke(main, ["capabilities", "register", "homegrown"])
+    assert result.exit_code == 0, result.output
+    assert "Adopted 'homegrown'" in result.output
+    assert "incubated-in-repo" in result.output
+    assert "was kit-shipped" in result.output
+
+    # Origin flipped on the existing entry; subtree untouched; no re-deploy.
+    assert read_capability_origin(kit_target, "homegrown") == ORIGIN_INCUBATED_IN_REPO
+    assert skill_path.read_text(encoding="utf-8") == skill_before
+    assert calls["deploy"] == 0
+
+
+def test_cli_register_adopt_dry_run_writes_nothing(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """`--dry-run` on the adopt path reports the change but leaves origin unset."""
+    _stage_capability_in_repo(kit_target, "homegrown")
+    _manually_register_origin_unset(kit_target, "homegrown")
+
+    from project_kit import cli as cli_mod
+
+    monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
+    result = CliRunner().invoke(
+        main, ["capabilities", "register", "homegrown", "--dry-run"]
+    )
+    assert result.exit_code == 0, result.output
+    assert "Would adopt 'homegrown'" in result.output
+    # Nothing written: origin still reads as the kit-shipped default.
+    assert read_capability_origin(kit_target, "homegrown") == ORIGIN_KIT_SHIPPED
+
+
+def test_cli_register_adopt_then_sync_skips_incubated(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """After adoption the sync incubated-skip path applies (origin reads incubated)."""
+    from project_kit import cli as cli_mod
+    from project_kit import install as install_mod
+    from project_kit import sync as sync_mod
+
+    _stage_capability_in_repo(kit_target, "homegrown", with_skills=("home-skill",))
+    _manually_register_origin_unset(kit_target, "homegrown")
+
+    monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
+    assert (
+        CliRunner().invoke(main, ["capabilities", "register", "homegrown"]).exit_code == 0
+    )
+    assert read_capability_origin(kit_target, "homegrown") == ORIGIN_INCUBATED_IN_REPO
+
+    skill_path = (
+        kit_target / ".pkit" / "capabilities" / "homegrown" / "skills" / "home-skill.md"
+    )
+    skill_before = skill_path.read_text(encoding="utf-8")
+
+    monkeypatch.setattr(install_mod, "find_source_kit", lambda: kit_source)
+    sync_mod.run_sync(kit_target)
+
+    assert read_capability_origin(kit_target, "homegrown") == ORIGIN_INCUBATED_IN_REPO
+    assert skill_path.read_text(encoding="utf-8") == skill_before
 
 
 def test_cli_list_shows_incubated_origin(

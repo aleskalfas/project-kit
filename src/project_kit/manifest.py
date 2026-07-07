@@ -17,7 +17,7 @@ explicit ordering matching the lifecycle README's worked example.
 from __future__ import annotations
 
 import io
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Literal, cast
 
@@ -159,6 +159,41 @@ def read_capability_origin(target_root: Path, name: str) -> str:
         if entry.kind == "capability" and entry.name == name:
             return entry.origin
     return ORIGIN_KIT_SHIPPED
+
+
+def set_capability_origin(target_root: Path, name: str, origin: str) -> bool:
+    """Set a registered capability's ``origin`` on its existing registry entry.
+
+    An origin-state upgrade in place (COR-031 D2 — origin is lifecycle-owned
+    install-state on the backbone manifest's component registry, recorded
+    outside the capability's own subtree). Rewrites only the origin field of
+    the existing ``kind: capability`` entry; the subtree is untouched. This is
+    the supported path for adopting a manually-registered capability (one
+    added with origin unset, which reads back as ``kit-shipped``) as
+    ``incubated-in-repo`` so ``pkit sync`` leaves it untouched.
+
+    Returns ``True`` when the entry was found and its origin changed (or was
+    written afresh), ``False`` when no matching registry entry exists or the
+    origin already held the requested value (nothing to write).
+    """
+    backbone = read_backbone_manifest(target_root)
+    if backbone is None:
+        return False
+    changed = False
+    new_components: list[ComponentRegistryEntry] = []
+    for entry in backbone.components:
+        if entry.kind == "capability" and entry.name == name:
+            if entry.origin == origin:
+                return False
+            new_components.append(replace(entry, origin=origin))
+            changed = True
+        else:
+            new_components.append(entry)
+    if not changed:
+        return False
+    backbone.components = new_components
+    write_backbone_manifest(target_root, backbone)
+    return True
 
 
 def _backbone_manifest_path(target_root: Path) -> Path:
