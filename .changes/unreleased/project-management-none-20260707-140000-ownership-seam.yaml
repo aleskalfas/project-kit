@@ -1,0 +1,8 @@
+component: project-management
+kind: none
+body: >
+  Feature #509 adds the instance-ownership marker seam (_lib/instance_ownership,
+  ADR-041) and its substrate selector schema (instance-ownership.yaml, DEC-043).
+  This is implementation-ahead: the seam and schema exist but no CLI command reads
+  them yet (set-instance and the claim/handoff wiring land in Feature #510), so
+  there is no adopter-usable surface to advertise. Declared `none`. No changelog line.
