@@ -15,10 +15,15 @@ infrastructure being in place.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import click
+from packaging.version import InvalidVersion, Version
 
 from project_kit import install
+
+if TYPE_CHECKING:
+    from project_kit.capabilities import CapabilitySource
 from project_kit.manifest import (
     ORIGIN_INCUBATED_IN_REPO,
     BackboneManifest,
@@ -28,8 +33,15 @@ from project_kit.manifest import (
 )
 
 
-def run_sync(target_root: Path, dry_run: bool = False) -> None:
-    """Re-run propagation against an already-initialised target."""
+def run_sync(target_root: Path, dry_run: bool = False, force: bool = False) -> None:
+    """Re-run propagation against an already-initialised target.
+
+    ``force`` overrides the capability downgrade guard: with it, a
+    capability whose source version is *older* than the installed one is
+    refreshed anyway (loudly). Without it, such a downgrade is refused so
+    a stale source can never silently overwrite a newer installed
+    capability (issue #524).
+    """
     if not (target_root / ".pkit").is_dir():
         raise click.ClickException(f"{target_root}/.pkit/ does not exist. Run 'pkit init' first.")
 
@@ -101,7 +113,7 @@ def run_sync(target_root: Path, dry_run: bool = False) -> None:
     # the capability is no longer in source, warn but leave its tree in
     # place — adopters chose to install it and the kit shouldn't yank
     # content out from under them on sync.
-    _sync_installed_capabilities(target_root, source_kit, ctx)
+    _sync_installed_capabilities(target_root, source_kit, ctx, force=force)
 
     # Re-run each installed adapter's primitives so the harness side
     # picks up renamed / removed / newly-resolved content (skills moved
@@ -146,7 +158,11 @@ def _hint_settings_consolidation(target_root: Path) -> None:
 
 
 def _sync_installed_capabilities(
-    target_root: Path, source_kit: Path, ctx: install.InstallContext
+    target_root: Path,
+    source_kit: Path,
+    ctx: install.InstallContext,
+    *,
+    force: bool = False,
 ) -> None:
     """Refresh installed capabilities from source per COR-017 / COR-031.
 
@@ -155,6 +171,12 @@ def _sync_installed_capabilities(
         - In source: re-copy the subtree (preserves the capability's
           registered-state and any prior skip overrides). Emits a refreshed
           / unchanged status line per capability.
+        - **Downgrade guard (issue #524):** if the source version is *older*
+          than the installed version, refuse the refresh loudly rather than
+          silently overwriting a newer installed capability with a stale
+          source. ``force=True`` overrides — the downgrade proceeds, but with
+          a loud warning line. This is defence in depth, orthogonal to *why*
+          the source is stale (a mis-pinned CLI, a partial checkout, etc.).
         - Not in source: warn but do not remove the adopter's installed
           tree.
     - `incubated-in-repo` origin (COR-031 D1): skip source-reconciliation
@@ -195,6 +217,27 @@ def _sync_installed_capabilities(
                 f"leaving installed copy in place."
             )
             continue
+
+        # Downgrade guard (issue #524): never let a stale source silently
+        # overwrite a newer installed capability. Compare the source version
+        # against the *installed* version of record (the per-component
+        # manifest, falling back to the installed package.yaml — what a
+        # refresh would actually clobber). A refusal is reported (and, in
+        # dry-run, previewed) instead of a refresh; `--force` overrides.
+        if _is_downgrade(target_root, source):
+            installed = caps.get_installed_capability_version(target_root, entry.name)
+            if not force:
+                click.echo(
+                    f"    {'refused':<12} {entry.name!r} — source v{source.package.version} "
+                    f"is older than installed v{installed}; refusing to downgrade "
+                    f"(re-run `pkit sync --force` to overwrite)."
+                )
+                continue
+            click.echo(
+                f"    {'downgrade':<12} {entry.name!r} — forced: overwriting installed "
+                f"v{installed} with older source v{source.package.version}."
+            )
+
         if ctx.dry_run:
             click.echo(f"    {'would refresh':<12} {entry.name!r} -> v{source.package.version}")
             continue
@@ -208,6 +251,36 @@ def _sync_installed_capabilities(
             dry_run=False,
         )
         click.echo(f"    {'refreshed':<12} {entry.name!r} -> v{source.package.version}")
+
+
+def _is_downgrade(target_root: Path, source: CapabilitySource) -> bool:
+    """True if refreshing *source* would replace a newer installed capability (issue #524).
+
+    Reads the installed version of record via
+    ``capabilities.get_installed_capability_version`` (the per-component
+    manifest, falling back to the installed ``package.yaml`` — what a
+    refresh would actually overwrite) and compares it to the source version
+    with ``packaging.version.Version`` (the same parser the capabilities and
+    versioning layers use). A downgrade is a source version *strictly
+    older* than the installed one; equal versions are not a downgrade and
+    refresh as before.
+
+    If either version is absent or unparseable, this returns ``False`` — the
+    guard only fires on an *unambiguous* downgrade. A missing/malformed
+    installed version means there is no reliable newer state to protect, so
+    the refresh proceeds (the pre-#524 behaviour) rather than blocking on an
+    unreadable manifest.
+    """
+    from project_kit import capabilities as caps
+
+    installed_str = caps.get_installed_capability_version(target_root, source.name)
+    source_str = source.package.version
+    if not installed_str or not source_str:
+        return False
+    try:
+        return Version(source_str) < Version(installed_str)
+    except InvalidVersion:
+        return False
 
 
 def _report_incubated_capability(source_kit: Path, name: str) -> None:

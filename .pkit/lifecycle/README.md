@@ -275,6 +275,15 @@ The skip is scoped to *reconciliation against the kit source only*. Everything e
 
 One boundary case (COR-031): if a same-named capability *now* also ships from kit source — graduation arriving before graduation is specified — `sync` surfaces the collision rather than silently shadowing either tree, so the adopter can decide. The default skip applies only while no kit capability of that name exists.
 
+### The downgrade guard on capability refresh (issue #524)
+
+The `kit-shipped` refresh above copies the source subtree wholesale. On its own that is direction-blind: a source *older* than the installed version would overwrite newer committed state with stale content — the exact data loss reported in #524, where a mis-pinned source refreshed an installed capability back several minor versions. So before refreshing a `kit-shipped` capability, `sync` compares the **source** version to the **installed version of record** (the per-component `manifest.yaml`, falling back to the installed `package.yaml` — what the refresh would actually overwrite):
+
+- **source version < installed version (a downgrade):** refuse this capability's refresh, print a `refused` line naming both versions, and leave the installed tree untouched. `sync --force` overrides — the downgrade proceeds, but a loud `downgrade` line records the deliberate overwrite. Under `--dry-run` the refusal is *previewed* (not a "would refresh") so the plan is honest.
+- **source version ≥ installed version:** refresh as before.
+
+The guard is defence in depth, orthogonal to *why* the source is stale, and fires only on an unambiguous downgrade — an absent or unparseable version on either side is treated as "not a downgrade" so an unreadable manifest never blocks a routine sync. It is scoped to the `kit-shipped` refresh branch: the incubated skip-branch above is unchanged (no kit source to compare against), and the "no longer ships from source" orphan case is likewise untouched.
+
 ## Worked example
 
 A full worked example demonstrating the upgrade flow across backbone + components is deferred for a focused rewrite. The prior example was built around the now-retired bundle pattern (per [COR-027](../decisions/core/COR-027-alternative-impls-as-capability-data.md)); rewriting it against the capability + adapter shape is queued.
