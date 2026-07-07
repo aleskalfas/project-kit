@@ -371,6 +371,60 @@ def _broaden_kit_components_requires_backbone(
         click.echo("  (no kit-shipped package.yaml files found — nothing to broaden)")
 
 
+def broaden_component_requires_backbone(pkg_file: Path, backbone: str) -> str | None:
+    """Widen one component's `requires_backbone` upper bound to cover `backbone`.
+
+    The single-component, current-backbone counterpart to
+    `_broaden_kit_components_requires_backbone` (which walks every kit-shipped
+    component and targets a *new backbone* version). This one targets a single
+    released component's `package.yaml` and raises its exclusive upper bound to
+    include `backbone` — the version the author is releasing under, so a
+    component released under backbone X asserts compatibility with X (COR-041's
+    author-owns-the-compatibility-claim, closed for the author flow by #494).
+
+    **Widen-only** — it only ever *raises* the upper bound, never narrows it. A
+    component whose declared range already covers `backbone` (a wider upper
+    bound set by hand or by a previous broaden) is left untouched. The target
+    upper is `X.(Y+1).0` for backbone `X.Y.Z` — the same "cover minor X.Y by an
+    exclusive bound at the next minor" convention the backbone-release broaden
+    uses, so the two stay consistent.
+
+    Reuses the shared `_REQUIRES_BACKBONE_RE` rewrite (not a YAML round-trip) so
+    quoting, indentation, and trailing comments survive. Returns a
+    human-readable `old -> new` range string when it rewrote the bound, `None`
+    when it was already wide enough or had no parseable upper bound (the caller
+    decides how to report each case).
+    """
+    match = _PEP440_RE.match(backbone)
+    if match is None:
+        raise click.ClickException(
+            f"backbone version {backbone!r} is not valid PEP 440 "
+            f"(expected major.minor.patch[(a|b|rc)N])"
+        )
+    bb_major, bb_minor = (int(g) for g in match.group(1, 2))
+    new_upper = f"{bb_major}.{bb_minor + 1}.0"
+
+    original = pkg_file.read_text(encoding="utf-8")
+    rb_match = _REQUIRES_BACKBONE_RE.search(original)
+    if rb_match is None:
+        return None  # no parseable upper bound (e.g. `*`, or field absent)
+
+    upper_major = int(rb_match.group(2))
+    upper_minor = int(rb_match.group(3))
+
+    # Widen-only: rewrite only when the target upper is strictly above the
+    # current one. An already-wider bound (upper > target) is left as-is.
+    if (upper_major, upper_minor) >= (bb_major, bb_minor + 1):
+        return None
+
+    updated = _REQUIRES_BACKBONE_RE.sub(rf"\g<1>{new_upper}", original, count=1)
+    pkg_file.write_text(updated, encoding="utf-8")
+
+    old_range = _extract_range(rb_match.string, rb_match.start())
+    new_range = old_range.rsplit("<", 1)[0] + f'<{new_upper}"'
+    return f"{old_range} -> {new_range}"
+
+
 def _narrow_kit_components_requires_backbone(
     source_kit: Path, old_major: int, old_minor: int, new_major: int, new_minor: int
 ) -> None:

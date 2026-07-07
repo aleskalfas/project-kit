@@ -187,13 +187,39 @@ PR** a human merges — it is *not* auto-run on every merge.
 | `pkit release merge <pr>` | yes (merges) | Merge a release PR (the sanctioned path — below). Guarded to `release/*` heads; merges only an open, mergeable, green PR; squash + delete-branch. Does not tag. `--dry-run` reports without merging. |
 | `pkit release publish-notes <version>` | no (publishes) | Publish a **notes-only** GitHub Release for tag `v<version>`, body = that version's `CHANGELOG.md` section (below). Idempotent (updates if it exists); **no artifact**. `--dry-run` prints the notes without calling `gh`. |
 | `pkit release check` | no | The CI guard (below). |
+| `pkit release check-shareable <component>` | no | Pre-sharing lint: is a capability ready to be consumed externally-sourced (COR-041)? (below). |
 
 `apply` in order: writes each tier's version (`.pkit/VERSION` for the backbone,
-the `version:` line in a component's `package.yaml`); **broadens** kit
-components' `requires_backbone` upper bound driven by the new backbone version
-(PRJ-002 D4 — the broaden moves here, out of per-branch `version bump`);
-prepends a `CHANGELOG.md` entry from the notes; and deletes the consumed
-changesets.
+the `version:` line in a component's `package.yaml`); **broadens**
+`requires_backbone` (see below); prepends a `CHANGELOG.md` entry from the notes;
+and deletes the consumed changesets.
+
+### The requires_backbone broaden — two shapes (PRJ-002 D4 + #494)
+
+`apply` widens `requires_backbone` upper bounds so a compatibility claim stays
+current without hand-editing. Which components it widens depends on **what
+moved**, and it is always **widen-only** — it raises an upper bound to cover a
+target version, never narrows a range that is already wider:
+
+- **A backbone release** widens **every** kit-shipped component's upper bound to
+  cover the new backbone minor (`<X.(Y+1).0` for a new backbone `X.Y.Z`). This
+  is the original PRJ-002 D4 broaden, driven by the *new* backbone version.
+- **A component release** (a component moves, the backbone does not) widens each
+  **released** component's own upper bound to cover the repo's **current**
+  backbone (`.pkit/VERSION`) — the version the author is releasing under and
+  tested against. Releasing a capability under backbone X asserts compatibility
+  with X, so its declared range comes to include X. This is #494's author-side
+  auto-broaden, closing the gap [COR-041](../decisions/core/COR-041-external-source-distribution.md)
+  and [ADR-040](../../docs/architecture/decisions/ADR-040-external-source-write-path.md)
+  flagged: the author owns an externally-sourced capability's compatibility
+  claim, and this keeps it current on release rather than by hand.
+
+The broaden is **keyed on "a component moved under backbone X"**, not on being
+project-kit — so it fires the same way in an adopter's own repo releasing its
+own capability. Pass **`--no-broaden`** to skip it (both shapes) when an author
+deliberately does *not* want to claim the current backbone — e.g. shipping a
+patch known-incompatible with the newest backbone; the range then stays exactly
+as authored.
 
 **Tagging is a separate, anchored step** (COR-004's each-step-its-own-command
 principle — the same reason `version bump` and `version tag` are distinct).
@@ -452,8 +478,45 @@ objective rule mis-fires.
 The category set and heading shapes are reviewable constants in
 `project_kit/release.py` (`CHANGELOG_CATEGORIES` and the heading regexes).
 
+## The shareability check — `pkit release check-shareable <component>`
+
+A **pre-sharing lint**: before a capability is shared to be consumed
+**externally-sourced** ([COR-041](../decisions/core/COR-041-external-source-distribution.md)),
+verify it is ready. A consumer pulls the capability **whole at a pin**, reads its
+manifest, and gates compatibility on the declared `requires_backbone` range
+against the consumer's own backbone
+([ADR-040](../../docs/architecture/decisions/ADR-040-external-source-write-path.md)
+point 4). For that to work the capability must declare the pieces the consumer's
+gate reads — this checks that objective subset and reports **pass or the
+specific gaps**:
+
+- **A `version`** — a consumer pins by version, so the manifest must declare a
+  non-empty `component.version`.
+- **A well-formed manifest** — the `package.yaml` must parse as a YAML mapping
+  with a `component:` block.
+- **A bounded `requires_backbone` range** — a `>=LOW,<HIGH` form the consumer's
+  compatibility gate can evaluate. An unbounded or open form (`*`, a bare
+  `>=X`) cannot gate a backbone and is flagged.
+
+It also **warns** (non-blocking) on cheaply-detectable **local-only
+assumptions** — an absolute filesystem path or a `file://` URL in the manifest,
+which a consumer will not have. That is a **heuristic reminder, not a proof**;
+deeper local-only coupling in scripts is human judgment left to review.
+
+```
+pkit release check-shareable <capability-name>
+```
+
+It **checks any component by name** and is **project-neutral** — no hardcoded
+project-kit specifics — so an adopter runs it on their own capability before
+sharing it across their repos. The backbone tier is not a shareable component
+and is refused; an unknown name is a clear usage error.
+
 ## Related
 
+- [COR-041](../decisions/core/COR-041-external-source-distribution.md) —
+  externally-sourced distribution; the author owns the compatibility claim the
+  component-release broaden keeps current and the shareability check verifies.
 - [PRJ-002](../decisions/project/PRJ-002-version-bump-policy.md) — the policy.
 - PRJ-004 — annotated tags matching `.pkit/VERSION` (`pkit version tag`).
 - [COR-010](../decisions/core/COR-010-resource-lifecycle.md) — semver +

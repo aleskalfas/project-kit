@@ -133,6 +133,8 @@ def discover_components(source_kit: Path) -> list[Component]:
         if not pkg_file.is_file():
             continue
         data = _yaml.load(pkg_file.read_text(encoding="utf-8")) or {}
+        if not isinstance(data, dict):
+            continue  # a manifest that isn't a mapping is not a discoverable component
         comp = data.get("component") or {}
         if not isinstance(comp, dict):
             continue

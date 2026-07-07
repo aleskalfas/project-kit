@@ -307,6 +307,86 @@ def test_cutover_legacy_version_bump_still_works(tmp_path: Path) -> None:
     assert plan.backbone.new_version == "1.6.1"
 
 
+# --- #494: component-release auto-broaden to the current backbone ----------
+
+
+def _write_capability(source_kit: Path, name: str, version: str, requires_backbone: str) -> Path:
+    """Add a kit-shipped capability package.yaml under capabilities/<name>/."""
+    cap = source_kit / "capabilities" / name
+    cap.mkdir(parents=True)
+    pkg = cap / "package.yaml"
+    pkg.write_text(
+        "schema_version: 1\n"
+        "component:\n"
+        "  kind: capability\n"
+        f"  name: {name}\n"
+        f"  version: {version}\n"
+        f'requires_backbone: "{requires_backbone}"\n',
+        encoding="utf-8",
+    )
+    return pkg
+
+
+def test_component_release_broadens_to_current_backbone(tmp_path: Path) -> None:
+    """A component release under backbone 1.5.0 widens the released component's
+    upper bound to cover it — `<1.2.0` becomes `<1.6.0` (backbone minor + 1)."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    pkg = _write_capability(source_kit, "houseware", "0.3.0", ">=1.0.0,<1.2.0")
+    _add(source_kit, "houseware", "minor", "house feature", "a.yaml")
+
+    plan = release.compute_release(source_kit)
+    release.apply_release(source_kit, plan, tag=False)
+
+    text = pkg.read_text()
+    assert "  version: 0.4.0\n" in text
+    assert 'requires_backbone: ">=1.0.0,<1.6.0"' in text
+    # Backbone did not move.
+    assert (source_kit / "VERSION").read_text().strip() == "1.5.0"
+
+
+def test_component_release_broaden_is_widen_only(tmp_path: Path) -> None:
+    """A component whose range already covers (or exceeds) the current backbone
+    is left untouched — the broaden never narrows a wider existing bound."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    pkg = _write_capability(source_kit, "houseware", "0.3.0", ">=1.0.0,<2.0.0")
+    _add(source_kit, "houseware", "patch", "house fix", "a.yaml")
+
+    plan = release.compute_release(source_kit)
+    release.apply_release(source_kit, plan, tag=False)
+
+    # Upper bound `<2.0.0` already covers backbone 1.5.0 → unchanged.
+    assert 'requires_backbone: ">=1.0.0,<2.0.0"' in pkg.read_text()
+
+
+def test_component_release_no_broaden_skips(tmp_path: Path) -> None:
+    """`broaden=False` (the --no-broaden flag) leaves the range as authored."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    pkg = _write_capability(source_kit, "houseware", "0.3.0", ">=1.0.0,<1.2.0")
+    _add(source_kit, "houseware", "minor", "house feature", "a.yaml")
+
+    plan = release.compute_release(source_kit)
+    release.apply_release(source_kit, plan, tag=False, broaden=False)
+
+    assert 'requires_backbone: ">=1.0.0,<1.2.0"' in pkg.read_text()
+
+
+def test_backbone_release_still_broadens_all_components(tmp_path: Path) -> None:
+    """No regression: a backbone release widens every component to the new
+    backbone minor (the original PRJ-002 D4 broaden), not the component path."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    pkg = _write_capability(source_kit, "houseware", "0.3.0", ">=1.0.0,<1.2.0")
+    _add(source_kit, "backbone", "minor", "backbone change", "a.yaml")
+
+    plan = release.compute_release(source_kit)
+    release.apply_release(source_kit, plan, tag=False)
+
+    # Backbone 1.5.0 -> 1.6.0; every component broadens to <1.7.0.
+    assert (source_kit / "VERSION").read_text().strip() == "1.6.0"
+    assert 'requires_backbone: ">=1.0.0,<1.7.0"' in pkg.read_text()
+    adapter = (source_kit / "adapters" / "claude-code" / "package.yaml").read_text()
+    assert 'requires_backbone: ">=0.1.0,<1.7.0"' in adapter
+
+
 def _add_migration_dir(source_kit: Path, version: str) -> None:
     (source_kit / "migrations" / "backbone" / version).mkdir(parents=True, exist_ok=True)
 
