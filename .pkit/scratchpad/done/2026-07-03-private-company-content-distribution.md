@@ -2,6 +2,10 @@
 authors:
   - Aleš Kalfas <kalfas.ales@gmail.com>
 started: 2026-07-03
+retired: 2026-07-07
+produced:
+  - COR-041
+  - ADR-040
 ---
 
 # Private, company-internal distribution of adopter-owned content
