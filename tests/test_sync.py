@@ -436,6 +436,7 @@ def _stage_capability_in_source(
     *,
     skill_body: str = "# Skill\n",
     extra_decision: str | None = None,
+    version: str = "1.0.0",
 ) -> Path:
     """Create a capability under source_kit/capabilities/<name>/ for sync tests.
 
@@ -443,6 +444,10 @@ def _stage_capability_in_source(
     package.yaml + skills/ + decisions/. Also stamps a VERSION + decisions/
     scaffold so sync's _update_recorded_backbone_version + the
     source-kit-missing guard don't trip.
+
+    ``version`` sets the capability's package.yaml version, letting a test
+    stage a source that is older / equal / newer than an installed copy —
+    the axis the #524 downgrade guard turns on.
     """
     cap_dir = source_kit / "capabilities" / name
     (cap_dir / "skills").mkdir(parents=True, exist_ok=True)
@@ -457,7 +462,7 @@ def _stage_capability_in_source(
         f"""component:
   kind: capability
   name: {name}
-  version: 1.0.0
+  version: {version}
 description: Test capability.
 requires_backbone: ">=0.0.0"
 schema_version: 1
@@ -557,6 +562,155 @@ def test_sync_warns_when_capability_no_longer_in_source(
     # Tree on disk is untouched.
     ghost_dir = installed_target / ".pkit" / "capabilities" / "ghost"
     assert ghost_dir.is_dir()
+
+
+# --- downgrade guard: a stale source must not clobber a newer install (#524) ---
+
+
+def _install_then_repoint_source(
+    installed_target: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    name: str,
+    *,
+    installed_version: str,
+    source_version: str,
+) -> Path:
+    """Install `name` at `installed_version`, then repoint sync at a source at `source_version`.
+
+    Returns the capability's skill file in the adopter (so a test can assert
+    whether a refresh reached it). The installed copy is staged from a source
+    at `installed_version`; sync is then pointed at a *fresh* source tree
+    whose same-named capability sits at `source_version` — the two versions
+    are the downgrade-guard axis.
+    """
+    from project_kit import capabilities as caps
+
+    install_source = tmp_path / "install-source" / ".pkit"
+    install_source.mkdir(parents=True)
+    _stage_capability_in_source(install_source, name, version=installed_version)
+    source = caps.find_capability_in_source(install_source, name)
+    assert source is not None
+    caps.install_capability(installed_target, source)
+
+    # A distinct source tree carrying the (older / equal / newer) version.
+    sync_source = tmp_path / "sync-source" / ".pkit"
+    sync_source.mkdir(parents=True)
+    _stage_capability_in_source(
+        sync_source, name, version=source_version, skill_body="# From sync source\n"
+    )
+    monkeypatch.setattr(install, "find_source_kit", lambda: sync_source)
+    monkeypatch.setattr(sync.install, "find_source_kit", lambda: sync_source)
+
+    return (
+        installed_target / ".pkit" / "capabilities" / name / "skills" / f"{name}-skill.md"
+    )
+
+
+def test_sync_refuses_downgrade_and_leaves_tree_untouched(
+    installed_target: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The trip-planner failure (#524): source older than installed → refuse, do not refresh."""
+    skill = _install_then_repoint_source(
+        installed_target, monkeypatch, tmp_path, "software-engineering",
+        installed_version="0.3.0", source_version="0.1.0",
+    )
+    before = skill.read_text(encoding="utf-8")
+
+    sync.run_sync(installed_target)
+    out = capsys.readouterr().out
+
+    # Refused, naming both versions; the installed tree is byte-for-byte intact.
+    assert "refused" in out
+    assert "software-engineering" in out
+    assert "0.1.0" in out and "0.3.0" in out
+    assert skill.read_text(encoding="utf-8") == before
+    assert "From sync source" not in skill.read_text(encoding="utf-8")
+
+
+def test_sync_force_proceeds_with_downgrade_loudly(
+    installed_target: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """--force overrides the guard: the downgrade proceeds, but a loud line records it."""
+    skill = _install_then_repoint_source(
+        installed_target, monkeypatch, tmp_path, "software-engineering",
+        installed_version="0.3.0", source_version="0.1.0",
+    )
+
+    sync.run_sync(installed_target, force=True)
+    out = capsys.readouterr().out
+
+    # Loud downgrade line naming both versions; the older source content lands.
+    assert "downgrade" in out
+    assert "0.1.0" in out and "0.3.0" in out
+    assert "From sync source" in skill.read_text(encoding="utf-8")
+
+
+def test_sync_refreshes_normally_when_source_newer(
+    installed_target: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Source newer than installed is a normal upgrade — the guard does not fire."""
+    skill = _install_then_repoint_source(
+        installed_target, monkeypatch, tmp_path, "evidence",
+        installed_version="0.1.0", source_version="0.3.0",
+    )
+
+    sync.run_sync(installed_target)
+    out = capsys.readouterr().out
+
+    assert "refreshed" in out
+    assert "refused" not in out
+    assert "From sync source" in skill.read_text(encoding="utf-8")
+
+
+def test_sync_refreshes_when_source_equal(
+    installed_target: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Equal versions are not a downgrade — refresh proceeds unchanged."""
+    skill = _install_then_repoint_source(
+        installed_target, monkeypatch, tmp_path, "evidence",
+        installed_version="0.2.0", source_version="0.2.0",
+    )
+
+    sync.run_sync(installed_target)
+    out = capsys.readouterr().out
+
+    assert "refreshed" in out
+    assert "refused" not in out
+    assert "From sync source" in skill.read_text(encoding="utf-8")
+
+
+def test_sync_dry_run_previews_downgrade_refusal_and_writes_nothing(
+    installed_target: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Dry-run over a downgrade previews the refusal (not a 'would refresh') and writes nothing."""
+    skill = _install_then_repoint_source(
+        installed_target, monkeypatch, tmp_path, "software-engineering",
+        installed_version="0.3.0", source_version="0.1.0",
+    )
+    before = skill.read_text(encoding="utf-8")
+
+    sync.run_sync(installed_target, dry_run=True)
+    out = capsys.readouterr().out
+
+    assert "refused" in out
+    assert "would refresh" not in out
+    assert skill.read_text(encoding="utf-8") == before
 
 
 # --- incubated (in-repo) capabilities skip source-reconciliation (COR-031) ---

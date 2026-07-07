@@ -618,12 +618,20 @@ def status() -> None:
     default=False,
     help="Show what would be refreshed without writing any files (per COR-004).",
 )
-def sync(dry_run: bool) -> None:
+@click.option(
+    "--force",
+    is_flag=True,
+    default=False,
+    help="Overwrite an installed capability even when the source version is "
+    "OLDER than the installed one (a downgrade). Without this, sync refuses "
+    "such a downgrade rather than silently clobbering newer state (issue #524).",
+)
+def sync(dry_run: bool, force: bool) -> None:
     """Re-run propagation: refresh kit-owned content from source (per COR-001)."""
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
-    run_sync(target_root, dry_run=dry_run)
+    run_sync(target_root, dry_run=dry_run, force=force)
 
 
 @main.command()
