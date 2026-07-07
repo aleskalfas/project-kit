@@ -442,3 +442,245 @@ def test_gh_pr_merge_subject_not_commit_message(dw, monkeypatch) -> None:
     assert landed_subject != commit_subject, (
         "Squash subject must be the PR title, not the commit message."
     )
+
+
+# ---- CI-status gate (#498) -------------------------------------------
+
+
+def test_gh_get_status_rollup_returns_list(dw, monkeypatch) -> None:
+    """_gh_get_status_rollup returns the rollup list from the JSON response."""
+    import subprocess
+
+    rollup = [{"name": "tests", "status": "COMPLETED", "conclusion": "FAILURE"}]
+
+    def fake_gh_run(args, config, **kwargs):
+        return subprocess.CompletedProcess(
+            args=args, returncode=0,
+            stdout=json.dumps({"statusCheckRollup": rollup}), stderr="",
+        )
+
+    monkeypatch.setattr(dw, "gh_run", fake_gh_run)
+    assert dw._gh_get_status_rollup(496, {}) == rollup
+
+
+def test_gh_get_status_rollup_none_on_failure(dw, monkeypatch) -> None:
+    """A gh failure yields None (treated as check-free / passing by the gate)."""
+    import subprocess
+
+    def fake_gh_run(args, config, **kwargs):
+        return subprocess.CompletedProcess(
+            args=args, returncode=1, stdout="", stderr="not found",
+        )
+
+    monkeypatch.setattr(dw, "gh_run", fake_gh_run)
+    assert dw._gh_get_status_rollup(496, {}) is None
+
+
+def test_ci_gate_refuses_failing_and_pending(dw) -> None:
+    """The shared gate wired into done-work refuses red and pending rollups."""
+    failing = dw.evaluate_ci_gate(
+        [{"name": "tests", "status": "COMPLETED", "conclusion": "FAILURE"}]
+    )
+    assert failing.passing is False
+    pending = dw.evaluate_ci_gate(
+        [{"name": "build", "status": "IN_PROGRESS", "conclusion": ""}]
+    )
+    assert pending.passing is False
+    green = dw.evaluate_ci_gate(
+        [{"name": "ok", "status": "COMPLETED", "conclusion": "SUCCESS"}]
+    )
+    assert green.passing is True
+
+
+def test_done_work_ci_bypass_audit_body_follows_template(dw) -> None:
+    """done-work's CI-bypass audit follows the schema template + its own stamp."""
+    identity = dw.Identity(github_login="octocat", email="octo@example.com")
+    body = dw._ci_bypass_audit_body(
+        identity, "advisory guard on a decision-only PR", ("guard (FAILURE)",)
+    )
+    assert dw.CI_BYPASS_AUDIT_STAMP in body
+    assert "Bypassed by octocat <octo@example.com>: " in body
+    assert "guard (FAILURE)" in body
+
+
+def test_done_work_post_ci_bypass_audit_idempotent(dw, monkeypatch) -> None:
+    """An already-present CI-bypass comment is not re-posted (idempotent)."""
+    import subprocess
+
+    captured: list[list[str]] = []
+
+    def fake_gh_run(args, config, **kwargs):
+        captured.append(list(args))
+        if "view" in args:
+            existing = json.dumps(
+                {"comments": [{"body": f"{dw.CI_BYPASS_AUDIT_STAMP}\n\nprior"}]}
+            )
+            return subprocess.CompletedProcess(
+                args=args, returncode=0, stdout=existing, stderr="",
+            )
+        return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(dw, "gh_run", fake_gh_run)
+    identity = dw.Identity(github_login="octocat", email="octo@example.com")
+    ok = dw._post_ci_bypass_audit(496, "override", identity, ("x (FAILURE)",), {})
+    assert ok is True
+    assert not [c for c in captured if "comment" in c]
+
+
+# ---- flag split: --bypass vs --bypass-ci (#498) ----------------------
+#
+# `--bypass` clears ONLY the approval gate; the CI gate is overridable
+# ONLY by the dedicated `--bypass-ci`. These are `main()`-level tests: a
+# bypassing operator must never silently land a red CI (#498's footgun),
+# so the split is exercised end-to-end at the gate wiring, not just at
+# the helpers.
+
+
+def _wire_main_seams(dw, monkeypatch, *, rollup, gate_passed=True):
+    """Monkeypatch done-work's heavy seams so main() reaches the CI gate.
+
+    Membership/session-guard/branch/PR resolution and the approval gate are
+    all stubbed to succeed; `_gh_get_status_rollup` returns *rollup* so the
+    real `evaluate_ci_gate` decides. Returns a dict recording the merge and
+    audit side-effects the CI-gate outcome drives (so a test can assert the
+    red-CI-under-`--bypass`-only path never reaches the merge).
+    """
+    calls = {"merged": False, "ci_audit": False, "approval_audit": False,
+             "moved": False}
+
+    monkeypatch.setattr(dw, "resolve_capability_root", lambda arg: Path("/cap"))
+    monkeypatch.setattr(dw, "load_adopter_config", lambda root: {})
+    monkeypatch.setattr(dw, "_read_members", lambda root, loader: [])
+    monkeypatch.setattr(
+        dw, "resolve_invoker_identity",
+        lambda config=None: dw.Identity(github_login="octocat", email="o@e.com"),
+    )
+    monkeypatch.setattr(
+        dw, "check_membership",
+        lambda members, invoker: type(
+            "MR", (), {"allowed": True, "refusal_message": None},
+        )(),
+    )
+    monkeypatch.setattr(dw.session_guard, "enforce", lambda **kw: True)
+    monkeypatch.setattr(dw, "_find_issue_branch", lambda n: "fix/42-slug")
+    monkeypatch.setattr(
+        dw, "_find_pr_for_branch",
+        lambda branch, config: {"number": 496, "title": "fix: x", "isDraft": False},
+    )
+    monkeypatch.setattr(dw, "_gh_get_issue", lambda n, config: {"labels": []})
+    monkeypatch.setattr(
+        dw, "resolve_mode",
+        lambda config, issue_labels=None: type(
+            "M", (), {"mode": "human", "source": "default"},
+        )(),
+    )
+    monkeypatch.setattr(
+        dw, "_check_approval_gate",
+        lambda pr_number, pr, bypass_reason, config: dw._GateResult(
+            passed=gate_passed, passed_via="stub",
+            refusal_message="" if gate_passed else "[refused] approval gate",
+        ),
+    )
+    monkeypatch.setattr(
+        dw, "_gh_get_pr_body", lambda pr_number, config: "## Test plan\n- [x] ok\n",
+    )
+    monkeypatch.setattr(
+        dw, "_check_pr_placeholder", lambda body, pr_number, cap_root: [],
+    )
+    monkeypatch.setattr(dw, "_gh_get_status_rollup", lambda pr_number, config: rollup)
+
+    def _stub_ci_audit(pr_number, reason, invoker, checks, config):
+        calls["ci_audit"] = True
+        return True
+
+    def _stub_approval_audit(issue_number, reason, config):
+        calls["approval_audit"] = True
+        return True
+
+    def _stub_merge(pr_number, *, pr_title, admin, config):
+        calls["merged"] = True
+        return True
+
+    def _stub_move(issue_number, target, cap_root_arg):
+        calls["moved"] = True
+        return 0
+
+    monkeypatch.setattr(dw, "_post_ci_bypass_audit", _stub_ci_audit)
+    monkeypatch.setattr(dw, "_post_bypass_audit_idempotent", _stub_approval_audit)
+    monkeypatch.setattr(dw, "_gh_pr_merge", _stub_merge)
+    monkeypatch.setattr(dw, "_git_pull_main", lambda: None)
+    monkeypatch.setattr(dw, "_invoke_move_issue", _stub_move)
+    return calls
+
+
+_RED_ROLLUP = [{"name": "tests", "status": "COMPLETED", "conclusion": "FAILURE"}]
+_GREEN_ROLLUP = [{"name": "tests", "status": "COMPLETED", "conclusion": "SUCCESS"}]
+
+
+def _run_main(dw, monkeypatch, argv):
+    monkeypatch.setattr(sys, "argv", ["done-work.py", *argv])
+    return dw.main()
+
+
+def test_bypass_alone_does_not_clear_red_ci(dw, monkeypatch, capsys):
+    """`--bypass` clears the approval gate but a red CI still hard-refuses."""
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_RED_ROLLUP)
+    rc = _run_main(dw, monkeypatch, ["42", "--bypass", "flaky reviewer", "--yes"])
+    assert rc == 1, "red CI under --bypass-only must refuse"
+    assert calls["merged"] is False, "must not merge a red CI on --bypass alone"
+    err = capsys.readouterr().err
+    assert "CI-status gate" in err
+    assert "--bypass-ci" in err, "refuse message must name --bypass-ci as the override"
+
+
+def test_bypass_ci_clears_red_ci_and_posts_audit(dw, monkeypatch, capsys):
+    """`--bypass-ci "<reason>"` overrides the CI gate, posts the audit, merges."""
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_RED_ROLLUP)
+    rc = _run_main(
+        dw, monkeypatch, ["42", "--bypass-ci", "advisory guard", "--yes"],
+    )
+    assert rc == 0
+    assert calls["ci_audit"] is True, "--bypass-ci must post the CI-bypass audit"
+    assert calls["merged"] is True
+
+
+def test_both_gates_blocked_needs_both_flags(dw, monkeypatch, capsys):
+    """A merge blocked on approval AND red CI needs both --bypass and --bypass-ci.
+
+    With only --bypass-ci the approval gate still refuses; adding --bypass too
+    clears both and the merge proceeds (posting both audits).
+    """
+    # approval gate fails; only --bypass-ci given → approval refusal.
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_RED_ROLLUP, gate_passed=False)
+    rc = _run_main(dw, monkeypatch, ["42", "--bypass-ci", "ci reason", "--yes"])
+    assert rc == 1, "approval gate must still refuse when only --bypass-ci given"
+    assert calls["merged"] is False
+
+    # both flags → both gates cleared, merge proceeds.
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_RED_ROLLUP, gate_passed=True)
+    rc = _run_main(
+        dw, monkeypatch,
+        ["42", "--bypass", "appr reason", "--bypass-ci", "ci reason", "--yes"],
+    )
+    assert rc == 0
+    assert calls["approval_audit"] is True
+    assert calls["ci_audit"] is True
+    assert calls["merged"] is True
+
+
+def test_bypass_ci_empty_reason_refused(dw, monkeypatch, capsys):
+    """`--bypass-ci` with a whitespace-only reason is refused (before merge)."""
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_RED_ROLLUP)
+    rc = _run_main(dw, monkeypatch, ["42", "--bypass-ci", "   ", "--yes"])
+    assert rc == 1
+    assert calls["merged"] is False
+    assert "non-empty reason" in capsys.readouterr().err
+
+
+def test_green_ci_needs_no_bypass_ci(dw, monkeypatch):
+    """A green CI merges with no --bypass-ci and posts no CI audit."""
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+    assert rc == 0
+    assert calls["merged"] is True
+    assert calls["ci_audit"] is False
