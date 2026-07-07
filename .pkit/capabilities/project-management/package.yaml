@@ -13,6 +13,7 @@ aliases:
 # is per-clone audit state, not shared methodology content.
 runtime_ignore:
   - .pkit/capabilities/project-management/project/process/**/*.journal.jsonl
+  - .pkit/capabilities/project-management/project/instance/*.json
 commands:
   pre-check:
     script: scripts/pre-check.py
@@ -38,6 +39,9 @@ commands:
   show-members:
     script: scripts/show-members.py
     help: Show the current team-membership roster and resolved invoker identity (read-only).
+  set-instance:
+    script: scripts/set-instance.py
+    help: "Set (or --show / --clear) this clone's numeric instance id — the opt-in, per-clone activation gate for instance ownership (DEC-035). Writes a git-ignored runtime file; a clone with no id set behaves as a single-clone repo."
   create-issue:
     script: scripts/create-issue.py
     help: File a new issue (per DEC-020). Composes title + body from the type's template, applies classification labels, optionally adds to the configured Projects v2 board. Refuses a non-feature --kind on an epic/feature/umbrella up front (the DEC-011 kind/structural hard-reject).
