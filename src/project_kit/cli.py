@@ -2299,6 +2299,14 @@ def register_capability_cmd(name: str, dry_run: bool) -> None:
     (the in-repo tree is the source) but keeps the pre-flights that still
     apply: backbone-version satisfaction, naming-collision detection, and
     the capability-dependency check (COR-030).
+
+    Idempotent on an already-registered capability, branching on origin
+    (COR-031 D2): if it is already `incubated-in-repo`, this is a clean no-op;
+    if it is `kit-shipped` (including the origin-unset default a manual
+    registration leaves behind), it is *adopted in place* — the applicable
+    pre-flights re-run and the origin is set to `incubated-in-repo` on the
+    existing registry entry (no re-copy, no re-deploy), so `pkit sync` stops
+    reconciling it against kit source.
     """
     from project_kit import capabilities as caps
 
@@ -2329,12 +2337,26 @@ def register_capability_cmd(name: str, dry_run: bool) -> None:
         )
     capability_source = resolved.source
 
-    # Pre-flight: already registered?
-    if caps.is_installed(target_root, name):
-        raise click.ClickException(
-            f"capability {name!r} is already installed. "
-            f"Use `pkit capabilities upgrade {name}` to refresh."
-        )
+    # Pre-flight: already registered? Branch on origin (COR-031 D2). A capability
+    # added via the old manual workaround is registered with origin unset, which
+    # reads back as kit-shipped — and `upgrade` refreshes from source without ever
+    # setting `incubated-in-repo`, so there is no other path to protect it from
+    # sync. Adopt it in place here; a genuinely incubated one is a clean no-op.
+    already_registered = caps.is_installed(target_root, name)
+    adopt_in_place = False
+    if already_registered:
+        current_origin = caps.read_capability_origin(target_root, name)
+        if current_origin == caps.INCUBATED_IN_REPO:
+            click.echo(
+                "\n  " + cli_render.style("strong",
+                    f"capability {name!r} is already registered as "
+                    f"incubated-in-repo; nothing to do.")
+            )
+            return
+        # kit-shipped / unset → adopt in place: run the applicable pre-flights
+        # below, then set origin on the existing entry (no re-copy, no re-deploy —
+        # the subtree is already installed; this is an origin-state upgrade).
+        adopt_in_place = True
 
     # COR-031 boundary: a same-named capability now also ships from kit
     # source (graduation, before graduation is specified). Surface it so the
@@ -2393,6 +2415,24 @@ def register_capability_cmd(name: str, dry_run: bool) -> None:
             f"unsatisfied dependencies:\n" + "\n".join(lines) + "\n"
             "Install or upgrade the required capabilities first."
         )
+
+    if adopt_in_place:
+        # Adopt in place: the capability is already registered and its subtree
+        # already installed, so we do not re-copy or re-deploy — the only change
+        # is the origin field on the existing registry entry (COR-031 D2). Skip
+        # collision detection (the subtree's artifacts are already the installed
+        # content and would self-collide); the applicable pre-flights above have
+        # run. `--dry-run` shows the change and writes nothing.
+        verb = "Would adopt" if dry_run else "Adopted"
+        if not dry_run:
+            caps.set_capability_origin(target_root, name, caps.INCUBATED_IN_REPO)
+        click.echo(
+            "\n  " + cli_render.style("strong",
+                f"{verb} {name!r} v{capability_source.package.version} as "
+                f"incubated-in-repo (was {current_origin}); pkit sync will now "
+                f"leave it untouched.")
+        )
+        return
 
     # Pre-flight: collision detection. The capability's own skills/agents
     # already live in its in-repo tree, so detect_collisions surfaces them
