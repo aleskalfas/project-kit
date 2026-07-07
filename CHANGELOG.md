@@ -3,14 +3,15 @@
 ## 1.142.0 — 2026-07-07
 
 ### Added
-- Releasing a capability now keeps its compatibility claim current: the release step widens the released component's supported backbone range to cover the version it was released under, and a new pre-sharing check reports whether a capability is ready to be shared for another repository to consume. ([#494])
-- **project-management 0.48.0** — The merge paths (`done-work` and `merge-pr`) now enforce a CI-status gate in front of the merge (#498): the PR's `statusCheckRollup` must be green, else the merge is refused, naming the failing or still-pending checks. Closes the hole where an APPROVED reviewer verdict merged a PR whose CI was red (PR #496). A non-green check is bypassable-with-audit via a dedicated `--bypass-ci "<reason>"` flag on both scripts, which posts an audit comment to the PR before merging; a non-green check with no `--bypass-ci` is a hard refuse. The CI override is deliberately separate from `done-work`'s general `--bypass` (approval gate) so overriding a flaky reviewer never silently lands a red CI — a merge blocked on both gates needs both flags.
+- Releasing a capability now keeps its compatibility claim current — the release step widens the released component's supported backbone range to the version it was released under, and a new `pkit release check-shareable` reports whether a capability is ready for another repository to consume. ([#494])
+- **project-management 0.48.0** — The merge commands now refuse a pull request whose CI is red or still running, so an approved review can no longer land a failing build; a red check can be overridden deliberately with `--bypass-ci "<reason>"`, which records an audit note. ([#498])
 
 ### Changed
-- Remediation for PR #496: the COR-041 + ADR-040 decision landing touched the backbone decisions tree with no user-facing surface (design-ahead — the externally-sourced mechanism ships in a later implementation PR), so it is declared `none`. No changelog line.
-- The changeset-guard error now points a decision-only PR to the right choice — a `none` changeset for a design-ahead decision, or a real changeset for a self-executing rule change.
+- The changeset-guard error now guides a decision-only PR to the right choice — a `none` changeset for a design-ahead decision, or a real one for a self-executing rule change. ([#497])
 
-[#494]: 494
+[#494]: https://github.com/aleskalfas/project-kit/issues/494
+[#497]: https://github.com/aleskalfas/project-kit/issues/497
+[#498]: https://github.com/aleskalfas/project-kit/issues/498
 
 ## 1.141.1 — 2026-07-05
 
