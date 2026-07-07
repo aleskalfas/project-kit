@@ -46,6 +46,7 @@ from project_kit.release import (
     ReleasePlan,
     apply_release,
     check_changesets,
+    check_shareable,
     compute_release,
     lint_release_format,
     merge_release_pr,
@@ -356,24 +357,38 @@ def release_plan(as_json: bool) -> None:
     "(`pkit version tag --push`) after the release commit lands on main.",
 )
 @click.option("--push", is_flag=True, default=False, help="With --tag, push the tag to origin.")
+@click.option(
+    "--no-broaden",
+    is_flag=True,
+    default=False,
+    help="Skip widening released components' requires_backbone to cover the "
+    "current backbone. Default is to broaden (releasing under backbone X "
+    "asserts compatibility with X); pass this to keep a range as authored.",
+)
 @click.option("--yes", is_flag=True, default=False, help="Skip the confirmation prompt (CI).")
-def release_apply(tag: bool, push: bool, yes: bool) -> None:
+def release_apply(tag: bool, push: bool, no_broaden: bool, yes: bool) -> None:
     """Consume changesets and write versions + changelog (the release write).
 
     The sole main-only writer of version state (PRJ-002 D3). Run from a
     release PR against `main` — not on every merge. Tagging is a separate,
     anchored step by default; see `pkit version tag`.
+
+    On a component release, widens that component's `requires_backbone` to
+    cover the repo's current backbone (the version being released under) unless
+    `--no-broaden` is given; a backbone release widens every component as
+    before. Both are widen-only. See `.pkit/release/README.md`.
     """
     source_kit = find_source_kit()
     plan = compute_release(source_kit)
     _print_release_plan(plan)
     _warn_migration_mismatches(source_kit, plan)
+    broaden = not no_broaden
     if plan.is_empty:
-        apply_release(source_kit, plan, tag=tag, push=push)
+        apply_release(source_kit, plan, tag=tag, push=push, broaden=broaden)
         return
     if not yes:
         click.confirm("Write these versions and consume the changesets?", abort=True)
-    apply_release(source_kit, plan, tag=tag, push=push)
+    apply_release(source_kit, plan, tag=tag, push=push, broaden=broaden)
 
 
 @release.command("check")
@@ -508,6 +523,36 @@ def release_publish_notes(version: str, dry_run: bool) -> None:
     """
     source_kit = find_source_kit()
     click.echo(publish_release_notes(source_kit.parent, version, dry_run=dry_run))
+
+
+@release.command("check-shareable")
+@click.argument("component")
+def release_check_shareable(component: str) -> None:
+    """Check a capability is ready to be consumed externally-sourced (COR-041).
+
+    A pre-sharing lint: before a capability is pulled whole at a pin by another
+    repo, it must declare a `version`, a well-formed `package.yaml` manifest,
+    and a bounded `requires_backbone` range the consumer's compatibility gate
+    can evaluate. This reports pass or the specific gaps, and warns on cheaply
+    detectable local-only assumptions (absolute paths / `file://` URLs). It
+    checks any component by name — project-neutral, no project-kit specifics.
+    """
+    source_kit = find_source_kit()
+    report = check_shareable(source_kit, component)
+
+    for warning in report.warnings:
+        click.echo(f"  warning: {warning}")
+
+    if report.ok:
+        click.echo(f"shareability check: {component} is ready to be shared — ok.")
+        return
+
+    detail = "\n".join(f"  - {gap}" for gap in report.gaps)
+    raise click.ClickException(
+        f"{component} is not ready to be consumed externally-sourced:\n"
+        + detail
+        + "\n  Fix the gaps above, then re-run. See COR-041 / .pkit/release/README.md."
+    )
 
 
 def _env_flag(name: str) -> bool:

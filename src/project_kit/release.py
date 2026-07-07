@@ -166,6 +166,7 @@ def apply_release(
     *,
     tag: bool = False,
     push: bool = False,
+    broaden: bool = True,
     today: date | None = None,
 ) -> None:
     """Write the release: versions, broaden, changelog, delete.
@@ -173,6 +174,22 @@ def apply_release(
     The order matters — versions and the requires_backbone broaden land
     first, then the changelog is prepended, then the consumed changesets are
     deleted. Idempotent inputs only: re-running with an empty plan is a no-op.
+
+    The broaden step has two shapes, keyed on what moved:
+
+    - **Backbone release** — widen *every* kit-shipped component's upper bound
+      to cover the new backbone minor (the long-standing PRJ-002 D4 broaden).
+    - **Component release** — widen each *released* component's own upper bound
+      to cover the repo's **current** backbone (`.pkit/VERSION`), i.e. the
+      backbone the author is releasing under / tested against. This is #494's
+      author-side auto-broaden: a component released under backbone X asserts
+      compatibility with X (COR-041). Keyed on "a component moved under backbone
+      X", not on being project-kit, so it fires in any adopter's repo.
+
+    Both are **widen-only** (never narrow a wider existing bound) and
+    reuse `versioning`'s regex rewrite. `broaden=False` (the `--no-broaden`
+    flag) skips the step for an author who deliberately does not want to claim
+    the current backbone.
 
     Tagging is **off by default** and deliberately a separate step, matching
     the codebase's anchoring principle (bump writes; `pkit version tag` tags —
@@ -196,11 +213,8 @@ def apply_release(
         else:
             _write_component_version(rel)
 
-    # Broaden kit components' requires_backbone at the release step (D4),
-    # driven by the NEW backbone version — only when the backbone moved.
-    if backbone is not None:
-        major, minor = (int(p) for p in backbone.new_version.split(".")[:2])
-        versioning._broaden_kit_components_requires_backbone(source_kit, major, minor)
+    if broaden:
+        _broaden_at_release(source_kit, plan)
 
     _write_changelog(source_kit.parent, plan, today or date.today())
     _delete_changesets(plan.consumed)
@@ -212,6 +226,39 @@ def apply_release(
             "Next: commit the release, then `pkit version tag --push` on main "
             f"to cut v{backbone.new_version} (PRJ-004)."
         )
+
+
+def _broaden_at_release(source_kit: Path, plan: ReleasePlan) -> None:
+    """Broaden `requires_backbone` for the moving tiers (PRJ-002 D4 + #494).
+
+    A backbone release widens every kit-shipped component to the new backbone
+    minor (the original D4 broaden). A component release widens each released
+    component's own bound to cover the repo's current backbone — the version
+    the author releases under (#494 / COR-041). The two are complementary, not
+    exclusive: a mixed release (backbone + a component in one plan) runs the
+    backbone broaden, which already covers every component including the moved
+    one, so the per-component step is only reached for a component release with
+    no backbone move.
+    """
+    backbone = plan.backbone
+    if backbone is not None:
+        # Backbone moved — widen every component to the new backbone minor.
+        major, minor = (int(p) for p in backbone.new_version.split(".")[:2])
+        versioning._broaden_kit_components_requires_backbone(source_kit, major, minor)
+        return
+
+    # Component-only release — widen each released component's own bound to the
+    # repo's current backbone (the version being released under / tested with).
+    current_backbone = (source_kit / "VERSION").read_text(encoding="utf-8").strip()
+    for rel in plan.releases:
+        if rel.component.name == BACKBONE:
+            continue  # unreachable here (backbone is None), but keep the guard explicit
+        rel_path = rel.component.version_path.relative_to(source_kit)
+        changed = versioning.broaden_component_requires_backbone(
+            rel.component.version_path, current_backbone
+        )
+        if changed is not None:
+            click.echo(f"  broadened {rel_path}: {changed} (covers backbone {current_backbone})")
 
 
 def _write_component_version(rel: ComponentRelease) -> None:
@@ -831,6 +878,127 @@ def _gh_pr_merge(pr_number: int, subject: str, repo_root: Path) -> None:
         raise click.ClickException(
             f"`gh pr merge {pr_number}` failed: {result.stderr.strip()}"
         )
+
+
+# --- The shareability check (#494) ---------------------------------------
+#
+# A pre-sharing lint: is a capability ready to be consumed externally-sourced
+# (COR-041)? A consumer pulls the capability whole at a pin, reads its
+# manifest, and gates compatibility on the declared `requires_backbone` range
+# against the consumer's backbone (ADR-040 point 4) — so the capability MUST
+# declare a version, a well-formed manifest, and a parseable requires_backbone
+# range before it is safe to share. This checks that objective, mechanically
+# verifiable subset and reports pass / the specific gaps. It is project-neutral:
+# it checks any component by name, with no project-kit-specific assumptions.
+
+# requires_backbone must be a bounded range `>=LOW,<HIGH` — an unbounded or
+# open form (`*`, `>=X` with no upper bound) cannot gate a consumer's backbone,
+# so it is flagged. Mirrors the bound shape versioning.py's broaden rewrites.
+_REQUIRES_BACKBONE_RANGE_RE = re.compile(r'^>=\d+\.\d+\.\d+,<\d+\.\d+\.\d+$')
+
+# Cheaply-detectable local-only assumptions: an absolute filesystem path or a
+# `file://` URL in the manifest points at something a consumer will not have.
+# A heuristic reminder, not a proof — matched against the raw manifest text.
+_LOCAL_PATH_RE = re.compile(r'(?m)(?:^|\s|["\':=])(/(?:Users|home|tmp|var|opt|private)/\S+|file://\S+)')
+
+
+@dataclass(frozen=True)
+class ShareabilityReport:
+    """Outcome of the pre-sharing shareability check for one component."""
+
+    component: str
+    gaps: list[str]  # each an actionable "what is missing / malformed"
+    warnings: list[str]  # non-blocking heuristics (e.g. local-path smells)
+
+    @property
+    def ok(self) -> bool:
+        return not self.gaps
+
+
+def check_shareable(source_kit: Path, component_name: str) -> ShareabilityReport:
+    """Check that a capability is ready to be consumed externally-sourced.
+
+    Per COR-041 a consumer pulls the capability whole, reads its manifest, and
+    gates on the declared `requires_backbone` range against its own backbone
+    (ADR-040). This verifies the objective preconditions for that to work:
+
+    - the named component **exists** and carries a `package.yaml` manifest;
+    - the manifest is a **well-formed** mapping with a `component` block;
+    - it declares a non-empty **`version`**;
+    - it declares a **bounded `requires_backbone` range** (`>=LOW,<HIGH`) the
+      consumer's gate can evaluate.
+
+    Cheaply-detectable **local-only assumptions** (absolute paths, `file://`
+    URLs in the manifest) are surfaced as non-blocking *warnings* — a heuristic
+    reminder, not a proof. The backbone tier is not a shareable component and is
+    refused. Returns a `ShareabilityReport`; raises `click.ClickException` only
+    when the named component is unknown (a usage error, not a gap).
+    """
+    if component_name == BACKBONE:
+        raise click.ClickException(
+            f"{BACKBONE!r} is the backbone tier, not a shareable component. "
+            "Pass an adapter or capability name."
+        )
+
+    components = {c.name: c for c in discover_components(source_kit)}
+    component = components.get(component_name)
+    if component is None:
+        known = [n for n in sorted(components) if n != BACKBONE]
+        raise click.ClickException(
+            f"unknown component {component_name!r}. "
+            f"Known: {', '.join(known) if known else '(none)'}."
+        )
+
+    gaps: list[str] = []
+    warnings: list[str] = []
+
+    manifest = component.version_path
+    text = manifest.read_text(encoding="utf-8")
+    data = _load_yaml_mapping(text)
+    if data is None:
+        gaps.append(f"manifest {manifest.name} is not a well-formed YAML mapping.")
+        return ShareabilityReport(component_name, gaps, warnings)
+
+    comp_block = data.get("component")
+    if not isinstance(comp_block, dict):
+        gaps.append(f"manifest {manifest.name} has no `component:` mapping.")
+        comp_block = {}
+
+    version = comp_block.get("version")
+    if not version or not str(version).strip():
+        gaps.append("no `component.version` declared — a consumer pins by version.")
+
+    requires_backbone = data.get("requires_backbone")
+    if not requires_backbone or not str(requires_backbone).strip():
+        gaps.append(
+            "no `requires_backbone` declared — a consumer cannot gate compatibility "
+            "against its backbone (COR-041)."
+        )
+    elif not _REQUIRES_BACKBONE_RANGE_RE.match(str(requires_backbone).strip()):
+        gaps.append(
+            f"`requires_backbone: {str(requires_backbone).strip()!r}` is not a bounded "
+            "range `>=LOW,<HIGH` — the consumer's compatibility gate cannot evaluate it."
+        )
+
+    for match in _LOCAL_PATH_RE.finditer(text):
+        warnings.append(
+            f"manifest references what looks like a local-only path ({match.group(1)!r}) — "
+            "a consumer will not have it."
+        )
+
+    return ShareabilityReport(component_name, gaps, warnings)
+
+
+def _load_yaml_mapping(text: str) -> dict | None:
+    """Parse `text` as YAML; return the mapping, or None if it is not one."""
+    from ruamel.yaml import YAML
+    from ruamel.yaml.error import YAMLError
+
+    try:
+        data = YAML(typ="safe").load(text)
+    except YAMLError:
+        return None
+    return data if isinstance(data, dict) else None
 
 
 # --- The notes-only GitHub Release (#485) --------------------------------
