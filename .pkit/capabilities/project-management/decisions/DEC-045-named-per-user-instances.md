@@ -96,9 +96,11 @@ references *W*:
 - **none** (unassigned *W*, or an issue with no workstream) → there is no derived
   expectation, so the guard **falls back to DEC-035's flat numeric commons behaviour**.
 
-The derivation is read through the ownership seam ([pkit:ADR-041]) and consumed **only**
-by the pm-layer guard and listings — **never** by a gate, a transition, or the cascade
-fold. Realm-blindness (DEC-035 point 8, DEC-043 D6) is preserved: naming instances does
+The *expected* owner is derived from the per-user topology file (point 2); the *actual*
+current owner is resolved separately through the ownership seam ([pkit:ADR-041]). The
+clash guard consumes **both** — comparing actual against expected — and, with listings,
+is the **only** consumer; **never** a gate, a transition, or the cascade fold.
+Realm-blindness (DEC-035 point 8, DEC-043 D6) is preserved: naming instances does
 not make ownership engine state. The named layer thus *refines* DEC-035 where the
 reference is unambiguous and *falls back* to it otherwise — the numeric model stays the
 floor.
@@ -195,15 +197,17 @@ the automatic version waits for lived use of the mechanical one.
 
 - **`set-instance` gains a name** alongside the numeric id in the clone-local runtime
   file (DEC-035 point 1); additive, still git-ignored, still opt-in.
-- **A per-user-local topology file** (resolved from a per-user location, never committed;
-  declared via the capability's `runtime_ignore:` posture so it is never accidentally
-  tracked) lists the person's named instances and the workstream slugs each references,
-  with optional path hints. A new schema describes it; it is **not** `substrate-map.yaml`
-  and **not** a committed project registry like `workstreams.yaml` / `members.yaml`.
-- **The ownership clash guard consumes the workstream→instance reference** through the
-  ADR-041 seam to compute the *expected* owner (singleton warns / shared allows /
-  unassigned falls back to DEC-035 numeric commons). Consumed by the pm-layer guard and
-  listings only; the engine and cascade fold never read it (DEC-035 point 8 / DEC-043 D6).
+- **A per-user-local topology file** (resolved from a per-user home/config location
+  *outside* any repo tree, so it is shared across the person's clones and never
+  committed — distinct from DEC-035's in-repo git-ignored clone-local id) lists the
+  person's named instances and the workstream slugs each references, with optional path
+  hints. A new schema describes it; it is **not** `substrate-map.yaml` and **not** a
+  committed project registry like `workstreams.yaml` / `members.yaml`.
+- **The ownership clash guard computes the *expected* owner from the workstream→instance
+  reference in the per-user topology file** and compares it against the *actual* owner
+  resolved through the ADR-041 seam (singleton warns / shared allows / unassigned falls
+  back to DEC-035 numeric commons). Consumed by the pm-layer guard and listings only; the
+  engine and cascade fold never read it (DEC-035 point 8 / DEC-043 D6).
 - **Two new scripts:** the **guided assignment** (local, idempotent, reconciles DEC-018
   workstream-lifecycle drift, surfaces shared/unassigned at `warning`) and
   **`create-instance`** (clone into a sibling folder + scaffold config; rule-8 confirm

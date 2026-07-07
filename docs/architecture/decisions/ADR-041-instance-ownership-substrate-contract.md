@@ -333,8 +333,8 @@ realm-blind.
   selector field.
 - **Not the comment-stamp or mirror-region format.** The hidden-stamp syntax and
   the mirror region's rendered shape are carried by the shared audit-log facility's
-  own DEC (DEC-043 Implications: "the ownership event log is that facility
-  specialised") and land with the Feature. This ADR pins only that the event write
+  own DEC ([project-management:DEC-044-audit-log-facility]; DEC-043 Implications: "the
+  ownership event log is that facility specialised") and land with the Feature. This ADR pins only that the event write
   and the mirror render each have one constructor and that the mirror is
   overwrite-not-append.
 - **Not the DEC-009 refinement note.** The description-mirror region is a
@@ -545,10 +545,11 @@ enforced by the seam having no engine-side caller.
   three prior seam invariants staying scoped to their own substrates. Composes with
   DEC-014 (the guard's severity token) and DEC-026 (the event log aligns with the
   handoff audit comment). Does not restate DEC-043; cites it as the decision.
-- **Acceptance.** Landed `proposed`. Because this ADR pins the contract for a
-  substrate that **refines the foundational DEC-035** (via DEC-043), promotion
-  `proposed → accepted` warrants **explicit maintainer sign-off** — the same class
-  as DEC-035's own handoff-contract sign-off, DEC-039's DEC-005 refinement, and
-  DEC-043's DEC-035 refinement — not an architect self-acceptance. The seam, the two
-  constructors, the guard, and the drivers land with the DEC-043-gated Feature,
-  citing this ADR for the invariant.
+- **Acceptance.** Because this ADR pins the contract for a substrate that **refines
+  the foundational DEC-035** (via DEC-043), it required **explicit maintainer
+  sign-off** rather than architect self-acceptance — the same class as DEC-035's own
+  handoff-contract sign-off, DEC-039's DEC-005 refinement, and DEC-043's DEC-035
+  refinement. That sign-off was given in-session by the maintainer, and this record
+  was accepted alongside DEC-043 / DEC-044 / DEC-045 in the same change-set. The seam,
+  the two constructors, the guard, and the drivers land with the DEC-043-gated
+  Feature, citing this ADR for the invariant.

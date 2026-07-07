@@ -161,7 +161,7 @@ substrate and making `label` the opt-in fails safe.
   do-not-edit class of body content that [project-management:DEC-009-living-documents] does not
   yet model; it needs an explicit refinement note (authored in the same change-set). The region
   is *derived*, which is a lighter interaction than authoritative body state.
-- **The shared audit-log facility** (its own DEC) carries the comment-stamp + render spec; the
+- **The shared audit-log facility** ([project-management:DEC-044-audit-log-facility]) carries the comment-stamp + render spec; the
   ownership event log is that facility specialised with ownership event types, and the existing
   promote / bypass / handoff audit strings migrate onto it rather than running parallel.
 - **Read cost stays one call** — the description mirror is returned inline by
