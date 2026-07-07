@@ -17,6 +17,14 @@ policy (git-conventions.yaml's `merge` convention). Before invoking
     refuse. The PR body's own checkboxes also count.
   * PR title must match `titles.yaml`'s `pr` regex (Conventional
     Commits).
+  * CI-status gate (#498): the PR's `statusCheckRollup` must be green.
+    A failing or still-pending check refuses the merge, naming the
+    offending checks, unless `--bypass-ci "<reason>"` is supplied — a
+    bypassable-with-audit escape (validation-severity.yaml) dedicated to
+    the CI gate that posts the audit-comment template to the PR before
+    merging. The CI override is deliberately its own flag, separate from
+    any general `--bypass`, so overriding another gate never silently
+    clears a red CI.
 
 Self-contained via PEP 723; runs via
   uv run --script .pkit/capabilities/project-management/scripts/merge-pr.py 99
@@ -26,7 +34,7 @@ Or via the dispatcher (per COR-021):
 
 Exit codes:
   0  merged (or dry-run reported)
-  1  membership refusal / checkbox close-gate refusal / title refusal
+  1  membership / checkbox / title / CI-status refusal
   2  usage error (PR not found)
   3  gh failure
 """
@@ -45,11 +53,13 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
+from _lib.ci_checks import evaluate_ci_gate  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib.hooks import fire_hooks  # noqa: E402
 from _lib import session_guard  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
+    Identity,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
@@ -59,6 +69,11 @@ from _lib.membership import (  # noqa: E402
 CLOSING_KEYWORD_RE = re.compile(
     r"\b(?:closes|fixes|resolves)\s+#(\d+)", re.IGNORECASE
 )
+
+# Idempotency stamp for the CI-bypass audit comment (mirrors done-work's
+# BYPASS_AUDIT_STAMP shape; a distinct marker so a re-run recognises its own
+# prior comment rather than confusing it with an approval-gate bypass).
+CI_BYPASS_AUDIT_STAMP = "<!-- pkit-hook: merge-pr-ci-bypass -->"
 
 
 def main() -> int:
@@ -88,6 +103,18 @@ def main() -> int:
         help=(
             "Pass --admin to gh pr merge (bypasses branch-protection "
             "checks). Use only when authorised."
+        ),
+    )
+    parser.add_argument(
+        "--bypass-ci",
+        default=None,
+        help=(
+            "Override the CI-status gate with an explicit reason "
+            "(bypassable-with-audit per validation-severity.yaml). Posts "
+            "an audit comment to the PR before merging. Use for a "
+            "deliberate override — e.g. an advisory check failing on a "
+            "decision-only PR. Dedicated to the CI gate; no other bypass "
+            "clears a red or pending CI check."
         ),
     )
     parser.add_argument(
@@ -197,10 +224,44 @@ def main() -> int:
             )
             return 1
 
+    # CI-status gate (#498). A reviewer's APPROVED verdict is not evidence CI
+    # passed — refuse to land a PR whose checks are red or still running. A
+    # deliberate override goes through the dedicated --bypass-ci flag
+    # (bypassable-with-audit): the audit comment lands on the PR first, then
+    # the merge proceeds. Only --bypass-ci clears a non-green CI — no other
+    # bypass silently lands a red check.
+    ci_gate = evaluate_ci_gate(pr.get("statusCheckRollup"))
+    if not ci_gate.passing:
+        if not args.bypass_ci:
+            print(
+                "\n[refused] CI-status gate: the PR's checks are not all green.\n"
+                f"  failing/pending: {', '.join(ci_gate.failing_checks)}\n"
+                "  → wait for the checks to pass, or override this CI gate "
+                'explicitly with `--bypass-ci "<reason>"` (posts an audit '
+                "comment).",
+                file=sys.stderr,
+            )
+            return 1
+        if not args.bypass_ci.strip():
+            print(
+                "\n[refused] --bypass-ci requires a non-empty reason.",
+                file=sys.stderr,
+            )
+            return 1
+        print(
+            "  ci-status: [bypass-ci] checks not green "
+            f"({', '.join(ci_gate.failing_checks)}); reason: {args.bypass_ci.strip()}"
+        )
+    else:
+        print("  ci-status: green")
+
     if args.dry_run:
+        note = ""
+        if not ci_gate.passing:
+            note = " (would post CI-bypass audit comment first)"
         print(
             f"\n[dry-run] gh pr merge --squash --delete-branch "
-            f"--subject {pr_title!r} would be invoked; nothing written."
+            f"--subject {pr_title!r} would be invoked{note}; nothing written."
         )
         return 0
     if not args.yes and sys.stdin.isatty():
@@ -208,6 +269,20 @@ def main() -> int:
         if reply not in ("y", "yes"):
             print("aborted.", file=sys.stderr)
             return 0
+
+    # Post the CI-bypass audit comment before merging so the trail survives
+    # even if the merge later fails (bypassable-with-audit; the comment lands
+    # first per validation-severity.yaml).
+    if not ci_gate.passing and args.bypass_ci:
+        if not _post_ci_bypass_audit(
+            args.pr_number, args.bypass_ci.strip(), invoker, ci_gate.failing_checks, config
+        ):
+            print(
+                "[warn] could not post CI-bypass audit comment; aborting "
+                "before merge.",
+                file=sys.stderr,
+            )
+            return 3
 
     if not _gh_merge(args.pr_number, pr_title=pr_title, admin=args.admin, config=config):
         return 3
@@ -288,6 +363,69 @@ def _pr_title_pattern(titles: dict) -> str | None:
     return None
 
 
+# ---- CI-bypass audit -------------------------------------------------
+
+
+def _ci_bypass_audit_body(
+    invoker: Identity, reason: str, failing_checks: tuple[str, ...]
+) -> str:
+    """Render the bypassable-with-audit comment body (validation-severity.yaml).
+
+    Follows the schema's `audit_comment_template`
+    (`Bypassed by <name> <<email>>: <reason>`), naming the checks the bypass
+    overrode so the trail records *what* was skipped. Prefixed with the
+    idempotency stamp so a re-run recognises its own prior comment.
+    """
+    name = invoker.github_login or invoker.email or "<unresolved>"
+    email = invoker.email or "<unknown>"
+    checks = ", ".join(failing_checks) or "(none named)"
+    return (
+        f"{CI_BYPASS_AUDIT_STAMP}\n\n"
+        f"Bypassed by {name} <{email}>: {reason}\n\n"
+        f"CI-status gate overridden; non-passing checks: {checks}."
+    )
+
+
+def _post_ci_bypass_audit(
+    pr_number: int,
+    reason: str,
+    invoker: Identity,
+    failing_checks: tuple[str, ...],
+    config: dict,
+) -> bool:
+    """Post the CI-bypass audit comment to the PR, idempotently.
+
+    Returns True on success (or when an identical audit comment is already
+    present — the stamp makes the post idempotent), False on gh failure.
+    """
+    body = _ci_bypass_audit_body(invoker, reason, failing_checks)
+    proc = gh_run(
+        ["gh", "pr", "view", str(pr_number), "--json", "comments"],
+        config, check=False,
+    )
+    if proc.returncode == 0:
+        try:
+            data = json.loads(proc.stdout)
+            for c in data.get("comments", []):
+                if CI_BYPASS_AUDIT_STAMP in (c.get("body") or ""):
+                    print("  ci-bypass audit comment already present; idempotent skip")
+                    return True
+        except (ValueError, KeyError, TypeError):
+            pass
+    proc = gh_run(
+        ["gh", "pr", "comment", str(pr_number), "--body", body],
+        config, check=False,
+    )
+    if proc.returncode != 0:
+        print(
+            f"error: gh pr comment failed: {proc.stderr.strip()}",
+            file=sys.stderr,
+        )
+        return False
+    print("  ci-bypass audit comment posted")
+    return True
+
+
 # ---- gh wrappers ----------------------------------------------------
 
 
@@ -300,7 +438,7 @@ def _gh_get_pr(pr_number: int, config: dict) -> dict | None:
                 "view",
                 str(pr_number),
                 "--json",
-                "title,body,state,url,headRefName,baseRefName",
+                "title,body,state,url,headRefName,baseRefName,statusCheckRollup",
             ],
             config,
             check=False,
