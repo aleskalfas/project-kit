@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.142.4 — 2026-07-08
+
+### Fixed
+- `pkit sync`/`upgrade` no longer silently aborts when a listed skill or agent resolves to no canonical file. The claude-code deploy primitives ran an unguarded resolver whose benign "not found" tripped `set -e`, killing the run mid-way with no diagnostic (only the wrapper's opaque "exited with status 1"). The common trigger is a composite skill folder mid-build (COR-020): sub-procedures present but no `<name>/<name>.md` dispatcher yet. Both deploy scripts now skip the unresolvable item loudly — naming the skill/agent and the defect with a remediation hint — deploy the rest, and exit cleanly with an end-of-run summary. ([#537])
+
+[#537]: https://github.com/aleskalfas/project-kit/issues/537
+
 ## 1.142.3 — 2026-07-08
 
 ### Fixed
