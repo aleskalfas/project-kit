@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.142.2 — 2026-07-08
+
+### Added
+- **project-management 0.49.0** — Add the `set-instance` command — set (or `--show` / `--clear`) this clone's opt-in, per-clone numeric instance id, the activation gate for instance ownership when one person runs several clones of a repo (DEC-035). The id is written to a git-ignored runtime file and read by the ownership lifecycle; a clone with no id set is unchanged. The claim / clash-guard / signed-listing behaviour that acts on the id follows in subsequent changes.
+
+### Changed
+- Documented COR-031's operational collision precedence in the CLI reference: register keeps the in-repo (incubated) copy on a kit-source name collision and surfaces that a kit-shipped version is available; sync leaves incubated untouched (D1). A doc clarification of already-decided behaviour (no COR change, no surface moved).
+
+### Fixed
+- `pkit sync` no longer silently downgrades a capability: when the source ships an older version than the one installed, sync now refuses — naming both versions and leaving the installed tree untouched — instead of overwriting newer work. `pkit sync --force` overrides the guard to downgrade deliberately (and loudly).
+- `pkit capabilities register` no longer refuses an already-registered capability outright: it now branches on origin. An entry registered as `incubated-in-repo` is a clean no-op, and one registered `kit-shipped` — including the origin-unset default a manual registration leaves behind — is adopted in place: the origin is set to `incubated-in-repo` on the existing registry entry (no re-copy, no re-deploy) so `pkit sync` stops reconciling it against kit source. `--dry-run` shows the change without writing.
+
 ## 1.142.1 — 2026-07-07
 
 ### Fixed
