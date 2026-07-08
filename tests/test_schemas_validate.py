@@ -1158,3 +1158,158 @@ def test_cli_schemas_resolve_unknown_errors(cli_target: Path) -> None:
     result = runner.invoke(main, ["schemas", "resolve", "[target:task]"])
     assert result.exit_code != 0
     assert "not found" in result.output
+
+
+# --- non-schema YAML exclusion from the companion requirement (issue #534) --
+#
+# `validate_path` (and its callers `pkit schemas validate` +
+# `validate_capability_self_consistency`) must not demand a companion JSON
+# Schema for YAML that isn't a schema definition: fixtures under `examples/`,
+# `*-example.yaml` files, and instances validated against an *external*
+# `$schema` (a shared/foreign schema, not their own companion). A genuine
+# schema definition with no companion is still flagged (no COR-018 regression).
+
+
+def test_example_dir_yaml_without_companion_not_flagged(tmp_path: Path) -> None:
+    """A YAML under `examples/` is a fixture — never requires its own companion."""
+    schemas = _make_capability(tmp_path, "demo")
+    _write_schema_pair(schemas, "trip", yaml_body=_MINIMAL_YAML, json_schema=_MINIMAL_JSON_SCHEMA)
+    examples = schemas / "examples"
+    examples.mkdir()
+    (examples / "japan.yaml").write_text(_MINIMAL_YAML, encoding="utf-8")  # no companion
+
+    report = validate_path(schemas)
+    assert report.is_clean
+    # Only the real schema pair is enumerated; the fixture is excluded.
+    assert report.pairs_checked == 1
+
+
+def test_example_named_yaml_without_companion_not_flagged(tmp_path: Path) -> None:
+    """A `*-example.yaml` file is a fixture by naming convention — no companion required."""
+    schemas = _make_capability(tmp_path, "demo")
+    _write_schema_pair(schemas, "trip", yaml_body=_MINIMAL_YAML, json_schema=_MINIMAL_JSON_SCHEMA)
+    (schemas / "trip-example.yaml").write_text(_MINIMAL_YAML, encoding="utf-8")  # no companion
+
+    report = validate_path(schemas)
+    assert report.is_clean
+    assert report.pairs_checked == 1
+
+
+def test_external_schema_directive_yaml_not_flagged(tmp_path: Path) -> None:
+    """A YAML with a `# yaml-language-server: $schema=<external>` directive is an instance."""
+    schemas = _make_capability(tmp_path, "demo")
+    _write_schema_pair(
+        schemas, "process", yaml_body=_MINIMAL_YAML, json_schema=_MINIMAL_JSON_SCHEMA
+    )
+    # A process-definition instance validated against a shared _defs schema.
+    (schemas / "software-development.yaml").write_text(
+        "# yaml-language-server: $schema=_defs/process.schema.json\n"
+        "schema_version: 1\nname: sw-dev\n",
+        encoding="utf-8",
+    )  # no own companion
+
+    report = validate_path(schemas)
+    assert report.is_clean
+    assert report.pairs_checked == 1
+
+
+def test_external_schema_top_level_key_yaml_not_flagged(tmp_path: Path) -> None:
+    """A YAML with a top-level `$schema:` key pointing at an external schema is an instance."""
+    schemas = _make_capability(tmp_path, "demo")
+    _write_schema_pair(
+        schemas, "process", yaml_body=_MINIMAL_YAML, json_schema=_MINIMAL_JSON_SCHEMA
+    )
+    (schemas / "onboarding.yaml").write_text(
+        "$schema: _defs/process.schema.json\nschema_version: 1\nname: onboarding\n",
+        encoding="utf-8",
+    )  # no own companion
+
+    report = validate_path(schemas)
+    assert report.is_clean
+    assert report.pairs_checked == 1
+
+
+def test_self_pointing_schema_directive_still_requires_companion(tmp_path: Path) -> None:
+    """A `$schema` pointer at the YAML's *own* companion is an ordinary pair — still required."""
+    schemas = _make_capability(tmp_path, "demo")
+    (schemas / "alpha.yaml").write_text(
+        "# yaml-language-server: $schema=alpha.schema.json\nschema_version: 1\nname: a\n",
+        encoding="utf-8",
+    )  # no companion on disk
+
+    report = validate_path(schemas)
+    assert not report.is_clean
+    assert any("missing companion" in issue.message.lower() for issue in report.issues)
+
+
+def test_genuine_schema_without_companion_still_flagged(tmp_path: Path) -> None:
+    """The COR-018 true positive: a direct schema YAML with no companion is still flagged."""
+    schemas = _make_capability(tmp_path, "demo")
+    (schemas / "real.yaml").write_text(_MINIMAL_YAML, encoding="utf-8")  # no companion, no signals
+
+    report = validate_path(schemas)
+    assert not report.is_clean
+    assert any("missing companion" in issue.message.lower() for issue in report.issues)
+
+
+def _build_trip_planner_shaped_schemas(schemas: Path) -> None:
+    """Populate a `schemas/` tree mirroring trip-planner's shape (issue #534).
+
+    A genuine schema definition + side-by-side companion, an `examples/` fixture
+    with no companion, and a process-definition YAML validated against a shared
+    `_defs/` schema via a `$schema` directive.
+    """
+    _write_schema_pair(schemas, "trip", yaml_body=_MINIMAL_YAML, json_schema=_MINIMAL_JSON_SCHEMA)
+
+    examples = schemas / "examples"
+    examples.mkdir()
+    (examples / "japan-example.yaml").write_text(_MINIMAL_YAML, encoding="utf-8")
+
+    defs = schemas / "_defs"
+    defs.mkdir()
+    (defs / "process.schema.json").write_text(
+        json.dumps(_MINIMAL_JSON_SCHEMA), encoding="utf-8"
+    )
+    (schemas / "software-development.yaml").write_text(
+        "# yaml-language-server: $schema=_defs/process.schema.json\n"
+        "schema_version: 1\nname: sw-dev\n",
+        encoding="utf-8",
+    )
+
+
+def test_trip_planner_shaped_capability_passes(tmp_path: Path) -> None:
+    """The full trip-planner-shaped `schemas/` tree passes the companion check."""
+    schemas = _make_capability(tmp_path, "trip-planning")
+    _build_trip_planner_shaped_schemas(schemas)
+
+    report = validate_path(schemas)
+    assert report.is_clean, [f"{i.location}: {i.message}" for i in report.issues]
+    # Only the genuine `trip` schema is enumerated; the example + process-def
+    # are excluded as non-schema material.
+    assert report.pairs_checked == 1
+
+
+def test_trip_planner_shaped_capability_self_consistency_clean(tmp_path: Path) -> None:
+    """`validate_capability_self_consistency` (register's check) accepts the trip-planner shape."""
+    from project_kit.capabilities import (
+        CapabilityPackage,
+        CapabilitySource,
+        validate_capability_self_consistency,
+    )
+
+    cap_dir = tmp_path / "trip-planning"
+    (cap_dir / "schemas").mkdir(parents=True)
+    (cap_dir / "README.md").write_text("# trip-planning\n", encoding="utf-8")
+    _build_trip_planner_shaped_schemas(cap_dir / "schemas")
+
+    package = CapabilityPackage(
+        name="trip-planning",
+        version="0.1.0",
+        description="trip planning",
+        requires_backbone=">=0.1.0",
+    )
+    source = CapabilitySource(name="trip-planning", path=cap_dir, package=package)
+
+    problems = validate_capability_self_consistency(source)
+    schema_problems = [p for p in problems if p.startswith("schema ")]
+    assert schema_problems == [], schema_problems

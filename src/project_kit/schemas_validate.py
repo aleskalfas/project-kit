@@ -200,11 +200,109 @@ def discover_schema_pairs(target_root: Path) -> list[SchemaPair]:
     return pairs
 
 
-def discover_schema_pairs_at(path: Path) -> list[SchemaPair]:
-    """Discover pairs for a specific path (a file or a directory).
+# Matches a `# yaml-language-server: $schema=<path>` directive comment (the
+# IDE-side binding, per COR-023) anywhere in a YAML file's leading comment
+# block. `<path>` is captured so we can tell a self-companion pointer
+# (`<name>.schema.json`, which still requires the companion) from an external
+# one (a shared/foreign schema, which means the YAML is an instance).
+_LANGUAGE_SERVER_SCHEMA_PATTERN = re.compile(
+    r"^\s*#\s*yaml-language-server:\s*\$schema\s*=\s*(?P<target>\S+)"
+)
 
-    If `path` is a YAML file, returns one pair. If it's a directory,
-    walks for `*.yaml` files. Companion path is derived the same way.
+# How many leading lines of a YAML we scan for the language-server directive
+# and a top-level `$schema:` key. The directive is a header comment by
+# convention; a top-level key sits in the first data lines. Bounding the scan
+# keeps the non-schema check cheap on large instance files.
+_INSTANCE_MARKER_SCAN_LINES = 40
+
+
+def _companion_pointer_is_external(target: str, own_companion_name: str) -> bool:
+    """True when a `$schema` pointer names something other than the YAML's own companion.
+
+    A pointer at the side-by-side `<name>.schema.json` is the ordinary schema
+    pair — the companion is still required. A pointer at any *other* schema
+    (a shared `_defs/process.schema.json`, a capability's describing schema)
+    marks the YAML as an *instance* validated against that external schema, so
+    it needs no companion of its own.
+    """
+    # Compare on the basename so relative/absolute prefixes don't matter.
+    return Path(target).name != own_companion_name
+
+
+def _yaml_declares_external_schema(yaml_path: Path) -> bool:
+    """True when the YAML declares a `$schema` pointing at an external/shared schema.
+
+    Two signals, either sufficient (per the `.pkit/schemas/` companion-scope
+    convention + COR-023's IDE-directive form):
+
+    - a `# yaml-language-server: $schema=<path>` directive comment, or
+    - a top-level `$schema:` key,
+
+    whose target is a schema *other than* this YAML's own
+    `<name>.schema.json`. Such a YAML is an instance validated against the
+    named schema, not a schema definition — so it requires no companion.
+
+    Read failures are treated as "no external declaration": a genuinely broken
+    file is left to surface as a normal validation issue rather than being
+    silently excluded from the schema surface.
+    """
+    own_companion_name = yaml_path.with_suffix(".schema.json").name
+    try:
+        text = yaml_path.read_text(encoding="utf-8")
+    except OSError:
+        return False
+    for line in text.splitlines()[:_INSTANCE_MARKER_SCAN_LINES]:
+        m = _LANGUAGE_SERVER_SCHEMA_PATTERN.match(line)
+        if m and _companion_pointer_is_external(m.group("target"), own_companion_name):
+            return True
+        # Top-level `$schema:` key — column 0, no leading indent.
+        stripped = line.rstrip()
+        if stripped.startswith("$schema:") and not line[:1].isspace():
+            target = stripped[len("$schema:"):].strip().strip("'\"")
+            if target and _companion_pointer_is_external(target, own_companion_name):
+                return True
+    return False
+
+
+def _is_schema_definition(yaml_path: Path) -> bool:
+    """True when a YAML under a schemas tree is an actual schema definition.
+
+    A YAML requires a companion JSON Schema (COR-018) only if it *is* a schema
+    definition. Non-schema YAML — fixtures and instances that live alongside
+    real schemas — is excluded via principled, project-neutral signals so the
+    companion requirement doesn't fire on files that categorically can't have a
+    companion:
+
+    - **`examples/` material.** YAML under any `examples/` directory, or named
+      `*-example.yaml`, is an instance/fixture — never a schema.
+    - **Instances of an external schema.** YAML declaring a `$schema` pointer
+      (language-server directive or top-level key) at a schema other than its
+      own companion is validated against that shared/external schema, so it
+      owns no companion of its own (e.g. process-definition YAMLs validated
+      against a shared `_defs/process.schema.json`).
+
+    Everything else is treated as a schema definition and must ship a
+    companion — preserving the COR-018 check on genuine schema YAML.
+    """
+    if any(part == "examples" for part in yaml_path.parts):
+        return False
+    if yaml_path.stem.endswith("-example"):
+        return False
+    return not _yaml_declares_external_schema(yaml_path)
+
+
+def discover_schema_pairs_at(path: Path) -> list[SchemaPair]:
+    """Discover schema pairs for a specific path (a file or a directory).
+
+    If `path` is a YAML file, returns one pair (the path is taken to be a
+    schema the caller means to validate). If it's a directory, walks it for
+    schema-definition YAML — excluding non-schema YAML (fixtures under
+    `examples/`, instances of an external `$schema`) via `_is_schema_definition`
+    so the COR-018 companion requirement fires only on actual schemas. This
+    keeps the directory walk aligned with `discover_schema_pairs`' convention
+    that a schema is a direct `schemas/<name>.yaml` with a side-by-side
+    companion; subdirectories (`examples/`, `_defs/`) hold non-schema material.
+    Companion path is derived the same way in both branches.
     """
     pairs: list[SchemaPair] = []
     if path.is_file() and path.suffix == ".yaml":
@@ -215,6 +313,8 @@ def discover_schema_pairs_at(path: Path) -> list[SchemaPair]:
         for yaml_path in sorted(path.rglob("*.yaml")):
             # Skip companion side-cars and other generated files if any sneak in.
             if yaml_path.name.endswith(".schema.json"):
+                continue
+            if not _is_schema_definition(yaml_path):
                 continue
             companion = yaml_path.with_suffix(".schema.json")
             pairs.append(SchemaPair(yaml_path=yaml_path, companion_path=companion))

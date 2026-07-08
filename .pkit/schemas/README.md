@@ -62,6 +62,15 @@ Every YAML schema ships a companion JSON Schema declaring its formal shape:
 - **Validates the envelope.** The companion's `properties` block constrains `schema_version` (typically `"const": <integer>`), declares `source` as an optional object when applicable, and validates each domain-specific field's type and value constraints.
 - **Companion is required, not optional.** A YAML schema without a companion is incomplete. Consumers and tools can rely on the companion always existing.
 
+### Which YAML the companion requirement covers
+
+The companion requirement scopes to **schema definitions**, not to every YAML that happens to live under a `schemas/` tree. A schema definition is a **direct `schemas/<name>.yaml`** paired one-to-one with a side-by-side `<name>.schema.json`; the validator (`pkit schemas validate`, and the same walk register's self-consistency check reuses) enumerates only those and flags a genuine schema YAML that ships no companion. Two categories of *non-schema* YAML are excluded, so they need no companion of their own:
+
+- **Fixtures and examples.** YAML under any `examples/` directory, or named `*-example.yaml`, is an instance/fixture demonstrating a schema — categorically not a schema itself.
+- **Instances of an external/shared schema.** YAML that declares a `$schema` pointer — a `# yaml-language-server: $schema=<path>` directive comment (per COR-023's IDE binding) or a top-level `$schema:` key — at a schema **other than its own `<name>.schema.json`** is an *instance* validated against that named schema, not a definition. A common shape: process-definition YAMLs validated against one shared `_defs/<name>.schema.json`. (A `$schema` pointer at the YAML's *own* companion is an ordinary pair — the companion is still required.)
+
+Subdirectories under `schemas/` (`examples/`, `_defs/`) hold non-schema material; the companion requirement lives with the direct-child schema definitions.
+
 The combination of YAML + companion JSON Schema means a schemas-aware editor (VSCode's YAML extension, JetBrains, etc.) gives autocomplete and inline validation on every YAML schema with zero per-file configuration. CI validators, language-level libraries (`jsonschema` in Python, `ajv` in JavaScript, etc.) all consume the companion the same way.
 
 ## Common shape patterns
