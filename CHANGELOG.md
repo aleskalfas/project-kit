@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-07-08
+
+### Fixed
+- **claude-code 0.5.1** — `deploy-skills.sh` and `deploy-agents.sh` no longer silently abort the whole `pkit sync`/`upgrade` when a listed skill or agent resolves to no canonical file. Previously an unguarded command substitution over the resolver's benign `return 1` tripped `set -e`, aborting mid-run with no diagnostic and no `Done.` (only the wrapper's opaque "exited with status 1" — with nothing above it). The common trigger is a composite skill folder mid-build (COR-020): sub-procedures present but no `<name>/<name>.md` dispatcher yet. Both scripts now guard the resolution and skip the unresolvable item loudly — naming the skill/agent and the precise defect, with a remediation hint — then deploy the rest and exit 0, printing an end-of-run summary of what was skipped. Valid skills/agents deploy exactly as before; resolution precedence and symlink logic are unchanged. ([#537])
+
+[#537]: 537
+
 ## 1.142.3 — 2026-07-08
 
 ### Fixed
