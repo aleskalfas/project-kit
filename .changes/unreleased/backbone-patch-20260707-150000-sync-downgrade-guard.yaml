@@ -1,8 +1,0 @@
-component: backbone
-kind: patch
-category: Fixed
-body: >
-  `pkit sync` no longer silently downgrades a capability: when the source ships an
-  older version than the one installed, sync now refuses — naming both versions and
-  leaving the installed tree untouched — instead of overwriting newer work.
-  `pkit sync --force` overrides the guard to downgrade deliberately (and loudly).
