@@ -47,6 +47,8 @@ Adopter content is never clobbered. Both `@.pkit/rules/core.md` (kit-owned, refr
 
 Walks `.pkit/skills/{core,project}/<name>/` and creates relative symlinks at `.claude/skills/<name>/` so Claude Code can discover and load the skills. Idempotent; safe to re-run; skips non-kit-managed content under `.claude/skills/`. Per COR-005's adapter pattern, this is the Claude-Code-specific deployment for the harness-agnostic skill content stored at `.pkit/skills/`.
 
+A listed skill whose canonical file doesn't resolve — most commonly a composite skill folder mid-build (per COR-020): sub-procedures present but no `<name>/<name>.md` dispatcher yet — is **skipped loudly** (a `skipped` status line naming the skill and defect, plus a remediation hint), not treated as fatal. The rest of the skills deploy and the run exits 0 with an end-of-run summary. This is deliberate: one half-built incubated skill must never abort a whole-project `pkit sync`/`upgrade`. `deploy-agents.sh` applies the same degrade-loudly discipline to an agent folder with no canonical `<name>/<name>.md` (and to an unresolved overlay category).
+
 ### Live permission enforcement (`permission-hook.py`)
 
 The realizer that makes declared permissions *bite* at runtime (per [COR-028](../../decisions/core/COR-028-permission-model-realization.md) / [ADR-002](../../../docs/architecture/decisions/ADR-002-permission-realizer-ownership.md)). It's **opt-in** — see *enable / disable* below.

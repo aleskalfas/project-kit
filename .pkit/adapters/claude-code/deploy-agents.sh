@@ -22,9 +22,13 @@
 #   `overrides.<name>` taking precedence per COR-013.
 # - Idempotent: if the resolved content matches the destination,
 #   reports "exists"; otherwise overwrites.
-# - Unresolved placeholder (category referenced by an agent but not
-#   defined in the overlay) → "error" status + non-zero exit code.
-# - Tagged status lines: created, updated, exists, error.
+# - Unresolved overlay placeholder (a category an agent references but the
+#   project's overlay.yaml doesn't define) → skipped loudly with remediation,
+#   the rest deploy, the run exits 0 (an adopter-config gap, not fatal).
+# - A listed agent whose canonical source doesn't resolve (e.g. a folder
+#   mid-build with no <name>/<name>.md per COR-015) is likewise skipped
+#   loudly rather than aborting the run (#537).
+# - Tagged status lines: created, updated, exists, skipped, removed.
 #
 # Stale-removal pass (now that the marker convention exists): after the
 # deploy pass, a `.claude/agents/<name>.md` that carries our marker but whose
@@ -140,7 +144,22 @@ resolve_agent() {
 deploy_one() {
     local name="$1"
     local source_file
-    source_file="$(source_for "$name")"
+    # Guard the resolution: source_for returns 1 when a name resolves to no
+    # canonical file (e.g. a composite agent folder mid-build with no
+    # <name>/<name>.md), and under `set -e` an unguarded command
+    # substitution would abort the whole run on that benign non-zero — with
+    # no diagnostic and no `Done.` (#537). Capture-or-empty, then branch.
+    source_file="$(source_for "$name")" || source_file=""
+    if [ -z "$source_file" ]; then
+        # Listed (a folder exists) but no canonical file resolved. Skip THIS
+        # agent loudly with remediation and deploy the rest — one half-built
+        # incubated agent must not brick a whole-project sync/upgrade. Mirrors
+        # the unresolved-overlay-category skip below.
+        status "skipped" "$name — agent folder agents/$name/ has no canonical agents/$name/$name.md (COR-015)."
+        printf "  %s\n" "         Add the file:  create .pkit/agents/<ns>/$name/$name.md"
+        unresolved=$((unresolved + 1))
+        return 0
+    fi
     local dest="$CLAUDE_AGENTS/$name.md"
 
     local tmpfile tmperr
