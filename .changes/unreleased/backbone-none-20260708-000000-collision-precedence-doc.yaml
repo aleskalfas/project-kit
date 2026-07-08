@@ -1,0 +1,8 @@
+component: backbone
+kind: none
+body: >
+  Documented COR-031's operational collision precedence in the CLI reference:
+  register keeps the in-repo (incubated) copy on a kit-source name collision and
+  surfaces that a kit-shipped version is available; sync leaves incubated
+  untouched (D1). A doc clarification of already-decided behaviour (no COR change,
+  no surface moved).
