@@ -34,6 +34,10 @@
 #   the new structure.
 # - Adopter content (non-symlink files/dirs, or symlinks pointing
 #   outside .pkit/skills/) is left untouched and reported "skipped".
+# - A listed skill whose canonical file doesn't resolve (e.g. a composite
+#   folder mid-build with sub-procedures but no <name>/<name>.md dispatcher
+#   per COR-020) is skipped loudly with remediation — it does NOT abort the
+#   run (#537). Valid skills still deploy; the run exits 0 with a summary.
 # - Output uses tagged status lines: created, updated, exists, removed,
 #   skipped, error.
 
@@ -175,9 +179,26 @@ shopt -u nullglob
 
 # Pass 1: ensure every kit skill has the right .claude/skills/<name>/SKILL.md symlink,
 # plus per-sibling symlinks for composite skills (folder-form with supporting siblings).
+skipped=0
 while IFS= read -r name; do
     [ -n "$name" ] || continue
-    expected="$(expected_for "$name")"
+    # Guard the resolution: expected_for returns 1 when a name resolves to
+    # no canonical file, and under `set -e` an unguarded command
+    # substitution would abort the whole run on that benign non-zero — with
+    # no diagnostic and no `Done.` (#537). Capture-or-empty, then branch.
+    expected="$(expected_for "$name")" || expected=""
+    if [ -z "$expected" ]; then
+        # The name was listed (a folder exists) but no canonical file
+        # resolved. The normal cause is a composite skill folder mid-build
+        # (COR-020): sub-procedures present, but no <name>/<name>.md
+        # dispatcher yet. Skip THIS skill loudly with remediation and
+        # deploy the rest — one half-built incubated skill must not brick a
+        # whole-project sync/upgrade.
+        status "skipped" "$name — composite skill folder skills/$name/ has sub-procedures but no canonical skills/$name/$name.md dispatcher (COR-020)."
+        printf "  %s\n" "         Add the dispatcher:  create .pkit/skills/<ns>/$name/$name.md"
+        skipped=$((skipped + 1))
+        continue
+    fi
     target_dir="$CLAUDE_SKILLS/$name"
     target="$target_dir/SKILL.md"
 
@@ -290,3 +311,7 @@ done
 shopt -u nullglob
 
 echo "Done."
+if [ "$skipped" -gt 0 ]; then
+    echo "  note: $skipped skill(s) skipped — unresolved canonical file; the rest deployed."
+    echo "        → A composite skill folder needs a <name>/<name>.md dispatcher (COR-020)."
+fi
