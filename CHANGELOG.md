@@ -7,8 +7,6 @@
 
 ### Changed
 - Documented COR-031's operational collision precedence in the CLI reference: register keeps the in-repo (incubated) copy on a kit-source name collision and surfaces that a kit-shipped version is available; sync leaves incubated untouched (D1). A doc clarification of already-decided behaviour (no COR change, no surface moved).
-- **project-management 0.49.0** — Design landing for multi-instance ownership & coordination (DEC-043/044/045, ADR-041; reciprocal notes on DEC-035 and DEC-009) touched the project-management capability decisions tree with no adopter-observable surface — design-ahead, the implementation ships in later Features (#509-#513 under EPIC #508). Declared `none`. No changelog line.
-- **project-management 0.49.0** — Feature #509 adds the instance-ownership marker seam (_lib/instance_ownership, ADR-041) and its substrate selector schema (instance-ownership.yaml, DEC-043). This is implementation-ahead: the seam and schema exist but no CLI command reads them yet (set-instance and the claim/handoff wiring land in Feature #510), so there is no adopter-usable surface to advertise. Declared `none`. No changelog line.
 
 ### Fixed
 - `pkit sync` no longer silently downgrades a capability: when the source ships an older version than the one installed, sync now refuses — naming both versions and leaving the installed tree untouched — instead of overwriting newer work. `pkit sync --force` overrides the guard to downgrade deliberately (and loudly).
