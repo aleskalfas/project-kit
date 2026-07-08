@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.142.3 — 2026-07-08
+
+### Fixed
+- Scope the COR-018 companion-JSON-Schema requirement to actual schema definitions in `pkit schemas validate` (and register's capability self-consistency check). YAML fixtures under `examples/` (or named `*-example.yaml`) and instances that declare an external/shared `$schema` pointer (a `# yaml-language-server: $schema=` directive or a top-level `$schema:` key at a schema other than their own companion) are no longer wrongly flagged as schema definitions missing a companion. A genuine schema YAML with no companion is still flagged.
+
 ## 1.142.2 — 2026-07-08
 
 ### Added
