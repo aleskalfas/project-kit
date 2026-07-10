@@ -1,4 +1,0 @@
-component: backbone
-kind: patch
-category: Fixed
-body: The release step now keeps the source repo's own self-host manifest backbone version current on a backbone bump, so `pkit status` no longer misreports the self-host backbone as frozen at genesis.

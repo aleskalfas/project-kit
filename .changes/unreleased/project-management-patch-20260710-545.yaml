@@ -1,4 +1,0 @@
-component: project-management
-kind: patch
-category: Fixed
-body: The provenance footer no longer stamps `tree unknown` in adopter installs — the backbone version now resolves from `.pkit/manifest.yaml` when `.pkit/VERSION` is absent.
