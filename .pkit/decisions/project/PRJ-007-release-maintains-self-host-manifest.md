@@ -12,7 +12,7 @@ When `pkit release apply` writes a new backbone version to `.pkit/VERSION`, it *
 
 The source repo self-hosts: its `.pkit/` is simultaneously the methodology **source** and a notional **install**. The manifest's `backbone_version` records "the backbone version synced into this `.pkit/`" — normally written by the install / sync / upgrade machinery. But the source repo never runs that machinery on itself, so its `.pkit/manifest.yaml` `backbone_version` stayed at the genesis value (`1.0.0`) while `.pkit/VERSION` advanced (to `1.142.4` when [#549] was raised). `pkit status` reads `backbone_version` from the manifest and so reported the self-host backbone as far behind ("run `pkit upgrade`") — a permanent, misleading display.
 
-Since the version-provenance footer was fixed to read `.pkit/VERSION` first ([project-management:DEC-041-version-provenance-stamp] / the #545 fix), `pkit status` display is the only remaining reader of the self-host `backbone_version` — so the drift was cosmetic but permanent. [#549] weighed three options: leave it (a self-host quirk), one-time correct it (re-rots at the next release), or make the release step own it (durable root-cause fix). This record pins the third.
+Since the version-provenance footer (the stamping policy of [project-management:DEC-041-version-provenance-stamp]) had its tree-version read fixed to prefer `.pkit/VERSION` in #545, `pkit status` display is the only remaining reader of the self-host `backbone_version` — so the drift was cosmetic but permanent. [#549] weighed three options: leave it (a self-host quirk), one-time correct it (re-rots at the next release), or make the release step own it (durable root-cause fix). This record pins the third.
 
 ## Decision
 
