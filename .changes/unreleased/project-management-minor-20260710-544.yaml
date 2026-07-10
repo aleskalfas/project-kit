@@ -1,0 +1,3 @@
+component: project-management
+kind: minor
+body: Add `show-pr --field review` — surface the DEC-028 reviewer verdict (token + reasons) through the governed pm read path, so the verdict is no longer opaque after `review-pr`.
