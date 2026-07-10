@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.142.5 — 2026-07-10
+
+### Changed
+- **project-management 0.50.0** — Add `show-pr --field review` — surface the DEC-028 reviewer verdict (token + reasons) through the governed pm read path, so the verdict is no longer opaque after `review-pr`.
+
+### Fixed
+- The release step now keeps the source repo's own self-host manifest backbone version current on a backbone bump, so `pkit status` no longer misreports the self-host backbone as frozen at genesis.
+- **project-management 0.50.0** — The provenance footer no longer stamps `tree unknown` in adopter installs — the backbone version now resolves from `.pkit/manifest.yaml` when `.pkit/VERSION` is absent.
+
 ## 1.142.4 — 2026-07-08
 
 ### Fixed
