@@ -12,6 +12,7 @@ import click
 import pytest
 
 from project_kit import changesets, release, versioning
+from project_kit.manifest import read_backbone_manifest
 
 
 def _make_kit(tmp_path: Path, backbone: str = "1.5.0") -> Path:
@@ -368,6 +369,89 @@ def test_component_release_no_broaden_skips(tmp_path: Path) -> None:
     release.apply_release(source_kit, plan, tag=False, broaden=False)
 
     assert 'requires_backbone: ">=1.0.0,<1.2.0"' in pkg.read_text()
+
+
+# --- PRJ-007: release keeps the self-host manifest backbone_version current ---
+
+
+def _write_self_host_manifest(source_kit: Path, backbone_version: str) -> Path:
+    """Write a self-host `.pkit/manifest.yaml` with a components registry."""
+    path = source_kit / "manifest.yaml"
+    path.write_text(
+        "schema_version: 1\n"
+        f"backbone_version: {backbone_version}\n"
+        "components:\n"
+        "  - kind: adapter\n"
+        "    name: claude-code\n"
+        "    manifest: .pkit/adapters/claude-code/project/manifest.yaml\n",
+        encoding="utf-8",
+    )
+    return path
+
+
+def test_apply_backbone_bump_updates_self_host_manifest(tmp_path: Path) -> None:
+    """On a backbone bump, apply writes the new version into the self-host
+    manifest's `backbone_version`, matching the new `.pkit/VERSION` (PRJ-007)."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    _write_self_host_manifest(source_kit, "1.0.0")
+    _add(source_kit, "backbone", "minor", "a new command", "a.yaml")
+
+    plan = release.compute_release(source_kit)
+    release.apply_release(source_kit, plan, tag=False)
+
+    version = (source_kit / "VERSION").read_text().strip()
+    assert version == "1.6.0"
+    updated = read_backbone_manifest(source_kit.parent)
+    assert updated is not None
+    assert updated.backbone_version == version
+
+
+def test_apply_backbone_bump_preserves_other_manifest_keys(tmp_path: Path) -> None:
+    """Only `backbone_version` moves — the components registry and schema
+    version are preserved (PRJ-007)."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    _write_self_host_manifest(source_kit, "1.0.0")
+    _add(source_kit, "backbone", "minor", "x", "a.yaml")
+
+    plan = release.compute_release(source_kit)
+    release.apply_release(source_kit, plan, tag=False)
+
+    updated = read_backbone_manifest(source_kit.parent)
+    assert updated is not None
+    assert updated.schema_version == 1
+    assert [e.name for e in updated.components] == ["claude-code"]
+    assert updated.components[0].kind == "adapter"
+
+
+def test_apply_capability_only_release_leaves_manifest_backbone(tmp_path: Path) -> None:
+    """A capability-only release does not move the backbone, so the self-host
+    manifest's `backbone_version` is untouched (PRJ-007)."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    _write_capability(source_kit, "houseware", "0.3.0", ">=1.0.0,<1.6.0")
+    _write_self_host_manifest(source_kit, "1.0.0")
+    _add(source_kit, "houseware", "minor", "house feature", "a.yaml")
+
+    plan = release.compute_release(source_kit)
+    release.apply_release(source_kit, plan, tag=False)
+
+    # Backbone did not move → manifest backbone_version stays as authored.
+    assert (source_kit / "VERSION").read_text().strip() == "1.5.0"
+    updated = read_backbone_manifest(source_kit.parent)
+    assert updated is not None
+    assert updated.backbone_version == "1.0.0"
+
+
+def test_apply_backbone_bump_no_manifest_is_noop(tmp_path: Path) -> None:
+    """An apply in a repo with no self-host manifest is unaffected — the sync is
+    source-repo-only mechanics and no-ops when there is nothing to maintain."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")  # _make_kit writes no manifest
+    _add(source_kit, "backbone", "minor", "x", "a.yaml")
+
+    plan = release.compute_release(source_kit)
+    release.apply_release(source_kit, plan, tag=False)  # must not raise
+
+    assert (source_kit / "VERSION").read_text().strip() == "1.6.0"
+    assert read_backbone_manifest(source_kit.parent) is None
 
 
 def test_backbone_release_still_broadens_all_components(tmp_path: Path) -> None:
