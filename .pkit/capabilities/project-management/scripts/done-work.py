@@ -76,6 +76,12 @@ from _lib.closing_issue_fetchers import (  # noqa: E402
     issue_labels as _issue_labels_fetch,
     pr_closing_issue_numbers as _pr_closing_issue_numbers_fetch,
 )
+from _lib.agent_verdicts import (  # noqa: E402
+    APPROVED,
+    PATH_LOCAL,
+    PATH_REMOTE,
+    gate_verdicts,
+)
 from _lib.review_contributions import collect_contributions  # noqa: E402
 from _lib.review_mode import resolve_mode  # noqa: E402
 from _lib.required_reviewers import (  # noqa: E402
@@ -555,58 +561,34 @@ def _check_agent_gate(
         )
 
     # --- Steps 1–5: latest fresh verdict per agent per path, selected by
-    # TIMESTAMP (DEC-028 step 5), not by list order. A fresh
-    # CHANGES_REQUESTED after a fresh APPROVED must correctly block, and vice
-    # versa, regardless of how `gh` ordered the comments array. We track the
-    # winning verdict's timestamp per agent and only let a later one override.
-    # remote: github_login → (verdict, timestamp).
-    remote_latest: dict[str, tuple[str, str]] = {}
-    # local: agent name → (verdict, timestamp).
-    local_latest: dict[str, tuple[str, str]] = {}
-
-    def _record_latest(
-        store: dict[str, tuple[str, str]], key: str, verdict: str, ts: str
-    ) -> None:
-        prior = store.get(key)
-        # ISO-8601 (UTC `Z`) timestamps compare correctly as strings. Strict
-        # `>` keeps the first-seen verdict on an exact tie (deterministic).
-        if prior is None or ts > prior[1]:
-            store[key] = (verdict, ts)
-
-    for c in comments:
-        if not isinstance(c, dict):
-            continue
-        comment_body = (c.get("body") or "")
-        first_line = comment_body.split("\n", 1)[0].strip()
-        comment_author = (c.get("author") or {}).get("login") or ""
-        comment_ts = str(c.get("createdAt") or "")
-
-        # Freshness: comment must post-date the latest commit.
-        if comment_ts <= latest_commit_ts:
-            continue
-
-        # Remote path: identity match + author exclusion (DEC-028 step 2/3).
-        if first_line in (
-            "Reviewer agent: APPROVED", "Reviewer agent: CHANGES_REQUESTED"
-        ):
-            if comment_author in remote_baseline and comment_author != author_login:
-                verdict = (
-                    "APPROVED" if first_line.endswith("APPROVED")
-                    else "CHANGES_REQUESTED"
-                )
-                _record_latest(remote_latest, comment_author, verdict, comment_ts)
-
-        # Local path: name match in the body line; author-exclusion relaxed.
-        local_verdict, local_who = _parse_local_verdict(first_line)
-        if local_verdict is not None and local_who in required_local:
-            _record_latest(local_latest, local_who, local_verdict, comment_ts)
-
-    # Collapse to the latest verdict per agent (timestamp already selected).
+    # TIMESTAMP (DEC-028 step 5), via the SHARED verdict selection
+    # (`_lib.agent_verdicts`) that `show-pr --field review` also consumes — so
+    # the two never diverge on which comment is a reviewer's current verdict
+    # (COR-007). The gate goes through the strict `gate_verdicts` wrapper, whose
+    # freshness + membership filters are REQUIRED args — the read-surface
+    # primitive's permissive fail-open default is unreachable from here. The
+    # gate scopes the selection to its concern by injecting:
+    #   * freshness — `min_timestamp` drops comments not strictly after the
+    #     latest commit (a fresh CHANGES_REQUESTED after a fresh APPROVED still
+    #     blocks; the latest-by-timestamp rule handles the ordering);
+    #   * membership — remote verdicts count only from a baseline login that is
+    #     not the PR author (DEC-028 step 2/3); local verdicts only from a name
+    #     in the resolved required set (DEC-032 D1).
+    remote_baseline_set = set(remote_baseline)
+    required_local_set = set(required_local)
+    verdicts = gate_verdicts(
+        comments,
+        min_timestamp=latest_commit_ts,
+        remote_reviewer_ok=lambda login: (
+            login in remote_baseline_set and login != author_login
+        ),
+        local_reviewer_ok=lambda name: name in required_local_set,
+    )
     remote_status: dict[str, str] = {
-        k: v[0] for k, v in remote_latest.items()
+        v.reviewer: v.token for v in verdicts if v.path == PATH_REMOTE
     }
     local_status: dict[str, str] = {
-        k: v[0] for k, v in local_latest.items()
+        v.reviewer: v.token for v in verdicts if v.path == PATH_LOCAL
     }
 
     # --- DEC-032 D3 composition: per-reviewer OR-across-paths, AND-across-set.
@@ -614,9 +596,9 @@ def _check_agent_gate(
         # A reviewer registered on both paths (a baseline name appearing in
         # both `remote_registered` and `local_registered`) is satisfied by
         # either path's fresh APPROVED — DEC-028's per-reviewer OR.
-        if local_status.get(name) == "APPROVED":
+        if local_status.get(name) == APPROVED:
             return True
-        if name in remote_baseline and remote_status.get(name) == "APPROVED":
+        if name in remote_baseline and remote_status.get(name) == APPROVED:
             return True
         return False
 
@@ -625,7 +607,7 @@ def _check_agent_gate(
     # (baseline or contributed) reviewer on the local path.
     unsatisfied: list[str] = []
     for name in remote_baseline:
-        if name not in required_local and remote_status.get(name) != "APPROVED":
+        if name not in required_local and remote_status.get(name) != APPROVED:
             unsatisfied.append(name)
     for name in required_local:
         if not reviewer_satisfied(name):
@@ -708,20 +690,6 @@ def _resolution_refusal(resolution: Resolution) -> _GateResult:
         )
     # Defensive: any other (unexpected) kind still fails closed.
     return _GateResult(passed=False, refusal_message=error.message)
-
-
-def _parse_local_verdict(first_line: str) -> tuple[str | None, str | None]:
-    """Parse a local-path verdict line into (verdict, agent-name).
-
-    Recognises DEC-028's local verdict shape
-    `Reviewer agent (local, <name>): APPROVED|CHANGES_REQUESTED`. Returns
-    `(None, None)` for any non-matching line. Generalises the old fixed-name
-    match to any registered local name (the singleton cap lifts, DEC-032 D3).
-    """
-    match = _LOCAL_VERDICT_RE.match(first_line)
-    if match is None:
-        return None, None
-    return match.group("verdict"), match.group("name")
 
 
 def _reviewer_label(name: str, contributed_by: dict[str, str]) -> str:
@@ -862,13 +830,6 @@ def _agent_gate_refusal(
         "or use --bypass."
     )
     return "\n".join(lines)
-
-
-# DEC-028 local-path verdict line, generalised to any registered name.
-_LOCAL_VERDICT_RE = re.compile(
-    r"^Reviewer agent \(local, (?P<name>[^)]+)\): "
-    r"(?P<verdict>APPROVED|CHANGES_REQUESTED)$"
-)
 
 
 # ---- side-effects ----------------------------------------------------

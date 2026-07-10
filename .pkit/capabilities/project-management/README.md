@@ -314,12 +314,13 @@ Both surface the methodology-relevant view of an existing issue / PR. Three outp
 Addressable fields:
 
 - **`show-issue`**: `title`, `type`, `state`, `assignees`, `milestone`, `parent`, `priority`, `workstream`, `labels`, `criteria`, `sections`, `body`, `url`.
-- **`show-pr`**: `title`, `state`, `draft`, `base`, `head`, `merged-at`, `cc-type`, `cc-summary`, `closes`, `reviewers`, `doc-impact`, `body`, `url`.
+- **`show-pr`**: `title`, `state`, `draft`, `base`, `head`, `merged-at`, `cc-type`, `cc-summary`, `closes`, `reviewers`, `review`, `doc-impact`, `body`, `url`. The `review` field surfaces the **latest DEC-028 reviewer verdict(s)** — the verdict **token** (`APPROVED`/`CHANGES_REQUESTED`) and the **reasons** (the verdict comment body) — one entry per reviewer (latest-per-reviewer). It shows every posted verdict; `done-work`'s merge gate acts on a *filtered subset* of these (the gate additionally drops stale verdicts and verdicts from non-required reviewers). A verdict that predates the PR's latest commit — which the gate will not count — is flagged **stale** (`… (stale — predates the latest commit; the merge gate will not count it)`), so an APPROVED the gate would refuse is not mistaken for gate-agreement. It reads the verdict comments through the same governed `gh` path the rest of the view uses, so it works for the `project-manager` agent whose raw `gh pr view --comments` is denied; a PR with no verdict comment prints `no reviewer verdict posted`.
 
 ```
 pkit pm show-issue 318 --field state          # -> in progress's state, e.g. `open`
 pkit pm show-issue 318 --field criteria       # -> one acceptance-criterion per line
 pkit pm show-pr 320 --field cc-type            # -> e.g. `feat(pm)`
+pkit pm show-pr 320 --field review             # -> latest verdict token + reasons per reviewer
 ```
 
 Configure the review mode in `project/config.yaml`:
