@@ -38,6 +38,7 @@ from project_kit.changesets import (
     segment_rank,
     unreleased_dir,
 )
+from project_kit.manifest import read_backbone_manifest, write_backbone_manifest
 from project_kit.migrations import _VERSION_DIR_RE, parse_version_tuple
 
 # Rewrites a component's `version:` line in its package.yaml. Anchored to a
@@ -211,6 +212,7 @@ def apply_release(
         if rel.component.name == BACKBONE:
             rel.component.version_path.write_text(f"{rel.new_version}\n", encoding="utf-8")
             click.echo(f"Backbone: {rel.old_version} -> {rel.new_version}")
+            _sync_self_host_manifest_backbone(source_kit, rel.new_version)
         else:
             _write_component_version(rel)
 
@@ -273,6 +275,33 @@ def _write_component_version(rel: ComponentRelease) -> None:
         )
     path.write_text(updated, encoding="utf-8")
     click.echo(f"{rel.component.name}: {rel.old_version} -> {rel.new_version}")
+
+
+def _sync_self_host_manifest_backbone(source_kit: Path, new_version: str) -> None:
+    """Keep the source repo's own `.pkit/manifest.yaml` backbone_version current.
+
+    project-kit self-hosts: its `.pkit/` is both the methodology *source* and a
+    notional *install*, but the source repo never runs install/sync/upgrade on
+    itself — so its manifest's `backbone_version` froze at genesis while
+    `.pkit/VERSION` advanced, leaving `pkit status` permanently misreporting the
+    self-host backbone. On a backbone bump the release is the exact moment the
+    source repo's backbone moves, so it records the new value here too (PRJ-007).
+
+    Keyed to the backbone-bump branch: a capability-only release never reaches
+    this, so `backbone_version` is untouched when the backbone did not move. Only
+    the `backbone_version` field is written; the components registry, schema
+    version, and any comments are round-trip-preserved by `write_backbone_manifest`.
+    A no-op when no manifest exists (an adopter repo running `apply` has no
+    self-host manifest to maintain — this is source-repo-only mechanics).
+    """
+    manifest = read_backbone_manifest(source_kit.parent)
+    if manifest is None:
+        return
+    if manifest.backbone_version == new_version:
+        return
+    manifest.backbone_version = new_version
+    write_backbone_manifest(source_kit.parent, manifest)
+    click.echo(f"Self-host manifest backbone_version -> {new_version}")
 
 
 def render_changelog_entry(plan: ReleasePlan, when: date) -> str:
