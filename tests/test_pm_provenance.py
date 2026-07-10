@@ -185,6 +185,59 @@ def test_read_versions_degrades_to_unknown_on_missing_files(prov, tmp_path) -> N
     assert v.capability == "unknown"
 
 
+def test_tree_falls_back_to_manifest_in_adopter_layout(prov, tmp_path) -> None:
+    """Adopter install: no `.pkit/VERSION`; tree resolves from the manifest."""
+    cap = tmp_path / ".pkit" / "capabilities" / "demo"
+    cap.mkdir(parents=True)
+    (tmp_path / ".pkit" / "manifest.yaml").write_text(
+        "schema_version: 1\nbackbone_version: 1.142.4\n", encoding="utf-8"
+    )
+    v = prov.read_versions(cap)
+    assert v.tree == "1.142.4"
+
+
+def test_tree_prefers_version_file_over_manifest_in_source_layout(prov, tmp_path) -> None:
+    """Source repo: `.pkit/VERSION` wins over the (stale) manifest."""
+    cap = tmp_path / ".pkit" / "capabilities" / "demo"
+    cap.mkdir(parents=True)
+    (tmp_path / ".pkit" / "VERSION").write_text("9.9.9\n", encoding="utf-8")
+    (tmp_path / ".pkit" / "manifest.yaml").write_text(
+        "schema_version: 1\nbackbone_version: 1.0.0\n", encoding="utf-8"
+    )
+    v = prov.read_versions(cap)
+    assert v.tree == "9.9.9"
+
+
+def test_tree_is_unknown_when_version_and_manifest_both_absent(prov, tmp_path) -> None:
+    cap = tmp_path / ".pkit" / "capabilities" / "demo"
+    cap.mkdir(parents=True)
+    v = prov.read_versions(cap)
+    assert v.tree == "unknown"
+
+
+def test_tree_empty_version_file_falls_through_to_manifest(prov, tmp_path) -> None:
+    """An empty/whitespace `.pkit/VERSION` is treated as absent."""
+    cap = tmp_path / ".pkit" / "capabilities" / "demo"
+    cap.mkdir(parents=True)
+    (tmp_path / ".pkit" / "VERSION").write_text("   \n", encoding="utf-8")
+    (tmp_path / ".pkit" / "manifest.yaml").write_text(
+        "schema_version: 1\nbackbone_version: 1.142.4\n", encoding="utf-8"
+    )
+    v = prov.read_versions(cap)
+    assert v.tree == "1.142.4"
+
+
+def test_tree_is_unknown_when_manifest_lacks_backbone_version(prov, tmp_path) -> None:
+    """A manifest without `backbone_version` degrades gracefully."""
+    cap = tmp_path / ".pkit" / "capabilities" / "demo"
+    cap.mkdir(parents=True)
+    (tmp_path / ".pkit" / "manifest.yaml").write_text(
+        "schema_version: 1\ncomponents: []\n", encoding="utf-8"
+    )
+    v = prov.read_versions(cap)
+    assert v.tree == "unknown"
+
+
 # --- single source of truth: sentinels match the schema ----------------
 
 
