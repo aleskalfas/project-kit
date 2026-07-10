@@ -212,3 +212,215 @@ def test_field_and_json_are_mutually_exclusive() -> None:
     )
     assert result.returncode != 0
     assert "not allowed with" in result.stderr.lower()
+
+
+# --- review field (DEC-028 verdict read surface, #544) ---------------
+
+
+def _local_verdict_comment(name, verdict, ts="2026-06-02T00:00:00Z",
+                           reasons="because reasons"):
+    return {
+        "author": {"login": name},
+        "body": f"Reviewer agent (local, {name}): {verdict}\n\n{reasons}",
+        "createdAt": ts,
+    }
+
+
+def test_review_field_in_valid_fields_list(sp) -> None:
+    assert "review" in sp.PR_FIELD_NAMES
+
+
+def test_review_field_in_json_output(sp) -> None:
+    # The summary the --json path serialises carries a `review` key.
+    s = sp._summarise({"title": "x", "body": "y", "state": "OPEN"})
+    assert "review" in s
+
+
+def test_review_field_single_verdict_shows_token_and_reasons(sp) -> None:
+    s = sp._summarise({
+        "title": "feat: x",
+        "body": "body",
+        "state": "OPEN",
+        "comments": [
+            _local_verdict_comment("critic", "CHANGES_REQUESTED",
+                                   reasons="the abstraction is premature")
+        ],
+    })
+    lines = sp._field_lines_for(s)["review"]
+    blob = "\n".join(lines)
+    assert "CHANGES_REQUESTED" in blob
+    assert "critic" in blob
+    assert "the abstraction is premature" in blob
+
+
+def test_review_field_multi_reviewer_latest_per_reviewer(sp) -> None:
+    s = sp._summarise({
+        "title": "feat: x",
+        "body": "body",
+        "state": "OPEN",
+        "comments": [
+            # critic flips to APPROVED later; the later verdict must win.
+            _local_verdict_comment("critic", "CHANGES_REQUESTED",
+                                   ts="2026-06-02T00:00:00Z"),
+            _local_verdict_comment("critic", "APPROVED",
+                                   ts="2026-06-03T00:00:00Z"),
+            _local_verdict_comment("architect", "APPROVED"),
+        ],
+    })
+    review = s["review"]
+    by_name = {e["reviewer"]: e["verdict"] for e in review}
+    assert by_name == {"critic": "APPROVED", "architect": "APPROVED"}
+    blob = "\n".join(sp._field_lines_for(s)["review"])
+    # Both reviewers surfaced.
+    assert "critic" in blob
+    assert "architect" in blob
+
+
+def test_review_field_absent_shows_clear_message(sp) -> None:
+    s = sp._summarise({
+        "title": "feat: x",
+        "body": "body",
+        "state": "OPEN",
+        "comments": [
+            {"author": {"login": "someone"}, "body": "a normal comment",
+             "createdAt": "2026-06-02T00:00:00Z"}
+        ],
+    })
+    lines = sp._field_lines_for(s)["review"]
+    assert lines == [sp.NO_VERDICT_MESSAGE]
+
+
+def test_review_field_no_comments_shows_clear_message(sp) -> None:
+    s = sp._summarise({"title": "x", "body": "y", "state": "MERGED"})
+    assert sp._field_lines_for(s)["review"] == [sp.NO_VERDICT_MESSAGE]
+
+
+# --- staleness annotation (Fix 3) + read-surface semantics (Fix 2) ------
+
+
+def _commit(ts):
+    return {"committedDate": ts}
+
+
+def test_review_field_marks_verdict_stale_when_predates_latest_commit(sp) -> None:
+    # Verdict at 06-02, latest commit at 06-05 -> verdict is stale; the gate
+    # would not count it, so the read surface flags it.
+    s = sp._summarise({
+        "title": "feat: x",
+        "body": "body",
+        "state": "OPEN",
+        "comments": [
+            _local_verdict_comment("critic", "APPROVED",
+                                   ts="2026-06-02T00:00:00Z"),
+        ],
+        "commits": [_commit("2026-06-05T00:00:00Z")],
+    })
+    assert s["review"][0]["stale"] is True
+    blob = "\n".join(sp._field_lines_for(s)["review"])
+    assert sp.STALE_MARKER.strip() in blob
+    assert "will not count it" in blob
+
+
+def test_review_field_fresh_verdict_unmarked(sp) -> None:
+    # Verdict at 06-06 is strictly after the latest commit at 06-05 -> fresh.
+    s = sp._summarise({
+        "title": "feat: x",
+        "body": "body",
+        "state": "OPEN",
+        "comments": [
+            _local_verdict_comment("critic", "APPROVED",
+                                   ts="2026-06-06T00:00:00Z"),
+        ],
+        "commits": [_commit("2026-06-05T00:00:00Z")],
+    })
+    assert s["review"][0]["stale"] is False
+    blob = "\n".join(sp._field_lines_for(s)["review"])
+    assert sp.STALE_MARKER.strip() not in blob
+
+
+def test_review_field_verdict_at_exact_commit_ts_is_stale(sp) -> None:
+    # Freshness is strict (verdict must be AFTER the commit); an equal
+    # timestamp is stale, matching the gate's `timestamp <= min_timestamp` drop.
+    s = sp._summarise({
+        "title": "feat: x",
+        "body": "body",
+        "state": "OPEN",
+        "comments": [
+            _local_verdict_comment("critic", "APPROVED",
+                                   ts="2026-06-05T00:00:00Z"),
+        ],
+        "commits": [_commit("2026-06-05T00:00:00Z")],
+    })
+    assert s["review"][0]["stale"] is True
+
+
+def test_review_field_no_commits_renders_without_marker(sp) -> None:
+    # No resolvable commit timestamp -> nothing is marked stale (render, don't
+    # error). The verdict is still shown.
+    s = sp._summarise({
+        "title": "feat: x",
+        "body": "body",
+        "state": "OPEN",
+        "comments": [
+            _local_verdict_comment("critic", "APPROVED",
+                                   ts="2026-06-02T00:00:00Z"),
+        ],
+        # no "commits" key at all
+    })
+    assert s["review"][0]["stale"] is False
+    blob = "\n".join(sp._field_lines_for(s)["review"])
+    assert "APPROVED" in blob
+    assert sp.STALE_MARKER.strip() not in blob
+
+
+def test_review_field_commit_without_timestamp_renders_without_marker(sp) -> None:
+    # A commit entry with neither committedDate nor authoredDate yields no
+    # anchor -> no stale marking rather than an error.
+    s = sp._summarise({
+        "title": "feat: x",
+        "body": "body",
+        "state": "OPEN",
+        "comments": [
+            _local_verdict_comment("critic", "APPROVED",
+                                   ts="2026-06-02T00:00:00Z"),
+        ],
+        "commits": [{"oid": "abc123"}],
+    })
+    assert s["review"][0]["stale"] is False
+
+
+def test_latest_commit_timestamp_prefers_committed_then_authored(sp) -> None:
+    assert sp._latest_commit_timestamp([]) == ""
+    assert sp._latest_commit_timestamp(
+        [{"authoredDate": "2026-06-01T00:00:00Z"}]
+    ) == "2026-06-01T00:00:00Z"
+    assert sp._latest_commit_timestamp([
+        {"committedDate": "2026-06-01T00:00:00Z"},
+        {"committedDate": "2026-06-05T00:00:00Z",
+         "authoredDate": "2026-06-04T00:00:00Z"},
+    ]) == "2026-06-05T00:00:00Z"
+
+
+def test_review_read_surface_is_superset_of_gate_set(sp) -> None:
+    # The read surface shows verdicts the gate excludes: a stale one and one
+    # from a reviewer the gate's membership filter would drop. Both appear here
+    # (show-pr applies no freshness/membership filter) — the corrected
+    # semantics: read surface = superset, gate = filtered subset.
+    s = sp._summarise({
+        "title": "feat: x",
+        "body": "body",
+        "state": "OPEN",
+        "comments": [
+            # stale (predates latest commit) — gate drops, read surface shows
+            _local_verdict_comment("critic", "APPROVED",
+                                   ts="2026-06-02T00:00:00Z"),
+            # a reviewer the gate might not require — read surface still shows
+            _local_verdict_comment("passer-by", "CHANGES_REQUESTED",
+                                   ts="2026-06-06T00:00:00Z"),
+        ],
+        "commits": [_commit("2026-06-05T00:00:00Z")],
+    })
+    by_name = {e["reviewer"]: e for e in s["review"]}
+    assert set(by_name) == {"critic", "passer-by"}
+    assert by_name["critic"]["stale"] is True
+    assert by_name["passer-by"]["stale"] is False

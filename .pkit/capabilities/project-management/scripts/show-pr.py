@@ -9,7 +9,11 @@
 
 Read-only diagnostic for a GitHub PR. Surfaces the methodology-relevant
 view: title, Conventional Commits parse, state, base/head branches,
-closing issues, reviewers, doc-impact section presence.
+closing issues, reviewers, doc-impact section presence, and the latest
+DEC-028 reviewer verdict(s) — `--field review` renders each reviewer's
+verdict token AND the reasons, read via the same governed `gh` path the
+rest of the view uses (issue #544; the operator's only allowed path to the
+verdict body, since raw `gh pr view --comments` is denied).
 
 Membership gate per DEC-021 runs at startup.
 
@@ -39,6 +43,10 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
+from _lib.agent_verdicts import (  # noqa: E402
+    PATH_LOCAL,
+    latest_verdicts_per_reviewer,
+)
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
@@ -150,6 +158,8 @@ def _summarise(pr: dict) -> dict:
     conv = _parse_conventional_commits(title)
     closing_issues = _extract_closing_issues(body)
     has_doc_impact = "## Doc impact" in body
+    latest_commit_ts = _latest_commit_timestamp(pr.get("commits") or [])
+    review = _summarise_review(pr.get("comments") or [], latest_commit_ts)
 
     return {
         "title": title,
@@ -163,8 +173,66 @@ def _summarise(pr: dict) -> dict:
         "closes": closing_issues,
         "reviewers": reviewers,
         "has_doc_impact_section": has_doc_impact,
+        "review": review,
         "body": body,
     }
+
+
+def _summarise_review(
+    comments: list, latest_commit_ts: str = ""
+) -> list[dict]:
+    """Latest DEC-028 reviewer verdict per reviewer, token + reasons (#544).
+
+    Delegates recognition and latest-per-reviewer selection to the SHARED
+    selection (`_lib.agent_verdicts`) that `done-work`'s gate also consumes,
+    so the two never diverge on *which* comment is a reviewer's current verdict
+    (COR-007; one parser, not two). But the read surface is a SUPERSET of what
+    the gate acts on, not the same set: it applies no freshness filter and no
+    required-set membership filter, so it includes stale verdicts and verdicts
+    from non-required reviewers that the gate excludes. It shows every posted
+    verdict (latest per reviewer); the gate acts on a filtered subset.
+
+    Because there is no freshness filter, a verdict can be shown as APPROVED on
+    a live PR even though it predates the latest commit — which `done-work`
+    would refuse. To keep the read honest about gate-agreement (#544's point:
+    the agent reads the verdict to act on it), each entry is annotated `stale`
+    when its timestamp is at/​before `latest_commit_ts` (the freshness anchor
+    the gate uses). When `latest_commit_ts` is empty (no resolvable commit
+    timestamp), nothing is marked stale — we render without the marker rather
+    than guess.
+
+    Each entry carries the reviewer, the verdict token, the path
+    (`local`/`remote`), the full comment body (the reasons), and `stale`.
+    """
+    verdicts = latest_verdicts_per_reviewer(comments)
+    return [
+        {
+            "reviewer": v.reviewer,
+            "verdict": v.token,
+            "path": v.path,
+            "body": v.body,
+            "stale": bool(latest_commit_ts) and v.timestamp <= latest_commit_ts,
+        }
+        for v in verdicts
+    ]
+
+
+def _latest_commit_timestamp(commits: list) -> str:
+    """The latest commit's timestamp, the gate's verdict-freshness anchor.
+
+    Mirrors `done-work`'s anchor: `gh pr view --json commits` returns the
+    commits in order, so the last entry's `committedDate` (falling back to
+    `authoredDate`) is the freshness boundary against which a shown verdict is
+    marked stale. Returns "" when no commit timestamp is resolvable — the
+    caller then renders every verdict without a stale marker rather than
+    erroring.
+    """
+    if not commits:
+        return ""
+    last = commits[-1]
+    if not isinstance(last, dict):
+        return ""
+    return str(last.get("committedDate") or last.get("authoredDate") or "")
 
 
 # The addressable field vocabulary for `--field`. Order is the documented
@@ -180,10 +248,21 @@ PR_FIELD_NAMES = (
     "cc-summary",
     "closes",
     "reviewers",
+    "review",
     "doc-impact",
     "body",
     "url",
 )
+
+# Shown by `--field review` when no reviewer has posted a DEC-028 verdict
+# comment. A clear message, not an empty result / traceback (issue #544).
+NO_VERDICT_MESSAGE = "no reviewer verdict posted"
+
+# Appended to a shown verdict that predates the latest commit — the merge gate
+# anchors freshness to that commit and will not count such a verdict, so the
+# read surface flags it rather than let an operator mistake it for
+# gate-agreement (issue #544).
+STALE_MARKER = " (stale — predates the latest commit; the merge gate will not count it)"
 
 
 def _scalar(value: object) -> list[str]:
@@ -201,6 +280,40 @@ def _scalar(value: object) -> list[str]:
 def _bool(value: object) -> list[str]:
     """Render a boolean field as a single `true`/`false` line."""
     return ["true" if value else "false"]
+
+
+def _review_lines(review: list) -> list[str]:
+    """Render the latest DEC-028 verdict(s) as readable lines (#544).
+
+    Each reviewer's verdict is a header line (`<verdict> — <reviewer>`,
+    qualified `local`/`remote`) followed by the verdict comment body indented
+    beneath it, so an operator reads the token AND the reasons through the
+    governed surface. Multiple reviewers are separated by a blank line. The
+    absent case yields a single clear message rather than no output — a bare
+    `--field review` on an unreviewed PR must not look like a silent empty
+    field.
+
+    A stale verdict (one predating the latest commit — which `done-work`'s
+    gate will not count) is marked in its header, so an operator does not read
+    an APPROVED that the merge gate will refuse and mistake it for
+    gate-agreement.
+    """
+    if not review:
+        return [NO_VERDICT_MESSAGE]
+    lines: list[str] = []
+    for i, entry in enumerate(review):
+        if i > 0:
+            lines.append("")
+        reviewer = entry.get("reviewer") or "<unknown>"
+        verdict = entry.get("verdict") or "<unknown>"
+        path = entry.get("path")
+        qualifier = f" ({path})" if path else ""
+        stale = STALE_MARKER if entry.get("stale") else ""
+        lines.append(f"{verdict} — {reviewer}{qualifier}{stale}")
+        body = str(entry.get("body") or "").strip()
+        for body_line in body.splitlines():
+            lines.append(f"    {body_line}" if body_line else "")
+    return lines
 
 
 def _field_lines_for(s: dict) -> dict[str, list[str]]:
@@ -231,6 +344,7 @@ def _field_lines_for(s: dict) -> dict[str, list[str]]:
         "cc-summary": _scalar(cc_summary),
         "closes": closes,
         "reviewers": list(s.get("reviewers") or []),
+        "review": _review_lines(s.get("review") or []),
         "doc-impact": _bool(s.get("has_doc_impact_section")),
         "body": _scalar(s.get("body")),
         "url": _scalar(s.get("url")),
@@ -259,6 +373,17 @@ def _print_summary(pr_number: int, s: dict) -> None:
     )
     reviewers = s.get("reviewers") or []
     print(f"  reviewers:    {', '.join(reviewers) or '<none>'}")
+    review = s.get("review") or []
+    if review:
+        summary = ", ".join(
+            f"{e.get('reviewer')}: {e.get('verdict')}"
+            + (" (stale)" if e.get("stale") else "")
+            for e in review
+        )
+        print(f"  review:       {summary}")
+        print("                (--field review for reasons)")
+    else:
+        print(f"  review:       <{NO_VERDICT_MESSAGE}>")
     print(
         f"  doc impact:   {'present' if s.get('has_doc_impact_section') else 'missing'}"
     )
@@ -306,7 +431,7 @@ def _gh_get_pr(pr_number: int, config: dict) -> dict | None:
                 str(pr_number),
                 "--json",
                 "title,body,state,headRefName,baseRefName,mergedAt,"
-                "isDraft,url,reviewRequests",
+                "isDraft,url,reviewRequests,comments,commits",
             ],
             config,
             check=False,

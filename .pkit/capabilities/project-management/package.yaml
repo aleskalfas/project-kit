@@ -101,7 +101,7 @@ commands:
     help: Methodology-aware edit of a PR's body or title. Validates new state before writing; refuses on hard-reject unless --force.
   show-pr:
     script: scripts/show-pr.py
-    help: Read-only view of a GitHub PR — title parse, state, branches, closing issues, reviewers, doc-impact section presence.
+    help: Read-only view of a GitHub PR — title parse, state, branches, closing issues, reviewers, doc-impact section presence, and the latest DEC-028 reviewer verdict(s) (--field review surfaces the verdict token + reasons through the governed read path).
   show-tree:
     script: scripts/show-tree.py
     help: PM-operational diagnostic. Walks the hierarchy (EPICs → Features/Umbrellas → Tasks → PRs) and reports orphans. Text / JSON / markdown output.
