@@ -24,6 +24,13 @@ doubled or orphaned footer is structurally impossible.
 The sentinel strings here are locked to the `provenance_marker` entry in
 `body-format.yaml` by `tests/test_provenance.py` (single source of truth,
 verified at test time rather than re-parsed on every call).
+
+The **tree** (backbone) version resolves in order: (1) `.pkit/VERSION`
+if present and non-empty — the source repo's source-of-truth, kept ahead
+of the self-hosted manifest (which sits at a stale 1.0.0); (2) else
+`.pkit/manifest.yaml`'s top-level `backbone_version` — the adopter's
+canonical installed version, the same value `pkit status` reads (an
+adopter install has no `.pkit/VERSION`); (3) else `unknown`.
 """
 
 from __future__ import annotations
@@ -94,7 +101,29 @@ def read_versions(capability_root: Path) -> Versions:
 
 def _read_tree_version(capability_root: Path) -> str:
     # capability_root = .pkit/capabilities/<name>; .pkit/ = parents[1].
-    return _read_version_file(capability_root.parents[1] / "VERSION")
+    # VERSION (source-repo source-of-truth) wins; else the manifest's
+    # backbone_version (the adopter's canonical installed version); else
+    # unknown. See the module docstring's resolution note.
+    version = _read_version_file(capability_root.parents[1] / "VERSION")
+    if version != _UNKNOWN:
+        return version
+    return _read_manifest_backbone_version(capability_root)
+
+
+def _read_manifest_backbone_version(capability_root: Path) -> str:
+    # Adopter installs carry no `.pkit/VERSION`; the canonical backbone
+    # version lives in `.pkit/manifest.yaml`'s top-level `backbone_version`.
+    # Self-contained per PEP 723 — parse with the already-imported ruamel
+    # YAML rather than importing the backbone `project_kit.manifest` reader.
+    path = capability_root.parents[1] / "manifest.yaml"
+    if YAML is None:
+        return _UNKNOWN
+    try:
+        data = YAML(typ="safe").load(path.read_text(encoding="utf-8")) or {}
+    except (OSError, YAMLError):
+        return _UNKNOWN
+    version = data.get("backbone_version") if isinstance(data, dict) else None
+    return str(version) if version else _UNKNOWN
 
 
 def _read_version_file(path: Path) -> str:
@@ -134,7 +163,7 @@ def _read_cli_version(capability_root: Path) -> str | None:
         return importlib.metadata.version("project-kit")
     except importlib.metadata.PackageNotFoundError:
         pass
-    except Exception:  # noqa: BLE001 — metadata lookup must never break a write.
+    except Exception:  # metadata lookup must never break a write.
         pass
 
     spec = importlib.util.find_spec("project_kit")
@@ -262,7 +291,7 @@ def post_filing_comment(
             return f"provenance: filing comment already present on #{issue_number} (skip)"
     except FileNotFoundError:
         return "provenance: gh not on PATH; filing comment skipped"
-    except Exception as exc:  # noqa: BLE001 — best-effort; never block the create.
+    except Exception as exc:  # best-effort; never block the create.
         return f"provenance: filing-comment idempotency check failed ({exc}); skipped"
 
     body = render_filing_comment(versions, today)
@@ -274,7 +303,7 @@ def post_filing_comment(
         )
     except FileNotFoundError:
         return "provenance: gh not on PATH; filing comment skipped"
-    except Exception as exc:  # noqa: BLE001 — best-effort.
+    except Exception as exc:  # best-effort.
         return f"provenance: filing-comment post failed ({exc}); skipped"
     if proc.returncode != 0:
         detail = (proc.stderr or "").strip() or "no stderr"
