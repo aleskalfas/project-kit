@@ -1117,3 +1117,446 @@ def test_no_placeholder_check_when_no_capability_root(
         f for f in findings if f.label.startswith("body.placeholder")
     ]
     assert placeholder_findings == []
+
+
+# --- brownfield type-presence (substrate-map bound to title-prefix) ----
+# #553: validate-issue's type-presence gate must route through the SAME
+# substrate-map seam pre-check uses. When `type` is bound to the adopter's own
+# substrate (title-prefix), no kit `type:*` label is written, so demanding one
+# false-fails every issue while pre-check on the same repo reports the axis
+# served. These pin the fix and the greenfield parity (the other direction).
+
+
+@pytest.fixture(scope="module")
+def precheck():
+    """Load pre-check.py as a module — for the gate-agreement disposition test."""
+    script_path = (
+        REPO_ROOT
+        / ".pkit"
+        / "capabilities"
+        / "project-management"
+        / "scripts"
+        / "pre-check.py"
+    )
+    module_name = "pm_pre_check_under_test"
+    spec = importlib.util.spec_from_file_location(module_name, script_path)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.fixture
+def brownfield_type_prefix_map(vi):
+    """A substrate-map binding `type` to the adopter's title-prefix substrate.
+
+    The brownfield shape #553 is about: `type` served via `title-prefix`, so the
+    kit writes no `type:*` label (never-write-an-unmanaged-label). A present map
+    means the seam is in effect — `axis_expects_kit_labels("type", map)` is False.
+    """
+    return vi.axis_labels.SubstrateMap(
+        axes={
+            "type": {
+                "title-prefix": {
+                    "remap": {
+                        # The adopter's OWN bracket prefixes (as the shipped AUJ
+                        # reference declares them) — note `epic` is `[Epic]`, NOT
+                        # the kit's rendered `[EPIC]`. That divergence is the R1
+                        # false-reject: the kit vocabulary would fail `[Epic]`.
+                        "task": "[Task]",
+                        "epic": "[Epic]",
+                        "umbrella": "[Umbrella]",
+                        "feature": "[Feature]",
+                    }
+                }
+            }
+        }
+    )
+
+
+@pytest.fixture
+def brownfield_type_label_map(vi):
+    """A substrate-map binding `type` to an adopter LABEL remap.
+
+    The G1 shape: `type` served via a value→label remap onto the adopter's own
+    labels (not the kit `type:*`). Presence must be checked against those remapped
+    labels — a missing one is a genuine missing-value (hard-reject), a present one
+    is clean.
+    """
+    return vi.axis_labels.SubstrateMap(
+        axes={
+            "type": {
+                "label": {
+                    "remap": {
+                        "feature": "kind/feature",
+                        "epic": "kind/epic",
+                        "task": "kind/task",
+                        "umbrella": "kind/umbrella",
+                    }
+                }
+            }
+        }
+    )
+
+
+def test_brownfield_no_type_label_does_not_hard_reject(
+    vi, issue_types, titles, body_format, board_config, brownfield_type_prefix_map
+) -> None:
+    """(a) Brownfield: a correctly-prefixed issue with ZERO `type:*` labels does
+    NOT emit `classification.type.missing`; it relies on the parsed structural
+    type. Board config so unrelated priority/workstream label demands stay out of
+    the way — the assertion is scoped to the type axis (the #553 fix)."""
+    issue = _make_issue(
+        title="[Task] Install the Claude Code CLI inside the sandbox",
+        body=(
+            "Feature: #1\n\n"
+            "## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
+        ),
+        labels=[],  # no kit labels at all — a real brownfield tracker
+    )
+    findings = vi._validate_issue(
+        issue=issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        config=board_config,
+        substrate_map=brownfield_type_prefix_map,
+    )
+    assert "classification.type.missing" not in _labels(findings)
+    # And it validates clean overall (no blocking findings) — the type axis is
+    # satisfied by the [Task] prefix, everything else is in order.
+    blocking = [
+        f
+        for f in findings
+        if f.severity in (vi.SEVERITY_HARD_REJECT, vi.SEVERITY_BYPASSABLE)
+    ]
+    assert blocking == [], f"unexpected blocking findings: {_labels(findings)}"
+
+
+def test_greenfield_missing_type_label_still_hard_rejects(
+    vi, issue_types, titles, body_format, label_fallback_config
+) -> None:
+    """(b) Greenfield parity: with no substrate-map (or `type` served by kit
+    labels), a missing `type:*` label is still a hard-reject — unchanged."""
+    issue = _make_issue(
+        title="[Task] Install the Claude Code CLI inside the sandbox",
+        body=(
+            "Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
+        ),
+        labels=["priority:Medium", "workstream:cli"],  # no type:*
+    )
+    findings = vi._validate_issue(
+        issue=issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        config=label_fallback_config,
+        substrate_map=None,  # greenfield, explicit
+    )
+    assert "classification.type.missing" in _labels(findings)
+
+
+def test_dec011_cross_check_still_fires_greenfield(
+    vi, issue_types, titles, body_format, classification, label_fallback_config
+) -> None:
+    """(c) DEC-011 kind/structural cross-check still fires in greenfield: a
+    [Feature] carrying `type:bug` is the mismatch, reported at --phase create."""
+    issue = _make_issue(
+        title="[Feature] deliver the widget",
+        body="EPIC: #1\n\n## What\nx.",
+        labels=["type:bug", "priority:Medium", "workstream:cli"],
+    )
+    findings = vi._validate_issue(
+        issue=issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        classification=classification,
+        config=label_fallback_config,
+        phase=vi.PHASE_CREATE,
+        substrate_map=None,
+    )
+    assert "classification.type.structural-mismatch" in _labels(findings)
+
+
+def test_dec011_cross_check_demands_no_label_in_brownfield(
+    vi,
+    issue_types,
+    titles,
+    body_format,
+    classification,
+    board_config,
+    brownfield_type_prefix_map,
+) -> None:
+    """(c, other direction) In brownfield the cross-check has no `type:*` label to
+    evaluate — it must neither fire the mismatch nor newly-demand a label. A
+    [Feature] with zero labels is clean on the type axis."""
+    issue = _make_issue(
+        title="[Feature] deliver the widget",
+        body="EPIC: #1\n\n## What\nx.",
+        labels=[],
+    )
+    findings = vi._validate_issue(
+        issue=issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        classification=classification,
+        config=board_config,
+        phase=vi.PHASE_CREATE,
+        substrate_map=brownfield_type_prefix_map,
+    )
+    assert "classification.type.missing" not in _labels(findings)
+    assert "classification.type.structural-mismatch" not in _labels(findings)
+
+
+def test_brownfield_bad_prefix_surfaces_title_format_not_label_error(
+    vi, issue_types, titles, body_format, board_config, brownfield_type_prefix_map
+) -> None:
+    """(d) Brownfield with a bad/absent title prefix: the REAL error surfaces —
+    title.format (the type can't be inferred) — NOT a spurious type-label error.
+    The prefix, not a label, is the type substrate here, so a broken prefix is
+    the thing to report."""
+    issue = _make_issue(
+        title="Random title with no prefix",
+        body="Feature: #1\n\n## What\nx.",
+        labels=[],
+    )
+    findings = vi._validate_issue(
+        issue=issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        config=board_config,
+        substrate_map=brownfield_type_prefix_map,
+    )
+    assert "title.format" in _labels(findings)
+    assert "classification.type.missing" not in _labels(findings)
+
+
+def test_validate_issue_and_pre_check_agree_on_type_disposition(
+    vi, precheck, brownfield_type_prefix_map
+) -> None:
+    """Gate-agreement (the #553 acceptance): validate-issue and pre-check must
+    reach the SAME "are kit type labels required?" disposition on the same repo.
+
+    Both route through the one seam predicate — pre-check via its thin
+    `_axis_expects_kit_labels` adapter, validate-issue via the seam directly — so
+    they cannot disagree. Proven at the disposition seam in both substrates."""
+    # Brownfield: a present map binding type→title-prefix ⇒ kit labels NOT required.
+    assert (
+        vi.axis_labels.axis_expects_kit_labels("type", brownfield_type_prefix_map)
+        is False
+    )
+    assert (
+        precheck._axis_expects_kit_labels("type", brownfield_type_prefix_map) is False
+    )
+    # Greenfield: no map ⇒ kit labels ARE required, both agree.
+    assert vi.axis_labels.axis_expects_kit_labels("type", None) is True
+    assert precheck._axis_expects_kit_labels("type", None) is True
+    # And they agree value-for-value in both substrates (one source of truth).
+    for smap in (None, brownfield_type_prefix_map):
+        assert vi.axis_labels.axis_expects_kit_labels(
+            "type", smap
+        ) == precheck._axis_expects_kit_labels("type", smap)
+
+
+# --- R1: title-prefix inference is substrate-aware ---------------------
+# The blocker #553 exists to remove, one check earlier than the label gate: an
+# adopter's `[Epic]` prefix (bound in substrate-map.yaml) diverges from the kit's
+# rendered `[EPIC]`, so the old kit-vocabulary `title.format` hard-rejected it.
+
+
+def test_brownfield_adopter_epic_prefix_validates_clean(
+    vi, issue_types, titles, body_format, board_config, brownfield_type_prefix_map
+) -> None:
+    """(R1) An AUJ-style `[Epic]` title (adopter prefix ≠ the kit's `[EPIC]`),
+    zero labels, validates clean — the structural type resolves via the adopter's
+    declared prefixes, not the kit vocabulary. This is the R1 false-reject closed."""
+    issue = _make_issue(
+        title="[Epic] Stand up the sandbox backbone",
+        body=(
+            "Parent: #1\n\n"
+            "## Outcome\nDe-risk the backbone.\n"
+            "## Success criteria\n- [ ] the sandbox boots.\n"
+        ),
+        labels=[],
+    )
+    findings = vi._validate_issue(
+        issue=issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        config=board_config,
+        substrate_map=brownfield_type_prefix_map,
+    )
+    assert "title.format" not in _labels(findings)
+    assert "title.pattern" not in _labels(findings)  # kit regex does not apply
+    blocking = [
+        f
+        for f in findings
+        if f.severity in (vi.SEVERITY_HARD_REJECT, vi.SEVERITY_BYPASSABLE)
+    ]
+    assert blocking == [], f"unexpected blocking findings: {_labels(findings)}"
+
+
+def test_brownfield_adopter_epic_infers_structural_type_via_seam(
+    vi, issue_types, brownfield_type_prefix_map
+) -> None:
+    """The `[Epic]` prefix resolves to the `epic` structural type through the seam
+    (not the kit `[EPIC]`), and the kit vocabulary would NOT have matched it."""
+    assert (
+        vi._infer_structural_type(
+            "[Epic] x", issue_types, brownfield_type_prefix_map
+        )
+        == "epic"
+    )
+    # The kit greenfield vocabulary renders `[EPIC]`, so it does NOT match `[Epic]`.
+    assert vi._infer_structural_type("[Epic] x", issue_types, None) is None
+
+
+def test_brownfield_unknown_prefix_hard_rejects_undeterminable_type(
+    vi, issue_types, titles, body_format, board_config, brownfield_type_prefix_map
+) -> None:
+    """(b, architect ruling) A title matching NONE of the adopter's declared
+    prefixes resolves to no structural type — an undeterminable close-gate
+    failure. It surfaces the REAL error (`title.format`, not a spurious label
+    error) and HARD-REJECTS, exactly as greenfield hard-rejects an unknown prefix
+    and as the label-remap arm hard-rejects a missing remapped label; only the
+    message vocabulary differs, naming the adopter's declared prefixes."""
+    issue = _make_issue(
+        title="[Spike] not an adopter prefix",
+        body="Parent: #1\n\n## What\nx.",
+        labels=[],
+    )
+    findings = vi._validate_issue(
+        issue=issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        config=board_config,
+        substrate_map=brownfield_type_prefix_map,
+    )
+    title_format = [f for f in findings if f.label == "title.format"]
+    assert title_format, "expected the real title.format error to surface"
+    assert title_format[0].severity == vi.SEVERITY_HARD_REJECT
+    # Adopter vocabulary, not the kit's — names the declared prefixes.
+    assert "adopter's declared" in title_format[0].detail
+    assert "classification.type.missing" not in _labels(findings)
+
+
+# --- G1: label-bound type axis gets a presence check ------------------
+
+
+def test_brownfield_label_bound_type_missing_label_hard_rejects(
+    vi, issue_types, titles, body_format, board_config, brownfield_type_label_map
+) -> None:
+    """(c, G1) `type` bound to a label remap: a missing remapped label is a
+    genuine missing-value — hard-reject, exactly as greenfield gates a missing
+    `type:*`. This closes the false-ACCEPT the incomplete cut left open."""
+    issue = _make_issue(
+        title="Add the widget",  # no prefix — type is label-carried here
+        body="Parent: #1\n\n## What\nx.",
+        labels=[],  # none of the adopter's remapped type labels present
+    )
+    findings = vi._validate_issue(
+        issue=issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        config=board_config,
+        substrate_map=brownfield_type_label_map,
+    )
+    type_missing = [f for f in findings if f.label == "classification.type.missing"]
+    assert type_missing, "a label-bound type with no remapped label must be demanded"
+    assert type_missing[0].severity == vi.SEVERITY_HARD_REJECT
+
+
+def test_brownfield_label_bound_type_present_label_clean(
+    vi, issue_types, titles, body_format, board_config, brownfield_type_label_map
+) -> None:
+    """(c) `type` bound to a label remap with a remapped label PRESENT — clean on
+    the type axis (resolve_read reverse-maps `kind/feature` → `feature`)."""
+    issue = _make_issue(
+        title="Add the widget",
+        body="Parent: #1\n\n## What\nx.",
+        labels=["kind/feature"],  # an adopter-remapped type label
+    )
+    findings = vi._validate_issue(
+        issue=issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        config=board_config,
+        substrate_map=brownfield_type_label_map,
+    )
+    assert "classification.type.missing" not in _labels(findings)
+    # And no spurious title finding — type is label-carried, not title-carried.
+    assert "title.format" not in _labels(findings)
+
+
+# --- gate-agreement across ALL type bindings (the #553 acceptance) -----
+
+
+def test_gate_agreement_across_all_type_bindings(
+    vi, precheck, brownfield_type_prefix_map, brownfield_type_label_map
+) -> None:
+    """validate-issue and pre-check reach the SAME type-substrate disposition on
+    the same repo across every binding — kit-label, title-prefix (incl. the
+    `[Epic]` vs kit `[EPIC]` mismatch), label-remap, derive, unsupported. Both
+    route through the one seam, so they cannot drift.
+
+    Proven at the seam predicates the two consumers share: the kit-label
+    disposition (`axis_expects_kit_labels`, via pre-check's thin adapter) and the
+    title-prefix vocabulary (`axis_title_prefix_remap`, which validate-issue's
+    inference and pre-check's alignment both read)."""
+    derive_map = vi.axis_labels.SubstrateMap(
+        axes={"type": {"derive": {"from": "open-closed"}}}
+    )
+    unsupported_map = vi.axis_labels.SubstrateMap(
+        axes={"type": {"unsupported": True}}
+    )
+    all_maps = {
+        "greenfield": None,
+        "title-prefix": brownfield_type_prefix_map,
+        "label-remap": brownfield_type_label_map,
+        "derive": derive_map,
+        "unsupported": unsupported_map,
+    }
+    for name, smap in all_maps.items():
+        # (1) kit-label disposition agrees between the two consumers.
+        assert vi.axis_labels.axis_expects_kit_labels(
+            "type", smap
+        ) == precheck._axis_expects_kit_labels("type", smap), name
+        # (2) both read the adopter's title-prefix vocabulary through the SAME
+        # seam accessor — identical remap (or None) for every binding.
+        assert vi.axis_labels.axis_title_prefix_remap(
+            "type", smap
+        ) == precheck.axis_labels.axis_title_prefix_remap("type", smap), name
+
+    # Only greenfield expects the kit's own type labels.
+    assert vi.axis_labels.axis_expects_kit_labels("type", None) is True
+    for smap in (brownfield_type_prefix_map, brownfield_type_label_map, derive_map):
+        assert vi.axis_labels.axis_expects_kit_labels("type", smap) is False
+
+    # The `[Epic]` mismatch specifically: the adopter's `[Epic]` is in the vocab
+    # both consumers validate against (so neither false-rejects it against the kit
+    # `[EPIC]`), and validate-issue's reverse read resolves it to `epic`.
+    remap = vi.axis_labels.axis_title_prefix_remap("type", brownfield_type_prefix_map)
+    assert "[Epic]" in remap.values()
+    assert (
+        vi.axis_labels.resolve_title_prefix_read(
+            "type", "[Epic] x", brownfield_type_prefix_map
+        )
+        == "epic"
+    )
+
+    # The label-remap binding: both agree it is NOT kit-label-served, and
+    # validate-issue reads the axis as label-bound (so it demands the remapped
+    # label rather than skipping the axis — the G1 fix).
+    assert precheck._axis_expects_kit_labels("type", brownfield_type_label_map) is False
+    assert (
+        vi.axis_labels.axis_is_label_bound("type", brownfield_type_label_map) is True
+    )

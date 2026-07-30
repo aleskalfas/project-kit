@@ -150,12 +150,22 @@ def main() -> int:
     if issue is None:
         return 2
 
+    # The adopter's substrate-map (DEC-036 / ADR-026), loaded once and threaded
+    # into the validation. None ⇒ greenfield (no map). The type-presence gate
+    # and the hierarchy mode below both read it, so load it here rather than
+    # re-walking the tree per consumer.
+    substrate_map = axis_labels.load_substrate_map(capability_root)
+
     # The adopter's hierarchy MODE (DEC-036 D4). Governs whether a missing /
     # malformed parent-ref first line hard-rejects (gated / greenfield) or
     # degrades to a warning (advisory) — the body-format.yaml parent-ref rule
     # is one of the two parent-requiredness rules advisory relaxes. None map ⇒
-    # gated (greenfield, byte-unchanged).
-    hierarchy = axis_labels.hierarchy_disposition(capability_root)
+    # gated (greenfield, byte-unchanged); a present map carries its own mode.
+    hierarchy = (
+        axis_labels.hierarchy_disposition(substrate_map)
+        if substrate_map is not None
+        else axis_labels.HIERARCHY_GATED
+    )
 
     findings = _validate_issue(
         issue=issue,
@@ -168,6 +178,7 @@ def main() -> int:
         capability_root=capability_root,
         phase=args.phase,
         hierarchy=hierarchy,
+        substrate_map=substrate_map,
     )
 
     if args.json:
@@ -206,6 +217,7 @@ def _validate_issue(
     capability_root: Path | None = None,
     phase: str = PHASE_TRANSITION,
     hierarchy: str = axis_labels.HIERARCHY_GATED,
+    substrate_map: "axis_labels.SubstrateMap | None" = None,
 ) -> list[Finding]:
     findings: list[Finding] = []
     title = str(issue.get("title", ""))
@@ -216,20 +228,54 @@ def _validate_issue(
     ]
     assignees = issue.get("assignees") or []
 
-    # Infer structural type from title prefix.
-    structural_type = _infer_structural_type(title, issue_types)
+    # Infer structural type from the title prefix, substrate-aware (#553): the
+    # kit's own prefix vocabulary in greenfield, the ADOPTER's declared prefixes
+    # when the substrate-map binds `type` via title-prefix.
+    structural_type = _infer_structural_type(title, issue_types, substrate_map)
 
-    # Title format.
-    if structural_type is None:
-        findings.append(
-            Finding(
-                SEVERITY_HARD_REJECT,
-                "title.format",
-                f"title {title!r} does not match any known [Type] prefix "
-                f"(expected one of [EPIC], [Feature], [Umbrella], [Task]).",
+    # Title format / pattern.
+    #
+    # The kit's title vocabulary (issue-types prefixes + the titles.yaml regex)
+    # is the authority ONLY in greenfield. Under a substrate-map:
+    #   * `type` bound to title-prefix ⇒ the type IS title-carried, and the
+    #     yardstick is the ADOPTER's prefixes (resolved above). A title matching
+    #     none of them resolves to NO structural type — an undeterminable
+    #     close-gate failure, so it hard-rejects `title.format` exactly as
+    #     greenfield hard-rejects an unknown prefix (only the message vocabulary
+    #     differs, naming the adopter's declared prefixes rather than the kit's;
+    #     architect ruling (b), #553); the kit's titles.yaml regex (which
+    #     hardcodes `[EPIC]` etc.) does NOT additionally apply (the adopter owns
+    #     the title format).
+    #   * `type` bound to label/derive/unsupported/absent ⇒ the type is NOT
+    #     title-carried; no title-format demand is made (its presence gate / the
+    #     capability matrix covers the axis via its own substrate).
+    type_title_carried = substrate_map is None or axis_labels.axis_is_title_carried(
+        "type", substrate_map
+    )
+    if type_title_carried and structural_type is None:
+        expected = _expected_type_prefixes(issue_types, substrate_map)
+        if substrate_map is None:
+            findings.append(
+                Finding(
+                    SEVERITY_HARD_REJECT,
+                    "title.format",
+                    f"title {title!r} does not match any known type prefix "
+                    f"(expected one of {', '.join(expected)}).",
+                )
             )
-        )
-    else:
+        else:
+            findings.append(
+                Finding(
+                    SEVERITY_HARD_REJECT,
+                    "title.format",
+                    f"title {title!r} matches none of the adopter's declared "
+                    f"substrate-map type prefixes "
+                    f"(expected one of {', '.join(expected)}).",
+                )
+            )
+    elif structural_type is not None and substrate_map is None:
+        # Greenfield: also enforce the titles.yaml regex pattern. Under a present
+        # map the kit's regex does not apply (the adopter owns the title format).
         pattern = _title_pattern_for(titles, structural_type)
         if pattern and not re.match(pattern, title):
             findings.append(
@@ -241,76 +287,124 @@ def _validate_issue(
                 )
             )
 
-    # Classification axes (per DEC-012).
-    type_labels = [lbl for lbl in labels if axis_labels.is_axis_label(lbl, "type")]
-    if len(type_labels) == 0:
-        findings.append(
-            Finding(
-                SEVERITY_HARD_REJECT,
-                "classification.type.missing",
-                "no `type:*` label present (required by classification.yaml).",
-            )
-        )
-    elif len(type_labels) > 1:
-        findings.append(
-            Finding(
-                SEVERITY_HARD_REJECT,
-                "classification.type.multiple",
-                f"multiple `type:*` labels — must be mutually exclusive: "
-                f"{', '.join(type_labels)}",
-            )
-        )
-    else:
-        # Exactly one `type:*` label — cross-check the kind against the issue's
-        # structural type (DEC-011's kind/structural restriction). A non-`feature`
-        # kind on an epic/feature/umbrella manufactures the kind/structural
-        # mismatch that breaks the closing PR's Conventional-Commits `<type>`
-        # derivation. This is the validate-issue enforcement point DEC-011 names
-        # ("refused at create-issue and at validate-issue"). Reads
-        # `allowed_structural_types_per_kind` via the SAME shared predicate
-        # create-issue / set-field call — single source of truth. Fires only when
-        # the structural type is known (the title.format finding above already
-        # covers an unrecognised prefix).
-        #
-        # Severity is phase-split (architect review, #410), mirroring the
-        # placeholder-residual phase pattern (detect_placeholder_residuals):
-        #   - `--phase create` — hard-reject: refuse the mismatch at the point of
-        #     manufacture, using the schema's authored `mismatch_severity` token
-        #     (hard-reject in the shipped classification).
-        #   - `--phase transition` (validate-issue's default) — the SAME finding
-        #     at warning: a pre-existing container-kind mismatch corrupts the
-        #     closing-PR conv-type derivation (a create-PR-time concern), NOT the
-        #     transition in flight. Reporting rather than blocking keeps a
-        #     lifecycle transition from being walled on traversal of a mismatched
-        #     live ancestor (e.g. EPIC #128).
-        # Any phase other than `transition` (only `create` today) keeps the
-        # schema-authored severity — the hard-reject is the default posture, and
-        # only the transition gate relaxes it.
-        kind = axis_labels.read("type", labels)
-        if (
-            kind is not None
-            and structural_type is not None
-            and not classification_rules.kind_allowed_for_structural_type(
-                kind, structural_type, classification or {}
-            )
-        ):
-            if phase == PHASE_TRANSITION:
-                severity = SEVERITY_WARNING
-            else:
-                severity = _severity_from_token(
-                    classification_rules.mismatch_severity_token(classification or {})
-                )
+    # Type axis presence (per DEC-012), fully substrate-aware per-binding (#553).
+    #
+    # The kit's `type:*` labels are the type substrate ONLY in greenfield. Under a
+    # substrate-map the type axis resolves through the adopter's OWN substrate, so
+    # the presence demand is per-binding — and it mirrors pre-check's disposition
+    # on the same repo, so the two gates agree across every binding:
+    #   * kit labels (greenfield)  — require exactly one `type:*` label, and
+    #                                cross-check its kind vs the structural type
+    #                                (DEC-011). Byte-unchanged.
+    #   * title-prefix             — the type IS the title prefix; a missing /
+    #                                unrecognised one is the `title.format` finding
+    #                                above. No label is written or demanded.
+    #   * label remap              — require one of the adopter's remapped type
+    #                                labels (resolve_read). A missing one is a
+    #                                genuine missing-value, gated as greenfield
+    #                                gates a missing `type:*`.
+    #   * derive / unsupported     — nothing to carry; no presence demand.
+    # Every arm routes through the seam (axis_expects_kit_labels / axis_is_label_
+    # bound / resolve_read) — no second source of truth for "which substrate?".
+    if axis_labels.axis_expects_kit_labels("type", substrate_map):
+        # --- Greenfield: the kit's `type:*` labels are the substrate. ---
+        type_labels = [lbl for lbl in labels if axis_labels.is_axis_label(lbl, "type")]
+        if len(type_labels) == 0:
             findings.append(
                 Finding(
-                    severity,
-                    "classification.type.structural-mismatch",
-                    f"kind {kind!r} (its type:* label) is not valid for "
-                    f"structural type {structural_type!r} — epic/feature/umbrella "
-                    "carry kind 'feature' by definition (classification.yaml "
-                    "structural_restriction / DEC-011). Re-file the non-feature "
-                    "kind as a Task, or set the kind to 'feature'.",
+                    SEVERITY_HARD_REJECT,
+                    "classification.type.missing",
+                    "no `type:*` label present (required by classification.yaml).",
                 )
             )
+        elif len(type_labels) > 1:
+            findings.append(
+                Finding(
+                    SEVERITY_HARD_REJECT,
+                    "classification.type.multiple",
+                    f"multiple `type:*` labels — must be mutually exclusive: "
+                    f"{', '.join(type_labels)}",
+                )
+            )
+        else:
+            # Exactly one `type:*` label — cross-check the kind against the issue's
+            # structural type (DEC-011's kind/structural restriction). A
+            # non-`feature` kind on an epic/feature/umbrella manufactures the
+            # kind/structural mismatch that breaks the closing PR's Conventional-
+            # Commits `<type>` derivation. This is the validate-issue enforcement
+            # point DEC-011 names ("refused at create-issue and at validate-issue").
+            # Reads `allowed_structural_types_per_kind` via the SAME shared
+            # predicate create-issue / set-field call — single source of truth.
+            # Fires only when the structural type is known (the title.format
+            # finding above already covers an unrecognised prefix).
+            #
+            # DEC-011 cross-check stays inert in brownfield BY CONSTRUCTION: it
+            # lives inside this greenfield-only branch, and in brownfield the kit
+            # writes no `type:*` label to cross-check (kind and structural type are
+            # the same title-derived signal there — nothing to cross-check).
+            #
+            # Severity is phase-split (architect review, #410), mirroring the
+            # placeholder-residual phase pattern (detect_placeholder_residuals):
+            #   - `--phase create` — hard-reject: refuse the mismatch at the point
+            #     of manufacture, using the schema's authored `mismatch_severity`
+            #     token (hard-reject in the shipped classification).
+            #   - `--phase transition` (validate-issue's default) — the SAME
+            #     finding at warning: a pre-existing container-kind mismatch
+            #     corrupts the closing-PR conv-type derivation (a create-PR-time
+            #     concern), NOT the transition in flight. Reporting rather than
+            #     blocking keeps a lifecycle transition from being walled on
+            #     traversal of a mismatched live ancestor (e.g. EPIC #128).
+            # Any phase other than `transition` (only `create` today) keeps the
+            # schema-authored severity — the hard-reject is the default posture,
+            # and only the transition gate relaxes it.
+            kind = axis_labels.read("type", labels)
+            if (
+                kind is not None
+                and structural_type is not None
+                and not classification_rules.kind_allowed_for_structural_type(
+                    kind, structural_type, classification or {}
+                )
+            ):
+                if phase == PHASE_TRANSITION:
+                    severity = SEVERITY_WARNING
+                else:
+                    severity = _severity_from_token(
+                        classification_rules.mismatch_severity_token(
+                            classification or {}
+                        )
+                    )
+                findings.append(
+                    Finding(
+                        severity,
+                        "classification.type.structural-mismatch",
+                        f"kind {kind!r} (its type:* label) is not valid for "
+                        f"structural type {structural_type!r} — epic/feature/"
+                        "umbrella carry kind 'feature' by definition "
+                        "(classification.yaml structural_restriction / DEC-011). "
+                        "Re-file the non-feature kind as a Task, or set the kind "
+                        "to 'feature'.",
+                    )
+                )
+    elif axis_labels.axis_is_label_bound("type", substrate_map):
+        # --- Present map, `type` bound to an adopter LABEL remap. ---
+        # The adopter's own type labels are the substrate; require one present
+        # (resolve_read reverse-maps it to the kit value, or None if absent). A
+        # missing one is a genuine missing-value — hard-reject, exactly as
+        # greenfield gates a missing `type:*` (G1). No DEC-011 cross-check: the
+        # kind/structural cross-check is greenfield-only (above).
+        if axis_labels.resolve_read("type", labels, substrate_map) is None:
+            findings.append(
+                Finding(
+                    SEVERITY_HARD_REJECT,
+                    "classification.type.missing",
+                    "no type label present — substrate-map.yaml binds `type` to a "
+                    "label remap; one of the adopter's remapped type labels is "
+                    "required (see the `type` binding in project/substrate-map.yaml).",
+                )
+            )
+    # else: `type` bound to title-prefix (handled by title.format above), derive,
+    # unsupported, or absent — nothing to carry, so no presence demand (mirrors
+    # pre-check reporting the axis served/degraded via its own substrate).
 
     has_board = bool(config.get("has_projects_v2_board", False))
     if not has_board:
@@ -507,8 +601,37 @@ def _validate_issue(
     return findings
 
 
-def _infer_structural_type(title: str, issue_types: dict) -> str | None:
-    """Map the title prefix to the structural type name."""
+def _infer_structural_type(
+    title: str,
+    issue_types: dict,
+    substrate_map: "axis_labels.SubstrateMap | None" = None,
+) -> str | None:
+    """Map the title prefix to the structural type name, substrate-aware (#553).
+
+    The prefix vocabulary the title is read against depends on the substrate:
+
+    * **Greenfield** (``substrate_map is None``) ⇒ the kit's own rendered
+      prefixes from ``issue-types.yaml`` (``[EPIC]`` / ``[Feature]`` /
+      ``[Umbrella]`` / ``[Task]``), byte-unchanged.
+    * **Map binds ``type`` via ``title-prefix``** ⇒ the ADOPTER's own declared
+      prefixes, via the seam's :func:`axis_labels.resolve_title_prefix_read` (which
+      reads the same binding shape ``pre-check`` validates against). This is the
+      R1 fix: an AUJ ``[Epic]`` title (adopter prefix, ≠ the kit's ``[EPIC]``)
+      resolves here instead of failing ``title.format`` against the kit vocabulary.
+    * **Map binds ``type`` otherwise** (``label`` / ``derive`` / ``unsupported`` /
+      absent) ⇒ ``None`` — the type is not carried in the title under such a
+      binding, so the kit prefix vocabulary does not apply (mirrors ``pre-check``
+      skipping title-prefix alignment for non-title-prefix bindings). The caller
+      keys the ``title.format`` demand on whether the type is title-carried, so a
+      ``None`` here does NOT spuriously fail a label-bound brownfield issue.
+    """
+    if substrate_map is not None:
+        if axis_labels.axis_title_prefix_remap("type", substrate_map) is None:
+            # `type` not title-carried under the map — the kit prefix vocabulary
+            # does not apply; the structural type is not read from the title.
+            return None
+        return axis_labels.resolve_title_prefix_read("type", title, substrate_map)
+
     types = issue_types.get("types") or {}
     for type_name, entry in types.items():
         if not isinstance(entry, dict):
@@ -521,6 +644,33 @@ def _infer_structural_type(title: str, issue_types: dict) -> str | None:
         if title.startswith(f"[{rendered}] "):
             return str(type_name)
     return None
+
+
+def _expected_type_prefixes(
+    issue_types: dict,
+    substrate_map: "axis_labels.SubstrateMap | None" = None,
+) -> list[str]:
+    """The bracketed type prefixes a title is expected to carry, for the error text.
+
+    Greenfield ⇒ the kit's own rendered prefixes; a ``title-prefix``-bound ``type``
+    ⇒ the adopter's declared prefixes (already bracketed, e.g. ``[Task]``). Kept
+    in step with :func:`_infer_structural_type` so the ``title.format`` message
+    names the SAME vocabulary the inference actually validated against.
+    """
+    if substrate_map is not None:
+        remap = axis_labels.axis_title_prefix_remap("type", substrate_map)
+        if remap is not None:
+            return sorted(remap.values())
+    prefixes: list[str] = []
+    for entry in (issue_types.get("types") or {}).values():
+        if not isinstance(entry, dict):
+            continue
+        prefix = entry.get("title_prefix", "")
+        case = entry.get("title_case", "title")
+        rendered = str(prefix).upper() if case == "upper" else str(prefix)
+        if rendered:
+            prefixes.append(f"[{rendered}]")
+    return prefixes
 
 
 def _title_pattern_for(titles: dict, structural_type: str) -> str | None:
