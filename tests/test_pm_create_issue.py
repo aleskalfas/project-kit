@@ -1432,6 +1432,263 @@ def test_main_body_file_accepts_any_allowed_parent_ref_form(
     assert created["body"].lstrip().split("\n", 1)[0] == "EPIC: #128"
 
 
+# --- --body-file first-line check honours hierarchy: advisory (#557) --------
+# The greenfield contract "the first line MUST be a parent-ref form" degrades on
+# a flat brownfield tracker exactly as the requiredness gate above it does: under
+# `hierarchy: advisory` a non-parent-ref first line is ACCEPTED (parentless, body
+# verbatim) — the #218 prepared-body path an agent uses to file a parentless
+# issue. The check reuses the SAME `_parent_requiredness_is_gated` predicate, so
+# it can never disagree with the requiredness gate. Greenfield / `gated` is byte
+# unchanged: a non-parent-ref first line still hard-rejects.
+
+
+def _write_hierarchy_advisory_map(root: Path) -> None:
+    """Stage a present substrate-map declaring `hierarchy: advisory`.
+
+    Minimal but schema-shaped: schema_version + the top-level `hierarchy:` key +
+    an empty `axes` map (so no axis is served — a flat tracker binds nothing).
+    """
+    (root / "project" / "substrate-map.yaml").write_text(
+        "schema_version: 1\nhierarchy: advisory\naxes: {}\n", encoding="utf-8"
+    )
+
+
+def test_main_body_file_advisory_non_parent_ref_first_line_files_parentless(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    """#557: `hierarchy: advisory` + a `--body-file` whose first line is not a
+    parent-ref + no `--parent` ⇒ create SUCCEEDS (rc 0), the body is used verbatim
+    (parentless), and the `[advisory]` warning is emitted (by the requiredness
+    gate, for the missing parent) — mirroring the template-composition path."""
+    root = _stage_capability_tree(tmp_path, has_board=False)
+    _write_hierarchy_advisory_map(root)
+    body_file = tmp_path / "body.md"
+    body_file.write_text("## What\n\nthe work\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        ci.subprocess,
+        "run",
+        _gh_command_dispatcher("https://github.com/acme/repo/issues/70"),
+    )
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+    monkeypatch.setattr(ci, "link_sub_issue", lambda *a, **k: _FakeLink("ok", ok=True))
+
+    created: dict = {}
+    real_create = ci._gh_create_issue
+
+    def capturing_create(**kwargs):
+        created.update(kwargs)
+        return real_create(**kwargs)
+
+    monkeypatch.setattr(ci, "_gh_create_issue", capturing_create)
+    monkeypatch.setattr(
+        ci.sys, "argv",
+        [
+            "create-issue.py",
+            "--type", "task",
+            "--title", "file a parentless prepared body here",
+            # No --parent — the whole point of #557 on a flat tracker.
+            "--body-file", str(body_file),
+            "--capability-root", str(root),
+            "--yes",
+        ],
+    )
+
+    assert ci.main() == 0
+    # Body used verbatim — the non-parent-ref first line is preserved.
+    assert created["body"].lstrip().split("\n", 1)[0] == "## What"
+    err = capsys.readouterr().err
+    assert "[advisory]" in err
+    assert "not gated under hierarchy: advisory" in err
+
+
+def test_main_body_file_advisory_valid_parent_ref_first_line_accepted(
+    ci, tmp_path, monkeypatch
+) -> None:
+    """#557: under advisory a VALID parent-ref first line is still accepted as-is
+    (the ref is recorded when the tracker can express it) — advisory relaxes the
+    requirement, it does not reject a supplied ref."""
+    root = _stage_capability_tree(tmp_path, has_board=False)
+    _write_hierarchy_advisory_map(root)
+    body_file = tmp_path / "body.md"
+    body_file.write_text("Feature: #1\n\n## What\n\nthe work\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        ci.subprocess,
+        "run",
+        _gh_command_dispatcher("https://github.com/acme/repo/issues/71"),
+    )
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+    monkeypatch.setattr(ci, "link_sub_issue", lambda *a, **k: _FakeLink("ok", ok=True))
+
+    created: dict = {}
+    real_create = ci._gh_create_issue
+
+    def capturing_create(**kwargs):
+        created.update(kwargs)
+        return real_create(**kwargs)
+
+    monkeypatch.setattr(ci, "_gh_create_issue", capturing_create)
+    monkeypatch.setattr(
+        ci.sys, "argv",
+        [
+            "create-issue.py",
+            "--type", "task",
+            "--title", "file a prepared body with a ref here",
+            "--parent", "1",
+            "--body-file", str(body_file),
+            "--capability-root", str(root),
+            "--yes",
+        ],
+    )
+
+    assert ci.main() == 0
+    assert created["body"].lstrip().split("\n", 1)[0] == "Feature: #1"
+
+
+def test_main_body_file_advisory_parent_given_non_parent_ref_first_line_silent(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    """#557: under advisory a `--parent`-given body whose first line is NOT a ref
+    is accepted SILENTLY (rc 0, body verbatim). The requiredness gate owns the sole
+    advisory warning and does not fire here (a parent WAS supplied); the body-file
+    check does not re-warn — the native `--parent` linkage is what matters, and
+    body-text refs aren't machine-checked under advisory."""
+    root = _stage_capability_tree(tmp_path, has_board=False)
+    _write_hierarchy_advisory_map(root)
+    body_file = tmp_path / "body.md"
+    body_file.write_text("## What\n\nthe work\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        ci.subprocess,
+        "run",
+        _gh_command_dispatcher("https://github.com/acme/repo/issues/74"),
+    )
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+    monkeypatch.setattr(ci, "link_sub_issue", lambda *a, **k: _FakeLink("ok", ok=True))
+
+    created: dict = {}
+    real_create = ci._gh_create_issue
+
+    def capturing_create(**kwargs):
+        created.update(kwargs)
+        return real_create(**kwargs)
+
+    monkeypatch.setattr(ci, "_gh_create_issue", capturing_create)
+    monkeypatch.setattr(
+        ci.sys, "argv",
+        [
+            "create-issue.py",
+            "--type", "task",
+            "--title", "file a prepared body with a parent but no ref line",
+            "--parent", "1",
+            "--body-file", str(body_file),
+            "--capability-root", str(root),
+            "--yes",
+        ],
+    )
+
+    assert ci.main() == 0
+    assert created["body"].lstrip().split("\n", 1)[0] == "## What"
+    # Accepted silently: no parent-handling advisory warning fires. Neither the
+    # (removed) body-file second warning nor the requiredness gate's advisory
+    # (which only fires when NO --parent is given) appears. (Unrelated axis-
+    # labelling advisories may still print; we assert only on the parent path.)
+    err = capsys.readouterr().err
+    assert "first line is not a parent-ref form" not in err
+    assert "not gated under hierarchy: advisory" not in err
+
+
+def test_main_body_file_greenfield_non_parent_ref_first_line_hard_errors(
+    ci, tmp_path, monkeypatch
+) -> None:
+    """#557: greenfield (no substrate-map ⇒ `hierarchy: gated`) + a `--body-file`
+    whose first line is not a parent-ref form ⇒ the hard error is UNCHANGED (rc 2).
+    `--parent` is supplied so the requiredness gate passes and the body-file
+    first-line check is the gate that fires."""
+    root = _stage_capability_tree(tmp_path, has_board=False)
+    # No substrate-map ⇒ greenfield ⇒ gated.
+    body_file = tmp_path / "body.md"
+    body_file.write_text("## What\n\nthe work\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        ci.subprocess,
+        "run",
+        _gh_command_dispatcher("https://github.com/acme/repo/issues/72"),
+    )
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+    monkeypatch.setattr(ci, "link_sub_issue", lambda *a, **k: _FakeLink("ok", ok=True))
+    monkeypatch.setattr(
+        ci.sys, "argv",
+        [
+            "create-issue.py",
+            "--type", "task",
+            "--title", "file a prepared body here",
+            "--parent", "1",
+            "--workstream", "spyre",
+            "--body-file", str(body_file),
+            "--capability-root", str(root),
+            "--yes",
+        ],
+    )
+
+    assert ci.main() == 2
+
+
+def test_main_body_file_parent_ref_optional_type_skips_first_line_check(
+    ci, tmp_path, monkeypatch
+) -> None:
+    """#557 / unchanged: a `parent_ref_optional` type never runs the first-line
+    check (it short-circuits on `not parent_ref_optional`), so a non-parent-ref
+    first line is accepted even greenfield — independent of hierarchy mode."""
+    root = _stage_capability_tree(tmp_path, has_board=False)
+    # Rebind the `task` type as parent_ref_optional so the check is short-circuited.
+    (root / "schemas" / "issue-types.yaml").write_text(
+        "types:\n"
+        "  task:\n"
+        "    title_prefix: Task\n"
+        "    title_case: title\n"
+        "    parent_issue_types: [feature, umbrella, epic, milestone]\n"
+        "    parent_ref_form: 'Feature: #<N>'\n"
+        "    parent_ref_optional: true\n",
+        encoding="utf-8",
+    )
+    body_file = tmp_path / "body.md"
+    body_file.write_text("## What\n\nthe work\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        ci.subprocess,
+        "run",
+        _gh_command_dispatcher("https://github.com/acme/repo/issues/73"),
+    )
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+    monkeypatch.setattr(ci, "link_sub_issue", lambda *a, **k: _FakeLink("ok", ok=True))
+
+    created: dict = {}
+    real_create = ci._gh_create_issue
+
+    def capturing_create(**kwargs):
+        created.update(kwargs)
+        return real_create(**kwargs)
+
+    monkeypatch.setattr(ci, "_gh_create_issue", capturing_create)
+    monkeypatch.setattr(
+        ci.sys, "argv",
+        [
+            "create-issue.py",
+            "--type", "task",
+            "--title", "file an optional-parent body here",
+            "--workstream", "spyre",
+            "--body-file", str(body_file),
+            "--capability-root", str(root),
+            "--yes",
+        ],
+    )
+
+    assert ci.main() == 0
+    assert created["body"].lstrip().split("\n", 1)[0] == "## What"
+
+
 # --- the containment substrate selector on --parent (DEC-039 D2 / ADR-035, #357)
 # A `containment:` selector in the adopter's substrate-map gates the native link.
 # `textual` ⇒ skip the native link entirely (the textual child-side ref already
