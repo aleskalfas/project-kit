@@ -446,8 +446,25 @@ def main() -> int:
         # path agents use, supplying their own (correctly-labelled) parent-ref.
         first_line = body.lstrip().split("\n", 1)[0].strip()
         matchers = _parent_ref_form_matchers(str(type_entry.get("parent_ref_form", "")))
-        if matchers and not parent_ref_optional and not any(
-            m.match(first_line) for m in matchers
+        first_line_is_parent_ref = any(m.match(first_line) for m in matchers)
+        # This first-line format check mirrors the requiredness gate above: it
+        # HARD-rejects a non-parent-ref first line ONLY where a missing parent-ref
+        # is gated (greenfield / `hierarchy: gated`), reusing the SAME
+        # `_parent_requiredness_is_gated` predicate so the two gates can never
+        # disagree (#557). Under `hierarchy: advisory` a flat brownfield tracker has
+        # no machine-checkable parent-refs, so a non-parent-ref first line is
+        # accepted and the body used verbatim (parentless) — the #218 prepared-body
+        # path an agent uses to file a parentless issue. The requiredness gate above
+        # is the SOLE owner of the parent-handling advisory warning (it fires for
+        # the genuine missing-parent case, no `--parent`); this check does NOT
+        # re-warn, so a `--parent`-given body whose first line is not a ref is
+        # accepted silently — the native `--parent` linkage is what matters; body-
+        # text refs aren't machine-checked under advisory.
+        if (
+            matchers
+            and not parent_ref_optional
+            and not first_line_is_parent_ref
+            and _parent_requiredness_is_gated(type_entry, hierarchy)
         ):
             print(
                 f"error: --body-file's first line must be one of the parent-ref "
