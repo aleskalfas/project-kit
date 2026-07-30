@@ -588,13 +588,12 @@ def _axis_expects_kit_labels(
 ) -> bool:
     """Whether the kit's own `<axis>:*` labels should exist for ``axis``.
 
-    Only in greenfield (no substrate-map). With a map present, NO axis uses the
-    kit's own labels — a bound axis resolves to the adopter's substrate, an
-    unsupported/absent axis degrades — so the kit-label existence check is
-    skipped and replaced by the capability-matrix line. This is the read-path's
-    expression of "never demand a label the adopter cannot create".
+    Thin adapter over the seam's :func:`axis_labels.axis_expects_kit_labels` —
+    the single source of truth for this disposition, so ``pre-check`` (kit-label
+    existence) and ``validate-issue`` (per-issue presence gates) cannot drift.
+    See the seam function's docstring for the full contract.
     """
-    return substrate_map is None
+    return axis_labels.axis_expects_kit_labels(axis, substrate_map)
 
 
 def _axis_label_check_skipped(
@@ -1354,18 +1353,17 @@ def _check_title_prefix_alignment(
     # decide up front whether to validate against the adopter's prefixes or skip.
     adopter_prefixes: set[str] | None = None
     if substrate_map is not None:
-        type_binding = substrate_map.axes.get("type") or {}
-        prefix_binding = type_binding.get("title-prefix")
-        if isinstance(prefix_binding, dict) and isinstance(
-            prefix_binding.get("remap"), dict
-        ):
+        # Read the adopter's declared `type` prefixes through the seam's single
+        # binding-shape reader (`axis_labels.axis_title_prefix_remap`) — the SAME
+        # accessor validate-issue's structural-type inference uses, so the two
+        # gates cannot drift on the adopter's prefix vocabulary. A non-None remap
+        # (even empty) ⇒ `type` is title-prefix-bound; None ⇒ bound to
+        # label/derive/unsupported/absent.
+        type_prefix_remap = axis_labels.axis_title_prefix_remap("type", substrate_map)
+        if type_prefix_remap is not None:
             # `type` bound to title-prefix: validate against the adopter's own
             # declared prefixes (advisory), not the kit set.
-            adopter_prefixes = {
-                str(p)
-                for p in prefix_binding["remap"].values()
-                if isinstance(p, str) and p
-            }
+            adopter_prefixes = set(type_prefix_remap.values())
         else:
             # `type` bound to label/derive, unsupported, or absent — the kit
             # prefix vocabulary does not apply. Skip, do not refuse.

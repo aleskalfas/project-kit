@@ -339,6 +339,45 @@ def axis_disposition(
     return "unsupported"
 
 
+def axis_expects_kit_labels(
+    axis: str, substrate_map: SubstrateMap | None
+) -> bool:
+    """Whether the kit's own ``<axis>:*`` labels are the substrate for ``axis``.
+
+    True only in greenfield (no ``substrate-map.yaml``). With a map present, NO
+    axis uses the kit's own ``<axis>:*`` labels — a *bound* axis resolves to the
+    adopter's own substrate (a remapped label, a title-prefix, or a derive
+    predicate), and an *unsupported*/absent axis degrades. Either way the kit's
+    ``<axis>:*`` label is not the thing to look for. This is the read-path's
+    expression of "never demand a label the adopter cannot create" (DEC-036,
+    EPIC #217 constraint 1).
+
+    This is the single predicate a presence gate consults to decide whether to
+    demand / count the kit's ``<axis>:*`` labels — the same disposition
+    ``pre-check`` reaches for its kit-label existence check and ``validate-issue``
+    reaches for its per-issue type/priority/workstream presence gates. Kept in the
+    seam (ADR-026's sole reader of substrate-map shape) so the two gates cannot
+    drift: a copied ``substrate_map is None`` in a consumer would be a second
+    source of truth.
+
+    Note this is *coarser* than :func:`axis_disposition`: a ``label``-bound axis
+    under a present map is ``served`` there, but its substrate is the adopter's
+    remapped label, NOT the kit's ``<axis>:*`` label — so this returns ``False``.
+    A presence gate that keyed on ``axis_disposition == "served"`` would wrongly
+    demand a kit label for a label-bound brownfield axis. Use this predicate,
+    not the disposition, for "should the kit label exist?".
+
+    The answer is **axis-independent** — ``axis`` is never read. That is
+    correct-by-design, not an oversight: ADR-026's absent-map-≡-no-axis-reads-kit-
+    labels rule means the disposition is a pure function of the map's *presence*,
+    identical for every axis. The parameter is kept for call-site symmetry with
+    the other per-axis seam predicates (so a future caller need not special-case
+    it), and so a later contract that *does* vary by axis has a signature to grow
+    into without churning every call site.
+    """
+    return substrate_map is None
+
+
 def axis_is_title_carried(
     axis: str, substrate_map: SubstrateMap | None
 ) -> bool:
@@ -376,6 +415,79 @@ def axis_is_title_carried(
     if not isinstance(binding, dict):
         return False
     return "title-prefix" in binding
+
+
+def axis_is_label_bound(
+    axis: str, substrate_map: SubstrateMap | None
+) -> bool:
+    """Whether ``axis`` is carried by an adopter-REMAPPED label under the map.
+
+    True only when a map is present AND binds ``axis`` via ``label`` (a value→label
+    remap onto the adopter's OWN existing labels). Distinct from greenfield —
+    which is *also* label-carried, but by the kit's own ``<axis>:*`` label (ask
+    :func:`axis_expects_kit_labels` for that) — and from ``title-prefix`` /
+    ``derive`` / ``unsupported`` / absent / malformed, none of which is a
+    remapped-label read.
+
+    This is the seam accessor a presence gate consults to decide whether to demand
+    one of the adopter's remapped labels on the issue (read via
+    :func:`resolve_read`): a ``label``-bound axis whose remapped label is absent is
+    a genuine missing-value, gated exactly as greenfield gates a missing kit label.
+    Kept in the seam — the sole reader of binding shape (ADR-026) — so a presence
+    gate never sniffs ``substrate_map.axes[...]`` itself. Mirror-image of
+    :func:`axis_is_title_carried` for the label arm.
+    """
+    if substrate_map is None:
+        return False
+    binding = substrate_map.axes.get(axis)
+    if not isinstance(binding, dict):
+        return False
+    return isinstance(binding.get("label"), dict)
+
+
+def axis_title_prefix_remap(
+    axis: str, substrate_map: SubstrateMap | None
+) -> dict[str, str] | None:
+    """The adopter's ``title-prefix`` remap for ``axis`` — kit-value → prefix — or ``None``.
+
+    Returns the ``title-prefix.remap`` mapping (the kit's own methodology value →
+    the adopter's declared bracket prefix, e.g. ``{"task": "[Task]", "epic":
+    "[Epic]"}``) only when a map is present AND binds ``axis`` via ``title-prefix``
+    with a ``remap`` mapping. Entries whose value is not a non-empty string are
+    dropped. Returns:
+
+    * ``None`` — greenfield (no map), or ``axis`` bound to ``label`` / ``derive``
+      / ``unsupported`` / absent / malformed, or the ``title-prefix`` binding
+      carries no ``remap`` mapping. The kit's own prefix vocabulary applies (the
+      caller's greenfield arm), or the axis is not title-carried at all.
+    * a (possibly EMPTY) ``dict`` — the axis IS ``title-prefix``-bound. An empty
+      dict means the binding declares no usable prefixes (every value degrades —
+      the fourth arm applied to all of them); the caller distinguishes it from
+      ``None`` (``remap is not None`` ⇒ "title-carried, but nothing declared").
+
+    This is the single reader of the ``title-prefix`` binding SHAPE. ``pre-check``'s
+    title-prefix alignment (which needs the adopter's prefix *vocabulary* — the
+    values) and ``validate-issue``'s structural-type inference (which needs the
+    reverse map title → kit value, via :func:`resolve_title_prefix_read`) both go
+    through here, so the two gates cannot drift on what the adopter's prefixes are —
+    the same single-source-of-truth discipline as :func:`axis_expects_kit_labels`.
+    """
+    if substrate_map is None:
+        return None
+    binding = substrate_map.axes.get(axis)
+    if not isinstance(binding, dict):
+        return None
+    prefix_binding = binding.get("title-prefix")
+    if not isinstance(prefix_binding, dict):
+        return None
+    remap = prefix_binding.get("remap")
+    if not isinstance(remap, dict):
+        return None
+    return {
+        str(kit_value): prefix
+        for kit_value, prefix in remap.items()
+        if isinstance(prefix, str) and prefix
+    }
 
 
 def hierarchy_disposition(
@@ -719,6 +831,39 @@ def resolve_read(
                     return str(kit_value)
         return None
     # derive / title-prefix / unsupported / malformed — not a label read.
+    return None
+
+
+def resolve_title_prefix_read(
+    axis: str, title: str, substrate_map: SubstrateMap | None
+) -> str | None:
+    """Read ``axis``'s kit value from the issue TITLE through a ``title-prefix`` binding.
+
+    The read counterpart to :func:`resolve_write`'s ``title-prefix`` arm — and the
+    title sibling of :func:`resolve_read` (label arm) / :func:`derive_state`
+    (derive arm): given an issue ``title``, return the kit's own methodology value
+    on ``axis`` whose adopter-declared bracket prefix the title carries, or
+    ``None`` when the title matches none of them.
+
+    Only meaningful when a map is present and binds ``axis`` via ``title-prefix``;
+    returns ``None`` otherwise (greenfield, or a ``label`` / ``derive`` /
+    ``unsupported`` / absent binding — the title is not the substrate for those,
+    so a title read there is nonsensical, not merely empty). Matching mirrors the
+    kit's own structural-type read and ``pre-check``'s ``bracket_re`` — the adopter
+    prefix followed by a single space (``title.startswith(f"{prefix} ")``) — so
+    ``[Epic]`` matches ``[Epic] Do the thing`` but a bare ``[Epic]`` (no title
+    text) does not, exactly as greenfield requires ``[EPIC] ...``.
+
+    Resolves through :func:`axis_title_prefix_remap` — the single reader of the
+    binding shape — so this reverse read and ``pre-check``'s forward vocabulary
+    check see the same adopter prefixes and cannot drift.
+    """
+    remap = axis_title_prefix_remap(axis, substrate_map)
+    if remap is None:
+        return None
+    for kit_value, adopter_prefix in remap.items():
+        if title.startswith(f"{adopter_prefix} "):
+            return kit_value
     return None
 
 
