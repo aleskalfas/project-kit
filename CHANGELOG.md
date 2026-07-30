@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-07-30
+
+### Fixed
+- **project-management 0.50.1** — The `validate-issue` type-axis handling is now fully substrate-aware, so it agrees with `pre-check` on a brownfield repo across every `type` binding. A title carrying the adopter's own prefix (e.g. `[Epic]`, which diverges from the kit's rendered `[EPIC]`) resolves against the substrate-map's declared prefixes instead of false-failing `title.format`; a `type` bound to a label remap now demands one of the adopter's remapped labels (previously a missing type slipped through the close-gate); and a `type` bound to a title-prefix demands no kit `type:*` label but does demand a resolvable declared prefix — a title matching none of the adopter's declared prefixes hard-rejects `title.format` (an undeterminable structural type), consistent with the other served arms. All arms route through the axis-labels seam, and greenfield behaviour (a missing `type:*` label still hard-rejects) is unchanged. ([#553])
+
+[#553]: https://github.com/aleskalfas/project-kit/issues/553
+
 ## 1.142.5 — 2026-07-10
 
 ### Changed
