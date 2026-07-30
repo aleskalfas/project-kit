@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.142.6 — 2026-07-30
+
+### Fixed
+- Roll the backbone to carry the project-management 0.50.1 brownfield `validate-issue` fix to adopters through `pkit upgrade`. project-management is a kit-shipped capability, so it reaches adopters bundled with the backbone; the fix landed between backbone tags (as a capability-only release), leaving no tag the upgrade path could deliver. This backbone bump tags the tree that already contains the fix so `pkit upgrade` delivers it. ([#553])
+
+[#553]: https://github.com/aleskalfas/project-kit/issues/553
+
 ## 2026-07-30
 
 ### Fixed
