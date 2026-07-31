@@ -1980,6 +1980,251 @@ def test_main_label_fallback_workstream_served_map_still_requires_workstream(
     assert ci.main() == 2
 
 
+def test_main_label_fallback_workstream_served_default_files_without_workstream(
+    ci, tmp_path, monkeypatch
+) -> None:
+    """#559: label-fallback + a SERVED `workstream` axis carrying a `default:` +
+    no `--workstream` ⇒ create SUCCEEDS (rc 0) and the workstream label is written
+    FROM THE DEFAULT. The requiredness gate must consult `axis_default` — the SAME
+    seed `_build_labels` applies (`value or axis_default(...)`) — so it never
+    demands a value the adopter deliberately defaulted. Without the fix the gate
+    fired first (rc 2), making the declared default unreachable in label-fallback
+    mode."""
+    root = _stage_capability_tree(tmp_path, has_board=False)
+    # A present map binding workstream to a label remap AND declaring a default ⇒
+    # SERVED with a seedable value.
+    (root / "project" / "substrate-map.yaml").write_text(
+        "schema_version: 1\n"
+        "axes:\n"
+        "  workstream:\n"
+        "    label:\n"
+        "      remap:\n"
+        "        spyre: Spyre\n"
+        "    default: spyre\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        ci.subprocess,
+        "run",
+        _gh_command_dispatcher("https://github.com/acme/repo/issues/64"),
+    )
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+    monkeypatch.setattr(ci, "link_sub_issue", lambda *a, **k: _FakeLink("ok", ok=True))
+
+    created: dict = {}
+    real_create = ci._gh_create_issue
+
+    def capturing_create(**kwargs):
+        created.update(kwargs)
+        return real_create(**kwargs)
+
+    monkeypatch.setattr(ci, "_gh_create_issue", capturing_create)
+    monkeypatch.setattr(
+        ci.sys, "argv",
+        [
+            "create-issue.py",
+            "--type", "task",
+            "--title", "do a thing",
+            "--parent", "1",
+            # No --workstream — the default supplies it, so the gate must not fire.
+            "--capability-root", str(root),
+            "--yes",
+        ],
+    )
+
+    assert ci.main() == 0
+    # The workstream label was written from the declared default (remapped `Spyre`).
+    assert "Spyre" in created["labels"]
+
+
+def test_main_label_fallback_workstream_title_prefix_bound_no_gate(
+    ci, tmp_path, monkeypatch
+) -> None:
+    """#559: label-fallback + a `title-prefix`-bound `workstream` axis + no
+    `--workstream` ⇒ create SUCCEEDS (rc 0) and NO workstream label is written.
+    A title-prefix axis is TITLE-carried, so `_build_labels` skips it before
+    resolution and writes no label — demanding `--workstream` for it would refuse
+    a filing for a value that is never label-written (the over-fire the corrected
+    gate excludes via `axis_is_label_bound`/`axis_expects_kit_labels`)."""
+    root = _stage_capability_tree(tmp_path, has_board=False)
+    (root / "project" / "substrate-map.yaml").write_text(
+        "schema_version: 1\n"
+        "axes:\n"
+        "  workstream:\n"
+        "    title-prefix:\n"
+        "      remap:\n"
+        "        spyre: '[Spyre]'\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        ci.subprocess,
+        "run",
+        _gh_command_dispatcher("https://github.com/acme/repo/issues/65"),
+    )
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+    monkeypatch.setattr(ci, "link_sub_issue", lambda *a, **k: _FakeLink("ok", ok=True))
+
+    created: dict = {}
+    real_create = ci._gh_create_issue
+
+    def capturing_create(**kwargs):
+        created.update(kwargs)
+        return real_create(**kwargs)
+
+    monkeypatch.setattr(ci, "_gh_create_issue", capturing_create)
+    monkeypatch.setattr(
+        ci.sys, "argv",
+        [
+            "create-issue.py",
+            "--type", "task",
+            "--title", "do a thing",
+            "--parent", "1",
+            # No --workstream — a title-carried axis is not label-written, so the
+            # gate must not fire.
+            "--capability-root", str(root),
+            "--yes",
+        ],
+    )
+
+    assert ci.main() == 0
+    assert not any(lbl.startswith("workstream:") for lbl in created["labels"])
+
+
+def test_main_label_fallback_workstream_derive_bound_no_gate(
+    ci, tmp_path, monkeypatch
+) -> None:
+    """#559: label-fallback + a `derive`-bound `workstream` axis + no
+    `--workstream` ⇒ create SUCCEEDS (rc 0) and NO workstream label is written.
+    A derive axis has no write-label (`resolve_write` DEGRADEs unconditionally on
+    the derive arm), so the corrected gate — which asks the writer's own
+    `resolve_write` — does not demand a value that would never be written."""
+    root = _stage_capability_tree(tmp_path, has_board=False)
+    (root / "project" / "substrate-map.yaml").write_text(
+        "schema_version: 1\n"
+        "axes:\n"
+        "  workstream:\n"
+        "    derive:\n"
+        "      from: open-closed\n"
+        "      states: {}\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        ci.subprocess,
+        "run",
+        _gh_command_dispatcher("https://github.com/acme/repo/issues/66"),
+    )
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+    monkeypatch.setattr(ci, "link_sub_issue", lambda *a, **k: _FakeLink("ok", ok=True))
+
+    created: dict = {}
+    real_create = ci._gh_create_issue
+
+    def capturing_create(**kwargs):
+        created.update(kwargs)
+        return real_create(**kwargs)
+
+    monkeypatch.setattr(ci, "_gh_create_issue", capturing_create)
+    monkeypatch.setattr(
+        ci.sys, "argv",
+        [
+            "create-issue.py",
+            "--type", "task",
+            "--title", "do a thing",
+            "--parent", "1",
+            # No --workstream — a derive axis is never label-written, so the gate
+            # must not fire.
+            "--capability-root", str(root),
+            "--yes",
+        ],
+    )
+
+    assert ci.main() == 0
+    assert not any(lbl.startswith("workstream:") for lbl in created["labels"])
+
+
+def test_main_label_fallback_workstream_unsupported_skips_value_validation(
+    ci, tmp_path, monkeypatch
+) -> None:
+    """#559 (Fix 2): label-fallback + `workstream: unsupported` + an EXPLICIT
+    `--workstream` value NOT in config.yaml's list ⇒ create SUCCEEDS (rc 0) and
+    no workstream label is written. The value-validation is substrate-aware: under
+    `unsupported` the writer discards the value, so validating it against the
+    adopter's declared list would false-refuse a filing for a value that is never
+    written. Greenfield still refuses an unknown value (the sibling test below)."""
+    root = _stage_capability_tree(tmp_path, has_board=False)
+    _write_workstream_unsupported_map(root)
+
+    monkeypatch.setattr(
+        ci.subprocess,
+        "run",
+        _gh_command_dispatcher("https://github.com/acme/repo/issues/67"),
+    )
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+    monkeypatch.setattr(ci, "link_sub_issue", lambda *a, **k: _FakeLink("ok", ok=True))
+
+    created: dict = {}
+    real_create = ci._gh_create_issue
+
+    def capturing_create(**kwargs):
+        created.update(kwargs)
+        return real_create(**kwargs)
+
+    monkeypatch.setattr(ci, "_gh_create_issue", capturing_create)
+    monkeypatch.setattr(
+        ci.sys, "argv",
+        [
+            "create-issue.py",
+            "--type", "task",
+            "--title", "do a thing",
+            "--parent", "1",
+            # `quantum` is NOT in config.yaml's `workstreams: [spyre]`, but the axis
+            # is unsupported ⇒ the value is discarded, so validation must be skipped.
+            "--workstream", "quantum",
+            "--capability-root", str(root),
+            "--yes",
+        ],
+    )
+
+    assert ci.main() == 0
+    assert not any(lbl.startswith("workstream:") for lbl in created["labels"])
+
+
+def test_main_label_fallback_greenfield_rejects_unknown_workstream_value(
+    ci, tmp_path, monkeypatch
+) -> None:
+    """The unchanged path: greenfield (no map) + an EXPLICIT `--workstream` NOT in
+    config.yaml's declared list ⇒ hard-refuse (rc 2). The value WILL be written as
+    a `workstream:*` label here, so the typo-catch stays — Fix 2's skip is scoped
+    to `unsupported`, never greenfield."""
+    root = _stage_capability_tree(tmp_path, has_board=False)
+    # No substrate-map staged ⇒ greenfield ⇒ the value is label-written ⇒ validated.
+
+    monkeypatch.setattr(
+        ci.subprocess,
+        "run",
+        _gh_command_dispatcher("https://github.com/acme/repo/issues/68"),
+    )
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+    monkeypatch.setattr(ci, "link_sub_issue", lambda *a, **k: _FakeLink("ok", ok=True))
+    monkeypatch.setattr(
+        ci.sys, "argv",
+        [
+            "create-issue.py",
+            "--type", "task",
+            "--title", "do a thing",
+            "--parent", "1",
+            "--workstream", "quantum",  # not in `workstreams: [spyre]`
+            "--capability-root", str(root),
+            "--yes",
+        ],
+    )
+
+    assert ci.main() == 2
+
+
 # --- #454: a title-prefix-bound axis writes NO label -----------------------
 # In brownfield with a `substrate-map.yaml` binding the `type` axis via
 # `title-prefix` (structural remap task:[Task], feature:[Feature], …),

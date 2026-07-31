@@ -281,6 +281,12 @@ def main() -> int:
     full_title = f"[{title_prefix}] {args.title.strip()}"
 
     # Validate against titles.yaml's pattern for this surface.
+    #
+    # Left NOT substrate-map-aware (deferred to #4), and safe only because create
+    # composes `full_title` from the KIT's own title vocabulary and does NOT
+    # honour any substrate-map write-side `title-prefix` remap — so the pattern it
+    # checks is always the one it just wrote. This flips to a live false-refuse (a
+    # (b)-class gate) if/when #4's write-side prefix honouring lands; revisit then.
     title_pattern = _title_pattern_for(titles, args.type)
     if title_pattern and not re.match(title_pattern, full_title):
         print(
@@ -366,23 +372,52 @@ def main() -> int:
 
     # Workstream requirement when in label-fallback mode.
     #
-    # The gate honours the substrate-map degradation (#443): it demands a
-    # `--workstream` only when the value would actually be WRITTEN. A brownfield
-    # adopter whose substrate-map declares the `workstream` axis `unsupported`
-    # (or omits it — absent ≡ unsupported, the load-bearing rule) has no
-    # workstream substrate to write to; `_build_labels`/`resolve_write` DEGRADE
-    # and drop the label downstream (L470-493 above resolve it via the seam), so
-    # requiring a value the next stage discards is a false gate. We consult the
-    # SAME signal that downstream degradation keys on — `axis_disposition`, which
-    # is `resolve_write`'s DEGRADE arm expressed as a disposition — so the gate
-    # and the resolution can never disagree. A SERVED workstream axis (bound, or
-    # greenfield where the kit's `workstream:*` label IS the adopter's substrate)
-    # still requires the value, exactly as before.
+    # The gate MIRRORS the writer's (`_build_labels`) write/no-write decision for
+    # the workstream axis, reusing the SAME seam predicates and the SAME
+    # `resolve_write` the writer uses — so the gate and the resolution cannot
+    # drift (one source of truth per axis). It demands `--workstream` only when a
+    # workstream LABEL is the substrate AND no such label would be written for an
+    # omitted value:
+    #
+    #   * The workstream is label-carried only in greenfield (the kit's own
+    #     `workstream:*` label IS the adopter's substrate — `axis_expects_kit_labels`)
+    #     or when the axis is bound to an adopter-REMAPPED label
+    #     (`axis_is_label_bound`). A `title-prefix` / `derive` / `unsupported` /
+    #     absent axis is NOT label-carried — `_build_labels` writes NO workstream
+    #     label for it (title-carried ⇒ skipped before resolution; derive /
+    #     unsupported / absent ⇒ `resolve_write` DEGRADEs) — so demanding
+    #     `--workstream` would refuse a filing for a value the next stage discards:
+    #     the #559 / #443 false gate (it over-fired on these sibling arms). The
+    #     gate does not fire there.
+    #   * On a label-carried axis, an omitted `--workstream` is already covered
+    #     when the adopter declared a `default:` that resolves to a REAL write
+    #     under the writer's own `resolve_write` (`_build_labels` seeds `value or
+    #     axis_default(...)` at L789 and labels the result). We run that default
+    #     through the SAME `resolve_write`, so a default that itself DEGRADEs (a
+    #     value-unresolvable default) does NOT count as coverage — the gate still
+    #     demands an explicit value rather than let the label-carried axis silently
+    #     drop.
+    #
+    # A label-carried axis with no covering default still requires the value.
+    # Greenfield (no map ⇒ label-carried, no default) is byte-unchanged: the gate
+    # fires exactly as before. This is a mirror of the writer, not a stronger
+    # invariant — it demands `--workstream` only when a label would actually be
+    # written once a value is supplied.
     has_board = bool(config.get("has_projects_v2_board", False))
-    workstream_served = (
-        axis_labels.axis_disposition("workstream", substrate_map) == "served"
+    workstream_label_carried = axis_labels.axis_expects_kit_labels(
+        "workstream", substrate_map
+    ) or axis_labels.axis_is_label_bound("workstream", substrate_map)
+    workstream_default = axis_labels.axis_default("workstream", substrate_map)
+    default_writes_a_label = workstream_default is not None and isinstance(
+        axis_labels.resolve_write("workstream", workstream_default, substrate_map),
+        str,
     )
-    if not has_board and workstream_served and args.workstream is None:
+    if (
+        not has_board
+        and args.workstream is None
+        and workstream_label_carried
+        and not default_writes_a_label
+    ):
         print(
             "error: --workstream is required in label-fallback mode "
             "(no Projects v2 board configured in project/config.yaml).",
@@ -391,7 +426,17 @@ def main() -> int:
         return 2
 
     # Workstream value validation against adopter config.
-    if args.workstream is not None:
+    #
+    # Skipped when the substrate-map declares `workstream` unsupported (or absent
+    # — absent ≡ unsupported, the load-bearing rule): the writer discards the
+    # value (`resolve_write` DEGRADEs, no label written), so validating it against
+    # config.yaml's list would false-refuse a filing for a value that will never
+    # be written (#559). Kept for greenfield / served — a typo-catch on a value
+    # that WILL be written.
+    workstream_unsupported = (
+        axis_labels.axis_disposition("workstream", substrate_map) == "unsupported"
+    )
+    if args.workstream is not None and not workstream_unsupported:
         adopter_workstreams = _adopter_workstreams(config)
         if adopter_workstreams and args.workstream not in adopter_workstreams:
             print(
