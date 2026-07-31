@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.142.7 — 2026-07-31
+
+### Fixed
+- Roll the backbone to carry the project-management 0.50.2 brownfield create-issue fixes (#557 the `--body-file` first-line check honours an advisory hierarchy; #559 the requiredness-gate substrate-awareness sweep) to adopters through `pkit upgrade`. project-management is a kit-shipped capability delivered bundled with the backbone, so these capability-only fixes need a backbone tag to reach adopters via the normal upgrade path; this bump tags the tree that already contains them. ([#559])
+- **project-management 0.50.2** — The create-issue `--body-file` first-line parent-ref check now consults the hierarchy mode, mirroring the requiredness gate above it. Under `hierarchy: advisory` a non-parent-ref first line is accepted (parentless, body verbatim) so a flat brownfield tracker can file a prepared parentless body; greenfield / `hierarchy: gated` still hard-rejects a non-parent-ref first line unchanged. ([#557])
+- **project-management 0.50.2** — Swept every create-issue requiredness/format refusal for substrate-map / hierarchy awareness (the create-side mirror of the read-side sweep). The workstream-requiredness gate now MIRRORS the writer's (`_build_labels`) write/no-write decision, reusing the same seam predicates and the same `resolve_write` — so the gate and the resolution cannot drift. It demands `--workstream` only when a workstream LABEL is the substrate (greenfield or an adopter-remapped `label` binding) AND no such label would be written for the omitted value; a `title-prefix` / `derive` / `unsupported` / absent axis is never label-written, so the gate no longer over-fires on those sibling arms (the earlier `served`-only predicate demanded a value for a `title-prefix`- or `derive`-bound axis that `_build_labels` never labels). An adopter-declared `default:` that resolves to a real write covers an omitted `--workstream` (the default supplies the label); a default that itself DEGRADEs does not, so the axis never silently drops. The explicit-`--workstream` value validation is now likewise substrate-aware — skipped under `workstream: unsupported` (the value is discarded by the writer, so validating it would false-refuse), kept for greenfield / served. Greenfield is byte-unchanged. The parent-requiredness, `--body-file` first-line gates were confirmed already substrate-aware; the title-format gate is left unchanged pending the brownfield-title-composition decision it is entangled with. Universal invariants (membership, cross-repo guard, unknown type, the kind/structural mismatch) stay hard. ([#559])
+
+[#557]: https://github.com/aleskalfas/project-kit/issues/557
+[#559]: https://github.com/aleskalfas/project-kit/issues/559
+
 ## 1.142.6 — 2026-07-30
 
 ### Fixed
