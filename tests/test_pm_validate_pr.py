@@ -13,7 +13,6 @@ from pathlib import Path
 
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS_DIR = (
     REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
@@ -439,3 +438,60 @@ def test_gather_closing_type_labels_threads_config(vp, monkeypatch) -> None:
 
     assert result == ["type:feature"]
     assert seen["config"] is cfg  # threaded through, not an undefined name
+
+
+# --- validate-at-ready (#569): the skeleton trap -----------------------
+
+
+def test_skeleton_body_hard_rejects_at_ready(vp, titles, classification, git_conv) -> None:
+    """The open-pr / review-work skeleton — empty `## Test plan` checkbox — is a
+    hard-reject at the *transition* phase. That is exactly the phase the
+    validate-at-ready gate (#569) runs, so the fail-late trap is caught before
+    merge, not at it."""
+    cap_root = SCRIPTS_DIR.parent  # .pkit/capabilities/project-management/
+    skeleton = "Closes #1\n\n## Summary\n\n## Test plan\n\n- [ ]\n\n## Doc impact\n\n-\n"
+    findings = vp._validate_pr(
+        pr_title="feat(cli): add x",
+        pr_body=skeleton,
+        titles=titles,
+        classification=classification,
+        git_conv=git_conv,
+        closing_type_labels=["type:feature"],
+        capability_root=cap_root,
+        phase=vp.PHASE_TRANSITION,
+    )
+    assert any(f.severity == vp.SEVERITY_HARD_REJECT for f in findings), (
+        "skeleton PR body must hard-reject at the ready/transition phase"
+    )
+
+    filled = (
+        "Closes #1\n\n## Summary\nReal summary.\n\n"
+        "## Test plan\n- [x] tested end to end\n\n"
+        "## Doc impact\nNo doc impact: internal change.\n"
+    )
+    filled_findings = vp._validate_pr(
+        pr_title="feat(cli): add x",
+        pr_body=filled,
+        titles=titles,
+        classification=classification,
+        git_conv=git_conv,
+        closing_type_labels=["type:feature"],
+        capability_root=cap_root,
+        phase=vp.PHASE_TRANSITION,
+    )
+    assert not any(f.severity == vp.SEVERITY_HARD_REJECT for f in filled_findings), (
+        f"a filled body must pass the ready gate; got {[f.label for f in filled_findings]}"
+    )
+
+
+def test_open_pr_and_review_work_wire_validate_at_ready() -> None:
+    """The two ready-transition commands resolve through the shared validator at
+    the merge-gate phase (#569) — guards the wiring against silent removal."""
+    for name in ("open-pr.py", "review-work.py"):
+        src = (SCRIPTS_DIR / name).read_text(encoding="utf-8")
+        assert "pr_validation.validate_pr(" in src, (
+            f"{name} must validate the body at the ready transition"
+        )
+        assert "PHASE_TRANSITION" in src, (
+            f"{name} must validate at the merge-gate (transition) phase"
+        )

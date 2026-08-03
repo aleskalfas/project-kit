@@ -1,0 +1,14 @@
+component: project-management
+kind: minor
+custom:
+  category: Changed
+body: >
+  Validate PR bodies at the ready-for-review transition, not only at merge (#569).
+  `open-pr` (non-draft) and `review-work` (opening a ready PR, or flipping a draft
+  to ready) now run the shared PR-body validator at merge-gate strictness and
+  refuse a skeleton body (empty `## Summary`, a bare `- [ ]` `## Test plan`, empty
+  `## Doc impact`), closing the fail-late trap where such a PR passed open + review
+  and only blocked at `done-work`. Drafts stay exempt; a new `--force` flag on
+  `open-pr` / `review-work` overrides a blocking body with an audit note. You can
+  no longer take an empty body to ready-for-review — fill a draft first, or use
+  `open-pr --body-file`.

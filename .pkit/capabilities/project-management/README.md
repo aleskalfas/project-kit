@@ -204,10 +204,19 @@ The asymmetry is deliberate: `create-issue` keeps stamping the template skeleton
 
 `validate-pr` applies the same two-signal rule to PR bodies, derived structurally from `templates/PR.md` at runtime:
 
-- **Empty required checkbox section** — same authored-item definition as the issue side. Severity: `warning` when the PR is opened (`create-draft` / `review-work`); `hard-reject` at the merge gate — `done-work` refuses to squash-merge a PR whose body still carries the raw `## Summary` skeleton with no authored checkbox items.
+- **Empty required checkbox section** — same authored-item definition as the issue side. `hard-reject` at the merge gate (`done-work`) **and, since #569, at the ready-for-review transition** — see "validate-at-ready" below.
 - **Surviving template placeholder prose** — if the body still contains placeholder text from `templates/PR.md`, `validate-pr` emits a `warning` at every validation call. Detection is runtime-derived from the live template, so it stays in sync automatically when the template is edited.
 
-The trigger asymmetry mirrors the issue side: a PR opened with an unauthored body is visible (warning surfaced immediately) but not blocked; the **hard-reject** fires at `done-work`, where merging an unauthored PR body causes the actual harm. `done-work` always runs `validate-pr` before entering the approval gate; a placeholder-body failure is reported and the merge is refused.
+##### validate-at-ready (#569) — the same validator runs when a PR goes ready-for-review
+
+The comprehensive PR-body validator lives in `_lib/pr_validation.py` (one source) and runs at **every point a PR becomes ready-for-review**, not only at merge — closing the fail-late trap where a skeleton body (empty `## Summary`, a bare `- [ ]` `## Test plan`, empty `## Doc impact`) sailed past open + review and only blocked at `done-work`:
+
+- **`open-pr` without `--draft`** and **`review-work`** (opening a ready PR, or flipping a draft → ready) validate the body at the merge-gate strictness (empty checkbox → `hard-reject`) *before* the PR goes ready, and refuse with the findings. This mirrors `create-issue`'s validate-at-creation.
+- **Drafts are exempt** — `open-pr --draft`, `create-draft`, and `back-to-draft` never validate; a skeleton-of-TODOs is legitimate WIP. Fill it (`edit-pr`), then `review-work` flips it ready (which validates).
+- **`--force`** on `open-pr` / `review-work` overrides a blocking body with an audit note (mirrors `edit-issue --force`).
+- **`done-work` stays the backstop** — it always runs the validator before the approval gate; a placeholder-body failure is reported and the merge is refused.
+
+Practical consequence: you cannot take an *empty* body to ready-for-review. Use `open-pr --body-file <filled>`, or `create-draft` → `edit-pr` → `review-work`.
 
 #### The seven workflow wrappers (per [project-management:DEC-026-work-ownership-lifecycle])
 

@@ -44,7 +44,7 @@ from ruamel.yaml import YAML
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_labels, classification_rules, session_guard  # noqa: E402
+from _lib import axis_labels, classification_rules, pr_validation, session_guard  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
@@ -52,6 +52,7 @@ from _lib.membership import (  # noqa: E402
     resolve_capability_root,
     resolve_invoker_identity,
 )
+from _lib.placeholder_detection import PHASE_TRANSITION  # noqa: E402
 from _lib.review_mode import (  # noqa: E402
     resolve_mode,
     reviewer_role_from_config,
@@ -86,6 +87,16 @@ def main() -> int:
     )
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--yes", action="store_true")
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help=(
+            "Take a PR to ready-for-review despite hard-reject body-validation "
+            "findings (empty required section / checkbox / missing Doc impact). "
+            "Drafts stay exempt; you normally fill a draft first (create-draft → "
+            "edit-pr → review-work) or use open-pr --body-file."
+        ),
+    )
     session_guard.add_override_argument(parser)
     args = parser.parse_args()
 
@@ -152,13 +163,19 @@ def main() -> int:
             print("aborted.", file=sys.stderr)
             return 0
 
-    # PR handling: open ready, or flip draft → ready.
+    # PR handling: open ready, or flip draft → ready. Validate-at-ready (#569):
+    # a PR going ready-for-review must pass the checks the merge gate enforces
+    # (DEC-031 empty checkbox → hard-reject; DEC-015 Doc impact). Drafts are
+    # exempt; --force overrides. An empty body cannot go ready — fill a draft
+    # first (create-draft → edit-pr → review-work), or use open-pr --body-file.
     existing_pr = _find_pr_for_branch(branch, config)
     pr_number: int | None = None
     if existing_pr is None:
-        # Open a ready PR (non-draft).
+        # Open a ready PR (non-draft) — validate the composed body first.
         title = _derive_pr_title(issue, branch)
         body = f"Closes #{args.issue_number}"
+        if not _ready_body_ok(body, classification, capability_root, args.force):
+            return 1
         url = _gh_pr_create_ready(branch, args.base, title, body, config)
         if url is None:
             return 3
@@ -166,8 +183,12 @@ def main() -> int:
         pr_number = int(m.group(1)) if m else None
         print(f"  opened ready PR: {url}")
     elif existing_pr.get("isDraft"):
-        # Flip draft → ready.
+        # Flip draft → ready — validate the draft's current body first.
         pr_number = existing_pr.get("number")
+        if not _ready_body_ok(
+            _gh_pr_body(pr_number, config), classification, capability_root, args.force
+        ):
+            return 1
         if not _gh_pr_ready(pr_number, config):
             return 3
         print(f"  flipped PR #{pr_number} draft → ready")
@@ -308,6 +329,64 @@ def _gh_pr_create_ready(
         print(f"error: gh pr create failed: {proc.stderr.strip()}", file=sys.stderr)
         return None
     return proc.stdout.strip()
+
+
+def _ready_body_ok(
+    body: str, classification: dict, capability_root: Path, force: bool
+) -> bool:
+    """Validate-at-ready (#569): True iff `body` may go ready-for-review.
+
+    Runs the shared PR-body validator at the merge-gate phase (empty checkbox →
+    hard-reject). Title/closing-label checks are skipped (review-work composes the
+    title). On a blocking finding: print it and return False, or True under
+    ``force``. Merge remains the backstop; drafts never reach here.
+    """
+    findings = pr_validation.validate_pr(
+        pr_title="",
+        pr_body=body,
+        titles={},
+        classification=classification,
+        git_conv={},
+        closing_type_labels=[],
+        capability_root=capability_root,
+        phase=PHASE_TRANSITION,
+    )
+    blocking = [f for f in findings if f.severity in pr_validation.BLOCKING_SEVERITIES]
+    if not blocking:
+        return True
+    print(
+        "[refused] PR body is not ready for review (validate-at-ready, #569):",
+        file=sys.stderr,
+    )
+    for f in blocking:
+        print(f"  - [{f.severity}] {f.label}: {f.detail}", file=sys.stderr)
+    if force:
+        print("  → proceeding under --force.", file=sys.stderr)
+        return True
+    print(
+        "  → fill the body first (create-draft → edit-pr → review-work), or use "
+        "open-pr --body-file; --force overrides.",
+        file=sys.stderr,
+    )
+    return False
+
+
+def _gh_pr_body(pr_number: int | None, config: dict) -> str:
+    """The current body of a PR (for validating a draft before flip → ready)."""
+    if pr_number is None:
+        return ""
+    try:
+        proc = gh_run(
+            ["gh", "pr", "view", str(pr_number), "--json", "body"], config, check=False
+        )
+    except FileNotFoundError:
+        return ""
+    if proc.returncode != 0:
+        return ""
+    try:
+        return str((json.loads(proc.stdout) or {}).get("body") or "")
+    except json.JSONDecodeError:
+        return ""
 
 
 def _gh_pr_ready(pr_number: int | None, config: dict) -> bool:

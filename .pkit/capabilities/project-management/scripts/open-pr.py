@@ -40,7 +40,6 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
-import json
 import re
 import subprocess
 import sys
@@ -52,10 +51,13 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_labels  # noqa: E402
-from _lib import classification_rules  # noqa: E402
-from _lib import provenance  # noqa: E402
-from _lib import session_guard  # noqa: E402
+from _lib import (  # noqa: E402
+    axis_labels,
+    classification_rules,
+    pr_validation,
+    provenance,
+    session_guard,
+)
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib.hooks import fire_hooks  # noqa: E402
 from _lib.membership import (  # noqa: E402
@@ -64,6 +66,7 @@ from _lib.membership import (  # noqa: E402
     resolve_capability_root,
     resolve_invoker_identity,
 )
+from _lib.placeholder_detection import PHASE_TRANSITION  # noqa: E402
 
 
 def main() -> int:
@@ -127,6 +130,16 @@ def main() -> int:
         "--draft",
         action="store_true",
         help="Open the PR as a draft (passed through as gh pr create --draft).",
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help=(
+            "Open a non-draft PR despite hard-reject body-validation findings "
+            "(empty required section / checkbox / missing Doc impact), recording "
+            "an audit note on the PR. Drafts skip validation, so --force is a "
+            "no-op with --draft."
+        ),
     )
     parser.add_argument(
         "--capability-root",
@@ -245,6 +258,46 @@ def main() -> int:
     # Seam: stamp exactly one provenance footer onto the PR body (ADR-037).
     body = provenance.stamp(body, provenance.read_versions(capability_root))
 
+    # Validate-at-ready (#569): a non-draft PR goes straight to ready-for-review,
+    # so its body must pass the checks the merge gate enforces (DEC-031 empty
+    # checkbox → hard-reject at the transition phase; DEC-015 Doc impact). Drafts
+    # are exempt — a skeleton-of-TODOs is legitimate WIP. --force overrides with an
+    # audit note. Title/closing-label checks are skipped (the title is composed here).
+    forced_findings: list[pr_validation.Finding] = []
+    if not args.draft:
+        findings = pr_validation.validate_pr(
+            pr_title=pr_title,
+            pr_body=body,
+            titles={},
+            classification=classification,
+            git_conv=git_conventions,
+            closing_type_labels=[],
+            capability_root=capability_root,
+            phase=PHASE_TRANSITION,
+        )
+        blocking = [
+            f for f in findings if f.severity in pr_validation.BLOCKING_SEVERITIES
+        ]
+        if blocking:
+            print(
+                "[refused] PR body is not ready for review (validate-at-ready, #569):",
+                file=sys.stderr,
+            )
+            for f in blocking:
+                print(f"  - [{f.severity}] {f.label}: {f.detail}", file=sys.stderr)
+            if not args.force:
+                print(
+                    "  → fill the body (--body-file), or open a draft (--draft) and "
+                    "fill it before marking ready; --force overrides with an audit note.",
+                    file=sys.stderr,
+                )
+                return 1
+            forced_findings = blocking
+            print(
+                "  → proceeding under --force; an audit note will be posted on the PR.",
+                file=sys.stderr,
+            )
+
     # Determine base branch.
     base = args.base or str(config.get("default_branch") or "main")
 
@@ -287,6 +340,8 @@ def main() -> int:
     if pr_number is not None:
         # One-time immutable filing-version comment on the PR (DEC-041).
         print(provenance.post_filing_comment(pr_number, capability_root, config, is_pr=True))
+        if forced_findings:
+            _post_force_audit(pr_number, forced_findings, config)
     fire_hooks(
         "after_open_pr",
         context={"pr": {"number": pr_number, "title": pr_title}},
@@ -400,6 +455,22 @@ def _current_branch() -> str | None:
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
     return gh_get_issue(issue_number, config, fields="title,labels,state")
+
+
+def _post_force_audit(pr_number: int, findings: list, config: dict) -> None:
+    """Best-effort audit note when a non-draft PR is opened under --force despite
+    ready-validation findings (#569) — mirrors edit-issue's --force audit trail."""
+    lines = ["[audit] non-draft PR opened despite validate-at-ready findings (--force):"]
+    for f in findings:
+        lines.append(f"  - [{f.severity}] {f.label}: {f.detail}")
+    try:
+        gh_run(
+            ["gh", "pr", "comment", str(pr_number), "--body", "\n".join(lines)],
+            config,
+            check=False,
+        )
+    except FileNotFoundError:
+        pass
 
 
 def _gh_pr_create(
