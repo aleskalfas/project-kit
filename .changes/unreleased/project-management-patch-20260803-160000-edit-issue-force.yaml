@@ -1,0 +1,9 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  Fix `edit-issue --force`, which crashed with a `TypeError` before writing its
+  audit comment — the `--force` audit-comment call site dropped the `config`
+  argument to the internal comment helper. The documented escape hatch for
+  editing a non-compliant issue works again.
