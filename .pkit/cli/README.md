@@ -147,6 +147,8 @@ Use this when you want to pull baseline updates for a single fixed-path config f
 
 Compares the version of the core layer recorded in your project against the version this CLI was built from. Runs any pending migrations in order, then runs `sync`. Refuses to proceed if your project's recorded version is ahead of the CLI's (and tells you so).
 
+It also runs a **best-effort staleness check on the tool itself** (per [ADR-044](../../docs/architecture/decisions/ADR-044-upgrade-self-update-detect-instruct.md)): `upgrade` refreshes your project from the *tool's* bundled content, but cannot update the tool. So it queries the release source for the latest tag and, when the installed `pkit` is behind, **prints the exact `uv tool install --force …@v<latest>` command** to update it (then re-run `upgrade`) — it installs nothing itself. When the tool is current it says so, instead of the ambiguous "nothing to upgrade". The check is read-only and never fails the command: any lookup failure (offline, no credentials, timeout) warns and continues with the sync; it is suppressed on a source checkout / self-host.
+
 On **self-host**, there is no backbone to upgrade (the source is the installed state), so `upgrade` short-circuits to the self-host `sync` above — re-running the deploy primitives — rather than attempting a version transition.
 
 ### Capabilities — two ways in
