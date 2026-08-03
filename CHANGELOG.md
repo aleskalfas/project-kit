@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.143.0 — 2026-08-03
+
+### Added
+- `pkit upgrade` now runs a best-effort staleness check against the release source (`git ls-remote --tags` on the compiled distribution URL) and, when the installed tool is behind the latest release, prints the exact `uv tool install --force <url>@v<latest>` command to update it (then re-run `pkit upgrade`) — it installs nothing itself (ADR-044). When the tool is current it says so plainly instead of the ambiguous "nothing to upgrade". The check is read-only and never fails the command: any lookup failure (offline, missing credentials, git unavailable, timeout) warns loudly and continues with today's project sync, and it is suppressed on a source checkout / self-host. ([#574])
+
+### Changed
+- **project-management 0.51.0** — Validate PR bodies at the ready-for-review transition, not only at merge (#569). `open-pr` (non-draft) and `review-work` (opening a ready PR, or flipping a draft to ready) now run the shared PR-body validator at merge-gate strictness and refuse a skeleton body (empty `## Summary`, a bare `- [ ]` `## Test plan`, empty `## Doc impact`), closing the fail-late trap where such a PR passed open + review and only blocked at `done-work`. Drafts stay exempt; a new `--force` flag on `open-pr` / `review-work` overrides a blocking body with an audit note. You can no longer take an empty body to ready-for-review — fill a draft first, or use `open-pr --body-file`.
+
+### Fixed
+- **project-management 0.51.0** — Fix `edit-issue --force`, which crashed with a `TypeError` before writing its audit comment — the `--force` audit-comment call site dropped the `config` argument to the internal comment helper. The documented escape hatch for editing a non-compliant issue works again.
+
+[#574]: https://github.com/aleskalfas/project-kit/issues/574
+
 ## 1.142.7 — 2026-07-31
 
 ### Fixed
