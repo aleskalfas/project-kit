@@ -52,7 +52,11 @@
         },
         "bypassable": {
           "type": "boolean",
-          "description": "Whether the user may override the agent's refusal. Mutually informative with `aborts_operation`."
+          "description": "Whether the user may override the agent's refusal via the in-band, reason-based `--bypass` mechanism. Mutually informative with `aborts_operation`."
+        },
+        "force_overridable": {
+          "type": "boolean",
+          "description": "Whether the operator may override the agent's refusal out of band via `--force` (a blunt, boolean, last-resort override distinct from the reason-based `--bypass`; audited where the substrate can carry the audit). Present and `true` for `hard-reject` per DEC-046; omit or `false` otherwise. Orthogonal to `bypassable`: a hard-reject is `bypassable: false` yet `force_overridable: true`."
         },
         "aborts_operation": {
           "type": "boolean",
