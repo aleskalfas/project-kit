@@ -7,12 +7,12 @@ findings, structural-type inference, title-pattern matching.
 from __future__ import annotations
 
 import argparse
+import ast
 import importlib.util
 import sys
 from pathlib import Path
 
 import pytest
-
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
@@ -471,3 +471,45 @@ def test_title_pattern_for_returns_expected(ei, titles) -> None:
 
 def test_title_pattern_for_returns_none_for_unknown(ei, titles) -> None:
     assert ei._title_pattern_for(titles, "bogus") is None
+
+
+def test_gh_comment_call_sites_thread_config() -> None:
+    """Regression (bug #567): every `_gh_comment` call site must provide `config`.
+
+    The `--force` audit-comment call site once passed 2 positional args while the
+    definition (and the sibling reopen/close/move scripts) takes
+    `(issue_number, body, config)` — so `edit-issue --force` died with
+    `TypeError: _gh_comment() missing 1 required positional argument: 'config'`
+    before writing the audit comment, making the documented escape hatch unusable.
+    This guards the whole call-site class, computing the required arity from the
+    definition rather than hard-coding 3.
+    """
+    tree = ast.parse(SCRIPT_PATH.read_text(encoding="utf-8"))
+
+    defs = [
+        n
+        for n in ast.walk(tree)
+        if isinstance(n, ast.FunctionDef) and n.name == "_gh_comment"
+    ]
+    assert defs, "no `_gh_comment` definition found in edit-issue.py"
+    fn = defs[0]
+    required = len(fn.args.args) - len(fn.args.defaults)  # positional params without a default
+
+    calls = [
+        n
+        for n in ast.walk(tree)
+        if isinstance(n, ast.Call)
+        and isinstance(n.func, ast.Name)
+        and n.func.id == "_gh_comment"
+    ]
+    assert calls, "no `_gh_comment` call sites found — did the helper get renamed?"
+
+    for c in calls:
+        provides_config = len(c.args) >= required or any(
+            kw.arg == "config" for kw in c.keywords
+        )
+        assert provides_config, (
+            f"_gh_comment call at edit-issue.py:{c.lineno} passes {len(c.args)} "
+            f"positional arg(s) and no `config` keyword; the definition requires "
+            f"{required} — `config` was dropped (bug #567)."
+        )
