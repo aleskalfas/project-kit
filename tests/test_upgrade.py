@@ -26,6 +26,70 @@ def installed_target(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return tmp_path
 
 
+class _RecordingRun:
+    """Stand-in for `subprocess.run` while the ADR-044 staleness check runs.
+
+    Intercepts only the `git ls-remote` the check issues — returning a
+    configurable stdout/returncode (or raising a configured exception) to drive
+    the staleness branches, so the suite never touches the network. Every *other*
+    command (git plumbing in fixtures, the real migration scripts) is delegated
+    to the genuine `subprocess.run`, since patching the shared `subprocess`
+    module replaces `run` process-wide. Records every argv so a test can assert
+    what was — and was not — invoked, in particular that `pkit upgrade` never
+    shells out to `uv tool install` (it is print-only).
+    """
+
+    def __init__(self, real_run) -> None:  # type: ignore[no-untyped-def]
+        self._real_run = real_run
+        self.calls: list[list[str]] = []
+        self.ls_remote_stdout = ""
+        self.ls_remote_returncode = 1  # default: lookup fails → degrade path
+        self.raise_exc: Exception | None = None
+
+    def __call__(self, argv, *args, **kwargs):  # type: ignore[no-untyped-def]
+        self.calls.append(list(argv))
+        if list(argv[:2]) != ["git", "ls-remote"]:
+            return self._real_run(argv, *args, **kwargs)
+        if self.raise_exc is not None:
+            raise self.raise_exc
+        return subprocess.CompletedProcess(
+            argv, self.ls_remote_returncode, self.ls_remote_stdout, ""
+        )
+
+    @property
+    def ls_remote_calls(self) -> list[list[str]]:
+        return [c for c in self.calls if c[:2] == ["git", "ls-remote"]]
+
+    @property
+    def install_calls(self) -> list[list[str]]:
+        return [c for c in self.calls if c[:2] == ["uv", "tool"]]
+
+
+@pytest.fixture(autouse=True)
+def stub_ls_remote(monkeypatch: pytest.MonkeyPatch) -> _RecordingRun:
+    """Intercept the ADR-044 staleness check's `git ls-remote` so it never touches
+    the network anywhere in this suite (all other subprocess calls pass through).
+    Defaults to a *failed* ls-remote (the degrade path); tests exercising the
+    stale/current branches configure the returned recorder."""
+    rec = _RecordingRun(subprocess.run)
+    monkeypatch.setattr(subprocess, "run", rec)
+    return rec
+
+
+def _tag_output(*versions: str) -> str:
+    """Fabricate `git ls-remote --tags` output for the given `v<semver>` tags.
+
+    Emits both the tag ref and its dereferenced-annotated peel (`^{}`) line, so
+    the parser's `^{}` stripping is exercised.
+    """
+    sha = "0" * 40
+    lines: list[str] = []
+    for v in versions:
+        lines.append(f"{sha}\trefs/tags/v{v}")
+        lines.append(f"{sha}\trefs/tags/v{v}^{{}}")
+    return "\n".join(lines) + "\n"
+
+
 def test_upgrade_refuses_when_pkit_dir_missing(tmp_path: Path) -> None:
     with pytest.raises(click.ClickException, match=r"\.pkit/ does not exist"):
         upgrade.run_upgrade(tmp_path)
@@ -516,3 +580,162 @@ def test_upgrade_refuses_cleanly_when_source_incomplete(
 
     with pytest.raises(click.ClickException, match="methodology source not found"):
         upgrade.run_upgrade(installed_target)
+
+
+# ============================================================================
+# ADR-044: `pkit upgrade` detects a stale tool and instructs (print-only)
+# ============================================================================
+
+
+def test_tool_staleness_instructs_when_behind(
+    installed_target: Path,
+    stub_ls_remote: _RecordingRun,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A running tool behind the latest release prints the exact update command
+    and installs nothing (ADR-044 D2). The project-sync axis is untouched."""
+    stub_ls_remote.ls_remote_returncode = 0
+    stub_ls_remote.ls_remote_stdout = _tag_output("1.0.0", "2.5.0")
+    monkeypatch.setattr(upgrade, "running_version", lambda: "1.0.0")
+
+    upgrade.run_upgrade(installed_target)  # must not raise
+
+    out = capsys.readouterr().out
+    assert "A newer pkit tool is available: v2.5.0" in out
+    assert "you are running v1.0.0" in out
+    assert f"uv tool install --force {upgrade.DISTRIBUTION_GIT_URL}@v2.5.0" in out
+    # Print-only: the check queried the source but ran no install.
+    assert stub_ls_remote.ls_remote_calls
+    assert stub_ls_remote.install_calls == []
+    # The project axis still reports normally (installed == source version).
+    assert "Already at backbone v" in out
+
+
+def test_tool_staleness_reports_current_when_up_to_date(
+    installed_target: Path,
+    stub_ls_remote: _RecordingRun,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A running tool at the latest release prints a plain "current" line instead
+    of an instruction (ADR-044 D2), and installs nothing."""
+    stub_ls_remote.ls_remote_returncode = 0
+    stub_ls_remote.ls_remote_stdout = _tag_output("1.0.0", "1.2.3")
+    monkeypatch.setattr(upgrade, "running_version", lambda: "1.2.3")
+
+    upgrade.run_upgrade(installed_target)
+
+    out = capsys.readouterr().out
+    assert "pkit tool is current (v1.2.3)." in out
+    assert "A newer pkit tool is available" not in out
+    assert stub_ls_remote.install_calls == []
+
+
+def test_tool_staleness_degrades_on_ls_remote_failure_and_sync_proceeds(
+    installed_target: Path,
+    stub_ls_remote: _RecordingRun,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A failed lookup warns loudly and never fails the command — today's sync
+    still runs, exit code unchanged (ADR-044 D1)."""
+    # Force a version mismatch so the normal sync step actually runs.
+    m = manifest.read_backbone_manifest(installed_target)
+    assert m is not None
+    m.backbone_version = "0.1.0"
+    manifest.write_backbone_manifest(installed_target, m)
+
+    called = {"sync": 0}
+
+    def _spy_sync(_root: Path, dry_run: bool = False) -> None:
+        called["sync"] += 1
+
+    monkeypatch.setattr(upgrade, "run_sync", _spy_sync)
+
+    # stub_ls_remote defaults to a failed lookup (returncode 1) → degrade.
+    upgrade.run_upgrade(installed_target)  # must not raise → exit code unchanged
+
+    captured = capsys.readouterr()
+    assert "could not check for a newer pkit tool" in captured.err
+    assert called["sync"] == 1  # today's behaviour proceeded
+    assert stub_ls_remote.install_calls == []
+
+
+def test_tool_staleness_degrades_on_timeout(
+    installed_target: Path,
+    stub_ls_remote: _RecordingRun,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A bounded-timeout expiry is caught and degrades to a warning (ADR-044 D1)."""
+    stub_ls_remote.raise_exc = subprocess.TimeoutExpired(cmd="git ls-remote", timeout=5.0)
+
+    upgrade.run_upgrade(installed_target)  # must not raise
+
+    assert "could not check for a newer pkit tool" in capsys.readouterr().err
+
+
+def test_tool_staleness_degrades_when_git_missing(
+    installed_target: Path,
+    stub_ls_remote: _RecordingRun,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """`git` not on PATH (OSError) is caught and degrades to a warning (ADR-044 D1)."""
+    stub_ls_remote.raise_exc = FileNotFoundError("git")
+
+    upgrade.run_upgrade(installed_target)  # must not raise
+
+    assert "could not check for a newer pkit tool" in capsys.readouterr().err
+
+
+def test_tool_staleness_ignores_malformed_tags(
+    installed_target: Path,
+    stub_ls_remote: _RecordingRun,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Non-release and malformed tags are skipped; the highest valid `v<semver>`
+    wins. No parseable tag degrades like a failed lookup."""
+    stub_ls_remote.ls_remote_returncode = 0
+    stub_ls_remote.ls_remote_stdout = (
+        "0000000000000000000000000000000000000000\trefs/tags/not-a-version\n"
+        "0000000000000000000000000000000000000000\trefs/tags/v-broken\n"
+        "0000000000000000000000000000000000000000\trefs/tags/v3.1.0\n"
+    )
+    monkeypatch.setattr(upgrade, "running_version", lambda: "1.0.0")
+
+    upgrade.run_upgrade(installed_target)
+
+    assert "A newer pkit tool is available: v3.1.0" in capsys.readouterr().out
+
+
+def test_tool_staleness_suppressed_on_source_checkout(
+    tmp_path: Path,
+    stub_ls_remote: _RecordingRun,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """On a source checkout the check is skipped entirely — no lookup, no output
+    (ADR-044 D3). Uses the router's `is_source_checkout` discriminator."""
+    (tmp_path / "src" / "project_kit").mkdir(parents=True)
+    (tmp_path / "src" / "project_kit" / "__init__.py").write_text("", encoding="utf-8")
+    (tmp_path / ".pkit" / "cli").mkdir(parents=True)
+    (tmp_path / ".pkit" / "cli" / "pkit").write_text("", encoding="utf-8")
+
+    upgrade._check_tool_staleness(tmp_path)
+
+    assert stub_ls_remote.ls_remote_calls == []
+    assert capsys.readouterr().out == ""
+
+
+def test_tool_staleness_not_run_on_self_host(
+    stub_ls_remote: _RecordingRun,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The self-host short-circuit returns before the check — no ls-remote call."""
+    source_repo = install.find_source_kit().parent
+    monkeypatch.chdir(source_repo)
+    monkeypatch.setattr(upgrade, "run_sync", lambda *_a, **_k: None)
+
+    upgrade.run_upgrade(source_repo)
+
+    assert stub_ls_remote.ls_remote_calls == []

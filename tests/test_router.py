@@ -96,7 +96,7 @@ def test_enclosing_project_none_outside_any_project(tmp_path: Path) -> None:
 
 def test_is_source_checkout_true_only_with_package_source(tmp_path: Path) -> None:
     _make_source_checkout(tmp_path)
-    assert router._is_source_checkout(tmp_path) is True
+    assert router.is_source_checkout(tmp_path) is True
 
 
 def test_is_source_checkout_false_for_adopter(tmp_path: Path) -> None:
@@ -104,7 +104,7 @@ def test_is_source_checkout_false_for_adopter(tmp_path: Path) -> None:
     (tmp_path / ".pkit" / "cli").mkdir()
     (tmp_path / ".pkit" / "cli" / "pkit").write_text("", encoding="utf-8")
     # Has the dispatcher, but no src/project_kit → not a source checkout.
-    assert router._is_source_checkout(tmp_path) is False
+    assert router.is_source_checkout(tmp_path) is False
 
 
 def test_resolve_pin_reads_version(tmp_path: Path) -> None:
@@ -121,7 +121,7 @@ def test_pinned_base_is_git_tag_pin(tmp_path: Path) -> None:
     base = router._pinned_base("1.100.0")
     assert base[0] == "uvx"
     assert "--from" in base
-    assert f"{router._DISTRIBUTION_GIT_URL}@v1.100.0" in base
+    assert f"{router.DISTRIBUTION_GIT_URL}@v1.100.0" in base
     assert base[-1] == "project-kit"
 
 
@@ -236,7 +236,7 @@ def test_route2_reexecs_pinned_version_and_propagates_exit(
     _make_adopter(tmp_path, "1.100.0")
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv(router._CLI_VERSION_ENV, raising=False)
-    monkeypatch.setattr(router, "_running_version", lambda: "1.139.0")
+    monkeypatch.setattr(router, "running_version", lambda: "1.139.0")
     # Probe resolves (rc 0), then the real command exits 3.
     calls = _patch_subprocess(monkeypatch, [_FakeCompleted(0), _FakeCompleted(3)])
 
@@ -254,7 +254,7 @@ def test_route2_reexecs_pinned_version_and_propagates_exit(
     probe_cmd = calls[0]["cmd"]
     real_cmd = calls[1]["cmd"]
     assert probe_cmd[-1] == "--version"
-    assert f"{router._DISTRIBUTION_GIT_URL}@v1.100.0" in real_cmd
+    assert f"{router.DISTRIBUTION_GIT_URL}@v1.100.0" in real_cmd
     assert real_cmd[-1] == "validate"
     # The loop guard is set on the child's environment.
     assert calls[1]["kwargs"]["env"][router._LOOP_GUARD_ENV] == "1"
@@ -269,7 +269,7 @@ def test_route2_degrades_to_self_when_pin_unresolvable(
 ) -> None:
     _make_adopter(tmp_path, "1.100.0")
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(router, "_running_version", lambda: "1.139.0")
+    monkeypatch.setattr(router, "running_version", lambda: "1.139.0")
     # Probe fails to resolve (rc 1); no real command should run.
     calls = _patch_subprocess(monkeypatch, [_FakeCompleted(1)])
 
@@ -290,7 +290,7 @@ def test_route2_degrades_when_uvx_absent(
 ) -> None:
     _make_adopter(tmp_path, "1.100.0")
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(router, "_running_version", lambda: "1.139.0")
+    monkeypatch.setattr(router, "running_version", lambda: "1.139.0")
     _patch_subprocess(monkeypatch, [FileNotFoundError("uvx")])
 
     router.main(["status"])
@@ -308,7 +308,7 @@ def test_route3_runs_self_on_version_match(
     _make_adopter(tmp_path, "1.139.0")
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv(router._CLI_VERSION_ENV, raising=False)
-    monkeypatch.setattr(router, "_running_version", lambda: "1.139.0")
+    monkeypatch.setattr(router, "running_version", lambda: "1.139.0")
     ran = _patch_subprocess(monkeypatch, [])  # nothing should be spawned
 
     router.main(["status"])
