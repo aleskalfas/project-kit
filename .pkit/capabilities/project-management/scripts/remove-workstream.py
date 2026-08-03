@@ -75,8 +75,10 @@ def main() -> int:
         "--force",
         action="store_true",
         help=(
-            "Bypass the zero-issues precondition. Discouraged — leaves "
-            "orphaned `workstream:<slug>` labels on issues."
+            "Force past the zero-issues precondition (the `--force` layer "
+            "per DEC-046 — a label has no comment thread, so the override is "
+            "surfaced in output but not audited to a comment). Discouraged — "
+            "leaves orphaned `workstream:<slug>` labels on issues."
         ),
     )
     parser.add_argument(

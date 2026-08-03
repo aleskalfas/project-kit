@@ -1,0 +1,17 @@
+component: project-management
+kind: minor
+custom:
+  category: Changed
+body: >
+  Settle the `--force` / `--bypass` override-flag convention (#570, DEC-046).
+  `--bypass[-<gate>]` overrides a `bypassable-with-audit` gate (a required,
+  audited reason; qualified per-gate when a command has several, e.g.
+  `done-work`'s `--bypass` + `--bypass-ci`); `--force` overrides a `hard-reject`
+  finding or a hard script precondition (boolean, audited where the substrate
+  can carry it). DEC-014's `hard-reject` is amended to carry the out-of-band
+  operator `--force` layer — recorded as a new `force_overridable: true` field
+  on its `validation-severity.yaml` entry, so an agent dispatching on the
+  severity token sees the override exists (`bypassable: false` stays: there is
+  no in-band `--bypass` for a hard-reject). `edit-issue --force` and
+  `remove-workstream --force` help text corrected (they overrode a hard-reject /
+  precondition, not a bypassable gate). No behaviour change; no migration.

@@ -26,9 +26,16 @@ severities:
     behaviour: |
       The agent halts before any mutation, surfaces the failed rule
       and the failing input, and ends the operation. No further steps
-      execute. There is no `--bypass` form. The user must fix the input
-      and retry.
+      execute. There is no in-band, reason-based `--bypass` form. The
+      user should fix the input and retry. As a separate, out-of-band
+      last resort, the operator may `--force` past the finding (the
+      `force_overridable` layer per DEC-046) — a blunt, boolean,
+      audited override, distinct from the `--bypass` mechanism, audited
+      where the substrate can carry the audit (an issue/PR comment; a
+      milestone description-append; a bare label, having no annotation
+      surface, records the override in output only).
     bypassable: false
+    force_overridable: true
     aborts_operation: true
     examples:
       - "Title does not start with `[Type]` prefix"

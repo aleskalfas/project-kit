@@ -370,6 +370,16 @@ A failing check is **bypassable-with-audit** (`schemas/validation-severity.yaml`
 
 The current gate treats **any** non-green check as bypass-required — it does not yet distinguish GitHub-required from advisory checks (that distinction is not exposed cleanly in `statusCheckRollup`). When required-vs-advisory becomes distinguishable, the intended refinement is: block a required check outright, allow an advisory check only via `--bypass`.
 
+#### Override flags — `--bypass[-<gate>]` vs `--force` (per [project-management:DEC-046-override-flag-convention])
+
+Two override families run across the mutating commands, and which a command exposes is fixed by the stop it overrides — one question: **is it a `bypassable-with-audit` gate?**
+
+- **`--bypass[-<gate>]`** overrides a gate the severity model *designed* to be bypassable ([project-management:DEC-014-validation-severity-model]'s `bypassable-with-audit`): a **required reason**, and the DEC-014 audit comment posted *before* the mutation. A command with one bypassable gate spells it `--bypass` (`move-issue`, `promote-issue`); a command with several qualifies each — `done-work` carries `--bypass` (approval) **and** `--bypass-ci` (CI), and `merge-pr` carries `--bypass-ci`. `--bypass` never clears a red CI, and vice-versa.
+- **`--force`** overrides a **`hard-reject` finding** *or* a **hard script precondition** — a stop the methodology treats as firm. Boolean, no reason. Sites: `edit-issue` / `edit-pr` (body-validation findings), `open-pr` / `review-work` (validate-at-ready), `close-milestone` (open-children), `remove-workstream` (non-zero-issues). It audits **where the substrate can carry it** — an issue/PR comment, a milestone description-append; a bare label (`remove-workstream`) has no annotation surface, so the override shows in output only.
+- **Hard-reject is force-overridable.** DEC-014's `hard-reject` keeps `bypassable: false` (no in-band `--bypass`) but carries an out-of-band operator `--force` layer — recorded as `force_overridable: true` on its schema entry. `--force` is *not* the `--bypass` mechanism; it is a blunter, last-resort override.
+- **Out of scope:** `merge-pr --admin` is a `gh pr merge --admin` branch-protection passthrough, not a methodology override.
+- **New commands** pick the flag by the same question; a second bypassable gate takes a `--bypass-<gate>` name.
+
 ### 5. (Optional) Declare lifecycle hooks
 
 Per [project-management:DEC-024-lifecycle-hooks], adopters can declare **post-action steps** the engine fires after each pm lifecycle event — set a board field after `create-issue`, post a templated comment after `close-issue`, assign a default milestone, or run a custom script. Hooks live in `project/hooks.yaml`:

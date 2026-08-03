@@ -112,9 +112,10 @@ def main() -> int:
         "--force",
         action="store_true",
         help=(
-            "Accept hard-reject validation findings with an audit comment "
-            "(DEC-014 bypassable-with-audit pattern). Default: refuse on "
-            "hard-reject."
+            "Operator override of hard-reject validation findings, with an "
+            "audit comment (the `--force` layer per DEC-046 — a hard-reject "
+            "is force-overridable out of band, distinct from the "
+            "`--bypass` mechanism). Default: refuse on hard-reject."
         ),
     )
     parser.add_argument(
