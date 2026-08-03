@@ -22,7 +22,7 @@ The runtime's authoring language is a project-kit-internal choice (the kit's bin
 
 ## Decision
 
-**Python**, distributed via `uv tool install` (with `pip install` as fallback). Specifics:
+**Python**, distributed via `uv tool install` (the sole sanctioned frontend — `uv` is required; the former `pip` fallback was dropped, see PRJ-004). Specifics:
 
 - **Language**: Python 3.11+ (matches the floor that mainstream distributions and `uv` tools assume today; gives us `tomllib`, structural pattern matching, exception groups).
 - **Packaging**: standard `pyproject.toml` with PEP 621 metadata; entry point `pkit = "project_kit.cli:main"`.
@@ -37,7 +37,7 @@ The runtime's authoring language is a project-kit-internal choice (the kit's bin
 
 **Why startup cost is acceptable.** Python cold-start is ~100–200 ms with `uv`'s lightweight launcher, ~50–100 ms warm. The CLI is invoked from terminals during deliberate development moments — not in tight loops, hooks, or pre-receive paths — so the cost is below the threshold a developer perceives as slow. (If profiling later shows a hot-path command crossing 500 ms cold, that command is a candidate for a Go or Rust subcommand, not a justification to retrofit the whole runtime.)
 
-**Why `uv` for distribution.** `uv tool install project-kit` is the modern equivalent of `pipx install project-kit`: an isolated environment per tool, automatic Python-interpreter management, fast resolution. It avoids the global-pip foot-gun and the "which Python?" footwork. `pip install` and source-checkout symlink (today's bootstrap pattern) remain as fallbacks; `uv` is the recommended path.
+**Why `uv` for distribution.** `uv tool install project-kit` is the modern equivalent of `pipx install project-kit`: an isolated environment per tool, automatic Python-interpreter management, fast resolution. It avoids the global-pip foot-gun and the "which Python?" footwork. `uv` is the **required** frontend — the former `pip install` fallback was dropped (PRJ-004); a source-checkout is the dev/self-host path (dispatcher, not a distributed install).
 
 **Why minimal third-party dependencies.** Each dependency is a future migration cost — every kit upgrade that crosses a dep's major version forces an adopter migration. A kit whose runtime depends on a small fixed set (round-trip YAML, semver, argparse-equivalent) keeps that surface narrow. The kit prefers stdlib where it suffices.
 
