@@ -2,6 +2,11 @@
 authors:
   - Aleš Kalfas <kalfas.ales@gmail.com>
 started: 2026-07-31
+retired: 2026-08-03
+produced:
+  - ADR-044
+  - PRJ-004
+  - '#574'
 ---
 
 # Self-service tool update: can `pkit upgrade` get me the latest released tool on its own?
