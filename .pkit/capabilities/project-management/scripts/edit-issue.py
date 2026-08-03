@@ -244,7 +244,7 @@ def main() -> int:
         for f in findings:
             if f.severity in (SEVERITY_HARD_REJECT, SEVERITY_BYPASSABLE):
                 audit_lines.append(f"  - [{f.severity}] {f.label}: {f.detail}")
-        if not _gh_comment(args.issue_number, "\n".join(audit_lines)):
+        if not _gh_comment(args.issue_number, "\n".join(audit_lines), config):
             return 3
 
     # Seam: write exactly one current footer (strip-then-append-one).
