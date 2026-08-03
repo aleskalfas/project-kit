@@ -35,6 +35,7 @@ content is `sync`'s job, not upgrade's.
 
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 
 import click
@@ -54,6 +55,11 @@ from project_kit.migrations import (
     execute_migration_scripts,
     pending_migration_scripts,
     report_pending_migrations,
+)
+from project_kit.router import (
+    DISTRIBUTION_GIT_URL,
+    is_source_checkout,
+    running_version,
 )
 from project_kit.sync import run_sync
 
@@ -93,6 +99,14 @@ def run_upgrade(target_root: Path, dry_run: bool = False) -> None:
         run_sync(target_root, dry_run=dry_run)
         return
 
+    # ADR-044: detect a newer *released tool* and instruct (print-only). This is
+    # about the `uv`-installed binary, not this project's `.pkit/` content — so it
+    # runs before the backbone-version comparison below and its early return, or
+    # the stale-tool adopter would still see only "nothing to upgrade" and never
+    # learn the fix lives in `uv`. Best-effort and read-only: it never installs,
+    # never fails the command, and is suppressed on a source checkout (D3).
+    _check_tool_staleness(target_root)
+
     # Past the self-host short-circuit: a real adopter upgrade reads
     # `read_kit_version(source_kit)` next and propagates from `source_kit` via
     # its sync step. Guard the resolved source first, so an incomplete bundle
@@ -131,6 +145,120 @@ def run_upgrade(target_root: Path, dry_run: bool = False) -> None:
 
     click.echo()
     click.echo("Upgrade complete.")
+
+
+# --- Tool-staleness detection (ADR-044) ----------------------------------------
+
+# Bounded so an unreachable release source (offline, DNS black-hole) can't hang
+# `pkit upgrade`. The check is best-effort; a timeout degrades to a warning.
+_LS_REMOTE_TIMEOUT_SECONDS = 5.0
+
+
+def _check_tool_staleness(target_root: Path) -> None:
+    """Best-effort: detect a newer released pkit tool and print how to update it.
+
+    Implements ADR-044 D1-D3. Read-only and print-only — it installs nothing and
+    never fails `pkit upgrade`:
+
+    - **D3 suppression.** On a source checkout / self-host, reinstalling a
+      released tag over working-tree code is nonsensical, so the check is
+      skipped entirely (no lookup, no output). Reuses the router's canonical
+      `is_source_checkout` predicate — one source of truth for the discriminator.
+      (The self-host case has already returned above; this also covers the rare
+      checkout the self-host branch doesn't catch.)
+    - **D1 degrade.** Any lookup failure (offline, missing credentials, `git`
+      absent, timeout, malformed output) prints a loud warning to stderr and
+      returns; the caller proceeds with today's sync behaviour unchanged.
+    - **D2 instruct.** When the running tool is behind the latest release, prints
+      the exact `uv tool install --force` command and why. When current, prints a
+      plain "tool is current" line (replacing the ambiguous "nothing to upgrade"
+      for the tool axis).
+    """
+    if is_source_checkout(target_root):
+        return
+
+    latest = _latest_released_version()
+    if latest is None:
+        click.echo()
+        click.secho(
+            "warning: could not check for a newer pkit tool "
+            f"(`git ls-remote {DISTRIBUTION_GIT_URL}` failed — offline, missing "
+            "credentials, git unavailable, or timed out). Continuing with the "
+            "project sync; your installed tool may be behind.",
+            err=True,
+            fg="yellow",
+        )
+        return
+
+    running_str = running_version()
+    try:
+        running = Version(running_str)
+    except InvalidVersion:
+        # Our own version string is unparseable — we can't compare, so degrade
+        # like a failed lookup rather than printing a misleading instruction.
+        return
+
+    if running >= latest:
+        click.echo(f"pkit tool is current (v{running}).")
+        return
+
+    click.echo()
+    click.echo(f"A newer pkit tool is available: v{latest} (you are running v{running}).")
+    click.echo("Update the tool, then re-run this command:")
+    click.echo()
+    click.echo(f"    uv tool install --force {DISTRIBUTION_GIT_URL}@v{latest}")
+    click.echo("    pkit upgrade")
+    click.echo()
+    click.echo(
+        "`pkit upgrade` refreshes this project from the installed tool's bundled "
+        "kit; it cannot update the tool itself — hence the manual step above."
+    )
+
+
+def _latest_released_version() -> Version | None:
+    """Query the distribution source for the highest released `v<semver>` tag.
+
+    Best-effort per ADR-044 D1: returns None on *any* failure — `git` missing
+    (`OSError`), the source unreachable (non-zero exit), a bounded-timeout expiry,
+    or output with no parseable `v<semver>` tag. The caller degrades loudly. Uses
+    the same compiled distribution URL the router pins against (`router`), so tool
+    detection and route-2 pinning share one source of truth.
+    """
+    try:
+        completed = subprocess.run(
+            ["git", "ls-remote", "--tags", DISTRIBUTION_GIT_URL],
+            capture_output=True,
+            text=True,
+            timeout=_LS_REMOTE_TIMEOUT_SECONDS,
+        )
+    except (OSError, subprocess.SubprocessError):
+        # OSError: git not on PATH. SubprocessError covers TimeoutExpired et al.
+        return None
+    if completed.returncode != 0:
+        return None
+    return _max_released_tag(completed.stdout)
+
+
+def _max_released_tag(ls_remote_output: str) -> Version | None:
+    """Pick the highest `v<semver>` tag from `git ls-remote --tags` output.
+
+    Each line is `<sha>\trefs/tags/<tag>`. Annotated tags also emit a
+    dereferenced `<tag>^{}` peel line; the `^{}` suffix is stripped so both
+    resolve to the same version. Only `v`-prefixed valid semver tags count;
+    anything else (a non-release tag, a malformed ref) is skipped. Returns None
+    when no release tag is present.
+    """
+    versions: list[Version] = []
+    for line in ls_remote_output.splitlines():
+        ref = line.rpartition("refs/tags/")[2].strip()
+        ref = ref.removesuffix("^{}")
+        if not ref.startswith("v"):
+            continue
+        try:
+            versions.append(Version(ref[1:]))
+        except InvalidVersion:
+            continue
+    return max(versions) if versions else None
 
 
 def _resolve_compatibility(

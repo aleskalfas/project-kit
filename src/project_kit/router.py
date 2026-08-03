@@ -50,7 +50,7 @@ _LOOP_GUARD_ENV = "PKIT_ROUTED"
 # The PRJ-004 canonical distribution URL. Route 2 pins by git tag `v<version>`
 # appended after `@` (PRJ-004's tag-pinning form); tag⟺`.pkit/VERSION`
 # correspondence is a release-discipline property owned by #464 (ADR-039 D3).
-_DISTRIBUTION_GIT_URL = "git+ssh://git@github.com/aleskalfas/project-kit.git"
+DISTRIBUTION_GIT_URL = "git+ssh://git@github.com/aleskalfas/project-kit.git"
 
 # Provenance override the CLI honours first (see the pm capability's
 # provenance.py `_read_cli_version`). Route 1 sets it to the checkout's
@@ -83,7 +83,7 @@ def _route(argv: list[str], environ) -> None:  # type: ignore[no-untyped-def]
     if root is None:
         return  # not inside any project → run self (a global pkit works anywhere)
 
-    if _is_source_checkout(root):
+    if is_source_checkout(root):
         # Route 1. Execs the dispatcher and never returns; on a broken checkout
         # (dispatcher missing / not executable) it warns and returns so we run
         # self rather than silently misrouting — we do NOT fall on to a pin.
@@ -95,7 +95,7 @@ def _route(argv: list[str], environ) -> None:  # type: ignore[no-untyped-def]
     pin = _resolve_pin(root)
     if pin is None:
         return  # no pin → run self
-    running = _running_version()
+    running = running_version()
     if pin == running:
         return  # route 3 (match) → run self
     _run_pinned(pin, running, argv, environ)  # sys.exit on run; returns on degrade
@@ -131,7 +131,7 @@ def _enclosing_project(start: Path) -> Path | None:
         cur = cur.parent
 
 
-def _is_source_checkout(root: Path) -> bool:
+def is_source_checkout(root: Path) -> bool:
     """True iff `root` is a project-kit *source checkout* (not an adopter).
 
     The discriminator is the Python package source plus the in-tree dispatcher.
@@ -172,7 +172,7 @@ def _read_pkit_version(root: Path) -> str | None:
     return text or None
 
 
-def _running_version() -> str:
+def running_version() -> str:
     """This binary's version. `project_kit.__init__` is import-light (it only
     reads a VERSION file), so this stays off the heavy-import path."""
     from project_kit import __version__
@@ -197,7 +197,7 @@ def _exec_source_dispatcher(root: Path, argv: list[str], environ) -> None:  # ty
         os.execv(str(dispatcher), [str(dispatcher), *argv])  # replaces this process
     _warn(
         f"source checkout at {root} but {dispatcher} is missing or not "
-        f"executable — running this binary ({_running_version()}) instead. "
+        f"executable — running this binary ({running_version()}) instead. "
         f"Re-run `pkit sync` to restore the dispatcher."
     )
 
@@ -239,7 +239,7 @@ def _run_pinned(pin: str, running: str, argv: list[str], environ) -> None:  # ty
             f"{running}, and the pinned version could not be resolved (offline, "
             f"missing tag, auth, or uvx unavailable). Running {running} instead — "
             f"output may not match the pinned methodology. Align the pin, or re-run "
-            f"where `uvx --from {_DISTRIBUTION_GIT_URL}@v{pin} project-kit` resolves."
+            f"where `uvx --from {DISTRIBUTION_GIT_URL}@v{pin} project-kit` resolves."
         )
         return
 
@@ -249,7 +249,7 @@ def _run_pinned(pin: str, running: str, argv: list[str], environ) -> None:  # ty
 
 def _pinned_base(pin: str) -> list[str]:
     """The `uvx` prefix that runs project-kit at `pin`'s git tag (`v<pin>`)."""
-    return ["uvx", "--from", f"{_DISTRIBUTION_GIT_URL}@v{pin}", "project-kit"]
+    return ["uvx", "--from", f"{DISTRIBUTION_GIT_URL}@v{pin}", "project-kit"]
 
 
 def _pin_is_resolvable(pin: str, env) -> bool:  # type: ignore[no-untyped-def]
