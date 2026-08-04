@@ -1,0 +1,14 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `merge-pr` no longer misreports a successful merge as a failure when the PR's
+  head branch is checked out in a git worktree (#587). `gh pr merge
+  --delete-branch` cannot delete a local branch that is checked out, so it merges
+  the PR and deletes the remote branch, then exits non-zero on the failed local
+  delete. `merge-pr` now detects that exact case — the head branch is checked out
+  in a worktree AND the PR did in fact merge — and reports success, leaving the
+  local branch in place with a notice naming the worktree. A genuine merge
+  failure that merely coincides with a checked-out branch still fails (the
+  post-merge re-check guards it). The normal squash-and-delete path is unchanged.

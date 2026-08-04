@@ -166,6 +166,7 @@ def test_gh_merge_uses_pr_title_as_subject(mp, monkeypatch) -> None:
     result = mp._gh_merge(
         99,
         pr_title="fix(pm-scripts): squash subject uses PR title",
+        head_branch="fix/pm-scripts-subject",
         admin=False,
         config={},
     )
@@ -202,7 +203,9 @@ def test_gh_merge_subject_not_commit_message(mp, monkeypatch) -> None:
         )
 
     monkeypatch.setattr(mp.subprocess, "run", fake_run)
-    mp._gh_merge(32, pr_title=pr_title, admin=False, config={})
+    mp._gh_merge(
+        32, pr_title=pr_title, head_branch="fix/x", admin=False, config={}
+    )
 
     argv = captured[0]
     assert "--subject" in argv
@@ -373,7 +376,7 @@ def _wire_merge_seams(mp, monkeypatch, *, rollup):
         calls["ci_audit"] = True
         return True
 
-    def _stub_merge(pr_number, *, pr_title, admin, config):
+    def _stub_merge(pr_number, *, pr_title, head_branch, admin, config):
         calls["merged"] = True
         return True
 
@@ -443,3 +446,98 @@ def test_merge_green_ci_no_bypass_needed(mp, monkeypatch):
     assert rc == 0
     assert calls["merged"] is True
     assert calls["ci_audit"] is False
+
+
+# --- worktree checked-out branch on --delete-branch (#587) -----------
+#
+# `gh pr merge --delete-branch` cannot delete a local branch that is checked out
+# in a worktree; it merges + deletes the remote branch, then exits non-zero on
+# the failed local delete. merge-pr must detect that exact case and report the
+# merge as the success it is, not a failure.
+
+
+_WORKTREE_PORCELAIN = """\
+worktree /repo/main
+HEAD 1111111111111111111111111111111111111111
+branch refs/heads/main
+
+worktree /repo/wt-feature
+HEAD 2222222222222222222222222222222222222222
+branch refs/heads/fix/587-thing
+
+worktree /repo/wt-detached
+HEAD 3333333333333333333333333333333333333333
+detached
+"""
+
+
+def test_parse_worktree_branch_finds_checked_out(mp) -> None:
+    assert (
+        mp._parse_worktree_branch(_WORKTREE_PORCELAIN, "fix/587-thing")
+        == "/repo/wt-feature"
+    )
+    assert mp._parse_worktree_branch(_WORKTREE_PORCELAIN, "main") == "/repo/main"
+
+
+def test_parse_worktree_branch_none_when_absent(mp) -> None:
+    assert mp._parse_worktree_branch(_WORKTREE_PORCELAIN, "fix/999-absent") is None
+
+
+def test_parse_worktree_branch_ignores_detached_and_partial_match(mp) -> None:
+    # A detached worktree contributes no branch; a prefix of a real branch
+    # must not match (exact ref only).
+    assert mp._parse_worktree_branch(_WORKTREE_PORCELAIN, "fix/587") is None
+    assert mp._parse_worktree_branch("", "anything") is None
+
+
+class _FakeProc:
+    def __init__(self, returncode: int, stderr: str = "") -> None:
+        self.returncode = returncode
+        self.stderr = stderr
+        self.stdout = ""
+
+
+def _stub_gh_merge_nonzero(mp, monkeypatch) -> None:
+    """Make the `gh pr merge` subprocess call return non-zero (local-delete
+    failure shape)."""
+    monkeypatch.setattr(
+        mp.subprocess,
+        "run",
+        lambda *a, **k: _FakeProc(1, "failed to delete local branch"),
+    )
+
+
+def test_gh_merge_reports_success_when_branch_in_worktree_and_merged(mp, monkeypatch):
+    """Non-zero exit + branch checked out in a worktree + PR actually merged ⇒
+    treat as success (the #587 fix)."""
+    _stub_gh_merge_nonzero(mp, monkeypatch)
+    monkeypatch.setattr(mp, "_branch_checked_out_worktree", lambda b: "/repo/wt-x")
+    monkeypatch.setattr(mp, "_pr_is_merged", lambda n, c: True)
+    ok = mp._gh_merge(
+        99, pr_title="fix(x): y", head_branch="fix/587-thing", admin=False, config={}
+    )
+    assert ok is True
+
+
+def test_gh_merge_reports_failure_when_worktree_but_not_merged(mp, monkeypatch):
+    """Non-zero exit + branch in a worktree but the PR did NOT merge ⇒ a real
+    failure (the merged? guard prevents a false success)."""
+    _stub_gh_merge_nonzero(mp, monkeypatch)
+    monkeypatch.setattr(mp, "_branch_checked_out_worktree", lambda b: "/repo/wt-x")
+    monkeypatch.setattr(mp, "_pr_is_merged", lambda n, c: False)
+    ok = mp._gh_merge(
+        99, pr_title="fix(x): y", head_branch="fix/587-thing", admin=False, config={}
+    )
+    assert ok is False
+
+
+def test_gh_merge_reports_failure_when_not_a_worktree(mp, monkeypatch):
+    """Non-zero exit with the branch not checked out anywhere ⇒ a real failure
+    (unchanged behaviour for the normal path)."""
+    _stub_gh_merge_nonzero(mp, monkeypatch)
+    monkeypatch.setattr(mp, "_branch_checked_out_worktree", lambda b: None)
+    monkeypatch.setattr(mp, "_pr_is_merged", lambda n, c: True)
+    ok = mp._gh_merge(
+        99, pr_title="fix(x): y", head_branch="fix/587-thing", admin=False, config={}
+    )
+    assert ok is False
