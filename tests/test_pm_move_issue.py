@@ -287,6 +287,40 @@ def test_severity_from_token_falls_back_to_warning(mi) -> None:
     assert mi._severity_from_token("") == "warning"
 
 
+# --- --bypass reason enforcement (issue #580) -----------------------
+#
+# `--bypass` overrides a bypassable-with-audit gate, which records the
+# reason in the audit comment (DEC-014); the override-flag convention
+# (DEC-046) requires that reason to be non-empty. A bare `--bypass` with
+# no `--bypass-reason` must refuse, not substitute a placeholder. The
+# refusal predicate is pure and unit-tested here; the argparse/gh main()
+# wiring calls it before any mutation or audit comment.
+
+
+def test_bypass_reason_missing_true_when_bypass_without_reason(mi) -> None:
+    """Acceptance 1 — bare --bypass (no reason) is flagged for refusal."""
+    assert mi._bypass_reason_missing(True, None) is True
+    assert mi._bypass_reason_missing(True, "") is True
+    assert mi._bypass_reason_missing(True, "   ") is True
+    assert mi._bypass_reason_missing(True, "\t\n") is True
+
+
+def test_bypass_reason_missing_false_when_reason_present(mi) -> None:
+    """Acceptance 2 — --bypass with a non-empty reason passes."""
+    assert mi._bypass_reason_missing(True, "landing hotfix out of band") is False
+    assert mi._bypass_reason_missing(True, "x") is False
+    # Leading/trailing whitespace around real content is still a real reason.
+    assert mi._bypass_reason_missing(True, "  real reason  ") is False
+
+
+def test_bypass_reason_missing_false_when_bypass_not_set(mi) -> None:
+    """The flag is inert without --bypass, so there is nothing to enforce
+    (the TTY-confirm path does not post an audit comment)."""
+    assert mi._bypass_reason_missing(False, None) is False
+    assert mi._bypass_reason_missing(False, "") is False
+    assert mi._bypass_reason_missing(False, "unused reason") is False
+
+
 # --- state inference ------------------------------------------------
 
 

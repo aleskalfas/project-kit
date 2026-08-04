@@ -131,7 +131,10 @@ def main() -> int:
     parser.add_argument(
         "--bypass-reason",
         default=None,
-        help="Free-text reason recorded in the audit comment when --bypass is set.",
+        help=(
+            "Reason recorded in the audit comment; required (non-empty) "
+            "whenever --bypass is set — a bare --bypass is refused."
+        ),
     )
     parser.add_argument(
         "--no-cascade",
@@ -336,6 +339,20 @@ def main() -> int:
                     file=sys.stderr,
                 )
                 return 1
+            # A --bypass override must carry a non-empty reason. The
+            # bypassable-with-audit gate (DEC-014) records the reason in the
+            # audit comment, and the override-flag convention (DEC-046)
+            # requires it — a bare --bypass must refuse, not substitute a
+            # placeholder. Refuse before any mutation or audit comment.
+            if _bypass_reason_missing(args.bypass, args.bypass_reason):
+                print(
+                    f"[refused] transition {current_state!r} → {args.to!r}: "
+                    "--bypass requires a non-empty --bypass-reason "
+                    "(the audit comment records the reason per DEC-014 / "
+                    "DEC-046).",
+                    file=sys.stderr,
+                )
+                return 1
 
     # Residual-placeholder check per DEC-031 — hard-reject at transition.
     # Run before any mutation so an unauthored body blocks the transition.
@@ -414,10 +431,9 @@ def main() -> int:
         and transition.severity == SEVERITY_BYPASSABLE
         and args.bypass
     ):
-        reason = (
-            args.bypass_reason
-            or "Authorised by caller via --bypass (no reason supplied)."
-        )
+        # Reason is guaranteed non-empty here: the bypassable authorisation
+        # gate above refuses a --bypass without a non-empty --bypass-reason.
+        reason = (args.bypass_reason or "").strip()
         if not _gh_comment(
             args.issue_number,
             f"[audit] transition {current_state!r} → {args.to!r} "
@@ -615,6 +631,19 @@ def _severity_from_token(token: str) -> str:
     if not m:
         return SEVERITY_WARNING
     return m.group(1)
+
+
+def _bypass_reason_missing(bypass: bool, bypass_reason: str | None) -> bool:
+    """True when a `--bypass` override lacks the required non-empty reason.
+
+    A `bypassable-with-audit` gate records the reason in the audit comment
+    ([project-management:DEC-014-validation-severity-model]) and the
+    override-flag convention ([project-management:DEC-046-override-flag-convention])
+    requires it, so a bare `--bypass` with no reason must refuse rather than
+    substitute a placeholder. Whitespace-only counts as missing. When
+    `bypass` is False the flag is inert, so there is nothing to enforce.
+    """
+    return bool(bypass) and not (bypass_reason or "").strip()
 
 
 def _infer_structural_type(
