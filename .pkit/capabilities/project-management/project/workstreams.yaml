@@ -3,6 +3,11 @@
 
 schema_version: 1
 
+# Self-describing binding tag (COR-023) — resolves this file to its schema for
+# `pkit data validate` (the `binds_to` glob on schemas/workstreams.yaml also
+# resolves it, so this is belt-and-suspenders).
+pkit_schema: project-management:workstreams
+
 workstreams:
   capabilities:
     name: capabilities

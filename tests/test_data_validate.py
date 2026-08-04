@@ -881,3 +881,39 @@ def test_reference_cli_shape_only_flag(kit_target: Path) -> None:
     # --shape-only passes.
     ok = CliRunner().invoke(main, ["data", "validate", str(scope), "--shape-only"])
     assert ok.exit_code == 0, ok.output
+
+
+# --- real shipped project-management:workstreams binding (#585) --------
+#
+# Regression for the dogfooding gap where `pkit data validate` on the shipped
+# `project/workstreams.yaml` reported "no schema binding found": the capability
+# shipped only `workstreams.schema.json` (no `workstreams.yaml` carrier), so
+# neither the `pkit_schema:` field path (`_build_binding` requires the
+# <schema>.yaml + .schema.json pair to exist) nor a `binds_to:` glob (read only
+# from `schemas/*.yaml`) could resolve it. These tests exercise the real shipped
+# tree via REPO_ROOT.
+
+_PM_WORKSTREAMS_SEED = (
+    REPO_ROOT
+    / ".pkit"
+    / "capabilities"
+    / "project-management"
+    / "project"
+    / "workstreams.yaml"
+)
+
+
+def test_pm_workstreams_seed_resolves_binding() -> None:
+    """The shipped project-management workstreams seed resolves to its schema
+    (was 'no schema binding found'). Guards the `pkit_schema` self-tag on the
+    seed and the `schemas/workstreams.{yaml,schema.json}` pair together."""
+    result = dv.resolve_binding(_PM_WORKSTREAMS_SEED, REPO_ROOT)
+    assert isinstance(result, dv.ResolvedBinding), getattr(result, "message", "")
+    assert result.capability == "project-management"
+    assert result.schema_name == "workstreams"
+
+
+def test_pm_workstreams_seed_validates_clean() -> None:
+    """The shipped seed passes full shape validation against its companion."""
+    issues = dv.validate_data_file(_PM_WORKSTREAMS_SEED, REPO_ROOT)
+    assert issues == [], [i.message for i in issues]

@@ -12,6 +12,15 @@
       "type": "integer",
       "minimum": 1
     },
+    "binds_to": {
+      "description": "Repo-relative globs matching the adopter-data files this schema validates (COR-023 fallback binding). Present on the kit-shipped binding carrier; absent from adopter data files.",
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "pkit_schema": {
+      "description": "Self-describing adopter-data binding tag, `project-management:workstreams` (COR-023). Optional on adopter files (the binds_to glob resolves them either way).",
+      "type": "string"
+    },
     "workstreams": {
       "description": "Either a mapping (slug → attributes) or a list (of slugs only).",
       "oneOf": [
