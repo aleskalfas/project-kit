@@ -1,0 +1,26 @@
+# Workstreams file shape — binding carrier for the project-management capability.
+#
+# The real workstream declarations live in an adopter's `project/workstreams.yaml`
+# (per [project-management:DEC-018-workstream-taxonomy-and-lifecycle]); this
+# kit-shipped schema file exists so that:
+#   (a) it declares the COR-023 `binds_to:` glob, letting `pkit data validate`
+#       resolve an adopter's workstreams.yaml to its companion JSON Schema
+#       (`_build_binding` requires the <schema>.yaml + <schema>.schema.json pair
+#       to exist); and
+#   (b) it validates against that companion under `pkit schemas validate`.
+# It carries no workstreams of its own — `workstreams` is an empty placeholder;
+# adopters populate their own project file.
+
+schema_version: 1
+
+# Adopter-data binding (per COR-023): a project's workstreams.yaml matches this
+# schema. Adopter files SHOULD also carry the self-describing top-level field
+# `pkit_schema: project-management:workstreams`.
+binds_to:
+  - "**/workstreams.yaml"
+
+pkit_schema: project-management:workstreams
+
+# Empty placeholder — this binding carrier declares no workstreams; the real
+# taxonomy lives in the adopter's project/workstreams.yaml.
+workstreams: {}
