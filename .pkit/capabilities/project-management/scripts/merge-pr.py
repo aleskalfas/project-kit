@@ -284,7 +284,14 @@ def main() -> int:
             )
             return 3
 
-    if not _gh_merge(args.pr_number, pr_title=pr_title, admin=args.admin, config=config):
+    head_branch = str(pr.get("headRefName", ""))
+    if not _gh_merge(
+        args.pr_number,
+        pr_title=pr_title,
+        head_branch=head_branch,
+        admin=args.admin,
+        config=config,
+    ):
         return 3
 
     print(f"\n[ok] merged: {pr_url}")
@@ -463,7 +470,9 @@ def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
     return gh_get_issue(issue_number, config, fields="title,body,state")
 
 
-def _gh_merge(pr_number: int, *, pr_title: str, admin: bool, config: dict) -> bool:
+def _gh_merge(
+    pr_number: int, *, pr_title: str, head_branch: str, admin: bool, config: dict
+) -> bool:
     # Force --subject to the PR title so the squash-commit subject equals the
     # gate-validated title for both single- and multi-commit PRs.  GitHub's
     # default for a single-commit PR is the commit message, not the title —
@@ -484,6 +493,25 @@ def _gh_merge(pr_number: int, *, pr_title: str, admin: bool, config: dict) -> bo
     except FileNotFoundError:
         return False
     if proc.returncode != 0:
+        # A branch checked out in a git worktree cannot be deleted locally —
+        # git refuses. So `gh pr merge --delete-branch` merges the PR and deletes
+        # the *remote* branch, then exits non-zero on the failed *local* delete,
+        # misreporting a successful merge as a failure (#587). Detect that exact
+        # case — the head branch is checked out in a worktree AND the PR did in
+        # fact merge — and report the success it is, leaving the local branch in
+        # place with a precise notice. The `merged?` re-check guards against a
+        # genuine merge failure that merely coincides with a checked-out branch.
+        worktree = _branch_checked_out_worktree(head_branch)
+        if worktree is not None and _pr_is_merged(pr_number, config):
+            print(
+                f"[notice] merged; the remote branch was deleted, but local branch "
+                f"{head_branch!r} was left in place — it is checked out in the "
+                f"worktree at {worktree} and cannot be deleted while checked out. "
+                f"Remove it after switching away (e.g. `git worktree remove "
+                f"{worktree}`, or `git branch -d {head_branch}` once nothing has "
+                "it checked out)."
+            )
+            return True
         print(
             f"error: gh pr merge failed (exit {proc.returncode}).\n"
             f"stderr: {proc.stderr.strip()}",
@@ -491,6 +519,53 @@ def _gh_merge(pr_number: int, *, pr_title: str, admin: bool, config: dict) -> bo
         )
         return False
     return True
+
+
+def _pr_is_merged(pr_number: int, config: dict) -> bool:
+    """True iff the PR's state is MERGED (re-queried after a merge attempt)."""
+    pr = _gh_get_pr(pr_number, config)
+    if not pr:
+        return False
+    return str(pr.get("state", "")).lower() == "merged"
+
+
+def _branch_checked_out_worktree(branch: str) -> str | None:
+    """Return the worktree path where `branch` is checked out, or None.
+
+    Reads `git worktree list --porcelain` and matches `branch` against each
+    worktree's checked-out ref. A branch checked out in any worktree of this
+    repo cannot be deleted locally, which is the #587 failure cause.
+    """
+    if not branch:
+        return None
+    try:
+        proc = subprocess.run(
+            ["git", "worktree", "list", "--porcelain"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        return None
+    if proc.returncode != 0:
+        return None
+    return _parse_worktree_branch(proc.stdout, branch)
+
+
+def _parse_worktree_branch(porcelain_output: str, branch: str) -> str | None:
+    """Pure parse of `git worktree list --porcelain` → the worktree path whose
+    checked-out branch is `branch`, or None. Each worktree stanza opens with a
+    `worktree <path>` line and (when a branch is checked out) carries a
+    `branch refs/heads/<name>` line."""
+    current_path: str | None = None
+    for line in porcelain_output.splitlines():
+        if line.startswith("worktree "):
+            current_path = line[len("worktree "):].strip()
+        elif line.startswith("branch "):
+            ref = line[len("branch "):].strip()
+            if ref in (f"refs/heads/{branch}", branch):
+                return current_path
+    return None
 
 
 def _read_yaml(path: Path, yaml_loader: YAML) -> dict:
