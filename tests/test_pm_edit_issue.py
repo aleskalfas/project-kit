@@ -352,6 +352,102 @@ def test_validate_issue_parent_form_still_accepted(
     )
 
 
+# --- validation scope: check_title / check_body (#583) ---------------
+#
+# A title-only edit must not re-reject an untouched (possibly legacy-schema)
+# body, and a body-only edit must not re-reject an untouched title. Findings are
+# labelled `title.*` / `body.*`; the unedited axis is dropped.
+
+_GOOD_TASK_TITLE = "[Task] Install the Claude Code CLI inside the sandbox"
+# Non-conformant legacy body: no required sections, wrong parent-ref first line.
+_LEGACY_BODY = "A stale legacy body with no required sections and no parent ref."
+
+
+def test_validate_full_scope_flags_legacy_body(
+    ei, issue_types, titles, body_format
+) -> None:
+    """Control: at full scope, the legacy body DOES produce body findings — so
+    the title-only test below is meaningfully dropping them."""
+    findings = ei._validate(
+        title=_GOOD_TASK_TITLE,
+        body=_LEGACY_BODY,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+    )
+    assert any(f.label.startswith("body.") for f in findings)
+
+
+def test_validate_title_only_passes_over_legacy_body(
+    ei, issue_types, titles, body_format
+) -> None:
+    """A2 core (#583): a title-only edit (valid title) passes clean over an
+    untouched non-conformant body."""
+    findings = ei._validate(
+        title=_GOOD_TASK_TITLE,
+        body=_LEGACY_BODY,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        check_title=True,
+        check_body=False,
+    )
+    assert findings == [], [f.label for f in findings]
+
+
+def test_validate_title_only_still_flags_bad_title(
+    ei, issue_types, titles, body_format
+) -> None:
+    """A title-only edit still validates the new title; body findings are dropped."""
+    findings = ei._validate(
+        title="Random title",
+        body=_LEGACY_BODY,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        check_title=True,
+        check_body=False,
+    )
+    labels = [f.label for f in findings]
+    assert "title.format" in labels
+    assert all(not lbl.startswith("body.") for lbl in labels)
+
+
+def test_validate_body_only_validates_body_drops_title(
+    ei, issue_types, titles, body_format
+) -> None:
+    """A body-only edit validates the new body (missing sections) and drops any
+    title findings."""
+    findings = ei._validate(
+        title=_GOOD_TASK_TITLE,
+        body="Feature: #1\n\n## What\nx",  # missing Acceptance criteria + Doc impact
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        check_title=False,
+        check_body=True,
+    )
+    labels = [f.label for f in findings]
+    assert "body.required-section" in labels
+    assert all(not lbl.startswith("title.") for lbl in labels)
+
+
+def test_validate_body_only_drops_bad_title_finding(
+    ei, issue_types, titles, body_format
+) -> None:
+    """A body-only edit does not re-reject a pre-existing malformed title."""
+    findings = ei._validate(
+        title="Random title",
+        body="whatever",
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        check_title=False,
+        check_body=True,
+    )
+    assert all(not f.label.startswith("title.") for f in findings)
+
+
 # --- structural type inference --------------------------------------
 
 
