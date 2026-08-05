@@ -478,9 +478,10 @@ Invoke `scripts/do-thing.py`, follow `sub-procedure.md`, read `project/config.ya
     assert flagged == [], flagged
 
 
-def test_backward_external_absolute_path_still_flagged(kit_target: Path) -> None:
-    """An absolute path outside the capability (not a decision) is still flagged —
-    the exemption does not hide a real external-dependency gap."""
+def test_backward_cross_tier_pkit_path_still_flagged(kit_target: Path) -> None:
+    """A target-root-relative `.pkit/...` path into *another* capability is still
+    flagged — the intra-capability exemption resolves `.pkit/`-prefixed paths from
+    the target root, so a cross-tier reference is not falsely treated as internal."""
     body = """---
 name: s
 description: t
@@ -492,6 +493,25 @@ This reads `.pkit/capabilities/other/project/state.yaml` from another capability
     issues = refs.validate_corpus(kit_target)
     assert any(
         "body cites path '.pkit/capabilities/other/project/state.yaml'" in i.diagnosis
+        for i in issues
+    ), [i.diagnosis for i in issues]
+
+
+def test_backward_truly_absolute_path_still_flagged(kit_target: Path) -> None:
+    """A genuinely `/`-absolute path is still flagged — the `is_absolute()`
+    early-return in `_is_intra_capability_path` means an absolute path is never
+    intra-capability, so the exemption cannot hide it."""
+    body = """---
+name: s
+description: t
+---
+# S
+This reads `/etc/pkit/other-capability/state.yaml` off the host.
+"""
+    _write_capability_skill(kit_target, "mycap", "s", body)
+    issues = refs.validate_corpus(kit_target)
+    assert any(
+        "body cites path '/etc/pkit/other-capability/state.yaml'" in i.diagnosis
         for i in issues
     ), [i.diagnosis for i in issues]
 

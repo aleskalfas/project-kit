@@ -1,9 +1,11 @@
 """Tests for the comment-issue / comment-pr shared verb logic (DEC-047).
 
-Covers body resolution (`--body` / `--body-file`, empty / missing / both) and
-that `post_comment` targets `gh issue comment` / `gh pr comment` for the right
-subject. The guard/membership/session flow in `run_comment_verb` is exercised
-end-to-end by the scripts; here we test the pure pieces.
+Covers body resolution (`--body`, present / empty), the sentinel-spoof refusal,
+the freeform marker, and that `post_comment` targets `gh issue comment` /
+`gh pr comment` for the right subject. The guard/membership/session flow in
+`run_comment_verb` is exercised end-to-end by the scripts; here we test the pure
+pieces. (Comments take `--body` only — `--body-file` is reserved for issue/PR
+body writes, per DEC-047.)
 """
 
 from __future__ import annotations
