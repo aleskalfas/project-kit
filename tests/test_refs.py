@@ -427,6 +427,122 @@ Mentions COR-999 without declaring it.
     assert any("body cites record 'COR-999'" in i.diagnosis for i in issues)
 
 
+# --- backward-citation exemptions (#584) ----------------------------
+#
+# The backward check must not flag references that are not overlay-resolved
+# external reads: decision-record links (the record is the real reference) and
+# a capability artifact's pointers into its own tree. Real external gaps and
+# record citations must still surface.
+
+
+def _write_capability_skill(root: Path, cap: str, name: str, body: str) -> Path:
+    folder = root / ".pkit" / "capabilities" / cap / "skills" / name
+    folder.mkdir(parents=True)
+    target = folder / f"{name}.md"
+    target.write_text(body, encoding="utf-8")
+    return target
+
+
+def test_backward_decision_link_path_is_exempt(kit_target: Path) -> None:
+    """A `[COR-001](.../COR-001-*.md)` markdown link is not required in reads.paths."""
+    _write_decision(kit_target, "core", "COR", "001", "a-thing")
+    body = """---
+name: skill-a
+description: t
+reads:
+  records: [COR-001]
+---
+# Skill
+Per [COR-001](../../decisions/core/COR-001-a-thing.md) this holds.
+"""
+    _write_skill(kit_target, "core", "skill-a", body)
+    issues = refs.validate_corpus(kit_target)
+    assert not any(
+        "body cites path" in i.diagnosis and "COR-001-a-thing.md" in i.diagnosis
+        for i in issues
+    ), [i.diagnosis for i in issues]
+
+
+def test_backward_intra_capability_path_is_exempt(kit_target: Path) -> None:
+    """A capability skill pointing at its own scripts / sub-procedures is exempt."""
+    body = """---
+name: s
+description: t
+---
+# S
+Invoke `scripts/do-thing.py`, follow `sub-procedure.md`, read `project/config.yaml`.
+"""
+    _write_capability_skill(kit_target, "mycap", "s", body)
+    issues = refs.validate_corpus(kit_target)
+    flagged = [i.diagnosis for i in issues if "body cites path" in i.diagnosis]
+    assert flagged == [], flagged
+
+
+def test_backward_external_absolute_path_still_flagged(kit_target: Path) -> None:
+    """An absolute path outside the capability (not a decision) is still flagged —
+    the exemption does not hide a real external-dependency gap."""
+    body = """---
+name: s
+description: t
+---
+# S
+This reads `.pkit/capabilities/other/project/state.yaml` from another capability.
+"""
+    _write_capability_skill(kit_target, "mycap", "s", body)
+    issues = refs.validate_corpus(kit_target)
+    assert any(
+        "body cites path '.pkit/capabilities/other/project/state.yaml'" in i.diagnosis
+        for i in issues
+    ), [i.diagnosis for i in issues]
+
+
+def test_backward_record_citation_still_flagged_after_exemptions(kit_target: Path) -> None:
+    """Record citations are never path-exempt — an undeclared record still flags."""
+    body = """---
+name: s
+description: t
+---
+# S
+Relies on COR-777 for rationale.
+"""
+    _write_capability_skill(kit_target, "mycap", "s", body)
+    issues = refs.validate_corpus(kit_target)
+    assert any("body cites record 'COR-777'" in i.diagnosis for i in issues)
+
+
+def test_is_decision_link_unit() -> None:
+    assert refs._is_decision_link("../../decisions/core/COR-016-x.md")
+    assert refs._is_decision_link("DEC-030-capability-contributed-adapter-overlays.md")
+    assert refs._is_decision_link("a/b/decisions/PRJ-002-y.md")
+    assert not refs._is_decision_link("scripts/move-issue.py")
+    assert not refs._is_decision_link("project/config.yaml")
+
+
+def test_storyboard_bare_sibling_resolves(kit_target: Path) -> None:
+    """A bare `storyboard.md` declared by a capability agent resolves against the
+    agent's own directory, not target-root (#584)."""
+    folder = kit_target / ".pkit" / "capabilities" / "cap" / "agents" / "a"
+    folder.mkdir(parents=True)
+    (folder / "a.md").write_text(
+        """---
+name: a
+description: t
+tools: [Read]
+storyboards:
+  - storyboard.md
+---
+# A
+Follow `storyboard.md` for the scripted scenarios.
+""",
+        encoding="utf-8",
+    )
+    (folder / "storyboard.md").write_text("---\nconsumers: []\n---\n# SB\n", encoding="utf-8")
+    issues = refs.validate_corpus(kit_target)
+    assert not any(
+        "storyboard" in i.diagnosis and "does not exist" in i.diagnosis for i in issues
+    ), [i.diagnosis for i in issues]
+
+
 def test_validate_flags_hook_closure_violation(kit_target: Path) -> None:
     """Agent needs a hook no provider answers/provides."""
     body = """---

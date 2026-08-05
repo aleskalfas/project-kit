@@ -23,6 +23,7 @@ Body parser convention (per COR-013, documented in `.pkit/agents/README.md`):
 from __future__ import annotations
 
 import io
+import os
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -999,15 +1000,27 @@ def _validate_bidirectional(artifacts: list[Artifact], target_root: Path) -> lis
                     )
                 )
 
-        # Backward: every body ref is declared in frontmatter.
+        # Backward: every body ref is declared in frontmatter — except
+        # references that are not overlay-resolved external reads: anchor /
+        # same-file doc links, decision-record links (the record is the real
+        # reference), and a capability artifact's pointers into its own tree
+        # (scripts, sub-procedures, project config). Those would otherwise be
+        # permanent, un-actionable noise on kit-owned content (#584).
         for path in art.body_refs.paths:
-            if path not in declared_paths_all and not _is_doc_link(path):
-                issues.append(
-                    Issue(
-                        location=loc,
-                        diagnosis=f"body cites path {path!r} but it is not declared in frontmatter `reads.paths` or `owns`.",
-                    )
+            if path in declared_paths_all:
+                continue
+            if (
+                _is_doc_link(path)
+                or _is_decision_link(path)
+                or _is_intra_capability_path(path, art, target_root)
+            ):
+                continue
+            issues.append(
+                Issue(
+                    location=loc,
+                    diagnosis=f"body cites path {path!r} but it is not declared in frontmatter `reads.paths` or `owns`.",
                 )
+            )
         for rec in art.body_refs.records:
             if rec not in declared_records_all:
                 issues.append(
@@ -1037,6 +1050,56 @@ def _is_doc_link(path: str) -> bool:
     refs (`#section`) and same-file refs (`./local.md`).
     """
     return path.startswith(("#", "./"))
+
+
+_DECISION_LINK_RE = re.compile(r"(?:^|/)(?:COR|PRJ|DEC|ADR)-\d+[A-Za-z0-9-]*\.md$")
+
+
+def _is_decision_link(path: str) -> bool:
+    """A body path citation whose target is a decision record (COR/PRJ/DEC/ADR
+    file) or a file under a `decisions/` directory.
+
+    A `[COR-026](.../COR-026-...md)` citation names a record; the record is the
+    load-bearing reference and is checked via `reads.records` / the
+    capability-citation graph. Requiring the redundant `.md` link *also* be
+    declared in `reads.paths` is noise (COR-013 backward check), so exempt it.
+    Existence of the linked file is still checked separately by `find_rot`.
+    """
+    return "/decisions/" in path or bool(_DECISION_LINK_RE.search(path))
+
+
+def _is_intra_capability_path(path: str, art: "Artifact", target_root: Path) -> bool:
+    """A relative path, cited by a capability-owned artifact, that resolves
+    inside that capability's own tree.
+
+    Such a path is an *implementation pointer* — a sibling sub-procedure
+    (`create-issue.md`), a script (`scripts/move-issue.py`), a `project/` config
+    (`project/config.yaml`) — not an overlay-resolved external dependency, so it
+    should not require a `reads.paths` declaration. Resolved lexically (no
+    filesystem access) against both the artifact's own directory and the
+    capability root, so sibling refs and capability-root refs both count.
+    Absolute paths and non-capability (area) artifacts are never intra-capability.
+    """
+    if art.capability is None or Path(path).is_absolute():
+        return False
+    cap_dir = target_root / ".pkit" / "capabilities" / art.capability
+    cap_root = os.path.normpath(cap_dir)
+    # A path that is *target-root-relative* (starts with `.pkit/`) resolves only
+    # from the target root — joining it under the artifact dir would falsely land
+    # a cross-tier reference (`.pkit/agents/project/overlay.yaml`, another
+    # capability's file) inside this capability. A genuinely artifact-relative
+    # path resolves from the artifact's own dir or the capability root.
+    if path == ".pkit" or path.startswith(".pkit" + os.sep):
+        candidates = [os.path.normpath(os.path.join(str(target_root), path))]
+    else:
+        candidates = [
+            os.path.normpath(os.path.join(str(art.path.parent), path)),
+            os.path.normpath(os.path.join(str(cap_dir), path)),
+        ]
+    for resolved in candidates:
+        if resolved == cap_root or resolved.startswith(cap_root + os.sep):
+            return True
+    return False
 
 
 def _validate_hook_closure(artifacts: list[Artifact], providers: list[Provider]) -> list[Issue]:
@@ -1114,7 +1177,16 @@ def _validate_storyboards(artifacts: list[Artifact], target_root: Path) -> list[
             )
         for sb_path in sorted(art.declared.storyboards):
             declared_storyboards.setdefault(sb_path, []).append(art)
-            candidate = target_root / sb_path if not Path(sb_path).is_absolute() else Path(sb_path)
+            if Path(sb_path).is_absolute():
+                candidate = Path(sb_path)
+            else:
+                # A storyboard is declared either target-root-relative (per
+                # agents/README.md) or as a bare sibling filename — the natural
+                # form for a capability agent whose storyboard sits beside it.
+                # Resolve against the agent's own directory first, then the
+                # target root (#584).
+                sibling = art.path.parent / sb_path
+                candidate = sibling if sibling.is_file() else target_root / sb_path
             if not candidate.is_file():
                 issues.append(
                     Issue(
