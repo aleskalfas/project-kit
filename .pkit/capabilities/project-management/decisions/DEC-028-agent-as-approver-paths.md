@@ -59,6 +59,8 @@ Three findings:
 
 The verdict vocabulary (`APPROVED`, `CHANGES_REQUESTED`) matches GitHub's native PR-review state names — transferable mental model, and future migration from comment-based sentinels to actual `gh pr review` objects is mechanically straightforward (the verdict maps to the Review state).
 
+> **Amended by [project-management:DEC-047-freeform-comment-verb] (#593).** The verdict comment additionally carries a **provenance marker**, `<!-- pkit-verdict -->`, and **the gate counts a verdict only when that marker is present**. The reviewer path stamps it (`review-pr.py` on post; a directly-posting reviewer includes it); `agent_verdicts.gate_verdicts` requires it (`require_marker=True`). This closes the read side of the sentinel-spoof DEC-047 guards on the write side: a bare verdict-grammar first line — hand-typed, or slipped past a write-side guard — no longer satisfies the merge gate unless it was stamped by the reviewer path. The **read surface** (`show-pr --field review`) stays permissive and still displays every verdict-shaped comment, marked or not; only the *gate* requires the marker. The first-line grammar is unchanged (the marker is a separate line), so this is a refinement, not a change to what a verdict *looks* like.
+
 A comment without the `Reviewer agent:` first-line prefix is implicitly informational commentary — no special verdict needed. Comments from the agent without the prefix do not affect the gate.
 
 ### Verdict-line grammar and the consumer scan contract
