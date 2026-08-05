@@ -244,6 +244,8 @@ This is intentionally narrower than the **branch** conv-type set. The branch pat
 
 Three narrow, batch-capable verbs replace the whole-body fetch-edit-resend that `edit-issue` forces for a single checkbox flip or field change. Each takes narrow input, validates the **whole batch up front**, refuses before any mutation on a hard inconsistency, and applies **idempotently** so a half-applied batch recovers by re-running. Output is a single clean line per result — nothing to pipe through `grep`.
 
+`edit-issue` itself **scopes validation to the field(s) being edited** (per [project-management:DEC-014-validation-severity-model]; #583): a title-only edit validates the new title but not the untouched body, and a body-only edit validates the new body but not the untouched title. This lets an issue whose body predates the current body schema take a clean title edit without a full body rewrite (and without reaching for `--force`); a body edit still validates the new body in full.
+
 | Command | What it does |
 |---|---|
 | `check-criterion <issue> <index> [text] [<index> [text]] ...` | Tick one or more acceptance-criterion checkboxes, addressed by **1-based index** (matching `show-issue --field criteria`'s numbering) with an optional **expected-text guard**. |

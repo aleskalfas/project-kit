@@ -13,9 +13,16 @@ Methodology-aware body edit. Fetches the current issue body via
 `body-format.yaml` + `titles.yaml` + `issue-types.yaml`, and writes
 back via `gh issue edit --body-file`.
 
+Validation is scoped to the field(s) being edited (#583): a title-only
+edit validates the new title but not the untouched body (which may
+predate the current body schema), and a body-only edit validates the new
+body but not the untouched title. This lets a legacy issue take a clean
+title edit without a full body rewrite.
+
 Refuses on hard-reject validation findings; warns on warning-level
-findings. The `--force` flag accepts hard-rejects with an audit
-comment (DEC-014 bypassable-with-audit pattern).
+findings. The `--force` flag is the operator override of a hard-reject
+finding (the `--force` layer per DEC-046 — distinct from the reason-based
+`--bypass` mechanism), recording an audit comment.
 
 Membership gate per DEC-021 runs at startup.
 
@@ -205,7 +212,16 @@ def main() -> int:
         f"  body change:   {len(current_body)} → {len(new_body)} chars"
     )
 
-    # Validate the new state.
+    # Scope validation to the field(s) actually being edited (#583). A
+    # title-only edit validates the new title but not the untouched body (which
+    # may predate the current body schema); a body-only edit validates the new
+    # body but not the untouched title.
+    title_changed = args.title is not None
+    body_changed = (
+        args.body is not None or args.body_file is not None or args.append is not None
+    )
+
+    # Validate the new state, scoped to the edited axes.
     findings = _validate(
         title=new_title,
         body=new_body,
@@ -213,6 +229,8 @@ def main() -> int:
         titles=titles,
         body_format=body_format,
         classification=classification,
+        check_title=title_changed,
+        check_body=body_changed,
     )
     _print_findings(findings)
 
@@ -296,8 +314,19 @@ def _validate(
     titles: dict,
     body_format: dict,
     classification: dict | None = None,
+    check_title: bool = True,
+    check_body: bool = True,
 ) -> list[Finding]:
-    """Apply the body + title validators used by validate-issue.py."""
+    """Apply the body + title validators used by validate-issue.py.
+
+    ``check_title`` / ``check_body`` scope the findings to the field(s) being
+    changed (#583). Both default True (full validation, unchanged for callers
+    that revalidate the whole issue); edit-issue passes only the axes it is
+    actually editing so a title-only edit does not re-reject an untouched
+    (possibly legacy-schema) body, and a body-only edit does not re-reject an
+    untouched title. Findings are labelled ``title.*`` / ``body.*``; the scope
+    is applied by dropping findings for the unchanged axis.
+    """
     findings: list[Finding] = []
 
     structural_type = _infer_structural_type(title, issue_types, classification or {})
@@ -401,6 +430,13 @@ def _validate(
             )
         )
 
+    # Scope to the fields being changed (#583). Findings are labelled
+    # `title.*` / `body.*`; drop the ones for an axis the caller is not editing
+    # so an untouched (possibly legacy-schema) title/body is not re-rejected.
+    if not check_title:
+        findings = [f for f in findings if not f.label.startswith("title.")]
+    if not check_body:
+        findings = [f for f in findings if not f.label.startswith("body.")]
     return findings
 
 
