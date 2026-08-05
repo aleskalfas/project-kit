@@ -364,6 +364,17 @@ Mode is resolved per-PR by three layers (highest wins):
 
 For the local-agent path, run `pkit project-management review-pr <N>` after `review-work` to invoke every registered local agent against the PR diff. Each agent posts a `Reviewer agent (local, <name>): APPROVED|CHANGES_REQUESTED` comment. Re-running re-invokes and posts a fresh verdict (post-date-latest-commit handles staleness).
 
+#### Freeform comments — `comment-issue` / `comment-pr` (per [project-management:DEC-047-freeform-comment-verb])
+
+The `project-manager` agent is denied direct `gh` writes, so it posts a **freeform** comment — evidence, analysis, a triage rationale — through a validated verb rather than raw `gh`. (The *structured* comments the methodology emits — audit notes, DEC-028 verdicts, filing provenance — stay side-effects of their own verbs.)
+
+| Command | What it does |
+|---|---|
+| `comment-issue <n> --body "…"` | Post a freeform comment on an issue. |
+| `comment-pr <n> --body "…"` | Post a freeform comment on a PR. |
+
+Both run the membership gate (DEC-021) and the foreign-repo session interlock (COR-039), print the context header, and honour `--dry-run` / `--yes` — the same guards as every mutating verb. A comment **mutates no lifecycle state**, so it carries **no** validation-severity gate; the only failure is an empty body. The verb refuses a body that would be mistaken for a **structured** comment — a first line matching the DEC-028 reviewer-verdict grammar or the DEC-014 audit-comment template — so a freeform note can never be mis-parsed by `done-work`'s gate-checker (see DEC-047).
+
 #### The CI-status gate (in front of the merge)
 
 The approval gate answers *did a reviewer approve?* — not *did CI pass?* A reviewer's APPROVED verdict is not evidence the PR's checks are green (the #498 hole: PR #496 merged with a red check on an APPROVED PR). So **both** merge paths — `done-work` and the lower-level `merge-pr` — run a **CI-status gate in front of the merge**, mirroring the release-merge gate (#475): they fetch the PR's `statusCheckRollup` and **refuse to merge when any check is failing or still pending**, naming the offending checks. An empty rollup (no checks configured) passes. This is additive — the reviewer-verdict and checkbox close-gates are unchanged; the CI gate sits ahead of them at the merge itself.

@@ -102,6 +102,12 @@ commands:
   show-pr:
     script: scripts/show-pr.py
     help: Read-only view of a GitHub PR — title parse, state, branches, closing issues, reviewers, doc-impact section presence, and the latest DEC-028 reviewer verdict(s) (--field review surfaces the verdict token + reasons through the governed read path).
+  comment-issue:
+    script: scripts/comment-issue.py
+    help: "Post a freeform comment on an issue through the validated path (per DEC-047). Membership + foreign-repo guarded; mutates no lifecycle state. Refuses a body whose first line would impersonate a structured comment (a DEC-028 verdict / `Approved`-prefix / audit template) so a note cannot spoof the merge gate."
+  comment-pr:
+    script: scripts/comment-pr.py
+    help: "Post a freeform comment on a PR through the validated path (per DEC-047). Membership + foreign-repo guarded; mutates no lifecycle state. Refuses a body whose first line would impersonate a structured comment (a DEC-028 verdict / `Approved`-prefix / audit template) so a note cannot spoof the merge gate."
   show-tree:
     script: scripts/show-tree.py
     help: PM-operational diagnostic. Walks the hierarchy (EPICs → Features/Umbrellas → Tasks → PRs) and reports orphans. Text / JSON / markdown output.
