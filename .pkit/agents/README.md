@@ -92,6 +92,14 @@ The discipline: cite paths in backticks, cite records by ID, mention hooks by na
 
 Both directions must hold. CI runs the same check at PR time.
 
+**Backward-check exemptions.** The backward path rule targets *overlay-resolved external reads* — dependencies whose location an adopter overlay can relocate. Three kinds of body path reference are therefore *not* required to be declared, because they are not that:
+
+- **Anchor / same-file links** — `#section`, `./local.md`.
+- **Decision-record links** — a `[COR-026](.../COR-026-…md)` markdown link. The *record* is the load-bearing reference (checked via `reads.records` / the capability-citation graph); the redundant `.md` link is exempt. (Its existence is still checked by `pkit refs rot`.)
+- **Intra-capability pointers** — a path, cited by a capability-owned agent/skill, that resolves inside that capability's own tree (`scripts/move-issue.py`, a sibling sub-procedure `create-issue.md`, `project/config.yaml`). These are implementation pointers, not external reads. A path that resolves *outside* the capability, or an absolute / target-root-relative path into another tier, is still flagged.
+
+Record and hook citations are never path-exempt: an undeclared `COR-NNN` record or hook mention is still flagged.
+
 Additional graph operations live in the `pkit refs` CLI family — show, who-references, rename, rot, graph, lookup. See `.pkit/cli/README.md` for the full surface once it ships.
 
 ## Hooks
@@ -302,7 +310,7 @@ storyboards:
 ---
 ```
 
-`storyboards:` is a list of project-root-relative paths. Each entry must resolve to a file on disk; the agent body must cite the path.
+`storyboards:` is a list of paths, each either project-root-relative (`.pkit/agents/project/<agent>/storyboard.md`) or a **bare sibling filename** (`storyboard.md`) resolved against the agent's own directory — the natural form when the storyboard sits beside the agent (e.g. a capability agent). Each entry must resolve to a file on disk; the agent body must cite the path.
 
 **Storyboard side:**
 
