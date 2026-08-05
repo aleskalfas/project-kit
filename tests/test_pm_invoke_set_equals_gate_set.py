@@ -298,7 +298,11 @@ def _run_gate(dw, monkeypatch, *, collection, labels, approved_names, refs_rc=0)
     comments = [
         {
             "author": {"login": "reviewer"},
-            "body": f"Reviewer agent (local, {name}): APPROVED\n\nbody.",
+            # Carries the verdict marker the gate now requires (#593).
+            "body": (
+                f"Reviewer agent (local, {name}): APPROVED\n\nbody."
+                "\n\n<!-- pkit-verdict -->"
+            ),
             "createdAt": _FRESH_TS,
         }
         for name in approved_names

@@ -84,18 +84,26 @@ def _config(local=("reviewer",), remote=()):
     }
 
 
-def _local_verdict_comment(name, verdict, author="reviewer", ts=_FRESH_TS):
+# Real reviewer-path verdicts carry the `<!-- pkit-verdict -->` marker the gate
+# now requires (#593); `marked=False` simulates an unstamped verdict-grammar
+# comment, which must NOT satisfy the gate.
+_VERDICT_MARKER = "<!-- pkit-verdict -->"
+
+
+def _local_verdict_comment(name, verdict, author="reviewer", ts=_FRESH_TS, marked=True):
+    tail = f"\n\n{_VERDICT_MARKER}" if marked else ""
     return {
         "author": {"login": author},
-        "body": f"Reviewer agent (local, {name}): {verdict}\n\nbody.",
+        "body": f"Reviewer agent (local, {name}): {verdict}\n\nbody.{tail}",
         "createdAt": ts,
     }
 
 
-def _remote_verdict_comment(verdict, author="review-bot", ts=_FRESH_TS):
+def _remote_verdict_comment(verdict, author="review-bot", ts=_FRESH_TS, marked=True):
+    tail = f"\n\n{_VERDICT_MARKER}" if marked else ""
     return {
         "author": {"login": author},
-        "body": f"Reviewer agent: {verdict}\n\nbody.",
+        "body": f"Reviewer agent: {verdict}\n\nbody.{tail}",
         "createdAt": ts,
     }
 

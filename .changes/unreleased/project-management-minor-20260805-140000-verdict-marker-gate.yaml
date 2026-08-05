@@ -1,0 +1,15 @@
+component: project-management
+kind: minor
+custom:
+  category: Changed
+body: >
+  The agent-mode merge gate now counts a DEC-028 reviewer verdict only when its
+  comment carries a `<!-- pkit-verdict -->` provenance marker (#593). The reviewer
+  path stamps it (`review-pr.py` on post; a directly-posting reviewer includes
+  it), and `agent_verdicts.gate_verdicts` requires it. This closes the read side
+  of the DEC-047 sentinel-spoof: a bare `Reviewer agent … APPROVED` first line —
+  hand-typed, or a freeform note that reached the PR by any other path — no longer
+  satisfies the gate unless the reviewer path stamped it. The read surface
+  (`show-pr --field review`) stays permissive and still displays every
+  verdict-shaped comment, marked or not. Verdicts are ephemeral (re-run
+  `review-pr`), so no migration; DEC-028 amended.

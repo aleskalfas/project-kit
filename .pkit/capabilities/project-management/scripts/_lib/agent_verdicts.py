@@ -49,6 +49,23 @@ from typing import Callable
 APPROVED = "APPROVED"
 CHANGES_REQUESTED = "CHANGES_REQUESTED"
 
+# Provenance marker the reviewer path stamps on a verdict comment (#593). The
+# **gate** counts a verdict only when its body carries this marker, so a bare
+# verdict-grammar line posted by any *other* path (a hand-typed comment, a
+# freeform note that slipped the DEC-047 write-side guard, a future tool) never
+# satisfies the merge gate. The read surface (`show-pr --field review`) stays
+# permissive — it displays every verdict-shaped comment, marked or not. Reuses
+# the HTML-marker convention (`pkit-provenance`, `pkit-hook`, `pkit-freeform`).
+VERDICT_MARKER = "<!-- pkit-verdict -->"
+
+
+def stamp_verdict(body: str) -> str:
+    """Append the verdict marker to a verdict comment body (idempotent)."""
+    if VERDICT_MARKER in body:
+        return body
+    return f"{body.rstrip()}\n\n{VERDICT_MARKER}\n"
+
+
 # Verdict-comment path (DEC-028): a remote reviewer posts under its GitHub
 # login; a local reviewer names itself in the first line.
 PATH_REMOTE = "remote"
@@ -117,6 +134,7 @@ def latest_verdicts_per_reviewer(
     remote_reviewer_ok: Callable[[str], bool] = lambda _login: True,
     local_reviewer_ok: Callable[[str], bool] = lambda _name: True,
     min_timestamp: str | None = None,
+    require_marker: bool = False,
 ) -> list[Verdict]:
     """Collapse a PR's comments to the latest verdict per reviewer (DEC-028).
 
@@ -164,6 +182,11 @@ def latest_verdicts_per_reviewer(
         if token is None:
             continue
 
+        # Gate path (#593): only a marker-carrying verdict counts, so a bare
+        # verdict-grammar line posted by any non-reviewer path never gates.
+        if require_marker and VERDICT_MARKER not in body:
+            continue
+
         timestamp = str(comment.get("createdAt") or "")
         if min_timestamp is not None and timestamp <= min_timestamp:
             continue
@@ -202,13 +225,18 @@ def gate_verdicts(
 ) -> list[Verdict]:
     """Strict, gate-facing verdict selection for the merge gate (DEC-028).
 
-    Behaviour-identical to `latest_verdicts_per_reviewer`, but the three
-    security-relevant filters are REQUIRED (non-defaulted) keyword arguments —
-    there is no way to call this permissively. That makes the fail-open default
-    of the read-surface primitive unreachable from the gate path: the gate's
-    correctness no longer depends on `done-work` *remembering* to inject a
-    freshness anchor and membership/author-exclusion predicates; forgetting one
-    is a `TypeError` at the call site, not a silently weakened gate.
+    Like `latest_verdicts_per_reviewer`, but the security-relevant filters are
+    REQUIRED (non-defaulted) keyword arguments, and it additionally requires the
+    verdict marker (`require_marker=True`, #593) — there is no way to call this
+    permissively. That makes the fail-open default of the read-surface primitive
+    unreachable from the gate path: the gate's correctness no longer depends on
+    `done-work` *remembering* to inject a freshness anchor and
+    membership/author-exclusion predicates; forgetting one is a `TypeError` at
+    the call site, not a silently weakened gate.
+
+    The marker filter (#593) closes the read side of the DEC-047 spoof: a bare
+    verdict-grammar line — however it reached the PR — counts only if the
+    reviewer path stamped it with `VERDICT_MARKER`.
 
       * `min_timestamp` — the freshness anchor (the latest-commit timestamp);
         only comments strictly after it count (DEC-028 step 4). Required so a
@@ -223,4 +251,5 @@ def gate_verdicts(
         min_timestamp=min_timestamp,
         local_reviewer_ok=local_reviewer_ok,
         remote_reviewer_ok=remote_reviewer_ok,
+        require_marker=True,
     )

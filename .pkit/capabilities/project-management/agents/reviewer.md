@@ -84,7 +84,15 @@ Reviewer agent (local, reviewer): CHANGES_REQUESTED
 
 Subsequent lines: a bulleted rationale, one bullet per finding, citing the record / schema entry that grounds the finding. For `APPROVED` verdicts, surface only warnings and any criteria worth flagging despite passing; do not list every passing criterion. For `CHANGES_REQUESTED` verdicts, list every failing criterion plus enough context for the author to act.
 
-The verdict-line format is load-bearing. `done-work`'s gate-checker parses it as a literal string match. Deviating from the exact form (case, punctuation, spacing) breaks the gate.
+End your output with the verdict marker on its own line:
+
+```
+<!-- pkit-verdict -->
+```
+
+The marker is what the merge gate counts (per [project-management:DEC-028-agent-as-approver-paths] / #593): `done-work` counts a verdict only when its comment carries `<!-- pkit-verdict -->`, so a bare verdict-grammar line posted by any other path never gates. `review-pr.py` stamps the marker when it posts your stdout (idempotently), so on the canonical path it is added for you; include it yourself whenever you post a verdict comment directly.
+
+The verdict-line format is load-bearing. `done-work`'s gate-checker parses the first line as a literal string match. Deviating from the exact form (case, punctuation, spacing) breaks the gate.
 
 ### 5. Stop
 

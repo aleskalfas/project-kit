@@ -80,6 +80,7 @@ _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib import session_guard  # noqa: E402
+from _lib.agent_verdicts import stamp_verdict  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
     check_membership,
@@ -345,11 +346,11 @@ def _invoke_agent(
 
 
 def _format_verdict_comment(name: str, verdict: str, body: str) -> str:
-    """Compose the verdict comment in DEC-028's local-path format."""
+    """Compose the verdict comment in DEC-028's local-path format, stamped with
+    the verdict marker (#593) so the merge gate counts it."""
     first_line = f"Reviewer agent (local, {name}): {verdict}"
-    if body.strip():
-        return f"{first_line}\n\n{body.strip()}"
-    return first_line
+    composed = f"{first_line}\n\n{body.strip()}" if body.strip() else first_line
+    return stamp_verdict(composed)
 
 
 # ---- required-set resolution (DEC-032 D1/D4) -------------------------

@@ -88,7 +88,9 @@ def test_local_registered_handles_non_dict_review(rpr) -> None:
 
 def test_format_verdict_approved(rpr) -> None:
     out = rpr._format_verdict_comment("critic", "APPROVED", "")
-    assert out == "Reviewer agent (local, critic): APPROVED"
+    # First line is the gate grammar; the verdict marker (#593) is appended.
+    assert out.split("\n", 1)[0] == "Reviewer agent (local, critic): APPROVED"
+    assert "<!-- pkit-verdict -->" in out
 
 
 def test_format_verdict_with_body(rpr) -> None:
@@ -97,12 +99,14 @@ def test_format_verdict_with_body(rpr) -> None:
     )
     assert out.startswith("Reviewer agent (local, critic): CHANGES_REQUESTED\n\n")
     assert "Three findings" in out
+    assert "<!-- pkit-verdict -->" in out
 
 
 def test_format_verdict_strips_blank_body(rpr) -> None:
-    """Whitespace-only body is omitted."""
+    """Whitespace-only body is omitted; the verdict marker is still appended."""
     out = rpr._format_verdict_comment("critic", "APPROVED", "  \n  \n")
-    assert out == "Reviewer agent (local, critic): APPROVED"
+    assert out.split("\n", 1)[0] == "Reviewer agent (local, critic): APPROVED"
+    assert "<!-- pkit-verdict -->" in out
 
 
 # ---- _invoke_agent verdict scan (DEC-028 grammar, anywhere in output) ----
