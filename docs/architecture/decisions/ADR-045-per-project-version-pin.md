@@ -1,0 +1,78 @@
+---
+id: ADR-045
+title: Per-project version pin via a project-owned directive file
+status: proposed
+date: 2026-08-05
+author: Aleš Kalfas <kalfas.ales@gmail.com>
+---
+
+> Make the [ADR-039](ADR-039-pkit-entry-point-router.md) router's per-project version pin real for adopters. A project opts in to a pinned pkit version by committing a small **project-owned pin directive file**; the router then re-execs `uvx project-kit@<pin>` so the pinned version serves the command, and a global-tool upgrade no longer disturbs the project. Three deliberate gestures manage the pin: **`pkit pin`** freezes the project (writes the file, default at the current version), **`pkit upgrade`** raises an existing pin forward, and **`pkit unpin`** removes it. The raise runs through the router's existing `PKIT_NO_ROUTE` bypass — **no global `uv tool install`, no change to the router's route-decision contract, ADR-039 stays closed.** (The pin *source* the router reads does change — from `.pkit/VERSION` to the pin file — which is exactly the slot ADR-039 left to implementation.) Absent the file, nothing changes: the router runs the installed binary as it does today. This fills the pin source [ADR-039](ADR-039-pkit-entry-point-router.md) explicitly left to implementation.
+
+## Context
+
+The ADR-039 router decides, before it dispatches any command, which pkit actually runs. It has three outcomes: run the in-tree dispatcher when inside a source checkout; re-exec `uvx project-kit@<pin>` when the project pins a version different from the running binary, so the pinned version serves the command; otherwise run the installed binary as-is. The middle outcome — the **pinned re-exec** — is what makes a project run at its own version: a global-tool upgrade then doesn't disturb a pinned project. That is the reproducibility guarantee, and it matters directly when one machine drives several projects held at different pkit versions under a single global install.
+
+**But the pin is inert for adopters.** The router resolves the pin from `.pkit/VERSION`, and adopters have no `.pkit/VERSION` — it is source-repo-only (the #545 family). No pin resolves, so the router falls to the last outcome and runs the installed global binary in every adopter project. Adopters get **no per-project version-locking at all**; a `uv tool install --force` to the latest silently moves every project on the machine.
+
+ADR-039 anticipated this: it **explicitly defers the pin source to the implementation** (its lines 94-95 and 155, issue #465 — "whether the project's pin is read from `.pkit/VERSION` or from a dedicated pin file is left to the implementation to decide and reconcile"). This record makes that call. [ADR-044](ADR-044-upgrade-self-update-detect-instruct.md) shipped the print-only self-update (v1.143.0) and named this seamless per-project increment as its deferred next step.
+
+An earlier lean — reuse `manifest.yaml`'s `backbone_version` as the pin — was pressure-tested and rejected (recorded in the scratchpad note this record retires). `backbone_version` is written unconditionally by every `sync`, so an offline sync in a pinned project would silently rewrite the pin; and it advances mid-upgrade (before migrations), leaving no atomic flip. Overloading a sync-written *record* as the run *directive* is unsound.
+
+## Decision
+
+**A project opts in to per-project version pinning by committing a dedicated, project-owned pin directive file. The router resolves the pin from that file; `pkit upgrade` raises it, executed through the router's existing bypass. The router's route-decision contract (its route table, loop guard, and degrade posture) is unchanged; only the pin *source* it reads changes — the slot ADR-039 explicitly deferred. ADR-039 stays closed.**
+
+1. **Pin source: a dedicated project-owned directive file** — not `.pkit/VERSION`, not `manifest.yaml`'s `backbone_version`. Per COR-006's artifact-role distinction, `backbone_version` is a **record** (a receipt of the last sync) and the pin is a **directive** (a forward-looking, operator-owned control input). The pin file follows the lockfile model (`.python-version`-style): committed, project-owned, **never kit-synced**, and flipped last in an upgrade (atomic). It is not named `VERSION` (that re-imports the content-vs-run-version confusion). `_resolve_pin` reads this file when present.
+
+2. **Opt-in** — the pin file's *presence* is the signal. Present → the router re-execs `uvx project-kit@<pin>` and the pinned version serves the command. Absent → the router runs the installed binary as-is, exactly today's behaviour and zero added cost. The file is created by a deliberate gesture (`pkit pin`, below), never by `init`/`sync`.
+
+3. **Three separate gestures manage the pin — freeze, raise, remove — because they are three different intents:**
+   - **`pkit pin [<version>]`** *creates or sets* the pin. With no argument it **freezes the project at the version it is currently on** — the common case: lock this project where it is, don't move it. With a `<version>` it pins at that version (and syncs content to match, run under the bypass since it may move the project). This is the opt-in gesture and the only way a project acquires its first pin file.
+   - **`pkit upgrade`** *raises an existing pin* to the target (the ambient tool's version, or latest via ADR-044's check), then syncs content to match. In an **un-pinned** project `pkit upgrade` keeps its current meaning — sync content from the installed tool's bundle, no pin written — so nothing about today's un-pinned upgrade changes.
+   - **`pkit unpin`** *removes* the pin file; the project reverts to floating on the installed binary (today's behaviour).
+
+4. **Route all commands** (the router keeps routing every command uniformly, as ADR-039 already does) — reads (validate / status / gating) are the most correctness-sensitive commands for a methodology tool; version⟺content must hold for them, so routing stays uniform. No mutation-only carve-out.
+
+5. **Bootstrap-the-raise via the existing `PKIT_NO_ROUTE` bypass, in the operator gesture** — the router runs *before* command dispatch, so a pinned-X project cannot run a newer pkit to rewrite its own pin from inside. The escape is **not** a router change; it is the router's existing bypass surfaced in the operator gesture: `uv tool install --force <url>@vZ && PKIT_NO_ROUTE=1 pkit upgrade`. `PKIT_NO_ROUTE=1` makes that one invocation run at the ambient tool version, which performs the raise (writes the pin file to the target) and syncs content to match. `pkit upgrade` detects it is the pinned child (via `PKIT_ROUTED=1`, the flag the router already sets when it re-execs into the pinned version) and prints this actionable line rather than silently no-op'ing. Forgetting the bypass is benign — the invocation just re-execs into the pinned version and no-ops with the same message. (Only gestures that move a project *past* its current pin need the bypass — `pkit upgrade`, and `pkit pin <version>` when the target is newer than the pin. `pkit pin` with no argument freezes at the current version and writes the file in place, no bypass needed; `pkit unpin` just deletes it.)
+
+6. **`sync` does not escape** — because the pin is a dedicated file (not `backbone_version`), a `sync` under a pinned project is *correct* and must route normally. Only a pin-raise past the current pin uses the bypass.
+
+7. **Drop `--to vY`; compose with ADR-044** — to reach a specific version the operator uses ADR-044's already-shipped `uv tool install --force …@vY` then `pkit upgrade`. This record adds no version-target flag of its own.
+
+This is **not** an ADR-039 reopening — it fills the pin-source slot ADR-039 explicitly deferred. The router's route table, loop guard, and degrade-loudly-on-unresolvable-pin posture are all unchanged.
+
+## Rationale
+
+**Why a dedicated directive file over reusing `backbone_version` (COR-006, and the killed lean).** The pin is a *directive* the operator sets to control which code runs; `backbone_version` is a *record* the tool writes to note what content was last synced. Collapsing them fails three ways: (a) `sync` writes `backbone_version` unconditionally, so an offline sync (degrading to the global version) would silently rewrite the pin — the exact opposite of the reproducibility the pin exists for; (b) `backbone_version` advances *before* migrations run, so it can't be the atomic end-of-upgrade flip; (c) capability content upgrades independently of `backbone_version`, so it isn't a faithful "run version" anyway. A separate, operator-owned, never-sync-written file is immune to all three.
+
+**Why the escape is the operator gesture, not a router carve-out.** The tempting alternative — teach the router to run `upgrade`/`sync` unrouted while routing everything else — reopens ADR-039's command-agnostic contract, requires a fragile pre-click argv parse, and is unsafe in both directions (a mis-classified pin-managing command routes and no-ops; a mis-classified methodology command runs at the wrong version). The `PKIT_NO_ROUTE` bypass already exists for exactly this, costs the router nothing, and keeps the failure mode benign. This is the load-bearing correction from architectural review.
+
+**Why route all commands, not just mutations.** For a methodology tool the reads — validation, status, gate evaluation — are where running the wrong version's *behaviour* does the most damage (a gate that passes under the wrong rules is worse than a mutation that refuses). Uniform routing is foundational to ADR-039's soundness; the hot-path `uvx` cost is mitigated by uv's cache and is the price of correctness.
+
+**Why opt-in.** Pinning carries a real cost (a `uvx` re-exec per command in a pinned project). Absent an explicit pin file, adopters keep today's zero-tax run-self. Implicit universal pinning would also mean the first global-tool upgrade suddenly flips every project's behaviour — surprising and the opposite of deliberate. Presence-as-signal makes the cost opted into.
+
+**Why three gestures instead of overloading `pkit upgrade`.** "Lock this project where it is" and "move this project to a newer version and lock it there" are different intents, and the common one is the *freeze* — an operator with several projects wants to pin each at its current, known-good version, not upgrade them. Folding both into `pkit upgrade` would force an upgrade to acquire a pin, so you could never lock a project without also moving it. Splitting them keeps each gesture honest: `pkit pin` sets the directive (freeze by default), `pkit upgrade` moves an existing pin forward, `pkit unpin` clears it. It also mirrors the lockfile tools this design borrows from — you *write* a lock, then separately *update* it.
+
+**Why this is safe to record now.** The architect's advisory lean was to *defer* the build (at single-digit adopters ADR-044's print-only already relieved the reported friction; the value is latent). The maintainer has the concrete need it named as justifying: multiple projects on different pkit versions under one global install. The design is settled and low-risk (the router's route-decision contract is untouched), so the record stands; the implementation follows once this record is accepted.
+
+### Alternatives considered
+
+- **Reuse `manifest.yaml` `backbone_version` as the pin (approach A).** Rejected — record-vs-directive conflation; silent sync-rewrite hazard; no atomic flip; capability content drifts from it. (Killed in review; see the retired scratchpad note.)
+- **Propagate `.pkit/VERSION` to adopters (approach C).** Rejected — introduces a second per-project version record beside `backbone_version`, two sources of one truth, the drift the #545 family already demonstrates.
+- **Argv-aware router carve-out for pin-managing commands.** Rejected — reopens ADR-039's command-agnostic contract, fragile pre-click parse, unsafe in both error directions. The existing `PKIT_NO_ROUTE` bypass achieves the same escape with no router change.
+- **Route only mutations.** Rejected — a methodology tool's reads (gating/validation) are the most version-sensitive commands; running them at the wrong version is the worst failure.
+- **A `--to vY` target flag.** Rejected as over-engineering — ADR-044's shipped `uv tool install --force …@vY` already reaches a specific version; this record composes with it.
+- **A single `pkit upgrade` as the only pin gesture.** Rejected — it couples pinning to upgrading, so you could never freeze a project at its current version without moving it. The common intent (lock where it is) needs its own gesture; hence the `pin` / `upgrade` / `unpin` split.
+- **Defer the build entirely (architect's Q5 lean).** Not taken — the maintainer has the concrete multi-project need; the design is settled and leaves the router's route-decision contract untouched. Recorded now; implemented on acceptance.
+
+## Implications
+
+- **Router (`router.py`).** `_resolve_pin` reads the dedicated pin file (project-owned path, TBD in implementation) instead of `.pkit/VERSION`; absent → `None` → the router runs the installed binary as-is. Route table, loop guard, and unresolvable-pin degrade-loudly posture unchanged. This realizes the pin source ADR-039 deferred (#465).
+- **New CLI surface: `pkit pin` and `pkit unpin`.** `pkit pin [<version>]` writes the pin file — no argument freezes at the current version (in place, no bypass); `<version>` pins at a target (under the bypass when the target is newer than the running pin, since it re-execs there to sync). `pkit unpin` deletes the pin file. Both are new commands (COR-004 surface); documented in `.pkit/cli/README.md`.
+- **Upgrade (`upgrade.py`).** `pkit upgrade` (a) when it detects it is the pinned child (`PKIT_ROUTED=1`), prints the actionable bypass-prefixed escape (the literal string is owned by `.pkit/cli/README.md`) and stops; (b) when run under `PKIT_NO_ROUTE=1` (or as the ambient tool) in a pinned project, resolves the target, raises the pin, and syncs content to match — the pin file flipped last (atomic); (c) in an un-pinned project, keeps today's plain content-sync from the tool bundle (no pin written). Composes with ADR-044's existing staleness check; no `--to` flag.
+- **The pin file is project-owned and never synced.** It joins the project-owned set (like the pm capability's `substrate-map.yaml`) — outside the no-shared-files kit-owned trees; `pkit sync`/`upgrade` never write or overwrite it except via `pkit pin` / `pkit upgrade`'s deliberate raise.
+- **Opt-in migration posture.** Existing adopters are unaffected until they create a pin file — no migration needed for the router change itself (absent file = today's behaviour). The `_resolve_pin` source change is behaviour-preserving for un-pinned projects; a migration is required only if the file format or a rename lands later.
+- **Surface change (PRJ-002).** New behaviour (a project-owned pin directive the router honours; upgrade's pin-raise semantics) → a backbone bump, and the change ships via `pkit upgrade` from the tool's bundle.
+- **Sequencing under the target's code.** A raise runs the *target* version's sync (target code writes target content), so pin-raise + content-sync + migrations all execute under the version being moved to, per ADR-033's content-locked-to-binary invariant.
+- **Docs.** `.pkit/cli/README.md` documents the pin file and the three gestures (`pkit pin` / `pkit upgrade` / `pkit unpin`), including the `PKIT_NO_ROUTE=1` raise; ADR-039's deferred-pin-source note (#465) is answered by this record (cross-reference, not edit).
+- **Retires the scratchpad note** `.pkit/scratchpad/active/2026-08-05-per-project-version-pin.md` (produces this ADR).
