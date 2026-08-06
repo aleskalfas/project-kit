@@ -1,7 +1,7 @@
 ---
 id: ADR-045
 title: Per-project version pin via a project-owned directive file
-status: proposed
+status: accepted
 date: 2026-08-05
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
