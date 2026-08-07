@@ -93,10 +93,31 @@
     },
     "depends_on": {
       "type": "object",
-      "description": "COR-038: ONE inert, schema-validated cross-process connection a state declares (the entries live in the `depends_on` LIST on a state). INERT by design -- the engine's runtime (`status`/`can-move`/`move`/`validate`-of-position) NEVER reads it: its only readers are the SCHEMA (shape-validates it here) and a future render (out-of-engine, draws the topology). So a malformed entry is a definition-authoring LINT error, never a fail-closed gate -- it cannot affect whether any subject may move. It annotates ONLY the edges the engine cannot already see; an enforced `composed-subprocess` / `aggregates` edge is fully declared by the `subprocess`/`cascade` block the engine owns, so the render DERIVES those (derive-don't-annotate, single-source-of-truth COR-006) and they are deliberately NOT relation values here.",
+      "description": "COR-038: ONE inert, schema-validated cross-process connection a state declares (the entries live in the `depends_on` LIST on a state). INERT by default -- the engine's runtime (`status`/`can-move`/`move`/`validate`-of-position) NEVER reads it: its readers are the SCHEMA (shape-validates it here), the render (out-of-engine, draws the topology), and -- for entries carrying the OPT-IN `handoff` contract -- the `health` surface (out-of-runtime, report-only, COR-042). So a malformed entry is a definition-authoring LINT error, never a fail-closed gate -- it cannot affect whether any subject may move. It annotates ONLY the edges the engine cannot already see; an enforced `composed-subprocess` / `aggregates` edge is fully declared by the `subprocess`/`cascade` block the engine owns, so the render DERIVES those (derive-don't-annotate, single-source-of-truth COR-006) and they are deliberately NOT relation values here.",
       "required": ["upstream", "relation", "mode", "why"],
       "additionalProperties": false,
       "properties": {
+        "handoff": {
+          "type": "object",
+          "description": "COR-042 (optional, additive): the OPT-IN evaluable hand-off contract -- read ONLY by the out-of-runtime `health` surface, never by the runtime engine or any gate. Declares the upstream trigger state plus the two binding-supplied resolution-seam predicates (ADR-048). Orthogonal to `relation`/`mode` (any edge's hand-off may be checkable). Entries WITHOUT this block keep COR-038's full inert contract. Shape lint here is LOCAL well-formedness only; whether the contract can be INTERPRETED (upstream address resolves, trigger is a real state of the upstream) is checked at health time, where failure is INDETERMINATE -- never silently green. Two authoring smells the reference documents: an EPHEMERAL trigger (a subject that transits it leaves the report, picked up or not -- declare a stable state) and a candidates source that can silently return nothing against a wrong root (a determinate empty answer that hides a real backlog).",
+          "required": ["trigger", "candidates", "resolve"],
+          "additionalProperties": false,
+          "properties": {
+            "trigger": {
+              "type": "string",
+              "minLength": 1,
+              "description": "COR-042: the upstream state meaning 'ready to hand off'. Must be a state of the upstream definition (checked at health time, not here); declare a STABLE state the subject holds until picked up."
+            },
+            "candidates": {
+              "$ref": "#/$defs/predicate",
+              "description": "ADR-048: the binding-supplied source of upstream candidate subject ids (a registered command; returns {candidates: [\"id\", ...]}). The source PROPOSES; the health surface confirms each candidate one subject at a time through the engine's own per-subject position resolution. Error/unavailable = the contract is indeterminate (fail-closed); an explicit empty list is a determinate, clean answer."
+            },
+            "resolve": {
+              "$ref": "#/$defs/predicate",
+              "description": "ADR-048: the binding-supplied point-to-point resolution -- threaded with ONE upstream subject id, returns {downstream: [\"id\", ...]}. A non-empty list = the hand-off is satisfied (>=1 downstream exists, fan-out allowed); an explicit EMPTY list = determinate absence (a MISSED hand-off); error / no explicit list = indeterminate (fail-closed, never read as 'no miss')."
+            }
+          }
+        },
         "upstream": {
           "type": "string",
           "pattern": "^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$",
@@ -136,7 +157,7 @@
         },
         "depends_on": {
           "type": "array",
-          "description": "COR-038 (optional, additive): INERT cross-process connection metadata -- a list of declared connections to upstream processes that the engine NEVER evaluates (only the schema shape-validates them, only a future render reads them to draw the topology). Absent on every existing state -- those validate byte-unchanged. Carries ONLY the edges the engine cannot see; composition/aggregation edges are derived from `subprocess`/`cascade` instead (derive-don't-annotate).",
+          "description": "COR-038 (optional, additive): INERT cross-process connection metadata -- a list of declared connections to upstream processes that the RUNTIME engine never evaluates (the schema shape-validates them, the render draws them, and the out-of-runtime `health` surface evaluates ONLY the entries carrying an opt-in `handoff` contract, COR-042). Absent on every existing state -- those validate byte-unchanged. Carries ONLY the edges the engine cannot see; composition/aggregation edges are derived from `subprocess`/`cascade` instead (derive-don't-annotate).",
           "items": { "$ref": "#/$defs/depends_on" }
         },
         "entry": {

@@ -3570,6 +3570,56 @@ def process_validate(address: str, subject: str | None, as_json: bool) -> None:
         raise SystemExit(1)
 
 
+@process.command("health")
+@click.option(
+    "--process", "focus_process", default=None,
+    help="Only contracts touching this <capability>:<process-id> (as upstream or downstream).",
+)
+@click.option(
+    "--json", "as_json", is_flag=True, default=False,
+    help="Emit the byte-stable machine form (per-contract objects + totals; no styling).",
+)
+def process_health(focus_process: str | None, as_json: bool) -> None:
+    """Walk every declared hand-off contract (COR-042) and report missed
+    hand-offs — upstream subjects at their trigger state with no downstream
+    counterpart.
+
+    \b
+    Takes NO subject: it walks the opt-in `handoff` contracts on `depends_on`
+    entries across the configured wiring. Out-of-runtime and REPORT-ONLY — it
+    reads live upstream positions through the engine's per-subject resolution
+    plus the binding's candidates/resolve seam predicates (ADR-048), but blocks
+    no move, writes no journal entry, remediates nothing. Entries without a
+    contract are never evaluated.
+
+    \b
+    Fail-closed (COR-042): an uninterpretable contract (unresolvable upstream
+    address, phantom trigger), a broken candidate source, an unreadable upstream
+    position, or an erroring `resolve` is INDETERMINATE — reported distinctly,
+    never counted as "nothing missed". A determinate-empty candidate set is
+    clean. Deterministic: contracts order topologically over the wiring
+    (upstream-most first, name tie-breaks), subjects name-sorted; no time/age
+    ordering.
+
+    Exits non-zero on any miss OR any indeterminate; 0 only when both are zero.
+    """
+    from project_kit import process as process_mod
+    from project_kit import process_health as ph
+
+    try:
+        repo_root = process_mod.resolve_repo_root()
+        report = ph.build_report(repo_root, focus=focus_process)
+    except process_mod.ProcessError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    if as_json:
+        click.echo(ph.render_json(report), nl=False)
+    else:
+        click.echo(ph.render_narrative(report), nl=False)
+    if not report.ok:
+        raise SystemExit(1)
+
+
 @process.command("graph")
 @click.option(
     "--flow", "fmt_flow", is_flag=True, default=False,
