@@ -9,6 +9,8 @@ later increments of #613.
 
 from __future__ import annotations
 
+import shutil
+import subprocess
 import urllib.parse
 from pathlib import Path
 
@@ -79,3 +81,44 @@ def compose_report(
     )
     url = build_new_issue_url(REPORT_TARGET, title=title, body=body, label=kind)
     return body, url
+
+
+def gh_authenticated() -> bool:
+    """True iff `gh` is installed and authenticated (so the auto-file path can run).
+    Best-effort; any failure ⇒ False ⇒ the caller degrades to the URL."""
+    if shutil.which("gh") is None:
+        return False
+    try:
+        proc = subprocess.run(
+            ["gh", "auth", "status"], capture_output=True, text=True, check=False
+        )
+    except OSError:
+        return False
+    return proc.returncode == 0
+
+
+def file_report_via_gh(
+    target: str, *, title: str, body: str, label: str
+) -> str | None:
+    """Create the report issue on `target` via `gh issue create`. Returns the new
+    issue's URL on success, or None on any failure (caller degrades to the URL).
+
+    This is a **categorically-foreign** write (ADR-047): it targets the
+    distribution's repo (`--repo <target>`), never the session's own, so it is
+    scoped *outside* the self-guard interlock by category — no
+    `--allow-foreign-repo` override is used. The interactive target-naming confirm
+    is the caller's (CLI) responsibility; under `--yes`/autonomy the caller does
+    not reach here (it degrades to the draft URL — the deliberate `--yes`
+    asymmetry).
+    """
+    cmd = [
+        "gh", "issue", "create", "--repo", target,
+        "--title", title, "--body", body, "--label", label,
+    ]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    except OSError:
+        return None
+    if proc.returncode != 0:
+        return None
+    return proc.stdout.strip() or "(created)"

@@ -622,17 +622,43 @@ def report(ctx: click.Context) -> None:
         )
 
 
-def _run_report_url_first(
-    kind: str, title: str, prose: str, on_behalf_of: str | None, include_private: bool
+def _echo_url_first(kind: str, url: str, target: str, note: str = "") -> None:
+    if note:
+        click.echo(note)
+    click.echo(f"\nOpen this prefilled {kind} on {target} to file it:\n")
+    click.echo(f"    {url}\n")
+    click.echo(
+        "Review the body in the browser before submitting — it carries a redacted "
+        "environment block (versions/OS only; home paths stripped, private "
+        "capability names withheld)."
+    )
+
+
+def _run_report(
+    kind: str,
+    title: str,
+    prose: str,
+    on_behalf_of: str | None,
+    include_private: bool,
+    do_file: bool,
+    assume_yes: bool,
 ) -> None:
-    """URL-first reporter path: compose the report and print a prefilled new-issue
-    URL (works with no `gh` auth; the browser submit is the review gate). The
-    `gh`-auto-file + target-naming confirm + `--yes`-degrade land next (#613)."""
-    from project_kit.report import REPORT_TARGET, compose_report
+    """Reporter path. Default is **URL-first** (print a prefilled new-issue URL —
+    no `gh` needed, browser submit is the review gate). `--file` opts into a
+    `gh`-auto-file to the fixed distribution target, gated by an interactive
+    **target-naming confirm**; it degrades to the URL when `gh` isn't
+    authenticated or under `--yes`/autonomy (ADR-047: the foreign write never
+    auto-posts — the deliberate `--yes` asymmetry)."""
+    from project_kit.report import (
+        REPORT_TARGET,
+        compose_report,
+        file_report_via_gh,
+        gh_authenticated,
+    )
 
     target_root = find_target_root() or Path.cwd()
     try:
-        _body, url = compose_report(
+        body, url = compose_report(
             kind,
             title=title,
             prose=prose,
@@ -642,20 +668,56 @@ def _run_report_url_first(
         )
     except ValueError as exc:
         raise click.ClickException(str(exc)) from exc
-    click.echo(f"Open this prefilled {kind} on {REPORT_TARGET} to file it:")
-    click.echo()
-    click.echo(f"    {url}")
-    click.echo()
-    click.echo(
-        "Review the body in the browser before submitting — it carries a redacted "
-        "environment block (versions/OS only; home paths stripped, private "
-        "capability names withheld)."
-    )
+
+    if do_file and assume_yes:
+        _echo_url_first(
+            kind, url, REPORT_TARGET,
+            note="--yes: not auto-posting a public foreign issue (ADR-047). Draft "
+            "below to review + submit.",
+        )
+        return
+    if do_file and not gh_authenticated():
+        _echo_url_first(
+            kind, url, REPORT_TARGET,
+            note="gh is not authenticated — falling back to the prefilled URL.",
+        )
+        return
+    if do_file:
+        click.echo(
+            f"This posts a PUBLIC {kind} issue to {REPORT_TARGET} under your gh "
+            "identity, with this body:\n"
+        )
+        click.echo(body)
+        if click.confirm(f"\nPost to {REPORT_TARGET}?", default=False):
+            posted = file_report_via_gh(
+                REPORT_TARGET, title=title, body=body, label=kind
+            )
+            if posted:
+                click.echo(f"\n[ok] filed: {posted}")
+                return
+            _echo_url_first(
+                kind, url, REPORT_TARGET,
+                note="\ngh could not file it — use the prefilled URL instead:",
+            )
+            return
+        _echo_url_first(kind, url, REPORT_TARGET, note="\nNot posted.")
+        return
+
+    _echo_url_first(kind, url, REPORT_TARGET)
 
 
 _REPORT_OPTS = [
     click.option("--title", required=True, help="One-line summary."),
     click.option("--body", "prose", required=True, help="The report text (prose)."),
+    click.option(
+        "--file", "do_file", is_flag=True, default=False,
+        help="Opt into filing via `gh` (after a confirm) instead of printing a URL.",
+    ),
+    click.option(
+        "--yes", "assume_yes", is_flag=True, default=False,
+        help="Non-interactive. For --file, degrades to the draft URL — the foreign "
+        "write is never auto-posted (ADR-047).",
+    ),
     click.option(
         "--on-behalf-of", default=None,
         help="Attribute the report to @login (files under your identity).",
@@ -675,16 +737,24 @@ def _with_report_opts(fn):
 
 @report.command("bug")
 @_with_report_opts
-def report_bug(title: str, prose: str, on_behalf_of: str | None, include_private: bool) -> None:
+def report_bug(
+    title: str, prose: str, do_file: bool, assume_yes: bool,
+    on_behalf_of: str | None, include_private: bool,
+) -> None:
     """File a structured bug report to project-kit."""
-    _run_report_url_first("bug", title, prose, on_behalf_of, include_private)
+    _run_report("bug", title, prose, on_behalf_of, include_private, do_file, assume_yes)
 
 
 @report.command("feedback")
 @_with_report_opts
-def report_feedback(title: str, prose: str, on_behalf_of: str | None, include_private: bool) -> None:
+def report_feedback(
+    title: str, prose: str, do_file: bool, assume_yes: bool,
+    on_behalf_of: str | None, include_private: bool,
+) -> None:
     """File freeform feedback to project-kit."""
-    _run_report_url_first("feedback", title, prose, on_behalf_of, include_private)
+    _run_report(
+        "feedback", title, prose, on_behalf_of, include_private, do_file, assume_yes
+    )
 
 
 @main.command()

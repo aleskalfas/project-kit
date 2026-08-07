@@ -9,7 +9,8 @@ body: >
   OS/arch — no filesystem paths; incubated capability names withheld unless
   `--include-private`) and prints a **prefilled GitHub new-issue URL** — the
   URL-first path works with no `gh` auth (the browser submit is the review gate).
-  `--on-behalf-of @login` attributes a report filed for someone else. The
-  `gh`-auto-file path (with the target-naming confirm and `--yes`-degrades-to-draft),
-  the tracking reads (`list`/`show`), and the maintainer side land in later
-  increments of #613.
+  An opt-in `--file` posts via `gh` after an interactive **target-naming confirm**,
+  degrading to the URL when `gh` isn't authenticated or under `--yes` (the foreign
+  write is never auto-posted — the deliberate `--yes` asymmetry, ADR-047).
+  `--on-behalf-of @login` attributes a report filed for someone else. The tracking
+  reads (`list`/`show`) and the maintainer side land in later increments of #613.
