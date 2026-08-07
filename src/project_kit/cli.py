@@ -612,6 +612,291 @@ def status() -> None:
     report_status()
 
 
+@main.group("report", invoke_without_command=True)
+@click.option(
+    "--tree", is_flag=True, help="Show each report with its tracked-by fixes nested."
+)
+@click.pass_context
+def report(ctx: click.Context, tree: bool) -> None:
+    """Report a bug or feedback about pkit to project-kit (per PRJ-008 / ADR-047).
+
+    With no subcommand, lists your reports and their states (flat; `--tree` nests
+    each report's tracked-by fixes).
+    """
+    if ctx.invoked_subcommand is None:
+        _run_report_list(tree=tree)
+
+
+def _run_report_list(*, tree: bool = False) -> None:
+    from project_kit.report import (
+        REPORT_TARGET,
+        gh_authenticated,
+        list_my_reports,
+        list_my_reports_tree,
+    )
+
+    if not gh_authenticated():
+        click.echo(
+            "Listing your reports needs `gh` auth. Meanwhile, view them at\n"
+            f"    https://github.com/{REPORT_TARGET}/issues?q=is%3Aissue+author%3A%40me"
+        )
+        return
+
+    if tree:
+        rows = list_my_reports_tree(REPORT_TARGET)
+        if rows is None:
+            raise click.ClickException("could not read your reports (gh error).")
+        if not rows:
+            click.echo("No reports yet — file one with `pkit report bug|feedback`.")
+            return
+        click.echo(f"Your reports to {REPORT_TARGET}:\n")
+        for r, tracked in rows:
+            click.echo(f"  #{r.number:<5} {r.kind:<9} {r.state:<12} {_report_title(r)}")
+            for n, st in tracked.items():
+                click.echo(f"      └ #{n:<6} {st}")
+        return
+
+    reports = list_my_reports(REPORT_TARGET)
+    if reports is None:
+        raise click.ClickException("could not read your reports (gh error).")
+    if not reports:
+        click.echo("No reports yet — file one with `pkit report bug|feedback`.")
+        return
+    click.echo(f"Your reports to {REPORT_TARGET}:\n")
+    for r in reports:
+        click.echo(f"  #{r.number:<5} {r.kind:<9} {r.state:<12} {_report_title(r)}")
+
+
+def _report_title(r) -> str:
+    """Render a report's title with a `(filed for you)` marker when attributed."""
+    return f"{r.title}  (filed for you)" if r.attributed else r.title
+
+
+@report.command("show")
+@click.argument("number", type=int)
+def report_show(number: int) -> None:
+    """Show one report's state, maintainer comments, and its tracked-by fixes."""
+    from project_kit.report import REPORT_TARGET, gh_authenticated, show_report
+
+    if not gh_authenticated():
+        click.echo(
+            f"View it at https://github.com/{REPORT_TARGET}/issues/{number} "
+            "(`gh` auth needed for CLI detail)."
+        )
+        return
+    detail = show_report(REPORT_TARGET, number)
+    if detail is None:
+        raise click.ClickException(
+            f"could not read report #{number} on {REPORT_TARGET}."
+        )
+    kind = detail["kind"] or "report"
+    click.echo(f"#{detail['number']}  {kind}  {detail['state']}  {detail['title']}")
+    tracked = detail["tracked_by"]
+    if tracked:
+        click.echo("\n  Tracked by (the issues that will fix it):")
+        for n, st in tracked.items():
+            click.echo(f"    #{n:<6} {st}")
+    comments = detail["comments"]
+    if comments:
+        last = comments[-1]
+        first_line = (str(last.get("body") or "").strip().splitlines() or [""])[0]
+        click.echo(f"\n  {len(comments)} maintainer comment(s); latest: {first_line}")
+
+
+def _require_report_target() -> str:
+    """Gate the maintainer side to running inside the report-target repo."""
+    from project_kit.report import REPORT_TARGET, in_report_target
+
+    if not in_report_target():
+        raise click.ClickException(
+            "the maintainer side (inbox/link/unlink) runs only inside the report "
+            f"target repo ({REPORT_TARGET}). Cd into it and retry."
+        )
+    return REPORT_TARGET
+
+
+@report.command("inbox")
+def report_inbox() -> None:
+    """(Maintainer) Triage queue: all bug/feedback reports on the target repo."""
+    from project_kit.report import list_inbox
+
+    target = _require_report_target()
+    reports = list_inbox(target)
+    if reports is None:
+        raise click.ClickException("could not read the inbox (gh error).")
+    if not reports:
+        click.echo("Inbox empty — no reports filed yet.")
+        return
+    click.echo(f"Reports on {target}:\n")
+    for r in reports:
+        click.echo(f"  #{r.number:<5} {r.kind:<9} {r.state:<12} {r.title}")
+
+
+@report.command("link")
+@click.argument("feedback_n", type=int)
+@click.argument("fix_n", type=int)
+def report_link(feedback_n: int, fix_n: int) -> None:
+    """(Maintainer) Add fix #FIX_N to feedback #FEEDBACK_N's Tracked-by section."""
+    from project_kit.report import link_fix
+
+    target = _require_report_target()
+    if not link_fix(target, feedback_n, fix_n):
+        raise click.ClickException(
+            f"could not link #{fix_n} into #{feedback_n} (gh error)."
+        )
+    click.echo(f"Linked #{fix_n} into #{feedback_n}'s Tracked by.")
+
+
+@report.command("unlink")
+@click.argument("feedback_n", type=int)
+@click.argument("fix_n", type=int)
+def report_unlink(feedback_n: int, fix_n: int) -> None:
+    """(Maintainer) Remove fix #FIX_N from feedback #FEEDBACK_N's Tracked-by."""
+    from project_kit.report import unlink_fix
+
+    target = _require_report_target()
+    if not unlink_fix(target, feedback_n, fix_n):
+        raise click.ClickException(
+            f"could not unlink #{fix_n} from #{feedback_n} (gh error)."
+        )
+    click.echo(f"Unlinked #{fix_n} from #{feedback_n}'s Tracked by.")
+
+
+def _echo_url_first(kind: str, url: str, target: str, note: str = "") -> None:
+    if note:
+        click.echo(note)
+    click.echo(f"\nOpen this prefilled {kind} on {target} to file it:\n")
+    click.echo(f"    {url}\n")
+    click.echo(
+        "Review the body in the browser before submitting — it carries a redacted "
+        "environment block (versions/OS only; home paths stripped, private "
+        "capability names withheld)."
+    )
+
+
+def _run_report(
+    kind: str,
+    title: str,
+    prose: str,
+    on_behalf_of: str | None,
+    include_private: bool,
+    do_file: bool,
+    assume_yes: bool,
+) -> None:
+    """Reporter path. Default is **URL-first** (print a prefilled new-issue URL —
+    no `gh` needed, browser submit is the review gate). `--file` opts into a
+    `gh`-auto-file to the fixed distribution target, gated by an interactive
+    **target-naming confirm**; it degrades to the URL when `gh` isn't
+    authenticated or under `--yes`/autonomy (ADR-047: the foreign write never
+    auto-posts — the deliberate `--yes` asymmetry)."""
+    from project_kit.report import (
+        REPORT_TARGET,
+        compose_report,
+        file_report_via_gh,
+        gh_authenticated,
+    )
+
+    target_root = find_target_root() or Path.cwd()
+    try:
+        body, url = compose_report(
+            kind,
+            title=title,
+            prose=prose,
+            target_root=target_root,
+            on_behalf_of=on_behalf_of,
+            include_private=include_private,
+        )
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    if do_file and assume_yes:
+        _echo_url_first(
+            kind, url, REPORT_TARGET,
+            note="--yes: not auto-posting a public foreign issue (ADR-047). Draft "
+            "below to review + submit.",
+        )
+        return
+    if do_file and not gh_authenticated():
+        _echo_url_first(
+            kind, url, REPORT_TARGET,
+            note="gh is not authenticated — falling back to the prefilled URL.",
+        )
+        return
+    if do_file:
+        click.echo(
+            f"This posts a PUBLIC {kind} issue to {REPORT_TARGET} under your gh "
+            "identity, with this body:\n"
+        )
+        click.echo(body)
+        if click.confirm(f"\nPost to {REPORT_TARGET}?", default=False):
+            posted = file_report_via_gh(
+                REPORT_TARGET, title=title, body=body, label=kind
+            )
+            if posted:
+                click.echo(f"\n[ok] filed: {posted}")
+                return
+            _echo_url_first(
+                kind, url, REPORT_TARGET,
+                note="\ngh could not file it — use the prefilled URL instead:",
+            )
+            return
+        _echo_url_first(kind, url, REPORT_TARGET, note="\nNot posted.")
+        return
+
+    _echo_url_first(kind, url, REPORT_TARGET)
+
+
+_REPORT_OPTS = [
+    click.option("--title", required=True, help="One-line summary."),
+    click.option("--body", "prose", required=True, help="The report text (prose)."),
+    click.option(
+        "--file", "do_file", is_flag=True, default=False,
+        help="Opt into filing via `gh` (after a confirm) instead of printing a URL.",
+    ),
+    click.option(
+        "--yes", "assume_yes", is_flag=True, default=False,
+        help="Non-interactive. For --file, degrades to the draft URL — the foreign "
+        "write is never auto-posted (ADR-047).",
+    ),
+    click.option(
+        "--on-behalf-of", default=None,
+        help="Attribute the report to @login (files under your identity).",
+    ),
+    click.option(
+        "--include-private", is_flag=True, default=False,
+        help="Include incubated (in-repo) capability names in the environment block.",
+    ),
+]
+
+
+def _with_report_opts(fn):
+    for opt in reversed(_REPORT_OPTS):
+        fn = opt(fn)
+    return fn
+
+
+@report.command("bug")
+@_with_report_opts
+def report_bug(
+    title: str, prose: str, do_file: bool, assume_yes: bool,
+    on_behalf_of: str | None, include_private: bool,
+) -> None:
+    """File a structured bug report to project-kit."""
+    _run_report("bug", title, prose, on_behalf_of, include_private, do_file, assume_yes)
+
+
+@report.command("feedback")
+@_with_report_opts
+def report_feedback(
+    title: str, prose: str, do_file: bool, assume_yes: bool,
+    on_behalf_of: str | None, include_private: bool,
+) -> None:
+    """File freeform feedback to project-kit."""
+    _run_report(
+        "feedback", title, prose, on_behalf_of, include_private, do_file, assume_yes
+    )
+
+
 @main.command()
 @click.option(
     "--dry-run",
