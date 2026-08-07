@@ -611,6 +611,82 @@ def status() -> None:
     report_status()
 
 
+@main.group("report", invoke_without_command=True)
+@click.pass_context
+def report(ctx: click.Context) -> None:
+    """Report a bug or feedback about pkit to project-kit (per PRJ-008 / ADR-047)."""
+    if ctx.invoked_subcommand is None:
+        click.echo(
+            "Usage: pkit report bug|feedback --title <t> --body <prose>\n"
+            "(list / show / maintainer verbs land in a later increment — #613)"
+        )
+
+
+def _run_report_url_first(
+    kind: str, title: str, prose: str, on_behalf_of: str | None, include_private: bool
+) -> None:
+    """URL-first reporter path: compose the report and print a prefilled new-issue
+    URL (works with no `gh` auth; the browser submit is the review gate). The
+    `gh`-auto-file + target-naming confirm + `--yes`-degrade land next (#613)."""
+    from project_kit.report import REPORT_TARGET, compose_report
+
+    target_root = find_target_root() or Path.cwd()
+    try:
+        _body, url = compose_report(
+            kind,
+            title=title,
+            prose=prose,
+            target_root=target_root,
+            on_behalf_of=on_behalf_of,
+            include_private=include_private,
+        )
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+    click.echo(f"Open this prefilled {kind} on {REPORT_TARGET} to file it:")
+    click.echo()
+    click.echo(f"    {url}")
+    click.echo()
+    click.echo(
+        "Review the body in the browser before submitting — it carries a redacted "
+        "environment block (versions/OS only; home paths stripped, private "
+        "capability names withheld)."
+    )
+
+
+_REPORT_OPTS = [
+    click.option("--title", required=True, help="One-line summary."),
+    click.option("--body", "prose", required=True, help="The report text (prose)."),
+    click.option(
+        "--on-behalf-of", default=None,
+        help="Attribute the report to @login (files under your identity).",
+    ),
+    click.option(
+        "--include-private", is_flag=True, default=False,
+        help="Include incubated (in-repo) capability names in the environment block.",
+    ),
+]
+
+
+def _with_report_opts(fn):
+    for opt in reversed(_REPORT_OPTS):
+        fn = opt(fn)
+    return fn
+
+
+@report.command("bug")
+@_with_report_opts
+def report_bug(title: str, prose: str, on_behalf_of: str | None, include_private: bool) -> None:
+    """File a structured bug report to project-kit."""
+    _run_report_url_first("bug", title, prose, on_behalf_of, include_private)
+
+
+@report.command("feedback")
+@_with_report_opts
+def report_feedback(title: str, prose: str, on_behalf_of: str | None, include_private: bool) -> None:
+    """File freeform feedback to project-kit."""
+    _run_report_url_first("feedback", title, prose, on_behalf_of, include_private)
+
+
 @main.command()
 @click.option(
     "--dry-run",

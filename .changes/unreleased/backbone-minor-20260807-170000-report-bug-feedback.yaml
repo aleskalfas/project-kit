@@ -1,0 +1,15 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  New `pkit report bug` / `pkit report feedback` — the built-in adopter→project-kit
+  feedback channel (#613, PRJ-008 / ADR-047). Composes a bug or freeform-feedback
+  report with a **redacted** environment block (pkit + capability versions, adapter,
+  OS/arch — no filesystem paths; incubated capability names withheld unless
+  `--include-private`) and prints a **prefilled GitHub new-issue URL** — the
+  URL-first path works with no `gh` auth (the browser submit is the review gate).
+  `--on-behalf-of @login` attributes a report filed for someone else. The
+  `gh`-auto-file path (with the target-naming confirm and `--yes`-degrades-to-draft),
+  the tracking reads (`list`/`show`), and the maintainer side land in later
+  increments of #613.
