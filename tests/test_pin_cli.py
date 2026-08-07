@@ -1,4 +1,4 @@
-"""Tests for `pkit pin` / `pkit unpin` (ADR-045).
+"""Tests for `pkit pin` / `pkit unpin` (ADR-049).
 
 The two operator gestures that manage a project's `.pkit/version-pin` directive:
 `pin` writes it (freeze at the current content version by default, or reconcile
@@ -30,7 +30,7 @@ def _git_repo(tmp_path: Path) -> Path:
 
 def _write_manifest(tmp_path: Path, backbone_version: str) -> None:
     """Seed a minimal `.pkit/manifest.yaml` so `pin <version>` can read the
-    current content version it compares the target against (ADR-045)."""
+    current content version it compares the target against (ADR-049)."""
     (tmp_path / ".pkit" / "manifest.yaml").write_text(
         f"schema_version: 1\nbackbone_version: {backbone_version}\ncomponents: []\n",
         encoding="utf-8",
@@ -177,7 +177,7 @@ def test_unpin_is_idempotent_when_absent(
     assert not router.pin_file_path(tmp_path).exists()
 
 
-# --- `pin <version>` reconcile + downgrade guard (ADR-045) ----------------------
+# --- `pin <version>` reconcile + downgrade guard (ADR-049) ----------------------
 
 
 def test_pin_equal_version_freezes_without_content_sync(
@@ -233,7 +233,7 @@ def test_pin_newer_version_aborts_without_advancing_pin_on_reconcile_failure(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A non-zero reconcile exit leaves the pin unmoved — the pin never advances
-    past content that failed to land (ADR-045)."""
+    past content that failed to land (ADR-049)."""
     _git_repo(tmp_path)
     _write_manifest(tmp_path, "1.0.0")
     router.pin_file_path(tmp_path).write_text("1.0.0\n", encoding="utf-8")
@@ -271,7 +271,7 @@ def test_pin_older_version_is_refused_and_writes_nothing(
     assert "git checkout" in result.output
 
 
-# --- Sync-exclusion invariant (ADR-045): init / sync never touch the pin --------
+# --- Sync-exclusion invariant (ADR-049): init / sync never touch the pin --------
 
 
 def _install(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -290,7 +290,7 @@ def test_init_does_not_create_a_version_pin(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """`pkit init` propagates only the kit-owned areas; the project-owned pin
-    directive is never seeded (ADR-045 — it is created only by `pkit pin`)."""
+    directive is never seeded (ADR-049 — it is created only by `pkit pin`)."""
     _install(tmp_path, monkeypatch)
     assert not router.pin_file_path(tmp_path).exists()
 

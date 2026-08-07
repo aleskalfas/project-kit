@@ -677,7 +677,7 @@ def upgrade(dry_run: bool) -> None:
 @main.command()
 @click.argument("version", required=False)
 def pin(version: str | None) -> None:
-    """Pin this project to a pkit version (per ADR-045): write `.pkit/version-pin`.
+    """Pin this project to a pkit version (per ADR-049): write `.pkit/version-pin`.
 
     VERSION, when given, is a version number only — `1.145.0`, or `v1.145.0`
     (a single leading `v` is stripped). Branch, commit-sha, and pre-release /
@@ -713,7 +713,7 @@ def pin(version: str | None) -> None:
 
 @main.command()
 def unpin() -> None:
-    """Remove this project's version pin (per ADR-045): delete `.pkit/version-pin`.
+    """Remove this project's version pin (per ADR-049): delete `.pkit/version-pin`.
 
     The project reverts to floating on the installed pkit binary — the router
     runs the installed tool as-is (today's un-pinned behaviour). Idempotent: it

@@ -1,5 +1,5 @@
 ---
-id: ADR-045
+id: ADR-049
 title: Per-project version pin via a project-owned directive file
 status: accepted
 date: 2026-08-05

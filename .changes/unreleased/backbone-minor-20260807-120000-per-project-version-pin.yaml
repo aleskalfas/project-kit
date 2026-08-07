@@ -4,7 +4,7 @@ custom:
   category: Added
 body: >
   Per-project version pinning via a project-owned `.pkit/version-pin` directive
-  (#605, ADR-045). A project opts into running a fixed pkit version by committing
+  (#605, ADR-049). A project opts into running a fixed pkit version by committing
   the directive; the entry-point router reads it (moving the pin source from
   `.pkit/VERSION` — the slot ADR-039 left to implementation) and re-execs the
   pinned version, so a global-tool upgrade no longer moves a pinned project. Two

@@ -70,7 +70,7 @@ def _make_source_checkout(
 
 def _make_adopter(root: Path, version: str) -> None:
     """Materialise an adopter project pinning `version` via `.pkit/version-pin`
-    (ADR-045)."""
+    (ADR-049)."""
     (root / ".git").mkdir()
     pkit = root / ".pkit"
     pkit.mkdir()
@@ -119,7 +119,7 @@ def test_resolve_pin_none_when_absent(tmp_path: Path) -> None:
 
 
 def test_resolve_pin_ignores_pkit_version_file(tmp_path: Path) -> None:
-    # `.pkit/VERSION` is the source tree's identity, NOT the pin source (ADR-045).
+    # `.pkit/VERSION` is the source tree's identity, NOT the pin source (ADR-049).
     # A project with only VERSION and no version-pin resolves to no pin.
     (tmp_path / ".pkit").mkdir()
     (tmp_path / ".pkit" / "VERSION").write_text("1.100.0\n", encoding="utf-8")

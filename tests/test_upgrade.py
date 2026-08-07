@@ -741,7 +741,7 @@ def test_tool_staleness_not_run_on_self_host(
     assert stub_ls_remote.ls_remote_calls == []
 
 
-# --- Per-project version pin: `pkit upgrade` semantics (ADR-045) ----------------
+# --- Per-project version pin: `pkit upgrade` semantics (ADR-049) ----------------
 
 
 def test_upgrade_pinned_child_prints_escape_and_raises_nothing(
@@ -750,7 +750,7 @@ def test_upgrade_pinned_child_prints_escape_and_raises_nothing(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Run as the pinned child (router set PKIT_ROUTED): print the bypass escape
-    and stop — never no-op silently, never touch the pin (ADR-045)."""
+    and stop — never no-op silently, never touch the pin (ADR-049)."""
     router.pin_file_path(installed_target).write_text("1.0.0\n", encoding="utf-8")
     monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")
 
@@ -769,7 +769,7 @@ def test_upgrade_pinned_raise_flips_pin_after_content_sync(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """A pinned project's upgrade raises the pin to the target — and flips it LAST,
-    after content sync, so a failed sync would leave the old pin intact (ADR-045)."""
+    after content sync, so a failed sync would leave the old pin intact (ADR-049)."""
     m = manifest.read_backbone_manifest(installed_target)
     assert m is not None
     source_version = m.backbone_version  # the target the raise moves to
@@ -816,7 +816,7 @@ def test_upgrade_unpinned_writes_no_pin_file(
     installed_target: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """An un-pinned project keeps today's behaviour exactly: plain content sync,
-    no pin directive written (ADR-045)."""
+    no pin directive written (ADR-049)."""
     m = manifest.read_backbone_manifest(installed_target)
     assert m is not None
     m.backbone_version = "0.1.0"
@@ -831,7 +831,7 @@ def test_upgrade_unpinned_writes_no_pin_file(
 def test_upgrade_dry_run_pinned_does_not_write_pin(
     installed_target: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A dry-run raise reports the flip but writes nothing (ADR-045 + COR-004)."""
+    """A dry-run raise reports the flip but writes nothing (ADR-049 + COR-004)."""
     m = manifest.read_backbone_manifest(installed_target)
     assert m is not None
     m.backbone_version = "0.1.0"

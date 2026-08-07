@@ -15,7 +15,7 @@ Three routes, in order:
 
 2. **Project pins a version ≠ me → re-exec the pinned wheel.** When the enclosing
    *adopter* project pins a version (its `.pkit/version-pin` directive, per
-   ADR-045) different from this binary's, run the command under `uvx …@<pin>`
+   ADR-049) different from this binary's, run the command under `uvx …@<pin>`
    instead. Sound only because ADR-033 version-locks bundled content to the
    binary: the pinned wheel brings code *and* content from the same tag, so they
    cannot diverge.
@@ -53,7 +53,7 @@ _LOOP_GUARD_ENV = "PKIT_ROUTED"
 # correspondence is a release-discipline property owned by #464 (ADR-039 D3).
 DISTRIBUTION_GIT_URL = "git+ssh://git@github.com/aleskalfas/project-kit.git"
 
-# The project-owned pin directive (ADR-045). Its *presence* opts a project into
+# The project-owned pin directive (ADR-049). Its *presence* opts a project into
 # per-project version pinning: the router reads it as the pin source and re-execs
 # `uvx project-kit@<pin>` (route 2) so the pinned version serves every command. A
 # plain one-line text file — a version, or a PRJ-004 tag/branch/sha token —
@@ -101,7 +101,7 @@ def _route(argv: list[str], environ) -> None:  # type: ignore[no-untyped-def]
         return
 
     # Route 2 candidate: an adopter project. It pins a version via its
-    # `.pkit/version-pin` directive (ADR-045); a mismatch against this binary
+    # `.pkit/version-pin` directive (ADR-049); a mismatch against this binary
     # means run the pin.
     pin = _resolve_pin(root)
     if pin is None:
@@ -158,9 +158,9 @@ def is_source_checkout(root: Path) -> bool:
 
 
 def _resolve_pin(root: Path) -> str | None:
-    """The version a project pins via its `.pkit/version-pin` directive (ADR-045).
+    """The version a project pins via its `.pkit/version-pin` directive (ADR-049).
 
-    ADR-039 left the pin source to the implementation; ADR-045 fills that slot
+    ADR-039 left the pin source to the implementation; ADR-049 fills that slot
     with a dedicated, project-owned directive file (`.pkit/version-pin`) rather
     than `.pkit/VERSION` — the pin is a forward-looking *directive* the operator
     sets, distinct from `.pkit/VERSION`'s role as the *source tree's* identity.
@@ -171,7 +171,7 @@ def _resolve_pin(root: Path) -> str | None:
 
 
 def pin_file_path(root: Path) -> Path:
-    """The path to a project's `.pkit/version-pin` directive under `root` (ADR-045)."""
+    """The path to a project's `.pkit/version-pin` directive under `root` (ADR-049)."""
     return root / ".pkit" / _PIN_FILE
 
 
@@ -180,7 +180,7 @@ def read_version_pin(root: Path) -> str | None:
 
     Cheap and stdlib-only — a plain file read on the pre-click hot path
     (ADR-039), mirroring `_read_pkit_version`. This is the pin *source* the
-    router honours (ADR-045); it is the sole reader of the pin directive shared
+    router honours (ADR-049); it is the sole reader of the pin directive shared
     by the router (route 2) and the `pin` / `upgrade` gestures.
     """
     try:
@@ -195,7 +195,7 @@ def is_routed_child(environ) -> bool:  # type: ignore[no-untyped-def]
 
     The router sets the loop-guard env on the child it re-execs (route 2). A
     routed child that runs `pkit upgrade` cannot raise its own pin from inside
-    the pinned version and must print the operator escape instead (ADR-045)."""
+    the pinned version and must print the operator escape instead (ADR-049)."""
     return _env_true(environ, _LOOP_GUARD_ENV)
 
 
@@ -204,7 +204,7 @@ def _read_pkit_version(root: Path) -> str | None:
 
     Defensive and stdlib-only — a plain file read, cheap enough for the hot path
     (ADR-039). Reads the *source tree's* identity for the route-1 CLI-version
-    stamp; the route-2 pin source is `read_version_pin` (ADR-045), a separate
+    stamp; the route-2 pin source is `read_version_pin` (ADR-049), a separate
     file — the two are deliberately distinct concerns.
     """
     try:
@@ -300,7 +300,7 @@ def run_bypassed(pin: str, argv: list[str], environ=None) -> int:  # type: ignor
     Uses the same `uvx --from …@v<pin>` base route 2 pins against, but sets
     PKIT_NO_ROUTE on the child so the bootstrapped process runs self rather than
     re-routing through a pin (which would loop or mis-resolve). The shared
-    bootstrap the `pin` gesture's forward-reconcile builds on (ADR-045): pinning a
+    bootstrap the `pin` gesture's forward-reconcile builds on (ADR-049): pinning a
     project to a *newer* version needs that version's own code to sync content and
     run the forward migrations, so the reconcile runs under the target's wheel
     here rather than the currently-installed tool. Blocks until the child exits.
