@@ -271,6 +271,49 @@ def test_pin_older_version_is_refused_and_writes_nothing(
     assert "git checkout" in result.output
 
 
+def test_pin_newer_in_routed_context_reconciles_content_not_just_flips_pin(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`pin <newer>` invoked as a routed child (PKIT_ROUTED set) bootstraps the
+    reconcile with routing truly OFF — PKIT_NO_ROUTE set AND PKIT_ROUTED cleared —
+    so the target's `upgrade` reaches its content-sync path instead of re-detecting
+    itself as the routed pinned child and no-op'ing (which would flip the pin
+    without syncing content: pin-ahead-of-content corruption). Regression for the
+    env-leak (ADR-049)."""
+    _git_repo(tmp_path)
+    _write_manifest(tmp_path, "1.0.0")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")  # we are the pinned routed child
+
+    captured: dict[str, object] = {}
+    real_run = subprocess.run
+
+    def _fake_run(cmd, *args, **kwargs):  # type: ignore[no-untyped-def]
+        # Intercept only the bootstrap `uvx …` spawn; delegate everything else
+        # (the CLI's `git rev-parse` root resolution) to the genuine run, since
+        # patching the shared `subprocess` module replaces `run` process-wide.
+        if list(cmd[:1]) != ["uvx"]:
+            return real_run(cmd, *args, **kwargs)
+        captured["cmd"] = list(cmd)
+        captured["env"] = kwargs["env"]
+        return subprocess.CompletedProcess(cmd, 0)
+
+    # run_bypassed spawns via router.subprocess.run — patch there so the real
+    # env-clearing logic runs (not a stubbed run_bypassed).
+    monkeypatch.setattr(router.subprocess, "run", _fake_run)
+
+    result = CliRunner().invoke(main, ["pin", "2.0.0"])
+
+    assert result.exit_code == 0
+    cmd = captured["cmd"]
+    assert cmd[-1] == "upgrade"
+    assert f"{router.DISTRIBUTION_GIT_URL}@v2.0.0" in cmd
+    env = captured["env"]
+    assert env[router._BYPASS_ENV] == "1"  # routing bypassed for the reconcile
+    assert router._LOOP_GUARD_ENV not in env  # cleared → grandchild reconciles for real
+    assert router.read_version_pin(tmp_path) == "2.0.0"  # flipped after reconcile
+
+
 # --- Sync-exclusion invariant (ADR-049): init / sync never touch the pin --------
 
 

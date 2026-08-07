@@ -326,6 +326,31 @@ def test_route2_degrades_when_uvx_absent(
     assert "could not be resolved" in capsys.readouterr().err
 
 
+# --- run_bypassed: bootstrap the pin raise with routing truly off ---------------
+
+
+def test_run_bypassed_sets_no_route_and_clears_loop_guard(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """run_bypassed's child runs TRULY non-routed: PKIT_NO_ROUTE set and the loop
+    guard PKIT_ROUTED cleared. Called from an already-routed child (the pinned
+    case), a leaked PKIT_ROUTED would make the bootstrapped grandchild re-detect
+    itself as the routed pinned child and sync NOTHING while the outer reconcile
+    still flipped the pin — pin-ahead-of-content corruption (ADR-049)."""
+    monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")  # we are an already-routed child
+    calls = _patch_subprocess(monkeypatch, [_FakeCompleted(0)])
+
+    rc = router.run_bypassed("2.0.0", ["upgrade"])
+
+    assert rc == 0
+    env = calls[0]["kwargs"]["env"]
+    assert env[router._BYPASS_ENV] == "1"  # routing bypassed
+    assert router._LOOP_GUARD_ENV not in env  # loop guard NOT leaked into the child
+    cmd = calls[0]["cmd"]
+    assert f"{router.DISTRIBUTION_GIT_URL}@v2.0.0" in cmd
+    assert cmd[-1] == "upgrade"
+
+
 # --- Route 3: match / no pin / not-in-project → run self ------------------------
 
 

@@ -304,9 +304,19 @@ def run_bypassed(pin: str, argv: list[str], environ=None) -> int:  # type: ignor
     project to a *newer* version needs that version's own code to sync content and
     run the forward migrations, so the reconcile runs under the target's wheel
     here rather than the currently-installed tool. Blocks until the child exits.
+
+    The child must run **truly non-routed**: PKIT_NO_ROUTE alone is not enough
+    when the caller is itself an already-routed child (the pinned-project case,
+    the common one). The loop guard PKIT_ROUTED would otherwise leak into the
+    bootstrapped grandchild — and its `pkit upgrade` would then re-detect itself
+    as the routed pinned child and take the print/escape branch, syncing NOTHING,
+    while the outer reconcile still flipped the pin forward (pin-ahead-of-content
+    corruption, ADR-049). So drop PKIT_ROUTED from the child env; only
+    PKIT_NO_ROUTE is set, and the grandchild reconciles content for real.
     """
     env = dict(os.environ if environ is None else environ)
     env[_BYPASS_ENV] = "1"
+    env.pop(_LOOP_GUARD_ENV, None)  # never leak the loop guard into the bootstrapped child
     completed = subprocess.run([*_pinned_base(pin), *argv], env=env)
     return completed.returncode
 
