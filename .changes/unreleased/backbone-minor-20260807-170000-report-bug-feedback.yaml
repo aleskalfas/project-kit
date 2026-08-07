@@ -15,5 +15,5 @@ body: >
   `--on-behalf-of @login` attributes a report filed for someone else. `pkit report`
   (no subcommand) lists your reports + states, and `pkit report show <N>` adds the
   maintainer comments and the `## Tracked by` rollup (the issues that will fix it,
-  with each one's state). The maintainer side (`inbox` / `link`) and the `--tree`
-  list view land in later increments of #613.
+  with each one's state); `pkit report --tree` nests each report's tracked-by fixes
+  under it. The maintainer side (`inbox` / `link`) lands in a later increment of #613.

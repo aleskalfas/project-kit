@@ -612,18 +612,27 @@ def status() -> None:
 
 
 @main.group("report", invoke_without_command=True)
+@click.option(
+    "--tree", is_flag=True, help="Show each report with its tracked-by fixes nested."
+)
 @click.pass_context
-def report(ctx: click.Context) -> None:
+def report(ctx: click.Context, tree: bool) -> None:
     """Report a bug or feedback about pkit to project-kit (per PRJ-008 / ADR-047).
 
-    With no subcommand, lists your reports and their states.
+    With no subcommand, lists your reports and their states (flat; `--tree` nests
+    each report's tracked-by fixes).
     """
     if ctx.invoked_subcommand is None:
-        _run_report_list()
+        _run_report_list(tree=tree)
 
 
-def _run_report_list() -> None:
-    from project_kit.report import REPORT_TARGET, gh_authenticated, list_my_reports
+def _run_report_list(*, tree: bool = False) -> None:
+    from project_kit.report import (
+        REPORT_TARGET,
+        gh_authenticated,
+        list_my_reports,
+        list_my_reports_tree,
+    )
 
     if not gh_authenticated():
         click.echo(
@@ -631,6 +640,21 @@ def _run_report_list() -> None:
             f"    https://github.com/{REPORT_TARGET}/issues?q=is%3Aissue+author%3A%40me"
         )
         return
+
+    if tree:
+        rows = list_my_reports_tree(REPORT_TARGET)
+        if rows is None:
+            raise click.ClickException("could not read your reports (gh error).")
+        if not rows:
+            click.echo("No reports yet — file one with `pkit report bug|feedback`.")
+            return
+        click.echo(f"Your reports to {REPORT_TARGET}:\n")
+        for r, tracked in rows:
+            click.echo(f"  #{r.number:<5} {r.kind:<9} {r.state:<12} {r.title}")
+            for n, st in tracked.items():
+                click.echo(f"      └ #{n:<6} {st}")
+        return
+
     reports = list_my_reports(REPORT_TARGET)
     if reports is None:
         raise click.ClickException("could not read your reports (gh error).")

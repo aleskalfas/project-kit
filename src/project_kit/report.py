@@ -208,6 +208,32 @@ def list_my_reports(target: str) -> list[ReportSummary] | None:
     return sorted(reports, key=lambda r: r.updated_at, reverse=True)
 
 
+def list_my_reports_tree(
+    target: str,
+) -> list[tuple[ReportSummary, dict[int, str]]] | None:
+    """Like `list_my_reports`, but each report is paired with its `## Tracked by`
+    fixes resolved to states — for the `--tree` view. One extra read per tracked
+    issue; bounded by a personal report list. None on the initial gh failure."""
+    data = _gh_json([
+        "gh", "issue", "list", "--repo", target, "--author", "@me",
+        "--state", "all", "--limit", "100",
+        "--json", "number,title,state,labels,updatedAt,body",
+    ])
+    if not isinstance(data, list):
+        return None
+    rows: list[tuple[ReportSummary, dict[int, str]]] = []
+    for issue in data:
+        if not isinstance(issue, dict):
+            continue
+        summary = _summarize(issue)
+        if not summary.kind:  # bug/feedback only
+            continue
+        tracked = resolve_states(target, parse_tracked_by(str(issue.get("body", ""))))
+        rows.append((summary, tracked))
+    rows.sort(key=lambda row: row[0].updated_at, reverse=True)
+    return rows
+
+
 def parse_tracked_by(body: str) -> list[int]:
     """Extract the `#N` issue references from a feedback body's `## Tracked by`
     section (a GitHub task-list), de-duped, in order."""

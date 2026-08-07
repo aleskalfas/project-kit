@@ -259,6 +259,39 @@ def test_cli_report_list(monkeypatch) -> None:
     assert "#1" in res.output and "a bug" in res.output
 
 
+def test_list_my_reports_tree_pairs_each_with_tracked(monkeypatch) -> None:
+    def fake_gh_json(args):
+        if "list" in args:
+            return [{
+                "number": 42, "title": "fb", "state": "OPEN",
+                "labels": [{"name": "feedback"}], "updatedAt": "2026-08-03",
+                "body": "p\n\n## Tracked by\n- [ ] #7\n",
+            }]
+        if args[3] == "7":
+            return {"state": "CLOSED", "labels": []}
+        return None
+
+    monkeypatch.setattr(rep, "_gh_json", fake_gh_json)
+    rows = rep.list_my_reports_tree("o/r")
+    assert len(rows) == 1
+    summary, tracked = rows[0]
+    assert summary.number == 42 and tracked == {7: "closed"}
+
+
+def test_cli_report_tree(monkeypatch) -> None:
+    monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
+    monkeypatch.setattr(
+        rep, "list_my_reports_tree",
+        lambda target: [(
+            rep.ReportSummary(42, "fb", "feedback", "open", "2026-08-03"),
+            {7: "closed"},
+        )],
+    )
+    res = CliRunner().invoke(main, ["report", "--tree"])
+    assert res.exit_code == 0
+    assert "#42" in res.output and "#7" in res.output and "closed" in res.output
+
+
 def test_cli_report_list_no_auth_degrades(monkeypatch) -> None:
     monkeypatch.setattr(rep, "gh_authenticated", lambda: False)
     res = CliRunner().invoke(main, ["report"])
