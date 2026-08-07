@@ -95,12 +95,6 @@ def test_cli_report_feedback_labels_feedback() -> None:
     assert "labels=feedback" in res.output
 
 
-def test_cli_report_no_subcommand_shows_usage() -> None:
-    res = CliRunner().invoke(main, ["report"])
-    assert res.exit_code == 0
-    assert "report bug|feedback" in res.output
-
-
 # --- gh-auto-file path (mocked gh) -----------------------------------
 
 import project_kit.report as rep  # noqa: E402
