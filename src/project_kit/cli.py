@@ -650,7 +650,7 @@ def _run_report_list(*, tree: bool = False) -> None:
             return
         click.echo(f"Your reports to {REPORT_TARGET}:\n")
         for r, tracked in rows:
-            click.echo(f"  #{r.number:<5} {r.kind:<9} {r.state:<12} {r.title}")
+            click.echo(f"  #{r.number:<5} {r.kind:<9} {r.state:<12} {_report_title(r)}")
             for n, st in tracked.items():
                 click.echo(f"      └ #{n:<6} {st}")
         return
@@ -663,7 +663,12 @@ def _run_report_list(*, tree: bool = False) -> None:
         return
     click.echo(f"Your reports to {REPORT_TARGET}:\n")
     for r in reports:
-        click.echo(f"  #{r.number:<5} {r.kind:<9} {r.state:<12} {r.title}")
+        click.echo(f"  #{r.number:<5} {r.kind:<9} {r.state:<12} {_report_title(r)}")
+
+
+def _report_title(r) -> str:
+    """Render a report's title with a `(filed for you)` marker when attributed."""
+    return f"{r.title}  (filed for you)" if r.attributed else r.title
 
 
 @report.command("show")

@@ -222,6 +222,53 @@ def test_list_my_reports_filters_to_bug_feedback_and_sorts(monkeypatch) -> None:
     assert reports[0].state == "closed" and reports[0].kind == "feedback"
 
 
+def test_list_my_reports_includes_attributed(monkeypatch) -> None:
+    def fake(args):
+        if args[:3] == ["gh", "api", "user"]:
+            return {"login": "mike"}
+        if "--author" in args:
+            return [{"number": 1, "title": "mine", "state": "OPEN",
+                     "labels": [{"name": "bug"}], "updatedAt": "2026-08-01"}]
+        if "--search" in args:
+            return [{"number": 9, "title": "for mike", "state": "OPEN",
+                     "labels": [{"name": "feedback"}], "updatedAt": "2026-08-05"}]
+        return None
+
+    monkeypatch.setattr(rep, "_gh_json", fake)
+    reports = rep.list_my_reports("o/r")
+    assert [r.number for r in reports] == [9, 1]  # newest first
+    assert next(r for r in reports if r.number == 9).attributed is True
+    assert next(r for r in reports if r.number == 1).attributed is False
+
+
+def test_list_my_reports_authored_wins_over_attributed(monkeypatch) -> None:
+    # an issue both authored and self-attributed should render as authored.
+    def fake(args):
+        if args[:3] == ["gh", "api", "user"]:
+            return {"login": "mike"}
+        issue = {"number": 5, "title": "dual", "state": "OPEN",
+                 "labels": [{"name": "bug"}], "updatedAt": "2026-08-02"}
+        return [issue]  # both --author and --search return it
+
+    monkeypatch.setattr(rep, "_gh_json", fake)
+    reports = rep.list_my_reports("o/r")
+    assert [r.number for r in reports] == [5]
+    assert reports[0].attributed is False  # authored wins the de-dup
+
+
+def test_cli_report_list_marks_attributed(monkeypatch) -> None:
+    monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
+    monkeypatch.setattr(
+        rep, "list_my_reports",
+        lambda t: [rep.ReportSummary(
+            9, "for mike", "feedback", "open", "2026-08-05", attributed=True
+        )],
+    )
+    res = CliRunner().invoke(main, ["report"])
+    assert res.exit_code == 0
+    assert "filed for you" in res.output
+
+
 def test_list_my_reports_gh_failure_returns_none(monkeypatch) -> None:
     monkeypatch.setattr(rep, "_gh_json", lambda args: None)
     assert rep.list_my_reports("o/r") is None

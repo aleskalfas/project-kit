@@ -13,7 +13,9 @@ body: >
   degrading to the URL when `gh` isn't authenticated or under `--yes` (the foreign
   write is never auto-posted — the deliberate `--yes` asymmetry, ADR-047).
   `--on-behalf-of @login` attributes a report filed for someone else. `pkit report`
-  (no subcommand) lists your reports + states, and `pkit report show <N>` adds the
+  (no subcommand) lists your reports + states — both those you authored and those
+  filed **for** you (marked `filed for you`), so a beneficiary tracks a report they
+  never authored — and `pkit report show <N>` adds the
   maintainer comments and the `## Tracked by` rollup (the issues that will fix it,
   with each one's state); `pkit report --tree` nests each report's tracked-by fixes
   under it. The maintainer side — `pkit report inbox` (triage queue) and `report

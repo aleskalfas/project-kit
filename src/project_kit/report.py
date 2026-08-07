@@ -18,7 +18,7 @@ import re
 import shutil
 import subprocess
 import urllib.parse
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from project_kit.environment import collect_environment, render_environment_block
@@ -143,6 +143,7 @@ class ReportSummary:
     kind: str  # "bug" | "feedback" | "" (unlabelled)
     state: str  # display state: "open" | "in progress" | "closed"
     updated_at: str
+    attributed: bool = False  # filed *for* the invoker by someone else (on-behalf-of)
 
 
 def _gh_json(args: list[str]) -> object | None:
@@ -197,9 +198,20 @@ def _summarize(issue: dict) -> ReportSummary:
     )
 
 
+def _current_login() -> str | None:
+    """The authenticated `gh` user's login, or None if it can't be determined."""
+    data = _gh_json(["gh", "api", "user"])
+    if isinstance(data, dict) and isinstance(data.get("login"), str):
+        return data["login"]
+    return None
+
+
 def list_my_reports(target: str) -> list[ReportSummary] | None:
-    """The invoker's reports on `target` (authored by them), bug/feedback only,
-    newest first. None on gh failure (caller degrades)."""
+    """The invoker's reports on `target`, bug/feedback only, newest first — both
+    those they **authored** and those **attributed** to them (filed on their behalf
+    via `--on-behalf-of`, carrying a `Reported for @login` marker). None on gh
+    failure of the authored query (caller degrades); the attributed query is
+    best-effort and skipped when the login can't be resolved."""
     data = _gh_json([
         "gh", "issue", "list", "--repo", target, "--author", "@me",
         "--state", "all", "--limit", "100",
@@ -207,9 +219,30 @@ def list_my_reports(target: str) -> list[ReportSummary] | None:
     ])
     if not isinstance(data, list):
         return None
-    reports = [_summarize(i) for i in data if isinstance(i, dict)]
-    reports = [r for r in reports if r.kind]  # bug/feedback only
-    return sorted(reports, key=lambda r: r.updated_at, reverse=True)
+    by_number: dict[int, ReportSummary] = {}
+    for issue in data:
+        if isinstance(issue, dict):
+            s = _summarize(issue)
+            if s.kind:
+                by_number[s.number] = s
+
+    login = _current_login()
+    if login:
+        attr = _gh_json([
+            "gh", "issue", "list", "--repo", target,
+            "--search", f'in:body "Reported for @{login}"',
+            "--state", "all", "--limit", "100",
+            "--json", "number,title,state,labels,updatedAt",
+        ])
+        if isinstance(attr, list):
+            for issue in attr:
+                if not isinstance(issue, dict):
+                    continue
+                s = _summarize(issue)
+                if s.kind and s.number not in by_number:  # authored wins
+                    by_number[s.number] = replace(s, attributed=True)
+
+    return sorted(by_number.values(), key=lambda r: r.updated_at, reverse=True)
 
 
 def list_my_reports_tree(
