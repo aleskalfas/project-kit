@@ -69,11 +69,12 @@ def _make_source_checkout(
 
 
 def _make_adopter(root: Path, version: str) -> None:
-    """Materialise an adopter project pinning `version` via `.pkit/VERSION`."""
+    """Materialise an adopter project pinning `version` via `.pkit/version-pin`
+    (ADR-045)."""
     (root / ".git").mkdir()
     pkit = root / ".pkit"
     pkit.mkdir()
-    (pkit / "VERSION").write_text(version + "\n", encoding="utf-8")
+    (pkit / "version-pin").write_text(version + "\n", encoding="utf-8")
 
 
 # --- Predicates ----------------------------------------------------------------
@@ -107,7 +108,7 @@ def test_is_source_checkout_false_for_adopter(tmp_path: Path) -> None:
     assert router.is_source_checkout(tmp_path) is False
 
 
-def test_resolve_pin_reads_version(tmp_path: Path) -> None:
+def test_resolve_pin_reads_version_pin(tmp_path: Path) -> None:
     _make_adopter(tmp_path, "1.100.0")
     assert router._resolve_pin(tmp_path) == "1.100.0"
 
@@ -115,6 +116,32 @@ def test_resolve_pin_reads_version(tmp_path: Path) -> None:
 def test_resolve_pin_none_when_absent(tmp_path: Path) -> None:
     (tmp_path / ".pkit").mkdir()
     assert router._resolve_pin(tmp_path) is None
+
+
+def test_resolve_pin_ignores_pkit_version_file(tmp_path: Path) -> None:
+    # `.pkit/VERSION` is the source tree's identity, NOT the pin source (ADR-045).
+    # A project with only VERSION and no version-pin resolves to no pin.
+    (tmp_path / ".pkit").mkdir()
+    (tmp_path / ".pkit" / "VERSION").write_text("1.100.0\n", encoding="utf-8")
+    assert router._resolve_pin(tmp_path) is None
+
+
+def test_read_version_pin_strips_and_empty_is_none(tmp_path: Path) -> None:
+    (tmp_path / ".pkit").mkdir()
+    pin = tmp_path / ".pkit" / "version-pin"
+    pin.write_text("  1.100.0  \n", encoding="utf-8")
+    assert router.read_version_pin(tmp_path) == "1.100.0"
+    pin.write_text("\n", encoding="utf-8")  # present but empty → no pin
+    assert router.read_version_pin(tmp_path) is None
+
+
+def test_pin_file_path_is_under_pkit(tmp_path: Path) -> None:
+    assert router.pin_file_path(tmp_path) == tmp_path / ".pkit" / "version-pin"
+
+
+def test_is_routed_child_reads_loop_guard(tmp_path: Path) -> None:
+    assert router.is_routed_child({router._LOOP_GUARD_ENV: "1"}) is True
+    assert router.is_routed_child({}) is False
 
 
 def test_pinned_base_is_git_tag_pin(tmp_path: Path) -> None:
@@ -323,7 +350,7 @@ def test_route3_runs_self_when_adopter_has_no_pin(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, no_exec: None, ran_self: list[bool]
 ) -> None:
     (tmp_path / ".git").mkdir()
-    (tmp_path / ".pkit").mkdir()  # a project, but no VERSION file
+    (tmp_path / ".pkit").mkdir()  # a project, but no version-pin directive
     monkeypatch.chdir(tmp_path)
 
     router.main(["status"])
