@@ -1,0 +1,31 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  Per-project version pinning via a project-owned `.pkit/version-pin` directive
+  (#605, ADR-049). A project opts into running a fixed pkit version by committing
+  the directive; the entry-point router reads it (moving the pin source from
+  `.pkit/VERSION` — the slot ADR-039 left to implementation) and re-execs the
+  pinned version, so a global-tool upgrade no longer moves a pinned project. Two
+  new commands manage it: `pkit pin [<version>]` and `pkit unpin` (removes the
+  directive). With no argument `pin` freezes the project at its current *content*
+  version (`manifest.yaml`'s `backbone_version`); with a `<version>` (a version
+  number only — a single leading `v` is stripped, and branch/sha/pre-release
+  tokens are refused since the router routes only a bare `v<semver>` tag) it
+  dispatches on how the target orders against the content version — equal freezes
+  in place, a newer version reconciles content forward (under that version's own
+  code, via the `PKIT_NO_ROUTE=1` bypass) and then flips the pin last, and an
+  older version is refused because migrations are forward-only (COR-010; roll
+  back with `git checkout` of `.pkit/` instead). Both forms require the manifest.
+  `pkit upgrade` in a pinned project now *auto-advances* the pin to the latest
+  release with no `uv tool install` and no manual step: detected as the routed
+  pinned child, it resolves the latest tag (ADR-044's `git ls-remote` check) and,
+  when latest is newer than the pin, reconciles content forward under the target's
+  own code (via the `PKIT_NO_ROUTE=1` bypass) then flips the pin last (never ahead
+  of content; an interrupted raise is recovered by an idempotent re-run) — a clear
+  no-op when already at latest, a distinct message when the pin sits ahead of the
+  newest release, and a loud degrade (pin unchanged) when the release source is
+  unreachable. An un-pinned project's upgrade is unchanged. The directive is
+  project-owned and never written or clobbered by `init` / `sync` / `upgrade`'s
+  content pass.

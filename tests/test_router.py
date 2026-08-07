@@ -69,11 +69,12 @@ def _make_source_checkout(
 
 
 def _make_adopter(root: Path, version: str) -> None:
-    """Materialise an adopter project pinning `version` via `.pkit/VERSION`."""
+    """Materialise an adopter project pinning `version` via `.pkit/version-pin`
+    (ADR-049)."""
     (root / ".git").mkdir()
     pkit = root / ".pkit"
     pkit.mkdir()
-    (pkit / "VERSION").write_text(version + "\n", encoding="utf-8")
+    (pkit / "version-pin").write_text(version + "\n", encoding="utf-8")
 
 
 # --- Predicates ----------------------------------------------------------------
@@ -107,7 +108,7 @@ def test_is_source_checkout_false_for_adopter(tmp_path: Path) -> None:
     assert router.is_source_checkout(tmp_path) is False
 
 
-def test_resolve_pin_reads_version(tmp_path: Path) -> None:
+def test_resolve_pin_reads_version_pin(tmp_path: Path) -> None:
     _make_adopter(tmp_path, "1.100.0")
     assert router._resolve_pin(tmp_path) == "1.100.0"
 
@@ -115,6 +116,32 @@ def test_resolve_pin_reads_version(tmp_path: Path) -> None:
 def test_resolve_pin_none_when_absent(tmp_path: Path) -> None:
     (tmp_path / ".pkit").mkdir()
     assert router._resolve_pin(tmp_path) is None
+
+
+def test_resolve_pin_ignores_pkit_version_file(tmp_path: Path) -> None:
+    # `.pkit/VERSION` is the source tree's identity, NOT the pin source (ADR-049).
+    # A project with only VERSION and no version-pin resolves to no pin.
+    (tmp_path / ".pkit").mkdir()
+    (tmp_path / ".pkit" / "VERSION").write_text("1.100.0\n", encoding="utf-8")
+    assert router._resolve_pin(tmp_path) is None
+
+
+def test_read_version_pin_strips_and_empty_is_none(tmp_path: Path) -> None:
+    (tmp_path / ".pkit").mkdir()
+    pin = tmp_path / ".pkit" / "version-pin"
+    pin.write_text("  1.100.0  \n", encoding="utf-8")
+    assert router.read_version_pin(tmp_path) == "1.100.0"
+    pin.write_text("\n", encoding="utf-8")  # present but empty → no pin
+    assert router.read_version_pin(tmp_path) is None
+
+
+def test_pin_file_path_is_under_pkit(tmp_path: Path) -> None:
+    assert router.pin_file_path(tmp_path) == tmp_path / ".pkit" / "version-pin"
+
+
+def test_is_routed_child_reads_loop_guard(tmp_path: Path) -> None:
+    assert router.is_routed_child({router._LOOP_GUARD_ENV: "1"}) is True
+    assert router.is_routed_child({}) is False
 
 
 def test_pinned_base_is_git_tag_pin(tmp_path: Path) -> None:
@@ -299,6 +326,31 @@ def test_route2_degrades_when_uvx_absent(
     assert "could not be resolved" in capsys.readouterr().err
 
 
+# --- run_bypassed: bootstrap the pin raise with routing truly off ---------------
+
+
+def test_run_bypassed_sets_no_route_and_clears_loop_guard(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """run_bypassed's child runs TRULY non-routed: PKIT_NO_ROUTE set and the loop
+    guard PKIT_ROUTED cleared. Called from an already-routed child (the pinned
+    case), a leaked PKIT_ROUTED would make the bootstrapped grandchild re-detect
+    itself as the routed pinned child and sync NOTHING while the outer reconcile
+    still flipped the pin — pin-ahead-of-content corruption (ADR-049)."""
+    monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")  # we are an already-routed child
+    calls = _patch_subprocess(monkeypatch, [_FakeCompleted(0)])
+
+    rc = router.run_bypassed("2.0.0", ["upgrade"])
+
+    assert rc == 0
+    env = calls[0]["kwargs"]["env"]
+    assert env[router._BYPASS_ENV] == "1"  # routing bypassed
+    assert router._LOOP_GUARD_ENV not in env  # loop guard NOT leaked into the child
+    cmd = calls[0]["cmd"]
+    assert f"{router.DISTRIBUTION_GIT_URL}@v2.0.0" in cmd
+    assert cmd[-1] == "upgrade"
+
+
 # --- Route 3: match / no pin / not-in-project → run self ------------------------
 
 
@@ -323,7 +375,7 @@ def test_route3_runs_self_when_adopter_has_no_pin(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, no_exec: None, ran_self: list[bool]
 ) -> None:
     (tmp_path / ".git").mkdir()
-    (tmp_path / ".pkit").mkdir()  # a project, but no VERSION file
+    (tmp_path / ".pkit").mkdir()  # a project, but no version-pin directive
     monkeypatch.chdir(tmp_path)
 
     router.main(["status"])

@@ -37,6 +37,7 @@ from project_kit.scaffolds import (
 from project_kit.agents import Namespace as AgentNamespace, stamp_new_agent
 from project_kit.storyboards import ArtifactKind, stamp_new_storyboard
 from project_kit import refs as refs_mod
+from project_kit import router
 from project_kit.scratchpads import (
     stamp_new_scratchpad,
     transition_to_done,
@@ -56,7 +57,7 @@ from project_kit.release import (
 )
 from project_kit.status import report_status
 from project_kit.sync import run_sync
-from project_kit.upgrade import run_upgrade
+from project_kit.upgrade import freeze_at_content, reconcile_pin, run_upgrade
 from project_kit.validate import print_validate_report, run_validate
 from project_kit.versioning import (
     PreKind,
@@ -671,6 +672,63 @@ def upgrade(dry_run: bool) -> None:
     if target_root is None:
         raise click.ClickException("not in a project tree.")
     run_upgrade(target_root, dry_run=dry_run)
+
+
+@main.command()
+@click.argument("version", required=False)
+def pin(version: str | None) -> None:
+    """Pin this project to a pkit version (per ADR-049): write `.pkit/version-pin`.
+
+    VERSION, when given, is a version number only — `1.145.0`, or `v1.145.0`
+    (a single leading `v` is stripped). Branch, commit-sha, and pre-release /
+    build-metadata pins are refused: the router can only route a bare `v<semver>`
+    tag, so those are deferred. Both forms require `.pkit/manifest.yaml` (the
+    project's recorded content version); run `pkit sync` first if it is absent.
+
+    With no argument, freezes the project at its current CONTENT version
+    (`.pkit/manifest.yaml`'s `backbone_version`) — the common case: lock this
+    project where its content is, don't move it. With a VERSION token, the
+    behaviour depends on how it orders against that content version:
+
+    \b
+    - equal   → freeze in place (write the pin, no content sync);
+    - newer   → reconcile content forward to the target under that version's own
+                code, then flip the pin last (atomically);
+    - older   → REFUSED — pkit migrations are forward-only (COR-010), so there is
+                no safe downgrade; `git checkout` the `.pkit/` tree to roll back.
+
+    Once the directive exists, the pkit router re-execs `uvx project-kit@<pin>` so
+    the pinned version serves every command; a global-tool upgrade no longer moves
+    this project. Raise the pin later with `pkit upgrade`; remove it with
+    `pkit unpin`.
+    """
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    if version is None:
+        freeze_at_content(target_root)
+        return
+    reconcile_pin(target_root, version)
+
+
+@main.command()
+def unpin() -> None:
+    """Remove this project's version pin (per ADR-049): delete `.pkit/version-pin`.
+
+    The project reverts to floating on the installed pkit binary — the router
+    runs the installed tool as-is (today's un-pinned behaviour). Idempotent: it
+    is fine to run when no pin file is present.
+    """
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    pin_path = router.pin_file_path(target_root)
+    if pin_path.exists():
+        pin_path.unlink()
+        rel = pin_path.relative_to(target_root)
+        click.echo(f"Removed pin ({rel}); project now floats on the installed tool.")
+    else:
+        click.echo("No pin to remove; project already floats on the installed tool.")
 
 
 @main.group("visibility", invoke_without_command=True)

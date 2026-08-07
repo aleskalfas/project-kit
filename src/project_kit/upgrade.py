@@ -35,6 +35,8 @@ content is `sync`'s job, not upgrade's.
 
 from __future__ import annotations
 
+import os
+import re
 import subprocess
 from pathlib import Path
 
@@ -58,7 +60,12 @@ from project_kit.migrations import (
 )
 from project_kit.router import (
     DISTRIBUTION_GIT_URL,
+    is_route_bypassed,
+    is_routed_child,
     is_source_checkout,
+    pin_file_path,
+    read_version_pin,
+    run_bypassed,
     running_version,
 )
 from project_kit.sync import run_sync
@@ -99,13 +106,30 @@ def run_upgrade(target_root: Path, dry_run: bool = False) -> None:
         run_sync(target_root, dry_run=dry_run)
         return
 
+    # ADR-049: this project may pin a pkit version via `.pkit/version-pin`. Its
+    # presence changes what `pkit upgrade` means — an upgrade *raises* the pin
+    # (flipped last) rather than floating on the installed tool.
+    pinned = read_version_pin(target_root) is not None
+    if pinned and is_routed_child(os.environ):
+        # The router re-exec'd us INTO the pinned version, which cannot mutate the
+        # global tool from inside. Auto-advance the pin to the latest release
+        # through the router bypass (no `uv tool install`, no manual escape).
+        _auto_advance_pinned(target_root, dry_run)
+        return
+
     # ADR-044: detect a newer *released tool* and instruct (print-only). This is
     # about the `uv`-installed binary, not this project's `.pkit/` content — so it
     # runs before the backbone-version comparison below and its early return, or
     # the stale-tool adopter would still see only "nothing to upgrade" and never
     # learn the fix lives in `uv`. Best-effort and read-only: it never installs,
     # never fails the command, and is suppressed on a source checkout (D3).
-    _check_tool_staleness(target_root)
+    #
+    # ADR-049: suppress it on the bootstrap hop. Inside a `run_bypassed`-launched
+    # reconcile (PKIT_NO_ROUTE set), this upgrade is running *under* a pin raise;
+    # a second `git ls-remote` here would print a nonsensical "tool is current"
+    # line mid-raise. The outer, non-bypassed upgrade already ran the probe.
+    if not is_route_bypassed(os.environ):
+        _check_tool_staleness(target_root)
 
     # Past the self-host short-circuit: a real adopter upgrade reads
     # `read_kit_version(source_kit)` next and propagates from `source_kit` via
@@ -125,6 +149,11 @@ def run_upgrade(target_root: Path, dry_run: bool = False) -> None:
 
     if current_version == target_version:
         click.echo(f"Already at backbone v{target_version}; nothing to upgrade.")
+        # ADR-049: content is already current, but a pinned project may still
+        # need its pin flipped forward (e.g. raised via the bypass with content
+        # already synced). Flip only when it actually moves.
+        if pinned:
+            _raise_pin_to(target_root, target_version, dry_run)
         return
 
     click.echo(f"Upgrading backbone: {current_version} -> {target_version}")
@@ -143,8 +172,314 @@ def run_upgrade(target_root: Path, dry_run: bool = False) -> None:
     _run_backbone_migrations(target_root, current_version, target_version, dry_run)
     _run_component_migrations(target_root, manifest.components, dry_run)
 
+    # ADR-049: on a pinned project, flip the pin LAST — after content sync and
+    # migrations — so a failed upgrade never advances the pin past content that
+    # isn't in place. The write itself is atomic.
+    if pinned:
+        _raise_pin_to(target_root, target_version, dry_run)
+
     click.echo()
     click.echo("Upgrade complete.")
+
+
+# --- Per-project version pin (ADR-049) -----------------------------------------
+
+
+def _raise_pin_to(target_root: Path, target_version: str, dry_run: bool) -> None:
+    """Flip `.pkit/version-pin` forward to `target_version` (ADR-049 pin raise).
+
+    Writes only when the pin actually moves — an idempotent no-op when the pin is
+    already at the target. The write is atomic (temp file + `os.replace`) and, by
+    call-site placement, happens LAST in an upgrade: after content sync and
+    migrations, so a failed upgrade leaves the project consistently at its old
+    pin rather than advancing past content that never landed.
+    """
+    pin_path = pin_file_path(target_root)
+    current_pin = read_version_pin(target_root)
+    if current_pin == target_version:
+        return
+    prior = current_pin if current_pin is not None else "(unpinned)"
+    if dry_run:
+        click.echo(f"  would raise pin: {prior} -> {target_version} ({pin_path.name})")
+        return
+    tmp = pin_path.with_name(pin_path.name + ".tmp")
+    tmp.write_text(target_version + "\n", encoding="utf-8")
+    os.replace(tmp, pin_path)  # atomic on POSIX; the pin never observes a torn write
+    click.echo(f"  pin raised: {prior} -> {target_version} (.pkit/version-pin)")
+
+
+def freeze_pin(target_root: Path, version: str) -> None:
+    """Write the `.pkit/version-pin` directive at `version`, in place, with no content sync.
+
+    The freeze gesture: lock the project at a version without moving it. Backs
+    `pkit pin` with no argument (freeze at the current content version, via
+    `freeze_at_content`) and `pkit pin <version>` when the target equals the
+    current content version (ADR-049). `version` is always a bare
+    `MAJOR.MINOR.PATCH` semver — the callers normalise and validate before this
+    point (`_normalize_pin_version`), so the router can always route it."""
+    pin_path = pin_file_path(target_root)
+    pin_path.parent.mkdir(parents=True, exist_ok=True)
+    pin_path.write_text(version + "\n", encoding="utf-8")
+    click.echo(f"Pinned project-kit to {version} ({pin_path.relative_to(target_root)}).")
+
+
+def freeze_at_content(target_root: Path) -> None:
+    """No-arg `pkit pin`: freeze the project at its current CONTENT version (ADR-049).
+
+    Freezes at `.pkit/manifest.yaml`'s `backbone_version` — the content the
+    project last synced — *not* the running binary's version. When the installed
+    tool is ahead of the project's synced content, freezing at the binary version
+    would bake in a code-vs-content mismatch; freezing at content keeps the
+    version⟺content invariant intact. Refuses when the manifest is absent (there
+    is no recorded content version to pin against).
+    """
+    current = _require_backbone_version(target_root)
+    freeze_pin(target_root, current)
+
+
+def reconcile_pin(target_root: Path, version: str) -> None:
+    """Set the pin at `version`, reconciling content per the target-vs-current order.
+
+    `pkit pin <version>` normalises and validates the token first
+    (`_normalize_pin_version`: a bare `MAJOR.MINOR.PATCH` semver, a single leading
+    `v` stripped), then compares it against the project's current content version
+    (`.pkit/manifest.yaml`'s `backbone_version`) and dispatches on the ordering
+    (ADR-049):
+
+    - **equal** → freeze in place (write the pin, no content sync);
+    - **newer** → reconcile content forward to the target under the target's own
+      code (via the router bypass), then flip the pin last, atomically;
+    - **older** → HARD REFUSE — pkit migrations are forward-only (COR-010), so
+      there is no safe downgrade path; nothing is written and no content is
+      touched (`git checkout` is the rollback route).
+
+    A version-only token is required: branch names, commit shas, and pre-release /
+    build-metadata forms are refused at the boundary, because the router's route-2
+    can only route a bare `v<semver>` tag (branch/sha pins need a router change and
+    are deferred). A project with no `.pkit/manifest.yaml` (no recorded content
+    version) is refused too — there is nothing to order the target against.
+    """
+    normalized = _normalize_pin_version(version)
+    current = _require_backbone_version(target_root)
+    order = _pin_order(normalized, current)
+
+    if order == "older":
+        raise click.ClickException(_downgrade_refusal(normalized, current))
+
+    if order == "equal":
+        freeze_pin(target_root, normalized)
+        return
+
+    # newer → reconcile content forward, then flip the pin LAST, so a failed
+    # reconcile never advances the pin past content that never landed.
+    click.echo(
+        f"Pinning forward to {normalized} (current content {current}): reconciling "
+        "content up to the target first."
+    )
+    _advance_pin_to(target_root, normalized)
+
+
+# Accepted pin token: a bare MAJOR.MINOR.PATCH semver. Deliberately stricter than
+# `packaging.version.Version` (which also parses `1.2`, `1.2.3rc1`, `1.2.3+build`)
+# — the router's route-2 pins by the git tag `v<token>`, and only a plain
+# three-part release tag is guaranteed to resolve. Pre-release / build-metadata /
+# branch / sha pins need a router change and are deferred (ADR-049).
+_PIN_SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+$")
+
+
+def _normalize_pin_version(token: str) -> str:
+    """Normalise + validate a `pkit pin <token>` argument to a bare semver (ADR-049).
+
+    Strips a single leading `v` (`v1.145.0` and `1.145.0` both normalise to the
+    bare `1.145.0` that gets ordered, written, AND routed), then requires a plain
+    `MAJOR.MINOR.PATCH` semver. Refuses anything else — branch names, commit shas,
+    pre-release / build-metadata forms — because the router can only route a bare
+    `v<semver>` tag. Raises `click.ClickException` (nothing is written) on refusal.
+    """
+    candidate = token[1:] if token.startswith("v") else token
+    if not _PIN_SEMVER_RE.match(candidate):
+        raise click.ClickException(
+            f"pkit pin takes a version like 1.145.0 (got {token!r}); branch and "
+            "commit pins aren't supported yet."
+        )
+    return candidate
+
+
+def _require_backbone_version(target_root: Path) -> str:
+    """Read the project's recorded content version, or refuse when the manifest is absent.
+
+    Both `pkit pin` gestures need `.pkit/manifest.yaml`'s `backbone_version` — the
+    no-arg freeze pins *at* it, and `pin <version>` orders the target *against* it.
+    Absent, there is no recorded content version, so both hard-refuse with the same
+    seed-the-manifest posture `run_upgrade` uses (ADR-049). Raises
+    `click.ClickException`; nothing is written.
+    """
+    manifest = read_backbone_manifest(target_root)
+    if manifest is None:
+        raise click.ClickException(
+            f"{target_root}/.pkit/manifest.yaml is missing — pkit has no record of "
+            "this project's content version to pin against. Run 'pkit sync' once to "
+            "seed the manifest, then retry."
+        )
+    return manifest.backbone_version
+
+
+def reconcile_forward_via_target(target_root: Path, target: str) -> None:
+    """Reconcile content forward to a NEWER `target` using that version's own code.
+
+    Syncing to a newer version needs that version's code and bundled content,
+    which the currently-installed tool does not carry. Bootstrap the target wheel
+    with `uvx project-kit@v<target>` and run its `upgrade` there — under the
+    router's PKIT_NO_ROUTE bypass, so the bootstrapped process runs self instead
+    of routing back through this project's (older) pin. That upgrade syncs content
+    and runs the forward migrations. Raises ClickException on a non-zero exit so
+    the caller aborts BEFORE advancing the pin — the pin never moves past content
+    that failed to land (ADR-049). Shares the router's route-2 uvx machinery
+    (`run_bypassed`) rather than duplicating the invocation.
+    """
+    returncode = run_bypassed(target, ["upgrade"])
+    if returncode != 0:
+        raise click.ClickException(
+            f"reconciling content forward to {target} failed: the bootstrapped "
+            f"`uvx project-kit@v{target} upgrade` exited {returncode}. The pin was "
+            "not advanced; resolve the error reported above and retry."
+        )
+
+
+def _pin_order(target: str, current: str) -> str:
+    """Order `target` against `current` for the pin guard: equal | newer | older.
+
+    `target` is already a validated bare semver (`_normalize_pin_version`);
+    `current` is the project's recorded `backbone_version`. A malformed recorded
+    version (a corrupt manifest) is refused cleanly rather than crashing the
+    comparison (ADR-049)."""
+    parsed_target = Version(target)
+    try:
+        parsed_current = Version(current)
+    except InvalidVersion as exc:
+        raise click.ClickException(
+            f"this project's recorded content version {current!r} is not valid "
+            "semver — the manifest may be corrupt. Run 'pkit sync' to reconcile it, "
+            "then retry."
+        ) from exc
+    if parsed_target == parsed_current:
+        return "equal"
+    return "newer" if parsed_target > parsed_current else "older"
+
+
+def _downgrade_refusal(target: str, current: str) -> str:
+    """The refusal message for a downgrade pin (ADR-049 + COR-010).
+
+    pkit migrations are forward-only, so there is no safe content path back to an
+    earlier version; rolling back is a git operation, which restores kit-owned
+    *and* project-owned state together — something a forward-only sync cannot."""
+    return (
+        f"refusing to pin {target}: it is OLDER than this project's current content "
+        f"({current}), and pkit cannot safely downgrade — its migrations are "
+        "forward-only (COR-010), so there is no reconcile path back to an earlier "
+        "version. Nothing was written and no content was touched.\n"
+        "To roll this project back, `git checkout` the `.pkit/` tree at a commit "
+        "that carried the earlier version:\n"
+        "    git checkout <ref> -- .pkit/\n"
+        "git restores kit-owned and project-owned state together, atomically — "
+        "which a forward-only content sync cannot do. Note this also reverts "
+        f"`.pkit/version-pin` itself (the file you are setting), and it only "
+        "restores a state that already exists in history."
+    )
+
+
+def _advance_pin_to(target_root: Path, target: str) -> None:
+    """Reconcile content forward to `target`, then flip the pin LAST (ADR-049).
+
+    The shared "raise" shape both pin-forward gestures use (COR-007): `pkit pin
+    <newer>` and `pkit upgrade` in a pinned project. It runs the *target* version's
+    own code via the router bypass to sync content and forward-migrate
+    (`reconcile_forward_via_target`), and only on its success flips
+    `.pkit/version-pin` to `target` — so the pin never advances past content that
+    failed to land.
+
+    The explicit `_raise_pin_to` here is the load-bearing write when the project
+    had no pin yet (first-time `pkit pin <newer>`): the bootstrapped upgrade sees
+    no pin and does not flip one. When the project *was* already pinned (the
+    `pkit upgrade` raise), the bootstrapped upgrade flips the pin from inside its
+    own OUTER path, so this flip is a benign idempotent no-op.
+    """
+    reconcile_forward_via_target(target_root, target)
+    _raise_pin_to(target_root, target, dry_run=False)
+
+
+def _auto_advance_pinned(target_root: Path, dry_run: bool) -> None:
+    """`pkit upgrade` as the pinned child: auto-advance the pin to the latest release (ADR-049).
+
+    The router re-exec'd us INTO the pinned version (PKIT_ROUTED set), so we run
+    the pinned code and cannot mutate the global tool. Resolve the latest released
+    version (ADR-044's `git ls-remote` check) and dispatch on how it orders against
+    the current pin:
+
+    - **latest > pin** → reconcile content forward to latest under the target's own
+      code (via the router bypass) and flip the pin last — no global `uv tool
+      install`, no manual escape.
+    - **latest == pin** → no-op with a clear "already at the latest release" line.
+    - **latest < pin** → the project is pinned ahead of the newest release; say so
+      and leave the pin (pkit never downgrades a pin — migrations are forward-only,
+      COR-010).
+    - **latest unresolvable** (offline / `_latest_released_version` returns None) →
+      degrade loudly to stderr and leave the pin unchanged; never brick the command.
+    """
+    current_pin = read_version_pin(target_root)
+    latest = _latest_released_version()
+    if latest is None:
+        click.secho(
+            "warning: could not check for the latest pkit release "
+            f"(`git ls-remote {DISTRIBUTION_GIT_URL}` failed — offline, missing "
+            "credentials, git unavailable, or timed out). The pin is unchanged "
+            f"({current_pin}); re-run when the release source is reachable.",
+            err=True,
+            fg="yellow",
+        )
+        return
+
+    try:
+        pinned_version = Version(current_pin) if current_pin is not None else None
+    except InvalidVersion:
+        pinned_version = None
+    if pinned_version is None:
+        # The pin the router routed on is unparseable — refuse to guess an order
+        # rather than advance blindly. Degrade like an unresolvable lookup.
+        click.secho(
+            f"warning: this project's pin ({current_pin!r}) is not valid semver, so "
+            f"`pkit upgrade` cannot order it against the latest release (v{latest}). "
+            "The pin is unchanged; re-pin with `pkit pin <version>`.",
+            err=True,
+            fg="yellow",
+        )
+        return
+
+    if latest == pinned_version:
+        click.echo(f"Already at the latest pkit release (v{latest}); pin unchanged.")
+        return
+
+    if latest < pinned_version:
+        click.echo(
+            f"This project is pinned to {current_pin}, which is AHEAD of the latest "
+            f"pkit release (v{latest}); leaving the pin unchanged (pkit does not "
+            "downgrade a pin)."
+        )
+        return
+
+    # latest > pin → raise. Flip last, after content lands (ADR-049).
+    target = str(latest)
+    if dry_run:
+        click.echo(
+            f"  (dry-run) would raise pin {current_pin} -> {target} (latest pkit "
+            "release), reconciling content forward under the target's own code first."
+        )
+        return
+    click.echo(
+        f"Raising the pin: {current_pin} -> {target} (latest pkit release); "
+        "reconciling content forward under the target's own code first."
+    )
+    _advance_pin_to(target_root, target)
 
 
 # --- Tool-staleness detection (ADR-044) ----------------------------------------
