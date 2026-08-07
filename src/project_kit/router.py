@@ -194,9 +194,21 @@ def is_routed_child(environ) -> bool:  # type: ignore[no-untyped-def]
     """True when this process was re-exec'd by the router into a pinned version.
 
     The router sets the loop-guard env on the child it re-execs (route 2). A
-    routed child that runs `pkit upgrade` cannot raise its own pin from inside
-    the pinned version and must print the operator escape instead (ADR-049)."""
+    routed child that runs `pkit upgrade` cannot mutate the global tool from
+    inside the pinned version, so it auto-advances its own pin to the latest
+    release through the router bypass instead (ADR-049)."""
     return _env_true(environ, _LOOP_GUARD_ENV)
+
+
+def is_route_bypassed(environ) -> bool:  # type: ignore[no-untyped-def]
+    """True when routing was explicitly bypassed via PKIT_NO_ROUTE.
+
+    Set by `run_bypassed` on the child it bootstraps (ADR-049). A `pkit upgrade`
+    reached this way is the target version's own reconcile run *under* a pin
+    raise, not a top-level upgrade — so it skips the redundant ADR-044 tool
+    staleness probe (which would issue a second `git ls-remote` and print a
+    nonsensical "tool is current" line mid-raise)."""
+    return _env_true(environ, _BYPASS_ENV)
 
 
 def _read_pkit_version(root: Path) -> str | None:

@@ -60,6 +60,7 @@ from project_kit.migrations import (
 )
 from project_kit.router import (
     DISTRIBUTION_GIT_URL,
+    is_route_bypassed,
     is_routed_child,
     is_source_checkout,
     pin_file_path,
@@ -107,13 +108,13 @@ def run_upgrade(target_root: Path, dry_run: bool = False) -> None:
 
     # ADR-049: this project may pin a pkit version via `.pkit/version-pin`. Its
     # presence changes what `pkit upgrade` means — an upgrade *raises* the pin
-    # (flipped last, atomically) rather than floating on the installed tool.
+    # (flipped last) rather than floating on the installed tool.
     pinned = read_version_pin(target_root) is not None
     if pinned and is_routed_child(os.environ):
-        # The router re-exec'd us INTO the pinned (older) version, which cannot
-        # rewrite its own pin from inside. Print the operator escape and stop —
-        # the raise must bootstrap through the router's PKIT_NO_ROUTE bypass.
-        _print_pinned_child_escape(target_root)
+        # The router re-exec'd us INTO the pinned version, which cannot mutate the
+        # global tool from inside. Auto-advance the pin to the latest release
+        # through the router bypass (no `uv tool install`, no manual escape).
+        _auto_advance_pinned(target_root, dry_run)
         return
 
     # ADR-044: detect a newer *released tool* and instruct (print-only). This is
@@ -122,7 +123,13 @@ def run_upgrade(target_root: Path, dry_run: bool = False) -> None:
     # the stale-tool adopter would still see only "nothing to upgrade" and never
     # learn the fix lives in `uv`. Best-effort and read-only: it never installs,
     # never fails the command, and is suppressed on a source checkout (D3).
-    _check_tool_staleness(target_root)
+    #
+    # ADR-049: suppress it on the bootstrap hop. Inside a `run_bypassed`-launched
+    # reconcile (PKIT_NO_ROUTE set), this upgrade is running *under* a pin raise;
+    # a second `git ls-remote` here would print a nonsensical "tool is current"
+    # line mid-raise. The outer, non-bypassed upgrade already ran the probe.
+    if not is_route_bypassed(os.environ):
+        _check_tool_staleness(target_root)
 
     # Past the self-host short-circuit: a real adopter upgrade reads
     # `read_kit_version(source_kit)` next and propagates from `source_kit` via
@@ -263,14 +270,13 @@ def reconcile_pin(target_root: Path, version: str) -> None:
         freeze_pin(target_root, normalized)
         return
 
-    # newer → reconcile content forward, then flip the pin LAST (atomic), so a
-    # failed reconcile never advances the pin past content that never landed.
+    # newer → reconcile content forward, then flip the pin LAST, so a failed
+    # reconcile never advances the pin past content that never landed.
     click.echo(
         f"Pinning forward to {normalized} (current content {current}): reconciling "
         "content up to the target first."
     )
-    reconcile_forward_via_target(target_root, normalized)
-    _raise_pin_to(target_root, normalized, dry_run=False)
+    _advance_pin_to(target_root, normalized)
 
 
 # Accepted pin token: a bare MAJOR.MINOR.PATCH semver. Deliberately stricter than
@@ -382,36 +388,98 @@ def _downgrade_refusal(target: str, current: str) -> str:
     )
 
 
-def _print_pinned_child_escape(target_root: Path) -> None:
-    """Print the operator escape when `pkit upgrade` runs as the pinned child.
+def _advance_pin_to(target_root: Path, target: str) -> None:
+    """Reconcile content forward to `target`, then flip the pin LAST (ADR-049).
 
-    The router runs before command dispatch, so a project pinned at X cannot run
-    a newer pkit to rewrite its own pin from inside the pinned version. The raise
-    bootstraps through the router's existing `PKIT_NO_ROUTE` bypass (ADR-049). The
-    canonical prose for this escape lives in `.pkit/cli/README.md`; the record
-    (ADR-049) deliberately carries no literal command string.
+    The shared "raise" shape both pin-forward gestures use (COR-007): `pkit pin
+    <newer>` and `pkit upgrade` in a pinned project. It runs the *target* version's
+    own code via the router bypass to sync content and forward-migrate
+    (`reconcile_forward_via_target`), and only on its success flips
+    `.pkit/version-pin` to `target` — so the pin never advances past content that
+    failed to land.
+
+    The explicit `_raise_pin_to` here is the load-bearing write when the project
+    had no pin yet (first-time `pkit pin <newer>`): the bootstrapped upgrade sees
+    no pin and does not flip one. When the project *was* already pinned (the
+    `pkit upgrade` raise), the bootstrapped upgrade flips the pin from inside its
+    own OUTER path, so this flip is a benign idempotent no-op.
     """
-    pin = read_version_pin(target_root) or "?"
+    reconcile_forward_via_target(target_root, target)
+    _raise_pin_to(target_root, target, dry_run=False)
+
+
+def _auto_advance_pinned(target_root: Path, dry_run: bool) -> None:
+    """`pkit upgrade` as the pinned child: auto-advance the pin to the latest release (ADR-049).
+
+    The router re-exec'd us INTO the pinned version (PKIT_ROUTED set), so we run
+    the pinned code and cannot mutate the global tool. Resolve the latest released
+    version (ADR-044's `git ls-remote` check) and dispatch on how it orders against
+    the current pin:
+
+    - **latest > pin** → reconcile content forward to latest under the target's own
+      code (via the router bypass) and flip the pin last — no global `uv tool
+      install`, no manual escape.
+    - **latest == pin** → no-op with a clear "already at the latest release" line.
+    - **latest < pin** → the project is pinned ahead of the newest release; say so
+      and leave the pin (pkit never downgrades a pin — migrations are forward-only,
+      COR-010).
+    - **latest unresolvable** (offline / `_latest_released_version` returns None) →
+      degrade loudly to stderr and leave the pin unchanged; never brick the command.
+    """
+    current_pin = read_version_pin(target_root)
     latest = _latest_released_version()
-    target = f"v{latest}" if latest is not None else "vZ"
+    if latest is None:
+        click.secho(
+            "warning: could not check for the latest pkit release "
+            f"(`git ls-remote {DISTRIBUTION_GIT_URL}` failed — offline, missing "
+            "credentials, git unavailable, or timed out). The pin is unchanged "
+            f"({current_pin}); re-run when the release source is reachable.",
+            err=True,
+            fg="yellow",
+        )
+        return
+
+    try:
+        pinned_version = Version(current_pin) if current_pin is not None else None
+    except InvalidVersion:
+        pinned_version = None
+    if pinned_version is None:
+        # The pin the router routed on is unparseable — refuse to guess an order
+        # rather than advance blindly. Degrade like an unresolvable lookup.
+        click.secho(
+            f"warning: this project's pin ({current_pin!r}) is not valid semver, so "
+            f"`pkit upgrade` cannot order it against the latest release (v{latest}). "
+            "The pin is unchanged; re-pin with `pkit pin <version>`.",
+            err=True,
+            fg="yellow",
+        )
+        return
+
+    if latest == pinned_version:
+        click.echo(f"Already at the latest pkit release (v{latest}); pin unchanged.")
+        return
+
+    if latest < pinned_version:
+        click.echo(
+            f"This project is pinned to {current_pin}, which is AHEAD of the latest "
+            f"pkit release (v{latest}); leaving the pin unchanged (pkit does not "
+            "downgrade a pin)."
+        )
+        return
+
+    # latest > pin → raise. Flip last, after content lands (ADR-049).
+    target = str(latest)
+    if dry_run:
+        click.echo(
+            f"  (dry-run) would raise pin {current_pin} -> {target} (latest pkit "
+            "release), reconciling content forward under the target's own code first."
+        )
+        return
     click.echo(
-        f"This project is pinned to project-kit {pin}, and `pkit upgrade` is "
-        "running as that pinned version (routed in by the pkit router)."
+        f"Raising the pin: {current_pin} -> {target} (latest pkit release); "
+        "reconciling content forward under the target's own code first."
     )
-    click.echo(
-        "The router runs before any command, so a pinned project cannot raise its "
-        "own pin from inside the pinned version. To raise the pin, install the "
-        "target tool and re-run the upgrade under the routing bypass:"
-    )
-    click.echo()
-    click.echo(f"    uv tool install --force {DISTRIBUTION_GIT_URL}@{target}")
-    click.echo("    PKIT_NO_ROUTE=1 pkit upgrade")
-    click.echo()
-    click.echo(
-        "`PKIT_NO_ROUTE=1` runs that one invocation at the freshly-installed tool "
-        "version, which raises the pin and syncs content to match. To drop the pin "
-        "entirely instead, run `pkit unpin`."
-    )
+    _advance_pin_to(target_root, target)
 
 
 # --- Tool-staleness detection (ADR-044) ----------------------------------------
