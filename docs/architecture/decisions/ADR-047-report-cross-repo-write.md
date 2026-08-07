@@ -1,5 +1,5 @@
 ---
-id: ADR-045
+id: ADR-047
 title: "`pkit report` — realizing the first deliberate fixed-foreign-repo write"
 status: accepted
 date: 2026-08-07

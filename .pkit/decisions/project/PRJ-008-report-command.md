@@ -90,7 +90,7 @@ GitHub stamps the authenticated user as author; one cannot file *as* another per
 @mike" credit + marker; the marker restores @mike's tracking. The flow nudges a
 consent check (public repo + their name).
 
-### Safety obligations (detailed in [pkit:ADR-045])
+### Safety obligations (detailed in [pkit:ADR-047])
 
 The reporter side is a **cross-repo write** to the fixed upstream — the first
 realization of [COR-039](../core/COR-039-session-repo-mutation-boundary.md)'s
@@ -141,7 +141,7 @@ is the same shape.
 
 ## Implications
 
-- **New records:** this PRJ + [pkit:ADR-045] (the cross-repo realization) + a
+- **New records:** this PRJ + [pkit:ADR-047] (the cross-repo realization) + a
   `report` entry in the CLI spec (`.pkit/cli/README.md`). No COR.
 - **Backbone command + a shared accessor.** The command lives in the backbone CLI.
   Its environment block reuses an **extracted `collect_environment()`** accessor

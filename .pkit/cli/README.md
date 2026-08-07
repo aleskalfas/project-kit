@@ -350,7 +350,7 @@ The declared, release-driven version path (PRJ-002 D1–D4). Feature branches dr
 ## Report commands
 
 The built-in adopter→upstream feedback channel (per [pkit:PRJ-008]; cross-repo
-realization [pkit:ADR-045]). A `report` files an issue to the **configured report
+realization [pkit:ADR-047]). A `report` files an issue to the **configured report
 target** — the upstream repo the distribution sets in project config (for every real
 adopter that is project-kit's own repo), *not* the adopter's own tracker. The environment block (pkit + capability versions, adapter, OS) is attached
 automatically and **redacted by construction** (`$HOME`/paths stripped, kit-shipped
@@ -364,7 +364,7 @@ new-issue URL that works with no `gh` auth (the browser is the review gate);
 `gh`-auto-file is the authenticated convenience, behind a **target-naming confirm**
 ("posts a PUBLIC issue to `<owner/repo>` under your identity"). `--yes` / autonomy
 **degrades to the draft — it never auto-posts** (the deliberate `--yes` asymmetry,
-per ADR-045). `--on-behalf-of @login` files under the invoker's identity with a
+per ADR-047). `--on-behalf-of @login` files under the invoker's identity with a
 "Reported for @login" attribution so the beneficiary still tracks it.
 
 ### `report` (= `report list`) / `report show <N>`

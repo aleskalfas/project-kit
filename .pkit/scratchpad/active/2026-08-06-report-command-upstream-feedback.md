@@ -170,7 +170,7 @@ distiller→upstream-*spec* (pm-workflow) via scratchpad notes; this is
 adopter→*tool-repo*. Name it in the PRJ so they don't conflate.
 
 **Records:** PRJ-008 (project-kit ships `report`; target = our repo; product
-rationale) + ADR-045 (the cross-repo realization above) + CLI-spec entry. **No
+rationale) + ADR-047 (the cross-repo realization above) + CLI-spec entry. **No
 COR** (fixed-target is product-specific; fails universal applicability — precedent
 PRJ-004, the fixed install source). Version aggregation reuses an extracted
 `collect_environment()` accessor shared with `status` (COR-007), reading the
@@ -179,7 +179,7 @@ PRJ-004, the fixed install source). Version aggregation reuses an extracted
 ## Next steps
 
 - [x] `critic` + `architect` passes; findings folded above.
-- [ ] Author PRJ-008 + ADR-045 + CLI-spec entry (proposed; not accepted).
+- [ ] Author PRJ-008 + ADR-047 + CLI-spec entry (proposed; not accepted).
 - [ ] `methodology-reviewer` neutrality pass on the records.
 - [ ] Show the records to the user before writing command code.
 - [ ] On sign-off: build (`report` command + `report-author` skill + `report link`
