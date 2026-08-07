@@ -1,0 +1,7 @@
+component: backbone
+kind: none
+body: >
+  Design-ahead, no user-facing surface moves: accept PRJ-008 + ADR-047 for
+  `pkit report` (the built-in adopter→project-kit feedback channel), and land the
+  internal `collect_environment()` accessor + CLI-spec draft. The `report` command
+  family itself ships in a later PR (#613), which carries the surface changeset.
