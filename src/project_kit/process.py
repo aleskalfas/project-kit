@@ -315,6 +315,23 @@ class PredicateRunner:
             indeterminate=True,
         )
 
+    def run_raw(self, predicate: dict[str, Any]) -> dict[str, Any] | None:
+        """Resolve + run a predicate command and return its RAW parsed payload,
+        or None when it could not be evaluated (unresolved name shape, non-zero
+        exit, timeout, unparseable JSON) — the caller maps None to its own
+        fail-closed outcome and interprets the payload itself.
+
+        This is the public form of the runner contract for out-of-engine
+        consumers whose payloads carry no engine-interpreted `result` — the
+        health surface's `candidates` / `resolve` seam reads (COR-042 /
+        ADR-048) go through here. Same command resolution, subject threading,
+        per-invocation caching, and fail-closed rules as every other predicate;
+        no new execution mechanism. An UNREGISTERED command name still raises
+        `ProcessError` (a definition bug, per `_invoke`); callers that must not
+        hard-fail on it catch and fold it into their indeterminacy.
+        """
+        return self._run(predicate)
+
     def _run(self, predicate: dict[str, Any]) -> dict[str, Any] | None:
         """Resolve + run a predicate command, returning parsed JSON or None.
 

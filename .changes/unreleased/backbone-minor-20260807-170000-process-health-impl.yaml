@@ -1,0 +1,11 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit process health` landed per COR-042/ADR-048 (#610): the report-only
+  missed-hand-off walk over opt-in `handoff` contracts on `depends_on` entries
+  (additive schema sub-block: trigger + candidates/resolve seam predicates),
+  homed in a sibling module beside the engine with the pinned import boundary;
+  flow-direction report + byte-stable `--json`, `--process` filter,
+  topological coupling order, exit non-zero on any miss or indeterminate.
