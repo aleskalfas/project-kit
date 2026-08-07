@@ -1,4 +1,4 @@
-"""Tests for the redacted environment snapshot (`pkit report`, PRJ-008 / ADR-045)."""
+"""Tests for the redacted environment snapshot (`pkit report`, PRJ-008 / ADR-047)."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Redacted environment snapshot for `pkit report` (PRJ-008 / ADR-045).
+"""Redacted environment snapshot for `pkit report` (PRJ-008 / ADR-047).
 
 Collects the version + platform context a bug report needs, **redacted by
 construction** for a public tracker:
