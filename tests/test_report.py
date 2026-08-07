@@ -189,3 +189,93 @@ def test_cli_file_no_auth_degrades(monkeypatch) -> None:
     )
     assert res.exit_code == 0
     assert "not authenticated" in res.output and "issues/new?" in res.output
+
+
+# --- tracking reads --------------------------------------------------
+
+
+def test_parse_tracked_by() -> None:
+    body = "prose\n\n## Tracked by\n\n- [ ] #123\n- [x] #145\n\n## Other\n#999\n"
+    assert rep.parse_tracked_by(body) == [123, 145]  # stops at the next heading
+    assert rep.parse_tracked_by("no section, incidental #5") == []
+    assert rep.parse_tracked_by("## Tracked by\n- [ ] #7\n- [ ] #7\n") == [7]  # de-dup
+
+
+def test_display_state() -> None:
+    assert rep.display_state("CLOSED", []) == "closed"
+    assert rep.display_state("OPEN", ["state:in-progress"]) == "in progress"
+    assert rep.display_state("open", ["type:bug"]) == "open"
+
+
+def test_list_my_reports_filters_to_bug_feedback_and_sorts(monkeypatch) -> None:
+    issues = [
+        {"number": 1, "title": "a bug", "state": "OPEN",
+         "labels": [{"name": "bug"}], "updatedAt": "2026-08-01"},
+        {"number": 2, "title": "not a report", "state": "OPEN",
+         "labels": [{"name": "docs"}], "updatedAt": "2026-08-05"},
+        {"number": 3, "title": "some feedback", "state": "CLOSED",
+         "labels": [{"name": "feedback"}], "updatedAt": "2026-08-03"},
+    ]
+    monkeypatch.setattr(rep, "_gh_json", lambda args: issues)
+    reports = rep.list_my_reports("o/r")
+    assert [r.number for r in reports] == [3, 1]  # #2 dropped; newest-first
+    assert reports[0].state == "closed" and reports[0].kind == "feedback"
+
+
+def test_list_my_reports_gh_failure_returns_none(monkeypatch) -> None:
+    monkeypatch.setattr(rep, "_gh_json", lambda args: None)
+    assert rep.list_my_reports("o/r") is None
+
+
+def test_show_report_resolves_tracked_by(monkeypatch) -> None:
+    def fake_gh_json(args):
+        n = args[3]
+        if n == "42":
+            return {
+                "number": 42, "title": "fb", "state": "OPEN",
+                "body": "p\n\n## Tracked by\n- [ ] #7\n",
+                "labels": [{"name": "feedback"}],
+                "comments": [{"body": "working on it"}],
+            }
+        if n == "7":
+            return {"state": "CLOSED", "labels": []}
+        return None
+
+    monkeypatch.setattr(rep, "_gh_json", fake_gh_json)
+    detail = rep.show_report("o/r", 42)
+    assert detail["state"] == "open" and detail["kind"] == "feedback"
+    assert detail["tracked_by"] == {7: "closed"}
+    assert len(detail["comments"]) == 1
+
+
+def test_cli_report_list(monkeypatch) -> None:
+    monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
+    monkeypatch.setattr(
+        rep, "list_my_reports",
+        lambda target: [rep.ReportSummary(1, "a bug", "bug", "open", "2026-08-01")],
+    )
+    res = CliRunner().invoke(main, ["report"])
+    assert res.exit_code == 0
+    assert "#1" in res.output and "a bug" in res.output
+
+
+def test_cli_report_list_no_auth_degrades(monkeypatch) -> None:
+    monkeypatch.setattr(rep, "gh_authenticated", lambda: False)
+    res = CliRunner().invoke(main, ["report"])
+    assert "github.com" in res.output and "auth" in res.output.lower()
+
+
+def test_cli_report_show(monkeypatch) -> None:
+    monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
+    monkeypatch.setattr(
+        rep, "show_report",
+        lambda t, n: {
+            "number": 42, "title": "fb", "state": "open", "kind": "feedback",
+            "comments": [{"body": "working on it"}],
+            "tracked_by": {7: "closed", 8: "in progress"},
+        },
+    )
+    res = CliRunner().invoke(main, ["report", "show", "42"])
+    assert res.exit_code == 0
+    assert "#42" in res.output and "Tracked by" in res.output
+    assert "#7" in res.output and "maintainer comment" in res.output

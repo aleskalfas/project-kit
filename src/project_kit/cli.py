@@ -614,12 +614,63 @@ def status() -> None:
 @main.group("report", invoke_without_command=True)
 @click.pass_context
 def report(ctx: click.Context) -> None:
-    """Report a bug or feedback about pkit to project-kit (per PRJ-008 / ADR-047)."""
+    """Report a bug or feedback about pkit to project-kit (per PRJ-008 / ADR-047).
+
+    With no subcommand, lists your reports and their states.
+    """
     if ctx.invoked_subcommand is None:
+        _run_report_list()
+
+
+def _run_report_list() -> None:
+    from project_kit.report import REPORT_TARGET, gh_authenticated, list_my_reports
+
+    if not gh_authenticated():
         click.echo(
-            "Usage: pkit report bug|feedback --title <t> --body <prose>\n"
-            "(list / show / maintainer verbs land in a later increment — #613)"
+            "Listing your reports needs `gh` auth. Meanwhile, view them at\n"
+            f"    https://github.com/{REPORT_TARGET}/issues?q=is%3Aissue+author%3A%40me"
         )
+        return
+    reports = list_my_reports(REPORT_TARGET)
+    if reports is None:
+        raise click.ClickException("could not read your reports (gh error).")
+    if not reports:
+        click.echo("No reports yet — file one with `pkit report bug|feedback`.")
+        return
+    click.echo(f"Your reports to {REPORT_TARGET}:\n")
+    for r in reports:
+        click.echo(f"  #{r.number:<5} {r.kind:<9} {r.state:<12} {r.title}")
+
+
+@report.command("show")
+@click.argument("number", type=int)
+def report_show(number: int) -> None:
+    """Show one report's state, maintainer comments, and its tracked-by fixes."""
+    from project_kit.report import REPORT_TARGET, gh_authenticated, show_report
+
+    if not gh_authenticated():
+        click.echo(
+            f"View it at https://github.com/{REPORT_TARGET}/issues/{number} "
+            "(`gh` auth needed for CLI detail)."
+        )
+        return
+    detail = show_report(REPORT_TARGET, number)
+    if detail is None:
+        raise click.ClickException(
+            f"could not read report #{number} on {REPORT_TARGET}."
+        )
+    kind = detail["kind"] or "report"
+    click.echo(f"#{detail['number']}  {kind}  {detail['state']}  {detail['title']}")
+    tracked = detail["tracked_by"]
+    if tracked:
+        click.echo("\n  Tracked by (the issues that will fix it):")
+        for n, st in tracked.items():
+            click.echo(f"    #{n:<6} {st}")
+    comments = detail["comments"]
+    if comments:
+        last = comments[-1]
+        first_line = (str(last.get("body") or "").strip().splitlines() or [""])[0]
+        click.echo(f"\n  {len(comments)} maintainer comment(s); latest: {first_line}")
 
 
 def _echo_url_first(kind: str, url: str, target: str, note: str = "") -> None:

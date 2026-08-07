@@ -12,5 +12,8 @@ body: >
   An opt-in `--file` posts via `gh` after an interactive **target-naming confirm**,
   degrading to the URL when `gh` isn't authenticated or under `--yes` (the foreign
   write is never auto-posted — the deliberate `--yes` asymmetry, ADR-047).
-  `--on-behalf-of @login` attributes a report filed for someone else. The tracking
-  reads (`list`/`show`) and the maintainer side land in later increments of #613.
+  `--on-behalf-of @login` attributes a report filed for someone else. `pkit report`
+  (no subcommand) lists your reports + states, and `pkit report show <N>` adds the
+  maintainer comments and the `## Tracked by` rollup (the issues that will fix it,
+  with each one's state). The maintainer side (`inbox` / `link`) and the `--tree`
+  list view land in later increments of #613.
