@@ -35,6 +35,7 @@ content is `sync`'s job, not upgrade's.
 
 from __future__ import annotations
 
+import os
 import subprocess
 from pathlib import Path
 
@@ -58,7 +59,10 @@ from project_kit.migrations import (
 )
 from project_kit.router import (
     DISTRIBUTION_GIT_URL,
+    is_routed_child,
     is_source_checkout,
+    pin_file_path,
+    read_version_pin,
     running_version,
 )
 from project_kit.sync import run_sync
@@ -99,6 +103,17 @@ def run_upgrade(target_root: Path, dry_run: bool = False) -> None:
         run_sync(target_root, dry_run=dry_run)
         return
 
+    # ADR-045: this project may pin a pkit version via `.pkit/version-pin`. Its
+    # presence changes what `pkit upgrade` means — an upgrade *raises* the pin
+    # (flipped last, atomically) rather than floating on the installed tool.
+    pinned = read_version_pin(target_root) is not None
+    if pinned and is_routed_child(os.environ):
+        # The router re-exec'd us INTO the pinned (older) version, which cannot
+        # rewrite its own pin from inside. Print the operator escape and stop —
+        # the raise must bootstrap through the router's PKIT_NO_ROUTE bypass.
+        _print_pinned_child_escape(target_root)
+        return
+
     # ADR-044: detect a newer *released tool* and instruct (print-only). This is
     # about the `uv`-installed binary, not this project's `.pkit/` content — so it
     # runs before the backbone-version comparison below and its early return, or
@@ -125,6 +140,11 @@ def run_upgrade(target_root: Path, dry_run: bool = False) -> None:
 
     if current_version == target_version:
         click.echo(f"Already at backbone v{target_version}; nothing to upgrade.")
+        # ADR-045: content is already current, but a pinned project may still
+        # need its pin flipped forward (e.g. raised via the bypass with content
+        # already synced). Flip only when it actually moves.
+        if pinned:
+            _raise_pin_to(target_root, target_version, dry_run)
         return
 
     click.echo(f"Upgrading backbone: {current_version} -> {target_version}")
@@ -143,8 +163,71 @@ def run_upgrade(target_root: Path, dry_run: bool = False) -> None:
     _run_backbone_migrations(target_root, current_version, target_version, dry_run)
     _run_component_migrations(target_root, manifest.components, dry_run)
 
+    # ADR-045: on a pinned project, flip the pin LAST — after content sync and
+    # migrations — so a failed upgrade never advances the pin past content that
+    # isn't in place. The write itself is atomic.
+    if pinned:
+        _raise_pin_to(target_root, target_version, dry_run)
+
     click.echo()
     click.echo("Upgrade complete.")
+
+
+# --- Per-project version pin (ADR-045) -----------------------------------------
+
+
+def _raise_pin_to(target_root: Path, target_version: str, dry_run: bool) -> None:
+    """Flip `.pkit/version-pin` forward to `target_version` (ADR-045 pin raise).
+
+    Writes only when the pin actually moves — an idempotent no-op when the pin is
+    already at the target. The write is atomic (temp file + `os.replace`) and, by
+    call-site placement, happens LAST in an upgrade: after content sync and
+    migrations, so a failed upgrade leaves the project consistently at its old
+    pin rather than advancing past content that never landed.
+    """
+    pin_path = pin_file_path(target_root)
+    current_pin = read_version_pin(target_root)
+    if current_pin == target_version:
+        return
+    if dry_run:
+        click.echo(f"  would raise pin: {current_pin} -> {target_version} ({pin_path.name})")
+        return
+    tmp = pin_path.with_name(pin_path.name + ".tmp")
+    tmp.write_text(target_version + "\n", encoding="utf-8")
+    os.replace(tmp, pin_path)  # atomic on POSIX; the pin never observes a torn write
+    click.echo(f"  pin raised: {current_pin} -> {target_version} (.pkit/version-pin)")
+
+
+def _print_pinned_child_escape(target_root: Path) -> None:
+    """Print the operator escape when `pkit upgrade` runs as the pinned child.
+
+    The router runs before command dispatch, so a project pinned at X cannot run
+    a newer pkit to rewrite its own pin from inside the pinned version. The raise
+    bootstraps through the router's existing `PKIT_NO_ROUTE` bypass (ADR-045). The
+    canonical prose for this escape lives in `.pkit/cli/README.md`; the record
+    (ADR-045) deliberately carries no literal command string.
+    """
+    pin = read_version_pin(target_root) or "?"
+    latest = _latest_released_version()
+    target = f"v{latest}" if latest is not None else "vZ"
+    click.echo(
+        f"This project is pinned to project-kit {pin}, and `pkit upgrade` is "
+        "running as that pinned version (routed in by the pkit router)."
+    )
+    click.echo(
+        "The router runs before any command, so a pinned project cannot raise its "
+        "own pin from inside the pinned version. To raise the pin, install the "
+        "target tool and re-run the upgrade under the routing bypass:"
+    )
+    click.echo()
+    click.echo(f"    uv tool install --force {DISTRIBUTION_GIT_URL}@{target}")
+    click.echo("    PKIT_NO_ROUTE=1 pkit upgrade")
+    click.echo()
+    click.echo(
+        "`PKIT_NO_ROUTE=1` runs that one invocation at the freshly-installed tool "
+        "version, which raises the pin and syncs content to match. To drop the pin "
+        "entirely instead, run `pkit unpin`."
+    )
 
 
 # --- Tool-staleness detection (ADR-044) ----------------------------------------

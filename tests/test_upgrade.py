@@ -9,7 +9,7 @@ from pathlib import Path
 import click
 import pytest
 
-from project_kit import install, manifest, upgrade
+from project_kit import install, manifest, router, upgrade
 
 
 @pytest.fixture
@@ -739,3 +739,106 @@ def test_tool_staleness_not_run_on_self_host(
     upgrade.run_upgrade(source_repo)
 
     assert stub_ls_remote.ls_remote_calls == []
+
+
+# --- Per-project version pin: `pkit upgrade` semantics (ADR-045) ----------------
+
+
+def test_upgrade_pinned_child_prints_escape_and_raises_nothing(
+    installed_target: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Run as the pinned child (router set PKIT_ROUTED): print the bypass escape
+    and stop — never no-op silently, never touch the pin (ADR-045)."""
+    router.pin_file_path(installed_target).write_text("1.0.0\n", encoding="utf-8")
+    monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")
+
+    upgrade.run_upgrade(installed_target)
+
+    out = capsys.readouterr().out
+    assert "uv tool install --force" in out
+    assert "PKIT_NO_ROUTE=1 pkit upgrade" in out
+    # The pin is untouched — a pinned child cannot raise its own pin.
+    assert router.read_version_pin(installed_target) == "1.0.0"
+
+
+def test_upgrade_pinned_raise_flips_pin_after_content_sync(
+    installed_target: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A pinned project's upgrade raises the pin to the target — and flips it LAST,
+    after content sync, so a failed sync would leave the old pin intact (ADR-045)."""
+    m = manifest.read_backbone_manifest(installed_target)
+    assert m is not None
+    source_version = m.backbone_version  # the target the raise moves to
+    m.backbone_version = "0.1.0"  # force content behind so upgrade has work
+    manifest.write_backbone_manifest(installed_target, m)
+    router.pin_file_path(installed_target).write_text("0.1.0\n", encoding="utf-8")
+    monkeypatch.delenv(router._LOOP_GUARD_ENV, raising=False)  # not a routed child
+
+    pin_seen_at_sync: list[str | None] = []
+
+    def spy_sync(root: Path, **_kw: object) -> None:
+        pin_seen_at_sync.append(router.read_version_pin(root))
+
+    monkeypatch.setattr(upgrade, "run_sync", spy_sync)
+
+    upgrade.run_upgrade(installed_target)
+
+    assert pin_seen_at_sync == ["0.1.0"]  # pin NOT yet flipped when sync ran
+    assert router.read_version_pin(installed_target) == source_version  # flipped last
+    assert f"pin raised: 0.1.0 -> {source_version}" in capsys.readouterr().out
+
+
+def test_upgrade_pinned_already_current_still_flips_lagging_pin(
+    installed_target: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Content already current but the pin lags (e.g. content synced separately):
+    the upgrade still flips the pin forward on the already-at-version path."""
+    m = manifest.read_backbone_manifest(installed_target)
+    assert m is not None
+    source_version = m.backbone_version  # content already current
+    router.pin_file_path(installed_target).write_text("0.1.0\n", encoding="utf-8")
+    monkeypatch.delenv(router._LOOP_GUARD_ENV, raising=False)
+
+    upgrade.run_upgrade(installed_target)
+
+    out = capsys.readouterr().out
+    assert "Already at backbone v" in out
+    assert router.read_version_pin(installed_target) == source_version
+
+
+def test_upgrade_unpinned_writes_no_pin_file(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An un-pinned project keeps today's behaviour exactly: plain content sync,
+    no pin directive written (ADR-045)."""
+    m = manifest.read_backbone_manifest(installed_target)
+    assert m is not None
+    m.backbone_version = "0.1.0"
+    manifest.write_backbone_manifest(installed_target, m)
+    monkeypatch.setattr(upgrade, "run_sync", lambda *_a, **_k: None)
+
+    upgrade.run_upgrade(installed_target)
+
+    assert not router.pin_file_path(installed_target).exists()
+
+
+def test_upgrade_dry_run_pinned_does_not_write_pin(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A dry-run raise reports the flip but writes nothing (ADR-045 + COR-004)."""
+    m = manifest.read_backbone_manifest(installed_target)
+    assert m is not None
+    m.backbone_version = "0.1.0"
+    manifest.write_backbone_manifest(installed_target, m)
+    router.pin_file_path(installed_target).write_text("0.1.0\n", encoding="utf-8")
+    monkeypatch.delenv(router._LOOP_GUARD_ENV, raising=False)
+
+    upgrade.run_upgrade(installed_target, dry_run=True)
+
+    assert router.read_version_pin(installed_target) == "0.1.0"  # unchanged
