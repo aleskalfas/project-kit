@@ -1,0 +1,18 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  Per-project version pinning via a project-owned `.pkit/version-pin` directive
+  (#605, ADR-045). A project opts into running a fixed pkit version by committing
+  the directive; the entry-point router reads it (moving the pin source from
+  `.pkit/VERSION` — the slot ADR-039 left to implementation) and re-execs the
+  pinned version, so a global-tool upgrade no longer moves a pinned project. Two
+  new commands manage it: `pkit pin [<version>]` freezes the project at the
+  current version (or a given token), and `pkit unpin` removes the directive.
+  `pkit upgrade` in a pinned project now *raises* the pin — syncing content then
+  flipping the pin last, atomically — and, when it detects it is the routed
+  pinned child (which cannot raise its own pin from inside), prints the
+  `PKIT_NO_ROUTE=1` bypass escape instead of silently no-op'ing; an un-pinned
+  project's upgrade is unchanged. The directive is project-owned and never
+  written or clobbered by `init` / `sync` / `upgrade`'s content pass.
