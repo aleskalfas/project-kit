@@ -8,5 +8,6 @@ permissions/project/diagnose.yaml
 permissions/project/diagnose-log.jsonl
 permissions/project/sandbox-provenance.yaml
 permissions/project/active-profile.yaml
+permissions/project/profile-realized-allows.yaml
 capabilities/project-management/project/process/**/*.journal.jsonl
 capabilities/project-management/project/instance/*.json

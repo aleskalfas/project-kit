@@ -941,7 +941,14 @@ def _active_profile_grants(target_root: str, config: dict[str, Any]) -> list[dic
     Resolves the active profile name via `active_profile` (the per-machine
     sidecar, with `config.yaml` fallback — ADR-032), then the profile file
     project-first (`project/profiles/<name>.yaml`) then shipped
-    (`profiles/<name>.yaml`)."""
+    (`profiles/<name>.yaml`).
+
+    Each grant dict is annotated with a ``_profile`` key naming the source
+    profile (mirroring ``_capability_fragment_grants``' ``_capability``
+    annotation). This is ADR-046's routing key: `apply` uses it to route
+    profile-only realizer output to the per-machine settings file. The
+    annotation rides along in the model unstripped — ``decide()`` reads only
+    ``subject``/``privilege``/``effect``/``scope`` and ignores extra keys."""
     import os.path
 
     name = active_profile(target_root, config)
@@ -953,7 +960,15 @@ def _active_profile_grants(target_root: str, config: dict[str, Any]) -> list[dic
     ):
         path = os.path.join(base, f"{name}.yaml")
         if _exists(path):
-            return list(load_yaml(path).get("grants", []) or [])
+            out: list[dict[str, Any]] = []
+            for grant in load_yaml(path).get("grants", []) or []:
+                if isinstance(grant, dict):
+                    annotated = dict(grant)
+                    annotated["_profile"] = name
+                    out.append(annotated)
+                else:
+                    out.append(grant)
+            return out
     return []
 
 
@@ -968,9 +983,11 @@ def _capability_fragment_grants(target_root: str) -> list[dict[str, Any]]:
 
     Each grant dict is annotated with a ``_capability`` key naming the source
     capability; ``load_model`` carries this through for the reporting layer
-    (``pkit permissions overview`` / ``explain``). The ``_capability`` key is
-    stripped before the model is passed to ``decide()`` — ``decide()`` only
-    reads ``subject``, ``privilege``, ``effect``, and ``scope``.
+    (``pkit permissions overview`` / ``explain``). The annotation is never
+    stripped — it rides along in the model, and ``decide()`` simply ignores
+    keys it does not read (it reads only ``subject``, ``privilege``,
+    ``effect``, and ``scope``). The profile layer's ``_profile`` annotation
+    (ADR-046 routing key) works the same way.
 
     Stdlib-safe (ADR-002 / ADR-003 same-code invariant): reads files through
     the existing ``load_yaml`` / ``_stdlib_load_yaml`` fallback; no third-party
@@ -1017,7 +1034,8 @@ def load_model(target_root: str, catalog: dict[str, Any]) -> dict[str, Any]:
     fragments → profile → adopter (adopter last so manual grants are never
     clobbered, per ADR-005); `decide()` is deny-wins and order-independent
     regardless. Capability-fragment grants are annotated with ``_capability``
-    for the reporting layer (ADR-016); ``decide()`` ignores the extra key.
+    for the reporting layer (ADR-016) and profile-layer grants with ``_profile``
+    (ADR-046's realizer routing key); ``decide()`` ignores the extra keys.
     """
     import os.path
 

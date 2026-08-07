@@ -139,6 +139,11 @@ def _attribute_rule(rule: str, catalog: dict) -> str | None:
 
 
 def _live_settings(target_root: Path) -> dict[str, list[str]]:
+    """COMMITTED-scope settings reader (ADR-046 condition 5): reads ONLY the
+    committed `.claude/settings.json`. Use for floor claims (e.g. the probe's
+    native double-lock check) — a rule present only in the per-machine
+    `settings.local.json` must never certify state other checkouts lack. For
+    live-behaviour claims, use `_union_live_allow`."""
     path = target_root / ".claude" / "settings.json"
     if not path.is_file():
         return {"allow": [], "deny": []}
@@ -148,6 +153,19 @@ def _live_settings(target_root: Path) -> dict[str, list[str]]:
         return {"allow": [], "deny": []}
     perms = data.get("permissions", {})
     return {"allow": perms.get("allow", []), "deny": perms.get("deny", [])}
+
+
+def _union_live_allow(target_root: Path) -> list[str]:
+    """UNION-scope allow reader (ADR-046 condition 5): the live-behaviour allow
+    set — committed `settings.json` allows plus per-machine
+    `settings.local.json` allows (the harness aggregates both files'
+    `permissions.allow` arrays). Use for live-behaviour claims (`diff`'s
+    applied/not-applied reconciliation, the diagnose report); floor claims stay
+    on the committed-scope `_live_settings`. Order-stable, committed first."""
+    allow = list(_live_settings(target_root)["allow"])
+    local = _read_settings_local(target_root).get("permissions", {}).get("allow", [])
+    allow.extend(r for r in local if r not in allow)
+    return allow
 
 
 # ---- explain ---------------------------------------------------------------
@@ -467,6 +485,9 @@ def diff(target_root: Path, agent: str | None) -> tuple[str, bool]:
     granted privilege justifies (the "unjustified grant" flag)."""
     catalog = _load_catalog(target_root)
     model = _load_model(target_root)
+    # COMMITTED-scope read (ADR-046 cond. 5): unjustified-rule attribution
+    # checks the committed file only — harness/operator-authored always-allows
+    # in the per-machine settings.local.json are never flagged as violations.
     live = _live_settings(target_root)
 
     # Which privilege ids does the model grant (allow) to anyone?
@@ -497,7 +518,10 @@ def diff(target_root: Path, agent: str | None) -> tuple[str, bool]:
     # view and `apply`'s emission can't disagree (ADR-002 same-code).
     proj = _projection_mod(target_root).project(model, catalog)
     expected = set(proj["settings"]["allow"])
-    live_allow = set(live["allow"])
+    # UNION-scope read (ADR-046 cond. 5): applied/not-applied is a live-
+    # behaviour claim — profile-derived rules legitimately realize in the
+    # per-machine settings.local.json, so reconcile against both files' allows.
+    live_allow = set(_union_live_allow(target_root))
     ownership = model.get("ownership_mode", "additive")
     lines.append("\n" + cli_render.style("heading", "model → settings projection (expected session-wide allow rules):"))
     if not expected:
@@ -1833,20 +1857,56 @@ def sandbox_status(target_root: Path) -> str:
 
 # ---- apply (additive realization, #250) ------------------------------------
 
+def _profile_ledger_path(target_root: Path) -> Path:
+    """The gitignored per-machine ledger of the `settings.local.json` allow
+    rules pkit authored for the active profile (ADR-046 condition 3). Rides the
+    same `runtime_ignore` registration as the other per-machine sidecars in
+    `.pkit/permissions/project/` (sandbox-provenance, active-profile)."""
+    return _project_dir(target_root) / "profile-realized-allows.yaml"
+
+
+def _load_profile_ledger(target_root: Path) -> tuple[Any, list[str]]:
+    """(recorded profile name or None, ledgered rules) — empty when absent."""
+    doc = _load_yaml(_profile_ledger_path(target_root))
+    return doc.get("profile"), [str(r) for r in (doc.get("rules") or [])]
+
+
+def _dump_profile_ledger(target_root: Path, profile: Any, rules: list[str]) -> None:
+    _dump_yaml(
+        _profile_ledger_path(target_root),
+        {"schema_version": 1, "profile": profile, "rules": rules},
+    )
+
+
 def apply(target_root: Path) -> str:
-    """Additively realize the model into the harness (per ADR-002 additive mode).
+    """Realize the model into the harness — one realizer, two routed
+    destinations (ADR-002 additive mode, qualified by ADR-046).
 
-    Unions the model's projected session-wide allow rules into live
-    `.claude/settings.json` and ensures the fail-closed guardrail denies (the
-    double-lock), then reports the out-of-harness gap. Writes the live target
-    in-process — like `enable`, and deliberately NOT via a merge source:
-    projected allows are model-derived realizer output, and parking them in a
-    hand-edited source would accrete drift additive mode can't heal on revoke.
+    Projects the model TWICE through the same `project()` (ADR-002 same-code):
+    the full model, and the model minus the active profile's
+    `_profile`-annotated grant layer. The profile-less projection
+    (`committed_expected`) unions additively into the committed
+    `.claude/settings.json` exactly as before — never removes or replaces
+    there — alongside the fail-closed guardrail denies (the double-lock).
+    Because `project()` is a per-grant monotone union, a rule derivable from
+    BOTH the profile and a committed source lands in `committed_expected` and
+    is never ledgered (ADR-046 condition 2) — a future refactor must preserve
+    this double-projection shape.
 
-    Additive only — never removes or replaces (managed-mode wholesale
-    regeneration is #252). Idempotent: a set-union write, so re-running is a
-    fixed point. The settings + gap report use the same `project()` /
-    `_gap_report` as `diff`, so realization and reconciliation can't disagree.
+    The difference (`profile_expected` = full − committed) is per-machine
+    state by ADR-032 Rule A and realizes into the gitignored
+    `.claude/settings.local.json` under provenance-scoped recompute-replace
+    (ADR-046 condition 3): a pkit-owned ledger sidecar records exactly the
+    local rules pkit authored; on every run, ledgered rules no longer
+    profile-justified are healed away (profile switch / deactivation), missing
+    ones are added, and the ledger is rewritten. Local entries NOT in the
+    ledger — operator/harness-authored always-allows — are never touched. A
+    profile rule already present in the committed file is silently skipped:
+    not added locally, not ledgered, not advised (condition 4).
+
+    Idempotent: re-running under a fixed profile is a no-op fixed point. The
+    settings + gap report use the same `project()` / `_gap_report` as `diff`,
+    so realization and reconciliation can't disagree.
     """
     if not _adapter_installed(target_root, "claude-code"):
         raise PermissionsError(
@@ -1858,30 +1918,84 @@ def apply(target_root: Path) -> str:
     if model.get("ownership_mode") == "managed":
         # Additive-only by guard, not by omission: managed mode wholesale-
         # regenerates the region (the #252 seam), which this realizer does not do.
+        # When #252 is built: per ADR-046 condition 6 / ADR-002's #252
+        # composition edit, the managed committed union EXCLUDES per-machine-
+        # classified sources — profile-derived allows route to
+        # settings.local.json even under managed mode.
         raise PermissionsError(
             "ownership_mode is `managed`, but managed-mode apply (wholesale region "
             "regeneration) is not yet implemented (#252). This is the additive "
             "realizer — set `pkit permissions mode additive` to use it."
         )
-    proj = _projection_mod(target_root).project(model, catalog)
+    proj_mod = _projection_mod(target_root)
+    proj = proj_mod.project(model, catalog)
+    # The double projection (ADR-046 conditions 1-2): the same project() over
+    # the model minus profile-layer grants. The set subtraction below — not any
+    # per-rule judgment — is what keeps shared-derivation rules committed.
+    committed_model = dict(model)
+    committed_model["grants"] = [
+        g for g in model["grants"] if not (isinstance(g, dict) and "_profile" in g)
+    ]
+    committed_expected = proj_mod.project(committed_model, catalog)["settings"]["allow"]
+    committed_set = set(committed_expected)
+    # project() emits sorted rules; the filter preserves that stable order.
+    profile_expected = [r for r in proj["settings"]["allow"] if r not in committed_set]
 
     settings = _read_settings(target_root)
     perms = settings.setdefault("permissions", {})
     allow = perms.setdefault("allow", [])
     deny = perms.setdefault("deny", [])
 
-    expected = proj["settings"]["allow"]
-    added_allow = [r for r in expected if r not in allow]
+    added_allow = [r for r in committed_expected if r not in allow]
     allow.extend(added_allow)
     added_deny = [d for d in _core_settings_denies(target_root) if d not in deny]
     deny.extend(added_deny)
 
-    changed = bool(added_allow or added_deny)
-    if changed:
+    committed_changed = bool(added_allow or added_deny)
+    if committed_changed:
         _write_settings(target_root, settings)
 
+    # ---- profile-derived routing (ADR-046 conditions 3-4) -------------------
+    # Silent-skip: a profile rule already present in the committed file is
+    # authoritative team state — not added locally, not ledgered, not advised.
+    to_local = [r for r in profile_expected if r not in allow]
+    ledger_path = _profile_ledger_path(target_root)
+    old_profile, old_ledger = _load_profile_ledger(target_root)
+    local = _read_settings_local(target_root)
+    local_allow = local.setdefault("permissions", {}).setdefault("allow", [])
+    expected_local = set(to_local)
+    ledgered = set(old_ledger)
+    # Heal: remove ledgered rules no longer profile-justified. ONLY ledgered
+    # entries — operator/harness-authored local allows are never touched.
+    healed = [r for r in local_allow if r in ledgered and r not in expected_local]
+    if healed:
+        healed_set = set(healed)
+        local_allow[:] = [r for r in local_allow if r not in healed_set]
+    added_local = [r for r in to_local if r not in local_allow]
+    local_allow.extend(added_local)
+    local_changed = bool(healed or added_local)
+    if local_changed:
+        # No empty-husk residue: drop an emptied allow list / permissions block
+        # before writing (mirrors `_strip_committed_sandbox_enabled`).
+        if not local_allow:
+            local["permissions"].pop("allow", None)
+            if not local["permissions"]:
+                local.pop("permissions", None)
+        _write_settings_local(target_root, local)
+    # The ledger records exactly the local rules pkit maintains: rules it just
+    # added, plus previously-ledgered rules still expected. A profile rule that
+    # was already in the local file UN-ledgered is operator-authored — it stays
+    # un-ledgered so a later heal can never remove it.
+    added_local_set = set(added_local)
+    new_ledger = [r for r in to_local if r in ledgered or r in added_local_set]
+    active = model.get("active_profile")
+    if (ledger_path.is_file() or new_ledger) and (
+        new_ledger != old_ledger or old_profile != active
+    ):
+        _dump_profile_ledger(target_root, active, new_ledger)
+
     lines: list[str] = []
-    if changed:
+    if committed_changed:
         parts = []
         if added_allow:
             parts.append(f"{len(added_allow)} allow rule(s)")
@@ -1891,8 +2005,17 @@ def apply(target_root: Path) -> str:
             "strong",
             "applied (additive): added " + " + ".join(parts) + " to .claude/settings.json.",
         ))
-    else:
+    if local_changed:
+        msg = (
+            f"{len(added_local)} profile-derived allow rule(s) realized in "
+            f".claude/settings.local.json"
+        )
+        if healed:
+            msg += f" ({len(healed)} healed)"
+        lines.append(cli_render.style("strong", msg + "."))
+    if not committed_changed and not local_changed:
         lines.append(cli_render.style("strong", "applied (additive): already realized — nothing to add."))
+    expected = proj["settings"]["allow"]
     if expected:
         lines.append(f"  model's session-wide allow rules: {', '.join(sorted(expected))}")
 
@@ -2322,6 +2445,9 @@ def probe(target_root: Path, subject: str = "operator", live: bool = False) -> t
     if not canonical:
         lines.append("  (claude-code adapter core settings not found — skipped)")
     else:
+        # COMMITTED-scope read (ADR-046 cond. 5): a floor claim — a deny present
+        # only in the per-machine file must never certify a floor other
+        # checkouts lack.
         live_deny = _live_settings(target_root)["deny"]
         for rule in canonical:
             if rule in live_deny:
@@ -4166,7 +4292,13 @@ def _local_is_purely_overriding(target_root: Path, findings: list[_OverlayFindin
     """True when, after removing every finding's attribute, the whole
     `settings.local.json` carries NOTHING ELSE of value — so the consent-gated
     removal can drop the WHOLE file rather than rewrite an empty husk (#399's
-    whole-file-vs-attributes rule). Computed on a deep copy; never mutates."""
+    whole-file-vs-attributes rule). Computed on a deep copy; never mutates.
+
+    Dead by design once a profile has realized rules (ADR-046): `apply` routes
+    profile-derived allows into this file's `permissions.allow`, so the file
+    then carries non-sandbox content of value and is never "purely overriding".
+    The check degrades safely — a populated `permissions` key makes it return
+    False, falling through to the attributes-only removal branch."""
     import copy
 
     data = copy.deepcopy(_read_settings_local(target_root))
@@ -4819,9 +4951,9 @@ def _diagnose_settings_allow(target_root: Path) -> tuple[list[list[str]], set[st
                    calls go through the prefix matcher above.
 
     Reuses the existing settings readers and the `_BASH_RULE` parser; no new matcher."""
-    raw = list(_live_settings(target_root)["allow"])
-    local = _read_settings_local(target_root)
-    raw += list(local.get("permissions", {}).get("allow", []))
+    # UNION-scope read (ADR-046 cond. 5): a live-behaviour claim — the harness
+    # flat-matches both files' allows, so the diagnose axes must too.
+    raw = _union_live_allow(target_root)
     specs: list[list[str]] = []
     seen: set[tuple[str, ...]] = set()
     tool_allows: set[str] = set()

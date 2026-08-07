@@ -389,6 +389,141 @@ def test_apply_refused_in_managed_mode(tmp_path, monkeypatch):
     assert "managed" in out and "#252" in out
 
 
+# ---- apply: profile-derived output routing (ADR-046) ------------------------
+#
+# `apply` projects twice through the same project(): the full model, and the
+# model minus `_profile`-annotated grants. Profile-only rules route to the
+# gitignored settings.local.json under a ledgered recompute-replace; committed-
+# model rules keep landing additively in settings.json.
+
+_LEDGER = Path(".pkit/permissions/project/profile-realized-allows.yaml")
+
+
+def _settings_local(proj: Path) -> dict:
+    return json.loads((proj / ".claude" / "settings.local.json").read_text())
+
+
+def _ledger_doc(proj: Path) -> dict:
+    from ruamel.yaml import YAML as _YAML
+
+    with (proj / _LEDGER).open() as fh:
+        return _YAML(typ="safe").load(fh)
+
+
+def test_apply_routes_profile_only_rules_local_and_ledgers(tmp_path, monkeypatch):
+    proj = _with_adapter(_setup(tmp_path))
+    _run(proj, monkeypatch, "profile", "activate", "non-destructive", "--no-apply")
+    out = _run(proj, monkeypatch, "apply")
+    assert "profile-derived allow rule(s) realized in .claude/settings.local.json" in out
+    local_allow = _settings_local(proj)["permissions"]["allow"]
+    assert "Bash(git:*)" in local_allow and "Bash(gh:*)" in local_allow
+    # The committed file stays profile-free: guardrail denies land, allows don't.
+    committed = _settings(proj)
+    assert committed["permissions"]["allow"] == []
+    assert "Bash(sudo:*)" in committed["permissions"]["deny"]
+    doc = _ledger_doc(proj)
+    assert doc["profile"] == "non-destructive"
+    assert set(doc["rules"]) == set(local_allow)
+
+
+def test_apply_committed_model_rules_still_land_committed(tmp_path, monkeypatch):
+    proj = _with_adapter(_setup(tmp_path, grants=_ALL_VCS))
+    _run(proj, monkeypatch, "apply")
+    assert "Bash(git:*)" in _settings(proj)["permissions"]["allow"]
+    # No profile → no per-machine realization, no ledger sidecar.
+    assert not (proj / ".claude" / "settings.local.json").exists()
+    assert not (proj / _LEDGER).exists()
+
+
+def test_apply_shared_derivation_stays_committed_never_ledgered(tmp_path, monkeypatch):
+    # vcs is granted by BOTH grants.yaml and the profile → committed, unhealable.
+    proj = _with_adapter(_setup(tmp_path, grants=_ALL_VCS))
+    _run(proj, monkeypatch, "profile", "activate", "non-destructive", "--no-apply")
+    _run(proj, monkeypatch, "apply")
+    assert "Bash(git:*)" in _settings(proj)["permissions"]["allow"]
+    local_allow = _settings_local(proj)["permissions"]["allow"]
+    rules = _ledger_doc(proj)["rules"]
+    assert "Bash(git:*)" not in local_allow and "Bash(git:*)" not in rules
+    # Profile-only rules still route local + ledgered.
+    assert "Bash(gh:*)" in local_allow and "Bash(gh:*)" in rules
+
+
+def test_apply_profile_switch_heals_stale_local_rules(tmp_path, monkeypatch):
+    proj = _with_adapter(_setup(tmp_path))
+    _run(proj, monkeypatch, "profile", "activate", "autonomous", "--no-apply")
+    _run(proj, monkeypatch, "apply")
+    assert "Bash(docker:*)" in _settings_local(proj)["permissions"]["allow"]
+    _run(proj, monkeypatch, "profile", "activate", "read-only", "--no-apply")
+    out = _run(proj, monkeypatch, "apply")
+    assert "healed" in out
+    local_allow = _settings_local(proj)["permissions"]["allow"]
+    # Stale ledgered rules are recompute-replaced away; read-only's remain.
+    assert local_allow == ["Glob", "Grep", "Read"]
+    doc = _ledger_doc(proj)
+    assert doc["profile"] == "read-only"
+    assert set(doc["rules"]) == {"Glob", "Grep", "Read"}
+
+
+def test_apply_never_touches_unledgered_local_rules(tmp_path, monkeypatch):
+    proj = _with_adapter(_setup(tmp_path))
+    (proj / ".claude").mkdir(parents=True, exist_ok=True)
+    # Operator/harness-authored local allows, one of which (WebFetch) the
+    # profile also expects — pre-existing, so never claimed by the ledger.
+    (proj / ".claude" / "settings.local.json").write_text(json.dumps(
+        {"permissions": {"allow": ["Bash(myown:*)", "WebFetch"]}}))
+    _run(proj, monkeypatch, "profile", "activate", "autonomous", "--no-apply")
+    _run(proj, monkeypatch, "apply")
+    assert "WebFetch" not in _ledger_doc(proj)["rules"]
+    _run(proj, monkeypatch, "profile", "activate", "read-only", "--no-apply")
+    _run(proj, monkeypatch, "apply")
+    local_allow = _settings_local(proj)["permissions"]["allow"]
+    assert "Bash(myown:*)" in local_allow    # untouched through both applies
+    assert "WebFetch" in local_allow         # operator-authored → heal-immune
+    assert "Bash(docker:*)" not in local_allow
+
+
+def test_apply_skips_profile_rule_already_committed(tmp_path, monkeypatch):
+    # ADR-046 condition 4: committed presence is authoritative team state —
+    # the rule is not duplicated locally, not ledgered, not advised about.
+    settings = json.dumps({"permissions": {"allow": ["Bash(gh:*)"], "deny": []}})
+    proj = _with_adapter(_setup(tmp_path, settings=settings))
+    _run(proj, monkeypatch, "profile", "activate", "non-destructive", "--no-apply")
+    _run(proj, monkeypatch, "apply")
+    assert _settings(proj)["permissions"]["allow"].count("Bash(gh:*)") == 1
+    assert "Bash(gh:*)" not in _settings_local(proj)["permissions"]["allow"]
+    assert "Bash(gh:*)" not in _ledger_doc(proj)["rules"]
+
+
+def test_apply_profile_routing_idempotent(tmp_path, monkeypatch):
+    proj = _with_adapter(_setup(tmp_path))
+    _run(proj, monkeypatch, "profile", "activate", "non-destructive", "--no-apply")
+    _run(proj, monkeypatch, "apply")
+    before_committed = _settings(proj)
+    before_local = _settings_local(proj)
+    before_ledger = (proj / _LEDGER).read_text()
+    out = _run(proj, monkeypatch, "apply")
+    assert "already realized" in out
+    assert _settings(proj) == before_committed
+    assert _settings_local(proj) == before_local
+    assert (proj / _LEDGER).read_text() == before_ledger
+
+
+def test_diff_union_scope_sees_local_realization(tmp_path, monkeypatch):
+    proj = _with_adapter(_setup(tmp_path))
+    _run(proj, monkeypatch, "profile", "activate", "non-destructive", "--no-apply")
+    _run(proj, monkeypatch, "apply")
+    # A harness-authored local always-allow no catalog privilege recognizes.
+    local = _settings_local(proj)
+    local["permissions"]["allow"].append("Bash(operatorown:*)")
+    (proj / ".claude" / "settings.local.json").write_text(json.dumps(local))
+    out = _run(proj, monkeypatch, "diff")
+    # Union-scope reconciliation: locally-realized profile rules count as applied.
+    assert "applied: 6/6" in out
+    assert "not applied" not in out
+    # Attribution stays committed-scope: the local rule is never flagged.
+    assert "operatorown" not in out
+
+
 # ---- profiles (#255 / ADR-005) ---------------------------------------------
 
 def test_profile_list_shows_shipped_tiers(tmp_path, monkeypatch):
