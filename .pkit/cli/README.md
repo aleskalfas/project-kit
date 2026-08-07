@@ -53,7 +53,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # or: brew install uv
 | `init` | first install (propagation + seed + merge) | yes | no — refuses re-run |
 | `sync` | re-run propagation | yes | yes |
 | `merge [<target>...]` | re-run merge for one or all targets | yes | yes |
-| `upgrade` | version-aware migrations + sync; in a pinned project, raises the `.pkit/version-pin` directive (flipped last, atomically) per ADR-049 | yes | yes |
+| `upgrade` | version-aware migrations + sync; in a pinned project, auto-advances the `.pkit/version-pin` directive to the latest release (reconcile forward via `uvx`, flip the pin last; no `uv tool install`) per ADR-049 | yes | yes |
 | `pin [<version>]` | write the `.pkit/version-pin` directive (per ADR-049): no argument freezes at the current content version (`backbone_version`); `<version>` (a version number only, leading `v` stripped) freezes (equal), reconciles content forward then flips the pin last (newer), or refuses (older — forward-only migrations). Requires the manifest; refuses branch/sha/pre-release pins. Project-owned; never kit-synced | yes | no — overwrites an existing pin |
 | `unpin` | remove the `.pkit/version-pin` directive (per ADR-049); the project reverts to floating on the installed binary | yes | yes — no-op when absent |
 | `visibility` | control pkit's git footprint (per ADR-009). No subcommand = status | no | yes (read-only) |
@@ -153,13 +153,18 @@ It also runs a **best-effort staleness check on the tool itself** (per [ADR-044]
 
 On **self-host**, there is no backbone to upgrade (the source is the installed state), so `upgrade` short-circuits to the self-host `sync` above — re-running the deploy primitives — rather than attempting a version transition.
 
-**In a pinned project** (one that has a `.pkit/version-pin` directive — see [`pin` / `unpin`](#pin--unpin-per-project-version-pin) below), `upgrade` *raises the pin* rather than floating on the installed tool. It syncs content to the target and then, **last of all, flips the pin forward** — so a failed sync never advances the pin *past* content that isn't in place. This ordering guarantees the pin is never ahead of content; it is not a single atomic transaction. If a raise is interrupted mid-migration, content can be advanced with the pin not yet flipped — a benign, self-correcting state: just **re-run** the upgrade, which is idempotent (sync re-applies content, migrations no-op on already-applied state, the pin flip no-ops once it matches). Because the router runs before any command, a project pinned at an older version cannot raise its own pin from inside that pinned version: when `upgrade` detects it is running as the pinned child, it prints the operator escape and stops rather than silently no-op'ing. To raise the pin past its current value, install the target tool and re-run the upgrade under the routing bypass:
+**In a pinned project** (one that has a `.pkit/version-pin` directive — see [`pin` / `unpin`](#pin--unpin-per-project-version-pin) below), `upgrade` *auto-advances the pin to the latest release* rather than floating on the installed tool — with **no `uv tool install` and no manual step at all**. The framing is: `upgrade` advances a project **as far as it safely can without mutating the shared global tool**. An un-pinned project cannot go past the installed bundle without a global `uv tool install` (a shared-binary mutation with cross-project blast radius), so it only *instructs* (the staleness check above); a pinned project can advance with **zero global mutation** — the router's bypass + ephemeral `uvx` fetch the target's own code per-project — so it *acts*.
 
-```
-uv tool install --force git+ssh://git@github.com/aleskalfas/project-kit.git@vZ && PKIT_NO_ROUTE=1 pkit upgrade
-```
+Concretely, when `upgrade` detects it is running as the pinned child (the router re-exec'd it into the pinned version, which cannot mutate the global tool from inside), it resolves the latest released version via the same `git ls-remote` check, then:
 
-`PKIT_NO_ROUTE=1` runs that single invocation at the freshly-installed tool version, which performs the raise (writes the new pin) and syncs content to match. Forgetting the bypass is benign — the invocation just re-execs into the pinned version and prints the same escape. An **un-pinned** project's `upgrade` is unchanged: plain content-sync from the tool's bundle, no pin file written.
+- **latest is newer than the pin** → it reconciles content forward to latest *under the target's own code* (bootstrapped through the `PKIT_NO_ROUTE=1` router bypass) and, **last of all, flips the pin forward** — so a failed reconcile never advances the pin *past* content that isn't in place. This ordering guarantees the pin is never ahead of content; it is not a single atomic transaction. If a raise is interrupted mid-migration, content can be advanced with the pin not yet flipped — a benign, self-correcting state: just **re-run** the upgrade, which is idempotent (sync re-applies content, migrations no-op on already-applied state, the pin flip no-ops once it matches).
+- **latest equals the pin** → a clear "already at the latest release" no-op; the pin is untouched.
+- **latest is older than the pin** (the project is pinned ahead of the newest release) → it says so and leaves the pin; pkit never downgrades a pin (migrations are forward-only, COR-010).
+- **the release source is unreachable** (offline, no credentials, timeout) → it degrades loudly to a warning and leaves the pin unchanged; it never bricks the command.
+
+An **un-pinned** project's `upgrade` is unchanged: plain content-sync from the tool's bundle, no pin file written.
+
+> **Rollout note.** The auto-advance logic lives in the *pinned wheel's* own `upgrade` code, run under the target version. A project pinned *below* the ship that introduced this behaviour keeps the old print-only escape until it is first raised past that ship — the old code is what runs while the pin sits below it. There is no bootstrap gap: `pkit pin <newer>` already self-bootstraps with no `uv` step, so an operator can always move such a project forward with `pkit pin <version>`, after which `pkit upgrade`'s auto-advance is live.
 
 ### `pin` / `unpin` — per-project version pin
 
@@ -170,7 +175,7 @@ Per [ADR-049](../../docs/architecture/decisions/ADR-049-per-project-version-pin.
   - **equal** → freeze in place (write the pin, no content sync);
   - **newer** → reconcile content forward to the target *under that version's own code* (`uvx project-kit@v<version>`, run under the `PKIT_NO_ROUTE=1` bypass so it doesn't route-loop) — this syncs content + runs the forward migrations — then flips the pin **last**, so a failed reconcile never advances the pin past content that isn't in place. This ordering keeps the pin from ever getting ahead of content; it is not one atomic transaction — an interrupted raise is recovered by re-running (idempotent);
   - **older** → **refused**. pkit migrations are forward-only (COR-010), so there is no safe content-sync back to an earlier version; the command exits non-zero, writes nothing, and touches no content. To roll a project back, `git checkout` the `.pkit/` tree at a commit that carried the earlier version (`git checkout <ref> -- .pkit/`) — git restores kit-owned *and* project-owned state together, atomically (this also reverts `.pkit/version-pin` itself, and only restores a state that exists in history), which a forward-only content sync cannot. There is deliberately no `--force` override.
-- **`upgrade`** — raise an existing pin forward (see the pinned-project note under [`upgrade`](#upgrade) above).
+- **`upgrade`** — raise an existing pin forward to the latest release, automatically and with no `uv` step (see the pinned-project note under [`upgrade`](#upgrade) above).
 - **`unpin`** — remove the directive; the project reverts to floating on the installed binary. Idempotent — fine to run when no pin is present.
 
 ### Capabilities — two ways in
