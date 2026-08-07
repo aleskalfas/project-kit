@@ -1,7 +1,7 @@
 ---
 id: ADR-046
 title: Hand-off downstream resolution is a binding-supplied resolve predicate; health is a sibling reader beside the engine
-status: proposed
+status: accepted
 date: 2026-08-07
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---

@@ -1,7 +1,7 @@
 ---
 id: COR-042
 title: A connection may declare an evaluable hand-off contract; a report-only health check detects missed hand-offs
-status: proposed
+status: accepted
 date: 2026-08-07
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
