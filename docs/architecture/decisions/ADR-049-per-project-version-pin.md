@@ -41,7 +41,7 @@ An earlier lean — reuse `manifest.yaml`'s `backbone_version` as the pin — wa
 
 6. **`sync` does not escape** — because the pin is a dedicated file (not `backbone_version`), a `sync` under a pinned project is *correct* and must route normally. Only a pin-raise past the current pin uses the bypass.
 
-7. **Drop `--to vY`; compose with ADR-044** — to reach a specific version the operator uses ADR-044's already-shipped `uv tool install --force …@vY` then `pkit upgrade`. This record adds no version-target flag of its own.
+7. **Drop `--to vY`; specific versions go through `pkit pin <version>`** — `pkit upgrade` targets *latest* (unpinned: the installed bundle; pinned: the latest release, per the Amendment). To reach a *specific* newer version the operator runs `pkit pin <vY>`, which self-bootstraps the raise with zero global mutation. This record adds no version-target flag to `upgrade`. *(Pre-amendment this pointed at `uv tool install --force …@vY` then `pkit upgrade`; the point-5 reversal makes `pkit pin <vY>` the correct specific-version path — the global install would mutate the shared tool, which the Amendment's invariant argues against.)*
 
 This is **not** an ADR-039 reopening — it fills the pin-source slot ADR-039 explicitly deferred. The router's route table, loop guard, and degrade-loudly-on-unresolvable-pin posture are all unchanged.
 
@@ -65,7 +65,7 @@ This is **not** an ADR-039 reopening — it fills the pin-source slot ADR-039 ex
 - **Propagate `.pkit/VERSION` to adopters (approach C).** Rejected — introduces a second per-project version record beside `backbone_version`, two sources of one truth, the drift the #545 family already demonstrates.
 - **Argv-aware router carve-out for pin-managing commands.** Rejected — reopens ADR-039's command-agnostic contract, fragile pre-click parse, unsafe in both error directions. The existing `PKIT_NO_ROUTE` bypass achieves the same escape with no router change.
 - **Route only mutations.** Rejected — a methodology tool's reads (gating/validation) are the most version-sensitive commands; running them at the wrong version is the worst failure.
-- **A `--to vY` target flag.** Rejected as over-engineering — ADR-044's shipped `uv tool install --force …@vY` already reaches a specific version; this record composes with it.
+- **A `--to vY` target flag on `upgrade`.** Rejected as over-engineering — `pkit pin <vY>` already reaches a specific newer version, self-bootstrapping with zero global mutation, so `upgrade` needs no version-target flag.
 - **A single `pkit upgrade` as the only pin gesture.** Rejected — it couples pinning to upgrading, so you could never freeze a project at its current version without moving it. The common intent (lock where it is) needs its own gesture; hence the `pin` / `upgrade` / `unpin` split.
 - **Defer the build entirely (architect's Q5 lean).** Not taken — the maintainer has the concrete multi-project need; the design is settled and leaves the router's route-decision contract untouched. Recorded now; implemented on acceptance.
 
