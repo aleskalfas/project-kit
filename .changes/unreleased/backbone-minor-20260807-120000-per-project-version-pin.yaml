@@ -9,16 +9,19 @@ body: >
   `.pkit/VERSION` — the slot ADR-039 left to implementation) and re-execs the
   pinned version, so a global-tool upgrade no longer moves a pinned project. Two
   new commands manage it: `pkit pin [<version>]` and `pkit unpin` (removes the
-  directive). With no argument `pin` freezes the project at its current version;
-  with a `<version>` it dispatches on how the target orders against the project's
-  current content version — equal freezes in place, a newer version reconciles
-  content forward (under that version's own code, via the `PKIT_NO_ROUTE=1`
-  bypass) and then flips the pin last, and an older version is refused because
-  migrations are forward-only (COR-010; roll back with `git checkout` of `.pkit/`
-  instead). A non-orderable branch/sha token skips the guard and pins in place.
+  directive). With no argument `pin` freezes the project at its current *content*
+  version (`manifest.yaml`'s `backbone_version`); with a `<version>` (a version
+  number only — a single leading `v` is stripped, and branch/sha/pre-release
+  tokens are refused since the router routes only a bare `v<semver>` tag) it
+  dispatches on how the target orders against the content version — equal freezes
+  in place, a newer version reconciles content forward (under that version's own
+  code, via the `PKIT_NO_ROUTE=1` bypass) and then flips the pin last, and an
+  older version is refused because migrations are forward-only (COR-010; roll
+  back with `git checkout` of `.pkit/` instead). Both forms require the manifest.
   `pkit upgrade` in a pinned project now *raises* the pin — syncing content then
-  flipping the pin last, atomically — and, when it detects it is the routed
-  pinned child (which cannot raise its own pin from inside), prints the
+  flipping the pin last (so the pin is never ahead of content; an interrupted
+  raise is recovered by an idempotent re-run) — and, when it detects it is the
+  routed pinned child (which cannot raise its own pin from inside), prints the
   `PKIT_NO_ROUTE=1` bypass escape instead of silently no-op'ing; an un-pinned
   project's upgrade is unchanged. The directive is project-owned and never
   written or clobbered by `init` / `sync` / `upgrade`'s content pass.
