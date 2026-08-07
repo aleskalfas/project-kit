@@ -14,10 +14,11 @@ Three routes, in order:
    shim delivered.
 
 2. **Project pins a version ≠ me → re-exec the pinned wheel.** When the enclosing
-   *adopter* project pins a version (its `.pkit/VERSION`) different from this
-   binary's, run the command under `uvx …@<pin>` instead. Sound only because
-   ADR-033 version-locks bundled content to the binary: the pinned wheel brings
-   code *and* content from the same tag, so they cannot diverge.
+   *adopter* project pins a version (its `.pkit/version-pin` directive, per
+   ADR-049) different from this binary's, run the command under `uvx …@<pin>`
+   instead. Sound only because ADR-033 version-locks bundled content to the
+   binary: the pinned wheel brings code *and* content from the same tag, so they
+   cannot diverge.
 
 3. **Match, or no pin, or not in a project → run self.** Import the CLI and run
    in-process.
@@ -51,6 +52,15 @@ _LOOP_GUARD_ENV = "PKIT_ROUTED"
 # appended after `@` (PRJ-004's tag-pinning form); tag⟺`.pkit/VERSION`
 # correspondence is a release-discipline property owned by #464 (ADR-039 D3).
 DISTRIBUTION_GIT_URL = "git+ssh://git@github.com/aleskalfas/project-kit.git"
+
+# The project-owned pin directive (ADR-049). Its *presence* opts a project into
+# per-project version pinning: the router reads it as the pin source and re-execs
+# `uvx project-kit@<pin>` (route 2) so the pinned version serves every command. A
+# plain one-line text file — a version, or a PRJ-004 tag/branch/sha token —
+# project-owned and never kit-synced. Deliberately NOT `.pkit/VERSION`: that file
+# records the *source tree's* own identity (route 1's CLI-version stamp), a
+# different concern from the forward-looking run directive this file carries.
+_PIN_FILE = "version-pin"
 
 # Provenance override the CLI honours first (see the pm capability's
 # provenance.py `_read_cli_version`). Route 1 sets it to the checkout's
@@ -90,8 +100,9 @@ def _route(argv: list[str], environ) -> None:  # type: ignore[no-untyped-def]
         _exec_source_dispatcher(root, argv, environ)
         return
 
-    # Route 2 candidate: an adopter project. It pins the version it installed
-    # (its `.pkit/VERSION`); a mismatch against this binary means run the pin.
+    # Route 2 candidate: an adopter project. It pins a version via its
+    # `.pkit/version-pin` directive (ADR-049); a mismatch against this binary
+    # means run the pin.
     pin = _resolve_pin(root)
     if pin is None:
         return  # no pin → run self
@@ -147,23 +158,66 @@ def is_source_checkout(root: Path) -> bool:
 
 
 def _resolve_pin(root: Path) -> str | None:
-    """The version an adopter project pins: its installed `.pkit/VERSION`.
+    """The version a project pins via its `.pkit/version-pin` directive (ADR-049).
 
-    ADR-039 leaves the pin source to the implementation; we reuse `.pkit/VERSION`
-    — the adopter's installed *content* version — because ADR-033 version-locks
-    content to the binary, so "run me under the version whose content I have"
-    is exactly the right pin, and it needs no new file. Returns None when there
-    is no readable, non-empty VERSION (→ no pin → run self).
+    ADR-039 left the pin source to the implementation; ADR-049 fills that slot
+    with a dedicated, project-owned directive file (`.pkit/version-pin`) rather
+    than `.pkit/VERSION` — the pin is a forward-looking *directive* the operator
+    sets, distinct from `.pkit/VERSION`'s role as the *source tree's* identity.
+    Returns None when there is no readable, non-empty pin file (→ no pin → run
+    self), which is every un-pinned project's state.
     """
-    return _read_pkit_version(root)
+    return read_version_pin(root)
+
+
+def pin_file_path(root: Path) -> Path:
+    """The path to a project's `.pkit/version-pin` directive under `root` (ADR-049)."""
+    return root / ".pkit" / _PIN_FILE
+
+
+def read_version_pin(root: Path) -> str | None:
+    """Read `root/.pkit/version-pin`, stripped; None when missing/unreadable/empty.
+
+    Cheap and stdlib-only — a plain file read on the pre-click hot path
+    (ADR-039), mirroring `_read_pkit_version`. This is the pin *source* the
+    router honours (ADR-049); it is the sole reader of the pin directive shared
+    by the router (route 2) and the `pin` / `upgrade` gestures.
+    """
+    try:
+        text = pin_file_path(root).read_text(encoding="utf-8").strip()
+    except OSError:
+        return None
+    return text or None
+
+
+def is_routed_child(environ) -> bool:  # type: ignore[no-untyped-def]
+    """True when this process was re-exec'd by the router into a pinned version.
+
+    The router sets the loop-guard env on the child it re-execs (route 2). A
+    routed child that runs `pkit upgrade` cannot mutate the global tool from
+    inside the pinned version, so it auto-advances its own pin to the latest
+    release through the router bypass instead (ADR-049)."""
+    return _env_true(environ, _LOOP_GUARD_ENV)
+
+
+def is_route_bypassed(environ) -> bool:  # type: ignore[no-untyped-def]
+    """True when routing was explicitly bypassed via PKIT_NO_ROUTE.
+
+    Set by `run_bypassed` on the child it bootstraps (ADR-049). A `pkit upgrade`
+    reached this way is the target version's own reconcile run *under* a pin
+    raise, not a top-level upgrade — so it skips the redundant ADR-044 tool
+    staleness probe (which would issue a second `git ls-remote` and print a
+    nonsensical "tool is current" line mid-raise)."""
+    return _env_true(environ, _BYPASS_ENV)
 
 
 def _read_pkit_version(root: Path) -> str | None:
     """Read `root/.pkit/VERSION`, stripped; None when missing/unreadable/empty.
 
     Defensive and stdlib-only — a plain file read, cheap enough for the hot path
-    (ADR-039). Shared by the pin resolver (route 2) and the route-1 CLI-version
-    stamp so the two never diverge on how the VERSION file is read.
+    (ADR-039). Reads the *source tree's* identity for the route-1 CLI-version
+    stamp; the route-2 pin source is `read_version_pin` (ADR-049), a separate
+    file — the two are deliberately distinct concerns.
     """
     try:
         text = (root / ".pkit" / "VERSION").read_text(encoding="utf-8").strip()
@@ -250,6 +304,33 @@ def _run_pinned(pin: str, running: str, argv: list[str], environ) -> None:  # ty
 def _pinned_base(pin: str) -> list[str]:
     """The `uvx` prefix that runs project-kit at `pin`'s git tag (`v<pin>`)."""
     return ["uvx", "--from", f"{DISTRIBUTION_GIT_URL}@v{pin}", "project-kit"]
+
+
+def run_bypassed(pin: str, argv: list[str], environ=None) -> int:  # type: ignore[no-untyped-def]
+    """Run `pkit <argv>` at the wheel for `pin`, with routing bypassed; return the exit code.
+
+    Uses the same `uvx --from …@v<pin>` base route 2 pins against, but sets
+    PKIT_NO_ROUTE on the child so the bootstrapped process runs self rather than
+    re-routing through a pin (which would loop or mis-resolve). The shared
+    bootstrap the `pin` gesture's forward-reconcile builds on (ADR-049): pinning a
+    project to a *newer* version needs that version's own code to sync content and
+    run the forward migrations, so the reconcile runs under the target's wheel
+    here rather than the currently-installed tool. Blocks until the child exits.
+
+    The child must run **truly non-routed**: PKIT_NO_ROUTE alone is not enough
+    when the caller is itself an already-routed child (the pinned-project case,
+    the common one). The loop guard PKIT_ROUTED would otherwise leak into the
+    bootstrapped grandchild — and its `pkit upgrade` would then re-detect itself
+    as the routed pinned child and take the print/escape branch, syncing NOTHING,
+    while the outer reconcile still flipped the pin forward (pin-ahead-of-content
+    corruption, ADR-049). So drop PKIT_ROUTED from the child env; only
+    PKIT_NO_ROUTE is set, and the grandchild reconciles content for real.
+    """
+    env = dict(os.environ if environ is None else environ)
+    env[_BYPASS_ENV] = "1"
+    env.pop(_LOOP_GUARD_ENV, None)  # never leak the loop guard into the bootstrapped child
+    completed = subprocess.run([*_pinned_base(pin), *argv], env=env)
+    return completed.returncode
 
 
 def _pin_is_resolvable(pin: str, env) -> bool:  # type: ignore[no-untyped-def]

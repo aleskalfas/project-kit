@@ -8,8 +8,9 @@ from pathlib import Path
 
 import click
 import pytest
+from packaging.version import Version
 
-from project_kit import install, manifest, upgrade
+from project_kit import install, manifest, router, upgrade
 
 
 @pytest.fixture
@@ -739,3 +740,229 @@ def test_tool_staleness_not_run_on_self_host(
     upgrade.run_upgrade(source_repo)
 
     assert stub_ls_remote.ls_remote_calls == []
+
+
+# --- Per-project version pin: `pkit upgrade` semantics (ADR-049) ----------------
+
+
+def test_upgrade_pinned_child_auto_advances_to_latest(
+    installed_target: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Run as the pinned child (router set PKIT_ROUTED): auto-advance the pin to the
+    latest release, reconciling content forward then flipping the pin LAST — no
+    `uv tool install`, no manual escape (ADR-049)."""
+    router.pin_file_path(installed_target).write_text("1.0.0\n", encoding="utf-8")
+    monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")
+    monkeypatch.setattr(upgrade, "_latest_released_version", lambda: Version("2.0.0"))
+
+    seen: dict[str, object] = {}
+
+    def _fake_bypassed(pin: str, argv: list[str], environ: object = None) -> int:
+        seen["target"] = pin
+        seen["argv"] = argv
+        # The pin must NOT yet be advanced while the forward reconcile runs.
+        seen["pin_during_reconcile"] = router.read_version_pin(installed_target)
+        return 0
+
+    monkeypatch.setattr(upgrade, "run_bypassed", _fake_bypassed)
+
+    upgrade.run_upgrade(installed_target)
+
+    assert seen["target"] == "2.0.0"  # reconciled forward under the latest release
+    assert seen["argv"] == ["upgrade"]
+    assert seen["pin_during_reconcile"] == "1.0.0"  # flipped only after reconcile
+    assert router.read_version_pin(installed_target) == "2.0.0"  # flipped last
+    out = capsys.readouterr().out
+    assert "Raising the pin: 1.0.0 -> 2.0.0" in out
+    assert "uv tool install" not in out  # no manual escape any more
+
+
+def test_upgrade_pinned_child_noop_when_already_at_latest(
+    installed_target: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Pin already at the latest release → a clear no-op; the pin is not touched
+    and no reconcile is bootstrapped (ADR-049)."""
+    router.pin_file_path(installed_target).write_text("2.0.0\n", encoding="utf-8")
+    monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")
+    monkeypatch.setattr(upgrade, "_latest_released_version", lambda: Version("2.0.0"))
+
+    def _boom(*_a: object, **_k: object) -> int:
+        raise AssertionError("an at-latest pin must not reconcile content")
+
+    monkeypatch.setattr(upgrade, "run_bypassed", _boom)
+
+    upgrade.run_upgrade(installed_target)
+
+    out = capsys.readouterr().out
+    assert "Already at the latest pkit release (v2.0.0)" in out
+    assert router.read_version_pin(installed_target) == "2.0.0"
+
+
+def test_upgrade_pinned_child_leaves_pin_when_ahead_of_latest(
+    installed_target: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Pin ahead of the newest release → a distinct message; pkit never downgrades
+    a pin, so it is left unchanged and no reconcile runs (ADR-049)."""
+    router.pin_file_path(installed_target).write_text("3.0.0\n", encoding="utf-8")
+    monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")
+    monkeypatch.setattr(upgrade, "_latest_released_version", lambda: Version("2.0.0"))
+
+    def _boom(*_a: object, **_k: object) -> int:
+        raise AssertionError("a pin ahead of latest must not reconcile content")
+
+    monkeypatch.setattr(upgrade, "run_bypassed", _boom)
+
+    upgrade.run_upgrade(installed_target)
+
+    out = capsys.readouterr().out
+    assert "AHEAD of the latest" in out
+    assert router.read_version_pin(installed_target) == "3.0.0"  # unchanged
+
+
+def test_upgrade_pinned_child_degrades_when_latest_unresolvable(
+    installed_target: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Offline / unresolvable latest (None) → degrade loudly to stderr and leave
+    the pin unchanged; never brick the command (ADR-049)."""
+    router.pin_file_path(installed_target).write_text("1.0.0\n", encoding="utf-8")
+    monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")
+    monkeypatch.setattr(upgrade, "_latest_released_version", lambda: None)
+
+    def _boom(*_a: object, **_k: object) -> int:
+        raise AssertionError("an unresolvable latest must not reconcile content")
+
+    monkeypatch.setattr(upgrade, "run_bypassed", _boom)
+
+    upgrade.run_upgrade(installed_target)  # must not raise
+
+    err = capsys.readouterr().err
+    assert "could not check for the latest pkit release" in err
+    assert router.read_version_pin(installed_target) == "1.0.0"  # unchanged
+
+
+def test_upgrade_pinned_child_dry_run_does_not_reconcile_or_flip(
+    installed_target: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A dry-run auto-advance reports the plan but reconciles nothing and leaves
+    the pin (ADR-049 + COR-004)."""
+    router.pin_file_path(installed_target).write_text("1.0.0\n", encoding="utf-8")
+    monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")
+    monkeypatch.setattr(upgrade, "_latest_released_version", lambda: Version("2.0.0"))
+
+    def _boom(*_a: object, **_k: object) -> int:
+        raise AssertionError("dry-run must not reconcile content")
+
+    monkeypatch.setattr(upgrade, "run_bypassed", _boom)
+
+    upgrade.run_upgrade(installed_target, dry_run=True)
+
+    out = capsys.readouterr().out
+    assert "would raise pin 1.0.0 -> 2.0.0" in out
+    assert router.read_version_pin(installed_target) == "1.0.0"  # unchanged
+
+
+def test_upgrade_skips_tool_staleness_on_bypass_hop(
+    installed_target: Path,
+    stub_ls_remote: _RecordingRun,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Inside a `run_bypassed`-bootstrapped upgrade (PKIT_NO_ROUTE set), the ADR-044
+    tool-staleness probe is suppressed — no second `git ls-remote`, no "tool is
+    current" line mid-raise (ADR-049)."""
+    monkeypatch.setenv(router._BYPASS_ENV, "1")
+    monkeypatch.delenv(router._LOOP_GUARD_ENV, raising=False)
+
+    upgrade.run_upgrade(installed_target)
+
+    assert stub_ls_remote.ls_remote_calls == []  # staleness probe skipped
+
+
+def test_upgrade_pinned_raise_flips_pin_after_content_sync(
+    installed_target: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A pinned project's upgrade raises the pin to the target — and flips it LAST,
+    after content sync, so a failed sync would leave the old pin intact (ADR-049)."""
+    m = manifest.read_backbone_manifest(installed_target)
+    assert m is not None
+    source_version = m.backbone_version  # the target the raise moves to
+    m.backbone_version = "0.1.0"  # force content behind so upgrade has work
+    manifest.write_backbone_manifest(installed_target, m)
+    router.pin_file_path(installed_target).write_text("0.1.0\n", encoding="utf-8")
+    monkeypatch.delenv(router._LOOP_GUARD_ENV, raising=False)  # not a routed child
+
+    pin_seen_at_sync: list[str | None] = []
+
+    def spy_sync(root: Path, **_kw: object) -> None:
+        pin_seen_at_sync.append(router.read_version_pin(root))
+
+    monkeypatch.setattr(upgrade, "run_sync", spy_sync)
+
+    upgrade.run_upgrade(installed_target)
+
+    assert pin_seen_at_sync == ["0.1.0"]  # pin NOT yet flipped when sync ran
+    assert router.read_version_pin(installed_target) == source_version  # flipped last
+    assert f"pin raised: 0.1.0 -> {source_version}" in capsys.readouterr().out
+
+
+def test_upgrade_pinned_already_current_still_flips_lagging_pin(
+    installed_target: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Content already current but the pin lags (e.g. content synced separately):
+    the upgrade still flips the pin forward on the already-at-version path."""
+    m = manifest.read_backbone_manifest(installed_target)
+    assert m is not None
+    source_version = m.backbone_version  # content already current
+    router.pin_file_path(installed_target).write_text("0.1.0\n", encoding="utf-8")
+    monkeypatch.delenv(router._LOOP_GUARD_ENV, raising=False)
+
+    upgrade.run_upgrade(installed_target)
+
+    out = capsys.readouterr().out
+    assert "Already at backbone v" in out
+    assert router.read_version_pin(installed_target) == source_version
+
+
+def test_upgrade_unpinned_writes_no_pin_file(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An un-pinned project keeps today's behaviour exactly: plain content sync,
+    no pin directive written (ADR-049)."""
+    m = manifest.read_backbone_manifest(installed_target)
+    assert m is not None
+    m.backbone_version = "0.1.0"
+    manifest.write_backbone_manifest(installed_target, m)
+    monkeypatch.setattr(upgrade, "run_sync", lambda *_a, **_k: None)
+
+    upgrade.run_upgrade(installed_target)
+
+    assert not router.pin_file_path(installed_target).exists()
+
+
+def test_upgrade_dry_run_pinned_does_not_write_pin(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A dry-run raise reports the flip but writes nothing (ADR-049 + COR-004)."""
+    m = manifest.read_backbone_manifest(installed_target)
+    assert m is not None
+    m.backbone_version = "0.1.0"
+    manifest.write_backbone_manifest(installed_target, m)
+    router.pin_file_path(installed_target).write_text("0.1.0\n", encoding="utf-8")
+    monkeypatch.delenv(router._LOOP_GUARD_ENV, raising=False)
+
+    upgrade.run_upgrade(installed_target, dry_run=True)
+
+    assert router.read_version_pin(installed_target) == "0.1.0"  # unchanged

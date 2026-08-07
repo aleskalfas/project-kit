@@ -4,7 +4,7 @@ authors:
 started: 2026-08-05
 retired: 2026-08-06
 produced:
-  - ADR-045
+  - ADR-049
 ---
 
 # Per-project version pin: make the router's pin work for adopters (Option D)
@@ -93,8 +93,8 @@ The architect reviewed the reframe. Verdict: architect-clear to proceed to a dec
 - **Q3 — dedicated project-owned pin DIRECTIVE file, not `backbone_version`, not named `VERSION`.** COR-006 artifact-role distinction: `backbone_version` is a **record** (a receipt of the last sync); the pin is a **directive** (a forward-looking, operator-owned control input) — a lockfile (`.python-version` model): committed, project-owned, never kit-synced, flipped last (atomic end-of-upgrade). Don't name it `VERSION` (re-imports the confusion). **Not an ADR-039 reopening** — ADR-039 *explicitly defers the pin source to implementation* (its lines 94-95, 155, #465), so choosing a dedicated file fills a slot ADR-039 left open.
 - **Q4 — opt-in.** Pin-file presence is the signal; absent → route-3 run-self (today's zero-tax default). The file is created by the deliberate raise, not by install. Costed choices are opted into.
 - **Q5 (advisory lean) — DEFER the build.** At single-digit adopters, ADR-044's print-only already relieved the *actual* reported friction; D's value is real but **latent** (no adopter currently wedged). COR-007 speculative-generality caution → record the reframe's conclusion and revisit on concrete demand rather than build now. **Advisory, not a gate.**
-- **Escalation — none** under the recommended shape (ADR-039 not reopened). The decision to record is a **new ADR** (this file → ADR-045), not an ADR-039 amendment. Only the rejected argv-carve-out path would have needed foundational authorization.
+- **Escalation — none** under the recommended shape (ADR-039 not reopened). The decision to record is a **new ADR** (this file → ADR-049), not an ADR-039 amendment. Only the rejected argv-carve-out path would have needed foundational authorization.
 
 **Settled shape (build, if built):** dedicated project-owned pin directive file (lockfile model, never sync-written) · opt-in (presence = pinned; absent = run-self) · route **all** commands · bootstrap-the-raise via the **existing** `PKIT_NO_ROUTE` bypass in the operator gesture + `pkit upgrade` detecting `PKIT_ROUTED` and printing the escape · drop `--to`, compose with ADR-044's shipped `uv tool install --force` · no router change, ADR-039 stays closed.
 
-**Build-vs-defer:** the architect leans defer (Q5); the maintainer has the concrete need (multiple projects on different pkit versions under one global install — the exact demand Q5 said would justify building), so **build**. Recorded as ADR-045.
+**Build-vs-defer:** the architect leans defer (Q5); the maintainer has the concrete need (multiple projects on different pkit versions under one global install — the exact demand Q5 said would justify building), so **build**. Recorded as ADR-049.
