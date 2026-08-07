@@ -697,6 +697,65 @@ def report_show(number: int) -> None:
         click.echo(f"\n  {len(comments)} maintainer comment(s); latest: {first_line}")
 
 
+def _require_report_target() -> str:
+    """Gate the maintainer side to running inside the report-target repo."""
+    from project_kit.report import REPORT_TARGET, in_report_target
+
+    if not in_report_target():
+        raise click.ClickException(
+            "the maintainer side (inbox/link/unlink) runs only inside the report "
+            f"target repo ({REPORT_TARGET}). Cd into it and retry."
+        )
+    return REPORT_TARGET
+
+
+@report.command("inbox")
+def report_inbox() -> None:
+    """(Maintainer) Triage queue: all bug/feedback reports on the target repo."""
+    from project_kit.report import list_inbox
+
+    target = _require_report_target()
+    reports = list_inbox(target)
+    if reports is None:
+        raise click.ClickException("could not read the inbox (gh error).")
+    if not reports:
+        click.echo("Inbox empty — no reports filed yet.")
+        return
+    click.echo(f"Reports on {target}:\n")
+    for r in reports:
+        click.echo(f"  #{r.number:<5} {r.kind:<9} {r.state:<12} {r.title}")
+
+
+@report.command("link")
+@click.argument("feedback_n", type=int)
+@click.argument("fix_n", type=int)
+def report_link(feedback_n: int, fix_n: int) -> None:
+    """(Maintainer) Add fix #FIX_N to feedback #FEEDBACK_N's Tracked-by section."""
+    from project_kit.report import link_fix
+
+    target = _require_report_target()
+    if not link_fix(target, feedback_n, fix_n):
+        raise click.ClickException(
+            f"could not link #{fix_n} into #{feedback_n} (gh error)."
+        )
+    click.echo(f"Linked #{fix_n} into #{feedback_n}'s Tracked by.")
+
+
+@report.command("unlink")
+@click.argument("feedback_n", type=int)
+@click.argument("fix_n", type=int)
+def report_unlink(feedback_n: int, fix_n: int) -> None:
+    """(Maintainer) Remove fix #FIX_N from feedback #FEEDBACK_N's Tracked-by."""
+    from project_kit.report import unlink_fix
+
+    target = _require_report_target()
+    if not unlink_fix(target, feedback_n, fix_n):
+        raise click.ClickException(
+            f"could not unlink #{fix_n} from #{feedback_n} (gh error)."
+        )
+    click.echo(f"Unlinked #{fix_n} from #{feedback_n}'s Tracked by.")
+
+
 def _echo_url_first(kind: str, url: str, target: str, note: str = "") -> None:
     if note:
         click.echo(note)

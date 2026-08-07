@@ -16,4 +16,7 @@ body: >
   (no subcommand) lists your reports + states, and `pkit report show <N>` adds the
   maintainer comments and the `## Tracked by` rollup (the issues that will fix it,
   with each one's state); `pkit report --tree` nests each report's tracked-by fixes
-  under it. The maintainer side (`inbox` / `link`) lands in a later increment of #613.
+  under it. The maintainer side — `pkit report inbox` (triage queue) and `report
+  link` / `unlink <feedback-N> <fix-N>` (wire a fix issue into a feedback's `##
+  Tracked by`) — is enabled **only inside the report-target repo** and inert
+  elsewhere (same-repo edits, no cross-repo gate).

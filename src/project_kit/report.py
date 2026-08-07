@@ -1,10 +1,14 @@
 """`pkit report` — built-in adopter→project-kit feedback channel (PRJ-008 / ADR-047).
 
 Composes a bug/feedback report with a **redacted** environment block and files it
-to the distribution's fixed report target. This increment ships the **URL-first**
-path (works with no `gh` auth — the browser is the review gate); the `gh`-auto-file
-path, the target-naming confirm, tracking reads, and the maintainer side land in
-later increments of #613.
+to the distribution's fixed report target. Two sides:
+
+- **Reporter** (any adopter): `compose_report` / `build_new_issue_url` (URL-first,
+  no `gh` auth needed — the browser is the review gate), `file_report_via_gh` (opt-in
+  `--file` via `gh`), and the tracking reads (`list_my_reports`, `show_report`).
+- **Maintainer** (only inside the report target — `in_report_target` gates it):
+  `list_inbox` (triage queue), `link_fix` / `unlink_fix` (wire a fix issue into a
+  feedback's `## Tracked by` section via the pure `add_tracked_ref` / `remove_tracked_ref`).
 """
 
 from __future__ import annotations
@@ -264,6 +268,122 @@ def resolve_states(target: str, numbers: list[int]) -> dict[int, str]:
         else:
             states[n] = "unknown"
     return states
+
+
+def add_tracked_ref(body: str, n: int) -> str:
+    """Return `body` with `#n` present in its `## Tracked by` task-list. Creates the
+    section if absent; no-op if `#n` is already tracked. Pure over its inputs."""
+    if n in parse_tracked_by(body):
+        return body
+    line = f"- [ ] #{n}"
+    trailing = "\n" if body.endswith("\n") or not body else ""
+    if _TRACKED_HEADING not in body:
+        return body.rstrip() + f"\n\n{_TRACKED_HEADING}\n\n{line}\n"
+    lines = body.splitlines()
+    head = next(i for i, ln in enumerate(lines) if ln.strip() == _TRACKED_HEADING)
+    end = len(lines)
+    for j in range(head + 1, len(lines)):
+        if re.match(r"#{1,6} ", lines[j]):
+            end = j
+            break
+    insert_at = head + 1
+    for j in range(head + 1, end):
+        if lines[j].strip():
+            insert_at = j + 1
+    lines.insert(insert_at, line)
+    return "\n".join(lines) + trailing
+
+
+def remove_tracked_ref(body: str, n: int) -> str:
+    """Return `body` with any `#n` task-list entry dropped from its `## Tracked by`
+    section (the heading is kept even if it empties). Pure over its inputs."""
+    if _TRACKED_HEADING not in body:
+        return body
+    trailing = "\n" if body.endswith("\n") else ""
+    result: list[str] = []
+    in_section = False
+    for line in body.splitlines():
+        if line.strip() == _TRACKED_HEADING:
+            in_section = True
+            result.append(line)
+            continue
+        if in_section and re.match(r"#{1,6} ", line):
+            in_section = False
+        if in_section and re.match(rf"\s*- \[[ xX]\] #{n}\b", line):
+            continue  # drop this tracked-ref line
+        result.append(line)
+    return "\n".join(result) + trailing
+
+
+def current_repo_slug() -> str | None:
+    """The `owner/repo` the current directory's default repo resolves to (via `gh`),
+    or None if it can't be determined. Used to gate the maintainer side to the
+    report-target repo (PRJ-008: `inbox`/`link` run only inside the target)."""
+    data = _gh_json(["gh", "repo", "view", "--json", "nameWithOwner"])
+    if isinstance(data, dict) and isinstance(data.get("nameWithOwner"), str):
+        return data["nameWithOwner"]
+    return None
+
+
+def in_report_target() -> bool:
+    """True iff the current repo is the configured report target."""
+    return bool(REPORT_TARGET) and current_repo_slug() == REPORT_TARGET
+
+
+def list_inbox(target: str) -> list[ReportSummary] | None:
+    """All bug/feedback reports on `target` (any author), newest first — the
+    maintainer's triage queue. None on gh failure."""
+    reports: list[ReportSummary] = []
+    for kind in KINDS:
+        data = _gh_json([
+            "gh", "issue", "list", "--repo", target, "--label", kind,
+            "--state", "all", "--limit", "100",
+            "--json", "number,title,state,labels,updatedAt",
+        ])
+        if not isinstance(data, list):
+            return None
+        reports.extend(_summarize(i) for i in data if isinstance(i, dict))
+    # de-dup (an issue could carry both labels) and sort newest-first
+    seen: dict[int, ReportSummary] = {}
+    for r in reports:
+        seen.setdefault(r.number, r)
+    return sorted(seen.values(), key=lambda r: r.updated_at, reverse=True)
+
+
+def _edit_body(target: str, number: int, body: str) -> bool:
+    """`gh issue edit <n> --repo <target> --body <body>`. This is a *local* mutation
+    when run inside the target repo (the maintainer-side gate ensures cwd == target,
+    so it is not a foreign write). True on success."""
+    cmd = ["gh", "issue", "edit", str(number), "--repo", target, "--body", body]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    except OSError:
+        return False
+    return proc.returncode == 0
+
+
+def link_fix(target: str, feedback_n: int, fix_n: int) -> bool:
+    """Add `#fix_n` to feedback `#feedback_n`'s `## Tracked by` section. Idempotent
+    (a duplicate link is a no-op that still succeeds). True on success."""
+    data = _gh_json([
+        "gh", "issue", "view", str(feedback_n), "--repo", target, "--json", "body",
+    ])
+    if not isinstance(data, dict):
+        return False
+    new_body = add_tracked_ref(str(data.get("body", "")), fix_n)
+    return _edit_body(target, feedback_n, new_body)
+
+
+def unlink_fix(target: str, feedback_n: int, fix_n: int) -> bool:
+    """Remove `#fix_n` from feedback `#feedback_n`'s `## Tracked by` section.
+    Idempotent. True on success."""
+    data = _gh_json([
+        "gh", "issue", "view", str(feedback_n), "--repo", target, "--json", "body",
+    ])
+    if not isinstance(data, dict):
+        return False
+    new_body = remove_tracked_ref(str(data.get("body", "")), fix_n)
+    return _edit_body(target, feedback_n, new_body)
 
 
 def show_report(target: str, number: int) -> dict | None:

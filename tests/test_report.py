@@ -298,6 +298,86 @@ def test_cli_report_list_no_auth_degrades(monkeypatch) -> None:
     assert "github.com" in res.output and "auth" in res.output.lower()
 
 
+# --- maintainer side (pure body helpers + gated commands) ------------
+
+
+def test_add_tracked_ref_creates_section_when_absent() -> None:
+    out = rep.add_tracked_ref("Some feedback prose.\n", 7)
+    assert "## Tracked by" in out and "- [ ] #7" in out
+
+
+def test_add_tracked_ref_appends_within_existing_section() -> None:
+    body = "prose\n\n## Tracked by\n\n- [ ] #7\n\n## Notes\nmore\n"
+    out = rep.add_tracked_ref(body, 8)
+    assert rep.parse_tracked_by(out) == [7, 8]
+    assert "## Notes" in out  # the ref landed in the section, not after Notes
+
+
+def test_add_tracked_ref_is_idempotent() -> None:
+    body = "## Tracked by\n- [ ] #7\n"
+    assert rep.add_tracked_ref(body, 7) == body
+
+
+def test_remove_tracked_ref_drops_the_line_keeps_heading() -> None:
+    body = "prose\n\n## Tracked by\n- [ ] #7\n- [x] #8\n"
+    out = rep.remove_tracked_ref(body, 7)
+    assert rep.parse_tracked_by(out) == [8]
+    assert "## Tracked by" in out
+    assert rep.remove_tracked_ref(out, 8) == out.replace("- [x] #8\n", "")
+
+
+def test_in_report_target_gate(monkeypatch) -> None:
+    monkeypatch.setattr(rep, "current_repo_slug", lambda: rep.REPORT_TARGET)
+    assert rep.in_report_target() is True
+    monkeypatch.setattr(rep, "current_repo_slug", lambda: "someone/fork")
+    assert rep.in_report_target() is False
+
+
+def test_list_inbox_dedups_across_labels(monkeypatch) -> None:
+    def fake_gh_json(args):
+        # both label queries return the same #5 (carries both labels)
+        return [{
+            "number": 5, "title": "dual", "state": "OPEN",
+            "labels": [{"name": "bug"}, {"name": "feedback"}],
+            "updatedAt": "2026-08-04",
+        }]
+
+    monkeypatch.setattr(rep, "_gh_json", fake_gh_json)
+    inbox = rep.list_inbox("o/r")
+    assert [r.number for r in inbox] == [5]  # de-duped
+
+
+def test_link_fix_fetches_edits(monkeypatch) -> None:
+    edited = {}
+
+    def fake_gh_json(args):
+        return {"body": "prose\n"}  # the issue view
+
+    def fake_edit(target, number, body):
+        edited["body"] = body
+        return True
+
+    monkeypatch.setattr(rep, "_gh_json", fake_gh_json)
+    monkeypatch.setattr(rep, "_edit_body", fake_edit)
+    assert rep.link_fix("o/r", 42, 7) is True
+    assert "- [ ] #7" in edited["body"]
+
+
+def test_cli_inbox_gated_outside_target(monkeypatch) -> None:
+    monkeypatch.setattr(rep, "in_report_target", lambda: False)
+    res = CliRunner().invoke(main, ["report", "inbox"])
+    assert res.exit_code != 0
+    assert "runs only inside" in res.output
+
+
+def test_cli_link_inside_target(monkeypatch) -> None:
+    monkeypatch.setattr(rep, "in_report_target", lambda: True)
+    monkeypatch.setattr(rep, "link_fix", lambda t, f, x: True)
+    res = CliRunner().invoke(main, ["report", "link", "42", "7"])
+    assert res.exit_code == 0
+    assert "Linked #7 into #42" in res.output
+
+
 def test_cli_report_show(monkeypatch) -> None:
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
     monkeypatch.setattr(
