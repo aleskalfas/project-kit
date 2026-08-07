@@ -1,7 +1,7 @@
 ---
 id: PRJ-008
 title: "`pkit report` — a built-in adopter→project-kit feedback channel"
-status: proposed
+status: accepted
 date: 2026-08-07
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
@@ -70,8 +70,12 @@ project-kit-specific install source carried by universal surface.)
 
 ### Tracking model
 
-- `list` counts issues **authored by *or* attributed to** the invoker, so an
-  on-behalf report still tracks for its beneficiary.
+- `list` **renders one line per report** (number, state, title, last activity) —
+  **flat by default**, not a bare count. Its scope is the issues **authored by *or*
+  attributed to** the invoker, so an on-behalf report still shows up for its
+  beneficiary. A **`--tree`** mode expands each feedback with its `## Tracked by`
+  fixes and their states inline (and `show <N>` always gives that per-report
+  detail) — flat stays the default so the overview is a quick scan.
 - `show <feedback-N>` renders a **`## Tracked by`** section — a GitHub task-list of
   `#N` references (many-to-many, non-owning: derived *or* pre-existing) — resolving
   each linked issue's state. Chosen over native sub-issues (single-parent ownership

@@ -1,7 +1,7 @@
 ---
 id: ADR-045
 title: "`pkit report` — realizing the first deliberate fixed-foreign-repo write"
-status: proposed
+status: accepted
 date: 2026-08-07
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---

@@ -369,9 +369,11 @@ per ADR-045). `--on-behalf-of @login` files under the invoker's identity with a
 
 ### `report` (= `report list`) / `report show <N>`
 
-`report` lists the invoker's reports (authored by *or* attributed to them) + states.
-`report show <N>` adds the maintainer comments and the `## Tracked by` rollup — the
-issues that will fix it, with each one's state. Read-only; requires `gh` auth (a
+`report` lists the invoker's reports (authored by *or* attributed to them) + states,
+one line each — **flat by default**; `--tree` expands each feedback with its
+`## Tracked by` fixes and their states inline. `report show <N>` adds the maintainer
+comments and the `## Tracked by` rollup — the issues that will fix it, with each
+one's state. Read-only; requires `gh` auth (a
 no-auth user tracks via GitHub's own notifications).
 
 ### `report inbox` / `report link` / `report unlink` (maintainers)
