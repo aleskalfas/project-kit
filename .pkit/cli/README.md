@@ -54,7 +54,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # or: brew install uv
 | `sync` | re-run propagation | yes | yes |
 | `merge [<target>...]` | re-run merge for one or all targets | yes | yes |
 | `upgrade` | version-aware migrations + sync; in a pinned project, raises the `.pkit/version-pin` directive (flipped last, atomically) per ADR-045 | yes | yes |
-| `pin [<version>]` | write the `.pkit/version-pin` directive (per ADR-045): no argument freezes at the current running version, `<version>` pins at that token. Project-owned; never kit-synced | yes | no — overwrites an existing pin |
+| `pin [<version>]` | write the `.pkit/version-pin` directive (per ADR-045): no argument freezes at the current running version; `<version>` freezes (equal), reconciles content forward then flips the pin last (newer), or refuses (older — forward-only migrations). Project-owned; never kit-synced | yes | no — overwrites an existing pin |
 | `unpin` | remove the `.pkit/version-pin` directive (per ADR-045); the project reverts to floating on the installed binary | yes | yes — no-op when absent |
 | `visibility` | control pkit's git footprint (per ADR-009). No subcommand = status | no | yes (read-only) |
 | `visibility shared` / `visibility private` | `private` hides the whole footprint via the per-clone `.git/info/exclude` (no committed `.gitignore` is ever written) + a confirm-gated untrack; `shared` (default) keeps pkit committed. `--dry-run` previews | yes | yes — idempotent |
@@ -165,7 +165,13 @@ uv tool install --force git+ssh://git@github.com/aleskalfas/project-kit.git@vZ &
 
 Per [ADR-045](../../docs/architecture/decisions/ADR-045-per-project-version-pin.md), a project opts into running a fixed pkit version by committing a **`.pkit/version-pin`** directive — a plain one-line text file holding a version (or a PRJ-004 tag/branch/sha token). It is **project-owned and never kit-synced**: `init`, `sync`, and `upgrade`'s content pass never write or clobber it; only the gestures below do. Its *presence* is the opt-in signal — the router reads it and re-execs `uvx project-kit@<pin>` so the pinned version serves every command, and a global-tool upgrade no longer moves this project. Absent the file, nothing changes: the router runs the installed binary as-is. This is the lockfile model (`.python-version`-style): you *write* a pin, then separately *raise* or *remove* it.
 
-- **`pin [<version>]`** — write the directive. With **no argument** it freezes the project at the version it is currently on (the common case: lock this project where it is). With a **`<version>`** token it pins at that target. Creates `.pkit/` if needed.
+- **`pin [<version>]`** — write the directive. With **no argument** it freezes the project at the version it is currently on (the common case: lock this project where it is). With a **`<version>`** token it dispatches on how that version orders against the project's current content version (`.pkit/manifest.yaml`'s `backbone_version`):
+  - **equal** → freeze in place (write the pin, no content sync);
+  - **newer** → reconcile content forward to the target *under that version's own code* (`uvx project-kit@v<version>`, run under the `PKIT_NO_ROUTE=1` bypass so it doesn't route-loop) — this syncs content + runs the forward migrations — then flips the pin **last**, atomically, so a failed reconcile never advances the pin past content that isn't in place;
+  - **older** → **refused**. pkit migrations are forward-only (COR-010), so there is no safe content-sync back to an earlier version; the command exits non-zero, writes nothing, and touches no content. To roll a project back, `git checkout` the `.pkit/` tree at the commit that carried the earlier version (`git checkout <ref> -- .pkit/`) — git restores kit-owned *and* project-owned state together, atomically, which a forward-only content sync cannot. There is deliberately no `--force` override.
+  - a **PRJ-004 branch/sha token** (not a comparable version) → the ordering guard is skipped (nothing to compare) and the pin is written in place — an advanced / at-your-own-risk case.
+
+  Creates `.pkit/` if needed.
 - **`upgrade`** — raise an existing pin forward (see the pinned-project note under [`upgrade`](#upgrade) above).
 - **`unpin`** — remove the directive; the project reverts to floating on the installed binary. Idempotent — fine to run when no pin is present.
 

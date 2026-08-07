@@ -294,6 +294,23 @@ def _pinned_base(pin: str) -> list[str]:
     return ["uvx", "--from", f"{DISTRIBUTION_GIT_URL}@v{pin}", "project-kit"]
 
 
+def run_bypassed(pin: str, argv: list[str], environ=None) -> int:  # type: ignore[no-untyped-def]
+    """Run `pkit <argv>` at the wheel for `pin`, with routing bypassed; return the exit code.
+
+    Uses the same `uvx --from …@v<pin>` base route 2 pins against, but sets
+    PKIT_NO_ROUTE on the child so the bootstrapped process runs self rather than
+    re-routing through a pin (which would loop or mis-resolve). The shared
+    bootstrap the `pin` gesture's forward-reconcile builds on (ADR-045): pinning a
+    project to a *newer* version needs that version's own code to sync content and
+    run the forward migrations, so the reconcile runs under the target's wheel
+    here rather than the currently-installed tool. Blocks until the child exits.
+    """
+    env = dict(os.environ if environ is None else environ)
+    env[_BYPASS_ENV] = "1"
+    completed = subprocess.run([*_pinned_base(pin), *argv], env=env)
+    return completed.returncode
+
+
 def _pin_is_resolvable(pin: str, env) -> bool:  # type: ignore[no-untyped-def]
     """True iff the pinned wheel can be resolved and run (a `--version` probe).
 

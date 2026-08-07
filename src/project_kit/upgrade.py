@@ -63,6 +63,7 @@ from project_kit.router import (
     is_source_checkout,
     pin_file_path,
     read_version_pin,
+    run_bypassed,
     running_version,
 )
 from project_kit.sync import run_sync
@@ -189,13 +190,132 @@ def _raise_pin_to(target_root: Path, target_version: str, dry_run: bool) -> None
     current_pin = read_version_pin(target_root)
     if current_pin == target_version:
         return
+    prior = current_pin if current_pin is not None else "(unpinned)"
     if dry_run:
-        click.echo(f"  would raise pin: {current_pin} -> {target_version} ({pin_path.name})")
+        click.echo(f"  would raise pin: {prior} -> {target_version} ({pin_path.name})")
         return
     tmp = pin_path.with_name(pin_path.name + ".tmp")
     tmp.write_text(target_version + "\n", encoding="utf-8")
     os.replace(tmp, pin_path)  # atomic on POSIX; the pin never observes a torn write
-    click.echo(f"  pin raised: {current_pin} -> {target_version} (.pkit/version-pin)")
+    click.echo(f"  pin raised: {prior} -> {target_version} (.pkit/version-pin)")
+
+
+def freeze_pin(target_root: Path, token: str) -> None:
+    """Write the `.pkit/version-pin` directive at `token`, in place, with no content sync.
+
+    The freeze gesture: lock the project at a version without moving it. Backs
+    `pkit pin` with no argument (freeze at the running version) and `pkit pin
+    <version>` when the target equals the current content version, or is a
+    non-orderable token the downgrade guard cannot compare (ADR-045)."""
+    pin_path = pin_file_path(target_root)
+    pin_path.parent.mkdir(parents=True, exist_ok=True)
+    pin_path.write_text(token + "\n", encoding="utf-8")
+    click.echo(f"Pinned project-kit to {token} ({pin_path.relative_to(target_root)}).")
+
+
+def reconcile_pin(target_root: Path, version: str) -> None:
+    """Set the pin at `version`, reconciling content per the target-vs-current order.
+
+    `pkit pin <version>` compares the requested version against the project's
+    current content version (`.pkit/manifest.yaml`'s `backbone_version`) and
+    dispatches on the ordering (ADR-045):
+
+    - **equal** → freeze in place (write the pin, no content sync);
+    - **newer** → reconcile content forward to the target under the target's own
+      code (via the router bypass), then flip the pin last, atomically;
+    - **older** → HARD REFUSE — pkit migrations are forward-only (COR-010), so
+      there is no safe downgrade path; nothing is written and no content is
+      touched (`git checkout` is the rollback route);
+    - **unorderable** (a PRJ-004 branch/sha token, not a semver) → the guard
+      cannot compare, so it is skipped and the pin is written in place as an
+      advanced / at-your-own-risk case (no directional content sync).
+
+    A project with no `.pkit/manifest.yaml` (no recorded content version) has
+    nothing to downgrade from, so the guard is vacuous — it is treated like the
+    non-orderable case and the pin is written in place.
+    """
+    manifest = read_backbone_manifest(target_root)
+    current = manifest.backbone_version if manifest is not None else None
+    order = "unorderable" if current is None else _pin_order(version, current)
+
+    if order == "older":
+        # current is a real version here (order != unorderable ⇒ manifest present).
+        raise click.ClickException(_downgrade_refusal(version, current or ""))
+
+    if order in ("equal", "unorderable"):
+        if order == "unorderable" and current is not None:
+            click.echo(
+                f"{version!r} is not a comparable version, so the downgrade guard is "
+                "skipped; pinning in place without a content sync (advanced)."
+            )
+        freeze_pin(target_root, version)
+        return
+
+    # newer → reconcile content forward, then flip the pin LAST (atomic), so a
+    # failed reconcile never advances the pin past content that never landed.
+    click.echo(
+        f"Pinning forward to {version} (current content {current}): reconciling "
+        "content up to the target first."
+    )
+    reconcile_forward_via_target(target_root, version)
+    _raise_pin_to(target_root, version, dry_run=False)
+
+
+def reconcile_forward_via_target(target_root: Path, target: str) -> None:
+    """Reconcile content forward to a NEWER `target` using that version's own code.
+
+    Syncing to a newer version needs that version's code and bundled content,
+    which the currently-installed tool does not carry. Bootstrap the target wheel
+    with `uvx project-kit@v<target>` and run its `upgrade` there — under the
+    router's PKIT_NO_ROUTE bypass, so the bootstrapped process runs self instead
+    of routing back through this project's (older) pin. That upgrade syncs content
+    and runs the forward migrations. Raises ClickException on a non-zero exit so
+    the caller aborts BEFORE advancing the pin — the pin never moves past content
+    that failed to land (ADR-045). Shares the router's route-2 uvx machinery
+    (`run_bypassed`) rather than duplicating the invocation.
+    """
+    returncode = run_bypassed(target, ["upgrade"])
+    if returncode != 0:
+        raise click.ClickException(
+            f"reconciling content forward to {target} failed: the bootstrapped "
+            f"`uvx project-kit@v{target} upgrade` exited {returncode}. The pin was "
+            "not advanced; resolve the error reported above and retry."
+        )
+
+
+def _pin_order(target: str, current: str) -> str:
+    """Order `target` against `current` for the pin guard: equal | newer | older | unorderable.
+
+    Returns ``"unorderable"`` when either side is not parseable semver (a PRJ-004
+    branch/sha pin token), so the caller skips the ordering guard rather than
+    crashing on the comparison (ADR-045)."""
+    try:
+        parsed_target = Version(target)
+        parsed_current = Version(current)
+    except InvalidVersion:
+        return "unorderable"
+    if parsed_target == parsed_current:
+        return "equal"
+    return "newer" if parsed_target > parsed_current else "older"
+
+
+def _downgrade_refusal(target: str, current: str) -> str:
+    """The refusal message for a downgrade pin (ADR-045 + COR-010).
+
+    pkit migrations are forward-only, so there is no safe content path back to an
+    earlier version; rolling back is a git operation, which restores kit-owned
+    *and* project-owned state together — something a forward-only sync cannot."""
+    return (
+        f"refusing to pin {target}: it is OLDER than this project's current content "
+        f"({current}), and pkit cannot safely downgrade — its migrations are "
+        "forward-only (COR-010), so there is no reconcile path back to an earlier "
+        "version. Nothing was written and no content was touched.\n"
+        "To roll this project back, `git checkout` the `.pkit/` tree at the commit "
+        "that carried the earlier version:\n"
+        "    git checkout <ref> -- .pkit/\n"
+        "git restores kit-owned and project-owned state together, atomically — "
+        "which a forward-only content sync cannot do."
+    )
 
 
 def _print_pinned_child_escape(target_root: Path) -> None:

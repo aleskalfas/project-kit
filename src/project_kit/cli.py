@@ -57,7 +57,7 @@ from project_kit.release import (
 )
 from project_kit.status import report_status
 from project_kit.sync import run_sync
-from project_kit.upgrade import run_upgrade
+from project_kit.upgrade import freeze_pin, reconcile_pin, run_upgrade
 from project_kit.validate import print_validate_report, run_validate
 from project_kit.versioning import (
     PreKind,
@@ -681,20 +681,30 @@ def pin(version: str | None) -> None:
 
     With no argument, freezes the project at the version it is currently on — the
     common case: lock this project where it is, don't move it. With a VERSION
-    token (a version, or a PRJ-004 tag/branch/sha), pins at that target. Once the
-    directive exists, the pkit router re-execs `uvx project-kit@<pin>` so the
-    pinned version serves every command; a global-tool upgrade no longer moves
+    token, the behaviour depends on how it orders against the project's current
+    content version (`.pkit/manifest.yaml`'s `backbone_version`):
+
+    \b
+    - equal   → freeze in place (write the pin, no content sync);
+    - newer   → reconcile content forward to the target under that version's own
+                code, then flip the pin last (atomically);
+    - older   → REFUSED — pkit migrations are forward-only (COR-010), so there is
+                no safe downgrade; `git checkout` the `.pkit/` tree to roll back;
+    - a PRJ-004 branch/sha token (not a comparable version) → the guard is skipped
+                and the pin is written in place (advanced / at-your-own-risk).
+
+    Once the directive exists, the pkit router re-execs `uvx project-kit@<pin>` so
+    the pinned version serves every command; a global-tool upgrade no longer moves
     this project. Raise the pin later with `pkit upgrade`; remove it with
     `pkit unpin`.
     """
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
-    token = version if version is not None else router.running_version()
-    pin_path = router.pin_file_path(target_root)
-    pin_path.parent.mkdir(parents=True, exist_ok=True)
-    pin_path.write_text(token + "\n", encoding="utf-8")
-    click.echo(f"Pinned project-kit to {token} ({pin_path.relative_to(target_root)}).")
+    if version is None:
+        freeze_pin(target_root, router.running_version())
+        return
+    reconcile_pin(target_root, version)
 
 
 @main.command()
