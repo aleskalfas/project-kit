@@ -347,6 +347,40 @@ Under the current PRJ-002 policy, feature branches **declare** version intent vi
 
 The declared, release-driven version path (PRJ-002 D1–D4). Feature branches drop a **changeset** file under `.changes/unreleased/`; the release step on `main` is the sole writer of version state. `release plan` previews the computed release; `release apply` consumes the changesets, computes each tier's new version from current `main`, broadens `requires_backbone` (the broaden moves here, PRJ-002 D4), updates `CHANGELOG.md`, and deletes the consumed changesets. Tagging stays a separate anchored step (`pkit version tag --push` on `main` after the release commit lands), matching the bump/tag split. `release merge <pr>` is the **sanctioned merge path** for a release PR — one that closes no issue, which the project-management issue-PR merge gate legitimately refuses; it is guarded to `release/*` heads, merges only an open, mergeable, green PR (squash + delete-branch), and does not tag (`release-tag.yml` tags on the push to `main`). `release publish-notes <version>` publishes a **notes-only** GitHub Release for tag `v<version>` (body = that version's `CHANGELOG.md` section) so the release page shows what changed — it is **idempotent** (creates the Release, then edits its notes on re-run), attaches **no artifact** (a notes overlay on the git-tag install path, PRJ-004 — never a file/wheel channel), and derives the repo from the ambient `gh` context; `--dry-run` prints the notes without calling `gh`, and `release-tag.yml` runs it automatically right after it cuts a tag. `release check --base <ref>` is the CI surface-without-changeset guard, with a `none`-changeset / `skip-changeset`-label escape hatch. `release lint` is a sibling *format* check — it validates only the mechanically-checkable subset (a changeset's category is a Keep-a-Changelog group and its body is a well-formed sentence; `CHANGELOG.md` headings parse) and leaves plain-language judgment to the guide and review; it reads committed files only (no PR context), so it rides in the shared check aggregator (`scripts/check.sh`). The full mechanics — changeset format, contributor workflow, and both checks' honest limits — live in the release-flow spec (`.pkit/release/README.md`).
 
+## Report commands
+
+The built-in adopter→upstream feedback channel (per [pkit:PRJ-008]; cross-repo
+realization [pkit:ADR-045]). A `report` files an issue to the **configured report
+target** — the upstream repo the distribution sets in project config (for every real
+adopter that is project-kit's own repo), *not* the adopter's own tracker. The environment block (pkit + capability versions, adapter, OS) is attached
+automatically and **redacted by construction** (`$HOME`/paths stripped, kit-shipped
+capabilities only unless `--include-private`).
+
+### `report bug` / `report feedback`
+
+Compose and file a **bug** (structured) or **feedback** (freeform) report,
+agent-assisted (the `report-author` skill). **URL-first**: prints a prefilled GitHub
+new-issue URL that works with no `gh` auth (the browser is the review gate);
+`gh`-auto-file is the authenticated convenience, behind a **target-naming confirm**
+("posts a PUBLIC issue to `<owner/repo>` under your identity"). `--yes` / autonomy
+**degrades to the draft — it never auto-posts** (the deliberate `--yes` asymmetry,
+per ADR-045). `--on-behalf-of @login` files under the invoker's identity with a
+"Reported for @login" attribution so the beneficiary still tracks it.
+
+### `report` (= `report list`) / `report show <N>`
+
+`report` lists the invoker's reports (authored by *or* attributed to them) + states.
+`report show <N>` adds the maintainer comments and the `## Tracked by` rollup — the
+issues that will fix it, with each one's state. Read-only; requires `gh` auth (a
+no-auth user tracks via GitHub's own notifications).
+
+### `report inbox` / `report link` / `report unlink` (maintainers)
+
+Enabled **only when the current repo is the configured report target** (the
+structural "developers of the target repo" gate; inert elsewhere). `report inbox` lists all incoming feedback for
+triage; `report link` / `unlink <feedback-N> <fix-N>` add/remove a `#fix-N` reference
+in feedback #N's `## Tracked by` list. These are same-repo edits (no cross-repo gate).
+
 ## Standard flags
 
 - **`--help`** on every command, including the root.
