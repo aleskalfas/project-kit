@@ -422,6 +422,28 @@ def test_load_model_layers_active_profile_between_guardrails_and_adopter(decide_
     assert d == "allow"
 
 
+def test_profile_grants_annotated_with_profile_key(decide_mod, tmp_path):
+    # ADR-046: profile-layer grants carry `_profile: <name>` (mirroring the
+    # `_capability` annotation) as `apply`'s routing key. Never stripped —
+    # decide() reads only subject/privilege/effect/scope and ignores it.
+    _profile_tree(
+        tmp_path,
+        profile=("schema_version: 1\ndescription: t\nposture: lenient\n"
+                 "grants:\n  - subject: all\n    privilege: \"[privilege-catalog:vcs]\"\n"
+                 "    effect: allow\n"),
+        config=("schema_version: 1\nownership_mode: additive\nposture: lenient\n"
+                "active_profile: team\n"),
+    )
+    catalog = decide_mod.load_catalog(str(tmp_path))
+    model = decide_mod.load_model(str(tmp_path), catalog)
+    profile_grants = [g for g in model["grants"] if g.get("_profile")]
+    assert len(profile_grants) == 1
+    assert profile_grants[0]["_profile"] == "team"
+    # decide() is unaffected by the annotation.
+    d, _ = decide_mod.decide(model, catalog, _bash("git status", "operator"))
+    assert d == "allow"
+
+
 def test_load_model_no_active_profile_no_layer(decide_mod, tmp_path):
     _write_tree(tmp_path)  # catalog only, no config/profile
     catalog = decide_mod.load_catalog(str(tmp_path))

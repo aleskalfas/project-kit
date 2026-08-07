@@ -100,6 +100,8 @@ def test_runtime_ignore_includes_backbone_permissions_seam(repo: Path) -> None:
     assert ".pkit/permissions/project/sandbox-provenance.yaml" in out
     # ADR-032: the per-machine active-profile sidecar is gitignored.
     assert ".pkit/permissions/project/active-profile.yaml" in out
+    # ADR-046: the profile-realization ledger is gitignored (per-machine).
+    assert ".pkit/permissions/project/profile-realized-allows.yaml" in out
 
 
 def test_runtime_ignore_aggregates_component_declaration(repo: Path) -> None:
