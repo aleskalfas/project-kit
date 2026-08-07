@@ -21,4 +21,6 @@ body: >
   under it. The maintainer side — `pkit report inbox` (triage queue) and `report
   link` / `unlink <feedback-N> <fix-N>` (wire a fix issue into a feedback's `##
   Tracked by`) — is enabled **only inside the report-target repo** and inert
-  elsewhere (same-repo edits, no cross-repo gate).
+  elsewhere (same-repo edits, no cross-repo gate). Ships the `report-author` skill:
+  an agent interviews the reporter to draw out a clear, actionable bug/feedback
+  description (redaction-aware for the prose), then files it via the command.
