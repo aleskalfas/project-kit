@@ -1,0 +1,12 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  COR-042 (accepted): a depends_on entry may opt in to an evaluable hand-off
+  contract (trigger + candidates/resolve seam predicates); a report-only
+  `process health` operation reports missed hand-offs, exit non-zero on any
+  miss or indeterminate. ADR-046 records the seam mechanism + sibling-module
+  placement. COR-038's reader-set ruling re-scoped by amendment note;
+  COR-035's deferred list updated (first family shipped). Implementation
+  follows in #610 (#609).
