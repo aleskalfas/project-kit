@@ -37,6 +37,7 @@ from project_kit.scaffolds import (
 from project_kit.agents import Namespace as AgentNamespace, stamp_new_agent
 from project_kit.storyboards import ArtifactKind, stamp_new_storyboard
 from project_kit import refs as refs_mod
+from project_kit import router
 from project_kit.scratchpads import (
     stamp_new_scratchpad,
     transition_to_done,
@@ -671,6 +672,49 @@ def upgrade(dry_run: bool) -> None:
     if target_root is None:
         raise click.ClickException("not in a project tree.")
     run_upgrade(target_root, dry_run=dry_run)
+
+
+@main.command()
+@click.argument("version", required=False)
+def pin(version: str | None) -> None:
+    """Pin this project to a pkit version (per ADR-045): write `.pkit/version-pin`.
+
+    With no argument, freezes the project at the version it is currently on — the
+    common case: lock this project where it is, don't move it. With a VERSION
+    token (a version, or a PRJ-004 tag/branch/sha), pins at that target. Once the
+    directive exists, the pkit router re-execs `uvx project-kit@<pin>` so the
+    pinned version serves every command; a global-tool upgrade no longer moves
+    this project. Raise the pin later with `pkit upgrade`; remove it with
+    `pkit unpin`.
+    """
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    token = version if version is not None else router.running_version()
+    pin_path = router.pin_file_path(target_root)
+    pin_path.parent.mkdir(parents=True, exist_ok=True)
+    pin_path.write_text(token + "\n", encoding="utf-8")
+    click.echo(f"Pinned project-kit to {token} ({pin_path.relative_to(target_root)}).")
+
+
+@main.command()
+def unpin() -> None:
+    """Remove this project's version pin (per ADR-045): delete `.pkit/version-pin`.
+
+    The project reverts to floating on the installed pkit binary — the router
+    runs the installed tool as-is (today's un-pinned behaviour). Idempotent: it
+    is fine to run when no pin file is present.
+    """
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    pin_path = router.pin_file_path(target_root)
+    if pin_path.exists():
+        pin_path.unlink()
+        rel = pin_path.relative_to(target_root)
+        click.echo(f"Removed pin ({rel}); project now floats on the installed tool.")
+    else:
+        click.echo("No pin to remove; project already floats on the installed tool.")
 
 
 @main.group("visibility", invoke_without_command=True)
