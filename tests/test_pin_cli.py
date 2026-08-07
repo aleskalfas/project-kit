@@ -1,10 +1,12 @@
 """Tests for `pkit pin` / `pkit unpin` (ADR-045).
 
 The two operator gestures that manage a project's `.pkit/version-pin` directive:
-`pin` writes it (freeze at the current version by default, or at a given token),
-`unpin` removes it. The router reads the file elsewhere; these tests cover only
-the write/remove gestures and the sync-exclusion invariant that neither `init`
-nor `sync` ever touches the directive.
+`pin` writes it (freeze at the current content version by default, or reconcile
+to a given version), `unpin` removes it. The pin token is a version number only
+(a single leading `v` stripped) — branch / sha / pre-release forms are refused.
+The router reads the file elsewhere; these tests cover only the write/remove
+gestures and the sync-exclusion invariant that neither `init` nor `sync` ever
+touches the directive.
 """
 
 from __future__ import annotations
@@ -35,53 +37,118 @@ def _write_manifest(tmp_path: Path, backbone_version: str) -> None:
     )
 
 
-def test_pin_no_arg_freezes_at_running_version(
+def test_pin_no_arg_freezes_at_content_version_not_running_version(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """No-arg `pin` freezes at the CONTENT version (`backbone_version`), not the
+    running binary — even when the installed tool is ahead of synced content."""
     _git_repo(tmp_path)
+    _write_manifest(tmp_path, "1.5.0")
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(router, "running_version", lambda: "1.140.0")
+    # Installed tool is ahead of the project's synced content; freeze at content.
+    monkeypatch.setattr(router, "running_version", lambda: "9.9.9")
 
     result = CliRunner().invoke(main, ["pin"])
 
     assert result.exit_code == 0
-    assert router.read_version_pin(tmp_path) == "1.140.0"
-    assert "1.140.0" in result.output
+    assert router.read_version_pin(tmp_path) == "1.5.0"
+    assert "1.5.0" in result.output
 
 
-def test_pin_with_token_writes_that_token(
+def test_pin_no_arg_refuses_when_manifest_absent(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """No-arg `pin` has no recorded content version to freeze at → hard refuse."""
+    _git_repo(tmp_path)  # .pkit/ exists but no manifest.yaml
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(main, ["pin"])
+
+    assert result.exit_code != 0
+    assert not router.pin_file_path(tmp_path).exists()
+    assert "pkit sync" in result.output
+
+
+def test_pin_strips_leading_v_and_routes_bare(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`pin v1.145.0` normalises to the bare `1.145.0` — so the router builds
+    `@v1.145.0`, never a broken `@vv1.145.0`."""
     _git_repo(tmp_path)
+    _write_manifest(tmp_path, "1.145.0")  # equal → freeze in place
     monkeypatch.chdir(tmp_path)
 
-    result = CliRunner().invoke(main, ["pin", "1.99.0"])
+    result = CliRunner().invoke(main, ["pin", "v1.145.0"])
 
     assert result.exit_code == 0
-    assert router.read_version_pin(tmp_path) == "1.99.0"
+    written = router.read_version_pin(tmp_path)
+    assert written == "1.145.0"  # the leading `v` was stripped before writing
+    # And the router routes the written pin to the bare `v<semver>` tag.
+    assert f"@v{written}" in " ".join(router._pinned_base(written))
+    assert "@vv" not in " ".join(router._pinned_base(written))
 
 
-def test_pin_creates_pkit_dir_if_missing(
+@pytest.mark.parametrize(
+    "token",
+    [
+        "feature-branch",  # branch name
+        "abc1234",  # commit sha
+        "1.2.3rc1",  # pre-release
+        "1.2.3+build",  # build metadata
+        "1.2",  # not three-part
+        "latest",  # tag alias
+    ],
+)
+def test_pin_refuses_non_semver_token(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, token: str
+) -> None:
+    """Only a bare `MAJOR.MINOR.PATCH` semver is accepted; everything else is
+    refused (exit non-zero, nothing written) — the router can't route it."""
+    _git_repo(tmp_path)
+    _write_manifest(tmp_path, "1.0.0")
+    monkeypatch.chdir(tmp_path)
+
+    def _boom(*_a: object, **_k: object) -> int:
+        raise AssertionError("a refused token must not reconcile content")
+
+    monkeypatch.setattr(upgrade, "run_bypassed", _boom)
+
+    result = CliRunner().invoke(main, ["pin", token])
+
+    assert result.exit_code != 0
+    assert not router.pin_file_path(tmp_path).exists()
+    assert "1.145.0" in result.output  # the "takes a version like …" guidance
+
+
+def test_pin_version_refuses_when_manifest_absent(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)  # no .pkit/ yet
+    """`pin <version>` has nothing to order the target against without a manifest
+    → hard refuse (exit non-zero, nothing written)."""
+    _git_repo(tmp_path)  # .pkit/ exists but no manifest.yaml
     monkeypatch.chdir(tmp_path)
+
+    def _boom(*_a: object, **_k: object) -> int:
+        raise AssertionError("a refused pin must not reconcile content")
+
+    monkeypatch.setattr(upgrade, "run_bypassed", _boom)
 
     result = CliRunner().invoke(main, ["pin", "1.99.0"])
 
-    assert result.exit_code == 0
-    assert router.pin_file_path(tmp_path).is_file()
-    assert router.read_version_pin(tmp_path) == "1.99.0"
+    assert result.exit_code != 0
+    assert not router.pin_file_path(tmp_path).exists()
+    assert "pkit sync" in result.output
 
 
 def test_pin_overwrites_an_existing_pin(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _git_repo(tmp_path)
+    _write_manifest(tmp_path, "2.0.0")
     monkeypatch.chdir(tmp_path)
     router.pin_file_path(tmp_path).write_text("1.0.0\n", encoding="utf-8")
 
-    result = CliRunner().invoke(main, ["pin", "2.0.0"])
+    result = CliRunner().invoke(main, ["pin", "2.0.0"])  # equal → freeze in place
 
     assert result.exit_code == 0
     assert router.read_version_pin(tmp_path) == "2.0.0"
@@ -202,27 +269,6 @@ def test_pin_older_version_is_refused_and_writes_nothing(
     assert "backbone_version: 2.0.0" in manifest_text
     assert "forward-only" in result.output
     assert "git checkout" in result.output
-
-
-def test_pin_branch_token_skips_guard_and_pins_in_place(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """A non-semver token (a PRJ-004 branch/sha) can't be ordered → the guard is
-    skipped, the pin is written in place, and the comparison never crashes."""
-    _git_repo(tmp_path)
-    _write_manifest(tmp_path, "1.0.0")
-    monkeypatch.chdir(tmp_path)
-
-    def _boom(*_a: object, **_k: object) -> int:
-        raise AssertionError("a non-orderable pin must not reconcile content")
-
-    monkeypatch.setattr(upgrade, "run_bypassed", _boom)
-
-    result = CliRunner().invoke(main, ["pin", "feature-branch"])
-
-    assert result.exit_code == 0
-    assert router.read_version_pin(tmp_path) == "feature-branch"
-    assert "not a comparable version" in result.output
 
 
 # --- Sync-exclusion invariant (ADR-045): init / sync never touch the pin --------

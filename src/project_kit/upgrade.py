@@ -36,6 +36,7 @@ content is `sync`'s job, not upgrade's.
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 from pathlib import Path
 
@@ -200,65 +201,121 @@ def _raise_pin_to(target_root: Path, target_version: str, dry_run: bool) -> None
     click.echo(f"  pin raised: {prior} -> {target_version} (.pkit/version-pin)")
 
 
-def freeze_pin(target_root: Path, token: str) -> None:
-    """Write the `.pkit/version-pin` directive at `token`, in place, with no content sync.
+def freeze_pin(target_root: Path, version: str) -> None:
+    """Write the `.pkit/version-pin` directive at `version`, in place, with no content sync.
 
     The freeze gesture: lock the project at a version without moving it. Backs
-    `pkit pin` with no argument (freeze at the running version) and `pkit pin
-    <version>` when the target equals the current content version, or is a
-    non-orderable token the downgrade guard cannot compare (ADR-045)."""
+    `pkit pin` with no argument (freeze at the current content version, via
+    `freeze_at_content`) and `pkit pin <version>` when the target equals the
+    current content version (ADR-045). `version` is always a bare
+    `MAJOR.MINOR.PATCH` semver — the callers normalise and validate before this
+    point (`_normalize_pin_version`), so the router can always route it."""
     pin_path = pin_file_path(target_root)
     pin_path.parent.mkdir(parents=True, exist_ok=True)
-    pin_path.write_text(token + "\n", encoding="utf-8")
-    click.echo(f"Pinned project-kit to {token} ({pin_path.relative_to(target_root)}).")
+    pin_path.write_text(version + "\n", encoding="utf-8")
+    click.echo(f"Pinned project-kit to {version} ({pin_path.relative_to(target_root)}).")
+
+
+def freeze_at_content(target_root: Path) -> None:
+    """No-arg `pkit pin`: freeze the project at its current CONTENT version (ADR-045).
+
+    Freezes at `.pkit/manifest.yaml`'s `backbone_version` — the content the
+    project last synced — *not* the running binary's version. When the installed
+    tool is ahead of the project's synced content, freezing at the binary version
+    would bake in a code-vs-content mismatch; freezing at content keeps the
+    version⟺content invariant intact. Refuses when the manifest is absent (there
+    is no recorded content version to pin against).
+    """
+    current = _require_backbone_version(target_root)
+    freeze_pin(target_root, current)
 
 
 def reconcile_pin(target_root: Path, version: str) -> None:
     """Set the pin at `version`, reconciling content per the target-vs-current order.
 
-    `pkit pin <version>` compares the requested version against the project's
-    current content version (`.pkit/manifest.yaml`'s `backbone_version`) and
-    dispatches on the ordering (ADR-045):
+    `pkit pin <version>` normalises and validates the token first
+    (`_normalize_pin_version`: a bare `MAJOR.MINOR.PATCH` semver, a single leading
+    `v` stripped), then compares it against the project's current content version
+    (`.pkit/manifest.yaml`'s `backbone_version`) and dispatches on the ordering
+    (ADR-045):
 
     - **equal** → freeze in place (write the pin, no content sync);
     - **newer** → reconcile content forward to the target under the target's own
       code (via the router bypass), then flip the pin last, atomically;
     - **older** → HARD REFUSE — pkit migrations are forward-only (COR-010), so
       there is no safe downgrade path; nothing is written and no content is
-      touched (`git checkout` is the rollback route);
-    - **unorderable** (a PRJ-004 branch/sha token, not a semver) → the guard
-      cannot compare, so it is skipped and the pin is written in place as an
-      advanced / at-your-own-risk case (no directional content sync).
+      touched (`git checkout` is the rollback route).
 
-    A project with no `.pkit/manifest.yaml` (no recorded content version) has
-    nothing to downgrade from, so the guard is vacuous — it is treated like the
-    non-orderable case and the pin is written in place.
+    A version-only token is required: branch names, commit shas, and pre-release /
+    build-metadata forms are refused at the boundary, because the router's route-2
+    can only route a bare `v<semver>` tag (branch/sha pins need a router change and
+    are deferred). A project with no `.pkit/manifest.yaml` (no recorded content
+    version) is refused too — there is nothing to order the target against.
     """
-    manifest = read_backbone_manifest(target_root)
-    current = manifest.backbone_version if manifest is not None else None
-    order = "unorderable" if current is None else _pin_order(version, current)
+    normalized = _normalize_pin_version(version)
+    current = _require_backbone_version(target_root)
+    order = _pin_order(normalized, current)
 
     if order == "older":
-        # current is a real version here (order != unorderable ⇒ manifest present).
-        raise click.ClickException(_downgrade_refusal(version, current or ""))
+        raise click.ClickException(_downgrade_refusal(normalized, current))
 
-    if order in ("equal", "unorderable"):
-        if order == "unorderable" and current is not None:
-            click.echo(
-                f"{version!r} is not a comparable version, so the downgrade guard is "
-                "skipped; pinning in place without a content sync (advanced)."
-            )
-        freeze_pin(target_root, version)
+    if order == "equal":
+        freeze_pin(target_root, normalized)
         return
 
     # newer → reconcile content forward, then flip the pin LAST (atomic), so a
     # failed reconcile never advances the pin past content that never landed.
     click.echo(
-        f"Pinning forward to {version} (current content {current}): reconciling "
+        f"Pinning forward to {normalized} (current content {current}): reconciling "
         "content up to the target first."
     )
-    reconcile_forward_via_target(target_root, version)
-    _raise_pin_to(target_root, version, dry_run=False)
+    reconcile_forward_via_target(target_root, normalized)
+    _raise_pin_to(target_root, normalized, dry_run=False)
+
+
+# Accepted pin token: a bare MAJOR.MINOR.PATCH semver. Deliberately stricter than
+# `packaging.version.Version` (which also parses `1.2`, `1.2.3rc1`, `1.2.3+build`)
+# — the router's route-2 pins by the git tag `v<token>`, and only a plain
+# three-part release tag is guaranteed to resolve. Pre-release / build-metadata /
+# branch / sha pins need a router change and are deferred (ADR-045).
+_PIN_SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+$")
+
+
+def _normalize_pin_version(token: str) -> str:
+    """Normalise + validate a `pkit pin <token>` argument to a bare semver (ADR-045).
+
+    Strips a single leading `v` (`v1.145.0` and `1.145.0` both normalise to the
+    bare `1.145.0` that gets ordered, written, AND routed), then requires a plain
+    `MAJOR.MINOR.PATCH` semver. Refuses anything else — branch names, commit shas,
+    pre-release / build-metadata forms — because the router can only route a bare
+    `v<semver>` tag. Raises `click.ClickException` (nothing is written) on refusal.
+    """
+    candidate = token[1:] if token.startswith("v") else token
+    if not _PIN_SEMVER_RE.match(candidate):
+        raise click.ClickException(
+            f"pkit pin takes a version like 1.145.0 (got {token!r}); branch and "
+            "commit pins aren't supported yet."
+        )
+    return candidate
+
+
+def _require_backbone_version(target_root: Path) -> str:
+    """Read the project's recorded content version, or refuse when the manifest is absent.
+
+    Both `pkit pin` gestures need `.pkit/manifest.yaml`'s `backbone_version` — the
+    no-arg freeze pins *at* it, and `pin <version>` orders the target *against* it.
+    Absent, there is no recorded content version, so both hard-refuse with the same
+    seed-the-manifest posture `run_upgrade` uses (ADR-045). Raises
+    `click.ClickException`; nothing is written.
+    """
+    manifest = read_backbone_manifest(target_root)
+    if manifest is None:
+        raise click.ClickException(
+            f"{target_root}/.pkit/manifest.yaml is missing — pkit has no record of "
+            "this project's content version to pin against. Run 'pkit sync' once to "
+            "seed the manifest, then retry."
+        )
+    return manifest.backbone_version
 
 
 def reconcile_forward_via_target(target_root: Path, target: str) -> None:
@@ -284,16 +341,21 @@ def reconcile_forward_via_target(target_root: Path, target: str) -> None:
 
 
 def _pin_order(target: str, current: str) -> str:
-    """Order `target` against `current` for the pin guard: equal | newer | older | unorderable.
+    """Order `target` against `current` for the pin guard: equal | newer | older.
 
-    Returns ``"unorderable"`` when either side is not parseable semver (a PRJ-004
-    branch/sha pin token), so the caller skips the ordering guard rather than
-    crashing on the comparison (ADR-045)."""
+    `target` is already a validated bare semver (`_normalize_pin_version`);
+    `current` is the project's recorded `backbone_version`. A malformed recorded
+    version (a corrupt manifest) is refused cleanly rather than crashing the
+    comparison (ADR-045)."""
+    parsed_target = Version(target)
     try:
-        parsed_target = Version(target)
         parsed_current = Version(current)
-    except InvalidVersion:
-        return "unorderable"
+    except InvalidVersion as exc:
+        raise click.ClickException(
+            f"this project's recorded content version {current!r} is not valid "
+            "semver — the manifest may be corrupt. Run 'pkit sync' to reconcile it, "
+            "then retry."
+        ) from exc
     if parsed_target == parsed_current:
         return "equal"
     return "newer" if parsed_target > parsed_current else "older"
@@ -310,11 +372,13 @@ def _downgrade_refusal(target: str, current: str) -> str:
         f"({current}), and pkit cannot safely downgrade — its migrations are "
         "forward-only (COR-010), so there is no reconcile path back to an earlier "
         "version. Nothing was written and no content was touched.\n"
-        "To roll this project back, `git checkout` the `.pkit/` tree at the commit "
+        "To roll this project back, `git checkout` the `.pkit/` tree at a commit "
         "that carried the earlier version:\n"
         "    git checkout <ref> -- .pkit/\n"
         "git restores kit-owned and project-owned state together, atomically — "
-        "which a forward-only content sync cannot do."
+        "which a forward-only content sync cannot do. Note this also reverts "
+        f"`.pkit/version-pin` itself (the file you are setting), and it only "
+        "restores a state that already exists in history."
     )
 
 

@@ -57,7 +57,7 @@ from project_kit.release import (
 )
 from project_kit.status import report_status
 from project_kit.sync import run_sync
-from project_kit.upgrade import freeze_pin, reconcile_pin, run_upgrade
+from project_kit.upgrade import freeze_at_content, reconcile_pin, run_upgrade
 from project_kit.validate import print_validate_report, run_validate
 from project_kit.versioning import (
     PreKind,
@@ -679,19 +679,23 @@ def upgrade(dry_run: bool) -> None:
 def pin(version: str | None) -> None:
     """Pin this project to a pkit version (per ADR-045): write `.pkit/version-pin`.
 
-    With no argument, freezes the project at the version it is currently on — the
-    common case: lock this project where it is, don't move it. With a VERSION
-    token, the behaviour depends on how it orders against the project's current
-    content version (`.pkit/manifest.yaml`'s `backbone_version`):
+    VERSION, when given, is a version number only — `1.145.0`, or `v1.145.0`
+    (a single leading `v` is stripped). Branch, commit-sha, and pre-release /
+    build-metadata pins are refused: the router can only route a bare `v<semver>`
+    tag, so those are deferred. Both forms require `.pkit/manifest.yaml` (the
+    project's recorded content version); run `pkit sync` first if it is absent.
+
+    With no argument, freezes the project at its current CONTENT version
+    (`.pkit/manifest.yaml`'s `backbone_version`) — the common case: lock this
+    project where its content is, don't move it. With a VERSION token, the
+    behaviour depends on how it orders against that content version:
 
     \b
     - equal   → freeze in place (write the pin, no content sync);
     - newer   → reconcile content forward to the target under that version's own
                 code, then flip the pin last (atomically);
     - older   → REFUSED — pkit migrations are forward-only (COR-010), so there is
-                no safe downgrade; `git checkout` the `.pkit/` tree to roll back;
-    - a PRJ-004 branch/sha token (not a comparable version) → the guard is skipped
-                and the pin is written in place (advanced / at-your-own-risk).
+                no safe downgrade; `git checkout` the `.pkit/` tree to roll back.
 
     Once the directive exists, the pkit router re-execs `uvx project-kit@<pin>` so
     the pinned version serves every command; a global-tool upgrade no longer moves
@@ -702,7 +706,7 @@ def pin(version: str | None) -> None:
     if target_root is None:
         raise click.ClickException("not in a project tree.")
     if version is None:
-        freeze_pin(target_root, router.running_version())
+        freeze_at_content(target_root)
         return
     reconcile_pin(target_root, version)
 
