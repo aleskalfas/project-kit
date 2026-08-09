@@ -948,27 +948,28 @@ def merge(targets: tuple[str, ...], dry_run: bool) -> None:
     help="Show what would be upgraded without writing any files (per COR-004).",
 )
 @click.option(
-    "--pin",
+    "--no-pin",
+    "no_pin",
     is_flag=True,
     default=False,
-    help="Also pin this project at the version it upgrades to (ADR-049) — the "
-    "one-step opt-in to keep it version-locked. No-op if already pinned.",
+    help="Keep this project un-pinned (opt out of pin-by-default): it keeps "
+    "following the installed global tool. Per ADR-049.",
 )
-def upgrade(dry_run: bool, pin: bool) -> None:
+def upgrade(dry_run: bool, no_pin: bool) -> None:
     """Transition the project to a newer backbone (per COR-010).
 
     Bumps the project to the source kit's current backbone version. To
     upgrade a single capability, use `pkit capabilities upgrade <name>`.
 
-    Pass `--pin` to also pin the project at the version it upgrades to (ADR-049),
-    so it stays version-locked without a separate `pkit pin` step. On a project
-    that is already pinned, `pkit upgrade` advances the pin on its own, so `--pin`
-    is a no-op there.
+    **Pins the project by default** at the version it upgrades to (ADR-049), so it
+    stays version-locked with no separate `pkit pin` step. Pass `--no-pin` to keep
+    it un-pinned (it keeps following the installed global tool). A project that is
+    already pinned advances its pin either way; self-host is never pinned.
     """
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
-    run_upgrade(target_root, dry_run=dry_run, pin=pin)
+    run_upgrade(target_root, dry_run=dry_run, pin=not no_pin)
 
 
 @main.command()
