@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.145.0 — 2026-08-09
+
+### Changed
+- **`pkit upgrade` now pins the project by default** at the version it upgrades to (#631, ADR-049 amended) — pinning becomes the norm so a project stays code⟺content-coherent with no separate `pkit pin` step, and never runs a newer global CLI over older un-migrated content. Pass **`--no-pin`** to keep a project un-pinned (it keeps following the installed global tool, running in-process; `pkit unpin` removes an existing pin). It pins at the **local** synced version (offline-safe — no `git ls-remote` lookup), writes the pin **last** (so a failed sync never leaves a pin ahead of content), and is a no-op on an already-pinned project (which still auto-advances its pin). Self-host is never pinned. **This reverses ADR-049's opt-in default** (a project now opts *out* of pinning rather than *in*) and supersedes the short-lived `--pin` opt-in from #627 (never released; removed). Note the new default moves a project into the pinned (uvx-re-exec) execution model on its next upgrade; the router degrades an unresolvable pin to running self, so a pinned project never bricks offline.
+
+### Fixed
+- **project-management 0.52.1** — The criteria primitives (check-criterion / uncheck-criterion / show-issue --field criteria) now resolve checkbox-bearing headings from body-format.yaml instead of hardcoding "## Acceptance criteria" — an EPIC's "## Success criteria" boxes can be ticked by index (previously refused with "0 acceptance criteria" while still gating the close) (#624).
+
 ## 1.144.0 — 2026-08-07
 
 ### Added
