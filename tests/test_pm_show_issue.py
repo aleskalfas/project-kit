@@ -198,6 +198,41 @@ def test_extract_criteria_empty_when_section_absent(si) -> None:
     assert si._extract_criteria("## What\n- not criteria\n") == []
 
 
+def test_extract_criteria_honours_schema_resolved_headings(si) -> None:
+    # EPICs carry their checkboxes under `## Success criteria`
+    # (body-format.yaml); the heading set resolved from the schema is
+    # honoured (issue #624).
+    body = "EPIC: #1\n\n## Outcome\nthesis\n\n## Success criteria\n- [ ] proven\n"
+    headings = frozenset({"acceptance criteria", "success criteria"})
+    assert si._extract_criteria(body, headings) == ["proven"]
+    # Bare call keeps the historical fallback: success criteria invisible.
+    assert si._extract_criteria(body) == []
+
+
+def test_summarise_extracts_epic_success_criteria(si, issue_types) -> None:
+    # End-to-end through _summarise: the criteria field is populated from the
+    # heading the schema declares for the type, not a hardcoded literal.
+    body_format = {
+        "bodies": {
+            "epic": {
+                "required_sections": [
+                    {"heading": "## Outcome", "has_checkboxes": False},
+                    {"heading": "## Success criteria", "has_checkboxes": True},
+                ],
+            },
+        },
+    }
+    issue = {
+        "title": "[EPIC] Prove the thesis",
+        "body": "## Outcome\nthesis\n\n## Success criteria\n- [ ] proven\n- [x] shipped\n",
+        "labels": [],
+        "assignees": [],
+        "state": "OPEN",
+    }
+    summary = si._summarise(issue, issue_types, body_format)
+    assert summary["criteria"] == ["proven", "shipped"]
+
+
 # --- --field projection ----------------------------------------------
 
 

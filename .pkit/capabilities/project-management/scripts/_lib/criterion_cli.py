@@ -22,6 +22,7 @@ from ruamel.yaml.error import YAMLError
 
 from _lib import provenance
 from _lib import session_guard
+from _lib.criteria import checkbox_headings
 from _lib.criterion_ops import Target, plan_batch
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config
 from _lib.membership import (
@@ -86,7 +87,14 @@ def run_criterion_verb(*, verb: str, target_checked: bool) -> int:
     print(f"  action:  {action} {len(targets)} "
           f"{'criterion' if len(targets) == 1 else 'criteria'}")
 
-    plan = plan_batch(body, targets, target_checked=target_checked)
+    # Which `## <Name>` section carries the checkboxes is issue-type-dependent
+    # and owned by the body-format schema (`## Success criteria` on EPICs,
+    # `## Acceptance criteria` on Features/Tasks). Resolve the heading set from
+    # the schema — fail-open to the historical literal when it cannot be read —
+    # so indices stay in parity with `show-issue --field criteria`.
+    headings = checkbox_headings(_read_body_format(capability_root, yaml_loader))
+
+    plan = plan_batch(body, targets, target_checked=target_checked, headings=headings)
 
     for result in plan.results:
         marker = "ok" if result.ok else "refused"
@@ -252,6 +260,23 @@ def _gh_write_body(issue_number: int, body: str, config: dict) -> bool:
         except OSError:
             pass
     return True
+
+
+def _read_body_format(capability_root: Path, yaml_loader: YAML) -> dict:
+    """Parse `schemas/body-format.yaml`; `{}` when missing or unreadable.
+
+    Fail-open by design: an empty mapping makes `checkbox_headings` return its
+    hardcoded fallback, so a broken schema degrades to the pre-schema behaviour
+    rather than refusing the verb.
+    """
+    path = capability_root / "schemas" / "body-format.yaml"
+    if not path.is_file():
+        return {}
+    try:
+        data = yaml_loader.load(path.read_text(encoding="utf-8"))
+    except (OSError, YAMLError):
+        return {}
+    return data if isinstance(data, dict) else {}
 
 
 def _read_members(capability_root: Path, yaml_loader: YAML) -> list[dict]:

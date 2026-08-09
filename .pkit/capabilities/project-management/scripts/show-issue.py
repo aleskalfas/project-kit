@@ -42,6 +42,7 @@ _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import axis_labels  # noqa: E402
 from _lib import provenance  # noqa: E402
+from _lib.criteria import FALLBACK_HEADINGS, checkbox_headings  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
@@ -158,7 +159,7 @@ def _summarise(issue: dict, issue_types: dict, body_format: dict) -> dict:
     structural_type = _infer_structural_type(title, issue_types)
     parent_ref = _first_body_line(body)
     required_sections = _required_section_status(structural_type, body, body_format)
-    criteria = _extract_criteria(body)
+    criteria = _extract_criteria(body, checkbox_headings(body_format))
 
     type_labels = [lbl for lbl in labels if axis_labels.is_axis_label(lbl, "type")]
     priority_labels = [lbl for lbl in labels if axis_labels.is_axis_label(lbl, "priority")]
@@ -311,20 +312,31 @@ def _first_body_line(body: str) -> str:
     return body.lstrip().split("\n", 1)[0] if body.strip() else ""
 
 
-def _extract_criteria(body: str) -> list[str]:
-    """Pull the authored items under the '## Acceptance criteria' section.
+def _extract_criteria(body: str, headings: frozenset[str] | None = None) -> list[str]:
+    """Pull the authored items under the criteria section.
+
+    Which `## <Name>` heading carries the criteria is issue-type-dependent and
+    owned by the body-format schema (`## Success criteria` on EPICs,
+    `## Acceptance criteria` on Features/Tasks); `headings` is the resolved set
+    from `_lib.criteria.checkbox_headings` — the same resolver check-criterion
+    uses, keeping the criteria indices shown here in parity with the indices
+    that verb addresses. `None` falls back to the historical
+    `acceptance criteria` literal.
 
     Returns each item's text with the leading bullet and any checkbox marker
-    stripped. Collection starts at the acceptance-criteria heading and stops
-    at the next level-2 heading. A bare skeleton item (`- [ ]` with nothing
-    after it) is excluded — it carries no authored content.
+    stripped. Collection starts at a criteria heading and stops at the next
+    level-2 heading. A bare skeleton item (`- [ ]` with nothing after it) is
+    excluded — it carries no authored content.
     """
+    if headings is None:
+        headings = FALLBACK_HEADINGS
     items: list[str] = []
     in_section = False
     for raw in body.splitlines():
         stripped = raw.strip()
         if stripped.startswith("## "):
-            in_section = "acceptance criteria" in stripped.lower()
+            lowered = stripped.lower()
+            in_section = any(h in lowered for h in headings)
             continue
         if not in_section:
             continue

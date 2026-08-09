@@ -65,6 +65,45 @@ def test_tick_batch_by_index(ops) -> None:
     assert "- [x] beta" in plan.new_body
 
 
+# --- schema-resolved headings: the EPIC success-criteria path (issue #624) --
+
+EPIC_BODY = (
+    "EPIC: #1\n\n"
+    "## Outcome\nthesis\n\n"
+    "## Success criteria\n"
+    "- [ ] proven\n"
+    "- [ ] shipped\n"
+)
+
+SCHEMA_HEADINGS = frozenset({"acceptance criteria", "success criteria"})
+
+
+def test_tick_epic_success_criterion_with_schema_headings(ops) -> None:
+    plan = ops.plan_batch(
+        EPIC_BODY, [ops.Target(1)], target_checked=True, headings=SCHEMA_HEADINGS
+    )
+    assert plan.accepted and plan.changed
+    assert "- [x] proven" in plan.new_body
+    assert "- [ ] shipped" in plan.new_body  # untouched
+
+
+def test_epic_refused_without_schema_headings(ops) -> None:
+    # The pre-#624 behaviour, preserved as the fallback: without the
+    # schema-resolved heading set, `## Success criteria` is invisible.
+    plan = ops.plan_batch(EPIC_BODY, [ops.Target(1)], target_checked=True)
+    assert plan.accepted is False
+    assert any("0 criteria" in m for m in _msgs(plan))
+
+
+def test_feature_body_unchanged_under_schema_headings(ops) -> None:
+    # Passing the schema set must not disturb the Feature/Task walk.
+    plan = ops.plan_batch(
+        BODY, [ops.Target(1)], target_checked=True, headings=SCHEMA_HEADINGS
+    )
+    assert plan.accepted and plan.changed
+    assert "- [x] alpha" in plan.new_body
+
+
 # --- expected-text guard: match success ------------------------------------
 
 
@@ -107,7 +146,7 @@ def test_index_out_of_range_refuses(ops) -> None:
     assert plan.accepted is False
     assert plan.new_body is None
     assert any("out of range" in m for m in _msgs(plan))
-    assert any("3 acceptance criteria" in m for m in _msgs(plan))
+    assert any("3 criteria" in m for m in _msgs(plan))
 
 
 def test_non_checkbox_target_refuses(ops) -> None:

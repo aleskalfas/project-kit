@@ -1,0 +1,10 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  check-criterion / uncheck-criterion / show-issue --field criteria now
+  resolve checkbox-bearing headings from body-format.yaml instead of
+  hardcoding "## Acceptance criteria" — an EPIC's "## Success criteria"
+  boxes can be ticked by index (previously refused with "0 acceptance
+  criteria" while still gating the close) (#624).

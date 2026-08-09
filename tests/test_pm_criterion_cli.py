@@ -71,3 +71,42 @@ def test_non_positive_index_is_error(cli) -> None:
 def test_negative_index_is_error(cli) -> None:
     with pytest.raises(ValueError, match="1-based"):
         cli._parse_targets(["-1"])
+
+
+# --- _read_body_format: schema load + fail-open (issue #624) ----------------
+
+
+def _yaml_loader():
+    from ruamel.yaml import YAML
+
+    return YAML(typ="safe")
+
+
+def test_read_body_format_missing_schema_fails_open(cli, tmp_path) -> None:
+    # No schemas/body-format.yaml under the capability root → {} → the
+    # heading resolver falls back to the historical literal.
+    from _lib.criteria import FALLBACK_HEADINGS, checkbox_headings
+
+    body_format = cli._read_body_format(tmp_path, _yaml_loader())
+    assert body_format == {}
+    assert checkbox_headings(body_format) == FALLBACK_HEADINGS
+
+
+def test_read_body_format_malformed_schema_fails_open(cli, tmp_path) -> None:
+    schema_dir = tmp_path / "schemas"
+    schema_dir.mkdir()
+    (schema_dir / "body-format.yaml").write_text(
+        "bodies: [unclosed\n", encoding="utf-8"
+    )
+    assert cli._read_body_format(tmp_path, _yaml_loader()) == {}
+
+
+def test_read_body_format_resolves_shipped_schema_headings(cli) -> None:
+    # End-to-end wiring of the cli's resolution against the real capability
+    # root: the shipped schema yields both criteria headings.
+    from _lib.criteria import checkbox_headings
+
+    capability_root = SCRIPTS.parent
+    headings = checkbox_headings(cli._read_body_format(capability_root, _yaml_loader()))
+    assert "success criteria" in headings
+    assert "acceptance criteria" in headings
