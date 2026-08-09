@@ -46,7 +46,8 @@ def test_build_new_issue_url_encodes_params() -> None:
 
 def test_compose_report_ties_env_and_url(tmp_path: Path) -> None:
     (tmp_path / ".pkit").mkdir()
-    body, url = compose_report("bug", title="T", prose="P", target_root=tmp_path)
+    title, body, url = compose_report("bug", title="T", prose="P", target_root=tmp_path)
+    assert title == "T"  # bug titles are not prefixed
     assert "## Environment" in body
     assert "P" in body
     assert REPORT_TARGET in url
@@ -55,7 +56,7 @@ def test_compose_report_ties_env_and_url(tmp_path: Path) -> None:
 
 def test_compose_report_feedback_kind_labels_feedback(tmp_path: Path) -> None:
     (tmp_path / ".pkit").mkdir()
-    _, url = compose_report("feedback", title="T", prose="P", target_root=tmp_path)
+    _, _, url = compose_report("feedback", title="T", prose="P", target_root=tmp_path)
     q = urllib.parse.parse_qs(url.split("?", 1)[1])
     assert q["labels"] == ["feedback"]
 
@@ -65,8 +66,62 @@ def test_compose_report_unknown_kind_raises(tmp_path: Path) -> None:
         compose_report("nope", title="T", prose="P", target_root=tmp_path)
 
 
-def test_kinds_are_bug_and_feedback() -> None:
-    assert set(KINDS) == {"bug", "feedback"}
+def test_kinds_are_bug_feedback_change_request() -> None:
+    assert set(KINDS) == {"bug", "feedback", "change-request"}
+
+
+def test_compose_report_stamps_kind_marker(tmp_path: Path) -> None:
+    (tmp_path / ".pkit").mkdir()
+    for kind in KINDS:
+        _, body, _ = compose_report(kind, title="T", prose="P", target_root=tmp_path)
+        assert f"<!-- pkit-report: kind={kind} -->" in body
+
+
+# --- change-request kind (compose) -----------------------------------
+
+
+def test_compose_change_request_prefixes_title_and_templates_body(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / ".pkit").mkdir()
+    title, body, url = compose_report(
+        "change-request", title="add a flag", prose="I keep retyping it.",
+        target_root=tmp_path,
+    )
+    assert title == "[CR] add a flag"
+    assert "### Motivation" in body and "I keep retyping it." in body
+    assert "### Desired behaviour" in body and "### Current workaround" in body
+    q = urllib.parse.parse_qs(url.split("?", 1)[1])
+    assert q["labels"] == ["change-request"]
+    assert q["title"] == ["[CR] add a flag"]
+
+
+def test_compose_change_request_keeps_existing_prefix_and_headings(
+    tmp_path: Path,
+) -> None:
+    prose = "### Motivation\n\nwhy\n\n### Desired behaviour\n\nwhat\n"
+    (tmp_path / ".pkit").mkdir()
+    title, body, _ = compose_report(
+        "change-request", title="[CR] already prefixed", prose=prose,
+        target_root=tmp_path,
+    )
+    assert title == "[CR] already prefixed"  # not doubled
+    assert body.count("### Motivation") == 1  # template not re-applied
+
+
+def test_parse_report_marker() -> None:
+    body = "prose\n<!-- pkit-report: kind=change-request -->\n"
+    assert rep.parse_report_marker(body) == {"kind": "change-request"}
+    multi = "<!-- pkit-report: kind=feedback project=alpha -->"
+    assert rep.parse_report_marker(multi) == {"kind": "feedback", "project": "alpha"}
+    assert rep.parse_report_marker("no marker here") == {}
+
+
+def test_classify_kind_label_marker_and_title_prefix() -> None:
+    assert rep.classify_kind(["bug"], "[CR] t", "") == "bug"  # label wins
+    assert rep.classify_kind([], "t", "<!-- pkit-report: kind=feedback -->") == "feedback"
+    assert rep.classify_kind([], "[CR] add a flag", "") == "change-request"
+    assert rep.classify_kind([], "unrelated CR mention", "prose") == ""
 
 
 # --- CLI (URL-first path) --------------------------------------------
@@ -417,6 +472,235 @@ def test_cli_link_inside_target(monkeypatch) -> None:
     res = CliRunner().invoke(main, ["report", "link", "42", "7"])
     assert res.exit_code == 0
     assert "Linked #7 into #42" in res.output
+
+
+def test_cli_change_request_prints_prefilled_url() -> None:
+    res = CliRunner().invoke(
+        main,
+        ["report", "change-request", "--title", "add a flag", "--body", "retyping"],
+    )
+    assert res.exit_code == 0, res.output
+    assert "issues/new?" in res.output
+    assert "labels=change-request" in res.output
+    assert urllib.parse.quote_plus("[CR] add a flag") in res.output
+
+
+def test_cli_change_request_file_yes_degrades_and_does_not_post(monkeypatch) -> None:
+    # same ADR-047 asymmetry as bug/feedback: --file --yes NEVER auto-posts.
+    posted = {"v": False}
+    monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
+    monkeypatch.setattr(
+        rep, "file_report_via_gh",
+        lambda *a, **k: posted.__setitem__("v", True) or "x",
+    )
+    res = CliRunner().invoke(
+        main,
+        ["report", "change-request", "--title", "t", "--body", "b", "--file", "--yes"],
+    )
+    assert res.exit_code == 0
+    assert posted["v"] is False
+    assert "issues/new?" in res.output and "ADR-047" in res.output
+
+
+# --- inbox filtering (--kind / --group-by) ---------------------------
+
+
+_INBOX_ISSUES = [
+    {"number": 1, "title": "a bug", "state": "OPEN",
+     "labels": [{"name": "bug"}], "updatedAt": "2026-08-01", "body": "b"},
+    {"number": 2, "title": "some feedback", "state": "OPEN",
+     "labels": [{"name": "feedback"}], "updatedAt": "2026-08-02", "body": "f"},
+    {"number": 3, "title": "[CR] unlabelled cr", "state": "OPEN",
+     "labels": [], "updatedAt": "2026-08-03",
+     "body": "p\n<!-- pkit-report: kind=change-request -->\n"},
+    {"number": 4, "title": "mentions CR only", "state": "OPEN",
+     "labels": [], "updatedAt": "2026-08-04", "body": "not a report"},
+]
+
+
+def test_list_inbox_kind_filters_and_classifies_unlabelled_cr(monkeypatch) -> None:
+    monkeypatch.setattr(rep, "_gh_json", lambda args: _INBOX_ISSUES)
+    inbox = rep.list_inbox("o/r", kind="change-request")
+    # #3 classifies by marker/prefix despite no label; #4 (search noise) is dropped.
+    assert [r.number for r in inbox] == [3]
+    inbox_all = rep.list_inbox("o/r")
+    assert [r.number for r in inbox_all] == [3, 2, 1]  # newest first, #4 dropped
+
+
+def test_list_inbox_queries_search_titles_for_cr(monkeypatch) -> None:
+    seen: list[list[str]] = []
+
+    def fake(args):
+        seen.append(args)
+        return []
+
+    monkeypatch.setattr(rep, "_gh_json", fake)
+    rep.list_inbox("o/r", kind="change-request")
+    assert any("--label" in q and "change-request" in q for q in seen)
+    assert any("--search" in q for q in seen)  # discovers label-less URL-filed CRs
+
+
+def test_cli_inbox_kind_flag(monkeypatch) -> None:
+    monkeypatch.setattr(rep, "in_report_target", lambda: True)
+    captured = {}
+
+    def fake_list(target, *, kind=None):
+        captured["kind"] = kind
+        return [rep.ReportSummary(3, "[CR] t", "change-request", "open", "2026-08-03")]
+
+    monkeypatch.setattr(rep, "list_inbox", fake_list)
+    res = CliRunner().invoke(main, ["report", "inbox", "--kind", "change-request"])
+    assert res.exit_code == 0, res.output
+    assert captured["kind"] == "change-request"
+    assert "#3" in res.output
+
+
+def test_cli_inbox_group_by_project_degrades_without_marker(monkeypatch) -> None:
+    monkeypatch.setattr(rep, "in_report_target", lambda: True)
+    monkeypatch.setattr(
+        rep, "list_inbox",
+        lambda target, *, kind=None: [
+            rep.ReportSummary(1, "a", "bug", "open", "2026-08-01", project="alpha"),
+            rep.ReportSummary(2, "b", "feedback", "open", "2026-08-02"),
+        ],
+    )
+    res = CliRunner().invoke(main, ["report", "inbox", "--group-by", "project"])
+    assert res.exit_code == 0, res.output
+    assert "alpha" in res.output
+    assert "(no project)" in res.output  # markerless reports still render
+
+
+# --- inbox --resolved (close-prompt) ---------------------------------
+
+
+def test_list_resolved_requires_all_tracked_closed(monkeypatch) -> None:
+    issues = [
+        {"number": 10, "title": "all closed", "state": "OPEN",
+         "labels": [{"name": "feedback"}], "updatedAt": "2026-08-01",
+         "body": "p\n\n## Tracked by\n- [x] #7\n"},
+        {"number": 11, "title": "one open", "state": "OPEN",
+         "labels": [{"name": "feedback"}], "updatedAt": "2026-08-02",
+         "body": "p\n\n## Tracked by\n- [ ] #8\n"},
+        {"number": 12, "title": "untracked", "state": "OPEN",
+         "labels": [{"name": "feedback"}], "updatedAt": "2026-08-03", "body": "p"},
+    ]
+
+    def fake(args):
+        if "list" in args:
+            return issues
+        if args[3] == "7":
+            return {"state": "CLOSED", "labels": []}
+        if args[3] == "8":
+            return {"state": "OPEN", "labels": []}
+        return None
+
+    monkeypatch.setattr(rep, "_gh_json", fake)
+    rows = rep.list_resolved("o/r")
+    assert [(r.number, tracked) for r, tracked in rows] == [(10, [7])]
+
+
+def test_list_resolved_excludes_bugs_and_closed_reports(monkeypatch) -> None:
+    issues = [
+        {"number": 20, "title": "a bug", "state": "OPEN",
+         "labels": [{"name": "bug"}], "updatedAt": "2026-08-01",
+         "body": "p\n\n## Tracked by\n- [x] #7\n"},
+        {"number": 21, "title": "already closed", "state": "CLOSED",
+         "labels": [{"name": "feedback"}], "updatedAt": "2026-08-02",
+         "body": "p\n\n## Tracked by\n- [x] #7\n"},
+    ]
+
+    def fake(args):
+        if "list" in args:
+            return issues
+        return {"state": "CLOSED", "labels": []}
+
+    monkeypatch.setattr(rep, "_gh_json", fake)
+    assert rep.list_resolved("o/r") == []
+
+
+def test_close_report_as_resolved_comments_then_closes(monkeypatch) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run(cmd, **kwargs):
+        calls.append(cmd)
+        return _FakeProc(0)
+
+    monkeypatch.setattr(rep.subprocess, "run", fake_run)
+    assert rep.close_report_as_resolved("o/r", 10, [7, 8]) is True
+    assert calls[0][:3] == ["gh", "issue", "comment"]
+    assert "#7, #8" in calls[0][calls[0].index("--body") + 1]
+    assert calls[1][:3] == ["gh", "issue", "close"]
+
+
+_RESOLVED_ROW = (
+    rep.ReportSummary(10, "all closed", "feedback", "open", "2026-08-01"),
+    [7],
+)
+
+
+def test_cli_inbox_resolved_yes_lists_but_never_closes(monkeypatch) -> None:
+    closed = {"v": False}
+    monkeypatch.setattr(rep, "in_report_target", lambda: True)
+    monkeypatch.setattr(rep, "list_resolved", lambda target: [_RESOLVED_ROW])
+    monkeypatch.setattr(
+        rep, "close_report_as_resolved",
+        lambda *a, **k: closed.__setitem__("v", True) or True,
+    )
+    res = CliRunner().invoke(main, ["report", "inbox", "--resolved", "--yes"])
+    assert res.exit_code == 0, res.output
+    assert closed["v"] is False  # --yes lists only — the close needs a live confirm
+    assert "#10" in res.output and "listing only" in res.output
+
+
+def test_cli_inbox_resolved_no_input_never_closes(monkeypatch) -> None:
+    # non-interactive without --yes: the confirm aborts on EOF; nothing closes.
+    closed = {"v": False}
+    monkeypatch.setattr(rep, "in_report_target", lambda: True)
+    monkeypatch.setattr(rep, "list_resolved", lambda target: [_RESOLVED_ROW])
+    monkeypatch.setattr(
+        rep, "close_report_as_resolved",
+        lambda *a, **k: closed.__setitem__("v", True) or True,
+    )
+    res = CliRunner().invoke(main, ["report", "inbox", "--resolved"])
+    assert closed["v"] is False
+    assert res.exit_code != 0  # aborted at the confirm, after listing
+
+
+def test_cli_inbox_resolved_confirm_closes(monkeypatch) -> None:
+    calls: list[tuple] = []
+    monkeypatch.setattr(rep, "in_report_target", lambda: True)
+    monkeypatch.setattr(rep, "list_resolved", lambda target: [_RESOLVED_ROW])
+    monkeypatch.setattr(
+        rep, "close_report_as_resolved",
+        lambda t, n, tracked: calls.append((n, tracked)) or True,
+    )
+    res = CliRunner().invoke(main, ["report", "inbox", "--resolved"], input="y\n")
+    assert res.exit_code == 0, res.output
+    assert calls == [(10, [7])]
+    assert "Closed #10" in res.output
+
+
+def test_cli_inbox_resolved_decline_skips(monkeypatch) -> None:
+    closed = {"v": False}
+    monkeypatch.setattr(rep, "in_report_target", lambda: True)
+    monkeypatch.setattr(rep, "list_resolved", lambda target: [_RESOLVED_ROW])
+    monkeypatch.setattr(
+        rep, "close_report_as_resolved",
+        lambda *a, **k: closed.__setitem__("v", True) or True,
+    )
+    res = CliRunner().invoke(main, ["report", "inbox", "--resolved"], input="n\n")
+    assert res.exit_code == 0, res.output
+    assert closed["v"] is False
+    assert "Skipped #10" in res.output
+
+
+def test_cli_inbox_resolved_rejects_kind_combination(monkeypatch) -> None:
+    monkeypatch.setattr(rep, "in_report_target", lambda: True)
+    res = CliRunner().invoke(
+        main, ["report", "inbox", "--resolved", "--kind", "bug"]
+    )
+    assert res.exit_code != 0
+    assert "does not combine" in res.output
 
 
 def test_cli_report_show(monkeypatch) -> None:
