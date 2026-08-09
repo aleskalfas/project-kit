@@ -57,7 +57,12 @@ from project_kit.release import (
 )
 from project_kit.status import report_status
 from project_kit.sync import run_sync
-from project_kit.upgrade import freeze_at_content, reconcile_pin, run_upgrade
+from project_kit.upgrade import (
+    freeze_at_content,
+    reconcile_pin,
+    run_tool_update,
+    run_upgrade,
+)
 from project_kit.validate import print_validate_report, run_validate
 from project_kit.versioning import (
     PreKind,
@@ -955,21 +960,39 @@ def merge(targets: tuple[str, ...], dry_run: bool) -> None:
     help="Keep this project un-pinned (opt out of pin-by-default): it keeps "
     "following the installed global tool. Per ADR-049.",
 )
-def upgrade(dry_run: bool, no_pin: bool) -> None:
+@click.option(
+    "--no-self-update",
+    "no_self_update",
+    is_flag=True,
+    default=False,
+    help="Don't update the pkit tool itself when it's stale — just print the "
+    "command (the old detect-and-instruct behaviour). Per ADR-044.",
+)
+def upgrade(dry_run: bool, no_pin: bool, no_self_update: bool) -> None:
     """Transition the project to a newer backbone (per COR-010).
 
     Bumps the project to the source kit's current backbone version. To
     upgrade a single capability, use `pkit capabilities upgrade <name>`.
 
+    **Updates the pkit tool itself** when it is behind (ADR-044): it runs
+    `uv tool install --force …@<latest>` and re-runs the upgrade under the new
+    version — degrading to just printing the command when non-interactive or if the
+    install is declined. `--no-self-update` keeps the print-only behaviour. Run
+    outside any project, `pkit upgrade` updates the tool only.
+
     **Pins the project by default** at the version it upgrades to (ADR-049), so it
     stays version-locked with no separate `pkit pin` step. Pass `--no-pin` to keep
-    it un-pinned (it keeps following the installed global tool). A project that is
-    already pinned advances its pin either way; self-host is never pinned.
+    it un-pinned. A project that is already pinned advances its pin either way;
+    self-host is never pinned.
     """
     target_root = find_target_root()
     if target_root is None:
-        raise click.ClickException("not in a project tree.")
-    run_upgrade(target_root, dry_run=dry_run, pin=not no_pin)
+        # Outside any project: update the tool only ("just update my tool").
+        run_tool_update(dry_run=dry_run, self_update=not no_self_update)
+        return
+    run_upgrade(
+        target_root, dry_run=dry_run, pin=not no_pin, self_update=not no_self_update
+    )
 
 
 @main.command()
