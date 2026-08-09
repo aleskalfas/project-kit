@@ -1,0 +1,12 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  COR-043 (accepted): scratchpad notes gain an optional `reported` side-state
+  — lazily-created directory, frontmatter refs/date/content-hash,
+  freeze-by-convention with drift detection, live pull-only upstream read-back
+  and retire-prompt. ADR-050 pins report context sourcing (pm-provided
+  workstream read-verb, declared project name, never paths); ADR-047 refined
+  to the confirmed-send-payload unit for oversized attachments. Implementation
+  follows (#642).

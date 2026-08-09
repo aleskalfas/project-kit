@@ -21,7 +21,7 @@ The principles — that scratchpad notes are a fifth content shape (orthogonal t
     └── <YYYY-MM-DD>-<slug>.md
 ```
 
-The notes themselves are project-owned and never touched by sync; only this README (and any future kit-shipped templates) is in the propagation manifest. The same convention applies in adopting projects: their scratchpad notes live in their own `.pkit/scratchpad/{active,done,dropped}/` tree.
+The notes themselves are project-owned and never touched by sync; only this README (and any future kit-shipped templates) is in the propagation manifest. The same convention applies in adopting projects: their scratchpad notes live in their own `.pkit/scratchpad/{active,done,dropped}/` tree (plus the lazily-created `reported/` when the report side-state is in use, per COR-043).
 
 ## Lifecycle
 
@@ -32,8 +32,11 @@ A note moves through three states. The folder it lives in *is* its state — the
 | **`active/`** | The note is being filled or actively referenced. The question it explores is still open. |
 | **`done/`** | The note's content has been incorporated into other artifacts (records, docs, skills, agents). The question is resolved; the note is kept as the archaeology of how the resolution was reached. |
 | **`dropped/`** | The line of thought did not pan out. The note is kept as a record of what was explored and why it was abandoned, so future authors do not re-tread the path silently. |
+| **`reported/`** *(optional side-state of active, per [COR-043](../decisions/core/COR-043-scratchpad-reported-state.md))* | The note was **sent through the built-in report channel** as (part of) a report. Still live in lifecycle terms — retirement proceeds `reported/ → done/` (or `dropped/`) by the same gestures. The directory is **lazy**: created when the first note enters it, removed when it empties; a project that never reports shows no trace of it. |
 
 A state transition is a `git mv` from one folder to another, performed (or wrapped) by the CLI commands below. Transitions are intentionally simple — no validation, no machinery beyond moving the file and updating frontmatter.
+
+Conventions specific to `reported/` (COR-043): a reported note is **frozen by convention** — its as-sent text is preserved verbatim in the issue it became; follow-up thinking goes in a *new* note cross-referencing it. Tooling **detects** divergence (the stamped hash vs current content) and surfaces it in listings and before subsequent sends — a warning, never a gate. Listings resolve the reported refs' upstream state **live** (pull-only, never stored; offline degrades to "state unknown") and prompt retirement when all refs close — retirement itself stays a human gesture.
 
 ## Filename
 
@@ -74,6 +77,27 @@ started: 2026-05-12
 
 - **`authors:`** — list of contributors as git-style `Name <email>` entries. At creation, just the creator; further contributors append.
 - **`started:`** — the note's start date. Mirrors the filename date for machine-readable consumption (same duplication as a decision record's `id:` appearing in both filename and frontmatter).
+
+### `reported/` (side-state of active, COR-043)
+
+```yaml
+---
+authors:
+  - Name <email>
+started: 2026-05-12
+reported: 2026-08-10
+reported_to:
+  - owner/repo#631
+reported_hash: sha256:<hex of the full file content at send time>
+---
+```
+
+- **`reported:`** — the date the note was sent through the report channel.
+- **`reported_to:`** — list of upstream issue refs (`owner/repo#N`); one note may become several issues.
+- **`reported_hash:`** — SHA-256 of the **full local file** at send time; the drift-detection anchor.
+- Optional **`project:`** / **`workstream:`** — the report's context pair (see the CLI specification's report section), stamped when available.
+
+Stamped by the report surface on a **successful post only** (draft/URL paths stamp nothing), or manually via the stamp gesture (`pkit scratchpad reported <slug> <ref>`) for URL-first posts and retroactive marking.
 
 ### `done/`
 
