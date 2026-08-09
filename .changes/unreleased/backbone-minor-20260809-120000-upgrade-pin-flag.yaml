@@ -1,0 +1,16 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit upgrade --pin` — a one-step opt-in that pins an *un-pinned* project at the
+  version it just upgraded to (the "I upgraded, so lock to what I upgraded to"
+  gesture), so you no longer need a separate `pkit pin` before/after the upgrade
+  (#627, ADR-049). It pins at the **local** synced version (offline-safe — no
+  `git ls-remote` latest lookup), writes the pin **last** (after content +
+  migrations, so a failed sync never leaves a pin ahead of content), skips on a
+  failed sync, and is a **no-op on an already-pinned project** (the pinned-child
+  auto-advance already maintains the pin). Plain `pkit upgrade` is unchanged, so
+  `--pin` never silently switches a project into the pinned (uvx-re-exec)
+  execution model — it stays an explicit opt-in. Making new projects pinned by
+  default is a separate, larger question tracked on EPIC #626.
