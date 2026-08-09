@@ -52,14 +52,96 @@ PARITY_BODIES = [
     "- [ ] one\n- [x] two\n\n## Doc impact\n- not a criterion\n",
     "## What\n- not criteria\n",  # no acceptance-criteria section
     "## Acceptance criteria\n- [ ]\n- [ ] real one\n",  # bare skeleton excluded
+    # EPIC shape: checkboxes live under `## Success criteria` (body-format.yaml)
+    "EPIC: #1\n\n## Outcome\nthesis\n\n## Success criteria\n"
+    "- [ ] proven\n- [x] shipped\n",
 ]
+
+# The schema-resolved heading set both sides must share for index parity.
+SCHEMA_HEADINGS = frozenset({"acceptance criteria", "success criteria"})
 
 
 @pytest.mark.parametrize("body", PARITY_BODIES)
 def test_text_sequence_matches_show_issue(crit, show_issue, body) -> None:
+    mine = [c.text for c in crit.extract_criteria(body, SCHEMA_HEADINGS)]
+    theirs = show_issue._extract_criteria(body, SCHEMA_HEADINGS)
+    assert mine == theirs
+
+
+@pytest.mark.parametrize("body", PARITY_BODIES)
+def test_text_sequence_matches_show_issue_on_fallback(crit, show_issue, body) -> None:
+    # Bare calls (no heading set) keep the historical acceptance-criteria walk
+    # on both sides (the EPIC body yields [] on both — parity still holds).
     mine = [c.text for c in crit.extract_criteria(body)]
     theirs = show_issue._extract_criteria(body)
     assert mine == theirs
+
+
+# --- schema-driven heading resolution --------------------------------------
+
+
+def test_checkbox_headings_collects_has_checkboxes_sections(crit) -> None:
+    body_format = {
+        "bodies": {
+            "epic": {
+                "required_sections": [
+                    {"heading": "## Outcome", "has_checkboxes": False},
+                    {"heading": "## Success criteria", "has_checkboxes": True},
+                ],
+            },
+            "feature": {
+                "required_sections": [
+                    {"heading": "## What", "has_checkboxes": False},
+                    {"heading": "## Acceptance criteria", "has_checkboxes": True},
+                ],
+            },
+        },
+    }
+    assert crit.checkbox_headings(body_format) == SCHEMA_HEADINGS
+
+
+def test_checkbox_headings_from_real_schema(crit) -> None:
+    # body-format.yaml is the source of truth; the shipped schema must yield
+    # both the EPIC and the Feature/Task criteria headings.
+    from ruamel.yaml import YAML
+
+    path = (
+        REPO_ROOT
+        / ".pkit"
+        / "capabilities"
+        / "project-management"
+        / "schemas"
+        / "body-format.yaml"
+    )
+    body_format = YAML(typ="safe").load(path.read_text(encoding="utf-8"))
+    headings = crit.checkbox_headings(body_format)
+    assert "success criteria" in headings
+    assert "acceptance criteria" in headings
+
+
+@pytest.mark.parametrize("body_format", [{}, {"bodies": {}}, {"bodies": None}])
+def test_checkbox_headings_falls_back_when_schema_empty(crit, body_format) -> None:
+    # Unreadable/missing schema reaches the resolver as an empty mapping
+    # (the callers' loaders fail-open to {}); the fallback is the historical
+    # hardcoded literal, so the primitives never get worse than before.
+    assert crit.checkbox_headings(body_format) == crit.FALLBACK_HEADINGS
+    assert frozenset({"acceptance criteria"}) == crit.FALLBACK_HEADINGS
+
+
+def test_epic_success_criteria_extracted_with_schema_headings(crit) -> None:
+    body = "EPIC: #1\n\n## Outcome\nthesis\n\n## Success criteria\n- [ ] a\n- [x] b\n"
+    items = crit.extract_criteria(body, SCHEMA_HEADINGS)
+    assert [(c.index, c.text, c.checked) for c in items] == [
+        (1, "a", False),
+        (2, "b", True),
+    ]
+
+
+def test_epic_success_criteria_invisible_on_fallback(crit) -> None:
+    # Without the schema-resolved set the historical behaviour holds: only
+    # `## Acceptance criteria` is scanned.
+    body = "## Success criteria\n- [ ] a\n"
+    assert crit.extract_criteria(body) == []
 
 
 # --- metadata --------------------------------------------------------------

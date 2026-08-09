@@ -76,10 +76,14 @@ def plan_batch(
     targets: list[Target],
     *,
     target_checked: bool,
+    headings: frozenset[str] | None = None,
 ) -> BatchPlan:
     """Validate the whole batch, then build the rewritten body (DEC-038 D4).
 
     `target_checked` is True for check-criterion, False for uncheck-criterion.
+    `headings` is the schema-resolved checkbox-bearing heading set (from
+    `criteria.checkbox_headings`), passed through to the extractor so the
+    engine stays pure (no file I/O); `None` keeps the extractor's fallback.
 
     Validation (all up front, before any mutation):
       - index out of range            → hard-reject the whole batch;
@@ -95,7 +99,7 @@ def plan_batch(
     and writes nothing. On acceptance the plan carries the rewritten body; a box
     already in the requested state is a no-op success (idempotent).
     """
-    criteria = extract_criteria(body)
+    criteria = extract_criteria(body, headings)
     count = len(criteria)
 
     # ---- validate the whole batch up front (DEC-038 D4 hard-rejects) ----
@@ -110,7 +114,7 @@ def plan_batch(
                     changed=False,
                     message=(
                         f"criterion {t.index}: out of range "
-                        f"(issue has {count} acceptance "
+                        f"(issue has {count} "
                         f"{'criterion' if count == 1 else 'criteria'})"
                     ),
                 )
