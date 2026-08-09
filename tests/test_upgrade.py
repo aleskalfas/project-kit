@@ -278,6 +278,26 @@ def test_upgrade_pin_is_noop_when_already_pinned(installed_target: Path) -> None
     assert router.read_version_pin(installed_target) == version
 
 
+def test_upgrade_pin_skips_pin_when_sync_fails(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`--pin` writes no pin when the content sync fails — the flip-last invariant:
+    a failed upgrade never leaves a pin ahead of content that didn't land."""
+    m = manifest.read_backbone_manifest(installed_target)
+    assert m is not None
+    m.backbone_version = "0.1.0"  # force the upgrade to reach the sync step
+    manifest.write_backbone_manifest(installed_target, m)
+
+    def _boom(*_args: object, **_kwargs: object) -> None:
+        raise click.ClickException("sync failed")
+
+    monkeypatch.setattr(upgrade, "run_sync", _boom)
+
+    with pytest.raises(click.ClickException):
+        upgrade.run_upgrade(installed_target, pin=True)
+    assert router.read_version_pin(installed_target) is None  # pin never written
+
+
 def test_cli_upgrade_pin_flag_forwards(monkeypatch: pytest.MonkeyPatch) -> None:
     """The `--pin` CLI flag threads through to `run_upgrade(pin=True)`."""
     from click.testing import CliRunner
