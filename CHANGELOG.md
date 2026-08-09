@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.146.0 — 2026-08-09
+
+### Changed
+- **`pkit upgrade` now updates the pkit tool itself** when it is stale, instead of just printing the command (#638, ADR-044 amended). When the installed `pkit` is behind the latest release it runs `uv tool install --force …@v<latest>` and **re-runs the upgrade under the new version** — one seamless command, no manual step. Run **outside any project**, `pkit upgrade` performs this tool update alone instead of erroring on a missing project. It **degrades to just printing the command** (the old detect-and-instruct behaviour) when the session is non-interactive (no TTY — so a network install is never forced under automation), when `--no-self-update` is passed, or if the install fails/is declined — it never bricks. Safe because pin-by-default (v1.145.0) insulates projects from the global tool: self-update fires only on the un-pinned path, and a pinned project still runs its own version via the router's `uvx` re-exec (the ADR-039 multi-version invariant is preserved).
+
 ## 1.145.0 — 2026-08-09
 
 ### Changed
