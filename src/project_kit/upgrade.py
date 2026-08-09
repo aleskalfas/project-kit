@@ -38,6 +38,7 @@ from __future__ import annotations
 import os
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 import click
@@ -78,7 +79,9 @@ from project_kit.sync import run_sync
 #   capabilities._read_package_yaml (internal, accessed via CapabilitySource path)
 
 
-def run_upgrade(target_root: Path, dry_run: bool = False, pin: bool = True) -> None:
+def run_upgrade(
+    target_root: Path, dry_run: bool = False, pin: bool = True, self_update: bool = True
+) -> None:
     """Transition the project to the source kit's current backbone version.
 
     **Pins by default** (ADR-049, amended 2026-08-09): an **un-pinned** project is
@@ -140,7 +143,10 @@ def run_upgrade(target_root: Path, dry_run: bool = False, pin: bool = True) -> N
     # a second `git ls-remote` here would print a nonsensical "tool is current"
     # line mid-raise. The outer, non-bypassed upgrade already ran the probe.
     if not is_route_bypassed(os.environ):
-        _check_tool_staleness(target_root)
+        # Tool axis (ADR-044, amended): self-update the global tool when stale
+        # and re-exec to finish under the new version (never returns on a
+        # successful self-update); otherwise instruct or report current.
+        _maybe_self_update_tool(target_root, self_update=self_update, dry_run=dry_run)
 
     # Past the self-host short-circuit: a real adopter upgrade reads
     # `read_kit_version(source_kit)` next and propagates from `source_kit` via
@@ -526,27 +532,46 @@ def _auto_advance_pinned(target_root: Path, dry_run: bool) -> None:
 _LS_REMOTE_TIMEOUT_SECONDS = 5.0
 
 
-def _check_tool_staleness(target_root: Path) -> None:
-    """Best-effort: detect a newer released pkit tool and print how to update it.
+#: Guard env var: set on the re-exec'd child after a self-update, so the child
+#: never attempts a second self-update (defence against a re-exec loop, on top of
+#: the version comparison that already no-ops once the tool is current).
+_SELF_UPDATED_ENV = "PKIT_SELF_UPDATED"
 
-    Implements ADR-044 D1-D3. Read-only and print-only — it installs nothing and
-    never fails `pkit upgrade`:
 
-    - **D3 suppression.** On a source checkout / self-host, reinstalling a
-      released tag over working-tree code is nonsensical, so the check is
-      skipped entirely (no lookup, no output). Reuses the router's canonical
-      `is_source_checkout` predicate — one source of truth for the discriminator.
-      (The self-host case has already returned above; this also covers the rare
-      checkout the self-host branch doesn't catch.)
-    - **D1 degrade.** Any lookup failure (offline, missing credentials, `git`
-      absent, timeout, malformed output) prints a loud warning to stderr and
-      returns; the caller proceeds with today's sync behaviour unchanged.
-    - **D2 instruct.** When the running tool is behind the latest release, prints
-      the exact `uv tool install --force` command and why. When current, prints a
-      plain "tool is current" line (replacing the ambiguous "nothing to upgrade"
-      for the tool axis).
+def run_tool_update(dry_run: bool = False, self_update: bool = True) -> None:
+    """`pkit upgrade` run **outside any project**: update the global tool only.
+
+    The "just update my tool" case (ADR-044, amended) — there is no project
+    content to sync, so this handles the tool axis alone and reports the result,
+    instead of erroring on a missing project/manifest.
     """
-    if is_source_checkout(target_root):
+    if is_route_bypassed(os.environ):
+        return
+    _maybe_self_update_tool(None, self_update=self_update, dry_run=dry_run)
+
+
+def _maybe_self_update_tool(
+    target_root: Path | None, *, self_update: bool, dry_run: bool
+) -> None:
+    """Detect a newer released pkit tool and **act** on it (ADR-044, amended):
+    self-update the global binary and re-exec, or degrade to instruct.
+
+    - **D3 suppression.** On a source checkout / self-host, reinstalling a released
+      tag over working-tree code is nonsensical — skip entirely (no lookup, no
+      output). `target_root is None` (run outside a project) is never a checkout.
+    - **D1 degrade.** Any lookup failure (offline, no credentials, `git` absent,
+      timeout) warns and returns; the caller proceeds unchanged.
+    - **Act (amended).** When the tool is behind and self-update is allowed
+      (`self_update`, an interactive TTY, not a dry-run, not the guarded re-exec
+      child), run `uv tool install --force …@v<latest>` and **re-exec** the same
+      command under the new version (never returns on success). Pin-by-default
+      (v1.145.0) insulates projects from the global tool, so this no longer has
+      cross-project blast radius.
+    - **Instruct (degrade).** Otherwise (non-interactive, `--no-self-update`, a
+      failed/declined install, or a dry-run) fall back to printing the exact
+      command — today's behaviour. Never fails `pkit upgrade`.
+    """
+    if target_root is not None and is_source_checkout(target_root):
         return
 
     latest = _latest_released_version()
@@ -555,16 +580,15 @@ def _check_tool_staleness(target_root: Path) -> None:
         click.secho(
             "warning: could not check for a newer pkit tool "
             f"(`git ls-remote {DISTRIBUTION_GIT_URL}` failed — offline, missing "
-            "credentials, git unavailable, or timed out). Continuing with the "
-            "project sync; your installed tool may be behind.",
+            "credentials, git unavailable, or timed out). Continuing; your "
+            "installed tool may be behind.",
             err=True,
             fg="yellow",
         )
         return
 
-    running_str = running_version()
     try:
-        running = Version(running_str)
+        running = Version(running_version())
     except InvalidVersion:
         # Our own version string is unparseable — we can't compare, so degrade
         # like a failed lookup rather than printing a misleading instruction.
@@ -574,17 +598,68 @@ def _check_tool_staleness(target_root: Path) -> None:
         click.echo(f"pkit tool is current (v{running}).")
         return
 
+    # Stale. Act when allowed; otherwise instruct.
+    if self_update and not dry_run and _self_update_allowed():
+        if _self_update_tool(latest):
+            _reexec_after_self_update()  # never returns on success
+        # Install failed/declined → fall through to instruct.
+    elif self_update and dry_run:
+        click.echo()
+        click.echo(
+            f"A newer pkit tool is available: v{latest} (you are running "
+            f"v{running}). (dry-run) would run `uv tool install --force "
+            f"{DISTRIBUTION_GIT_URL}@v{latest}` and re-run this upgrade."
+        )
+        return
+
+    _instruct_tool_update(latest, running)
+
+
+def _self_update_allowed() -> bool:
+    """True iff we may auto-run the tool self-update: an interactive TTY and not
+    the guarded re-exec child. Non-interactive (CI / piped) callers degrade to
+    instruct so a network install is never forced under automation."""
+    if os.environ.get(_SELF_UPDATED_ENV) == "1":
+        return False
+    return sys.stdin.isatty() and sys.stdout.isatty()
+
+
+def _self_update_tool(latest: Version) -> bool:
+    """Run `uv tool install --force <dist>@v<latest>` to update the global binary.
+    Returns True on success; False on any failure (caller degrades to instruct).
+    A global-binary mutation the sandbox may gate — a decline surfaces as non-zero
+    and degrades, never bricks."""
+    click.echo(f"Updating the pkit tool to v{latest} …")
+    cmd = ["uv", "tool", "install", "--force", f"{DISTRIBUTION_GIT_URL}@v{latest}"]
+    try:
+        proc = subprocess.run(cmd, check=False)
+    except OSError:
+        return False
+    return proc.returncode == 0
+
+
+def _reexec_after_self_update() -> None:
+    """Re-exec the same `pkit` command under the freshly-installed tool, so the
+    content sync + pin run under the new bundle — one seamless upgrade. Sets the
+    guard env so the child never self-updates again. Replaces the process image
+    (does not return) on success; on an exec failure, returns so the caller can
+    proceed with the (old) in-process upgrade rather than bricking."""
+    click.echo("Re-running the upgrade under the new version …")
+    env = {**os.environ, _SELF_UPDATED_ENV: "1"}
+    try:
+        os.execvpe("pkit", ["pkit", *sys.argv[1:]], env)
+    except OSError:
+        return  # exec failed; caller continues under the old binary
+
+
+def _instruct_tool_update(latest: Version, running: Version) -> None:
+    """Print the exact manual update command (ADR-044 D2 instruct — the degrade)."""
     click.echo()
     click.echo(f"A newer pkit tool is available: v{latest} (you are running v{running}).")
     click.echo("Update the tool, then re-run this command:")
     click.echo()
     click.echo(f"    uv tool install --force {DISTRIBUTION_GIT_URL}@v{latest}")
     click.echo("    pkit upgrade")
-    click.echo()
-    click.echo(
-        "`pkit upgrade` refreshes this project from the installed tool's bundled "
-        "kit; it cannot update the tool itself — hence the manual step above."
-    )
 
 
 def _latest_released_version() -> Version | None:

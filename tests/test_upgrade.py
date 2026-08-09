@@ -336,8 +336,8 @@ def test_cli_upgrade_no_pin_flag_forwards(monkeypatch: pytest.MonkeyPatch) -> No
 
     captured: dict[str, object] = {}
 
-    def _fake(target_root: Path, dry_run: bool = False, pin: bool = True) -> None:
-        captured["pin"] = pin
+    def _fake(target_root: Path, **kwargs: object) -> None:
+        captured["pin"] = kwargs.get("pin")
 
     monkeypatch.setattr(cli, "run_upgrade", _fake)
     monkeypatch.setattr(cli, "find_target_root", lambda: Path("/tmp"))
@@ -349,6 +349,126 @@ def test_cli_upgrade_no_pin_flag_forwards(monkeypatch: pytest.MonkeyPatch) -> No
     res = CliRunner().invoke(cli.main, ["upgrade"])  # default
     assert res.exit_code == 0, res.output
     assert captured["pin"] is True
+
+
+# --- tool self-update (ADR-044, amended) -----------------------------
+
+
+def _stale(monkeypatch: pytest.MonkeyPatch, running: str = "0.1.0", latest: str = "9.9.9") -> None:
+    monkeypatch.setattr(upgrade, "running_version", lambda: running)
+    monkeypatch.setattr(upgrade, "_latest_released_version", lambda: Version(latest))
+
+
+def test_self_update_acts_when_stale_and_allowed(monkeypatch: pytest.MonkeyPatch) -> None:
+    _stale(monkeypatch)
+    monkeypatch.setattr(upgrade, "_self_update_allowed", lambda: True)
+    calls: dict = {"install": None, "reexec": 0}
+    monkeypatch.setattr(upgrade, "_self_update_tool", lambda v: calls.__setitem__("install", v) or True)
+    monkeypatch.setattr(upgrade, "_reexec_after_self_update", lambda: calls.__setitem__("reexec", calls["reexec"] + 1))
+    upgrade._maybe_self_update_tool(None, self_update=True, dry_run=False)
+    assert calls["install"] == Version("9.9.9")
+    assert calls["reexec"] == 1
+
+
+def test_self_update_degrades_when_not_allowed(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _stale(monkeypatch)
+    monkeypatch.setattr(upgrade, "_self_update_allowed", lambda: False)
+    installed = {"v": False}
+    monkeypatch.setattr(upgrade, "_self_update_tool", lambda v: installed.__setitem__("v", True) or True)
+    upgrade._maybe_self_update_tool(None, self_update=True, dry_run=False)
+    assert installed["v"] is False
+    assert "uv tool install --force" in capsys.readouterr().out  # instruct
+
+
+def test_self_update_off_instructs(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _stale(monkeypatch)
+    monkeypatch.setattr(upgrade, "_self_update_allowed", lambda: True)
+    installed = {"v": False}
+    monkeypatch.setattr(upgrade, "_self_update_tool", lambda v: installed.__setitem__("v", True) or True)
+    upgrade._maybe_self_update_tool(None, self_update=False, dry_run=False)
+    assert installed["v"] is False
+    assert "uv tool install --force" in capsys.readouterr().out
+
+
+def test_self_update_install_failure_degrades(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _stale(monkeypatch)
+    monkeypatch.setattr(upgrade, "_self_update_allowed", lambda: True)
+    monkeypatch.setattr(upgrade, "_self_update_tool", lambda v: False)  # install fails
+    reexec = {"n": 0}
+    monkeypatch.setattr(upgrade, "_reexec_after_self_update", lambda: reexec.__setitem__("n", reexec["n"] + 1))
+    upgrade._maybe_self_update_tool(None, self_update=True, dry_run=False)
+    assert reexec["n"] == 0
+    assert "uv tool install --force" in capsys.readouterr().out
+
+
+def test_self_update_dry_run_reports_no_install(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _stale(monkeypatch)
+    monkeypatch.setattr(upgrade, "_self_update_allowed", lambda: True)
+    installed = {"v": False}
+    monkeypatch.setattr(upgrade, "_self_update_tool", lambda v: installed.__setitem__("v", True) or True)
+    upgrade._maybe_self_update_tool(None, self_update=True, dry_run=True)
+    assert installed["v"] is False
+    assert "would run" in capsys.readouterr().out
+
+
+def test_self_update_current_tool_noops(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _stale(monkeypatch, running="9.9.9", latest="9.9.9")  # equal → current
+    installed = {"v": False}
+    monkeypatch.setattr(upgrade, "_self_update_tool", lambda v: installed.__setitem__("v", True) or True)
+    upgrade._maybe_self_update_tool(None, self_update=True, dry_run=False)
+    assert installed["v"] is False
+    assert "tool is current" in capsys.readouterr().out
+
+
+def test_self_update_allowed_false_when_guarded(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(upgrade._SELF_UPDATED_ENV, "1")
+    assert upgrade._self_update_allowed() is False
+
+
+def test_run_tool_update_forwards_no_project(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: dict = {}
+    monkeypatch.setattr(
+        upgrade, "_maybe_self_update_tool",
+        lambda tr, *, self_update, dry_run: seen.update(tr=tr, su=self_update),
+    )
+    upgrade.run_tool_update(dry_run=False, self_update=True)
+    assert seen["tr"] is None and seen["su"] is True
+
+
+def test_cli_upgrade_outside_project_updates_tool(monkeypatch: pytest.MonkeyPatch) -> None:
+    from click.testing import CliRunner
+
+    from project_kit import cli
+
+    called = {"tool": False}
+    monkeypatch.setattr(cli, "find_target_root", lambda: None)
+    monkeypatch.setattr(cli, "run_tool_update", lambda **k: called.__setitem__("tool", True))
+    res = CliRunner().invoke(cli.main, ["upgrade"])
+    assert res.exit_code == 0, res.output
+    assert called["tool"] is True  # tool-only update, not an error
+
+
+def test_cli_upgrade_no_self_update_forwards(monkeypatch: pytest.MonkeyPatch) -> None:
+    from click.testing import CliRunner
+
+    from project_kit import cli
+
+    seen: dict = {}
+    monkeypatch.setattr(cli, "find_target_root", lambda: Path("/tmp"))
+    monkeypatch.setattr(cli, "run_upgrade", lambda tr, **k: seen.update(k))
+    res = CliRunner().invoke(cli.main, ["upgrade", "--no-self-update"])
+    assert res.exit_code == 0, res.output
+    assert seen["self_update"] is False
 
 
 # --- backbone + component migration execution (per COR-010) ----------
@@ -834,7 +954,7 @@ def test_tool_staleness_suppressed_on_source_checkout(
     (tmp_path / ".pkit" / "cli").mkdir(parents=True)
     (tmp_path / ".pkit" / "cli" / "pkit").write_text("", encoding="utf-8")
 
-    upgrade._check_tool_staleness(tmp_path)
+    upgrade._maybe_self_update_tool(tmp_path, self_update=True, dry_run=False)
 
     assert stub_ls_remote.ls_remote_calls == []
     assert capsys.readouterr().out == ""
