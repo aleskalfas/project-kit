@@ -404,16 +404,24 @@ adopter that is project-kit's own repo), *not* the adopter's own tracker. The en
 automatically and **redacted by construction** (`$HOME`/paths stripped, kit-shipped
 capabilities only unless `--include-private`).
 
-### `report bug` / `report feedback`
+### `report bug` / `report feedback` / `report change-request`
 
-Compose and file a **bug** (structured) or **feedback** (freeform) report,
-agent-assisted (the `report-author` skill). **URL-first**: prints a prefilled GitHub
-new-issue URL that works with no `gh` auth (the browser is the review gate);
-`gh`-auto-file is the authenticated convenience, behind a **target-naming confirm**
-("posts a PUBLIC issue to `<owner/repo>` under your identity"). `--yes` / autonomy
-**degrades to the draft — it never auto-posts** (the deliberate `--yes` asymmetry,
-per ADR-047). `--on-behalf-of @login` files under the invoker's identity with a
-"Reported for @login" attribution so the beneficiary still tracks it.
+Compose and file a **bug** (structured), **feedback** (freeform), or
+**change-request** (structured-ish) report, agent-assisted (the `report-author`
+skill). `change-request` is a **third sibling verb rather than a `--kind` flag on
+`feedback`** because it follows PRJ-008's structured-vs-freeform verb split: a CR
+carries its own compose template (motivation / desired behaviour / current
+workaround), which a flag on the freeform verb would blur. A filed CR gets a
+`[CR]` title prefix and a body kind-marker (`<!-- pkit-report: kind=… -->`, stamped
+on every kind) so the maintainer inbox classifies it even when the GitHub label is
+dropped (URL-filed issues from non-collaborators lose labels). **URL-first**: prints
+a prefilled GitHub new-issue URL that works with no `gh` auth (the browser is the
+review gate); `gh`-auto-file is the authenticated convenience, behind a
+**target-naming confirm** ("posts a PUBLIC issue to `<owner/repo>` under your
+identity"). `--yes` / autonomy **degrades to the draft — it never auto-posts** (the
+deliberate `--yes` asymmetry, per ADR-047). `--on-behalf-of @login` files under the
+invoker's identity with a "Reported for @login" attribution so the beneficiary
+still tracks it.
 
 ### `report` (= `report list`) / `report show <N>`
 
@@ -428,7 +436,15 @@ no-auth user tracks via GitHub's own notifications).
 
 Enabled **only when the current repo is the configured report target** (the
 structural "developers of the target repo" gate; inert elsewhere). `report inbox` lists all incoming feedback for
-triage; `report link` / `unlink <feedback-N> <fix-N>` add/remove a `#fix-N` reference
+triage; `--kind <bug|feedback|change-request>` narrows to one kind, and
+`--group-by project` groups rows by the body project marker (reports without one —
+all of them, until a project marker ships with a later feature — group under
+`(no project)`). `report inbox --resolved` lists open feedbacks/change-requests
+whose `## Tracked by` issues are **all closed**, and — **interactively only** —
+prompts per report to post a closing comment + close; `--yes` / non-interactive
+**lists without closing** (the same never-autonomous asymmetry as the reporter
+side's `--yes`), and a close is never automatic. `report link` / `unlink
+<feedback-N> <fix-N>` add/remove a `#fix-N` reference
 in feedback #N's `## Tracked by` list. These are same-repo edits (no cross-repo gate).
 
 ## Standard flags

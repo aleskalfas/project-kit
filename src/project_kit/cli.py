@@ -647,11 +647,11 @@ def _run_report_list(*, tree: bool = False) -> None:
         if rows is None:
             raise click.ClickException("could not read your reports (gh error).")
         if not rows:
-            click.echo("No reports yet — file one with `pkit report bug|feedback`.")
+            click.echo("No reports yet — file one with `pkit report bug|feedback|change-request`.")
             return
         click.echo(f"Your reports to {REPORT_TARGET}:\n")
         for r, tracked in rows:
-            click.echo(f"  #{r.number:<5} {r.kind:<9} {r.state:<12} {_report_title(r)}")
+            click.echo(f"  #{r.number:<5} {r.kind:<15} {r.state:<12} {_report_title(r)}")
             for n, st in tracked.items():
                 click.echo(f"      └ #{n:<6} {st}")
         return
@@ -660,11 +660,11 @@ def _run_report_list(*, tree: bool = False) -> None:
     if reports is None:
         raise click.ClickException("could not read your reports (gh error).")
     if not reports:
-        click.echo("No reports yet — file one with `pkit report bug|feedback`.")
+        click.echo("No reports yet — file one with `pkit report bug|feedback|change-request`.")
         return
     click.echo(f"Your reports to {REPORT_TARGET}:\n")
     for r in reports:
-        click.echo(f"  #{r.number:<5} {r.kind:<9} {r.state:<12} {_report_title(r)}")
+        click.echo(f"  #{r.number:<5} {r.kind:<15} {r.state:<12} {_report_title(r)}")
 
 
 def _report_title(r) -> str:
@@ -716,20 +716,102 @@ def _require_report_target() -> str:
 
 
 @report.command("inbox")
-def report_inbox() -> None:
-    """(Maintainer) Triage queue: all bug/feedback reports on the target repo."""
-    from project_kit.report import list_inbox
-
+@click.option(
+    "--kind", type=click.Choice(["bug", "feedback", "change-request"]), default=None,
+    help="Show only reports of this kind.",
+)
+@click.option(
+    "--group-by", "group_by", type=click.Choice(["project"]), default=None,
+    help="Group reports by their body project marker (reports without one group "
+    "under '(no project)').",
+)
+@click.option(
+    "--resolved", is_flag=True, default=False,
+    help="List open feedbacks/change-requests whose Tracked-by issues are all "
+    "closed, and prompt (interactively) to comment + close each. Never closes "
+    "without a per-report confirm.",
+)
+@click.option(
+    "--yes", "assume_yes", is_flag=True, default=False,
+    help="Non-interactive. With --resolved, lists only — never closes (the "
+    "report family's --yes asymmetry).",
+)
+def report_inbox(
+    kind: str | None, group_by: str | None, resolved: bool, assume_yes: bool
+) -> None:
+    """(Maintainer) Triage queue: all reports on the target repo."""
     target = _require_report_target()
-    reports = list_inbox(target)
+    if resolved:
+        if kind or group_by:
+            raise click.UsageError(
+                "--resolved is its own view (feedbacks/change-requests only); "
+                "it does not combine with --kind/--group-by."
+            )
+        _run_inbox_resolved(target, assume_yes=assume_yes)
+        return
+    _run_inbox_list(target, kind=kind, group_by=group_by)
+
+
+def _run_inbox_list(target: str, *, kind: str | None, group_by: str | None) -> None:
+    from project_kit.report import ReportSummary, list_inbox
+
+    reports = list_inbox(target, kind=kind)
     if reports is None:
         raise click.ClickException("could not read the inbox (gh error).")
     if not reports:
-        click.echo("Inbox empty — no reports filed yet.")
+        what = f"{kind} reports" if kind else "reports"
+        click.echo(f"Inbox empty — no {what} filed yet.")
         return
     click.echo(f"Reports on {target}:\n")
+    if group_by == "project":
+        by_project: dict[str, list[ReportSummary]] = {}
+        for r in reports:
+            by_project.setdefault(r.project or "(no project)", []).append(r)
+        for project in sorted(by_project):
+            click.echo(f"  {project}")
+            for r in by_project[project]:
+                click.echo(
+                    f"    #{r.number:<5} {r.kind:<15} {r.state:<12} {r.title}"
+                )
+        return
     for r in reports:
-        click.echo(f"  #{r.number:<5} {r.kind:<9} {r.state:<12} {r.title}")
+        click.echo(f"  #{r.number:<5} {r.kind:<15} {r.state:<12} {r.title}")
+
+
+def _run_inbox_resolved(target: str, *, assume_yes: bool) -> None:
+    """The `--resolved` close-prompt: list fully-tracked reports, then confirm a
+    comment + close **per report, interactively only**. `--yes`/non-interactive
+    never closes — listing is the whole autonomous surface (the same
+    produce-don't-act asymmetry as the reporter side's --yes, ADR-047)."""
+    from project_kit.report import close_report_as_resolved, list_resolved
+
+    rows = list_resolved(target)
+    if rows is None:
+        raise click.ClickException("could not read the inbox (gh error).")
+    if not rows:
+        click.echo("Nothing resolved — no open report has all its tracked fixes closed.")
+        return
+    click.echo(f"Resolved reports on {target} (all tracked fixes closed):\n")
+    for r, tracked in rows:
+        refs = ", ".join(f"#{n}" for n in tracked)
+        click.echo(f"  #{r.number:<5} {r.kind:<15} {r.title}  (tracked: {refs})")
+    if assume_yes:
+        click.echo(
+            "\n--yes: listing only — closing needs an interactive per-report "
+            "confirm (never autonomous)."
+        )
+        return
+    click.echo("")
+    for r, tracked in rows:
+        if not click.confirm(
+            f"Post a closing comment on #{r.number} and close it?", default=False
+        ):
+            click.echo(f"Skipped #{r.number}.")
+            continue
+        if close_report_as_resolved(target, r.number, tracked):
+            click.echo(f"Closed #{r.number} with a closing comment.")
+        else:
+            click.echo(f"Could not close #{r.number} (gh error); left open.")
 
 
 @report.command("link")
@@ -798,7 +880,7 @@ def _run_report(
 
     target_root = find_target_root() or Path.cwd()
     try:
-        body, url = compose_report(
+        title, body, url = compose_report(
             kind,
             title=title,
             prose=prose,
@@ -894,6 +976,25 @@ def report_feedback(
     """File freeform feedback to project-kit."""
     _run_report(
         "feedback", title, prose, on_behalf_of, include_private, do_file, assume_yes
+    )
+
+
+@report.command("change-request")
+@_with_report_opts
+def report_change_request(
+    title: str, prose: str, do_file: bool, assume_yes: bool,
+    on_behalf_of: str | None, include_private: bool,
+) -> None:
+    """File a change/feature request to project-kit.
+
+    Structured-ish: the body is scaffolded into a motivation / desired behaviour /
+    current workaround template (unless your prose already carries those
+    headings), and the title gets a `[CR]` prefix so the maintainer inbox can
+    classify it even when the GitHub label is dropped.
+    """
+    _run_report(
+        "change-request", title, prose, on_behalf_of, include_private,
+        do_file, assume_yes,
     )
 
 

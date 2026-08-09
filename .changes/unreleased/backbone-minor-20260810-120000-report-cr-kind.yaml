@@ -1,0 +1,19 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  New `pkit report change-request` — a typed change/feature-request kind joining
+  bug/feedback as a third sibling verb (#639, PRJ-008 refinement). A CR is
+  structured-ish: the body is scaffolded into a motivation / desired behaviour /
+  current workaround template, the title gets a `[CR]` prefix, and every composed
+  report now carries a body kind-marker (`<!-- pkit-report: kind=… -->`) so the
+  maintainer inbox classifies reports even when the GitHub label is dropped on
+  URL-filed issues. All ADR-047 behaviour is identical to the existing verbs
+  (URL-first, target-naming confirm, `--yes` produces-never-posts, redacted
+  environment block). The maintainer inbox grew `--kind
+  <bug|feedback|change-request>` filtering, `--group-by project` (grouping by a
+  body project marker; degrades to `(no project)` until that marker ships), and
+  `report inbox --resolved`: open feedbacks/CRs whose `## Tracked by` issues are
+  all closed are listed and — interactively only — prompted per report for a
+  closing comment + close; `--yes`/non-interactive lists without ever closing.

@@ -100,6 +100,20 @@ never auto-posts; and **redaction by construction** of the environment block. Th
 maintainer side is a same-repo edit (the dev's cwd *is* the target) and carries none
 of this.
 
+### Refinement — 2026-08-10 (issue #639)
+
+A third kind, **change-request** (`report change-request`), joins bug/feedback as a
+sibling verb — not a `--kind` flag on `feedback` — because it follows this record's
+structured-vs-freeform verb split (a CR is structured-ish, with its own
+motivation / desired-behaviour / current-workaround compose template). Filed CRs
+carry a `[CR]` title prefix plus a body kind-marker so the inbox classifies them
+even when the GitHub label is dropped on URL-filed issues. `report inbox` grew
+`--kind` / `--group-by project` filtering and `--resolved`: open feedbacks/CRs whose
+`## Tracked by` issues are all closed are listed and — interactively only — prompted
+for a closing comment + close, never autonomously (`--yes` lists without closing,
+the same produce-don't-act asymmetry as the reporter side). [pkit:ADR-047]'s three
+bars are unchanged.
+
 ## Rationale
 
 **Why build it, and why tracking is v1 not v2.** The auto-context block

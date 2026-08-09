@@ -7,8 +7,10 @@ to the distribution's fixed report target. Two sides:
   no `gh` auth needed — the browser is the review gate), `file_report_via_gh` (opt-in
   `--file` via `gh`), and the tracking reads (`list_my_reports`, `show_report`).
 - **Maintainer** (only inside the report target — `in_report_target` gates it):
-  `list_inbox` (triage queue), `link_fix` / `unlink_fix` (wire a fix issue into a
-  feedback's `## Tracked by` section via the pure `add_tracked_ref` / `remove_tracked_ref`).
+  `list_inbox` (triage queue, kind-filterable), `list_resolved` /
+  `close_report_as_resolved` (the `--resolved` close-prompt), `link_fix` /
+  `unlink_fix` (wire a fix issue into a feedback's `## Tracked by` section via the
+  pure `add_tracked_ref` / `remove_tracked_ref`).
 """
 
 from __future__ import annotations
@@ -30,8 +32,75 @@ from project_kit.environment import collect_environment, render_environment_bloc
 #: unconfigured ⇒ `report` degrades rather than filing.
 REPORT_TARGET = "aleskalfas/project-kit"
 
-#: The two report kinds, each a GitHub label on the filed issue.
-KINDS = ("bug", "feedback")
+#: The report kinds, each a GitHub label on the filed issue.
+KINDS = ("bug", "feedback", "change-request")
+
+#: Title prefix stamped on change-request reports. The prefilled-URL path can lose
+#: the GitHub label (labels in a new-issue URL are dropped for non-collaborators),
+#: so the prefix + the body kind-marker are the reliable classification signals.
+CHANGE_REQUEST_TITLE_PREFIX = "[CR]"
+
+#: Machine-readable marker embedded in every composed report body
+#: (`<!-- pkit-report: key=value -->`, invisible when rendered). Carries `kind`
+#: today; a future `project` key rides the same format (`parse_report_marker`
+#: already reads any key, so grouping degrades gracefully until it ships).
+_MARKER_RE = re.compile(r"<!--\s*pkit-report:\s*([^>]*?)\s*-->")
+
+#: Headings of the change-request compose template (structured-ish, per PRJ-008's
+#: structured-vs-freeform split): motivation / desired behaviour / current workaround.
+_CR_HEADING_RE = re.compile(
+    r"(?mi)^#{2,4}\s+(motivation|desired behaviour|current workaround)\b"
+)
+
+
+def kind_marker(kind: str) -> str:
+    """The body marker line for `kind` (see `_MARKER_RE`)."""
+    return f"<!-- pkit-report: kind={kind} -->"
+
+
+def parse_report_marker(body: str) -> dict[str, str]:
+    """Parse all `<!-- pkit-report: key=value ... -->` markers in `body` into one
+    dict (later markers win on a duplicate key). Unknown keys pass through — the
+    forward seam for the project marker. Pure over its input."""
+    out: dict[str, str] = {}
+    for match in _MARKER_RE.finditer(body):
+        for token in match.group(1).split():
+            key, sep, value = token.partition("=")
+            if sep and key:
+                out[key] = value
+    return out
+
+
+def classify_kind(labels: list[str], title: str = "", body: str = "") -> str:
+    """Classify an issue's report kind: label wins, then the body kind-marker,
+    then the `[CR]` title prefix; '' when it is not a report. The fallbacks exist
+    because URL-filed issues from non-collaborators lose their labels."""
+    for k in KINDS:
+        if k in labels:
+            return k
+    marker_kind = parse_report_marker(body).get("kind", "")
+    if marker_kind in KINDS:
+        return marker_kind
+    if title.startswith(CHANGE_REQUEST_TITLE_PREFIX):
+        return "change-request"
+    return ""
+
+
+def apply_change_request_template(prose: str) -> str:
+    """Scaffold `prose` into the change-request template (motivation / desired
+    behaviour / current workaround) unless it already carries those headings.
+    The placeholders are filled (or pruned) in the browser / by the author before
+    filing — URL-first keeps the form editable. Pure over its input."""
+    if _CR_HEADING_RE.search(prose):
+        return prose
+    return (
+        "### Motivation\n\n"
+        f"{prose.strip()}\n\n"
+        "### Desired behaviour\n\n"
+        "_(what should happen instead — edit before filing)_\n\n"
+        "### Current workaround\n\n"
+        "_(how you cope today, if at all — edit before filing)_"
+    )
 
 
 def compose_report_body(
@@ -68,12 +137,14 @@ def compose_report(
     target_root: Path,
     on_behalf_of: str | None = None,
     include_private: bool = False,
-) -> tuple[str, str]:
-    """Compose a report → (full issue body, prefilled new-issue URL).
+) -> tuple[str, str, str]:
+    """Compose a report → (issue title, full issue body, prefilled new-issue URL).
 
-    Ties the redacted environment block (`collect_environment`) into the body and
-    builds the URL against `REPORT_TARGET`. Raises `ValueError` on an unknown kind
-    or an unconfigured target.
+    Ties the redacted environment block (`collect_environment`) into the body,
+    stamps the body kind-marker, and builds the URL against `REPORT_TARGET`. A
+    change-request additionally gets the `[CR]` title prefix and the
+    motivation/desired-behaviour/workaround template. Raises `ValueError` on an
+    unknown kind or an unconfigured target.
     """
     if kind not in KINDS:
         raise ValueError(f"unknown report kind {kind!r}; expected one of {KINDS}")
@@ -82,12 +153,17 @@ def compose_report(
             "no report target is configured for this distribution — `report` is "
             "inert (see PRJ-008)."
         )
+    if kind == "change-request":
+        prose = apply_change_request_template(prose)
+        if not title.startswith(CHANGE_REQUEST_TITLE_PREFIX):
+            title = f"{CHANGE_REQUEST_TITLE_PREFIX} {title}"
     env = collect_environment(target_root, include_private=include_private)
     body = compose_report_body(
         prose, render_environment_block(env), on_behalf_of=on_behalf_of
     )
+    body = f"{body}\n{kind_marker(kind)}\n"
     url = build_new_issue_url(REPORT_TARGET, title=title, body=body, label=kind)
-    return body, url
+    return title, body, url
 
 
 def gh_authenticated() -> bool:
@@ -140,10 +216,11 @@ _TRACKED_HEADING = "## Tracked by"
 class ReportSummary:
     number: int
     title: str
-    kind: str  # "bug" | "feedback" | "" (unlabelled)
+    kind: str  # "bug" | "feedback" | "change-request" | "" (not a report)
     state: str  # display state: "open" | "in progress" | "closed"
     updated_at: str
     attributed: bool = False  # filed *for* the invoker by someone else (on-behalf-of)
+    project: str = ""  # body marker's `project=` value; "" until that marker ships
 
 
 def _gh_json(args: list[str]) -> object | None:
@@ -180,21 +257,17 @@ def display_state(gh_state: str, labels: list[str]) -> str:
     return "open"
 
 
-def _kind_of(labels: list[str]) -> str:
-    for k in KINDS:
-        if k in labels:
-            return k
-    return ""
-
-
 def _summarize(issue: dict) -> ReportSummary:
     labels = _label_names(issue.get("labels"))
+    title = str(issue.get("title", ""))
+    body = str(issue.get("body", ""))  # "" when the query didn't fetch bodies
     return ReportSummary(
         number=int(issue.get("number", 0)),
-        title=str(issue.get("title", "")),
-        kind=_kind_of(labels),
+        title=title,
+        kind=classify_kind(labels, title, body),
         state=display_state(str(issue.get("state", "")), labels),
         updated_at=str(issue.get("updatedAt", "")),
+        project=parse_report_marker(body).get("project", ""),
     )
 
 
@@ -363,24 +436,105 @@ def in_report_target() -> bool:
     return bool(REPORT_TARGET) and current_repo_slug() == REPORT_TARGET
 
 
-def list_inbox(target: str) -> list[ReportSummary] | None:
-    """All bug/feedback reports on `target` (any author), newest first — the
-    maintainer's triage queue. None on gh failure."""
-    reports: list[ReportSummary] = []
-    for kind in KINDS:
-        data = _gh_json([
+_INBOX_FIELDS = "number,title,state,labels,updatedAt,body"
+
+
+def _inbox_queries(target: str, kinds: tuple[str, ...]) -> list[list[str]]:
+    """The gh list queries covering `kinds`: one per kind label, plus a title
+    search for change-requests (a URL-filed CR from a non-collaborator loses its
+    label, so the `[CR]` prefix is its discoverable signal; false positives are
+    dropped by `classify_kind` client-side). Bodies are fetched for marker
+    classification and project grouping."""
+    queries: list[list[str]] = []
+    for kind in kinds:
+        queries.append([
             "gh", "issue", "list", "--repo", target, "--label", kind,
-            "--state", "all", "--limit", "100",
-            "--json", "number,title,state,labels,updatedAt",
+            "--state", "all", "--limit", "100", "--json", _INBOX_FIELDS,
         ])
+        if kind == "change-request":
+            queries.append([
+                "gh", "issue", "list", "--repo", target,
+                "--search", f'"{CHANGE_REQUEST_TITLE_PREFIX}" in:title',
+                "--state", "all", "--limit", "100", "--json", _INBOX_FIELDS,
+            ])
+    return queries
+
+
+def list_inbox(target: str, *, kind: str | None = None) -> list[ReportSummary] | None:
+    """All reports on `target` (any author), newest first — the maintainer's
+    triage queue. `kind` narrows to one report kind. Non-report issues swept in
+    by the CR title search are dropped by classification. None on gh failure."""
+    kinds = (kind,) if kind else KINDS
+    reports: list[ReportSummary] = []
+    for query in _inbox_queries(target, kinds):
+        data = _gh_json(query)
         if not isinstance(data, list):
             return None
         reports.extend(_summarize(i) for i in data if isinstance(i, dict))
-    # de-dup (an issue could carry both labels) and sort newest-first
+    # de-dup (an issue can match several queries) and sort newest-first
     seen: dict[int, ReportSummary] = {}
     for r in reports:
-        seen.setdefault(r.number, r)
+        if r.kind and (kind is None or r.kind == kind):
+            seen.setdefault(r.number, r)
     return sorted(seen.values(), key=lambda r: r.updated_at, reverse=True)
+
+
+def list_resolved(target: str) -> list[tuple[ReportSummary, list[int]]] | None:
+    """Open feedbacks/change-requests on `target` whose `## Tracked by` issues are
+    **all closed** — the close-prompt candidates — each paired with its tracked
+    issue numbers. A report with no tracked issues is not resolved (nothing
+    vouches for it); bugs are excluded (they close with their own fix). None on
+    gh failure."""
+    resolved: list[tuple[ReportSummary, list[int]]] = []
+    seen: set[int] = set()
+    for kind in ("feedback", "change-request"):
+        for query in _inbox_queries(target, (kind,)):
+            data = _gh_json(query)
+            if not isinstance(data, list):
+                return None
+            for issue in data:
+                if not isinstance(issue, dict):
+                    continue
+                summary = _summarize(issue)
+                if (
+                    summary.kind != kind
+                    or summary.state == "closed"
+                    or summary.number in seen
+                ):
+                    continue
+                seen.add(summary.number)
+                tracked = parse_tracked_by(str(issue.get("body", "")))
+                if not tracked:
+                    continue
+                states = resolve_states(target, tracked)
+                if all(state == "closed" for state in states.values()):
+                    resolved.append((summary, tracked))
+    resolved.sort(key=lambda row: row[0].updated_at, reverse=True)
+    return resolved
+
+
+def close_report_as_resolved(target: str, number: int, tracked: list[int]) -> bool:
+    """Post a closing comment on report `#number` (naming its closed fixes) and
+    close it. Same-repo maintainer edit (the caller's gate ensures cwd == target).
+    Only ever invoked after an explicit interactive confirm — never autonomously
+    (the report family's close-prompt discipline). True iff both steps succeed."""
+    refs = ", ".join(f"#{n}" for n in tracked)
+    comment = (
+        f"All tracked fixes ({refs}) are closed — closing this report as "
+        "resolved. If something is still missing, reply here or file a new "
+        "report with `pkit report`."
+    )
+    for cmd in (
+        ["gh", "issue", "comment", str(number), "--repo", target, "--body", comment],
+        ["gh", "issue", "close", str(number), "--repo", target],
+    ):
+        try:
+            proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        except OSError:
+            return False
+        if proc.returncode != 0:
+            return False
+    return True
 
 
 def _edit_body(target: str, number: int, body: str) -> bool:
@@ -429,12 +583,13 @@ def show_report(target: str, number: int) -> dict | None:
     if not isinstance(data, dict):
         return None
     labels = _label_names(data.get("labels"))
-    tracked = parse_tracked_by(str(data.get("body", "")))
+    title = str(data.get("title", ""))
+    body = str(data.get("body", ""))
     return {
         "number": int(data.get("number", number)),
-        "title": str(data.get("title", "")),
+        "title": title,
         "state": display_state(str(data.get("state", "")), labels),
-        "kind": _kind_of(labels),
+        "kind": classify_kind(labels, title, body),
         "comments": data.get("comments") or [],
-        "tracked_by": resolve_states(target, tracked),
+        "tracked_by": resolve_states(target, parse_tracked_by(body)),
     }
