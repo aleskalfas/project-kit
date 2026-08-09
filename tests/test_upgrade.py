@@ -239,7 +239,7 @@ def test_upgrade_updates_recorded_version_when_run_for_real(
     assert post.backbone_version == source_version
 
 
-# --- --pin opt-in auto-pin (ADR-049) ---------------------------------
+# --- pin-by-default on upgrade (ADR-049, amended) --------------------
 
 
 def _recorded_version(target: Path) -> str:
@@ -248,41 +248,42 @@ def _recorded_version(target: Path) -> str:
     return m.backbone_version
 
 
-def test_upgrade_pin_freezes_unpinned_already_current(installed_target: Path) -> None:
-    """`--pin` on an un-pinned, already-current project pins it at the content version."""
+def test_upgrade_pins_unpinned_project_by_default(installed_target: Path) -> None:
+    """Plain `pkit upgrade` pins an un-pinned project at the content version — the
+    reversed default (pin-by-default), no flag needed."""
     assert router.read_version_pin(installed_target) is None
-    upgrade.run_upgrade(installed_target, pin=True)
+    upgrade.run_upgrade(installed_target)  # default: pins
     assert router.read_version_pin(installed_target) == _recorded_version(installed_target)
 
 
-def test_upgrade_without_pin_leaves_project_unpinned(installed_target: Path) -> None:
-    """Plain `pkit upgrade` (no `--pin`) never writes a pin — the opt-in is preserved."""
-    upgrade.run_upgrade(installed_target)
+def test_upgrade_no_pin_leaves_project_unpinned(installed_target: Path) -> None:
+    """`--no-pin` (pin=False) opts out — the project stays un-pinned (old behaviour)."""
+    upgrade.run_upgrade(installed_target, pin=False)
     assert router.read_version_pin(installed_target) is None
 
 
-def test_upgrade_pin_dry_run_writes_no_pin(
+def test_upgrade_dry_run_writes_no_pin(
     installed_target: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """`--pin --dry-run` reports the pin it would write but touches nothing."""
-    upgrade.run_upgrade(installed_target, dry_run=True, pin=True)
+    """`--dry-run` reports the pin it would write by default but touches nothing."""
+    upgrade.run_upgrade(installed_target, dry_run=True)
     assert router.read_version_pin(installed_target) is None
     assert "would pin" in capsys.readouterr().out
 
 
 def test_upgrade_pin_is_noop_when_already_pinned(installed_target: Path) -> None:
-    """On an already-pinned project `--pin` is a no-op — the pin machinery maintains it."""
+    """An already-pinned project: the default pin write is a no-op (pin machinery maintains it)."""
     version = _recorded_version(installed_target)
     upgrade.freeze_pin(installed_target, version)
-    upgrade.run_upgrade(installed_target, pin=True)  # must not raise / must not change
+    upgrade.run_upgrade(installed_target)  # must not raise / must not change
     assert router.read_version_pin(installed_target) == version
 
 
-def test_upgrade_pin_skips_pin_when_sync_fails(
+def test_upgrade_skips_pin_when_sync_fails(
     installed_target: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """`--pin` writes no pin when the content sync fails — the flip-last invariant:
-    a failed upgrade never leaves a pin ahead of content that didn't land."""
+    """The default pin writes nothing when the content sync fails — the flip-last
+    invariant: a failed upgrade never leaves a pin ahead of content that didn't land."""
     m = manifest.read_backbone_manifest(installed_target)
     assert m is not None
     m.backbone_version = "0.1.0"  # force the upgrade to reach the sync step
@@ -294,41 +295,60 @@ def test_upgrade_pin_skips_pin_when_sync_fails(
     monkeypatch.setattr(upgrade, "run_sync", _boom)
 
     with pytest.raises(click.ClickException):
-        upgrade.run_upgrade(installed_target, pin=True)
+        upgrade.run_upgrade(installed_target)  # default pins, but sync fails first
     assert router.read_version_pin(installed_target) is None  # pin never written
 
 
-def test_cli_upgrade_pin_flag_forwards(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The `--pin` CLI flag threads through to `run_upgrade(pin=True)`."""
+def test_upgrade_no_pin_on_real_move_stays_unpinned(installed_target: Path) -> None:
+    """`--no-pin` on an upgrade that actually moves content advances the content but
+    leaves the project un-pinned."""
+    source_version = _recorded_version(installed_target)
+    m = manifest.read_backbone_manifest(installed_target)
+    assert m is not None
+    m.backbone_version = "0.1.0"
+    manifest.write_backbone_manifest(installed_target, m)
+
+    upgrade.run_upgrade(installed_target, pin=False)
+
+    assert _recorded_version(installed_target) == source_version  # content moved
+    assert router.read_version_pin(installed_target) is None  # but stayed un-pinned
+
+
+def test_upgrade_default_on_real_move_pins_at_new_version(installed_target: Path) -> None:
+    """A default upgrade that moves content pins at the new synced version (flip-last)."""
+    source_version = _recorded_version(installed_target)
+    m = manifest.read_backbone_manifest(installed_target)
+    assert m is not None
+    m.backbone_version = "0.1.0"
+    manifest.write_backbone_manifest(installed_target, m)
+
+    upgrade.run_upgrade(installed_target)  # default pins
+
+    assert _recorded_version(installed_target) == source_version  # content moved
+    assert router.read_version_pin(installed_target) == source_version  # pin followed
+
+
+def test_cli_upgrade_no_pin_flag_forwards(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`--no-pin` threads through to `run_upgrade(pin=False)`; the default is `pin=True`."""
     from click.testing import CliRunner
 
     from project_kit import cli
 
     captured: dict[str, object] = {}
 
-    def _fake(target_root: Path, dry_run: bool = False, pin: bool = False) -> None:
+    def _fake(target_root: Path, dry_run: bool = False, pin: bool = True) -> None:
         captured["pin"] = pin
 
     monkeypatch.setattr(cli, "run_upgrade", _fake)
     monkeypatch.setattr(cli, "find_target_root", lambda: Path("/tmp"))
-    res = CliRunner().invoke(cli.main, ["upgrade", "--pin"])
+
+    res = CliRunner().invoke(cli.main, ["upgrade", "--no-pin"])
+    assert res.exit_code == 0, res.output
+    assert captured["pin"] is False
+
+    res = CliRunner().invoke(cli.main, ["upgrade"])  # default
     assert res.exit_code == 0, res.output
     assert captured["pin"] is True
-
-
-def test_upgrade_pin_on_real_move_pins_at_new_version(installed_target: Path) -> None:
-    """`--pin` on an upgrade that actually moves content pins at the new synced version
-    (flip-last: the pin lands after the content sync)."""
-    source_version = _recorded_version(installed_target)
-    m = manifest.read_backbone_manifest(installed_target)
-    assert m is not None
-    m.backbone_version = "0.1.0"  # force content behind so the upgrade has work
-    manifest.write_backbone_manifest(installed_target, m)
-
-    upgrade.run_upgrade(installed_target, pin=True)
-
-    assert _recorded_version(installed_target) == source_version  # content moved
-    assert router.read_version_pin(installed_target) == source_version  # pin followed
 
 
 # --- backbone + component migration execution (per COR-010) ----------
@@ -1028,18 +1048,19 @@ def test_upgrade_pinned_already_current_still_flips_lagging_pin(
     assert router.read_version_pin(installed_target) == source_version
 
 
-def test_upgrade_unpinned_writes_no_pin_file(
+def test_upgrade_no_pin_writes_no_pin_file(
     installed_target: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """An un-pinned project keeps today's behaviour exactly: plain content sync,
-    no pin directive written (ADR-049)."""
+    """With `--no-pin`, an un-pinned project keeps the old behaviour: plain content
+    sync, no pin directive written (ADR-049, amended — pinning is now the default,
+    so the no-pin outcome requires the opt-out)."""
     m = manifest.read_backbone_manifest(installed_target)
     assert m is not None
     m.backbone_version = "0.1.0"
     manifest.write_backbone_manifest(installed_target, m)
     monkeypatch.setattr(upgrade, "run_sync", lambda *_a, **_k: None)
 
-    upgrade.run_upgrade(installed_target)
+    upgrade.run_upgrade(installed_target, pin=False)
 
     assert not router.pin_file_path(installed_target).exists()
 

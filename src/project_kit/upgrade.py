@@ -78,16 +78,18 @@ from project_kit.sync import run_sync
 #   capabilities._read_package_yaml (internal, accessed via CapabilitySource path)
 
 
-def run_upgrade(target_root: Path, dry_run: bool = False, pin: bool = False) -> None:
+def run_upgrade(target_root: Path, dry_run: bool = False, pin: bool = True) -> None:
     """Transition the project to the source kit's current backbone version.
 
-    `pin=True` (the `--pin` opt-in, ADR-049) additionally pins an **un-pinned**
-    project at the version its content was just synced to — the one-step
-    "I upgraded, so pin to what I upgraded to" gesture that composes `pkit pin`
-    into the upgrade. It pins at the local synced version (offline-safe — no
-    `git ls-remote` latest lookup), writes the pin LAST (after content + migrations,
-    so a failed sync never leaves a pin ahead of content), and is a no-op on a
-    project that is already pinned (the existing pin-raise already maintains it).
+    **Pins by default** (ADR-049, amended 2026-08-09): an **un-pinned** project is
+    pinned at the version its content just synced to, so pinning is the norm and a
+    project stays code/content-coherent without a remembered gesture. `pin=False`
+    (the `--no-pin` opt-out) keeps the old un-pinned "follow the installed global
+    tool" behaviour. The pin uses the local synced version (offline-safe — no
+    `git ls-remote` lookup), is written LAST (after content + migrations, so a
+    failed sync never leaves a pin ahead of content), and is a no-op on a project
+    that is already pinned (the existing pin-raise already maintains it). Self-host
+    is never pinned — it returns before the pin logic.
     """
     if not (target_root / ".pkit").is_dir():
         raise click.ClickException(f"{target_root}/.pkit/ does not exist. Run 'pkit init' first.")
@@ -164,8 +166,8 @@ def run_upgrade(target_root: Path, dry_run: bool = False, pin: bool = False) -> 
         if pinned:
             _raise_pin_to(target_root, target_version, dry_run)
         elif pin:
-            # `--pin` on an un-pinned project whose content is already current:
-            # still honour the opt-in and pin at the current content version.
+            # Pin-by-default on an un-pinned project whose content is already
+            # current: pin at the current content version (unless `--no-pin`).
             _pin_after_upgrade(target_root, target_version, dry_run)
         return
 
@@ -187,9 +189,9 @@ def run_upgrade(target_root: Path, dry_run: bool = False, pin: bool = False) -> 
 
     # ADR-049: on a pinned project, flip the pin LAST — after content sync and
     # migrations — so a failed upgrade never advances the pin past content that
-    # isn't in place. The write itself is atomic. On an un-pinned project with
-    # `--pin`, the same last-position write freezes the pin at the just-synced
-    # version (the opt-in auto-pin path).
+    # isn't in place. The write itself is atomic. On an un-pinned project the same
+    # last-position write freezes the pin at the just-synced version by default
+    # (pin-by-default; `--no-pin` sets pin=False to skip it).
     if pinned:
         _raise_pin_to(target_root, target_version, dry_run)
     elif pin:
@@ -226,18 +228,19 @@ def _raise_pin_to(target_root: Path, target_version: str, dry_run: bool) -> None
 
 
 def _pin_after_upgrade(target_root: Path, version: str, dry_run: bool) -> None:
-    """`pkit upgrade --pin` on an un-pinned project: freeze the pin at the just-synced
-    version (ADR-049 opt-in auto-pin).
+    """Pin-by-default on an un-pinned project: freeze the pin at the just-synced
+    version (ADR-049, amended 2026-08-09).
 
-    Called only when the project was un-pinned and the upgrade succeeded, at the
-    same LAST position as the pinned pin-raise — so a failed sync (which raises
-    before this point) never leaves a pin without matching content. `version` is
-    the local content version the sync targeted, so this needs no `git ls-remote`
-    latest lookup and works offline. Delegates the write to `freeze_pin` (the same
-    validated directive path `pkit pin` uses); honours `--dry-run`.
+    Called when the project was un-pinned, the upgrade succeeded, and `--no-pin`
+    was not passed — at the same LAST position as the pinned pin-raise, so a failed
+    sync (which raises before this point) never leaves a pin without matching
+    content. `version` is the local content version the sync targeted, so this
+    needs no `git ls-remote` lookup and works offline. Delegates the write to
+    `freeze_pin` (the same validated directive path `pkit pin` uses); honours
+    `--dry-run`.
     """
     if dry_run:
-        click.echo(f"  would pin project at {version} (--pin; .pkit/version-pin)")
+        click.echo(f"  would pin project at {version} (.pkit/version-pin; --no-pin to skip)")
         return
     freeze_pin(target_root, version)
 
