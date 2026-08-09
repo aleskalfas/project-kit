@@ -239,6 +239,98 @@ def test_upgrade_updates_recorded_version_when_run_for_real(
     assert post.backbone_version == source_version
 
 
+# --- --pin opt-in auto-pin (ADR-049) ---------------------------------
+
+
+def _recorded_version(target: Path) -> str:
+    m = manifest.read_backbone_manifest(target)
+    assert m is not None
+    return m.backbone_version
+
+
+def test_upgrade_pin_freezes_unpinned_already_current(installed_target: Path) -> None:
+    """`--pin` on an un-pinned, already-current project pins it at the content version."""
+    assert router.read_version_pin(installed_target) is None
+    upgrade.run_upgrade(installed_target, pin=True)
+    assert router.read_version_pin(installed_target) == _recorded_version(installed_target)
+
+
+def test_upgrade_without_pin_leaves_project_unpinned(installed_target: Path) -> None:
+    """Plain `pkit upgrade` (no `--pin`) never writes a pin — the opt-in is preserved."""
+    upgrade.run_upgrade(installed_target)
+    assert router.read_version_pin(installed_target) is None
+
+
+def test_upgrade_pin_dry_run_writes_no_pin(
+    installed_target: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """`--pin --dry-run` reports the pin it would write but touches nothing."""
+    upgrade.run_upgrade(installed_target, dry_run=True, pin=True)
+    assert router.read_version_pin(installed_target) is None
+    assert "would pin" in capsys.readouterr().out
+
+
+def test_upgrade_pin_is_noop_when_already_pinned(installed_target: Path) -> None:
+    """On an already-pinned project `--pin` is a no-op — the pin machinery maintains it."""
+    version = _recorded_version(installed_target)
+    upgrade.freeze_pin(installed_target, version)
+    upgrade.run_upgrade(installed_target, pin=True)  # must not raise / must not change
+    assert router.read_version_pin(installed_target) == version
+
+
+def test_upgrade_pin_skips_pin_when_sync_fails(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`--pin` writes no pin when the content sync fails — the flip-last invariant:
+    a failed upgrade never leaves a pin ahead of content that didn't land."""
+    m = manifest.read_backbone_manifest(installed_target)
+    assert m is not None
+    m.backbone_version = "0.1.0"  # force the upgrade to reach the sync step
+    manifest.write_backbone_manifest(installed_target, m)
+
+    def _boom(*_args: object, **_kwargs: object) -> None:
+        raise click.ClickException("sync failed")
+
+    monkeypatch.setattr(upgrade, "run_sync", _boom)
+
+    with pytest.raises(click.ClickException):
+        upgrade.run_upgrade(installed_target, pin=True)
+    assert router.read_version_pin(installed_target) is None  # pin never written
+
+
+def test_cli_upgrade_pin_flag_forwards(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The `--pin` CLI flag threads through to `run_upgrade(pin=True)`."""
+    from click.testing import CliRunner
+
+    from project_kit import cli
+
+    captured: dict[str, object] = {}
+
+    def _fake(target_root: Path, dry_run: bool = False, pin: bool = False) -> None:
+        captured["pin"] = pin
+
+    monkeypatch.setattr(cli, "run_upgrade", _fake)
+    monkeypatch.setattr(cli, "find_target_root", lambda: Path("/tmp"))
+    res = CliRunner().invoke(cli.main, ["upgrade", "--pin"])
+    assert res.exit_code == 0, res.output
+    assert captured["pin"] is True
+
+
+def test_upgrade_pin_on_real_move_pins_at_new_version(installed_target: Path) -> None:
+    """`--pin` on an upgrade that actually moves content pins at the new synced version
+    (flip-last: the pin lands after the content sync)."""
+    source_version = _recorded_version(installed_target)
+    m = manifest.read_backbone_manifest(installed_target)
+    assert m is not None
+    m.backbone_version = "0.1.0"  # force content behind so the upgrade has work
+    manifest.write_backbone_manifest(installed_target, m)
+
+    upgrade.run_upgrade(installed_target, pin=True)
+
+    assert _recorded_version(installed_target) == source_version  # content moved
+    assert router.read_version_pin(installed_target) == source_version  # pin followed
+
+
 # --- backbone + component migration execution (per COR-010) ----------
 
 
