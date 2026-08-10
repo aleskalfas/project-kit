@@ -217,6 +217,66 @@ def test_find_target_root_walk_recognises_worktree_git_file(
     assert resolved.resolve() == worktree_root.resolve()
 
 
+# ---- .pkit install-marker check in the root walk (#656) -----------------------
+
+
+def test_find_target_root_skips_bare_pkit_dir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Stage 2 walk: an empty `.pkit/` (no manifest, no decisions/) is not an
+    install — the walk skips it, continues upward, and resolves nothing."""
+    (tmp_path / ".pkit").mkdir()
+    nested = tmp_path / "work"
+    nested.mkdir()
+    monkeypatch.setenv("PATH", "/nonexistent")  # force Stage 2
+    assert install.find_target_root(nested) is None
+
+
+def test_find_target_root_skips_stray_home_style_pkit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The #656 repro shape: a stray `~/.pkit/` holding only junk (a leftover
+    `shim/` dir) must not make its parent qualify as a project root — the
+    walk previously resolved `$HOME` and invited `pkit sync` into it."""
+    (tmp_path / ".pkit" / "shim").mkdir(parents=True)
+    nested = tmp_path / "pkit_temp"
+    nested.mkdir()
+    monkeypatch.setenv("PATH", "/nonexistent")
+    assert install.find_target_root(nested) is None
+
+
+def test_find_target_root_accepts_manifest_bearing_pkit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A `.pkit/` carrying `manifest.yaml` (any post-COR-010 install) is a
+    real install and qualifies its parent as the root — no `.git` needed."""
+    pkit_dir = tmp_path / ".pkit"
+    pkit_dir.mkdir()
+    (pkit_dir / "manifest.yaml").write_text("backbone_version: 1.0.0\n", encoding="utf-8")
+    nested = tmp_path / "deep" / "dir"
+    nested.mkdir(parents=True)
+    monkeypatch.setenv("PATH", "/nonexistent")
+    resolved = install.find_target_root(nested)
+    assert resolved is not None
+    assert resolved.resolve() == tmp_path.resolve()
+
+
+def test_find_target_root_accepts_legacy_decisions_bearing_pkit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A `.pkit/` with `decisions/` but no manifest (an install pre-dating the
+    manifest layer, COR-010) still qualifies — the legacy marker keeps old
+    installs resolvable so upgrade's seed-the-manifest remediation can reach
+    them."""
+    (tmp_path / ".pkit" / "decisions").mkdir(parents=True)
+    nested = tmp_path / "deep"
+    nested.mkdir()
+    monkeypatch.setenv("PATH", "/nonexistent")
+    resolved = install.find_target_root(nested)
+    assert resolved is not None
+    assert resolved.resolve() == tmp_path.resolve()
+
+
 # ---- flat-content area propagation (#285) ------------------------------------
 
 @pytest.mark.usefixtures("stub_adapter_primitives")

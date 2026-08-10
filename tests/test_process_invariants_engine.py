@@ -99,6 +99,9 @@ def fixture_repo(tmp_path: Path) -> Path:
 
     defs_dst = pkit / "schemas" / "_defs"
     defs_dst.mkdir(parents=True, exist_ok=True)
+    # Root-walk install marker (#656): find_target_root only accepts a .pkit/
+    # ancestor that carries manifest.yaml (or decisions/).
+    (pkit / "manifest.yaml").write_text("backbone_version: 0.0.0\n", encoding="utf-8")
     source_defs = (
         Path(__file__).resolve().parents[1] / ".pkit" / "schemas" / "_defs" / "process.schema.json"
     )

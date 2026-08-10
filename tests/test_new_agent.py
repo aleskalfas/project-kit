@@ -18,6 +18,9 @@ def kit_target(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     agents_dir = tmp_path / ".pkit" / "agents"
     for ns in ("core", "project"):
         (agents_dir / ns).mkdir(parents=True)
+    # Root-walk install marker (#656): find_target_root only accepts a .pkit/
+    # ancestor that carries manifest.yaml (or decisions/).
+    (tmp_path / ".pkit" / "manifest.yaml").write_text("backbone_version: 0.0.0\n", encoding="utf-8")
     monkeypatch.chdir(tmp_path)
     return tmp_path
 

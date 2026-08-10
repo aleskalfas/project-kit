@@ -28,6 +28,9 @@ def _setup_namespace(tmp_path: Path) -> tuple[Path, Path]:
     """Stamp a capability with a namespace-owning schema. Returns (yaml, companion) paths."""
     schemas = tmp_path / ".pkit" / "capabilities" / "demo" / "schemas"
     schemas.mkdir(parents=True)
+    # Root-walk install marker (#656): find_target_root only accepts a .pkit/
+    # ancestor that carries manifest.yaml (or decisions/).
+    (tmp_path / ".pkit" / "manifest.yaml").write_text("backbone_version: 0.0.0\n", encoding="utf-8")
     yaml_body = (
         "# A taxonomy.\n"
         "schema_version: 1\n"
@@ -281,6 +284,9 @@ def _stamp_empty_capability(tmp_path: Path) -> Path:
     """Create a capability directory with no schemas yet (so stamp can land cleanly)."""
     cap_dir = tmp_path / ".pkit" / "capabilities" / "demo"
     cap_dir.mkdir(parents=True)
+    # Root-walk install marker (#656): find_target_root only accepts a .pkit/
+    # ancestor that carries manifest.yaml (or decisions/).
+    (tmp_path / ".pkit" / "manifest.yaml").write_text("backbone_version: 0.0.0\n", encoding="utf-8")
     return cap_dir
 
 
@@ -609,6 +615,9 @@ def _setup_namespace_with_consumer(tmp_path: Path) -> dict[str, Path]:
     """Stamp a namespace owner + a consumer that references it via tokens and annotation keys."""
     schemas = tmp_path / ".pkit" / "capabilities" / "demo" / "schemas"
     schemas.mkdir(parents=True)
+    # Root-walk install marker (#656): find_target_root only accepts a .pkit/
+    # ancestor that carries manifest.yaml (or decisions/).
+    (tmp_path / ".pkit" / "manifest.yaml").write_text("backbone_version: 0.0.0\n", encoding="utf-8")
     # Owner: namespace `kinds`, mapping form with `types:` collection.
     (schemas / "kinds.yaml").write_text(
         "schema_version: 1\n"

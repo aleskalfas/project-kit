@@ -57,6 +57,9 @@ def _project(tmp_path: Path, *, overlay: str | None = None) -> Path:
     proj = tmp_path / "proj"
     (proj / ".pkit" / "agents" / "core").mkdir(parents=True)
     (proj / ".pkit" / "agents" / "project").mkdir(parents=True)
+    # Root-walk install marker (#656): find_target_root only accepts a .pkit/
+    # ancestor that carries manifest.yaml (or decisions/).
+    (proj / ".pkit" / "manifest.yaml").write_text("backbone_version: 0.0.0\n", encoding="utf-8")
     if overlay is not None:
         (proj / ".pkit" / "agents" / "project" / "overlay.yaml").write_text(overlay, encoding="utf-8")
     return proj

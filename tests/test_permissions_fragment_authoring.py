@@ -33,6 +33,9 @@ def _project_with_capability(tmp_path: Path, name: str = "demo") -> Path:
     proj = tmp_path / "proj"
     cap_dir = proj / ".pkit" / "capabilities" / name
     cap_dir.mkdir(parents=True)
+    # Root-walk install marker (#656): find_target_root only accepts a .pkit/
+    # ancestor that carries manifest.yaml (or decisions/).
+    (proj / ".pkit" / "manifest.yaml").write_text("backbone_version: 0.0.0\n", encoding="utf-8")
     (cap_dir / "package.yaml").write_text(
         "schema_version: 1\ncomponent:\n  kind: capability\n  name: " + name + "\n"
         "  version: 0.1.0\nrequires_backbone: \">=1.0.0,<2.0.0\"\n",
@@ -129,6 +132,9 @@ def test_scaffold_cli_stamps_and_reports(tmp_path: Path, monkeypatch) -> None:
 def test_scaffold_cli_refuses_unknown_capability(tmp_path: Path, monkeypatch) -> None:
     proj = tmp_path / "proj"
     (proj / ".pkit").mkdir(parents=True)
+    # Root-walk install marker (#656): find_target_root only accepts a .pkit/
+    # ancestor that carries manifest.yaml (or decisions/).
+    (proj / ".pkit" / "manifest.yaml").write_text("backbone_version: 0.0.0\n", encoding="utf-8")
     monkeypatch.chdir(proj)
     result = CliRunner().invoke(main, ["permissions", "scaffold", "ghost"])
     assert result.exit_code != 0
