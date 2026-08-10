@@ -139,15 +139,16 @@ The kit's authoring and management surface (per COR-004 and COR-005) includes:
 | Command | Effect |
 |---|---|
 | `pkit new scratchpad <slug>` | Stamp a new note at `active/<YYYY-MM-DD>-<slug>.md` with today's date. Frontmatter is seeded with `authors:` (from git config) and `started:`; body is seeded with a `# <slug>` placeholder H1. Paired with the `scratchpad-author` skill per COR-005's skill / command pairing. |
-| `pkit scratchpad done <slug> [--produced <ref>...]` | Move the file from `active/<slug>.md` to `done/<same-filename>.md`. Append `retired:` (today's date) and `produced:` (from `--produced` arguments) to frontmatter. The `<slug>` argument may match the slug portion of the filename or the full filename. |
-| `pkit scratchpad drop <slug>` | Move the file from `active/<slug>.md` to `dropped/<same-filename>.md`. Append `retired:` (today's date) to frontmatter. |
+| `pkit scratchpad done <slug> [--produced <ref>...]` | Move the file from `active/<slug>.md` (or `reported/<slug>.md`) to `done/<same-filename>.md`. Append `retired:` (today's date) and `produced:` (from `--produced` arguments) to frontmatter. The `<slug>` argument may match the slug portion of the filename or the full filename. Removes `reported/` when the move empties it. |
+| `pkit scratchpad drop <slug>` | Move the file from `active/<slug>.md` (or `reported/<slug>.md`) to `dropped/<same-filename>.md`. Append `retired:` (today's date) to frontmatter. |
+| `pkit scratchpad reported <slug> <ref>...` | The manual stamp gesture (COR-043): move the file from `active/` to the lazily-created `reported/`, appending `reported:`/`reported_to:`/`reported_hash:`. Refs are `owner/repo#N` or GitHub issue URLs (normalised). On an already-reported note, appends new refs (idempotent for duplicates) and re-anchors the hash. The automatic stamp happens on a successful `pkit report … --file` post. |
+| `pkit scratchpad list` | List notes by state. Reported notes resolve their refs' upstream state live (pull-only; offline degrades to `state unknown`), flag `modified since reported` drift against the stamped hash, and print a retire prompt when all refs are closed — never auto-retiring. |
 
-State-transition commands (`done`, `drop`) are mechanical — they wrap `git mv` plus frontmatter updates. Per COR-006's discriminator they need no paired skill.
+State-transition commands (`done`, `drop`, `reported`) are mechanical — they wrap `git mv` plus frontmatter updates. Per COR-006's discriminator they need no paired skill.
 
 Deferred (per COR-007 — extract after recurrence is visible):
 
 - **`pkit scratchpad reopen <slug>`** — move from `done/` or `dropped/` back to `active/`. Hand-`git mv` works while this is rare.
-- **`pkit scratchpad list [--state <state>]`** — listing helper. `ls .pkit/scratchpad/<state>/` covers the obvious case.
 
 ## Authoring workflow
 

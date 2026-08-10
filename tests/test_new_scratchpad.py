@@ -124,7 +124,7 @@ def test_transition_to_done_resolves_by_full_filename(kit_target: Path) -> None:
 
 
 def test_transition_to_done_refuses_unknown_slug(kit_target: Path) -> None:
-    with pytest.raises(click.ClickException, match=r"no active scratchpad note"):
+    with pytest.raises(click.ClickException, match=r"no active or reported scratchpad note"):
         scratchpads.transition_to_done(kit_target, slug="missing")
 
 

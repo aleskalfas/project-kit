@@ -38,8 +38,10 @@ from project_kit.agents import Namespace as AgentNamespace, stamp_new_agent
 from project_kit.storyboards import ArtifactKind, stamp_new_storyboard
 from project_kit import refs as refs_mod
 from project_kit import router
+from project_kit import scratchpads
 from project_kit.scratchpads import (
     stamp_new_scratchpad,
+    stamp_reported,
     transition_to_done,
     transition_to_dropped,
 )
@@ -869,21 +871,33 @@ def _run_report(
     include_private: bool,
     do_file: bool,
     assume_yes: bool,
+    scratchpad_note: str | None = None,
 ) -> None:
     """Reporter path. Default is **URL-first** (print a prefilled new-issue URL —
     no `gh` needed, browser submit is the review gate). `--file` opts into a
     `gh`-auto-file to the fixed distribution target, gated by an interactive
     **target-naming confirm**; it degrades to the URL when `gh` isn't
     authenticated or under `--yes`/autonomy (ADR-047: the foreign write never
-    auto-posts — the deliberate `--yes` asymmetry)."""
+    auto-posts — the deliberate `--yes` asymmetry).
+
+    `--scratchpad` inlines a note into the payload (COR-043): redaction-linted
+    at compose time on every path, oversize split into body-excerpt + ONE
+    overflow comment confirmed as a single gesture, and stamped `reported`
+    only on a fully-successful post — draft/URL paths stamp nothing."""
     from project_kit.report import (
         REPORT_TARGET,
+        SendPayload,
+        attach_note,
+        build_new_issue_url,
         compose_report,
         file_report_via_gh,
         gh_authenticated,
+        lint_redaction,
+        post_issue_comment,
     )
 
     target_root = find_target_root() or Path.cwd()
+    _warn_reported_drift(target_root)
     try:
         title, body, url = compose_report(
             kind,
@@ -896,41 +910,170 @@ def _run_report(
     except ValueError as exc:
         raise click.ClickException(str(exc)) from exc
 
+    payload = SendPayload(body)
+    findings: list = []
+    note_path: Path | None = None
+    if scratchpad_note:
+        note_path = scratchpads.resolve_note(target_root, scratchpad_note)
+        note_text = note_path.read_text(encoding="utf-8")
+        findings = lint_redaction(note_text)
+        payload = attach_note(body, note_path.name, note_text)
+        url = build_new_issue_url(
+            REPORT_TARGET, title=title, body=payload.body, label=kind
+        )
+
     if do_file and assume_yes:
+        _echo_redaction_warnings(findings)
         _echo_url_first(
             kind, url, REPORT_TARGET,
             note="--yes: not auto-posting a public foreign issue (ADR-047). Draft "
             "below to review + submit.",
         )
+        _echo_overflow_draft_note(payload)
         return
     if do_file and not gh_authenticated():
+        _echo_redaction_warnings(findings)
         _echo_url_first(
             kind, url, REPORT_TARGET,
             note="gh is not authenticated — falling back to the prefilled URL.",
         )
+        _echo_overflow_draft_note(payload)
         return
     if do_file:
+        if findings and not _confirm_past_redaction_findings(findings):
+            click.echo("Not posted — edit the note and re-run.")
+            return
         click.echo(
             f"This posts a PUBLIC {kind} issue to {REPORT_TARGET} under your gh "
             "identity, with this body:\n"
         )
-        click.echo(body)
+        click.echo(payload.body)
+        if payload.overflow_comment is not None:
+            click.echo(
+                "\n…plus ONE overflow comment on the same issue, carrying the "
+                "full note text (the body above holds an excerpt — one logical "
+                "send, per ADR-047):\n"
+            )
+            click.echo(payload.overflow_comment)
         if click.confirm(f"\nPost to {REPORT_TARGET}?", default=False):
             posted = file_report_via_gh(
-                REPORT_TARGET, title=title, body=body, label=kind
+                REPORT_TARGET, title=title, body=payload.body, label=kind
             )
-            if posted:
-                click.echo(f"\n[ok] filed: {posted}")
+            if not posted:
+                _echo_url_first(
+                    kind, url, REPORT_TARGET,
+                    note="\ngh could not file it — use the prefilled URL instead:",
+                )
                 return
-            _echo_url_first(
-                kind, url, REPORT_TARGET,
-                note="\ngh could not file it — use the prefilled URL instead:",
-            )
+            if payload.overflow_comment is not None:
+                ok, error = post_issue_comment(
+                    REPORT_TARGET, posted, payload.overflow_comment
+                )
+                if not ok:
+                    click.echo(
+                        f"\n[warn] issue created at {posted}, but the overflow "
+                        "comment FAILED — the send did not complete as confirmed "
+                        "(ADR-047), so the note was NOT stamped reported."
+                    )
+                    click.echo(f"gh error: {error}")
+                    click.echo(
+                        "Remediation: post the full note text as a comment on "
+                        f"{posted} (retry `gh issue comment`, or edit the issue), "
+                        "then stamp manually with `pkit scratchpad reported`."
+                    )
+                    return
+            click.echo(f"\n[ok] filed: {posted}")
+            _stamp_reported_after_post(target_root, note_path, posted)
             return
         _echo_url_first(kind, url, REPORT_TARGET, note="\nNot posted.")
         return
 
+    _echo_redaction_warnings(findings)
     _echo_url_first(kind, url, REPORT_TARGET)
+    _echo_overflow_draft_note(payload)
+
+
+def _warn_reported_drift(target_root: Path) -> None:
+    """One-line pre-send drift lint (COR-043): a reported note modified since
+    its stamp is surfaced before any report verb runs. Warning, never a gate."""
+    drifted = scratchpads.drifted_reported_notes(target_root)
+    if drifted:
+        click.echo(
+            "Warning: reported scratchpad note(s) modified since reported: "
+            + ", ".join(drifted)
+            + " (COR-043 freeze — follow-up thinking belongs in a new note).\n"
+        )
+
+
+def _echo_redaction_warnings(findings: list) -> None:
+    """Draft-path form of the redaction lint: findings ride as warnings."""
+    if not findings:
+        return
+    click.echo(
+        "Warning: possible un-redacted content in the attached note — review "
+        "before filing:"
+    )
+    for f in findings:
+        click.echo(f"  line {f.line}: {f.pattern}: {f.excerpt}")
+    click.echo("")
+
+
+def _confirm_past_redaction_findings(findings: list) -> bool:
+    """Interactive form of the redaction lint: edit-or-send-anyway."""
+    click.echo("Possible un-redacted content in the attached note:")
+    for f in findings:
+        click.echo(f"  line {f.line}: {f.pattern}: {f.excerpt}")
+    return click.confirm(
+        "\nSend anyway? (decline to edit the note first)", default=False
+    )
+
+
+def _echo_overflow_draft_note(payload) -> None:
+    """On draft/URL paths an oversize attachment can't carry its overflow
+    comment — say so instead of silently dropping the full text."""
+    if payload.truncated:
+        click.echo(
+            "\nNote: the attached note exceeds the issue-body budget — the draft "
+            "body carries an excerpt. After filing, add the full note text as "
+            "the first comment (the note file itself is the source)."
+        )
+
+
+def _stamp_reported_after_post(
+    target_root: Path, note_path: Path | None, posted: str
+) -> None:
+    """Stamp the attached note `reported` after a fully-successful post
+    (COR-043: entering the state is produced by an actual send). Best-effort
+    past the post: the foreign write already happened, so a stamp failure
+    warns + names the manual gesture rather than erroring the command."""
+    if note_path is None:
+        return
+    area = target_root / ".pkit" / "scratchpad"
+    if note_path.parent not in (area / "active", area / "reported"):
+        click.echo(
+            f"note {note_path} is outside .pkit/scratchpad/active/ — not "
+            "stamped reported."
+        )
+        return
+    try:
+        ref = scratchpads.normalize_issue_ref(posted.strip())
+        stamp = stamp_reported(target_root, note_path.name, (ref,))
+    except click.ClickException as exc:
+        click.echo(
+            f"[warn] could not stamp the note reported ({exc.message}) — stamp "
+            f"manually: pkit scratchpad reported {scratchpads.note_slug(note_path.name)} <ref>"
+        )
+        return
+    if stamp.src != stamp.dst:
+        click.echo(
+            f"Stamped reported: {stamp.src.relative_to(target_root)} -> "
+            f"{stamp.dst.relative_to(target_root)}"
+        )
+    elif stamp.added:
+        click.echo(
+            f"Recorded {', '.join(stamp.added)} on "
+            f"{stamp.dst.relative_to(target_root)}"
+        )
 
 
 _REPORT_OPTS = [
@@ -953,6 +1096,12 @@ _REPORT_OPTS = [
         "--include-private", is_flag=True, default=False,
         help="Include incubated (in-repo) capability names in the environment block.",
     ),
+    click.option(
+        "--scratchpad", "scratchpad_note", default=None, metavar="SLUG",
+        help="Attach a scratchpad note (slug, filename, or path) as a collapsed "
+        "as-sent section; redaction-linted at compose time, and stamped "
+        "reported on a successful post only (COR-043).",
+    ),
 ]
 
 
@@ -966,21 +1115,25 @@ def _with_report_opts(fn):
 @_with_report_opts
 def report_bug(
     title: str, prose: str, do_file: bool, assume_yes: bool,
-    on_behalf_of: str | None, include_private: bool,
+    on_behalf_of: str | None, include_private: bool, scratchpad_note: str | None,
 ) -> None:
     """File a structured bug report to project-kit."""
-    _run_report("bug", title, prose, on_behalf_of, include_private, do_file, assume_yes)
+    _run_report(
+        "bug", title, prose, on_behalf_of, include_private, do_file, assume_yes,
+        scratchpad_note,
+    )
 
 
 @report.command("feedback")
 @_with_report_opts
 def report_feedback(
     title: str, prose: str, do_file: bool, assume_yes: bool,
-    on_behalf_of: str | None, include_private: bool,
+    on_behalf_of: str | None, include_private: bool, scratchpad_note: str | None,
 ) -> None:
     """File freeform feedback to project-kit."""
     _run_report(
-        "feedback", title, prose, on_behalf_of, include_private, do_file, assume_yes
+        "feedback", title, prose, on_behalf_of, include_private, do_file,
+        assume_yes, scratchpad_note,
     )
 
 
@@ -988,7 +1141,7 @@ def report_feedback(
 @_with_report_opts
 def report_change_request(
     title: str, prose: str, do_file: bool, assume_yes: bool,
-    on_behalf_of: str | None, include_private: bool,
+    on_behalf_of: str | None, include_private: bool, scratchpad_note: str | None,
 ) -> None:
     """File a change/feature request to project-kit.
 
@@ -999,7 +1152,7 @@ def report_change_request(
     """
     _run_report(
         "change-request", title, prose, on_behalf_of, include_private,
-        do_file, assume_yes,
+        do_file, assume_yes, scratchpad_note,
     )
 
 
@@ -3705,7 +3858,8 @@ def new_scratchpad(slug: str, dry_run: bool) -> None:
 
 @main.group()
 def scratchpad() -> None:
-    """Manage scratchpad notes (per COR-012): retire active notes by transitioning to done or dropped."""
+    """Manage scratchpad notes (per COR-012 + COR-043): retire notes to done or
+    dropped, stamp them reported, and list them with live upstream read-back."""
 
 
 @scratchpad.command("done")
@@ -3752,6 +3906,86 @@ def scratchpad_drop(slug: str, dry_run: bool) -> None:
     dst_rel = dst.relative_to(target_root)
     verb = "Would move" if dry_run else "Moved"
     click.echo(f"{verb}: {src_rel} -> {dst_rel}")
+
+
+@scratchpad.command("reported")
+@click.argument("slug")
+@click.argument("refs", nargs=-1, required=True)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Show what would change without moving the file or writing frontmatter.",
+)
+def scratchpad_reported(slug: str, refs: tuple[str, ...], dry_run: bool) -> None:
+    """Manually stamp a note as sent through the report channel (per COR-043).
+
+    Moves an active note to the lazily-created reported/ and records the issue
+    REFS (owner/repo#N, or a GitHub issue URL — normalised), the date, and a
+    content hash of the file as sent. On an already-reported note, appends the
+    refs not yet recorded (idempotent for duplicates) and re-anchors the hash.
+    Covers URL-first posts and retroactive marking — the automatic stamp
+    happens on a successful `pkit report ... --file` post.
+    """
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    stamp = stamp_reported(target_root, slug, refs, dry_run=dry_run)
+    if not stamp.added:
+        click.echo(
+            f"Already recorded: {', '.join(stamp.duplicate)} on "
+            f"{stamp.dst.relative_to(target_root)} — nothing to do."
+        )
+        return
+    if stamp.src != stamp.dst:
+        verb = "Would move" if dry_run else "Moved"
+        click.echo(
+            f"{verb}: {stamp.src.relative_to(target_root)} -> "
+            f"{stamp.dst.relative_to(target_root)}"
+        )
+    verb = "Would record" if dry_run else "Recorded"
+    click.echo(f"{verb}: {', '.join(stamp.added)}")
+    if stamp.duplicate:
+        click.echo(f"Already recorded: {', '.join(stamp.duplicate)}")
+
+
+@scratchpad.command("list")
+def scratchpad_list() -> None:
+    """List scratchpad notes by state (per COR-012 + COR-043).
+
+    Reported notes resolve their upstream refs live via gh — pull-only,
+    nothing stored; offline degrades to "state unknown" — flag divergence
+    from the stamped hash, and prompt retirement when every ref is closed
+    (never auto-retired: retirement stays a human gesture).
+    """
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    entries = scratchpads.list_notes(target_root)
+    if not entries:
+        click.echo("No scratchpad notes.")
+        return
+    for folder in ("active", "reported", "done", "dropped"):
+        group = [e for e in entries if e.folder == folder]
+        if not group:
+            continue
+        click.echo(f"{folder}/")
+        for entry in group:
+            if folder != "reported":
+                click.echo(f"  {entry.name}")
+                continue
+            refs_text = ", ".join(
+                f"{r.ref} ({'state unknown' if r.state == 'unknown' else r.state})"
+                for r in entry.refs
+            ) or "(no refs recorded)"
+            drift = "  [modified since reported]" if entry.drifted else ""
+            click.echo(f"  {entry.name}  -> {refs_text}{drift}")
+            if entry.refs and all(r.state == "closed" for r in entry.refs):
+                produced = " ".join(f"--produced {r.ref}" for r in entry.refs)
+                click.echo(
+                    "      all refs closed — retire with: pkit scratchpad done "
+                    f"{scratchpads.note_slug(entry.name)} {produced}"
+                )
 
 
 def _cast_area_variant(value: str) -> AreaVariant:

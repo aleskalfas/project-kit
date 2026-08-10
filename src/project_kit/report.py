@@ -166,6 +166,124 @@ def compose_report(
     return title, body, url
 
 
+# --- scratchpad attachment (COR-043 / ADR-047 refinement) ------------
+
+#: Issue-body budget for the composed send payload. GitHub caps bodies at
+#: 65536 chars; 60000 leaves headroom for maintainer edits.
+REPORT_BODY_BUDGET = 60000
+
+#: Compose-time redaction patterns for *attached* content. The environment
+#: block is redacted by construction (`environment.py` — no paths collected);
+#: attached scratchpad notes are free prose, so the same exposure ($HOME,
+#: home-dir paths) is caught by lint instead. Runs on EVERY path, drafts and
+#: URL-first included: redaction is a property of the composed payload, not
+#: of the channel that carries it (ADR-047 refinement).
+_REDACTION_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    ("$HOME reference", re.compile(r"\$HOME\b")),
+    ("macOS home path (/Users/...)", re.compile(r"/Users/[A-Za-z0-9._-]+")),
+    ("Linux home path (/home/...)", re.compile(r"/home/[A-Za-z0-9._-]+")),
+    ("home-relative path (~/...)", re.compile(r"(?<![\w.])~/")),
+)
+
+
+@dataclass(frozen=True)
+class RedactionFinding:
+    """One possibly-unredacted spot in attached content."""
+
+    line: int
+    pattern: str
+    excerpt: str
+
+
+def lint_redaction(text: str) -> list[RedactionFinding]:
+    """Scan `text` for content the environment block redacts by construction
+    ($HOME, home-dir paths). Findings are surfaced, never auto-stripped — the
+    author decides (edit-or-send-anyway interactively; warnings on drafts).
+    Pure over its input."""
+    findings: list[RedactionFinding] = []
+    for line_no, line in enumerate(text.splitlines(), start=1):
+        for name, pattern in _REDACTION_PATTERNS:
+            if pattern.search(line):
+                findings.append(RedactionFinding(line_no, name, line.strip()[:80]))
+    return findings
+
+
+@dataclass(frozen=True)
+class SendPayload:
+    """The confirmed unit of a send (ADR-047 refinement): the issue body plus,
+    when the attachment exceeds the budget, ONE overflow comment carrying the
+    full as-sent note text. Confirmed as a single gesture before any post."""
+
+    body: str
+    overflow_comment: str | None = None
+    truncated: bool = False
+
+
+def render_note_details(filename: str, note_text: str, *, truncated: bool = False) -> str:
+    """The collapsed `<details>` section carrying an attached scratchpad note.
+    Pure over its inputs."""
+    summary = f"{filename} (as sent)"
+    if truncated:
+        summary = f"{filename} (as sent — excerpt; full text in the first comment)"
+    return (
+        f"<details>\n<summary>{summary}</summary>\n\n"
+        f"{note_text.rstrip()}\n\n</details>"
+    )
+
+
+def attach_note(
+    body: str, filename: str, note_text: str, *, budget: int = REPORT_BODY_BUDGET
+) -> SendPayload:
+    """Inline a scratchpad note into a composed report body (collapsed, before
+    the environment block). Oversize rule (ADR-047 refinement): when the
+    composed body would exceed `budget`, the body carries an excerpt and the
+    FULL note text rides as one overflow comment — one logical send. Pure
+    over its inputs."""
+    full = _insert_before_environment(body, render_note_details(filename, note_text))
+    if len(full) <= budget:
+        return SendPayload(full)
+    frame = _insert_before_environment(
+        body, render_note_details(filename, "", truncated=True)
+    )
+    marker = "\n\n_(…truncated — the full note text is carried in the first comment below.)_"
+    allowed = max(budget - len(frame) - len(marker), 0)
+    excerpt = note_text[:allowed].rstrip() + marker
+    excerpted_body = _insert_before_environment(
+        body, render_note_details(filename, excerpt, truncated=True)
+    )
+    overflow = (
+        f"Full text of `{filename}` (as sent) — the issue body carries only "
+        f"an excerpt:\n\n{note_text}"
+    )
+    return SendPayload(excerpted_body, overflow, truncated=True)
+
+
+def _insert_before_environment(body: str, block: str) -> str:
+    """Insert `block` just before the `## Environment` section (or append when
+    the section is absent). Pure over its inputs."""
+    idx = body.find("## Environment")
+    if idx == -1:
+        return body.rstrip() + "\n\n" + block + "\n"
+    return body[:idx] + block + "\n\n" + body[idx:]
+
+
+def post_issue_comment(target: str, issue: str, body: str) -> tuple[bool, str]:
+    """Post the overflow comment of an already-confirmed send (`issue` is the
+    posted issue's URL or number). Returns (ok, verbatim error text).
+
+    This is NOT an independent second write: it is the second API call of the
+    ONE logical send the operator confirmed (ADR-047 refinement — reviewers
+    should continue to reject any independent foreign write)."""
+    cmd = ["gh", "issue", "comment", str(issue), "--repo", target, "--body", body]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    except OSError as exc:
+        return False, str(exc)
+    if proc.returncode != 0:
+        return False, (proc.stderr or proc.stdout).strip()
+    return True, ""
+
+
 def gh_authenticated() -> bool:
     """True iff `gh` is installed and authenticated (so the auto-file path can run).
     Best-effort; any failure ⇒ False ⇒ the caller degrades to the URL."""
