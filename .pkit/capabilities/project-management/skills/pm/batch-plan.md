@@ -62,7 +62,7 @@ End the message with: "Approve, revise, or cancel?"
 
 In dependency order (parents before children so parent-ref values are available):
 
-- For each ticket: call `scripts/create-issue.py` with `--type`, `--title`, `--kind`, `--workstream`, `--priority`, `--parent` (if any), `--yes`.
+- For each ticket: call `scripts/create-issue.py` with `--type`, `--title`, `--kind`, `--workstream`, `--priority`, `--parent` (if any), `--yes` — and, when the plan originated from a feedback/change-request report #N, `--from-report N` so each filed issue is auto-linked into #N's `## Tracked by` (per [project-management:DEC-048-from-report-auto-link]; a link failure exits 4 with a remediation command and never rolls the issue back).
 - Parse the script's `[ok] created: <URL>` line for the new issue number.
 - Immediately call `scripts/edit-issue.py --body-file <tmp> --yes` to overwrite the auto-generated template body with the planned body content (the create-issue.py script produces a placeholder body; the real content is what was approved at the gate).
 - Attach milestone via `gh issue edit <number> -R <repo> --milestone "<title>"` per the workaround for issue #177 (the create-issue.py `--milestone NUM` path is broken pending that issue's fix).

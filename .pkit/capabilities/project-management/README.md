@@ -349,6 +349,22 @@ through the capability dispatcher (COR-021) rather than reading
 inside the capability. Read-only and deliberately not membership-gated (a
 passive context accessor over the invoker's own branch).
 
+#### Filing fixes from a report — `create-issue --from-report <N>` (per [project-management:DEC-048-from-report-auto-link])
+
+When a maintainer files fix work for a feedback/change-request report #N
+(pkit PRJ-008), `create-issue --from-report N` closes the forgettable manual
+step: after a successful create, the new issue is auto-linked into #N's
+`## Tracked by` list. The link-back is performed by **invoking the backbone's
+canonical editor** — `pkit report link N <new>` as a subprocess — never by a
+second Tracked-by implementation (DEC-048's one-linker rule), so `--from-report`
+and a manual `report link` can never drift. The batch-plan skill's filing loop
+passes the same flag per filed issue when the plan originated from a report.
+Maintainer-side, same-repo: the backbone verb refuses outside the report-target
+repo and the refusal is surfaced verbatim. A link failure after a successful
+create warns loudly with the exact remediation command (`pkit report link N
+<new>`) and exits 4 — the created issue is never rolled back. Requires a
+backbone shipping `report link` (v1.144.0+, the capability's declared floor).
+
 Configure the review mode in `project/config.yaml`:
 
 ```yaml

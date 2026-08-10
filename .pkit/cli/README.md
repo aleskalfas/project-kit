@@ -513,6 +513,11 @@ prompts per report to post a closing comment + close; `--yes` / non-interactive
 side's `--yes`), and a close is never automatic. `report link` / `unlink
 <feedback-N> <fix-N>` add/remove a `#fix-N` reference
 in feedback #N's `## Tracked by` list. These are same-repo edits (no cross-repo gate).
+`report link` is the **one** Tracked-by editor: the project-management
+capability's `create-issue --from-report <N>` invokes this same verb after
+filing a fix (per [project-management:DEC-048-from-report-auto-link]), so the
+manual `report link` remains the universal fallback, never a parallel
+implementation.
 
 ## Standard flags
 

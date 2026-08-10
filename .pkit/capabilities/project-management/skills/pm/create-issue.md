@@ -38,8 +38,11 @@ pkit project-management create-issue \
   [--assignee <github-login>] \
   [--milestone <number>] \
   [--board <projects-v2-id>] \
+  [--from-report <report-issue-number>] \
   [--dry-run] [--yes]
 ```
+
+**`--from-report <N>`** (per [project-management:DEC-048-from-report-auto-link]): when the issue being filed is a fix for feedback/change-request #N, pass this flag — after a successful create the script links the new issue into #N's `## Tracked by` list by invoking the backbone's canonical editor (`pkit report link`). This is the flag the [batch-plan](batch-plan.md) filing loop passes on every issue when the plan originated from a report. The link runs maintainer-side in the report-target repo (the backbone verb enforces that; surface its refusal verbatim). A link failure after a successful create exits 4 with the exact remediation command — the issue is created and never rolled back; surface the warning and the remediation to the user.
 
 Direct-path is equivalent for adopters whose kit predates the dispatcher:
 
