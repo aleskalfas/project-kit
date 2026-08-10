@@ -703,6 +703,70 @@ def test_cli_inbox_resolved_rejects_kind_combination(monkeypatch) -> None:
     assert "does not combine" in res.output
 
 
+# --- scratchpad attachment compose helpers (COR-043 / ADR-047) -------
+
+
+def test_lint_redaction_flags_home_paths() -> None:
+    text = (
+        "clean line\n"
+        "ref to $HOME/config\n"
+        "path /Users/alice/project\n"
+        "path /home/bob/project\n"
+        "rel ~/notes.md\n"
+    )
+    findings = rep.lint_redaction(text)
+    assert [f.line for f in findings] == [2, 3, 4, 5]
+    assert rep.lint_redaction("nothing sensitive here") == []
+
+
+def test_render_note_details_collapsed_as_sent() -> None:
+    out = rep.render_note_details("2026-08-09-note.md", "note body")
+    assert out.startswith("<details>")
+    assert "<summary>2026-08-09-note.md (as sent)</summary>" in out
+    assert "note body" in out and out.rstrip().endswith("</details>")
+
+
+def test_attach_note_within_budget_no_overflow() -> None:
+    body = "prose\n\n## Environment\n\n```\nx\n```\n"
+    payload = rep.attach_note(body, "n.md", "the note text")
+    assert payload.overflow_comment is None and payload.truncated is False
+    assert "(as sent)" in payload.body and "the note text" in payload.body
+    # inserted before the environment block
+    assert payload.body.index("the note text") < payload.body.index("## Environment")
+
+
+def test_attach_note_oversize_excerpts_and_overflows() -> None:
+    body = "prose\n\n## Environment\n\n```\nx\n```\n"
+    note = "x" * 70_000
+    payload = rep.attach_note(body, "n.md", note)
+    assert payload.truncated is True
+    assert len(payload.body) <= rep.REPORT_BODY_BUDGET
+    assert "truncated" in payload.body  # the truncation is flagged in the body
+    assert payload.overflow_comment is not None
+    assert note in payload.overflow_comment  # the FULL as-sent text
+    assert "n.md" in payload.overflow_comment
+
+
+def test_post_issue_comment_argv_and_failure(monkeypatch) -> None:
+    captured: dict = {}
+
+    def fake_run(cmd, **kwargs):
+        captured["cmd"] = cmd
+        return _FakeProc(0)
+
+    monkeypatch.setattr(rep.subprocess, "run", fake_run)
+    ok, err = rep.post_issue_comment("o/r", "https://github.com/o/r/issues/9", "full")
+    assert ok is True and err == ""
+    assert captured["cmd"][:3] == ["gh", "issue", "comment"]
+    assert "--repo" in captured["cmd"] and "o/r" in captured["cmd"]
+
+    monkeypatch.setattr(
+        rep.subprocess, "run", lambda cmd, **k: _FakeProc(1, "", "boom")
+    )
+    ok, err = rep.post_issue_comment("o/r", "9", "full")
+    assert ok is False and err == "boom"  # error text verbatim
+
+
 def test_cli_report_show(monkeypatch) -> None:
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
     monkeypatch.setattr(

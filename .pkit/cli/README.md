@@ -12,7 +12,7 @@ The design rules governing the CLI's shape — why these commands exist and not 
 
 The CLI is implemented in Python (per PRJ-003), with `.pkit/cli/pkit` as a thin proxy that exec's the Python runtime via `uv` and bypasses to the adapter's shell scripts for `deploy-skills` / `merge-settings` (which are shell to the bone — primitives the adapter ships, not surface commands).
 
-The full COR-004 surface is implemented: `init`, `sync`, `merge`, `upgrade`, `capabilities install / register / uninstall / upgrade / list` (per COR-017 + COR-031), `status`, `validate`, `version`, `version bump`, `release plan / apply / merge / publish-notes / check / lint / check-shareable` (per PRJ-002 + COR-041), `new decision`, the authoring commands (`area`, `adapter`, `capability`, `agent`, `storyboard`, `schema`, `migration`), and the scratchpad commands (`new scratchpad`, `scratchpad done`, `scratchpad drop`) per COR-012. Each authoring command ships paired with its skill under `.pkit/skills/core/<name>-author/` per COR-005's "Skill / command pairing". (The `bundle` command family was retired in COR-027 — capabilities subsumed the bundle role.)
+The full COR-004 surface is implemented: `init`, `sync`, `merge`, `upgrade`, `capabilities install / register / uninstall / upgrade / list` (per COR-017 + COR-031), `status`, `validate`, `version`, `version bump`, `release plan / apply / merge / publish-notes / check / lint / check-shareable` (per PRJ-002 + COR-041), `new decision`, the authoring commands (`area`, `adapter`, `capability`, `agent`, `storyboard`, `schema`, `migration`), and the scratchpad commands (`new scratchpad`, `scratchpad done`, `scratchpad drop`, `scratchpad reported`, `scratchpad list`) per COR-012 + COR-043. Each authoring command ships paired with its skill under `.pkit/skills/core/<name>-author/` per COR-005's "Skill / command pairing". (The `bundle` command family was retired in COR-027 — capabilities subsumed the bundle role.)
 
 ## Installing pkit on PATH
 
@@ -69,9 +69,10 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # or: brew install uv
 | `new migration [...]` | scaffold a migration script in the right `<major>.<minor>.0/` directory | yes | no — emits a fresh, numbered file each call |
 | `new decision <namespace> <slug>` | scaffold a new decision record stub (frontmatter + four sections + next number in namespace) | yes | no — refuses if a record with that slug already exists |
 | `new scratchpad <slug>` | stamp a new active-state scratchpad note (per COR-012) | yes | no — refuses if the slug is already in use across any state |
-| `scratchpad done <slug> [--produced <ref>...]` | move a note from `active/` to `done/`, append `retired`/`produced` to frontmatter | yes | no — refuses if no active note matches |
-| `scratchpad drop <slug>` | move a note from `active/` to `dropped/`, append `retired` to frontmatter | yes | no — refuses if no active note matches |
-| `scratchpad reported <slug> <ref>...` | *(ships with the COR-043 implementation, #643)* manually stamp an active note as sent through the report channel: move to lazily-created `reported/`, append `reported`/`reported_to`/`reported_hash` frontmatter (per COR-043; the automatic stamp happens on a successful `report` post — this gesture covers URL-first posts and retroactive marking) | yes | yes — appends refs to an already-reported note |
+| `scratchpad done <slug> [--produced <ref>...]` | move a note from `active/` (or `reported/`, removing that lazy directory when it empties) to `done/`, append `retired`/`produced` to frontmatter | yes | no — refuses if no active or reported note matches |
+| `scratchpad drop <slug>` | move a note from `active/` (or `reported/`) to `dropped/`, append `retired` to frontmatter | yes | no — refuses if no active or reported note matches |
+| `scratchpad reported <slug> <ref>...` | manually stamp an active note as sent through the report channel: move to lazily-created `reported/`, append `reported`/`reported_to`/`reported_hash` frontmatter (per COR-043; the automatic stamp happens on a successful `report` post — this gesture covers URL-first posts and retroactive marking). Refs are `owner/repo#N` or GitHub issue URLs (normalised) | yes | yes — appends refs to an already-reported note; duplicate refs are a no-op |
+| `scratchpad list` | list notes by state; reported notes resolve their refs' upstream state **live** via `gh` (pull-only, never stored; offline degrades to `state unknown`), flag divergence from the stamped hash (`modified since reported`), and print a retire prompt when every ref is closed — never auto-retiring (per COR-043) | no | yes (read-only) |
 | `status` | show how project-kit is wired in this project (paths, installed backbone version vs source, adapter, deployed skills, capabilities, decision counts) | no | yes (read-only) |
 | `validate` | check project state against invariants | no | yes (read-only) |
 | `schemas validate [<path>]` | validate capability schema YAMLs against their JSON Schema companions + cross-file refs | no | yes (read-only) |
@@ -288,24 +289,42 @@ Supports `--dry-run`.
 
 ## Scratchpad commands
 
-Scratchpad notes (per COR-012) move between three state folders — `active/`, `done/`, `dropped/`. Two retire-direction commands wrap the `git mv` + frontmatter update; the convention's full spec lives in `.pkit/scratchpad/README.md`.
+Scratchpad notes (per COR-012) move between three state folders — `active/`, `done/`, `dropped/` — plus the optional `reported/` side-state of active (per COR-043: lazily created when the first note enters it, removed when it empties). The retire-direction commands wrap the `git mv` + frontmatter update; the convention's full spec lives in `.pkit/scratchpad/README.md`.
 
 ### `scratchpad done <slug> [--produced <ref>...]`
 
-Moves a note from `active/` to `done/` and appends `retired` (today) and `produced` (the list of `--produced` refs) to its frontmatter. Use when the note's content has been incorporated into other artifacts (records, docs, skills, agents).
+Moves a note from `active/` — or from `reported/`, retirement proceeds from the side-state by the same gesture — to `done/` and appends `retired` (today) and `produced` (the list of `--produced` refs) to its frontmatter. Use when the note's content has been incorporated into other artifacts (records, docs, skills, agents). A reported note's `produced` refs naturally include the upstream issue(s) it became.
 
 - **`<slug>`** matches either the slug portion of the filename or the full filename. Use the full filename to disambiguate when multiple notes share a slug (rare; the `new scratchpad` command refuses duplicates within the area).
 - **`--produced <ref>`** is repeatable. Each value is a record ID (`COR-013`), file path (`.pkit/agents/README.md`), or URL. May be omitted; the `produced:` field is then not added (the author can edit it later by hand).
 
-Supports `--dry-run`. Refuses if no active note matches the slug, or if the destination filename already exists in `done/`.
+Supports `--dry-run`. Refuses if no active or reported note matches the slug, or if the destination filename already exists in `done/`. When the move empties `reported/`, the directory is removed (it is lazy — COR-043).
 
 ### `scratchpad drop <slug>`
 
-Moves a note from `active/` to `dropped/` and appends `retired` (today) to its frontmatter. Use when the line of thought did not pan out.
+Moves a note from `active/` (or `reported/`) to `dropped/` and appends `retired` (today) to its frontmatter. Use when the line of thought did not pan out.
 
 Before dropping, the convention asks the author to append a closing paragraph to the body explaining *why* the line was abandoned, so future readers do not re-tread the path silently.
 
-Supports `--dry-run`. Refuses if no active note matches the slug, or if the destination filename already exists in `dropped/`.
+Supports `--dry-run`. Refuses if no active or reported note matches the slug, or if the destination filename already exists in `dropped/`.
+
+### `scratchpad reported <slug> <ref>...`
+
+The **manual stamp gesture** (per COR-043): mark a note as sent through the report channel when the post happened outside the tooling — the URL-first path (the browser filed it) or retroactive marking of a note hand-carried upstream before the mechanism existed. The automatic equivalent runs on a successful `pkit report … --file` post.
+
+Moves the note from `active/` to the lazily-created `reported/` and appends to its frontmatter: `reported` (today), `reported_to` (the refs), and `reported_hash` (SHA-256 of the full file as it was at stamp time — the drift-detection anchor). On a note already in `reported/`, appends the refs not yet recorded and re-anchors the hash (a new send); duplicate refs are an idempotent no-op.
+
+- **`<ref>`** is `owner/repo#N` or a full GitHub issue URL (normalised to `owner/repo#N`). Repeatable — one note may become several issues.
+
+Supports `--dry-run`.
+
+### `scratchpad list`
+
+Lists every note grouped by state folder. For `reported/` notes it additionally (per COR-043):
+
+- **Resolves each ref's upstream state live** via `gh` — pull-only at the moment of asking, nothing stored or synced; offline or unresolvable degrades to `state unknown`, never blocking.
+- **Flags drift** — `[modified since reported]` when the current content diverges from the stamped hash. A warning, never a gate: reported notes are frozen by convention, and follow-up thinking belongs in a new note.
+- **Prompts retirement** when *all* of a note's refs are closed, printing the exact `pkit scratchpad done <slug> --produced <ref>...` command. It never auto-retires — retirement carries `produced` refs only a human can complete.
 
 ## Diagnostic commands
 
@@ -423,6 +442,26 @@ identity"). `--yes` / autonomy **degrades to the draft — it never auto-posts**
 deliberate `--yes` asymmetry, per ADR-047). `--on-behalf-of @login` files under the
 invoker's identity with a "Reported for @login" attribution so the beneficiary
 still tracks it.
+
+**`--scratchpad <slug>`** (per COR-043) inlines a scratchpad note — resolved by
+slug, filename, or path in `active/` (or `reported/` for a re-send) — into the
+composed report as a collapsed `<details>` section titled with the note's filename
++ "(as sent)". The attached content passes a **compose-time redaction lint** on
+*every* path, drafts and URL-first included ($HOME, `/Users/…`, `/home/…`, `~/`
+home paths — redaction is a property of the payload, not the channel):
+interactively a finding prompts **edit-or-send-anyway**; on draft paths findings
+ride as warnings with the draft. An **oversized** note (composed body over the
+issue-body budget) is sent as an excerpted body **plus ONE overflow comment**
+carrying the full as-sent text — one logical send, body and comment shown and
+confirmed as a **single gesture** before any post (ADR-047 refinement). If the
+issue posts but the overflow comment fails, the send did not complete as
+confirmed: **nothing is stamped**, the created issue is named with the
+remediation, and the `gh` error is surfaced verbatim. On a **fully-successful
+post** the note is stamped `reported` (moved to the lazily-created `reported/`
+with refs/date/hash frontmatter); draft and URL paths send nothing and stamp
+nothing — use `pkit scratchpad reported` after the browser submit. Every report
+verb also prints a one-line warning (never a gate) when a `reported/` note has
+been modified since its stamp.
 
 ### `report` (= `report list`) / `report show <N>`
 
