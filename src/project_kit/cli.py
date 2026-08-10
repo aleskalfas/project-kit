@@ -675,8 +675,10 @@ def _run_report_list(*, tree: bool = False) -> None:
 
 
 def _report_title(r) -> str:
-    """Render a report's title with a `(filed for you)` marker when attributed."""
-    return f"{r.title}  (filed for you)" if r.attributed else r.title
+    """Render a report's title, tagged with its project marker (`[project]`,
+    ADR-050) and a `(filed for you)` marker when attributed."""
+    title = f"{r.title}  [{r.project}]" if r.project else r.title
+    return f"{title}  (filed for you)" if r.attributed else title
 
 
 @report.command("show")
@@ -729,8 +731,8 @@ def _require_report_target() -> str:
 )
 @click.option(
     "--group-by", "group_by", type=click.Choice(["project"]), default=None,
-    help="Group reports by their body project marker (reports without one group "
-    "under '(no project)').",
+    help="Group reports by the body marker's project= key (ADR-050; reports "
+    "without one group under '(no project)').",
 )
 @click.option(
     "--resolved", is_flag=True, default=False,
@@ -778,11 +780,18 @@ def _run_inbox_list(target: str, *, kind: str | None, group_by: str | None) -> N
             click.echo(f"  {project}")
             for r in by_project[project]:
                 click.echo(
-                    f"    #{r.number:<5} {r.kind:<15} {r.state:<12} {r.title}"
+                    f"    #{r.number:<5} {r.kind:<15} {r.state:<12}"
+                    f" {_inbox_title(r)}"
                 )
         return
     for r in reports:
-        click.echo(f"  #{r.number:<5} {r.kind:<15} {r.state:<12} {r.title}")
+        click.echo(f"  #{r.number:<5} {r.kind:<15} {r.state:<12} {_inbox_title(r)}")
+
+
+def _inbox_title(r) -> str:
+    """An inbox row's title with its workstream marker (`[workstream]`,
+    ADR-050) when the report carries one."""
+    return f"{r.title}  [{r.workstream}]" if r.workstream else r.title
 
 
 def _run_inbox_resolved(target: str, *, assume_yes: bool) -> None:
@@ -863,6 +872,49 @@ def _echo_url_first(kind: str, url: str, target: str, note: str = "") -> None:
     )
 
 
+def _resolve_report_context(
+    target_root: Path, *, workstream_override: str | None, interactive: bool
+) -> tuple[str | None, str | None]:
+    """Resolve the (project, workstream) context pair for a compose (ADR-050).
+
+    Project: the declared config `name`; when absent on an **interactive**
+    compose, prompt once (default: the git remote's repo name, never a path
+    segment) and offer to persist the answer — the write-back is what makes
+    the prompt once-per-project. Non-interactive/draft paths resolve config →
+    remote fallback silently, no prompt. Workstream: `--workstream` override,
+    else the pm capability's `context-workstream` read verb via the
+    dispatcher; every miss degrades to omission.
+    """
+    from project_kit import report_context
+
+    project = report_context.read_project_name(target_root)
+    if project is None:
+        fallback = report_context.git_remote_repo_name(target_root)
+        if not interactive:
+            project = fallback
+        else:
+            entered = click.prompt(
+                "Project name for the report's context line (a declared name, "
+                "never a path; blank to omit)",
+                default=fallback or "",
+                show_default=bool(fallback),
+            ).strip()
+            project = entered or None
+            if project and click.confirm(
+                f"Save name {project!r} to "
+                f"{report_context.PROJECT_CONFIG_RELPATH} so future reports "
+                "skip this prompt?",
+                default=True,
+            ):
+                report_context.write_project_name(target_root, project)
+
+    if workstream_override is not None:
+        workstream = workstream_override.strip() or None
+    else:
+        workstream = report_context.pm_workstream(target_root)
+    return project, workstream
+
+
 def _run_report(
     kind: str,
     title: str,
@@ -872,6 +924,7 @@ def _run_report(
     do_file: bool,
     assume_yes: bool,
     scratchpad_note: str | None = None,
+    workstream_override: str | None = None,
 ) -> None:
     """Reporter path. Default is **URL-first** (print a prefilled new-issue URL —
     no `gh` needed, browser submit is the review gate). `--file` opts into a
@@ -883,7 +936,9 @@ def _run_report(
     `--scratchpad` inlines a note into the payload (COR-043): redaction-linted
     at compose time on every path, oversize split into body-excerpt + ONE
     overflow comment confirmed as a single gesture, and stamped `reported`
-    only on a fully-successful post — draft/URL paths stamp nothing."""
+    only on a fully-successful post — draft/URL paths stamp nothing. Every
+    path carries the project/workstream context (ADR-050): line + marker +
+    title parenthetical, stamped into the reported note's frontmatter."""
     from project_kit.report import (
         REPORT_TARGET,
         SendPayload,
@@ -898,6 +953,13 @@ def _run_report(
 
     target_root = find_target_root() or Path.cwd()
     _warn_reported_drift(target_root)
+    # Interactive = the path that can actually post (the prompt-once name flow
+    # runs only there; --yes / draft / no-auth paths resolve silently).
+    interactive = do_file and not assume_yes and gh_authenticated()
+    project, ws = _resolve_report_context(
+        target_root, workstream_override=workstream_override,
+        interactive=interactive,
+    )
     try:
         title, body, url = compose_report(
             kind,
@@ -906,6 +968,8 @@ def _run_report(
             target_root=target_root,
             on_behalf_of=on_behalf_of,
             include_private=include_private,
+            project=project,
+            workstream=ws,
         )
     except ValueError as exc:
         raise click.ClickException(str(exc)) from exc
@@ -983,7 +1047,9 @@ def _run_report(
                     )
                     return
             click.echo(f"\n[ok] filed: {posted}")
-            _stamp_reported_after_post(target_root, note_path, posted)
+            _stamp_reported_after_post(
+                target_root, note_path, posted, project=project, workstream=ws
+            )
             return
         _echo_url_first(kind, url, REPORT_TARGET, note="\nNot posted.")
         return
@@ -1040,12 +1106,19 @@ def _echo_overflow_draft_note(payload) -> None:
 
 
 def _stamp_reported_after_post(
-    target_root: Path, note_path: Path | None, posted: str
+    target_root: Path,
+    note_path: Path | None,
+    posted: str,
+    *,
+    project: str | None = None,
+    workstream: str | None = None,
 ) -> None:
     """Stamp the attached note `reported` after a fully-successful post
-    (COR-043: entering the state is produced by an actual send). Best-effort
-    past the post: the foreign write already happened, so a stamp failure
-    warns + names the manual gesture rather than erroring the command."""
+    (COR-043: entering the state is produced by an actual send), carrying the
+    resolved project/workstream pair into the frontmatter (ADR-050 / #643's
+    optional stamp kwargs). Best-effort past the post: the foreign write
+    already happened, so a stamp failure warns + names the manual gesture
+    rather than erroring the command."""
     if note_path is None:
         return
     area = target_root / ".pkit" / "scratchpad"
@@ -1057,7 +1130,10 @@ def _stamp_reported_after_post(
         return
     try:
         ref = scratchpads.normalize_issue_ref(posted.strip())
-        stamp = stamp_reported(target_root, note_path.name, (ref,))
+        stamp = stamp_reported(
+            target_root, note_path.name, (ref,),
+            project=project, workstream=workstream,
+        )
     except click.ClickException as exc:
         click.echo(
             f"[warn] could not stamp the note reported ({exc.message}) — stamp "
@@ -1102,6 +1178,12 @@ _REPORT_OPTS = [
         "as-sent section; redaction-linted at compose time, and stamped "
         "reported on a successful post only (COR-043).",
     ),
+    click.option(
+        "--workstream", "workstream_override", default=None, metavar="NAME",
+        help="Workstream for the report's context line/marker, overriding the "
+        "pm-derived value (branch → issue → workstream, when the "
+        "project-management capability is installed; ADR-050).",
+    ),
 ]
 
 
@@ -1116,11 +1198,12 @@ def _with_report_opts(fn):
 def report_bug(
     title: str, prose: str, do_file: bool, assume_yes: bool,
     on_behalf_of: str | None, include_private: bool, scratchpad_note: str | None,
+    workstream_override: str | None,
 ) -> None:
     """File a structured bug report to project-kit."""
     _run_report(
         "bug", title, prose, on_behalf_of, include_private, do_file, assume_yes,
-        scratchpad_note,
+        scratchpad_note, workstream_override,
     )
 
 
@@ -1129,11 +1212,12 @@ def report_bug(
 def report_feedback(
     title: str, prose: str, do_file: bool, assume_yes: bool,
     on_behalf_of: str | None, include_private: bool, scratchpad_note: str | None,
+    workstream_override: str | None,
 ) -> None:
     """File freeform feedback to project-kit."""
     _run_report(
         "feedback", title, prose, on_behalf_of, include_private, do_file,
-        assume_yes, scratchpad_note,
+        assume_yes, scratchpad_note, workstream_override,
     )
 
 
@@ -1142,6 +1226,7 @@ def report_feedback(
 def report_change_request(
     title: str, prose: str, do_file: bool, assume_yes: bool,
     on_behalf_of: str | None, include_private: bool, scratchpad_note: str | None,
+    workstream_override: str | None,
 ) -> None:
     """File a change/feature request to project-kit.
 
@@ -1152,7 +1237,7 @@ def report_change_request(
     """
     _run_report(
         "change-request", title, prose, on_behalf_of, include_private,
-        do_file, assume_yes, scratchpad_note,
+        do_file, assume_yes, scratchpad_note, workstream_override,
     )
 
 

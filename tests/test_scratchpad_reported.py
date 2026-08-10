@@ -35,6 +35,16 @@ def fixed_today(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture(autouse=True)
+def _pinned_report_context(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Pin the ADR-050 context resolution to (None, None) so the report-verb
+    flow tests never prompt for a name or spawn the pm read-verb subprocess.
+    The context-stamp test overrides with concrete values."""
+    monkeypatch.setattr(
+        cli_mod, "_resolve_report_context", lambda *a, **k: (None, None)
+    )
+
+
+@pytest.fixture(autouse=True)
 def fixed_git_author(monkeypatch: pytest.MonkeyPatch) -> None:
     def _fake_git_config(key: str) -> str:
         return {"user.name": "Test Author", "user.email": "test@example.com"}.get(key, "")
@@ -435,6 +445,33 @@ def test_cli_report_attach_inlines_note_and_stamps_on_post(
     reported = cli_target / ".pkit" / "scratchpad" / "reported" / note.name
     assert reported.is_file() and not note.exists()
     assert "  - aleskalfas/project-kit#700" in reported.read_text(encoding="utf-8")
+
+
+def test_cli_report_post_stamps_context_into_frontmatter(
+    cli_target: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The resolved project/workstream pair flows through the #643 stamp
+    # kwargs into the reported note's frontmatter (ADR-050).
+    note = _write_note(cli_target)
+    monkeypatch.setattr(
+        cli_mod, "_resolve_report_context", lambda *a, **k: ("alpha", "cli")
+    )
+    monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
+    monkeypatch.setattr(
+        rep, "file_report_via_gh",
+        lambda target, **k: "https://github.com/aleskalfas/project-kit/issues/700",
+    )
+    res = CliRunner().invoke(
+        main,
+        ["report", "bug", "--title", "t", "--body", "b", "--file",
+         "--scratchpad", "my-note"],
+        input="y\n",
+    )
+    assert res.exit_code == 0, res.output
+    reported = cli_target / ".pkit" / "scratchpad" / "reported" / note.name
+    content = reported.read_text(encoding="utf-8")
+    assert "project: alpha" in content
+    assert "workstream: cli" in content
 
 
 def test_cli_report_attach_draft_url_path_never_stamps(cli_target: Path) -> None:

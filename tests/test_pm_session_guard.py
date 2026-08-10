@@ -514,6 +514,8 @@ _READ_ONLY_EXEMPT = frozenset(
         "cascade-members.py",
         "cascade-membership.py",
         # Views / listings.
+        "context-workstream.py",  # report-context read verb (ADR-050):
+        # branch → issue → workstream label, prints one value, exits 0 always.
         "list-workstreams.py",
         "show-issue.py",
         "show-members.py",

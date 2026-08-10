@@ -1,0 +1,8 @@
+# Adopter-owned backbone project config (project namespace — never touched
+# by `pkit sync`). Holds project-level declarations the backbone reads.
+#
+# `name` — the declared project identity for report context (pkit ADR-050):
+# rendered on every `pkit report` as the body context line, the `project=`
+# marker key, and the title parenthetical. Declared here precisely so it is
+# never derived from a filesystem path segment.
+name: project-kit

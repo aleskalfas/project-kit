@@ -41,9 +41,10 @@ KINDS = ("bug", "feedback", "change-request")
 CHANGE_REQUEST_TITLE_PREFIX = "[CR]"
 
 #: Machine-readable marker embedded in every composed report body
-#: (`<!-- pkit-report: key=value -->`, invisible when rendered). Carries `kind`
-#: today; a future `project` key rides the same format (`parse_report_marker`
-#: already reads any key, so grouping degrades gracefully until it ships).
+#: (`<!-- pkit-report: key=value -->`, invisible when rendered). Carries
+#: `kind` plus, when resolved, the `project` / `workstream` context pair
+#: (ADR-050; `parse_report_marker` reads any key, so unknown future keys —
+#: e.g. EPIC #411's version provenance — degrade gracefully).
 _MARKER_RE = re.compile(r"<!--\s*pkit-report:\s*([^>]*?)\s*-->")
 
 #: Headings of the change-request compose template (structured-ish, per PRJ-008's
@@ -53,9 +54,38 @@ _CR_HEADING_RE = re.compile(
 )
 
 
-def kind_marker(kind: str) -> str:
-    """The body marker line for `kind` (see `_MARKER_RE`)."""
-    return f"<!-- pkit-report: kind={kind} -->"
+def kind_marker(
+    kind: str, *, project: str | None = None, workstream: str | None = None
+) -> str:
+    """The body marker line for `kind` plus any resolved context keys
+    (see `_MARKER_RE`). Values are tokenised (whitespace → `-`) because the
+    marker format is space-separated `key=value` pairs; the human context
+    line keeps the verbatim name."""
+    tokens = [f"kind={kind}"]
+    if project:
+        tokens.append(f"project={_marker_token(project)}")
+    if workstream:
+        tokens.append(f"workstream={_marker_token(workstream)}")
+    return f"<!-- pkit-report: {' '.join(tokens)} -->"
+
+
+def _marker_token(value: str) -> str:
+    """A marker-safe token: internal whitespace collapsed to `-`."""
+    return re.sub(r"\s+", "-", value.strip())
+
+
+def render_context_line(project: str | None, workstream: str | None) -> str:
+    """The human context line for the composed body (ADR-050): present halves
+    joined with ` · `; an unresolvable project is stated as omitted rather
+    than silently dropped. Pure over its inputs."""
+    parts: list[str] = []
+    if project:
+        parts.append(f"Project: {project}")
+    if workstream:
+        parts.append(f"Workstream: {workstream}")
+    if not project:
+        parts.append("(project: not declared)")
+    return " · ".join(parts)
 
 
 def parse_report_marker(body: str) -> dict[str, str]:
@@ -104,11 +134,19 @@ def apply_change_request_template(prose: str) -> str:
 
 
 def compose_report_body(
-    prose: str, env_block: str, *, on_behalf_of: str | None = None
+    prose: str,
+    env_block: str,
+    *,
+    on_behalf_of: str | None = None,
+    project: str | None = None,
+    workstream: str | None = None,
 ) -> str:
-    """Assemble the issue body: (optional attribution) + the reporter's prose +
+    """Assemble the issue body: the context line (ADR-050 — first, right
+    under the issue title) + (optional attribution) + the reporter's prose +
     the redacted `## Environment` block. Pure over its inputs."""
     parts: list[str] = []
+    parts.append(render_context_line(project, workstream))
+    parts.append("")
     if on_behalf_of:
         handle = on_behalf_of.lstrip("@")
         parts.append(f"_Reported for @{handle} (filed on their behalf)._")
@@ -137,13 +175,18 @@ def compose_report(
     target_root: Path,
     on_behalf_of: str | None = None,
     include_private: bool = False,
+    project: str | None = None,
+    workstream: str | None = None,
 ) -> tuple[str, str, str]:
     """Compose a report → (issue title, full issue body, prefilled new-issue URL).
 
     Ties the redacted environment block (`collect_environment`) into the body,
     stamps the body kind-marker, and builds the URL against `REPORT_TARGET`. A
     change-request additionally gets the `[CR]` title prefix and the
-    motivation/desired-behaviour/workaround template. Raises `ValueError` on an
+    motivation/desired-behaviour/workaround template. The resolved context
+    (ADR-050) renders three ways: the human context line atop the body, the
+    `project=`/`workstream=` marker keys, and a ` (<project>)` title
+    parenthetical when the project is known. Raises `ValueError` on an
     unknown kind or an unconfigured target.
     """
     if kind not in KINDS:
@@ -157,11 +200,17 @@ def compose_report(
         prose = apply_change_request_template(prose)
         if not title.startswith(CHANGE_REQUEST_TITLE_PREFIX):
             title = f"{CHANGE_REQUEST_TITLE_PREFIX} {title}"
+    if project:
+        title = f"{title} ({project})"
     env = collect_environment(target_root, include_private=include_private)
     body = compose_report_body(
-        prose, render_environment_block(env), on_behalf_of=on_behalf_of
+        prose,
+        render_environment_block(env),
+        on_behalf_of=on_behalf_of,
+        project=project,
+        workstream=workstream,
     )
-    body = f"{body}\n{kind_marker(kind)}\n"
+    body = f"{body}\n{kind_marker(kind, project=project, workstream=workstream)}\n"
     url = build_new_issue_url(REPORT_TARGET, title=title, body=body, label=kind)
     return title, body, url
 
@@ -338,7 +387,8 @@ class ReportSummary:
     state: str  # display state: "open" | "in progress" | "closed"
     updated_at: str
     attributed: bool = False  # filed *for* the invoker by someone else (on-behalf-of)
-    project: str = ""  # body marker's `project=` value; "" until that marker ships
+    project: str = ""  # body marker's `project=` value; "" when absent
+    workstream: str = ""  # body marker's `workstream=` value; "" when absent
 
 
 def _gh_json(args: list[str]) -> object | None:
@@ -379,13 +429,15 @@ def _summarize(issue: dict) -> ReportSummary:
     labels = _label_names(issue.get("labels"))
     title = str(issue.get("title", ""))
     body = str(issue.get("body", ""))  # "" when the query didn't fetch bodies
+    marker = parse_report_marker(body)
     return ReportSummary(
         number=int(issue.get("number", 0)),
         title=title,
         kind=classify_kind(labels, title, body),
         state=display_state(str(issue.get("state", "")), labels),
         updated_at=str(issue.get("updatedAt", "")),
-        project=parse_report_marker(body).get("project", ""),
+        project=marker.get("project", ""),
+        workstream=marker.get("workstream", ""),
     )
 
 
@@ -406,7 +458,7 @@ def list_my_reports(target: str) -> list[ReportSummary] | None:
     data = _gh_json([
         "gh", "issue", "list", "--repo", target, "--author", "@me",
         "--state", "all", "--limit", "100",
-        "--json", "number,title,state,labels,updatedAt",
+        "--json", "number,title,state,labels,updatedAt,body",
     ])
     if not isinstance(data, list):
         return None
@@ -423,7 +475,7 @@ def list_my_reports(target: str) -> list[ReportSummary] | None:
             "gh", "issue", "list", "--repo", target,
             "--search", f'in:body "Reported for @{login}"',
             "--state", "all", "--limit", "100",
-            "--json", "number,title,state,labels,updatedAt",
+            "--json", "number,title,state,labels,updatedAt,body",
         ])
         if isinstance(attr, list):
             for issue in attr:
