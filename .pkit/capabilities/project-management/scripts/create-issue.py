@@ -28,11 +28,22 @@ Self-contained via PEP 723; runs via
 Or, via the dispatcher (per COR-021):
   pkit project-management create-issue --type task --title "..."
 
+With --from-report <N> (per [project-management:DEC-048-from-report-auto-link]),
+a successfully created issue is also linked into feedback/change-request #N's
+`## Tracked by` list by invoking the backbone's canonical editor
+(`pkit report link <N> <new>`) as a subprocess — the one-linker rule: this
+script never reimplements the Tracked-by edit. The backbone verb owns the
+maintainer-side same-repo check; its refusal is surfaced verbatim. A link
+failure after a successful create never rolls the issue back — it warns
+loudly with the exact remediation command and exits 4.
+
 Exit codes:
   0  issue created
   1  membership refusal
   2  usage error / validation refusal
   3  gh failure (auth, network, repo not found, ...)
+  4  issue created, but --from-report link failed (issue NOT rolled back;
+     remediation command printed)
 """
 
 from __future__ import annotations
@@ -172,6 +183,22 @@ def main() -> int:
         help=(
             "Projects v2 board ID. Overrides the adopter's "
             "`projects_v2_board_id` config for this invocation."
+        ),
+    )
+    parser.add_argument(
+        "--from-report",
+        type=int,
+        default=None,
+        metavar="N",
+        help=(
+            "Feedback/change-request issue number to auto-link the new issue "
+            "into. After a successful create, invokes the backbone's "
+            "`pkit report link N <new>` (the canonical `## Tracked by` "
+            "editor per [project-management:DEC-048-from-report-auto-link]) — "
+            "never a second Tracked-by implementation. Maintainer-side, "
+            "same-repo: the backbone verb enforces that and its refusal is "
+            "surfaced verbatim. A link failure never rolls the issue back "
+            "(exit 4 + remediation command)."
         ),
     )
     parser.add_argument(
@@ -590,6 +617,11 @@ def main() -> int:
         print(f"  milestone:  #{args.milestone}")
     print(f"  assignee:   {assignee}")
     print(f"  labels:     {', '.join(labels)}")
+    if args.from_report is not None:
+        print(
+            f"  from-report: #{args.from_report}  "
+            "(will link the new issue into its Tracked by via `pkit report link`)"
+        )
     board_id = args.board if args.board is not None else config.get("projects_v2_board_id")
     if has_board:
         print(f"  board:      v2/{board_id}  (auto-add per DEC-019)")
@@ -717,6 +749,64 @@ def main() -> int:
         capability_root=capability_root,
     )
 
+    # --from-report: link the new issue into the report's `## Tracked by` by
+    # invoking the backbone's canonical editor (DEC-048's one-linker rule —
+    # `pkit report link` is the SOLE Tracked-by implementation; this script
+    # only decides when it fires). Runs LAST so a link failure never skips the
+    # containment link / board add / hooks above. The backbone verb owns the
+    # maintainer-side same-repo gate; its refusal (or any other failure) is
+    # surfaced verbatim, with the exact remediation command, and maps to exit
+    # 4 — the issue itself is never rolled back.
+    if args.from_report is not None:
+        return _link_from_report(args.from_report, new_issue_number)
+
+    return 0
+
+
+def _link_from_report(report_n: int, new_issue_number: int | None) -> int:
+    """Link the just-created issue into report `#report_n` via `pkit report link`.
+
+    The subprocess call is the one-linker realization (DEC-048): the
+    `## Tracked by` edit is implemented once, in the backbone's report link
+    editor; this capability invokes the canonical verb rather than importing
+    backbone Python or re-editing the body itself. Returns the script's exit
+    code contribution: 0 on a successful link, 4 on any failure (the issue was
+    already created — loud warning + remediation command, never a rollback).
+    """
+    if new_issue_number is None:
+        print(
+            f"[warn] issue created but NOT linked into report #{report_n}'s "
+            "Tracked by: could not parse the new issue number from the gh "
+            "output.\n"
+            f"Run manually: pkit report link {report_n} <new-issue-number>",
+            file=sys.stderr,
+        )
+        return 4
+    argv = ["pkit", "report", "link", str(report_n), str(new_issue_number)]
+    remediation = f"Run manually: pkit report link {report_n} {new_issue_number}"
+    try:
+        proc = subprocess.run(argv, capture_output=True, text=True, check=False)
+    except (OSError, FileNotFoundError):
+        print(
+            f"[warn] issue created but NOT linked into report #{report_n}'s "
+            "Tracked by: `pkit` not on PATH.\n" + remediation,
+            file=sys.stderr,
+        )
+        return 4
+    if proc.returncode != 0:
+        # Surface the backbone verb's own message verbatim — including its
+        # maintainer-side refusal ("runs only inside the report target repo").
+        detail = (proc.stderr or proc.stdout or "").strip()
+        print(
+            f"[warn] issue created but NOT linked into report #{report_n}'s "
+            f"Tracked by:\n{detail}\n" + remediation,
+            file=sys.stderr,
+        )
+        return 4
+    print(
+        f"[ok] linked #{new_issue_number} into report #{report_n}'s Tracked by "
+        "(via `pkit report link`)."
+    )
     return 0
 
 

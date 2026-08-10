@@ -4,7 +4,9 @@ component:
   name: project-management
   version: 0.52.1
 description: Project-management discipline realized from the pm-workflow methodology — issue hierarchy, state machine, body validation, naming conventions — encoded as schemas a methodology-agnostic engine (skills + agent) consumes at runtime.
-requires_backbone: ">=1.126.0,<2.0.0"
+# Floor 1.144.0: create-issue --from-report invokes the backbone's
+# `pkit report link` (shipped in v1.144.0) per DEC-048's one-linker rule.
+requires_backbone: ">=1.144.0,<2.0.0"
 aliases:
   - pm
 # Runtime-local files this capability owns under `.pkit/` (ADR-009 Amendment 1).
@@ -44,7 +46,7 @@ commands:
     help: "Set (or --show / --clear) this clone's numeric instance id — the opt-in, per-clone activation gate for instance ownership (DEC-035). Writes a git-ignored runtime file; a clone with no id set behaves as a single-clone repo."
   create-issue:
     script: scripts/create-issue.py
-    help: File a new issue (per DEC-020). Composes title + body from the type's template, applies classification labels, optionally adds to the configured Projects v2 board. Refuses a non-feature --kind on an epic/feature/umbrella up front (the DEC-011 kind/structural hard-reject).
+    help: File a new issue (per DEC-020). Composes title + body from the type's template, applies classification labels, optionally adds to the configured Projects v2 board. Refuses a non-feature --kind on an epic/feature/umbrella up front (the DEC-011 kind/structural hard-reject). --from-report <N> auto-links the new issue into feedback/CR #N's Tracked by via the backbone's `pkit report link` (per DEC-048; link failure warns + exits 4, never rolls back).
   create-milestone:
     script: scripts/create-milestone.py
     help: File a new Milestone in a declared category (per DEC-016). Computes the next number from existing milestones; composes title from category's title_format; posts to GitHub with the `Close trigger:` body line.
