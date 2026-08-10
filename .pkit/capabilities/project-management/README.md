@@ -334,6 +334,21 @@ pkit pm show-pr 320 --field cc-type            # -> e.g. `feat(pm)`
 pkit pm show-pr 320 --field review             # -> latest verdict token + reasons per reviewer
 ```
 
+#### Report-context read verb — `context-workstream` (per pkit ADR-050)
+
+`pkit pm context-workstream` prints the **current workstream** — resolved
+from the current branch (`<type>/<N>-<slug>` → issue #N → its `workstream:*`
+label, through the ADR-026 axis-label read seam) — as one bare value on
+stdout, or **nothing** when it cannot be derived (branch not issue-shaped,
+`gh` unavailable, issue unlabelled, board-substrate adopter). It **always
+exits 0**: the caller treats empty output as "omit workstream", so context
+enrichment never becomes a gate. This is the pm-provided half of the report
+context seam — the backbone's `pkit report` compose invokes it by subprocess
+through the capability dispatcher (COR-021) rather than reading
+`workstreams.yaml` or issue labels itself, keeping workstream vocabulary
+inside the capability. Read-only and deliberately not membership-gated (a
+passive context accessor over the invoker's own branch).
+
 Configure the review mode in `project/config.yaml`:
 
 ```yaml

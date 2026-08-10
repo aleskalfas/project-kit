@@ -1,0 +1,11 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+body: >
+  Added the `context-workstream` read verb (pkit ADR-050, #644): resolves
+  the current branch `<type>/<N>-<slug>` to issue #N and prints its bare
+  `workstream:*` label value, or nothing when underivable. Read-only,
+  always exits 0, not membership-gated; invoked by the backbone's report
+  compose through the capability dispatcher so workstream vocabulary stays
+  inside the capability.

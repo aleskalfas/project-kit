@@ -577,3 +577,55 @@ def test_uninstalled_capability_does_not_surface(kit_target: Path) -> None:
 
     after = runner.invoke(main, ["--help"])
     assert "demo" not in after.output
+
+
+# --- resolve_capability_script (the backbone→verb subprocess seam) ----
+
+
+def test_resolve_capability_script_finds_declared_leaf(kit_target: Path) -> None:
+    """The resolver returns the script path a `commands:` leaf declares
+    (ADR-050's dispatcher-mediated read-verb invocation reuses it)."""
+    from project_kit.dispatcher import resolve_capability_script
+
+    cap_dir = _install_synthetic_capability(
+        kit_target,
+        "demo",
+        commands_yaml=(
+            "commands:\n"
+            "  context-workstream:\n"
+            "    script: scripts/context-workstream.py\n"
+            "    help: Print the current workstream.\n"
+        ),
+    )
+    script = _stage_proxy_script(cap_dir, "scripts/context-workstream.py")
+    assert (
+        resolve_capability_script(kit_target, "demo", "context-workstream")
+        == script
+    )
+
+
+def test_resolve_capability_script_none_on_every_degrade_axis(
+    kit_target: Path,
+) -> None:
+    from project_kit.dispatcher import resolve_capability_script
+
+    # Capability not registered at all.
+    assert resolve_capability_script(kit_target, "absent", "verb") is None
+
+    cap_dir = _install_synthetic_capability(
+        kit_target,
+        "demo",
+        commands_yaml=(
+            "commands:\n"
+            "  declared:\n"
+            "    script: scripts/missing.py\n"
+            "    help: Declared but the script file is absent.\n"
+        ),
+    )
+    # Verb not declared.
+    assert resolve_capability_script(kit_target, "demo", "other-verb") is None
+    # Verb declared but the script file is missing on disk.
+    assert resolve_capability_script(kit_target, "demo", "declared") is None
+    # Script appears -> resolves.
+    script = _stage_proxy_script(cap_dir, "scripts/missing.py")
+    assert resolve_capability_script(kit_target, "demo", "declared") == script

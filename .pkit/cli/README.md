@@ -443,6 +443,30 @@ deliberate `--yes` asymmetry, per ADR-047). `--on-behalf-of @login` files under 
 invoker's identity with a "Reported for @login" attribution so the beneficiary
 still tracks it.
 
+**Project + workstream context** (per [pkit:ADR-050]) rides every composed
+report, drafts included: a human context line right under the title
+(`Project: <name> · Workstream: <ws>`, missing halves omitted), `project=` /
+`workstream=` keys on the body marker, and a ` (<project>)` title
+parenthetical when the project is known. Sourcing is **names, never paths**
+(the redaction discipline extended — no value is ever derived from a
+filesystem path segment, directory basenames included): the project name
+comes from the declared `name` key in the adopter-owned
+`.pkit/project/config.yaml`; when that key is absent, an **interactive**
+`--file` compose prompts once (defaulting to the git remote's repo name
+**without** the owner/org — a private org name is itself potentially
+sensitive) and offers to write the answer back so future reports skip the
+prompt, while draft / `--yes` / no-auth paths use config-then-remote-fallback
+silently. No name resolvable ⇒ the body states `(project: not declared)`
+instead. The workstream is **asked of the project-management capability** —
+its `context-workstream` read verb (current branch → issue → workstream),
+invoked by subprocess through the capability dispatcher, so the backbone
+never reads pm's `workstreams.yaml` or labels itself; `--workstream <name>`
+overrides, and pm-absent / underivable simply omits the half. A successful
+`--file` post stamps the same pair into the reported scratchpad note's
+frontmatter. This context block is the designated extension point for
+version provenance (EPIC #411): future provenance fields join the same
+line/marker rather than adding a second block.
+
 **`--scratchpad <slug>`** (per COR-043) inlines a scratchpad note — resolved by
 slug, filename, or path in `active/` (or `reported/` for a re-send) — into the
 composed report as a collapsed `<details>` section titled with the note's filename
@@ -466,7 +490,9 @@ been modified since its stamp.
 ### `report` (= `report list`) / `report show <N>`
 
 `report` lists the invoker's reports (authored by *or* attributed to them) + states,
-one line each — **flat by default**; `--tree` expands each feedback with its
+one line each — **flat by default**, each row tagged with its project marker
+(`[<project>]`, per [pkit:ADR-050]) when the report carries one; `--tree`
+expands each feedback with its
 `## Tracked by` fixes and their states inline. `report show <N>` adds the maintainer
 comments and the `## Tracked by` rollup — the issues that will fix it, with each
 one's state. Read-only; requires `gh` auth (a
@@ -476,9 +502,10 @@ no-auth user tracks via GitHub's own notifications).
 
 Enabled **only when the current repo is the configured report target** (the
 structural "developers of the target repo" gate; inert elsewhere). `report inbox` lists all incoming feedback for
-triage; `--kind <bug|feedback|change-request>` narrows to one kind, and
-`--group-by project` groups rows by the body project marker (reports without one —
-all of them, until a project marker ships with a later feature — group under
+triage, each row tagged with its workstream marker (`[<workstream>]`, per
+[pkit:ADR-050]) when present; `--kind <bug|feedback|change-request>` narrows to one kind, and
+`--group-by project` groups rows by the body marker's `project=` key (reports
+without one group under
 `(no project)`). `report inbox --resolved` lists open feedbacks/change-requests
 whose `## Tracked by` issues are **all closed**, and — **interactively only** —
 prompts per report to post a closing comment + close; `--yes` / non-interactive

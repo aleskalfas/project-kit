@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+import project_kit.cli as cli_mod
 from project_kit.report import (
     KINDS,
     REPORT_TARGET,
@@ -14,6 +15,20 @@ from project_kit.report import (
     compose_report,
     compose_report_body,
 )
+
+#: The real context resolver, captured before the autouse pin below replaces
+#: it — the ADR-050 prompt-flow tests restore it explicitly.
+_REAL_RESOLVE_CONTEXT = cli_mod._resolve_report_context
+
+
+@pytest.fixture(autouse=True)
+def _pinned_report_context(monkeypatch):
+    """Pin the ADR-050 context resolution to (None, None) so CLI tests never
+    prompt for a name or spawn the pm read-verb subprocess. Context-specific
+    tests override (or restore `_REAL_RESOLVE_CONTEXT`)."""
+    monkeypatch.setattr(
+        cli_mod, "_resolve_report_context", lambda *a, **k: (None, None)
+    )
 
 
 def test_compose_report_body_includes_prose_and_env() -> None:
@@ -765,6 +780,209 @@ def test_post_issue_comment_argv_and_failure(monkeypatch) -> None:
     )
     ok, err = rep.post_issue_comment("o/r", "9", "full")
     assert ok is False and err == "boom"  # error text verbatim
+
+
+# --- project + workstream context (ADR-050 / #644) -------------------
+
+from project_kit import report_context as rc_mod  # noqa: E402
+
+
+def test_compose_report_renders_context_line_marker_and_title(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / ".pkit").mkdir()
+    title, body, _ = compose_report(
+        "bug", title="T", prose="P", target_root=tmp_path,
+        project="alpha", workstream="cli",
+    )
+    assert title == "T (alpha)"  # title parenthetical
+    # the context line is the FIRST body line, right under the issue title
+    assert body.splitlines()[0] == "Project: alpha · Workstream: cli"
+    assert rep.parse_report_marker(body) == {
+        "kind": "bug", "project": "alpha", "workstream": "cli",
+    }
+
+
+def test_compose_change_request_title_parenthetical_after_prefix(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / ".pkit").mkdir()
+    title, _, _ = compose_report(
+        "change-request", title="add a flag", prose="x", target_root=tmp_path,
+        project="alpha",
+    )
+    assert title == "[CR] add a flag (alpha)"
+
+
+def test_compose_report_unresolved_project_states_omission(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / ".pkit").mkdir()
+    title, body, _ = compose_report(
+        "bug", title="T", prose="P", target_root=tmp_path,
+    )
+    assert title == "T"  # no parenthetical without a name
+    assert "(project: not declared)" in body  # explicit, never silent
+    assert "Project:" not in body
+    marker = rep.parse_report_marker(body)
+    assert "project" not in marker and "workstream" not in marker
+
+
+def test_cli_workstream_flag_overrides_pm_derivation(monkeypatch) -> None:
+    monkeypatch.setattr(cli_mod, "_resolve_report_context", _REAL_RESOLVE_CONTEXT)
+    monkeypatch.setattr(rc_mod, "read_project_name", lambda root: "alpha")
+
+    def explode(root):  # pragma: no cover - must not be reached
+        raise AssertionError("--workstream must skip the pm subprocess")
+
+    monkeypatch.setattr(rc_mod, "pm_workstream", explode)
+    res = CliRunner().invoke(
+        main,
+        ["report", "bug", "--title", "t", "--body", "b", "--workstream", "cli-x"],
+    )
+    assert res.exit_code == 0, res.output
+    assert urllib.parse.quote_plus("Workstream: cli-x") in res.output
+
+
+def test_cli_workstream_derived_via_pm_verb(monkeypatch) -> None:
+    monkeypatch.setattr(cli_mod, "_resolve_report_context", _REAL_RESOLVE_CONTEXT)
+    monkeypatch.setattr(rc_mod, "read_project_name", lambda root: "alpha")
+    monkeypatch.setattr(rc_mod, "pm_workstream", lambda root: "derived-ws")
+    res = CliRunner().invoke(main, ["report", "bug", "--title", "t", "--body", "b"])
+    assert res.exit_code == 0, res.output
+    assert urllib.parse.quote_plus("Project: alpha · Workstream: derived-ws") in res.output
+
+
+def test_cli_draft_path_uses_remote_fallback_without_prompt(
+    tmp_path: Path, monkeypatch
+) -> None:
+    # Non-interactive/draft compose: config -> remote fallback, silently.
+    (tmp_path / ".pkit").mkdir()
+    monkeypatch.setattr(cli_mod, "find_target_root", lambda: tmp_path)
+    monkeypatch.setattr(cli_mod, "_resolve_report_context", _REAL_RESOLVE_CONTEXT)
+    monkeypatch.setattr(rc_mod, "git_remote_repo_name", lambda root: "remote-repo")
+    monkeypatch.setattr(rc_mod, "pm_workstream", lambda root: None)
+    res = CliRunner().invoke(
+        main, ["report", "bug", "--title", "t", "--body", "b"]
+    )  # no input at all: a prompt would abort on EOF
+    assert res.exit_code == 0, res.output
+    assert urllib.parse.quote_plus("Project: remote-repo") in res.output
+
+
+def test_cli_interactive_compose_prompts_once_and_writes_back(
+    tmp_path: Path, monkeypatch
+) -> None:
+    (tmp_path / ".pkit").mkdir()
+    monkeypatch.setattr(cli_mod, "find_target_root", lambda: tmp_path)
+    monkeypatch.setattr(cli_mod, "_resolve_report_context", _REAL_RESOLVE_CONTEXT)
+    monkeypatch.setattr(rc_mod, "git_remote_repo_name", lambda root: None)
+    monkeypatch.setattr(rc_mod, "pm_workstream", lambda root: None)
+    monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
+    monkeypatch.setattr(
+        rep, "file_report_via_gh",
+        lambda target, **k: "https://github.com/aleskalfas/project-kit/issues/700",
+    )
+    # name prompt -> save-confirm (default yes) -> post-confirm
+    res = CliRunner().invoke(
+        main, ["report", "bug", "--title", "t", "--body", "b", "--file"],
+        input="myproj\ny\ny\n",
+    )
+    assert res.exit_code == 0, res.output
+    assert "Save name 'myproj'" in res.output
+    assert rc_mod.read_project_name(tmp_path) == "myproj"  # written back
+
+    # Second compose: the declared name resolves — no prompt fires (the only
+    # input consumed is the post-confirm).
+    res2 = CliRunner().invoke(
+        main, ["report", "bug", "--title", "t", "--body", "b", "--file"],
+        input="y\n",
+    )
+    assert res2.exit_code == 0, res2.output
+    assert "Save name" not in res2.output
+    assert "Project: myproj" in res2.output  # echoed body carries the context
+
+
+def test_cli_interactive_prompt_blank_omits_and_writes_nothing(
+    tmp_path: Path, monkeypatch
+) -> None:
+    (tmp_path / ".pkit").mkdir()
+    monkeypatch.setattr(cli_mod, "find_target_root", lambda: tmp_path)
+    monkeypatch.setattr(cli_mod, "_resolve_report_context", _REAL_RESOLVE_CONTEXT)
+    monkeypatch.setattr(rc_mod, "git_remote_repo_name", lambda root: None)
+    monkeypatch.setattr(rc_mod, "pm_workstream", lambda root: None)
+    monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
+    monkeypatch.setattr(rep, "file_report_via_gh", lambda target, **k: "url")
+    # blank name -> no save-confirm -> decline the post
+    res = CliRunner().invoke(
+        main, ["report", "bug", "--title", "t", "--body", "b", "--file"],
+        input="\nn\n",
+    )
+    assert res.exit_code == 0, res.output
+    assert "(project: not declared)" in res.output
+    assert not rc_mod.project_config_path(tmp_path).exists()
+
+
+def test_list_my_reports_fetches_bodies_and_reads_project_marker(
+    monkeypatch,
+) -> None:
+    queries: list[list[str]] = []
+
+    def fake(args):
+        queries.append(args)
+        if args[:3] == ["gh", "api", "user"]:
+            return None  # no login -> attributed query skipped
+        return [{
+            "number": 1, "title": "a bug", "state": "OPEN",
+            "labels": [{"name": "bug"}], "updatedAt": "2026-08-01",
+            "body": "p\n<!-- pkit-report: kind=bug project=alpha workstream=cli -->\n",
+        }]
+
+    monkeypatch.setattr(rep, "_gh_json", fake)
+    reports = rep.list_my_reports("o/r")
+    assert reports[0].project == "alpha" and reports[0].workstream == "cli"
+    list_query = next(q for q in queries if "list" in q)
+    assert "body" in list_query[list_query.index("--json") + 1]
+
+
+def test_cli_report_list_shows_project_per_row(monkeypatch) -> None:
+    monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
+    monkeypatch.setattr(
+        rep, "list_my_reports",
+        lambda t: [rep.ReportSummary(
+            1, "a bug", "bug", "open", "2026-08-01", project="alpha"
+        )],
+    )
+    res = CliRunner().invoke(main, ["report"])
+    assert res.exit_code == 0
+    assert "[alpha]" in res.output
+
+
+def test_cli_inbox_group_by_project_end_to_end_from_markers(monkeypatch) -> None:
+    # markers -> _gh_json -> list_inbox -> grouped CLI output, no seam mocked
+    # between the marker parse and the rendering.
+    issues = [
+        {"number": 1, "title": "a bug", "state": "OPEN",
+         "labels": [{"name": "bug"}], "updatedAt": "2026-08-01",
+         "body": "p\n<!-- pkit-report: kind=bug project=alpha workstream=cli -->\n"},
+        {"number": 2, "title": "fb", "state": "OPEN",
+         "labels": [{"name": "feedback"}], "updatedAt": "2026-08-02",
+         "body": "p\n<!-- pkit-report: kind=feedback project=beta -->\n"},
+        {"number": 3, "title": "bare", "state": "OPEN",
+         "labels": [{"name": "feedback"}], "updatedAt": "2026-08-03",
+         "body": "no marker"},
+    ]
+    monkeypatch.setattr(rep, "in_report_target", lambda: True)
+    monkeypatch.setattr(rep, "_gh_json", lambda args: issues)
+    res = CliRunner().invoke(main, ["report", "inbox", "--group-by", "project"])
+    assert res.exit_code == 0, res.output
+    lines = res.output.splitlines()
+    assert any(ln.strip() == "alpha" for ln in lines)
+    assert any(ln.strip() == "beta" for ln in lines)
+    assert any(ln.strip() == "(no project)" for ln in lines)
+    assert "[cli]" in res.output  # workstream shown on #1's row
+    # each report renders under its own project group
+    assert lines.index(next(ln for ln in lines if ln.strip() == "alpha")) < \
+        lines.index(next(ln for ln in lines if "#1" in ln))
 
 
 def test_cli_report_show(monkeypatch) -> None:

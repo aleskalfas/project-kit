@@ -119,6 +119,43 @@ def _discover_capability_commands() -> dict[str, click.Group]:
     return out
 
 
+def resolve_capability_script(
+    target_root: Path, capability: str, command: str
+) -> Path | None:
+    """Resolve an installed capability's top-level command leaf to its script
+    path — the same package.yaml `commands:` resolution the dispatch group
+    uses, exposed for backbone code that invokes a capability verb by
+    subprocess (per COR-021; first consumer: ADR-050's `context-workstream`
+    read on report compose).
+
+    Returns None on every degrade axis — capability not registered in the
+    backbone manifest, subtree or `package.yaml` missing, no such command
+    declared, or the declared script file absent — so callers can treat the
+    verb as optional.
+    """
+    backbone = read_backbone_manifest(target_root)
+    if backbone is None:
+        return None
+    for component in backbone.components:
+        if component.kind != "capability" or component.name != capability:
+            continue
+        cap_dir = target_root / ".pkit" / "capabilities" / capability
+        package_yaml = cap_dir / "package.yaml"
+        if not package_yaml.is_file():
+            return None
+        commands_tree, _description, _aliases = (
+            _read_commands_description_and_aliases(package_yaml)
+        )
+        if not isinstance(commands_tree, dict):
+            return None
+        entry = commands_tree.get(command)
+        if not isinstance(entry, dict) or "script" not in entry:
+            return None
+        script = cap_dir / str(entry["script"])
+        return script if script.is_file() else None
+    return None
+
+
 def _read_commands_description_and_aliases(
     package_yaml: Path,
 ) -> tuple[dict[str, Any] | None, str, list[str]]:

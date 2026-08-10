@@ -1,0 +1,20 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  Every report now carries visible project + workstream context (ADR-050,
+  #644): a human context line atop the composed body (`Project: … ·
+  Workstream: …`), `project=`/`workstream=` keys on the body report-marker,
+  and a ` (<project>)` title parenthetical. The project name is declared —
+  a `name` key in the adopter-owned `.pkit/project/config.yaml`, prompted
+  once on an interactive compose with an offer to persist, falling back to
+  the git remote's repo name without the owner/org — never a filesystem
+  path segment; unresolvable renders an explicit "(project: not declared)"
+  note. The workstream is asked of the project-management capability's new
+  `context-workstream` read verb by subprocess through the capability
+  dispatcher (`--workstream` overrides; pm absent means omitted — the
+  backbone never reads pm vocabulary itself). A successful post stamps the
+  pair into the reported note's frontmatter; `report inbox --group-by
+  project` groups live on the marker, and `report`/`report inbox` rows show
+  the project / workstream when present.
