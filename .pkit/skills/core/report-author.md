@@ -54,6 +54,24 @@ For **feedback**, aim to capture:
 
 You do **not** need to ask for versions, OS, or which capabilities are installed — the command attaches a redacted environment block automatically.
 
+## 2b. Scratchpad-backed reports — prefer the note when one exists
+
+If the substance already lives in a **scratchpad note** (the user says so, or you find one under `.pkit/scratchpad/active/` covering the topic), do **not** re-interview them into a flattened body — send the note itself:
+
+```
+pkit report <kind> --scratchpad <slug>
+```
+
+That inlines the note into the report (collapsed, "as sent"), runs a **redaction lint over the note's content** (interactive: findings prompt edit-or-send-anyway; drafts carry them as warnings), stamps the project + workstream context, and shows the whole payload for one confirm. On a successful post the note moves to `reported/` with the issue ref, send date, and a content hash in frontmatter (per COR-043).
+
+Consequences to convey:
+
+- **If they post via the browser URL** (the draft path — including every `--yes`/agent run), nothing is stamped; after posting they run `pkit scratchpad reported <slug> <ref>` to record it.
+- **The reported note is frozen by convention** — follow-up thinking goes in a *new* note cross-referencing it; edits after send are flagged as drift, since the issue carries the as-sent text.
+- **Tracking is automatic from there:** `pkit scratchpad list` resolves the note's issues live and prompts retirement when they all close.
+
+If no note exists but the topic is clearly design-shaped and still fuzzy, suggest sharpening it in a scratchpad first (the `scratchpad-author` skill) and reporting the note — one round-trip of thinking, sent whole, beats a lossy summary.
+
 ## 3. Redaction awareness
 
 The environment block is redacted **by construction** — it carries pkit + capability versions, adapter, and OS/arch only; home paths are stripped and incubated (private) capability names are withheld unless `--include-private` is passed. You do not manage that.
@@ -92,5 +110,6 @@ Tell the user they can follow their report:
 - `pkit report` — lists their reports (authored and attributed) with each one's state.
 - `pkit report --tree` — the same, with the fixing issues (`## Tracked by`) nested under each.
 - `pkit report show <N>` — one report's detail: the latest maintainer comment and the issues that will fix it, each with its state.
+- For a scratchpad-backed report, `pkit scratchpad list` shows the same loop from the note's side — live issue states, drift warnings, and the retirement prompt when everything closes.
 
 That closes the loop — the user reports once and watches it move, without leaving the CLI.
