@@ -28,6 +28,8 @@ A scratchpad note's lifecycle has three states: an **active** state (the note is
 
 The specific state labels and folder names live in `.pkit/scratchpad/README.md`. Per COR-006's docs-as-state-and-reference role, the labels are reference content that can be refined without amending this record; only the three-state principle and the folder-as-state mechanic are locked here.
 
+> **Refinement ([COR-043](COR-043-scratchpad-reported-state.md), 2026-08-10).** An *active* note sent through the built-in report channel may enter an optional **`reported`** side-state, carried by a lazily-created `reported/` directory. This refines, not widens, the two locked rulings: the lifecycle stays three-state (`reported` is a refinement *of active* — retirement still proceeds to `done/` or `dropped/` by the same gestures), and folder-as-state is preserved in its refined form — *directories encode a note's most specific state*, including this optional refinement. COR-043 owns the side-state's semantics.
+
 ### Frontmatter tracks lifecycle and authorship
 
 A scratchpad note's body opens with a level-1 heading carrying its title — markdown previews, the host platform's rendering, and `head` all surface the title without needing to parse frontmatter. The frontmatter does not carry the title; it carries lifecycle and authorship metadata that benefits from being machine-readable and visible at file-open without a separate `git log` query.

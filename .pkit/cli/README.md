@@ -71,6 +71,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # or: brew install uv
 | `new scratchpad <slug>` | stamp a new active-state scratchpad note (per COR-012) | yes | no — refuses if the slug is already in use across any state |
 | `scratchpad done <slug> [--produced <ref>...]` | move a note from `active/` to `done/`, append `retired`/`produced` to frontmatter | yes | no — refuses if no active note matches |
 | `scratchpad drop <slug>` | move a note from `active/` to `dropped/`, append `retired` to frontmatter | yes | no — refuses if no active note matches |
+| `scratchpad reported <slug> <ref>...` | *(ships with the COR-043 implementation, #643)* manually stamp an active note as sent through the report channel: move to lazily-created `reported/`, append `reported`/`reported_to`/`reported_hash` frontmatter (per COR-043; the automatic stamp happens on a successful `report` post — this gesture covers URL-first posts and retroactive marking) | yes | yes — appends refs to an already-reported note |
 | `status` | show how project-kit is wired in this project (paths, installed backbone version vs source, adapter, deployed skills, capabilities, decision counts) | no | yes (read-only) |
 | `validate` | check project state against invariants | no | yes (read-only) |
 | `schemas validate [<path>]` | validate capability schema YAMLs against their JSON Schema companions + cross-file refs | no | yes (read-only) |
