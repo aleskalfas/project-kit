@@ -52,8 +52,14 @@ find_target_root() {
     cur="$(pwd)"
     while [ "$cur" != "/" ]; do
         # `.git` may be a directory (normal repo) or a file (worktree
-        # marker). Either form counts as a tree boundary.
-        if [ -e "$cur/.git" ] || [ -d "$cur/.pkit" ]; then
+        # marker). Either form counts as a tree boundary. A `.pkit/`
+        # ancestor counts only when it looks like a real install —
+        # `manifest.yaml`, or `decisions/` for installs pre-dating the
+        # manifest layer. A bare/foreign `.pkit` (e.g. a stray junk
+        # `~/.pkit/`) is skipped and the walk continues upward (#656).
+        # Mirrors `find_target_root` / `looks_like_pkit_install` in the
+        # Python runtime (install.py / router.py).
+        if [ -e "$cur/.git" ] || [ -f "$cur/.pkit/manifest.yaml" ] || [ -d "$cur/.pkit/decisions" ]; then
             echo "$cur"
             return 0
         fi

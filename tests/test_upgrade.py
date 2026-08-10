@@ -458,6 +458,36 @@ def test_cli_upgrade_outside_project_updates_tool(monkeypatch: pytest.MonkeyPatc
     assert called["tool"] is True  # tool-only update, not an error
 
 
+def test_cli_upgrade_with_stray_pkit_above_cwd_updates_tool(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """#656 end-to-end: a stray `.pkit/` holding only junk above CWD (the
+    leftover-`~/.pkit` shape) must not resolve as a project root. Upgrade
+    takes the tool-only path and never emits the seed-the-manifest
+    remediation (which would invite `pkit sync` into the stray directory).
+
+    Uses the REAL `find_target_root` (unlike the test above): the stray
+    `.pkit` fails the install-marker check, the walk continues upward, and
+    resolution comes back None."""
+    from click.testing import CliRunner
+
+    from project_kit import cli
+
+    home = tmp_path / "home"
+    (home / ".pkit" / "shim").mkdir(parents=True)  # junk only — no markers
+    workdir = home / "pkit_temp"
+    workdir.mkdir()
+    monkeypatch.chdir(workdir)
+    monkeypatch.setenv("PATH", "/nonexistent")  # no git → the stage-2 walk runs
+
+    called = {"tool": False}
+    monkeypatch.setattr(cli, "run_tool_update", lambda **k: called.__setitem__("tool", True))
+    res = CliRunner().invoke(cli.main, ["upgrade"])
+    assert res.exit_code == 0, res.output
+    assert called["tool"] is True
+    assert "manifest.yaml is missing" not in res.output
+
+
 def test_cli_upgrade_no_self_update_forwards(monkeypatch: pytest.MonkeyPatch) -> None:
     from click.testing import CliRunner
 

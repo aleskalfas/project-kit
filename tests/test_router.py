@@ -95,6 +95,35 @@ def test_enclosing_project_none_outside_any_project(tmp_path: Path) -> None:
     assert router._enclosing_project(plain) is None
 
 
+def test_enclosing_project_skips_bare_pkit_dir(tmp_path: Path) -> None:
+    # A stray `.pkit/` with only junk (no manifest, no decisions/) is not an
+    # install and must not qualify its parent as a project boundary (#656).
+    (tmp_path / ".pkit" / "shim").mkdir(parents=True)
+    deep = tmp_path / "work"
+    deep.mkdir()
+    assert router._enclosing_project(deep) is None
+
+
+def test_enclosing_project_accepts_install_marked_pkit(tmp_path: Path) -> None:
+    pkit_dir = tmp_path / ".pkit"
+    pkit_dir.mkdir()
+    (pkit_dir / "manifest.yaml").write_text("backbone_version: 1.0.0\n", encoding="utf-8")
+    deep = tmp_path / "a" / "b"
+    deep.mkdir(parents=True)
+    assert router._enclosing_project(deep) == tmp_path.resolve()
+
+
+def test_looks_like_pkit_install_markers(tmp_path: Path) -> None:
+    pkit_dir = tmp_path / ".pkit"
+    assert router.looks_like_pkit_install(pkit_dir) is False  # absent
+    pkit_dir.mkdir()
+    assert router.looks_like_pkit_install(pkit_dir) is False  # bare
+    (pkit_dir / "decisions").mkdir()
+    assert router.looks_like_pkit_install(pkit_dir) is True  # legacy marker
+    (pkit_dir / "manifest.yaml").write_text("backbone_version: 1.0.0\n", encoding="utf-8")
+    assert router.looks_like_pkit_install(pkit_dir) is True  # manifest marker
+
+
 def test_is_source_checkout_true_only_with_package_source(tmp_path: Path) -> None:
     _make_source_checkout(tmp_path)
     assert router.is_source_checkout(tmp_path) is True

@@ -243,6 +243,9 @@ def test_detect_works_when_only_local_exists(tmp_path: Path) -> None:
 def adopter_with_redundancies(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """A project tree with `.pkit/`, `.claude/settings.json` containing redundancies."""
     (tmp_path / ".pkit").mkdir()
+    # Root-walk install marker (#656): find_target_root only accepts a .pkit/
+    # ancestor that carries manifest.yaml (or decisions/).
+    (tmp_path / ".pkit" / "manifest.yaml").write_text("backbone_version: 0.0.0\n", encoding="utf-8")
     _write_settings(
         tmp_path,
         allow=["Bash(pkit:*)", "Bash(pkit new *)", "Bash(pkit refs *)", "Bash(git:*)"],
@@ -287,6 +290,9 @@ def test_cli_consolidate_prompt_no_cancels(adopter_with_redundancies: Path) -> N
 
 def test_cli_consolidate_no_redundancies_is_noop(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     (tmp_path / ".pkit").mkdir()
+    # Root-walk install marker (#656): find_target_root only accepts a .pkit/
+    # ancestor that carries manifest.yaml (or decisions/).
+    (tmp_path / ".pkit" / "manifest.yaml").write_text("backbone_version: 0.0.0\n", encoding="utf-8")
     _write_settings(tmp_path, allow=["Bash(pkit:*)", "Bash(git:*)"])
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
@@ -297,6 +303,9 @@ def test_cli_consolidate_no_redundancies_is_noop(tmp_path: Path, monkeypatch: py
 
 def test_cli_consolidate_no_settings_file_is_noop(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     (tmp_path / ".pkit").mkdir()
+    # Root-walk install marker (#656): find_target_root only accepts a .pkit/
+    # ancestor that carries manifest.yaml (or decisions/).
+    (tmp_path / ".pkit" / "manifest.yaml").write_text("backbone_version: 0.0.0\n", encoding="utf-8")
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
     result = runner.invoke(main, ["settings", "consolidate"])
@@ -309,6 +318,9 @@ def test_cli_consolidate_dry_run_groups_pairs_by_file(
 ) -> None:
     """Dry-run output groups redundant entries by their source file."""
     (tmp_path / ".pkit").mkdir()
+    # Root-walk install marker (#656): find_target_root only accepts a .pkit/
+    # ancestor that carries manifest.yaml (or decisions/).
+    (tmp_path / ".pkit" / "manifest.yaml").write_text("backbone_version: 0.0.0\n", encoding="utf-8")
     _write_settings(tmp_path, allow=["Bash(pkit:*)", "Bash(pkit new *)"])
     _write_local_settings(tmp_path, allow=["Bash(pkit refs *)"])
     monkeypatch.chdir(tmp_path)
@@ -328,6 +340,9 @@ def test_cli_consolidate_writes_to_both_files_with_yes(
 ) -> None:
     """--yes commits the cleanup to every affected file."""
     (tmp_path / ".pkit").mkdir()
+    # Root-walk install marker (#656): find_target_root only accepts a .pkit/
+    # ancestor that carries manifest.yaml (or decisions/).
+    (tmp_path / ".pkit" / "manifest.yaml").write_text("backbone_version: 0.0.0\n", encoding="utf-8")
     _write_settings(tmp_path, allow=["Bash(pkit:*)", "Bash(pkit new *)"])
     _write_local_settings(tmp_path, allow=["Bash(pkit refs *)", "Bash(git:*)"])
     monkeypatch.chdir(tmp_path)

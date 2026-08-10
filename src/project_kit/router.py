@@ -128,18 +128,45 @@ def _env_true(environ, name: str) -> bool:  # type: ignore[no-untyped-def]
 def _enclosing_project(start: Path) -> Path | None:
     """Walk up from `start` to the first dir that looks like a project root.
 
-    A project boundary is a `.pkit/` directory or a `.git` entry (dir or the
-    worktree-marker file) — the same boundary `find_target_root` uses. Pure
-    filesystem walk, no `git` subprocess: cheaper on the hot path than spawning
-    a process, and it needs no external tool.
+    A project boundary is an install-marked `.pkit/` directory (per
+    `looks_like_pkit_install` — a bare/foreign `.pkit` is skipped, #656) or a
+    `.git` entry (dir or the worktree-marker file) — the same boundary
+    `find_target_root` uses. Pure filesystem walk, no `git` subprocess: cheaper
+    on the hot path than spawning a process, and it needs no external tool.
     """
     cur = start.resolve()
     while True:
-        if (cur / ".pkit").is_dir() or (cur / ".git").exists():
+        if looks_like_pkit_install(cur / ".pkit") or (cur / ".git").exists():
             return cur
         if cur == cur.parent:
             return None
         cur = cur.parent
+
+
+def looks_like_pkit_install(pkit_dir: Path) -> bool:
+    """True iff `pkit_dir` is a real kit install's (or the source tree's own)
+    `.pkit/`, as opposed to a stray/foreign `.pkit` directory.
+
+    The root walks (`find_target_root`, `_enclosing_project`, and the bash
+    dispatcher's mirror) must not accept a bare `.pkit/` ancestor as a project
+    boundary: a leftover junk `~/.pkit/` would resolve `$HOME` as the project
+    root and invite scaffolding kit content into it (#656). Markers, either
+    sufficing:
+
+    - `manifest.yaml` — stamped by every init since the manifest layer
+      (COR-010);
+    - `decisions/` — propagated by every generation of installs, including
+      those pre-dating the manifest layer; the same discriminator the
+      source-kit checks use (`_looks_like_source_checkout`).
+
+    Lives here rather than in `install.py` because this module is the
+    stdlib-only pre-click hot path and cannot import the heavier install
+    module; `find_target_root` imports it from here so the two walks share one
+    definition. Cheap (at most two stats), so it is safe on the hot path.
+    """
+    if not pkit_dir.is_dir():
+        return False
+    return (pkit_dir / "manifest.yaml").is_file() or (pkit_dir / "decisions").is_dir()
 
 
 def is_source_checkout(root: Path) -> bool:

@@ -20,6 +20,7 @@ from pathlib import Path
 import click
 
 from project_kit import treecopy
+from project_kit.router import looks_like_pkit_install
 
 # Settings-file template seeded into adopter projects when no
 # project-side overrides exist. Matches the bash dispatcher's heredoc.
@@ -114,8 +115,14 @@ class InstallContext:
 
 def find_target_root(start: Path | None = None) -> Path | None:
     """Resolve the project root by `git rev-parse --show-toplevel` first,
-    then by walking up looking for `.git/` or `.pkit/`. Mirrors the bash
-    dispatcher's `find_target_root` helper.
+    then by walking up looking for `.git/` or an install-marked `.pkit/`.
+    Mirrors the bash dispatcher's `find_target_root` helper.
+
+    A `.pkit/` ancestor qualifies only when it looks like a real install
+    (`looks_like_pkit_install`: `manifest.yaml`, or `decisions/` for installs
+    pre-dating the manifest layer). A bare/foreign `.pkit` — e.g. a stray
+    junk `~/.pkit/` — is skipped and the walk continues upward, so out-of-
+    project commands never resolve `$HOME` as a root (#656).
     """
     cwd = start if start is not None else Path.cwd()
     try:
@@ -135,7 +142,7 @@ def find_target_root(start: Path | None = None) -> Path | None:
     while cur != cur.parent:
         # `.git` may be a directory (normal repo) or a file (worktree marker
         # pointing at the main repo's worktrees dir). Either form counts.
-        if (cur / ".git").exists() or (cur / ".pkit").is_dir():
+        if (cur / ".git").exists() or looks_like_pkit_install(cur / ".pkit"):
             return cur
         cur = cur.parent
     return None

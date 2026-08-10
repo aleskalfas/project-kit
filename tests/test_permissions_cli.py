@@ -34,6 +34,9 @@ def _setup(tmp_path: Path, *, grants: str | None = None, config: str | None = No
     model / live settings, and return its root."""
     proj = tmp_path / "proj"
     (proj / ".pkit" / "schemas").mkdir(parents=True)
+    # Root-walk install marker (#656): find_target_root only accepts a .pkit/
+    # ancestor that carries manifest.yaml (or decisions/).
+    (proj / ".pkit" / "manifest.yaml").write_text("backbone_version: 0.0.0\n", encoding="utf-8")
     for f in ("privilege-catalog.yaml", "privilege-catalog.schema.json",
               "confinement-toolkit.yaml"):
         shutil.copy(REPO / ".pkit" / "schemas" / f, proj / ".pkit" / "schemas" / f)
