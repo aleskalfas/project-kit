@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.147.1 — 2026-08-10
+
+### Fixed
+- Fixed the project-root walk accepting any bare `.pkit/` ancestor as a root (#656): a stray junk `~/.pkit/` made out-of-project `pkit upgrade` resolve `$HOME` and error with the seed-the-manifest remediation — inviting `pkit sync` into the home directory. The walk (`find_target_root`, the router's boundary walk, and the bash dispatcher's mirror) now requires an install marker — `manifest.yaml`, or `decisions/` for installs pre-dating the manifest layer — and skips bare/foreign `.pkit` dirs, continuing upward. Out-of-project `pkit upgrade` therefore reaches the ADR-044 tool-only update path as designed; the seed-the-manifest error remains reachable only inside a marker-qualified legacy root.
+
 ## 1.147.0 — 2026-08-10
 
 ### Added
