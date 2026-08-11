@@ -431,10 +431,23 @@ Compose and file a **bug** (structured), **feedback** (freeform), or
 skill). `change-request` is a **third sibling verb rather than a `--kind` flag on
 `feedback`** because it follows PRJ-008's structured-vs-freeform verb split: a CR
 carries its own compose template (motivation / desired behaviour / current
-workaround), which a flag on the freeform verb would blur. A filed CR gets a
-`[CR]` title prefix and a body kind-marker (`<!-- pkit-report: kind=… -->`, stamped
-on every kind) so the maintainer inbox classifies it even when the GitHub label is
-dropped (URL-filed issues from non-collaborators lose labels).
+workaround), which a flag on the freeform verb would blur.
+
+**Kind visibility (#663).** Every filed report carries its kind three ways: a
+**title prefix** (`[Bug]` / `[CR]` / `[Feedback]`, prepended at compose before
+the project parenthetical), a **namespaced GitHub label** (`report:bug` /
+`report:change-request` / `report:feedback` — namespaced so the channel's
+vocabulary never collides with the target repo's own labels), and the **body
+kind-marker** (`<!-- pkit-report: kind=… -->`, stamped on every kind — the
+machine-authoritative signal). An API post **creates the label on the target if
+missing** (fixed color per kind, description "pkit report kind"); a label
+create/apply failure **degrades to posting without the label** — a warning,
+never a blocked send, because the prefix + marker still carry the kind. URL
+prefills keep the label parameter (harmless where GitHub drops it — URL-filed
+issues from non-collaborators lose labels); there the prefix + marker are the
+reliable signals. The read side (`inbox` / `show` / `list`) classifies label →
+marker → prefix, recognizing both the namespaced and the legacy bare-kind
+labels; an issue the classifier cannot place renders as `unclassified`.
 
 **The send path (#662): API-post primary.** With `gh` authenticated, the composed
 payload (body + any overflow comment) is shown **once**, the confirm names the

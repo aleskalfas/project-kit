@@ -38,15 +38,16 @@ def fixed_today(monkeypatch: pytest.MonkeyPatch) -> None:
 def _pinned_report_context(monkeypatch: pytest.MonkeyPatch) -> None:
     """Pin the ADR-050 context resolution to (None, None) so the report-verb
     flow tests never prompt for a name or spawn the pm read-verb subprocess,
-    and pin the gh seams (no auth; login 'tester') so the send path never
-    depends on the machine's real gh state (#662: gh auth now selects the
-    API-primary path). Tests override per-case; the context-stamp test
-    overrides with concrete values."""
+    and pin the gh seams (no auth; login 'tester'; kind label always
+    ensurable, #663) so the send path never depends on the machine's real gh
+    state (#662: gh auth now selects the API-primary path). Tests override
+    per-case; the context-stamp test overrides with concrete values."""
     monkeypatch.setattr(
         cli_mod, "_resolve_report_context", lambda *a, **k: (None, None)
     )
     monkeypatch.setattr(rep, "gh_authenticated", lambda: False)
     monkeypatch.setattr(rep, "current_login", lambda: "tester")
+    monkeypatch.setattr(rep, "ensure_kind_label", lambda *a, **k: True)
 
 
 @pytest.fixture(autouse=True)

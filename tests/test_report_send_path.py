@@ -22,12 +22,14 @@ from project_kit.report import REPORT_TARGET, SendPayload
 @pytest.fixture(autouse=True)
 def _pinned_seams(monkeypatch):
     """Same pins as test_report.py: context resolution silent, gh seams
-    deterministic (no auth by default; login 'tester'). Tests override."""
+    deterministic (no auth by default; login 'tester'; kind label always
+    ensurable, #663). Tests override."""
     monkeypatch.setattr(
         cli_mod, "_resolve_report_context", lambda *a, **k: (None, None)
     )
     monkeypatch.setattr(rep, "gh_authenticated", lambda: False)
     monkeypatch.setattr(rep, "current_login", lambda: "tester")
+    monkeypatch.setattr(rep, "ensure_kind_label", lambda *a, **k: True)
 
 
 @pytest.fixture
@@ -112,6 +114,55 @@ def test_api_post_scratchpad_note_posts_body_and_stamps(
     assert "a perfectly clean note" in sent["body"]
     assert "Stamped reported" in res.output
     assert (target / ".pkit" / "scratchpad" / "reported" / note.name).exists()
+
+
+# --- kind visibility on the API post (#663) ---------------------------
+
+
+def test_api_post_ensures_then_applies_namespaced_label(
+    target: Path, monkeypatch
+) -> None:
+    ensured: list[tuple[str, str]] = []
+    sent: dict = {}
+    monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
+    monkeypatch.setattr(
+        rep, "ensure_kind_label", lambda t, k: ensured.append((t, k)) or True
+    )
+
+    def fake_post(t, *, title, body, label):
+        sent["title"], sent["label"] = title, label
+        return f"https://github.com/{t}/issues/705"
+
+    monkeypatch.setattr(rep, "file_report_via_gh", fake_post)
+    res = CliRunner().invoke(
+        main, ["report", "bug", "--title", "t", "--body", "b"], input="y\n"
+    )
+    assert res.exit_code == 0, res.output
+    assert ensured == [(REPORT_TARGET, "bug")]  # ensure ran, exactly once
+    assert sent["label"] == "report:bug"  # then the namespaced label applied
+    assert sent["title"].startswith("[Bug] ")  # prefix survives to the post
+    assert "filed:" in res.output
+
+
+def test_api_post_label_failure_degrades_with_warning_and_posts(
+    target: Path, monkeypatch
+) -> None:
+    sent: dict = {}
+    monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
+    monkeypatch.setattr(rep, "ensure_kind_label", lambda t, k: False)
+
+    def fake_post(t, *, title, body, label):
+        sent["label"] = label
+        return f"https://github.com/{t}/issues/706"
+
+    monkeypatch.setattr(rep, "file_report_via_gh", fake_post)
+    res = CliRunner().invoke(
+        main, ["report", "feedback", "--title", "t", "--body", "b"], input="y\n"
+    )
+    assert res.exit_code == 0, res.output
+    assert sent["label"] is None  # posted WITHOUT the label — never blocked
+    assert "[warn]" in res.output and "report:feedback" in res.output
+    assert "filed:" in res.output and "706" in res.output
 
 
 # --- URL survivor path -----------------------------------------------
@@ -219,6 +270,17 @@ def test_yes_stages_prints_one_line_and_never_posts(
     assert lines[0].startswith("staged: pkit report submit ")
 
 
+def test_yes_stage_title_carries_kind_prefix(target: Path) -> None:
+    # the prefix is stamped at compose, so a staged draft already carries it
+    # (#663) — submit posts the staged title verbatim.
+    res = CliRunner().invoke(
+        main, ["report", "feedback", "--title", "t", "--body", "b", "--yes"]
+    )
+    assert res.exit_code == 0, res.output
+    (draft,) = rep.list_staged(target)
+    assert draft.title == "[Feedback] t"
+
+
 def test_yes_stage_file_lands_gitignored(target: Path) -> None:
     res = CliRunner().invoke(
         main, ["report", "bug", "--title", "t", "--body", "b", "--yes"]
@@ -318,7 +380,8 @@ def test_submit_confirms_posts_stamps_and_cleans(
     res = CliRunner().invoke(main, ["report", "submit", draft_id], input="y\n")
     assert res.exit_code == 0, res.output
     assert f"Post as @tester to {REPORT_TARGET}?" in res.output
-    assert "clean note body" in sent["body"] and sent["label"] == "bug"
+    # submit posts through the same ensured, namespaced label path (#663)
+    assert "clean note body" in sent["body"] and sent["label"] == "report:bug"
     assert "filed:" in res.output and "702" in res.output
     assert "Stamped reported" in res.output
     assert (target / ".pkit" / "scratchpad" / "reported" / note.name).exists()

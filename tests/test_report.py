@@ -25,20 +25,23 @@ _REAL_RESOLVE_CONTEXT = cli_mod._resolve_report_context
 #: tests exercising the real functions restore these explicitly.
 _REAL_GH_AUTHENTICATED = _rep_for_pins.gh_authenticated
 _REAL_CURRENT_LOGIN = _rep_for_pins.current_login
+_REAL_ENSURE_KIND_LABEL = _rep_for_pins.ensure_kind_label
 
 
 @pytest.fixture(autouse=True)
 def _pinned_report_context(monkeypatch):
     """Pin the ADR-050 context resolution to (None, None) so CLI tests never
     prompt for a name or spawn the pm read-verb subprocess, and pin the gh
-    seams (no auth; login 'tester') so no test's send path depends on the
-    machine's real gh state (#662: gh auth now selects the API-primary path).
+    seams (no auth; login 'tester'; kind label always ensurable) so no test's
+    send path depends on the machine's real gh state (#662: gh auth now
+    selects the API-primary path; #663: the post ensures the kind label).
     Tests override per-case (or restore the captured real functions)."""
     monkeypatch.setattr(
         cli_mod, "_resolve_report_context", lambda *a, **k: (None, None)
     )
     monkeypatch.setattr(_rep_for_pins, "gh_authenticated", lambda: False)
     monkeypatch.setattr(_rep_for_pins, "current_login", lambda: "tester")
+    monkeypatch.setattr(_rep_for_pins, "ensure_kind_label", lambda *a, **k: True)
 
 
 def test_compose_report_body_includes_prose_and_env() -> None:
@@ -72,7 +75,7 @@ def test_build_new_issue_url_encodes_params() -> None:
 def test_compose_report_ties_env_and_url(tmp_path: Path) -> None:
     (tmp_path / ".pkit").mkdir()
     title, body, url = compose_report("bug", title="T", prose="P", target_root=tmp_path)
-    assert title == "T"  # bug titles are not prefixed
+    assert title == "[Bug] T"  # every kind carries a prefix (#663)
     assert "## Environment" in body
     assert "P" in body
     assert REPORT_TARGET in url
@@ -83,7 +86,31 @@ def test_compose_report_feedback_kind_labels_feedback(tmp_path: Path) -> None:
     (tmp_path / ".pkit").mkdir()
     _, _, url = compose_report("feedback", title="T", prose="P", target_root=tmp_path)
     q = urllib.parse.parse_qs(url.split("?", 1)[1])
-    assert q["labels"] == ["feedback"]
+    assert q["labels"] == ["report:feedback"]  # namespaced (#663)
+
+
+def test_compose_report_prefixes_every_kind(tmp_path: Path) -> None:
+    # #663: all three kinds carry a title prefix + the namespaced label in
+    # the URL prefill (harmless where GitHub drops it — prefix+marker carry
+    # the kind there).
+    (tmp_path / ".pkit").mkdir()
+    for kind, prefix in rep.KIND_TITLE_PREFIXES.items():
+        title, _, url = compose_report(
+            kind, title="T", prose="P", target_root=tmp_path
+        )
+        assert title == f"{prefix} T"
+        q = urllib.parse.parse_qs(url.split("?", 1)[1])
+        assert q["title"] == [f"{prefix} T"]
+        assert q["labels"] == [rep.KIND_LABELS[kind]]
+
+
+def test_compose_report_does_not_double_any_prefix(tmp_path: Path) -> None:
+    (tmp_path / ".pkit").mkdir()
+    for kind, prefix in rep.KIND_TITLE_PREFIXES.items():
+        title, _, _ = compose_report(
+            kind, title=f"{prefix} already", prose="P", target_root=tmp_path
+        )
+        assert title == f"{prefix} already"
 
 
 def test_compose_report_unknown_kind_raises(tmp_path: Path) -> None:
@@ -117,7 +144,7 @@ def test_compose_change_request_prefixes_title_and_templates_body(
     assert "### Motivation" in body and "I keep retyping it." in body
     assert "### Desired behaviour" in body and "### Current workaround" in body
     q = urllib.parse.parse_qs(url.split("?", 1)[1])
-    assert q["labels"] == ["change-request"]
+    assert q["labels"] == ["report:change-request"]
     assert q["title"] == ["[CR] add a flag"]
 
 
@@ -143,10 +170,31 @@ def test_parse_report_marker() -> None:
 
 
 def test_classify_kind_label_marker_and_title_prefix() -> None:
-    assert rep.classify_kind(["bug"], "[CR] t", "") == "bug"  # label wins
+    # precedence: label (namespaced, then legacy) > marker > prefix (#663)
+    assert rep.classify_kind(["report:bug"], "[CR] t", "") == "bug"
+    assert rep.classify_kind(["bug"], "[CR] t", "") == "bug"  # legacy name still read
+    assert rep.classify_kind(
+        ["report:feedback", "bug"], "t", ""
+    ) == "feedback"  # namespaced beats legacy
     assert rep.classify_kind([], "t", "<!-- pkit-report: kind=feedback -->") == "feedback"
+    assert rep.classify_kind(
+        [], "[Bug] t", "<!-- pkit-report: kind=feedback -->"
+    ) == "feedback"  # marker beats prefix
     assert rep.classify_kind([], "[CR] add a flag", "") == "change-request"
+    assert rep.classify_kind([], "[Bug] it crashes", "") == "bug"
+    assert rep.classify_kind([], "[Feedback] some thoughts", "") == "feedback"
     assert rep.classify_kind([], "unrelated CR mention", "prose") == ""
+
+
+def test_classify_kind_660_shape_prefix_only_feedback() -> None:
+    # The exact shape that rendered as bare 'report' pre-#663: a
+    # [Feedback]-prefixed title, no report label, no body marker (#660 was
+    # URL-filed, so GitHub dropped its label).
+    title = (
+        "[Feedback] pkit report channel — friction inventory "
+        "(keep the consent gate, secure the gated path)"
+    )
+    assert rep.classify_kind(["enhancement"], title, "## The through-line") == "feedback"
 
 
 # --- CLI (URL-first path) --------------------------------------------
@@ -163,7 +211,7 @@ def test_cli_report_bug_prints_prefilled_url() -> None:
     assert res.exit_code == 0, res.output
     assert f"issues/new?" in res.output
     assert REPORT_TARGET in res.output
-    assert "labels=bug" in res.output
+    assert "labels=report%3Abug" in res.output  # namespaced label prefill (#663)
     assert "environment block" in res.output.lower()
 
 
@@ -172,7 +220,7 @@ def test_cli_report_feedback_labels_feedback() -> None:
         main, ["report", "feedback", "--title", "t", "--body", "some thoughts"]
     )
     assert res.exit_code == 0, res.output
-    assert "labels=feedback" in res.output
+    assert "labels=report%3Afeedback" in res.output
 
 
 # --- gh-auto-file path (mocked gh) -----------------------------------
@@ -195,15 +243,82 @@ def test_file_report_via_gh_argv_and_success(monkeypatch) -> None:
         return _FakeProc(0, "https://github.com/owner/repo/issues/99\n")
 
     monkeypatch.setattr(rep.subprocess, "run", fake_run)
-    url = rep.file_report_via_gh("owner/repo", title="T", body="B", label="bug")
+    url = rep.file_report_via_gh("owner/repo", title="T", body="B", label="report:bug")
     assert url == "https://github.com/owner/repo/issues/99"
     assert captured["cmd"][:5] == ["gh", "issue", "create", "--repo", "owner/repo"]
-    assert "--label" in captured["cmd"] and "bug" in captured["cmd"]
+    assert "--label" in captured["cmd"] and "report:bug" in captured["cmd"]
+
+
+def test_file_report_via_gh_no_label_omits_flag(monkeypatch) -> None:
+    # label=None is the ensure-failure degrade (#663): post unlabelled rather
+    # than block the send.
+    captured: dict = {}
+
+    def fake_run(cmd, **kwargs):
+        captured["cmd"] = cmd
+        return _FakeProc(0, "url\n")
+
+    monkeypatch.setattr(rep.subprocess, "run", fake_run)
+    assert rep.file_report_via_gh("o/r", title="T", body="B", label=None) == "url"
+    assert "--label" not in captured["cmd"]
 
 
 def test_file_report_via_gh_failure_returns_none(monkeypatch) -> None:
     monkeypatch.setattr(rep.subprocess, "run", lambda cmd, **k: _FakeProc(1, "", "boom"))
-    assert rep.file_report_via_gh("o/r", title="T", body="B", label="bug") is None
+    assert rep.file_report_via_gh("o/r", title="T", body="B", label="report:bug") is None
+
+
+# --- kind labels: ensure-then-apply (#663) ----------------------------
+
+
+def test_ensure_kind_label_present_skips_create(monkeypatch) -> None:
+    monkeypatch.setattr(rep, "ensure_kind_label", _REAL_ENSURE_KIND_LABEL)
+    monkeypatch.setattr(rep, "_gh_json", lambda args: [{"name": "report:bug"}])
+    monkeypatch.setattr(
+        rep.subprocess, "run",
+        lambda *a, **k: (_ for _ in ()).throw(AssertionError("create must not run")),
+    )
+    assert rep.ensure_kind_label("o/r", "bug") is True
+
+
+def test_ensure_kind_label_creates_when_missing_once(monkeypatch) -> None:
+    monkeypatch.setattr(rep, "ensure_kind_label", _REAL_ENSURE_KIND_LABEL)
+    monkeypatch.setattr(rep, "_gh_json", lambda args: [])  # label absent
+    creates: list[list[str]] = []
+
+    def fake_run(cmd, **kwargs):
+        creates.append(cmd)
+        return _FakeProc(0)
+
+    monkeypatch.setattr(rep.subprocess, "run", fake_run)
+    assert rep.ensure_kind_label("o/r", "feedback") is True
+    assert len(creates) == 1  # create-if-missing fires exactly once
+    cmd = creates[0]
+    assert cmd[:4] == ["gh", "label", "create", "report:feedback"]
+    assert "--repo" in cmd and "o/r" in cmd
+    assert "--color" in cmd
+    assert rep.KIND_LABEL_DESCRIPTION in cmd  # "pkit report kind"
+
+
+def test_ensure_kind_label_tolerates_already_exists(monkeypatch) -> None:
+    # A failed list read falls through to create; an "already exists" refusal
+    # is the desired end state, not a failure.
+    monkeypatch.setattr(rep, "ensure_kind_label", _REAL_ENSURE_KIND_LABEL)
+    monkeypatch.setattr(rep, "_gh_json", lambda args: None)
+    monkeypatch.setattr(
+        rep.subprocess, "run",
+        lambda *a, **k: _FakeProc(1, "", "label already exists on o/r"),
+    )
+    assert rep.ensure_kind_label("o/r", "bug") is True
+
+
+def test_ensure_kind_label_create_failure_returns_false(monkeypatch) -> None:
+    monkeypatch.setattr(rep, "ensure_kind_label", _REAL_ENSURE_KIND_LABEL)
+    monkeypatch.setattr(rep, "_gh_json", lambda args: [])
+    monkeypatch.setattr(
+        rep.subprocess, "run", lambda *a, **k: _FakeProc(1, "", "HTTP 403")
+    )
+    assert rep.ensure_kind_label("o/r", "bug") is False
 
 
 def test_gh_authenticated_false_when_gh_absent(monkeypatch) -> None:
@@ -514,7 +629,7 @@ def test_cli_change_request_prints_prefilled_url() -> None:
     )
     assert res.exit_code == 0, res.output
     assert "issues/new?" in res.output
-    assert "labels=change-request" in res.output
+    assert "labels=report%3Achange-request" in res.output
     assert urllib.parse.quote_plus("[CR] add a flag") in res.output
 
 
@@ -567,7 +682,7 @@ def test_list_inbox_kind_filters_and_classifies_unlabelled_cr(monkeypatch) -> No
     assert [r.number for r in inbox_all] == [3, 2, 1]  # newest first, #4 dropped
 
 
-def test_list_inbox_queries_search_titles_for_cr(monkeypatch) -> None:
+def test_list_inbox_queries_labels_and_prefix_search_per_kind(monkeypatch) -> None:
     seen: list[list[str]] = []
 
     def fake(args):
@@ -575,9 +690,28 @@ def test_list_inbox_queries_search_titles_for_cr(monkeypatch) -> None:
         return []
 
     monkeypatch.setattr(rep, "_gh_json", fake)
-    rep.list_inbox("o/r", kind="change-request")
-    assert any("--label" in q and "change-request" in q for q in seen)
-    assert any("--search" in q for q in seen)  # discovers label-less URL-filed CRs
+    for kind in rep.KINDS:
+        seen.clear()
+        rep.list_inbox("o/r", kind=kind)
+        assert any("--label" in q and rep.KIND_LABELS[kind] in q for q in seen)
+        assert any("--label" in q and kind in q for q in seen)  # legacy labels
+        # discovers label-less URL-filed reports by their title prefix (#663)
+        prefix_query = f'"{rep.KIND_TITLE_PREFIXES[kind]}" in:title'
+        assert any("--search" in q and prefix_query in q for q in seen)
+
+
+def test_list_inbox_discovers_prefix_only_feedback(monkeypatch) -> None:
+    # the #660 shape end-to-end through the inbox: [Feedback]-titled, no
+    # report label (only the repo's own vocabulary), no marker.
+    issues = [{
+        "number": 660, "title": "[Feedback] friction inventory", "state": "OPEN",
+        "labels": [{"name": "enhancement"}], "updatedAt": "2026-08-10",
+        "body": "no marker here",
+    }]
+    monkeypatch.setattr(rep, "_gh_json", lambda args: issues)
+    inbox = rep.list_inbox("o/r", kind="feedback")
+    assert [r.number for r in inbox] == [660]
+    assert inbox[0].kind == "feedback"
 
 
 def test_cli_inbox_kind_flag(monkeypatch) -> None:
@@ -820,7 +954,7 @@ def test_compose_report_renders_context_line_marker_and_title(
         "bug", title="T", prose="P", target_root=tmp_path,
         project="alpha", workstream="cli",
     )
-    assert title == "T (alpha)"  # title parenthetical
+    assert title == "[Bug] T (alpha)"  # kind prefix, then title, then parenthetical
     # the context line is the FIRST body line, right under the issue title
     assert body.splitlines()[0] == "Project: alpha · Workstream: cli"
     assert rep.parse_report_marker(body) == {
@@ -846,7 +980,7 @@ def test_compose_report_unresolved_project_states_omission(
     title, body, _ = compose_report(
         "bug", title="T", prose="P", target_root=tmp_path,
     )
-    assert title == "T"  # no parenthetical without a name
+    assert title == "[Bug] T"  # no parenthetical without a name
     assert "(project: not declared)" in body  # explicit, never silent
     assert "Project:" not in body
     marker = rep.parse_report_marker(body)
@@ -1025,3 +1159,19 @@ def test_cli_report_show(monkeypatch) -> None:
     assert res.exit_code == 0
     assert "#42" in res.output and "Tracked by" in res.output
     assert "#7" in res.output and "maintainer comment" in res.output
+
+
+def test_cli_report_show_unclassifiable_issue_says_so(monkeypatch) -> None:
+    # An issue the classifier can't place renders as 'unclassified', not as
+    # the kind-masquerading 'report' that #660 surfaced pre-#663.
+    monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
+    monkeypatch.setattr(
+        rep, "show_report",
+        lambda t, n: {
+            "number": 5, "title": "not a report", "state": "open", "kind": "",
+            "comments": [], "tracked_by": {},
+        },
+    )
+    res = CliRunner().invoke(main, ["report", "show", "5"])
+    assert res.exit_code == 0
+    assert "unclassified" in res.output
