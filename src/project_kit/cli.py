@@ -625,10 +625,14 @@ def status() -> None:
 )
 @click.pass_context
 def report(ctx: click.Context, tree: bool) -> None:
-    """Report a bug or feedback about pkit to project-kit (per PRJ-008 / ADR-047).
+    """Report a bug, change-request, or feedback about pkit (per PRJ-008 / ADR-047).
 
     With no subcommand, lists your reports and their states (flat; `--tree` nests
     each report's tracked-by fixes).
+
+    Agent-assisted composing is the paired flow (per COR-005): the
+    `report-author` skill draws out an actionable description and drives these
+    verbs — reach for it rather than hand-composing (#665).
     """
     if ctx.invoked_subcommand is None:
         _run_report_list(tree=tree)
@@ -1166,6 +1170,10 @@ def _confirm_send_payload(kind: str, payload, login: str | None) -> bool:
     from project_kit.report import REPORT_TARGET
 
     who = f"@{login}" if login else "your gh CLI identity (login unresolved)"
+    click.echo(
+        "tip: the paired `report-author` skill guides composing (COR-005) — "
+        "hand-running the verbs skips that help.\n"
+    )
     click.echo(
         f"This posts a PUBLIC {kind} issue to {REPORT_TARGET} as {who} — your "
         "gh CLI identity — with this body:\n"

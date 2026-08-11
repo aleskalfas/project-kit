@@ -1,6 +1,6 @@
 ---
 name: report-author
-description: Help a user compose and file a well-formed bug, change-request, or feedback report to the upstream project-kit repo via `pkit report`. Use when someone wants to report a problem or share feedback about pkit and would benefit from an agent drawing out a clear, actionable description.
+description: Help a user compose and file a well-formed bug, change-request, or feedback report to the upstream project-kit repo via `pkit report`. Use when someone wants to report a problem or share feedback about pkit and would benefit from an agent drawing out a clear, actionable description. Also invoke BEFORE hand-running any `pkit report bug|change-request|feedback` command — the verbs are paired with this skill (COR-005); composing without it skips the interview, kind guidance, and scratchpad-route decision.
 metadata:
   wraps_command: pkit report
 reads:
