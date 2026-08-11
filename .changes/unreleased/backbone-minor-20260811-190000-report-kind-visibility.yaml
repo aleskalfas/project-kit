@@ -1,0 +1,22 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  Every report's kind is now reliably visible (#663, from #660's dogfood
+  inventory): all three kinds carry a consistent title prefix
+  (`[Bug]`/`[CR]`/`[Feedback]`, prepended at compose before the project
+  parenthetical — previously only change-requests were prefixed), and an API
+  post applies a namespaced kind label
+  (`report:bug`/`report:change-request`/`report:feedback` — namespaced so
+  the channel never collides with the target repo's own label vocabulary),
+  created on the target if missing (fixed color per kind, description "pkit
+  report kind"). A label create/apply failure degrades to posting without
+  the label — a warning, never a blocked send — since the prefix + the body
+  kind-marker (still machine-authoritative) carry the kind everywhere, URL
+  prefills included. The read side (`report inbox`/`show`/`list`) classifies
+  label → marker → prefix, learning the namespaced labels, the legacy
+  bare-kind labels, and all three prefixes — so a label-less URL filing like
+  #660's `[Feedback]`-titled report now classifies — and `report show`
+  renders an unplaceable issue honestly as `unclassified` instead of the
+  kind-masquerading `report`.

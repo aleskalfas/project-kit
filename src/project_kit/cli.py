@@ -698,7 +698,10 @@ def report_show(number: int) -> None:
         raise click.ClickException(
             f"could not read report #{number} on {REPORT_TARGET}."
         )
-    kind = detail["kind"] or "report"
+    # An honest fallback for an issue the classifier can't place (no report
+    # label, marker, or title prefix) — "report" here used to masquerade as a
+    # kind (#663; pre-classifier-update #660 rendered that way).
+    kind = detail["kind"] or "unclassified"
     click.echo(f"#{detail['number']}  {kind}  {detail['state']}  {detail['title']}")
     tracked = detail["tracked_by"]
     if tracked:
@@ -955,6 +958,7 @@ def _run_report(
     path carries the project/workstream context (ADR-050): line + marker +
     title parenthetical, stamped into the reported note's frontmatter."""
     from project_kit.report import (
+        KIND_LABELS,
         REPORT_TARGET,
         URL_BUDGET,
         SendPayload,
@@ -1003,7 +1007,8 @@ def _run_report(
         findings = lint_redaction(note_text)
         payload = attach_note(body, note_path.name, note_text)
         url = build_new_issue_url(
-            REPORT_TARGET, title=title, body=payload.body, label=kind
+            REPORT_TARGET, title=title, body=payload.body,
+            label=KIND_LABELS[kind],
         )
 
     if assume_yes:
@@ -1147,15 +1152,32 @@ def _post_confirmed_payload(
     project: str | None,
     workstream: str | None,
 ) -> str:
-    """Execute an already-confirmed send: post the issue, post the overflow
-    comment (one logical send, ADR-047), stamp the attached note `reported`.
-    Returns `"failed"` (issue not created — the caller names its fallback),
-    `"incomplete"` (issue created, overflow comment failed — fail-closed:
-    nothing stamped, remediation printed), or `"complete"`."""
-    from project_kit.report import REPORT_TARGET, file_report_via_gh, post_issue_comment
+    """Execute an already-confirmed send: ensure the kind label on the target
+    (create-if-missing, #663 — part of the one confirmed send), post the
+    issue, post the overflow comment (one logical send, ADR-047), stamp the
+    attached note `reported`. A label ensure failure degrades to posting
+    without the label — a warning, never a blocked send. Returns `"failed"`
+    (issue not created — the caller names its fallback), `"incomplete"`
+    (issue created, overflow comment failed — fail-closed: nothing stamped,
+    remediation printed), or `"complete"`."""
+    from project_kit.report import (
+        KIND_LABELS,
+        REPORT_TARGET,
+        ensure_kind_label,
+        file_report_via_gh,
+        post_issue_comment,
+    )
 
+    label: str | None = KIND_LABELS[kind]
+    if not ensure_kind_label(REPORT_TARGET, kind):
+        click.echo(
+            f"[warn] could not create/apply the {label!r} label on "
+            f"{REPORT_TARGET} — posting without it (the title prefix + body "
+            "marker still carry the kind)."
+        )
+        label = None
     posted = file_report_via_gh(
-        REPORT_TARGET, title=title, body=payload.body, label=kind
+        REPORT_TARGET, title=title, body=payload.body, label=label
     )
     if not posted:
         return "failed"
@@ -1383,8 +1405,9 @@ def report_change_request(
 
     Structured-ish: the body is scaffolded into a motivation / desired behaviour /
     current workaround template (unless your prose already carries those
-    headings), and the title gets a `[CR]` prefix so the maintainer inbox can
-    classify it even when the GitHub label is dropped.
+    headings). The title gets the `[CR]` prefix — every kind carries one
+    (`[Bug]`/`[Feedback]`/`[CR]`, #663) so the maintainer inbox can classify
+    it even when the GitHub label is dropped.
     """
     _run_report(
         "change-request", title, prose, on_behalf_of, include_private,

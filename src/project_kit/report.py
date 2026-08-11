@@ -4,7 +4,8 @@ Composes a bug/feedback report with a **redacted** environment block and files i
 to the distribution's fixed report target. Two sides:
 
 - **Reporter** (any adopter): `compose_report` + `file_report_via_gh` (the
-  confirm-gated API post — the primary path when `gh` is authenticated, #662),
+  confirm-gated API post — the primary path when `gh` is authenticated, #662 —
+  with `ensure_kind_label`'s create-if-missing kind label, #663),
   `build_new_issue_url` (the URL survivor path: no `gh` auth or an explicit
   `--url`, within `URL_BUDGET` only), `stage_report` / `list_staged` /
   `load_staged` (the `--yes` stage + human `report submit` split), and the
@@ -37,13 +38,40 @@ from project_kit.environment import collect_environment, render_environment_bloc
 #: unconfigured ⇒ `report` degrades rather than filing.
 REPORT_TARGET = "aleskalfas/project-kit"
 
-#: The report kinds, each a GitHub label on the filed issue.
+#: The report kinds. Each carries a title prefix + a namespaced GitHub label
+#: (below); the body kind-marker stays the machine-authoritative signal.
 KINDS = ("bug", "feedback", "change-request")
 
-#: Title prefix stamped on change-request reports. The prefilled-URL path can lose
-#: the GitHub label (labels in a new-issue URL are dropped for non-collaborators),
-#: so the prefix + the body kind-marker are the reliable classification signals.
-CHANGE_REQUEST_TITLE_PREFIX = "[CR]"
+#: Title prefix per kind, stamped on EVERY composed title (#663 — before it,
+#: only change-requests were prefixed, so a report whose label was dropped had
+#: no visible kind at all). The prefilled-URL path can lose the GitHub label
+#: (labels in a new-issue URL are dropped for non-collaborators), so the
+#: prefix + the body kind-marker are the reliable classification signals.
+KIND_TITLE_PREFIXES = {
+    "bug": "[Bug]",
+    "feedback": "[Feedback]",
+    "change-request": "[CR]",
+}
+
+#: GitHub label per kind, namespaced `report:<kind>` (#663) so the channel's
+#: vocabulary never collides with the target repo's own labels (project-kit
+#: already carries a bare `bug` label, and the namespacing matches its
+#: `type:`/`state:`/`workstream:` label convention). API posts ensure the
+#: label exists first (`ensure_kind_label`, create-if-missing); the read side
+#: keeps recognizing the legacy bare-kind names on old reports.
+KIND_LABELS = {kind: f"report:{kind}" for kind in KINDS}
+
+#: Fixed color per kind for `ensure_kind_label`'s create-if-missing (bug red
+#: matches GitHub's default `bug`; the others pick distinct calm hues).
+_KIND_LABEL_COLORS = {
+    "bug": "d73a4a",
+    "feedback": "0e8a16",
+    "change-request": "1d76db",
+}
+
+#: Description stamped on every label `ensure_kind_label` creates — marks the
+#: label as channel-owned, distinguishing it from the target's own vocabulary.
+KIND_LABEL_DESCRIPTION = "pkit report kind"
 
 #: Machine-readable marker embedded in every composed report body
 #: (`<!-- pkit-report: key=value -->`, invisible when rendered). Carries
@@ -107,17 +135,24 @@ def parse_report_marker(body: str) -> dict[str, str]:
 
 
 def classify_kind(labels: list[str], title: str = "", body: str = "") -> str:
-    """Classify an issue's report kind: label wins, then the body kind-marker,
-    then the `[CR]` title prefix; '' when it is not a report. The fallbacks exist
-    because URL-filed issues from non-collaborators lose their labels."""
+    """Classify an issue's report kind: label wins (the namespaced
+    `report:<kind>` names, then the legacy bare-kind names old reports carry),
+    then the body kind-marker, then the kind's title prefix (#663 — all three
+    prefixes, so a label-less URL filing like #660's still classifies); ''
+    when it is not a report. The fallbacks exist because URL-filed issues from
+    non-collaborators lose their labels."""
+    for k in KINDS:
+        if KIND_LABELS[k] in labels:
+            return k
     for k in KINDS:
         if k in labels:
             return k
     marker_kind = parse_report_marker(body).get("kind", "")
     if marker_kind in KINDS:
         return marker_kind
-    if title.startswith(CHANGE_REQUEST_TITLE_PREFIX):
-        return "change-request"
+    for k, prefix in KIND_TITLE_PREFIXES.items():
+        if title.startswith(prefix):
+            return k
     return ""
 
 
@@ -186,8 +221,10 @@ def compose_report(
     """Compose a report → (issue title, full issue body, prefilled new-issue URL).
 
     Ties the redacted environment block (`collect_environment`) into the body,
-    stamps the body kind-marker, and builds the URL against `REPORT_TARGET`. A
-    change-request additionally gets the `[CR]` title prefix and the
+    stamps the body kind-marker, and builds the URL against `REPORT_TARGET`.
+    Every kind gets its title prefix (`[Bug]`/`[Feedback]`/`[CR]`, #663 — the
+    human-visible kind, reliable even where the label is dropped), prepended
+    before the project parenthetical; a change-request additionally gets the
     motivation/desired-behaviour/workaround template. The resolved context
     (ADR-050) renders three ways: the human context line atop the body, the
     `project=`/`workstream=` marker keys, and a ` (<project>)` title
@@ -203,8 +240,9 @@ def compose_report(
         )
     if kind == "change-request":
         prose = apply_change_request_template(prose)
-        if not title.startswith(CHANGE_REQUEST_TITLE_PREFIX):
-            title = f"{CHANGE_REQUEST_TITLE_PREFIX} {title}"
+    prefix = KIND_TITLE_PREFIXES[kind]
+    if not title.startswith(prefix):
+        title = f"{prefix} {title}"
     if project:
         title = f"{title} ({project})"
     env = collect_environment(target_root, include_private=include_private)
@@ -216,7 +254,9 @@ def compose_report(
         workstream=workstream,
     )
     body = f"{body}\n{kind_marker(kind, project=project, workstream=workstream)}\n"
-    url = build_new_issue_url(REPORT_TARGET, title=title, body=body, label=kind)
+    url = build_new_issue_url(
+        REPORT_TARGET, title=title, body=body, label=KIND_LABELS[kind]
+    )
     return title, body, url
 
 
@@ -569,11 +609,48 @@ def gh_authenticated() -> bool:
     return proc.returncode == 0
 
 
+def ensure_kind_label(target: str, kind: str) -> bool:
+    """Make sure `kind`'s namespaced label exists on `target` before an API
+    post applies it (#663 create-if-missing — the target repo typically does
+    not define the channel's labels, and GitHub silently drops an unknown
+    one). True when the label can be applied; False on any failure — the
+    caller then posts WITHOUT the label and warns, because label plumbing must
+    never block the send (the title prefix + body marker still carry the
+    kind). Creating the label is part of the one confirmed send, not an
+    independent foreign write (ADR-047's overflow-comment precedent)."""
+    label = KIND_LABELS[kind]
+    existing = _gh_json(
+        ["gh", "label", "list", "--repo", target, "--search", label,
+         "--json", "name"]
+    )
+    if isinstance(existing, list) and any(
+        isinstance(item, dict) and item.get("name") == label for item in existing
+    ):
+        return True
+    # Absent — or the list read failed, in which case creating is still the
+    # best recovery: an "already exists" refusal just means the label is
+    # there, which is the desired end state.
+    cmd = [
+        "gh", "label", "create", label, "--repo", target,
+        "--color", _KIND_LABEL_COLORS[kind],
+        "--description", KIND_LABEL_DESCRIPTION,
+    ]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    except OSError:
+        return False
+    if proc.returncode == 0:
+        return True
+    return "already exists" in (proc.stderr or proc.stdout).lower()
+
+
 def file_report_via_gh(
-    target: str, *, title: str, body: str, label: str
+    target: str, *, title: str, body: str, label: str | None
 ) -> str | None:
     """Create the report issue on `target` via `gh issue create`. Returns the new
     issue's URL on success, or None on any failure (caller degrades to the URL).
+    `label=None` posts unlabelled — the `ensure_kind_label`-failure degrade
+    (#663); the title prefix + body marker still carry the kind.
 
     This is a **categorically-foreign** write (ADR-047): it targets the
     distribution's repo (`--repo <target>`), never the session's own, so it is
@@ -585,8 +662,10 @@ def file_report_via_gh(
     """
     cmd = [
         "gh", "issue", "create", "--repo", target,
-        "--title", title, "--body", body, "--label", label,
+        "--title", title, "--body", body,
     ]
+    if label:
+        cmd += ["--label", label]
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
     except OSError:
@@ -834,30 +913,33 @@ _INBOX_FIELDS = "number,title,state,labels,updatedAt,body"
 
 
 def _inbox_queries(target: str, kinds: tuple[str, ...]) -> list[list[str]]:
-    """The gh list queries covering `kinds`: one per kind label, plus a title
-    search for change-requests (a URL-filed CR from a non-collaborator loses its
-    label, so the `[CR]` prefix is its discoverable signal; false positives are
+    """The gh list queries covering `kinds`: per kind, the namespaced label
+    (`report:<kind>`), the legacy bare-kind label (reports filed before the
+    #663 namespacing), and a title search for the kind's prefix (a URL-filed
+    report from a non-collaborator loses its label, so the prefix is its
+    discoverable signal; false positives — e.g. a bare `bug` word match — are
     dropped by `classify_kind` client-side). Bodies are fetched for marker
     classification and project grouping."""
     queries: list[list[str]] = []
     for kind in kinds:
-        queries.append([
-            "gh", "issue", "list", "--repo", target, "--label", kind,
-            "--state", "all", "--limit", "100", "--json", _INBOX_FIELDS,
-        ])
-        if kind == "change-request":
+        for label in (KIND_LABELS[kind], kind):
             queries.append([
-                "gh", "issue", "list", "--repo", target,
-                "--search", f'"{CHANGE_REQUEST_TITLE_PREFIX}" in:title',
+                "gh", "issue", "list", "--repo", target, "--label", label,
                 "--state", "all", "--limit", "100", "--json", _INBOX_FIELDS,
             ])
+        queries.append([
+            "gh", "issue", "list", "--repo", target,
+            "--search", f'"{KIND_TITLE_PREFIXES[kind]}" in:title',
+            "--state", "all", "--limit", "100", "--json", _INBOX_FIELDS,
+        ])
     return queries
 
 
 def list_inbox(target: str, *, kind: str | None = None) -> list[ReportSummary] | None:
     """All reports on `target` (any author), newest first — the maintainer's
     triage queue. `kind` narrows to one report kind. Non-report issues swept in
-    by the CR title search are dropped by classification. None on gh failure."""
+    by the title-prefix searches are dropped by classification. None on gh
+    failure."""
     kinds = (kind,) if kind else KINDS
     reports: list[ReportSummary] = []
     for query in _inbox_queries(target, kinds):
