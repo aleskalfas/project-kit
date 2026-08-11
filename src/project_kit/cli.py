@@ -640,6 +640,7 @@ def _run_report_list(*, tree: bool = False) -> None:
         gh_authenticated,
         list_my_reports,
         list_my_reports_tree,
+        local_reported_notes,
     )
 
     if not gh_authenticated():
@@ -648,6 +649,14 @@ def _run_report_list(*, tree: bool = False) -> None:
             f"    https://github.com/{REPORT_TARGET}/issues?q=is%3Aissue+author%3A%40me"
         )
         return
+
+    # The one-tracking-truth cross-tag (#664): the upstream view stays
+    # marker/author-based, but a row whose issue a local reported/ note
+    # references is tagged [note: <slug>] — derived live, never stored.
+    target_root = find_target_root()
+    notes = (
+        local_reported_notes(target_root, REPORT_TARGET) if target_root else {}
+    )
 
     if tree:
         rows = list_my_reports_tree(REPORT_TARGET)
@@ -658,9 +667,12 @@ def _run_report_list(*, tree: bool = False) -> None:
             return
         click.echo(f"Your reports to {REPORT_TARGET}:\n")
         for r, tracked in rows:
-            click.echo(f"  #{r.number:<5} {r.kind:<15} {r.state:<12} {_report_title(r)}")
-            for n, st in tracked.items():
-                click.echo(f"      └ #{n:<6} {st}")
+            click.echo(
+                f"  #{r.number:<5} {r.kind:<15} {r.state:<12}"
+                f" {_report_title(r, note=notes.get(r.number))}"
+            )
+            for n, fix in tracked.items():
+                click.echo(f"      └ {_tracked_fix_row(n, fix)}")
         return
 
     reports = list_my_reports(REPORT_TARGET)
@@ -671,14 +683,31 @@ def _run_report_list(*, tree: bool = False) -> None:
         return
     click.echo(f"Your reports to {REPORT_TARGET}:\n")
     for r in reports:
-        click.echo(f"  #{r.number:<5} {r.kind:<15} {r.state:<12} {_report_title(r)}")
+        click.echo(
+            f"  #{r.number:<5} {r.kind:<15} {r.state:<12}"
+            f" {_report_title(r, note=notes.get(r.number))}"
+        )
 
 
-def _report_title(r) -> str:
+def _report_title(r, note: str | None = None) -> str:
     """Render a report's title, tagged with its project marker (`[project]`,
-    ADR-050) and a `(filed for you)` marker when attributed."""
+    ADR-050), a `(filed for you)` marker when attributed, and the local
+    reported-note cross-tag (`[note: <slug>]`, #664) when a reported/
+    scratchpad note references the issue."""
     title = f"{r.title}  [{r.project}]" if r.project else r.title
-    return f"{title}  (filed for you)" if r.attributed else title
+    if r.attributed:
+        title = f"{title}  (filed for you)"
+    return f"{title}  [note: {note}]" if note else title
+
+
+def _tracked_fix_row(n: int, fix) -> str:
+    """One Tracked-by rollup row (#664): number + state, plus the fix's title
+    and URL when the read resolved them — so the reader learns WHAT is fixing
+    them without a browser round-trip. Offline/unresolved degrades to
+    number + state."""
+    if fix.title or fix.url:
+        return f"#{n:<6} {fix.state:<12} {fix.title}  ({fix.url})"
+    return f"#{n:<6} {fix.state}"
 
 
 @report.command("show")
@@ -706,8 +735,8 @@ def report_show(number: int) -> None:
     tracked = detail["tracked_by"]
     if tracked:
         click.echo("\n  Tracked by (the issues that will fix it):")
-        for n, st in tracked.items():
-            click.echo(f"    #{n:<6} {st}")
+        for n, fix in tracked.items():
+            click.echo(f"    {_tracked_fix_row(n, fix)}")
     comments = detail["comments"]
     if comments:
         last = comments[-1]
@@ -954,7 +983,9 @@ def _run_report(
     at compose time on every path (findings ride a stage file's header as
     warnings), oversize split into body-excerpt + ONE overflow comment
     confirmed as a single gesture, and stamped `reported` only on a
-    fully-successful post — staged/URL paths stamp nothing at compose. Every
+    fully-successful post — staged paths stamp at `report submit`, and any
+    flow that ends at a URL instead of a post ENDS with the required
+    `scratchpad reported` follow-up as its last line (#664). Every
     path carries the project/workstream context (ADR-050): line + marker +
     title parenthetical, stamped into the reported note's frontmatter."""
     from project_kit.report import (
@@ -1026,6 +1057,7 @@ def _run_report(
         _run_report_url_path(
             kind, url, payload, findings,
             gh_ok=gh_ok, explicit=want_url, open_browser=open_browser,
+            note_path=note_path,
         )
         return
 
@@ -1047,6 +1079,7 @@ def _run_report(
                     note="\ngh could not file it — use the prefilled URL instead:",
                 )
                 _echo_browser_identity_warning()
+                _echo_reported_followup(note_path)
             else:
                 draft = stage_report(
                     target_root, kind=kind, title=title, payload=payload,
@@ -1061,6 +1094,7 @@ def _run_report(
     if len(url) <= URL_BUDGET:
         _echo_url_first(kind, url, REPORT_TARGET, note="\nNot posted.")
         _echo_browser_identity_warning()
+        _echo_reported_followup(note_path)
     else:
         click.echo("\nNot posted — edit and re-run when ready.")
 
@@ -1074,12 +1108,16 @@ def _run_report_url_path(
     gh_ok: bool,
     explicit: bool,
     open_browser: bool,
+    note_path: Path | None = None,
 ) -> None:
     """The URL survivor path (#662): honest only without `gh` auth or on an
     explicit `--url`/`--open`, and only within `URL_BUDGET` — over it the
     prefilled form hard-fails at GitHub's edge, so refuse with the working
     alternatives instead of printing a URL that cannot be opened. Always warns
-    that the browser's logged-in account authors the submit."""
+    that the browser's logged-in account authors the submit. A
+    scratchpad-backed flow ENDS with the required `scratchpad reported`
+    follow-up as its last line (#664 — a browser filing stamps nothing, so
+    the flow must hand over the exact tracking gesture, loudly)."""
     from project_kit.report import (
         REPORT_TARGET,
         URL_BUDGET,
@@ -1117,6 +1155,7 @@ def _run_report_url_path(
             )
         else:
             click.echo("\nCould not open a browser — copy the URL above.")
+    _echo_reported_followup(note_path)
 
 
 def _confirm_send_payload(kind: str, payload, login: str | None) -> bool:
@@ -1203,6 +1242,22 @@ def _post_confirmed_payload(
         target_root, note_path, posted, project=project, workstream=workstream
     )
     return "complete"
+
+
+def _echo_reported_followup(note_path: Path | None) -> None:
+    """The required tracking follow-up when a scratchpad-backed compose ends
+    in a URL/draft instead of a post (#664 / #660 C.7): the browser cannot
+    stamp the note reported, so the flow's LAST line is the exact one-command
+    gesture — loud, never a hidden step. No attached note ⇒ nothing to track
+    ⇒ silent."""
+    if note_path is None:
+        return
+    slug = scratchpads.note_slug(note_path.name)
+    click.echo(
+        "\nREQUIRED follow-up — the browser submit cannot stamp the note "
+        "reported (COR-043):"
+    )
+    click.echo(f"after filing in the browser, run: pkit scratchpad reported {slug} <issue-ref>")
 
 
 def _echo_browser_identity_warning() -> None:
@@ -4273,8 +4328,10 @@ def scratchpad_reported(slug: str, refs: tuple[str, ...], dry_run: bool) -> None
     REFS (owner/repo#N, or a GitHub issue URL — normalised), the date, and a
     content hash of the file as sent. On an already-reported note, appends the
     refs not yet recorded (idempotent for duplicates) and re-anchors the hash.
-    Covers URL-first posts and retroactive marking — the automatic stamp
-    happens on a successful `pkit report ... --file` post.
+    Covers URL-path posts (the compose flow ends by naming this exact
+    command as the required follow-up, #664) and retroactive marking — the
+    automatic stamp happens on a successful `pkit report` API post (direct
+    or via `report submit`).
     """
     target_root = find_target_root()
     if target_root is None:

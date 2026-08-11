@@ -793,10 +793,11 @@ def list_my_reports(target: str) -> list[ReportSummary] | None:
 
 def list_my_reports_tree(
     target: str,
-) -> list[tuple[ReportSummary, dict[int, str]]] | None:
+) -> list[tuple[ReportSummary, dict[int, TrackedFix]]] | None:
     """Like `list_my_reports`, but each report is paired with its `## Tracked by`
-    fixes resolved to states — for the `--tree` view. One extra read per tracked
-    issue; bounded by a personal report list. None on the initial gh failure."""
+    fixes resolved to `TrackedFix` (state + title + url, #664) — for the
+    `--tree` view. One extra read per tracked issue; bounded by a personal
+    report list. None on the initial gh failure."""
     data = _gh_json([
         "gh", "issue", "list", "--repo", target, "--author", "@me",
         "--state", "all", "--limit", "100",
@@ -804,14 +805,14 @@ def list_my_reports_tree(
     ])
     if not isinstance(data, list):
         return None
-    rows: list[tuple[ReportSummary, dict[int, str]]] = []
+    rows: list[tuple[ReportSummary, dict[int, TrackedFix]]] = []
     for issue in data:
         if not isinstance(issue, dict):
             continue
         summary = _summarize(issue)
         if not summary.kind:  # bug/feedback only
             continue
-        tracked = resolve_states(target, parse_tracked_by(str(issue.get("body", ""))))
+        tracked = resolve_tracked(target, parse_tracked_by(str(issue.get("body", ""))))
         rows.append((summary, tracked))
     rows.sort(key=lambda row: row[0].updated_at, reverse=True)
     return rows
@@ -832,21 +833,76 @@ def parse_tracked_by(body: str) -> list[int]:
     return out
 
 
-def resolve_states(target: str, numbers: list[int]) -> dict[int, str]:
-    """Display state for each issue number on `target` (missing/failed → 'unknown')."""
-    states: dict[int, str] = {}
+@dataclass(frozen=True)
+class TrackedFix:
+    """One resolved `## Tracked by` fix (#664): its display state plus — when
+    the read succeeded — the title and URL, so a rollup can say WHAT is fixing
+    a report, not just its number. Offline/unresolved: state 'unknown',
+    title/url empty (the render degrades to number + state)."""
+
+    state: str
+    title: str = ""
+    url: str = ""
+
+
+def resolve_tracked(target: str, numbers: list[int]) -> dict[int, TrackedFix]:
+    """Resolve each tracked issue number on `target` to a `TrackedFix` — one
+    `gh` read per number, the same per-ref seam `resolve_states` always used,
+    now also carrying title + url for the rollup render (#664). A failed read
+    degrades that entry to state 'unknown' with empty title/url."""
+    fixes: dict[int, TrackedFix] = {}
     for n in numbers:
         data = _gh_json([
             "gh", "issue", "view", str(n), "--repo", target,
-            "--json", "state,labels",
+            "--json", "state,labels,title,url",
         ])
         if isinstance(data, dict):
-            states[n] = display_state(
-                str(data.get("state", "")), _label_names(data.get("labels"))
+            fixes[n] = TrackedFix(
+                state=display_state(
+                    str(data.get("state", "")), _label_names(data.get("labels"))
+                ),
+                title=str(data.get("title", "")),
+                url=str(data.get("url", "")),
             )
         else:
-            states[n] = "unknown"
-    return states
+            fixes[n] = TrackedFix(state="unknown")
+    return fixes
+
+
+def resolve_states(target: str, numbers: list[int]) -> dict[int, str]:
+    """Display state for each issue number on `target` (missing/failed →
+    'unknown'). The state-only view of `resolve_tracked` — kept for callers
+    (`list_resolved`) that decide on states alone."""
+    return {n: fix.state for n, fix in resolve_tracked(target, numbers).items()}
+
+
+def local_reported_notes(target_root: Path, target: str) -> dict[int, str]:
+    """Map issue number → note slug for every local `reported/` scratchpad
+    note whose `reported_to` refs point at `target` (#664 — the one-tracking-
+    truth reconciliation, read side only). `report list` uses this to tag a
+    row `[note: <slug>]` when a locally-reported note references that issue:
+    the ISSUE stays the truth for state, the NOTE's frontmatter the truth for
+    what was sent — nothing is synced or stored (derive-don't-store). When
+    several notes reference the same issue, the first (name-sorted) wins.
+    Empty when `reported/` is absent (its lazy normal state)."""
+    from project_kit import scratchpads
+
+    reported_dir = target_root / ".pkit" / "scratchpad" / "reported"
+    if not reported_dir.is_dir():
+        return {}
+    out: dict[int, str] = {}
+    for path in sorted(reported_dir.glob("*.md")):
+        try:
+            refs = scratchpads.read_reported_refs(
+                path.read_text(encoding="utf-8")
+            )
+        except OSError:
+            continue
+        for ref in refs:
+            owner_repo, _, number = ref.partition("#")
+            if owner_repo == target and number.isdigit():
+                out.setdefault(int(number), scratchpads.note_slug(path.name))
+    return out
 
 
 def add_tracked_ref(body: str, n: int) -> str:
@@ -1051,7 +1107,8 @@ def unlink_fix(target: str, feedback_n: int, fix_n: int) -> bool:
 
 def show_report(target: str, number: int) -> dict | None:
     """Fetch one report's detail (state, body, comments) + resolve its
-    `## Tracked by` linked issues' states. None on gh failure."""
+    `## Tracked by` linked issues to `TrackedFix` (state + title + url,
+    #664). None on gh failure."""
     data = _gh_json([
         "gh", "issue", "view", str(number), "--repo", target,
         "--json", "number,title,state,body,labels,comments",
@@ -1067,5 +1124,5 @@ def show_report(target: str, number: int) -> dict | None:
         "state": display_state(str(data.get("state", "")), labels),
         "kind": classify_kind(labels, title, body),
         "comments": data.get("comments") or [],
-        "tracked_by": resolve_states(target, parse_tracked_by(body)),
+        "tracked_by": resolve_tracked(target, parse_tracked_by(body)),
     }

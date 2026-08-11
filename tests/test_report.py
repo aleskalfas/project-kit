@@ -26,6 +26,7 @@ _REAL_RESOLVE_CONTEXT = cli_mod._resolve_report_context
 _REAL_GH_AUTHENTICATED = _rep_for_pins.gh_authenticated
 _REAL_CURRENT_LOGIN = _rep_for_pins.current_login
 _REAL_ENSURE_KIND_LABEL = _rep_for_pins.ensure_kind_label
+_REAL_LOCAL_REPORTED_NOTES = _rep_for_pins.local_reported_notes
 
 
 @pytest.fixture(autouse=True)
@@ -42,6 +43,12 @@ def _pinned_report_context(monkeypatch):
     monkeypatch.setattr(_rep_for_pins, "gh_authenticated", lambda: False)
     monkeypatch.setattr(_rep_for_pins, "current_login", lambda: "tester")
     monkeypatch.setattr(_rep_for_pins, "ensure_kind_label", lambda *a, **k: True)
+    # Pin the local reported-note cross-tag read (#664) to empty so list
+    # rendering never depends on this checkout's own scratchpad state; the
+    # cross-tag tests override with a tmp target root.
+    monkeypatch.setattr(
+        _rep_for_pins, "local_reported_notes", lambda *a, **k: {}
+    )
 
 
 def test_compose_report_body_includes_prose_and_env() -> None:
@@ -482,13 +489,17 @@ def test_show_report_resolves_tracked_by(monkeypatch) -> None:
                 "comments": [{"body": "working on it"}],
             }
         if n == "7":
-            return {"state": "CLOSED", "labels": []}
+            return {"state": "CLOSED", "labels": [], "title": "the fix",
+                    "url": "https://github.com/o/r/issues/7"}
         return None
 
     monkeypatch.setattr(rep, "_gh_json", fake_gh_json)
     detail = rep.show_report("o/r", 42)
     assert detail["state"] == "open" and detail["kind"] == "feedback"
-    assert detail["tracked_by"] == {7: "closed"}
+    # tracked fixes resolve with title + url beside the state (#664)
+    assert detail["tracked_by"] == {
+        7: rep.TrackedFix("closed", "the fix", "https://github.com/o/r/issues/7")
+    }
     assert len(detail["comments"]) == 1
 
 
@@ -512,14 +523,18 @@ def test_list_my_reports_tree_pairs_each_with_tracked(monkeypatch) -> None:
                 "body": "p\n\n## Tracked by\n- [ ] #7\n",
             }]
         if args[3] == "7":
-            return {"state": "CLOSED", "labels": []}
+            return {"state": "CLOSED", "labels": [], "title": "the fix",
+                    "url": "https://github.com/o/r/issues/7"}
         return None
 
     monkeypatch.setattr(rep, "_gh_json", fake_gh_json)
     rows = rep.list_my_reports_tree("o/r")
     assert len(rows) == 1
     summary, tracked = rows[0]
-    assert summary.number == 42 and tracked == {7: "closed"}
+    assert summary.number == 42
+    assert tracked == {
+        7: rep.TrackedFix("closed", "the fix", "https://github.com/o/r/issues/7")
+    }
 
 
 def test_cli_report_tree(monkeypatch) -> None:
@@ -528,18 +543,121 @@ def test_cli_report_tree(monkeypatch) -> None:
         rep, "list_my_reports_tree",
         lambda target: [(
             rep.ReportSummary(42, "fb", "feedback", "open", "2026-08-03"),
-            {7: "closed"},
+            {7: rep.TrackedFix(
+                "closed", "the fix", "https://github.com/o/r/issues/7"
+            )},
         )],
     )
     res = CliRunner().invoke(main, ["report", "--tree"])
     assert res.exit_code == 0
     assert "#42" in res.output and "#7" in res.output and "closed" in res.output
+    # the rollup renders the fix's title and URL beside number+state (#664)
+    assert "the fix" in res.output
+    assert "https://github.com/o/r/issues/7" in res.output
+
+
+def test_cli_report_tree_offline_degrades_to_number_and_state(monkeypatch) -> None:
+    # An unresolved tracked ref (offline gh) renders as number + state only —
+    # no empty-title artefacts (#664).
+    monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
+    monkeypatch.setattr(
+        rep, "list_my_reports_tree",
+        lambda target: [(
+            rep.ReportSummary(42, "fb", "feedback", "open", "2026-08-03"),
+            {7: rep.TrackedFix("unknown")},
+        )],
+    )
+    res = CliRunner().invoke(main, ["report", "--tree"])
+    assert res.exit_code == 0
+    tracked_line = next(ln for ln in res.output.splitlines() if "#7" in ln)
+    assert "unknown" in tracked_line
+    assert "(" not in tracked_line  # no empty URL parenthetical
 
 
 def test_cli_report_list_no_auth_degrades(monkeypatch) -> None:
     monkeypatch.setattr(rep, "gh_authenticated", lambda: False)
     res = CliRunner().invoke(main, ["report"])
     assert "github.com" in res.output and "auth" in res.output.lower()
+
+
+# --- one tracking truth: the local-note cross-tag (#664) --------------
+
+
+def _reported_note(target_root: Path, name: str, refs: list[str]) -> Path:
+    reported = target_root / ".pkit" / "scratchpad" / "reported"
+    reported.mkdir(parents=True, exist_ok=True)
+    ref_lines = "".join(f"  - {ref}\n" for ref in refs)
+    path = reported / name
+    path.write_text(
+        "---\nauthors:\n  - T <t@example.com>\nstarted: 2026-08-10\n"
+        f"reported: 2026-08-10\nreported_to:\n{ref_lines}"
+        "reported_hash: sha256:abc\n---\n\n# Note\n",
+        encoding="utf-8",
+    )
+    return path
+
+
+def test_local_reported_notes_maps_target_refs_to_slugs(tmp_path: Path) -> None:
+    _reported_note(
+        tmp_path, "2026-08-10-channel-ux.md", ["o/r#659", "other/repo#5"]
+    )
+    # only refs pointing at the queried target map; slug is the note's slug
+    assert _REAL_LOCAL_REPORTED_NOTES(tmp_path, "o/r") == {659: "channel-ux"}
+    assert _REAL_LOCAL_REPORTED_NOTES(tmp_path, "other/repo") == {5: "channel-ux"}
+    assert _REAL_LOCAL_REPORTED_NOTES(tmp_path, "none/none") == {}
+
+
+def test_local_reported_notes_empty_without_reported_dir(tmp_path: Path) -> None:
+    # reported/ is lazy (COR-043) — its absence is the normal empty answer
+    assert _REAL_LOCAL_REPORTED_NOTES(tmp_path, "o/r") == {}
+
+
+def test_cli_report_list_tags_locally_reported_note(
+    tmp_path: Path, monkeypatch
+) -> None:
+    # report list stays the upstream (marker/author) view, but a row whose
+    # issue a local reported/ note references gains [note: <slug>] — the
+    # derive-don't-store reconciliation of the two tracking surfaces (#664).
+    _reported_note(
+        tmp_path, "2026-08-10-channel-ux.md", [f"{REPORT_TARGET}#659"]
+    )
+    monkeypatch.setattr(cli_mod, "find_target_root", lambda: tmp_path)
+    monkeypatch.setattr(rep, "local_reported_notes", _REAL_LOCAL_REPORTED_NOTES)
+    monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
+    monkeypatch.setattr(
+        rep, "list_my_reports",
+        lambda t: [
+            rep.ReportSummary(659, "channel ux", "feedback", "open", "2026-08-10"),
+            rep.ReportSummary(700, "unrelated", "bug", "open", "2026-08-09"),
+        ],
+    )
+    res = CliRunner().invoke(main, ["report"])
+    assert res.exit_code == 0, res.output
+    line_659 = next(ln for ln in res.output.splitlines() if "#659" in ln)
+    assert "[note: channel-ux]" in line_659
+    line_700 = next(ln for ln in res.output.splitlines() if "#700" in ln)
+    assert "[note:" not in line_700
+
+
+def test_cli_report_tree_tags_locally_reported_note(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _reported_note(
+        tmp_path, "2026-08-10-channel-ux.md", [f"{REPORT_TARGET}#659"]
+    )
+    monkeypatch.setattr(cli_mod, "find_target_root", lambda: tmp_path)
+    monkeypatch.setattr(rep, "local_reported_notes", _REAL_LOCAL_REPORTED_NOTES)
+    monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
+    monkeypatch.setattr(
+        rep, "list_my_reports_tree",
+        lambda t: [(
+            rep.ReportSummary(659, "channel ux", "feedback", "open", "2026-08-10"),
+            {},
+        )],
+    )
+    res = CliRunner().invoke(main, ["report", "--tree"])
+    assert res.exit_code == 0, res.output
+    assert "[note: channel-ux]" in res.output
 
 
 # --- maintainer side (pure body helpers + gated commands) ------------
@@ -1152,13 +1270,24 @@ def test_cli_report_show(monkeypatch) -> None:
         lambda t, n: {
             "number": 42, "title": "fb", "state": "open", "kind": "feedback",
             "comments": [{"body": "working on it"}],
-            "tracked_by": {7: "closed", 8: "in progress"},
+            "tracked_by": {
+                7: rep.TrackedFix(
+                    "closed", "the fix", "https://github.com/o/r/issues/7"
+                ),
+                8: rep.TrackedFix("in progress"),
+            },
         },
     )
     res = CliRunner().invoke(main, ["report", "show", "42"])
     assert res.exit_code == 0
     assert "#42" in res.output and "Tracked by" in res.output
     assert "#7" in res.output and "maintainer comment" in res.output
+    # a resolved fix renders title + URL beside number+state; an unresolved
+    # one degrades to number + state (#664)
+    assert "the fix" in res.output
+    assert "https://github.com/o/r/issues/7" in res.output
+    line8 = next(ln for ln in res.output.splitlines() if "#8" in ln)
+    assert "in progress" in line8 and "(" not in line8
 
 
 def test_cli_report_show_unclassifiable_issue_says_so(monkeypatch) -> None:
