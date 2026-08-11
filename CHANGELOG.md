@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.148.1 — 2026-08-11
+
+### Fixed
+- `pkit report` (list) no longer sweeps in every ordinary prefix-titled tracker issue the invoker authored (#681, adopter-observed: ~35 rows for ~3 genuine reports). Membership now requires positive report provenance — the `pkit-report` body marker, a `report:*` label, or the on-behalf-of attribution line — unioned with issues referenced by local `reported/` notes, which keeps raw-`gh`-filed reports like #660 listed. Title prefixes and legacy bare kind labels demote to display-only kind fallbacks; the inbox applies the same rule (its title-prefix sweep leg is replaced by a marker body search).
+
 ## 1.148.0 — 2026-08-11
 
 ### Added
