@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 import project_kit.cli as cli_mod
+import project_kit.report as _rep_for_pins
 from project_kit.report import (
     KINDS,
     REPORT_TARGET,
@@ -20,15 +21,24 @@ from project_kit.report import (
 #: it — the ADR-050 prompt-flow tests restore it explicitly.
 _REAL_RESOLVE_CONTEXT = cli_mod._resolve_report_context
 
+#: Real gh seams, captured before the autouse pins below replace them —
+#: tests exercising the real functions restore these explicitly.
+_REAL_GH_AUTHENTICATED = _rep_for_pins.gh_authenticated
+_REAL_CURRENT_LOGIN = _rep_for_pins.current_login
+
 
 @pytest.fixture(autouse=True)
 def _pinned_report_context(monkeypatch):
     """Pin the ADR-050 context resolution to (None, None) so CLI tests never
-    prompt for a name or spawn the pm read-verb subprocess. Context-specific
-    tests override (or restore `_REAL_RESOLVE_CONTEXT`)."""
+    prompt for a name or spawn the pm read-verb subprocess, and pin the gh
+    seams (no auth; login 'tester') so no test's send path depends on the
+    machine's real gh state (#662: gh auth now selects the API-primary path).
+    Tests override per-case (or restore the captured real functions)."""
     monkeypatch.setattr(
         cli_mod, "_resolve_report_context", lambda *a, **k: (None, None)
     )
+    monkeypatch.setattr(_rep_for_pins, "gh_authenticated", lambda: False)
+    monkeypatch.setattr(_rep_for_pins, "current_login", lambda: "tester")
 
 
 def test_compose_report_body_includes_prose_and_env() -> None:
@@ -197,13 +207,17 @@ def test_file_report_via_gh_failure_returns_none(monkeypatch) -> None:
 
 
 def test_gh_authenticated_false_when_gh_absent(monkeypatch) -> None:
+    monkeypatch.setattr(rep, "gh_authenticated", _REAL_GH_AUTHENTICATED)
     monkeypatch.setattr(rep.shutil, "which", lambda _name: None)
     assert rep.gh_authenticated() is False
 
 
-def test_cli_file_yes_degrades_and_does_not_post(monkeypatch) -> None:
-    # --file --yes must NEVER auto-post the foreign write (ADR-047) — degrade to URL.
+def test_cli_file_yes_stages_and_does_not_post(tmp_path, monkeypatch) -> None:
+    # --file --yes must NEVER auto-post the foreign write (ADR-047) — since
+    # #662 it stages the payload for `pkit report submit` instead.
     posted = {"v": False}
+    (tmp_path / ".pkit").mkdir()
+    monkeypatch.setattr(cli_mod, "find_target_root", lambda: tmp_path)
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
     monkeypatch.setattr(
         rep, "file_report_via_gh",
@@ -212,10 +226,10 @@ def test_cli_file_yes_degrades_and_does_not_post(monkeypatch) -> None:
     res = CliRunner().invoke(
         main, ["report", "bug", "--title", "t", "--body", "b", "--file", "--yes"]
     )
-    assert res.exit_code == 0
+    assert res.exit_code == 0, res.output
     assert posted["v"] is False
-    assert "issues/new?" in res.output
-    assert "ADR-047" in res.output
+    assert "staged: pkit report submit " in res.output
+    assert rep.list_staged(tmp_path)  # the payload landed as a draft
 
 
 def test_cli_file_confirm_yes_posts(monkeypatch) -> None:
@@ -287,6 +301,8 @@ def test_list_my_reports_filters_to_bug_feedback_and_sorts(monkeypatch) -> None:
 
 
 def test_list_my_reports_includes_attributed(monkeypatch) -> None:
+    monkeypatch.setattr(rep, "current_login", _REAL_CURRENT_LOGIN)
+
     def fake(args):
         if args[:3] == ["gh", "api", "user"]:
             return {"login": "mike"}
@@ -307,6 +323,8 @@ def test_list_my_reports_includes_attributed(monkeypatch) -> None:
 
 def test_list_my_reports_authored_wins_over_attributed(monkeypatch) -> None:
     # an issue both authored and self-attributed should render as authored.
+    monkeypatch.setattr(rep, "current_login", _REAL_CURRENT_LOGIN)
+
     def fake(args):
         if args[:3] == ["gh", "api", "user"]:
             return {"login": "mike"}
@@ -500,9 +518,14 @@ def test_cli_change_request_prints_prefilled_url() -> None:
     assert urllib.parse.quote_plus("[CR] add a flag") in res.output
 
 
-def test_cli_change_request_file_yes_degrades_and_does_not_post(monkeypatch) -> None:
-    # same ADR-047 asymmetry as bug/feedback: --file --yes NEVER auto-posts.
+def test_cli_change_request_file_yes_stages_and_does_not_post(
+    tmp_path, monkeypatch
+) -> None:
+    # same ADR-047 asymmetry as bug/feedback: --file --yes NEVER auto-posts —
+    # it stages for `report submit` (#662).
     posted = {"v": False}
+    (tmp_path / ".pkit").mkdir()
+    monkeypatch.setattr(cli_mod, "find_target_root", lambda: tmp_path)
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
     monkeypatch.setattr(
         rep, "file_report_via_gh",
@@ -512,9 +535,11 @@ def test_cli_change_request_file_yes_degrades_and_does_not_post(monkeypatch) -> 
         main,
         ["report", "change-request", "--title", "t", "--body", "b", "--file", "--yes"],
     )
-    assert res.exit_code == 0
+    assert res.exit_code == 0, res.output
     assert posted["v"] is False
-    assert "issues/new?" in res.output and "ADR-047" in res.output
+    assert "staged: pkit report submit " in res.output
+    drafts = rep.list_staged(tmp_path)
+    assert [d.kind for d in drafts] == ["change-request"]
 
 
 # --- inbox filtering (--kind / --group-by) ---------------------------
@@ -925,6 +950,7 @@ def test_cli_interactive_prompt_blank_omits_and_writes_nothing(
 def test_list_my_reports_fetches_bodies_and_reads_project_marker(
     monkeypatch,
 ) -> None:
+    monkeypatch.setattr(rep, "current_login", _REAL_CURRENT_LOGIN)
     queries: list[list[str]] = []
 
     def fake(args):

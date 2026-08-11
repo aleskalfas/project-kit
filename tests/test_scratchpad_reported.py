@@ -37,11 +37,16 @@ def fixed_today(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.fixture(autouse=True)
 def _pinned_report_context(monkeypatch: pytest.MonkeyPatch) -> None:
     """Pin the ADR-050 context resolution to (None, None) so the report-verb
-    flow tests never prompt for a name or spawn the pm read-verb subprocess.
-    The context-stamp test overrides with concrete values."""
+    flow tests never prompt for a name or spawn the pm read-verb subprocess,
+    and pin the gh seams (no auth; login 'tester') so the send path never
+    depends on the machine's real gh state (#662: gh auth now selects the
+    API-primary path). Tests override per-case; the context-stamp test
+    overrides with concrete values."""
     monkeypatch.setattr(
         cli_mod, "_resolve_report_context", lambda *a, **k: (None, None)
     )
+    monkeypatch.setattr(rep, "gh_authenticated", lambda: False)
+    monkeypatch.setattr(rep, "current_login", lambda: "tester")
 
 
 @pytest.fixture(autouse=True)
@@ -486,9 +491,10 @@ def test_cli_report_attach_draft_url_path_never_stamps(cli_target: Path) -> None
     assert not (cli_target / ".pkit" / "scratchpad" / "reported").exists()
 
 
-def test_cli_report_attach_yes_degrades_and_never_stamps(
+def test_cli_report_attach_yes_stages_and_never_stamps(
     cli_target: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    # --yes stages for `report submit` (#662) — nothing posts, nothing stamps.
     note = _write_note(cli_target)
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
     res = CliRunner().invoke(
@@ -497,7 +503,7 @@ def test_cli_report_attach_yes_degrades_and_never_stamps(
          "--scratchpad", "my-note"],
     )
     assert res.exit_code == 0, res.output
-    assert "ADR-047" in res.output
+    assert "staged: pkit report submit " in res.output
     assert note.is_file()
     assert not (cli_target / ".pkit" / "scratchpad" / "reported").exists()
 

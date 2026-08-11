@@ -3,9 +3,12 @@
 Composes a bug/feedback report with a **redacted** environment block and files it
 to the distribution's fixed report target. Two sides:
 
-- **Reporter** (any adopter): `compose_report` / `build_new_issue_url` (URL-first,
-  no `gh` auth needed — the browser is the review gate), `file_report_via_gh` (opt-in
-  `--file` via `gh`), and the tracking reads (`list_my_reports`, `show_report`).
+- **Reporter** (any adopter): `compose_report` + `file_report_via_gh` (the
+  confirm-gated API post — the primary path when `gh` is authenticated, #662),
+  `build_new_issue_url` (the URL survivor path: no `gh` auth or an explicit
+  `--url`, within `URL_BUDGET` only), `stage_report` / `list_staged` /
+  `load_staged` (the `--yes` stage + human `report submit` split), and the
+  tracking reads (`list_my_reports`, `show_report`).
 - **Maintainer** (only inside the report target — `in_report_target` gates it):
   `list_inbox` (triage queue, kind-filterable), `list_resolved` /
   `close_report_as_resolved` (the `--resolved` close-prompt), `link_fix` /
@@ -20,7 +23,9 @@ import re
 import shutil
 import subprocess
 import urllib.parse
+import webbrowser
 from dataclasses import dataclass, replace
+from datetime import UTC, datetime
 from pathlib import Path
 
 from project_kit.environment import collect_environment, render_environment_block
@@ -333,6 +338,223 @@ def post_issue_comment(target: str, issue: str, body: str) -> tuple[bool, str]:
     return True, ""
 
 
+# --- send path: URL budget, browser open, stage + submit (#662) ------
+
+#: Budget (in characters) for a prefilled new-issue URL, measured on the FULL
+#: encoded URL. The binding constraint is not the browser (Chrome/Firefox
+#: accept URLs far beyond this) but the server edge: GitHub rejects request
+#: lines beyond the common ~8 KB reverse-proxy cap with HTTP 414 (nginx's
+#: `large_client_header_buffers` default is 8k; Apache's `LimitRequestLine`
+#: is 8190 — the same order), so an oversized prefill HARD-FAILS on open
+#: rather than degrading (#662). 6000 leaves ~2 KB of headroom under that
+#: request-line cap for the method/path and intermediary inflation. Over
+#: budget, the flow refuses the URL form and routes to the API post (or the
+#: stage + submit split).
+URL_BUDGET = 6000
+
+
+def open_in_browser(url: str) -> bool:
+    """Open `url` in the default browser; False on any failure. The caller
+    prints the URL before attempting this, so a failure degrades to
+    copy-paste rather than losing the draft."""
+    try:
+        return bool(webbrowser.open(url))
+    except Exception:  # any browser failure degrades the same way
+        return False
+
+
+#: Where `--yes`/non-interactive composes stage their payload for the human
+#: `pkit report submit` gesture. Project-local, and ignored by git via the
+#: `.gitignore` the stager drops inside the directory itself — self-contained,
+#: so no repo-root `.gitignore` edit (and no merge-primitive involvement) is
+#: needed in any adopter.
+DRAFTS_RELPATH = Path(".pkit/scratchpad/.report-drafts")
+
+#: Separates the staged issue body from the staged overflow comment inside a
+#: stage file. A body containing this exact line would confuse the parse —
+#: accepted: stage files are short-lived, tool-written intermediates.
+_DRAFT_OVERFLOW_MARKER = "<!-- pkit-report-draft: overflow-comment -->"
+
+#: Stage-file format marker (header key `pkit-report-draft`), bumped on an
+#: incompatible stage-file change so a stale draft is skipped, not misparsed.
+_DRAFT_FORMAT = "1"
+
+
+@dataclass(frozen=True)
+class StagedDraft:
+    """One staged send payload under `DRAFTS_RELPATH` — the `--yes` product,
+    consumed by the interactive-only `report submit` (ADR-047: autonomy
+    stages, a human posts)."""
+
+    draft_id: str
+    path: Path
+    kind: str
+    title: str
+    target: str
+    staged: str  # ISO timestamp of the compose
+    payload: SendPayload
+    note: str | None = None  # target_root-relative path of the attached note
+    project: str | None = None
+    workstream: str | None = None
+    warnings: tuple[str, ...] = ()  # compose-time redaction findings, rendered
+
+
+def render_finding(finding: RedactionFinding) -> str:
+    """One redaction finding as the single line it rides everywhere: draft
+    warnings, stage-file headers, interactive prompts. Pure over its input."""
+    return f"line {finding.line}: {finding.pattern}: {finding.excerpt}"
+
+
+def stage_report(
+    target_root: Path,
+    *,
+    kind: str,
+    title: str,
+    payload: SendPayload,
+    findings: list[RedactionFinding] | None = None,
+    note_path: Path | None = None,
+    project: str | None = None,
+    workstream: str | None = None,
+) -> StagedDraft:
+    """Write the composed send payload to a stage file and return the draft.
+
+    The stage file is markdown with a simple `key: value` header (own
+    format, not YAML — titles and warning excerpts need no escaping because
+    values are single-line and parsed by first-`': '` partition): kind,
+    title, target, timestamp, the attached note's relative path, the
+    resolved project/workstream pair, and one `warning:` line per
+    compose-time redaction finding (the findings ride the stage so `submit`
+    can re-surface them). The body follows the header; an overflow comment
+    follows `_DRAFT_OVERFLOW_MARKER`. Edge whitespace is normalized on the
+    round-trip; content is otherwise verbatim."""
+    drafts_dir = target_root / DRAFTS_RELPATH
+    drafts_dir.mkdir(parents=True, exist_ok=True)
+    gitignore = drafts_dir / ".gitignore"
+    if not gitignore.exists():
+        gitignore.write_text("*\n", encoding="utf-8")
+
+    draft_id = _new_draft_id(drafts_dir, kind)
+    warnings = tuple(render_finding(f) for f in findings or [])
+    note_rel: str | None = None
+    if note_path is not None:
+        try:
+            note_rel = str(note_path.relative_to(target_root))
+        except ValueError:
+            note_rel = str(note_path)
+    staged = datetime.now(UTC).isoformat(timespec="seconds")
+
+    header = [
+        "---",
+        f"pkit-report-draft: {_DRAFT_FORMAT}",
+        f"kind: {kind}",
+        f"title: {title}",
+        f"target: {REPORT_TARGET}",
+        f"staged: {staged}",
+    ]
+    if note_rel:
+        header.append(f"note: {note_rel}")
+    if project:
+        header.append(f"project: {project}")
+    if workstream:
+        header.append(f"workstream: {workstream}")
+    header.extend(f"warning: {w}" for w in warnings)
+    header.append("---")
+
+    content = "\n".join(header) + "\n" + payload.body.rstrip("\n") + "\n"
+    if payload.overflow_comment is not None:
+        content += (
+            f"\n{_DRAFT_OVERFLOW_MARKER}\n\n"
+            + payload.overflow_comment.rstrip("\n")
+            + "\n"
+        )
+    path = drafts_dir / f"{draft_id}.md"
+    path.write_text(content, encoding="utf-8")
+    return StagedDraft(
+        draft_id, path, kind, title, REPORT_TARGET, staged, payload,
+        note=note_rel, project=project, workstream=workstream, warnings=warnings,
+    )
+
+
+def _new_draft_id(drafts_dir: Path, kind: str) -> str:
+    """A timestamped, collision-free draft id (`YYYYMMDD-HHMMSS-<kind>`)."""
+    base = datetime.now(UTC).strftime("%Y%m%d-%H%M%S") + f"-{kind}"
+    candidate, n = base, 2
+    while (drafts_dir / f"{candidate}.md").exists():
+        candidate = f"{base}-{n}"
+        n += 1
+    return candidate
+
+
+def list_staged(target_root: Path) -> list[StagedDraft]:
+    """The parseable staged drafts, oldest first (draft ids are timestamped,
+    so name order is stage order). Unparseable files are skipped."""
+    drafts_dir = target_root / DRAFTS_RELPATH
+    if not drafts_dir.is_dir():
+        return []
+    drafts: list[StagedDraft] = []
+    for path in sorted(drafts_dir.glob("*.md")):
+        draft = _parse_stage_file(path)
+        if draft is not None:
+            drafts.append(draft)
+    return drafts
+
+
+def load_staged(target_root: Path, draft_id: str) -> StagedDraft | None:
+    """One staged draft by id; None when absent or unparseable."""
+    path = target_root / DRAFTS_RELPATH / f"{draft_id}.md"
+    if not path.is_file():
+        return None
+    return _parse_stage_file(path)
+
+
+def _parse_stage_file(path: Path) -> StagedDraft | None:
+    """Parse one stage file (see `stage_report` for the format); None when it
+    is not a current-format stage file."""
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    lines = text.splitlines()
+    if not lines or lines[0] != "---":
+        return None
+    try:
+        close = lines.index("---", 1)
+    except ValueError:
+        return None
+    fields: dict[str, str] = {}
+    warnings: list[str] = []
+    for line in lines[1:close]:
+        key, sep, value = line.partition(": ")
+        if not sep:
+            continue
+        if key == "warning":
+            warnings.append(value)
+        else:
+            fields[key] = value
+    if fields.get("pkit-report-draft") != _DRAFT_FORMAT:
+        return None
+    rest = "\n".join(lines[close + 1 :])
+    body, sep2, overflow = rest.partition(f"\n{_DRAFT_OVERFLOW_MARKER}\n")
+    payload = SendPayload(
+        body.rstrip("\n") + "\n",
+        overflow.strip("\n") or None if sep2 else None,
+        truncated=bool(sep2),
+    )
+    return StagedDraft(
+        draft_id=path.stem,
+        path=path,
+        kind=fields.get("kind", ""),
+        title=fields.get("title", ""),
+        target=fields.get("target", REPORT_TARGET),
+        staged=fields.get("staged", ""),
+        payload=payload,
+        note=fields.get("note"),
+        project=fields.get("project"),
+        workstream=fields.get("workstream"),
+        warnings=tuple(warnings),
+    )
+
+
 def gh_authenticated() -> bool:
     """True iff `gh` is installed and authenticated (so the auto-file path can run).
     Best-effort; any failure ⇒ False ⇒ the caller degrades to the URL."""
@@ -356,10 +578,10 @@ def file_report_via_gh(
     This is a **categorically-foreign** write (ADR-047): it targets the
     distribution's repo (`--repo <target>`), never the session's own, so it is
     scoped *outside* the self-guard interlock by category — no
-    `--allow-foreign-repo` override is used. The interactive target-naming confirm
-    is the caller's (CLI) responsibility; under `--yes`/autonomy the caller does
-    not reach here (it degrades to the draft URL — the deliberate `--yes`
-    asymmetry).
+    `--allow-foreign-repo` override is used. The interactive target-and-identity
+    confirm is the caller's (CLI) responsibility; under `--yes`/autonomy the
+    caller does not reach here (it stages the payload for `report submit` —
+    the deliberate `--yes` asymmetry: stage, never post).
     """
     cmd = [
         "gh", "issue", "create", "--repo", target,
@@ -441,8 +663,10 @@ def _summarize(issue: dict) -> ReportSummary:
     )
 
 
-def _current_login() -> str | None:
-    """The authenticated `gh` user's login, or None if it can't be determined."""
+def current_login() -> str | None:
+    """The authenticated `gh` user's login, or None if it can't be determined.
+    Public because the send path names it as the posting identity before every
+    confirm (#662 — the browser-identity misattribution guard)."""
     data = _gh_json(["gh", "api", "user"])
     if isinstance(data, dict) and isinstance(data.get("login"), str):
         return data["login"]
@@ -469,7 +693,7 @@ def list_my_reports(target: str) -> list[ReportSummary] | None:
             if s.kind:
                 by_number[s.number] = s
 
-    login = _current_login()
+    login = current_login()
     if login:
         attr = _gh_json([
             "gh", "issue", "list", "--repo", target,

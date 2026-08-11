@@ -66,7 +66,7 @@ That inlines the note into the report (collapsed, "as sent"), runs a **redaction
 
 Consequences to convey:
 
-- **If they post via the browser URL** (the draft path — including every `--yes`/agent run), nothing is stamped; after posting they run `pkit scratchpad reported <slug> <ref>` to record it.
+- **A gated post stamps automatically** — whether from the interactive confirm or from `pkit report submit` on a staged draft. Only a browser-URL post (small reports only) stamps nothing; after that submit they run `pkit scratchpad reported <slug> <ref>` to record it.
 - **The reported note is frozen by convention** — follow-up thinking goes in a *new* note cross-referencing it; edits after send are flagged as drift, since the issue carries the as-sent text.
 - **Tracking is automatic from there:** `pkit scratchpad list` resolves the note's issues live and prompts retirement when they all close.
 
@@ -95,9 +95,9 @@ pkit report bug --title "<title>" --body "<body>"
 
 (or `pkit report feedback …`). Behaviour to convey to the user:
 
-- **URL-first by default** — the command prints a prefilled GitHub new-issue URL. It works with **no `gh` auth**; opening it lands the user on the issue form with everything filled, and the **browser submit is the review gate**. This is the safe default.
-- **`--file`** posts directly via `gh` (when authenticated), behind an interactive **target-naming confirm** ("posts a PUBLIC issue to `<owner/repo>` under your identity"). Use only when the user is ready to publish.
-- **`--yes` / autonomy never auto-posts** — it degrades to the draft URL (the deliberate `--yes` asymmetry). Never try to force a post under automation; hand back the URL.
+- **API post by default** (#662) — with `gh` authenticated, the command shows the full payload once and posts via `gh` behind an interactive confirm that names the target **and the posting identity** ("posts as `@<gh login>` to `<owner/repo>`"). The note travels as the issue body — never URL-embedded.
+- **The URL form is the fallback, not the default** — it survives only without `gh` auth or on an explicit `--url` (`--open` opens it in the browser), only for small reports (an oversized prefill is refused — it would hard-fail on open), and always with the warning that **the browser's logged-in account authors the submit**.
+- **`--yes` / autonomy never posts — it stages** (the deliberate `--yes` asymmetry). The command prints one line, `staged: pkit report submit <id>`; surface that line to the user, who reviews and posts with that single interactive command. Never try to force a post under automation.
 
 ## 6. Filing on behalf of someone
 

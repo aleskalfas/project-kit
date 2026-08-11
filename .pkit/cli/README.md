@@ -434,12 +434,26 @@ carries its own compose template (motivation / desired behaviour / current
 workaround), which a flag on the freeform verb would blur. A filed CR gets a
 `[CR]` title prefix and a body kind-marker (`<!-- pkit-report: kind=… -->`, stamped
 on every kind) so the maintainer inbox classifies it even when the GitHub label is
-dropped (URL-filed issues from non-collaborators lose labels). **URL-first**: prints
-a prefilled GitHub new-issue URL that works with no `gh` auth (the browser is the
-review gate); `gh`-auto-file is the authenticated convenience, behind a
-**target-naming confirm** ("posts a PUBLIC issue to `<owner/repo>` under your
-identity"). `--yes` / autonomy **degrades to the draft — it never auto-posts** (the
-deliberate `--yes` asymmetry, per ADR-047). `--on-behalf-of @login` files under the
+dropped (URL-filed issues from non-collaborators lose labels).
+
+**The send path (#662): API-post primary.** With `gh` authenticated, the composed
+payload (body + any overflow comment) is shown **once**, the confirm names the
+target **and the posting identity** ("posts a PUBLIC issue to `<owner/repo>` as
+`@<gh login>`"), and an explicit yes posts via `gh` — the note travels as the
+issue **body**, never URL-embedded, so a real scratchpad-backed report files with
+no copy-paste. The **prefilled-URL form survives only where it is honest**: no
+`gh` auth, or an explicit `--url` — and only within the ~6000-char URL budget
+(GitHub's edge rejects longer request lines with HTTP 414, so an oversized
+prefill *hard-fails* on open; over budget the flow refuses the URL form and names
+the API / stage alternatives instead). Whenever the URL form is used, the flow
+warns that **the browser's logged-in account authors the submit** — it can
+silently differ from the CLI identity (the misattribution that hit #659).
+`--open` opens a within-budget prefilled form in the browser instead of forcing
+copy-paste (degrades to the printed URL). `--yes` / autonomy **stages the
+composed payload and prints one line (`staged: pkit report submit <id>`) — it
+never posts** (the deliberate `--yes` asymmetry, per ADR-047: **`--yes` stages,
+never posts**). `--file` is kept as an explicit gesture; the API post is the
+default whenever `gh` is authenticated. `--on-behalf-of @login` files under the
 invoker's identity with a "Reported for @login" attribution so the beneficiary
 still tracks it.
 
@@ -482,10 +496,28 @@ issue posts but the overflow comment fails, the send did not complete as
 confirmed: **nothing is stamped**, the created issue is named with the
 remediation, and the `gh` error is surfaced verbatim. On a **fully-successful
 post** the note is stamped `reported` (moved to the lazily-created `reported/`
-with refs/date/hash frontmatter); draft and URL paths send nothing and stamp
-nothing — use `pkit scratchpad reported` after the browser submit. Every report
-verb also prints a one-line warning (never a gate) when a `reported/` note has
-been modified since its stamp.
+with refs/date/hash frontmatter) — whether the post came from a direct compose
+or from `report submit`; staged and URL paths send nothing and stamp nothing at
+compose time (use `pkit scratchpad reported` after a browser submit). Every
+report verb also prints a one-line warning (never a gate) when a `reported/`
+note has been modified since its stamp.
+
+### `report submit [<id>]`
+
+The human half of the agent-stage + human-submit split (#662). A `--yes`
+compose stages its full payload — with the compose-time redaction findings as
+header warnings — under `.pkit/scratchpad/.report-drafts/` (project-local,
+kept out of git by a `.gitignore` the stager drops inside the directory, so no
+repo-root ignore edit is needed). Bare, `report submit` lists the staged
+drafts. With an id it loads the staged payload, re-surfaces the redaction
+warnings, shows the whole payload (body + any overflow comment), names the
+posting identity and target, and posts via `gh` only on an explicit confirm —
+then stamps/tracks exactly as a direct post (COR-043) and removes the stage
+file. **Interactive-only**: `--yes` is refused, so ADR-047's gate survives the
+realization — autonomy stages, only a human posts. A failed post keeps the
+draft for retry; an issue created whose overflow comment failed keeps the
+draft **only** as the source of the full text and says not to resubmit (the
+issue already exists — retry the comment instead).
 
 ### `report` (= `report list`) / `report show <N>`
 
