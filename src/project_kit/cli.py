@@ -4661,7 +4661,15 @@ def process_validate(address: str, subject: str | None, as_json: bool) -> None:
     "--json", "as_json", is_flag=True, default=False,
     help="Emit the byte-stable machine form (per-contract objects + totals; no styling).",
 )
-def process_health(focus_process: str | None, as_json: bool) -> None:
+@click.option(
+    "--interpretation-only", "interpretation_only", is_flag=True, default=False,
+    help="Report INDETERMINATES only (the authoring completion signal, COR-044): "
+         "does every contract resolve and its seams execute? Misses are not "
+         "counted and do not affect the exit code.",
+)
+def process_health(
+    focus_process: str | None, as_json: bool, interpretation_only: bool
+) -> None:
     """Walk every declared hand-off contract (COR-042) and report missed
     hand-offs — upstream subjects at their trigger state with no downstream
     counterpart.
@@ -4684,6 +4692,14 @@ def process_health(focus_process: str | None, as_json: bool) -> None:
     ordering.
 
     Exits non-zero on any miss OR any indeterminate; 0 only when both are zero.
+
+    \b
+    --interpretation-only is the AUTHORING variant (COR-044): it consumes the
+    SAME walk (never a parallel contract-walker, COR-042 point 5) but reports
+    only the interpretability half — indeterminates — and counts NO misses (a
+    fresh, correct contract routinely reports real misses; miss-count is never
+    the authoring done-signal). With the flag, the exit code is non-zero on
+    any indeterminate only. The default run's exit contract is unchanged.
     """
     from project_kit import process as process_mod
     from project_kit import process_health as ph
@@ -4694,12 +4710,348 @@ def process_health(focus_process: str | None, as_json: bool) -> None:
     except process_mod.ProcessError as exc:
         raise click.ClickException(str(exc)) from exc
 
+    if interpretation_only:
+        if as_json:
+            click.echo(ph.render_interpretation_json(report), nl=False)
+        else:
+            click.echo(ph.render_interpretation_narrative(report), nl=False)
+        if report.indeterminate_total > 0:
+            raise SystemExit(1)
+        return
+
     if as_json:
         click.echo(ph.render_json(report), nl=False)
     else:
         click.echo(ph.render_narrative(report), nl=False)
     if not report.ok:
         raise SystemExit(1)
+
+
+# --- process authoring stamps (per COR-044) ---------------------------
+
+
+def _authoring_repo_root():
+    from project_kit import process as process_mod
+
+    try:
+        return process_mod.resolve_repo_root()
+    except process_mod.ProcessError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+
+def _echo_authoring_warnings(warnings: tuple[str, ...]) -> None:
+    for warning in warnings:
+        click.echo("  " + cli_render.style("warn", f"⚠ {warning}"))
+
+
+def _split_pair(raw: str, sep: str, flag: str, shape: str) -> tuple[str, str]:
+    head, _, tail = raw.partition(sep)
+    if not head.strip() or not tail.strip():
+        raise click.ClickException(f"{flag} {raw!r} is malformed; expected {shape}.")
+    return head.strip(), tail.strip()
+
+
+@process.command("new")
+@click.argument("address")
+@click.option("--cardinality", default="singleton", show_default=True,
+              help="Subject cardinality (validated against the shape contract's set).")
+@click.option("--key", "subject_key", default=None,
+              help="Descriptive name of what identifies a KEYED unit (COR-032); keyed only.")
+@click.option("--state", "state_flags", multiple=True, required=True, metavar="<id>=<meaning>",
+              help="Declare a state (repeatable; declaration order is kept — it can be "
+                   "load-bearing for detection precedence). Every state gets a detection "
+                   "predicate stub.")
+@click.option("--entry", "entry_flags", multiple=True, metavar="<state-id>",
+              help="Mark a state as an unconditional entry (repeatable).")
+@click.option("--guarded-entry", "guarded_entry_flags", multiple=True, metavar="<state-id>",
+              help="Mark a state as a GUARDED entry (repeatable); scaffolds an entry-guard "
+                   "predicate stub.")
+@click.option("--terminal", "terminal_flags", multiple=True, metavar="<state-id>",
+              help="Mark a state terminal — an outcome a parent may wire (repeatable).")
+@click.option("--transition", "transition_flags", multiple=True,
+              metavar="<from>:<to>:<trigger>[:<authorisation>]",
+              help="Declare a transition (repeatable). `from` may be `*` (any source). "
+                   "Authorisation defaults to `user` (the safe floor: nothing moves "
+                   "autonomously until the author decides otherwise).")
+@click.option("--gate", "gate_flags", multiple=True, metavar="<from>:<to>[:<kind>]",
+              help="Gate a declared transition (repeatable); scaffolds a gate predicate "
+                   "stub. Kind defaults to `deterministic`; `authorisation-artifact` is "
+                   "the other stubbed kind (engine-computed kinds ride the deferred "
+                   "subprocess/cascade block surface).")
+@click.option("--invariant", "invariant_flags", multiple=True, metavar="<id>=<why>",
+              help="Declare a position-independent always-check (COR-035, repeatable); "
+                   "scaffolds a check predicate stub.")
+@click.option("--blocked", "blocked_on", default=None,
+              help="Declare the subject's wait reason (COR-034; validated against the "
+                   "shape contract's set). `awaiting-condition` scaffolds a resume_when "
+                   "predicate stub.")
+def process_new(
+    address: str,
+    cardinality: str,
+    subject_key: str | None,
+    state_flags: tuple[str, ...],
+    entry_flags: tuple[str, ...],
+    guarded_entry_flags: tuple[str, ...],
+    terminal_flags: tuple[str, ...],
+    transition_flags: tuple[str, ...],
+    gate_flags: tuple[str, ...],
+    invariant_flags: tuple[str, ...],
+    blocked_on: str | None,
+) -> None:
+    """Scaffold a lint-clean process definition into its owning capability.
+
+    ADDRESS is `<capability>:<process-id>` — the owning capability is REQUIRED
+    (COR-044: a definition is a capability-instance artifact; the command
+    errors cleanly without one and never routes through capability authoring —
+    that walkthrough is the process-authoring skill's judgment).
+
+    \b
+    Stamps `.pkit/capabilities/<capability>/schemas/<process-id>.yaml` (subject
+    incl. cardinality, states with meanings, transitions, entry/terminal
+    marks), validated against the shape contract BEFORE writing, plus a
+    predicate STUB for every evaluable the declared shape demands — detection
+    always; gates / entry guards / resume_when / invariant checks when
+    declared. Stubs follow the predicate-runner contract (read-only, subject
+    argv + `--json`) and FAIL CLOSED (exit non-zero) until implemented, so an
+    unwritten predicate can never read as green; each registers in the owning
+    capability's package.yaml. Implementing them is the process-author agent's
+    territory. One-shot: refuses when the process id already resolves.
+    """
+    from project_kit import process_authoring as authoring
+
+    repo_root = _authoring_repo_root()
+
+    pairs = [_split_pair(raw, "=", "--state", "<id>=<meaning>") for raw in state_flags]
+    declared_ids = {state_id for state_id, _ in pairs}
+    for flag_name, mark in (
+        ("--entry", entry_flags),
+        ("--guarded-entry", guarded_entry_flags),
+        ("--terminal", terminal_flags),
+    ):
+        for state_id in mark:
+            if state_id not in declared_ids:
+                raise click.ClickException(
+                    f"{flag_name} {state_id!r} does not match a --state declaration."
+                )
+    states = [
+        authoring.StateSpec(
+            state_id=state_id,
+            meaning=meaning,
+            entry=state_id in entry_flags,
+            guarded_entry=state_id in guarded_entry_flags,
+            terminal=state_id in terminal_flags,
+        )
+        for state_id, meaning in pairs
+    ]
+
+    transitions: list[authoring.TransitionSpec] = []
+    for raw in transition_flags:
+        parts = [p.strip() for p in raw.split(":")]
+        if len(parts) not in (3, 4) or not all(parts):
+            raise click.ClickException(
+                f"--transition {raw!r} is malformed; expected "
+                "<from>:<to>:<trigger>[:<authorisation>]."
+            )
+        transitions.append(
+            authoring.TransitionSpec(
+                from_state=parts[0],
+                to_state=parts[1],
+                trigger=parts[2],
+                authorisation=parts[3] if len(parts) == 4 else "user",
+            )
+        )
+    for raw in gate_flags:
+        parts = [p.strip() for p in raw.split(":")]
+        if len(parts) not in (2, 3) or not all(parts):
+            raise click.ClickException(
+                f"--gate {raw!r} is malformed; expected <from>:<to>[:<kind>]."
+            )
+        kind = parts[2] if len(parts) == 3 else "deterministic"
+        for index, t in enumerate(transitions):
+            if (t.from_state, t.to_state) == (parts[0], parts[1]):
+                transitions[index] = authoring.TransitionSpec(
+                    from_state=t.from_state,
+                    to_state=t.to_state,
+                    trigger=t.trigger,
+                    authorisation=t.authorisation,
+                    gate_kind=kind,
+                )
+                break
+        else:
+            raise click.ClickException(
+                f"--gate {raw!r} does not match a --transition declaration."
+            )
+
+    invariants = [
+        authoring.InvariantSpec(*_split_pair(raw, "=", "--invariant", "<id>=<why>"))
+        for raw in invariant_flags
+    ]
+
+    try:
+        result = authoring.stamp_new_process(
+            repo_root,
+            address,
+            cardinality=cardinality,
+            subject_key=subject_key,
+            states=states,
+            transitions=transitions,
+            invariants=invariants,
+            blocked_on=blocked_on,
+        )
+    except authoring.ProcessAuthoringError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    click.echo(f"Stamped: {result.definition_path.relative_to(repo_root)}")
+    for stub in result.stubs:
+        click.echo(f"  stub: {stub.command} -> {stub.script_relpath}  ({stub.purpose})")
+    _echo_authoring_warnings(result.warnings)
+    click.echo(
+        "Next: implement each predicate stub (the process-author agent's "
+        "territory), then `pkit process status " + address + "`."
+    )
+
+
+@process.command("couple")
+@click.argument("address")
+@click.option("--state", "state_id", required=True,
+              help="The hosting state of the coupling (a state of ADDRESS; the hosting "
+                   "state has no semantic effect on any check — audit colour, COR-042).")
+@click.option("--upstream", required=True, metavar="<capability>:<process-id>",
+              help="The upstream process this definition depends on.")
+@click.option("--relation", required=True,
+              help="The connection kind, from COR-038's closed set as the shape contract "
+                   "declares it (read as data — a new relation kind is an enum value, "
+                   "never a code change).")
+@click.option("--mode", required=True,
+              help="pull (read on the reader's turn) | push (mediated OUTSIDE the "
+                   "engine — no eventing); from the shape contract's set.")
+@click.option("--why", required=True,
+              help="The human-readable reason the render surfaces (required, COR-038).")
+def process_couple(
+    address: str, state_id: str, upstream: str, relation: str, mode: str, why: str
+) -> None:
+    """Author a `depends_on` coupling into the invoker-named definition.
+
+    Appends the entry to ADDRESS's hosting state (COR-038: coupling lives in
+    the SUBSCRIBER's definition — the upstream is never touched). The entry is
+    inert metadata the runtime engine never evaluates; the definition
+    `version` is NOT bumped (additive inert edit, COR-044). An upstream that
+    does not resolve here is declarable (warned, not refused).
+
+    Idempotent on the identical entry; refuses to overwrite a DIFFERENT
+    declared coupling on the same upstream.
+    """
+    from project_kit import process_authoring as authoring
+
+    repo_root = _authoring_repo_root()
+    try:
+        result = authoring.couple_process(
+            repo_root,
+            address,
+            state_id=state_id,
+            upstream=upstream,
+            relation=relation,
+            mode=mode,
+            why=why,
+        )
+    except authoring.ProcessAuthoringError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    rel = result.definition_path.relative_to(repo_root)
+    if not result.changed:
+        click.echo(
+            f"Already declared: {address} state {result.state_id!r} -> "
+            f"{upstream} ({relation}, {mode}); nothing to do."
+        )
+    else:
+        click.echo(
+            f"Coupled: {address} state {result.state_id!r} -> {upstream} "
+            f"({relation}, {mode}) in {rel} (version unchanged)."
+        )
+    _echo_authoring_warnings(result.warnings)
+
+
+@process.command("hand-off")
+@click.argument("address")
+@click.option("--upstream", required=True, metavar="<capability>:<process-id>",
+              help="The coupled upstream process the contract checks against.")
+@click.option("--state", "state_id", default=None,
+              help="Hosting state of the coupling; needed only when ADDRESS couples to "
+                   "the same upstream on several states.")
+@click.option("--trigger", required=True,
+              help="The upstream state meaning 'ready to hand off'. Declare a STABLE "
+                   "state — a subject that transits an ephemeral trigger leaves the "
+                   "report, picked up or not (COR-042 authoring smell).")
+@click.option("--candidates", required=True, metavar="<command>",
+              help="The candidate-source command of THIS capability (registered name; "
+                   "scaffolded as a fail-closed stub + registered when new). Subject "
+                   "slot = the upstream process address; payload {candidates: [...]}. "
+                   "A source that can silently return nothing against a wrong root is "
+                   "the sibling authoring smell — error instead (COR-042).")
+@click.option("--resolve", required=True, metavar="<command>",
+              help="The resolve-seam command of THIS capability (registered name; "
+                   "scaffolded as a fail-closed stub + registered when new). Subject "
+                   "slot = one upstream subject id; payload {downstream: [...]} — "
+                   "empty = determinate absence (a miss), error = indeterminate.")
+def process_handoff(
+    address: str,
+    upstream: str,
+    state_id: str | None,
+    trigger: str,
+    candidates: str,
+    resolve: str,
+) -> None:
+    """Add a COR-042 hand-off contract to an existing coupling.
+
+    Mutates ONLY the invoker-named (downstream) definition: the opt-in
+    `handoff` sub-block — trigger + the two seam predicate refs — on the
+    `depends_on` entry for --upstream. Refuses when no such coupling exists
+    (`pkit process couple` first). Validates the trigger is a state of the
+    upstream definition where it resolves at authoring time; an unresolvable
+    upstream warns (health reports the contract indeterminate until it
+    resolves — never silently green). The definition `version` is NOT bumped
+    (additive report-only edit, COR-044).
+
+    Finish by running `pkit process health --interpretation-only` — the
+    authoring done-signal is NO indeterminates, never a zero miss-count.
+    """
+    from project_kit import process_authoring as authoring
+
+    repo_root = _authoring_repo_root()
+    try:
+        result = authoring.handoff_process(
+            repo_root,
+            address,
+            upstream=upstream,
+            state_id=state_id,
+            trigger=trigger,
+            candidates=candidates,
+            resolve=resolve,
+        )
+    except authoring.ProcessAuthoringError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    rel = result.definition_path.relative_to(repo_root)
+    if not result.changed:
+        click.echo(
+            f"Already declared: the coupling {upstream} -> {address} carries "
+            f"this exact contract (@{trigger}); nothing to do."
+        )
+    else:
+        click.echo(
+            f"Contract declared: {upstream} -> {address} @{trigger} in {rel} "
+            "(version unchanged)."
+        )
+        for stub in result.stubs:
+            click.echo(
+                f"  stub: {stub.command} -> {stub.script_relpath}  (implement "
+                "before relying on the check — it fails closed until then)"
+            )
+    _echo_authoring_warnings(result.warnings)
+    if result.changed:
+        click.echo(
+            "Next: pkit process health --interpretation-only --process " + address
+        )
 
 
 @process.command("graph")

@@ -120,7 +120,10 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # or: brew install uv
 | `release check --base <ref>` | CI guard: fail a PR whose surface change ships no changeset (escape hatch: `none` changeset / `skip-changeset` label) | no | yes (read-only) |
 | `release lint` | format lint of the OBJECTIVE changeset + `CHANGELOG.md` subset (category enum, body shape, changelog heading structure); a reminder not a proof (escape hatch: `--skip` / `PKIT_CHANGELOG_LINT_SKIP`) | no | yes (read-only) |
 | `release check-shareable <component>` | pre-sharing lint: is a capability ready to be consumed externally-sourced (COR-041)? Checks it declares a `version`, a well-formed `package.yaml` manifest, and a bounded `requires_backbone` range; warns on cheaply-detectable local-only assumptions. Reports pass / the specific gaps; project-neutral (any component by name); see `.pkit/release/README.md` | no | yes (read-only) |
-| `process health [--process <addr>] [--json]` | walk every opt-in hand-off contract (COR-042) and report missed hand-offs; report-only, takes no subject; exits non-zero on any miss or indeterminate | no | yes (read-only) |
+| `process health [--process <addr>] [--interpretation-only] [--json]` | walk every opt-in hand-off contract (COR-042) and report missed hand-offs; report-only, takes no subject; exits non-zero on any miss or indeterminate. `--interpretation-only` re-renders the same walk as the COR-044 authoring check: indeterminates only, misses not counted, exit non-zero on any indeterminate | no | yes (read-only) |
+| `process new <capability>:<process-id> [...]` | scaffold a lint-clean process definition into its NAMED owning capability + a fail-closed predicate stub per declared evaluable, registered in the capability's package.yaml (COR-044); errors cleanly with no owning capability | yes | no — one-shot, refuses an existing id |
+| `process couple <addr> --state <s> --upstream <addr> --relation <r> --mode <m> --why <prose>` | append a `depends_on` entry (COR-038) to the invoker-named definition; relation/mode validated against the closed vocabularies read from the shape contract; definition `version` NOT bumped | yes | yes — identical entry is a clean no-op; a different entry on the same upstream refuses |
+| `process hand-off <addr> --upstream <addr> --trigger <state> --candidates <cmd> --resolve <cmd> [--state <s>]` | add a COR-042 hand-off contract to an existing coupling; validates the trigger against the upstream where resolvable; scaffolds + registers the seam stubs when new; `version` NOT bumped | yes | yes — identical contract is a clean no-op; a different contract refuses |
 
 ## Lifecycle commands
 
@@ -399,9 +402,9 @@ The declared, release-driven version path (PRJ-002 D1–D4). Feature branches dr
 
 ## Process commands
 
-The process-substrate engine's surface (`pkit process status / can-move / move / validate / cascade / graph / health`) is specified operation-by-operation in the process area (`.pkit/process/README.md`, "The engine") — the engine's contracts live there with the shape reference, per COR-033. This section specs only the command whose contract is CLI-owned rather than engine-owned.
+The process-substrate engine's surface (`pkit process status / can-move / move / validate / cascade / graph / health`) is specified operation-by-operation in the process area (`.pkit/process/README.md`, "The engine") — the engine's contracts live there with the shape reference, per COR-033. This section specs the commands whose contracts are CLI-owned rather than engine-owned: the health check and the three authoring stamps.
 
-### `process health [--process <addr>] [--json]`
+### `process health [--process <addr>] [--interpretation-only] [--json]`
 
 Walk every declared **hand-off contract** — the opt-in `handoff` sub-block on a `depends_on` entry (per [COR-042](../decisions/core/COR-042-process-health.md)) — and report every **missed hand-off**: an upstream subject currently at its trigger state with no downstream subject picking it up.
 
@@ -414,6 +417,33 @@ Takes **no subject** (unlike `validate`): it walks contracts across the configur
 - **`--process <addr>`** keeps only contracts touching that `<capability>:<process-id>` as either endpoint. **`--json`** emits the byte-stable machine form: per-contract objects (`upstream`, `downstream`, `trigger`, `state`, `misses[]`, `indeterminate[]`, `counts`) plus `skipped[]` (unloadable definitions) and `totals`.
 
 Offline and read-only apart from running the registered predicate scripts (which must themselves be read-only, per the engine contract). The contract's field shape and the seam payloads (`{candidates: [...]}` / `{downstream: [...]}`) are specified in the process area's `depends_on` section.
+
+- **`--interpretation-only`** — the authoring-completion variant (per [COR-044](../decisions/core/COR-044-process-authoring-layer.md)): the same walk, re-rendered to answer only the interpretability question — does every contract resolve (upstream address, real trigger state) and do its seams execute? It reports **indeterminates only**; misses are **not counted, not rendered, and do not affect the exit code** (a fresh, correct contract routinely reports real misses — upstream work waiting is the very situation that motivates declaring it — so miss-count is never the authoring done-signal). Exit `0` iff zero indeterminates. Implemented as a **consumer of the health walker** (COR-042 point 5's design-once rule — never a parallel contract-walker); the default run's exit contract is unchanged. `--json` emits the machine form minus every miss surface (no `misses` arrays, no at-trigger/satisfied counts they could be derived from): per-contract `{upstream, downstream, trigger, state, indeterminate[], counts}` plus `skipped[]` and `totals.indeterminate`.
+
+### `process new <capability>:<process-id> [flags]`
+
+The deterministic stamp under the process-authoring skill's `new` operation (per [COR-044](../decisions/core/COR-044-process-authoring-layer.md); the COR-005 skill/command pairing). Scaffolds a **lint-clean** process definition at `.pkit/capabilities/<capability>/schemas/<process-id>.yaml` — validated against the shape contract (`.pkit/schemas/_defs/process.schema.json`) **before** writing — plus a **predicate stub for every evaluable the declared shape demands**, each registered in the owning capability's `package.yaml` commands tree.
+
+- **The owning capability is required.** A definition is a capability-instance artifact; an address without the `<capability>:` half, or naming an uninstalled capability, errors cleanly. The command never routes a capability-less adopter through capability authoring — that walkthrough is the skill's judgment (#685), not the stamp's.
+- **Shape flags.** `--cardinality <v>` (+ `--key <slug>` for keyed, COR-032); repeatable `--state "<id>=<meaning>"` (declaration order kept — it can be load-bearing for detection precedence); `--entry <id>` / `--guarded-entry <id>` / `--terminal <id>` marks; repeatable `--transition "<from>:<to>:<trigger>[:<authorisation>]"` (authorisation defaults to `user`, the safe floor); `--gate "<from>:<to>[:<kind>]"` on a declared transition (kind defaults `deterministic`; `authorisation-artifact` is the other stubbed kind — the engine-computed kinds ride the deferred subprocess/cascade block surface); repeatable `--invariant "<id>=<why>"` (COR-035); `--blocked <reason>` (COR-034). Every enum-valued flag is validated against the shape contract's vocabulary **read as data**.
+- **Stubs per the predicate-runner contract:** detection always (one per state); an entry-guard, gate, `resume_when` (for `awaiting-condition`), or invariant-check stub when declared. Each stub is read-only, takes the subject argv + `--json`, and **fails closed** (exits non-zero) until implemented — an unwritten predicate can never read as green. Implementing them is the `process-author` agent's territory.
+- One-shot: refuses when the target file exists or any schema already claims the process id; refuses command-name collisions against the capability's registered commands.
+
+### `process couple <addr> --state <s> --upstream <addr> --relation <r> --mode <m> --why <prose>`
+
+The stamp under the skill's `couple` operation: append a `depends_on` entry ([COR-038](../decisions/core/COR-038-process-connections.md)) to the **invoker-named** definition's hosting state — coupling lives in the subscriber; the upstream is never touched (the owner-scoping COR-044 fixes by construction).
+
+- `--relation` / `--mode` are validated against the **closed vocabularies read from the shape contract as data** — a new relation kind is an enum value the command picks up, never a code change. `--why` is required (COR-038).
+- **No version bump:** the entry is additive, inert metadata (COR-044's version semantics — state/transition evolution is the deferred `amend` operation, which does bump).
+- An upstream that does not resolve locally is declarable (warned, not refused — the entry is inert; a later hand-off contract on it would report indeterminate). Idempotent on the identical entry; refuses to overwrite a **different** declared coupling on the same upstream. Round-trip edit (comments and layout preserved); the result is re-linted and the prior file restored on any failure.
+
+### `process hand-off <addr> --upstream <addr> --trigger <state> --candidates <cmd> --resolve <cmd> [--state <s>]`
+
+The stamp under the skill's `hand-off` operation: add a [COR-042](../decisions/core/COR-042-process-health.md) hand-off contract — the `handoff` sub-block (trigger + the two seam predicate refs) — to an **existing** coupling on the invoker-named definition. Refuses when no `depends_on` entry for the upstream exists (`process couple` first); `--state` disambiguates when the same upstream is coupled on several states.
+
+- **Trigger validated where resolvable:** when the upstream definition loads, a trigger that is not one of its states is refused (a phantom trigger would report indeterminate forever); an unresolvable upstream degrades to a warning — health reports the contract indeterminate until it resolves, never silently green. Declare a **stable** trigger state (the ephemeral-trigger authoring smell, COR-042).
+- `--candidates` / `--resolve` name commands of the **declaring** capability: unregistered names are scaffolded as fail-closed seam stubs (ADR-048 payload shapes — `{candidates: [...]}` / `{downstream: [...]}`) and registered in `package.yaml`; already-registered names are reused untouched.
+- **No version bump** (additive, report-only edit). Idempotent on the identical contract; refuses to overwrite a different one. The authoring done-signal afterwards is `pkit process health --interpretation-only` reporting **no indeterminates** — never a zero miss-count.
 
 ## Report commands
 

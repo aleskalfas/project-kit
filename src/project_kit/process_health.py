@@ -636,6 +636,102 @@ def render_narrative(report: HealthReport) -> str:
     return "\n".join(lines) + "\n"
 
 
+def render_interpretation_narrative(report: HealthReport) -> str:
+    """The interpretation-only view (COR-044 / COR-042 point 5): the authoring
+    layer's completion signal is "no indeterminates" — the contract resolves,
+    the trigger is a real upstream state, the seams execute.
+
+    A pure CONSUMER of the walker's `HealthReport` (never a parallel
+    contract-walker — COR-042's design-once rule): it renders only the
+    indeterminate findings and the unreadable definitions, and deliberately
+    counts NO misses — a fresh, correct contract routinely reports real misses
+    (upstream work waiting is what motivated declaring it), so miss-count is
+    never the authoring done-signal.
+    """
+    lines: list[str] = []
+    lines.append(
+        cli_render.style("title", "Process interpretability")
+        + "  (authoring check — indeterminates only; misses are not counted)"
+    )
+    if not report.contracts and not report.skipped:
+        lines.append("")
+        lines.append("  (no hand-off contracts declared)")
+
+    for cr in report.contracts:
+        contract = cr.contract
+        lines.append("")
+        header = cli_render.style(
+            "strong", f"{contract.upstream} → {contract.downstream}"
+        )
+        trigger = contract.trigger or "(no trigger)"
+        lines.append(f"  {header}   @{trigger}")
+        if not cr.indeterminate:
+            lines.append(
+                "    ✓ interpretable — the contract resolves and its seams "
+                "execute"
+            )
+            continue
+        for finding in cr.indeterminate:
+            if finding.subject is None:
+                lines.extend(
+                    cli_render.wrap(
+                        f"? contract indeterminate: {finding.reason}",
+                        indent="    ",
+                    )
+                )
+            else:
+                lines.append(_finding_line(finding))
+
+    if report.skipped:
+        count = len(report.skipped)
+        noun = "definition" if count == 1 else "definitions"
+        lines.append("")
+        lines.append(
+            "  "
+            + cli_render.style(
+                "warn",
+                f"⚠ {count} {noun} could not be loaded (contract set unknown — "
+                "counted indeterminate):",
+            )
+        )
+        for s in report.skipped:
+            lines.extend(cli_render.wrap(f"{s.address} — {s.reason}", indent="    "))
+
+    lines.append("")
+    clean = report.indeterminate_total == 0
+    summary = f"{report.indeterminate_total} indeterminate (misses not counted)"
+    lines.append("  " + cli_render.style("success" if clean else "strong", summary))
+    return "\n".join(lines) + "\n"
+
+
+def render_interpretation_json(report: HealthReport) -> str:
+    """The interpretation-only machine form: the health `--json` shape minus
+    every miss surface (no `misses` arrays, no missed/at_trigger/satisfied
+    counts — those would let a consumer derive the miss count this view
+    deliberately does not report). Byte-stable like the full form."""
+    payload = {
+        "contracts": [
+            {
+                "upstream": cr.contract.upstream,
+                "downstream": cr.contract.downstream,
+                "trigger": cr.contract.trigger or None,
+                "state": cr.contract.state_id,
+                "indeterminate": [
+                    {"subject": f.subject, "reason": f.reason}
+                    for f in cr.indeterminate
+                ],
+                "counts": {"indeterminate": len(cr.indeterminate)},
+            }
+            for cr in report.contracts
+        ],
+        "skipped": [
+            {"address": s.address, "reason": s.reason} for s in report.skipped
+        ],
+        "totals": {"indeterminate": report.indeterminate_total},
+    }
+    return json.dumps(payload, indent=2, sort_keys=True) + "\n"
+
+
 def render_json(report: HealthReport) -> str:
     """The byte-stable machine form (ADR-024's invariant: deterministic order,
     no TTY styling, identical bytes across runs). Contracts carry the report's
