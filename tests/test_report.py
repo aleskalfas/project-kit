@@ -407,14 +407,15 @@ def test_display_state() -> None:
     assert rep.display_state("open", ["type:bug"]) == "open"
 
 
-def test_list_my_reports_filters_to_bug_feedback_and_sorts(monkeypatch) -> None:
+def test_list_my_reports_filters_to_members_and_sorts(monkeypatch) -> None:
     issues = [
         {"number": 1, "title": "a bug", "state": "OPEN",
-         "labels": [{"name": "bug"}], "updatedAt": "2026-08-01"},
+         "labels": [{"name": "report:bug"}], "updatedAt": "2026-08-01"},
         {"number": 2, "title": "not a report", "state": "OPEN",
          "labels": [{"name": "docs"}], "updatedAt": "2026-08-05"},
         {"number": 3, "title": "some feedback", "state": "CLOSED",
-         "labels": [{"name": "feedback"}], "updatedAt": "2026-08-03",
+         "labels": [], "updatedAt": "2026-08-03",
+         "body": "p\n<!-- pkit-report: kind=feedback -->\n",
          "url": "https://github.com/o/r/issues/3"},
     ]
     captured: dict = {}
@@ -433,6 +434,74 @@ def test_list_my_reports_filters_to_bug_feedback_and_sorts(monkeypatch) -> None:
     assert reports[1].url == ""
 
 
+def test_is_report_requires_positive_provenance() -> None:
+    # membership (#681): report:* label, body marker, or attribution line
+    assert rep.is_report(["report:bug"], "") is True
+    assert rep.is_report([], "<!-- pkit-report: kind=feedback -->") is True
+    assert rep.is_report([], "_Reported for @mike (filed on their behalf)._") is True
+    # display-only signals never create membership: legacy bare kind labels
+    # and the repo's own vocabulary are ambiguous on a tracker that owns them
+    assert rep.is_report(["bug"], "") is False
+    assert rep.is_report(["feedback", "change-request"], "") is False
+    assert rep.is_report(["type:bug"], "ordinary issue body") is False
+    assert rep.is_report([], "") is False
+
+
+def test_list_my_reports_excludes_ordinary_prefix_titled_issues(monkeypatch) -> None:
+    # The live #681 over-sweep shape: the invoker's ordinary pm-filed issues
+    # are [Bug]/[CR]/[Feedback]-titled by the pm capability's own kind-prefix
+    # convention — authored by the invoker, classifiable by prefix, but NOT
+    # reports. Only provenance-carrying issues are members.
+    issues = [
+        {"number": 30, "title": "[Bug] ordinary pm-filed issue", "state": "OPEN",
+         "labels": [{"name": "type:bug"}], "updatedAt": "2026-08-05",
+         "body": "an ordinary tracker issue"},
+        {"number": 31, "title": "[CR] ordinary change too", "state": "OPEN",
+         "labels": [{"name": "type:feature"}], "updatedAt": "2026-08-04",
+         "body": "also not a report"},
+        {"number": 32, "title": "[Bug] real report", "state": "OPEN",
+         "labels": [], "updatedAt": "2026-08-03",
+         "body": "p\n<!-- pkit-report: kind=bug -->\n"},
+        {"number": 33, "title": "[Feedback] labelled report", "state": "OPEN",
+         "labels": [{"name": "report:feedback"}], "updatedAt": "2026-08-02",
+         "body": "no marker, the label vouches"},
+    ]
+    monkeypatch.setattr(rep, "_gh_json", lambda args: issues)
+    reports = rep.list_my_reports("o/r")
+    assert [r.number for r in reports] == [32, 33]  # the pm issues stay OUT
+    assert reports[0].kind == "bug" and reports[1].kind == "feedback"
+
+
+def test_list_my_reports_unions_locally_reported(
+    tmp_path: Path, monkeypatch
+) -> None:
+    # #660's shape: raw-gh-filed (no marker, no report label, repo-own label
+    # only) but referenced by a local reported/ note — unioned in by number
+    # (#681). Kind resolves via the title prefix, legitimate now that the
+    # note establishes membership. A note ref that can't be fetched is
+    # skipped, best-effort.
+    monkeypatch.setattr(rep, "local_reported_notes", _REAL_LOCAL_REPORTED_NOTES)
+    _reported_note(
+        tmp_path, "2026-08-10-friction.md", ["o/r#660", "o/r#999"]
+    )
+
+    def fake(args):
+        if "list" in args:
+            return []  # neither authored nor attributed carries provenance
+        if args[:3] == ["gh", "issue", "view"] and args[3] == "660":
+            return {"number": 660, "title": "[Feedback] friction inventory",
+                    "state": "OPEN", "labels": [{"name": "enhancement"}],
+                    "updatedAt": "2026-08-10", "body": "no marker",
+                    "url": "https://github.com/o/r/issues/660"}
+        return None  # #999 unfetchable
+
+    monkeypatch.setattr(rep, "_gh_json", fake)
+    reports = rep.list_my_reports("o/r", tmp_path)
+    assert [r.number for r in reports] == [660]
+    assert reports[0].kind == "feedback"  # prefix classifies the member
+    assert reports[0].url == "https://github.com/o/r/issues/660"
+
+
 def test_list_my_reports_includes_attributed(monkeypatch) -> None:
     monkeypatch.setattr(rep, "current_login", _REAL_CURRENT_LOGIN)
 
@@ -441,10 +510,12 @@ def test_list_my_reports_includes_attributed(monkeypatch) -> None:
             return {"login": "mike"}
         if "--author" in args:
             return [{"number": 1, "title": "mine", "state": "OPEN",
-                     "labels": [{"name": "bug"}], "updatedAt": "2026-08-01"}]
+                     "labels": [{"name": "report:bug"}], "updatedAt": "2026-08-01"}]
         if "--search" in args:
+            # the attribution line IS the membership provenance (#681)
             return [{"number": 9, "title": "for mike", "state": "OPEN",
-                     "labels": [{"name": "feedback"}], "updatedAt": "2026-08-05"}]
+                     "labels": [], "updatedAt": "2026-08-05",
+                     "body": "_Reported for @mike (filed on their behalf)._"}]
         return None
 
     monkeypatch.setattr(rep, "_gh_json", fake)
@@ -462,7 +533,7 @@ def test_list_my_reports_authored_wins_over_attributed(monkeypatch) -> None:
         if args[:3] == ["gh", "api", "user"]:
             return {"login": "mike"}
         issue = {"number": 5, "title": "dual", "state": "OPEN",
-                 "labels": [{"name": "bug"}], "updatedAt": "2026-08-02"}
+                 "labels": [{"name": "report:bug"}], "updatedAt": "2026-08-02"}
         return [issue]  # both --author and --search return it
 
     monkeypatch.setattr(rep, "_gh_json", fake)
@@ -475,7 +546,7 @@ def test_cli_report_list_marks_attributed(monkeypatch) -> None:
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
     monkeypatch.setattr(
         rep, "list_my_reports",
-        lambda t: [rep.ReportSummary(
+        lambda t, root=None: [rep.ReportSummary(
             9, "for mike", "feedback", "open", "2026-08-05", attributed=True
         )],
     )
@@ -518,7 +589,7 @@ def test_cli_report_list(monkeypatch) -> None:
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
     monkeypatch.setattr(
         rep, "list_my_reports",
-        lambda target: [rep.ReportSummary(
+        lambda target, root=None: [rep.ReportSummary(
             1, "a bug", "bug", "open", "2026-08-01",
             url="https://github.com/o/r/issues/1",
         )],
@@ -536,7 +607,9 @@ def test_cli_report_list_without_url_degrades_to_bare_row(monkeypatch) -> None:
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
     monkeypatch.setattr(
         rep, "list_my_reports",
-        lambda target: [rep.ReportSummary(1, "a bug", "bug", "open", "2026-08-01")],
+        lambda target, root=None: [
+            rep.ReportSummary(1, "a bug", "bug", "open", "2026-08-01")
+        ],
     )
     res = CliRunner().invoke(main, ["report"])
     assert res.exit_code == 0
@@ -549,7 +622,7 @@ def test_list_my_reports_tree_pairs_each_with_tracked(monkeypatch) -> None:
         if "list" in args:
             return [{
                 "number": 42, "title": "fb", "state": "OPEN",
-                "labels": [{"name": "feedback"}], "updatedAt": "2026-08-03",
+                "labels": [{"name": "report:feedback"}], "updatedAt": "2026-08-03",
                 "body": "p\n\n## Tracked by\n- [ ] #7\n",
             }]
         if args[3] == "7":
@@ -567,11 +640,43 @@ def test_list_my_reports_tree_pairs_each_with_tracked(monkeypatch) -> None:
     }
 
 
+def test_list_my_reports_tree_excludes_and_unions_like_flat(
+    tmp_path: Path, monkeypatch
+) -> None:
+    # the tree view applies the same membership rule + locally-reported
+    # union as the flat list (#681)
+    monkeypatch.setattr(rep, "local_reported_notes", _REAL_LOCAL_REPORTED_NOTES)
+    _reported_note(tmp_path, "2026-08-10-friction.md", ["o/r#660"])
+
+    def fake_gh_json(args):
+        if "list" in args:
+            return [{
+                "number": 30, "title": "[Bug] ordinary pm-filed issue",
+                "state": "OPEN", "labels": [{"name": "type:bug"}],
+                "updatedAt": "2026-08-11", "body": "not a report",
+            }]
+        if args[3] == "660":
+            return {"number": 660, "title": "[Feedback] friction inventory",
+                    "state": "OPEN", "labels": [], "updatedAt": "2026-08-10",
+                    "body": "p\n\n## Tracked by\n- [ ] #7\n"}
+        if args[3] == "7":
+            return {"state": "CLOSED", "labels": [], "title": "the fix",
+                    "url": "https://github.com/o/r/issues/7"}
+        return None
+
+    monkeypatch.setattr(rep, "_gh_json", fake_gh_json)
+    rows = rep.list_my_reports_tree("o/r", tmp_path)
+    assert [(s.number, s.kind) for s, _ in rows] == [(660, "feedback")]
+    assert rows[0][1] == {
+        7: rep.TrackedFix("closed", "the fix", "https://github.com/o/r/issues/7")
+    }
+
+
 def test_cli_report_tree(monkeypatch) -> None:
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
     monkeypatch.setattr(
         rep, "list_my_reports_tree",
-        lambda target: [(
+        lambda target, root=None: [(
             rep.ReportSummary(
                 42, "fb", "feedback", "open", "2026-08-03",
                 url="https://github.com/o/r/issues/42",
@@ -597,7 +702,7 @@ def test_cli_report_tree_offline_degrades_to_number_and_state(monkeypatch) -> No
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
     monkeypatch.setattr(
         rep, "list_my_reports_tree",
-        lambda target: [(
+        lambda target, root=None: [(
             rep.ReportSummary(42, "fb", "feedback", "open", "2026-08-03"),
             {7: rep.TrackedFix("unknown")},
         )],
@@ -661,7 +766,7 @@ def test_cli_report_list_tags_locally_reported_note(
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
     monkeypatch.setattr(
         rep, "list_my_reports",
-        lambda t: [
+        lambda t, root=None: [
             rep.ReportSummary(659, "channel ux", "feedback", "open", "2026-08-10"),
             rep.ReportSummary(700, "unrelated", "bug", "open", "2026-08-09"),
         ],
@@ -685,7 +790,7 @@ def test_cli_report_tree_tags_locally_reported_note(
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
     monkeypatch.setattr(
         rep, "list_my_reports_tree",
-        lambda t: [(
+        lambda t, root=None: [(
             rep.ReportSummary(659, "channel ux", "feedback", "open", "2026-08-10"),
             {},
         )],
@@ -735,7 +840,7 @@ def test_list_inbox_dedups_across_labels(monkeypatch) -> None:
         # both label queries return the same #5 (carries both labels)
         return [{
             "number": 5, "title": "dual", "state": "OPEN",
-            "labels": [{"name": "bug"}, {"name": "feedback"}],
+            "labels": [{"name": "report:bug"}, {"name": "report:feedback"}],
             "updatedAt": "2026-08-04",
         }]
 
@@ -815,27 +920,33 @@ def test_cli_change_request_file_yes_stages_and_does_not_post(
 
 _INBOX_ISSUES = [
     {"number": 1, "title": "a bug", "state": "OPEN",
-     "labels": [{"name": "bug"}], "updatedAt": "2026-08-01", "body": "b"},
+     "labels": [{"name": "report:bug"}], "updatedAt": "2026-08-01", "body": "b"},
     {"number": 2, "title": "some feedback", "state": "OPEN",
-     "labels": [{"name": "feedback"}], "updatedAt": "2026-08-02", "body": "f"},
+     # a pre-#663 legacy report: bare kind label + the marker that admits it
+     "labels": [{"name": "feedback"}], "updatedAt": "2026-08-02",
+     "body": "f\n<!-- pkit-report: kind=feedback -->\n"},
     {"number": 3, "title": "[CR] unlabelled cr", "state": "OPEN",
      "labels": [], "updatedAt": "2026-08-03",
      "body": "p\n<!-- pkit-report: kind=change-request -->\n"},
     {"number": 4, "title": "mentions CR only", "state": "OPEN",
      "labels": [], "updatedAt": "2026-08-04", "body": "not a report"},
+    {"number": 5, "title": "[Bug] ordinary pm-filed issue", "state": "OPEN",
+     # prefix-titled + the repo's own vocabulary: sweep noise, not a report
+     "labels": [{"name": "type:bug"}], "updatedAt": "2026-08-05",
+     "body": "an ordinary tracker issue"},
 ]
 
 
 def test_list_inbox_kind_filters_and_classifies_unlabelled_cr(monkeypatch) -> None:
     monkeypatch.setattr(rep, "_gh_json", lambda args: _INBOX_ISSUES)
     inbox = rep.list_inbox("o/r", kind="change-request")
-    # #3 classifies by marker/prefix despite no label; #4 (search noise) is dropped.
+    # #3 classifies by marker despite no label; #4/#5 (search noise) are dropped.
     assert [r.number for r in inbox] == [3]
     inbox_all = rep.list_inbox("o/r")
-    assert [r.number for r in inbox_all] == [3, 2, 1]  # newest first, #4 dropped
+    assert [r.number for r in inbox_all] == [3, 2, 1]  # newest first, #4/#5 dropped
 
 
-def test_list_inbox_queries_labels_and_prefix_search_per_kind(monkeypatch) -> None:
+def test_list_inbox_queries_labels_and_marker_search_per_kind(monkeypatch) -> None:
     seen: list[list[str]] = []
 
     def fake(args):
@@ -848,23 +959,29 @@ def test_list_inbox_queries_labels_and_prefix_search_per_kind(monkeypatch) -> No
         rep.list_inbox("o/r", kind=kind)
         assert any("--label" in q and rep.KIND_LABELS[kind] in q for q in seen)
         assert any("--label" in q and kind in q for q in seen)  # legacy labels
-        # discovers label-less URL-filed reports by their title prefix (#663)
+        # discovers label-less API/URL-filed reports by their body marker (#681)
+        marker_query = f'"pkit-report: kind={kind}" in:body'
+        assert any("--search" in q and marker_query in q for q in seen)
+        # the title-prefix sweep leg is gone — it matched every ordinary
+        # prefix-titled tracker issue (#681's over-sweep vector)
         prefix_query = f'"{rep.KIND_TITLE_PREFIXES[kind]}" in:title'
-        assert any("--search" in q and prefix_query in q for q in seen)
+        assert not any(prefix_query in q for q in seen)
 
 
-def test_list_inbox_discovers_prefix_only_feedback(monkeypatch) -> None:
-    # the #660 shape end-to-end through the inbox: [Feedback]-titled, no
-    # report label (only the repo's own vocabulary), no marker.
+def test_list_inbox_excludes_prefix_only_issue(monkeypatch) -> None:
+    # A prefix-titled issue with neither report label nor marker (the raw-
+    # filed #660 shape) is NOT inbox-discoverable under the membership rule
+    # (#681) — even when a sweep returns it. Acceptable: the channel now
+    # API-posts with markers; the reporter side still lists such issues via
+    # local reported/ notes.
     issues = [{
         "number": 660, "title": "[Feedback] friction inventory", "state": "OPEN",
         "labels": [{"name": "enhancement"}], "updatedAt": "2026-08-10",
         "body": "no marker here",
     }]
     monkeypatch.setattr(rep, "_gh_json", lambda args: issues)
-    inbox = rep.list_inbox("o/r", kind="feedback")
-    assert [r.number for r in inbox] == [660]
-    assert inbox[0].kind == "feedback"
+    assert rep.list_inbox("o/r", kind="feedback") == []
+    assert rep.list_inbox("o/r") == []
 
 
 def test_cli_inbox_kind_flag(monkeypatch) -> None:
@@ -908,13 +1025,14 @@ def test_cli_inbox_group_by_project_degrades_without_marker(monkeypatch) -> None
 def test_list_resolved_requires_all_tracked_closed(monkeypatch) -> None:
     issues = [
         {"number": 10, "title": "all closed", "state": "OPEN",
-         "labels": [{"name": "feedback"}], "updatedAt": "2026-08-01",
+         "labels": [{"name": "report:feedback"}], "updatedAt": "2026-08-01",
          "body": "p\n\n## Tracked by\n- [x] #7\n"},
         {"number": 11, "title": "one open", "state": "OPEN",
-         "labels": [{"name": "feedback"}], "updatedAt": "2026-08-02",
+         "labels": [{"name": "report:feedback"}], "updatedAt": "2026-08-02",
          "body": "p\n\n## Tracked by\n- [ ] #8\n"},
         {"number": 12, "title": "untracked", "state": "OPEN",
-         "labels": [{"name": "feedback"}], "updatedAt": "2026-08-03", "body": "p"},
+         "labels": [{"name": "report:feedback"}], "updatedAt": "2026-08-03",
+         "body": "p"},
     ]
 
     def fake(args):
@@ -934,10 +1052,10 @@ def test_list_resolved_requires_all_tracked_closed(monkeypatch) -> None:
 def test_list_resolved_excludes_bugs_and_closed_reports(monkeypatch) -> None:
     issues = [
         {"number": 20, "title": "a bug", "state": "OPEN",
-         "labels": [{"name": "bug"}], "updatedAt": "2026-08-01",
+         "labels": [{"name": "report:bug"}], "updatedAt": "2026-08-01",
          "body": "p\n\n## Tracked by\n- [x] #7\n"},
         {"number": 21, "title": "already closed", "state": "CLOSED",
-         "labels": [{"name": "feedback"}], "updatedAt": "2026-08-02",
+         "labels": [{"name": "report:feedback"}], "updatedAt": "2026-08-02",
          "body": "p\n\n## Tracked by\n- [x] #7\n"},
     ]
 
@@ -1266,7 +1384,7 @@ def test_cli_report_list_shows_project_per_row(monkeypatch) -> None:
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
     monkeypatch.setattr(
         rep, "list_my_reports",
-        lambda t: [rep.ReportSummary(
+        lambda t, root=None: [rep.ReportSummary(
             1, "a bug", "bug", "open", "2026-08-01", project="alpha"
         )],
     )
@@ -1286,7 +1404,7 @@ def test_cli_inbox_group_by_project_end_to_end_from_markers(monkeypatch) -> None
          "labels": [{"name": "feedback"}], "updatedAt": "2026-08-02",
          "body": "p\n<!-- pkit-report: kind=feedback project=beta -->\n"},
         {"number": 3, "title": "bare", "state": "OPEN",
-         "labels": [{"name": "feedback"}], "updatedAt": "2026-08-03",
+         "labels": [{"name": "report:feedback"}], "updatedAt": "2026-08-03",
          "body": "no marker"},
     ]
     monkeypatch.setattr(rep, "in_report_target", lambda: True)

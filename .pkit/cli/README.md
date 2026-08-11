@@ -545,7 +545,14 @@ issue already exists — retry the comment instead).
 one line each — **flat by default**, each row tagged with its project marker
 (`[<project>]`, per [pkit:ADR-050]) when the report carries one; `--tree`
 expands each feedback with its
-`## Tracked by` fixes and their states inline. `report show <N>` adds the maintainer
+`## Tracked by` fixes and their states inline. **Membership requires positive
+report provenance** (#681): an issue is listed only when it carries the
+`pkit-report` body marker, a `report:*` label, or the on-behalf-of
+attribution line — **unioned** with any issue a local `reported/` note
+references (how a raw-`gh`-filed report without a marker stays listed).
+Title prefixes (`[Bug]`/`[CR]`/`[Feedback]`) and legacy bare kind labels only
+classify a member's *kind* — they never make an ordinary tracker issue a
+report (that was #681's over-sweep). `report show <N>` adds the maintainer
 comments and the `## Tracked by` rollup. **Rollups render title + URL** (#664):
 each tracked fix shows its number + state **plus its title and URL** — bare
 numbers force a browser round-trip to learn what is fixing you — degrading to
@@ -554,8 +561,8 @@ no-auth user tracks via GitHub's own notifications).
 
 **One tracking truth (#664).** `pkit report` (list) and `pkit scratchpad list`
 answer different questions and both are honest: `report list` is the
-**upstream view** (my reports on the target, recognized by marker / author /
-prefix), `scratchpad list` is the **note view** (my local notes' reported
+**upstream view** (my reports on the target, recognized by the provenance
+rule above), `scratchpad list` is the **note view** (my local notes' reported
 state). The declared source-of-truth rule: the **issue** (upstream) is the
 truth for *state*; the **note's frontmatter** is the truth for *what was
 sent*. They reconcile by derivation, never by a sync mechanism
@@ -567,7 +574,10 @@ refs' upstream state live — nothing is copied or stored on either side.
 
 Enabled **only when the current repo is the configured report target** (the
 structural "developers of the target repo" gate; inert elsewhere). `report inbox` lists all incoming feedback for
-triage, each row tagged with its workstream marker (`[<workstream>]`, per
+triage — the same positive-provenance membership rule as the reporter list
+(#681; a raw-filed report with neither marker nor `report:*` label is not
+inbox-discoverable, since the maintainer has no local notes for foreign
+reporters) — each row tagged with its workstream marker (`[<workstream>]`, per
 [pkit:ADR-050]) when present; `--kind <bug|feedback|change-request>` narrows to one kind, and
 `--group-by project` groups rows by the body marker's `project=` key (reports
 without one group under

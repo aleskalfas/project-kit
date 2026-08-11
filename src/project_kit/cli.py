@@ -654,16 +654,18 @@ def _run_report_list(*, tree: bool = False) -> None:
         )
         return
 
-    # The one-tracking-truth cross-tag (#664): the upstream view stays
-    # marker/author-based, but a row whose issue a local reported/ note
-    # references is tagged [note: <slug>] — derived live, never stored.
+    # The one-tracking-truth cross-tag (#664): a row whose issue a local
+    # reported/ note references is tagged [note: <slug>] — derived live,
+    # never stored. The same notes also feed membership (#681): the list
+    # functions union in locally-reported issues that carry no upstream
+    # provenance marker (raw-gh-filed reports like #660).
     target_root = find_target_root()
     notes = (
         local_reported_notes(target_root, REPORT_TARGET) if target_root else {}
     )
 
     if tree:
-        rows = list_my_reports_tree(REPORT_TARGET)
+        rows = list_my_reports_tree(REPORT_TARGET, target_root)
         if rows is None:
             raise click.ClickException("could not read your reports (gh error).")
         if not rows:
@@ -676,7 +678,7 @@ def _run_report_list(*, tree: bool = False) -> None:
                 click.echo(f"      └ {_tracked_fix_row(n, fix)}")
         return
 
-    reports = list_my_reports(REPORT_TARGET)
+    reports = list_my_reports(REPORT_TARGET, target_root)
     if reports is None:
         raise click.ClickException("could not read your reports (gh error).")
     if not reports:
