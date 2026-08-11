@@ -387,3 +387,78 @@ def test_undeployed_contributed_agent_aborts(rpr, rc, monkeypatch, tmp_path) -> 
     rc_code = rpr.main()
     assert rc_code == 2
     assert invoked == []
+
+
+# ---- native GitHub review delivery (DEC-028, amended) ----------------
+
+import json as _json  # noqa: E402
+
+
+class _Proc:
+    def __init__(self, returncode: int = 0, stdout: str = "", stderr: str = "") -> None:
+        self.returncode = returncode
+        self.stdout = stdout
+        self.stderr = stderr
+
+
+def _fake_gh(author: str = "alice", me: str = "bob"):
+    """A gh_run stand-in that answers pr-view (author), api-user (login), and
+    records the pr-review call. Returns (fake, calls)."""
+    calls: list[list[str]] = []
+
+    def fake(argv, config, check=False):  # type: ignore[no-untyped-def]
+        calls.append(list(argv))
+        if argv[:3] == ["gh", "pr", "view"]:
+            return _Proc(0, _json.dumps({"author": {"login": author}}))
+        if argv[:2] == ["gh", "api"]:  # gh api user --jq .login
+            return _Proc(0, me + "\n")
+        if argv[:3] == ["gh", "pr", "review"]:
+            return _Proc(0, "")
+        return _Proc(0, "")
+
+    return fake, calls
+
+
+def test_deliver_native_review_approve(rpr, monkeypatch) -> None:
+    fake, calls = _fake_gh(author="alice", me="bob")
+    monkeypatch.setattr(rpr, "gh_run", fake)
+    rpr._deliver_native_review(42, "APPROVED", "the body", {})
+    review = [c for c in calls if c[:3] == ["gh", "pr", "review"]]
+    assert len(review) == 1 and "--approve" in review[0]
+    assert "42" in review[0] and "the body" in review[0]
+
+
+def test_deliver_native_review_request_changes(rpr, monkeypatch) -> None:
+    fake, calls = _fake_gh(author="alice", me="bob")
+    monkeypatch.setattr(rpr, "gh_run", fake)
+    rpr._deliver_native_review(42, "CHANGES_REQUESTED", "b", {})
+    review = [c for c in calls if c[:3] == ["gh", "pr", "review"]]
+    assert len(review) == 1 and "--request-changes" in review[0]
+
+
+def test_deliver_native_review_self_approval_skips(rpr, monkeypatch) -> None:
+    # Reviewer identity == PR author → GitHub blocks self-approval → skip native.
+    fake, calls = _fake_gh(author="alice", me="alice")
+    monkeypatch.setattr(rpr, "gh_run", fake)
+    rpr._deliver_native_review(42, "APPROVED", "b", {})
+    assert not [c for c in calls if c[:3] == ["gh", "pr", "review"]]
+
+
+def test_deliver_native_review_failure_degrades(rpr, monkeypatch, capsys) -> None:
+    def fake(argv, config, check=False):  # type: ignore[no-untyped-def]
+        if argv[:3] == ["gh", "pr", "view"]:
+            return _Proc(0, _json.dumps({"author": {"login": "alice"}}))
+        if argv[:2] == ["gh", "api"]:
+            return _Proc(0, "bob\n")
+        return _Proc(1, "", "permission denied")  # the review post fails
+
+    monkeypatch.setattr(rpr, "gh_run", fake)
+    rpr._deliver_native_review(42, "APPROVED", "b", {})  # must not raise
+    assert "could not post native review" in capsys.readouterr().err
+
+
+def test_gh_pr_author_and_current_login(rpr, monkeypatch) -> None:
+    fake, _ = _fake_gh(author="alice", me="bob")
+    monkeypatch.setattr(rpr, "gh_run", fake)
+    assert rpr._gh_pr_author(42, {}) == "alice"
+    assert rpr._gh_current_login({}) == "bob"
