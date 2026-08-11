@@ -251,9 +251,12 @@ def test_open_flag_degrades_to_printed_url(target: Path, monkeypatch) -> None:
 # --- --yes stages, never posts (the ADR-047 asymmetry, pinned) --------
 
 
-def test_yes_stages_prints_one_line_and_never_posts(
+def test_yes_stages_prints_submit_root_and_store_and_never_posts(
     target: Path, monkeypatch
 ) -> None:
+    # The stage message is deliberately TIGHT (it exists to keep agent output
+    # noise-free) but must name where the draft landed: the resolved project
+    # root and the per-project draft store (#693).
     posted = {"v": False}
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
     monkeypatch.setattr(
@@ -266,8 +269,10 @@ def test_yes_stages_prints_one_line_and_never_posts(
     assert res.exit_code == 0, res.output
     assert posted["v"] is False  # the asymmetry: --yes NEVER posts
     lines = [ln for ln in res.output.splitlines() if ln.strip()]
-    assert len(lines) == 1  # ONE short line — the agent hand-off
-    assert lines[0].startswith("staged: pkit report submit ")
+    assert len(lines) <= 3  # short — the agent hand-off, not a wall
+    assert lines[0].startswith("staged: pkit report submit ")  # command first
+    assert f"project root: {target}" in lines[1]
+    assert str(rep.drafts_dir(target)) in lines[2]
 
 
 def test_yes_stage_title_carries_kind_prefix(target: Path) -> None:
@@ -324,6 +329,80 @@ def test_yes_stage_roundtrips_oversize_overflow_comment(target: Path) -> None:
     assert len(draft.payload.body) <= rep.REPORT_BODY_BUDGET
 
 
+# --- composing outside a project (#693) -------------------------------
+
+
+@pytest.fixture
+def no_project(tmp_path: Path, monkeypatch) -> Path:
+    """A scratch directory that is NOT a pkit project: `find_target_root`
+    resolves nothing, exactly as in a temp dir a report body was drafted in."""
+    monkeypatch.setattr(cli_mod, "find_target_root", lambda: None)
+    monkeypatch.chdir(tmp_path)
+    return Path.cwd()  # resolved form — what the CLI will print
+
+
+def test_no_project_compose_warns_loudly(no_project: Path) -> None:
+    res = CliRunner().invoke(
+        main, ["report", "bug", "--title", "t", "--body", "b", "--yes"]
+    )
+    assert res.exit_code == 0, res.output  # composes anyway — never refuses
+    assert f"no pkit project found at {no_project}" in res.output
+    assert "project root" in res.output  # names how to fix it
+
+
+def test_no_project_compose_marks_env_unresolved_not_empty(
+    no_project: Path,
+) -> None:
+    res = CliRunner().invoke(
+        main, ["report", "bug", "--title", "t", "--body", "b", "--yes"]
+    )
+    assert res.exit_code == 0, res.output
+    (draft,) = rep.list_staged(no_project)
+    body = draft.payload.body
+    assert "## Environment" in body  # the fenced block keeps its shape
+    assert "NOT COLLECTED" in body
+    # …and NONE of the values a maintainer would read as facts about the install
+    assert "(none installed)" not in body
+    assert "backbone:" not in body and "adapter:" not in body
+
+
+def test_no_project_compose_body_carries_no_filesystem_path(
+    no_project: Path,
+) -> None:
+    # The warning names the directory (terminal); the ISSUE body never may.
+    res = CliRunner().invoke(
+        main, ["report", "bug", "--title", "t", "--body", "b", "--yes"]
+    )
+    assert res.exit_code == 0, res.output
+    (draft,) = rep.list_staged(no_project)
+    body = draft.payload.body
+    assert str(no_project) not in body
+    assert rep.lint_redaction(body) == []
+
+
+def test_no_project_stage_message_says_no_project(no_project: Path) -> None:
+    res = CliRunner().invoke(
+        main, ["report", "bug", "--title", "t", "--body", "b", "--yes"]
+    )
+    assert res.exit_code == 0, res.output
+    lines = [ln for ln in res.output.splitlines() if ln.strip()]
+    assert f"project root: no project — {no_project}" in lines[-2]
+    assert str(rep.drafts_dir(no_project)) in lines[-1]
+
+
+def test_in_project_compose_is_unchanged(target: Path) -> None:
+    # The in-project path keeps collecting and rendering the real block.
+    res = CliRunner().invoke(
+        main, ["report", "bug", "--title", "t", "--body", "b", "--yes"]
+    )
+    assert res.exit_code == 0, res.output
+    assert "no pkit project found" not in res.output
+    (draft,) = rep.list_staged(target)
+    body = draft.payload.body
+    assert "backbone:" in body and "adapter:" in body
+    assert "NOT COLLECTED" not in body
+
+
 # --- report submit ----------------------------------------------------
 
 
@@ -333,20 +412,28 @@ def _stage_via_cli(target: Path, *extra: str) -> str:
         main, ["report", "bug", "--title", "t", "--body", "b", "--yes", *extra]
     )
     assert res.exit_code == 0, res.output
-    return res.output.strip().rsplit(" ", 1)[-1]
+    staged = next(
+        ln for ln in res.output.splitlines() if ln.startswith("staged: ")
+    )
+    return staged.rsplit(" ", 1)[-1]
 
 
-def test_submit_bare_lists_staged_drafts(target: Path) -> None:
+def test_submit_bare_lists_staged_drafts_and_names_the_store(
+    target: Path,
+) -> None:
     draft_id = _stage_via_cli(target)
     res = CliRunner().invoke(main, ["report", "submit"])
     assert res.exit_code == 0, res.output
     assert draft_id in res.output and "bug" in res.output
+    # list mode says WHICH store it is listing (#693) — the store is per-project
+    assert str(rep.drafts_dir(target)) in res.output
 
 
-def test_submit_bare_empty_state(target: Path) -> None:
+def test_submit_bare_empty_state_names_the_store(target: Path) -> None:
     res = CliRunner().invoke(main, ["report", "submit"])
     assert res.exit_code == 0, res.output
     assert "No staged report drafts" in res.output
+    assert str(rep.drafts_dir(target)) in res.output
 
 
 def test_submit_refuses_yes(target: Path, monkeypatch) -> None:
@@ -462,10 +549,16 @@ def test_submit_overflow_failure_fails_closed_and_keeps_draft(
     assert not (target / ".pkit" / "scratchpad" / "reported" / note.name).exists()
 
 
-def test_submit_missing_draft_errors(target: Path) -> None:
+def test_submit_missing_draft_names_where_it_looked(target: Path) -> None:
+    # The #693 diagnostic: an id that isn't here must say WHERE "here" is and
+    # that drafts are per-project — the draft may well exist under another root.
     res = CliRunner().invoke(main, ["report", "submit", "nope"])
     assert res.exit_code != 0
     assert "no staged draft" in res.output
+    assert str(rep.drafts_dir(target)) in res.output
+    assert f"project root: {target}" in res.output
+    assert "per-project" in res.output
+    assert "run submit from that project's root" in res.output.lower()
 
 
 def test_submit_requires_gh_auth(target: Path) -> None:

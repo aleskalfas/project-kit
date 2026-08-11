@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from project_kit.environment import (
+    UNRESOLVED,
     collect_environment,
     render_environment_block,
 )
@@ -85,6 +86,38 @@ def test_render_environment_block_is_redacted(tmp_path: Path) -> None:
     assert "/Users/" not in block and "/home/" not in block
     assert "secret-internal" not in block
     assert "names withheld" in block
+
+
+def test_collect_environment_unresolved_root_collects_no_project_half() -> None:
+    # No root resolved (#693): the project half is NOT collected — and the
+    # snapshot says so, instead of reporting an empty install.
+    env = collect_environment(None)
+    assert env.project_resolved is False
+    assert env.backbone_version == UNRESOLVED
+    assert env.adapter == UNRESOLVED
+    assert env.capabilities == ()
+    # the process half is a property of the running command, so still honest
+    assert env.tool_version and env.python and env.os
+
+
+def test_render_environment_block_unresolved_reads_as_not_collected() -> None:
+    block = render_environment_block(collect_environment(None))
+    assert block.startswith("## Environment")
+    assert block.rstrip().endswith("```")  # same fenced shape
+    assert "NOT COLLECTED" in block
+    # never the values a maintainer reads as facts about the reporter's install
+    assert "(none installed)" not in block
+    assert "backbone:" not in block and "adapter:" not in block
+
+
+def test_render_environment_block_unresolved_carries_no_path(
+    tmp_path: Path, monkeypatch
+) -> None:
+    # The unresolved marker rides into a PUBLIC issue body: path-free, always.
+    monkeypatch.chdir(tmp_path)
+    block = render_environment_block(collect_environment(None))
+    assert str(Path.cwd()) not in block
+    assert "/Users/" not in block and "/home/" not in block
 
 
 def test_render_environment_block_shows_private_names_when_included(tmp_path: Path) -> None:

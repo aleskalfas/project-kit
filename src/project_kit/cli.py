@@ -980,10 +980,16 @@ def _run_report(
     directly (degrades to the printed URL).
 
     `--yes`/autonomy **stages** the composed payload for the interactive-only
-    `pkit report submit` and prints one line — it never posts (ADR-047: the
-    deliberate `--yes` asymmetry, now stage-shaped). `--file` is kept as an
-    explicit gesture; the API post is the default whenever `gh` is
+    `pkit report submit` and prints the submit command plus where the draft
+    landed (resolved root + per-project store, #693) — it never posts
+    (ADR-047: the deliberate `--yes` asymmetry, now stage-shaped). `--file` is
+    kept as an explicit gesture; the API post is the default whenever `gh` is
     authenticated.
+
+    Composing **outside a project** (no root resolves) warns loudly and marks
+    the environment block NOT COLLECTED rather than emitting a fake-empty one
+    (#693) — but still composes: a report from a scratch directory beats no
+    report.
 
     `--scratchpad` inlines a note into the payload (COR-043): redaction-linted
     at compose time on every path (findings ride a stage file's header as
@@ -1010,7 +1016,15 @@ def _run_report(
     )
 
     del do_file  # accepted for compatibility — the API post is now the default
-    target_root = find_target_root() or Path.cwd()
+    # Two roots, deliberately distinct (#693): `project_root` is the RESOLVED
+    # project (None outside one) and decides whether an environment can be
+    # collected at all; `target_root` is where this invocation reads notes and
+    # anchors its draft store, falling back to the cwd so a report composed
+    # outside a project is still possible — loudly, never silently.
+    project_root = find_target_root()
+    target_root = project_root or Path.cwd()
+    if project_root is None:
+        _warn_no_project_context(target_root)
     _warn_reported_drift(target_root)
     want_url = use_url or open_browser
     gh_ok = gh_authenticated()
@@ -1026,7 +1040,7 @@ def _run_report(
             kind,
             title=title,
             prose=prose,
-            target_root=target_root,
+            target_root=project_root,
             on_behalf_of=on_behalf_of,
             include_private=include_private,
             project=project,
@@ -1049,14 +1063,16 @@ def _run_report(
         )
 
     if assume_yes:
-        # ADR-047 asymmetry: autonomy stages, it NEVER posts. One short line —
-        # the whole hand-off an agent needs to surface (#662).
+        # ADR-047 asymmetry: autonomy stages, it NEVER posts. Three short
+        # lines — the submit command (the hand-off an agent surfaces, #662)
+        # plus WHERE it landed, because the store is per-project (#693).
         draft = stage_report(
             target_root, kind=kind, title=title, payload=payload,
             findings=findings, note_path=note_path, project=project,
             workstream=ws,
         )
         click.echo(f"staged: pkit report submit {draft.draft_id}")
+        _echo_stage_location(project_root, target_root)
         return
 
     if want_url or not gh_ok:
@@ -1096,6 +1112,7 @@ def _run_report(
                     "\ngh could not file it — staged for retry: "
                     f"pkit report submit {draft.draft_id}"
                 )
+                _echo_stage_location(project_root, target_root)
         return
     if len(url) <= URL_BUDGET:
         _echo_url_first(kind, url, REPORT_TARGET, note="\nNot posted.")
@@ -1279,6 +1296,39 @@ def _echo_browser_identity_warning() -> None:
         "IN AS — check the signed-in account before submitting (it can "
         "silently differ from your gh CLI identity)."
     )
+
+
+def _root_label(project_root: Path | None, cwd: Path) -> str:
+    """How a report message names the root it resolved (#693). Terminal-only —
+    paths are fine here; the composed ISSUE body stays path-free."""
+    return str(project_root) if project_root is not None else f"no project — {cwd}"
+
+
+def _warn_no_project_context(cwd: Path) -> None:
+    """Loud compose-time warning when no project root resolved (#693). Nothing
+    else in the output distinguished a report composed inside a fully-installed
+    project from one composed in an empty scratch dir — the trap that caught
+    one operator three times in a session. The compose still proceeds (a report
+    from outside beats no report); the environment block says it was not
+    collected, and this says why and how to fix it."""
+    click.echo(
+        f"Warning: no pkit project found at {cwd} — the environment block will "
+        "be marked NOT COLLECTED (versions, adapter and capabilities are "
+        "unknown, not empty), and any staged draft is anchored here rather "
+        "than in your project. Run pkit report from your project root for a "
+        "useful report.\n"
+    )
+
+
+def _echo_stage_location(project_root: Path | None, target_root: Path) -> None:
+    """Name where a staged draft landed: the resolved project root and the
+    per-project draft store (#693). Drafts are only visible to a `report
+    submit` run under the same root, so the stage message that omitted both was
+    the whole reason a draft staged elsewhere read as lost."""
+    from project_kit.report import drafts_dir
+
+    click.echo(f"  project root: {_root_label(project_root, target_root)}")
+    click.echo(f"  draft store:  {drafts_dir(target_root)}")
 
 
 def _warn_reported_drift(target_root: Path) -> None:
@@ -1500,25 +1550,31 @@ def report_submit(draft_id: str | None, assume_yes: bool) -> None:
     `gh` only on an explicit confirm — then stamps/tracks exactly as a direct
     post (COR-043) and removes the stage file. Interactive-only: `--yes` is
     refused, so ADR-047's never-auto-post gate survives the new realization.
+
+    The store is **per-project**, so every message here names the store path it
+    read (and the root that resolved it) — a draft staged under another root is
+    not lost, it is simply invisible from this one (#693).
     """
     from project_kit.report import (
-        DRAFTS_RELPATH,
         current_login,
+        drafts_dir,
         gh_authenticated,
         list_staged,
         load_staged,
     )
 
-    target_root = find_target_root() or Path.cwd()
+    project_root = find_target_root()
+    target_root = project_root or Path.cwd()
+    store = drafts_dir(target_root)  # the store THIS invocation can see (#693)
     if draft_id is None:
         drafts = list_staged(target_root)
         if not drafts:
             click.echo(
-                "No staged report drafts — `pkit report <kind> … --yes` "
-                "stages one."
+                f"No staged report drafts in {store} — `pkit report <kind> … "
+                "--yes` stages one (drafts are per-project)."
             )
             return
-        click.echo(f"Staged report drafts ({DRAFTS_RELPATH}):\n")
+        click.echo(f"Staged report drafts ({store}):\n")
         for d in drafts:
             warn = (
                 f"  [{len(d.warnings)} redaction warning(s)]" if d.warnings else ""
@@ -1534,7 +1590,11 @@ def report_submit(draft_id: str | None, assume_yes: bool) -> None:
     draft = load_staged(target_root, draft_id)
     if draft is None:
         raise click.ClickException(
-            f"no staged draft {draft_id!r} — `pkit report submit` lists them."
+            f"no staged draft {draft_id!r} in {store} "
+            f"(project root: {_root_label(project_root, target_root)}). "
+            "Drafts are per-project — staged in a different project? Run "
+            "submit from that project's root. `pkit report submit` lists the "
+            "drafts visible here."
         )
     if not gh_authenticated():
         raise click.ClickException(

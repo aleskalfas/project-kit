@@ -97,7 +97,8 @@ pkit report bug --title "<title>" --body "<body>"
 
 - **API post by default** (#662) — with `gh` authenticated, the command shows the full payload once and posts via `gh` behind an interactive confirm that names the target **and the posting identity** ("posts as `@<gh login>` to `<owner/repo>`"). The note travels as the issue body — never URL-embedded.
 - **The URL form is the fallback, not the default** — it survives only without `gh` auth or on an explicit `--url` (`--open` opens it in the browser), only for small reports (an oversized prefill is refused — it would hard-fail on open), and always with the warning that **the browser's logged-in account authors the submit**.
-- **`--yes` / autonomy never posts — it stages** (the deliberate `--yes` asymmetry). The command prints one line, `staged: pkit report submit <id>`; surface that line to the user, who reviews and posts with that single interactive command. Never try to force a post under automation.
+- **`--yes` / autonomy never posts — it stages** (the deliberate `--yes` asymmetry). The command prints the submit command, `staged: pkit report submit <id>`, plus the resolved project root and the draft store it wrote to (#693 — the store is per-project, and `submit` only sees drafts under the same root); surface those lines to the user, who reviews and posts with that single interactive command. Never try to force a post under automation.
+- **Run the command from the user's project root.** Composing from a scratch directory resolves no project: the flow warns and marks the environment block `NOT COLLECTED` (it will not fake an empty install), and the draft lands in the scratch directory rather than the project. If you drafted the body in a temp file, pass it by absolute path from the project root instead of changing directory — the environment block is baked at compose time, so a misplaced draft is re-composed, not moved.
 
 ## 6. Filing on behalf of someone
 
