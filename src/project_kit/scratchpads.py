@@ -247,8 +247,16 @@ class ReportedStamp:
 
 @dataclass(frozen=True)
 class ReportedRefState:
+    """One reported ref resolved live (#678, mirroring report.py's
+    `TrackedFix` shape): its upstream state plus — when the read succeeded —
+    the issue's title and URL, so a listing can say WHAT was reported, not
+    just its number. Offline/unresolved: state "unknown", title/url empty
+    (the render degrades to ref + state)."""
+
     ref: str  # normalized `owner/repo#N`
     state: str  # "open" | "closed" | "unknown" (offline / unresolvable)
+    title: str = ""
+    url: str = ""
 
 
 @dataclass(frozen=True)
@@ -411,7 +419,7 @@ def read_reported_refs(content: str) -> tuple[str, ...]:
 
 def list_notes(target_root: Path) -> list[NoteEntry]:
     """Every scratchpad note, grouped by state folder. Reported notes carry
-    their refs resolved **live** via `resolve_ref_state` (pull-only, nothing
+    their refs resolved **live** via `resolve_ref` (pull-only, nothing
     stored — COR-043; offline degrades to "unknown") and a drift flag."""
     scratchpad_dir = target_root / ".pkit" / "scratchpad"
     entries: list[NoteEntry] = []
@@ -425,8 +433,7 @@ def list_notes(target_root: Path) -> list[NoteEntry]:
                 continue
             content = path.read_text(encoding="utf-8")
             refs = tuple(
-                ReportedRefState(ref, resolve_ref_state(ref))
-                for ref in read_reported_refs(content)
+                resolve_ref(ref) for ref in read_reported_refs(content)
             )
             entries.append(
                 NoteEntry(path.name, state, refs=refs, drifted=note_is_drifted(content))
@@ -434,20 +441,26 @@ def list_notes(target_root: Path) -> list[NoteEntry]:
     return entries
 
 
-def resolve_ref_state(ref: str) -> str:
-    """Live upstream state of `owner/repo#N` via a `gh` read: "open" /
-    "closed", degrading to "unknown" offline or on any failure (COR-043:
-    never blocking, never guessing). Cross-repo *read* — unrestricted per
-    COR-039."""
+def resolve_ref(ref: str) -> ReportedRefState:
+    """Live upstream view of `owner/repo#N` via ONE `gh` read: its state
+    ("open" / "closed") plus title + url (#678 — the same single read that
+    used to fetch state alone), degrading to state "unknown" with empty
+    title/url offline or on any failure (COR-043: never blocking, never
+    guessing). Cross-repo *read* — unrestricted per COR-039."""
     owner_repo, _, number = ref.partition("#")
     data = _gh_json(
-        ["gh", "issue", "view", number, "--repo", owner_repo, "--json", "state"]
+        ["gh", "issue", "view", number, "--repo", owner_repo,
+         "--json", "state,title,url"]
     )
     if isinstance(data, dict) and isinstance(data.get("state"), str):
         state = data["state"].lower()
         if state in ("open", "closed"):
-            return state
-    return "unknown"
+            return ReportedRefState(
+                ref, state,
+                title=str(data.get("title", "")),
+                url=str(data.get("url", "")),
+            )
+    return ReportedRefState(ref, "unknown")
 
 
 def _gh_json(args: list[str]) -> object | None:

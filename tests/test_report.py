@@ -414,12 +414,23 @@ def test_list_my_reports_filters_to_bug_feedback_and_sorts(monkeypatch) -> None:
         {"number": 2, "title": "not a report", "state": "OPEN",
          "labels": [{"name": "docs"}], "updatedAt": "2026-08-05"},
         {"number": 3, "title": "some feedback", "state": "CLOSED",
-         "labels": [{"name": "feedback"}], "updatedAt": "2026-08-03"},
+         "labels": [{"name": "feedback"}], "updatedAt": "2026-08-03",
+         "url": "https://github.com/o/r/issues/3"},
     ]
-    monkeypatch.setattr(rep, "_gh_json", lambda args: issues)
+    captured: dict = {}
+
+    def fake(args):
+        captured.setdefault("args", args)
+        return issues
+
+    monkeypatch.setattr(rep, "_gh_json", fake)
     reports = rep.list_my_reports("o/r")
     assert [r.number for r in reports] == [3, 1]  # #2 dropped; newest-first
     assert reports[0].state == "closed" and reports[0].kind == "feedback"
+    # the list query fetches url; the summary carries it, "" when absent (#678)
+    assert "number,title,state,labels,updatedAt,body,url" in captured["args"]
+    assert reports[0].url == "https://github.com/o/r/issues/3"
+    assert reports[1].url == ""
 
 
 def test_list_my_reports_includes_attributed(monkeypatch) -> None:
@@ -507,11 +518,30 @@ def test_cli_report_list(monkeypatch) -> None:
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
     monkeypatch.setattr(
         rep, "list_my_reports",
-        lambda target: [rep.ReportSummary(1, "a bug", "bug", "open", "2026-08-01")],
+        lambda target: [rep.ReportSummary(
+            1, "a bug", "bug", "open", "2026-08-01",
+            url="https://github.com/o/r/issues/1",
+        )],
     )
     res = CliRunner().invoke(main, ["report"])
     assert res.exit_code == 0
     assert "#1" in res.output and "a bug" in res.output
+    # the row renders the report's OWN url beside the title (#678)
+    assert "a bug  (https://github.com/o/r/issues/1)" in res.output
+
+
+def test_cli_report_list_without_url_degrades_to_bare_row(monkeypatch) -> None:
+    # a summary without a url (offline-ish read) renders exactly as before
+    # #678 — no empty parenthetical
+    monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
+    monkeypatch.setattr(
+        rep, "list_my_reports",
+        lambda target: [rep.ReportSummary(1, "a bug", "bug", "open", "2026-08-01")],
+    )
+    res = CliRunner().invoke(main, ["report"])
+    assert res.exit_code == 0
+    row = next(ln for ln in res.output.splitlines() if "#1" in ln)
+    assert "a bug" in row and "(" not in row
 
 
 def test_list_my_reports_tree_pairs_each_with_tracked(monkeypatch) -> None:
@@ -542,7 +572,10 @@ def test_cli_report_tree(monkeypatch) -> None:
     monkeypatch.setattr(
         rep, "list_my_reports_tree",
         lambda target: [(
-            rep.ReportSummary(42, "fb", "feedback", "open", "2026-08-03"),
+            rep.ReportSummary(
+                42, "fb", "feedback", "open", "2026-08-03",
+                url="https://github.com/o/r/issues/42",
+            ),
             {7: rep.TrackedFix(
                 "closed", "the fix", "https://github.com/o/r/issues/7"
             )},
@@ -551,7 +584,9 @@ def test_cli_report_tree(monkeypatch) -> None:
     res = CliRunner().invoke(main, ["report", "--tree"])
     assert res.exit_code == 0
     assert "#42" in res.output and "#7" in res.output and "closed" in res.output
-    # the rollup renders the fix's title and URL beside number+state (#664)
+    # the report row renders its OWN url (#678), the rollup the fix's (#664)
+    report_line = next(ln for ln in res.output.splitlines() if "#42" in ln)
+    assert "(https://github.com/o/r/issues/42)" in report_line
     assert "the fix" in res.output
     assert "https://github.com/o/r/issues/7" in res.output
 
@@ -838,13 +873,18 @@ def test_cli_inbox_kind_flag(monkeypatch) -> None:
 
     def fake_list(target, *, kind=None):
         captured["kind"] = kind
-        return [rep.ReportSummary(3, "[CR] t", "change-request", "open", "2026-08-03")]
+        return [rep.ReportSummary(
+            3, "[CR] t", "change-request", "open", "2026-08-03",
+            url="https://github.com/o/r/issues/3",
+        )]
 
     monkeypatch.setattr(rep, "list_inbox", fake_list)
     res = CliRunner().invoke(main, ["report", "inbox", "--kind", "change-request"])
     assert res.exit_code == 0, res.output
     assert captured["kind"] == "change-request"
     assert "#3" in res.output
+    # inbox rows carry the report's own url too (#678, same row renderer)
+    assert "(https://github.com/o/r/issues/3)" in res.output
 
 
 def test_cli_inbox_group_by_project_degrades_without_marker(monkeypatch) -> None:
