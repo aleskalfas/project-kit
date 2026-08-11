@@ -310,7 +310,7 @@ Supports `--dry-run`. Refuses if no active or reported note matches the slug, or
 
 ### `scratchpad reported <slug> <ref>...`
 
-The **manual stamp gesture** (per COR-043): mark a note as sent through the report channel when the post happened outside the tooling — the URL-first path (the browser filed it) or retroactive marking of a note hand-carried upstream before the mechanism existed. The automatic equivalent runs on a successful `pkit report … --file` post.
+The **manual stamp gesture** (per COR-043): mark a note as sent through the report channel when the post happened outside the tooling — the URL path (the browser filed it; the compose flow ends by printing this exact command as the required follow-up, #664) or retroactive marking of a note hand-carried upstream before the mechanism existed. The automatic equivalent runs on a successful `pkit report` API post (direct or via `report submit`).
 
 Moves the note from `active/` to the lazily-created `reported/` and appends to its frontmatter: `reported` (today), `reported_to` (the refs), and `reported_hash` (SHA-256 of the full file as it was at stamp time — the drift-detection anchor). On a note already in `reported/`, appends the refs not yet recorded and re-anchors the hash (a new send); duplicate refs are an idempotent no-op.
 
@@ -489,7 +489,7 @@ its `context-workstream` read verb (current branch → issue → workstream),
 invoked by subprocess through the capability dispatcher, so the backbone
 never reads pm's `workstreams.yaml` or labels itself; `--workstream <name>`
 overrides, and pm-absent / underivable simply omits the half. A successful
-`--file` post stamps the same pair into the reported scratchpad note's
+post stamps the same pair into the reported scratchpad note's
 frontmatter. This context block is the designated extension point for
 version provenance (EPIC #411): future provenance fields join the same
 line/marker rather than adding a second block.
@@ -511,7 +511,14 @@ remediation, and the `gh` error is surfaced verbatim. On a **fully-successful
 post** the note is stamped `reported` (moved to the lazily-created `reported/`
 with refs/date/hash frontmatter) — whether the post came from a direct compose
 or from `report submit`; staged and URL paths send nothing and stamp nothing at
-compose time (use `pkit scratchpad reported` after a browser submit). Every
+compose time. **Tracking fires on every path** (#664, from #660 §C.7): the
+staged path stamps at `report submit` exactly as a direct post, and any
+scratchpad-backed flow that ends at a URL instead of a post — `--url`,
+`--open`, the no-auth fallback, or an API post that degraded to the URL —
+**ends with the required follow-up as its last line** (`after filing in the
+browser, run: pkit scratchpad reported <slug> <issue-ref>`): the browser
+cannot stamp the note, so the exact one-command gesture is handed over
+loudly, never left as a hidden step. Every
 report verb also prints a one-line warning (never a gate) when a `reported/`
 note has been modified since its stamp.
 
@@ -539,9 +546,22 @@ one line each — **flat by default**, each row tagged with its project marker
 (`[<project>]`, per [pkit:ADR-050]) when the report carries one; `--tree`
 expands each feedback with its
 `## Tracked by` fixes and their states inline. `report show <N>` adds the maintainer
-comments and the `## Tracked by` rollup — the issues that will fix it, with each
-one's state. Read-only; requires `gh` auth (a
+comments and the `## Tracked by` rollup. **Rollups render title + URL** (#664):
+each tracked fix shows its number + state **plus its title and URL** — bare
+numbers force a browser round-trip to learn what is fixing you — degrading to
+number + state when a ref can't be resolved (offline). Read-only; requires `gh` auth (a
 no-auth user tracks via GitHub's own notifications).
+
+**One tracking truth (#664).** `pkit report` (list) and `pkit scratchpad list`
+answer different questions and both are honest: `report list` is the
+**upstream view** (my reports on the target, recognized by marker / author /
+prefix), `scratchpad list` is the **note view** (my local notes' reported
+state). The declared source-of-truth rule: the **issue** (upstream) is the
+truth for *state*; the **note's frontmatter** is the truth for *what was
+sent*. They reconcile by derivation, never by a sync mechanism
+(derive-don't-store): `report list` tags a row `[note: <slug>]` when a local
+`reported/` note references that issue, and `scratchpad list` resolves its
+refs' upstream state live — nothing is copied or stored on either side.
 
 ### `report inbox` / `report link` / `report unlink` (maintainers)
 

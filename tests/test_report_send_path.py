@@ -475,6 +475,170 @@ def test_submit_requires_gh_auth(target: Path) -> None:
     assert "gh auth login" in res.output
 
 
+# --- URL-path tracking follow-up (#664 / #660 C.7) --------------------
+
+_FOLLOWUP = (
+    "after filing in the browser, run: "
+    "pkit scratchpad reported send-note <issue-ref>"
+)
+
+
+def _last_line(output: str) -> str:
+    return [ln for ln in output.splitlines() if ln.strip()][-1]
+
+
+def test_url_path_with_note_ends_with_reported_followup(
+    target: Path, monkeypatch
+) -> None:
+    # A browser filing stamps nothing, so a scratchpad-backed --url flow must
+    # END with the exact one-command tracking gesture as its LAST line.
+    note = _note(target, "# Note\n\nclean\n")
+    monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
+    res = CliRunner().invoke(
+        main,
+        ["report", "feedback", "--title", "t", "--body", "b",
+         "--scratchpad", note.name, "--url"],
+    )
+    assert res.exit_code == 0, res.output
+    assert _last_line(res.output) == _FOLLOWUP
+
+
+def test_open_path_with_note_ends_with_reported_followup(
+    target: Path, monkeypatch
+) -> None:
+    note = _note(target, "# Note\n\nclean\n")
+    monkeypatch.setattr(rep, "open_in_browser", lambda url: True)
+    res = CliRunner().invoke(
+        main,
+        ["report", "feedback", "--title", "t", "--body", "b",
+         "--scratchpad", note.name, "--open"],
+    )
+    assert res.exit_code == 0, res.output
+    assert _last_line(res.output) == _FOLLOWUP  # after the opened-browser note
+
+
+def test_no_auth_fallback_with_note_ends_with_reported_followup(
+    target: Path,
+) -> None:
+    # gh unauthenticated (the autouse pin): the implicit URL fallback is a
+    # URL-path filing too — same required follow-up, same last line.
+    note = _note(target, "# Note\n\nclean\n")
+    res = CliRunner().invoke(
+        main,
+        ["report", "feedback", "--title", "t", "--body", "b",
+         "--scratchpad", note.name],
+    )
+    assert res.exit_code == 0, res.output
+    assert _last_line(res.output) == _FOLLOWUP
+
+
+def test_url_path_without_note_prints_no_followup(target: Path) -> None:
+    # nothing attached ⇒ nothing to track ⇒ no follow-up noise
+    res = CliRunner().invoke(
+        main, ["report", "bug", "--title", "t", "--body", "b", "--url"]
+    )
+    assert res.exit_code == 0, res.output
+    assert "scratchpad reported" not in res.output
+
+
+def test_api_decline_url_degrade_ends_with_reported_followup(
+    target: Path, monkeypatch
+) -> None:
+    # Declining the API confirm degrades to the printed URL — a degraded
+    # outcome that may still be filed in the browser, so it too must end
+    # with the follow-up.
+    note = _note(target, "# Note\n\nclean\n")
+    monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
+    res = CliRunner().invoke(
+        main,
+        ["report", "feedback", "--title", "t", "--body", "b",
+         "--scratchpad", note.name],
+        input="n\n",
+    )
+    assert res.exit_code == 0, res.output
+    assert "issues/new?" in res.output
+    assert _last_line(res.output) == _FOLLOWUP
+
+
+def test_api_failure_url_degrade_ends_with_reported_followup(
+    target: Path, monkeypatch
+) -> None:
+    note = _note(target, "# Note\n\nclean\n")
+    monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
+    monkeypatch.setattr(rep, "file_report_via_gh", lambda *a, **k: None)
+    res = CliRunner().invoke(
+        main,
+        ["report", "feedback", "--title", "t", "--body", "b",
+         "--scratchpad", note.name],
+        input="y\n",
+    )
+    assert res.exit_code == 0, res.output
+    assert "gh could not file it" in res.output
+    assert _last_line(res.output) == _FOLLOWUP
+
+
+# --- redaction lint on every path (#664 / #660 C.8; COR-043) ----------
+# The four compose paths: interactive API (below), --url/--open (below),
+# --yes stage (test_yes_stage_carries_redaction_findings_as_header_warnings),
+# submit resurface (test_submit_resurfaces_staged_redaction_warnings). The
+# staged path's stamp-at-submit is pinned by
+# test_submit_confirms_posts_stamps_and_cleans.
+
+
+def test_interactive_api_path_lints_note_and_gates_on_findings(
+    target: Path, monkeypatch
+) -> None:
+    note = _note(target, "path /Users/alice/project leaked\n")
+    posted = {"v": False}
+    monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
+    monkeypatch.setattr(
+        rep, "file_report_via_gh",
+        lambda *a, **k: posted.__setitem__("v", True) or "x",
+    )
+    # decline the edit-or-send-anyway prompt: nothing posts
+    res = CliRunner().invoke(
+        main,
+        ["report", "feedback", "--title", "t", "--body", "b",
+         "--scratchpad", note.name],
+        input="n\n",
+    )
+    assert res.exit_code == 0, res.output
+    assert "macOS home path" in res.output
+    assert "Send anyway?" in res.output
+    assert posted["v"] is False
+    assert "Not posted" in res.output
+
+
+def test_url_path_lints_note_and_surfaces_findings(
+    target: Path, monkeypatch
+) -> None:
+    note = _note(target, "path /Users/alice/project leaked\n")
+    monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
+    res = CliRunner().invoke(
+        main,
+        ["report", "feedback", "--title", "t", "--body", "b",
+         "--scratchpad", note.name, "--url"],
+    )
+    assert res.exit_code == 0, res.output
+    assert "possible un-redacted content" in res.output
+    assert "macOS home path" in res.output
+
+
+def test_open_path_lints_note_and_surfaces_findings(
+    target: Path, monkeypatch
+) -> None:
+    note = _note(target, "path /Users/alice/project leaked\n")
+    monkeypatch.setattr(rep, "open_in_browser", lambda url: True)
+    res = CliRunner().invoke(
+        main,
+        ["report", "feedback", "--title", "t", "--body", "b",
+         "--scratchpad", note.name, "--open"],
+    )
+    assert res.exit_code == 0, res.output
+    assert "possible un-redacted content" in res.output
+    assert "macOS home path" in res.output
+
+
 # --- staging round-trip (module level) --------------------------------
 
 
