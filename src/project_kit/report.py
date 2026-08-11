@@ -134,13 +134,35 @@ def parse_report_marker(body: str) -> dict[str, str]:
     return out
 
 
+#: The on-behalf-of attribution line's stable prefix (`compose_report_body`
+#: writes `_Reported for @<handle> (filed on their behalf)._`). One of the
+#: three positive-provenance signals `is_report` accepts (#681).
+_ATTRIBUTION_MARKER = "Reported for @"
+
+
+def is_report(labels: list[str], body: str) -> bool:
+    """Positive report provenance (#681): a namespaced `report:*` label, the
+    body's `pkit-report` marker, or the on-behalf-of attribution line. Title
+    prefixes and legacy bare-kind labels are **display-only** kind fallbacks
+    (`classify_kind`) — they never create membership, because an ordinary
+    tracker issue can carry both (the pm capability title-prefixes its own
+    issues, and the target repo owns a bare `bug` label). Pure over its
+    inputs."""
+    if any(label.startswith("report:") for label in labels):
+        return True
+    if _MARKER_RE.search(body):
+        return True
+    return _ATTRIBUTION_MARKER in body
+
+
 def classify_kind(labels: list[str], title: str = "", body: str = "") -> str:
     """Classify an issue's report kind: label wins (the namespaced
     `report:<kind>` names, then the legacy bare-kind names old reports carry),
     then the body kind-marker, then the kind's title prefix (#663 — all three
     prefixes, so a label-less URL filing like #660's still classifies); ''
     when it is not a report. The fallbacks exist because URL-filed issues from
-    non-collaborators lose their labels."""
+    non-collaborators lose their labels. Classification is display-only: it
+    never establishes *membership* — that is `is_report`'s job (#681)."""
     for k in KINDS:
         if KIND_LABELS[k] in labels:
             return k
@@ -732,6 +754,24 @@ def display_state(gh_state: str, labels: list[str]) -> str:
     return "open"
 
 
+def _is_report_issue(issue: dict) -> bool:
+    """`is_report` over a raw `gh` issue dict (#681) — the membership filter
+    every summary-producing sweep applies client-side."""
+    return is_report(_label_names(issue.get("labels")), str(issue.get("body", "")))
+
+
+def _fetch_issue(target: str, number: int) -> dict | None:
+    """One issue fetched by number with the summary fields — the read behind
+    the locally-reported union leg (#681; bounded by the `reported/` note
+    count). None on gh failure — the caller skips that row (best-effort,
+    like the attributed query)."""
+    data = _gh_json([
+        "gh", "issue", "view", str(number), "--repo", target,
+        "--json", _SUMMARY_FIELDS,
+    ])
+    return data if isinstance(data, dict) else None
+
+
 def _summarize(issue: dict) -> ReportSummary:
     labels = _label_names(issue.get("labels"))
     title = str(issue.get("title", ""))
@@ -759,12 +799,19 @@ def current_login() -> str | None:
     return None
 
 
-def list_my_reports(target: str) -> list[ReportSummary] | None:
-    """The invoker's reports on `target`, bug/feedback only, newest first — both
-    those they **authored** and those **attributed** to them (filed on their behalf
-    via `--on-behalf-of`, carrying a `Reported for @login` marker). None on gh
-    failure of the authored query (caller degrades); the attributed query is
-    best-effort and skipped when the login can't be resolved."""
+def list_my_reports(
+    target: str, target_root: Path | None = None
+) -> list[ReportSummary] | None:
+    """The invoker's reports on `target`, newest first — both those they
+    **authored** and those **attributed** to them (filed on their behalf via
+    `--on-behalf-of`, carrying a `Reported for @login` marker). Membership
+    requires positive provenance (`is_report`, #681) — the classifier's
+    prefix/legacy fallbacks no longer sweep in every ordinary prefix-titled
+    issue the invoker authored — **unioned** with any issue a local
+    `reported/` note references (`local_reported_notes`; how a raw-`gh`-filed
+    report without a marker, like #660, stays listed), fetched by number.
+    None on gh failure of the authored query (caller degrades); the
+    attributed query and the per-note fetches are best-effort."""
     data = _gh_json([
         "gh", "issue", "list", "--repo", target, "--author", "@me",
         "--state", "all", "--limit", "100", "--json", _SUMMARY_FIELDS,
@@ -773,10 +820,9 @@ def list_my_reports(target: str) -> list[ReportSummary] | None:
         return None
     by_number: dict[int, ReportSummary] = {}
     for issue in data:
-        if isinstance(issue, dict):
+        if isinstance(issue, dict) and _is_report_issue(issue):
             s = _summarize(issue)
-            if s.kind:
-                by_number[s.number] = s
+            by_number[s.number] = s
 
     login = current_login()
     if login:
@@ -787,22 +833,33 @@ def list_my_reports(target: str) -> list[ReportSummary] | None:
         ])
         if isinstance(attr, list):
             for issue in attr:
-                if not isinstance(issue, dict):
+                if not isinstance(issue, dict) or not _is_report_issue(issue):
                     continue
                 s = _summarize(issue)
-                if s.kind and s.number not in by_number:  # authored wins
+                if s.number not in by_number:  # authored wins
                     by_number[s.number] = replace(s, attributed=True)
+
+    if target_root is not None:
+        for number in local_reported_notes(target_root, target):
+            if number in by_number:
+                continue
+            issue = _fetch_issue(target, number)
+            if issue is not None:
+                # membership is established by the local note; kind still
+                # classifies via the full fallback chain (prefix included)
+                by_number[number] = _summarize(issue)
 
     return sorted(by_number.values(), key=lambda r: r.updated_at, reverse=True)
 
 
 def list_my_reports_tree(
-    target: str,
+    target: str, target_root: Path | None = None
 ) -> list[tuple[ReportSummary, dict[int, TrackedFix]]] | None:
-    """Like `list_my_reports`, but each report is paired with its `## Tracked by`
-    fixes resolved to `TrackedFix` (state + title + url, #664) — for the
-    `--tree` view. One extra read per tracked issue; bounded by a personal
-    report list. None on the initial gh failure."""
+    """Like `list_my_reports` (same membership rule + locally-reported union,
+    #681), but each report is paired with its `## Tracked by` fixes resolved
+    to `TrackedFix` (state + title + url, #664) — for the `--tree` view. One
+    extra read per tracked issue; bounded by a personal report list. None on
+    the initial gh failure."""
     data = _gh_json([
         "gh", "issue", "list", "--repo", target, "--author", "@me",
         "--state", "all", "--limit", "100", "--json", _SUMMARY_FIELDS,
@@ -810,14 +867,24 @@ def list_my_reports_tree(
     if not isinstance(data, list):
         return None
     rows: list[tuple[ReportSummary, dict[int, TrackedFix]]] = []
+    seen: set[int] = set()
     for issue in data:
-        if not isinstance(issue, dict):
+        if not isinstance(issue, dict) or not _is_report_issue(issue):
             continue
         summary = _summarize(issue)
-        if not summary.kind:  # bug/feedback only
-            continue
+        seen.add(summary.number)
         tracked = resolve_tracked(target, parse_tracked_by(str(issue.get("body", ""))))
         rows.append((summary, tracked))
+    if target_root is not None:
+        for number in local_reported_notes(target_root, target):
+            if number in seen:
+                continue
+            issue = _fetch_issue(target, number)
+            if issue is None:
+                continue
+            body = str(issue.get("body", ""))
+            tracked = resolve_tracked(target, parse_tracked_by(body))
+            rows.append((_summarize(issue), tracked))
     rows.sort(key=lambda row: row[0].updated_at, reverse=True)
     return rows
 
@@ -972,11 +1039,16 @@ def in_report_target() -> bool:
 def _inbox_queries(target: str, kinds: tuple[str, ...]) -> list[list[str]]:
     """The gh list queries covering `kinds`: per kind, the namespaced label
     (`report:<kind>`), the legacy bare-kind label (reports filed before the
-    #663 namespacing), and a title search for the kind's prefix (a URL-filed
-    report from a non-collaborator loses its label, so the prefix is its
-    discoverable signal; false positives — e.g. a bare `bug` word match — are
-    dropped by `classify_kind` client-side). Bodies are fetched for marker
-    classification and project grouping."""
+    #663 namespacing — they still carry the body marker that admits them),
+    and a body search for the kind's marker (a URL-filed report from a
+    non-collaborator loses its label, so the marker is its discoverable
+    signal). The former title-prefix search leg was the over-sweep vector
+    (#681 — every ordinary pm-filed `[Bug]`-titled issue matched) and is
+    gone: a raw-filed report with neither label nor marker is not inbox-
+    discoverable (acceptable — the channel API-posts with markers; the
+    reporter side still lists such issues via local `reported/` notes).
+    Sweep noise is dropped by `is_report` client-side; bodies are fetched
+    for marker classification and project grouping."""
     queries: list[list[str]] = []
     for kind in kinds:
         for label in (KIND_LABELS[kind], kind):
@@ -986,7 +1058,7 @@ def _inbox_queries(target: str, kinds: tuple[str, ...]) -> list[list[str]]:
             ])
         queries.append([
             "gh", "issue", "list", "--repo", target,
-            "--search", f'"{KIND_TITLE_PREFIXES[kind]}" in:title',
+            "--search", f'"pkit-report: kind={kind}" in:body',
             "--state", "all", "--limit", "100", "--json", _SUMMARY_FIELDS,
         ])
     return queries
@@ -994,20 +1066,24 @@ def _inbox_queries(target: str, kinds: tuple[str, ...]) -> list[list[str]]:
 
 def list_inbox(target: str, *, kind: str | None = None) -> list[ReportSummary] | None:
     """All reports on `target` (any author), newest first — the maintainer's
-    triage queue. `kind` narrows to one report kind. Non-report issues swept in
-    by the title-prefix searches are dropped by classification. None on gh
-    failure."""
+    triage queue. `kind` narrows to one report kind. Membership is the same
+    `is_report` provenance rule as the reporter list (#681) — sweep noise
+    (an ordinary issue matching a query) is dropped by it client-side. None
+    on gh failure."""
     kinds = (kind,) if kind else KINDS
     reports: list[ReportSummary] = []
     for query in _inbox_queries(target, kinds):
         data = _gh_json(query)
         if not isinstance(data, list):
             return None
-        reports.extend(_summarize(i) for i in data if isinstance(i, dict))
+        reports.extend(
+            _summarize(i) for i in data
+            if isinstance(i, dict) and _is_report_issue(i)
+        )
     # de-dup (an issue can match several queries) and sort newest-first
     seen: dict[int, ReportSummary] = {}
     for r in reports:
-        if r.kind and (kind is None or r.kind == kind):
+        if kind is None or r.kind == kind:
             seen.setdefault(r.number, r)
     return sorted(seen.values(), key=lambda r: r.updated_at, reverse=True)
 
@@ -1016,8 +1092,9 @@ def list_resolved(target: str) -> list[tuple[ReportSummary, list[int]]] | None:
     """Open feedbacks/change-requests on `target` whose `## Tracked by` issues are
     **all closed** — the close-prompt candidates — each paired with its tracked
     issue numbers. A report with no tracked issues is not resolved (nothing
-    vouches for it); bugs are excluded (they close with their own fix). None on
-    gh failure."""
+    vouches for it); bugs are excluded (they close with their own fix);
+    membership is `is_report`'s provenance rule, consistently with the inbox
+    (#681). None on gh failure."""
     resolved: list[tuple[ReportSummary, list[int]]] = []
     seen: set[int] = set()
     for kind in ("feedback", "change-request"):
@@ -1026,7 +1103,7 @@ def list_resolved(target: str) -> list[tuple[ReportSummary, list[int]]] | None:
             if not isinstance(data, list):
                 return None
             for issue in data:
-                if not isinstance(issue, dict):
+                if not isinstance(issue, dict) or not _is_report_issue(issue):
                     continue
                 summary = _summarize(issue)
                 if (
