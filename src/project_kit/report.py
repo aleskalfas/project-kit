@@ -679,6 +679,11 @@ def file_report_via_gh(
 
 _TRACKED_HEADING = "## Tracked by"
 
+#: Fields every summary-producing `gh issue list` query fetches — bodies for
+#: marker classification, `url` so list rows can render the report's own link
+#: (#678; before it only tracked-fix rollup rows carried one).
+_SUMMARY_FIELDS = "number,title,state,labels,updatedAt,body,url"
+
 
 @dataclass(frozen=True)
 class ReportSummary:
@@ -690,6 +695,7 @@ class ReportSummary:
     attributed: bool = False  # filed *for* the invoker by someone else (on-behalf-of)
     project: str = ""  # body marker's `project=` value; "" when absent
     workstream: str = ""  # body marker's `workstream=` value; "" when absent
+    url: str = ""  # the report's own issue URL (#678); "" when not fetched
 
 
 def _gh_json(args: list[str]) -> object | None:
@@ -739,6 +745,7 @@ def _summarize(issue: dict) -> ReportSummary:
         updated_at=str(issue.get("updatedAt", "")),
         project=marker.get("project", ""),
         workstream=marker.get("workstream", ""),
+        url=str(issue.get("url", "")),
     )
 
 
@@ -760,8 +767,7 @@ def list_my_reports(target: str) -> list[ReportSummary] | None:
     best-effort and skipped when the login can't be resolved."""
     data = _gh_json([
         "gh", "issue", "list", "--repo", target, "--author", "@me",
-        "--state", "all", "--limit", "100",
-        "--json", "number,title,state,labels,updatedAt,body",
+        "--state", "all", "--limit", "100", "--json", _SUMMARY_FIELDS,
     ])
     if not isinstance(data, list):
         return None
@@ -777,8 +783,7 @@ def list_my_reports(target: str) -> list[ReportSummary] | None:
         attr = _gh_json([
             "gh", "issue", "list", "--repo", target,
             "--search", f'in:body "Reported for @{login}"',
-            "--state", "all", "--limit", "100",
-            "--json", "number,title,state,labels,updatedAt,body",
+            "--state", "all", "--limit", "100", "--json", _SUMMARY_FIELDS,
         ])
         if isinstance(attr, list):
             for issue in attr:
@@ -800,8 +805,7 @@ def list_my_reports_tree(
     report list. None on the initial gh failure."""
     data = _gh_json([
         "gh", "issue", "list", "--repo", target, "--author", "@me",
-        "--state", "all", "--limit", "100",
-        "--json", "number,title,state,labels,updatedAt,body",
+        "--state", "all", "--limit", "100", "--json", _SUMMARY_FIELDS,
     ])
     if not isinstance(data, list):
         return None
@@ -965,9 +969,6 @@ def in_report_target() -> bool:
     return bool(REPORT_TARGET) and current_repo_slug() == REPORT_TARGET
 
 
-_INBOX_FIELDS = "number,title,state,labels,updatedAt,body"
-
-
 def _inbox_queries(target: str, kinds: tuple[str, ...]) -> list[list[str]]:
     """The gh list queries covering `kinds`: per kind, the namespaced label
     (`report:<kind>`), the legacy bare-kind label (reports filed before the
@@ -981,12 +982,12 @@ def _inbox_queries(target: str, kinds: tuple[str, ...]) -> list[list[str]]:
         for label in (KIND_LABELS[kind], kind):
             queries.append([
                 "gh", "issue", "list", "--repo", target, "--label", label,
-                "--state", "all", "--limit", "100", "--json", _INBOX_FIELDS,
+                "--state", "all", "--limit", "100", "--json", _SUMMARY_FIELDS,
             ])
         queries.append([
             "gh", "issue", "list", "--repo", target,
             "--search", f'"{KIND_TITLE_PREFIXES[kind]}" in:title',
-            "--state", "all", "--limit", "100", "--json", _INBOX_FIELDS,
+            "--state", "all", "--limit", "100", "--json", _SUMMARY_FIELDS,
         ])
     return queries
 

@@ -273,15 +273,20 @@ def test_list_notes_resolves_reported_refs_live(
     scratchpads.stamp_reported(
         kit_target, "sent-note", ("owner/repo#7", "owner/repo#8")
     )
-    states = {"owner/repo#7": "closed", "owner/repo#8": "open"}
-    monkeypatch.setattr(scratchpads, "resolve_ref_state", lambda ref: states[ref])
+    resolved = {
+        "owner/repo#7": scratchpads.ReportedRefState(
+            "owner/repo#7", "closed", title="the fix",
+            url="https://github.com/owner/repo/issues/7",
+        ),
+        "owner/repo#8": scratchpads.ReportedRefState("owner/repo#8", "open"),
+    }
+    monkeypatch.setattr(scratchpads, "resolve_ref", lambda ref: resolved[ref])
     entries = scratchpads.list_notes(kit_target)
     by_folder = {e.folder: e for e in entries}
     assert by_folder["active"].name == "2026-08-10-plain-note.md"
     reported = by_folder["reported"]
-    assert [(r.ref, r.state) for r in reported.refs] == [
-        ("owner/repo#7", "closed"), ("owner/repo#8", "open"),
-    ]
+    # title + url ride the same resolve as the state (#678)
+    assert reported.refs == (resolved["owner/repo#7"], resolved["owner/repo#8"])
     assert reported.drifted is False
 
 
@@ -292,20 +297,29 @@ def test_list_notes_offline_degrades_to_unknown(
     scratchpads.stamp_reported(kit_target, "my-note", ("owner/repo#7",))
     monkeypatch.setattr(scratchpads, "_gh_json", lambda args: None)  # offline
     entries = scratchpads.list_notes(kit_target)
-    assert entries[0].refs[0].state == "unknown"
+    # offline: state unknown, no title/url (the render degrades to ref + state)
+    assert entries[0].refs[0] == scratchpads.ReportedRefState("owner/repo#7", "unknown")
 
 
-def test_resolve_ref_state_reads_gh(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_resolve_ref_reads_state_title_url_in_one_gh_read(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     captured: dict = {}
 
     def fake(args):
         captured["args"] = args
-        return {"state": "CLOSED"}
+        return {"state": "CLOSED", "title": "the fix",
+                "url": "https://github.com/owner/repo/issues/7"}
 
     monkeypatch.setattr(scratchpads, "_gh_json", fake)
-    assert scratchpads.resolve_ref_state("owner/repo#7") == "closed"
+    assert scratchpads.resolve_ref("owner/repo#7") == scratchpads.ReportedRefState(
+        "owner/repo#7", "closed", title="the fix",
+        url="https://github.com/owner/repo/issues/7",
+    )
     assert captured["args"][:4] == ["gh", "issue", "view", "7"]
     assert "owner/repo" in captured["args"]
+    # ONE read carries all three fields (#678) — no extra per-ref round-trip
+    assert "state,title,url" in captured["args"]
 
 
 # --- CLI: scratchpad reported ----------------------------------------
@@ -371,11 +385,21 @@ def test_cli_scratchpad_list_states_drift_and_retire_prompt(
     stamp.dst.write_text(
         stamp.dst.read_text(encoding="utf-8") + "\nedit\n", encoding="utf-8"
     )
-    monkeypatch.setattr(scratchpads, "resolve_ref_state", lambda ref: "closed")
+    monkeypatch.setattr(
+        scratchpads, "resolve_ref",
+        lambda ref: scratchpads.ReportedRefState(
+            ref, "closed", title="the fix",
+            url="https://github.com/owner/repo/issues/7",
+        ),
+    )
     res = CliRunner().invoke(main, ["scratchpad", "list"])
     assert res.exit_code == 0, res.output
     assert "active/" in res.output and "2026-08-10-plain-note.md" in res.output
-    assert "owner/repo#7 (closed)" in res.output
+    # a resolved ref renders state + title + url in one row (#678)
+    assert (
+        "owner/repo#7 (closed) the fix  (https://github.com/owner/repo/issues/7)"
+        in res.output
+    )
     assert "[modified since reported]" in res.output
     # all refs closed → the retire prompt names the exact done command
     assert (
@@ -389,7 +413,10 @@ def test_cli_scratchpad_list_open_refs_no_retire_prompt(
 ) -> None:
     _stamp_note(cli_target)
     scratchpads.stamp_reported(cli_target, "my-note", ("owner/repo#7",))
-    monkeypatch.setattr(scratchpads, "resolve_ref_state", lambda ref: "open")
+    monkeypatch.setattr(
+        scratchpads, "resolve_ref",
+        lambda ref: scratchpads.ReportedRefState(ref, "open"),
+    )
     res = CliRunner().invoke(main, ["scratchpad", "list"])
     assert res.exit_code == 0, res.output
     assert "owner/repo#7 (open)" in res.output
@@ -401,10 +428,13 @@ def test_cli_scratchpad_list_unknown_renders_state_unknown(
 ) -> None:
     _stamp_note(cli_target)
     scratchpads.stamp_reported(cli_target, "my-note", ("owner/repo#7",))
-    monkeypatch.setattr(scratchpads, "resolve_ref_state", lambda ref: "unknown")
+    monkeypatch.setattr(scratchpads, "_gh_json", lambda args: None)  # offline
     res = CliRunner().invoke(main, ["scratchpad", "list"])
     assert res.exit_code == 0, res.output
+    # the offline degrade is ref + state exactly as before #678 — no
+    # empty-title/url artefacts on the row
     assert "owner/repo#7 (state unknown)" in res.output
+    assert "http" not in res.output
     assert "retire with" not in res.output  # unknown never counts as closed
 
 

@@ -671,10 +671,7 @@ def _run_report_list(*, tree: bool = False) -> None:
             return
         click.echo(f"Your reports to {REPORT_TARGET}:\n")
         for r, tracked in rows:
-            click.echo(
-                f"  #{r.number:<5} {r.kind:<15} {r.state:<12}"
-                f" {_report_title(r, note=notes.get(r.number))}"
-            )
+            click.echo(f"  {_report_row(r, _report_title(r, note=notes.get(r.number)))}")
             for n, fix in tracked.items():
                 click.echo(f"      └ {_tracked_fix_row(n, fix)}")
         return
@@ -687,10 +684,16 @@ def _run_report_list(*, tree: bool = False) -> None:
         return
     click.echo(f"Your reports to {REPORT_TARGET}:\n")
     for r in reports:
-        click.echo(
-            f"  #{r.number:<5} {r.kind:<15} {r.state:<12}"
-            f" {_report_title(r, note=notes.get(r.number))}"
-        )
+        click.echo(f"  {_report_row(r, _report_title(r, note=notes.get(r.number)))}")
+
+
+def _report_row(r, title: str) -> str:
+    """One report-list row (#678): number + kind + state + the rendered
+    `title`, plus the report's OWN issue URL when the list query resolved it —
+    so a row links straight to its issue, matching the tracked-fix rollup.
+    A summary without a URL renders without the parenthetical."""
+    row = f"#{r.number:<5} {r.kind:<15} {r.state:<12} {title}"
+    return f"{row}  ({r.url})" if r.url else row
 
 
 def _report_title(r, note: str | None = None) -> str:
@@ -815,13 +818,10 @@ def _run_inbox_list(target: str, *, kind: str | None, group_by: str | None) -> N
         for project in sorted(by_project):
             click.echo(f"  {project}")
             for r in by_project[project]:
-                click.echo(
-                    f"    #{r.number:<5} {r.kind:<15} {r.state:<12}"
-                    f" {_inbox_title(r)}"
-                )
+                click.echo(f"    {_report_row(r, _inbox_title(r))}")
         return
     for r in reports:
-        click.echo(f"  #{r.number:<5} {r.kind:<15} {r.state:<12} {_inbox_title(r)}")
+        click.echo(f"  {_report_row(r, _inbox_title(r))}")
 
 
 def _inbox_title(r) -> str:
@@ -4389,8 +4389,7 @@ def scratchpad_list() -> None:
                 click.echo(f"  {entry.name}")
                 continue
             refs_text = ", ".join(
-                f"{r.ref} ({'state unknown' if r.state == 'unknown' else r.state})"
-                for r in entry.refs
+                _reported_ref_text(r) for r in entry.refs
             ) or "(no refs recorded)"
             drift = "  [modified since reported]" if entry.drifted else ""
             click.echo(f"  {entry.name}  -> {refs_text}{drift}")
@@ -4400,6 +4399,17 @@ def scratchpad_list() -> None:
                     "      all refs closed — retire with: pkit scratchpad done "
                     f"{scratchpads.note_slug(entry.name)} {produced}"
                 )
+
+
+def _reported_ref_text(r: scratchpads.ReportedRefState) -> str:
+    """One resolved ref in a `scratchpad list` row (#678): ref + state, plus
+    the issue's title and URL when the live read resolved them — so the
+    listing says WHAT was reported, matching the report side's rollup rows.
+    Offline/unresolved degrades to ref + state exactly as before."""
+    state = "state unknown" if r.state == "unknown" else r.state
+    if r.title or r.url:
+        return f"{r.ref} ({state}) {r.title}  ({r.url})"
+    return f"{r.ref} ({state})"
 
 
 def _cast_area_variant(value: str) -> AreaVariant:
