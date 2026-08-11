@@ -925,37 +925,57 @@ def _run_report(
     assume_yes: bool,
     scratchpad_note: str | None = None,
     workstream_override: str | None = None,
+    use_url: bool = False,
+    open_browser: bool = False,
 ) -> None:
-    """Reporter path. Default is **URL-first** (print a prefilled new-issue URL —
-    no `gh` needed, browser submit is the review gate). `--file` opts into a
-    `gh`-auto-file to the fixed distribution target, gated by an interactive
-    **target-naming confirm**; it degrades to the URL when `gh` isn't
-    authenticated or under `--yes`/autonomy (ADR-047: the foreign write never
-    auto-posts — the deliberate `--yes` asymmetry).
+    """Reporter path (#662 realization of ADR-047). The **API post is
+    primary**: with `gh` authenticated, the full payload (body + any overflow
+    comment) is shown once, the confirm names the target AND the posting
+    identity ("posts as @<gh login> to <owner/repo>"), and only then does the
+    `gh` post run — the note travels as the issue body, never URL-embedded.
+
+    The prefilled-URL form survives only where it is honest: no `gh` auth, or
+    an explicit `--url`/`--open` — and only within `URL_BUDGET` (over it the
+    form hard-fails at GitHub's edge, so the flow refuses with the API/stage
+    alternatives instead). The URL form always warns that the BROWSER's
+    logged-in account authors the submit. `--open` opens a within-budget form
+    directly (degrades to the printed URL).
+
+    `--yes`/autonomy **stages** the composed payload for the interactive-only
+    `pkit report submit` and prints one line — it never posts (ADR-047: the
+    deliberate `--yes` asymmetry, now stage-shaped). `--file` is kept as an
+    explicit gesture; the API post is the default whenever `gh` is
+    authenticated.
 
     `--scratchpad` inlines a note into the payload (COR-043): redaction-linted
-    at compose time on every path, oversize split into body-excerpt + ONE
-    overflow comment confirmed as a single gesture, and stamped `reported`
-    only on a fully-successful post — draft/URL paths stamp nothing. Every
+    at compose time on every path (findings ride a stage file's header as
+    warnings), oversize split into body-excerpt + ONE overflow comment
+    confirmed as a single gesture, and stamped `reported` only on a
+    fully-successful post — staged/URL paths stamp nothing at compose. Every
     path carries the project/workstream context (ADR-050): line + marker +
     title parenthetical, stamped into the reported note's frontmatter."""
     from project_kit.report import (
         REPORT_TARGET,
+        URL_BUDGET,
         SendPayload,
         attach_note,
         build_new_issue_url,
         compose_report,
-        file_report_via_gh,
+        current_login,
         gh_authenticated,
         lint_redaction,
-        post_issue_comment,
+        render_finding,
+        stage_report,
     )
 
+    del do_file  # accepted for compatibility — the API post is now the default
     target_root = find_target_root() or Path.cwd()
     _warn_reported_drift(target_root)
+    want_url = use_url or open_browser
+    gh_ok = gh_authenticated()
     # Interactive = the path that can actually post (the prompt-once name flow
-    # runs only there; --yes / draft / no-auth paths resolve silently).
-    interactive = do_file and not assume_yes and gh_authenticated()
+    # runs only there; --yes / URL / no-auth paths resolve silently).
+    interactive = not assume_yes and not want_url and gh_ok
     project, ws = _resolve_report_context(
         target_root, workstream_override=workstream_override,
         interactive=interactive,
@@ -986,77 +1006,192 @@ def _run_report(
             REPORT_TARGET, title=title, body=payload.body, label=kind
         )
 
-    if do_file and assume_yes:
-        _echo_redaction_warnings(findings)
-        _echo_url_first(
-            kind, url, REPORT_TARGET,
-            note="--yes: not auto-posting a public foreign issue (ADR-047). Draft "
-            "below to review + submit.",
+    if assume_yes:
+        # ADR-047 asymmetry: autonomy stages, it NEVER posts. One short line —
+        # the whole hand-off an agent needs to surface (#662).
+        draft = stage_report(
+            target_root, kind=kind, title=title, payload=payload,
+            findings=findings, note_path=note_path, project=project,
+            workstream=ws,
         )
-        _echo_overflow_draft_note(payload)
+        click.echo(f"staged: pkit report submit {draft.draft_id}")
         return
-    if do_file and not gh_authenticated():
-        _echo_redaction_warnings(findings)
-        _echo_url_first(
-            kind, url, REPORT_TARGET,
-            note="gh is not authenticated — falling back to the prefilled URL.",
+
+    if want_url or not gh_ok:
+        _run_report_url_path(
+            kind, url, payload, findings,
+            gh_ok=gh_ok, explicit=want_url, open_browser=open_browser,
         )
-        _echo_overflow_draft_note(payload)
         return
-    if do_file:
-        if findings and not _confirm_past_redaction_findings(findings):
-            click.echo("Not posted — edit the note and re-run.")
-            return
-        click.echo(
-            f"This posts a PUBLIC {kind} issue to {REPORT_TARGET} under your gh "
-            "identity, with this body:\n"
+
+    # API-primary gated path: gh authenticated, interactive.
+    if findings and not _confirm_past_redaction_findings(
+        [render_finding(f) for f in findings]
+    ):
+        click.echo("Not posted — edit the note and re-run.")
+        return
+    if _confirm_send_payload(kind, payload, current_login()):
+        outcome = _post_confirmed_payload(
+            target_root, kind=kind, title=title, payload=payload,
+            note_path=note_path, project=project, workstream=ws,
         )
-        click.echo(payload.body)
-        if payload.overflow_comment is not None:
-            click.echo(
-                "\n…plus ONE overflow comment on the same issue, carrying the "
-                "full note text (the body above holds an excerpt — one logical "
-                "send, per ADR-047):\n"
-            )
-            click.echo(payload.overflow_comment)
-        if click.confirm(f"\nPost to {REPORT_TARGET}?", default=False):
-            posted = file_report_via_gh(
-                REPORT_TARGET, title=title, body=payload.body, label=kind
-            )
-            if not posted:
+        if outcome == "failed":
+            if len(url) <= URL_BUDGET:
                 _echo_url_first(
                     kind, url, REPORT_TARGET,
                     note="\ngh could not file it — use the prefilled URL instead:",
                 )
-                return
-            if payload.overflow_comment is not None:
-                ok, error = post_issue_comment(
-                    REPORT_TARGET, posted, payload.overflow_comment
+                _echo_browser_identity_warning()
+            else:
+                draft = stage_report(
+                    target_root, kind=kind, title=title, payload=payload,
+                    findings=findings, note_path=note_path, project=project,
+                    workstream=ws,
                 )
-                if not ok:
-                    click.echo(
-                        f"\n[warn] issue created at {posted}, but the overflow "
-                        "comment FAILED — the send did not complete as confirmed "
-                        "(ADR-047), so the note was NOT stamped reported."
-                    )
-                    click.echo(f"gh error: {error}")
-                    click.echo(
-                        "Remediation: post the full note text as a comment on "
-                        f"{posted} (retry `gh issue comment`, or edit the issue), "
-                        "then stamp manually with `pkit scratchpad reported`."
-                    )
-                    return
-            click.echo(f"\n[ok] filed: {posted}")
-            _stamp_reported_after_post(
-                target_root, note_path, posted, project=project, workstream=ws
-            )
-            return
-        _echo_url_first(kind, url, REPORT_TARGET, note="\nNot posted.")
+                click.echo(
+                    "\ngh could not file it — staged for retry: "
+                    f"pkit report submit {draft.draft_id}"
+                )
         return
+    if len(url) <= URL_BUDGET:
+        _echo_url_first(kind, url, REPORT_TARGET, note="\nNot posted.")
+        _echo_browser_identity_warning()
+    else:
+        click.echo("\nNot posted — edit and re-run when ready.")
 
-    _echo_redaction_warnings(findings)
-    _echo_url_first(kind, url, REPORT_TARGET)
+
+def _run_report_url_path(
+    kind: str,
+    url: str,
+    payload,
+    findings: list,
+    *,
+    gh_ok: bool,
+    explicit: bool,
+    open_browser: bool,
+) -> None:
+    """The URL survivor path (#662): honest only without `gh` auth or on an
+    explicit `--url`/`--open`, and only within `URL_BUDGET` — over it the
+    prefilled form hard-fails at GitHub's edge, so refuse with the working
+    alternatives instead of printing a URL that cannot be opened. Always warns
+    that the browser's logged-in account authors the submit."""
+    from project_kit.report import (
+        REPORT_TARGET,
+        URL_BUDGET,
+        open_in_browser,
+        render_finding,
+    )
+
+    if len(url) > URL_BUDGET:
+        alternative = (
+            "Re-run without --url/--open to review + post via gh (the "
+            "confirmed API path)."
+            if gh_ok
+            else "Authenticate gh (`gh auth login`) for the confirmed API "
+            "path, or run with --yes to stage and have someone submit with "
+            "`pkit report submit <id>`."
+        )
+        raise click.ClickException(
+            f"the prefilled URL is {len(url)} chars — over the {URL_BUDGET}-char "
+            "budget GitHub's edge accepts (longer request lines fail with "
+            f"HTTP 414), so the browser form cannot carry this report. "
+            f"{alternative}"
+        )
+    _echo_redaction_warnings([render_finding(f) for f in findings])
+    note = "" if explicit else (
+        "gh is not authenticated — falling back to the prefilled URL."
+    )
+    _echo_url_first(kind, url, REPORT_TARGET, note=note)
+    _echo_browser_identity_warning()
     _echo_overflow_draft_note(payload)
+    if open_browser:
+        if open_in_browser(url):
+            click.echo(
+                "\nOpened in your browser — check the signed-in account "
+                "before submitting."
+            )
+        else:
+            click.echo("\nCould not open a browser — copy the URL above.")
+
+
+def _confirm_send_payload(kind: str, payload, login: str | None) -> bool:
+    """Show the FULL send payload (body + any overflow comment) once and
+    confirm it as a single gesture, naming both the target and the posting
+    identity (#662 — the identity is surfaced so a CLI-vs-browser split can
+    never misattribute an API post)."""
+    from project_kit.report import REPORT_TARGET
+
+    who = f"@{login}" if login else "your gh CLI identity (login unresolved)"
+    click.echo(
+        f"This posts a PUBLIC {kind} issue to {REPORT_TARGET} as {who} — your "
+        "gh CLI identity — with this body:\n"
+    )
+    click.echo(payload.body)
+    if payload.overflow_comment is not None:
+        click.echo(
+            "\n…plus ONE overflow comment on the same issue, carrying the "
+            "full note text (the body above holds an excerpt — one logical "
+            "send, per ADR-047):\n"
+        )
+        click.echo(payload.overflow_comment)
+    return click.confirm(f"\nPost as {who} to {REPORT_TARGET}?", default=False)
+
+
+def _post_confirmed_payload(
+    target_root: Path,
+    *,
+    kind: str,
+    title: str,
+    payload,
+    note_path: Path | None,
+    project: str | None,
+    workstream: str | None,
+) -> str:
+    """Execute an already-confirmed send: post the issue, post the overflow
+    comment (one logical send, ADR-047), stamp the attached note `reported`.
+    Returns `"failed"` (issue not created — the caller names its fallback),
+    `"incomplete"` (issue created, overflow comment failed — fail-closed:
+    nothing stamped, remediation printed), or `"complete"`."""
+    from project_kit.report import REPORT_TARGET, file_report_via_gh, post_issue_comment
+
+    posted = file_report_via_gh(
+        REPORT_TARGET, title=title, body=payload.body, label=kind
+    )
+    if not posted:
+        return "failed"
+    if payload.overflow_comment is not None:
+        ok, error = post_issue_comment(
+            REPORT_TARGET, posted, payload.overflow_comment
+        )
+        if not ok:
+            click.echo(
+                f"\n[warn] issue created at {posted}, but the overflow "
+                "comment FAILED — the send did not complete as confirmed "
+                "(ADR-047), so the note was NOT stamped reported."
+            )
+            click.echo(f"gh error: {error}")
+            click.echo(
+                "Remediation: post the full note text as a comment on "
+                f"{posted} (retry `gh issue comment`, or edit the issue), "
+                "then stamp manually with `pkit scratchpad reported`."
+            )
+            return "incomplete"
+    click.echo(f"\n[ok] filed: {posted}")
+    _stamp_reported_after_post(
+        target_root, note_path, posted, project=project, workstream=workstream
+    )
+    return "complete"
+
+
+def _echo_browser_identity_warning() -> None:
+    """The browser-identity trap, surfaced on every URL-form print (#662 —
+    the CLI composes under the gh identity, but the browser submits as
+    whoever is logged in THERE; #659 landed misattributed exactly this way)."""
+    click.echo(
+        "\nNote: the browser form submits as WHOEVER YOUR BROWSER IS LOGGED "
+        "IN AS — check the signed-in account before submitting (it can "
+        "silently differ from your gh CLI identity)."
+    )
 
 
 def _warn_reported_drift(target_root: Path) -> None:
@@ -1071,24 +1206,27 @@ def _warn_reported_drift(target_root: Path) -> None:
         )
 
 
-def _echo_redaction_warnings(findings: list) -> None:
-    """Draft-path form of the redaction lint: findings ride as warnings."""
-    if not findings:
+def _echo_redaction_warnings(warnings: list[str]) -> None:
+    """Draft-path form of the redaction lint: findings ride as warnings.
+    Takes rendered lines (`report.render_finding`) so the stage-file header's
+    stored warnings flow through the same surface."""
+    if not warnings:
         return
     click.echo(
         "Warning: possible un-redacted content in the attached note — review "
         "before filing:"
     )
-    for f in findings:
-        click.echo(f"  line {f.line}: {f.pattern}: {f.excerpt}")
+    for line in warnings:
+        click.echo(f"  {line}")
     click.echo("")
 
 
-def _confirm_past_redaction_findings(findings: list) -> bool:
-    """Interactive form of the redaction lint: edit-or-send-anyway."""
+def _confirm_past_redaction_findings(warnings: list[str]) -> bool:
+    """Interactive form of the redaction lint: edit-or-send-anyway. Takes
+    rendered lines, same as `_echo_redaction_warnings`."""
     click.echo("Possible un-redacted content in the attached note:")
-    for f in findings:
-        click.echo(f"  line {f.line}: {f.pattern}: {f.excerpt}")
+    for line in warnings:
+        click.echo(f"  {line}")
     return click.confirm(
         "\nSend anyway? (decline to edit the note first)", default=False
     )
@@ -1157,12 +1295,25 @@ _REPORT_OPTS = [
     click.option("--body", "prose", required=True, help="The report text (prose)."),
     click.option(
         "--file", "do_file", is_flag=True, default=False,
-        help="Opt into filing via `gh` (after a confirm) instead of printing a URL.",
+        help="Post via `gh` after the confirm. Now the default whenever `gh` is "
+        "authenticated; kept as an explicit gesture.",
+    ),
+    click.option(
+        "--url", "use_url", is_flag=True, default=False,
+        help="Use the prefilled browser-URL form instead of the gh post (within "
+        "the URL budget only — an oversized report is refused with the API/stage "
+        "alternatives; the BROWSER's logged-in account authors the submit).",
+    ),
+    click.option(
+        "--open", "open_browser", is_flag=True, default=False,
+        help="Open the prefilled form in your browser (implies --url; degrades "
+        "to printing the URL).",
     ),
     click.option(
         "--yes", "assume_yes", is_flag=True, default=False,
-        help="Non-interactive. For --file, degrades to the draft URL — the foreign "
-        "write is never auto-posted (ADR-047).",
+        help="Non-interactive: STAGE the composed payload for `pkit report "
+        "submit` — the foreign write is never auto-posted (ADR-047: --yes "
+        "stages, never posts).",
     ),
     click.option(
         "--on-behalf-of", default=None,
@@ -1196,37 +1347,37 @@ def _with_report_opts(fn):
 @report.command("bug")
 @_with_report_opts
 def report_bug(
-    title: str, prose: str, do_file: bool, assume_yes: bool,
-    on_behalf_of: str | None, include_private: bool, scratchpad_note: str | None,
-    workstream_override: str | None,
+    title: str, prose: str, do_file: bool, use_url: bool, open_browser: bool,
+    assume_yes: bool, on_behalf_of: str | None, include_private: bool,
+    scratchpad_note: str | None, workstream_override: str | None,
 ) -> None:
     """File a structured bug report to project-kit."""
     _run_report(
         "bug", title, prose, on_behalf_of, include_private, do_file, assume_yes,
-        scratchpad_note, workstream_override,
+        scratchpad_note, workstream_override, use_url, open_browser,
     )
 
 
 @report.command("feedback")
 @_with_report_opts
 def report_feedback(
-    title: str, prose: str, do_file: bool, assume_yes: bool,
-    on_behalf_of: str | None, include_private: bool, scratchpad_note: str | None,
-    workstream_override: str | None,
+    title: str, prose: str, do_file: bool, use_url: bool, open_browser: bool,
+    assume_yes: bool, on_behalf_of: str | None, include_private: bool,
+    scratchpad_note: str | None, workstream_override: str | None,
 ) -> None:
     """File freeform feedback to project-kit."""
     _run_report(
         "feedback", title, prose, on_behalf_of, include_private, do_file,
-        assume_yes, scratchpad_note, workstream_override,
+        assume_yes, scratchpad_note, workstream_override, use_url, open_browser,
     )
 
 
 @report.command("change-request")
 @_with_report_opts
 def report_change_request(
-    title: str, prose: str, do_file: bool, assume_yes: bool,
-    on_behalf_of: str | None, include_private: bool, scratchpad_note: str | None,
-    workstream_override: str | None,
+    title: str, prose: str, do_file: bool, use_url: bool, open_browser: bool,
+    assume_yes: bool, on_behalf_of: str | None, include_private: bool,
+    scratchpad_note: str | None, workstream_override: str | None,
 ) -> None:
     """File a change/feature request to project-kit.
 
@@ -1237,8 +1388,98 @@ def report_change_request(
     """
     _run_report(
         "change-request", title, prose, on_behalf_of, include_private,
-        do_file, assume_yes, scratchpad_note, workstream_override,
+        do_file, assume_yes, scratchpad_note, workstream_override, use_url,
+        open_browser,
     )
+
+
+@report.command("submit")
+@click.argument("draft_id", required=False)
+@click.option(
+    "--yes", "assume_yes", is_flag=True, default=False,
+    help="Refused. submit is the human half of the stage+submit split and "
+    "never runs non-interactively (ADR-047: autonomy stages, only a human "
+    "posts).",
+)
+def report_submit(draft_id: str | None, assume_yes: bool) -> None:
+    """(Human) Review + post a staged report draft; bare lists the drafts.
+
+    The consuming half of the agent-stage + human-submit split (#662): a
+    `--yes` compose stages its full payload under the gitignored
+    `.pkit/scratchpad/.report-drafts/`; this verb loads it, re-surfaces the
+    compose-time redaction warnings, shows the whole payload (body + any
+    overflow comment), names the posting identity and target, and posts via
+    `gh` only on an explicit confirm — then stamps/tracks exactly as a direct
+    post (COR-043) and removes the stage file. Interactive-only: `--yes` is
+    refused, so ADR-047's never-auto-post gate survives the new realization.
+    """
+    from project_kit.report import (
+        DRAFTS_RELPATH,
+        current_login,
+        gh_authenticated,
+        list_staged,
+        load_staged,
+    )
+
+    target_root = find_target_root() or Path.cwd()
+    if draft_id is None:
+        drafts = list_staged(target_root)
+        if not drafts:
+            click.echo(
+                "No staged report drafts — `pkit report <kind> … --yes` "
+                "stages one."
+            )
+            return
+        click.echo(f"Staged report drafts ({DRAFTS_RELPATH}):\n")
+        for d in drafts:
+            warn = (
+                f"  [{len(d.warnings)} redaction warning(s)]" if d.warnings else ""
+            )
+            click.echo(f"  {d.draft_id:<28} {d.kind:<15} {d.title}{warn}")
+        click.echo("\nReview + post one with `pkit report submit <id>`.")
+        return
+    if assume_yes:
+        raise click.ClickException(
+            "submit never runs non-interactively — `--yes` stages "
+            "(`pkit report … --yes`), a human submits (ADR-047)."
+        )
+    draft = load_staged(target_root, draft_id)
+    if draft is None:
+        raise click.ClickException(
+            f"no staged draft {draft_id!r} — `pkit report submit` lists them."
+        )
+    if not gh_authenticated():
+        raise click.ClickException(
+            "submit posts via gh — authenticate first (`gh auth login`)."
+        )
+    if draft.warnings and not _confirm_past_redaction_findings(list(draft.warnings)):
+        click.echo("Not posted — draft kept; edit the source note and restage.")
+        return
+    if not _confirm_send_payload(draft.kind, draft.payload, current_login()):
+        click.echo(f"\nNot posted — draft kept ({draft.draft_id}).")
+        return
+    note_path = (target_root / draft.note) if draft.note else None
+    outcome = _post_confirmed_payload(
+        target_root, kind=draft.kind, title=draft.title, payload=draft.payload,
+        note_path=note_path, project=draft.project, workstream=draft.workstream,
+    )
+    if outcome == "failed":
+        click.echo(
+            f"\ngh could not file it — draft kept; retry `pkit report submit "
+            f"{draft.draft_id}`."
+        )
+        return
+    if outcome == "incomplete":
+        # The issue exists; the draft is kept ONLY as the source of the full
+        # overflow text for the manual remediation — resubmitting would file
+        # a duplicate issue.
+        click.echo(
+            f"Draft kept ({draft.draft_id}) as the source of the full text — "
+            "do NOT resubmit; retry the comment instead."
+        )
+        return
+    draft.path.unlink(missing_ok=True)
+    click.echo(f"Draft removed: {draft.draft_id}")
 
 
 @main.command()
