@@ -1,0 +1,15 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+body: >
+  `review-pr` now also delivers the reviewer verdict as a **native GitHub review**
+  (`APPROVED → gh pr review --approve`, `CHANGES_REQUESTED → --request-changes`),
+  not only the DEC-028 comment sentinel (#672, DEC-028 amended). The native review
+  is what shows in the PR UI and satisfies branch-protection "required approving
+  reviews" — closing the gap where an adopter's comment verdict didn't count and a
+  native review had to be hand-posted. The comment (with the `<!-- pkit-verdict -->`
+  marker) still drives `done-work`'s gate; the native review is added alongside it.
+  It **degrades to comment-only** when the reviewer identity is the PR author
+  (GitHub blocks self-approval of your own PR — native delivery is fully autonomous
+  only on a non-author / bot identity) or on any gh failure; `--no-native` opts out.

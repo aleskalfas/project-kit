@@ -114,6 +114,13 @@ def main() -> int:
         help=f"Default: <repo-root>/.pkit/capabilities/{CAPABILITY_NAME}/.",
     )
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument(
+        "--no-native", action="store_true",
+        help="Don't post a native GitHub review (APPROVE / REQUEST_CHANGES) — "
+        "only the comment verdict. Per DEC-028 (amended). The native review is "
+        "what shows in the PR UI and satisfies branch protection; it is skipped "
+        "automatically when you authored the PR (GitHub blocks self-approval).",
+    )
     session_guard.add_override_argument(parser)
     args = parser.parse_args()
 
@@ -238,6 +245,15 @@ def main() -> int:
 
         print(f"  [{name}] posted {verdict}")
 
+        # DEC-028 (amended): also deliver a NATIVE GitHub review carrying the
+        # verdict state, so it shows in the PR UI and satisfies branch-protection
+        # "required approving reviews". The comment above is what done-work's gate
+        # reads; the native review is the GitHub-facing signal. Best-effort — a
+        # failure or a self-approval degrade never fails review-pr (the comment
+        # verdict stands).
+        if not args.no_native:
+            _deliver_native_review(pr_number, verdict, comment, config)
+
     if failures > 0:
         return 3
     return 0
@@ -351,6 +367,70 @@ def _format_verdict_comment(name: str, verdict: str, body: str) -> str:
     first_line = f"Reviewer agent (local, {name}): {verdict}"
     composed = f"{first_line}\n\n{body.strip()}" if body.strip() else first_line
     return stamp_verdict(composed)
+
+
+# ---- native GitHub review delivery (DEC-028, amended) ----------------
+
+
+def _deliver_native_review(
+    pr_number: int, verdict: str, body: str, config: dict,
+) -> None:
+    """Post a native `gh pr review` carrying the verdict state (DEC-028, amended).
+
+    APPROVED → `--approve`, CHANGES_REQUESTED → `--request-changes`. The verdict
+    comment (already posted) carries the pkit gate marker; this native review is
+    the GitHub-facing state (PR UI + branch protection). Best-effort:
+
+    - **Self-approval degrade.** GitHub refuses to approve *or* request changes on
+      your own PR, so when the reviewer identity == the PR author, the native
+      review is skipped (the comment verdict stands). Native delivery is fully
+      autonomous only on a non-author / bot identity.
+    - **Failure degrade.** Any gh failure (permission, API) is reported and skipped
+      — never fails review-pr.
+    """
+    author = _gh_pr_author(pr_number, config)
+    me = _gh_current_login(config)
+    if author and me and author == me:
+        print(
+            f"  [native] skipped — you authored PR #{pr_number}; GitHub blocks a "
+            "native review of your own PR. The comment verdict stands."
+        )
+        return
+    event = "--approve" if verdict == "APPROVED" else "--request-changes"
+    proc = gh_run(
+        ["gh", "pr", "review", str(pr_number), event, "--body", body],
+        config, check=False,
+    )
+    if proc.returncode != 0:
+        print(
+            f"  [native] could not post native review ({proc.stderr.strip()}); "
+            "the comment verdict stands.",
+            file=sys.stderr,
+        )
+        return
+    state = "APPROVE" if verdict == "APPROVED" else "REQUEST_CHANGES"
+    print(f"  [native] posted native GitHub review ({state}).")
+
+
+def _gh_pr_author(pr_number: int, config: dict) -> str | None:
+    """The PR author's login, or None if it can't be determined."""
+    proc = gh_run(
+        ["gh", "pr", "view", str(pr_number), "--json", "author"], config, check=False,
+    )
+    if proc.returncode != 0:
+        return None
+    try:
+        return (json.loads(proc.stdout).get("author") or {}).get("login") or None
+    except (ValueError, KeyError):
+        return None
+
+
+def _gh_current_login(config: dict) -> str | None:
+    """The authenticated gh user's login, or None if it can't be determined."""
+    proc = gh_run(["gh", "api", "user", "--jq", ".login"], config, check=False)
+    if proc.returncode != 0:
+        return None
+    return proc.stdout.strip() or None
 
 
 # ---- required-set resolution (DEC-032 D1/D4) -------------------------
