@@ -1,0 +1,11 @@
+component: backbone
+kind: none
+custom:
+  category: Changed
+body: >
+  COR-044 accepted: process authoring ships at core as a three-tier layer —
+  deterministic authoring commands under the `pkit process` namespace, a
+  composite skill for the declarative shape, and an owner-scoped
+  `process-author` agent for the teeth. Design-ahead (`none`): the record fixes
+  the shape and the sign-off rulings; no adopter-observable surface changes
+  until the implementing tasks land, each of which carries its own changeset.
