@@ -1,7 +1,7 @@
 ---
 id: DEC-049
 title: Audit/journal model — engine journal is canonical, GitHub comments are a configurable provenance-stamped projection
-status: proposed
+status: accepted
 date: 2026-08-12
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
