@@ -595,10 +595,10 @@ _RESOLVE_NONE = (
 )
 
 
-def _implement_seams(repo: Path) -> None:
-    """Replace the scaffolded stubs with working implementations: file-backed
-    detection, a determinate candidate source, and a resolve that answers
-    explicit absence — a fully INTERPRETABLE contract with real misses."""
+def _implement_upstream_side(repo: Path) -> None:
+    """Implement everything EXCEPT the downstream `resolve` seam: file-backed
+    detection and a determinate candidate source. `resolve` stays the
+    scaffolded stub."""
     design_scripts = repo / ".pkit" / "capabilities" / "design" / "scripts"
     for state in ("drafting", "ready"):
         script = design_scripts / f"screen_detect_{state}.py"
@@ -609,11 +609,20 @@ def _implement_seams(repo: Path) -> None:
     (delivery_scripts / "unit_handoff_candidates.py").write_text(
         _CANDIDATES_OK, encoding="utf-8"
     )
-    (delivery_scripts / "unit_handoff_resolve.py").write_text(
-        _RESOLVE_NONE, encoding="utf-8"
-    )
     for script in (*design_scripts.iterdir(), *delivery_scripts.iterdir()):
         script.chmod(script.stat().st_mode | stat.S_IXUSR)
+
+
+def _implement_seams(repo: Path) -> None:
+    """Replace the scaffolded stubs with working implementations: file-backed
+    detection, a determinate candidate source, and a resolve that answers
+    explicit absence — a fully INTERPRETABLE contract with real misses."""
+    _implement_upstream_side(repo)
+    resolve = (
+        repo / ".pkit" / "capabilities" / "delivery" / "scripts" / "unit_handoff_resolve.py"
+    )
+    resolve.write_text(_RESOLVE_NONE, encoding="utf-8")
+    resolve.chmod(resolve.stat().st_mode | stat.S_IXUSR)
 
 
 @pytest.fixture
@@ -708,15 +717,121 @@ def test_interpretation_only_consumes_the_health_walker(
 
 
 def test_interpretation_only_module_has_no_second_walker() -> None:
-    # The render half of the variant lives beside the walker and calls no
-    # walk of its own: the interpretation renderers consume a HealthReport.
+    # The variant lives beside the walker and calls no walk of its own: the
+    # view builder and both renderers consume a HealthReport.
     import inspect
 
-    for renderer in (ph.render_interpretation_narrative, ph.render_interpretation_json):
-        source = inspect.getsource(renderer)
+    for consumer in (
+        ph.build_interpretation,
+        ph.render_interpretation_narrative,
+        ph.render_interpretation_json,
+    ):
+        source = inspect.getsource(consumer)
         assert "build_report" not in source
         assert "collect_contracts" not in source
         assert "evaluate_contract" not in source
+
+
+# --- the STATIC seam check: interpretability can't depend on who's at the
+# trigger (COR-044's done-signal) -------------------------------------------
+
+
+@pytest.fixture
+def unexercised_contract_repo(authoring_repo: Path) -> Path:
+    """The authored pair with a declared contract, an EMPTY candidate set, and
+    the `resolve` seam still the scaffolded stub.
+
+    Nobody is at the trigger, so the walk never runs `resolve` — the case where
+    a purely runtime interpretability check has nothing to say."""
+    _stamp_screen(authoring_repo)
+    _stamp_unit(authoring_repo)
+    _couple_unit(authoring_repo)
+    _handoff_unit(authoring_repo)
+    _implement_upstream_side(authoring_repo)
+    (authoring_repo / "_screens").write_text("", encoding="utf-8")
+    return authoring_repo
+
+
+def test_interpretation_only_catches_an_unexercised_stub_seam(
+    unexercised_contract_repo, monkeypatch
+) -> None:
+    # The done-signal must not read green on a seam that was never written just
+    # because no subject happened to exercise it.
+    result = _invoke_health(
+        unexercised_contract_repo, monkeypatch, "--interpretation-only"
+    )
+    assert result.exit_code == 1, result.output
+    assert "resolve seam" in result.output
+    assert "still the scaffolded stub" in result.output
+
+
+def test_default_health_contract_is_untouched_by_the_static_check(
+    unexercised_contract_repo, monkeypatch
+) -> None:
+    # COR-042's exit contract is misses + RUNTIME indeterminates. The static
+    # seam check belongs to the authoring view only: the same reality that
+    # fails --interpretation-only leaves the default run clean.
+    result = _invoke_health(unexercised_contract_repo, monkeypatch)
+    assert result.exit_code == 0, result.output
+    assert "0 missed, 0 indeterminate" in result.output
+
+
+def test_interpretation_only_clean_when_seams_are_implemented_and_idle(
+    unexercised_contract_repo, monkeypatch
+) -> None:
+    # The converse: fully implemented seams with an empty candidate set is the
+    # authoring done-state, and it reports clean.
+    _implement_seams(unexercised_contract_repo)
+    result = _invoke_health(
+        unexercised_contract_repo, monkeypatch, "--interpretation-only"
+    )
+    assert result.exit_code == 0, result.output
+    assert "0 indeterminate" in result.output
+    assert "interpretable" in result.output
+
+
+def test_interpretation_only_reports_missing_and_unregistered_seams(
+    unexercised_contract_repo, monkeypatch
+) -> None:
+    _implement_seams(unexercised_contract_repo)
+    scripts = unexercised_contract_repo / ".pkit" / "capabilities" / "delivery" / "scripts"
+    (scripts / "unit_handoff_resolve.py").unlink()
+    result = _invoke_health(
+        unexercised_contract_repo, monkeypatch, "--interpretation-only"
+    )
+    assert result.exit_code == 1, result.output
+    assert "not on disk" in result.output
+
+    # Drop the registration too: the seam then names a command the declaring
+    # capability does not register.
+    package = unexercised_contract_repo / ".pkit" / "capabilities" / "delivery" / "package.yaml"
+    package.write_text(
+        package.read_text(encoding="utf-8").replace(
+            "unit-handoff-resolve", "unit-handoff-resolve-renamed"
+        ),
+        encoding="utf-8",
+    )
+    result = _invoke_health(
+        unexercised_contract_repo, monkeypatch, "--interpretation-only"
+    )
+    assert result.exit_code == 1, result.output
+    assert "does not register" in result.output
+
+
+def test_interpretation_json_carries_the_static_findings(
+    unexercised_contract_repo, monkeypatch
+) -> None:
+    result = _invoke_health(
+        unexercised_contract_repo, monkeypatch, "--interpretation-only", "--json"
+    )
+    assert result.exit_code == 1
+    payload = json.loads(result.output)
+    assert payload["totals"]["indeterminate"] == 1
+    (contract,) = payload["contracts"]
+    (finding,) = contract["indeterminate"]
+    assert finding["subject"] is None
+    assert "scaffolded stub" in finding["reason"]
+    assert "misses" not in json.dumps(payload)
 
 
 def test_full_stack_via_cli_commands(authoring_repo: Path, monkeypatch) -> None:

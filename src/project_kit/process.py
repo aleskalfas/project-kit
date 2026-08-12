@@ -201,6 +201,18 @@ class ProcessError(Exception):
 # --- predicate evaluation -------------------------------------------------
 
 
+# The token a SCAFFOLDED, not-yet-implemented predicate script carries (written
+# by the authoring stamp, read by the interpretation check). It lives here, with
+# the predicate-runner contract, because writer and reader sit on opposite sides
+# of the substrate and neither owns the vocabulary: the stamp writes it into
+# every stub it scaffolds, the author deletes it when the predicate becomes
+# real, and a static check can then tell "declared but never written" from
+# "written and merely failing". Language-neutral — any comment syntax can carry
+# it — and never consulted at RUN time: the engine's judgement of a predicate is
+# always its live fail-closed outcome, never a marker in its source.
+PREDICATE_STUB_MARKER = "pkit:predicate-stub-unimplemented"
+
+
 @dataclass(frozen=True)
 class PredicateOutcome:
     """The engine's verdict on one predicate evaluation.

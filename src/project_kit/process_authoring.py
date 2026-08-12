@@ -52,6 +52,7 @@ from jsonschema import Draft202012Validator
 from ruamel.yaml import YAML
 
 from project_kit.process import (
+    PREDICATE_STUB_MARKER,
     ProcessDefinition,
     ProcessError,
     _load_command_registry,
@@ -248,6 +249,11 @@ predicate over reality. The contract it must follow (COR-033 engine contract,
 
 Until implemented this stub EXITS NON-ZERO (indeterminate, fail-closed) so an
 unwritten predicate can never read as green.
+
+{marker} — DELETE this line once the predicate is
+implemented. `pkit process health --interpretation-only` reads it statically to
+tell "seam declared but never written" from "seam written and merely failing",
+so a seam no subject currently exercises still reports honestly.
 """
 import json
 import sys
@@ -291,6 +297,7 @@ def _stub_body(
         operation=operation,
         subject_note=subject_note,
         payload=_STUB_PAYLOADS[payload_key],
+        marker=PREDICATE_STUB_MARKER,
     )
 
 

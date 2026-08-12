@@ -4698,8 +4698,16 @@ def process_health(
     SAME walk (never a parallel contract-walker, COR-042 point 5) but reports
     only the interpretability half — indeterminates — and counts NO misses (a
     fresh, correct contract routinely reports real misses; miss-count is never
-    the authoring done-signal). With the flag, the exit code is non-zero on
-    any indeterminate only. The default run's exit contract is unchanged.
+    the authoring done-signal). It also checks BOTH seams statically — declared
+    command registered, script present, no longer the scaffolded stub — so the
+    answer does not depend on which subjects happen to sit at the trigger. With
+    the flag, the exit code is non-zero on any indeterminate only. The default
+    run's exit contract is unchanged.
+
+    \b
+    Scope it with --process <addr> when the question is "is MY contract done?":
+    the bare form walks every contract in the project, so someone else's
+    unimplemented seam would hold your done-signal red.
     """
     from project_kit import process as process_mod
     from project_kit import process_health as ph
@@ -4711,11 +4719,12 @@ def process_health(
         raise click.ClickException(str(exc)) from exc
 
     if interpretation_only:
+        interpretation = ph.build_interpretation(report)
         if as_json:
-            click.echo(ph.render_interpretation_json(report), nl=False)
+            click.echo(ph.render_interpretation_json(interpretation), nl=False)
         else:
-            click.echo(ph.render_interpretation_narrative(report), nl=False)
-        if report.indeterminate_total > 0:
+            click.echo(ph.render_interpretation_narrative(interpretation), nl=False)
+        if not interpretation.ok:
             raise SystemExit(1)
         return
 
