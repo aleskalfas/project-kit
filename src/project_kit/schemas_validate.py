@@ -26,12 +26,26 @@ Both passes contribute issues to the report. The resolver pass is
 controlled by the `resolve` parameter (default True) so an author
 mid-refactor can run shape-only via `pkit schemas validate --shape-only`.
 
+A third check covers **pointered instances**: a YAML declaring an
+external `$schema` (a `# yaml-language-server: $schema=<path>` directive
+or a top-level `$schema:` key, per COR-023) that names a schema *other
+than* its own companion. Such a YAML is an instance, not a schema
+definition — COR-018's companion requirement does not reach it — but it
+IS validated against the schema its pointer names, resolved relative to
+the YAML's own directory. The shipped case is a process definition
+pointed at the shared `.pkit/schemas/_defs/process.schema.json` contract:
+without this check, a hand-edited definition is shape-checked by nothing.
+Shape only; `validate_instance` documents why the resolver passes don't
+apply to an instance.
+
 Discovery: walks `<target_root>/.pkit/capabilities/*/schemas/` for YAML
 files; for each, looks for a sibling `<name>.schema.json`. A YAML
 without a companion surfaces as an issue (per COR-018 the companion is
 required). The validator can also operate on a specific path passed in
 explicitly — useful for adopters running the validator against
-non-capability data files that follow the same conventions.
+non-capability data files that follow the same conventions. Both walks
+classify identically, and both collect pointered instances alongside the
+pairs.
 """
 
 from __future__ import annotations
@@ -103,6 +117,20 @@ class SchemaPair:
 
 
 @dataclass(frozen=True)
+class PointeredInstance:
+    """A YAML instance bound to an external schema by a `$schema` pointer.
+
+    Not a schema pair: the instance ships no companion of its own (per the
+    companion-scope convention in `.pkit/schemas/README.md`), and is validated
+    against the schema its pointer names.
+    """
+
+    yaml_path: Path
+    declared_target: str  # the pointer exactly as written in the YAML
+    schema_path: Path  # `declared_target` resolved against the YAML's own directory
+
+
+@dataclass(frozen=True)
 class ValidationIssue:
     """One finding from the validator — location + diagnosis."""
 
@@ -116,6 +144,7 @@ class ValidationReport:
 
     pairs_checked: int = 0
     issues: tuple[ValidationIssue, ...] = field(default_factory=tuple)
+    instances_checked: int = 0  # pointered instances validated against their target
 
     @property
     def is_clean(self) -> bool:
@@ -177,6 +206,18 @@ _NamespaceCacheEntry = _NamespaceTarget | str
 _NamespaceCache = dict[tuple[Path, str], _NamespaceCacheEntry]
 
 
+def _iter_capability_schema_yaml(target_root: Path) -> Iterator[Path]:
+    """Yield every `<target_root>/.pkit/capabilities/*/schemas/*.yaml`, sorted."""
+    capabilities_dir = target_root / ".pkit" / "capabilities"
+    if not capabilities_dir.is_dir():
+        return
+    for cap_dir in sorted(capabilities_dir.iterdir()):
+        schemas_dir = cap_dir / "schemas"
+        if not schemas_dir.is_dir():
+            continue
+        yield from sorted(schemas_dir.glob("*.yaml"))
+
+
 def discover_schema_pairs(target_root: Path) -> list[SchemaPair]:
     """Discover all (YAML, companion) pairs under installed capabilities.
 
@@ -191,22 +232,27 @@ def discover_schema_pairs(target_root: Path) -> list[SchemaPair]:
     the explicit-path run accepts can never fail the project-wide gate. Without
     that, an instance validated against a shared external schema (a process
     definition under `_defs/process.schema.json`, say) would be demanded a
-    companion it categorically cannot have.
+    companion it categorically cannot have. Such an instance is not unchecked:
+    `discover_pointered_instances` picks it up and it is validated against the
+    schema its pointer names.
     """
-    capabilities_dir = target_root / ".pkit" / "capabilities"
-    pairs: list[SchemaPair] = []
-    if not capabilities_dir.is_dir():
-        return pairs
-    for cap_dir in sorted(capabilities_dir.iterdir()):
-        schemas_dir = cap_dir / "schemas"
-        if not schemas_dir.is_dir():
-            continue
-        for yaml_path in sorted(schemas_dir.glob("*.yaml")):
-            if not _is_schema_definition(yaml_path):
-                continue
-            companion = yaml_path.with_suffix(".schema.json")
-            pairs.append(SchemaPair(yaml_path=yaml_path, companion_path=companion))
-    return pairs
+    return [
+        SchemaPair(yaml_path=p, companion_path=p.with_suffix(".schema.json"))
+        for p in _iter_capability_schema_yaml(target_root)
+        if _is_schema_definition(p)
+    ]
+
+
+def discover_pointered_instances(target_root: Path) -> list[PointeredInstance]:
+    """Discover every pointered instance under installed capabilities.
+
+    Same walk as `discover_schema_pairs` — the two partition the YAML under
+    `.pkit/capabilities/*/schemas/`: a file either is a schema definition
+    (needs a companion) or declares an external `$schema` (is validated
+    against it). Adopter-side data files outside that tree are
+    `pkit data validate`'s surface (COR-023), not this one's.
+    """
+    return _pointered_instances(_iter_capability_schema_yaml(target_root))
 
 
 # Matches a `# yaml-language-server: $schema=<path>` directive comment (the
@@ -224,6 +270,13 @@ _LANGUAGE_SERVER_SCHEMA_PATTERN = re.compile(
 # keeps the non-schema check cheap on large instance files.
 _INSTANCE_MARKER_SCAN_LINES = 40
 
+# Matches a URI scheme prefix (`https://`, `file://`) on a `$schema` pointer.
+# A remote pointer names a schema this validator cannot read without network
+# access, so it is exempt from the companion requirement (it is still an
+# external pointer) but is not validated against. Kit-side spec always points
+# at a local, repo-relative path.
+_URL_SCHEME_PATTERN = re.compile(r"^[a-z][a-z0-9+.\-]*://", re.IGNORECASE)
+
 
 def _companion_pointer_is_external(target: str, own_companion_name: str) -> bool:
     """True when a `$schema` pointer names something other than the YAML's own companion.
@@ -238,8 +291,8 @@ def _companion_pointer_is_external(target: str, own_companion_name: str) -> bool
     return Path(target).name != own_companion_name
 
 
-def _yaml_declares_external_schema(yaml_path: Path) -> bool:
-    """True when the YAML declares a `$schema` pointing at an external/shared schema.
+def _external_schema_target(yaml_path: Path) -> str | None:
+    """The external `$schema` pointer a YAML declares, or None when it declares none.
 
     Two signals, either sufficient (per the `.pkit/schemas/` companion-scope
     convention + COR-023's IDE-directive form):
@@ -249,7 +302,9 @@ def _yaml_declares_external_schema(yaml_path: Path) -> bool:
 
     whose target is a schema *other than* this YAML's own
     `<name>.schema.json`. Such a YAML is an instance validated against the
-    named schema, not a schema definition — so it requires no companion.
+    named schema, not a schema definition — so it requires no companion. The
+    target is returned exactly as written so the caller can resolve it against
+    the YAML's own directory (the form `pkit process new` stamps).
 
     Read failures are treated as "no external declaration": a genuinely broken
     file is left to surface as a normal validation issue rather than being
@@ -259,18 +314,47 @@ def _yaml_declares_external_schema(yaml_path: Path) -> bool:
     try:
         text = yaml_path.read_text(encoding="utf-8")
     except OSError:
-        return False
+        return None
     for line in text.splitlines()[:_INSTANCE_MARKER_SCAN_LINES]:
         m = _LANGUAGE_SERVER_SCHEMA_PATTERN.match(line)
         if m and _companion_pointer_is_external(m.group("target"), own_companion_name):
-            return True
+            return m.group("target")
         # Top-level `$schema:` key — column 0, no leading indent.
         stripped = line.rstrip()
         if stripped.startswith("$schema:") and not line[:1].isspace():
             target = stripped[len("$schema:"):].strip().strip("'\"")
             if target and _companion_pointer_is_external(target, own_companion_name):
-                return True
-    return False
+                return target
+    return None
+
+
+def _as_pointered_instance(yaml_path: Path) -> PointeredInstance | None:
+    """Classify a YAML as a pointered instance, resolving its pointer.
+
+    Returns None when the YAML declares no external `$schema`, or when the
+    pointer is remote (see `_URL_SCHEME_PATTERN`) — a remote target cannot be
+    read offline, so it stays exempt from the companion requirement without
+    being validated against. The pointer resolves relative to the YAML's own
+    directory, which is how the stamp writes it.
+    """
+    target = _external_schema_target(yaml_path)
+    if target is None or _URL_SCHEME_PATTERN.match(target):
+        return None
+    return PointeredInstance(
+        yaml_path=yaml_path,
+        declared_target=target,
+        schema_path=yaml_path.parent / target,
+    )
+
+
+def _pointered_instances(yaml_paths: Iterator[Path]) -> list[PointeredInstance]:
+    """Classify each YAML, keeping the pointered instances."""
+    instances: list[PointeredInstance] = []
+    for yaml_path in yaml_paths:
+        instance = _as_pointered_instance(yaml_path)
+        if instance is not None:
+            instances.append(instance)
+    return instances
 
 
 def _is_schema_definition(yaml_path: Path) -> bool:
@@ -286,9 +370,10 @@ def _is_schema_definition(yaml_path: Path) -> bool:
       `*-example.yaml`, is an instance/fixture — never a schema.
     - **Instances of an external schema.** YAML declaring a `$schema` pointer
       (language-server directive or top-level key) at a schema other than its
-      own companion is validated against that shared/external schema, so it
-      owns no companion of its own (e.g. process-definition YAMLs validated
-      against a shared `_defs/process.schema.json`).
+      own companion owns no companion of its own (e.g. process-definition YAMLs
+      pointed at the shared `_defs/process.schema.json`). Exempt from the
+      companion requirement, not from validation: `validate_instance` checks
+      such a YAML against the schema its pointer names.
 
     Everything else is treated as a schema definition and must ship a
     companion — preserving the COR-018 check on genuine schema YAML.
@@ -297,37 +382,56 @@ def _is_schema_definition(yaml_path: Path) -> bool:
         return False
     if yaml_path.stem.endswith("-example"):
         return False
-    return not _yaml_declares_external_schema(yaml_path)
+    return _external_schema_target(yaml_path) is None
+
+
+def _iter_path_yaml(path: Path) -> Iterator[Path]:
+    """Yield every YAML under a directory, sorted, skipping companion side-cars."""
+    for yaml_path in sorted(path.rglob("*.yaml")):
+        # Skip companion side-cars and other generated files if any sneak in.
+        if yaml_path.name.endswith(".schema.json"):
+            continue
+        yield yaml_path
 
 
 def discover_schema_pairs_at(path: Path) -> list[SchemaPair]:
     """Discover schema pairs for a specific path (a file or a directory).
 
-    If `path` is a YAML file, returns one pair (the path is taken to be a
-    schema the caller means to validate). If it's a directory, walks it for
-    schema-definition YAML — excluding non-schema YAML (fixtures under
-    `examples/`, instances of an external `$schema`) via `_is_schema_definition`
-    so the COR-018 companion requirement fires only on actual schemas. This
-    keeps the directory walk aligned with `discover_schema_pairs`' convention
-    that a schema is a direct `schemas/<name>.yaml` with a side-by-side
-    companion; subdirectories (`examples/`, `_defs/`) hold non-schema material.
-    Companion path is derived the same way in both branches.
+    If `path` is a YAML file, returns one pair — the path is taken to be a
+    schema the caller means to validate — unless it declares an external
+    `$schema`, which makes it an instance owning no companion (naming one
+    explicitly must not demand a companion the file categorically cannot
+    have). If it's a directory, walks it for schema-definition YAML —
+    excluding non-schema YAML (fixtures under `examples/`, instances of an
+    external `$schema`) via `_is_schema_definition` so the COR-018 companion
+    requirement fires only on actual schemas. This keeps the directory walk
+    aligned with `discover_schema_pairs`' convention that a schema is a direct
+    `schemas/<name>.yaml` with a side-by-side companion; subdirectories
+    (`examples/`, `_defs/`) hold non-schema material. Companion path is
+    derived the same way in both branches.
     """
-    pairs: list[SchemaPair] = []
     if path.is_file() and path.suffix == ".yaml":
-        pairs.append(
+        if _external_schema_target(path) is not None:
+            return []
+        return [
             SchemaPair(yaml_path=path, companion_path=path.with_suffix(".schema.json"))
-        )
-    elif path.is_dir():
-        for yaml_path in sorted(path.rglob("*.yaml")):
-            # Skip companion side-cars and other generated files if any sneak in.
-            if yaml_path.name.endswith(".schema.json"):
-                continue
-            if not _is_schema_definition(yaml_path):
-                continue
-            companion = yaml_path.with_suffix(".schema.json")
-            pairs.append(SchemaPair(yaml_path=yaml_path, companion_path=companion))
-    return pairs
+        ]
+    if path.is_dir():
+        return [
+            SchemaPair(yaml_path=p, companion_path=p.with_suffix(".schema.json"))
+            for p in _iter_path_yaml(path)
+            if _is_schema_definition(p)
+        ]
+    return []
+
+
+def discover_pointered_instances_at(path: Path) -> list[PointeredInstance]:
+    """Discover pointered instances for a specific path (a file or a directory)."""
+    if path.is_file() and path.suffix == ".yaml":
+        return _pointered_instances(iter([path]))
+    if path.is_dir():
+        return _pointered_instances(_iter_path_yaml(path))
+    return []
 
 
 def validate_pair(
@@ -371,37 +475,18 @@ def validate_pair(
         return issues
 
     # 2. Companion must parse + be a valid JSON Schema itself.
-    try:
-        schema = json.loads(pair.companion_path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
+    schema, reason = _load_json_schema(pair.companion_path)
+    if schema is None:
+        assert reason is not None
         issues.append(
-            ValidationIssue(
-                location=companion_rel,
-                message=f"companion is not valid JSON: {exc.msg} at line {exc.lineno} col {exc.colno}.",
-            )
-        )
-        return issues
-    try:
-        Draft202012Validator.check_schema(schema)
-    except SchemaError as exc:
-        issues.append(
-            ValidationIssue(
-                location=companion_rel,
-                message=f"companion is not a valid Draft 2020-12 JSON Schema: {exc.message}",
-            )
+            ValidationIssue(location=companion_rel, message=f"companion is {reason}")
         )
         return issues
 
     # 3. YAML must parse.
-    try:
-        data = _yaml.load(pair.yaml_path.read_text(encoding="utf-8"))
-    except YAMLError as exc:
-        issues.append(
-            ValidationIssue(
-                location=yaml_rel,
-                message=f"YAML parse error: {exc}",
-            )
-        )
+    data, reason = _load_yaml_data(pair.yaml_path)
+    if reason is not None:
+        issues.append(ValidationIssue(location=yaml_rel, message=reason))
         return issues
 
     # 4. Shape pass — validate YAML against the JSON Schema. Build a
@@ -409,37 +494,12 @@ def validate_pair(
     # or a sibling companion that owns a namespace's narrowed pattern)
     # resolve at validation time per COR-019's single-source-of-truth
     # convention for shared $defs.
-    data = _stringify_dates(data)
     if shared_registry is None:
         registry, registry_issues = _build_ref_registry(pair, target_root)
         issues.extend(registry_issues)
     else:
         registry = shared_registry
-    validator = Draft202012Validator(schema, registry=registry)
-    # `iter_errors` can raise `Unresolvable` when a `$ref` points at a
-    # schema that's missing from the registry — typically because the
-    # target file is missing or malformed. Catch it cleanly rather than
-    # crashing with a stack trace.
-    try:
-        shape_errors = list(validator.iter_errors(data))
-    except Unresolvable as exc:
-        issues.append(
-            ValidationIssue(
-                location=yaml_rel,
-                message=f"cross-file $ref could not resolve: {exc.ref!r}. "
-                f"The target schema may be missing, malformed, or lack the "
-                f"referenced $defs entry. See sibling-companion issues above.",
-            )
-        )
-        shape_errors = []
-    for error in sorted(shape_errors, key=lambda e: list(e.absolute_path)):
-        pointer = "/" + "/".join(str(p) for p in error.absolute_path) if error.absolute_path else ""
-        issues.append(
-            ValidationIssue(
-                location=f"{yaml_rel}{pointer}",
-                message=error.message,
-            )
-        )
+    issues.extend(_shape_issues(schema, data, registry, yaml_rel))
 
     # 5. Reference-resolution pass — walk every typed-token reference in
     # the YAML (value-position references), plus every mapping field
@@ -463,6 +523,155 @@ def validate_pair(
     return _dedup_pattern_when_resolver_covers(issues)
 
 
+def _load_json_schema(schema_path: Path) -> tuple[dict | None, str | None]:
+    """Read + meta-validate a JSON Schema file. Returns (schema, reason).
+
+    Exactly one of the two is non-None. `reason` completes the sentence
+    "<the file> is <reason>", so each caller names the file in the terms its
+    own report uses — a pair's companion, an instance's declared target.
+    """
+    try:
+        text = schema_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        return None, f"unreadable: {exc}."
+    try:
+        schema = json.loads(text)
+    except json.JSONDecodeError as exc:
+        return None, (
+            f"not valid JSON: {exc.msg} at line {exc.lineno} col {exc.colno}."
+        )
+    try:
+        Draft202012Validator.check_schema(schema)
+    except SchemaError as exc:
+        return None, f"not a valid Draft 2020-12 JSON Schema: {exc.message}"
+    return schema, None
+
+
+def _load_yaml_data(yaml_path: Path) -> tuple[Any, str | None]:
+    """Load a YAML document with dates stringified. Returns (data, reason).
+
+    `reason` is a complete message (reported against the YAML's own path) when
+    the load failed; None on success.
+    """
+    try:
+        text = yaml_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        return None, f"could not read YAML: {exc}."
+    try:
+        raw = _yaml.load(text)
+    except YAMLError as exc:
+        return None, f"YAML parse error: {exc}"
+    return _stringify_dates(raw), None
+
+
+def _shape_issues(
+    schema: dict, data: Any, registry: Registry, yaml_rel: str
+) -> list[ValidationIssue]:
+    """Run the JSON Schema shape pass; report each error at its data position."""
+    validator = Draft202012Validator(schema, registry=registry)
+    # `iter_errors` can raise `Unresolvable` when a `$ref` points at a
+    # schema that's missing from the registry — typically because the
+    # target file is missing or malformed. Catch it cleanly rather than
+    # crashing with a stack trace.
+    try:
+        shape_errors = list(validator.iter_errors(data))
+    except Unresolvable as exc:
+        return [
+            ValidationIssue(
+                location=yaml_rel,
+                message=f"cross-file $ref could not resolve: {exc.ref!r}. "
+                f"The target schema may be missing, malformed, or lack the "
+                f"referenced $defs entry. See sibling-companion issues above.",
+            )
+        ]
+    issues: list[ValidationIssue] = []
+    for error in sorted(shape_errors, key=lambda e: list(e.absolute_path)):
+        pointer = (
+            "/" + "/".join(str(p) for p in error.absolute_path)
+            if error.absolute_path
+            else ""
+        )
+        issues.append(
+            ValidationIssue(location=f"{yaml_rel}{pointer}", message=error.message)
+        )
+    return issues
+
+
+def validate_instance(
+    instance: PointeredInstance,
+    target_root: Path | None = None,
+    *,
+    shared_registry: Registry | None = None,
+) -> list[ValidationIssue]:
+    """Validate one pointered instance against the schema its `$schema` names.
+
+    Makes the pointer mean what it says: the YAML claims to conform to the
+    schema it names, so the shape is checked against it. Findings report
+    against the *instance's* path plus a JSON pointer into the offending
+    position, exactly as `validate_pair` reports shape errors — the instance is
+    what the author edits.
+
+    A pointer whose target is missing, unreadable, not JSON, or not a valid
+    Draft 2020-12 schema is a finding against the instance, not a skip: an
+    author who declares a contract and mistypes its path has an unchecked file
+    and no signal.
+
+    Shape pass only. The typed-token (`_resolve_references`) and annotated-key
+    (`_resolve_key_references`) passes are companion-pair concepts — COR-019
+    scopes them to sibling files in the schema's own directory and keys them on
+    the YAML's stem as its namespace. An instance has neither a namespace of
+    its own nor namespace-owning siblings (a process definition sits beside
+    other definitions, not beside namespace schemas), so running them would
+    emit spurious unresolved-reference findings. Instance-side cross-file
+    references are `pkit data validate`'s surface, resolved through the binding
+    per COR-029.
+    """
+    issues: list[ValidationIssue] = []
+    yaml_rel = _rel(instance.yaml_path, target_root)
+    schema_rel = _rel(instance.schema_path, target_root)
+
+    # 1. The declared target must exist, parse, and be a valid schema.
+    if not instance.schema_path.is_file():
+        return [
+            ValidationIssue(
+                location=yaml_rel,
+                message=f"declared $schema {instance.declared_target!r} does not "
+                f"resolve to a file (looked for {schema_rel}, relative to this "
+                f"YAML's own directory).",
+            )
+        ]
+    schema, reason = _load_json_schema(instance.schema_path)
+    if schema is None:
+        assert reason is not None
+        return [
+            ValidationIssue(
+                location=yaml_rel,
+                message=f"declared $schema {instance.declared_target!r} "
+                f"({schema_rel}) is {reason}",
+            )
+        ]
+
+    # 2. The instance itself must parse.
+    data, reason = _load_yaml_data(instance.yaml_path)
+    if reason is not None:
+        return [ValidationIssue(location=yaml_rel, message=reason)]
+
+    # 3. Shape pass against the declared schema. The registry covers the
+    # target's own directory (its siblings + its own `$id`) and the kit-wide
+    # `_defs/` library, so the target's cross-file `$ref`s resolve.
+    if shared_registry is None:
+        registry, registry_issues = _build_registry_for_paths(
+            _collect_instance_registry_paths(instance, target_root),
+            target_root,
+            already_reported=set(),
+        )
+        issues.extend(registry_issues)
+    else:
+        registry = shared_registry
+    issues.extend(_shape_issues(schema, data, registry, yaml_rel))
+    return issues
+
+
 def validate_all(target_root: Path, *, resolve: bool = True) -> ValidationReport:
     """Discover + validate every capability schema pair under target_root.
 
@@ -470,7 +679,8 @@ def validate_all(target_root: Path, *, resolve: bool = True) -> ValidationReport
     `bindings.yaml` file to validate — adopter-data binding patterns
     live in each schema YAML's optional `binds_to:` field and are
     validated implicitly by the schema's existing envelope. Schema
-    pair validation alone is the surface here.
+    pair validation plus pointered-instance validation (each instance
+    against the schema its `$schema` names) is the surface here.
 
     Also runs the capability-fragment grant-token lint (ADR-021): for every
     installed capability's `permissions/grants.yaml`, each grant's privilege
@@ -479,14 +689,19 @@ def validate_all(target_root: Path, *, resolve: bool = True) -> ValidationReport
     scoped to the full project (it needs the manifest + merged catalog), so it
     runs only in the no-PATH `validate_all` gate, not in `validate_path`.
     """
-    pairs = discover_schema_pairs(target_root)
-    report = _run_validation(pairs, target_root, resolve=resolve)
+    report = _run_validation(
+        discover_schema_pairs(target_root),
+        discover_pointered_instances(target_root),
+        target_root,
+        resolve=resolve,
+    )
     fragment_issues = _lint_fragment_grant_tokens(target_root)
     if not fragment_issues:
         return report
     return ValidationReport(
         pairs_checked=report.pairs_checked,
         issues=report.issues + tuple(fragment_issues),
+        instances_checked=report.instances_checked,
     )
 
 
@@ -515,33 +730,49 @@ def _lint_fragment_grant_tokens(target_root: Path) -> list[ValidationIssue]:
 def validate_path(
     path: Path, target_root: Path | None = None, *, resolve: bool = True
 ) -> ValidationReport:
-    """Validate the YAML schemas at a specific path (file or directory)."""
-    pairs = discover_schema_pairs_at(path)
-    return _run_validation(pairs, target_root, resolve=resolve)
+    """Validate the YAML schemas + pointered instances at a path (file or directory)."""
+    return _run_validation(
+        discover_schema_pairs_at(path),
+        discover_pointered_instances_at(path),
+        target_root,
+        resolve=resolve,
+    )
+
+
+def _checked_summary(report: ValidationReport) -> str:
+    """"N schema(s)" — plus " and M instance(s)" when any were checked."""
+    summary = f"{report.pairs_checked} schema(s)"
+    if report.instances_checked:
+        summary += f" and {report.instances_checked} instance(s)"
+    return summary
 
 
 def print_report(report: ValidationReport) -> None:
     """Render the report to stdout (and stderr for issues), in the style of `pkit refs validate`."""
     if report.is_clean:
-        if report.pairs_checked == 0:
+        if report.pairs_checked == 0 and report.instances_checked == 0:
             click.echo("  No schemas found to validate.")
         else:
-            click.echo("  " + cli_render.style("strong", f"Validated {report.pairs_checked} schema(s). All checks passed."))
+            click.echo("  " + cli_render.style("strong", f"Validated {_checked_summary(report)}. All checks passed."))
         return
 
-    click.echo("  " + cli_render.style("strong", f"{len(report.issues)} issue(s) found across {report.pairs_checked} schema(s):"))
+    click.echo("  " + cli_render.style("strong", f"{len(report.issues)} issue(s) found across {_checked_summary(report)}:"))
     for issue in report.issues:
         click.echo(f"    {issue.location}")
         click.echo(f"      → {issue.message}")
 
 
 def _run_validation(
-    pairs: list[SchemaPair], target_root: Path | None, *, resolve: bool = True
+    pairs: list[SchemaPair],
+    instances: list[PointeredInstance],
+    target_root: Path | None,
+    *,
+    resolve: bool = True,
 ) -> ValidationReport:
     # Build the registry once for the whole run. Schema-load failures
     # become issues against their own paths, reported once each rather
     # than once per consumer pair.
-    registry, registry_issues = _build_shared_registry(pairs, target_root)
+    registry, registry_issues = _build_shared_registry(pairs, instances, target_root)
     all_issues: list[ValidationIssue] = list(registry_issues)
     # Cache namespace targets across pairs so loading `issue-types.yaml`
     # once serves every schema that references it.
@@ -556,7 +787,17 @@ def _run_validation(
                 shared_registry=registry,
             )
         )
-    return ValidationReport(pairs_checked=len(pairs), issues=tuple(all_issues))
+    for instance in instances:
+        all_issues.extend(
+            validate_instance(
+                instance, target_root=target_root, shared_registry=registry
+            )
+        )
+    return ValidationReport(
+        pairs_checked=len(pairs),
+        issues=tuple(all_issues),
+        instances_checked=len(instances),
+    )
 
 
 def _rel(path: Path, target_root: Path | None) -> str:
@@ -664,17 +905,24 @@ def _build_ref_registry(
 
 
 def _build_shared_registry(
-    pairs: list[SchemaPair], target_root: Path | None
+    pairs: list[SchemaPair],
+    instances: list[PointeredInstance],
+    target_root: Path | None,
 ) -> tuple[Registry, list[ValidationIssue]]:
-    """Build one registry covering every schema in scope for `pairs`.
+    """Build one registry covering every schema in scope for a whole run.
 
     Used at the top of a multi-pair run so schema-load failures are
     reported once each rather than once per consumer pair.
     """
     paths: list[Path] = []
     seen: set[Path] = set()
-    for pair in pairs:
-        for p in _collect_registry_paths(pair, target_root):
+    groups = [_collect_registry_paths(pair, target_root) for pair in pairs]
+    groups += [
+        _collect_instance_registry_paths(instance, target_root)
+        for instance in instances
+    ]
+    for group in groups:
+        for p in group:
             if p not in seen:
                 seen.add(p)
                 paths.append(p)
@@ -683,14 +931,33 @@ def _build_shared_registry(
 
 def _collect_registry_paths(pair: SchemaPair, target_root: Path | None) -> list[Path]:
     """All `.schema.json` files relevant to a pair's `$ref` resolution."""
-    paths: list[Path] = []
-    schemas_dir = pair.yaml_path.parent
-    paths.extend(sorted(schemas_dir.glob("*.schema.json")))
-    if target_root is not None:
-        defs_dir = target_root / ".pkit" / "schemas" / "_defs"
-        if defs_dir.is_dir():
-            paths.extend(sorted(defs_dir.glob("*.schema.json")))
+    paths = sorted(pair.yaml_path.parent.glob("*.schema.json"))
+    paths.extend(_kit_defs_schema_paths(target_root))
     return paths
+
+
+def _collect_instance_registry_paths(
+    instance: PointeredInstance, target_root: Path | None
+) -> list[Path]:
+    """All `.schema.json` files relevant to a pointered instance's `$ref` resolution.
+
+    The declared target's own directory — so the target's `$id` self-references
+    and its siblings (`_defs/refs.schema.json` next to `_defs/process.schema.json`)
+    resolve — plus the kit-wide shared `_defs/` library.
+    """
+    paths = sorted(instance.schema_path.parent.glob("*.schema.json"))
+    paths.extend(_kit_defs_schema_paths(target_root))
+    return paths
+
+
+def _kit_defs_schema_paths(target_root: Path | None) -> list[Path]:
+    """The kit-wide shared `$defs` library at `<target_root>/.pkit/schemas/_defs/`."""
+    if target_root is None:
+        return []
+    defs_dir = target_root / ".pkit" / "schemas" / "_defs"
+    if not defs_dir.is_dir():
+        return []
+    return sorted(defs_dir.glob("*.schema.json"))
 
 
 def _build_registry_for_paths(

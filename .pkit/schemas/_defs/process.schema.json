@@ -3,6 +3,12 @@
   "$id": "process.schema.json",
   "title": "Process substrate — shape contract (COR-033)",
   "description": "Shared shape for a process DEFINITION a capability authors. Capability instance schemas cross-file $ref these $defs (e.g. \"_defs/process.schema.json#/$defs/process\"). Per the .pkit/process/ area spec + COR-033. Ship-narrow: enums admit only the implemented core values (singleton + keyed cardinality, inferred detection); remaining deferred values widen the enum when they ship. additionalProperties is permissive on the extensible objects (process, state, transition) so a capability's own domain-local fields coexist; tight on the core sub-objects.",
+  "$comment": "Root shape: a document validated against THIS file is a process DEFINITION (the `process:` envelope). Capability instance schemas cross-file $ref the $defs below, which ignores these root keywords, so adding them does not affect those consumers. Without a root, a $defs-only document accepts every instance -- so the yaml-language-server pointer stamped onto a definition validated nothing.",
+  "type": "object",
+  "required": ["process"],
+  "properties": {
+    "process": { "$ref": "#/$defs/process" }
+  },
   "$defs": {
     "predicate": {
       "type": "object",
