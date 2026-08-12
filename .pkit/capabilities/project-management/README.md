@@ -74,14 +74,31 @@ workstreams:                          # one entry per allowed workstream value
 # projects_v2_node_id: PVT_xxx        # board→node-id cache; populated at adoption
 #                                     # (bootstrap writes it; adopt-existing recommends
 #                                     # it) so create-issue skips a per-create read
-# code_path_to_doc_mapping: { src/foo/**: [docs/foo.md] }
+# code_path_to_doc_mapping:           # per DEC-015 + ADR-019
+#   enforce: false
+#   rules:
+#     - { code: "src/foo/**", docs: [docs/foo.md] }
 # pre_close_triage_lead_days: 3
 # gh:                                 # per DEC-023 — both fields optional
 #   host: github.com              #   target a non-`github.com` host
 #   default_owner: ai-platform-incubation   # spliced as `--owner` on cross-owner ops
 ```
 
+Further optional blocks are documented where the features that read them are described: `milestone_categories:` (per [project-management:DEC-016-time-bound-containers]), `review:` (the review-mode block under "Then use"), and `mesh_peers:` / `mesh_source:` (per [project-management:DEC-022-methodology-mesh]). The companion schema below is the complete enumeration.
+
 This config is adopter-owned. The capability's schemas are immutable kit-shipped content per the no-shared-files invariant; the config is the seam where adopter-specific values plug in.
+
+#### The config has a schema — unknown keys are refused
+
+`config.yaml` ships a companion JSON Schema at `schemas/config.schema.json`, bound to the installed config path by a COR-023 `binds_to:` glob in `schemas/config.yaml`. Validate a hand-edited config with:
+
+```
+pkit data validate .pkit/capabilities/project-management/project/config.yaml
+```
+
+The schema sets **`additionalProperties: false`**, so an unknown or misspelled key is a loud refusal naming the offending key rather than a silent default. This matters because every reader gets at the file through defensive `.get()` access: before the schema existed, `has_projects_v2_boards` (trailing `s`) validated fine and left the adopter in label-fallback mode, discovered only when classification landed in the wrong substrate. `pre-check` covers value-level problems (the board id resolves, the branch matches, the host is reachable) but cannot see a key that was never read; the schema covers exactly that gap. `schemas/config.yaml` is also the shipped reference instance — a valid minimal config with every optional key listed as a comment.
+
+The schema's required set (`schema_version`, `default_branch`, `workstreams`) mirrors `pre-check`'s, so the two gates agree. `workstreams:` is required only as the transitional shim described below; it drops from both when the shim does.
 
 #### The `gh:` block (per [project-management:DEC-023-gh-host-and-owner])
 

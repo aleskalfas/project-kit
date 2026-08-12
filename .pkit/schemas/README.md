@@ -282,7 +282,8 @@ binds_to:
 ```
 
 - The field lives **on the schema itself**, not in a separate bindings registry. One source of truth per schema; bindings die with the schema when it's removed; no cross-file registry to keep in sync.
-- The pattern is a glob (Python's `fnmatch` semantics) matched against the adopter file's repo-relative path. One segment per `*`; no `**`.
+- The pattern is a glob (Python's `fnmatch` semantics) matched against the adopter file's repo-relative path. Note `fnmatch`'s `*` **crosses `/`** — it is not shell-style per-segment matching — and `**/<name>` is the shipped idiom for "anywhere in the tree".
+- **Pick a glob narrow enough that nothing else in an installed tree matches it.** A *distinctive* filename (`workstreams.yaml`, `substrate-map.yaml`) is specific on its own, so `**/<name>.yaml` suffices. A *generic* filename (`config.yaml`, `settings.yaml`) is not: narrow it with the distinguishing path segments (e.g. `**/<capability>/project/config.yaml`), or rely on the adopter-side `pkit_schema:` field. The failure this prevents is asymmetric — a collision *across capabilities* surfaces as an ambiguous-binding refusal, but a collision with a **non-capability** file does not: it silently resolves to the wrong schema and reports a bogus validation failure on a correct file.
 - The field is optional. Most schemas in the kit are namespace owners or capability-internal — `binds_to:` matters only for schemas that describe adopter-data files.
 - When an adopter file omits `pkit_schema:`, the resolver walks every installed capability's `schemas/*.yaml`, collects `binds_to:` patterns, and uses the first matching glob. Multiple matches across capabilities surface as ambiguous (the adopter resolves it by adding the explicit field).
 
