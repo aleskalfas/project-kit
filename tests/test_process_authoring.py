@@ -338,6 +338,41 @@ def test_new_refuses_dangling_references(authoring_repo: Path) -> None:
         )
 
 
+def test_new_refuses_to_clobber_an_unregistered_script(authoring_repo: Path) -> None:
+    # The registered-NAME check is not enough: a capability may hold a
+    # hand-written script it has not registered, and the stub path is derived
+    # from the command name — so the stamp must pre-flight the PATH too, or it
+    # overwrites real predicate code with a fail-closed stub.
+    scripts = authoring_repo / ".pkit" / "capabilities" / "design" / "scripts"
+    scripts.mkdir(parents=True)
+    hand_written = scripts / "screen_detect_drafting.py"
+    hand_written.write_text("# real predicate code\n", encoding="utf-8")
+    with pytest.raises(pa.ProcessAuthoringError, match="already exist"):
+        _stamp_screen(authoring_repo)
+    assert hand_written.read_text(encoding="utf-8") == "# real predicate code\n"
+    # A refusal writes nothing at all — not even the definition.
+    assert not (
+        authoring_repo / ".pkit" / "capabilities" / "design" / "schemas" / "screen.yaml"
+    ).exists()
+
+
+def test_handoff_refuses_to_clobber_an_unregistered_seam_script(
+    authoring_repo: Path,
+) -> None:
+    _stamp_screen(authoring_repo)
+    _stamp_unit(authoring_repo)
+    _couple_unit(authoring_repo)
+    scripts = authoring_repo / ".pkit" / "capabilities" / "delivery" / "scripts"
+    hand_written = scripts / "my_resolver.py"
+    hand_written.write_text("# real resolve seam\n", encoding="utf-8")
+    with pytest.raises(pa.ProcessAuthoringError, match="already exist"):
+        _handoff_unit(authoring_repo, resolve="my-resolver")
+    assert hand_written.read_text(encoding="utf-8") == "# real resolve seam\n"
+    # The definition is untouched: the pre-flight runs before the edit.
+    definition = load_definition(authoring_repo, "delivery:unit")
+    assert "handoff" not in definition.states[0]["depends_on"][0]
+
+
 def test_new_cli_requires_capability_and_matching_marks(
     authoring_repo: Path, monkeypatch
 ) -> None:

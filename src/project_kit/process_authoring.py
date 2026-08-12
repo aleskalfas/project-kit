@@ -312,10 +312,48 @@ def _round_trip_yaml() -> YAML:
     return rt
 
 
+def _refuse_existing_stub_scripts(
+    repo_root: Path, capability_dir: Path, stubs: list[PredicateStub]
+) -> None:
+    """Refuse when any stub's SCRIPT PATH is already taken.
+
+    The registered-name check alone is not enough: a capability may hold a
+    hand-written `scripts/<name>.py` it has not (yet) registered, and the stub
+    path is derived from the command name, so scaffolding would silently
+    overwrite real predicate code. Same never-silently-overwrite posture the
+    stamps take for a declared coupling or contract. Pre-flighted so a refusal
+    writes nothing at all; `_write_stub_script` enforces the same rule
+    structurally at the write itself.
+    """
+    taken = sorted(
+        (capability_dir / stub.script_relpath)
+        for stub in stubs
+        if (capability_dir / stub.script_relpath).exists()
+    )
+    if not taken:
+        return
+    listed = ", ".join(str(p.relative_to(repo_root)) for p in taken)
+    raise ProcessAuthoringError(
+        f"script path(s) already exist: {listed}; refusing to overwrite "
+        "hand-written predicate code with a fail-closed stub. Register the "
+        "existing script under the command name the shape demands, or rename "
+        "the state/transition/seam so the derived path is free."
+    )
+
+
 def _write_stub_script(capability_dir: Path, stub: PredicateStub, body: str) -> Path:
     script_path = capability_dir / stub.script_relpath
     script_path.parent.mkdir(parents=True, exist_ok=True)
-    script_path.write_text(body, encoding="utf-8")
+    try:
+        # Exclusive create: never clobber an existing script, even if the
+        # caller's pre-flight was skipped or the file appeared since.
+        with script_path.open("x", encoding="utf-8") as f:
+            f.write(body)
+    except FileExistsError as exc:
+        raise ProcessAuthoringError(
+            f"{script_path} already exists; refusing to overwrite it with a "
+            "predicate stub."
+        ) from exc
     script_path.chmod(
         script_path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
     )
@@ -671,6 +709,7 @@ def stamp_new_process(
             f"package.yaml: {', '.join(collisions)}; the scaffold refuses to "
             "clobber existing commands."
         )
+    _refuse_existing_stub_scripts(repo_root, capability_dir, stubs)
     package_path = capability_dir / "package.yaml"
     if not package_path.is_file():
         raise ProcessAuthoringError(
@@ -1062,6 +1101,9 @@ def handoff_process(
         bodies[name] = _stub_body(
             purpose, address, "hand-off", definition.cardinality, payload_key
         )
+    # Pre-flight before the definition is touched: a seam whose script path is
+    # taken must refuse with the definition still unedited.
+    _refuse_existing_stub_scripts(repo_root, capability_dir, new_stubs)
 
     rt = _round_trip_yaml()
     original = definition_path.read_text(encoding="utf-8")
