@@ -1,0 +1,14 @@
+component: project-management
+kind: minor
+custom:
+  category: Changed
+body: >
+  Audit comments for state transitions are now **single and canonical** (#695,
+  DEC-049). `move-issue` is the **sole audit-comment writer**: it renders one
+  comment from the schema's `audit_comment_template` (a uniform `<!-- pkit-audit -->`
+  marker + `Bypassed by <actor>: <reason>`), and wrappers like `promote-issue`
+  pass the authorisation reason through via `--bypass-reason` instead of posting
+  their own. This ends the #672 double-post (a wrapper hook comment *plus* a
+  divergent `[audit]` line for one transition) and the drift between the posted
+  format and the schema template — one audited mutation now yields exactly one
+  audit comment in one format.

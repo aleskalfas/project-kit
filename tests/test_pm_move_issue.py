@@ -782,3 +782,35 @@ def test_regression_25_transition_check_passes_authored_body(
         "authored body with unchecked real criteria must produce no hard-reject "
         f"at phase=transition; got: {hard_rejects}"
     )
+
+
+# ---- canonical audit comment (DEC-049) ------------------------------
+
+from types import SimpleNamespace  # noqa: E402
+
+_CAP_ROOT = Path(".pkit/capabilities/project-management")
+
+
+def test_load_audit_template_reads_schema_marker(mi) -> None:
+    tmpl = mi._load_audit_template(_CAP_ROOT)
+    assert "<!-- pkit-audit -->" in tmpl
+    assert "Bypassed by <name> <<email>>: <reason>" in tmpl
+
+
+def test_load_audit_template_falls_back_on_bad_root(mi) -> None:
+    assert mi._load_audit_template(Path("/nonexistent")) == mi._AUDIT_TEMPLATE_FALLBACK
+
+
+def test_render_audit_comment_canonical(mi) -> None:
+    invoker = SimpleNamespace(github_login="alice", email="alice@x.io")
+    out = mi._render_audit_comment(_CAP_ROOT, invoker, "verbal PM approval")
+    assert out.startswith("<!-- pkit-audit -->")
+    assert "Bypassed by alice <alice@x.io>: verbal PM approval" in out
+
+
+def test_render_audit_comment_no_email_is_clean(mi) -> None:
+    invoker = SimpleNamespace(github_login="alice", email=None)
+    out = mi._render_audit_comment(_CAP_ROOT, invoker, "reason")
+    assert out.startswith("<!-- pkit-audit -->")
+    assert "Bypassed by alice: reason" in out
+    assert "<<" not in out and "<>" not in out  # no empty angle brackets

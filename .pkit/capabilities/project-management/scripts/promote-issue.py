@@ -7,18 +7,18 @@
 # ///
 """Project-management capability — promote-issue (DEC-026 workflow wrapper).
 
-Promotes an issue from Todo → Backlog, recording the authorisation source
-as an audit comment. Per DEC-026 (as amended for issue #61):
+Promotes an issue from Todo → Backlog, recording the authorisation source.
+Per DEC-026 (as amended for issue #61):
 
     promote-issue <N> [--milestone "<M>"] --reason "<R>"
 
 Two paths:
   - `--milestone` given → resolves <M> to an OPEN milestone (by number or
-    exact title), attaches it via `gh issue edit --milestone`, posts the
-    audit comment, then calls `move-issue --to backlog`.
-  - `--milestone` omitted → promotes on `--reason` alone: posts the same
-    audit comment (already milestone-free), skips `_attach_milestone`, then
-    calls `move-issue --to backlog`. No milestone resolution is attempted.
+    exact title), attaches it via `gh issue edit --milestone`, then calls
+    `move-issue --to backlog`.
+  - `--milestone` omitted → promotes on `--reason` alone: skips
+    `_attach_milestone`, then calls `move-issue --to backlog`. No milestone
+    resolution is attempted.
 
 Gates per DEC-026:
   - `--reason` non-empty (the authorisation source — typically the
@@ -28,9 +28,11 @@ Gates per DEC-026:
     it is never silently downgraded to milestone-free).
   - Current Status = Todo (delegated to `move-issue`'s state machine).
 
-Composes over `move-issue.py`: this wrapper writes the audit comment
-first, then invokes `move-issue --to backlog`. The audit comment is
-idempotent via DEC-024's template-stamp discipline.
+Composes over `move-issue.py`: this wrapper attaches the milestone (if any),
+then invokes `move-issue --to backlog`, **threading `--reason` to move-issue's
+`--bypass-reason`**. Per DEC-049, **move-issue is the sole audit-comment writer**
+— it posts the one canonical audit comment (from the schema template); this
+wrapper no longer posts its own (ending the #672 double-post).
 
 Self-contained via PEP 723; runs via
   uv run --script .pkit/capabilities/project-management/scripts/promote-issue.py 42 --reason "PM approved"
@@ -71,7 +73,6 @@ from _lib.membership import (  # noqa: E402
 )
 
 
-AUDIT_STAMP = "<!-- pkit-hook: promote-issue -->"
 
 
 def main() -> int:
@@ -181,13 +182,13 @@ def main() -> int:
     if args.dry_run:
         if milestone_title is not None:
             print(
-                "(dry-run: would post audit comment, attach milestone "
-                f"{milestone_title!r}, and call move-issue --to backlog.)"
+                f"(dry-run: would attach milestone {milestone_title!r} and call "
+                "move-issue --to backlog, which posts the single audit comment.)"
             )
         else:
             print(
-                "(dry-run: would post audit comment and call move-issue --to backlog "
-                "(no milestone — --reason-only path).)"
+                "(dry-run: would call move-issue --to backlog, which posts the "
+                "single audit comment (no milestone — --reason-only path).)"
             )
         return 0
 
@@ -197,15 +198,10 @@ def main() -> int:
             print("aborted.", file=sys.stderr)
             return 0
 
-    # Audit comment (idempotent via stamp marker). The text is milestone-free
-    # by design — it works for both the milestone-given and milestone-omitted
-    # paths without a template fork.
-    audit_body = (
-        f"{AUDIT_STAMP}\n\nPromoted Todo → Backlog by PM on user's "
-        f"in-session request: {reason}"
-    )
-    if not _post_audit_comment_idempotent(args.issue_number, audit_body, config):
-        return 2
+    # DEC-049: move-issue is the SOLE audit-comment writer. This wrapper no longer
+    # posts its own audit comment (which caused the #672 double-post); it passes
+    # the authorisation reason to move-issue via `--bypass-reason`, and move-issue
+    # posts the one canonical audit comment (rendered from the schema template).
 
     # Attach the milestone via gh issue edit — only when one was given.
     if milestone_title is not None:
@@ -221,25 +217,27 @@ def main() -> int:
     # special-case the already-promoted state.
     current_state = _detect_state_from_labels(args.issue_number, config)
     if current_state in ("backlog", "in-progress", "review", "done"):
-        if milestone_title is not None:
-            idempotent_detail = "milestone reattached, audit recorded"
-        else:
-            idempotent_detail = "audit recorded"
+        idempotent_detail = (
+            "milestone reattached; no state transition needed"
+            if milestone_title is not None
+            else "no state transition needed"
+        )
         print(
             f"\n[ok] #{args.issue_number} already at {axis_labels.label('state', current_state)} "
-            f"({idempotent_detail}; no state transition needed)."
+            f"({idempotent_detail})."
         )
         return 0
 
-    # Compose over move-issue for the actual state transition.
+    # Compose over move-issue for the actual state transition. move-issue posts
+    # the single canonical audit comment from the reason threaded here (DEC-049).
     rc = _invoke_move_issue(
-        args.issue_number, "backlog", args.capability_root, args.allow_foreign_repo
+        args.issue_number, "backlog", reason, args.capability_root, args.allow_foreign_repo
     )
     if rc != 0:
-        applied = "audit comment + milestone" if milestone_title is not None else "audit comment"
+        applied = "milestone" if milestone_title is not None else "(nothing)"
         print(
-            f"[warn] {applied} applied; move-issue exited {rc}. "
-            "Re-run this wrapper or run `move-issue --to backlog` to complete the transition.",
+            f"[warn] {applied} applied; move-issue exited {rc} (no audit comment or "
+            "transition). Re-run this wrapper or run `move-issue --to backlog` to complete.",
             file=sys.stderr,
         )
         return rc
@@ -292,40 +290,6 @@ def _detect_state_from_labels(issue_number: int, config: dict) -> str | None:
 # ---- side-effects ------------------------------------------------------
 
 
-def _post_audit_comment_idempotent(
-    issue_number: int, body: str, config: dict
-) -> bool:
-    """Post an audit comment if a comment with the same stamp doesn't already exist."""
-    # Check existing comments for the stamp marker.
-    proc = gh_run(
-        ["gh", "issue", "view", str(issue_number), "--json", "comments"],
-        config,
-        check=False,
-    )
-    if proc.returncode == 0:
-        try:
-            data = json.loads(proc.stdout)
-            for c in data.get("comments", []):
-                if AUDIT_STAMP in (c.get("body") or ""):
-                    print(f"  audit comment with stamp already exists; idempotent skip")
-                    return True
-        except (ValueError, KeyError, TypeError):
-            pass
-
-    proc = gh_run(
-        ["gh", "issue", "comment", str(issue_number), "--body", body],
-        config,
-        check=False,
-    )
-    if proc.returncode != 0:
-        print(
-            f"error: gh issue comment failed: {proc.stderr.strip()}",
-            file=sys.stderr,
-        )
-        return False
-    return True
-
-
 def _attach_milestone(issue_number: int, title: str, config: dict) -> bool:
     # Route the milestone write through the sole constructor (ADR-031); apply
     # this script's own report-and-return-bool posture to the neutral result.
@@ -339,10 +303,15 @@ def _attach_milestone(issue_number: int, title: str, config: dict) -> bool:
 def _invoke_move_issue(
     issue_number: int,
     target: str,
+    reason: str,
     capability_root_arg: Path | None,
     allow_foreign_repo: bool,
 ) -> int:
     """Shell out to `move-issue.py --to <target>` as the substrate transition.
+
+    ``reason`` is the authorisation reason, threaded to move-issue's
+    ``--bypass-reason`` so move-issue posts the **single** canonical audit comment
+    (DEC-049 — this wrapper no longer posts its own, ending the #672 double-post).
 
     ``allow_foreign_repo`` threads promote-issue's confirmed cross-repo
     override into the composed move-issue so the foreign-repo gate (COR-039 /
@@ -355,7 +324,7 @@ def _invoke_move_issue(
         str(issue_number),
         "--to", target,
         "--bypass",  # Todo → Backlog is bypassable-with-audit per workflow.yaml
-        "--bypass-reason", "promoted via promote-issue wrapper (audit comment already posted)",
+        "--bypass-reason", reason,
         "--yes",
     ]
     if allow_foreign_repo:
