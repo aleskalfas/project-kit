@@ -438,6 +438,7 @@
         "to": { "type": "string" },
         "trigger": { "type": "string" },
         "actor": { "type": "string" },
+        "version": { "type": "string", "description": "DEC-049: the pkit version that governed this move (provenance)." },
         "gate_result": { "type": "string" },
         "severity": { "type": "string" },
         "bypass_reason": { "type": "string" },
