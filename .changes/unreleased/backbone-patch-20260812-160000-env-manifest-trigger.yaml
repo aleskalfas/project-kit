@@ -1,0 +1,12 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The report environment block now marks the project half NOT COLLECTED
+  whenever no backbone manifest is found — not only when no project root
+  resolved (#702, follow-up to #693). A directory that is a git repo but
+  carries no pkit install previously rendered `backbone: unknown` /
+  `adapter: none` / `capabilities: (none installed)`, which a maintainer
+  reads as a fact about the reporter's project rather than as "not
+  collected".
