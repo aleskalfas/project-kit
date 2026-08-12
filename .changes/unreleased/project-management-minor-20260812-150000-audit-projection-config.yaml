@@ -1,0 +1,13 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+body: >
+  Audit-comment projection is now **configurable** via `audit.projection` in the
+  pm project config (#696, DEC-049): `off` (no journal comments — engine journal
+  only), `audit` (default — only override/authorisation justifications), or `full`
+  (every pkit-governed move posts a **provenance-stamped** comment carrying the
+  pkit version, making the governed-vs-ungoverned boundary fully visible on the
+  issue). The engine journal records every move regardless of level — the knob
+  controls only the GitHub comment projection. Completes the DEC-049 audit model
+  (engine journal = canonical trail; comments = configurable projection).

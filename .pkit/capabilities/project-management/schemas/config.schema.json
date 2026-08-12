@@ -95,6 +95,17 @@
       "minimum": 0,
       "description": "Lead time in days for pre-close triage of a time-bound container per DEC-016."
     },
+    "audit": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Audit/journal projection to GitHub comments (DEC-049). The engine journal is the canonical trail regardless of this setting; this controls only how much is projected as issue/PR comments.",
+      "properties": {
+        "projection": {
+          "enum": ["off", "audit", "full"],
+          "description": "off = no journal comments (engine journal only); audit (default) = only override/authorisation justifications (a DEC-014 bypass, a --force); full = every pkit-governed mutation, each posted as a provenance-stamped comment (the pkit version that governed it) so the governed-vs-ungoverned boundary is fully visible."
+        }
+      }
+    },
     "code_path_to_doc_mapping": {
       "type": "object",
       "additionalProperties": false,

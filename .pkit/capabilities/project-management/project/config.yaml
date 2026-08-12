@@ -85,3 +85,13 @@ review:
   agents:
     local_registered:
       - name: reviewer
+
+# Audit/journal comment projection (per DEC-049). The engine journal is the
+# canonical audit trail regardless; this controls how much is projected as
+# GitHub comments:
+#   off   — no journal comments (engine journal only)
+#   audit — only override/authorisation justifications (default)
+#   full  — every governed move, provenance-stamped with the pkit version
+# `pkit pm history <N> [--check-drift]` reads the journal + governance boundary.
+audit:
+  projection: audit
