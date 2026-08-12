@@ -332,11 +332,27 @@ Because detection is authoritative, the seam is self-correcting in the failure c
 
 ## Binding a process (how a capability uses this)
 
-1. Author a process definition as the capability's own instance schema at `.pkit/capabilities/<capability>/schemas/<process>.yaml`, declaring conformance to the shape contract (`../../../schemas/_defs/process.schema.json`).
+1. Author a process definition as the capability's own instance schema at `.pkit/capabilities/<capability>/schemas/<process>.yaml`, declaring conformance to the shape contract (`../../../schemas/_defs/process.schema.json`). **Author it through the authoring layer below, not by hand** — the stamps own the file's correctness.
 2. Drive it through the capability's verb-subject commands, which call the engine.
 3. The process is addressable elsewhere as `<capability>:<process-id>` — a parent embeds it by that address through a `subprocess` state (composition, COR-036). Orchestration (concurrent hand-off) remains deferred.
 
 The existing schema-binding grammar (COR-023) is unchanged; capabilities stay independent, self-describing peers.
+
+## The authoring layer
+
+Authoring a definition does not mean knowing this document by heart. Per [COR-044](../decisions/core/COR-044-process-authoring-layer.md) the layer has three tiers, split by what kind of work each does:
+
+- **Commands** — `pkit process new` / `couple` / `hand-off`. Deterministic stamps: they scaffold and mutate the definition, validate every value against the vocabularies **read as data from the shape contract** (`../schemas/_defs/process.schema.json`), scaffold a fail-closed predicate stub for each declared evaluable, and register it in the owning capability's package. The CLI reference specifies the grammar. `health --interpretation-only` is the read-only completion check that pairs with them.
+- **The `process` skill** — the walkthrough over those commands: it asks the shape questions (what is the subject, what does each state *mean*, which moves are gated, is this trigger stable, would this candidate source fail loudly or return empty), then stamps the answer. It also owns the judgment the stamps deliberately refuse — routing an adopter with no owning capability through capability authoring first.
+- **The `process-author` agent** — the **teeth**: the predicates behind every evaluable the shape declares (detections, gates, entry guards, `resume_when`, invariant checks, both hand-off seams). **Not yet shipped**; until it is, implement each stub by hand against the predicate-runner contract above. Stubs fail closed until implemented, so an unwritten predicate reads as indeterminate rather than green.
+
+The split is the point: a definition's *shape* is declarative data with closed vocabularies, so procedure can walk it; its *teeth* are domain logic over the owner's reality, which is authoring judgment.
+
+**Deferred authoring operations** (this list is authoritative; the skill points here):
+
+- `amend` — evolving states or transitions under live subjects, riding the definition `version`. Also the repair path for a mis-declared coupling or contract.
+- Adding a **wait** (COR-034) or an **invariant** (COR-035) to an *existing* definition. A fresh definition declares both through `new`.
+- **Subprocess embedding, cascade folds, open regions** — no stamp surface at all yet, fresh definition or not. (COR-044 point 3 claims a fresh definition can declare these; the shipped stamp cannot, and closing that divergence is tracked work.)
 
 ## Layout
 

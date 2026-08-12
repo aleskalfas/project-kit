@@ -59,6 +59,7 @@ Pairing per COR-005's "Skill / command pairing":
 | New storyboard | `storyboard-author` | `pkit new storyboard <artifact-kind> <name>` |
 | New capability | `capability-author` | `pkit new capability <name>` |
 | Work with schemas (new schema / add entry / rename entry / distill from upstream) | `schema` | `pkit new schema`, `pkit schemas add`, `pkit schemas rename` (composite per COR-020; sub-procedure picked inside the skill) |
+| Author a process definition's **shape** (new process / couple to an upstream / make a hand-off checkable) | `process` | `pkit process new`, `pkit process couple`, `pkit process hand-off` (composite per COR-020). The **teeth** — the predicates behind each scaffolded stub — are the `process-author` agent's territory, not the skill's (COR-044). |
 
 If a skill doesn't exist for a task, invoke the script directly *and follow the disciplines manually* — read CONTRIBUTING.md's relevant section, pick the slug, and use the script for the stamp. Do not author by hand: that is what produced the wrong-number record in PR #16.
 
