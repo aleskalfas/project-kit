@@ -71,6 +71,18 @@ The companion requirement scopes to **schema definitions**, not to every YAML th
 
 Subdirectories under `schemas/` (`examples/`, `_defs/`) hold non-schema material; the companion requirement lives with the direct-child schema definitions.
 
+### The pointer is validated, not just classifying
+
+An instance is exempt from the **companion** requirement, not from validation. `pkit schemas validate` — both the project-wide walk and a path-scoped run — validates every pointered instance against the schema its pointer names, so the pointer means what it says: a hand-edited definition that violates the shape it claims to conform to is reported. Details:
+
+- **The pointer resolves relative to the YAML's own directory**, which is the form the IDE reads and the form authoring commands stamp (e.g. `../../../schemas/_defs/process.schema.json` from a capability's `schemas/` directory).
+- **Findings report against the instance's path** plus a JSON pointer into the offending position (`demo.yaml/process/subject/cardinality`) — the instance is what the author edits.
+- **A broken pointer is a finding, not a skip.** A target that is missing, unreadable, not JSON, or not a valid Draft 2020-12 schema is reported against the instance: declaring a contract and mistyping its path would otherwise leave a file unchecked with no signal.
+- **The target needs a root.** A JSON Schema whose body is only `$defs` accepts every document, so a shared fragment intended as a pointer target declares root constraints (`type` / `required` / `properties`) alongside its `$defs`. Companions that cross-file `$ref` `#/$defs/*` are unaffected by those root keywords.
+- **Shape only.** The cross-file reference passes (typed tokens, `x-pkit-keys-from-namespace`) are companion-pair concepts — sibling-file scope, keyed on the YAML's stem as its namespace — and an instance has neither. Instance-side references are `pkit data validate`'s surface (see COR-029 below).
+- **A remote pointer (`https://…`) stays exempt and unvalidated** — it cannot be read offline. Kit-side spec points at local, repo-relative paths.
+- **With the top-level `$schema:` key form the pointer is data**, so the target schema must permit the property — the same rule that has the kit's own companions declare `pkit_schema:`. The directive-comment form carries no such constraint.
+
 The combination of YAML + companion JSON Schema means a schemas-aware editor (VSCode's YAML extension, JetBrains, etc.) gives autocomplete and inline validation on every YAML schema with zero per-file configuration. CI validators, language-level libraries (`jsonschema` in Python, `ajv` in JavaScript, etc.) all consume the companion the same way.
 
 ## Common shape patterns
@@ -335,15 +347,17 @@ The `schema` skill (composite per COR-020) covers adopter-data schemas through i
 
 ## Tooling expectations
 
-A schema's value depends on tooling actually consuming the companion. Three tooling layers a schemas-using project can expect:
+A schema's value depends on tooling actually consuming the companion. Five tooling layers a schemas-using project can expect:
 
 1. **IDE integration (zero configuration).** JSON-Schema-aware editors detect `<name>.schema.json` next to `<name>.yaml` and apply validation + autocomplete during authoring. Works out of the box; no project-specific setup.
 
 2. **Language-level validators (consumer-driven).** Code consuming a schema may load its companion at runtime and validate the YAML before acting on it (`jsonschema` in Python, `ajv` in JavaScript, etc.). Whether a given consumer does this is a per-consumer choice — runtime validation adds latency but catches malformed data with clearer errors than a downstream crash.
 
-3. **Cross-file resolution (kit-level validator).** `pkit schemas validate` ships the resolver: it walks every typed token across every YAML, looks up each namespace's companion in the same directory, follows the companion's `x-pkit-id-collection` JSON Pointer to the id-bearing collection in the data YAML, and confirms each token's id exists. Sibling-file scope (cross-directory not supported in v1). Unresolved references are hard-rejects (validator exits non-zero); `--shape-only` skips this pass for mid-refactor authoring.
+3. **Pointered-instance validation (kit-level validator).** `pkit schemas validate` also validates every YAML that declares an external `$schema` against the schema that pointer names — the same binding the IDE reads, enforced in CI. See "The pointer is validated, not just classifying" above.
 
-4. **Adopter-data validation (`pkit data validate <path>`).** The consumer surface for the COR-023 binding mechanism. Resolves each data file's binding (field-first; per-schema `binds_to:` as fallback), refuses on schema-version mismatch, runs JSON Schema validation against the resolved schema, and then — unless `--shape-only` — resolves cross-file typed references through the binding, scoped to the validated subtree (per COR-029). See "Adopter data → schema binding" above.
+4. **Cross-file resolution (kit-level validator).** `pkit schemas validate` ships the resolver: it walks every typed token across every YAML, looks up each namespace's companion in the same directory, follows the companion's `x-pkit-id-collection` JSON Pointer to the id-bearing collection in the data YAML, and confirms each token's id exists. Sibling-file scope (cross-directory not supported in v1). Unresolved references are hard-rejects (validator exits non-zero); `--shape-only` skips this pass for mid-refactor authoring.
+
+5. **Adopter-data validation (`pkit data validate <path>`).** The consumer surface for the COR-023 binding mechanism. Resolves each data file's binding (field-first; per-schema `binds_to:` as fallback), refuses on schema-version mismatch, runs JSON Schema validation against the resolved schema, and then — unless `--shape-only` — resolves cross-file typed references through the binding, scoped to the validated subtree (per COR-029). See "Adopter data → schema binding" above.
 
 ## Layout
 

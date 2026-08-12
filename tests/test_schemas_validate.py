@@ -1195,12 +1195,27 @@ def test_example_named_yaml_without_companion_not_flagged(tmp_path: Path) -> Non
     assert report.pairs_checked == 1
 
 
+def _write_shared_defs_schema(
+    schemas_dir: Path, name: str = "process", json_schema: dict | None = None
+) -> Path:
+    """Write a shared `_defs/<name>.schema.json` an instance's pointer can name."""
+    defs = schemas_dir / "_defs"
+    defs.mkdir(exist_ok=True)
+    target = defs / f"{name}.schema.json"
+    target.write_text(
+        json.dumps(json_schema if json_schema is not None else _MINIMAL_JSON_SCHEMA),
+        encoding="utf-8",
+    )
+    return target
+
+
 def test_external_schema_directive_yaml_not_flagged(tmp_path: Path) -> None:
     """A YAML with a `# yaml-language-server: $schema=<external>` directive is an instance."""
     schemas = _make_capability(tmp_path, "demo")
     _write_schema_pair(
         schemas, "process", yaml_body=_MINIMAL_YAML, json_schema=_MINIMAL_JSON_SCHEMA
     )
+    _write_shared_defs_schema(schemas)
     # A process-definition instance validated against a shared _defs schema.
     (schemas / "software-development.yaml").write_text(
         "# yaml-language-server: $schema=_defs/process.schema.json\n"
@@ -1209,8 +1224,11 @@ def test_external_schema_directive_yaml_not_flagged(tmp_path: Path) -> None:
     )  # no own companion
 
     report = validate_path(schemas)
-    assert report.is_clean
+    assert report.is_clean, [f"{i.location}: {i.message}" for i in report.issues]
+    # No companion demanded of the instance — and it IS checked, against the
+    # schema its pointer names.
     assert report.pairs_checked == 1
+    assert report.instances_checked == 1
 
 
 def test_external_schema_top_level_key_yaml_not_flagged(tmp_path: Path) -> None:
@@ -1219,14 +1237,20 @@ def test_external_schema_top_level_key_yaml_not_flagged(tmp_path: Path) -> None:
     _write_schema_pair(
         schemas, "process", yaml_body=_MINIMAL_YAML, json_schema=_MINIMAL_JSON_SCHEMA
     )
+    # The key form puts the pointer in the DATA, so the target must permit it —
+    # the same rule the kit's own companions apply to `pkit_schema:` (COR-023).
+    target = dict(_MINIMAL_JSON_SCHEMA)
+    target["properties"] = dict(target["properties"]) | {"$schema": {"type": "string"}}
+    _write_shared_defs_schema(schemas, json_schema=target)
     (schemas / "onboarding.yaml").write_text(
         "$schema: _defs/process.schema.json\nschema_version: 1\nname: onboarding\n",
         encoding="utf-8",
     )  # no own companion
 
     report = validate_path(schemas)
-    assert report.is_clean
+    assert report.is_clean, [f"{i.location}: {i.message}" for i in report.issues]
     assert report.pairs_checked == 1
+    assert report.instances_checked == 1
 
 
 def test_self_pointing_schema_directive_still_requires_companion(tmp_path: Path) -> None:
@@ -1265,11 +1289,7 @@ def _build_trip_planner_shaped_schemas(schemas: Path) -> None:
     examples.mkdir()
     (examples / "japan-example.yaml").write_text(_MINIMAL_YAML, encoding="utf-8")
 
-    defs = schemas / "_defs"
-    defs.mkdir()
-    (defs / "process.schema.json").write_text(
-        json.dumps(_MINIMAL_JSON_SCHEMA), encoding="utf-8"
-    )
+    _write_shared_defs_schema(schemas)
     (schemas / "software-development.yaml").write_text(
         "# yaml-language-server: $schema=_defs/process.schema.json\n"
         "schema_version: 1\nname: sw-dev\n",
@@ -1313,3 +1333,249 @@ def test_trip_planner_shaped_capability_self_consistency_clean(tmp_path: Path) -
     problems = validate_capability_self_consistency(source)
     schema_problems = [p for p in problems if p.startswith("schema ")]
     assert schema_problems == [], schema_problems
+
+
+# --- pointered instances ARE validated against their target (issue #710) -----
+#
+# The `$schema` pointer a definition carries used to buy nothing but the
+# companion exemption above — nothing validated the file against the schema it
+# named. These tests pin the pointer meaning what it says: the instance is
+# checked against its declared target, findings land on the instance's own
+# path, and a broken pointer is reported rather than silently skipped. The
+# companion exemption is unchanged.
+
+_SHIPPED_PROCESS_CONTRACT = (
+    Path(__file__).resolve().parents[1]
+    / ".pkit"
+    / "schemas"
+    / "_defs"
+    / "process.schema.json"
+)
+
+# How `pkit process new` writes the pointer: the definition lands at
+# `.pkit/capabilities/<cap>/schemas/<id>.yaml`, three levels below `.pkit/`.
+_STAMPED_POINTER = "../../../schemas/_defs/process.schema.json"
+
+
+def test_shipped_process_contract_declares_root_constraints() -> None:
+    """The regression pin: a `$defs`-only contract accepts every document.
+
+    Without these root keywords the stamped `$schema` pointer validates
+    nothing — the exact defect issue #710 exists to close. Any future edit
+    that drops the root fails here.
+    """
+    contract = json.loads(_SHIPPED_PROCESS_CONTRACT.read_text(encoding="utf-8"))
+    assert contract["type"] == "object"
+    assert contract["required"] == ["process"]
+    assert contract["properties"]["process"] == {"$ref": "#/$defs/process"}
+
+
+def _minimal_process_block() -> dict:
+    """A minimal valid singleton process, in the shape the stamp emits."""
+    return {
+        "id": "demo",
+        "version": 1,
+        "subject": {"cardinality": "singleton"},
+        "states": [
+            {
+                "id": "open",
+                "meaning": "Open.",
+                "detection": {
+                    "mode": "inferred",
+                    "predicate": {"run": "demo-detect-open"},
+                },
+            }
+        ],
+        "transitions": [],
+    }
+
+
+def _write_process_definition(target_root: Path, document: dict) -> Path:
+    """Stamp a pointered process definition into a tmp tree beside the real contract.
+
+    Copies the shipped `_defs/` library so the pointer resolves exactly as it
+    does in an installed tree, then writes the definition with the same header
+    directive `pkit process new` writes. The body is serialised as JSON, which
+    the YAML loader reads natively — it keeps the nested definition readable
+    here without a YAML dumper.
+    """
+    import shutil
+
+    defs_dir = target_root / ".pkit" / "schemas" / "_defs"
+    defs_dir.mkdir(parents=True, exist_ok=True)
+    for schema_file in _SHIPPED_PROCESS_CONTRACT.parent.glob("*.schema.json"):
+        shutil.copy(schema_file, defs_dir / schema_file.name)
+    schemas = _make_capability(target_root, "demo")
+    definition = schemas / "demo.yaml"
+    definition.write_text(
+        f"# yaml-language-server: $schema={_STAMPED_POINTER}\n"
+        + json.dumps(document, indent=2)
+        + "\n",
+        encoding="utf-8",
+    )
+    return definition
+
+
+def test_stamped_shape_definition_validates_clean(tmp_path: Path) -> None:
+    """A valid definition carrying the stamped pointer passes — and IS checked."""
+    _write_process_definition(tmp_path, {"process": _minimal_process_block()})
+    report = validate_all(tmp_path)
+    assert report.is_clean, [f"{i.location}: {i.message}" for i in report.issues]
+    # No companion demanded (pairs_checked == 0), yet the file was validated.
+    assert report.pairs_checked == 0
+    assert report.instances_checked == 1
+
+
+def test_definition_missing_process_envelope_is_reported(tmp_path: Path) -> None:
+    """The root's `required: [process]` — the check a `$defs`-only contract lost."""
+    _write_process_definition(tmp_path, _minimal_process_block())  # no envelope
+    report = validate_all(tmp_path)
+    assert not report.is_clean
+    msgs = [i.message for i in report.issues]
+    assert any("'process'" in m and "required" in m for m in msgs), msgs
+
+
+def test_definition_missing_version_is_reported_at_its_position(tmp_path: Path) -> None:
+    """A `process` block violating the shape is reported, located at the block."""
+    block = _minimal_process_block()
+    del block["version"]
+    definition = _write_process_definition(tmp_path, {"process": block})
+    report = validate_all(tmp_path)
+    assert not report.is_clean
+    findings = [
+        i for i in report.issues if "'version'" in i.message and "required" in i.message
+    ]
+    assert findings, [f"{i.location}: {i.message}" for i in report.issues]
+    # Reported against the instance's own path + a JSON pointer into the block.
+    assert findings[0].location.endswith(f"{definition.name}/process")
+
+
+def test_definition_with_bad_cardinality_is_reported_at_its_position(
+    tmp_path: Path,
+) -> None:
+    """An enum violation deep in the block carries a pointer to the offending value."""
+    block = _minimal_process_block()
+    block["subject"]["cardinality"] = "swarm"  # not in the shipped enum
+    _write_process_definition(tmp_path, {"process": block})
+    report = validate_all(tmp_path)
+    assert not report.is_clean
+    locations = [i.location for i in report.issues]
+    assert any(
+        loc.endswith("/process/subject/cardinality") for loc in locations
+    ), [f"{i.location}: {i.message}" for i in report.issues]
+
+
+def test_pointered_instance_needs_no_companion_when_named_explicitly(
+    tmp_path: Path,
+) -> None:
+    """`pkit schemas validate <instance.yaml>` must not demand a companion.
+
+    Naming an instance directly is the natural way to check one file; the
+    companion it categorically cannot have must not be required (COR-018's
+    requirement scopes to schema definitions).
+    """
+    definition = _write_process_definition(
+        tmp_path, {"process": _minimal_process_block()}
+    )
+    report = validate_path(definition, tmp_path)
+    assert report.is_clean, [f"{i.location}: {i.message}" for i in report.issues]
+    assert report.pairs_checked == 0
+    assert report.instances_checked == 1
+
+
+def test_pointered_instance_missing_target_is_reported(tmp_path: Path) -> None:
+    """A pointer at a nonexistent file is a finding, never a silent skip."""
+    schemas = _make_capability(tmp_path, "demo")
+    (schemas / "typo.yaml").write_text(
+        "# yaml-language-server: $schema=_defs/porcess.schema.json\n"
+        "schema_version: 1\n",
+        encoding="utf-8",
+    )
+    report = validate_all(tmp_path)
+    assert not report.is_clean
+    msgs = [i.message for i in report.issues]
+    assert any("does not resolve to a file" in m for m in msgs), msgs
+    assert any("porcess.schema.json" in m for m in msgs), msgs
+
+
+def test_pointered_instance_unparseable_target_is_reported(tmp_path: Path) -> None:
+    schemas = _make_capability(tmp_path, "demo")
+    defs = schemas / "_defs"
+    defs.mkdir()
+    (defs / "process.schema.json").write_text('{ "broken', encoding="utf-8")
+    (schemas / "instance.yaml").write_text(
+        "# yaml-language-server: $schema=_defs/process.schema.json\n"
+        "schema_version: 1\n",
+        encoding="utf-8",
+    )
+    report = validate_all(tmp_path)
+    assert not report.is_clean
+    msgs = [i.message for i in report.issues]
+    assert any("not valid JSON" in m for m in msgs), msgs
+
+
+def test_pointered_instance_target_not_a_schema_is_reported(tmp_path: Path) -> None:
+    """Valid JSON that isn't a valid Draft 2020-12 schema is reported, not applied."""
+    schemas = _make_capability(tmp_path, "demo")
+    _write_shared_defs_schema(
+        schemas,
+        json_schema={
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "type": "fake-type",
+        },
+    )
+    (schemas / "instance.yaml").write_text(
+        "# yaml-language-server: $schema=_defs/process.schema.json\n"
+        "schema_version: 1\n",
+        encoding="utf-8",
+    )
+    report = validate_all(tmp_path)
+    assert not report.is_clean
+    msgs = [i.message for i in report.issues]
+    assert any("not a valid Draft 2020-12" in m for m in msgs), msgs
+
+
+def test_pointered_instance_malformed_yaml_is_reported(tmp_path: Path) -> None:
+    schemas = _make_capability(tmp_path, "demo")
+    _write_shared_defs_schema(schemas)
+    (schemas / "instance.yaml").write_text(
+        "# yaml-language-server: $schema=_defs/process.schema.json\n"
+        "schema_version: 1\n  name: bad-indent\n",
+        encoding="utf-8",
+    )
+    report = validate_all(tmp_path)
+    assert not report.is_clean
+    msgs = [i.message for i in report.issues]
+    assert any("yaml parse error" in m.lower() for m in msgs), msgs
+
+
+def test_remote_pointer_is_exempt_but_not_validated(tmp_path: Path) -> None:
+    """A `https://` target can't be read offline: still exempt, not a finding."""
+    schemas = _make_capability(tmp_path, "demo")
+    (schemas / "instance.yaml").write_text(
+        "# yaml-language-server: $schema=https://example.invalid/process.schema.json\n"
+        "schema_version: 1\n",
+        encoding="utf-8",
+    )
+    report = validate_all(tmp_path)
+    assert report.is_clean, [f"{i.location}: {i.message}" for i in report.issues]
+    assert report.pairs_checked == 0
+    assert report.instances_checked == 0
+
+
+def test_cli_reports_instance_shape_failure_and_exits_nonzero(cli_target: Path) -> None:
+    """The gate `scripts/check.sh` runs surfaces a malformed definition."""
+    block = _minimal_process_block()
+    del block["states"]
+    definition = _write_process_definition(cli_target, {"process": block})
+    result = CliRunner().invoke(main, ["schemas", "validate"])
+    assert result.exit_code != 0, result.output
+    assert definition.name in result.output
+    assert "'states'" in result.output
+
+
+def test_cli_clean_run_counts_instances(cli_target: Path) -> None:
+    _write_process_definition(cli_target, {"process": _minimal_process_block()})
+    result = CliRunner().invoke(main, ["schemas", "validate"])
+    assert result.exit_code == 0, result.output
+    assert "1 instance(s)" in result.output

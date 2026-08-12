@@ -359,9 +359,11 @@ Reports issues with their locations and a brief diagnosis. Makes no changes.
 
 Read-only check on the **capability-side schemas mechanism**: every YAML schema under `.pkit/capabilities/<cap>/schemas/` is validated against its JSON Schema companion (shape pass) and every typed-token cross-schema reference is resolved against the target namespace's id collection (resolver pass).
 
+A YAML declaring an external `$schema` (a `# yaml-language-server:` directive or a top-level `$schema:` key naming a schema other than its own companion) is an **instance**, not a definition: it is exempt from the companion requirement and validated against the schema its pointer names, resolved relative to the YAML's own directory. Findings report against the instance's path with a JSON pointer into the offending position; a pointer whose target is missing or is not a valid Draft 2020-12 schema is itself a finding. See `.pkit/schemas/README.md` ("The pointer is validated, not just classifying") for the full contract.
+
 With `<path>`, runs the same passes scoped to the given file or directory — useful for adopters whose data follows the same conventions outside the capabilities tree.
 
-`--shape-only` skips the resolver pass (useful mid-refactor when a referenced target schema doesn't exist yet).
+`--shape-only` skips the resolver pass (useful mid-refactor when a referenced target schema doesn't exist yet). It does not affect instance validation, which is shape-only by construction.
 
 The no-PATH gate also runs a **fragment-token-resolution lint** (ADR-021): for every installed capability's `permissions/grants.yaml`, each grant's privilege token must resolve to a privilege in the *merged* catalog, or the deny silently does not bind (the bare-vs-scoped fail-open hazard). The lint reuses the decision core's merge (`load_catalog`) and token normaliser (`_privilege_ids`) so it agrees with the runtime exactly; it covers hand-authored fragments, not just those `permissions scaffold` / `permissions grant` produce. An unresolved token fails the gate with a clear message naming the file, the offending token, and the likely fix (usually the missing `<cap>:` scope). This pass is project-scoped (it needs the manifest + merged catalog), so it runs only in `schemas validate` with no `<path>`, not in the path-scoped form.
 
