@@ -7,6 +7,9 @@ queries:
   in the body; every body reference must be declared in frontmatter.
 - Hook closure: every `needs:` must be answered by some `answers:`
   (skill) or `provides:` (package.yaml). Same-tier collisions surface.
+- Exactly-one-owner: an agent's `owns:` entries are resolved through the
+  adopter overlay (per COR-013 rule 5, the check operates on resolved
+  paths, not placeholders) and cross-agent path overlaps are flagged.
 - Read-only lookups: show outgoing refs, reverse lookup, record-ID
   resolution, hook resolution by precedence.
 
@@ -23,6 +26,7 @@ Body parser convention (per COR-013, documented in `.pkit/agents/README.md`):
 from __future__ import annotations
 
 import io
+import itertools
 import os
 import re
 from dataclasses import dataclass, field
@@ -30,6 +34,8 @@ from pathlib import Path
 from typing import Any, Literal
 
 from ruamel.yaml import YAML
+
+from project_kit import agents_overlay
 
 Kind = Literal["agent", "skill"]
 Namespace = Literal["core", "project"]
@@ -188,11 +194,12 @@ def load_hook_providers(target_root: Path) -> list[Provider]:
 
 
 def validate_corpus(target_root: Path) -> list[Issue]:
-    """Run bidirectional consistency + hook closure + same-tier collision + storyboard + capability-citation + composes checks."""
+    """Run bidirectional consistency + hook closure + same-tier collision + exactly-one-owner + storyboard + capability-citation + composes checks."""
     artifacts = load_artifacts(target_root)
     providers = load_hook_providers(target_root)
     issues: list[Issue] = []
     issues.extend(_validate_bidirectional(artifacts, target_root))
+    issues.extend(_validate_ownership(artifacts, target_root))
     issues.extend(_validate_hook_closure(artifacts, providers))
     issues.extend(_validate_same_tier_collisions(providers))
     issues.extend(_validate_storyboards(artifacts, target_root))
@@ -1100,6 +1107,121 @@ def _is_intra_capability_path(path: str, art: "Artifact", target_root: Path) -> 
         if resolved == cap_root or resolved.startswith(cap_root + os.sep):
             return True
     return False
+
+
+def resolved_owns(
+    art: Artifact,
+    overlay: agents_overlay.OverlayValues,
+) -> dict[str, str | None]:
+    """One agent's `owns:` set as *resolved* paths → the category each came from.
+
+    `owns:` entries are either literal paths or `<category>` placeholders the
+    adopter's overlay populates. Resolution is delegated to the backbone's
+    single overlay helper, so it applies exactly the rules the deploy primitive
+    applies (a per-agent `overrides:` entry replaces the top-level default).
+
+    Paths are normalised for comparison (leading `./` and trailing `/` dropped);
+    the mapped value is the overlay category the path came from, or None when
+    the entry was already a literal path. Categories the overlay does not
+    define contribute nothing — see :func:`_validate_ownership` for why that is
+    clean rather than an error.
+    """
+    entries, _undefined = agents_overlay.expand_placeholders(
+        sorted(art.declared.owns), agent_name=art.name, overlay=overlay
+    )
+    owned: dict[str, str | None] = {}
+    for entry in entries:
+        path = _normalize_owned_path(entry.value)
+        if not path:
+            continue
+        owned.setdefault(path, entry.category)
+    return owned
+
+
+def _normalize_owned_path(path: str) -> str:
+    """Comparison form of an owned path: no leading `./`, no trailing `/`."""
+    normalized = path.strip()
+    while normalized.startswith("./"):
+        normalized = normalized[2:]
+    return normalized.rstrip("/")
+
+
+def _paths_overlap(left: str, right: str) -> bool:
+    """True when the two paths are equal or one contains the other."""
+    return (
+        left == right
+        or left.startswith(right + "/")
+        or right.startswith(left + "/")
+    )
+
+
+def _validate_ownership(artifacts: list[Artifact], target_root: Path) -> list[Issue]:
+    """Exactly-one-owner over agents' *resolved* `owns:` paths (per COR-013 rule 5).
+
+    COR-013's overlay rule fixes that the consistency check operates on resolved
+    paths, not placeholders: an agent whose write authority is expressed as an
+    overlay category must be checked against the paths that category resolves
+    to. The semantics are otherwise:
+
+    - **Overlap is path-prefix containment across two distinct agents** (equal
+      paths included). Nesting *within one agent's own* set is benign — an agent
+      legitimately owns a directory and specific files inside it.
+    - **Flagged, never arbitrated.** The finding names both agents and both
+      paths; no precedence rule picks a winner, because there is no ordering in
+      which two owners of one path is correct.
+    - **An entry resolving to zero paths is clean.** An adopter who has not
+      populated a category yet must not fail validation.
+    - **An entry whose category the overlay does not define is clean too.** The
+      deploy primitive already surfaces that loudly by skipping the agent
+      (`pkit agents` reports it); failing here as well would punish an
+      upgraded-not-yet-remediated install twice for one gap.
+    - **Only the agent that actually deploys counts as an owner.** Name-collision
+      precedence (project > capability > core) means a shadowed same-name source
+      is never deployed, so it is not a second owner of its paths.
+    """
+    overlay = agents_overlay.load_overlay_values(target_root)
+    winners = agents_overlay.discover_kit_agents(target_root)
+
+    owned_by_agent: dict[str, dict[str, str | None]] = {}
+    locations: dict[str, str] = {}
+    for art in artifacts:
+        if art.kind != "agent" or not art.declared.owns:
+            continue
+        winner = winners.get(art.name)
+        if winner is not None and winner[1].resolve() != art.path.resolve():
+            continue  # shadowed by name-collision precedence — never deployed
+        owned = resolved_owns(art, overlay)
+        if not owned:
+            continue
+        owned_by_agent.setdefault(art.name, {}).update(owned)
+        locations.setdefault(art.name, _location(art, target_root))
+
+    issues: list[Issue] = []
+    for first, second in itertools.combinations(sorted(owned_by_agent), 2):
+        for first_path, first_category in sorted(owned_by_agent[first].items()):
+            for second_path, second_category in sorted(owned_by_agent[second].items()):
+                if not _paths_overlap(first_path, second_path):
+                    continue
+                issues.append(
+                    Issue(
+                        location=locations[first],
+                        diagnosis=(
+                            f"ownership conflict: agent {first!r} owns "
+                            f"{first_path!r}{_via(first_category)} and agent {second!r} owns "
+                            f"{second_path!r}{_via(second_category)} — the paths overlap, so "
+                            "they have two owning agents. Every kit-relevant path has exactly "
+                            "one owning agent (per COR-013 rule 5); reassign in the agents' "
+                            "`owns:` or in `.pkit/agents/project/overlay.yaml`. This check "
+                            "reports the conflict and never picks a winner."
+                        ),
+                    )
+                )
+    return issues
+
+
+def _via(category: str | None) -> str:
+    """Provenance suffix naming the overlay category a resolved path came from."""
+    return f" (via overlay category <{category}>)" if category else ""
 
 
 def _validate_hook_closure(artifacts: list[Artifact], providers: list[Provider]) -> list[Issue]:

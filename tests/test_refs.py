@@ -1248,6 +1248,168 @@ Per COR-001 yes.
     assert "COR-001" in text
 
 
+# --- owns resolution + exactly-one-owner (#699) ----------------------
+#
+# `owns:` entries may be `<category>` placeholders the adopter overlay
+# populates; per COR-013 rule 5 the check operates on the *resolved* paths.
+# Overlap is path-prefix containment across two distinct agents; nesting inside
+# one agent's own set is benign; empty and undefined categories are clean.
+
+
+def _write_overlay(root: Path, text: str) -> Path:
+    target = root / ".pkit" / "agents" / "project" / "overlay.yaml"
+    target.write_text(text, encoding="utf-8")
+    return target
+
+
+def _write_owning_agent(
+    root: Path, name: str, owns: list[str], *, namespace: str = "core"
+) -> Path:
+    entries = "\n".join(f"  - {entry}" for entry in owns)
+    body = f"""---
+name: {name}
+description: t
+owns:
+{entries}
+---
+# {name}
+Write authority is whatever its frontmatter declares.
+"""
+    return _write_agent(root, namespace, name, body)
+
+
+def _ownership_diagnoses(root: Path) -> list[str]:
+    return [
+        i.diagnosis for i in refs.validate_corpus(root) if "ownership conflict" in i.diagnosis
+    ]
+
+
+def test_owns_placeholder_resolves_through_overlay_and_flags_containment(
+    kit_target: Path,
+) -> None:
+    """A `<category>` owns entry is checked against the paths it resolves to."""
+    _write_overlay(kit_target, "code-paths:\n  - src/app/\n")
+    _write_owning_agent(kit_target, "alpha", ["<code-paths>"])
+    _write_owning_agent(kit_target, "beta", ["src/app/module/"])
+
+    diagnoses = _ownership_diagnoses(kit_target)
+    assert len(diagnoses) == 1, diagnoses
+    assert "'alpha'" in diagnoses[0] and "'beta'" in diagnoses[0]
+    assert "'src/app'" in diagnoses[0] and "'src/app/module'" in diagnoses[0]
+    # The resolved path's provenance is named, and no winner is picked.
+    assert "via overlay category <code-paths>" in diagnoses[0]
+    assert "never picks a winner" in diagnoses[0]
+
+
+def test_owns_conflict_is_located_at_an_owning_agent_file(kit_target: Path) -> None:
+    _write_overlay(kit_target, "code-paths:\n  - src/app/\n")
+    _write_owning_agent(kit_target, "alpha", ["<code-paths>"])
+    _write_owning_agent(kit_target, "beta", ["src/app/module/"])
+
+    conflicts = [i for i in refs.validate_corpus(kit_target) if "ownership conflict" in i.diagnosis]
+    assert conflicts[0].location == ".pkit/agents/core/alpha.md"
+
+
+def test_owns_per_agent_override_replaces_the_default(kit_target: Path) -> None:
+    """Two agents on one category do NOT overlap once an override moves one away."""
+    _write_overlay(
+        kit_target,
+        "code-paths:\n  - src/app/\n"
+        "overrides:\n  beta:\n    code-paths:\n      - tests/\n",
+    )
+    _write_owning_agent(kit_target, "alpha", ["<code-paths>"])
+    _write_owning_agent(kit_target, "beta", ["<code-paths>"])
+
+    assert _ownership_diagnoses(kit_target) == []
+
+
+def test_owns_per_agent_override_value_is_what_participates(kit_target: Path) -> None:
+    """The override's own paths — not the default's — enter the overlap check."""
+    _write_overlay(
+        kit_target,
+        "code-paths:\n  - src/app/\n"
+        "overrides:\n  beta:\n    code-paths:\n      - tests/\n",
+    )
+    _write_owning_agent(kit_target, "alpha", ["<code-paths>"])
+    _write_owning_agent(kit_target, "beta", ["<code-paths>"])
+    _write_owning_agent(kit_target, "gamma", ["tests/unit/"])
+
+    diagnoses = _ownership_diagnoses(kit_target)
+    assert len(diagnoses) == 1, diagnoses
+    assert "'beta'" in diagnoses[0] and "'gamma'" in diagnoses[0]
+    assert "'tests'" in diagnoses[0] and "'tests/unit'" in diagnoses[0]
+    assert "src/app" not in diagnoses[0]
+
+
+def test_owns_category_resolving_to_empty_list_is_clean(kit_target: Path) -> None:
+    """A category the adopter has not populated yet must not fail validation."""
+    _write_overlay(kit_target, "code-paths: []\n")
+    _write_owning_agent(kit_target, "alpha", ["<code-paths>"])
+    _write_owning_agent(kit_target, "beta", ["<code-paths>"])
+
+    assert _ownership_diagnoses(kit_target) == []
+
+
+def test_owns_absent_category_is_clean(kit_target: Path) -> None:
+    """An undefined category is already surfaced by the deploy skip; don't double-punish."""
+    _write_overlay(kit_target, "other-paths:\n  - docs/\n")
+    _write_owning_agent(kit_target, "alpha", ["<code-paths>"])
+    _write_owning_agent(kit_target, "beta", ["<code-paths>"])
+
+    assert _ownership_diagnoses(kit_target) == []
+
+
+def test_owns_bare_category_key_is_clean(kit_target: Path) -> None:
+    """A bare `code-paths:` key resolves to nothing — same clean state as absent."""
+    _write_overlay(kit_target, "code-paths:\n")
+    _write_owning_agent(kit_target, "alpha", ["<code-paths>"])
+    _write_owning_agent(kit_target, "beta", ["<code-paths>"])
+
+    assert _ownership_diagnoses(kit_target) == []
+
+
+def test_owns_nesting_within_one_agent_is_not_flagged(kit_target: Path) -> None:
+    """An agent legitimately owns a directory and specific paths inside it."""
+    _write_overlay(kit_target, "adr-records:\n  - docs/architecture/decisions/\n")
+    _write_owning_agent(kit_target, "alpha", ["docs/architecture/", "<adr-records>"])
+
+    assert _ownership_diagnoses(kit_target) == []
+
+
+def test_owns_equal_paths_across_agents_are_flagged_once(kit_target: Path) -> None:
+    _write_owning_agent(kit_target, "alpha", ["docs/"])
+    _write_owning_agent(kit_target, "beta", ["docs"])
+
+    diagnoses = _ownership_diagnoses(kit_target)
+    assert len(diagnoses) == 1, diagnoses
+    assert "'alpha'" in diagnoses[0] and "'beta'" in diagnoses[0]
+
+
+def test_owns_disjoint_paths_across_agents_are_clean(kit_target: Path) -> None:
+    _write_owning_agent(kit_target, "alpha", ["docs/"])
+    _write_owning_agent(kit_target, "beta", ["src/"])
+
+    assert _ownership_diagnoses(kit_target) == []
+
+
+def test_owns_shadowed_same_name_agent_is_not_a_second_owner(kit_target: Path) -> None:
+    """Name-collision precedence deploys one agent per name, so the shadowed
+    source is not a second owner of its paths."""
+    _write_owning_agent(kit_target, "dup", ["docs/"], namespace="core")
+    _write_owning_agent(kit_target, "dup", ["docs/adr/"], namespace="project")
+
+    assert _ownership_diagnoses(kit_target) == []
+
+
+def test_owns_placeholder_keeps_forward_and_backward_checks_clean(kit_target: Path) -> None:
+    """Resolution must not make a correct agent newly fail the citation checks."""
+    _write_overlay(kit_target, "code-paths:\n  - src/app/\n")
+    _write_owning_agent(kit_target, "alpha", ["<code-paths>"])
+
+    issues = refs.validate_corpus(kit_target)
+    assert issues == [], [i.diagnosis for i in issues]
+
+
 # --- CLI wiring for new subcommands ---------------------------------
 
 
