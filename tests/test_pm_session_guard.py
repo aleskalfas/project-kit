@@ -516,6 +516,9 @@ _READ_ONLY_EXEMPT = frozenset(
         # Views / listings.
         "context-workstream.py",  # report-context read verb (ADR-050):
         # branch → issue → workstream label, prints one value, exits 0 always.
+        "history.py",  # renders the engine journal + timeline drift (DEC-049);
+        # read-only — reads `pkit process status --json` + the gh timeline, writes
+        # nothing to adopter state.
         "list-workstreams.py",
         "show-issue.py",
         "show-members.py",
