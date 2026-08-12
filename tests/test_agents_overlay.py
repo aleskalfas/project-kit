@@ -1,16 +1,19 @@
 """Tests for the `pkit agents` diagnostic + reconcile (per COR-013).
 
-Includes a guard that the backbone reference-detection key-set stays in sync
-with the claude-code adapter's `_resolve_agent.py` — the (B) factoring's
-anti-drift net.
+Includes two guards that the backbone stays in sync with the claude-code
+adapter's `_resolve_agent.py` — the (B) factoring's anti-drift net: the
+reference-detection key-set, and the *value*-resolution behaviour the backbone's
+`expand_placeholders` mirrors (exercised against the real resolver).
 """
 from __future__ import annotations
 
 import re
+import subprocess
 from pathlib import Path
 
 import pytest
 from click.testing import CliRunner
+from ruamel.yaml import YAML
 
 from project_kit import agents_overlay as ao
 from project_kit.cli import main
@@ -63,6 +66,86 @@ def _project(tmp_path: Path, *, overlay: str | None = None) -> Path:
     if overlay is not None:
         (proj / ".pkit" / "agents" / "project" / "overlay.yaml").write_text(overlay, encoding="utf-8")
     return proj
+
+
+# --- resolution parity with the adapter resolver (#699) ---------------------
+
+def _resolve_via_adapter(source: Path, agent_name: str, overlay: Path):
+    """Run the adapter resolver on one agent; return (returncode, frontmatter, stderr)."""
+    resolver = REPO / ".pkit" / "adapters" / "claude-code" / "_resolve_agent.py"
+    proc = subprocess.run(
+        [str(resolver), str(source), agent_name, str(overlay)],
+        capture_output=True, text=True, check=False,
+    )
+    m = re.match(r"^---\n(.*?\n)---\n", proc.stdout, re.DOTALL)
+    fm = YAML(typ="safe").load(m.group(1)) if m else None
+    return proc.returncode, fm, proc.stderr
+
+
+def test_expand_placeholders_matches_adapter_resolver(tmp_path):
+    """The backbone value-resolution helper must produce what the adapter actually
+    substitutes — default, per-agent override (replace, not merge), scalar value,
+    and literal pass-through — or every backbone check reasons about a different
+    `owns:` than the deployed agent has."""
+    overlay_text = (
+        "code-paths:\n  - src/app/\n  - src/lib/\n"
+        "docs-root: docs/\n"
+        "overrides:\n  special:\n    code-paths:\n      - tests/\n"
+    )
+    proj = _project(tmp_path, overlay=overlay_text)
+    overlay = proj / ".pkit" / "agents" / "project" / "overlay.yaml"
+    declared = ["<code-paths>", "<docs-root>", "CONTRIBUTING.md"]
+
+    for agent_name in ("plain", "special"):
+        src = _agent(proj / ".pkit" / "agents" / "core", agent_name, owns=declared)
+        code, fm, stderr = _resolve_via_adapter(src, agent_name, overlay)
+        assert code == 0, stderr
+        entries, undefined = ao.expand_placeholders(
+            declared, agent_name=agent_name, overlay=ao.load_overlay_values(proj)
+        )
+        assert undefined == []
+        assert [e.value for e in entries] == fm["owns"]
+
+
+def test_expand_placeholders_reports_what_the_adapter_refuses(tmp_path):
+    """Where the adapter *exits* on an undefined category (deploy skips the agent),
+    the backbone helper reports the category name and resolves the rest — the one
+    deliberate divergence, so callers can decide what unresolvable means."""
+    proj = _project(tmp_path, overlay="docs-root:\n  - docs/\n")
+    overlay = proj / ".pkit" / "agents" / "project" / "overlay.yaml"
+    declared = ["<code-paths>", "<docs-root>"]
+    src = _agent(proj / ".pkit" / "agents" / "core", "a", owns=declared)
+
+    code, _fm, stderr = _resolve_via_adapter(src, "a", overlay)
+    assert code != 0
+    assert "code-paths" in stderr
+
+    entries, undefined = ao.expand_placeholders(
+        declared, agent_name="a", overlay=ao.load_overlay_values(proj)
+    )
+    assert undefined == ["code-paths"]
+    assert [e.value for e in entries] == ["docs/"]
+
+
+def test_expand_placeholders_records_category_provenance(tmp_path):
+    proj = _project(tmp_path, overlay="code-paths:\n  - src/app/\n")
+    entries, _ = ao.expand_placeholders(
+        ["<code-paths>", "CONTRIBUTING.md"],
+        agent_name="a", overlay=ao.load_overlay_values(proj),
+    )
+    assert [(e.value, e.category) for e in entries] == [
+        ("src/app/", "code-paths"),
+        ("CONTRIBUTING.md", None),
+    ]
+
+
+def test_load_overlay_values_bare_key_resolves_to_undefined(tmp_path):
+    """A bare `code-paths:` key carries no value; the adapter treats that as
+    undefined (agent skipped), so the value helper must too."""
+    proj = _project(tmp_path, overlay="code-paths:\ndocs-root:\n  - docs/\n")
+    values = ao.load_overlay_values(proj)
+    assert values.resolve("a", "code-paths") is None
+    assert values.resolve("a", "docs-root") == ["docs/"]
 
 
 # --- discovery + reference-detection -----------------------------------------

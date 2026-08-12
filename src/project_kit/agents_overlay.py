@@ -18,15 +18,23 @@ adapter's *discovery* (which files are agents, with what precedence) and
 *reference-detection* (which frontmatter keys may carry placeholders) — the
 latter pinned to the adapter by a guard test (`tests/test_agents_overlay.py`).
 It never writes a resolved agent; deployment stays the adapter's job.
+
+It also owns the backbone's single *value*-resolution helper
+(:func:`load_overlay_values` + :func:`expand_placeholders`) — the same
+override-then-default-then-undefined rules the adapter resolver applies, exposed
+so every backbone consumer (the reference-graph's exactly-one-owner check, per
+COR-013 rule 5) resolves placeholders one way instead of re-deriving them. A
+parity test pins it to the adapter resolver's actual behaviour.
 """
 from __future__ import annotations
 
 import io
 import re
 import subprocess
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import click
 from ruamel.yaml import YAML
@@ -136,12 +144,20 @@ def discover_kit_agents(target_root: Path) -> dict[str, tuple[str, Path]]:
 
 # --- reference-detection (mirrors _resolve_agent.py) -------------------------
 
+def placeholder_category(item: object) -> str | None:
+    """The category name of a `<category>` list item, or None for a literal entry."""
+    if isinstance(item, str) and item.startswith("<") and item.endswith(">"):
+        return item[1:-1]
+    return None
+
+
 def _placeholders(items: object) -> set[str]:
     out: set[str] = set()
     if isinstance(items, list):
         for item in items:
-            if isinstance(item, str) and item.startswith("<") and item.endswith(">"):
-                out.add(item[1:-1])
+            cat = placeholder_category(item)
+            if cat is not None:
+                out.add(cat)
     return out
 
 
@@ -170,22 +186,107 @@ def _overlay_path(target_root: Path) -> Path:
     return target_root / ".pkit" / "agents" / "project" / "overlay.yaml"
 
 
-def load_overlay(target_root: Path) -> tuple[set[str], dict[str, set[str]]]:
-    """Return (default category names, {agent: override category names})."""
+@dataclass(frozen=True)
+class OverlayValues:
+    """The overlay's category *values*: top-level defaults + per-agent overrides.
+
+    Mirrors what the adapter resolver reads: every top-level key except the
+    reserved ``overrides`` is a default category; ``overrides.<agent>`` holds
+    per-agent categories that *replace* (never merge with) the default.
+    """
+
+    defaults: dict[str, Any]
+    overrides: dict[str, dict[str, Any]]
+
+    def resolve(self, agent_name: str, category: str) -> Any | None:
+        """The value a category resolves to for one agent, or None if undefined.
+
+        Precedence mirrors ``_resolve_agent.py``: the agent's own override wins,
+        then the top-level default. ``None`` means *undefined* — which covers
+        both an absent key and a bare key (``category:`` with no value), exactly
+        as the adapter treats them (the agent is skipped at deploy).
+        """
+        agent_overrides = self.overrides.get(agent_name) or {}
+        if category in agent_overrides:
+            return agent_overrides[category]
+        if category in self.defaults:
+            return self.defaults[category]
+        return None
+
+
+@dataclass(frozen=True)
+class ResolvedEntry:
+    """One resolved item of a placeholder-bearing frontmatter list.
+
+    ``category`` records the overlay category the value came from, so a
+    consumer can report *why* a path is in the list; None for a literal entry
+    that needed no resolution.
+    """
+
+    value: str
+    category: str | None
+
+
+def load_overlay_values(target_root: Path) -> OverlayValues:
+    """Read the adopter overlay's category values (defaults + per-agent overrides)."""
     path = _overlay_path(target_root)
     if not path.is_file() or path.stat().st_size == 0:
-        return set(), {}
+        return OverlayValues(defaults={}, overrides={})
     data = _yaml.load(path.read_text(encoding="utf-8")) or {}
     if not isinstance(data, dict):
-        return set(), {}
+        return OverlayValues(defaults={}, overrides={})
     overrides_raw = data.get("overrides") or {}
-    overrides: dict[str, set[str]] = {}
+    overrides: dict[str, dict[str, Any]] = {}
     if isinstance(overrides_raw, dict):
         for agent, cats in overrides_raw.items():
             if isinstance(cats, dict):
-                overrides[agent] = set(cats.keys())
-    defaults = {k for k in data.keys() if k != "overrides"}
-    return defaults, overrides
+                overrides[str(agent)] = dict(cats)
+    defaults = {str(k): v for k, v in data.items() if k != "overrides"}
+    return OverlayValues(defaults=defaults, overrides=overrides)
+
+
+def load_overlay(target_root: Path) -> tuple[set[str], dict[str, set[str]]]:
+    """Return (default category names, {agent: override category names})."""
+    values = load_overlay_values(target_root)
+    return set(values.defaults), {
+        agent: set(cats) for agent, cats in values.overrides.items()
+    }
+
+
+def expand_placeholders(
+    items: Iterable[object],
+    *,
+    agent_name: str,
+    overlay: OverlayValues,
+) -> tuple[list[ResolvedEntry], list[str]]:
+    """Substitute `<category>` items from the overlay; pass literals through.
+
+    The backbone twin of the adapter resolver's ``expand_list``: a list value
+    extends the output, a scalar contributes one entry, a literal (non-placeholder)
+    item is kept as-is. Where the adapter *exits* on an undefined category (which
+    makes the deploy skip the agent, loudly), this returns the undefined category
+    names alongside the entries it could resolve — the caller decides what an
+    unresolvable category means for it.
+
+    Returns ``(entries, undefined_categories)``.
+    """
+    entries: list[ResolvedEntry] = []
+    undefined: list[str] = []
+    for item in items:
+        category = placeholder_category(item)
+        if category is None:
+            entries.append(ResolvedEntry(value=str(item), category=None))
+            continue
+        resolved = overlay.resolve(agent_name, category)
+        if resolved is None:
+            undefined.append(category)
+            continue
+        values = resolved if isinstance(resolved, list) else [resolved]
+        for value in values:
+            if value is None:
+                continue
+            entries.append(ResolvedEntry(value=str(value), category=category))
+    return entries, undefined
 
 
 # --- status + reconcile ------------------------------------------------------

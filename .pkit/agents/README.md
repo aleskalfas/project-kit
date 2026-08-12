@@ -66,7 +66,7 @@ You are the **software engineer** for this project. …
 - `name`, `description` — agent identity; `description` is the one-line summary surfaced by tooling.
 - `tools` — the harness-recognised tool names this agent is granted (e.g. for Claude Code: `Read`, `Edit`, `Bash`, `Agent`, …). The adapter translates this to the harness's expected format at deploy time.
 - `reads` — references the agent consults at task time. Split into `paths` (filesystem locations), `records` (decision-record IDs like `COR-NNN` or `PRJ-NNN`), and `patterns` (overlay-resolved placeholders).
-- `owns` — paths the agent has write authority over. Every kit-relevant path has exactly one owning agent; the bidirectional check flags overlaps. Agents-only (skills don't own paths).
+- `owns` — paths the agent has write authority over; entries may be literal paths or `<category>` placeholders the overlay resolves. Every kit-relevant path is meant to have exactly one owning agent; `pkit refs validate` enforces that by flagging cross-agent overlaps over *resolved* paths — see "Exactly-one-owner over `owns:`" below for what it does and does not check. Agents-only (skills don't own paths).
 - `needs` — hook names this agent invokes. See the "Hooks" section.
 - `answers` — hook names a skill provides. Skills only.
 - `gates` — record IDs whose `accepted` status is load-bearing for a skill to run. Skills only; entries here automatically count as `reads.records`.
@@ -99,6 +99,20 @@ Both directions must hold. CI runs the same check at PR time.
 - **Intra-capability pointers** — a path, cited by a capability-owned agent/skill, that resolves inside that capability's own tree (`scripts/move-issue.py`, a sibling sub-procedure `create-issue.md`, `project/config.yaml`). These are implementation pointers, not external reads. A path that resolves *outside* the capability, or an absolute / target-root-relative path into another tier, is still flagged.
 
 Record and hook citations are never path-exempt: an undeclared `COR-NNN` record or hook mention is still flagged.
+
+### Exactly-one-owner over `owns:`
+
+`pkit refs validate` also checks write authority. Per COR-013's overlay rule, the check operates on **resolved** paths, not placeholders: each agent's `owns:` entries are expanded through `.pkit/agents/project/overlay.yaml` — a per-agent `overrides:` entry replacing the top-level default, exactly as the deploy primitive resolves them — and the resolved sets are compared across agents.
+
+- **Overlap means path-prefix containment between two *distinct* agents** — one agent's path contains the other's, or the two are equal. Nesting *within a single agent's own* set is benign (an agent legitimately owns a directory and specific paths inside it).
+- **Conflicts are flagged, never arbitrated.** The finding names both agents and both paths (and the overlay category a resolved path came from); no precedence rule picks a winner, because there is no ordering in which two owners of one path is correct. Resolve it by reassigning in the agents' `owns:` or by re-pointing the overlay category.
+- **An entry that resolves to zero paths is clean.** An adopter who has not populated a category yet (`code-paths: []`) is a normal state, not a validation failure.
+- **An entry whose category the overlay does not define is clean too.** That gap is already surfaced loudly elsewhere — the agent is *skipped at deploy time* and `pkit agents` reports the undefined category — so validation does not fail an upgraded-not-yet-remediated install a second time for the same gap.
+- **Only the agent that actually deploys counts as an owner.** Under name-collision precedence (see "Deploy mechanics") one agent per name is deployed; a shadowed same-name source is not a second owner of its paths.
+
+The check covers `owns:` overlap only. It does not verify that a resolved path exists on disk (`pkit refs rot` covers missing paths), and nothing at runtime physically prevents an agent from editing outside its `owns:` — resolved ownership is methodology metadata enforced at validation time and honoured as discipline at runtime.
+
+Resolution applies to the **ownership** comparison, not to citation coverage: the bidirectional check still satisfies a `<category>` entry by finding that *placeholder* in the body, deliberately. A core-shipped agent cannot cite an adopter's real paths in its prose without breaking project-neutrality, so the placeholder is the honest thing for the body to carry — the resolved paths are what ownership is judged over.
 
 Additional graph operations live in the `pkit refs` CLI family — show, who-references, rename, rot, graph, lookup. See `.pkit/cli/README.md` for the full surface once it ships.
 

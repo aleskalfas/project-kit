@@ -2099,12 +2099,18 @@ def refs() -> None:
 
 @refs.command("validate")
 def refs_validate() -> None:
-    """Bidirectional consistency + hook closure check across the artifact corpus."""
+    """Bidirectional consistency + hook closure + exactly-one-owner check across the artifact corpus."""
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
     issues = refs_mod.validate_corpus(target_root)
-    lines = [cli_render.style("title", "Reference validation — bidirectional consistency + hook closure"), ""]
+    lines = [
+        cli_render.style(
+            "title",
+            "Reference validation — bidirectional consistency + hook closure + exactly-one-owner",
+        ),
+        "",
+    ]
     if not issues:
         lines.append("  " + cli_render.style("strong", "All checks passed."))
         click.echo("\n".join(lines) + "\n", nl=False)
