@@ -4782,11 +4782,15 @@ def _split_pair(raw: str, sep: str, flag: str, shape: str) -> tuple[str, str]:
               help="Declare a transition (repeatable). `from` may be `*` (any source). "
                    "Authorisation defaults to `user` (the safe floor: nothing moves "
                    "autonomously until the author decides otherwise).")
-@click.option("--gate", "gate_flags", multiple=True, metavar="<from>:<to>[:<kind>]",
+@click.option("--gate", "gate_flags", multiple=True,
+              metavar="<from>:<to>:<trigger>[:<kind>]",
               help="Gate a declared transition (repeatable); scaffolds a gate predicate "
-                   "stub. Kind defaults to `deterministic`; `authorisation-artifact` is "
-                   "the other stubbed kind (engine-computed kinds ride the deferred "
-                   "subprocess/cascade block surface).")
+                   "stub. Addresses the transition by its FULL key including the trigger "
+                   "— two edges between the same state pair are legal when their triggers "
+                   "differ, and each is gated separately. Kind defaults to "
+                   "`deterministic`; `authorisation-artifact` is the other stubbed kind "
+                   "(engine-computed kinds ride the deferred subprocess/cascade block "
+                   "surface).")
 @click.option("--invariant", "invariant_flags", multiple=True, metavar="<id>=<why>",
               help="Declare a position-independent always-check (COR-035, repeatable); "
                    "scaffolds a check predicate stub.")
@@ -4794,6 +4798,8 @@ def _split_pair(raw: str, sep: str, flag: str, shape: str) -> tuple[str, str]:
               help="Declare the subject's wait reason (COR-034; validated against the "
                    "shape contract's set). `awaiting-condition` scaffolds a resume_when "
                    "predicate stub.")
+@click.option("--dry-run", "dry_run", is_flag=True, default=False,
+              help="Report what would be stamped without writing anything.")
 def process_new(
     address: str,
     cardinality: str,
@@ -4806,6 +4812,7 @@ def process_new(
     gate_flags: tuple[str, ...],
     invariant_flags: tuple[str, ...],
     blocked_on: str | None,
+    dry_run: bool,
 ) -> None:
     """Scaffold a lint-clean process definition into its owning capability.
 
@@ -4871,24 +4878,37 @@ def process_new(
         )
     for raw in gate_flags:
         parts = [p.strip() for p in raw.split(":")]
-        if len(parts) not in (2, 3) or not all(parts):
+        if len(parts) not in (3, 4) or not all(parts):
             raise click.ClickException(
-                f"--gate {raw!r} is malformed; expected <from>:<to>[:<kind>]."
+                f"--gate {raw!r} is malformed; expected "
+                "<from>:<to>:<trigger>[:<kind>]."
             )
-        kind = parts[2] if len(parts) == 3 else "deterministic"
+        kind = parts[3] if len(parts) == 4 else "deterministic"
+        # A transition is keyed by (from, to, trigger): addressing a gate by the
+        # state pair alone would leave a second edge between the same pair (an
+        # `approve` beside a `force-approve`) permanently ungateable, and two
+        # --gate flags on that pair silently last-wins.
+        key = (parts[0], parts[1], parts[2])
         for index, t in enumerate(transitions):
-            if (t.from_state, t.to_state) == (parts[0], parts[1]):
-                transitions[index] = authoring.TransitionSpec(
-                    from_state=t.from_state,
-                    to_state=t.to_state,
-                    trigger=t.trigger,
-                    authorisation=t.authorisation,
-                    gate_kind=kind,
+            if (t.from_state, t.to_state, t.trigger) != key:
+                continue
+            if t.gate_kind is not None:
+                raise click.ClickException(
+                    f"--gate {raw!r} addresses a transition that is already "
+                    "gated; declare one gate per transition."
                 )
-                break
+            transitions[index] = authoring.TransitionSpec(
+                from_state=t.from_state,
+                to_state=t.to_state,
+                trigger=t.trigger,
+                authorisation=t.authorisation,
+                gate_kind=kind,
+            )
+            break
         else:
             raise click.ClickException(
-                f"--gate {raw!r} does not match a --transition declaration."
+                f"--gate {raw!r} does not match a --transition declaration "
+                "(the address is <from>:<to>:<trigger>, the transition's full key)."
             )
 
     invariants = [

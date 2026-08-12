@@ -390,6 +390,21 @@ def _command_name(process_id: str, *parts: str) -> str:
     return "-".join([process_id, *parts])
 
 
+def _gate_command_name(process_id: str, transition: "TransitionSpec") -> str:
+    """A gate stub's command name, derived from the FULL transition key.
+
+    A transition is keyed by (from, to, trigger): two edges between the same
+    state pair are legal when their triggers differ (`approve` /
+    `force-approve`), so a name derived from the pair alone would collide and
+    leave the second edge ungateable. The trigger is kebab-checked at
+    declaration, which keeps the derived name a well-formed command name.
+    """
+    source = transition.from_state.strip("*") or "any"
+    return _command_name(
+        process_id, "gate", source, transition.to_state, transition.trigger
+    )
+
+
 def _script_relpath(command: str) -> str:
     return "scripts/" + command.replace("-", "_") + ".py"
 
@@ -601,9 +616,13 @@ def stamp_new_process(
                 f"transition {t.from_state!r} -> {t.to_state!r} names an "
                 f"undeclared target state."
             )
-        if not t.trigger.strip():
+        if not _KEBAB_CASE.match(t.trigger):
             raise ProcessAuthoringError(
-                f"transition {t.from_state!r} -> {t.to_state!r} needs a trigger."
+                f"transition {t.from_state!r} -> {t.to_state!r} needs a "
+                f"kebab-case trigger (got {t.trigger!r}). The trigger is the "
+                "third component of a transition's key, and a gate stub's "
+                "command name is derived from that key — so the stamp holds it "
+                "to the same id discipline as every other id it writes."
             )
         if t.authorisation not in authorisations:
             raise ProcessAuthoringError(
@@ -622,6 +641,18 @@ def stamp_new_process(
                     "`subprocess` / `cascade` block — a deferred `new` surface "
                     "(COR-044 named-deferred block kinds), not a predicate stub."
                 )
+    # A transition's key is (from, to, trigger) — two edges between the same
+    # pair are legal when their triggers differ (`approve` / `force-approve`),
+    # but two with the SAME key are a duplicate that makes every per-transition
+    # address (a gate's, above all) ambiguous.
+    keys = [(t.from_state, t.to_state, t.trigger) for t in transitions]
+    if len(set(keys)) != len(keys):
+        duplicate = next(k for k in keys if keys.count(k) > 1)
+        raise ProcessAuthoringError(
+            f"transition {duplicate[0]!r} -> {duplicate[1]!r} on trigger "
+            f"{duplicate[2]!r} is declared twice; a transition is keyed by "
+            "(from, to, trigger)."
+        )
 
     for inv in invariants:
         if not _KEBAB_CASE.match(inv.invariant_id):
@@ -678,9 +709,9 @@ def stamp_new_process(
                 else "gate"
             )
             add_stub(
-                _command_name(process_id, "gate", t.from_state.strip("*") or "any", t.to_state),
+                _gate_command_name(process_id, t),
                 f"{t.gate_kind} gate — may the subject move "
-                f"{t.from_state!r} -> {t.to_state!r}?",
+                f"{t.from_state!r} -> {t.to_state!r} on {t.trigger!r}?",
                 payload_key,
             )
     if blocked_on == "awaiting-condition":
@@ -761,11 +792,7 @@ def stamp_new_process(
         if t.gate_kind is not None:
             transition_block["gate"] = {
                 "kind": t.gate_kind,
-                "predicate": {
-                    "run": _command_name(
-                        process_id, "gate", t.from_state.strip("*") or "any", t.to_state
-                    )
-                },
+                "predicate": {"run": _gate_command_name(process_id, t)},
             }
         transitions_block.append(transition_block)
 

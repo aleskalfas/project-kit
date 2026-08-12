@@ -266,7 +266,7 @@ def test_new_stubs_every_declared_evaluable(authoring_repo: Path) -> None:
         "ladder-detect-open",
         "ladder-detect-shut",
         "ladder-entry-open",
-        "ladder-gate-open-shut",
+        "ladder-gate-open-shut-close",  # keyed by (from, to, TRIGGER)
         "ladder-resume-when",
         "ladder-invariant-has-owner",
     } <= commands
@@ -277,7 +277,7 @@ def test_new_stubs_every_declared_evaluable(authoring_repo: Path) -> None:
     states = {s["id"]: s for s in definition.states}
     assert states["open"]["entry"] == {"when": {"run": "ladder-entry-open"}}
     (transition,) = definition.transitions
-    assert transition["gate"]["predicate"] == {"run": "ladder-gate-open-shut"}
+    assert transition["gate"]["predicate"] == {"run": "ladder-gate-open-shut-close"}
     assert definition.data["subject"]["blocked"]["resume_when"] == {
         "run": "ladder-resume-when"
     }
@@ -371,6 +371,114 @@ def test_handoff_refuses_to_clobber_an_unregistered_seam_script(
     # The definition is untouched: the pre-flight runs before the edit.
     definition = load_definition(authoring_repo, "delivery:unit")
     assert "handoff" not in definition.states[0]["depends_on"][0]
+
+
+# --- transitions are keyed by (from, to, trigger) ---------------------------
+
+
+def test_two_transitions_between_one_pair_are_each_gateable(
+    authoring_repo: Path,
+) -> None:
+    # `approve` and `force-approve` between the same states are shape-legal and
+    # distinct: a gate address keyed on the state pair alone would collide, and
+    # the second edge could never be gated.
+    pa.stamp_new_process(
+        authoring_repo,
+        "design:screen",
+        states=[
+            pa.StateSpec("drafting", "Drafting.", entry=True),
+            pa.StateSpec("ready", "Ready.", terminal=True),
+        ],
+        transitions=[
+            pa.TransitionSpec("drafting", "ready", "approve", "user", gate_kind="deterministic"),
+            pa.TransitionSpec(
+                "drafting", "ready", "force-approve", "user",
+                gate_kind="authorisation-artifact",
+            ),
+        ],
+    )
+    definition = load_definition(authoring_repo, "design:screen")
+    gates = {t["trigger"]: t["gate"]["predicate"]["run"] for t in definition.transitions}
+    assert gates == {
+        "approve": "screen-gate-drafting-ready-approve",
+        "force-approve": "screen-gate-drafting-ready-force-approve",
+    }
+    assert set(gates.values()) <= set(_registered_commands(authoring_repo, "design"))
+
+
+def test_new_refuses_a_duplicate_transition_key(authoring_repo: Path) -> None:
+    with pytest.raises(pa.ProcessAuthoringError, match="declared twice"):
+        pa.stamp_new_process(
+            authoring_repo,
+            "design:screen",
+            states=[pa.StateSpec("a", "A."), pa.StateSpec("b", "B.")],
+            transitions=[
+                pa.TransitionSpec("a", "b", "go", "user"),
+                pa.TransitionSpec("a", "b", "go", "user"),
+            ],
+        )
+
+
+def test_new_requires_a_kebab_case_trigger(authoring_repo: Path) -> None:
+    with pytest.raises(pa.ProcessAuthoringError, match="kebab-case trigger"):
+        pa.stamp_new_process(
+            authoring_repo,
+            "design:screen",
+            states=[pa.StateSpec("a", "A."), pa.StateSpec("b", "B.")],
+            transitions=[pa.TransitionSpec("a", "b", "Force Approve", "user")],
+        )
+
+
+def test_gate_flag_addresses_a_transition_by_its_full_key(
+    authoring_repo: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr("project_kit.process.resolve_repo_root", lambda: authoring_repo)
+    runner = CliRunner()
+    base = [
+        "process", "new", "design:screen",
+        "--state", "drafting=Drafting.", "--state", "ready=Ready.",
+        "--entry", "drafting", "--terminal", "ready",
+        "--transition", "drafting:ready:approve",
+        "--transition", "drafting:ready:force-approve",
+    ]
+
+    # The pair alone is no longer an address.
+    result = runner.invoke(main, [*base, "--gate", "drafting:ready"])
+    assert result.exit_code != 0
+    assert "malformed" in result.output
+
+    # Two gates on one state pair, one per trigger — both land.
+    result = runner.invoke(
+        main,
+        [
+            *base,
+            "--gate", "drafting:ready:approve",
+            "--gate", "drafting:ready:force-approve:authorisation-artifact",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    definition = load_definition(authoring_repo, "design:screen")
+    kinds = {t["trigger"]: t["gate"]["kind"] for t in definition.transitions}
+    assert kinds == {"approve": "deterministic", "force-approve": "authorisation-artifact"}
+
+
+def test_two_gate_flags_on_one_transition_refuse(
+    authoring_repo: Path, monkeypatch
+) -> None:
+    # Silently last-wins is what the pair-keyed address used to do.
+    monkeypatch.setattr("project_kit.process.resolve_repo_root", lambda: authoring_repo)
+    result = CliRunner().invoke(
+        main,
+        [
+            "process", "new", "design:screen",
+            "--state", "drafting=Drafting.", "--state", "ready=Ready.",
+            "--transition", "drafting:ready:approve",
+            "--gate", "drafting:ready:approve",
+            "--gate", "drafting:ready:approve:authorisation-artifact",
+        ],
+    )
+    assert result.exit_code != 0
+    assert "already gated" in result.output
 
 
 def test_new_cli_requires_capability_and_matching_marks(
