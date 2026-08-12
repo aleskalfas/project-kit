@@ -214,6 +214,13 @@ def _run_all_checks(capability_root: Path) -> list[CheckResult]:
         # (G-3 / the loader docstring's promise).
         results.append(_check_substrate_map_parse(capability_root))
         results.extend(_check_substrate_capability_matrix(substrate_map))
+        # Cross-substrate conflict: an axis claimed by the BOARD (config's
+        # `has_projects_v2_board: true`) *and* bound to labels by the map. Each
+        # writer/reader believes its own file, so the axis ends up unset on both
+        # substrates and the review gate becomes unsatisfiable (#708). Greenfield
+        # (no map) cannot express the conflict, so this lives inside the
+        # present-map block, beside the matrix that reads the same map.
+        results.extend(_check_substrate_board_conflict(config, substrate_map))
 
     # 3b. gh: block validation + host-pinned auth (per DEC-023).
     if config is not None:
@@ -721,6 +728,120 @@ def _check_substrate_capability_matrix(
                 f"(ADR-026 no-knob-stays-hard).",
             ))
     return results
+
+
+# ----- cross-substrate conflict (writer/reader disagreement, #708) ----
+
+# The axes `has_projects_v2_board: true` claims for the BOARD — i.e. the axes
+# every writer stops writing a label for once the flag is set. This mirrors the
+# behaviour already encoded elsewhere: `_check_labels` skips the `priority:*` /
+# `workstream:*` kit-label checks under a board, `_check_state_labels` runs only
+# in label-fallback mode, `set-field` refuses priority/workstream, and
+# `move-issue._compute_plan` returns an empty (no-label) plan for `state`.
+#
+# `type` is deliberately absent: classification.yaml makes it always-a-label
+# regardless of board substrate (see set-field's `_plan_kind`), so the board
+# never claims it and a `label` binding on `type` is not a conflict.
+BOARD_CLAIMED_AXES: tuple[str, ...] = ("priority", "workstream", "state")
+
+
+def _check_substrate_board_conflict(
+    config: dict[str, Any] | None,
+    substrate_map: "axis_labels.SubstrateMap",
+) -> list[CheckResult]:
+    """FAIL when an axis is claimed by BOTH substrates — the board and the map.
+
+    The reported failure (#708, a brownfield adopter with a Projects v2 board):
+    `config.yaml` declares `has_projects_v2_board: true` — so every *writer*
+    treats a board-claimed axis as a board field and writes no label — while
+    `project/substrate-map.yaml` binds that same axis to the adopter's own
+    labels, which is where every *reader* then looks. Neither side is wrong on
+    its own terms, and each reads only its own file, so nothing detects the
+    disagreement: `create-issue` writes no label, `set-field` will not write one,
+    no board field is written either (only an `after_create_issue` hook does
+    that), and `review-pr` hard-rejects on the missing label. The axis ends up
+    unset on BOTH substrates and the capability's own verbs cannot satisfy the
+    capability's own gate — the adopter's only escape is a raw `gh issue edit`.
+
+    **Why `fail`, not `warn`** (the report offered either). pre-check is the hard
+    prerequisite gate — the thing that says "the methodology can operate here" —
+    and this state makes the review gate *unsatisfiable by the capability's own
+    tooling*, which is a broken prerequisite, not an advisory. It is also cheap
+    and unambiguous to fix (one of the two declarations changes), and a warn
+    would be lost in a passing run — exactly the invisibility the report is
+    about. Contrast the deliberate `warn` cases here (a missing contributed
+    label, DEC-042): those are self-healing via `bootstrap` and their consumers
+    fail closed on their own predicate. This one heals only by hand-backfilling
+    every issue filed in the meantime.
+
+    **Only `label` bindings conflict.** The predicate is the seam's
+    :func:`axis_labels.axis_is_label_bound` (a value→label remap onto the
+    adopter's own labels) — the shape the report hits and the only one where a
+    suppressed label write starves a label read. An axis marked `unsupported:
+    true` (the report's own workaround shape, and what the `workstream` axis
+    already uses for board-backed axes) does not conflict — it agrees with the
+    writer. Neither does `derive` (state read from open/closed, which a board
+    does not suppress) nor `title-prefix` (carried in the title, not a label).
+    Binding shape is read only through the seam, per ADR-026.
+    """
+    if not (config and config.get("has_projects_v2_board")):
+        return [CheckResult(
+            "cross-substrate axis conflict",
+            "skip",
+            "no board configured — `has_projects_v2_board` is not true, so no "
+            "axis can be claimed by both the board and substrate-map.yaml.",
+        )]
+
+    board_id = config.get("projects_v2_board_id")
+    board_ref = f" (board #{board_id})" if board_id is not None else ""
+
+    conflicting = [
+        axis
+        for axis in BOARD_CLAIMED_AXES
+        if axis_labels.axis_is_label_bound(axis, substrate_map)
+    ]
+    if not conflicting:
+        return [CheckResult(
+            "cross-substrate axis conflict",
+            "ok",
+            "no axis is claimed by both substrates — every board-claimed axis "
+            f"({', '.join(BOARD_CLAIMED_AXES)}) is absent, `unsupported`, or "
+            "bound to a non-label substrate in substrate-map.yaml.",
+        )]
+
+    return [
+        CheckResult(
+            f"axis `{axis}` claimed by one substrate only",
+            "fail",
+            (
+                f"CONFLICT — two claimants for `{axis}`: "
+                f"(1) project/config.yaml sets `has_projects_v2_board: true`"
+                f"{board_ref}, so every writer treats `{axis}` as a Projects-v2 "
+                f"board field and writes NO label; (2) project/substrate-map.yaml "
+                f"binds `{axis}` to the adopter's own labels (a `label:` remap), "
+                f"which is where every reader looks. Consequence: issues are "
+                f"filed with `{axis}` unset on BOTH substrates (no label, and no "
+                f"board field either — only an `after_create_issue` hook writes "
+                f"one), and the review gate that requires a value for `{axis}` "
+                f"becomes unsatisfiable by the capability's own verbs "
+                f"(create-issue will not write it, set-field refuses it, "
+                f"review-pr demands it)."
+            ),
+            remediation=(
+                f"Pick ONE substrate for `{axis}`. Board-backed: mark the axis "
+                f"`unsupported: true` in project/substrate-map.yaml (the shape a "
+                f"board-backed axis uses) and add an `after_create_issue` "
+                f"`set-board-field` hook so new issues get a board value — "
+                f"already-filed issues need their board field backfilled. "
+                f"Label-backed: keep the `label:` binding and set "
+                f"`has_projects_v2_board: false` in project/config.yaml "
+                f"(label-fallback mode, per DEC-012) so the writers label the "
+                f"axis they read. Either way the two files must agree "
+                f"(DEC-036 / ADR-026)."
+            ),
+        )
+        for axis in conflicting
+    ]
 
 
 def _check_labels(

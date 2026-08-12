@@ -30,9 +30,9 @@ composes, and the kind→title-prefix realignment reads classification.yaml's
 `title_prefix_by_value` (the same map create-issue's title composition uses), so
 prefix and label stay coupled. The `type:*` axis is ALWAYS a label (per
 classification.yaml), so --kind labels regardless of board substrate; under a
-Projects-v2 board, priority/workstream instead live on board fields, so set-field
-reports a degrade note and does not touch a label (mirroring move-issue's board
-posture at v1).
+Projects-v2 board, priority/workstream instead live on board fields, which
+set-field cannot write at v1 — so it REFUSES such an axis (non-zero exit, naming
+the board field to set instead) rather than reporting a no-op success (#709).
 
 Failure + recovery (DEC-038 D4 family): the whole request is validated up front
 (value in the adopter's vocabulary; parent resolvable; and the requested kind is
@@ -54,7 +54,12 @@ Or via the dispatcher (per COR-021):
 
 Exit codes:
   0  applied (or no-op idempotent success; or dry-run reported)
-  1  membership refusal / validation refusal (nothing mutated)
+  1  refusal — membership; up-front validation (nothing mutated); or a requested
+     axis lives on the Projects-v2 board substrate, which set-field cannot write
+     (#709). In the mixed case (some axes label-substrate, some board-substrate)
+     the label-substrate writes ARE applied and the exit is still non-zero, with
+     the summary naming what was and was not done — a partial application must
+     never read as a clean success.
   2  usage error (issue not found; no field given; unknown value)
   3  gh write failure
 """
@@ -259,6 +264,7 @@ def main() -> int:
         current_labels=current_labels,
         substrate_map=substrate_map,
         has_board=has_board,
+        board_id=config.get("projects_v2_board_id"),
     )
     results.extend(label_results)
     label_add.extend(axis_add)
@@ -277,12 +283,32 @@ def main() -> int:
     title_changed = new_title is not None and new_title != title
     any_change = bool(label_add or label_remove) or body_changed or title_changed
 
+    # A refused field (today: an axis on the board substrate, which set-field
+    # cannot write) must never be summarised as success — neither as "all fields
+    # already set" nor as a bare "updated" (#709). It drives a non-zero exit even
+    # when the label-substrate fields in the same call apply cleanly; the summary
+    # says which is which so a partial application is legible.
+    refused = [r for r in results if not r.ok]
+
     if not any_change:
+        if refused:
+            print(
+                f"\n[refused] #{args.issue_number}: nothing written — "
+                f"{_field_list(refused)} could not be set here (see above). "
+                "This is NOT 'already set': the field(s) remain unset."
+            )
+            return 1
         print(f"\n[ok] #{args.issue_number}: no change (all fields already set).")
         return 0
 
     if args.dry_run:
         print("\n[dry-run] gh would be invoked; nothing written.")
+        if refused:
+            print(
+                f"[refused] {_field_list(refused)} could not be set here even "
+                "outside dry-run (see above)."
+            )
+            return 1
         return 0
     if not args.yes and sys.stdin.isatty():
         reply = input("Write the change(s)? [y/N] ").strip().lower()
@@ -303,8 +329,31 @@ def main() -> int:
         if not _gh_write_body(args.issue_number, stamped, config):
             return 3
 
+    if refused:
+        applied = [r for r in results if r.ok and r.changed]
+        print(
+            f"\n[partial] #{args.issue_number}: applied "
+            f"{_field_list(applied) or 'nothing'}; REFUSED "
+            f"{_field_list(refused)} (see above — not written on any substrate)."
+        )
+        return 1
+
     print(f"\n[ok] #{args.issue_number}: updated.")
     return 0
+
+
+def _field_list(results: list[FieldResult]) -> str:
+    """`priority, workstream` — the field names of `results`, for a summary line.
+
+    Deduplicated, order-preserving: the summary names each field once even if a
+    field contributed more than one result (a kind change contributes both `kind`
+    and `title`).
+    """
+    seen: list[str] = []
+    for r in results:
+        if r.field not in seen:
+            seen.append(r.field)
+    return ", ".join(seen)
 
 
 # ---- planning -------------------------------------------------------------
@@ -317,6 +366,7 @@ def _plan_labels(
     current_labels: list[str],
     substrate_map: "axis_labels.SubstrateMap | None",
     has_board: bool,
+    board_id: int | str | None = None,
 ) -> tuple[list[FieldResult], list[str], list[str]]:
     """Resolve priority/workstream to add/remove label sets (idempotent).
 
@@ -324,8 +374,15 @@ def _plan_labels(
     `axis_labels.resolve_write` (so a remapped or board substrate is honoured),
     then diffs against the issue's current labels: a value already present is a
     no-op; a changed value removes the stale `<axis>:*` label(s) and adds the new
-    one. Under a board, the axis lives on a Projects-v2 field, not a label, so the
-    write degrades with a note (mirroring move-issue's v1 board posture).
+    one.
+
+    Under a board the axis lives on a Projects-v2 field, which set-field cannot
+    write at v1 — so the axis is REFUSED (`ok=False`), not reported as a no-op
+    success. It previously returned `ok=True, changed=False`, which printed
+    `[ok] priority: … not set here` and then summarised as `no change (all fields
+    already set)`: success-shaped output for a request that left the axis unset on
+    every substrate (#709 / #708). A refusal names the board field the caller must
+    set instead and drives a non-zero exit in `main`.
     """
     results: list[FieldResult] = []
     to_add: list[str] = []
@@ -335,14 +392,23 @@ def _plan_labels(
         if value is None:
             continue
         if has_board:
+            board_ref = f" #{board_id}" if board_id is not None else ""
             results.append(
                 FieldResult(
                     field=axis,
-                    ok=True,
+                    ok=False,
                     changed=False,
                     message=(
-                        f"{axis}: board substrate — lives on the Projects-v2 "
-                        f"field, not a label; not set here (set on the board)"
+                        f"{axis}: board substrate — `{axis}` lives on the "
+                        f"Projects-v2 board{board_ref} as its "
+                        f"`{_board_field_name(axis)}` field, not as a label, and "
+                        f"set-field cannot write board fields at v1. NOT SET: "
+                        f"{value!r} was not recorded anywhere. Set the board's "
+                        f"`{_board_field_name(axis)}` field for this issue "
+                        f"instead (board UI, or `gh project item-edit`). If you "
+                        f"expected a label here, config.yaml's "
+                        f"`has_projects_v2_board: true` and your substrate-map "
+                        f"disagree — run pre-check."
                     ),
                 )
             )
@@ -388,6 +454,20 @@ def _plan_labels(
         )
 
     return results, to_add, to_remove
+
+
+def _board_field_name(axis: str) -> str:
+    """The conventional Projects-v2 field name for a methodology `axis`.
+
+    Best-effort naming so a refusal can point at *something specific* the caller
+    must set (`Priority`, `Workstream`) rather than "the board". The kit does not
+    know the adopter's actual board-field names — `config.yaml` records only the
+    board id, and per-field ids appear only inside `set-board-field` hook entries —
+    so this is the Title-cased axis name, the convention Projects-v2 boards use.
+    Deliberately not a lookup: inventing a config key for field names would be a
+    new adopter surface, and the refusal is actionable without it.
+    """
+    return axis.capitalize()
 
 
 def _plan_kind(
