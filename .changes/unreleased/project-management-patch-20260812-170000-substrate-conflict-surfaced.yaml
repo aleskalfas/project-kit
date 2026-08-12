@@ -1,0 +1,28 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The writer/reader substrate disagreement is now surfaced where the adopter can
+  act on it (#709, from report #708). When `project/config.yaml` sets
+  `has_projects_v2_board: true` while `project/substrate-map.yaml` binds a
+  board-claimed axis (`priority`, `workstream`, `state`) to labels, each side
+  silently believed itself: `create-issue` wrote no label, `set-field` reported
+  `[ok] priority: … not set here` followed by `no change (all fields already
+  set)`, nothing wrote the board field either, and `review-pr` hard-rejected on
+  the missing label — a gate unsatisfiable by the capability's own verbs, whose
+  only escape was a raw `gh issue edit`. `pre-check` now FAILS on that
+  cross-substrate conflict, naming the axis, both claimants, and the consequence,
+  with a remediation offering either single-substrate exit; it is a hard failure
+  rather than a warning because pre-check is the prerequisite gate and this state
+  makes the review gate unsatisfiable, and a warning would be lost in the passing
+  run that hid the problem in the first place. Only `label` bindings conflict —
+  an axis marked `unsupported: true` agrees with the writer, and `derive` /
+  `title-prefix` bindings are not label reads — so a clean single-substrate
+  config (board-only, labels-only brownfield, or greenfield) is unaffected.
+  `set-field` now REFUSES a board-substrate axis instead of reporting success:
+  non-zero exit, a `[refused]` line naming the board field to set instead and
+  stating that the requested value was recorded nowhere, and a summary that no
+  longer claims all fields are set. When a call mixes substrates (`--kind` is
+  always label-backed), the label-substrate fields are still applied and the
+  summary reports the partial application explicitly.

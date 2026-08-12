@@ -1,8 +1,10 @@
-"""Tests for set-field's pure planning logic (no network).
+"""Tests for set-field's pure planning logic (no network) + its exit contract.
 
 Covers label resolution + idempotent diff for priority/workstream, the
 parent-ref body rewrite (replace / prepend / no-op), value-vocabulary reads,
-and the board-degrade posture.
+and the board-substrate REFUSAL (#709): a board-backed axis is refused with a
+non-zero exit rather than reported as a no-op success, while the label-substrate
+path and the partial (mixed-axes) case stay legible.
 """
 
 from __future__ import annotations
@@ -35,6 +37,16 @@ def sf():
     sys.modules[module_name] = module
     spec.loader.exec_module(module)
     return module
+
+
+@pytest.fixture(scope="module")
+def axis_labels():
+    # The read/write seam set-field resolves every axis through (ADR-026) — used
+    # here only to build a parsed substrate-map fixture.
+    sys.path.insert(0, str(SCRIPTS))
+    from _lib import axis_labels as mod
+
+    return mod
 
 
 @pytest.fixture(scope="module")
@@ -186,6 +198,105 @@ def test_plan_labels_board_degrades(sf) -> None:
     )
     assert add == [] and remove == []
     assert any("board substrate" in r.message for r in results)
+
+
+# --- board-substrate REFUSAL (#709, report #708) -----------------------------
+#
+# The axis stays unset either way — what changed is that set-field now SAYS so.
+# The prior `ok=True, changed=False` printed `[ok] priority: … not set here` and
+# summarised as `no change (all fields already set)`: success-shaped output for a
+# request that wrote nothing anywhere.
+
+
+def test_plan_labels_board_axis_is_refused_not_ok(sf) -> None:
+    results, add, remove = sf._plan_labels(
+        priority="High",
+        workstream=None,
+        current_labels=[],
+        substrate_map=None,
+        has_board=True,
+    )
+    assert add == [] and remove == []
+    priority_result = next(r for r in results if r.field == "priority")
+    assert priority_result.ok is False  # ⇒ printed `[refused]`, drives exit 1
+    assert priority_result.changed is False
+
+
+def test_board_refusal_names_the_board_field_to_set_instead(sf) -> None:
+    """The dead end has to be actionable at the point of use: name the field the
+    caller must set, and say plainly that the requested value went nowhere."""
+    results, _, _ = sf._plan_labels(
+        priority="High",
+        workstream=None,
+        current_labels=[],
+        substrate_map=None,
+        has_board=True,
+        board_id=7,
+    )
+    message = next(r for r in results if r.field == "priority").message
+    assert "`Priority` field" in message
+    assert "NOT SET" in message
+    assert "'High'" in message
+    assert "#7" in message  # the board it lives on, when config knows the id
+
+
+def test_board_refusal_covers_workstream_too(sf) -> None:
+    results, _, _ = sf._plan_labels(
+        priority=None,
+        workstream="cli",
+        current_labels=[],
+        substrate_map=None,
+        has_board=True,
+    )
+    ws = next(r for r in results if r.field == "workstream")
+    assert ws.ok is False
+    assert "`Workstream` field" in ws.message
+
+
+def test_board_field_name_is_title_cased_axis(sf) -> None:
+    assert sf._board_field_name("priority") == "Priority"
+    assert sf._board_field_name("workstream") == "Workstream"
+
+
+def test_label_substrate_path_is_untouched_by_the_refusal(sf) -> None:
+    """The normal (label-substrate) path must stay a success: `ok=True` and the
+    label planned exactly as before. The refusal is conditional on the board."""
+    results, add, remove = sf._plan_labels(
+        priority="High",
+        workstream="cli",
+        current_labels=["priority:Low"],
+        substrate_map=None,
+        has_board=False,
+    )
+    assert set(add) == {"priority:High", "workstream:cli"}
+    assert remove == ["priority:Low"]
+    assert all(r.ok for r in results)
+
+
+def test_unsupported_axis_under_map_is_still_a_note_not_a_refusal(sf, axis_labels) -> None:
+    """Scope guard: an axis the adopter explicitly declared `unsupported` has
+    nowhere to write BY DECLARATION — that stays a note (`ok=True`), unchanged by
+    #709, which is about the board/label DISAGREEMENT."""
+    sm = axis_labels.SubstrateMap(axes={"priority": {"unsupported": True}})
+    results, add, remove = sf._plan_labels(
+        priority="High",
+        workstream=None,
+        current_labels=[],
+        substrate_map=sm,
+        has_board=False,
+    )
+    assert add == [] and remove == []
+    assert next(r for r in results if r.field == "priority").ok is True
+
+
+def test_field_list_dedupes_and_preserves_order(sf) -> None:
+    fr = sf.FieldResult
+    listed = sf._field_list([
+        fr(field="kind", ok=True, changed=True, message=""),
+        fr(field="title", ok=True, changed=True, message=""),
+        fr(field="kind", ok=True, changed=False, message=""),
+    ])
+    assert listed == "kind, title"
 
 
 # --- kind planning (label swap + title-prefix realignment) ------------------
@@ -417,3 +528,200 @@ def test_is_parent_ref_recognises_forms(sf) -> None:
     assert sf._is_parent_ref("Milestone: #6")
     assert not sf._is_parent_ref("## What")
     assert not sf._is_parent_ref("just prose")
+
+
+# --- main()'s exit contract under a board (#709) ----------------------------
+#
+# The planning tests above pin `ok=False`; these pin what the CALLER sees — the
+# exit code and the summary line — because that is the actual bug: a refusal that
+# exited 0 and summarised as "all fields already set". No network: the two gh
+# seams (`gh_get_issue`, the label/title writers) and the foreign-repo guard are
+# stubbed; everything else (config load, membership, schema reads, planning,
+# summary) runs for real.
+
+
+def _stage_capability_root(tmp_path: Path, *, has_board: bool) -> Path:
+    """Stage a minimal but REAL pm capability tree set-field's main() can run on."""
+    root = tmp_path / ".pkit" / "capabilities" / "project-management"
+    (root / "schemas").mkdir(parents=True)
+    (root / "project").mkdir(parents=True)
+
+    (root / "schemas" / "issue-types.yaml").write_text(
+        "types:\n"
+        "  task:\n"
+        "    title_prefix: Task\n"
+        "    title_case: title\n"
+        "    parent_ref_form: 'Feature: #<N>'\n",
+        encoding="utf-8",
+    )
+    (root / "schemas" / "classification.yaml").write_text(
+        "axes:\n"
+        "  priority:\n"
+        "    values: [High, Medium, Low]\n"
+        "  type:\n"
+        "    values: [feature, bug]\n"
+        "    title_prefix_by_value:\n"
+        "      feature: Task\n"
+        "      bug: Bug\n"
+        "    structural_restriction:\n"
+        "      allowed_structural_types_per_kind:\n"
+        "        feature: [task, feature, umbrella, epic]\n"
+        "        bug: [task]\n",
+        encoding="utf-8",
+    )
+
+    config_lines = ["schema_version: 1\ndefault_branch: main\nworkstreams: [cli]\n"]
+    if has_board:
+        config_lines.append("has_projects_v2_board: true\nprojects_v2_board_id: 7\n")
+    (root / "project" / "config.yaml").write_text("".join(config_lines), encoding="utf-8")
+    # Empty members ⇒ open mode (membership passes for any resolved identity).
+    (root / "project" / "members.yaml").write_text("members: []\n", encoding="utf-8")
+    return root
+
+
+def _run_main(sf, monkeypatch, *, root: Path, argv: list[str], issue: dict) -> dict:
+    """Drive `sf.main()` with the gh seams stubbed; return rc + captured writes."""
+    captured: dict = {"labels": [], "titles": [], "bodies": []}
+
+    monkeypatch.setattr(sf, "gh_get_issue", lambda *a, **k: issue)
+    monkeypatch.setattr(sf.session_guard, "enforce", lambda **k: True)
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "an-invoker")
+
+    def fake_edit_labels(issue_number, add, remove, config):
+        captured["labels"].append((add, remove))
+        return True
+
+    monkeypatch.setattr(sf, "_gh_edit_labels", fake_edit_labels)
+    monkeypatch.setattr(
+        sf,
+        "_gh_write_title",
+        lambda n, title, config: captured["titles"].append(title) is None,
+    )
+    monkeypatch.setattr(
+        sf,
+        "_gh_write_body",
+        lambda n, body, config: captured["bodies"].append(body) is None,
+    )
+    monkeypatch.setattr(
+        sf.sys,
+        "argv",
+        ["set-field.py", *argv, "--capability-root", str(root), "--yes"],
+    )
+    captured["rc"] = sf.main()
+    return captured
+
+
+_TASK_ISSUE = {"title": "[Task] do a thing", "body": "## What\nx\n", "labels": []}
+
+
+def test_main_board_axis_refuses_nonzero_and_writes_nothing(
+    sf, tmp_path, monkeypatch, capsys
+) -> None:
+    """The reported dead end: `set-field N --priority High` under a board. The
+    axis cannot be written here, so the exit is non-zero, the line is `[refused]`
+    (never `[ok]`), and no gh write is attempted."""
+    root = _stage_capability_root(tmp_path, has_board=True)
+    captured = _run_main(
+        sf, monkeypatch, root=root, argv=["42", "--priority", "High"], issue=_TASK_ISSUE
+    )
+    out = capsys.readouterr().out
+
+    assert captured["rc"] == 1
+    assert captured["labels"] == []  # nothing written
+    assert "[refused] priority:" in out
+    assert "[ok] priority:" not in out
+
+
+def test_main_board_axis_summary_does_not_claim_all_fields_set(
+    sf, tmp_path, monkeypatch, capsys
+) -> None:
+    """The half of #709 that misled the adopter: the summary. It must not read as
+    `no change (all fields already set)` when the field is in fact unset."""
+    root = _stage_capability_root(tmp_path, has_board=True)
+    _run_main(
+        sf, monkeypatch, root=root, argv=["42", "--priority", "High"], issue=_TASK_ISSUE
+    )
+    out = capsys.readouterr().out
+
+    assert "all fields already set" not in out
+    assert "nothing written" in out
+    assert "remain unset" in out
+
+
+def test_main_board_axis_refuses_in_dry_run_too(
+    sf, tmp_path, monkeypatch, capsys
+) -> None:
+    """A refusal is knowable without writing, so `--dry-run` reports it as a
+    refusal (non-zero) rather than a clean plan."""
+    root = _stage_capability_root(tmp_path, has_board=True)
+    captured = _run_main(
+        sf,
+        monkeypatch,
+        root=root,
+        argv=["42", "--priority", "High", "--dry-run"],
+        issue=_TASK_ISSUE,
+    )
+    assert captured["rc"] == 1
+    assert "[refused]" in capsys.readouterr().out
+
+
+def test_main_label_substrate_axis_still_succeeds(
+    sf, tmp_path, monkeypatch, capsys
+) -> None:
+    """Regression guard: with no board, the normal path is untouched — the label
+    is written and the exit is 0."""
+    root = _stage_capability_root(tmp_path, has_board=False)
+    captured = _run_main(
+        sf, monkeypatch, root=root, argv=["42", "--priority", "High"], issue=_TASK_ISSUE
+    )
+    out = capsys.readouterr().out
+
+    assert captured["rc"] == 0
+    assert captured["labels"] == [(["priority:High"], [])]
+    assert "[ok] priority: set 'priority:High'" in out
+    assert "updated" in out
+    assert "[refused]" not in out
+
+
+def test_main_idempotent_noop_still_reports_all_fields_set(
+    sf, tmp_path, monkeypatch, capsys
+) -> None:
+    """The genuine no-op keeps its success summary — the new refusal path must not
+    swallow the idempotent case (DEC-038: re-running is a no-op success)."""
+    root = _stage_capability_root(tmp_path, has_board=False)
+    issue = {"title": "[Task] do a thing", "body": "x\n", "labels": ["priority:High"]}
+    captured = _run_main(
+        sf, monkeypatch, root=root, argv=["42", "--priority", "High"], issue=issue
+    )
+    out = capsys.readouterr().out
+
+    assert captured["rc"] == 0
+    assert "no change (all fields already set)" in out
+
+
+def test_main_mixed_axes_applies_label_refuses_board(
+    sf, tmp_path, monkeypatch, capsys
+) -> None:
+    """PARTIAL: `--kind` is always label-substrate (classification.yaml) while
+    `--priority` is board-backed here. The label half IS applied, the board half
+    is refused, the exit is non-zero, and the summary names both — a partial
+    application must never read as a clean success."""
+    root = _stage_capability_root(tmp_path, has_board=True)
+    captured = _run_main(
+        sf,
+        monkeypatch,
+        root=root,
+        argv=["42", "--kind", "bug", "--priority", "High"],
+        issue=_TASK_ISSUE,
+    )
+    out = capsys.readouterr().out
+
+    assert captured["rc"] == 1
+    # The label-substrate axis was genuinely applied (label + title realignment).
+    assert captured["labels"] == [(["type:bug"], [])]
+    assert captured["titles"] == ["[Bug] do a thing"]
+    # ...and the summary says what was done and what was not.
+    assert "[partial]" in out
+    assert "applied kind, title" in out
+    assert "REFUSED priority" in out
+    assert "all fields already set" not in out
