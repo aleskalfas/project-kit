@@ -70,6 +70,15 @@ ordering anywhere.
 
 Exit contract (rendered by the CLI): non-zero on ANY miss or ANY indeterminate;
 zero only when both totals are zero.
+
+Over that walk sits the authoring layer's completion signal (COR-044): the
+interpretation-only view, a pure CONSUMER of the report this module builds
+(`build_interpretation`), which asks only whether every contract is
+INTERPRETABLE and never counts a miss. It adds the one check the live walk
+structurally cannot make — a STATIC read of both seams' registration and
+implementation state — because the walk exercises `resolve` only for subjects
+that happen to be at the trigger, and an authoring done-signal must not depend
+on who is standing there when it runs.
 """
 
 from __future__ import annotations
@@ -81,10 +90,12 @@ from typing import Any
 
 from project_kit import cli_render
 from project_kit.process import (
+    PREDICATE_STUB_MARKER,
     PredicateRunner,
     ProcessDefinition,
     ProcessEngine,
     ProcessError,
+    _load_command_registry,
     load_definition,
 )
 from project_kit.process_graph import discover_process_addresses
@@ -634,6 +645,243 @@ def render_narrative(report: HealthReport) -> str:
         "  " + cli_render.style("strong" if not report.ok else "success", summary)
     )
     return "\n".join(lines) + "\n"
+
+
+# --- the interpretation-only view (COR-044) --------------------------------
+
+
+@dataclass(frozen=True)
+class ContractInterpretation:
+    """One contract seen through the authoring lens: everything that stops it
+    being interpretable, and nothing else.
+
+    `indeterminate` is the walker's own indeterminate findings for the contract
+    PLUS the static seam findings (below) — a single list, because to the author
+    they answer one question: is there anything here that is not yet
+    interpretable?
+    """
+
+    contract: HandoffContract
+    indeterminate: tuple[Finding, ...]
+
+
+@dataclass(frozen=True)
+class InterpretationReport:
+    """The authoring-completion view over a `HealthReport`. Misses are absent by
+    construction — not filtered at render time but never carried here — so no
+    consumer of this report can accidentally make the done-signal depend on
+    them."""
+
+    contracts: tuple[ContractInterpretation, ...]
+    skipped: tuple[SkippedDefinition, ...]
+
+    @property
+    def indeterminate_total(self) -> int:
+        return sum(len(c.indeterminate) for c in self.contracts) + len(self.skipped)
+
+    @property
+    def ok(self) -> bool:
+        """The variant's exit contract (COR-044): clean iff nothing is
+        indeterminate. The default health run's contract is untouched."""
+        return self.indeterminate_total == 0
+
+
+def build_interpretation(report: HealthReport) -> InterpretationReport:
+    """Re-read a completed `HealthReport` as the authoring done-signal.
+
+    A pure CONSUMER of the walker's result — it takes a built report and never
+    walks contracts itself (COR-042 point 5's design-once rule). What it adds is
+    the STATIC seam check: the walk can only exercise a seam that some subject
+    happens to reach, so a freshly authored contract with nobody at its trigger
+    would otherwise report "interpretable" while its `resolve` seam is still an
+    unwritten stub. That would be a lying done-signal on COR-044's own
+    completion criterion, so interpretability is decided statically — the same
+    verdict whatever reality holds at the moment of the run.
+    """
+    return InterpretationReport(
+        contracts=tuple(
+            ContractInterpretation(
+                contract=cr.contract,
+                indeterminate=cr.indeterminate + tuple(_static_seam_findings(cr.contract)),
+            )
+            for cr in report.contracts
+        ),
+        skipped=report.skipped,
+    )
+
+
+# The two seam slots a hand-off contract declares (COR-042 / ADR-048), in the
+# order the check reports them.
+_SEAM_SLOTS = ("candidates", "resolve")
+
+
+def _static_seam_findings(contract: HandoffContract) -> list[Finding]:
+    """Contract-level indeterminates that hold regardless of who is at the
+    trigger: a seam the declaring capability does not register, one whose script
+    is missing, or one that is still the scaffolded stub.
+
+    Deliberately overlaps with the walk: a seam the walk DID exercise and found
+    broken is reported twice, once per lens ("could not be evaluated" from the
+    run, "is still the scaffolded stub" from the declaration). Both are true and
+    both point at the same fix, and suppressing either would make the
+    static/runtime split invisible to the author — the honest report is the
+    union.
+    """
+    handoff = contract.handoff
+    if not isinstance(handoff, dict):
+        return []  # a malformed block: the walk's own finding says it better
+    registry = _load_command_registry(contract.capability_dir)
+    findings: list[Finding] = []
+    for slot in _SEAM_SLOTS:
+        predicate = handoff.get(slot)
+        run_name = predicate.get("run") if isinstance(predicate, dict) else None
+        if not isinstance(run_name, str) or not run_name:
+            continue  # malformed declaration: the walk reports it as such
+        script = registry.get(run_name)
+        if script is None:
+            findings.append(
+                _seam_finding(
+                    slot,
+                    run_name,
+                    f"names a command {contract.capability!r} does not register "
+                    "in its package.yaml",
+                )
+            )
+            continue
+        if not script.is_file():
+            findings.append(
+                _seam_finding(
+                    slot,
+                    run_name,
+                    f"registers a script that is not on disk ({script.name})",
+                )
+            )
+            continue
+        if _is_unimplemented_stub(script):
+            findings.append(
+                _seam_finding(
+                    slot,
+                    run_name,
+                    "is still the scaffolded stub — it fails closed on every "
+                    "subject, so the contract cannot yet tell the truth "
+                    f"(implement it and delete the {PREDICATE_STUB_MARKER} line)",
+                )
+            )
+    return findings
+
+
+def _seam_finding(slot: str, run_name: str, problem: str) -> Finding:
+    return Finding(
+        subject=None,
+        kind=KIND_INDETERMINATE,
+        reason=f"the {slot} seam {run_name!r} {problem}",
+    )
+
+
+def _is_unimplemented_stub(script: Path) -> bool:
+    """True when a predicate script still carries the scaffold's stub marker.
+
+    An unreadable script is NOT called a stub — it is a different problem, and
+    the walk reports it fail-closed when it runs the predicate.
+    """
+    try:
+        return PREDICATE_STUB_MARKER in script.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return False
+
+
+def render_interpretation_narrative(report: InterpretationReport) -> str:
+    """The interpretation-only view (COR-044 / COR-042 point 5): the authoring
+    layer's completion signal is "no indeterminates" — the contract resolves,
+    the trigger is a real upstream state, the seams execute.
+
+    Renders an `InterpretationReport`, which carries no miss surface at all — a
+    fresh, correct contract routinely reports real misses (upstream work waiting
+    is what motivated declaring it), so miss-count is never the authoring
+    done-signal.
+    """
+    lines: list[str] = []
+    lines.append(
+        cli_render.style("title", "Process interpretability")
+        + "  (authoring check — indeterminates only; misses are not counted)"
+    )
+    if not report.contracts and not report.skipped:
+        lines.append("")
+        lines.append("  (no hand-off contracts declared)")
+
+    for cr in report.contracts:
+        contract = cr.contract
+        lines.append("")
+        header = cli_render.style(
+            "strong", f"{contract.upstream} → {contract.downstream}"
+        )
+        trigger = contract.trigger or "(no trigger)"
+        lines.append(f"  {header}   @{trigger}")
+        if not cr.indeterminate:
+            lines.append(
+                "    ✓ interpretable — the contract resolves and both seams are "
+                "implemented and execute"
+            )
+            continue
+        for finding in cr.indeterminate:
+            if finding.subject is None:
+                lines.extend(
+                    cli_render.wrap(
+                        f"? contract indeterminate: {finding.reason}",
+                        indent="    ",
+                    )
+                )
+            else:
+                lines.append(_finding_line(finding))
+
+    if report.skipped:
+        count = len(report.skipped)
+        noun = "definition" if count == 1 else "definitions"
+        lines.append("")
+        lines.append(
+            "  "
+            + cli_render.style(
+                "warn",
+                f"⚠ {count} {noun} could not be loaded (contract set unknown — "
+                "counted indeterminate):",
+            )
+        )
+        for s in report.skipped:
+            lines.extend(cli_render.wrap(f"{s.address} — {s.reason}", indent="    "))
+
+    lines.append("")
+    clean = report.indeterminate_total == 0
+    summary = f"{report.indeterminate_total} indeterminate (misses not counted)"
+    lines.append("  " + cli_render.style("success" if clean else "strong", summary))
+    return "\n".join(lines) + "\n"
+
+
+def render_interpretation_json(report: InterpretationReport) -> str:
+    """The interpretation-only machine form: the health `--json` shape minus
+    every miss surface (no `misses` arrays, no missed/at_trigger/satisfied
+    counts — those would let a consumer derive the miss count this view
+    deliberately does not report). Byte-stable like the full form."""
+    payload = {
+        "contracts": [
+            {
+                "upstream": cr.contract.upstream,
+                "downstream": cr.contract.downstream,
+                "trigger": cr.contract.trigger or None,
+                "state": cr.contract.state_id,
+                "indeterminate": [
+                    {"subject": f.subject, "reason": f.reason}
+                    for f in cr.indeterminate
+                ],
+                "counts": {"indeterminate": len(cr.indeterminate)},
+            }
+            for cr in report.contracts
+        ],
+        "skipped": [
+            {"address": s.address, "reason": s.reason} for s in report.skipped
+        ],
+        "totals": {"indeterminate": report.indeterminate_total},
+    }
+    return json.dumps(payload, indent=2, sort_keys=True) + "\n"
 
 
 def render_json(report: HealthReport) -> str:

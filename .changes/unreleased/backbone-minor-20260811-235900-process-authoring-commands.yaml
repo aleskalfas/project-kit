@@ -1,0 +1,29 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  The deterministic command tier of COR-044's process-authoring layer (#683),
+  under the existing `pkit process` namespace: `process new` scaffolds a
+  lint-clean definition (subject incl. cardinality, states with meanings,
+  transitions, entry/terminal marks) into a NAMED owning capability — erroring
+  cleanly without one — with a fail-closed predicate stub for every evaluable
+  the declared shape demands (detection always; gates / entry guards /
+  resume_when / invariant checks when declared), each registered in the
+  capability's package.yaml per the predicate-runner contract; `process
+  couple` appends a `depends_on` entry to the invoker-named definition, with
+  relation/mode validated against COR-038's closed vocabularies read as data
+  from the shape contract; `process hand-off` adds a COR-042 contract
+  (trigger + both seams, stubs scaffolded when new) to an existing coupling,
+  validating the trigger against the upstream where resolvable. Neither
+  mutation bumps the definition version (additive inert/report-only edits per
+  COR-044), all three take `--dry-run`, and none ever overwrites an existing
+  declaration or an existing predicate script. Transitions are addressed by
+  their full `(from, to, trigger)` key, so two edges between one state pair
+  are each independently gateable. And `process health
+  --interpretation-only` re-renders the same health walk (a consumer of the
+  walker per COR-042 point 5, never a parallel contract-walker) as the
+  authoring completion signal: indeterminates only, misses not counted, plus a
+  static check that both seams are registered, present, and no longer stubs —
+  so the signal does not depend on which subjects happen to sit at the
+  trigger. The default health run's exit contract is unchanged.
