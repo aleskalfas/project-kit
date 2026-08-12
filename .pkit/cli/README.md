@@ -424,6 +424,21 @@ adopter that is project-kit's own repo), *not* the adopter's own tracker. The en
 automatically and **redacted by construction** (`$HOME`/paths stripped, kit-shipped
 capabilities only unless `--include-private`).
 
+**Run report verbs from your project root.** Everything the channel does is
+anchored on the resolved project root: the environment block is collected from
+it, and the draft store (`report submit`) lives *inside* it. Composing from a
+scratch directory — the natural move when you draft a long body in a temp file —
+resolves no project, and the flow says so rather than degrading silently (#693):
+the compose **warns loudly** (naming the directory and this expectation) and the
+environment block renders its project half as `NOT COLLECTED — composed outside
+a pkit project`, never as `backbone: unknown` / `adapter: none` /
+`capabilities: (none installed)` — values a maintainer reads as facts about
+*your* install. The compose still proceeds (a report from outside beats no
+report) and the unresolved marker stays **path-free**, like the rest of the
+block; the directory is named only on your terminal. The environment block is
+baked at compose time, so a report composed outside a project is re-composed
+from the root, not relocated.
+
 ### `report bug` / `report feedback` / `report change-request`
 
 Compose and file a **bug** (structured), **feedback** (freeform), or
@@ -463,9 +478,12 @@ warns that **the browser's logged-in account authors the submit** — it can
 silently differ from the CLI identity (the misattribution that hit #659).
 `--open` opens a within-budget prefilled form in the browser instead of forcing
 copy-paste (degrades to the printed URL). `--yes` / autonomy **stages the
-composed payload and prints one line (`staged: pkit report submit <id>`) — it
-never posts** (the deliberate `--yes` asymmetry, per ADR-047: **`--yes` stages,
-never posts**). `--file` is kept as an explicit gesture; the API post is the
+composed payload and prints three short lines — the submit command
+(`staged: pkit report submit <id>`), the resolved project root (or
+`no project — <cwd>`), and the draft store it wrote to — it never posts** (the
+deliberate `--yes` asymmetry, per ADR-047: **`--yes` stages, never posts**).
+Naming the root and the store is what makes a draft staged in the wrong place
+visible at the moment it happens (#693). `--file` is kept as an explicit gesture; the API post is the
 default whenever `gh` is authenticated. `--on-behalf-of @login` files under the
 invoker's identity with a "Reported for @login" attribution so the beneficiary
 still tracks it.
@@ -528,7 +546,12 @@ The human half of the agent-stage + human-submit split (#662). A `--yes`
 compose stages its full payload — with the compose-time redaction findings as
 header warnings — under `.pkit/scratchpad/.report-drafts/` (project-local,
 kept out of git by a `.gitignore` the stager drops inside the directory, so no
-repo-root ignore edit is needed). Bare, `report submit` lists the staged
+repo-root ignore edit is needed). The store is **per-project**: a draft is
+visible only to a `submit` run under the same root, so every message names the
+store path it read (#693) — the listing header, the empty state, and the
+not-found error, which adds the resolved root and points at running submit from
+the root the draft was staged under (a draft staged elsewhere is invisible here,
+not lost). Bare, `report submit` lists the staged
 drafts. With an id it loads the staged payload, re-surfaces the redaction
 warnings, shows the whole payload (body + any overflow comment), names the
 posting identity and target, and posts via `gh` only on an explicit confirm —

@@ -234,7 +234,7 @@ def compose_report(
     *,
     title: str,
     prose: str,
-    target_root: Path,
+    target_root: Path | None,
     on_behalf_of: str | None = None,
     include_private: bool = False,
     project: str | None = None,
@@ -252,6 +252,11 @@ def compose_report(
     `project=`/`workstream=` marker keys, and a ` (<project>)` title
     parenthetical when the project is known. Raises `ValueError` on an
     unknown kind or an unconfigured target.
+
+    `target_root=None` (no project root resolved, #693) composes with an
+    explicitly **unresolved** environment block rather than a fake-empty one —
+    the compose still succeeds, because a report from outside a project is
+    worth more than no report; the caller warns.
     """
     if kind not in KINDS:
         raise ValueError(f"unknown report kind {kind!r}; expected one of {KINDS}")
@@ -432,6 +437,14 @@ def open_in_browser(url: str) -> bool:
 #: needed in any adopter.
 DRAFTS_RELPATH = Path(".pkit/scratchpad/.report-drafts")
 
+
+def drafts_dir(target_root: Path) -> Path:
+    """The draft store for `target_root`. The store is **per-project** — a
+    draft staged under one root is invisible to a `submit` run under another —
+    so the CLI names this path wherever it stages or looks for a draft (#693).
+    """
+    return target_root / DRAFTS_RELPATH
+
 #: Separates the staged issue body from the staged overflow comment inside a
 #: stage file. A body containing this exact line would confuse the parse —
 #: accepted: stage files are short-lived, tool-written intermediates.
@@ -489,13 +502,13 @@ def stage_report(
     can re-surface them). The body follows the header; an overflow comment
     follows `_DRAFT_OVERFLOW_MARKER`. Edge whitespace is normalized on the
     round-trip; content is otherwise verbatim."""
-    drafts_dir = target_root / DRAFTS_RELPATH
-    drafts_dir.mkdir(parents=True, exist_ok=True)
-    gitignore = drafts_dir / ".gitignore"
+    store = drafts_dir(target_root)
+    store.mkdir(parents=True, exist_ok=True)
+    gitignore = store / ".gitignore"
     if not gitignore.exists():
         gitignore.write_text("*\n", encoding="utf-8")
 
-    draft_id = _new_draft_id(drafts_dir, kind)
+    draft_id = _new_draft_id(store, kind)
     warnings = tuple(render_finding(f) for f in findings or [])
     note_rel: str | None = None
     if note_path is not None:
@@ -529,7 +542,7 @@ def stage_report(
             + payload.overflow_comment.rstrip("\n")
             + "\n"
         )
-    path = drafts_dir / f"{draft_id}.md"
+    path = store / f"{draft_id}.md"
     path.write_text(content, encoding="utf-8")
     return StagedDraft(
         draft_id, path, kind, title, REPORT_TARGET, staged, payload,
@@ -537,11 +550,11 @@ def stage_report(
     )
 
 
-def _new_draft_id(drafts_dir: Path, kind: str) -> str:
+def _new_draft_id(store: Path, kind: str) -> str:
     """A timestamped, collision-free draft id (`YYYYMMDD-HHMMSS-<kind>`)."""
     base = datetime.now(UTC).strftime("%Y%m%d-%H%M%S") + f"-{kind}"
     candidate, n = base, 2
-    while (drafts_dir / f"{candidate}.md").exists():
+    while (store / f"{candidate}.md").exists():
         candidate = f"{base}-{n}"
         n += 1
     return candidate
@@ -550,11 +563,11 @@ def _new_draft_id(drafts_dir: Path, kind: str) -> str:
 def list_staged(target_root: Path) -> list[StagedDraft]:
     """The parseable staged drafts, oldest first (draft ids are timestamped,
     so name order is stage order). Unparseable files are skipped."""
-    drafts_dir = target_root / DRAFTS_RELPATH
-    if not drafts_dir.is_dir():
+    store = drafts_dir(target_root)
+    if not store.is_dir():
         return []
     drafts: list[StagedDraft] = []
-    for path in sorted(drafts_dir.glob("*.md")):
+    for path in sorted(store.glob("*.md")):
         draft = _parse_stage_file(path)
         if draft is not None:
             drafts.append(draft)
@@ -563,7 +576,7 @@ def list_staged(target_root: Path) -> list[StagedDraft]:
 
 def load_staged(target_root: Path, draft_id: str) -> StagedDraft | None:
     """One staged draft by id; None when absent or unparseable."""
-    path = target_root / DRAFTS_RELPATH / f"{draft_id}.md"
+    path = drafts_dir(target_root) / f"{draft_id}.md"
     if not path.is_file():
         return None
     return _parse_stage_file(path)
