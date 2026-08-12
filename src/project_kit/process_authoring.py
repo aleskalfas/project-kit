@@ -876,10 +876,13 @@ def couple_process(
     vocabularies read from the shape contract. The definition `version` is NOT
     bumped: the entry is additive and inert (COR-044).
 
-    Idempotent on the identical entry (same upstream + relation + mode + why on
-    the same state): reports a clean no-op. A DIFFERENT entry for the same
-    upstream on the same state is a conflict and refuses (edit deliberately,
-    don't silently overwrite a declared edge).
+    An entry is identified by (upstream, relation, mode) — the shape puts no
+    uniqueness constraint on `depends_on`, so one downstream state may legally
+    depend on the same upstream in two different ways (an `informational` pull
+    beside a `triggered-by` push). Idempotent on the identical entry (that key
+    plus the same `why`): a clean no-op. Same key, different `why`: a genuine
+    divergence, and it refuses — editing a declared edge is deliberate work,
+    never a silent overwrite. Different key: a new, legal entry, appended.
     """
     try:
         definition = load_definition(repo_root, address)
@@ -943,25 +946,24 @@ def couple_process(
             "definition by hand before coupling."
         )
     for entry in existing or []:
-        if isinstance(entry, dict) and entry.get("upstream") == upstream:
-            same = (
-                entry.get("relation") == relation
-                and entry.get("mode") == mode
-                and entry.get("why") == why
+        if not isinstance(entry, dict):
+            continue
+        key = (entry.get("upstream"), entry.get("relation"), entry.get("mode"))
+        if key != (upstream, relation, mode):
+            continue  # a different edge (or a different way of depending) — legal
+        if entry.get("why") == why:
+            return CoupleResult(
+                definition_path=definition_path,
+                state_id=state_id,
+                changed=False,
+                warnings=tuple(warnings),
             )
-            if same:
-                return CoupleResult(
-                    definition_path=definition_path,
-                    state_id=state_id,
-                    changed=False,
-                    warnings=tuple(warnings),
-                )
-            raise ProcessAuthoringError(
-                f"state {state_id!r} already declares a DIFFERENT coupling on "
-                f"upstream {upstream!r} (relation {entry.get('relation')!r}, "
-                f"mode {entry.get('mode')!r}); refusing to overwrite a "
-                "declared edge — edit the definition deliberately."
-            )
+        raise ProcessAuthoringError(
+            f"state {state_id!r} already declares this coupling on upstream "
+            f"{upstream!r} ({relation}, {mode}) with a DIFFERENT why "
+            f"({entry.get('why')!r}); refusing to overwrite a declared edge — "
+            "edit the definition deliberately."
+        )
 
     new_entry = {"upstream": upstream, "relation": relation, "mode": mode, "why": why}
     if existing is None:

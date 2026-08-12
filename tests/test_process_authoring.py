@@ -580,8 +580,33 @@ def test_couple_is_idempotent_and_refuses_conflicts(authoring_repo: Path) -> Non
     assert not again.changed  # identical entry: clean no-op
     definition = load_definition(authoring_repo, "delivery:unit")
     assert len(definition.states[0]["depends_on"]) == 1
-    with pytest.raises(pa.ProcessAuthoringError, match="DIFFERENT coupling"):
-        _couple_unit(authoring_repo, relation="informational", mode="pull")
+    # An entry is keyed by (upstream, relation, mode): the SAME key with a
+    # different `why` is a genuine divergence and refuses.
+    with pytest.raises(pa.ProcessAuthoringError, match="DIFFERENT why"):
+        _couple_unit(authoring_repo, why="Some other reason entirely.")
+
+
+def test_couple_allows_a_second_entry_on_the_same_upstream(authoring_repo: Path) -> None:
+    # The shape puts no uniqueness constraint on `depends_on`, so one state may
+    # legally depend on the same upstream in two DIFFERENT ways. Keying the
+    # conflict check on the upstream alone would refuse the legal second entry.
+    _stamp_screen(authoring_repo)
+    _stamp_unit(authoring_repo)
+    assert _couple_unit(authoring_repo).changed
+    second = _couple_unit(
+        authoring_repo,
+        relation="informational",
+        mode="pull",
+        why="A unit also reads the screen for context.",
+    )
+    assert second.changed
+    definition = load_definition(authoring_repo, "delivery:unit")
+    entries = definition.states[0]["depends_on"]
+    assert [(e["relation"], e["mode"]) for e in entries] == [
+        ("triggered-by", "push"),
+        ("informational", "pull"),
+    ]
+    assert pa.lint_process_block(authoring_repo, definition.data) == []
 
 
 def test_couple_validates_the_hosting_state(authoring_repo: Path) -> None:
