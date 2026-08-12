@@ -907,11 +907,22 @@ def _journal_move(
             check=False,
         )
     except (OSError, FileNotFoundError):
-        print("  [note] `pkit` not on PATH; move not journaled (position unaffected).")
+        print(
+            "  [warn] `pkit` not on PATH — this move was NOT recorded in the engine "
+            "journal (the canonical audit trail, DEC-049). The label/position is "
+            "unaffected (live detection stays authoritative); re-run under `pkit` "
+            "to journal it.",
+            file=sys.stderr,
+        )
         return
     if proc.returncode != 0:
         detail = (proc.stdout or proc.stderr or "").strip()
-        print(f"  [note] move not journaled by the engine: {detail}")
+        print(
+            "  [warn] this move was NOT recorded in the engine journal (the "
+            f"canonical audit trail, DEC-049): {detail}. The label/position is "
+            "unaffected; `pkit pm history <N> --check-drift` will show the gap.",
+            file=sys.stderr,
+        )
 
 
 # ---- gh wrappers ----------------------------------------------------

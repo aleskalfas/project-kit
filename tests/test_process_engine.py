@@ -263,6 +263,22 @@ def test_deterministic_gate_passing_allows_and_moves(fixture_repo: Path) -> None
     assert result.journal_entry["from"] == "draft"
     assert result.journal_entry["to"] == "ready"
     assert result.journal_entry["gate_result"] == "pass"
+    # DEC-049 provenance: the journal entry carries actor + the pkit version.
+    assert result.journal_entry["actor"] == "agent"
+    assert result.journal_entry["version"]  # non-empty version stamp
+
+
+def test_journal_entry_version_absent_when_unresolvable(
+    fixture_repo: Path, monkeypatch
+) -> None:
+    """A version hiccup never blocks a move: no `version` key, entry still valid."""
+    from project_kit import process as process_mod
+
+    (fixture_repo / "_checks_ok").write_text("", encoding="utf-8")
+    monkeypatch.setattr(process_mod, "_running_pkit_version", lambda: "")
+    result = _engine(fixture_repo).move("ready", actor="agent")
+    assert result.ok is True
+    assert "version" not in result.journal_entry
 
 
 # --- authorisation-artifact gate (cross-authority) ------------------------

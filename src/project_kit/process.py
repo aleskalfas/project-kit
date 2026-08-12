@@ -2050,6 +2050,11 @@ class ProcessEngine:
             "trigger": str(transition.get("trigger", "")),
             "actor": actor,
         }
+        # Provenance (DEC-049): stamp the pkit version that governed this move, so
+        # the journal is the canonical, provenance-carrying audit trail.
+        version = _running_pkit_version()
+        if version:
+            entry["version"] = version
         if from_state is not None:
             entry["from"] = from_state
         if check.has_gate:
@@ -2064,6 +2069,17 @@ class ProcessEngine:
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(entry, sort_keys=True) + "\n")
+
+
+def _running_pkit_version() -> str:
+    """The pkit version stamping a journal entry (DEC-049 provenance). Best-effort;
+    returns "" if unresolvable so a version hiccup never blocks a move."""
+    try:
+        from project_kit.router import running_version
+
+        return running_version() or ""
+    except Exception:
+        return ""
 
 
 # --- loading --------------------------------------------------------------
