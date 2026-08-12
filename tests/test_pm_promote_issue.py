@@ -119,72 +119,10 @@ def test_detect_state_from_labels_recognises_in_progress(pi, monkeypatch) -> Non
         )
 
 
-# ---- _post_audit_comment_idempotent -----------------------------------
-
-
-def test_post_audit_comment_skips_when_stamp_exists(pi, monkeypatch, capsys) -> None:
-    calls: list = []
-
-    def fake_gh_run(args, config, **kwargs):
-        import subprocess
-        calls.append(args)
-        if "view" in args:
-            return subprocess.CompletedProcess(
-                args=args, returncode=0,
-                stdout=json.dumps({
-                    "comments": [
-                        {"body": "Random comment"},
-                        {"body": f"{pi.AUDIT_STAMP}\n\nPromoted Todo → Backlog ..."},
-                    ]
-                }),
-                stderr="",
-            )
-        # `gh issue comment` — should NOT be called if stamp exists
-        return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
-
-    monkeypatch.setattr(pi, "gh_run", fake_gh_run)
-    result = pi._post_audit_comment_idempotent(42, "ignored", {})
-    assert result is True
-    # `gh issue comment` shouldn't have been called.
-    assert not any("comment" in args and "view" not in args for args in calls)
-
-
-def test_post_audit_comment_posts_when_absent(pi, monkeypatch) -> None:
-    calls: list = []
-
-    def fake_gh_run(args, config, **kwargs):
-        import subprocess
-        calls.append(args)
-        if "view" in args:
-            return subprocess.CompletedProcess(
-                args=args, returncode=0,
-                stdout=json.dumps({"comments": []}), stderr="",
-            )
-        return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
-
-    monkeypatch.setattr(pi, "gh_run", fake_gh_run)
-    result = pi._post_audit_comment_idempotent(42, "test body", {})
-    assert result is True
-    # `gh issue comment` was called.
-    assert any(args[1:3] == ["issue", "comment"] for args in calls)
-
-
-def test_post_audit_comment_propagates_failure(pi, monkeypatch, capsys) -> None:
-    def fake_gh_run(args, config, **kwargs):
-        import subprocess
-        if "view" in args:
-            return subprocess.CompletedProcess(
-                args=args, returncode=0,
-                stdout=json.dumps({"comments": []}), stderr="",
-            )
-        return subprocess.CompletedProcess(
-            args=args, returncode=1, stdout="", stderr="comment failed"
-        )
-
-    monkeypatch.setattr(pi, "gh_run", fake_gh_run)
-    result = pi._post_audit_comment_idempotent(42, "test", {})
-    assert result is False
-    assert "gh issue comment failed" in capsys.readouterr().err
+# NOTE: promote-issue no longer posts its own audit comment (DEC-049 —
+# move-issue is the sole audit writer). The former `_post_audit_comment_idempotent`
+# tests were removed; the single canonical audit comment is covered by the
+# move-issue tests.
 
 
 # ---- _attach_milestone -------------------------------------------------
@@ -251,7 +189,6 @@ def _wire_main_mocks(
     milestone_obj=None,      # None → resolve_milestone returns None (unresolvable)
     milestone_resolve_called: list | None = None,
     attach_called: list | None = None,
-    comment_result: bool = True,
     move_issue_rc: int = 0,
     current_state: str | None = None,
 ) -> None:
@@ -276,7 +213,6 @@ def _wire_main_mocks(
         return True
 
     monkeypatch.setattr(pi, "_attach_milestone", fake_attach)
-    monkeypatch.setattr(pi, "_post_audit_comment_idempotent", lambda *_a, **_k: comment_result)
     monkeypatch.setattr(pi, "_detect_state_from_labels", lambda *_a: current_state)
     monkeypatch.setattr(pi, "_invoke_move_issue", lambda *_a, **_k: move_issue_rc)
 
@@ -322,8 +258,8 @@ def test_main_milestone_omitted_calls_move_issue(pi, monkeypatch, capsys) -> Non
     move_calls: list = []
     original_invoke = pi._invoke_move_issue
 
-    def capturing_invoke(issue_number, target, cap_root, allow_foreign_repo=False):
-        move_calls.append((issue_number, target))
+    def capturing_invoke(issue_number, target, reason, cap_root, allow_foreign_repo=False):
+        move_calls.append((issue_number, target, reason))
         return 0
 
     _wire_main_mocks(
@@ -333,7 +269,9 @@ def test_main_milestone_omitted_calls_move_issue(pi, monkeypatch, capsys) -> Non
     monkeypatch.setattr(pi, "_invoke_move_issue", capturing_invoke)
     rc = pi.main()
     assert rc == 0
-    assert move_calls == [(42, "backlog")]
+    # The authorisation reason threads to move-issue (which posts the single
+    # canonical audit comment — DEC-049).
+    assert move_calls == [(42, "backlog", "triage")]
 
 
 def test_main_milestone_omitted_ok_line_says_no_milestone(pi, monkeypatch, capsys) -> None:

@@ -62,6 +62,7 @@ severities:
     aborts_operation: true
     override_syntax: '--bypass "<reason>"'
     audit_comment_template: |
+      <!-- pkit-audit -->
       Bypassed by <name> <<email>>: <reason>
     examples:
       - "Merging without an APPROVED review or `Approved` comment"

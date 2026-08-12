@@ -87,6 +87,45 @@ SEVERITY_HARD_REJECT = "hard-reject"
 SEVERITY_BYPASSABLE = "bypassable-with-audit"
 SEVERITY_WARNING = "warning"
 
+#: The audit-comment provenance marker (DEC-049), uniform with the other
+#: `<!-- pkit-* -->` markers (verdict / provenance / hook). Filterable; the
+#: canonical audit-comment shape lives in the schema template below.
+_AUDIT_MARKER = "<!-- pkit-audit -->"
+
+#: Fallback if the schema can't be read — must match the schema's canonical form.
+_AUDIT_TEMPLATE_FALLBACK = f"{_AUDIT_MARKER}\nBypassed by <name> <<email>>: <reason>"
+
+
+def _load_audit_template(capability_root) -> str:
+    """The canonical audit-comment template, read from `validation-severity.yaml`'s
+    `severities.bypassable-with-audit.audit_comment_template` — the single source
+    of truth per DEC-049. Falls back to the known canonical form on any read error."""
+    from pathlib import Path as _Path
+
+    path = _Path(capability_root) / "schemas" / "validation-severity.yaml"
+    try:
+        data = YAML(typ="safe").load(path.read_text(encoding="utf-8"))
+        tmpl = data["severities"][SEVERITY_BYPASSABLE]["audit_comment_template"]
+        return tmpl.strip() if isinstance(tmpl, str) and tmpl.strip() else _AUDIT_TEMPLATE_FALLBACK
+    except (OSError, YAMLError, KeyError, TypeError):
+        return _AUDIT_TEMPLATE_FALLBACK
+
+
+def _render_audit_comment(capability_root, invoker, reason: str) -> str:
+    """Render the one canonical audit comment (DEC-049) from the schema template:
+    marker + actor (`<name> <<email>>`) + reason. `move-issue` is the sole audit
+    writer; the transition itself is recorded by the timeline (the comment carries
+    the *why*, not the state). Renders cleanly when the email is unresolved."""
+    template = _load_audit_template(capability_root)
+    name = (getattr(invoker, "github_login", None) or getattr(invoker, "email", None) or "unknown")
+    email = getattr(invoker, "email", None) or ""
+    body = template.replace("<name>", name).replace("<reason>", reason)
+    if email:
+        body = body.replace("<email>", email)
+    else:
+        body = body.replace(" <<email>>", "").replace("<<email>>", "")
+    return body
+
 
 @dataclass(frozen=True)
 class Transition:
@@ -433,13 +472,12 @@ def main() -> int:
     ):
         # Reason is guaranteed non-empty here: the bypassable authorisation
         # gate above refuses a --bypass without a non-empty --bypass-reason.
+        # move-issue is the SOLE audit-comment writer (DEC-049): it renders the
+        # one canonical comment from the schema template; wrappers pass the reason
+        # through rather than posting their own (killing the #672 double-post).
         reason = (args.bypass_reason or "").strip()
-        if not _gh_comment(
-            args.issue_number,
-            f"[audit] transition {current_state!r} → {args.to!r} "
-            f"bypassed with audit. Reason: {reason}",
-        config,
-    ):
+        audit_comment = _render_audit_comment(capability_root, invoker, reason)
+        if not _gh_comment(args.issue_number, audit_comment, config):
             return 3
 
     # Execute.
