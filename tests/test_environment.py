@@ -67,10 +67,14 @@ def test_collect_environment_include_private(tmp_path: Path) -> None:
 
 
 def test_collect_environment_no_manifest(tmp_path: Path) -> None:
-    # A tree with no manifest degrades gracefully rather than raising.
+    # A tree with no manifest degrades gracefully rather than raising — and
+    # since #702 it degrades to NOT COLLECTED rather than to `unknown`: the
+    # absent manifest means the project half was never readable, which a
+    # maintainer must not read as "this adopter has nothing installed".
     (tmp_path / ".pkit").mkdir(parents=True)
     env = collect_environment(tmp_path)
-    assert env.backbone_version == "unknown"
+    assert env.project_resolved is False
+    assert env.backbone_version == UNRESOLVED
     assert env.capabilities == ()
 
 
@@ -98,6 +102,38 @@ def test_collect_environment_unresolved_root_collects_no_project_half() -> None:
     assert env.capabilities == ()
     # the process half is a property of the running command, so still honest
     assert env.tool_version and env.python and env.os
+
+
+def test_collect_environment_root_without_manifest_is_not_collected(tmp_path) -> None:
+    # A root that resolves but carries NO backbone manifest — a git repo with
+    # no pkit install (#702). The old trigger keyed on root-resolved, so this
+    # rendered `unknown` / `none` / `(none installed)`: the same misreading
+    # #693 closed one case of ("a fact about the reporter's project"), just a
+    # narrower blast radius. It must read as NOT COLLECTED too.
+    (tmp_path / ".git").mkdir()
+    env = collect_environment(tmp_path)
+    assert env.project_resolved is False
+    assert env.backbone_version == UNRESOLVED
+    assert env.adapter == UNRESOLVED
+    assert env.capabilities == ()
+    # ...and the rendered block must not carry the resolved-project shape
+    block = render_environment_block(env)
+    assert "none installed" not in block
+    assert str(tmp_path) not in block  # redaction holds: no paths in the body
+
+
+def test_collect_environment_with_manifest_is_collected(tmp_path) -> None:
+    # The converse pin: a manifest-bearing root still collects normally, so
+    # #702's trigger change cannot silently blank a real adopter's block.
+    pkit = tmp_path / ".pkit"
+    pkit.mkdir()
+    (pkit / "manifest.yaml").write_text(
+        "schema_version: 1\nbackbone_version: 1.148.1\ncomponents: []\n",
+        encoding="utf-8",
+    )
+    env = collect_environment(tmp_path)
+    assert env.project_resolved is True
+    assert env.backbone_version == "1.148.1"
 
 
 def test_render_environment_block_unresolved_reads_as_not_collected() -> None:

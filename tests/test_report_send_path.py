@@ -34,8 +34,19 @@ def _pinned_seams(monkeypatch):
 
 @pytest.fixture
 def target(tmp_path: Path, monkeypatch) -> Path:
-    """A minimal target root, wired as the CLI's resolved project."""
-    (tmp_path / ".pkit").mkdir()
+    """A minimal target root, wired as the CLI's resolved project.
+
+    Carries a backbone manifest: since #702 the environment block's project
+    half is collected only when a manifest is found, so a manifest-less
+    `.pkit/` is (correctly) NOT COLLECTED — not the shape an "in-project"
+    fixture should assert against.
+    """
+    pkit = tmp_path / ".pkit"
+    pkit.mkdir()
+    (pkit / "manifest.yaml").write_text(
+        "schema_version: 1\nbackbone_version: 1.148.1\ncomponents: []\n",
+        encoding="utf-8",
+    )
     monkeypatch.setattr(cli_mod, "find_target_root", lambda: tmp_path)
     return tmp_path
 

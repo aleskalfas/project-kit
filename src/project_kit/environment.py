@@ -74,30 +74,36 @@ def collect_environment(
     """Gather the redacted environment. Reads the *installed* manifest side
     (what the adopter is actually running), never the kit source.
 
-    `target_root=None` means *no project root resolved* (the caller's
-    `find_target_root()` came back empty): the project half is not collected
-    at all and the snapshot is marked `project_resolved=False`, rather than
-    probing an arbitrary directory and reporting its emptiness as the
-    adopter's install (#693). The tool/OS/python half is a property of the
-    running process, so it is still honest and still collected."""
+    The project half is collected only when a backbone **manifest** is found:
+    `target_root=None` (the caller's `find_target_root()` came back empty,
+    #693) and a resolved root carrying no manifest (a git repo with no pkit
+    install, #702) both mark the snapshot `project_resolved=False` rather than
+    reporting an arbitrary directory's emptiness as the adopter's install. The
+    tool/OS/python half is a property of the running process, so it is still
+    honest and still collected."""
     caps: list[tuple[str, str]] = []
     private = 0
-    if target_root is None:
+    # The project half is collected only when a backbone MANIFEST is found —
+    # not merely when a root resolved (#702). A directory that is a git repo
+    # but carries no pkit install resolves a root, and reporting its emptiness
+    # as `unknown` / `none` / `(none installed)` is the same misreading #693
+    # closed for the no-root case: a maintainer reads it as a fact about the
+    # reporter's project rather than as "not collected".
+    manifest = read_backbone_manifest(target_root) if target_root is not None else None
+    if manifest is None:
         backbone_version = adapter = UNRESOLVED
     else:
-        manifest = read_backbone_manifest(target_root)
-        backbone_version = manifest.backbone_version if manifest else "unknown"
+        backbone_version = manifest.backbone_version
         adapter = _adapter_summary(target_root)
-        if manifest is not None:
-            for entry in manifest.components:
-                if entry.kind != "capability":
-                    continue
-                if entry.origin != ORIGIN_KIT_SHIPPED and not include_private:
-                    # Incubated / in-repo capability — name withheld by default.
-                    private += 1
-                    continue
-                cm = read_component_manifest(target_root / entry.manifest)
-                caps.append((entry.name, cm.version if cm is not None else "unknown"))
+        for entry in manifest.components:
+            if entry.kind != "capability":
+                continue
+            if entry.origin != ORIGIN_KIT_SHIPPED and not include_private:
+                # Incubated / in-repo capability — name withheld by default.
+                private += 1
+                continue
+            cm = read_component_manifest(target_root / entry.manifest)
+            caps.append((entry.name, cm.version if cm is not None else "unknown"))
 
     return Environment(
         tool_version=_running_tool_version(),
@@ -108,7 +114,7 @@ def collect_environment(
         os=platform.system() or "unknown",
         arch=platform.machine() or "unknown",
         python=platform.python_version(),
-        project_resolved=target_root is not None,
+        project_resolved=manifest is not None,
     )
 
 
