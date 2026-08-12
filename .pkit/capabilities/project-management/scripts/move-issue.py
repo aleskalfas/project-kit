@@ -127,6 +127,42 @@ def _render_audit_comment(capability_root, invoker, reason: str) -> str:
     return body
 
 
+def _audit_projection(config) -> str:
+    """The audit-comment projection level (DEC-049): `off` | `audit` | `full`.
+    Default `audit`. The engine journal records every move regardless of level;
+    this only controls how much is projected as GitHub comments."""
+    audit = config.get("audit") if isinstance(config, dict) else None
+    level = audit.get("projection") if isinstance(audit, dict) else None
+    return level if level in ("off", "audit", "full") else "audit"
+
+
+def _pkit_version() -> str:
+    """Best-effort pkit version for a `full`-projection provenance stamp."""
+    try:
+        proc = subprocess.run(
+            ["pkit", "--version"], capture_output=True, text=True, check=False,
+        )
+    except OSError:
+        return ""
+    if proc.returncode != 0:
+        return ""
+    parts = proc.stdout.strip().replace(",", " ").split()
+    return parts[-1] if parts else ""
+
+
+def _render_provenance_comment(invoker, from_state, to_state) -> str:
+    """DEC-049 `full` projection: a provenance-stamped record of a governed move,
+    carrying the pkit version — the governed-vs-ungoverned boundary made visible on
+    the issue. Absence of such a comment beside a timeline label change flags an
+    out-of-band mutation."""
+    actor = (getattr(invoker, "github_login", None)
+             or getattr(invoker, "email", None) or "unknown")
+    version = _pkit_version()
+    stamp = f" — pkit {version}" if version else ""
+    move = f"{from_state} → {to_state}" if from_state else str(to_state)
+    return f"{_AUDIT_MARKER}\n{actor} moved {move} (governed by pkit){stamp}"
+
+
 @dataclass(frozen=True)
 class Transition:
     """One transition entry from workflow.yaml's `transitions:` list."""
@@ -464,12 +500,17 @@ def main() -> int:
             print("aborted.", file=sys.stderr)
             return 0
 
-    # Optional audit comment on bypassable transitions.
-    if (
+    # Audit-comment projection (DEC-049): the engine journal records this move
+    # regardless; `audit.projection` controls the GitHub comment projection —
+    # `off` posts nothing, `audit` (default) posts only override justifications,
+    # `full` posts a provenance-stamped comment for every governed move.
+    projection = _audit_projection(config)
+    is_bypass_audit = (
         transition.authorisation == "user"
         and transition.severity == SEVERITY_BYPASSABLE
         and args.bypass
-    ):
+    )
+    if projection != "off" and is_bypass_audit:
         # Reason is guaranteed non-empty here: the bypassable authorisation
         # gate above refuses a --bypass without a non-empty --bypass-reason.
         # move-issue is the SOLE audit-comment writer (DEC-049): it renders the
@@ -502,6 +543,17 @@ def main() -> int:
     # authorisation token), so the engine's cross-authority gate compares
     # like-with-like against an artifact's `produced_by` login (COR-033 P4).
     _journal_move(args.issue_number, args.to, invoker.github_login)
+
+    # DEC-049 `full` projection: post a provenance-stamped comment for a governed
+    # move not already covered by the bypass audit above, so the governed-vs-
+    # ungoverned boundary is visible on the issue. Best-effort — never fails the
+    # move (the engine journal is the canonical record).
+    if projection == "full" and not is_bypass_audit:
+        _gh_comment(
+            args.issue_number,
+            _render_provenance_comment(invoker, current_state, args.to),
+            config,
+        )
 
     # Forward cascade.
     if cascade_targets and not args.no_cascade:
