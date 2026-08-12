@@ -59,6 +59,9 @@ commands:
   show-issue:
     script: scripts/show-issue.py
     help: Show the methodology-relevant view of a GitHub issue (read-only). Surfaces type, classification, assignees, state, parent-ref, required-section summary.
+  history:
+    script: scripts/history.py
+    help: "Render an issue's engine journal — the canonical pkit-governed audit trail — so the state log is discoverable (per DEC-049). --check-drift diffs the journal against the GitHub timeline's state-label events and flags ungoverned changes (the governance boundary). Read-only."
   assign-issue:
     script: scripts/assign-issue.py
     help: Reassign a GitHub issue. Supports --me self-assignment, --assignee for single/multi assignment, --unassign for removal (per DEC-019).
