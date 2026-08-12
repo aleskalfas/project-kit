@@ -4926,14 +4926,19 @@ def process_new(
             transitions=transitions,
             invariants=invariants,
             blocked_on=blocked_on,
+            dry_run=dry_run,
         )
     except authoring.ProcessAuthoringError as exc:
         raise click.ClickException(str(exc)) from exc
 
-    click.echo(f"Stamped: {result.definition_path.relative_to(repo_root)}")
+    verb = "Would stamp" if dry_run else "Stamped"
+    click.echo(f"{verb}: {result.definition_path.relative_to(repo_root)}")
     for stub in result.stubs:
         click.echo(f"  stub: {stub.command} -> {stub.script_relpath}  ({stub.purpose})")
     _echo_authoring_warnings(result.warnings)
+    if dry_run:
+        click.echo("Dry run — nothing was written.")
+        return
     click.echo(
         "Next: implement each predicate stub (the process-author agent's "
         "territory), then `pkit process status " + address + "`."
@@ -4956,8 +4961,16 @@ def process_new(
                    "engine — no eventing); from the shape contract's set.")
 @click.option("--why", required=True,
               help="The human-readable reason the render surfaces (required, COR-038).")
+@click.option("--dry-run", "dry_run", is_flag=True, default=False,
+              help="Report what would change without writing anything.")
 def process_couple(
-    address: str, state_id: str, upstream: str, relation: str, mode: str, why: str
+    address: str,
+    state_id: str,
+    upstream: str,
+    relation: str,
+    mode: str,
+    why: str,
+    dry_run: bool,
 ) -> None:
     """Author a `depends_on` coupling into the invoker-named definition.
 
@@ -4967,8 +4980,10 @@ def process_couple(
     `version` is NOT bumped (additive inert edit, COR-044). An upstream that
     does not resolve here is declarable (warned, not refused).
 
-    Idempotent on the identical entry; refuses to overwrite a DIFFERENT
-    declared coupling on the same upstream.
+    An entry is identified by (upstream, relation, mode) — one state may
+    legally depend on the same upstream in two different ways. Idempotent on
+    the identical entry; refuses when that key is already declared with a
+    DIFFERENT why.
     """
     from project_kit import process_authoring as authoring
 
@@ -4982,6 +4997,7 @@ def process_couple(
             relation=relation,
             mode=mode,
             why=why,
+            dry_run=dry_run,
         )
     except authoring.ProcessAuthoringError as exc:
         raise click.ClickException(str(exc)) from exc
@@ -4994,10 +5010,13 @@ def process_couple(
         )
     else:
         click.echo(
-            f"Coupled: {address} state {result.state_id!r} -> {upstream} "
-            f"({relation}, {mode}) in {rel} (version unchanged)."
+            f"{'Would couple' if dry_run else 'Coupled'}: {address} state "
+            f"{result.state_id!r} -> {upstream} ({relation}, {mode}) in {rel} "
+            "(version unchanged)."
         )
     _echo_authoring_warnings(result.warnings)
+    if dry_run:
+        click.echo("Dry run — nothing was written.")
 
 
 @process.command("hand-off")
@@ -5022,6 +5041,8 @@ def process_couple(
                    "scaffolded as a fail-closed stub + registered when new). Subject "
                    "slot = one upstream subject id; payload {downstream: [...]} — "
                    "empty = determinate absence (a miss), error = indeterminate.")
+@click.option("--dry-run", "dry_run", is_flag=True, default=False,
+              help="Report what would change without writing anything.")
 def process_handoff(
     address: str,
     upstream: str,
@@ -5029,6 +5050,7 @@ def process_handoff(
     trigger: str,
     candidates: str,
     resolve: str,
+    dry_run: bool,
 ) -> None:
     """Add a COR-042 hand-off contract to an existing coupling.
 
@@ -5041,8 +5063,10 @@ def process_handoff(
     resolves — never silently green). The definition `version` is NOT bumped
     (additive report-only edit, COR-044).
 
-    Finish by running `pkit process health --interpretation-only` — the
-    authoring done-signal is NO indeterminates, never a zero miss-count.
+    Finish by running `pkit process health --interpretation-only --process
+    <addr>` — the authoring done-signal is NO indeterminates, never a zero
+    miss-count. Scope it to your own address: the bare form walks every
+    contract in the project.
     """
     from project_kit import process_authoring as authoring
 
@@ -5056,6 +5080,7 @@ def process_handoff(
             trigger=trigger,
             candidates=candidates,
             resolve=resolve,
+            dry_run=dry_run,
         )
     except authoring.ProcessAuthoringError as exc:
         raise click.ClickException(str(exc)) from exc
@@ -5067,8 +5092,9 @@ def process_handoff(
             f"this exact contract (@{trigger}); nothing to do."
         )
     else:
+        verb = "Would declare contract" if dry_run else "Contract declared"
         click.echo(
-            f"Contract declared: {upstream} -> {address} @{trigger} in {rel} "
+            f"{verb}: {upstream} -> {address} @{trigger} in {rel} "
             "(version unchanged)."
         )
         for stub in result.stubs:
@@ -5077,7 +5103,9 @@ def process_handoff(
                 "before relying on the check — it fails closed until then)"
             )
     _echo_authoring_warnings(result.warnings)
-    if result.changed:
+    if dry_run:
+        click.echo("Dry run — nothing was written.")
+    elif result.changed:
         click.echo(
             "Next: pkit process health --interpretation-only --process " + address
         )

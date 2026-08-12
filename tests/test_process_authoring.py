@@ -738,6 +738,81 @@ def test_handoff_reuses_registered_seam_commands(authoring_repo: Path) -> None:
     )
 
 
+# --- `--dry-run`, the universal preview flag (COR-004) ----------------------
+
+
+def _repo_snapshot(repo: Path) -> dict:
+    return {
+        p: p.read_bytes() for p in sorted(repo.rglob("*")) if p.is_file()
+    }
+
+
+def test_dry_run_previews_every_mutating_stamp(
+    authoring_repo: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr("project_kit.process.resolve_repo_root", lambda: authoring_repo)
+    runner = CliRunner()
+
+    # `new`: the full walk of checks runs, the plan is reported, nothing lands.
+    before = _repo_snapshot(authoring_repo)
+    result = runner.invoke(
+        main,
+        [
+            "process", "new", "design:screen",
+            "--state", "drafting=Drafting.", "--state", "ready=Ready.",
+            "--entry", "drafting", "--terminal", "ready",
+            "--transition", "drafting:ready:approve",
+            "--dry-run",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert "Would stamp" in result.output
+    assert "screen-detect-drafting" in result.output  # the stubs it would write
+    assert _repo_snapshot(authoring_repo) == before
+
+    # And a dry run refuses exactly what a real run refuses.
+    result = runner.invoke(
+        main, ["process", "new", "orphan", "--state", "only=Only.", "--dry-run"]
+    )
+    assert result.exit_code != 0
+    assert "owning capability" in result.output
+
+    _stamp_screen(authoring_repo)
+    _stamp_unit(authoring_repo)
+
+    before = _repo_snapshot(authoring_repo)
+    result = runner.invoke(
+        main,
+        [
+            "process", "couple", "delivery:unit",
+            "--state", "building", "--upstream", "design:screen",
+            "--relation", "triggered-by", "--mode", "push",
+            "--why", "A unit builds the readied screen.",
+            "--dry-run",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert "Would couple" in result.output
+    assert _repo_snapshot(authoring_repo) == before
+
+    _couple_unit(authoring_repo)
+    before = _repo_snapshot(authoring_repo)
+    result = runner.invoke(
+        main,
+        [
+            "process", "hand-off", "delivery:unit",
+            "--upstream", "design:screen", "--trigger", "ready",
+            "--candidates", "unit-handoff-candidates",
+            "--resolve", "unit-handoff-resolve",
+            "--dry-run",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert "Would declare contract" in result.output
+    assert "unit-handoff-resolve" in result.output  # the seam stubs it would write
+    assert _repo_snapshot(authoring_repo) == before
+
+
 # --- the interpretation-only check (COR-044 / COR-042 point 5) --------------
 
 _DETECT_SCREEN = (

@@ -216,6 +216,25 @@ def _lint_or_restore(repo_root: Path, path: Path, original: str, label: str) -> 
         )
 
 
+def _lint_in_memory(repo_root: Path, data: Any, label: str) -> None:
+    """The dry-run counterpart of `_lint_or_restore`: lint the MUTATED but
+    unwritten round-trip tree, so a preview reports the same conformance
+    verdict a real run would — without a write to undo. (ruamel's round-trip
+    containers are dict/list subclasses and its scalars are str subclasses, so
+    the JSON Schema validator reads them directly.)"""
+    block = data.get("process") if isinstance(data, dict) else None
+    issues = (
+        lint_process_block(repo_root, block)
+        if isinstance(block, dict)
+        else ["no top-level `process:` block after the edit"]
+    )
+    if issues:
+        raise ProcessAuthoringError(
+            f"{label} would leave the definition non-conforming (nothing was "
+            "written). Lint: " + "; ".join(issues)
+        )
+
+
 # --- predicate stubs (the predicate-runner contract, scaffolded) ------------
 
 # Payload examples per stub purpose — the runner-contract shape the implemented
@@ -530,6 +549,7 @@ def stamp_new_process(
     transitions: list[TransitionSpec] | None = None,
     invariants: list[InvariantSpec] | None = None,
     blocked_on: str | None = None,
+    dry_run: bool = False,
 ) -> NewProcessResult:
     """Scaffold a lint-clean process definition + its predicate stubs.
 
@@ -537,6 +557,10 @@ def stamp_new_process(
     the definition, the stub scripts, and the `package.yaml` registrations.
     The constructed `process` block is linted against the shape contract
     BEFORE any write — lint-clean by construction, not by promise.
+
+    `dry_run` reports exactly what a real run would stamp and writes nothing.
+    It costs no fidelity here: every check, including the shape lint of the
+    constructed block, already runs before the first write.
     """
     transitions = transitions or []
     invariants = invariants or []
@@ -821,16 +845,21 @@ def stamp_new_process(
         )
 
     # All checks passed: write definition, stubs, registrations.
-    schema_rel = Path("..") / ".." / ".." / "schemas" / "_defs" / "process.schema.json"
-    yaml = _round_trip_yaml()
-    definition_path.parent.mkdir(parents=True, exist_ok=True)
-    with definition_path.open("w", encoding="utf-8") as f:
-        f.write(_DEFINITION_HEADER.format(schema_rel=schema_rel.as_posix(), address=address))
-        f.write("\n")
-        yaml.dump({"process": process_block}, f)
-    for stub in stubs:
-        _write_stub_script(capability_dir, stub, bodies[stub.command])
-    _register_commands(capability_dir, stubs)
+    if not dry_run:
+        schema_rel = Path("..") / ".." / ".." / "schemas" / "_defs" / "process.schema.json"
+        yaml = _round_trip_yaml()
+        definition_path.parent.mkdir(parents=True, exist_ok=True)
+        with definition_path.open("w", encoding="utf-8") as f:
+            f.write(
+                _DEFINITION_HEADER.format(
+                    schema_rel=schema_rel.as_posix(), address=address
+                )
+            )
+            f.write("\n")
+            yaml.dump({"process": process_block}, f)
+        for stub in stubs:
+            _write_stub_script(capability_dir, stub, bodies[stub.command])
+        _register_commands(capability_dir, stubs)
 
     warnings: list[str] = []
     if not any(s.entry or s.guarded_entry for s in states):
@@ -867,6 +896,7 @@ def couple_process(
     relation: str,
     mode: str,
     why: str,
+    dry_run: bool = False,
 ) -> CoupleResult:
     """Append a `depends_on` entry (COR-038) to the invoker-named definition.
 
@@ -883,6 +913,8 @@ def couple_process(
     plus the same `why`): a clean no-op. Same key, different `why`: a genuine
     divergence, and it refuses — editing a declared edge is deliberate work,
     never a silent overwrite. Different key: a new, legal entry, appended.
+
+    `dry_run` runs every check and reports what would change, writing nothing.
     """
     try:
         definition = load_definition(repo_root, address)
@@ -971,9 +1003,12 @@ def couple_process(
     else:
         existing.append(new_entry)
 
-    with definition_path.open("w", encoding="utf-8") as f:
-        rt.dump(data, f)
-    _lint_or_restore(repo_root, definition_path, original, "`process couple`")
+    if not dry_run:
+        with definition_path.open("w", encoding="utf-8") as f:
+            rt.dump(data, f)
+        _lint_or_restore(repo_root, definition_path, original, "`process couple`")
+    else:
+        _lint_in_memory(repo_root, data, "`process couple --dry-run`")
     return CoupleResult(
         definition_path=definition_path,
         state_id=state_id,
@@ -1017,6 +1052,7 @@ def handoff_process(
     candidates: str,
     resolve: str,
     state_id: str | None = None,
+    dry_run: bool = False,
 ) -> HandoffResult:
     """Add a COR-042 hand-off contract to an EXISTING coupling on the
     invoker-named definition.
@@ -1033,6 +1069,9 @@ def handoff_process(
     payload shapes) and registered in package.yaml; already-registered names
     are reused untouched. The definition `version` is NOT bumped (the contract
     is additive and report-only, COR-044).
+
+    `dry_run` runs every check and reports the contract and seam stubs it would
+    write, writing nothing.
     """
     try:
         definition = load_definition(repo_root, address)
@@ -1177,14 +1216,17 @@ def handoff_process(
         "candidates": {"run": candidates},
         "resolve": {"run": resolve},
     }
-    with definition_path.open("w", encoding="utf-8") as f:
-        rt.dump(data, f)
-    _lint_or_restore(repo_root, definition_path, original, "`process hand-off`")
+    if dry_run:
+        _lint_in_memory(repo_root, data, "`process hand-off --dry-run`")
+    else:
+        with definition_path.open("w", encoding="utf-8") as f:
+            rt.dump(data, f)
+        _lint_or_restore(repo_root, definition_path, original, "`process hand-off`")
 
-    for stub in new_stubs:
-        _write_stub_script(capability_dir, stub, bodies[stub.command])
-    if new_stubs:
-        _register_commands(capability_dir, new_stubs)
+        for stub in new_stubs:
+            _write_stub_script(capability_dir, stub, bodies[stub.command])
+        if new_stubs:
+            _register_commands(capability_dir, new_stubs)
 
     return HandoffResult(
         definition_path=definition_path,
