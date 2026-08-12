@@ -1,0 +1,92 @@
+# Adopter config shape — binding carrier for the project-management capability.
+#
+# The real config lives in an adopter's `project/config.yaml`: the one file
+# every adopter hand-edits at install time (default branch, `gh:` host/owner,
+# Projects-v2 board flags, doc-path mappings, milestone categories, review
+# mode, mesh peers). This kit-shipped schema file exists so that:
+#   (a) it declares the COR-023 `binds_to:` glob, letting `pkit data validate`
+#       resolve an adopter's config.yaml to its companion JSON Schema
+#       (`_build_binding` requires the <schema>.yaml + <schema>.schema.json
+#       pair to exist); and
+#   (b) it validates against that companion under `pkit schemas validate`.
+#
+# The body below is the minimal reference instance — a valid config that
+# doubles as this schema's self-test and as the copy-paste starting point an
+# adopter edits. Every optional key is listed as a comment in the order the
+# capability README documents them; uncomment what applies.
+#
+# WHY THE COMPANION SETS `additionalProperties: false`: every reader gets at
+# this file through defensive `.get()` access, so before the schema existed a
+# misspelled key was silently ignored — `has_projects_v2_boards` (trailing `s`)
+# left the adopter in label-fallback mode with no signal until classification
+# landed in the wrong substrate. Validation now names the offending key.
+
+schema_version: 1
+
+# Adopter-data binding (per COR-023): a project's config.yaml matches this
+# schema. Adopter files MAY also carry the self-describing top-level field
+# `pkit_schema: project-management:config`.
+#
+# The glob carries the DISTINGUISHING SEGMENTS rather than the bare
+# `**/config.yaml` form the sibling schemas use. `workstreams.yaml` /
+# `substrate-map.yaml` / `instance-ownership.yaml` are distinctive names;
+# `config.yaml` is not — a bare `**/config.yaml` would also claim the
+# backbone's `.pkit/project/config.yaml`, the permission capability's
+# `.pkit/permissions/project/config.yaml`, and any application config an
+# adopter happens to keep in their repo, turning correct files into loud
+# validation failures. (A cross-capability collision surfaces as an
+# ambiguous-binding refusal; a collision with a NON-capability file does
+# not — it presents as a bogus failure on a correct file, which is why the
+# glob must be narrow.) Segments rather than a full anchor keeps the
+# backbone's install layout out of capability-owned data: the binding
+# survives a relocation of the capabilities tree.
+binds_to:
+  - "**/project-management/project/config.yaml"
+
+pkit_schema: project-management:config
+
+# --- reference instance -------------------------------------------------
+
+# The repo's default branch — drives branch-name generation and base-branch
+# enforcement (per [project-management:DEC-013-branch-and-pr-conventions]).
+default_branch: main
+
+# Legacy shim: the canonical workstream taxonomy lives in
+# `project/workstreams.yaml` (per [project-management:DEC-018-workstream-
+# taxonomy-and-lifecycle]), but `pre-check.py` still requires this key.
+workstreams: []
+
+# Classification substrate (per [project-management:DEC-012-classification-axes]).
+# false / absent = label-fallback mode; true requires projects_v2_board_id.
+has_projects_v2_board: false
+
+# Optional — uncomment what applies:
+#
+# projects_v2_board_id: 12            # the board NUMBER from `gh project list`
+# projects_v2_node_id: PVT_xxx        # board→node-id cache; bootstrap populates it
+# pre_close_triage_lead_days: 3       # per DEC-016
+#
+# gh:                                 # per DEC-023 — both fields optional
+#   host: github.example.com          #   target a non-`github.com` host
+#   default_owner: some-org           #   spliced as `--owner` on cross-owner ops
+#
+# code_path_to_doc_mapping:           # per DEC-015 + ADR-019
+#   enforce: false                    #   false (default) = advisory
+#   rules:
+#     - { code: "src/**", docs: [README.md] }
+#
+# milestone_categories:               # per DEC-016 — declare before filing one
+#   milestone:
+#     title_format: "Milestone {n}: {name}"
+#     close_trigger_default: content-based
+#     description: "Outcome bundle of related EPICs."
+#
+# review:                             # per DEC-027 + DEC-028
+#   mode: agent
+#   agents:
+#     local_registered:
+#       - name: reviewer
+#
+# mesh_peers:                         # per DEC-022
+#   - github://owner/repo
+# mesh_source: github://governance-owner/repo/path/to/mesh.yaml

@@ -1,0 +1,290 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "config.schema.json",
+  "title": "Adopter config — project-management capability",
+  "description": "Formal shape of the adopter's `project/config.yaml` — the one file every project-management adopter hand-edits at install time (default branch, `gh:` host/owner per DEC-023, Projects-v2 board flags + cached ids, doc-path mappings per DEC-015, milestone categories per DEC-016, review mode + registered agents per DEC-027 / DEC-028, methodology-mesh peers per DEC-022). `additionalProperties: false` is load-bearing: every reader accesses this file through defensive `.get()`, so an unknown or misspelled key would otherwise be silently ignored and degrade behaviour (e.g. `has_projects_v2_boards` with a trailing `s` falls back to label mode unnoticed) — the schema turns that into a loud refusal naming the offending key. Required keys mirror `pre-check.py`'s REQUIRED_ADOPTER_CONFIG_FIELDS so shape validation and the pre-check gate agree. Document-shaped schema: the file IS the resource (no top-level id collection). Companion per COR-018.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "default_branch",
+    "workstreams"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "source": {
+      "$ref": "refs.schema.json#/$defs/source"
+    },
+    "binds_to": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Repo-relative globs matching the adopter-data files this schema validates (COR-023 fallback binding). Present on the kit-shipped binding carrier; absent from adopter data files."
+    },
+    "pkit_schema": {
+      "type": "string",
+      "description": "Self-describing adopter-data binding tag, `project-management:config` (COR-023). Optional on adopter files (the binds_to glob resolves them either way)."
+    },
+    "default_branch": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The repo's default branch. Drives branch-name generation and base-branch enforcement per DEC-013; pre-check verifies it matches the live repo.",
+      "pattern": "^[^\\n\\r]+$"
+    },
+    "workstreams": {
+      "description": "LEGACY shim. The canonical workstream taxonomy lives in `project/workstreams.yaml` per DEC-018; this key survives because `pre-check.py` still lists it in REQUIRED_ADOPTER_CONFIG_FIELDS and readers accept it as a fallback. Both historical shapes are accepted: the v0.2.0 bare list of slugs and the v0.5.0 mapping form. An empty list is the normal value once the taxonomy has moved to its own file.",
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/workstream_slug"
+          },
+          "uniqueItems": true
+        },
+        {
+          "type": "object",
+          "propertyNames": {
+            "$ref": "#/$defs/workstream_slug"
+          },
+          "additionalProperties": {
+            "type": "object"
+          }
+        }
+      ]
+    },
+    "gh": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "GitHub host + owner targeting per DEC-023. Both fields optional; absence delegates to ambient `gh` state. Config wins over ambient.",
+      "properties": {
+        "host": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The host every `gh` shell-out targets, threaded as `GH_HOST`. `gh issue create` infers the host from the remote but `gh api` does not, so scripts hitting raw endpoints need it explicitly. Omit on single-org github.com.",
+          "pattern": "^[^\\s/]+$"
+        },
+        "default_owner": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Owner spliced as `--owner` on cross-owner operations (board / org / cross-owner labels). Omit when the board lives in the repo's own owner.",
+          "pattern": "^[^\\s/]+$"
+        }
+      }
+    },
+    "has_projects_v2_board": {
+      "type": "boolean",
+      "description": "True when classification axes live as Projects v2 board fields; false (or absent) selects label-fallback mode per DEC-012, where bootstrap creates `priority:*` / `workstream:*` / `state:*` labels instead. Set `projects_v2_board_id` alongside a true value."
+    },
+    "projects_v2_board_id": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "The board NUMBER (as shown by `gh project list`), not its node id. Read whenever `has_projects_v2_board` is true; pre-check fails when the flag is set and this is absent."
+    },
+    "projects_v2_node_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Cached GraphQL node id for the board (`PVT_…`), populated at adoption time by bootstrap so `create-issue` skips a per-create `gh project view` round-trip. Purely a cache: absent means live-resolve.",
+      "pattern": "^[^\\s]+$"
+    },
+    "pre_close_triage_lead_days": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Lead time in days for pre-close triage of a time-bound container per DEC-016."
+    },
+    "code_path_to_doc_mapping": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Code-path → doc-path couplings checked by `check-doc-mapping` per DEC-015 + ADR-019. Opt-in: absent or `enforce: false` reports would-fire mappings and exits 0. Keep broad tree→README rules advisory; enforce only surgical 1:1 couplings.",
+      "properties": {
+        "enforce": {
+          "type": "boolean",
+          "description": "True hard-rejects (exit 1) when mapped code changed without the mapped doc. Defaults to false (advisory). The real boundary is wiring the check as a required CI status; the merge-pr layer is only a speed-bump (ADR-004)."
+        },
+        "rules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/doc_mapping_rule"
+          },
+          "description": "The couplings. No rules configured means the check skips."
+        }
+      }
+    },
+    "milestone_categories": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/milestone_category"
+      },
+      "description": "Declared milestone categories per DEC-016. A project that files Milestones must declare at least one category first — the methodology ships no implicit default, and filing outside a declared category is a hard reject. Keys are the category names `create-milestone <category>` accepts."
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Review-mode configuration per DEC-027 (mode + human reviewer role) and DEC-028 (the two agent-as-approver paths). Absent means mode=agent with no agents registered.",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "agent",
+            "human"
+          ],
+          "description": "Project default review mode — the lowest of DEC-027's three override layers (a `review:agent` / `review:human` issue label beats it; `--require-human` beats both). Defaults to `agent` when unset."
+        },
+        "human_review": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Human-path settings per DEC-027.",
+          "properties": {
+            "reviewer_role": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Role from the membership roster whose members are requested as reviewers (the PR author is excluded)."
+            }
+          }
+        },
+        "agents": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Registered reviewer agents per DEC-028. Both lists optional; at least one entry across them is needed for the agent gate to be satisfiable.",
+          "properties": {
+            "remote_registered": {
+              "type": "array",
+              "maxItems": 1,
+              "description": "Remote path — agents with their own GitHub identity (bot, App, service account). Still singleton at v1: DEC-032 lifted the cap on the local path only.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "github_login"
+                ],
+                "properties": {
+                  "github_login": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "The agent's GitHub login; a verdict comment authored by it satisfies the gate (author-exclusion enforced)."
+                  }
+                }
+              }
+            },
+            "local_registered": {
+              "type": "array",
+              "description": "Local path — harness-deployed agents. N ≥ 2 is valid since DEC-032 lifted the singleton cap; the resolved required set is this baseline unioned with capability-contributed reviewers.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "name"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Agent name; must correspond to a deployed agent file (`.claude/agents/<name>.md` on the Claude Code adapter). pre-check refuses a registered name with no deployed file — an unsatisfiable merge gate."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "mesh_peers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/peer_uri"
+      },
+      "uniqueItems": true,
+      "description": "Peer repos whose methodology-shared state `check-mesh` compares against per DEC-022. Absent (together with `mesh_source`) skips the mesh check."
+    },
+    "mesh_source": {
+      "$ref": "#/$defs/peer_uri",
+      "description": "Single governance-repo pointer, an alternative to (and combinable with) `mesh_peers` per DEC-022. Dereferencing is deferred at v1 — treated as one more peer."
+    },
+    "repo_owner": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Owner segment of this repo, used by `check-mesh` when reporting local state. Optional — the live repo is otherwise resolved through `gh`.",
+      "pattern": "^[^\\s/]+$"
+    },
+    "repo_name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Name segment of this repo, used by `check-mesh` when reporting local state. Optional — the live repo is otherwise resolved through `gh`.",
+      "pattern": "^[^\\s/]+$"
+    }
+  },
+  "$defs": {
+    "workstream_slug": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*[a-z0-9]$",
+      "minLength": 2,
+      "maxLength": 40,
+      "description": "Kebab-case workstream slug, matching the shape workstreams.yaml declares (DEC-018)."
+    },
+    "peer_uri": {
+      "type": "string",
+      "pattern": "^github://[^/]+/[^/]+(/.*)?$",
+      "description": "A mesh peer, `github://<owner>/<repo>[/<path>]` (DEC-022). `check-mesh` exits with a usage error on any other form."
+    },
+    "doc_mapping_rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "docs"
+      ],
+      "description": "One code→doc coupling. Both fields are required: `check-doc-mapping` silently skips a rule missing either, so an incomplete rule is a rule that never fires.",
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Gitignore-style glob over the code surface. When a diff touches it, at least one mapped doc must be in the same diff."
+        },
+        "docs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "The doc paths (or globs) that satisfy the rule. Any one of them being in the diff is enough."
+        }
+      }
+    },
+    "milestone_category": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "title_format",
+        "close_trigger_default"
+      ],
+      "description": "One declared milestone category per DEC-016. `create-milestone` refuses a category that is not a mapping carrying both required fields.",
+      "properties": {
+        "title_format": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Title template `create-milestone` formats, e.g. `Milestone {n}: {name}`. The command substitutes the computed number and the supplied name.",
+          "pattern": "^[^\\n\\r]+$"
+        },
+        "close_trigger_default": {
+          "type": "string",
+          "enum": [
+            "date-based",
+            "content-based",
+            "either"
+          ],
+          "description": "Close trigger applied to instances of this category unless `--close-trigger` overrides it. Each Milestone carries the resolved value as its `Close trigger:` first body line."
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "One-line prose stating what this category means in this project.",
+          "pattern": "^[^\\n\\r]*$"
+        }
+      }
+    }
+  }
+}

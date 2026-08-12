@@ -3,6 +3,12 @@
 
 schema_version: 1
 
+# Self-describing binding tag (COR-023) — resolves this file to its schema for
+# `pkit data validate`. The `binds_to` glob on schemas/config.yaml also resolves
+# it, so this is belt-and-suspenders (and the recommended path for a generic
+# filename: it makes the binding independent of the glob entirely).
+pkit_schema: project-management:config
+
 # Default branch for branch-name generation + base-branch enforcement
 # (per [project-management:DEC-013-branch-and-pr-conventions]).
 default_branch: main
