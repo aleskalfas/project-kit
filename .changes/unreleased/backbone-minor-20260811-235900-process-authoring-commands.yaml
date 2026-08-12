@@ -17,7 +17,13 @@ body: >
   (trigger + both seams, stubs scaffolded when new) to an existing coupling,
   validating the trigger against the upstream where resolvable. Neither
   mutation bumps the definition version (additive inert/report-only edits per
-  COR-044). And `process health --interpretation-only` re-renders the same
-  health walk (a consumer of the walker per COR-042 point 5, never a parallel
-  contract-walker) as the authoring completion signal: indeterminates only,
-  misses not counted, the default run's exit contract unchanged.
+  COR-044), all three take `--dry-run`, and none ever overwrites an existing
+  declaration or an existing predicate script. Transitions are addressed by
+  their full `(from, to, trigger)` key, so two edges between one state pair
+  are each independently gateable. And `process health
+  --interpretation-only` re-renders the same health walk (a consumer of the
+  walker per COR-042 point 5, never a parallel contract-walker) as the
+  authoring completion signal: indeterminates only, misses not counted, plus a
+  static check that both seams are registered, present, and no longer stubs —
+  so the signal does not depend on which subjects happen to sit at the
+  trigger. The default health run's exit contract is unchanged.
