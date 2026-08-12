@@ -45,6 +45,7 @@ from click.testing import CliRunner
 
 from project_kit import process_authoring as pa
 from project_kit import process_health as ph
+from project_kit import schemas_validate
 from project_kit.cli import main
 from project_kit.process import ProcessError, load_definition
 from project_kit.schemas_validate import _is_schema_definition
@@ -188,6 +189,29 @@ def test_new_definition_is_a_schema_instance_not_a_schema(authoring_repo: Path) 
     # so `schemas validate` treats it as an instance (no companion demanded).
     result = _stamp_screen(authoring_repo)
     assert not _is_schema_definition(result.definition_path)
+
+
+def test_stamped_definition_passes_the_project_wide_schema_gate(
+    authoring_repo: Path, monkeypatch
+) -> None:
+    # The gate `scripts/check.sh` runs is `pkit schemas validate` with NO PATH
+    # — a different walk from the path-scoped one. Both must classify a stamped
+    # definition the same way, or the first adopter to stamp one inherits a red
+    # CI demanding a companion JSON Schema that categorically cannot exist.
+    _stamp_screen(authoring_repo)
+    assert schemas_validate.validate_all(authoring_repo).is_clean
+
+    monkeypatch.setattr("project_kit.cli.find_target_root", lambda: authoring_repo)
+    result = CliRunner().invoke(main, ["schemas", "validate"])
+    assert result.exit_code == 0, result.output
+    assert "screen.yaml" not in result.output
+
+    # The exemption is scoped to instances: a real schema YAML with no
+    # companion is still caught by the same walk.
+    (authoring_repo / ".pkit" / "capabilities" / "design" / "schemas" / "orphan.yaml").write_text(
+        "types:\n  thing:\n    meaning: A thing.\n", encoding="utf-8"
+    )
+    assert not schemas_validate.validate_all(authoring_repo).is_clean
 
 
 def test_new_stubs_fail_closed_and_are_read_only(authoring_repo: Path) -> None:

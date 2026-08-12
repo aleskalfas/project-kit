@@ -185,6 +185,13 @@ def discover_schema_pairs(target_root: Path) -> list[SchemaPair]:
     `<name>.schema.json` in the same directory. Returns the pair
     regardless of whether the companion exists; missing-companion is a
     validation issue, not a discovery failure.
+
+    Non-schema YAML is excluded by the same `_is_schema_definition` test the
+    path-scoped walk applies — the two walks classify identically, so a file
+    the explicit-path run accepts can never fail the project-wide gate. Without
+    that, an instance validated against a shared external schema (a process
+    definition under `_defs/process.schema.json`, say) would be demanded a
+    companion it categorically cannot have.
     """
     capabilities_dir = target_root / ".pkit" / "capabilities"
     pairs: list[SchemaPair] = []
@@ -195,6 +202,8 @@ def discover_schema_pairs(target_root: Path) -> list[SchemaPair]:
         if not schemas_dir.is_dir():
             continue
         for yaml_path in sorted(schemas_dir.glob("*.yaml")):
+            if not _is_schema_definition(yaml_path):
+                continue
             companion = yaml_path.with_suffix(".schema.json")
             pairs.append(SchemaPair(yaml_path=yaml_path, companion_path=companion))
     return pairs
