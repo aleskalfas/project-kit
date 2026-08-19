@@ -18,9 +18,9 @@ The design space was explored in the scratchpad note `2026-08-12-code-review-dis
 
 **Ship a three-agent code-review panel from `software-engineering`, registered via the reviewer-contribution socket, folding through the existing all-must-approve gate.**
 
-1. **The panel.** Three reviewer agents, each emitting the standard [project-management:DEC-028] verdict grammar (`APPROVED`/`REJECTED` + the `<!-- pkit-verdict -->` marker), registered in a `review-contributions.yaml`:
+1. **The panel.** Three reviewer agents, each emitting the standard [project-management:DEC-028] verdict grammar (`APPROVED`/`REJECTED` + the `<!-- pkit-verdict -->` marker), registered through the reviewer-contribution declaration (the pm-owned schema):
    - **`code-reviewer`** — the generalist headline: correctness/logic at its core, plus general code quality; the "review this PR" an operator reaches for.
-   - **`security-reviewer`** — auth, secrets-in-argv, `shell=True`/injection, crypto, dependency hygiene.
+   - **`security-reviewer`** — illustratively: auth, secrets-in-argv, `shell=True`/injection, crypto, dependency hygiene (its contract lives in the agent body, not this record).
    - **`docs-reviewer`** — documentation completeness, understandability, and docs-match-behaviour (leaning on [project-management:DEC-015]'s doc obligations).
 2. **Home: `software-engineering`.** Co-located with the producer (rationale below). Recorded here as the boundary call per [COR-026].
 3. **Block-threshold discipline (per-agent).** Each agent withholds `APPROVED` **only on objective failures** within its remit; softer or subjective findings are posted as `APPROVED`-with-comments (advisory). This keeps the binary all-must-approve gate from becoming a subjective merge-blocking veto.
@@ -35,11 +35,13 @@ The design space was explored in the scratchpad note `2026-08-12-code-review-dis
 
 **Why the `software-engineering` home.** The load-bearing reason is the *deferred generation-side feedback loop*: the producer (`software-engineer`) and the generalist (`code-reviewer`) will share one knowledge base — the producer reads it to generate, the reviewers apply it as verdicts. Co-locating keeps that a capability-internal seam rather than a cross-capability mutual dependency. Note what does *not* justify the home: "share the conventions corpus" — ADR-013 already decouples `<project-conventions>` from any capability, so a dedicated capability could read the identical corpus. COR-007 (one instance of a review discipline — a dedicated capability is premature) and avoiding a second [COR-030] dependency edge round it out. **The cost, named honestly:** install-granularity ([COR-017]) — installing `software-engineering` for code-generation help also acquires the review gate. Accepted as low (an un-invoked reviewer is opt-in-to-run), with the **split-later seam** recorded: extract a dedicated `code-review` capability if review grows its own release cadence, a large specialist set, or independent adopter demand.
 
+**On the two specialists' home.** `security-reviewer` rides the same code-knowledge loop as the generalist — security review *is* code review. `docs-reviewer`'s tie to that loop is weaker: its trigger is [project-management:DEC-015]'s doc obligations (pm-owned), not the code-conventions corpus the producer reads. Its home here is therefore a deliberate **panel-coherence** call, distinct from the shared-knowledge argument: the three are one code-review panel — authored under one block-threshold discipline, shipped and versioned as one contribution, composable together — and splitting doc review into pm or a separate capability would fracture that for a single instance (COR-007). If doc review later grows its own weight it follows the same split-later seam.
+
 **Why the panel (three), not one.** A maintainer call, over the `critic`'s ship-one lean: the generalist `code-reviewer` is the most-wanted deliverable, and shipping the specialists alongside gives real multi-perspective coverage at once. The critic's compounding-false-block risk is real and is **actively mitigated**, not ignored: the per-agent block-threshold (D3), the universal/project knowledge split (D4), and the required per-reviewer override companion decision together keep the panel from becoming a merge-halting nuisance.
 
 **Why block-only-on-objective.** Binary all-must-approve ANDs identical tokens; a subjective lens that hard-blocks on taste becomes a veto that trains the `--bypass` reflex — reintroducing #715's "green means nothing" from the other side. Pushing "block vs advise" into each agent body keeps the gate binary and the reviewers useful.
 
-**Why `security` and `docs` specifically.** Security is #715's demonstrated harm (a correctness generalist plausibly misses `shell=True` injection). Docs leans on existing DEC-015 doc-obligation machinery and pkit's doc density.
+**Why `security` and `docs` specifically.** Security is #715's demonstrated harm (a correctness generalist plausibly misses `shell=True` injection). Docs leans on existing DEC-015 doc-obligation machinery, which applies to any adopter that installs project-management.
 
 ### Alternatives considered
 
@@ -50,11 +52,12 @@ The design space was explored in the scratchpad note `2026-08-12-code-review-dis
 
 ## Implications
 
-- **Three agent files** under `software-engineering/agents/`, plus a **`review-contributions.yaml`** declaring them and their activation predicates. The declaration depends on the pm-side DEC-032 `type`-axis + diff-touch-floor amendment (sibling Task) to resolve.
+- **Three agent files** under `software-engineering/agents/`, plus the **reviewer-contribution declaration** (the pm-owned schema) declaring them and their activation predicates. The declaration depends on the pm-side DEC-032 `type`-axis + diff-touch-floor amendment (sibling Task) to resolve.
 - **`requires_capabilities: project-management`** ([COR-030]) — the capability declares the pm dependency for the socket + gate.
 - **Block-threshold and knowledge-split are authoring disciplines** for the agent bodies. They are currently *convention*, not a validated contract; a testable expression of the objective/advisory line is flagged as future work (the `critic`'s G1).
 - **Verdict grammar, freshness, all-must-approve: unchanged** (DEC-028/DEC-032).
 - **Surface change** ([PRJ-002]) → `software-engineering` capability + backbone bump; ships via `pkit upgrade`. **No migration** — additive (new agents, new declaration; a project without the capability, or a PR the predicate doesn't match, behaves as today).
 - **Companion pm decisions / sibling Tasks:** DEC-032 amendment (`type` axis + diff-touch floor); per-reviewer override; `done-work` gate-summary attribution. ADR-013 gains a forward-pointer (architect-owned) noting the panel realises its predicted review consumer.
+- **Implementation is gated with those companions (acceptance-gate honesty).** DEC-002 records the panel *decision*; the panel's activation cannot resolve without the pm resolver extension, so **no panel code ships until the companion decisions are also accepted.** They accept as one EPIC-level set under #725 — DEC-002 does not build against an unaccepted companion.
 - **Deferred (not this increment):** the remote-contributed (autonomous) path; a structured `review-rules` knowledge corpus; the generation-side sharing wiring; `testing`/`performance` reviewers; the review-to-file preview and native-GitHub-review companion Tasks.
 - **Retires** the scratchpad note `2026-08-12-code-review-discipline.md` (this DEC + EPIC #725 are what it produced).
