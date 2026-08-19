@@ -1,0 +1,32 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+body: >
+  `set-field` now WRITES a Projects-v2 board single-select value (#724, from #723
+  and report #708), so a board-carried axis is populatable by a pkit verb instead
+  of only by a hand-wired creation hook. `set-field <N> --priority High` under
+  `has_projects_v2_board: true` resolves everything by NAME at runtime — the board
+  number in config to the project node id, the field whose name matches the axis
+  (`Priority` / `Workstream`, matched case-insensitively), the option whose name
+  matches the value, and the issue's own card id — so no pre-resolved field or
+  option ids have to be dug out of the API by hand. The write itself is issued by
+  the existing sole constructor for a non-label substrate write (ADR-031), the
+  same primitive the `set-board-field` hook uses; the reads live in a new board
+  READ seam that `back-fill` and `adopt-existing` now share. `--dry-run` performs
+  the same resolution (a read) and reports the concrete write it would make
+  without touching the board. The honest-refusal posture is unchanged: a
+  board-carried axis that cannot be set is `[refused]` with a non-zero exit and
+  never `[ok]`, and each refusal names what was looked for AND what the board
+  actually offers — the field list when there is no matching field, the option
+  list when there is no matching option, the field type when it is not a
+  single-select (text / number / date / iteration are out of scope), and gh's
+  stderr verbatim on a scope or API failure. An issue with no card on the board
+  (membership is a post-creation step) is refused with the exact `gh project
+  item-add` command rather than added silently — putting an issue on a board is a
+  membership decision, not a side effect of setting a field. An axis claimed by
+  BOTH the board flag and a `label` binding in `substrate-map.yaml` is still
+  refused rather than resolved by implementation order, pointing at `pre-check`,
+  which fails on that conflict with both remediations. A call mixing substrates
+  applies what it can and exits non-zero if anything was refused, naming what was
+  and was not done.

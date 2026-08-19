@@ -2,9 +2,11 @@
 
 Covers label resolution + idempotent diff for priority/workstream, the
 parent-ref body rewrite (replace / prepend / no-op), value-vocabulary reads,
-and the board-substrate REFUSAL (#709): a board-backed axis is refused with a
-non-zero exit rather than reported as a no-op success, while the label-substrate
-path and the partial (mixed-axes) case stay legible.
+the BOARD single-select write (#724 — name → id resolution, and the five
+refusals that each name what the board actually offers), and the honesty posture
+inherited from #709: a requested axis that was not written is `[refused]` with a
+non-zero exit, never `[ok]`, while the label-substrate path and the partial
+(mixed-axes) case stay legible.
 """
 
 from __future__ import annotations
@@ -146,7 +148,6 @@ def test_plan_labels_sets_new_priority(sf) -> None:
         workstream=None,
         current_labels=["type:feature"],
         substrate_map=None,
-        has_board=False,
     )
     assert add == ["priority:High"]
     assert remove == []
@@ -159,7 +160,6 @@ def test_plan_labels_replaces_stale_priority(sf) -> None:
         workstream=None,
         current_labels=["priority:Low", "type:feature"],
         substrate_map=None,
-        has_board=False,
     )
     assert add == ["priority:High"]
     assert remove == ["priority:Low"]
@@ -171,7 +171,6 @@ def test_plan_labels_idempotent_noop(sf) -> None:
         workstream=None,
         current_labels=["priority:High"],
         substrate_map=None,
-        has_board=False,
     )
     assert add == [] and remove == []
     assert any("no-op" in r.message for r in results)
@@ -183,74 +182,79 @@ def test_plan_labels_batch_priority_and_workstream(sf) -> None:
         workstream="cli",
         current_labels=[],
         substrate_map=None,
-        has_board=False,
     )
     assert set(add) == {"priority:Medium", "workstream:cli"}
 
 
-def test_plan_labels_board_degrades(sf) -> None:
-    results, add, remove = sf._plan_labels(
-        priority="High",
-        workstream=None,
-        current_labels=[],
-        substrate_map=None,
-        has_board=True,
-    )
-    assert add == [] and remove == []
-    assert any("board substrate" in r.message for r in results)
-
-
-# --- board-substrate REFUSAL (#709, report #708) -----------------------------
+# --- axis routing: which substrate owns the axis (#724) ----------------------
 #
-# The axis stays unset either way — what changed is that set-field now SAYS so.
-# The prior `ok=True, changed=False` printed `[ok] priority: … not set here` and
-# summarised as `no change (all fields already set)`: success-shaped output for a
-# request that wrote nothing anywhere.
+# The routing predicate is deliberately the SAME pair pre-check's cross-substrate
+# conflict check keys on (`has_projects_v2_board` × `axis_is_label_bound`), so the
+# writer and the gate cannot disagree about where an axis lives.
 
 
-def test_plan_labels_board_axis_is_refused_not_ok(sf) -> None:
-    results, add, remove = sf._plan_labels(
+def test_route_axes_no_board_sends_everything_to_labels(sf) -> None:
+    label_axes, board_axes, results = sf._route_axes(
         priority="High",
-        workstream=None,
-        current_labels=[],
+        workstream="cli",
+        has_board=False,
         substrate_map=None,
-        has_board=True,
     )
-    assert add == [] and remove == []
-    priority_result = next(r for r in results if r.field == "priority")
-    assert priority_result.ok is False  # ⇒ printed `[refused]`, drives exit 1
-    assert priority_result.changed is False
+    assert label_axes == {"priority": "High", "workstream": "cli"}
+    assert board_axes == {}
+    assert results == []
 
 
-def test_board_refusal_names_the_board_field_to_set_instead(sf) -> None:
-    """The dead end has to be actionable at the point of use: name the field the
-    caller must set, and say plainly that the requested value went nowhere."""
-    results, _, _ = sf._plan_labels(
+def test_route_axes_board_claims_priority_and_workstream(sf) -> None:
+    label_axes, board_axes, results = sf._route_axes(
+        priority="High",
+        workstream="cli",
+        has_board=True,
+        substrate_map=None,
+    )
+    assert board_axes == {"priority": "High", "workstream": "cli"}
+    assert label_axes == {}
+    assert results == []
+
+
+def test_route_axes_label_bound_axis_under_a_board_is_the_two_claimant_refusal(
+    sf, axis_labels
+) -> None:
+    """The #708 root cause: config says board, the map binds the axis to a label.
+    set-field refuses rather than picking a winner (that is #712's call) — and says
+    the value went nowhere, keeping #709's posture."""
+    sm = axis_labels.SubstrateMap(axes={"priority": {"label": {"High": "P0"}}})
+    label_axes, board_axes, results = sf._route_axes(
         priority="High",
         workstream=None,
-        current_labels=[],
-        substrate_map=None,
         has_board=True,
+        substrate_map=sm,
         board_id=7,
     )
-    message = next(r for r in results if r.field == "priority").message
-    assert "`Priority` field" in message
-    assert "NOT SET" in message
-    assert "'High'" in message
-    assert "#7" in message  # the board it lives on, when config knows the id
+    assert label_axes == {} and board_axes == {}
+    refusal = next(r for r in results if r.field == "priority")
+    assert refusal.ok is False and refusal.changed is False
+    assert "TWO SUBSTRATES" in refusal.message
+    assert "NOT SET" in refusal.message
+    assert "#7" in refusal.message
+    assert "pre-check" in refusal.message
 
 
-def test_board_refusal_covers_workstream_too(sf) -> None:
-    results, _, _ = sf._plan_labels(
-        priority=None,
-        workstream="cli",
-        current_labels=[],
-        substrate_map=None,
-        has_board=True,
+def test_route_axes_mixed_map_splits_the_two_axes(sf, axis_labels) -> None:
+    """Only the label-bound axis is diverted; a board-claimed sibling still routes
+    to the board."""
+    sm = axis_labels.SubstrateMap(
+        axes={"priority": {"label": {"High": "P0"}}, "workstream": {"unsupported": True}}
     )
-    ws = next(r for r in results if r.field == "workstream")
-    assert ws.ok is False
-    assert "`Workstream` field" in ws.message
+    label_axes, board_axes, results = sf._route_axes(
+        priority="High",
+        workstream="cli",
+        has_board=True,
+        substrate_map=sm,
+    )
+    assert board_axes == {"workstream": "cli"}
+    assert label_axes == {}
+    assert [r.field for r in results] == ["priority"]
 
 
 def test_board_field_name_is_title_cased_axis(sf) -> None:
@@ -258,15 +262,174 @@ def test_board_field_name_is_title_cased_axis(sf) -> None:
     assert sf._board_field_name("workstream") == "Workstream"
 
 
-def test_label_substrate_path_is_untouched_by_the_refusal(sf) -> None:
-    """The normal (label-substrate) path must stay a success: `ok=True` and the
-    label planned exactly as before. The refusal is conditional on the board."""
+# --- board single-select planning (#724) -------------------------------------
+#
+# `_plan_board_fields` is pure: it plans against the `BoardState` snapshot one read
+# round-trip produced, so every diagnosis is reachable without a network and is
+# identical under `--dry-run`.
+
+
+def _board_state(sf, **overrides):
+    """A resolved BoardState: board #7 with a Priority single-select and a card."""
+    defaults = dict(
+        project_id="PVT_board7",
+        item_id="PVTI_card42",
+        fields=(
+            {"id": "PVTF_title", "name": "Title", "type": "ProjectV2Field"},
+            {
+                "id": "PVTSSF_priority",
+                "name": "Priority",
+                "type": "ProjectV2SingleSelectField",
+                "options": [
+                    {"id": "opt_high", "name": "High"},
+                    {"id": "opt_low", "name": "Low"},
+                ],
+            },
+        ),
+        board_ref="Projects-v2 board #7",
+        membership_remediation="gh project item-add 7 --owner an-org --url URL",
+    )
+    defaults.update(overrides)
+    return sf.BoardState(**defaults)
+
+
+def test_plan_board_fields_resolves_field_and_option_by_name(sf) -> None:
+    """The substance of #724: names in, ids out — no hand-configured ids."""
+    results, writes = sf._plan_board_fields(
+        board_axes={"priority": "High"},
+        state=_board_state(sf),
+        issue_number=42,
+    )
+    assert len(writes) == 1
+    write = writes[0]
+    assert write.field_id == "PVTSSF_priority"
+    assert write.option_id == "opt_high"
+    assert write.item_id == "PVTI_card42"
+    assert write.project_id == "PVT_board7"
+    assert results[0].ok is True and results[0].changed is True
+    assert "set board field `Priority` = 'High'" in results[0].message
+
+
+def test_plan_board_fields_matches_field_and_option_case_insensitively(sf) -> None:
+    state = _board_state(
+        sf,
+        fields=(
+            {
+                "id": "PVTSSF_priority",
+                "name": "PRIORITY",
+                "type": "ProjectV2SingleSelectField",
+                "options": [{"id": "opt_high", "name": "high"}],
+            },
+        ),
+    )
+    _, writes = sf._plan_board_fields(
+        board_axes={"priority": "High"}, state=state, issue_number=42
+    )
+    assert writes[0].option_id == "opt_high"
+
+
+def test_plan_board_fields_missing_card_refuses_with_the_add_command(sf) -> None:
+    """Board membership is a post-creation step, so the card may be absent. The
+    decided behaviour is REFUSE with the exact remediation — adding the card is a
+    membership decision this verb does not make silently — never a no-op."""
+    results, writes = sf._plan_board_fields(
+        board_axes={"priority": "High"},
+        state=_board_state(sf, item_id=None),
+        issue_number=42,
+    )
+    assert writes == []
+    refusal = results[0]
+    assert refusal.ok is False and refusal.changed is False
+    assert "NO CARD" in refusal.message
+    assert "gh project item-add 7 --owner an-org --url URL" in refusal.message
+    assert "NOT SET" in refusal.message
+
+
+def test_plan_board_fields_missing_field_names_what_the_board_offers(sf) -> None:
+    """The diagnosis an adopter could not get before: not just "no Priority field"
+    but the field list the board actually carries."""
+    state = _board_state(
+        sf,
+        fields=(
+            {"id": "PVTF_title", "name": "Title", "type": "ProjectV2Field"},
+            {"id": "PVTSSF_status", "name": "Status", "type": "ProjectV2SingleSelectField"},
+        ),
+    )
+    results, writes = sf._plan_board_fields(
+        board_axes={"priority": "High"}, state=state, issue_number=42
+    )
+    assert writes == []
+    message = results[0].message
+    assert results[0].ok is False
+    assert "NO FIELD named `Priority`" in message
+    assert "Title, Status" in message
+
+
+def test_plan_board_fields_missing_option_names_the_options_offered(sf) -> None:
+    state = _board_state(sf)
+    results, writes = sf._plan_board_fields(
+        board_axes={"priority": "Medium"}, state=state, issue_number=42
+    )
+    assert writes == []
+    message = results[0].message
+    assert results[0].ok is False
+    assert "NO OPTION named 'Medium'" in message
+    assert "High, Low" in message
+
+
+def test_plan_board_fields_refuses_a_non_single_select_field(sf) -> None:
+    """Text / number / date / iteration are out of scope (#724) — refuse by type
+    rather than mangle the value into a text field."""
+    state = _board_state(
+        sf,
+        fields=({"id": "PVTF_priority", "name": "Priority", "type": "ProjectV2Field"},),
+    )
+    results, writes = sf._plan_board_fields(
+        board_axes={"priority": "High"}, state=state, issue_number=42
+    )
+    assert writes == []
+    assert results[0].ok is False
+    assert "UNSUPPORTED FIELD TYPE" in results[0].message
+    assert "ProjectV2Field" in results[0].message
+
+
+def test_plan_board_fields_read_failure_surfaces_gh_stderr_verbatim(sf) -> None:
+    """Scope / permission failures are the likeliest board failure and the remedy is
+    in gh's own words — so they are passed through, not paraphrased."""
+    stderr = (
+        "your token has not been granted the required scopes to execute this "
+        "query. missing: 'read:project'"
+    )
+    results, writes = sf._plan_board_fields(
+        board_axes={"priority": "High"},
+        state=_board_state(sf, error=stderr, item_id=None, fields=()),
+        issue_number=42,
+    )
+    assert writes == []
+    assert results[0].ok is False
+    assert stderr in results[0].message
+
+
+def test_plan_board_fields_plans_both_axes_independently(sf) -> None:
+    """One axis resolvable, its sibling not: each gets its own verdict."""
+    state = _board_state(sf)
+    results, writes = sf._plan_board_fields(
+        board_axes={"priority": "High", "workstream": "cli"},
+        state=state,
+        issue_number=42,
+    )
+    assert [w.axis for w in writes] == ["priority"]
+    assert [(r.field, r.ok) for r in results] == [("priority", True), ("workstream", False)]
+
+
+def test_label_substrate_path_is_untouched_by_the_board_path(sf) -> None:
+    """Regression guard: the label planner is unchanged — `ok=True` and the labels
+    planned exactly as before."""
     results, add, remove = sf._plan_labels(
         priority="High",
         workstream="cli",
         current_labels=["priority:Low"],
         substrate_map=None,
-        has_board=False,
     )
     assert set(add) == {"priority:High", "workstream:cli"}
     assert remove == ["priority:Low"]
@@ -283,7 +446,6 @@ def test_unsupported_axis_under_map_is_still_a_note_not_a_refusal(sf, axis_label
         workstream=None,
         current_labels=[],
         substrate_map=sm,
-        has_board=False,
     )
     assert add == [] and remove == []
     assert next(r for r in results if r.field == "priority").ok is True
@@ -459,7 +621,6 @@ def test_kind_composes_with_priority_workstream_batch(
         workstream="cli",
         current_labels=current,
         substrate_map=None,
-        has_board=False,
     )
     add = k_add + a_add
     remove = k_remove + a_remove
@@ -530,14 +691,100 @@ def test_is_parent_ref_recognises_forms(sf) -> None:
     assert not sf._is_parent_ref("just prose")
 
 
-# --- main()'s exit contract under a board (#709) ----------------------------
+# --- the board READ orchestration (#724) -------------------------------------
 #
-# The planning tests above pin `ok=False`; these pin what the CALLER sees — the
-# exit code and the summary line — because that is the actual bug: a refusal that
-# exited 0 and summarised as "all fields already set". No network: the two gh
-# seams (`gh_get_issue`, the label/title writers) and the foreign-repo guard are
-# stubbed; everything else (config load, membership, schema reads, planning,
-# summary) runs for real.
+# `_read_board_state` is the one place the three board reads happen. The seam
+# functions (`_lib/board_fields`) are stubbed; the orchestration — order, the
+# membership-remediation composition, and error capture — runs for real.
+
+
+def _stub_board_reads(
+    sf,
+    monkeypatch,
+    *,
+    project=None,
+    fields_read=None,
+    item=None,
+) -> None:
+    bf = sf.board_fields
+    monkeypatch.setattr(
+        bf,
+        "read_project_node_id",
+        lambda config, owner=None, gh_call=None: project
+        or bf.ProjectLookup(ok=True, node_id="PVT_board7"),
+    )
+    monkeypatch.setattr(
+        bf,
+        "read_fields",
+        lambda config, owner=None, gh_call=None: fields_read
+        or bf.BoardFieldsRead(ok=True, fields=({"id": "F", "name": "Priority"},)),
+    )
+    monkeypatch.setattr(
+        bf,
+        "resolve_item_id",
+        lambda config, issue_node_id, project_node_id, gh_call=None: item
+        or bf.ItemLookup(ok=True, item_id="PVTI_card42"),
+    )
+
+
+_BOARD_CONFIG = {
+    "has_projects_v2_board": True,
+    "projects_v2_board_id": 7,
+    "gh": {"default_owner": "an-org"},
+}
+_BOARD_ISSUE = {"id": "I_issue42", "url": "https://github.com/an-org/r/issues/42"}
+
+
+def test_read_board_state_gathers_the_three_ids(sf, monkeypatch) -> None:
+    _stub_board_reads(sf, monkeypatch)
+    state = sf._read_board_state(_BOARD_CONFIG, issue=_BOARD_ISSUE, issue_number=42)
+    assert state.error is None
+    assert state.project_id == "PVT_board7"
+    assert state.item_id == "PVTI_card42"
+    assert state.fields == ({"id": "F", "name": "Priority"},)
+    assert state.board_ref == "Projects-v2 board #7"
+
+
+def test_read_board_state_composes_the_exact_item_add_remediation(sf, monkeypatch) -> None:
+    """The missing-card refusal is only actionable if the command is runnable as
+    printed — board number, owner and issue URL all resolved."""
+    _stub_board_reads(sf, monkeypatch)
+    state = sf._read_board_state(_BOARD_CONFIG, issue=_BOARD_ISSUE, issue_number=42)
+    assert state.membership_remediation == (
+        "gh project item-add 7 --owner an-org "
+        "--url https://github.com/an-org/r/issues/42"
+    )
+
+
+def test_read_board_state_surfaces_a_read_failure_verbatim(sf, monkeypatch) -> None:
+    stderr = "missing required scopes: 'read:project'"
+    _stub_board_reads(
+        sf,
+        monkeypatch,
+        fields_read=sf.board_fields.BoardFieldsRead(ok=False, error=stderr),
+    )
+    state = sf._read_board_state(_BOARD_CONFIG, issue=_BOARD_ISSUE, issue_number=42)
+    assert state.error == stderr
+
+
+def test_read_board_state_without_an_issue_node_id_is_an_error_not_a_guess(
+    sf, monkeypatch
+) -> None:
+    _stub_board_reads(sf, monkeypatch)
+    state = sf._read_board_state(_BOARD_CONFIG, issue={"url": "u"}, issue_number=42)
+    assert state.error is not None
+    assert "no node id" in state.error
+
+
+# --- main()'s exit contract (#709 posture, #724 board write) -----------------
+#
+# The planning tests above pin `ok=False` / the resolved write; these pin what the
+# CALLER sees — the exit code and the summary line — because that is where the
+# original bug lived: a refusal that exited 0 and summarised as "all fields already
+# set". No network: the gh seams (`gh_get_issue`, the label/title writers, the
+# board read + the board write) and the foreign-repo guard are stubbed; everything
+# else (config load, membership, schema reads, routing, planning, summary) runs for
+# real.
 
 
 def _stage_capability_root(tmp_path: Path, *, has_board: bool) -> Path:
@@ -579,11 +826,36 @@ def _stage_capability_root(tmp_path: Path, *, has_board: bool) -> Path:
     return root
 
 
-def _run_main(sf, monkeypatch, *, root: Path, argv: list[str], issue: dict) -> dict:
-    """Drive `sf.main()` with the gh seams stubbed; return rc + captured writes."""
-    captured: dict = {"labels": [], "titles": [], "bodies": []}
+def _run_main(
+    sf,
+    monkeypatch,
+    *,
+    root: Path,
+    argv: list[str],
+    issue: dict,
+    board_state=None,
+    board_write_ok: bool = True,
+) -> dict:
+    """Drive `sf.main()` with the gh seams stubbed; return rc + captured writes.
+
+    `board_state` stubs the board READ (its own tests cover the orchestration), so
+    a main() test states the board situation as data. Board writes are captured
+    rather than issued; `board_write_ok=False` makes the write fail at the point of
+    writing (the exit-3 path).
+    """
+    captured: dict = {"labels": [], "titles": [], "bodies": [], "board": []}
 
     monkeypatch.setattr(sf, "gh_get_issue", lambda *a, **k: issue)
+    if board_state is not None:
+        monkeypatch.setattr(
+            sf, "_read_board_state", lambda config, **k: board_state
+        )
+
+    def fake_board_write(write, config):
+        captured["board"].append(write)
+        return board_write_ok
+
+    monkeypatch.setattr(sf, "_write_board_field", fake_board_write)
     monkeypatch.setattr(sf.session_guard, "enforce", lambda **k: True)
     monkeypatch.setenv("PM_INVOKER_LOGIN", "an-invoker")
 
@@ -611,48 +883,91 @@ def _run_main(sf, monkeypatch, *, root: Path, argv: list[str], issue: dict) -> d
     return captured
 
 
-_TASK_ISSUE = {"title": "[Task] do a thing", "body": "## What\nx\n", "labels": []}
+_TASK_ISSUE = {
+    "title": "[Task] do a thing",
+    "body": "## What\nx\n",
+    "labels": [],
+    "id": "I_issue42",
+    "url": "https://github.com/an-org/r/issues/42",
+}
 
 
-def test_main_board_axis_refuses_nonzero_and_writes_nothing(
+def test_main_board_axis_writes_the_board_single_select(
     sf, tmp_path, monkeypatch, capsys
 ) -> None:
-    """The reported dead end: `set-field N --priority High` under a board. The
-    axis cannot be written here, so the exit is non-zero, the line is `[refused]`
-    (never `[ok]`), and no gh write is attempted."""
+    """#724's headline: `set-field 42 --priority High` under a board WRITES the
+    board field — ids resolved from names — and exits 0."""
     root = _stage_capability_root(tmp_path, has_board=True)
     captured = _run_main(
-        sf, monkeypatch, root=root, argv=["42", "--priority", "High"], issue=_TASK_ISSUE
+        sf,
+        monkeypatch,
+        root=root,
+        argv=["42", "--priority", "High"],
+        issue=_TASK_ISSUE,
+        board_state=_board_state(sf),
+    )
+    out = capsys.readouterr().out
+
+    assert captured["rc"] == 0
+    assert captured["labels"] == []  # the axis is NOT a label under a board
+    assert [(w.field_id, w.option_id, w.item_id) for w in captured["board"]] == [
+        ("PVTSSF_priority", "opt_high", "PVTI_card42")
+    ]
+    assert "[ok] priority: set board field `Priority` = 'High'" in out
+    assert "updated" in out
+    assert "[refused]" not in out
+
+
+def test_main_missing_card_refuses_nonzero_and_writes_nothing(
+    sf, tmp_path, monkeypatch, capsys
+) -> None:
+    """The membership race: no card on the board ⇒ refusal with the `item-add`
+    remediation, non-zero exit, and NO write of any kind. Never a silent no-op."""
+    root = _stage_capability_root(tmp_path, has_board=True)
+    captured = _run_main(
+        sf,
+        monkeypatch,
+        root=root,
+        argv=["42", "--priority", "High"],
+        issue=_TASK_ISSUE,
+        board_state=_board_state(sf, item_id=None),
     )
     out = capsys.readouterr().out
 
     assert captured["rc"] == 1
-    assert captured["labels"] == []  # nothing written
+    assert captured["board"] == [] and captured["labels"] == []
     assert "[refused] priority:" in out
     assert "[ok] priority:" not in out
-
-
-def test_main_board_axis_summary_does_not_claim_all_fields_set(
-    sf, tmp_path, monkeypatch, capsys
-) -> None:
-    """The half of #709 that misled the adopter: the summary. It must not read as
-    `no change (all fields already set)` when the field is in fact unset."""
-    root = _stage_capability_root(tmp_path, has_board=True)
-    _run_main(
-        sf, monkeypatch, root=root, argv=["42", "--priority", "High"], issue=_TASK_ISSUE
-    )
-    out = capsys.readouterr().out
-
+    assert "gh project item-add 7" in out
     assert "all fields already set" not in out
-    assert "nothing written" in out
     assert "remain unset" in out
 
 
-def test_main_board_axis_refuses_in_dry_run_too(
+def test_main_missing_option_refuses_and_names_what_the_board_offers(
     sf, tmp_path, monkeypatch, capsys
 ) -> None:
-    """A refusal is knowable without writing, so `--dry-run` reports it as a
-    refusal (non-zero) rather than a clean plan."""
+    root = _stage_capability_root(tmp_path, has_board=True)
+    captured = _run_main(
+        sf,
+        monkeypatch,
+        root=root,
+        argv=["42", "--priority", "Medium"],
+        issue=_TASK_ISSUE,
+        board_state=_board_state(sf),
+    )
+    out = capsys.readouterr().out
+
+    assert captured["rc"] == 1
+    assert captured["board"] == []
+    assert "NO OPTION named 'Medium'" in out
+    assert "High, Low" in out
+
+
+def test_main_dry_run_resolves_the_names_without_mutating(
+    sf, tmp_path, monkeypatch, capsys
+) -> None:
+    """`--dry-run` reports the concrete write it WOULD make (names already resolved
+    to ids — the resolution is a read) and issues nothing."""
     root = _stage_capability_root(tmp_path, has_board=True)
     captured = _run_main(
         sf,
@@ -660,9 +975,121 @@ def test_main_board_axis_refuses_in_dry_run_too(
         root=root,
         argv=["42", "--priority", "High", "--dry-run"],
         issue=_TASK_ISSUE,
+        board_state=_board_state(sf),
     )
+    out = capsys.readouterr().out
+
+    assert captured["rc"] == 0
+    assert captured["board"] == []  # nothing written
+    assert "would set board field `Priority` = 'High'" in out
+    assert "nothing written" in out
+
+
+def test_main_dry_run_still_refuses_a_knowably_impossible_board_write(
+    sf, tmp_path, monkeypatch, capsys
+) -> None:
+    """A missing field/option is knowable without writing, so `--dry-run` reports it
+    as a refusal (non-zero) rather than a clean plan."""
+    root = _stage_capability_root(tmp_path, has_board=True)
+    state = _board_state(
+        sf, fields=({"id": "F", "name": "Status", "type": "ProjectV2SingleSelectField"},)
+    )
+    captured = _run_main(
+        sf,
+        monkeypatch,
+        root=root,
+        argv=["42", "--priority", "High", "--dry-run"],
+        issue=_TASK_ISSUE,
+        board_state=state,
+    )
+    out = capsys.readouterr().out
+
     assert captured["rc"] == 1
-    assert "[refused]" in capsys.readouterr().out
+    assert captured["board"] == []
+    assert "[refused]" in out
+    assert "NO FIELD named `Priority`" in out
+
+
+def test_main_board_write_failure_exits_three(sf, tmp_path, monkeypatch, capsys) -> None:
+    """A write that failed at the point of writing is exit 3 (the gh-write-failure
+    code), not a refusal and certainly not a success."""
+    root = _stage_capability_root(tmp_path, has_board=True)
+    captured = _run_main(
+        sf,
+        monkeypatch,
+        root=root,
+        argv=["42", "--priority", "High"],
+        issue=_TASK_ISSUE,
+        board_state=_board_state(sf),
+        board_write_ok=False,
+    )
+    out = capsys.readouterr().out
+
+    assert captured["rc"] == 3
+    assert len(captured["board"]) == 1  # attempted
+    assert "updated" not in out
+    # The plan line said `[ok] … set board field …`; the failure has to be said on
+    # the same stream, not left to stderr alone.
+    assert "[failed]" in out
+    assert "was NOT written" in out
+
+
+def test_write_board_field_routes_through_the_substrate_write_seam(
+    sf, monkeypatch
+) -> None:
+    """ADR-031: the field-value write is obtained from `substrate_writes`, never
+    string-built here — the same primitive the `set-board-field` hook uses."""
+    seen: dict = {}
+
+    def fake_write_field_value(config, **kwargs):
+        seen.update(kwargs)
+        return sf.substrate_writes.SubstrateWriteResult(
+            ok=True, executed=True, detail="set"
+        )
+
+    monkeypatch.setattr(
+        sf.substrate_writes, "write_field_value", fake_write_field_value
+    )
+    write = sf.BoardWrite(
+        axis="priority",
+        field_name="Priority",
+        field_id="PVTSSF_priority",
+        option_name="High",
+        option_id="opt_high",
+        item_id="PVTI_card42",
+        project_id="PVT_board7",
+    )
+    assert sf._write_board_field(write, {}) is True
+    assert seen == {
+        "item_id": "PVTI_card42",
+        "field_id": "PVTSSF_priority",
+        "project_id": "PVT_board7",
+        "single_select_option_id": "opt_high",
+    }
+
+
+def test_write_board_field_failure_prints_gh_stderr_verbatim(
+    sf, monkeypatch, capsys
+) -> None:
+    stderr = "HTTP 403: Resource not accessible by personal access token"
+    monkeypatch.setattr(
+        sf.substrate_writes,
+        "write_field_value",
+        lambda config, **k: sf.substrate_writes.SubstrateWriteResult(
+            ok=False, executed=True, detail="failed", error=stderr
+        ),
+    )
+    write = sf.BoardWrite(
+        axis="priority",
+        field_name="Priority",
+        field_id="F",
+        option_name="High",
+        option_id="O",
+        item_id="I",
+        project_id="P",
+    )
+    assert sf._write_board_field(write, {}) is False
+    assert stderr in capsys.readouterr().err
 
 
 def test_main_label_substrate_axis_still_succeeds(
@@ -699,13 +1126,13 @@ def test_main_idempotent_noop_still_reports_all_fields_set(
     assert "no change (all fields already set)" in out
 
 
-def test_main_mixed_axes_applies_label_refuses_board(
+def test_main_mixed_axes_applies_label_refuses_unresolvable_board(
     sf, tmp_path, monkeypatch, capsys
 ) -> None:
     """PARTIAL: `--kind` is always label-substrate (classification.yaml) while
-    `--priority` is board-backed here. The label half IS applied, the board half
-    is refused, the exit is non-zero, and the summary names both — a partial
-    application must never read as a clean success."""
+    `--priority` is board-backed here and its card is missing. The label half IS
+    applied, the board half is refused, the exit is non-zero, and the summary names
+    both — a partial application must never read as a clean success."""
     root = _stage_capability_root(tmp_path, has_board=True)
     captured = _run_main(
         sf,
@@ -713,6 +1140,7 @@ def test_main_mixed_axes_applies_label_refuses_board(
         root=root,
         argv=["42", "--kind", "bug", "--priority", "High"],
         issue=_TASK_ISSUE,
+        board_state=_board_state(sf, item_id=None),
     )
     out = capsys.readouterr().out
 
@@ -720,8 +1148,59 @@ def test_main_mixed_axes_applies_label_refuses_board(
     # The label-substrate axis was genuinely applied (label + title realignment).
     assert captured["labels"] == [(["type:bug"], [])]
     assert captured["titles"] == ["[Bug] do a thing"]
+    assert captured["board"] == []
     # ...and the summary says what was done and what was not.
     assert "[partial]" in out
     assert "applied kind, title" in out
     assert "REFUSED priority" in out
     assert "all fields already set" not in out
+
+
+def test_main_mixed_axes_both_substrates_applied_is_a_clean_success(
+    sf, tmp_path, monkeypatch, capsys
+) -> None:
+    """The mixed case when nothing fails: the `type:*` label AND the board field are
+    both written in the one call, and the exit is 0."""
+    root = _stage_capability_root(tmp_path, has_board=True)
+    captured = _run_main(
+        sf,
+        monkeypatch,
+        root=root,
+        argv=["42", "--kind", "bug", "--priority", "High"],
+        issue=_TASK_ISSUE,
+        board_state=_board_state(sf),
+    )
+    out = capsys.readouterr().out
+
+    assert captured["rc"] == 0
+    assert captured["labels"] == [(["type:bug"], [])]
+    assert [w.axis for w in captured["board"]] == ["priority"]
+    assert "[partial]" not in out
+    assert "updated" in out
+
+
+def test_main_two_claimant_conflict_refuses_and_writes_nothing(
+    sf, tmp_path, monkeypatch, capsys
+) -> None:
+    """The #708 config: board flag on, substrate-map binds `priority` to a label.
+    set-field refuses the axis (it will not pick a winner), writes nothing, and
+    points at pre-check."""
+    root = _stage_capability_root(tmp_path, has_board=True)
+    (root / "project" / "substrate-map.yaml").write_text(
+        "schema_version: 1\naxes:\n  priority:\n    label:\n      High: P0\n",
+        encoding="utf-8",
+    )
+    captured = _run_main(
+        sf,
+        monkeypatch,
+        root=root,
+        argv=["42", "--priority", "High"],
+        issue=_TASK_ISSUE,
+        board_state=_board_state(sf),
+    )
+    out = capsys.readouterr().out
+
+    assert captured["rc"] == 1
+    assert captured["board"] == [] and captured["labels"] == []
+    assert "TWO SUBSTRATES" in out
+    assert "pre-check" in out
