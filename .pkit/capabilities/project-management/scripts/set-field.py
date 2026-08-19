@@ -29,10 +29,49 @@ substrate-map.yaml), the parent-ref line uses the same form create-issue
 composes, and the kind→title-prefix realignment reads classification.yaml's
 `title_prefix_by_value` (the same map create-issue's title composition uses), so
 prefix and label stay coupled. The `type:*` axis is ALWAYS a label (per
-classification.yaml), so --kind labels regardless of board substrate; under a
-Projects-v2 board, priority/workstream instead live on board fields, which
-set-field cannot write at v1 — so it REFUSES such an axis (non-zero exit, naming
-the board field to set instead) rather than reporting a no-op success (#709).
+classification.yaml), so --kind labels regardless of board substrate.
+
+Board-carried axes (#724, from #723 / report #708)
+-------------------------------------------------
+Under `has_projects_v2_board: true`, priority/workstream live on a Projects-v2
+single-select field rather than a label — and set-field now WRITES it. Everything
+is resolved from names the adopter already speaks, at runtime, through the board
+READ seam (`_lib/board_fields`): the board NUMBER in config → the project node id;
+the field whose NAME matches the axis (`priority` → `Priority`, the Title-case
+convention Projects-v2 boards use); the option whose NAME matches the requested
+value; and the issue's own card (item) id. No hand-configured ids — before this,
+the ONLY writer of a board field was an `after_create_issue` `set-board-field`
+hook whose entries carry field/option ids the adopter had to dig out of the API by
+hand, which is the pain report #708 describes.
+
+The write itself is constructed and executed only by `_lib/substrate_writes`
+(ADR-031's sole constructor for a non-label substrate write) — the same primitive
+the hook uses, so there is exactly one field-value write path in the capability.
+
+Four board cases are REFUSED rather than guessed at, each naming what was looked
+for and what the board actually offers (the diagnosis an adopter could not get
+before):
+
+  * **no card** — board membership is a post-creation step (DEC-019), so a
+    just-filed issue may have no card yet. set-field refuses with the exact
+    `gh project item-add` remediation instead of adding the card itself: adding an
+    issue to a board is a membership decision, explicitly NOT part of the
+    field-value substrate (ADR-031 point 3), and a verb asked to set a field must
+    not silently enlarge the board's contents. Never a silent no-op either way.
+  * **no such field / no such option** — the board has no `Priority` field, or no
+    `High` option on it; the refusal lists the board's field names / the field's
+    option names, both of which come back on the same read.
+  * **not a single-select** — a text / number / date / iteration field has no
+    option vocabulary to match a classification value against; out of scope
+    (#724) and refused by type name rather than mangled into a text value.
+  * **read failure** — a missing `read:project` scope or any other `gh` failure
+    surfaces gh's stderr VERBATIM (the remedy, `gh auth refresh -s project`, is
+    in that text).
+
+When `config.yaml` claims the board for an axis while `substrate-map.yaml` binds
+that same axis to a label, the two declarations disagree (the #708 root cause) and
+set-field refuses the axis rather than picking a winner — pre-check fails on that
+conflict and names both remediations.
 
 Failure + recovery (DEC-038 D4 family): the whole request is validated up front
 (value in the adopter's vocabulary; parent resolvable; and the requested kind is
@@ -55,13 +94,19 @@ Or via the dispatcher (per COR-021):
 Exit codes:
   0  applied (or no-op idempotent success; or dry-run reported)
   1  refusal — membership; up-front validation (nothing mutated); or a requested
-     axis lives on the Projects-v2 board substrate, which set-field cannot write
-     (#709). In the mixed case (some axes label-substrate, some board-substrate)
-     the label-substrate writes ARE applied and the exit is still non-zero, with
-     the summary naming what was and was not done — a partial application must
-     never read as a clean success.
+     axis could not be set on its substrate: the board case cannot be resolved
+     (no card, no such field, no such option, unsupported field type, or the board
+     read failed), or the board and substrate-map disagree about who owns the axis
+     (#709 / #724). Every such refusal happens BEFORE any write for that axis, so
+     nothing is half-written. In the mixed case (some axes applied, some refused)
+     the applicable writes ARE applied and the exit is still non-zero, with the
+     summary naming what was and was not done — a partial application must never
+     read as a clean success. `--dry-run` reports the same refusals with the same
+     non-zero exit, since all of them are knowable without writing.
   2  usage error (issue not found; no field given; unknown value)
-  3  gh write failure
+  3  gh write failure (a label/title/body edit, or a board field-value write,
+     failed at the point of writing). Re-running is safe: application is
+     idempotent.
 """
 
 from __future__ import annotations
@@ -79,9 +124,11 @@ from ruamel.yaml.error import YAMLError
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import axis_labels  # noqa: E402
+from _lib import board_fields  # noqa: E402
 from _lib import classification_rules  # noqa: E402
 from _lib import provenance  # noqa: E402
 from _lib import session_guard  # noqa: E402
+from _lib import substrate_writes  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
@@ -97,6 +144,42 @@ class FieldResult:
     ok: bool
     changed: bool
     message: str
+
+
+@dataclass(frozen=True)
+class BoardState:
+    """What one board READ round-trip knows, for planning a board field write.
+
+    Gathered once per call (not per axis) by :func:`_read_board_state`; every
+    board-carried axis in the same call plans against this one snapshot.
+    `error` is the verbatim reason a read failed (gh's stderr where there is one);
+    when it is set the other fields are unknown and every board axis refuses.
+    `item_id` None with no `error` is the membership case — the issue has no card.
+    """
+
+    project_id: str | None = None
+    item_id: str | None = None
+    fields: tuple[dict, ...] = ()
+    error: str | None = None
+    board_ref: str = "the Projects-v2 board"
+    membership_remediation: str = ""
+
+
+@dataclass(frozen=True)
+class BoardWrite:
+    """One resolved, ready-to-execute board single-select write.
+
+    Every id here came from a name the adopter speaks (see the module docstring);
+    the write is handed to `substrate_writes.write_field_value` unchanged.
+    """
+
+    axis: str
+    field_name: str
+    field_id: str
+    option_name: str
+    option_id: str
+    item_id: str
+    project_id: str
 
 
 def main() -> int:
@@ -142,8 +225,12 @@ def main() -> int:
     substrate_map = axis_labels.load_substrate_map(capability_root)
     has_board = bool(config.get("has_projects_v2_board", False))
 
+    # `id` + `url` are for the board path: `id` is the issue's GraphQL node id (the
+    # key the card lookup asks `projectItems` on) and `url` renders the exact
+    # `gh project item-add` remediation when the card is missing. Both ride the one
+    # `gh issue view` round-trip this call already makes.
     issue = gh_get_issue(
-        args.issue_number, config, fields="title,body,labels"
+        args.issue_number, config, fields="title,body,labels,id,url"
     )
     if issue is None:
         return 2
@@ -258,13 +345,36 @@ def main() -> int:
         label_add.extend(kind_add)
         label_remove.extend(kind_remove)
 
-    label_results, axis_add, axis_remove = _plan_labels(
+    # Route each requested axis to the substrate that owns it, THEN plan on that
+    # substrate. Routing is separate from planning so the board path (which needs
+    # live reads to turn names into ids) never runs for a label-carried axis, and
+    # the label planner stays pure.
+    label_axes, board_axes, routing_results = _route_axes(
         priority=args.priority,
         workstream=args.workstream,
+        has_board=has_board,
+        substrate_map=substrate_map,
+        board_id=config.get("projects_v2_board_id"),
+    )
+    results.extend(routing_results)
+
+    board_writes: list[BoardWrite] = []
+    if board_axes:
+        board_state = _read_board_state(
+            config, issue=issue, issue_number=args.issue_number
+        )
+        board_results, board_writes = _plan_board_fields(
+            board_axes=board_axes,
+            state=board_state,
+            issue_number=args.issue_number,
+        )
+        results.extend(board_results)
+
+    label_results, axis_add, axis_remove = _plan_labels(
+        priority=label_axes.get("priority"),
+        workstream=label_axes.get("workstream"),
         current_labels=current_labels,
         substrate_map=substrate_map,
-        has_board=has_board,
-        board_id=config.get("projects_v2_board_id"),
     )
     results.extend(label_results)
     label_add.extend(axis_add)
@@ -281,13 +391,18 @@ def main() -> int:
 
     body_changed = new_body is not None and new_body != body
     title_changed = new_title is not None and new_title != title
-    any_change = bool(label_add or label_remove) or body_changed or title_changed
+    any_change = (
+        bool(label_add or label_remove)
+        or body_changed
+        or title_changed
+        or bool(board_writes)
+    )
 
-    # A refused field (today: an axis on the board substrate, which set-field
-    # cannot write) must never be summarised as success — neither as "all fields
-    # already set" nor as a bare "updated" (#709). It drives a non-zero exit even
-    # when the label-substrate fields in the same call apply cleanly; the summary
-    # says which is which so a partial application is legible.
+    # A refused field — an axis whose board write could not be resolved, or one the
+    # board and the substrate-map both claim — must never be summarised as success:
+    # neither as "all fields already set" nor as a bare "updated" (#709). It drives
+    # a non-zero exit even when the other fields in the same call apply cleanly; the
+    # summary says which is which so a partial application is legible.
     refused = [r for r in results if not r.ok]
 
     if not any_change:
@@ -302,6 +417,15 @@ def main() -> int:
         return 0
 
     if args.dry_run:
+        # The board plan is fully resolved by now (names → ids), so a dry-run can
+        # report the concrete write it would make. The resolution itself is a READ:
+        # nothing on the board was touched to learn this.
+        for w in board_writes:
+            print(
+                f"  [dry-run] would set board field `{w.field_name}` = "
+                f"{w.option_name!r} (field {w.field_id}, option {w.option_id}, "
+                f"item {w.item_id})"
+            )
         print("\n[dry-run] gh would be invoked; nothing written.")
         if refused:
             print(
@@ -327,6 +451,18 @@ def main() -> int:
             new_body or "", provenance.read_versions(capability_root)
         )
         if not _gh_write_body(args.issue_number, stamped, config):
+            return 3
+    for write in board_writes:
+        if not _write_board_field(write, config):
+            # The plan line above read `[ok] priority: set board field …`. That
+            # write did not happen, so say so on the same stream the plan was
+            # printed on before exiting non-zero — a failed write must never be
+            # left looking like the reported plan (#709).
+            print(
+                f"\n[failed] #{args.issue_number}: board field "
+                f"`{write.field_name}` = {write.option_name!r} was NOT written "
+                f"(see stderr); {write.axis} remains unset."
+            )
             return 3
 
     if refused:
@@ -359,30 +495,89 @@ def _field_list(results: list[FieldResult]) -> str:
 # ---- planning -------------------------------------------------------------
 
 
+def _route_axes(
+    *,
+    priority: str | None,
+    workstream: str | None,
+    has_board: bool,
+    substrate_map: "axis_labels.SubstrateMap | None",
+    board_id: int | str | None = None,
+) -> tuple[dict[str, str], dict[str, str], list[FieldResult]]:
+    """Split the requested priority/workstream axes by the substrate that owns them.
+
+    Returns ``(label_axes, board_axes, results)`` — the axes to plan as labels, the
+    axes to plan as board single-selects, and any result the routing itself
+    produced (today: the two-claimants refusal).
+
+    The predicate for "the board owns this axis" is `has_projects_v2_board: true`
+    AND the substrate-map does NOT bind the axis to a label — deliberately the SAME
+    pair pre-check's cross-substrate conflict check keys on (its
+    `BOARD_CLAIMED_AXES` list crossed with `axis_labels.axis_is_label_bound`), so
+    the writer and the gate cannot disagree about which axis lives where. Binding
+    shape is read only through the seam (ADR-026).
+
+    When BOTH claim the axis, set-field refuses it rather than picking a winner:
+    which declaration wins is a methodology decision (the #712 question), not
+    something a verb should settle by implementation order, and the state is
+    exactly what pre-check hard-fails on with both remediations spelled out. The
+    refusal keeps #709's posture — the value was recorded nowhere, and the caller
+    is told so with a non-zero exit.
+    """
+    label_axes: dict[str, str] = {}
+    board_axes: dict[str, str] = {}
+    results: list[FieldResult] = []
+    board_ref = f" #{board_id}" if board_id is not None else ""
+
+    for axis, value in (("priority", priority), ("workstream", workstream)):
+        if value is None:
+            continue
+        if has_board and axis_labels.axis_is_label_bound(axis, substrate_map):
+            results.append(
+                FieldResult(
+                    field=axis,
+                    ok=False,
+                    changed=False,
+                    message=(
+                        f"{axis}: TWO SUBSTRATES claim `{axis}` — "
+                        f"project/config.yaml sets `has_projects_v2_board: true` "
+                        f"(board{board_ref}), so the axis is a board field, while "
+                        f"project/substrate-map.yaml binds `{axis}` to one of your "
+                        f"own labels, which is where every reader looks. NOT SET: "
+                        f"{value!r} was not recorded on either substrate — "
+                        f"set-field will not pick a winner between two adopter "
+                        f"declarations. Run `pkit project-management pre-check`: it "
+                        f"fails on this conflict and names both ways out (board-"
+                        f"backed: mark the axis `unsupported: true` in the map; "
+                        f"label-backed: set `has_projects_v2_board: false`)."
+                    ),
+                )
+            )
+            continue
+        if has_board:
+            board_axes[axis] = value
+            continue
+        label_axes[axis] = value
+
+    return label_axes, board_axes, results
+
+
 def _plan_labels(
     *,
     priority: str | None,
     workstream: str | None,
     current_labels: list[str],
     substrate_map: "axis_labels.SubstrateMap | None",
-    has_board: bool,
-    board_id: int | str | None = None,
 ) -> tuple[list[FieldResult], list[str], list[str]]:
     """Resolve priority/workstream to add/remove label sets (idempotent).
 
     Mirrors create-issue's `_build_labels` resolution through
-    `axis_labels.resolve_write` (so a remapped or board substrate is honoured),
-    then diffs against the issue's current labels: a value already present is a
-    no-op; a changed value removes the stale `<axis>:*` label(s) and adds the new
-    one.
+    `axis_labels.resolve_write` (so a remapped substrate is honoured), then diffs
+    against the issue's current labels: a value already present is a no-op; a
+    changed value removes the stale `<axis>:*` label(s) and adds the new one.
 
-    Under a board the axis lives on a Projects-v2 field, which set-field cannot
-    write at v1 — so the axis is REFUSED (`ok=False`), not reported as a no-op
-    success. It previously returned `ok=True, changed=False`, which printed
-    `[ok] priority: … not set here` and then summarised as `no change (all fields
-    already set)`: success-shaped output for a request that left the axis unset on
-    every substrate (#709 / #708). A refusal names the board field the caller must
-    set instead and drives a non-zero exit in `main`.
+    Pure — no gh reads. Only axes `_route_axes` assigned to the LABEL substrate
+    reach here; a board-carried axis is planned by `_plan_board_fields` instead, so
+    this function no longer needs to know whether a board exists.
     """
     results: list[FieldResult] = []
     to_add: list[str] = []
@@ -390,28 +585,6 @@ def _plan_labels(
 
     for axis, value in (("priority", priority), ("workstream", workstream)):
         if value is None:
-            continue
-        if has_board:
-            board_ref = f" #{board_id}" if board_id is not None else ""
-            results.append(
-                FieldResult(
-                    field=axis,
-                    ok=False,
-                    changed=False,
-                    message=(
-                        f"{axis}: board substrate — `{axis}` lives on the "
-                        f"Projects-v2 board{board_ref} as its "
-                        f"`{_board_field_name(axis)}` field, not as a label, and "
-                        f"set-field cannot write board fields at v1. NOT SET: "
-                        f"{value!r} was not recorded anywhere. Set the board's "
-                        f"`{_board_field_name(axis)}` field for this issue "
-                        f"instead (board UI, or `gh project item-edit`). If you "
-                        f"expected a label here, config.yaml's "
-                        f"`has_projects_v2_board: true` and your substrate-map "
-                        f"disagree — run pre-check."
-                    ),
-                )
-            )
             continue
         resolved = axis_labels.resolve_write(axis, value, substrate_map)
         if not isinstance(resolved, str):
@@ -457,17 +630,277 @@ def _plan_labels(
 
 
 def _board_field_name(axis: str) -> str:
-    """The conventional Projects-v2 field name for a methodology `axis`.
+    """The Projects-v2 field name to look for, for a methodology `axis`.
 
-    Best-effort naming so a refusal can point at *something specific* the caller
-    must set (`Priority`, `Workstream`) rather than "the board". The kit does not
-    know the adopter's actual board-field names — `config.yaml` records only the
-    board id, and per-field ids appear only inside `set-board-field` hook entries —
-    so this is the Title-cased axis name, the convention Projects-v2 boards use.
-    Deliberately not a lookup: inventing a config key for field names would be a
-    new adopter surface, and the refusal is actionable without it.
+    The Title-cased axis name (`priority` → `Priority`, `workstream` →
+    `Workstream`) — the convention Projects-v2 boards use, and the name the write
+    path now RESOLVES against the board's live field list (case-insensitively, per
+    `board_fields.find_field`). Deliberately still not a config lookup: a per-axis
+    field-name key would be a new adopter surface, and a board that does not carry
+    the conventional name gets a refusal that lists the names it does carry — the
+    adopter renames the field (or binds the axis to a label) rather than teaching
+    the kit a mapping.
     """
     return axis.capitalize()
+
+
+def _read_board_state(
+    config: dict,
+    *,
+    issue: dict,
+    issue_number: int,
+) -> BoardState:
+    """One board READ round-trip: project node id, the live field list, the card id.
+
+    Everything a board write needs that config does not declare. All three reads go
+    through the board READ seam (`_lib/board_fields`) and mutate nothing — so this
+    runs unchanged under `--dry-run`, which is what lets a dry-run report the
+    concrete write (and refuse a knowably-impossible one) without touching the
+    board.
+
+    Any failure is captured in `BoardState.error` with gh's stderr VERBATIM: the
+    likely cause is a token without the `project` scope, and the remedy is in that
+    text. A successful read with no card yields `item_id=None` — the membership
+    case, which the planner refuses with the `gh project item-add` remediation
+    composed here (it has the owner and the issue URL).
+    """
+    number = board_fields.board_number(config)
+    board_ref = f"Projects-v2 board #{number}" if number else "the Projects-v2 board"
+    owner = board_fields.default_owner(config)
+    issue_url = issue.get("url") if isinstance(issue.get("url"), str) else None
+    remediation = (
+        f"gh project item-add {number or '<board-number>'} "
+        f"--owner {owner or '<board-owner>'} "
+        f"--url {issue_url or f'<url of issue #{issue_number}>'}"
+    )
+
+    project = board_fields.read_project_node_id(config, owner=owner)
+    if not project.ok or not project.node_id:
+        return BoardState(
+            error=project.error or f"{board_ref} did not resolve to a project id.",
+            board_ref=board_ref,
+            membership_remediation=remediation,
+        )
+
+    fields_read = board_fields.read_fields(config, owner=owner)
+    if not fields_read.ok:
+        return BoardState(
+            project_id=project.node_id,
+            error=fields_read.error,
+            board_ref=board_ref,
+            membership_remediation=remediation,
+        )
+
+    issue_node_id = issue.get("id") if isinstance(issue.get("id"), str) else None
+    if not issue_node_id:
+        return BoardState(
+            project_id=project.node_id,
+            fields=fields_read.fields,
+            error=(
+                f"`gh issue view {issue_number}` returned no node id, so the "
+                f"issue's card on {board_ref} cannot be looked up."
+            ),
+            board_ref=board_ref,
+            membership_remediation=remediation,
+        )
+
+    item = board_fields.resolve_item_id(
+        config, issue_node_id=issue_node_id, project_node_id=project.node_id
+    )
+    if not item.ok:
+        return BoardState(
+            project_id=project.node_id,
+            fields=fields_read.fields,
+            error=item.error,
+            board_ref=board_ref,
+            membership_remediation=remediation,
+        )
+
+    return BoardState(
+        project_id=project.node_id,
+        item_id=item.item_id,
+        fields=fields_read.fields,
+        board_ref=board_ref,
+        membership_remediation=remediation,
+    )
+
+
+def _plan_board_fields(
+    *,
+    board_axes: dict[str, str],
+    state: BoardState,
+    issue_number: int,
+) -> tuple[list[FieldResult], list[BoardWrite]]:
+    """Resolve each board-carried axis to a single-select write, or refuse it.
+
+    Pure — it plans against the `state` snapshot `_read_board_state` gathered, so
+    every diagnosis below is reachable in a test without a network and is identical
+    under `--dry-run`.
+
+    The refusals, in the order they become knowable. Each names what was looked for
+    AND what the board actually offers, because "no `Priority` field" without the
+    field list leaves the adopter exactly where report #708 left them — guessing:
+
+      1. **read failed** — nothing is known; surface gh's stderr verbatim.
+      2. **no card** — the read succeeded and the issue has no item on the board.
+         Refused with the exact `gh project item-add` command rather than adding
+         the card: membership is a distinct operation (DEC-019; named out of the
+         field-value substrate by ADR-031 point 3) and a decision about what
+         belongs on the board, which a field write must not make silently.
+      3. **no such field** — lists the board's field names.
+      4. **not a single-select** — names the type found; #724 keeps text / number /
+         date / iteration out of scope rather than inventing a serialisation.
+      5. **no such option** — lists the field's option names. This is the
+         classification-vocabulary-vs-board-vocabulary mismatch: the value already
+         passed the up-front check against classification.yaml, so the board is
+         what disagrees.
+
+    A resolved axis returns `ok=True, changed=True` and a :class:`BoardWrite`.
+    There is no pre-write value-equality read (unlike the label path's no-op
+    detection): learning the card's CURRENT option costs another round-trip, and
+    the write is convergent — re-running sets the same value. The reported line
+    describes the write that will be made, which is honest either way.
+    """
+    results: list[FieldResult] = []
+    writes: list[BoardWrite] = []
+
+    for axis, value in board_axes.items():
+        field_name = _board_field_name(axis)
+        unset = f"NOT SET: {value!r} was not recorded anywhere."
+
+        if state.error is not None:
+            results.append(
+                FieldResult(
+                    field=axis,
+                    ok=False,
+                    changed=False,
+                    message=(
+                        f"{axis}: could not read {state.board_ref} to resolve "
+                        f"`{field_name}` = {value!r} to ids. {unset}\n"
+                        f"      reason: {state.error}"
+                    ),
+                )
+            )
+            continue
+
+        if state.item_id is None:
+            results.append(
+                FieldResult(
+                    field=axis,
+                    ok=False,
+                    changed=False,
+                    message=(
+                        f"{axis}: issue #{issue_number} has NO CARD on "
+                        f"{state.board_ref}, so there is no item whose "
+                        f"`{field_name}` field could be set. {unset} Add the card, "
+                        f"then re-run:\n"
+                        f"      {state.membership_remediation}\n"
+                        f"      (set-field writes field VALUES; putting an issue on "
+                        f"a board is a separate membership operation — DEC-019 — "
+                        f"and not a side effect this verb takes on your behalf.)"
+                    ),
+                )
+            )
+            continue
+
+        field = board_fields.find_field(state.fields, field_name)
+        if field is None:
+            offered = board_fields.field_names(state.fields)
+            results.append(
+                FieldResult(
+                    field=axis,
+                    ok=False,
+                    changed=False,
+                    message=(
+                        f"{axis}: {state.board_ref} has NO FIELD named "
+                        f"`{field_name}`. It offers: "
+                        f"{', '.join(offered) or '(no fields)'}. {unset} Rename or "
+                        f"add a `{field_name}` single-select on the board, or bind "
+                        f"`{axis}` to a label in project/substrate-map.yaml and set "
+                        f"`has_projects_v2_board: false`."
+                    ),
+                )
+            )
+            continue
+
+        if not board_fields.is_single_select(field):
+            results.append(
+                FieldResult(
+                    field=axis,
+                    ok=False,
+                    changed=False,
+                    message=(
+                        f"{axis}: board field `{field_name}` is a "
+                        f"{board_fields.field_type(field)}, not a single-select — "
+                        f"UNSUPPORTED FIELD TYPE. set-field writes single-select "
+                        f"options only (text / number / date / iteration fields are "
+                        f"out of scope), so it will not guess a serialisation for "
+                        f"{value!r}. {unset}"
+                    ),
+                )
+            )
+            continue
+
+        option_id = board_fields.option_id(field, value)
+        if option_id is None:
+            offered = board_fields.option_names(field)
+            results.append(
+                FieldResult(
+                    field=axis,
+                    ok=False,
+                    changed=False,
+                    message=(
+                        f"{axis}: board field `{field_name}` has NO OPTION named "
+                        f"{value!r}. It offers: "
+                        f"{', '.join(offered) or '(no options)'}. {unset} The value "
+                        f"is declared in classification.yaml, so it is the board's "
+                        f"option list that disagrees — add the option on the board, "
+                        f"or use one of the names it offers."
+                    ),
+                )
+            )
+            continue
+
+        field_id = field.get("id")
+        if not isinstance(field_id, str) or not field_id:
+            results.append(
+                FieldResult(
+                    field=axis,
+                    ok=False,
+                    changed=False,
+                    message=(
+                        f"{axis}: board field `{field_name}` came back without an "
+                        f"id, so it cannot be written. {unset}"
+                    ),
+                )
+            )
+            continue
+
+        resolved_name = field.get("name")
+        writes.append(
+            BoardWrite(
+                axis=axis,
+                field_name=resolved_name if isinstance(resolved_name, str) else field_name,
+                field_id=field_id,
+                option_name=value,
+                option_id=option_id,
+                item_id=state.item_id,
+                project_id=state.project_id or "",
+            )
+        )
+        results.append(
+            FieldResult(
+                field=axis,
+                ok=True,
+                changed=True,
+                message=(
+                    f"{axis}: set board field `{field_name}` = {value!r} on "
+                    f"{state.board_ref}"
+                ),
+            )
+        )
+
+    return results, writes
 
 
 def _plan_kind(
@@ -740,6 +1173,37 @@ def _gh_edit_labels(
     return True
 
 
+def _write_board_field(write: BoardWrite, config: dict) -> bool:
+    """Execute one resolved board single-select write; True on success.
+
+    The write is obtained from `substrate_writes.write_field_value` — ADR-031's
+    sole constructor for a non-label substrate write, the same primitive the
+    `set-board-field` hook uses. set-field never string-builds a `gh project
+    item-edit` argv itself; the difference between this call site and the hook's is
+    only WHERE the ids came from (resolved here from names, hand-authored there).
+
+    On failure the primitive's `error` — gh's stderr verbatim — is printed and the
+    caller exits 3. Nothing is retried and nothing else is rolled back: application
+    is idempotent, so a re-run converges.
+    """
+    result = substrate_writes.write_field_value(
+        config,
+        item_id=write.item_id,
+        field_id=write.field_id,
+        project_id=write.project_id,
+        single_select_option_id=write.option_id,
+    )
+    if not result.ok:
+        print(
+            f"error: writing board field `{write.field_name}` = "
+            f"{write.option_name!r} for {write.axis} failed.\n"
+            f"stderr: {result.error or 'no stderr'}",
+            file=sys.stderr,
+        )
+        return False
+    return True
+
+
 def _gh_write_title(issue_number: int, title: str, config: dict) -> bool:
     """Write the realigned title via `gh issue edit --title` (edit-issue's pattern)."""
     cmd = ["gh", "issue", "edit", str(issue_number), "--title", title]
@@ -798,7 +1262,11 @@ def _build_parser() -> argparse.ArgumentParser:
             "classification field(s) in one batch call. Validates up front and "
             "refuses before any mutation on an unknown value; idempotent on "
             "re-run. Reuses create-issue's classification resolution (DEC-038); "
-            "a kind change swaps the type:* label and realigns the title prefix."
+            "a kind change swaps the type:* label and realigns the title prefix. "
+            "Under a Projects-v2 board, priority/workstream are written as board "
+            "single-select values — field and option resolved by NAME at runtime — "
+            "and refused with a diagnosis (naming what the board offers) when the "
+            "issue has no card, or the field / option / field type cannot serve it."
         ),
     )
     parser.add_argument("issue_number", type=int, help="GitHub issue number.")
@@ -816,12 +1284,20 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--priority",
         default=None,
-        help="Priority value (one of the adopter's classification priority values).",
+        help=(
+            "Priority value (one of the adopter's classification priority values). "
+            "Written as a label, or — under a Projects-v2 board — as the board's "
+            "`Priority` single-select option."
+        ),
     )
     parser.add_argument(
         "--workstream",
         default=None,
-        help="Workstream slug (one of the adopter's declared workstreams).",
+        help=(
+            "Workstream slug (one of the adopter's declared workstreams). Written "
+            "as a label, or — under a Projects-v2 board — as the board's "
+            "`Workstream` single-select option."
+        ),
     )
     parser.add_argument(
         "--parent",

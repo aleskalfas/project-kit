@@ -153,7 +153,13 @@ from typing import Any
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_labels, back_fill_apply, session_guard, substrate_writes  # noqa: E402
+from _lib import (  # noqa: E402
+    axis_labels,
+    back_fill_apply,
+    board_fields,
+    session_guard,
+    substrate_writes,
+)
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 from _lib.hooks import HOOKS_RELATIVE_PATH, load_hooks_file  # noqa: E402
 
@@ -848,29 +854,39 @@ def _resolve_project_node_id(config: dict[str, Any]) -> str | None:
     caller treats a ``None`` as "no board resolvable" — which, when a field intent
     is declared, the residual gate's fourth member turns into a global refusal
     (DEC-037 §2), and otherwise leaves the milestone-only back-fill unaffected.
-    """
-    if not config.get("has_projects_v2_board"):
-        return None
-    board_number = config.get("projects_v2_board_id")
-    if board_number is None:
-        return None
 
-    owner = _resolve_board_owner(config)
-    view_args = ["gh", "project", "view", str(board_number), "--format", "json"]
-    if owner:
-        view_args += ["--owner", owner]
-    try:
-        proc = gh_run(view_args, config, check=False)
-    except FileNotFoundError:
+    The read itself lives in the board READ seam (`_lib/board_fields`, #724) — the
+    single home for board name → id resolution, extracted once this shape had
+    copies here, in `adopt-existing` and in `create-issue`. The argv and the
+    owner precedence are unchanged; `_board_gh_call` keeps the invocation on this
+    module's own `gh_run` binding.
+    """
+    if board_fields.board_number(config) is None:
+        # Short-circuit BEFORE resolving the owner: `_resolve_board_owner` may
+        # itself shell out (`gh repo view`), and an unconfigured board must cost
+        # no gh call at all.
         return None
-    if proc.returncode != 0:
-        return None
-    try:
-        payload = json.loads(proc.stdout)
-    except json.JSONDecodeError:
-        return None
-    node_id = payload.get("id") if isinstance(payload, dict) else None
-    return node_id if isinstance(node_id, str) and node_id else None
+    return board_fields.resolve_project_node_id(
+        config, owner=_resolve_board_owner(config), gh_call=_board_gh_call
+    )
+
+
+def _board_gh_call(
+    args: list[str],
+    config: dict[str, Any],
+    *,
+    fallback_owner: str | None = None,
+    check: bool = False,
+) -> Any:
+    """Run a board READ through THIS module's `gh_run`, owner spliced as before.
+
+    The seam (`_lib/board_fields`) accepts the runner so a delegating caller keeps
+    its own invocation path: the owner is appended exactly where this script
+    appended it before the extraction, so the argv `gh` receives is unchanged.
+    """
+    if fallback_owner:
+        args = [*args, "--owner", fallback_owner]
+    return gh_run(args, config, check=check)
 
 
 def _resolve_board_owner(config: dict[str, Any]) -> str | None:

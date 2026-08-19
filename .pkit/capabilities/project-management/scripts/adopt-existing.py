@@ -99,7 +99,7 @@ from typing import Any
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_labels  # noqa: E402
+from _lib import axis_labels, board_fields  # noqa: E402
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 
 CAPABILITY_NAME = "project-management"
@@ -358,31 +358,19 @@ def _read_board_fields(
     optional context for the inventory, not a precondition. Each field carries its
     ``name`` and (for single-selects) its ``options`` so the human can see which
     board field might carry an axis (e.g. workstream).
+
+    The read itself lives in the board READ seam (`_lib/board_fields`, #724) — the
+    single home for board name → id resolution, which grew out of this very read.
+    The argv, the owner precedence, and the ``([], True)``-on-failure contract are
+    unchanged; ``_board_gh_call`` keeps the invocation on this module's own
+    ``gh_run`` binding.
     """
-    if not config.get("has_projects_v2_board"):
+    if board_fields.board_number(config) is None:
         return [], False
-    board_number = config.get("projects_v2_board_id")
-    if board_number is None:
-        return [], False
-    args = ["gh", "project", "field-list", str(board_number), "--format", "json"]
-    owner = _resolve_owner(config)
-    if owner:
-        args += ["--owner", owner]
-    try:
-        proc = gh_run(args, config, check=False)
-    except FileNotFoundError:
-        return [], True
-    if proc.returncode != 0:
-        return [], True
-    try:
-        payload = json.loads(proc.stdout)
-    except json.JSONDecodeError:
-        return [], True
-    fields = payload.get("fields") if isinstance(payload, dict) else payload
-    if not isinstance(fields, list):
-        return [], True
-    out = [f for f in fields if isinstance(f, dict)]
-    return out, True
+    read = board_fields.read_fields(
+        config, owner=_resolve_owner(config), gh_call=_board_gh_call
+    )
+    return list(read.fields), True
 
 
 def _read_project_node_id(config: dict[str, Any]) -> str | None:
@@ -394,28 +382,33 @@ def _read_project_node_id(config: dict[str, Any]) -> str | None:
     JSON), it never writes config itself. The human moves the recommendation into
     place, the same draft-not-apply posture as the substrate-map. Returns ``None``
     when no board is configured or the read fails.
+
+    Delegates to the board READ seam (`_lib/board_fields`, #724) — same argv, same
+    owner precedence, same ``None``-on-failure contract.
     """
-    if not config.get("has_projects_v2_board"):
+    if board_fields.board_number(config) is None:
         return None
-    board_number = config.get("projects_v2_board_id")
-    if board_number is None:
-        return None
-    owner = _resolve_owner(config)
-    args = ["gh", "project", "view", str(board_number), "--format", "json"]
-    if owner:
-        args += ["--owner", owner]
-    try:
-        proc = gh_run(args, config, check=False)
-    except FileNotFoundError:
-        return None
-    if proc.returncode != 0:
-        return None
-    try:
-        payload = json.loads(proc.stdout)
-    except json.JSONDecodeError:
-        return None
-    node_id = payload.get("id") if isinstance(payload, dict) else None
-    return node_id if isinstance(node_id, str) and node_id else None
+    return board_fields.resolve_project_node_id(
+        config, owner=_resolve_owner(config), gh_call=_board_gh_call
+    )
+
+
+def _board_gh_call(
+    args: list[str],
+    config: dict[str, Any],
+    *,
+    fallback_owner: str | None = None,
+    check: bool = False,
+) -> Any:
+    """Run a board READ through THIS module's ``gh_run``, owner spliced as before.
+
+    The seam accepts the runner so a delegating caller keeps its own invocation
+    path: the owner is appended exactly where this script appended it before the
+    extraction, so the argv ``gh`` receives is unchanged.
+    """
+    if fallback_owner:
+        args = [*args, "--owner", fallback_owner]
+    return gh_run(args, config, check=check)
 
 
 def _resolve_owner(config: dict[str, Any]) -> str | None:
