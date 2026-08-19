@@ -1,7 +1,7 @@
 ---
 id: DEC-002
 title: Code-review panel shipped from software-engineering
-status: proposed
+status: accepted
 date: 2026-08-19
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
