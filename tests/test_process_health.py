@@ -12,7 +12,13 @@ These tests pin the load-bearing facts:
   unresolvable upstream address, an erroring/unregistered candidate source, an
   erroring `resolve`, and an unreadable upstream position each report
   indeterminate and hold the exit code non-zero;
-- determinate-empty is clean (an explicit empty candidate set exits 0);
+- determinate-empty is clean (an explicit empty candidate set exits 0), and so
+  are a bare run over zero declared contracts and a scoped run against a walked
+  definition that declares none;
+- a SCOPED run whose address resolves to nothing — neither a walked definition
+  nor any contract's endpoint — is indeterminate and exits non-zero, naming the
+  likely cause (an unregistered capability, a missing one, an unknown process
+  id) and its remedy (#713);
 - entries WITHOUT a `handoff` contract are never evaluated by anything;
 - singleton endpoints participate (a singleton upstream's one subject);
 - `--process` filters to contracts touching one address; `--json` is the
@@ -656,6 +662,107 @@ def test_focus_filters_to_contracts_touching_the_address(health_repo) -> None:
     ]
     untouched = ph.build_report(repo, focus="no:such")
     assert untouched.contracts == ()
+    # ...and an address the walk never reached is not clean — see below.
+    assert untouched.unresolved_scope is not None
+
+
+# --- a scoped run that resolves to nothing is never clean (#713) -----------
+
+
+def _register_capabilities(repo: Path, *names: str) -> None:
+    """Write a backbone manifest registering exactly `names` as capability
+    components (no names = the manifest-lists-none fallback branch)."""
+    entries = "".join(
+        f"  - kind: capability\n"
+        f"    name: {name}\n"
+        f"    manifest: .pkit/capabilities/{name}/manifest.yaml\n"
+        for name in names
+    )
+    (repo / ".pkit" / "manifest.yaml").write_text(
+        "schema_version: 1\nbackbone_version: 0.0.0\ncomponents:\n"
+        + (entries or "  []\n"),
+        encoding="utf-8",
+    )
+
+
+def test_scoped_run_matching_nothing_is_indeterminate(health_repo) -> None:
+    # A scoped run NAMES an address — a claim that can fail. When it matches no
+    # walked definition and no declared contract, the run checked nothing, so
+    # reporting clean would be a green light about nothing (COR-042).
+    repo = health_repo()
+    report = ph.build_report(repo, focus="typo:screen")
+    assert report.contracts == ()
+    assert report.missed_total == 0
+    assert report.indeterminate_total == 1
+    assert not report.ok
+    assert report.unresolved_scope is not None
+    assert report.unresolved_scope.address == "typo:screen"
+    assert "matched no walked process definition" in report.unresolved_scope.reason
+    assert "no capability 'typo'" in report.unresolved_scope.reason
+
+
+def test_scoped_run_names_registration_as_the_likely_cause(health_repo) -> None:
+    # The defect's own shape: the capability is ON DISK but not registered, so
+    # discovery never walks it. The finding must point at the remedy.
+    repo = health_repo()
+    _register_capabilities(repo, "design")
+    report = ph.build_report(repo, focus="delivery:unit")
+    assert report.unresolved_scope is not None
+    reason = report.unresolved_scope.reason
+    assert "on disk but not registered" in reason
+    assert "pkit capabilities register delivery" in reason
+    assert not report.ok
+
+
+def test_scoped_run_on_a_registered_capability_names_the_process_id(
+    health_repo,
+) -> None:
+    repo = health_repo()
+    _register_capabilities(repo, "design", "delivery")
+    report = ph.build_report(repo, focus="design:ghost")
+    assert report.unresolved_scope is not None
+    reason = report.unresolved_scope.reason
+    assert "declares no process 'ghost'" in reason
+    assert "design:screen" in reason  # what it DOES declare
+
+
+def test_scoped_run_on_a_walked_definition_without_contracts_is_clean(
+    health_repo,
+) -> None:
+    # Determinate-empty, deliberately: `design:catalog` IS walked — its
+    # definition was read and simply declares no contract touching it. Only an
+    # address that resolves to nothing at all is uninterpretable.
+    repo = health_repo()
+    report = ph.build_report(repo, focus="design:catalog")
+    assert report.contracts == ()
+    assert report.unresolved_scope is None
+    assert report.ok
+
+
+def test_bare_run_with_zero_contracts_stays_clean(health_repo) -> None:
+    # Determinate-empty preserved: a bare run makes no scope claim, so a
+    # project that genuinely declares no contract is a legitimate clean answer.
+    repo = health_repo(_UNIT_INERT_DEF)
+    report = ph.build_report(repo)
+    assert report.contracts == ()
+    assert report.unresolved_scope is None
+    assert report.ok
+
+
+def test_scoped_run_naming_an_unresolvable_upstream_is_not_double_counted(
+    health_repo,
+) -> None:
+    # The address is not walked, but a declared contract NAMES it as upstream —
+    # so the run did have something to say, and says it once (the contract's own
+    # unresolvable-upstream indeterminate), not twice.
+    repo = health_repo(
+        _UNIT_DEF_TEMPLATE.format(upstream="ghost:process", trigger="ready")
+    )
+    report = ph.build_report(repo, focus="ghost:process")
+    assert len(report.contracts) == 1
+    assert report.unresolved_scope is None
+    assert report.indeterminate_total == 1
+    assert not report.ok
 
 
 # --- --json: the byte-stable machine form ----------------------------------
@@ -667,9 +774,11 @@ def test_json_shape_and_totals(health_repo) -> None:
     _add_screen(repo, "s-2")
     _set_pickups(repo, {"s-2": ["unit-2"]})
     payload = json.loads(ph.render_json(ph.build_report(repo)))
-    assert set(payload) == {"contracts", "skipped", "totals"}
+    assert set(payload) == {"contracts", "skipped", "unresolved_scope", "totals"}
     assert payload["totals"] == {"missed": 1, "indeterminate": 0}
     assert payload["skipped"] == []
+    # A bare run makes no scope claim, so the key is present and null.
+    assert payload["unresolved_scope"] is None
     (contract,) = payload["contracts"]
     assert set(contract) == {
         "upstream",
@@ -900,6 +1009,64 @@ def test_cli_reports_no_contracts_declared(health_repo, monkeypatch) -> None:
     result = _invoke_health(repo, monkeypatch)
     assert result.exit_code == 0
     assert "no hand-off contracts declared" in result.output
+
+
+def test_cli_scoped_run_matching_nothing_exits_non_zero(
+    health_repo, monkeypatch
+) -> None:
+    repo = health_repo()
+    _register_capabilities(repo, "design")
+    result = _invoke_health(repo, monkeypatch, "--process", "delivery:unit")
+    assert result.exit_code == 1, result.output
+    assert "scope indeterminate" in result.output
+    assert "pkit capabilities register delivery" in result.output
+    # The determinate-empty note must NOT appear: nothing was determined.
+    assert "no hand-off contracts declared" not in result.output
+    assert "0 missed, 1 indeterminate" in result.output
+
+
+def test_cli_scoped_run_matching_nothing_json(health_repo, monkeypatch) -> None:
+    repo = health_repo()
+    result = _invoke_health(repo, monkeypatch, "--process", "typo:screen", "--json")
+    assert result.exit_code == 1, result.output
+    payload = json.loads(result.output)
+    assert payload["contracts"] == []
+    assert payload["totals"] == {"missed": 0, "indeterminate": 1}
+    assert payload["unresolved_scope"]["address"] == "typo:screen"
+    assert "matched no walked process definition" in payload["unresolved_scope"]["reason"]
+
+
+def test_cli_scoped_interpretation_run_matching_nothing_fails_closed(
+    health_repo, monkeypatch
+) -> None:
+    # COR-044's authoring done-signal is the scoped interpretation run, so this
+    # is the view where a green over nothing did the most damage (#713).
+    repo = health_repo()
+    _register_capabilities(repo, "design")
+    narrative = _invoke_health(
+        repo, monkeypatch, "--interpretation-only", "--process", "delivery:unit"
+    )
+    assert narrative.exit_code == 1, narrative.output
+    assert "scope indeterminate" in narrative.output
+    assert "pkit capabilities register delivery" in narrative.output
+    assert "1 indeterminate" in narrative.output
+
+    machine = _invoke_health(
+        repo, monkeypatch, "--interpretation-only", "--process", "delivery:unit", "--json"
+    )
+    assert machine.exit_code == 1, machine.output
+    payload = json.loads(machine.output)
+    assert payload["totals"] == {"indeterminate": 1}
+    assert payload["unresolved_scope"]["address"] == "delivery:unit"
+
+
+def test_cli_bare_empty_run_stays_clean_in_both_views(health_repo, monkeypatch) -> None:
+    repo = health_repo(_UNIT_INERT_DEF)
+    for args in ((), ("--interpretation-only",)):
+        result = _invoke_health(repo, monkeypatch, *args)
+        assert result.exit_code == 0, result.output
+        assert "no hand-off contracts declared" in result.output
+        assert "scope indeterminate" not in result.output
 
 
 # --- the ADR-048 module boundary, pinned -----------------------------------

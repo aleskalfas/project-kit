@@ -196,7 +196,7 @@ def discover_process_addresses(repo_root: Path) -> list[str]:
     The result is sorted, so the node list is deterministic.
     """
     addresses: set[str] = set()
-    for capability in _installed_capabilities(repo_root):
+    for capability in installed_capabilities(repo_root):
         schemas_dir = repo_root / ".pkit" / "capabilities" / capability / "schemas"
         if not schemas_dir.is_dir():
             continue
@@ -207,9 +207,16 @@ def discover_process_addresses(repo_root: Path) -> list[str]:
     return sorted(addresses)
 
 
-def _installed_capabilities(repo_root: Path) -> list[str]:
+def installed_capabilities(repo_root: Path) -> list[str]:
     """The installed capability names, from the backbone manifest when present,
-    else a filesystem scan of `.pkit/capabilities/`. Sorted for determinism."""
+    else a filesystem scan of `.pkit/capabilities/`. Sorted for determinism.
+
+    Public because it is THE definition of "a capability whose process
+    definitions participate": discovery walks exactly this set, the authoring
+    stamps refuse a capability outside it (#713), and health's scoped run
+    diagnoses a miss against it. One helper, so those three can never disagree
+    about what counts as installed -- fallback semantics included.
+    """
     backbone = read_backbone_manifest(repo_root)
     if backbone is not None:
         names = [c.name for c in backbone.components if c.kind == "capability"]

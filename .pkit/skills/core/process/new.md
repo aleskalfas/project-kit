@@ -8,10 +8,10 @@ Read the dispatcher (`process.md`) first for the acceptance gate and the shared 
 
 A process definition is an artifact **of a capability** — its address is `<capability>:<process-id>`, and its predicates must be registered in that capability's package for the engine to run them. So the first thing to establish is the owning capability, and there are only two cases:
 
-- **The author has one.** Confirm two things about it. It must be **registered with the project**, or the health surface will never walk what you author into it (see the trap in `hand-off.md`). And it must be **the author's own** — a capability the methodology ships is overwritten on the next sync, so a definition stamped there is silently destroyed later (the no-shared-files invariant; a capability incubated in the project is adopter-owned, per COR-031).
-- **The author has none.** They need a capability first. Route them through the capability-authoring path (`capability-author`), then come back. A capability incubated in the project is first-class and adopter-owned, so this is a real route and not a detour into someone else's territory.
+- **The author has one.** Confirm it is **the author's own** — a capability the methodology ships is overwritten on the next sync, so a definition stamped there is silently destroyed later (the no-shared-files invariant; a capability incubated in the project is adopter-owned, per COR-031). Whether it is *registered with the project* you do not have to check: the stamp refuses an unregistered capability outright, naming `pkit capabilities register <name>` as the remedy. If that refusal fires, run the register command and re-run the stamp.
+- **The author has none.** They need a capability first. Route them through the capability-authoring path (`capability-author`), then come back. A capability incubated in the project is first-class and adopter-owned, so this is a real route and not a detour into someone else's territory. Note that authoring a capability does not register it — so expect the stamp's registration refusal on the way back, and treat it as the next step rather than a problem.
 
-This routing is *this skill's* job and deliberately not the stamp's — `pkit process new` refuses a capability-less address with a clean error and no guesswork. Do not try to make the command do it.
+This routing is *this skill's* job and deliberately not the stamp's — `pkit process new` refuses a capability-less address, a capability with no directory, and an unregistered one with three distinct clean errors and no guesswork. Do not try to make the command do the routing.
 
 ## The questions
 

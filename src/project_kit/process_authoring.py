@@ -29,9 +29,12 @@ and inert or report-only, so the definition `version` field is NEVER bumped
 here — state/transition evolution is the deferred `amend` operation's
 territory, and only it carries the bump.
 
-No routing logic lives here (COR-044: `new` requires an owning capability and
-errors cleanly without one; walking a capability-less adopter through the
-capability-authoring path first is the skill's judgment, never the stamp's).
+All three stamps require an owning capability that is REGISTERED as a manifest
+component — the same set contract discovery walks — so a stamp can never write
+a definition nothing watches (#713); see `_require_owned_address`. No routing
+logic lives here beyond that refusal (COR-044: walking a capability-less
+adopter through the capability-authoring path, or through `pkit capabilities
+register`, is the skill's judgment, never the stamp's).
 
 Mutations round-trip through `ruamel.yaml` (comments, key order, and quoting
 preserved — the same discipline as `schemas_authoring`), lint the result
@@ -59,6 +62,7 @@ from project_kit.process import (
     load_definition,
     parse_address,
 )
+from project_kit.process_graph import installed_capabilities
 
 _KEBAB_CASE = re.compile(r"^[a-z][a-z0-9-]*$")
 
@@ -432,11 +436,25 @@ def _script_relpath(command: str) -> str:
 
 
 def _require_owned_address(repo_root: Path, address: str) -> tuple[str, str, Path]:
-    """Resolve `<capability>:<process-id>` to its owning capability directory.
+    """Resolve `<capability>:<process-id>` to its owning, REGISTERED capability.
 
-    The clean no-capability error is the COR-044 boundary: the stamp REQUIRES a
-    named owning capability and never routes — standing up a capability first
-    is the composite skill's walkthrough judgment.
+    Three refusals, each naming a distinct cause and its remedy:
+
+    1. **No `<capability>:` half.** The COR-044 boundary: the stamp REQUIRES a
+       named owning capability and never routes — standing up a capability
+       first is the composite skill's walkthrough judgment.
+    2. **No capability directory.** Nothing on disk to stamp into.
+    3. **A directory the project does not register as a component.** Contract
+       discovery walks only the capabilities `installed_capabilities` names, so
+       a definition stamped into an unregistered directory would be real,
+       correct, and watched by nothing — `health` would report "no contracts
+       declared" and exit 0 over it, the lying green COR-042 exists to prevent
+       (#713). Shared with discovery through that one helper so the two can
+       never disagree, FALLBACK INCLUDED: with no manifest, or a manifest
+       listing no capabilities, the set is the filesystem scan, so a
+       pre-manifest install stays authorable.
+
+    Every stamp goes through here, so all three refuse identically.
     """
     if ":" not in address:
         raise ProcessAuthoringError(
@@ -457,6 +475,16 @@ def _require_owned_address(repo_root: Path, address: str) -> tuple[str, str, Pat
             f"{capability_dir.relative_to(repo_root)}; a process definition "
             "needs an existing owning capability (COR-044 — this command does "
             "not create one)."
+        )
+    if capability not in installed_capabilities(repo_root):
+        raise ProcessAuthoringError(
+            f"capability {capability!r} exists at "
+            f"{capability_dir.relative_to(repo_root)} but is not registered as "
+            "a component with the project, so the process walk never discovers "
+            "its definitions: whatever this stamp wrote would be watched by "
+            "nothing, and `pkit process health` would report no contracts and "
+            "exit 0 over it. Register it first, then re-run this stamp:\n"
+            f"  pkit capabilities register {capability}"
         )
     return capability, process_id, capability_dir
 
@@ -916,6 +944,7 @@ def couple_process(
 
     `dry_run` runs every check and reports what would change, writing nothing.
     """
+    _require_owned_address(repo_root, address)
     try:
         definition = load_definition(repo_root, address)
     except ProcessError as exc:
@@ -1073,6 +1102,7 @@ def handoff_process(
     `dry_run` runs every check and reports the contract and seam stubs it would
     write, writing nothing.
     """
+    _require_owned_address(repo_root, address)
     try:
         definition = load_definition(repo_root, address)
     except ProcessError as exc:
