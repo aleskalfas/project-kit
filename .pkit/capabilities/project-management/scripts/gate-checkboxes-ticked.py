@@ -7,11 +7,21 @@
 # ///
 """Project-management capability — gate-checkboxes-ticked (process predicate, DEC-033).
 
-Deterministic close-gate (DEC-007): result=True iff the issue body has no unticked '- [ ]' checkbox. The checkbox close-gate for won't-do closure and PR-merge closing issues.
+Deterministic close-gate (DEC-007): result=True iff the issue body has no unticked '- [ ]' checkbox.
 
 READ-ONLY. The process engine (COR-033) invokes this as
   <script> <issue-number> --json
 and reads the structured-JSON contract on stdout. Self-contained via PEP 723.
+
+Where this predicate is actually invoked from: workflow.yaml declares it as
+the gate on the three `close-issue` transitions into `done` (from
+`in-progress`, `backlog`, `todo`) — the won't-do and cascade-eligibility
+closure paths. It is NOT the gate on `review → done`: that transition
+declares `gate-pr-merged` (`gate:` is single-valued), and DEC-007's checkbox
+check reaches the PR-merge path as a `done-work` pre-flight instead, because
+`Closes #N` auto-closes the issue on merge and so the check must happen
+before the merge is authorised (#734). Both routes evaluate the SAME rule,
+which lives once in `_lib/checkbox_gate.py`.
 
 Exit codes:
   0  evaluated (result emitted as JSON); 2  usage error.

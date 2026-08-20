@@ -54,6 +54,9 @@ from ruamel.yaml.error import YAMLError
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib.ci_checks import evaluate_ci_gate  # noqa: E402
+# DEC-007's checkbox close-gate — the ONE implementation (`_lib.checkbox_gate`),
+# shared with close-issue, done-work and the engine predicate.
+from _lib.checkbox_gate import unticked_boxes as _unticked_boxes  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib.hooks import fire_hooks  # noqa: E402
 from _lib import session_guard  # noqa: E402
@@ -347,14 +350,6 @@ def _gather_unticked_findings(
         if unticked:
             findings[f"#{n}"] = unticked
     return findings
-
-
-def _unticked_boxes(body: str) -> list[str]:
-    out: list[str] = []
-    for line in (body or "").splitlines():
-        if re.match(r"^\s*[-*]\s+\[\s\]\s+\S", line):
-            out.append(line.strip())
-    return out
 
 
 # ---- schema helpers ------------------------------------------------

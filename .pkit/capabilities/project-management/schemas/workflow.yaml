@@ -197,11 +197,24 @@ process:
         User authorises the merge per-PR; agent runs the squash-merge
         after the checkbox-completeness check passes. PR-merge bypassing
         the gate is a hard reject — the audit-trail mechanism does not
-        apply (the merge button is the gate). The gate is an
+        apply (the merge button is the gate). The declared gate is an
         authorisation-artifact: a merged PR whose merger differs from the
         actor being gated (cross-authority, COR-033 P4). Owned by
         `done-work` per DEC-026; approval gate is mode-conditional per
         DEC-027 / DEC-028.
+
+        The DEC-007 checkbox close-gate ALSO applies on this transition,
+        as a `done-work` PRE-FLIGHT rather than a declared gate: `gate:`
+        is single-valued, so the checkbox check cannot be declared here
+        beside `gate-pr-merged`. It has to run before the squash-merge
+        is authorised anyway — `Closes #N` auto-closes the issue on
+        merge, so a gate the engine evaluated on arrival at `done` would
+        already have been passed. `done-work` refuses on any unticked
+        box, listing each one; `--skip-checkbox-gate` overrides
+        (discouraged). The rule is the same one
+        `gate-checkboxes-ticked` evaluates on the `close-issue`
+        transitions below — one implementation, in
+        `scripts/_lib/checkbox_gate.py` (#734).
 
     - from: in-progress
       to: done

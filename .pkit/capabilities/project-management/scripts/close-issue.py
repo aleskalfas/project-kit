@@ -69,6 +69,14 @@ sys.path.insert(0, str(_HERE))
 from _lib import axis_labels  # noqa: E402
 from _lib import containment  # noqa: E402
 from _lib import session_guard  # noqa: E402
+# DEC-007's checkbox close-gate — the ONE implementation (`_lib.checkbox_gate`),
+# shared with done-work, merge-pr and the engine's gate-checkboxes-ticked
+# predicate. Aliased to the local names this script has always used.
+from _lib.checkbox_gate import (  # noqa: E402
+    all_boxes_ticked as _all_boxes_ticked,
+    refusal_message as _checkbox_refusal,
+    unticked_boxes as _unticked_boxes,
+)
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib.hooks import fire_hooks  # noqa: E402
 from _lib.labels import reconcile_state_labels_to_done  # noqa: E402
@@ -219,12 +227,14 @@ def main() -> int:
         # Checkbox close-gate per DEC-007.
         unticked = [] if args.skip_checkbox_gate else _unticked_boxes(body)
         if unticked:
-            print("\n[refused] DEC-007 checkbox close-gate:")
-            for line in unticked:
-                print(f"  - {line}")
             print(
-                "\n  → tick or remove each unticked checkbox before closing, "
-                "or pass --skip-checkbox-gate (discouraged).",
+                "\n" + _checkbox_refusal(
+                    unticked,
+                    remedy=(
+                        "tick or remove each unticked checkbox before closing, "
+                        "or pass --skip-checkbox-gate (discouraged)."
+                    ),
+                ),
                 file=sys.stderr,
             )
             return 1
@@ -307,12 +317,16 @@ def main() -> int:
         # Eligibility half 1 — own checkboxes ticked (DEC-007, NOT skippable here).
         unticked = _unticked_boxes(body)
         if unticked:
-            print("\n[refused] DEC-007 checkbox close-gate (cascade-eligibility):")
-            for line in unticked:
-                print(f"  - {line}")
             print(
-                "\n  → a container closes only when its own checkboxes are all "
-                "ticked. This gate is not skippable in cascade-eligibility-close.",
+                "\n" + _checkbox_refusal(
+                    unticked,
+                    scope="cascade-eligibility",
+                    remedy=(
+                        "a container closes only when its own checkboxes are "
+                        "all ticked. This gate is not skippable in "
+                        "cascade-eligibility-close."
+                    ),
+                ),
                 file=sys.stderr,
             )
             return 1
@@ -431,23 +445,6 @@ def main() -> int:
     )
 
     return 0
-
-
-# ---- DEC-007 checkbox gate ------------------------------------------
-
-
-def _unticked_boxes(body: str) -> list[str]:
-    """Return the raw lines for unticked `- [ ]` checkboxes in the body."""
-    out: list[str] = []
-    for line in body.splitlines():
-        # Match either `- [ ]` (markdown) or `* [ ]` style.
-        if re.match(r"^\s*[-*]\s+\[\s\]\s+\S", line):
-            out.append(line.strip())
-    return out
-
-
-def _all_boxes_ticked(body: str) -> bool:
-    return not _unticked_boxes(body)
 
 
 # ---- parent eligibility ---------------------------------------------

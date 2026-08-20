@@ -55,6 +55,7 @@ from __future__ import annotations
 import re
 
 from _lib import axis_labels
+from _lib.checkbox_gate import unticked_boxes  # noqa: F401 — re-export
 
 # Canonical state ordering (matches move-issue's `order` lists).
 STATE_ORDER = ["todo", "backlog", "in-progress", "review", "done"]
@@ -142,19 +143,11 @@ def infer_current_state(
 
 
 # --- gate inference -------------------------------------------------------
-
-
-def unticked_boxes(body: str) -> list[str]:
-    """Unticked markdown checkboxes in a body (DEC-007 close-gate).
-
-    Lifted verbatim from merge-pr / close-issue's `_unticked_boxes`: a line is
-    an unticked box when it is `- [ ]` (or `* [ ]`) followed by real content.
-    """
-    out: list[str] = []
-    for line in (body or "").splitlines():
-        if re.match(r"^\s*[-*]\s+\[\s\]\s+\S", line):
-            out.append(line.strip())
-    return out
+#
+# DEC-007's unticked-checkbox rule is NOT re-implemented here: it lives in
+# `_lib.checkbox_gate`, the one home shared with close-issue / done-work /
+# merge-pr, and is re-exported above so `gate_checkboxes_ticked` and this
+# module's other readers see the same answer the commands refuse on.
 
 
 def closing_issue_numbers(pr_body: str) -> list[int]:
