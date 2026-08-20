@@ -455,6 +455,23 @@ def test_floor_fires_on_code_diff_for_docs_issue(rr, rc) -> None:
     assert res.required_local == ("reviewer", "code-reviewer")
 
 
+def test_floor_fires_on_code_file_under_docs_dir(rr, rc) -> None:
+    """A code file checked into a docs tree still fires the floor (R1).
+
+    Before the code-suffix-dominant fix, `docs/conf.py` read as documentation,
+    so a PR touching only code under `docs/` escaped the code-review floor.
+    """
+    res = _resolve(
+        rr, baseline=["reviewer"],
+        collection=_floor_collection(rc),
+        closing=[42],
+        labels={42: ["type:docs"]},
+        changed=["docs/conf.py", "docs/index.md"],
+    )
+    assert res.ok
+    assert res.required_local == ("reviewer", "code-reviewer")
+
+
 def test_floor_fires_on_code_diff_for_unclassified_pr(rr, rc) -> None:
     """No closing issue at all: the floor still fires on a code diff."""
     res = _resolve(
@@ -543,13 +560,27 @@ def test_floor_and_classification_dedup_same_reviewer(rr, rc) -> None:
         ("config/settings.yaml", True),
         ("data.json", True),
         ("scripts/run.sh", True),
-        ("bin/tool", True),  # extensionless executable.
+        ("bin/tool", True),  # extensionless executable — fail-closed default.
         ("README.md", False),
         ("docs/guide.rst", False),
-        ("notes.txt", False),
         ("CHANGELOG.mdx", False),
-        ("docs/img/diagram.png", False),  # non-md file UNDER a docs/ dir.
+        ("docs/img/diagram.png", False),  # non-code file UNDER a docs/ dir.
         ("app/docs.py", True),  # a file merely NAMED docs is code.
+        # --- code-suffix dominates the docs/ location (R1 gate-escapes) ---
+        ("docs/conf.py", True),
+        ("docs/generate.py", True),
+        ("docs/deploy.sh", True),
+        ("src/docs/handler.py", True),
+        ("docs/config.yaml", True),  # config under docs/ is still code.
+        # --- .txt is code-adjacent, not documentation (G3) ---
+        ("requirements.txt", True),
+        ("CMakeLists.txt", True),
+        ("notes.txt", True),  # any .txt is code (fail-closed default).
+        # --- docs/ segment matched case-insensitively (G4) ---
+        ("Docs/img/diagram.png", False),
+        ("Docs/conf.py", True),  # code suffix still wins under Docs/.
+        # --- unknown suffix is code (fail-closed default) ---
+        ("mystery.xyz", True),
     ],
 )
 def test_diff_touches_code_per_file(rr, path, is_code) -> None:

@@ -348,15 +348,41 @@ def _satisfied_floors(changed_paths: list[str]) -> set[str]:
     return satisfied
 
 
-# Filename suffixes treated as PURE DOCUMENTATION (not code) by the
-# `touches-code` floor. A changed file with one of these suffixes does not, on
-# its own, make a diff "touch code". Everything else (source, config, scripts,
-# schemas) counts as code. Centralised here so the definition is one edit away.
-_DOC_SUFFIXES = (".md", ".mdx", ".markdown", ".rst", ".txt")
+# Filename suffixes that are ALWAYS code, regardless of directory — the
+# dominant test of the `touches-code` classification (see `diff_touches_code`).
+# A recognized source / config / schema / script suffix counts as code even
+# under a `docs/` directory (e.g. `docs/conf.py`, `docs/deploy.sh`), so real
+# code checked into a docs tree cannot slip past the floor. Centralised here so
+# the definition is one edit away.
+_CODE_SUFFIXES = frozenset({
+    # source languages
+    ".py", ".pyi", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs",
+    ".go", ".rs", ".rb", ".java", ".kt", ".kts", ".scala", ".groovy",
+    ".c", ".h", ".cc", ".cpp", ".cxx", ".hpp", ".hh", ".cs", ".swift",
+    ".m", ".mm", ".php", ".pl", ".pm", ".lua", ".r", ".jl", ".dart",
+    ".ex", ".exs", ".erl", ".clj", ".cljs", ".hs", ".ml", ".fs",
+    ".vb", ".sql",
+    # shell / batch scripts
+    ".sh", ".bash", ".zsh", ".fish", ".ksh", ".ps1", ".psm1",
+    ".bat", ".cmd",
+    # configuration / data / schema
+    ".yaml", ".yml", ".json", ".jsonc", ".toml", ".ini", ".cfg",
+    ".conf", ".xml", ".env", ".properties", ".gradle",
+})
 
-# Path segments that mark a DOCUMENTATION directory. A file living under such a
-# directory is documentation regardless of its suffix (e.g. an image or diagram
-# under `docs/`).
+# Filename suffixes treated as PURE DOCUMENTATION (not code) by the
+# `touches-code` floor — but ONLY for a file whose suffix is not in
+# `_CODE_SUFFIXES` (a code suffix always wins). A changed file with one of these
+# suffixes does not, on its own, make a diff "touch code". `.txt` is
+# deliberately absent: `requirements.txt` / `CMakeLists.txt` / `constraints.txt`
+# are code-adjacent, so a bare `.txt` is left to fall through to the fail-closed
+# code default rather than be demoted to docs.
+_DOC_SUFFIXES = (".md", ".mdx", ".markdown", ".rst")
+
+# Path segments (matched case-insensitively) that mark a DOCUMENTATION
+# directory. A NON-code-suffixed file living under such a directory is demoted
+# to documentation (e.g. an image or diagram under `docs/`). A code-suffixed
+# file is code regardless — the `docs/` location never overrides a code suffix.
 _DOC_DIR_SEGMENTS = ("docs",)
 
 
@@ -364,36 +390,58 @@ def diff_touches_code(changed_paths: list[str]) -> bool:
     """Whether the PR's diff touches code — the `touches-code` floor predicate.
 
     "Touches code" is defined as: **any changed file that is not purely
-    documentation**. A file is purely documentation when EITHER
+    documentation**. Classification is code-suffix-dominant and fail-closed, in
+    three tiers evaluated per file:
 
-      * its suffix is a documentation format (`.md` / `.mdx` / `.markdown` /
-        `.rst` / `.txt`), OR
-      * it lives under a documentation directory (a path with a `docs/`
-        segment).
-
-    Everything else — source (`.py`, `.ts`, …), configuration and schemas
-    (`.yaml`, `.json`, …), shell scripts, extensionless executables — counts as
-    code. The definition is intentionally a single predicate over a small
-    suffix/segment allow-list so it is easy to adjust as the panel's mandate
-    sharpens (DEC-032 amendment names this the genuine design point). An empty
-    diff (no changed files) does not touch code.
+      1. A recognized code suffix (`.py`, `.ts`, `.yaml`, `.json`, `.sh`, … —
+         source, config, schema, script) is ALWAYS code, regardless of
+         directory. `docs/conf.py` and `docs/deploy.sh` are code, so real code
+         checked into a docs tree cannot escape the floor.
+      2. Otherwise, a documentation suffix (`.md` / `.mdx` / `.markdown` /
+         `.rst`) OR a file under a `docs/` directory (matched
+         case-insensitively) is documentation — this is where a non-code asset
+         like `docs/img/diagram.png` is demoted.
+      3. Otherwise (an unknown suffix, or an extensionless file) → **code**, the
+         fail-closed default: when in doubt, the floor fires so the diff is not
+         silently waved through unreviewed.
 
     A conscious call: config/schema changes count as code (a reviewer mandated
     on code-carrying PRs should see a changed `*.yaml`/`*.json`), and a diff
     mixing docs with any code file touches code (the presence of one code file
-    is enough — a docs-only PR is the sole non-touching case).
+    is enough — a docs-only PR is the sole non-touching case). An empty diff (no
+    changed files) does not touch code. The suffix sets are a small, central
+    allow-list, easy to adjust as the panel's mandate sharpens (DEC-032
+    amendment names this the genuine design point).
     """
     return any(not _is_documentation_path(path) for path in changed_paths)
 
 
 def _is_documentation_path(path: str) -> bool:
-    """True when `path` is purely documentation (see `diff_touches_code`)."""
+    """True when `path` is purely documentation (see `diff_touches_code`).
+
+    Code-suffix-dominant and fail-closed: a code suffix returns False (code)
+    outright; only a non-code file that is doc-suffixed or under `docs/` returns
+    True; any remaining unknown suffix returns False (the code default).
+    """
     posix = PurePosixPath(path)
-    if posix.suffix.lower() in _DOC_SUFFIXES:
+    suffix = posix.suffix.lower()
+    if suffix in _CODE_SUFFIXES:
+        return False
+    if suffix in _DOC_SUFFIXES or _under_docs_dir(posix):
         return True
-    # `parts[:-1]` are the directory segments (excluding the filename), so a
-    # file merely NAMED `docs` is not mistaken for one living under `docs/`.
-    return any(segment in _DOC_DIR_SEGMENTS for segment in posix.parts[:-1])
+    return False
+
+
+def _under_docs_dir(posix: PurePosixPath) -> bool:
+    """Whether `posix` lives under a documentation directory (case-insensitive).
+
+    `parts[:-1]` are the directory segments (excluding the filename), so a file
+    merely NAMED `docs` is not mistaken for one living under `docs/`. Segment
+    matching is case-folded so `Docs/` reads the same as `docs/`.
+    """
+    return any(
+        segment.lower() in _DOC_DIR_SEGMENTS for segment in posix.parts[:-1]
+    )
 
 
 def _dedup_rules_by_reviewer(
