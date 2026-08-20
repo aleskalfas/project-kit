@@ -113,6 +113,6 @@ Prompted by [software-engineering:DEC-002] (the code-review panel) and report #7
 
 - **Consequence for the escape note.** D1's named classification-escape still holds for purely classification-keyed contributions (e.g. `design-reviewer` on `workstream:design`), but a **floor-carrying** contribution cannot be escaped by (mis)classification. The code panel ([software-engineering:DEC-002]) carries the floor; `design-reviewer` does not — so the escape's mitigation is procedural for the former and enforced for the latter.
 
-- **Surface + migration.** Surface change per [PRJ-002] (the resolver now accepts a wider predicate) → pm capability + backbone bump. Migration-free: additive (a project with no `type`-keyed or floor-carrying contribution, or a non-matching PR, resolves exactly as before).
+- **Surface + migration.** Surface change per [PRJ-002] (the resolver accepts a wider predicate) → a **pm-capability** changeset; the change touches pm-owned files only and reaches adopters through the tool bundle at the next backbone release (which is what makes an updated capability installable via `pkit upgrade`). Migration-free: additive (a project with no `type`-keyed or floor-carrying contribution, or a non-matching PR, resolves exactly as before).
 
 - **Realized by** the resolver (`required_reviewers.py`) and the `review-contributions` schema gaining `type`-axis and diff-property support, under this Task; DEC-002's code-review panel is the first consumer of both.
