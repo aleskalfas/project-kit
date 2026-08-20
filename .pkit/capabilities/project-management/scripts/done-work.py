@@ -10,11 +10,23 @@
 Transitions Review → Done by squash-merging the PR. Per DEC-026:
 
     done-work <N> [--bypass "<reason>"] [--bypass-ci "<reason>"]
+                  [--skip-checkbox-gate]
 
 Approval gate (human-mode three-way OR per DEC-026):
   1. Latest review on the PR is APPROVED, OR
   2. The PR's last non-author comment starts with `Approved`, OR
   3. `--bypass "<reason>"` is supplied (writes an audit comment).
+
+Checkbox close-gate (DEC-007, #734): a pre-flight in front of the merge —
+every `- [ ]` in the closing issue's body must be ticked, else refuse,
+listing each unticked line. It runs BEFORE the squash-merge is authorised
+because GitHub's `Closes #N` auto-closes the issue *on* merge, so a check
+afterwards would report a gate it had already let through. An issue with no
+checkboxes at all is unaffected (the rule applies only when boxes exist); a
+body that cannot be read fails closed. Overridable with
+`--skip-checkbox-gate` (discouraged), mirroring `close-issue`'s flag. The
+rule itself lives once in `_lib.checkbox_gate`, shared with `close-issue`,
+`merge-pr` and the engine's `gate-checkboxes-ticked` predicate.
 
 CI-status gate (#498): in front of the merge, the PR's `statusCheckRollup`
 must be green — a failing or still-pending check refuses the merge (an
@@ -41,7 +53,7 @@ Side-effects:
 
 Exit codes:
   0  merged + done
-  1  membership refusal / approval gate fails
+  1  membership refusal / approval, checkbox or CI gate fails
   2  usage error / gh failure
 """
 
@@ -60,6 +72,13 @@ _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import session_guard  # noqa: E402
 from _lib.ci_checks import evaluate_ci_gate  # noqa: E402
+# DEC-007's checkbox close-gate — the ONE implementation (`_lib.checkbox_gate`),
+# shared with close-issue, merge-pr and the engine's gate-checkboxes-ticked
+# predicate.
+from _lib.checkbox_gate import (  # noqa: E402
+    refusal_message as _checkbox_refusal,
+    unticked_boxes,
+)
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
@@ -94,8 +113,9 @@ from _lib.required_reviewers import (  # noqa: E402
 
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
-    """Fetch issue labels for review-mode resolution (DEC-027)."""
-    return gh_get_issue(issue_number, config, fields="labels")
+    """Fetch the issue's labels (review-mode resolution, DEC-027) and body (the
+    DEC-007 checkbox pre-flight) in one round-trip."""
+    return gh_get_issue(issue_number, config, fields="labels,body")
 
 
 BYPASS_AUDIT_STAMP = "<!-- pkit-hook: done-work-bypass -->"
@@ -127,6 +147,13 @@ def main() -> int:
             "distinct CI-bypass audit comment on the PR before merging. "
             "Independent of --bypass: a merge blocked on both the approval "
             "gate and red CI needs both flags."
+        ),
+    )
+    parser.add_argument(
+        "--skip-checkbox-gate", action="store_true",
+        help=(
+            "Skip the DEC-007 checkbox close-gate. Discouraged; only use "
+            "when you have just removed all open boxes by hand."
         ),
     )
     parser.add_argument(
@@ -237,6 +264,20 @@ def main() -> int:
                 file=sys.stderr,
             )
             return 1
+
+    # Checkbox close-gate (DEC-007, #734) — the PR-merge closure path. Runs
+    # BEFORE the merge is authorised: `Closes #N` auto-closes the issue *on*
+    # merge, so a check afterwards gates nothing. Reads the body already
+    # fetched above, so it costs no extra round-trip.
+    checkbox_gate = _check_checkbox_gate(
+        args.issue_number, issue, skip=args.skip_checkbox_gate
+    )
+    if not checkbox_gate.passed:
+        print(checkbox_gate.refusal_message, file=sys.stderr)
+        return 1
+    # Report the outcome even when it passes: a gate nobody can see run is how
+    # this one went missing for as long as it did (#734).
+    print(f"  checkbox-gate: {checkbox_gate.passed_via}")
 
     # CI-status gate (#498). A satisfied approval gate is not evidence CI
     # passed — refuse to land a PR whose checks are red or still running. The
@@ -424,6 +465,66 @@ def _check_approval_gate(
             "            - Have a non-author commenter post a comment "
             "starting with `Approved`.\n"
             "            - Re-run with `--bypass \"<reason>\"`."
+        ),
+    )
+
+
+# ---- checkbox close-gate (DEC-007) -----------------------------------
+
+
+def _check_checkbox_gate(
+    issue_number: int, issue: dict | None, *, skip: bool
+) -> _GateResult:
+    """DEC-007's checkbox close-gate on the issue this merge closes.
+
+    Markdown checkboxes are lifecycle-gating: an issue with an unticked box
+    cannot reach Done. On the PR-merge path the check has to happen BEFORE the
+    squash-merge is authorised — GitHub's `Closes #N` auto-closes the issue on
+    merge, so a post-merge check could only report a gate it had already let
+    through (DEC-007, "Task close via PR merge").
+
+    An issue whose body carries no checkboxes at all passes: the rule applies
+    only when boxes exist. A body that could NOT be read fails closed — an
+    unverifiable gate is not a satisfied one, and the merge it guards is
+    irreversible (the same posture as the agent gate's DEC-032 D5 refusals).
+
+    Skippable with `--skip-checkbox-gate` (discouraged), mirroring
+    `close-issue`'s flag of the same name and semantics.
+    """
+    if skip:
+        return _GateResult(passed=True, passed_via="--skip-checkbox-gate")
+
+    if issue is None:
+        return _GateResult(
+            passed=False,
+            refusal_message=(
+                f"[refused] DEC-007 checkbox close-gate for #{issue_number}: "
+                "the issue body could not be read.\n"
+                "          → `gh issue view` failed, so whether every checkbox "
+                "is ticked is unknown; the gate refuses rather than merge on an "
+                "unverified body (the merge auto-closes the issue and cannot be "
+                "undone).\n"
+                "          Remediation:\n"
+                "            - Transient gh failure — retry `done-work`.\n"
+                "            - If persistent, re-run with --skip-checkbox-gate "
+                "(discouraged) after checking the boxes by hand."
+            ),
+        )
+
+    unticked = unticked_boxes(str(issue.get("body") or ""))
+    if not unticked:
+        return _GateResult(passed=True, passed_via="all checkboxes ticked")
+
+    return _GateResult(
+        passed=False,
+        refusal_message=_checkbox_refusal(
+            unticked,
+            scope=f"#{issue_number}, pre-merge",
+            remedy=(
+                "tick or remove each unticked checkbox before merging, or pass "
+                "--skip-checkbox-gate (discouraged). The merge auto-closes the "
+                "issue, so this cannot be fixed afterwards."
+            ),
         ),
     )
 

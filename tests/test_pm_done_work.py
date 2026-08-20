@@ -527,6 +527,11 @@ def test_done_work_post_ci_bypass_audit_idempotent(dw, monkeypatch) -> None:
     assert not [c for c in captured if "comment" in c]
 
 
+# A sentinel distinguishing "caller said nothing about the issue" (use the
+# benign default) from "caller passed None" (simulate a failed fetch).
+_UNSET_ISSUE = object()
+
+
 # ---- flag split: --bypass vs --bypass-ci (#498) ----------------------
 #
 # `--bypass` clears ONLY the approval gate; the CI gate is overridable
@@ -536,7 +541,9 @@ def test_done_work_post_ci_bypass_audit_idempotent(dw, monkeypatch) -> None:
 # the helpers.
 
 
-def _wire_main_seams(dw, monkeypatch, *, rollup, gate_passed=True):
+def _wire_main_seams(
+    dw, monkeypatch, *, rollup, gate_passed=True, issue=_UNSET_ISSUE,
+):
     """Monkeypatch done-work's heavy seams so main() reaches the CI gate.
 
     Membership/session-guard/branch/PR resolution and the approval gate are
@@ -544,6 +551,12 @@ def _wire_main_seams(dw, monkeypatch, *, rollup, gate_passed=True):
     real `evaluate_ci_gate` decides. Returns a dict recording the merge and
     audit side-effects the CI-gate outcome drives (so a test can assert the
     red-CI-under-`--bypass`-only path never reaches the merge).
+
+    *issue* is what `_gh_get_issue` returns — the labels drive mode resolution
+    and the body drives the DEC-007 checkbox pre-flight. It defaults to a
+    label-less, checkbox-free issue, i.e. both are non-events; pass `None` to
+    simulate a failed fetch. The REAL checkbox gate runs in every case, so a
+    regression that lets an unticked box through shows up here.
     """
     calls = {"merged": False, "ci_audit": False, "approval_audit": False,
              "moved": False}
@@ -567,7 +580,10 @@ def _wire_main_seams(dw, monkeypatch, *, rollup, gate_passed=True):
         dw, "_find_pr_for_branch",
         lambda branch, config: {"number": 496, "title": "fix: x", "isDraft": False},
     )
-    monkeypatch.setattr(dw, "_gh_get_issue", lambda n, config: {"labels": []})
+    resolved_issue = (
+        {"labels": [], "body": ""} if issue is _UNSET_ISSUE else issue
+    )
+    monkeypatch.setattr(dw, "_gh_get_issue", lambda n, config: resolved_issue)
     monkeypatch.setattr(
         dw, "resolve_mode",
         lambda config, issue_labels=None: type(
@@ -684,3 +700,149 @@ def test_green_ci_needs_no_bypass_ci(dw, monkeypatch):
     assert rc == 0
     assert calls["merged"] is True
     assert calls["ci_audit"] is False
+
+
+# ---- checkbox close-gate pre-flight (DEC-007, #734) ------------------
+#
+# The gate has to bite BEFORE the squash-merge: `Closes #N` auto-closes the
+# issue *on* merge, so a check afterwards reports a gate it already let
+# through. Every refusal test therefore asserts `calls["merged"] is False`
+# — that assertion, not the exit code, is what pins "before the merge".
+
+_UNTICKED_BODY = (
+    "## What\n\nFix the widget.\n\n"
+    "## Acceptance criteria\n\n"
+    "- [x] The widget stops wobbling.\n"
+    "- [ ] The regression test covers the wobble.\n"
+)
+_TICKED_BODY = (
+    "## What\n\nFix the widget.\n\n"
+    "## Acceptance criteria\n\n"
+    "- [x] The widget stops wobbling.\n"
+    "- [x] The regression test covers the wobble.\n"
+)
+_NO_BOXES_BODY = "## What\n\nBump a pinned dependency. No criteria to track.\n"
+
+
+def _issue(body: str) -> dict:
+    return {"labels": [], "body": body}
+
+
+def test_unticked_checkbox_refuses_before_the_merge(dw, monkeypatch, capsys):
+    """An unticked box refuses, names the box, and never reaches the merge."""
+    calls = _wire_main_seams(
+        dw, monkeypatch, rollup=_GREEN_ROLLUP, issue=_issue(_UNTICKED_BODY),
+    )
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+    assert rc == 1
+    assert calls["merged"] is False, (
+        "the checkbox gate must refuse BEFORE the squash-merge — GitHub's "
+        "`Closes #N` auto-closes the issue on merge, so a post-merge check "
+        "gates nothing (DEC-007)"
+    )
+    assert calls["moved"] is False
+    err = capsys.readouterr().err
+    assert "DEC-007 checkbox close-gate" in err
+    assert "The regression test covers the wobble" in err, (
+        "the refusal must list each unticked line"
+    )
+    assert "--skip-checkbox-gate" in err, "the refusal must name the remedy"
+    # The ticked box is not reported as outstanding.
+    assert "stops wobbling" not in err
+
+
+def test_all_boxes_ticked_merges(dw, monkeypatch):
+    """An issue with every box ticked merges exactly as before."""
+    calls = _wire_main_seams(
+        dw, monkeypatch, rollup=_GREEN_ROLLUP, issue=_issue(_TICKED_BODY),
+    )
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+    assert rc == 0
+    assert calls["merged"] is True
+    assert calls["moved"] is True
+
+
+def test_body_with_no_checkboxes_merges(dw, monkeypatch):
+    """DEC-007's rule applies only when boxes exist — a box-free body merges."""
+    calls = _wire_main_seams(
+        dw, monkeypatch, rollup=_GREEN_ROLLUP, issue=_issue(_NO_BOXES_BODY),
+    )
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+    assert rc == 0
+    assert calls["merged"] is True
+
+
+def test_skip_checkbox_gate_overrides_the_refusal(dw, monkeypatch):
+    """`--skip-checkbox-gate` merges an issue that would otherwise refuse."""
+    calls = _wire_main_seams(
+        dw, monkeypatch, rollup=_GREEN_ROLLUP, issue=_issue(_UNTICKED_BODY),
+    )
+    rc = _run_main(dw, monkeypatch, ["42", "--skip-checkbox-gate", "--yes"])
+    assert rc == 0
+    assert calls["merged"] is True
+
+
+def test_bypass_alone_does_not_clear_an_unticked_box(dw, monkeypatch, capsys):
+    """`--bypass` clears the approval gate only — it is not a checkbox skip.
+
+    Same posture as `--bypass` vs a red CI (#498): each gate has its own
+    deliberate override.
+    """
+    calls = _wire_main_seams(
+        dw, monkeypatch, rollup=_GREEN_ROLLUP, issue=_issue(_UNTICKED_BODY),
+    )
+    rc = _run_main(dw, monkeypatch, ["42", "--bypass", "reviewer away", "--yes"])
+    assert rc == 1
+    assert calls["merged"] is False
+    assert "--skip-checkbox-gate" in capsys.readouterr().err
+
+
+def test_unreadable_issue_body_fails_closed(dw, monkeypatch, capsys):
+    """A failed issue fetch refuses: an unverified gate is not a satisfied one."""
+    calls = _wire_main_seams(
+        dw, monkeypatch, rollup=_GREEN_ROLLUP, issue=None,
+    )
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+    assert rc == 1
+    assert calls["merged"] is False
+    err = capsys.readouterr().err
+    assert "could not be read" in err
+    assert "--skip-checkbox-gate" in err
+
+
+def test_checkbox_gate_outcome_is_reported_when_it_passes(dw, monkeypatch, capsys):
+    """A passing gate still prints its outcome — a silent gate is invisible.
+
+    Both passing paths are named, so a skipped gate shows in the transcript
+    rather than looking like a satisfied one.
+    """
+    _wire_main_seams(
+        dw, monkeypatch, rollup=_GREEN_ROLLUP, issue=_issue(_TICKED_BODY),
+    )
+    assert _run_main(dw, monkeypatch, ["42", "--yes"]) == 0
+    assert "checkbox-gate: all checkboxes ticked" in capsys.readouterr().out
+
+    _wire_main_seams(
+        dw, monkeypatch, rollup=_GREEN_ROLLUP, issue=_issue(_UNTICKED_BODY),
+    )
+    assert _run_main(dw, monkeypatch, ["42", "--skip-checkbox-gate", "--yes"]) == 0
+    assert "checkbox-gate: --skip-checkbox-gate" in capsys.readouterr().out
+
+
+def test_done_work_fetches_the_issue_body_for_the_gate(dw, monkeypatch):
+    """The pre-flight rides the EXISTING issue fetch — no extra round-trip.
+
+    Mode resolution already reads the issue's labels; the gate needs its body.
+    Both come from one `gh_get_issue` call, so the gate costs no extra request.
+    """
+    captured: list[str] = []
+
+    def fake_gh_get_issue(issue_number, config, *, fields):
+        captured.append(fields)
+        return {"labels": [], "body": ""}
+
+    monkeypatch.setattr(dw, "gh_get_issue", fake_gh_get_issue)
+    dw._gh_get_issue(42, {})
+    assert len(captured) == 1, "the gate must not add a second issue fetch"
+    requested = set(captured[0].split(","))
+    assert {"labels", "body"} <= requested

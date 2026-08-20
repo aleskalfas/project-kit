@@ -340,7 +340,9 @@ def _list_issues(config: dict[str, Any]) -> Any:
 
 def gate_checkboxes_ticked(issue_number: int) -> dict[str, Any]:
     """Deterministic close-gate (DEC-007): result=True iff the issue body has no
-    unticked `- [ ]` checkbox. Lifts close-issue / merge-pr's `_unticked_boxes`.
+    unticked `- [ ]` checkbox. Reads the rule from `_lib.checkbox_gate`, the one
+    home close-issue / done-work / merge-pr also refuse on, so the engine's
+    verdict cannot drift from the commands'.
     """
     capability_root = _capability_root()
     if capability_root is None:
