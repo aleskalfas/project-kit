@@ -252,6 +252,86 @@ def test_parse_rule_unsupported_axis(rc) -> None:
     assert any("unsupported axis" in e.message for e in errors)
 
 
+def test_parse_type_axis_rule(rc) -> None:
+    # `type` is now a keyable axis (DEC-032 amendment).
+    data = {
+        "contributions": [
+            {"match": {"type": "feature"}, "reviewer": "code-reviewer"},
+        ]
+    }
+    rules, errors = rc.parse_contributions(data, "software-engineering")
+    assert errors == ()
+    assert dict(rules[0].predicate) == {"type": ("feature",)}
+
+
+def test_parse_wildcard_axis_present(rc) -> None:
+    # `<axis>: "*"` parses to the MATCH_ANY sentinel (axis-present).
+    data = {
+        "contributions": [
+            {"match": {"type": "*"}, "reviewer": "code-reviewer"},
+        ]
+    }
+    rules, errors = rc.parse_contributions(data, "cap")
+    assert errors == ()
+    assert rules[0].predicate["type"] is rc.MATCH_ANY
+
+
+def test_parse_wildcard_inside_list_is_literal(rc) -> None:
+    # A `"*"` inside a list is a literal value, not the wildcard.
+    data = {
+        "contributions": [
+            {"match": {"workstream": ["design", "*"]}, "reviewer": "r"},
+        ]
+    }
+    rules, errors = rc.parse_contributions(data, "cap")
+    assert errors == ()
+    assert dict(rules[0].predicate) == {"workstream": ("design", "*")}
+
+
+def test_parse_floor_rule(rc) -> None:
+    # A floor-only rule: no `match`, a valid `floor`, a reviewer.
+    data = {
+        "contributions": [
+            {"floor": "touches-code", "reviewer": "code-reviewer"},
+        ]
+    }
+    rules, errors = rc.parse_contributions(data, "software-engineering")
+    assert errors == ()
+    assert len(rules) == 1
+    assert rules[0].floor == rc.FLOOR_TOUCHES_CODE
+    assert dict(rules[0].predicate) == {}
+
+
+def test_parse_match_and_floor_together(rc) -> None:
+    data = {
+        "contributions": [
+            {
+                "match": {"type": "feature"},
+                "floor": "touches-code",
+                "reviewer": "code-reviewer",
+            },
+        ]
+    }
+    rules, errors = rc.parse_contributions(data, "cap")
+    assert errors == ()
+    assert dict(rules[0].predicate) == {"type": ("feature",)}
+    assert rules[0].floor == rc.FLOOR_TOUCHES_CODE
+
+
+def test_parse_rule_without_match_or_floor_is_malformed(rc) -> None:
+    data = {"contributions": [{"reviewer": "r"}]}
+    rules, errors = rc.parse_contributions(data, "cap")
+    assert rules == ()
+    assert any("`match` predicate, a `floor`, or both" in e.message for e in errors)
+
+
+def test_parse_unknown_floor_kind_is_malformed(rc) -> None:
+    data = {"contributions": [{"floor": "touches-secrets", "reviewer": "r"}]}
+    rules, errors = rc.parse_contributions(data, "cap")
+    assert rules == ()
+    assert any("floor must be one of" in e.message for e in errors)
+
+
 def test_parse_mixed_good_and_bad_rules(rc) -> None:
     data = {
         "contributions": [
@@ -520,6 +600,42 @@ def test_reviewers_for_issues_empty_is_baseline_only(rc) -> None:
         )
     )
     assert collection.reviewers_for_issues([]) == ()
+
+
+def test_reviewers_for_wildcard_matches_any_value(rc) -> None:
+    collection = rc.ContributionCollection(
+        rules=(rc.ContributionRule("se", {"type": rc.MATCH_ANY}, "code-reviewer"),)
+    )
+    assert collection.reviewers_for({"type": "feature"})[0].reviewer == "code-reviewer"
+    assert collection.reviewers_for({"type": "docs"})[0].reviewer == "code-reviewer"
+    # Axis-present: an entity with no `type` matches nothing.
+    assert collection.reviewers_for({"workstream": "design"}) == ()
+    assert collection.reviewers_for({}) == ()
+
+
+def test_reviewers_for_skips_floor_only_rule(rc) -> None:
+    # A floor-only rule (empty predicate) must NOT vacuously match every
+    # classification through reviewers_for.
+    collection = rc.ContributionCollection(
+        rules=(
+            rc.ContributionRule("se", {}, "code-reviewer", floor=rc.FLOOR_TOUCHES_CODE),
+        )
+    )
+    assert collection.reviewers_for({"type": "feature"}) == ()
+    assert collection.reviewers_for({}) == ()
+
+
+def test_reviewers_for_floors_matches_satisfied_kind(rc) -> None:
+    collection = rc.ContributionCollection(
+        rules=(
+            rc.ContributionRule("se", {}, "code-reviewer", floor=rc.FLOOR_TOUCHES_CODE),
+            rc.ContributionRule("a", {"workstream": ("design",)}, "design-reviewer"),
+        )
+    )
+    matched = collection.reviewers_for_floors({rc.FLOOR_TOUCHES_CODE})
+    assert tuple(r.reviewer for r in matched) == ("code-reviewer",)
+    # No satisfied floors → no floor rules.
+    assert collection.reviewers_for_floors(set()) == ()
 
 
 def test_reviewers_for_issues_preserves_unsatisfiable_rule(rc) -> None:

@@ -73,10 +73,11 @@ Exports (the types #145/#146/#147 import):
     ContributionError       — frozen dataclass: kind + capability + message
                               (re-exported from contribution_collector)
     ContributionRule        — frozen dataclass: capability, predicate,
-                              reviewer, deployed, resolution_error
+                              reviewer, floor, deployed, resolution_error
     ContributionCollection  — frozen dataclass: rules + errors + walked,
                               with `ok` / `has_blocking_errors` /
-                              `reviewers_for` / `reviewers_for_issues`
+                              `reviewers_for` / `reviewers_for_issues` /
+                              `reviewers_for_floors`
     CONTRIBUTIONS_FILENAME  — the per-capability declaration filename
     parse_contributions(data, capability) -> tuple[rules, errors]
     list_registered_capabilities(manifest_data) -> tuple[str, ...]
@@ -110,10 +111,57 @@ except ImportError:  # pragma: no cover - exercised via spec-loaded fallback
 # The declaration a contributing capability ships at its own root.
 CONTRIBUTIONS_FILENAME = "review-contributions.yaml"
 
-# Classification axes a `match` predicate may key on (per DEC-012). Only
-# `workstream` is specified at v1 (DEC-032 D2); the set is the single
-# place to widen when a second axis is added.
-SUPPORTED_MATCH_AXES = ("workstream",)
+# Classification axes a `match` predicate may key on (per DEC-012). Both are
+# `mutually_exclusive` in `classification.yaml`, so the single-value-per-axis
+# read (and the resolver's per-axis multi-value guard) generalise cleanly. The
+# DEC-032 amendment (2026-08-20) added `type` alongside `workstream`; this tuple
+# is the single place to widen when a further mutually-exclusive axis is keyed.
+SUPPORTED_MATCH_AXES = ("workstream", "type")
+
+# The wildcard / axis-present token a `match.<axis>` value may carry (DEC-032
+# amendment). A rule matching EVERY value of an axis writes `<axis>: "*"` rather
+# than enumerating the fixed value set — forward-safe if a value is added later
+# (enumerating would silently drop the rule for the new value). A `"*"` scalar
+# parses to the `MATCH_ANY` sentinel; `"*"` inside a list is a literal value.
+WILDCARD_TOKEN = "*"
+
+# Diff-property floor kinds a rule may carry (DEC-032 amendment). A floor keys on
+# the PR's *diff*, not a closing issue's classification, so it backstops D1's
+# classification gate-escape for a floor-carrying reviewer. Only one kind exists
+# now — `touches-code` (the diff touches non-documentation source). The tuple is
+# the single place to widen; the collector validates a rule's floor against it.
+FLOOR_TOUCHES_CODE = "touches-code"
+SUPPORTED_FLOORS = (FLOOR_TOUCHES_CODE,)
+
+
+class _MatchAny:
+    """Sentinel: a wildcard axis predicate — matches ANY value present on the axis.
+
+    A distinct singleton (not a string, not a tuple) so predicate-matching can
+    tell "match every value of this axis" apart from an enumerated value tuple.
+    Axis-*present* semantics: a `MATCH_ANY` axis matches a classification that
+    carries some value for that axis, and matches NOTHING when the axis is absent
+    (a sub-task / Milestone carrying no classification stays baseline-only per
+    DEC-032 D1 — the wildcard widens across an axis's values, it does not fire on
+    an entity that lacks the axis).
+    """
+
+    _instance: "_MatchAny | None" = None
+
+    def __new__(cls) -> "_MatchAny":
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __repr__(self) -> str:  # pragma: no cover - trivial
+        return "<review_contributions.MATCH_ANY>"
+
+
+MATCH_ANY: _MatchAny = _MatchAny()
+
+# A parsed `match.<axis>` predicate value: either the tuple of accepted values
+# (OR within the axis) or the `MATCH_ANY` wildcard sentinel.
+AxisMatch = "tuple[str, ...] | _MatchAny"
 
 # Error kinds a consumer can branch on (structured, not string-matched). The
 # two kind-agnostic classes come from the shared core (one definition); the
@@ -136,11 +184,21 @@ class ContributionRule:
     """One reviewer-contribution rule resolved from a capability.
 
     `predicate` is the classification match — a read-only mapping of axis
-    name to the tuple of accepted values (OR within an axis). A rule
-    matches a closing issue when, for every axis in `predicate`, that
-    issue's classification carries one of the accepted values (multi-axis
-    is AND, per DEC-032). `capability` records which capability contributed
-    the rule, for provenance in error messages and diagnostics.
+    name to either the tuple of accepted values (OR within an axis) or the
+    `MATCH_ANY` wildcard sentinel (axis-present). A rule matches a closing
+    issue when, for every axis in `predicate`, that issue's classification
+    carries one of the accepted values — or, for a `MATCH_ANY` axis, carries
+    any value at all (multi-axis is AND, per DEC-032). An *empty* predicate is
+    NOT a classification rule: it matches no classification (see
+    `reviewers_for`); a floor-only rule carries an empty predicate and its
+    `floor`. `capability` records which capability contributed the rule, for
+    provenance in error messages and diagnostics.
+
+    `floor` is the optional diff-property floor kind (one of `SUPPORTED_FLOORS`,
+    or `None`). A floor-carrying rule requires its reviewer whenever the PR's
+    *diff* satisfies the floor — independent of classification — matched via
+    `reviewers_for_floors`, not `reviewers_for`. A rule may carry a classification
+    predicate, a floor, or both.
 
     `deployed` records whether the contributed `reviewer` resolved to a
     deployed agent file. A rule with `deployed=False` is an *unsatisfiable
@@ -150,8 +208,9 @@ class ContributionRule:
     """
 
     capability: str
-    predicate: Mapping[str, tuple[str, ...]]
+    predicate: Mapping[str, "tuple[str, ...] | _MatchAny"]
     reviewer: str
+    floor: str | None = None
     deployed: bool = True
     resolution_error: ContributionError | None = None
 
@@ -161,10 +220,12 @@ class ContributionCollection:
     """Outcome of collecting reviewer contributions across capabilities.
 
     `rules` is the resolution structure siblings consume: each entry pairs
-    a match-predicate with a required reviewer (plus provenance and
-    resolution status). The gate-checker filters `rules` by predicate-match
-    against a PR's closing-issue classifications; `review-pr` invokes the
-    matched set. A rule whose reviewer is undeployed is present with
+    a classification match-predicate and/or a diff-property floor with a
+    required reviewer (plus provenance and resolution status). The gate-checker
+    filters `rules` by predicate-match against a PR's closing-issue
+    classifications (`reviewers_for_issues`) AND by satisfied floor kinds
+    against the PR's diff (`reviewers_for_floors`); `review-pr` invokes the
+    unioned matched set. A rule whose reviewer is undeployed is present with
     `deployed=False` (see the module docstring's fail-closed seam) — it is
     NOT absent, so consumers cannot silently weaken the gate by reading
     only `rules`.
@@ -212,16 +273,44 @@ class ContributionCollection:
 
         A rule matches when, for every axis in its predicate, the
         classification's value for that axis is one of the rule's accepted
-        values. A predicate keyed on an axis absent from `classification`
-        matches nothing (DEC-032 D1: an entity carrying no `workstream`
-        axis matches nothing → baseline only). Deduplicated by reviewer
-        name (first matching rule per reviewer wins); order follows first
-        appearance in `rules` for determinism.
+        values (or, for a `MATCH_ANY` wildcard axis, the classification
+        carries any value on that axis). A predicate keyed on an axis absent
+        from `classification` matches nothing (DEC-032 D1: an entity carrying
+        no such axis matches nothing → baseline only). A rule with an *empty*
+        predicate (a floor-only rule) is NOT matched here — floor rules resolve
+        via `reviewers_for_floors`, and an empty predicate must not vacuously
+        match every classification. Deduplicated by reviewer name (first
+        matching rule per reviewer wins); order follows first appearance in
+        `rules` for determinism.
         """
         return self._dedup_by_reviewer(
             rule
             for rule in self.rules
-            if _predicate_matches(rule.predicate, classification)
+            if rule.predicate and _predicate_matches(rule.predicate, classification)
+        )
+
+    def reviewers_for_floors(
+        self, satisfied_floors: "Iterable[str]"
+    ) -> tuple[ContributionRule, ...]:
+        """Rules whose diff-property floor is in `satisfied_floors` (DEC-032 amendment).
+
+        The diff-keyed counterpart to `reviewers_for`. `satisfied_floors` is the
+        set of floor kinds the PR's *diff* satisfies (the resolver evaluates the
+        diff → property mapping; this seam stays purely structural, matching a
+        rule's declared `floor` against that set). A floor-carrying rule is
+        required whenever its floor kind is satisfied, regardless of the closing
+        issues' classification — so a diff that touches code pulls in a
+        floor-carrying reviewer even for a `type:docs` / unclassified PR (D1's
+        classification gate-escape, backstopped for floor-carrying reviewers).
+
+        Deduplicated by reviewer name for determinism; matches the semantics of
+        `reviewers_for` so the resolver can union the two result sets.
+        """
+        satisfied = set(satisfied_floors)
+        return self._dedup_by_reviewer(
+            rule
+            for rule in self.rules
+            if rule.floor is not None and rule.floor in satisfied
         )
 
     def reviewers_for_issues(
@@ -262,18 +351,25 @@ class ContributionCollection:
 
 
 def _predicate_matches(
-    predicate: Mapping[str, tuple[str, ...]],
+    predicate: Mapping[str, "tuple[str, ...] | _MatchAny"],
     classification: Mapping[str, str],
 ) -> bool:
     """True when every axis in `predicate` holds in `classification`.
 
     Within an axis the accepted values are OR-ed (the classification's
     value need only be one of them); across axes the predicate is AND-ed
-    (every axis must hold). An axis absent from `classification` fails the
-    predicate (its `.get` is None, in no value-tuple).
+    (every axis must hold). A `MATCH_ANY` wildcard axis holds iff the
+    classification carries any value on that axis (axis-present). An axis
+    absent from `classification` fails the predicate — both for an enumerated
+    tuple (its `.get` is None, in no value-tuple) and for `MATCH_ANY` (a
+    missing value is not "any value present").
     """
     for axis, accepted in predicate.items():
-        if classification.get(axis) not in accepted:
+        value = classification.get(axis)
+        if accepted is MATCH_ANY:
+            if value is None:
+                return False
+        elif value not in accepted:
             return False
     return True
 
@@ -288,11 +384,14 @@ def parse_contributions(
     used both as rule provenance and to tag/prefix errors.
 
     `data` is expected to be a mapping shaped
-    `{schema_version: int, contributions: [ {match: {...}, reviewer: str}, ... ]}`.
-    Each `match.<axis>` value may be a scalar string OR a list of strings
-    (OR within the axis). `None` (absent/empty file) yields no rules and no
-    errors — a capability that ships no declaration contributes nothing,
-    which is not an error.
+    `{schema_version: int, contributions: [ {match: {...}, floor: str, reviewer: str}, ... ]}`.
+    Each `match.<axis>` value may be a scalar string, the `"*"` wildcard
+    (axis-present — matches every value of that axis), OR a list of strings
+    (OR within the axis). A rule may carry a classification `match`, a
+    diff-property `floor` (one of `SUPPORTED_FLOORS`), or both — but at least
+    one of the two. `None` (absent/empty file) yields no rules and no errors —
+    a capability that ships no declaration contributes nothing, which is not
+    an error.
 
     Does NOT check the deployed-agent constraint — that needs filesystem
     access and lives in `collect_contributions`. This function validates
@@ -344,32 +443,35 @@ def _parse_rule(
     if not isinstance(item, dict):
         return None, [malformed(f"{where} must be a mapping, got {type(item).__name__}")]
 
-    match = item.get("match")
-    if not isinstance(match, dict) or not match:
-        return None, [malformed(f"{where}.match must be a non-empty mapping")]
-
-    predicate: dict[str, tuple[str, ...]] = {}
     errors: list[ContributionError] = []
-    for axis, raw in match.items():
-        if axis not in SUPPORTED_MATCH_AXES:
-            errors.append(
-                malformed(
-                    f"{where}.match: unsupported axis {axis!r} "
-                    f"(supported at v1: {', '.join(SUPPORTED_MATCH_AXES)})"
-                )
-            )
-            continue
-        values = _parse_match_values(raw, where, axis, errors, malformed)
-        if values:
-            predicate[axis] = values
+
+    # A rule must declare a classification `match`, a diff-property `floor`, or
+    # both — but at least one of the two (else it requires its reviewer never).
+    match = item.get("match")
+    floor = item.get("floor")
+    if match is None and floor is None:
+        return None, [
+            malformed(f"{where} must declare a `match` predicate, a `floor`, or both")
+        ]
+
+    predicate: dict[str, tuple[str, ...] | _MatchAny] = {}
+    if match is not None:
+        if not isinstance(match, dict) or not match:
+            errors.append(malformed(f"{where}.match must be a non-empty mapping"))
+        else:
+            predicate = _parse_match(match, where, errors, malformed)
+
+    floor_kind = _parse_floor(floor, where, errors, malformed)
 
     reviewer = item.get("reviewer")
     if not isinstance(reviewer, str) or not reviewer:
         errors.append(malformed(f"{where}.reviewer must be a non-empty string"))
 
-    # Only emit a rule when the entry is fully well-formed; a partially
-    # broken entry surfaces its errors and contributes no (silent) rule.
-    if errors or not predicate or not isinstance(reviewer, str) or not reviewer:
+    # A well-formed rule needs a usable requirement to key on: a non-empty
+    # classification predicate OR a floor. Only emit when fully well-formed; a
+    # partially broken entry surfaces its errors and contributes no silent rule.
+    usable = bool(predicate) or floor_kind is not None
+    if errors or not usable or not isinstance(reviewer, str) or not reviewer:
         return None, errors
 
     return (
@@ -377,9 +479,61 @@ def _parse_rule(
             capability=capability,
             predicate=MappingProxyType(predicate),
             reviewer=reviewer,
+            floor=floor_kind,
         ),
         errors,
     )
+
+
+def _parse_match(
+    match: dict,
+    where: str,
+    errors: list[ContributionError],
+    malformed: Callable[[str], ContributionError],
+) -> dict[str, tuple[str, ...] | _MatchAny]:
+    """Validate a rule's `match` mapping into a predicate (axis → values / MATCH_ANY)."""
+    predicate: dict[str, tuple[str, ...] | _MatchAny] = {}
+    for axis, raw in match.items():
+        if axis not in SUPPORTED_MATCH_AXES:
+            errors.append(
+                malformed(
+                    f"{where}.match: unsupported axis {axis!r} "
+                    f"(supported: {', '.join(SUPPORTED_MATCH_AXES)})"
+                )
+            )
+            continue
+        if raw == WILDCARD_TOKEN:
+            # `<axis>: "*"` — the wildcard / axis-present predicate. Matches every
+            # value of the axis without enumerating the fixed set (forward-safe).
+            predicate[axis] = MATCH_ANY
+            continue
+        values = _parse_match_values(raw, where, axis, errors, malformed)
+        if values:
+            predicate[axis] = values
+    return predicate
+
+
+def _parse_floor(
+    floor: Any,
+    where: str,
+    errors: list[ContributionError],
+    malformed: Callable[[str], ContributionError],
+) -> str | None:
+    """Validate a rule's optional `floor` against `SUPPORTED_FLOORS`.
+
+    `None` (no floor declared) is valid — the rule keys on classification only.
+    A non-string or unknown floor kind appends an error and yields `None`.
+    """
+    if floor is None:
+        return None
+    if not isinstance(floor, str) or floor not in SUPPORTED_FLOORS:
+        errors.append(
+            malformed(
+                f"{where}.floor must be one of: {', '.join(SUPPORTED_FLOORS)}"
+            )
+        )
+        return None
+    return floor
 
 
 def _parse_match_values(

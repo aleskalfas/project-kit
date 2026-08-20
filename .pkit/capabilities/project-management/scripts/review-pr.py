@@ -89,6 +89,7 @@ from _lib.membership import (  # noqa: E402
 )
 from _lib.closing_issue_fetchers import (  # noqa: E402
     issue_labels as _issue_labels_fetch,
+    pr_changed_files as _pr_changed_files_fetch,
     pr_closing_issue_numbers as _pr_closing_issue_numbers_fetch,
 )
 from _lib.required_reviewers import (  # noqa: E402
@@ -443,7 +444,8 @@ def _resolve_required_local(
 
     Delegates to `_lib.required_reviewers.resolve_required_local_reviewers` —
     the SAME resolution `done-work`'s gate-checker calls — wiring in this
-    script's own `gh`-backed closing-issue and label fetchers. Because both
+    script's own `gh`-backed closing-issue, label, and changed-files fetchers.
+    Because both
     consumers go through one helper, the set this command invokes equals the
     set the gate later checks (DEC-032 D4, no divergence). Returns a
     `Resolution`; a non-ok result aborts (fail-closed, DEC-032 D5).
@@ -467,6 +469,9 @@ def _resolve_required_local(
         ),
         issue_labels=lambda n: _issue_labels_fetch(
             n, config, gh_get_issue=gh_get_issue
+        ),
+        changed_files=lambda n: _pr_changed_files_fetch(
+            n, config, gh_run=gh_run
         ),
         collect_contributions=collect_contributions,
     )

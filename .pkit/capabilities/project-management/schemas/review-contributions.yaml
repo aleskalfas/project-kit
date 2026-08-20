@@ -31,18 +31,33 @@
 
 schema_version: 1
 
-# `contributions` is a list of rules. Each rule pairs a `match`
-# predicate (keyed on classification axes — `workstream` is the axis
-# specified at v1) with the `reviewer` agent name required when the
-# predicate matches a closing issue's classification.
+# `contributions` is a list of rules. Each rule requires a `reviewer`
+# agent name plus at least one of two predicate kinds — a classification
+# `match` and/or a diff-property `floor` — and may carry both:
 #
-# A `match.<axis>` value may be a single string OR a list of strings:
+#   * `match` — keyed on classification axes (DEC-012). `workstream` and
+#     `type` are supported (both mutually_exclusive, so single-valued per
+#     issue). The rule's reviewer is required when the predicate matches a
+#     closing issue's classification.
+#   * `floor` — keyed on the PR's DIFF, not the closing issue. The rule's
+#     reviewer is required whenever the diff matches the property, even for
+#     an unclassified / `type:docs` PR. One floor kind: `touches-code`
+#     (the diff touches any non-documentation file). The floor backstops
+#     the classification gate-escape for a code-review reviewer.
+#
+# A `match.<axis>` value may be a single string, the `"*"` wildcard, OR a
+# list of strings:
 #   * scalar  → the rule matches that one value.
+#   * "*"     → the rule matches EVERY value of the axis (axis-present).
+#               Forward-safe versus enumerating a fixed value set — if a
+#               new value is added to the axis, a `"*"` rule still fires.
 #   * list    → the rule matches if the issue's value is ANY listed one
-#               (OR *within* an axis).
+#               (OR *within* an axis). A `"*"` inside a list is a literal
+#               value, not the wildcard.
 # Multiple axes in one `match` are AND-composed (every axis must hold).
 # Per DEC-032 D1 the required set across multiple closing issues is the
-# UNION of each issue's matched rules — pm's collector owns that union.
+# UNION of each issue's matched rules (∪ the floor-matched rules) — pm's
+# collector owns that union.
 #
 # Activation is install-driven (DEC-032 D5): the mere presence of this
 # file under a manifest-registered capability activates its rules. An
@@ -77,3 +92,18 @@ contributions:
   - match:
       workstream: accessibility
     reviewer: a11y-reviewer
+
+  # `type`-axis match: every non-docs `type` requires `code-reviewer`. The
+  # `"*"` wildcard matches EVERY value of the axis without enumerating the
+  # fixed set — forward-safe if a new `type` value is ever added.
+  - match:
+      type: "*"
+    reviewer: code-reviewer
+
+  # Diff-property FLOOR: require `code-reviewer` whenever the diff touches
+  # code, independent of classification. This backstops the classification
+  # gate-escape — a code-touching PR filed against a `type:docs` issue (or
+  # an unclassified sub-task) still pulls in the reviewer. A rule may carry
+  # a `floor`, a `match`, or both.
+  - floor: touches-code
+    reviewer: code-reviewer

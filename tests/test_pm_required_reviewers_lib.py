@@ -79,15 +79,25 @@ def _design_collection(rc, *, deployed=True):
     )
 
 
-def _resolve(rr, *, baseline, collection, closing, labels=None, refs_unresolvable=None):
+def _resolve(
+    rr, *, baseline, collection, closing, labels=None, refs_unresolvable=None,
+    changed=None, files_unresolvable=None,
+):
     """Drive resolve_required_local_reviewers with injected fetchers.
 
     `closing` is the issue-number list the PR closes (or, if
     `refs_unresolvable` is set, that `_Unresolvable` is returned instead).
     `labels` maps issue number → label-name list; an issue absent from it
     whose number is in a `None`-marked set resolves labels to None.
+
+    `changed` is the PR's changed-file path list the diff-property floor sees
+    (default empty → touches nothing); `files_unresolvable`, when set, makes
+    the changed-files fetcher return that `_Unresolvable` instead. The resolver
+    only calls the changed-files fetcher when the collection carries a floor
+    rule, so floor-free scenarios never exercise it.
     """
     labels = labels or {}
+    changed = changed or []
 
     def closing_fn(pr):
         if refs_unresolvable is not None:
@@ -100,12 +110,18 @@ def _resolve(rr, *, baseline, collection, closing, labels=None, refs_unresolvabl
             return None
         return [{"name": n} for n in val]
 
+    def changed_fn(pr):
+        if files_unresolvable is not None:
+            return rr._Unresolvable(files_unresolvable)
+        return list(changed)
+
     return rr.resolve_required_local_reviewers(
         99,
         baseline_local=baseline,
         repo_root=REPO,
         closing_issue_numbers=closing_fn,
         issue_labels=labels_fn,
+        changed_files=changed_fn,
         collect_contributions=lambda repo_root: collection,
     )
 
@@ -289,3 +305,260 @@ def test_collection_gated_before_closing_issues(rr, rc) -> None:
     )
     assert not res.ok
     assert res.error.kind == rr.ERROR_COLLECTION
+
+
+# ---- type-axis resolution (DEC-032 amendment) -------------------------
+
+
+def _type_collection(rc, *, values=("feature",), reviewer="code-reviewer"):
+    rule = rc.ContributionRule(
+        capability="software-engineering",
+        predicate=MappingProxyType({"type": tuple(values)}),
+        reviewer=reviewer,
+    )
+    return rc.ContributionCollection(rules=(rule,))
+
+
+def test_type_axis_match_adds_reviewer(rr, rc) -> None:
+    res = _resolve(
+        rr, baseline=["reviewer"],
+        collection=_type_collection(rc, values=("feature",)),
+        closing=[42],
+        labels={42: ["type:feature", "priority:High"]},
+    )
+    assert res.ok
+    assert res.required_local == ("reviewer", "code-reviewer")
+    assert res.contributed_by == {"code-reviewer": "software-engineering"}
+
+
+def test_type_axis_non_matching_baseline_only(rr, rc) -> None:
+    res = _resolve(
+        rr, baseline=["reviewer"],
+        collection=_type_collection(rc, values=("bug",)),
+        closing=[42],
+        labels={42: ["type:feature"]},
+    )
+    assert res.ok
+    assert res.required_local == ("reviewer",)
+
+
+def test_type_axis_no_type_label_baseline_only(rr, rc) -> None:
+    """An entity carrying no `type` axis matches nothing → baseline only."""
+    res = _resolve(
+        rr, baseline=["reviewer"],
+        collection=_type_collection(rc, values=("feature",)),
+        closing=[42],
+        labels={42: ["workstream:backend"]},
+    )
+    assert res.ok
+    assert res.required_local == ("reviewer",)
+
+
+def test_multi_type_label_fails_closed(rr, rc) -> None:
+    """`type` is mutually_exclusive; two values on one issue fail closed."""
+    res = _resolve(
+        rr, baseline=["reviewer"],
+        collection=_type_collection(rc, values=("feature",)),
+        closing=[42],
+        labels={42: ["type:feature", "type:bug"]},
+    )
+    assert not res.ok
+    assert res.error.kind == rr.ERROR_CLOSING_ISSUES
+    assert "multiple type" in res.error.message
+
+
+def test_type_and_workstream_both_read(rr, rc) -> None:
+    """Both axes are read into the classification a rule can AND-compose on."""
+    rule = rc.ContributionRule(
+        capability="cap",
+        predicate=MappingProxyType(
+            {"type": ("feature",), "workstream": ("design",)}
+        ),
+        reviewer="specialist",
+    )
+    matched = _resolve(
+        rr, baseline=["reviewer"],
+        collection=rc.ContributionCollection(rules=(rule,)),
+        closing=[42],
+        labels={42: ["type:feature", "workstream:design"]},
+    )
+    assert matched.required_local == ("reviewer", "specialist")
+    # Missing one axis → the AND-composed predicate no longer holds.
+    only_type = _resolve(
+        rr, baseline=["reviewer"],
+        collection=rc.ContributionCollection(rules=(rule,)),
+        closing=[42],
+        labels={42: ["type:feature"]},
+    )
+    assert only_type.required_local == ("reviewer",)
+
+
+# ---- wildcard / axis-present predicate (DEC-032 amendment) -------------
+
+
+def _wildcard_type_collection(rc, *, reviewer="code-reviewer"):
+    rule = rc.ContributionRule(
+        capability="software-engineering",
+        predicate={"type": rc.MATCH_ANY},
+        reviewer=reviewer,
+    )
+    return rc.ContributionCollection(rules=(rule,))
+
+
+def test_wildcard_matches_every_type_value(rr, rc) -> None:
+    for value in ("feature", "bug", "docs", "refactor"):
+        res = _resolve(
+            rr, baseline=["reviewer"],
+            collection=_wildcard_type_collection(rc),
+            closing=[42],
+            labels={42: [f"type:{value}"]},
+        )
+        assert res.ok
+        assert res.required_local == ("reviewer", "code-reviewer"), value
+
+
+def test_wildcard_requires_axis_present(rr, rc) -> None:
+    """A wildcard is axis-present: an entity with no `type` axis matches nothing."""
+    res = _resolve(
+        rr, baseline=["reviewer"],
+        collection=_wildcard_type_collection(rc),
+        closing=[42],
+        labels={42: ["workstream:design"]},
+    )
+    assert res.ok
+    assert res.required_local == ("reviewer",)
+
+
+# ---- diff-property floor (DEC-032 amendment) --------------------------
+
+
+def _floor_collection(rc, *, reviewer="code-reviewer"):
+    rule = rc.ContributionRule(
+        capability="software-engineering",
+        predicate={},  # floor-only rule — no classification predicate.
+        reviewer=reviewer,
+        floor=rc.FLOOR_TOUCHES_CODE,
+    )
+    return rc.ContributionCollection(rules=(rule,))
+
+
+def test_floor_fires_on_code_diff_for_docs_issue(rr, rc) -> None:
+    """A code-touching diff pulls in the floor reviewer even for `type:docs`."""
+    res = _resolve(
+        rr, baseline=["reviewer"],
+        collection=_floor_collection(rc),
+        closing=[42],
+        labels={42: ["type:docs"]},
+        changed=["src/app.py", "README.md"],
+    )
+    assert res.ok
+    assert res.required_local == ("reviewer", "code-reviewer")
+
+
+def test_floor_fires_on_code_diff_for_unclassified_pr(rr, rc) -> None:
+    """No closing issue at all: the floor still fires on a code diff."""
+    res = _resolve(
+        rr, baseline=["reviewer"],
+        collection=_floor_collection(rc),
+        closing=[],
+        changed=["scripts/run.sh"],
+    )
+    assert res.ok
+    assert res.required_local == ("reviewer", "code-reviewer")
+
+
+def test_floor_silent_on_docs_only_diff(rr, rc) -> None:
+    res = _resolve(
+        rr, baseline=["reviewer"],
+        collection=_floor_collection(rc),
+        closing=[42],
+        labels={42: ["type:feature"]},
+        changed=["README.md", "docs/guide.rst", "docs/img/diagram.png"],
+    )
+    assert res.ok
+    assert res.required_local == ("reviewer",)
+
+
+def test_floor_only_collection_does_not_fetch_diff_when_no_floor(rr, rc) -> None:
+    """A floor-free collection never calls the changed-files fetcher.
+
+    `files_unresolvable` would fail closed IF the fetcher were called; the
+    resolver must not call it when no rule carries a floor.
+    """
+    res = _resolve(
+        rr, baseline=["reviewer"],
+        collection=_design_collection(rc),  # classification-only rule.
+        closing=[42],
+        labels={42: ["workstream:design"]},
+        files_unresolvable="gh boom (must not be reached)",
+    )
+    assert res.ok
+    assert res.required_local == ("reviewer", "design-reviewer")
+
+
+def test_floor_fails_closed_when_diff_unresolvable(rr, rc) -> None:
+    res = _resolve(
+        rr, baseline=["reviewer"],
+        collection=_floor_collection(rc),
+        closing=[42],
+        labels={42: ["type:feature"]},
+        files_unresolvable="gh files failed",
+    )
+    assert not res.ok
+    assert res.error.kind == rr.ERROR_CHANGED_FILES
+    assert "gh files failed" in res.error.message
+
+
+def test_floor_and_classification_dedup_same_reviewer(rr, rc) -> None:
+    """A reviewer required by both a classification rule and a floor is once."""
+    class_rule = rc.ContributionRule(
+        capability="software-engineering",
+        predicate=MappingProxyType({"type": ("feature",)}),
+        reviewer="code-reviewer",
+    )
+    floor_rule = rc.ContributionRule(
+        capability="software-engineering",
+        predicate={},
+        reviewer="code-reviewer",
+        floor=rc.FLOOR_TOUCHES_CODE,
+    )
+    res = _resolve(
+        rr, baseline=["reviewer"],
+        collection=rc.ContributionCollection(rules=(class_rule, floor_rule)),
+        closing=[42],
+        labels={42: ["type:feature"]},
+        changed=["src/app.py"],
+    )
+    assert res.ok
+    assert res.required_local == ("reviewer", "code-reviewer")
+
+
+# ---- diff_touches_code predicate (the design point) -------------------
+
+
+@pytest.mark.parametrize(
+    "path,is_code",
+    [
+        ("src/app.py", True),
+        ("config/settings.yaml", True),
+        ("data.json", True),
+        ("scripts/run.sh", True),
+        ("bin/tool", True),  # extensionless executable.
+        ("README.md", False),
+        ("docs/guide.rst", False),
+        ("notes.txt", False),
+        ("CHANGELOG.mdx", False),
+        ("docs/img/diagram.png", False),  # non-md file UNDER a docs/ dir.
+        ("app/docs.py", True),  # a file merely NAMED docs is code.
+    ],
+)
+def test_diff_touches_code_per_file(rr, path, is_code) -> None:
+    assert rr.diff_touches_code([path]) is is_code
+
+
+def test_diff_touches_code_empty_is_false(rr) -> None:
+    assert rr.diff_touches_code([]) is False
+
+
+def test_diff_touches_code_mixed_is_true(rr) -> None:
+    assert rr.diff_touches_code(["README.md", "src/app.py"]) is True

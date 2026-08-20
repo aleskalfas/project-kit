@@ -20,32 +20,42 @@ If `review-pr` resolved a different set than the gate, a developer could run
 invoke-set == gate-set by construction.
 
 The collector (`_lib.review_contributions`) already owns the
-manifest-walk + per-issue union (`reviewers_for_issues`). This module adds
-the layer above it the two consumers share:
+manifest-walk + per-issue union (`reviewers_for_issues`) and the floor-match
+seam (`reviewers_for_floors`). This module adds the layer above it the two
+consumers share:
 
-  * fetching the PR's closing-issue classifications (the `gh` round-trips),
+  * fetching the PR's closing-issue classifications — keyed on the
+    `workstream` and `type` axes (DEC-032 amendment) — and, when a
+    floor-carrying contribution is installed, the PR's changed files (the
+    `gh` round-trips),
   * the fail-closed distinction between "PR closes no classified issue"
     (legitimate baseline-only) and "could not determine what the PR closes"
     (UNKNOWN → fail closed) — the `Unresolvable` sentinel,
   * unioning the baseline local names with the matched contributed reviewers
-    and de-duplicating, preserving baseline-first order.
+    (classification-matched ∪ floor-matched) and de-duplicating, preserving
+    baseline-first order.
 
 Fail-closed posture (DEC-032 D5)
 --------------------------------
 
-Resolution can fail in two structurally distinct ways, and the result type
-makes a consumer handle both before reading the set:
+Resolution can fail in three structurally distinct ways, and the result type
+makes a consumer handle each before reading the set:
 
   * **collection not ok** — a malformed contribution declaration or an
     installed contribution naming an undeployed agent. The collection's
     errors are surfaced; the required set is unsatisfiable, not smaller.
   * **closing-issue resolution unresolvable** — a transient `gh` failure
     resolving `closingIssuesReferences`, malformed JSON, an unreadable
-    closing issue's labels, or invalid multi-workstream label data. Ground
-    truth for *what the PR closes* is unknown, so a contributed reviewer it
-    might require cannot be dropped.
+    closing issue's labels, or invalid multi-value data on a
+    mutually-exclusive axis. Ground truth for *what the PR closes* is
+    unknown, so a contributed reviewer it might require cannot be dropped.
+  * **changed-files resolution unresolvable** — a transient `gh` failure
+    determining the PR's diff *while a floor-carrying contribution is
+    installed*. Ground truth for *what the diff touches* is unknown, so a
+    floor reviewer it might require cannot be dropped. A floor-free collection
+    never fetches the diff, so this failure is unreachable there.
 
-Both collapse to `Resolution.ok is False` with a structured `error` the
+All collapse to `Resolution.ok is False` with a structured `error` the
 consumer turns into its own refusal / error message. An *empty* contributed
 set with `ok is True` is the legitimate baseline-only branch (DEC-032 D1),
 distinct from either failure.
@@ -60,7 +70,7 @@ own already-imported `gh` helpers.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Callable
 
 from _lib import axis_labels
@@ -69,21 +79,27 @@ try:
     from _lib.review_contributions import (
         ContributionCollection,
         ContributionRule,
+        FLOOR_TOUCHES_CODE,
         collect_contributions as _default_collect_contributions,
     )
 except ImportError:  # pragma: no cover - exercised via spec-loaded fallback
     from review_contributions import (  # type: ignore[no-redef]
         ContributionCollection,
         ContributionRule,
+        FLOOR_TOUCHES_CODE,
         collect_contributions as _default_collect_contributions,
     )
 
 
-# `workstream:*` label prefix (DEC-012 classification axis). The required-
-# reviewer resolution keys contributed match-predicates on the `workstream`
-# axis, read off a closing issue's `workstream:<value>` label. Single place
-# to widen when a second axis is keyed.
-WORKSTREAM_LABEL_PREFIX = axis_labels.prefix("workstream")
+# Classification axes the required-reviewer resolution keys contributed
+# match-predicates on (DEC-012), read off a closing issue's `<axis>:<value>`
+# labels via the `axis_labels` seam. Both are `mutually_exclusive`, so each is
+# single-valued per issue (the multi-value guard below is per-axis). The
+# DEC-032 amendment added `type` alongside `workstream`; this is the single
+# place to widen when a further mutually-exclusive axis is keyed. It mirrors
+# `review_contributions.SUPPORTED_MATCH_AXES` — the collector validates which
+# axes a rule may name; this reads those same axes off the issue.
+CLASSIFICATION_AXES = ("workstream", "type")
 
 
 # ---- failure kinds (structured, not string-matched) ------------------
@@ -96,17 +112,24 @@ ERROR_COLLECTION = "collection-error"
 # not be established — a transient gh failure / malformed JSON / invalid
 # label data. The required set is UNKNOWN, so the consumer fails closed.
 ERROR_CLOSING_ISSUES = "closing-issues-unresolvable"
+# The PR's changed files could not be established (a transient gh failure /
+# malformed JSON) while a floor-carrying contribution is installed. A floor
+# reviewer it might require cannot be dropped, so the consumer fails closed.
+# Only reached when a floor-carrying rule exists — floor-free collections
+# never fetch the diff (DEC-032 amendment).
+ERROR_CHANGED_FILES = "changed-files-unresolvable"
 
 
 @dataclass(frozen=True)
 class RequiredReviewersError:
     """A structured reason the required set could not be resolved (DEC-032 D5).
 
-    `kind` is `ERROR_COLLECTION` or `ERROR_CLOSING_ISSUES` so a consumer can
-    branch on the failure class without string-matching `message`. For a
-    collection error, `collection` is the failing `ContributionCollection`
-    (its `errors` drive the consumer's refusal text); for a closing-issue
-    failure it is `None` and `message` carries the human-readable reason.
+    `kind` is `ERROR_COLLECTION`, `ERROR_CLOSING_ISSUES`, or
+    `ERROR_CHANGED_FILES` so a consumer can branch on the failure class
+    without string-matching `message`. For a collection error, `collection`
+    is the failing `ContributionCollection` (its `errors` drive the
+    consumer's refusal text); for a closing-issue or changed-files failure it
+    is `None` and `message` carries the human-readable reason.
     """
 
     kind: str
@@ -158,20 +181,22 @@ class _Unresolvable:
         self.reason = reason
 
 
-class _MultiWorkstreamError(Exception):
-    """An issue carries multiple `workstream:*` labels (DEC-012 forbids this).
+class _MultiValueAxisError(Exception):
+    """An issue carries multiple values on a `mutually_exclusive` axis (DEC-012).
 
-    `workstream` is `mutually_exclusive: true` per `classification.yaml`. More
-    than one value is invalid upstream label data; the resolver refuses to
-    guess which workstream's contributed reviewer to honour (silently picking
-    one would drop the others — fail-open). Surfaced as a fail-closed reason.
+    Both keyed axes (`workstream`, `type`) are `mutually_exclusive: true` per
+    `classification.yaml`, so at most one value is valid on an issue. More than
+    one is invalid upstream label data; the resolver refuses to guess which
+    value's contributed reviewer to honour (silently picking one would drop the
+    others — fail-open). Surfaced as a fail-closed reason. `axis` names the
+    offending axis so the message points the operator at the right labels.
     """
 
-    def __init__(self, values: list[str]):
+    def __init__(self, axis: str, values: list[str]):
+        self.axis = axis
         self.values = values
         super().__init__(
-            "issue carries multiple workstream labels: "
-            + ", ".join(sorted(values))
+            f"issue carries multiple {axis} labels: " + ", ".join(sorted(values))
         )
 
 
@@ -181,6 +206,10 @@ ClosingIssueNumbersFn = Callable[[int], "list[int] | _Unresolvable"]
 # Type of the injected per-issue label fetcher. Returns the issue's label
 # list, or None when the labels could not be read (fetch failure).
 IssueLabelsFn = Callable[[int], "list | None"]
+# Type of the injected changed-files resolver. Returns the PR's changed-file
+# paths, or an `_Unresolvable` when the diff could not be determined. Only
+# called when a floor-carrying contribution is installed (DEC-032 amendment).
+ChangedFilesFn = Callable[[int], "list[str] | _Unresolvable"]
 
 
 def resolve_required_local_reviewers(
@@ -190,6 +219,7 @@ def resolve_required_local_reviewers(
     repo_root: Path,
     closing_issue_numbers: ClosingIssueNumbersFn,
     issue_labels: IssueLabelsFn,
+    changed_files: ChangedFilesFn,
     collect_contributions: Callable[
         [Path], ContributionCollection
     ] = _default_collect_contributions,
@@ -201,20 +231,33 @@ def resolve_required_local_reviewers(
 
     `baseline_local` is the project's `review.agents.local_registered:` names
     (the union's baseline term). `repo_root` is the directory holding
-    `.pkit/` (passed to the contribution collector). `closing_issue_numbers`
-    and `issue_labels` are injected `gh`-backed callables (each consumer
-    passes its own already-wired helpers); injecting them keeps this module
-    free of substrate and unit-testable. `collect_contributions` is injectable
-    for the same reason and defaults to the real collector.
+    `.pkit/` (passed to the contribution collector). `closing_issue_numbers`,
+    `issue_labels`, and `changed_files` are injected `gh`-backed callables
+    (each consumer passes its own already-wired helpers); injecting them keeps
+    this module free of substrate and unit-testable. `collect_contributions`
+    is injectable for the same reason and defaults to the real collector.
+
+    The contributed set is the UNION of two match paths (DEC-032 amendment):
+
+      * **classification** — rules whose match-predicate holds for the
+        classification (`workstream` / `type` axes) of any closing issue.
+      * **diff-property floor** — floor-carrying rules whose floor the PR's
+        diff satisfies (e.g. `touches-code`), independent of classification.
+        This backstops D1's classification gate-escape for floor-carrying
+        reviewers: a diff that touches code pulls in the floor reviewer even
+        for a `type:docs` / unclassified PR.
 
     Returns a `Resolution`. On `ok`, `required_local` is the de-duplicated
     baseline-∪-contributed set; on failure (`ok is False`), `error` carries
     the fail-closed reason (DEC-032 D5) and the set fields are empty.
 
-    Order of the two fail-closed checks: the collection is gated FIRST (a
+    Order of the fail-closed checks: the collection is gated FIRST (a
     malformed declaration or undeployed contributed agent is unsatisfiable
-    regardless of what the PR closes), then closing-issue resolution. Either
-    failing yields a non-ok `Resolution`.
+    regardless of what the PR closes), then closing-issue resolution, then —
+    only when a floor-carrying contribution is installed — changed-files
+    resolution. Any failing yields a non-ok `Resolution`. A collection with no
+    floor-carrying rule never fetches the diff, so a floor-free project pays
+    no extra `gh` round-trip and cannot fail on a diff it does not consult.
     """
     collection = collect_contributions(repo_root)
     if not collection.ok:
@@ -239,7 +282,20 @@ def resolve_required_local_reviewers(
             )
         )
 
-    contributed_rules = collection.reviewers_for_issues(classifications)
+    classification_rules = collection.reviewers_for_issues(classifications)
+
+    floor_rules = _floor_rules(collection, pr_number, changed_files=changed_files)
+    if isinstance(floor_rules, _Unresolvable):
+        return Resolution(
+            error=RequiredReviewersError(
+                kind=ERROR_CHANGED_FILES,
+                message=floor_rules.reason,
+            )
+        )
+
+    contributed_rules = _dedup_rules_by_reviewer(
+        list(classification_rules) + list(floor_rules)
+    )
     required_local = _dedup_preserve_order(
         list(baseline_local) + [rule.reviewer for rule in contributed_rules]
     )
@@ -251,28 +307,136 @@ def resolve_required_local_reviewers(
     )
 
 
+def _floor_rules(
+    collection: ContributionCollection,
+    pr_number: int,
+    *,
+    changed_files: ChangedFilesFn,
+) -> "tuple[ContributionRule, ...] | _Unresolvable":
+    """Floor-carrying rules the PR's diff satisfies (DEC-032 amendment).
+
+    Short-circuits when no installed contribution carries a floor — a
+    floor-free project never fetches the diff (no extra `gh` round-trip, and no
+    way to fail on a diff it does not consult). Otherwise it resolves the PR's
+    changed files and maps them to the set of satisfied floor kinds, then asks
+    the collection which floor-carrying rules that set matches.
+
+    Returns `_Unresolvable` when the diff could not be determined while a floor
+    rule is installed — a floor reviewer it might require cannot be dropped, so
+    the caller fails closed (mirroring the closing-issue posture, DEC-032 D5).
+    """
+    if not any(rule.floor is not None for rule in collection.rules):
+        return ()
+    files = changed_files(pr_number)
+    if isinstance(files, _Unresolvable):
+        return files
+    satisfied_floors = _satisfied_floors(files)
+    return collection.reviewers_for_floors(satisfied_floors)
+
+
+def _satisfied_floors(changed_paths: list[str]) -> set[str]:
+    """The set of floor kinds the PR's changed files satisfy (DEC-032 amendment).
+
+    Maps the raw diff to the abstract floor-kind vocabulary the collection
+    matches on, keeping the collection ignorant of *how* a diff property is
+    computed. Currently one floor kind: `touches-code`, satisfied when the diff
+    touches code per `diff_touches_code`.
+    """
+    satisfied: set[str] = set()
+    if diff_touches_code(changed_paths):
+        satisfied.add(FLOOR_TOUCHES_CODE)
+    return satisfied
+
+
+# Filename suffixes treated as PURE DOCUMENTATION (not code) by the
+# `touches-code` floor. A changed file with one of these suffixes does not, on
+# its own, make a diff "touch code". Everything else (source, config, scripts,
+# schemas) counts as code. Centralised here so the definition is one edit away.
+_DOC_SUFFIXES = (".md", ".mdx", ".markdown", ".rst", ".txt")
+
+# Path segments that mark a DOCUMENTATION directory. A file living under such a
+# directory is documentation regardless of its suffix (e.g. an image or diagram
+# under `docs/`).
+_DOC_DIR_SEGMENTS = ("docs",)
+
+
+def diff_touches_code(changed_paths: list[str]) -> bool:
+    """Whether the PR's diff touches code — the `touches-code` floor predicate.
+
+    "Touches code" is defined as: **any changed file that is not purely
+    documentation**. A file is purely documentation when EITHER
+
+      * its suffix is a documentation format (`.md` / `.mdx` / `.markdown` /
+        `.rst` / `.txt`), OR
+      * it lives under a documentation directory (a path with a `docs/`
+        segment).
+
+    Everything else — source (`.py`, `.ts`, …), configuration and schemas
+    (`.yaml`, `.json`, …), shell scripts, extensionless executables — counts as
+    code. The definition is intentionally a single predicate over a small
+    suffix/segment allow-list so it is easy to adjust as the panel's mandate
+    sharpens (DEC-032 amendment names this the genuine design point). An empty
+    diff (no changed files) does not touch code.
+
+    A conscious call: config/schema changes count as code (a reviewer mandated
+    on code-carrying PRs should see a changed `*.yaml`/`*.json`), and a diff
+    mixing docs with any code file touches code (the presence of one code file
+    is enough — a docs-only PR is the sole non-touching case).
+    """
+    return any(not _is_documentation_path(path) for path in changed_paths)
+
+
+def _is_documentation_path(path: str) -> bool:
+    """True when `path` is purely documentation (see `diff_touches_code`)."""
+    posix = PurePosixPath(path)
+    if posix.suffix.lower() in _DOC_SUFFIXES:
+        return True
+    # `parts[:-1]` are the directory segments (excluding the filename), so a
+    # file merely NAMED `docs` is not mistaken for one living under `docs/`.
+    return any(segment in _DOC_DIR_SEGMENTS for segment in posix.parts[:-1])
+
+
+def _dedup_rules_by_reviewer(
+    rules: list[ContributionRule],
+) -> tuple[ContributionRule, ...]:
+    """De-duplicate contributed rules by reviewer name, preserving first order.
+
+    Unions the classification-matched and floor-matched rule lists: a reviewer
+    required by both paths is required once, keeping the first rule seen (so
+    classification provenance wins over a floor rule for the same reviewer).
+    """
+    seen: set[str] = set()
+    out: list[ContributionRule] = []
+    for rule in rules:
+        if rule.reviewer not in seen:
+            seen.add(rule.reviewer)
+            out.append(rule)
+    return tuple(out)
+
+
 def _closing_issue_classifications(
     pr_number: int,
     *,
     closing_issue_numbers: ClosingIssueNumbersFn,
     issue_labels: IssueLabelsFn,
 ) -> "list[dict[str, str]] | _Unresolvable":
-    """Classification mapping (e.g. `{workstream: design}`) per closing issue.
+    """Classification mapping (e.g. `{workstream: design, type: feature}`) per closing issue.
 
     DEC-032 D1's resolution domain is total for the *determinable* cases: a
     PR closing multiple issues yields one mapping per issue (the caller
     unions them); a PR closing no classified issue yields an empty list →
-    baseline only. A closing entity with no `workstream:*` label (a sub-task
-    or Milestone carries no classification per DEC-012) yields an empty
-    mapping — matching nothing, so baseline only, the named gate-escape
-    DEC-032 D1 calls out.
+    baseline only. A closing entity carrying none of the keyed axes (a
+    sub-task or Milestone carries no classification per DEC-012) yields an
+    empty mapping — matching nothing, so baseline only, the named
+    classification gate-escape DEC-032 D1 calls out (backstopped, for a
+    floor-carrying reviewer, by the diff-property floor).
 
     When ground truth cannot be established — `closingIssuesReferences`
     failed to resolve, a closing issue's labels could not be read, or invalid
-    multi-workstream label data is present — the result is `_Unresolvable`,
-    NOT an empty list. The two states are different per D1: "closes no
-    classified issue" is legitimate fail-open; "could not determine" is
-    UNKNOWN and must fail closed (the caller refuses). Collapsing the latter
+    multi-value label data on a mutually-exclusive axis is present — the result
+    is `_Unresolvable`, NOT an empty list. The two states are different per D1:
+    "closes no classified issue" is legitimate fail-open; "could not determine"
+    is UNKNOWN and must fail closed (the caller refuses). Collapsing the latter
     to baseline-only is a retry-/induce-able bypass of a required reviewer.
     """
     closing_numbers = closing_issue_numbers(pr_number)
@@ -290,11 +454,11 @@ def _closing_issue_classifications(
             )
         try:
             classification = _classification_from_labels(labels)
-        except _MultiWorkstreamError as exc:
+        except _MultiValueAxisError as exc:
             return _Unresolvable(
-                f"closing issue #{issue_number} has multiple workstream "
+                f"closing issue #{issue_number} has multiple {exc.axis} "
                 f"labels ({', '.join(sorted(exc.values))}); DEC-012 declares "
-                "the workstream axis mutually exclusive — fix the labels"
+                f"the {exc.axis} axis mutually exclusive — fix the labels"
             )
         if classification:
             classifications.append(classification)
@@ -304,31 +468,38 @@ def _closing_issue_classifications(
 def _classification_from_labels(labels: list) -> dict[str, str]:
     """Build the classification mapping from an issue's labels (DEC-012).
 
-    Only the `workstream` axis is keyed at v1 (DEC-032 D1). A `workstream:*`
-    label yields `{workstream: <value>}`; no such label yields `{}` (matching
-    nothing → baseline only).
+    Keys every axis in `CLASSIFICATION_AXES` (`workstream`, `type`). A
+    `<axis>:*` label yields `{<axis>: <value>}`; an axis with no label is
+    omitted (an entity carrying none of the axes yields `{}` → matching
+    nothing → baseline only). Values are read through the `axis_labels` seam,
+    the one place the `<axis>:<value>` encoding lives.
 
-    **Single workstream per issue.** The `workstream` axis is declared
+    **Single value per mutually-exclusive axis.** Both keyed axes are declared
     `mutually_exclusive: true` in `schemas/classification.yaml` (DEC-012), so
-    at most one `workstream:*` label is valid on an issue. If an issue somehow
-    carries multiple distinct `workstream:*` labels (a label-discipline
-    violation upstream), raise rather than silently pick one — silently
-    dropping the others would skip a contributed reviewer required for a
-    dropped workstream (the fail-open hole D5 guards against). A noisy failure
-    surfaces the bad data; the operator fixes the labels (or `--bypass`).
+    at most one `<axis>:*` label is valid per axis on an issue. If an issue
+    carries multiple distinct values on one axis (a label-discipline violation
+    upstream), raise rather than silently pick one — silently dropping the
+    others would skip a contributed reviewer required for a dropped value (the
+    fail-open hole D5 guards against). A noisy failure surfaces the bad data;
+    the operator fixes the labels (or `--bypass`). The guard is per-axis: a
+    valid `type` and a broken multi-value `workstream` fail on the workstream.
     """
-    values: list[str] = []
-    for lbl in labels:
-        name = lbl.get("name", "") if isinstance(lbl, dict) else str(lbl)
-        if name.startswith(WORKSTREAM_LABEL_PREFIX):
-            value = name[len(WORKSTREAM_LABEL_PREFIX):]
+    names = [
+        lbl.get("name", "") if isinstance(lbl, dict) else str(lbl)
+        for lbl in labels
+    ]
+    classification: dict[str, str] = {}
+    for axis in CLASSIFICATION_AXES:
+        values: list[str] = []
+        for value in axis_labels.read_all(axis, names):
             if value and value not in values:
                 values.append(value)
-    if not values:
-        return {}
-    if len(values) > 1:
-        raise _MultiWorkstreamError(values)
-    return {"workstream": values[0]}
+        if not values:
+            continue
+        if len(values) > 1:
+            raise _MultiValueAxisError(axis, values)
+        classification[axis] = values[0]
+    return classification
 
 
 def _dedup_preserve_order(names: list[str]) -> tuple[str, ...]:

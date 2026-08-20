@@ -74,6 +74,7 @@ from _lib.placeholder_detection import (  # noqa: E402
 )
 from _lib.closing_issue_fetchers import (  # noqa: E402
     issue_labels as _issue_labels_fetch,
+    pr_changed_files as _pr_changed_files_fetch,
     pr_closing_issue_numbers as _pr_closing_issue_numbers_fetch,
 )
 from _lib.agent_verdicts import (  # noqa: E402
@@ -646,9 +647,9 @@ def _resolve_required_local(
     """Resolve the PR's required-local set via the shared resolver (DEC-032 D1).
 
     Delegates to `_lib.required_reviewers.resolve_required_local_reviewers` —
-    the SAME resolution `review-pr` calls — injecting the SHARED closing-issue
-    and label fetchers (`_lib.closing_issue_fetchers`, the one definition both
-    consumers import) wired to this script's `gh` helpers and
+    the SAME resolution `review-pr` calls — injecting the SHARED closing-issue,
+    label, and changed-files fetchers (`_lib.closing_issue_fetchers`, the one
+    definition both consumers import) wired to this script's `gh` helpers and
     `collect_contributions`. The fetcher lambdas reference `gh_run` /
     `gh_get_issue` as module globals, looked up at call time, so the agent-gate
     tests' monkeypatches of `collect_contributions` / `gh_run` / `gh_get_issue`
@@ -664,6 +665,9 @@ def _resolve_required_local(
         ),
         issue_labels=lambda n: _issue_labels_fetch(
             n, config, gh_get_issue=gh_get_issue
+        ),
+        changed_files=lambda n: _pr_changed_files_fetch(
+            n, config, gh_run=gh_run
         ),
         collect_contributions=collect_contributions,
     )
