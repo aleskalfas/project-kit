@@ -1,13 +1,18 @@
-"""Shared `gh`-backed closing-issue / label fetchers for required-reviewer resolution.
+"""Shared `gh`-backed PR-data fetchers for required-reviewer resolution.
 
 `done-work`'s gate and `review-pr`'s invoke loop both feed the shared resolver
-(`_lib.required_reviewers.resolve_required_local_reviewers`) the same two
-inputs about a PR:
+(`_lib.required_reviewers.resolve_required_local_reviewers`) the same inputs
+about a PR:
 
-  * which issues the PR closes (`gh pr view`'s `closingIssuesReferences`), and
-  * each closing issue's labels (for the `workstream:*` classification).
+  * which issues the PR closes (`gh pr view`'s `closingIssuesReferences`),
+  * each closing issue's labels (for the `workstream:*` / `type:*`
+    classification), and
+  * the PR's changed files (`gh pr diff --name-only`, the complete path set),
+    consulted only when a floor-carrying contribution is installed (the
+    DEC-032 diff-property floor).
 
-Those two fetchers were duplicated byte-for-byte in both consumers. The
+The closing-issue and label fetchers were duplicated byte-for-byte in both
+consumers. The
 resolver checks the *exact* `_Unresolvable` sentinel they return to decide
 fail-closed vs. baseline-only (DEC-032 D5), so the two copies had to agree
 character-for-character — but nothing tested that they did. "Fix one fetcher,
@@ -80,12 +85,62 @@ def pr_closing_issue_numbers(
         return _Unresolvable(
             "gh pr view payload missing closingIssuesReferences"
         )
-    refs = data.get("closingIssuesReferences") or []
+    refs = data["closingIssuesReferences"]
+    if not isinstance(refs, list):
+        # A present-but-null (or otherwise non-list) field is UNKNOWN ground
+        # truth, not "closes nothing" — fail closed rather than collapse a
+        # null to the legitimate empty branch and drop a required reviewer.
+        return _Unresolvable(
+            "gh pr view closingIssuesReferences is null or not a list"
+        )
     numbers: list[int] = []
     for ref in refs:
         if isinstance(ref, dict) and isinstance(ref.get("number"), int):
             numbers.append(ref["number"])
     return numbers
+
+
+def pr_changed_files(
+    pr_number: int, config: dict, *, gh_run: GhRunFn,
+) -> "list[str] | _Unresolvable":
+    """The PR's changed-file paths, via `gh pr diff --name-only` (DEC-032 amendment).
+
+    Feeds the resolver's diff-property floor (`touches-code`), so the SOURCE of
+    the file set must be complete: `gh pr view --json files` returns only a
+    bounded first page (~100 files, no pagination), so a >100-file PR with code
+    after page 1 would read as docs-only and the floor would silently not fire.
+    `gh pr diff <n> --name-only` returns the full path set (one path per line),
+    closing that page-cap gate-escape.
+
+    Fail-closed contract (mirrors `pr_closing_issue_numbers`, DEC-032 D5):
+
+    - **The diff is determinable and non-empty** → the list of changed paths.
+    - **Could not determine the diff, OR it came back empty** (gh non-zero exit,
+      or zero paths) → `_Unresolvable`, so the resolver fails closed. A PR
+      always changes at least one file, so an empty result is treated as
+      unknown ground truth rather than "touches nothing"; returning `[]` here
+      would let a floor reviewer be dropped on a transient gh failure — a
+      retry-/induce-able bypass, exactly the hole DEC-032 D5 guards.
+
+    The resolver only calls this when a floor-carrying contribution is
+    installed, so a floor-free project never issues this `gh` round-trip.
+    `gh_run` is injected (the consumer's `_lib.gh.gh_run`) so this module
+    carries no substrate of its own; both consumers share this one definition.
+    """
+    proc = gh_run(
+        ["gh", "pr", "diff", str(pr_number), "--name-only"],
+        config, check=False,
+    )
+    if proc.returncode != 0:
+        return _Unresolvable(
+            f"gh pr diff --name-only failed: {proc.stderr.strip()}"
+        )
+    paths = [line.strip() for line in proc.stdout.splitlines() if line.strip()]
+    if not paths:
+        return _Unresolvable(
+            "gh pr diff --name-only returned no files — diff undeterminable"
+        )
+    return paths
 
 
 def issue_labels(

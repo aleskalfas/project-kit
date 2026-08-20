@@ -6,6 +6,25 @@
   "type": "object",
   "required": ["schema_version", "contributions"],
   "additionalProperties": false,
+  "$defs": {
+    "axisMatch": {
+      "description": "Value(s) a rule matches on for one classification axis. A scalar string matches that one value; the `\"*\"` wildcard matches EVERY value of the axis (axis-present — forward-safe versus enumerating a fixed value set); a list matches if the closing issue's value is ANY listed one (OR within the axis). A `\"*\"` inside a list is a literal value, not the wildcard.",
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      ]
+    }
+  },
   "properties": {
     "schema_version": {
       "type": "integer",
@@ -16,33 +35,27 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["match", "reviewer"],
+        "required": ["reviewer"],
+        "anyOf": [
+          { "required": ["match"] },
+          { "required": ["floor"] }
+        ],
         "additionalProperties": false,
         "properties": {
           "match": {
-            "description": "Classification match-predicate. Keys are classification axes (DEC-012); `workstream` is the axis specified at v1. A rule matches a closing issue when every key/value pair holds for that issue's classification.",
+            "description": "Classification match-predicate (DEC-012). Keys are classification axes; `workstream` and `type` are supported (both mutually_exclusive). A rule matches a closing issue when every key/value pair holds for that issue's classification (multi-axis is AND-composed). Optional when a `floor` is present; a rule must declare a `match`, a `floor`, or both.",
             "type": "object",
             "minProperties": 1,
             "additionalProperties": false,
             "properties": {
-              "workstream": {
-                "description": "Workstream-axis value(s) the rule matches on. A scalar string matches that one value; a list matches if the closing issue's `workstream` classification is ANY listed value (OR within the axis). Multi-axis predicates remain AND-composed.",
-                "oneOf": [
-                  {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  {
-                    "type": "array",
-                    "minItems": 1,
-                    "items": {
-                      "type": "string",
-                      "minLength": 1
-                    }
-                  }
-                ]
-              }
+              "workstream": { "$ref": "#/$defs/axisMatch" },
+              "type": { "$ref": "#/$defs/axisMatch" }
             }
+          },
+          "floor": {
+            "description": "Diff-property floor (DEC-032 amendment): require the reviewer whenever the PR's diff matches the property, independent of classification. `touches-code` fires when the diff touches any non-documentation file — backstopping the classification gate-escape for a code-review reviewer. Optional; a rule must declare a `match`, a `floor`, or both.",
+            "type": "string",
+            "enum": ["touches-code"]
           },
           "reviewer": {
             "description": "Required reviewer-agent name. Must correspond to a deployed agent file at `.claude/agents/<name>.md` (or wherever the harness deploys agents). Local-path only at v1 (per DEC-032 D2).",

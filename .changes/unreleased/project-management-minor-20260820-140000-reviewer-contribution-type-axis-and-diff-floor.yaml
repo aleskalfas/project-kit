@@ -1,0 +1,28 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+body: >
+  The reviewer-contribution predicate (DEC-032) now keys on the `type`
+  classification axis alongside `workstream`, supports a `"*"` wildcard that
+  matches every value of an axis (axis-present — forward-safe versus enumerating
+  a fixed value set), and gains a new predicate KIND — a diff-property `floor`
+  (#732, for [software-engineering:DEC-002]). A floor-carrying rule requires its
+  reviewer whenever the PR's DIFF matches a property, independent of the closing
+  issue's classification: the one floor kind, `touches-code`, fires when the diff
+  touches any non-documentation file. Classification is code-suffix-dominant and
+  fail-closed — a recognized source/config/schema/script suffix (`.py`, `.yaml`,
+  `.json`, `.sh`, …) is always code even under a `docs/` directory; only a
+  non-code asset that is doc-suffixed (`.md`/`.mdx`/`.markdown`/`.rst`) or under
+  `docs/` reads as documentation; and any unknown or extensionless file counts as
+  code (when in doubt, the floor fires). This
+  backstops D1's classification gate-escape for a code-review reviewer: a
+  code-touching PR filed against a `type:docs` or unclassified issue still pulls
+  the floor reviewer into the required set. The resolver takes the PR's changed
+  files as a new injected input, fetched only when a floor-carrying contribution
+  is installed (a floor-free project pays no extra `gh` round-trip), and fails
+  closed if the diff cannot be determined while a floor rule is present. The
+  `review-contributions` schema expresses all three forms (a `type`-axis
+  predicate, the wildcard, and the floor); existing `workstream` rules stay
+  valid. Additive: a project with no `type`-keyed or floor-carrying contribution,
+  or a non-matching PR, resolves exactly as before.

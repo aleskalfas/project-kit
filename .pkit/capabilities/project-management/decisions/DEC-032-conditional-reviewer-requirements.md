@@ -6,7 +6,7 @@ date: 2026-06-21
 author: Ales Kalfas
 ---
 
-pm's merge gate today requires the same single reviewer for every PR. This DEC makes the *required-reviewer set* resolve **per PR from the closing issues' classification**, and lets an **installed capability contribute** a requirement — "PRs in workstream `design` additionally require the `design-reviewer`". pm collects these rules by walking manifest-registered capabilities (the same orphan-safe walker [project-management:DEC-030-capability-contributed-adapter-overlays] uses), and a matching PR must collect a fresh `APPROVED` from its baseline reviewer **and** every contributed reviewer — *all-must-approve*. This realises the N≥2 multi-local extension [project-management:DEC-028-agent-as-approver-paths] already pinned the semantics for (all-must-approve) but capped at one agent per path for want of a second specialist. The `design-reviewer` is that second specialist.
+pm's merge gate today requires the same single reviewer for every PR. This DEC makes the *required-reviewer set* resolve **per PR from the closing issues' classification** (and, per the 2026-08-20 amendment, the PR's diff), and lets an **installed capability contribute** a requirement — "PRs in workstream `design` additionally require the `design-reviewer`". pm collects these rules by walking manifest-registered capabilities (the same orphan-safe walker [project-management:DEC-030-capability-contributed-adapter-overlays] uses), and a matching PR must collect a fresh `APPROVED` from its baseline reviewer **and** every contributed reviewer — *all-must-approve*. This realises the N≥2 multi-local extension [project-management:DEC-028-agent-as-approver-paths] already pinned the semantics for (all-must-approve) but capped at one agent per path for want of a second specialist. The `design-reviewer` is that second specialist.
 
 ## Context
 
@@ -18,7 +18,7 @@ The pieces to solve both exist: [COR-030](../../../decisions/core/COR-030-capabi
 
 ## Decision
 
-The required-reviewer set for a PR is **resolved per PR** from classification, may be **augmented by installed capabilities**, and is **AND-composed**. Five rules.
+The required-reviewer set for a PR is **resolved per PR** from classification (and, per the 2026-08-20 amendment, the PR's diff), may be **augmented by installed capabilities**, and is **AND-composed**. Five rules.
 
 ### D1 — The required local-reviewer set resolves from the PR's closing issues
 
@@ -26,12 +26,12 @@ For a PR, pm resolves the **required local-reviewer set** as:
 
 > baseline (the project's `review.agents.local_registered:`) **∪** every contributed reviewer whose *match predicate* matches the classification of **any** issue the PR closes.
 
-The match predicate keys on classification axes ([project-management:DEC-012-classification-axes]); `workstream` is the axis specified now. **Resolution domain** — because a PR's relation to issues is not 1:1, the rule is total:
+The match predicate keys on classification axes ([project-management:DEC-012-classification-axes]) — `workstream`, and (per the 2026-08-20 amendment) **`type`** — and a contributed rule may additionally carry a **diff-property floor** that requires its reviewer whenever the PR's *diff* matches, independent of the closing issue's classification (see the Amendment section). **Resolution domain** — because a PR's relation to issues is not 1:1, the rule is total:
 
 - **One closing issue** → match against its classification.
 - **Multiple closing issues** → **union** of all matched contributions (a PR closing a `design` issue and a `backend` issue requires both reviewers). This deliberately differs from DEC-012's *dominant-kind* rule for the `type` axis: `type` resolves the squash-commit prefix (one value needed); a required-reviewer gate is safer as a union (drop nothing a contributor asked for).
 - **No closing issue** (hotfix/refactor opened directly) → no classification to match → **baseline only**.
-- **Closing entity carries no `workstream` axis** (a sub-task or Milestone — per DEC-012 these carry no classification) → matches nothing → **baseline only**. This is a real gate-escape: design work filed/closed against a sub-task escapes the `design-reviewer`. The mitigation is procedural, not enforced — file gate-bearing work against a classified Task; the DEC names the escape rather than hiding it.
+- **Closing entity carries no classification axis** (a sub-task or Milestone — per DEC-012 these carry neither `workstream` nor `type`) → matches nothing → **baseline only**. This is a real gate-escape *for classification-keyed contributions*: design work filed/closed against a sub-task escapes the `design-reviewer`. The mitigation is procedural, not enforced — file gate-bearing work against a classified Task; the DEC names the escape rather than hiding it. **(Amended 2026-08-20: a *floor-carrying* contribution is exempt — its diff-property floor requires the reviewer regardless of classification, so the code panel is not escapable this way. See the Amendment section.)**
 
 The set is de-duplicated: a reviewer named by both the baseline and a contributed rule is required once.
 
@@ -58,11 +58,12 @@ The gate is satisfied when **every reviewer in the resolved required set has a f
 
 ### D5 — Activation is install-driven; the resolved set is recomputed at gate time
 
-A capability's reviewer contribution is **active when the capability is manifest-registered and its reviewer agent is deployed** — installing a review-discipline capability is the opt-in (no separate enable/disable toggle; contrast DEC-030, see Rationale). The required set is **recomputed at each gate check** from the current manifest and the PR's current classification — it is not frozen at PR-open. This makes the lifecycle dynamics total:
+A capability's reviewer contribution is **active when the capability is manifest-registered and its reviewer agent is deployed** — installing a review-discipline capability is the opt-in (no separate enable/disable toggle; contrast DEC-030, see Rationale). The required set is **recomputed at each gate check** from the current manifest, the PR's current classification, and (per the 2026-08-20 amendment) the PR's current diff — it is not frozen at PR-open. This makes the lifecycle dynamics total:
 
 - **Contributing capability uninstalled mid-PR** → its rule leaves the manifest → its reviewer drops out of the resolved set → the gate reverts toward baseline. No deadlock; the discipline left with the capability that owned it (the same disposition DEC-030 gives an uninstalled contribution).
 - **Capability still installed but its agent undeployed** → a resolvable rule names a missing agent file → this is a broken install, surfaced as a clear error at `review-pr`/`done-work` with remediation (redeploy the capability, or uninstall it) — the same "registered name must have a deployed file" check DEC-028 already runs, not a silent deadlock.
 - **PR reclassified mid-flight** (a `workstream` label edited) → recomputation adds or drops requirements. A newly-added reviewer has no verdict, so the gate correctly refuses until it approves. A dropped requirement is no longer gating — acceptable and symmetric with uninstall. Reclassification is thus a set-membership event the recompute handles directly (DEC-028's commit-keyed freshness does not need to model it).
+- **PR diff changes mid-flight** (per the 2026-08-20 amendment — e.g. a `type:docs` PR gains a code-touching commit) → recomputation reads the *current* diff, so a diff-property floor newly requires its reviewer (which has no verdict yet) → the gate correctly refuses until it approves. Symmetric with reclassification; the recompute handles it directly.
 
 Zero installed contributions, or a PR matching none, leaves the gate exactly as DEC-028 left it.
 
@@ -101,3 +102,17 @@ Zero installed contributions, or a PR matching none, leaves the gate exactly as 
 - **First consumer (illustrative).** The `ux-ui-design` capability ships `agents/design-reviewer.md` and a contribution rule matching `workstream: design` to `design-reviewer`, declaring `requires_capabilities: project-management`. A design-workstream PR then requires both the baseline `reviewer` and the `design-reviewer` to APPROVE before `done-work` merges.
 - **Implementation, now unblocked.** With this DEC accepted, the gate-checker generalisation, the `pre-check.py` cap lift, the contribution collector, the contribution-declaration schema, and `review-pr`'s resolution are authored under the conditional-reviewer feature, not here. The in-place DEC-028 step-7 amendment lands with this record.
 - **Universal-applicability flag for methodology review.** "An installed capability contributes a requirement into another capability's gate, resolved from classification" could recur (a security capability contributing a required security reviewer; a compliance capability contributing an approval). If it recurs, the contribution mechanism may promote toward a kit-level pattern per COR-007.
+
+## Amendment (2026-08-20) — the `type` axis and a diff-property floor
+
+Prompted by [software-engineering:DEC-002] (the code-review panel) and report #715, and shaped by an architect review. Two extensions to the contribution predicate, in place — the record's thesis (per-PR resolved set, capability-contributed, AND-composed, all-must-approve) is unchanged.
+
+- **The predicate keys on the `type` axis too.** D1 *originally* declared the predicate "keys on classification axes; `workstream` is the axis specified now" (that clause is now updated in place, above) — this realizes that stated generality by also keying on `type`. `type` is safe to key on: it is `mutually_exclusive` (so the existing single-value-per-issue logic and the multi-value guard generalize per-axis) and `required_on_every_issue` with a methodology-fixed value set. A rule that must match *every* type uses a **wildcard / axis-present** predicate (cleaner and forward-safe versus enumerating the fixed type values — which would silently drop the rule if a seventh type were ever added).
+
+- **A diff-property floor (new predicate kind).** A contributed rule may require its reviewer whenever the PR's **diff** matches a property — the code-review panel's floor is "the diff touches code" (any non-docs source change). This keys on the *diff*, not the closing issue's classification, and so it **backstops D1's classification gate-escape**: D1 resolves an unclassified sub-task / no-closing-issue / (for the code panel) a `type:docs`-but-code-touching PR to *baseline only*, which — for a discipline whose mandate is code review (#715) — would let code merge unreviewed. The floor removes that escape for any floor-carrying reviewer: a diff that touches code requires the code panel regardless of how the issue is labelled. This is a genuinely new predicate *kind* (diff-property, alongside classification-axis), realized in the pm resolver + the contribution-declaration schema.
+
+- **Consequence for the escape note.** D1's named classification-escape still holds for purely classification-keyed contributions (e.g. `design-reviewer` on `workstream:design`), but a **floor-carrying** contribution cannot be escaped by (mis)classification. The code panel ([software-engineering:DEC-002]) carries the floor; `design-reviewer` does not — so the escape's mitigation is procedural for the former and enforced for the latter.
+
+- **Surface + migration.** Surface change per [PRJ-002] (the resolver accepts a wider predicate) → a **pm-capability** changeset; the change touches pm-owned files only and reaches adopters through the tool bundle at the next backbone release (which is what makes an updated capability installable via `pkit upgrade`). Migration-free: additive (a project with no `type`-keyed or floor-carrying contribution, or a non-matching PR, resolves exactly as before).
+
+- **Realized by** the resolver (`required_reviewers.py`) and the `review-contributions` schema gaining `type`-axis and diff-property support, under this Task; DEC-002's code-review panel is the first consumer of both.
