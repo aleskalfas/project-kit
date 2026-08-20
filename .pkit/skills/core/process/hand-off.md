@@ -57,7 +57,7 @@ Then run the done-signal, scoped to your own address:
 pkit process health --interpretation-only --process <capability>:<process-id>
 ```
 
-**Check the report actually found your contract before reading anything into a green.** If it says no contracts are declared, that is not a pass — you just declared one, so something is wrong with what the checker can see rather than with the contract. Treat "zero contracts" on an address you just authored as red until you have explained it; `.pkit/cli/README.md` records the current known cause and its remedy under the health command.
+**A report that found nothing to check is not a pass.** Keep reading the output rather than the exit code alone: a green means something only if the report *names your contract*. The scoped run fails closed for you here — an address that matches no walked definition is reported as an indeterminate scope, with its likely cause and remedy, and exits non-zero rather than green.
 
 Otherwise, read the result carefully, because two very different things can be red:
 

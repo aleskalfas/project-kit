@@ -10,6 +10,10 @@ These tests pin the load-bearing facts:
   resume_when / invariant checks when declared), each registered in the
   owning capability's package.yaml; it errors cleanly when no owning
   capability is given (NO routing — that is the skill's judgment);
+- all three stamps refuse a capability that is on disk but NOT REGISTERED as a
+  manifest component — the set contract discovery walks — so a stamp can never
+  write a definition nothing watches (#713), while the no-manifest filesystem
+  fallback keeps a pre-manifest install authorable;
 - `couple` appends a `depends_on` entry to the invoker-named definition,
   validating relation/mode against the CLOSED vocabularies READ AS DATA from
   the shape contract (a widened enum is accepted with no code change), and
@@ -144,6 +148,23 @@ def _definition_version(repo: Path, capability: str, process_id: str) -> int:
     path = repo / ".pkit" / "capabilities" / capability / "schemas" / f"{process_id}.yaml"
     data = YAML(typ="safe").load(path.read_text(encoding="utf-8"))
     return data["process"]["version"]
+
+
+def _register_capabilities(repo: Path, *names: str) -> None:
+    """Write a backbone manifest registering exactly `names` as capability
+    components. No names = the manifest-lists-no-capabilities branch of the
+    filesystem fallback."""
+    entries = "".join(
+        f"  - kind: capability\n"
+        f"    name: {name}\n"
+        f"    manifest: .pkit/capabilities/{name}/manifest.yaml\n"
+        for name in names
+    )
+    (repo / ".pkit" / "manifest.yaml").write_text(
+        "schema_version: 1\nbackbone_version: 0.0.0\ncomponents:\n"
+        + (entries or "  []\n"),
+        encoding="utf-8",
+    )
 
 
 # --- `process new`: scaffold correctness + lint-cleanliness -----------------
@@ -298,6 +319,109 @@ def test_new_requires_an_owning_capability(authoring_repo: Path) -> None:
         )
     # Nothing was written anywhere.
     assert not list((authoring_repo / ".pkit" / "capabilities").rglob("*.yaml"))[2:]
+
+
+# --- the registration gate: a stamp never writes what nothing watches -------
+
+
+def test_the_three_refusals_are_distinct(authoring_repo: Path) -> None:
+    # Each cause gets its own message: no capability half in the address, no
+    # capability directory, and a directory the project does not register.
+    _register_capabilities(authoring_repo, "design")
+    with pytest.raises(pa.ProcessAuthoringError, match="owning capability"):
+        pa.stamp_new_process(
+            authoring_repo, "orphan", states=[pa.StateSpec("only", "Only state.")]
+        )
+    with pytest.raises(pa.ProcessAuthoringError, match="not installed"):
+        pa.stamp_new_process(
+            authoring_repo, "ghost:orphan", states=[pa.StateSpec("only", "Only state.")]
+        )
+    with pytest.raises(
+        pa.ProcessAuthoringError, match="pkit capabilities register delivery"
+    ):
+        pa.stamp_new_process(
+            authoring_repo, "delivery:orphan", states=[pa.StateSpec("only", "Only.")]
+        )
+
+
+def test_stamps_refuse_an_unregistered_capability(authoring_repo: Path) -> None:
+    # #713: contract discovery walks only REGISTERED capabilities, so a
+    # definition stamped into an unregistered directory is real, correct, and
+    # watched by nothing — `health` reports no contracts and exits 0 over it.
+    # All three stamps refuse, naming the remedy.
+    _stamp_screen(authoring_repo)
+    _stamp_unit(authoring_repo)
+    _couple_unit(authoring_repo)
+    _register_capabilities(authoring_repo, "design")  # `delivery` left out
+
+    before = (
+        authoring_repo / ".pkit" / "capabilities" / "delivery" / "schemas" / "unit.yaml"
+    ).read_text(encoding="utf-8")
+
+    with pytest.raises(pa.ProcessAuthoringError, match="not registered") as new_exc:
+        pa.stamp_new_process(
+            authoring_repo, "delivery:second", states=[pa.StateSpec("only", "Only.")]
+        )
+    with pytest.raises(pa.ProcessAuthoringError, match="not registered") as couple_exc:
+        _couple_unit(authoring_repo, why="A second reason.")
+    with pytest.raises(pa.ProcessAuthoringError, match="not registered") as handoff_exc:
+        _handoff_unit(authoring_repo)
+
+    for exc in (new_exc, couple_exc, handoff_exc):
+        assert "pkit capabilities register delivery" in str(exc.value)
+
+    # A refusal writes nothing: no new definition, no touched one.
+    assert not (
+        authoring_repo / ".pkit" / "capabilities" / "delivery" / "schemas" / "second.yaml"
+    ).exists()
+    assert (
+        authoring_repo / ".pkit" / "capabilities" / "delivery" / "schemas" / "unit.yaml"
+    ).read_text(encoding="utf-8") == before
+
+
+def test_stamps_accept_a_registered_capability(authoring_repo: Path) -> None:
+    # The normal state: both capabilities registered, all three stamps land and
+    # the contract is one the health walk can actually see.
+    _register_capabilities(authoring_repo, "design", "delivery")
+    _stamp_screen(authoring_repo)
+    _stamp_unit(authoring_repo)
+    assert _couple_unit(authoring_repo).changed
+    assert _handoff_unit(authoring_repo).changed
+    contracts, skipped = ph.collect_contracts(authoring_repo)
+    assert skipped == []
+    assert [(c.upstream, c.downstream) for c in contracts] == [
+        ("design:screen", "delivery:unit")
+    ]
+
+
+def test_stamps_stay_usable_under_the_no_manifest_fallback(authoring_repo: Path) -> None:
+    # The gate mirrors discovery's fallback exactly rather than inventing a
+    # second rule: with no backbone manifest at all, and with a manifest that
+    # lists no capabilities, the installed set IS the filesystem scan — so a
+    # pre-manifest install must stay authorable.
+    assert not (authoring_repo / ".pkit" / "manifest.yaml").exists()
+    _stamp_screen(authoring_repo)
+
+    _register_capabilities(authoring_repo)  # manifest present, no capabilities
+    _stamp_unit(authoring_repo)
+    assert _couple_unit(authoring_repo).changed
+    assert _handoff_unit(authoring_repo).changed
+
+
+def test_new_cli_refuses_an_unregistered_capability(
+    authoring_repo: Path, monkeypatch
+) -> None:
+    _register_capabilities(authoring_repo, "design")
+    monkeypatch.setattr(
+        "project_kit.process.resolve_repo_root", lambda: authoring_repo
+    )
+    result = CliRunner().invoke(
+        main,
+        ["process", "new", "delivery:unit", "--state", "only=Only state.",
+         "--entry", "only"],
+    )
+    assert result.exit_code != 0
+    assert "pkit capabilities register delivery" in result.output
 
 
 def test_new_is_one_shot(authoring_repo: Path) -> None:

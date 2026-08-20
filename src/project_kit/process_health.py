@@ -44,6 +44,12 @@ The check's semantics, all fixed by COR-042:
 - A definition that cannot be LOADED at all may hide contracts, so it is
   surfaced distinctly and counted indeterminate (fail-closed — the same
   lying-report argument), never silently dropped.
+- **A SCOPED run that resolves to nothing is indeterminate too** (#713).
+  `--process <addr>` names a specific address, which is a claim that can fail:
+  if the address is neither a walked definition nor an endpoint of any declared
+  contract, the run checked nothing and reports `unresolved_scope`. A BARE run
+  over a project with zero contracts, and a scoped run against a walked
+  definition that declares none, are determinate-empty and stay clean.
 
 Seam realization (ADR-048, predicate-runner contract reused unchanged — one
 subject positional + `--json`, cwd = repo root):
@@ -98,7 +104,10 @@ from project_kit.process import (
     _load_command_registry,
     load_definition,
 )
-from project_kit.process_graph import discover_process_addresses
+from project_kit.process_graph import (
+    discover_process_addresses,
+    installed_capabilities,
+)
 
 # Finding kinds — the only two things a per-subject line can report (a satisfied
 # hand-off produces NO line, COR-042's one-line-per-miss shape).
@@ -198,6 +207,28 @@ class SkippedDefinition:
 
 
 @dataclass(frozen=True)
+class UnresolvedScope:
+    """A `--process <addr>` scope the walk could say nothing about.
+
+    A SCOPED run names a specific address, which is a CLAIM that can fail: if
+    that address is neither a walked definition nor an endpoint of any declared
+    contract, the run checked nothing at all, and reporting clean would be a
+    green light about nothing — uninterpretable, never clean (COR-042; #713).
+    Distinct from determinate-empty: a bare run over a project that genuinely
+    declares zero contracts, and a scoped run against a walked definition that
+    declares none, are both legitimate answers and stay clean.
+
+    Counted as one indeterminate, so it holds the exit code non-zero in both
+    views. `reason` is self-explaining and names the likely cause (an
+    unregistered capability, a missing one, an unknown process id, a malformed
+    address) with its remedy.
+    """
+
+    address: str
+    reason: str
+
+
+@dataclass(frozen=True)
 class HealthReport:
     """The whole walk's result: evaluated contracts (topologically ordered) plus
     the definitions that could not be read. Immutable; renders read it many
@@ -205,6 +236,7 @@ class HealthReport:
 
     contracts: tuple[ContractReport, ...]
     skipped: tuple[SkippedDefinition, ...]
+    unresolved_scope: UnresolvedScope | None = None
 
     @property
     def missed_total(self) -> int:
@@ -213,8 +245,13 @@ class HealthReport:
     @property
     def indeterminate_total(self) -> int:
         """Every indeterminate line — per-subject and contract-level — plus one
-        per unreadable definition (its contract set is unknown, fail-closed)."""
-        return sum(len(c.indeterminate) for c in self.contracts) + len(self.skipped)
+        per unreadable definition (its contract set is unknown, fail-closed),
+        plus one for a scope that resolved to nothing."""
+        return (
+            sum(len(c.indeterminate) for c in self.contracts)
+            + len(self.skipped)
+            + (1 if self.unresolved_scope is not None else 0)
+        )
 
     @property
     def ok(self) -> bool:
@@ -561,15 +598,65 @@ def build_report(repo_root: Path, focus: str | None = None) -> HealthReport:
     either endpoint (only those are evaluated — the walk stays as narrow as the
     ask). Unreadable definitions are surfaced regardless of focus: whether they
     touch the focused process is exactly what cannot be known.
+
+    A focus that resolves to NOTHING — neither a walked definition nor an
+    endpoint of any declared contract — is reported as an `UnresolvedScope`
+    indeterminate rather than as a clean empty run (#713): naming an address is
+    a claim, and a run that checked nothing must not read green.
     """
-    contracts, skipped = collect_contracts(repo_root)
+    addresses = discover_process_addresses(repo_root)
+    contracts, skipped = collect_contracts(repo_root, addresses)
+    unresolved: UnresolvedScope | None = None
     if focus is not None:
         contracts = [c for c in contracts if focus in (c.upstream, c.downstream)]
+        # Walked-but-contractless is determinate-empty (the definition WAS read
+        # and declares nothing) — only an address the walk never reached, and
+        # that no contract names either, is uninterpretable.
+        if focus not in addresses and not contracts:
+            unresolved = UnresolvedScope(
+                address=focus, reason=_scope_reason(repo_root, focus, addresses)
+            )
     rank = _topological_rank(contracts)
     ordered = sorted(contracts, key=lambda c: _contract_sort_key(c, rank))
     return HealthReport(
         contracts=tuple(evaluate_contract(repo_root, c) for c in ordered),
         skipped=tuple(sorted(skipped, key=SkippedDefinition.sort_key)),
+        unresolved_scope=unresolved,
+    )
+
+
+def _scope_reason(repo_root: Path, focus: str, addresses: list[str]) -> str:
+    """Why the scoped address resolved to nothing, in plain language.
+
+    Diagnosed against the walk's own inputs — the discovered address list and
+    the capability set discovery enumerates — so the remedy named is the one
+    that would actually make the address visible.
+    """
+    head = (
+        f"the scoped address {focus!r} matched no walked process definition and "
+        "no declared hand-off contract, so this run checked nothing. "
+    )
+    if focus.count(":") != 1 or not all(focus.split(":")):
+        return head + "The address is malformed: expected <capability>:<process-id>."
+    capability, process_id = focus.split(":", 1)
+    capability_dir = repo_root / ".pkit" / "capabilities" / capability
+    if capability in installed_capabilities(repo_root):
+        known = [a for a in addresses if a.startswith(f"{capability}:")]
+        listed = ", ".join(known) if known else "none"
+        return head + (
+            f"Capability {capability!r} is registered but declares no process "
+            f"{process_id!r} (its process definitions: {listed}) — check the "
+            "process id."
+        )
+    if capability_dir.is_dir():
+        return head + (
+            f"Capability {capability!r} is on disk but not registered as a "
+            "component with the project, so its process definitions are never "
+            f"walked — register it: pkit capabilities register {capability}"
+        )
+    return head + (
+        f"There is no capability {capability!r} at "
+        f"{capability_dir.relative_to(repo_root)} — check the address."
     )
 
 
@@ -579,6 +666,18 @@ def build_report(repo_root: Path, focus: str | None = None) -> HealthReport:
 def _finding_line(finding: Finding) -> str:
     marker = "✗" if finding.kind == KIND_MISSED else "?"
     return f"    {marker} {finding.subject}  {finding.reason}"
+
+
+def _scope_lines(scope: UnresolvedScope | None) -> list[str]:
+    """The unresolved-scope block, shared by both narrative views: the one thing
+    a scoped run must never render as a clean empty result."""
+    if scope is None:
+        return []
+    return [
+        "",
+        "  " + cli_render.style("warn", "? scope indeterminate"),
+        *cli_render.wrap(scope.reason, indent="    "),
+    ]
 
 
 def render_narrative(report: HealthReport) -> str:
@@ -591,7 +690,7 @@ def render_narrative(report: HealthReport) -> str:
     lines.append(
         cli_render.style("title", "Process health") + "  (missed hand-off check)"
     )
-    if not report.contracts and not report.skipped:
+    if not report.contracts and not report.skipped and report.unresolved_scope is None:
         lines.append("")
         lines.append("  (no hand-off contracts declared)")
 
@@ -639,6 +738,8 @@ def render_narrative(report: HealthReport) -> str:
         for s in report.skipped:
             lines.extend(cli_render.wrap(f"{s.address} — {s.reason}", indent="    "))
 
+    lines.extend(_scope_lines(report.unresolved_scope))
+
     lines.append("")
     summary = f"{report.missed_total} missed, {report.indeterminate_total} indeterminate"
     lines.append(
@@ -674,10 +775,15 @@ class InterpretationReport:
 
     contracts: tuple[ContractInterpretation, ...]
     skipped: tuple[SkippedDefinition, ...]
+    unresolved_scope: UnresolvedScope | None = None
 
     @property
     def indeterminate_total(self) -> int:
-        return sum(len(c.indeterminate) for c in self.contracts) + len(self.skipped)
+        return (
+            sum(len(c.indeterminate) for c in self.contracts)
+            + len(self.skipped)
+            + (1 if self.unresolved_scope is not None else 0)
+        )
 
     @property
     def ok(self) -> bool:
@@ -707,6 +813,10 @@ def build_interpretation(report: HealthReport) -> InterpretationReport:
             for cr in report.contracts
         ),
         skipped=report.skipped,
+        # Carried through unchanged: an authoring done-signal scoped to an
+        # address the walk never reached is the exact case COR-044's completion
+        # criterion must not pass (#713).
+        unresolved_scope=report.unresolved_scope,
     )
 
 
@@ -805,7 +915,7 @@ def render_interpretation_narrative(report: InterpretationReport) -> str:
         cli_render.style("title", "Process interpretability")
         + "  (authoring check — indeterminates only; misses are not counted)"
     )
-    if not report.contracts and not report.skipped:
+    if not report.contracts and not report.skipped and report.unresolved_scope is None:
         lines.append("")
         lines.append("  (no hand-off contracts declared)")
 
@@ -849,11 +959,22 @@ def render_interpretation_narrative(report: InterpretationReport) -> str:
         for s in report.skipped:
             lines.extend(cli_render.wrap(f"{s.address} — {s.reason}", indent="    "))
 
+    lines.extend(_scope_lines(report.unresolved_scope))
+
     lines.append("")
     clean = report.indeterminate_total == 0
     summary = f"{report.indeterminate_total} indeterminate (misses not counted)"
     lines.append("  " + cli_render.style("success" if clean else "strong", summary))
     return "\n".join(lines) + "\n"
+
+
+def _scope_payload(scope: UnresolvedScope | None) -> dict[str, str] | None:
+    """The machine form of the unresolved scope — a nullable object, always
+    present (like `skipped`) so a consumer can test one stable key rather than
+    infer the case from an empty contract list plus a non-zero total."""
+    if scope is None:
+        return None
+    return {"address": scope.address, "reason": scope.reason}
 
 
 def render_interpretation_json(report: InterpretationReport) -> str:
@@ -879,6 +1000,7 @@ def render_interpretation_json(report: InterpretationReport) -> str:
         "skipped": [
             {"address": s.address, "reason": s.reason} for s in report.skipped
         ],
+        "unresolved_scope": _scope_payload(report.unresolved_scope),
         "totals": {"indeterminate": report.indeterminate_total},
     }
     return json.dumps(payload, indent=2, sort_keys=True) + "\n"
@@ -914,6 +1036,7 @@ def render_json(report: HealthReport) -> str:
         "skipped": [
             {"address": s.address, "reason": s.reason} for s in report.skipped
         ],
+        "unresolved_scope": _scope_payload(report.unresolved_scope),
         "totals": {
             "missed": report.missed_total,
             "indeterminate": report.indeterminate_total,

@@ -89,7 +89,7 @@ Never hand-inspect a definition to decide whether it is well-formed. Use the rig
 - **`pkit process validate`** — a subject's **invariants**. Not a definition lint, and it says nothing about a coupling: per COR-038 the runtime never reads `depends_on` at all.
 - **`pkit process health --interpretation-only --process <address>`** — is a hand-off contract *interpretable*. This is the authoring done-signal after touching a contract. Misses are expected on a fresh contract and are never the done-signal. Always scope it to the address you just authored; the bare form walks every contract in the project, so another owner's unfinished seam would hold your signal red.
 
-Read any green with one eye open: a report that found *nothing to check* is not the same as a clean one. Confirm the checker actually saw the thing you just authored before treating it as done — `hand-off.md` carries the concrete trap.
+Read any green with one eye open: a report that found *nothing to check* is not the same as a clean one. Confirm the checker actually saw the thing you just authored before treating it as done. The tooling now fails closed on the two ways that used to go wrong — a stamp refuses a capability the project does not register, and a scoped health run whose address matches nothing walked reports an indeterminate scope rather than a green — but the discipline still belongs to you, because they are not the only ways a report can be about nothing.
 
 ### What this skill deliberately does not do
 
