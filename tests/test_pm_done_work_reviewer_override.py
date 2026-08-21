@@ -223,6 +223,31 @@ def test_override_with_genuine_approval_on_others_passes(dw, rc, monkeypatch) ->
     assert result.passed is True
 
 
+def test_redundant_override_on_approved_reviewer_labelled_approved(dw, rc, monkeypatch) -> None:
+    """A reviewer with a genuine fresh APPROVED that is ALSO named in
+    --bypass-reviewer is reported as APPROVED (the override was redundant), NOT
+    satisfied-by-override — the honest label (DEC-050 W3). The gate passes
+    either way."""
+    _wire(
+        dw, monkeypatch,
+        collection=_design_collection(rc),
+        comments=[
+            _local_verdict_comment("reviewer", "APPROVED"),
+            _local_verdict_comment("design-reviewer", "APPROVED"),
+        ],
+        closing_issue_labels={42: ["workstream:design"]},
+    )
+    result = dw._check_agent_gate(
+        99, {}, _config(), "resolved", CAP_ROOT,
+        override_reviewers=("design-reviewer",),
+    )
+    assert result.passed is True
+    # A genuine APPROVED is reported as such even though the reviewer was named
+    # in --bypass-reviewer — the override was redundant, not the reason it passed.
+    assert "design-reviewer" in result.passed_via
+    assert "satisfied-by-override" not in result.passed_via
+
+
 # ---- unknown name → hard error ---------------------------------------
 
 
@@ -415,6 +440,41 @@ def test_state_stale_approved(dw, av) -> None:
     assert "stale APPROVED" in state
     # A stale APPROVED is not a block, so no block-comment link.
     assert url is None
+
+
+# ---- worst-state-wins across paths (audit fidelity) ------------------
+
+
+def _remote_verdict_comment(login, verdict, ts=_FRESH_TS, url=None):
+    return {
+        "author": {"login": login},
+        "body": f"Reviewer agent: {verdict}\n\nbody.\n\n{_VERDICT_MARKER}",
+        "createdAt": ts,
+        "url": url or f"https://example.test/c/{login}",
+    }
+
+
+def test_build_override_audits_dual_path_prefers_most_blocking(dw) -> None:
+    """A reviewer that posted on BOTH paths — a stale local APPROVED and a fresh
+    remote CHANGES_REQUESTED — must be audited by the most-blocking state, so the
+    audit faithfully records the active block and keeps its link, rather than the
+    stale APPROVED that sorts first (DEC-050 G2). The local verdict is listed
+    first to prove the choice is severity-based, not order-based."""
+    audits = dw._build_override_audits(
+        override_reviewers=("dual-reviewer",),
+        comments=[
+            _local_verdict_comment("dual-reviewer", "APPROVED", ts=_STALE_TS),
+            _remote_verdict_comment(
+                "dual-reviewer", "CHANGES_REQUESTED", ts=_FRESH_TS,
+                url="https://example.test/block",
+            ),
+        ],
+        latest_commit_ts=_COMMIT_TS,
+        contributed_by={},
+    )
+    assert len(audits) == 1
+    assert "fresh CHANGES_REQUESTED" in audits[0].state
+    assert audits[0].block_comment_url == "https://example.test/block"
 
 
 # ---- per-reviewer(+reason) idempotency stamp -------------------------
