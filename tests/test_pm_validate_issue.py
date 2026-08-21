@@ -1560,3 +1560,160 @@ def test_gate_agreement_across_all_type_bindings(
     assert (
         vi.axis_labels.axis_is_label_bound("type", brownfield_type_label_map) is True
     )
+
+
+# --- board membership: unverified is not missing, and not satisfied (#740) ---
+
+
+_MANDATORY_STATE_BOARD = {
+    "required_fields": {
+        "board_membership": {"drift_severity": "[validation-severity:warning]"},
+    }
+}
+
+
+def _membership_labels(
+    vi, issue_types, titles, body_format, board_config, project_items, *, present=True
+):
+    """Validator output for a board-configured adopter with a given
+    `projectItems` payload; returns the finding labels.
+
+    `present=False` omits the key entirely — the shape returned when the field
+    could not be resolved at all, distinct from an explicit null. Both are
+    undeterminable and neither may be silent.
+    """
+    issue = _make_issue(
+        title="[Task] Wire the sandbox allowlist",
+        body=(
+            "Feature: #1\n\n"
+            "## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
+        ),
+        labels=["type:feature"],
+    )
+    if present:
+        issue["projectItems"] = project_items
+    return _labels(
+        vi._validate_issue(
+            issue=issue,
+            issue_types=issue_types,
+            titles=titles,
+            body_format=body_format,
+            config=board_config,
+            mandatory_state=_MANDATORY_STATE_BOARD,
+        )
+    )
+
+
+def test_board_membership_null_is_unverified_not_silent(
+    vi, issue_types, titles, body_format, board_config
+) -> None:
+    """A null `projectItems` means membership could not be DETERMINED. The old
+    condition (`is not None and isinstance(list) and len==0`) skipped the branch,
+    so an unreadable board was indistinguishable from a satisfied check — a gate
+    that passes on a value it could not read is indistinguishable from a gate
+    that does not exist."""
+    labels = _membership_labels(vi, issue_types, titles, body_format, board_config, None)
+    assert "board_membership.unverified" in labels
+    # ...and it must NOT accuse the adopter of an off-board issue.
+    assert "board_membership.missing" not in labels
+
+
+def test_board_membership_absent_key_is_unverified(
+    vi, issue_types, titles, body_format, board_config
+) -> None:
+    """The key omitted entirely (field unresolvable) is the same undeterminable
+    state as an explicit null — not satisfied, not missing."""
+    labels = _membership_labels(
+        vi, issue_types, titles, body_format, board_config, None, present=False
+    )
+    assert "board_membership.unverified" in labels
+    assert "board_membership.missing" not in labels
+
+
+def test_board_membership_non_list_is_unverified(
+    vi, issue_types, titles, body_format, board_config
+) -> None:
+    """A malformed (non-list) payload is undeterminable, never a definite empty."""
+    labels = _membership_labels(
+        vi, issue_types, titles, body_format, board_config, {"unexpected": "shape"}
+    )
+    assert "board_membership.unverified" in labels
+    assert "board_membership.missing" not in labels
+
+
+def test_board_membership_definite_empty_still_reports_missing(
+    vi, issue_types, titles, body_format, board_config
+) -> None:
+    """The determinate case is UNCHANGED: an empty list is a definite answer —
+    the issue is not on the board — and keeps reporting `.missing`."""
+    labels = _membership_labels(vi, issue_types, titles, body_format, board_config, [])
+    assert "board_membership.missing" in labels
+    assert "board_membership.unverified" not in labels
+
+
+def test_board_membership_populated_is_clean(
+    vi, issue_types, titles, body_format, board_config
+) -> None:
+    """A populated list satisfies the check — no membership finding either way."""
+    labels = _membership_labels(
+        vi, issue_types, titles, body_format, board_config, [{"title": "Board 42"}]
+    )
+    assert "board_membership.missing" not in labels
+    assert "board_membership.unverified" not in labels
+
+
+def test_board_membership_unverified_is_dec019_severity(
+    vi, issue_types, titles, body_format, board_config
+) -> None:
+    """Reported at DEC-019's OWN drift_severity (warning) — this fix adds no
+    severity, no verdict token, no exit-code change. A hard-reject here would
+    contradict DEC-019's explicit rationale for warning (historical issues
+    predate adoption; blocking them mid-flight is the wrong trade)."""
+    issue = _make_issue(
+        title="[Task] Wire the sandbox allowlist",
+        body=(
+            "Feature: #1\n\n"
+            "## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
+        ),
+        labels=["type:feature"],
+    )
+    issue["projectItems"] = None
+    findings = vi._validate_issue(
+        issue=issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        config=board_config,
+        mandatory_state=_MANDATORY_STATE_BOARD,
+    )
+    unverified = [f for f in findings if f.label == "board_membership.unverified"]
+    assert len(unverified) == 1
+    assert unverified[0].severity == vi.SEVERITY_WARNING
+
+
+def test_label_only_adopter_gets_no_membership_finding(
+    vi, issue_types, titles, body_format, label_fallback_config
+) -> None:
+    """No board configured ⇒ the branch never runs: label-only adopters see no
+    new finding, no new call, no new scope requirement."""
+    issue = _make_issue(
+        title="[Task] Wire the sandbox allowlist",
+        body=(
+            "Feature: #1\n\n"
+            "## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
+        ),
+        labels=["type:feature", "priority:Medium", "workstream:cli"],
+    )
+    issue["projectItems"] = None
+    labels = _labels(
+        vi._validate_issue(
+            issue=issue,
+            issue_types=issue_types,
+            titles=titles,
+            body_format=body_format,
+            config=label_fallback_config,
+            mandatory_state=_MANDATORY_STATE_BOARD,
+        )
+    )
+    assert "board_membership.unverified" not in labels
+    assert "board_membership.missing" not in labels
