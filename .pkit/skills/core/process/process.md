@@ -97,7 +97,7 @@ A family of operations is **named and deferred** per COR-016's ship-narrow disci
 
 - **`amend`** — evolving a definition's states or transitions while subjects are live (it rides the definition's `version` field). This is also the repair path for a coupling or contract you declared wrongly; until it ships, the interim route is a hand-edit plus a `pkit schemas validate` re-check, which `.pkit/cli/README.md` records as the one sanctioned exception.
 - **Adding a wait (COR-034) or an invariant (COR-035) to an *existing* definition.** A fresh definition can declare both through `new`.
-- **Subprocess embedding, cascade folds, and open regions.** The stamp has no flags for these at all — not even on a fresh definition — so they are deferred outright, and the walkthrough must not offer them. (That is narrower than COR-044 point 3 claims; the divergence is tracked and belongs to the record or the stamp, not to this skill.)
+- **Subprocess embedding, cascade folds, and open regions** — the three structural composition blocks. The stamp has no flags for these in *any* definition, fresh or not, so they are deferred outright and the walkthrough must not offer them (COR-044 point 3 as amended). Say what the deferral is and is not: the substrate resolves all three at runtime, so an author who needs one is not blocked from the behaviour — only from stamping it, which is deferred work rather than a missing capability.
 
 This skill ships no storyboard. Its scenarios are a walkthrough the author drives, not a scripted interaction with fixed turns; the storyboard convention pairs with agents running scripted scenarios.
 

@@ -24,7 +24,7 @@ The thing that moves through the process, and whether there is one of it or many
 - **Singleton** — one journey, no identity needed. "Our quarterly audit."
 - **Keyed** — many independent units, each at its own position (per COR-032). "Each document." "Each application." Ask what identifies a unit and record it as the key; the engine does not interpret it, so a descriptive name is the point.
 
-Worth knowing while you ask: the shape contract also records a pointer to where the subject's *domain* data lives (the process tracks a position, not the thing itself), but the stamp has no flag for it yet — so do not collect an answer you cannot stamp.
+Then ask **where the thing itself lives** — the process tracks a *position*, not the subject's domain data, so the definition records a pointer to that data separately. "The design files in `design/screens/`." "The record in the tracker." Take the author's own answer verbatim: it is free-form, nothing interprets it, and it exists so a later reader can find the thing the positions are about. If the author has no answer — the subject is not written down anywhere yet — leave it out rather than inventing a plausible location; the field is optional and a wrong pointer is worse than none.
 
 ### 2. What are the states, and what does each mean?
 

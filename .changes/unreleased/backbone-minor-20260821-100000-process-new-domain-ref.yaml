@@ -1,0 +1,18 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit process new` now stamps `subject.domain_ref` through a `--domain-ref
+  <pointer>` flag (#716) — where the subject's *domain* data lives, kept
+  distinct from the position the substrate tracks. Optional on either
+  cardinality and free-form (the engine never interprets it, so carrying
+  something is the only check the stamp can honestly make); omitting it writes
+  no key, leaving a definition as valid and lint-clean as before. The authoring
+  walkthrough now asks for the pointer instead of warning it cannot be stamped.
+  Closing the same divergence from the other side, COR-044 point 3 is
+  **amended**: the three structural composition blocks — subprocess embedding,
+  cascade folds, open regions — are deferred for authoring in *any* definition,
+  fresh or not, rather than claimed as fresh-definition surface the stamp never
+  had. That deferral is authoring-only — the substrate resolves all three at
+  runtime — and the process area README carries the authoritative list.

@@ -5,13 +5,14 @@ does the stamping (the COR-005 skill/command split — the composite skill owns
 the disciplines and the walkthrough, this module owns the stamp):
 
 - `stamp_new_process` — scaffold a lint-clean definition (subject incl.
-  cardinality, states with meanings, transitions, entry/terminal marks) into a
-  NAMED owning capability, plus a predicate STUB for every evaluable the
-  declared shape demands: detection predicates always; transition gates, entry
-  guards, a `resume_when`, and invariant checks when declared. Stubs follow the
-  predicate-runner contract (read-only, subject argv + `--json`, fail-closed —
-  an unimplemented stub exits non-zero so it can never read as green) and
-  register in the owning capability's `package.yaml` commands tree.
+  cardinality and, optionally, where its domain data lives, states with
+  meanings, transitions, entry/terminal marks) into a NAMED owning capability,
+  plus a predicate STUB for every evaluable the declared shape demands:
+  detection predicates always; transition gates, entry guards, a `resume_when`,
+  and invariant checks when declared. Stubs follow the predicate-runner
+  contract (read-only, subject argv + `--json`, fail-closed — an unimplemented
+  stub exits non-zero so it can never read as green) and register in the owning
+  capability's `package.yaml` commands tree.
 - `couple_process` — append a `depends_on` entry (COR-038) to the invoker-named
   definition: upstream address, relation + mode validated against the CLOSED
   substrate vocabularies READ AS DATA from the shape contract (never a
@@ -573,6 +574,7 @@ def stamp_new_process(
     *,
     cardinality: str = "singleton",
     subject_key: str | None = None,
+    domain_ref: str | None = None,
     states: list[StateSpec],
     transitions: list[TransitionSpec] | None = None,
     invariants: list[InvariantSpec] | None = None,
@@ -585,6 +587,15 @@ def stamp_new_process(
     the definition, the stub scripts, and the `package.yaml` registrations.
     The constructed `process` block is linted against the shape contract
     BEFORE any write — lint-clean by construction, not by promise.
+
+    `domain_ref` is the optional pointer to where the subject's DOMAIN data
+    lives, kept distinct from its process position. It applies to either
+    cardinality, and the only check is that it carries something: the engine
+    never interprets it and the contract fixes no form, so a stamp that
+    guessed at one (a path? an address? a URL?) would refuse pointers the
+    contract admits. Omitting it leaves the key out entirely — the shape
+    requires only `cardinality`, so a definition without one is as valid as
+    one with.
 
     `dry_run` reports exactly what a real run would stamp and writes nothing.
     It costs no fidelity here: every check, including the shape lint of the
@@ -628,6 +639,12 @@ def stamp_new_process(
         raise ProcessAuthoringError(
             "--key names what identifies a KEYED unit (COR-032); it has no "
             "meaning for a singleton subject."
+        )
+    if domain_ref is not None and not domain_ref.strip():
+        raise ProcessAuthoringError(
+            "--domain-ref points at where the subject's domain data lives; an "
+            "empty pointer says nothing. Omit the flag instead — the field is "
+            "optional in the shape contract."
         )
 
     # States: unique kebab ids, non-empty meanings, consistent marks.
@@ -805,6 +822,8 @@ def stamp_new_process(
     subject_block: dict[str, Any] = {"cardinality": cardinality}
     if subject_key is not None:
         subject_block["key"] = subject_key
+    if domain_ref is not None:
+        subject_block["domain_ref"] = domain_ref
     if blocked_on is not None:
         blocked_block: dict[str, Any] = {"blocked_on": blocked_on}
         if blocked_on == "awaiting-condition":
