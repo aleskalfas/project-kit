@@ -352,7 +352,7 @@ The split is the point: a definition's *shape* is declarative data with closed v
 
 - `amend` — evolving states or transitions under live subjects, riding the definition `version`. Also the repair path for a mis-declared coupling or contract.
 - Adding a **wait** (COR-034) or an **invariant** (COR-035) to an *existing* definition. A fresh definition declares both through `new`.
-- **Subprocess embedding, cascade folds, open regions** — no stamp surface at all yet, fresh definition or not. (COR-044 point 3 claims a fresh definition can declare these; the shipped stamp cannot, and closing that divergence is tracked work.)
+- **Subprocess embedding, cascade folds, open regions** — the three *structural composition* blocks. No stamp surface in **any** definition, fresh or not (COR-044 point 3 as amended for #716); each lands when a real authoring case demands it. The deferral is **authoring-only**: the substrate resolves all three at runtime today, so a definition carrying one behaves exactly as this spec describes — what is missing is the flag grammar to stamp it.
 
 ## Layout
 

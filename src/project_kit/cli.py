@@ -4832,6 +4832,10 @@ def _split_pair(raw: str, sep: str, flag: str, shape: str) -> tuple[str, str]:
               help="Subject cardinality (validated against the shape contract's set).")
 @click.option("--key", "subject_key", default=None,
               help="Descriptive name of what identifies a KEYED unit (COR-032); keyed only.")
+@click.option("--domain-ref", "domain_ref", default=None, metavar="<pointer>",
+              help="Pointer to where the subject's DOMAIN data lives — distinct from its "
+                   "process position (optional, either cardinality). Free-form: the "
+                   "engine never interprets it.")
 @click.option("--state", "state_flags", multiple=True, required=True, metavar="<id>=<meaning>",
               help="Declare a state (repeatable; declaration order is kept — it can be "
                    "load-bearing for detection precedence). Every state gets a detection "
@@ -4870,6 +4874,7 @@ def process_new(
     address: str,
     cardinality: str,
     subject_key: str | None,
+    domain_ref: str | None,
     state_flags: tuple[str, ...],
     entry_flags: tuple[str, ...],
     guarded_entry_flags: tuple[str, ...],
@@ -4889,15 +4894,16 @@ def process_new(
 
     \b
     Stamps `.pkit/capabilities/<capability>/schemas/<process-id>.yaml` (subject
-    incl. cardinality, states with meanings, transitions, entry/terminal
-    marks), validated against the shape contract BEFORE writing, plus a
-    predicate STUB for every evaluable the declared shape demands — detection
-    always; gates / entry guards / resume_when / invariant checks when
-    declared. Stubs follow the predicate-runner contract (read-only, subject
-    argv + `--json`) and FAIL CLOSED (exit non-zero) until implemented, so an
-    unwritten predicate can never read as green; each registers in the owning
-    capability's package.yaml. Implementing them is the process-author agent's
-    territory. One-shot: refuses when the process id already resolves.
+    incl. cardinality and an optional domain-data pointer, states with
+    meanings, transitions, entry/terminal marks), validated against the shape
+    contract BEFORE writing, plus a predicate STUB for every evaluable the
+    declared shape demands — detection always; gates / entry guards /
+    resume_when / invariant checks when declared. Stubs follow the
+    predicate-runner contract (read-only, subject argv + `--json`) and FAIL
+    CLOSED (exit non-zero) until implemented, so an unwritten predicate can
+    never read as green; each registers in the owning capability's
+    package.yaml. Implementing them is the process-author agent's territory.
+    One-shot: refuses when the process id already resolves.
     """
     from project_kit import process_authoring as authoring
 
@@ -4988,6 +4994,7 @@ def process_new(
             address,
             cardinality=cardinality,
             subject_key=subject_key,
+            domain_ref=domain_ref,
             states=states,
             transitions=transitions,
             invariants=invariants,

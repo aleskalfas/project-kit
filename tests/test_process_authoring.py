@@ -3,9 +3,10 @@ the interpretation-only health variant.
 
 These tests pin the load-bearing facts:
 
-- `new` scaffolds a LINT-CLEAN definition (subject incl. cardinality, states
-  with meanings, transitions, entry/terminal marks) into a NAMED owning
-  capability, with a fail-closed predicate stub for every evaluable the
+- `new` scaffolds a LINT-CLEAN definition (subject incl. cardinality and an
+  optional `domain_ref` pointer, states with meanings, transitions,
+  entry/terminal marks) into a NAMED owning capability, with a fail-closed
+  predicate stub for every evaluable the
   declared shape demands (detection always; gates / entry guards /
   resume_when / invariant checks when declared), each registered in the
   owning capability's package.yaml; it errors cleanly when no owning
@@ -233,6 +234,63 @@ def test_stamped_definition_passes_the_project_wide_schema_gate(
         "types:\n  thing:\n    meaning: A thing.\n", encoding="utf-8"
     )
     assert not schemas_validate.validate_all(authoring_repo).is_clean
+
+
+def test_new_stamps_an_optional_domain_ref_pointer(authoring_repo: Path) -> None:
+    # `subject.domain_ref` — where the subject's DOMAIN data lives, kept
+    # distinct from its process position (#716). It applies to EITHER
+    # cardinality, and a definition carrying one still passes the same
+    # project-wide schema gate as one without.
+    pa.stamp_new_process(
+        authoring_repo,
+        "design:screen",
+        cardinality="keyed",
+        subject_key="screen-id",
+        domain_ref="design/screens/",
+        states=[pa.StateSpec("drafting", "Drafting the screen design.", entry=True)],
+    )
+    pa.stamp_new_process(
+        authoring_repo,
+        "delivery:audit",
+        domain_ref="docs/audits/2026-q3.md",
+        states=[pa.StateSpec("open", "The audit is open.", entry=True)],
+    )
+    keyed = load_definition(authoring_repo, "design:screen")
+    assert keyed.data["subject"] == {
+        "cardinality": "keyed",
+        "key": "screen-id",
+        "domain_ref": "design/screens/",
+    }
+    singleton = load_definition(authoring_repo, "delivery:audit")
+    assert singleton.data["subject"] == {
+        "cardinality": "singleton",
+        "domain_ref": "docs/audits/2026-q3.md",
+    }
+    assert pa.lint_process_block(authoring_repo, keyed.data) == []
+    assert pa.lint_process_block(authoring_repo, singleton.data) == []
+    assert schemas_validate.validate_all(authoring_repo).is_clean
+
+
+def test_new_without_a_domain_ref_writes_no_key(authoring_repo: Path) -> None:
+    # The field is OPTIONAL in the shape contract (`subject` requires only
+    # `cardinality`), so omitting it leaves no empty placeholder behind and the
+    # definition lints clean exactly as it did before the flag existed.
+    _stamp_unit(authoring_repo)
+    definition = load_definition(authoring_repo, "delivery:unit")
+    assert definition.data["subject"] == {"cardinality": "singleton"}
+    assert pa.lint_process_block(authoring_repo, definition.data) == []
+    assert schemas_validate.validate_all(authoring_repo).is_clean
+
+    # A pointer that says nothing is refused rather than written: the pointer
+    # is free-form and the engine never interprets it, so carrying something is
+    # the only check the stamp can honestly make.
+    with pytest.raises(pa.ProcessAuthoringError, match="empty pointer"):
+        pa.stamp_new_process(
+            authoring_repo,
+            "delivery:blank",
+            domain_ref="   ",
+            states=[pa.StateSpec("only", "Only state.")],
+        )
 
 
 def test_new_stubs_fail_closed_and_are_read_only(authoring_repo: Path) -> None:
@@ -629,6 +687,24 @@ def test_new_cli_requires_capability_and_matching_marks(
     )
     assert result.exit_code != 0
     assert "--entry 'ghost'" in result.output
+
+
+def test_new_cli_stamps_the_domain_ref_flag(authoring_repo: Path, monkeypatch) -> None:
+    # The flag reaches the stamp: `--domain-ref` -> `subject.domain_ref`.
+    monkeypatch.setattr("project_kit.process.resolve_repo_root", lambda: authoring_repo)
+    result = CliRunner().invoke(
+        main,
+        [
+            "process", "new", "design:screen",
+            "--cardinality", "keyed", "--key", "screen-id",
+            "--domain-ref", "design/screens/",
+            "--state", "drafting=Drafting the screen design.",
+            "--entry", "drafting",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    definition = load_definition(authoring_repo, "design:screen")
+    assert definition.data["subject"]["domain_ref"] == "design/screens/"
 
 
 # --- `process couple`: closed vocab as data + version-unbumped --------------
