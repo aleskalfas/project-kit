@@ -18,7 +18,7 @@ The design space was explored in the scratchpad note `2026-08-12-code-review-dis
 
 **Ship a three-agent code-review panel from `software-engineering`, registered via the reviewer-contribution socket, folding through the existing all-must-approve gate.**
 
-1. **The panel.** Three reviewer agents, each emitting the standard [project-management:DEC-028] verdict grammar (`APPROVED`/`REJECTED` + the `<!-- pkit-verdict -->` marker), registered through the reviewer-contribution declaration (the pm-owned schema):
+1. **The panel.** Three reviewer agents, each emitting the standard [project-management:DEC-028] verdict grammar (`APPROVED`/`CHANGES_REQUESTED` + the `<!-- pkit-verdict -->` marker — the block token is `CHANGES_REQUESTED`; DEC-028 deliberately declined `REJECTED` as too terminal), registered through the reviewer-contribution declaration (the pm-owned schema):
    - **`code-reviewer`** — the generalist headline: correctness/logic at its core, plus general code quality; the "review this PR" an operator reaches for.
    - **`security-reviewer`** — illustratively: auth, secrets-in-argv, `shell=True`/injection, crypto, dependency hygiene (its contract lives in the agent body, not this record).
    - **`docs-reviewer`** — documentation completeness, understandability, and docs-match-behaviour (leaning on [project-management:DEC-015]'s doc obligations).
