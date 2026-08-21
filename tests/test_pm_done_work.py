@@ -846,3 +846,32 @@ def test_done_work_fetches_the_issue_body_for_the_gate(dw, monkeypatch):
     assert len(captured) == 1, "the gate must not add a second issue fetch"
     requested = set(captured[0].split(","))
     assert {"labels", "body"} <= requested
+
+
+# ---- per-reviewer override guards (main()-level, DEC-050) -------------
+
+
+def test_bypass_reviewer_requires_reason(dw, monkeypatch, capsys):
+    """`--bypass-reviewer` without `--bypass-reason` is refused before any gate
+    work — a per-reviewer override is audited, reason-required (DEC-050)."""
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    rc = _run_main(dw, monkeypatch, ["42", "--bypass-reviewer", "design-reviewer", "--yes"])
+    assert rc == 1
+    assert calls["merged"] is False
+    assert "--bypass-reason" in capsys.readouterr().err
+
+
+def test_bypass_reviewer_refused_in_human_mode(dw, monkeypatch, capsys):
+    """`--bypass-reviewer` in human mode is refused — it targets the agent-mode
+    reviewer set, which human mode has no equivalent of (DEC-050)."""
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    rc = _run_main(
+        dw, monkeypatch,
+        ["42", "--bypass-reviewer", "design-reviewer",
+         "--bypass-reason", "false block", "--yes"],
+    )
+    assert rc == 1
+    assert calls["merged"] is False
+    err = capsys.readouterr().err
+    assert "agent-mode" in err
+    assert "human mode" in err

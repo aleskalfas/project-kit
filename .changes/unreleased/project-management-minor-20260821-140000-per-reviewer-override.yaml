@@ -1,0 +1,28 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+body: >
+  Per-reviewer override on the merge gate (#735, project-management:DEC-050):
+  `done-work --bypass-reviewer <name> --bypass-reason "<r>"` (repeatable)
+  satisfies ONE named required reviewer's slot as a first-class
+  `satisfied-by-override` state — distinct from a fresh APPROVED — while every
+  other required reviewer in the resolved set still gates. It is a member of
+  DEC-046's `--bypass` family (audited, reason-required, a parameterised
+  repeatable target), NOT the whole-gate `--bypass` that discards the entire
+  approval gate. Satisfied-by-override is a separate gate-checker input, never
+  a synthetic APPROVED verdict, so it never corrupts the DEC-028 verdict record
+  or the ADR-042 read surface. The override is ephemeral and merge-time —
+  evaluated once against the currently-resolved set and current HEAD, never
+  persisted for a later run to read back. A `--bypass-reviewer` name not in the
+  freshly-resolved required set is a hard error naming the set; overriding
+  every slot warns and steers to `--bypass`; an unresolvable set (broken
+  contribution / undeployed agent) is left to the whole-gate `--bypass`. Before
+  merging, a prose, verdict-grammar-distinct audit comment is posted per
+  overridden reviewer, recording the operator (name + email), the reason, the
+  overridden reviewer + provenance, and the reviewer's state at override time
+  (none / a fresh CHANGES_REQUESTED / a stale APPROVED) with a link to the
+  block comment when one exists — stamped per-reviewer(+reason) for
+  idempotency. Widens DEC-032 D3's satisfaction predicate (amended in place)
+  and extends DEC-046. Additive and migration-free: no override supplied is
+  today's behaviour.

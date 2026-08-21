@@ -11,6 +11,7 @@ Transitions Review → Done by squash-merging the PR. Per DEC-026:
 
     done-work <N> [--bypass "<reason>"] [--bypass-ci "<reason>"]
                   [--skip-checkbox-gate]
+                  [--bypass-reviewer <name> ... --bypass-reason "<r>"]
 
 Approval gate (human-mode three-way OR per DEC-026):
   1. Latest review on the PR is APPROVED, OR
@@ -37,6 +38,22 @@ comment to the PR before merging (bypassable-with-audit per
 validation-severity.yaml). The two overrides are independent deliberate
 acts: a merge blocked on both the approval gate and red CI needs both flags.
 
+Per-reviewer override (DEC-050): in agent mode, `--bypass-reviewer <name>`
+(repeatable, with a required `--bypass-reason`) satisfies ONE named required
+reviewer's slot as `satisfied-by-override` — a first-class state DISTINCT from
+a fresh APPROVED — while every other required reviewer still gates. It is a
+member of DEC-046's `--bypass` family (audited, reason-required), NOT the
+whole-gate `--bypass` (which discards the entire approval gate). The override
+is ephemeral and merge-time: evaluated once against the currently-resolved set
+and current HEAD, never persisted for a later run to read back. `satisfied-by-
+override` is a separate gate-checker input, never a synthetic APPROVED verdict —
+so it never corrupts the DEC-028 verdict record or the ADR-042 read surface. A
+name not in the freshly-resolved required set is a hard error; overriding every
+slot warns and points at `--bypass`. Before merging it posts a prose,
+verdict-grammar-distinct audit comment per overridden reviewer (who/which/why +
+the reviewer's state at override time), stamped per-reviewer(+reason) for
+idempotency.
+
 Phase D (DEC-027 mode resolution) wires the per-PR mode lookup that
 chooses between this human-mode gate and DEC-028's agent-verdict gate.
 v1 ships with the human-mode gate as the default.
@@ -46,6 +63,9 @@ Side-effects:
   - `git pull` (main) after the merge.
   - Audit comment "Approved by bypass: <reason>" if --bypass is used
     (stamped + idempotent per DEC-024).
+  - Per-reviewer-override audit comment(s) on the PR if --bypass-reviewer is
+    used (prose, verdict-grammar-distinct, stamped per-reviewer(+reason) +
+    idempotent per DEC-050).
   - Composes over `move-issue.py --to done`.
   - `done-work` does NOT roll back the merge if a downstream step
     fails — merge irreversibility is the architectural constraint per
@@ -60,10 +80,12 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import subprocess
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 from ruamel.yaml import YAML
@@ -98,9 +120,11 @@ from _lib.closing_issue_fetchers import (  # noqa: E402
 )
 from _lib.agent_verdicts import (  # noqa: E402
     APPROVED,
+    CHANGES_REQUESTED,
     PATH_LOCAL,
     PATH_REMOTE,
     gate_verdicts,
+    latest_verdicts_per_reviewer,
 )
 from _lib.review_contributions import collect_contributions  # noqa: E402
 from _lib.review_mode import resolve_mode  # noqa: E402
@@ -120,6 +144,25 @@ def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
 
 BYPASS_AUDIT_STAMP = "<!-- pkit-hook: done-work-bypass -->"
 CI_BYPASS_AUDIT_STAMP = "<!-- pkit-hook: done-work-ci-bypass -->"
+# Per-reviewer-override audit stamp (DEC-050). Distinct from the single
+# whole-gate BYPASS_AUDIT_STAMP: keyed by reviewer name AND a short reason hash,
+# so overriding a *different* reviewer — or the same reviewer with a *different*
+# reason — posts its own audit, while re-running the identical override is a
+# no-op. Built by `_reviewer_override_stamp`.
+REVIEWER_OVERRIDE_STAMP_PREFIX = "<!-- pkit-hook: done-work-reviewer-override"
+
+
+def _reviewer_override_stamp(reviewer: str, reason: str) -> str:
+    """The per-reviewer(+reason) idempotency stamp for an override audit (DEC-050).
+
+    Keyed by the reviewer name and a short hash of the (stripped) reason so the
+    stamp is stable across re-runs with the same reviewer+reason (idempotent
+    no-op) but differs when either changes (a fresh audit posts). The reason is
+    hashed rather than inlined to keep the marker a single well-formed HTML
+    comment regardless of the reason's characters.
+    """
+    reason_hash = hashlib.sha256(reason.strip().encode("utf-8")).hexdigest()[:12]
+    return f"{REVIEWER_OVERRIDE_STAMP_PREFIX} name={reviewer} reason={reason_hash} -->"
 
 
 def main() -> int:
@@ -154,6 +197,29 @@ def main() -> int:
         help=(
             "Skip the DEC-007 checkbox close-gate. Discouraged; only use "
             "when you have just removed all open boxes by hand."
+        ),
+    )
+    parser.add_argument(
+        "--bypass-reviewer", action="append", default=None, metavar="NAME",
+        help=(
+            "Satisfy ONE required reviewer's slot on the agent-mode approval "
+            "gate by audited override, leaving every other required reviewer "
+            "gating (DEC-050). Repeatable to override several named reviewers. "
+            "Distinct from the whole-gate --bypass, which discards the entire "
+            "approval gate: this waives one named reviewer and keeps the rest. "
+            "Requires --bypass-reason. A name not in the freshly-resolved "
+            "required set is a hard error. Overriding every slot warns and "
+            "steers you to --bypass (the one honest whole-gate audit). Posts a "
+            "verdict-distinct audit comment recording who/which/why + the "
+            "reviewer's state at override time, before merging."
+        ),
+    )
+    parser.add_argument(
+        "--bypass-reason", default=None, metavar="REASON",
+        help=(
+            "The required reason paired with --bypass-reviewer (DEC-050). "
+            "Applies to every reviewer named by --bypass-reviewer this "
+            "invocation; recorded in each per-reviewer audit comment."
         ),
     )
     parser.add_argument(
@@ -226,17 +292,49 @@ def main() -> int:
     mode_resolution = resolve_mode(config, issue_labels=issue_labels)
     print(f"  mode: {mode_resolution.mode} ({mode_resolution.source})")
 
+    # Per-reviewer override (DEC-050) — a --bypass-family member. Reason is
+    # required and paired via --bypass-reason (not inline). Validate the
+    # pairing before any gate work.
+    override_reviewers = tuple(args.bypass_reviewer or ())
+    override_reason = (args.bypass_reason or "").strip()
+    if override_reviewers and not override_reason:
+        print(
+            '[refused] --bypass-reviewer requires --bypass-reason "<reason>" '
+            "(DEC-050: a per-reviewer override is audited, reason-required).",
+            file=sys.stderr,
+        )
+        return 1
+
     # Mode-conditional gate per DEC-026 + DEC-027 + DEC-028.
     if args.bypass:
-        # --bypass overrides any mode; same audit-comment shape applies.
+        # --bypass overrides any mode; same audit-comment shape applies. A
+        # whole-gate bypass subsumes any per-reviewer override, so the override
+        # flags are inert here (nothing left to satisfy per-reviewer).
         gate_result = _GateResult(passed=True, passed_via=f"--bypass: {args.bypass}")
     elif mode_resolution.mode == "human":
+        # The per-reviewer override targets the agent-mode reviewer set; human
+        # mode has no named required-reviewer set to override.
+        if override_reviewers:
+            print(
+                "[refused] --bypass-reviewer applies to the agent-mode "
+                "reviewer gate, but this PR resolved to human mode "
+                f"(source: {mode_resolution.source}).\n"
+                '          → Use --bypass "<reason>" for a whole-gate override '
+                "in human mode, or set the PR to agent mode.",
+                file=sys.stderr,
+            )
+            return 1
         gate_result = _check_approval_gate(pr_number, pr, args.bypass, config)
     else:
-        # agent mode — DEC-028 gate, with DEC-032's per-PR resolved set.
+        # agent mode — DEC-028 gate, with DEC-032's per-PR resolved set and
+        # DEC-050's satisfied-by-override OR-branch.
         gate_result = _check_agent_gate(
             pr_number, pr, config, mode_resolution.source, capability_root,
+            override_reviewers=override_reviewers,
         )
+
+    for warning in gate_result.warnings:
+        print(warning, file=sys.stderr)
 
     if not gate_result.passed:
         print(gate_result.refusal_message, file=sys.stderr)
@@ -338,6 +436,22 @@ def main() -> int:
             )
             return 2
 
+    # Post per-reviewer-override audit comment(s) before the merge (DEC-050).
+    # Prose, verdict-grammar-distinct, stamped per-reviewer(+reason) so a
+    # re-run of the same override is a no-op and a different reviewer/reason
+    # posts anew. The trail lands before the merge so it survives a partial
+    # failure (mirroring the CI-bypass audit).
+    for audit in gate_result.override_audits:
+        if not _post_reviewer_override_audit(
+            pr_number, audit, override_reason, invoker, config
+        ):
+            print(
+                "[warn] could not post reviewer-override audit comment; "
+                "aborting before merge.",
+                file=sys.stderr,
+            )
+            return 2
+
     # When --bypass-ci overrode a red/pending CI gate, record that explicitly
     # on the PR (bypassable-with-audit; the comment lands before the merge so
     # the trail survives a partial failure).
@@ -383,10 +497,41 @@ def main() -> int:
 
 
 class _GateResult:
-    def __init__(self, passed: bool, passed_via: str = "", refusal_message: str = ""):
+    def __init__(
+        self,
+        passed: bool,
+        passed_via: str = "",
+        refusal_message: str = "",
+        override_audits: "list[_OverrideAudit] | None" = None,
+        warnings: "list[str] | None" = None,
+    ):
         self.passed = passed
         self.passed_via = passed_via
         self.refusal_message = refusal_message
+        # Per-reviewer-override audit records the caller posts before merging
+        # (DEC-050) — empty unless the gate passed WITH one or more overrides.
+        self.override_audits = override_audits or []
+        # Soft, non-refusing notices the caller prints to stderr (e.g. the
+        # all-slots override nudge, DEC-050).
+        self.warnings = warnings or []
+
+
+@dataclass(frozen=True)
+class _OverrideAudit:
+    """One overridden reviewer's audit record (DEC-050 Decision 4).
+
+    Carries what the audit comment must record beyond the operator identity +
+    reason (both supplied at post time): the overridden reviewer, its
+    provenance (the contributing capability, or `None` for a baseline
+    reviewer), a human-readable description of the reviewer's *state at
+    override time* (`none` / a fresh `CHANGES_REQUESTED` / a stale `APPROVED`,
+    per the DEC), and a link to the block comment when one exists.
+    """
+
+    reviewer: str
+    capability: str | None
+    state: str
+    block_comment_url: str | None
 
 
 def _check_approval_gate(
@@ -538,6 +683,8 @@ def _check_agent_gate(
     config: dict,
     mode_source: str,
     capability_root: Path,
+    *,
+    override_reviewers: tuple[str, ...] = (),
 ) -> _GateResult:
     """DEC-028's gate-checker, generalised by DEC-032 to a per-PR resolved set.
 
@@ -559,6 +706,19 @@ def _check_agent_gate(
     equivalent to the single-baseline case (DEC-032 D3: the per-reviewer-OR /
     across-set-AND rule coincides with DEC-028's cross-path OR when the
     resolved set has one reviewer).
+
+    Per-reviewer override (DEC-050): `override_reviewers` names reviewers the
+    operator waived this invocation with `--bypass-reviewer`. Each named
+    reviewer's conjunct is ALSO satisfied by the override — a first-class
+    `satisfied-by-override` state, a SEPARATE gate-checker input (never a
+    synthetic APPROVED, so the DEC-028 verdict record / ADR-042 surface stay
+    uncorrupted); AND-across-the-set is unchanged. Names are validated against
+    the freshly-resolved required set (an unknown name is a hard error naming
+    the set); overriding every slot warns and steers to `--bypass`. When the
+    gate passes with one or more overrides, the result carries an
+    `_OverrideAudit` per overridden reviewer (its state at override time) for
+    the caller to post before merging. The override is ephemeral — evaluated
+    once here against the current set + HEAD, never persisted.
     """
     review = config.get("review") if isinstance(config, dict) else None
     agents_block = review.get("agents") if isinstance(review, dict) else None
@@ -615,11 +775,41 @@ def _check_agent_gate(
         pr_number, config, repo_root, local_baseline
     )
     if not resolution.ok:
-        return _resolution_refusal(resolution)
+        # An unresolvable set (broken contribution / undeployed agent) cannot
+        # be helped by a per-reviewer override — the override operates WITHIN a
+        # resolved set (DEC-050 Decision 5). Name that when overrides were
+        # supplied so the operator reaches for the whole-gate --bypass instead.
+        return _resolution_refusal(
+            resolution, override_requested=bool(override_reviewers)
+        )
     required_local = list(resolution.required_local)
     # Provenance for the refusal message: reviewer name → contributing
     # capability (baseline reviewers have no contributing capability).
     contributed_by = dict(resolution.contributed_by)
+
+    # --- DEC-050: validate the per-reviewer override against the freshly-
+    # resolved required set. A name not in the set is a HARD ERROR naming the
+    # set (a typo, or a name dropped by reclassification/uninstall) — never a
+    # silent no-op. The set spans the remote baseline plus the resolved local
+    # set (a baseline reviewer may be remote).
+    override_set = set(override_reviewers)
+    required_set_all = set(remote_baseline) | set(required_local)
+    unknown_overrides = [n for n in override_reviewers if n not in required_set_all]
+    if unknown_overrides:
+        return _GateResult(
+            passed=False,
+            refusal_message=_unknown_override_refusal(
+                unknown_overrides, remote_baseline, required_local, contributed_by
+            ),
+        )
+
+    # Soft all-slots nudge (DEC-050 Decision 6): overriding EVERY required slot
+    # equals the whole-gate bypass by other means — allowed (it is audited),
+    # but steer the operator to --bypass (one honest audit vs N per-reviewer
+    # bypasses). A warning, not a refusal.
+    gate_warnings: list[str] = []
+    if override_set and override_set == required_set_all:
+        gate_warnings.append(_all_slots_override_warning(required_set_all))
 
     # Fetch comments + author + the latest commit timestamp (one round-trip).
     proc = gh_run(
@@ -693,8 +883,13 @@ def _check_agent_gate(
         v.reviewer: v.token for v in verdicts if v.path == PATH_LOCAL
     }
 
-    # --- DEC-032 D3 composition: per-reviewer OR-across-paths, AND-across-set.
+    # --- DEC-032 D3 composition: per-reviewer OR-across-paths, AND-across-set;
+    # DEC-050 adds the satisfied-by-override OR-branch.
     def reviewer_satisfied(name: str) -> bool:
+        # DEC-050: an operator's audited override satisfies the conjunct — a
+        # SEPARATE gate-checker input, never a synthetic APPROVED.
+        if name in override_set:
+            return True
         # A reviewer registered on both paths (a baseline name appearing in
         # both `remote_registered` and `local_registered`) is satisfied by
         # either path's fresh APPROVED — DEC-028's per-reviewer OR.
@@ -709,7 +904,7 @@ def _check_agent_gate(
     # (baseline or contributed) reviewer on the local path.
     unsatisfied: list[str] = []
     for name in remote_baseline:
-        if name not in required_local and remote_status.get(name) != APPROVED:
+        if name not in required_local and not reviewer_satisfied(name):
             unsatisfied.append(name)
     for name in required_local:
         if not reviewer_satisfied(name):
@@ -719,13 +914,32 @@ def _check_agent_gate(
         passed_via_parts: list[str] = []
         for name in remote_baseline:
             if name not in required_local:
-                passed_via_parts.append(f"remote agent (@{name}) APPROVED")
+                if name in override_set:
+                    passed_via_parts.append(
+                        f"remote agent (@{name}) satisfied-by-override"
+                    )
+                else:
+                    passed_via_parts.append(f"remote agent (@{name}) APPROVED")
         for name in required_local:
             label = _reviewer_label(name, contributed_by)
-            passed_via_parts.append(f"{label} APPROVED")
+            if name in override_set:
+                passed_via_parts.append(f"{label} satisfied-by-override")
+            else:
+                passed_via_parts.append(f"{label} APPROVED")
+        # Build the per-reviewer audit records (state at override time) for the
+        # caller to post before merging (DEC-050 Decision 4). Only when the
+        # gate actually passes — a refused merge posts no audit.
+        override_audits = _build_override_audits(
+            override_reviewers=override_reviewers,
+            comments=comments,
+            latest_commit_ts=latest_commit_ts,
+            contributed_by=contributed_by,
+        )
         return _GateResult(
             passed=True,
             passed_via="; ".join(passed_via_parts),
+            override_audits=override_audits,
+            warnings=gate_warnings,
         )
 
     return _GateResult(
@@ -738,7 +952,9 @@ def _check_agent_gate(
             remote_status=remote_status,
             local_status=local_status,
             unsatisfied=unsatisfied,
+            override_set=override_set,
         ),
+        warnings=gate_warnings,
     )
 
 
@@ -774,27 +990,37 @@ def _resolve_required_local(
     )
 
 
-def _resolution_refusal(resolution: Resolution) -> _GateResult:
+def _resolution_refusal(
+    resolution: Resolution, *, override_requested: bool = False
+) -> _GateResult:
     """Shape a fail-closed `_GateResult` from a non-ok `Resolution` (D5).
 
     A collection error names the malformed declaration / undeployed agent; an
     unresolvable closing-issue lookup names what could not be determined. Both
     refuse rather than proceed on a partial (fail-open) set.
+
+    When `override_requested` (the operator passed `--bypass-reviewer`), append
+    a note that a per-reviewer override cannot help an unresolvable set — it
+    operates WITHIN a resolved set, so the whole-gate `--bypass` is the tool
+    here (DEC-050 Decision 5).
     """
     error = resolution.error
     assert error is not None  # `not resolution.ok` guarantees this.
     if error.kind == ERROR_COLLECTION and error.collection is not None:
-        return _GateResult(
-            passed=False,
-            refusal_message=_contribution_error_refusal(error.collection),
+        message = _contribution_error_refusal(error.collection)
+    elif error.kind == ERROR_CLOSING_ISSUES:
+        message = _closing_issue_unresolvable_refusal(error.message)
+    else:
+        # Defensive: any other (unexpected) kind still fails closed.
+        message = error.message
+    if override_requested:
+        message += (
+            "\n            Note: --bypass-reviewer cannot help here — a "
+            "per-reviewer override operates within a RESOLVED required set, "
+            "and the set could not be resolved. Use the whole-gate "
+            '--bypass "<reason>" (DEC-050).'
         )
-    if error.kind == ERROR_CLOSING_ISSUES:
-        return _GateResult(
-            passed=False,
-            refusal_message=_closing_issue_unresolvable_refusal(error.message),
-        )
-    # Defensive: any other (unexpected) kind still fails closed.
-    return _GateResult(passed=False, refusal_message=error.message)
+    return _GateResult(passed=False, refusal_message=message)
 
 
 def _reviewer_label(name: str, contributed_by: dict[str, str]) -> str:
@@ -892,30 +1118,43 @@ def _agent_gate_refusal(
     remote_status: dict[str, str],
     local_status: dict[str, str],
     unsatisfied: list[str],
+    override_set: set[str] | None = None,
 ) -> str:
     """Refusal text naming the full resolved required set + who lacks APPROVED.
 
     Names every required reviewer (baseline + contributed, with provenance)
     and its most recent fresh verdict, so the operator sees exactly which
-    members of the AND-composed set still need to approve (DEC-032 D3).
+    members of the AND-composed set still need to approve (DEC-032 D3). A
+    reviewer satisfied-by-override (DEC-050) shows that state rather than a
+    verdict token — the gate still refuses because a DIFFERENT required
+    reviewer is unsatisfied.
     """
+    override_set = override_set or set()
     lines = [
         "[refused] agent-mode approval required but the resolved reviewer set "
         "is not fully satisfied.",
         f"            → resolved mode: agent (source: {mode_source})",
-        "            → required reviewers (all must have a fresh APPROVED):",
+        "            → required reviewers (all must have a fresh APPROVED, or "
+        "an operator override):",
     ]
     for name in remote_baseline:
         if name not in required_local:
-            status = remote_status.get(name) or "none"
+            if name in override_set:
+                status = "satisfied-by-override"
+            else:
+                status = remote_status.get(name) or "none"
             lines.append(f"                  remote @{name}: {status}")
     for name in required_local:
         label = _reviewer_label(name, contributed_by)
-        # A reviewer on both paths shows the best of its two verdicts.
-        status = local_status.get(name)
-        if status != "APPROVED" and name in remote_baseline:
-            status = remote_status.get(name) or status
-        lines.append(f"                  {label}: {status or 'none'}")
+        if name in override_set:
+            status = "satisfied-by-override"
+        else:
+            # A reviewer on both paths shows the best of its two verdicts.
+            status = local_status.get(name)
+            if status != "APPROVED" and name in remote_baseline:
+                status = remote_status.get(name) or status
+            status = status or "none"
+        lines.append(f"                  {label}: {status}")
     missing = ", ".join(
         _reviewer_label(name, contributed_by) if name in required_local
         else f"remote @{name}"
@@ -929,12 +1168,142 @@ def _agent_gate_refusal(
     lines.append(
         "              b) Run `review-pr <N>` to re-invoke the local agent(s)."
     )
-    lines.append("              c) Merge with `done-work --bypass \"<reason>\"`.")
     lines.append(
-        "              d) If no agent is configured, set `review.mode: human` "
+        "              c) Override a false block on ONE reviewer with "
+        '`done-work --bypass-reviewer <name> --bypass-reason "<r>"`.'
+    )
+    lines.append("              d) Merge with `done-work --bypass \"<reason>\"`.")
+    lines.append(
+        "              e) If no agent is configured, set `review.mode: human` "
         "or use --bypass."
     )
     return "\n".join(lines)
+
+
+# ---- per-reviewer override (DEC-050) ---------------------------------
+
+
+def _unknown_override_refusal(
+    unknown: list[str],
+    remote_baseline: list[str],
+    required_local: list[str],
+    contributed_by: dict[str, str],
+) -> str:
+    """Refusal text for a `--bypass-reviewer <name>` not in the resolved set.
+
+    A hard error (DEC-050 Decision 5) — a typo, or a name dropped by
+    reclassification/uninstall, must not silently no-op. Names the offending
+    name(s) AND the full freshly-resolved required set so the operator sees
+    exactly what is overridable this invocation.
+    """
+    resolved: list[str] = []
+    for name in remote_baseline:
+        if name not in required_local:
+            resolved.append(f"remote @{name}")
+    for name in required_local:
+        resolved.append(_reviewer_label(name, contributed_by))
+    return "\n".join([
+        "[refused] --bypass-reviewer named a reviewer not in the freshly-"
+        "resolved required set (DEC-050).",
+        f"            → not required: {', '.join(unknown)}",
+        f"            → resolved required set: {', '.join(resolved) or '(none)'}",
+        "            A per-reviewer override must name a reviewer this PR "
+        "actually requires — check for a typo, or a reviewer dropped by "
+        "reclassification / a capability uninstall.",
+        "            Remediation:",
+        "              a) Re-run naming a reviewer from the resolved set above.",
+        "              b) Merge with `done-work --bypass \"<reason>\"` for a "
+        "whole-gate override.",
+    ])
+
+
+def _all_slots_override_warning(required_set_all: set[str]) -> str:
+    """Warning text when `--bypass-reviewer` covers EVERY required slot (D6).
+
+    Overriding every slot equals the whole-gate bypass by other means —
+    allowed (it is audited), but N per-reviewer audits are noisier than one
+    honest `--bypass`. A warning, not a refusal.
+    """
+    return (
+        "[warn] --bypass-reviewer covers EVERY required reviewer "
+        f"({', '.join(sorted(required_set_all))}) — this equals a whole-gate "
+        'bypass. Consider `done-work --bypass "<reason>"` instead (one honest '
+        "audit rather than N per-reviewer overrides). Proceeding (DEC-050)."
+    )
+
+
+def _build_override_audits(
+    *,
+    override_reviewers: tuple[str, ...],
+    comments: list,
+    latest_commit_ts: str,
+    contributed_by: dict[str, str],
+) -> "list[_OverrideAudit]":
+    """One `_OverrideAudit` per overridden reviewer, with its state at override
+    time (DEC-050 Decision 4).
+
+    The state records why the reviewer's fresh-APPROVED slot was empty when
+    overridden — the three states the DEC names (`none` / a fresh
+    `CHANGES_REQUESTED` / a stale `APPROVED`), plus the remaining verdict/
+    freshness combinations for completeness. It reads the reviewer's LATEST
+    verdict regardless of freshness (via the shared `latest_verdicts_per_
+    reviewer`, marker-required so only genuine reviewer verdicts count), so a
+    stale APPROVED is distinguishable from an active block. The block comment's
+    URL is carried when the latest verdict is a CHANGES_REQUESTED (a pointer to
+    the block being waived).
+    """
+    override_names = set(override_reviewers)
+    latest = latest_verdicts_per_reviewer(
+        comments,
+        remote_reviewer_ok=lambda login: login in override_names,
+        local_reviewer_ok=lambda name: name in override_names,
+        require_marker=True,
+    )
+    # Prefer a local-path verdict when a name posted on both paths.
+    by_name: dict[str, "object"] = {}
+    for verdict in latest:
+        if verdict.reviewer not in by_name or verdict.path == PATH_LOCAL:
+            by_name[verdict.reviewer] = verdict
+
+    audits: list[_OverrideAudit] = []
+    for name in override_reviewers:
+        state, url = _describe_override_state(by_name.get(name), latest_commit_ts)
+        audits.append(_OverrideAudit(
+            reviewer=name,
+            capability=contributed_by.get(name),
+            state=state,
+            block_comment_url=url,
+        ))
+    return audits
+
+
+def _describe_override_state(
+    verdict, latest_commit_ts: str
+) -> "tuple[str, str | None]":
+    """Human description + block-comment URL for a reviewer's state at override.
+
+    Returns `(state, block_comment_url)`. `verdict` is the reviewer's latest
+    marker-carrying verdict (a `Verdict`) or `None` when the reviewer never
+    posted one. Freshness is relative to `latest_commit_ts` (strictly-after =
+    fresh), the same anchor the gate uses.
+    """
+    if verdict is None:
+        return "none (no verdict posted)", None
+    fresh = verdict.timestamp > latest_commit_ts
+    url = verdict.url or None
+    if verdict.token == CHANGES_REQUESTED:
+        if fresh:
+            return "a fresh CHANGES_REQUESTED (an active block)", url
+        return "a stale CHANGES_REQUESTED (predates the latest commit)", url
+    if verdict.token == APPROVED:
+        if fresh:
+            # Overriding an already-fresh-APPROVED reviewer is redundant but
+            # allowed — record it honestly rather than pretend it was blocked.
+            return "a fresh APPROVED (override redundant)", None
+        return "a stale APPROVED (predates the latest commit)", None
+    # Defensive: an unrecognised token still audits.
+    freshness = "fresh" if fresh else "stale"
+    return f"a {freshness} {verdict.token}", url
 
 
 # ---- side-effects ----------------------------------------------------
@@ -1047,6 +1416,92 @@ def _post_ci_bypass_audit(
         )
         return False
     print("  ci-bypass audit comment posted")
+    return True
+
+
+def _reviewer_override_audit_body(
+    audit: "_OverrideAudit", reason: str, invoker: Identity
+) -> str:
+    """Render one per-reviewer-override audit comment (DEC-050 Decision 4).
+
+    PROSE and verdict-grammar-distinct by construction: the first line is the
+    idempotency stamp (an HTML comment), no line matches the DEC-028 verdict
+    grammar (`Reviewer agent: ...` / `Reviewer agent (local, <name>): ...`),
+    and the DEC-028 verdict marker (`<!-- pkit-verdict -->`) is never emitted —
+    so neither the gate's verdict reader nor ADR-042's read surface counts it.
+    Records the overridden reviewer + provenance, the operator (name + email),
+    the reason, and the reviewer's state at override time with a link to the
+    block comment when one exists.
+    """
+    name = invoker.github_login or invoker.email or "<unresolved>"
+    email = invoker.email or "<unknown>"
+    provenance = (
+        f"required by capability `{audit.capability}`"
+        if audit.capability else "baseline reviewer"
+    )
+    stamp = _reviewer_override_stamp(audit.reviewer, reason)
+    lines = [
+        stamp,
+        "",
+        f"Per-reviewer override by {name} <{email}>: {reason}",
+        "",
+        f"Overridden reviewer `{audit.reviewer}` ({provenance}).",
+        f"Reviewer state at override time: {audit.state}.",
+    ]
+    if audit.block_comment_url:
+        lines.append(f"Block comment: {audit.block_comment_url}")
+    lines.append(
+        "This reviewer's slot is satisfied-by-override for this merge; every "
+        "other required reviewer still gated (project-management:DEC-050)."
+    )
+    return "\n".join(lines)
+
+
+def _post_reviewer_override_audit(
+    pr_number: int | None,
+    audit: "_OverrideAudit",
+    reason: str,
+    invoker: Identity,
+    config: dict,
+) -> bool:
+    """Post one per-reviewer-override audit comment to the PR, idempotently.
+
+    Idempotency is keyed by the per-reviewer(+reason) stamp (DEC-050): a re-run
+    of the identical override is a no-op, while overriding a DIFFERENT reviewer
+    or the same reviewer with a DIFFERENT reason carries a distinct stamp and
+    posts its own audit.
+    """
+    if pr_number is None:
+        return False
+    stamp = _reviewer_override_stamp(audit.reviewer, reason)
+    body = _reviewer_override_audit_body(audit, reason, invoker)
+    proc = gh_run(
+        ["gh", "pr", "view", str(pr_number), "--json", "comments"],
+        config, check=False,
+    )
+    if proc.returncode == 0:
+        try:
+            data = json.loads(proc.stdout)
+            for c in data.get("comments", []):
+                if stamp in (c.get("body") or ""):
+                    print(
+                        f"  reviewer-override audit for `{audit.reviewer}` "
+                        "already present; idempotent skip"
+                    )
+                    return True
+        except (ValueError, KeyError, TypeError):
+            pass
+    proc = gh_run(
+        ["gh", "pr", "comment", str(pr_number), "--body", body],
+        config, check=False,
+    )
+    if proc.returncode != 0:
+        print(
+            f"error: gh pr comment failed: {proc.stderr.strip()}",
+            file=sys.stderr,
+        )
+        return False
+    print(f"  reviewer-override audit posted for `{audit.reviewer}`")
     return True
 
 
