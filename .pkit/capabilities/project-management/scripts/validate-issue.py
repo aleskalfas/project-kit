@@ -465,15 +465,43 @@ def _validate_issue(
     # is limited at v1 so this is gated to data we have).
     if has_board and state_fields.get("board_membership"):
         project_items = issue.get("projectItems")
-        if project_items is not None and isinstance(project_items, list) and len(project_items) == 0:
-            board_field = state_fields["board_membership"]
-            sev = _severity_from_token(board_field.get("drift_severity"))
+        board_field = state_fields["board_membership"]
+        sev = _severity_from_token(board_field.get("drift_severity"))
+        if isinstance(project_items, list) and len(project_items) == 0:
             findings.append(
                 Finding(
                     sev,
                     "board_membership.missing",
                     "issue is not on the configured Projects v2 board. "
                     "Mandatory per DEC-019.",
+                )
+            )
+        elif not isinstance(project_items, list):
+            # UNVERIFIED is not MISSING, and it is not satisfied either (#740).
+            # `projectItems` absent / null / non-list means membership could not
+            # be DETERMINED — an unreadable board, a token without the project
+            # scope, or a partial-success GraphQL reply carrying an errors array.
+            # The prior condition (`is not None and isinstance(list) and len==0`)
+            # skipped this branch entirely, so an undeterminable membership was
+            # silently indistinguishable from a satisfied one: a check that
+            # passes on a value it could not read is indistinguishable, in the
+            # adopter's repo, from a check that does not exist.
+            #
+            # Reported at DEC-019's OWN `drift_severity` (warning) — this adds no
+            # severity, verdict token, exit code, or network call; the payload is
+            # already fetched. The message is deliberately distinct from
+            # `.missing`: sending an adopter to "add this issue to the board"
+            # when the issue may already be on it is the wrong diagnosis, and a
+            # wrong diagnosis teaches distrust of the gate.
+            findings.append(
+                Finding(
+                    sev,
+                    "board_membership.unverified",
+                    "could not determine Projects v2 board membership "
+                    "(no projectItems in the issue payload — board unreadable, "
+                    "token missing the project scope, or a partial API reply). "
+                    "Membership is mandatory per DEC-019; this is NOT a report "
+                    "that the issue is off the board.",
                 )
             )
 
