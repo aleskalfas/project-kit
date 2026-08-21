@@ -8,9 +8,11 @@ reference-detection key-set, and the *value*-resolution behaviour the backbone's
 from __future__ import annotations
 
 import re
+import shutil
 import subprocess
 from pathlib import Path
 
+import click
 import pytest
 from click.testing import CliRunner
 from ruamel.yaml import YAML
@@ -63,6 +65,11 @@ def _project(tmp_path: Path, *, overlay: str | None = None) -> Path:
     # Root-walk install marker (#656): find_target_root only accepts a .pkit/
     # ancestor that carries manifest.yaml (or decisions/).
     (proj / ".pkit" / "manifest.yaml").write_text("backbone_version: 0.0.0\n", encoding="utf-8")
+    # The propagated ownership module (ADR-051): reconcile reads the
+    # write-carrying registry from it, exactly as a synced adopter tree does.
+    lifecycle = proj / ".pkit" / "lifecycle"
+    lifecycle.mkdir(parents=True)
+    shutil.copy2(REPO / ".pkit" / "lifecycle" / "ownership.py", lifecycle / "ownership.py")
     if overlay is not None:
         (proj / ".pkit" / "agents" / "project" / "overlay.yaml").write_text(overlay, encoding="utf-8")
     return proj
@@ -467,11 +474,144 @@ def test_reconcile_conventional_defaults_map_covers_architect_categories():
         )
 
 
+# --- reconcile: write-carrying categories ship empty (ADR-051) ---------------
+
+_WRITE_CARRYING = "process-authoring-targets"
+
+
+def test_reconcile_write_fills_write_carrying_category_with_empty_list(tmp_path):
+    """`reconcile --write` writes `cat: []` uncommented, restoring fresh-install parity.
+
+    A commented stub would leave the agent *skipped*; the explicit empty list
+    makes it deploy *inert*, which is the state a fresh install gets from the
+    seed (ADR-051 Decision point 1).
+    """
+    proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
+    _agent(proj / ".pkit" / "agents" / "core", "process-author",
+           owns=[f"<{_WRITE_CARRYING}>"], body=f"owns `<{_WRITE_CARRYING}>`")
+
+    added, report = ao.reconcile_overlay(proj, write=True)
+    assert added == [_WRITE_CARRYING]
+    text = (proj / ".pkit" / "agents" / "project" / "overlay.yaml").read_text()
+    assert f"{_WRITE_CARRYING}: []" in text
+    assert f"# {_WRITE_CARRYING}:" not in text          # uncommented, not a stub
+    assert "empty list" in report
+    # The category now resolves — the agent is no longer skipped.
+    assert ao.missing_categories(proj) == []
+    assert all(s.deployable for s in ao.agent_overlay_statuses(proj))
+
+
+def test_reconcile_write_carrying_resolves_to_empty_owns(tmp_path):
+    """The filled value resolves to zero paths — the agent owns nothing (inert)."""
+    proj = _project(tmp_path, overlay=f"{_WRITE_CARRYING}: []\n")
+    values = ao.load_overlay_values(proj)
+    entries, undefined = ao.expand_placeholders(
+        [f"<{_WRITE_CARRYING}>"], agent_name="process-author", overlay=values
+    )
+    assert entries == [] and undefined == []
+
+
+def test_reconcile_write_carrying_dry_run_does_not_write(tmp_path):
+    proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
+    _agent(proj / ".pkit" / "agents" / "core", "process-author",
+           owns=[f"<{_WRITE_CARRYING}>"], body=f"owns `<{_WRITE_CARRYING}>`")
+    before = (proj / ".pkit" / "agents" / "project" / "overlay.yaml").read_text()
+
+    added, report = ao.reconcile_overlay(proj, write=False)
+    assert added == [_WRITE_CARRYING]
+    assert "dry-run" in report
+    assert (proj / ".pkit" / "agents" / "project" / "overlay.yaml").read_text() == before
+
+
+def test_reconcile_write_carrying_idempotent(tmp_path):
+    proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
+    _agent(proj / ".pkit" / "agents" / "core", "process-author",
+           owns=[f"<{_WRITE_CARRYING}>"], body=f"owns `<{_WRITE_CARRYING}>`")
+    ao.reconcile_overlay(proj, write=True)
+    after_first = (proj / ".pkit" / "agents" / "project" / "overlay.yaml").read_text()
+
+    added, report = ao.reconcile_overlay(proj, write=True)
+    assert added == []
+    assert (proj / ".pkit" / "agents" / "project" / "overlay.yaml").read_text() == after_first
+    assert "overlay is complete" in report
+
+
+def test_reconcile_write_carrying_does_not_overwrite_adopter_paths(tmp_path):
+    """An adopter who nominated real paths keeps them — never reset to `[]`."""
+    overlay = f"{_WRITE_CARRYING}:\n  - .pkit/capabilities/mine/schemas/flow.yaml\n"
+    proj = _project(tmp_path, overlay=overlay)
+    _agent(proj / ".pkit" / "agents" / "core", "process-author",
+           owns=[f"<{_WRITE_CARRYING}>"], body=f"owns `<{_WRITE_CARRYING}>`")
+
+    added, _ = ao.reconcile_overlay(proj, write=True)
+    assert added == []
+    assert (proj / ".pkit" / "agents" / "project" / "overlay.yaml").read_text() == overlay
+
+
+def test_reconcile_mixes_empty_fill_with_conventional_fill(tmp_path):
+    """The two fill kinds coexist: one gets `[]`, the other its conventional dir."""
+    proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
+    (proj / "docs" / "architecture").mkdir(parents=True)
+    _agent(proj / ".pkit" / "agents" / "core", "process-author",
+           owns=[f"<{_WRITE_CARRYING}>"], body=f"owns `<{_WRITE_CARRYING}>`")
+    _agent(proj / ".pkit" / "agents" / "core", "architect",
+           owns=["<architecture-docs>"], body="owns `<architecture-docs>`")
+
+    added, _ = ao.reconcile_overlay(proj, write=True)
+    assert set(added) == {_WRITE_CARRYING, "architecture-docs"}
+    text = (proj / ".pkit" / "agents" / "project" / "overlay.yaml").read_text()
+    assert f"{_WRITE_CARRYING}: []" in text
+    assert "architecture-docs:\n  - docs/architecture" in text
+
+
+def test_agents_status_says_write_carrying_is_not_adoptable(tmp_path, monkeypatch):
+    """The `pkit agents` skip report must not send the adopter to a command that refuses."""
+    proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
+    _agent(proj / ".pkit" / "agents" / "core", "process-author",
+           owns=[f"<{_WRITE_CARRYING}>"], body=f"owns `<{_WRITE_CARRYING}>`")
+    monkeypatch.chdir(proj)
+    result = CliRunner().invoke(main, ["agents"])
+    assert result.exit_code == 0, result.output
+    assert "Not adoptable" in result.output
+    assert _WRITE_CARRYING in result.output
+    assert "reconcile --write" in result.output
+
+
 # --- adopt (issue #47) -------------------------------------------------------
 
 def _deploy_ok(target_root: Path, agent_name: str) -> bool:  # noqa: ARG001
     """Stub deploy_fn that always succeeds (avoids invoking deploy-agents.sh in tests)."""
     return True
+
+
+def test_adopt_refuses_write_carrying_category_with_the_honest_reason(tmp_path):
+    """`adopt` structurally cannot serve a write-carrying category (ADR-051).
+
+    The refusal must say *why* — no conventional default exists for paths core
+    cannot enumerate — and point at reconcile, not at a stub the adopter would
+    then have to fill by hand.
+    """
+    proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
+    _agent(proj / ".pkit" / "agents" / "core", "process-author",
+           owns=[f"<{_WRITE_CARRYING}>"], body=f"owns `<{_WRITE_CARRYING}>`")
+
+    with pytest.raises(click.ClickException) as exc:
+        ao.adopt_agent(proj, "process-author", deploy_fn=_deploy_ok)
+    message = str(exc.value)
+    assert "cannot serve" in message and _WRITE_CARRYING in message
+    assert "pkit agents reconcile --write" in message
+
+
+def test_adopt_deploys_when_write_carrying_category_already_set(tmp_path):
+    """Already `[]`: nothing to create, so adopt just deploys rather than erroring."""
+    proj = _project(tmp_path, overlay=f"{_WRITE_CARRYING}: []\n")
+    _agent(proj / ".pkit" / "agents" / "core", "process-author",
+           owns=[f"<{_WRITE_CARRYING}>"], body=f"owns `<{_WRITE_CARRYING}>`")
+
+    result = ao.adopt_agent(proj, "process-author", deploy_fn=_deploy_ok)
+    assert result.categories_wired == ()
+    assert result.categories_already_set == (_WRITE_CARRYING,)
+    assert result.deployed is True
 
 
 def test_adopt_fresh_creates_dirs_and_wires_overlay(tmp_path):
