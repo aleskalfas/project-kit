@@ -1,7 +1,7 @@
 ---
 id: DEC-050
 title: Per-reviewer override on the merge gate
-status: proposed
+status: accepted
 date: 2026-08-21
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
