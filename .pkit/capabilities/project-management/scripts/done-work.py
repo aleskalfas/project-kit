@@ -277,12 +277,21 @@ def main() -> int:
             file=sys.stderr,
         )
         return 1
+    if override_reason and not override_reviewers:
+        print(
+            "[warn] --bypass-reason was supplied without --bypass-reviewer; a "
+            "reason applies only to a per-reviewer override, so it is ignored.",
+            file=sys.stderr,
+        )
 
     # Mode-conditional gate per DEC-026 + DEC-027 + DEC-028.
     if args.bypass:
         # --bypass overrides any mode; same audit-comment shape applies. A
-        # whole-gate bypass subsumes any per-reviewer override, so the override
-        # flags are inert here (nothing left to satisfy per-reviewer).
+        # whole-gate bypass discards the entire approval gate, so any
+        # per-reviewer override flags are validated above (the reason-pairing
+        # check runs before this branching, and so still refuses a
+        # --bypass-reviewer with no --bypass-reason) but otherwise ignored here
+        # — there is no per-reviewer slot left to satisfy.
         gate_result = _GateResult(passed=True, passed_via=f"--bypass: {args.bypass}")
     elif mode_resolution.mode == "human":
         # The per-reviewer override targets the agent-mode reviewer set; human
@@ -784,11 +793,8 @@ def _check_agent_gate(
 
     # --- DEC-032 D3 composition: per-reviewer OR-across-paths, AND-across-set;
     # DEC-050 adds the satisfied-by-override OR-branch.
-    def reviewer_satisfied(name: str) -> bool:
-        # DEC-050: an operator's audited override satisfies the conjunct — a
-        # SEPARATE gate-checker input, never a synthetic APPROVED.
-        if name in override_set:
-            return True
+    def reviewer_approved(name: str) -> bool:
+        # A genuine fresh APPROVED on either path, independent of any override.
         # A reviewer registered on both paths (a baseline name appearing in
         # both `remote_registered` and `local_registered`) is satisfied by
         # either path's fresh APPROVED — DEC-028's per-reviewer OR.
@@ -797,6 +803,14 @@ def _check_agent_gate(
         if name in remote_baseline and remote_status.get(name) == APPROVED:
             return True
         return False
+
+    def reviewer_satisfied(name: str) -> bool:
+        # DEC-050: an operator's audited override ALSO satisfies the conjunct —
+        # a SEPARATE gate-checker input, never a synthetic APPROVED. A genuine
+        # fresh APPROVED satisfies it too (and takes precedence in the honest
+        # passed_via label below — a real approval is reported as such even
+        # when the reviewer was also named in --bypass-reviewer).
+        return reviewer_approved(name) or name in override_set
 
     # The required set spans the remote baseline plus the resolved local set.
     # A remote-only baseline reviewer is required on the remote path; a local
@@ -810,21 +824,25 @@ def _check_agent_gate(
             unsatisfied.append(name)
 
     if not unsatisfied:
+        # Honest label: a genuine fresh APPROVED is reported as APPROVED even
+        # when the reviewer was also named in --bypass-reviewer (the override
+        # was redundant). Only a slot with no fresh APPROVED is labelled
+        # satisfied-by-override (DEC-050 — the gate passes either way).
         passed_via_parts: list[str] = []
         for name in remote_baseline:
             if name not in required_local:
-                if name in override_set:
+                if reviewer_approved(name):
+                    passed_via_parts.append(f"remote agent (@{name}) APPROVED")
+                else:
                     passed_via_parts.append(
                         f"remote agent (@{name}) satisfied-by-override"
                     )
-                else:
-                    passed_via_parts.append(f"remote agent (@{name}) APPROVED")
         for name in required_local:
             label = _reviewer_label(name, contributed_by)
-            if name in override_set:
-                passed_via_parts.append(f"{label} satisfied-by-override")
-            else:
+            if reviewer_approved(name):
                 passed_via_parts.append(f"{label} APPROVED")
+            else:
+                passed_via_parts.append(f"{label} satisfied-by-override")
         # Build the per-reviewer audit records (state at override time) for the
         # caller to post before merging (DEC-050 Decision 4). Only when the
         # gate actually passes — a refused merge posts no audit.
@@ -1158,10 +1176,20 @@ def _build_override_audits(
         local_reviewer_ok=lambda name: name in override_names,
         require_marker=True,
     )
-    # Prefer a local-path verdict when a name posted on both paths.
+    # When a name posted on both paths, keep the MOST-BLOCKING state so the
+    # audit faithfully describes what was overridden — a fresh
+    # CHANGES_REQUESTED (an active block) must win over a stale APPROVED rather
+    # than the audit mis-recording "stale APPROVED" and dropping the block link
+    # (DEC-050 audit fidelity). On a severity tie the first-seen verdict wins;
+    # `latest` is sorted local-before-remote, preserving the prior local-first
+    # tie-break.
     by_name: dict[str, "object"] = {}
     for verdict in latest:
-        if verdict.reviewer not in by_name or verdict.path == PATH_LOCAL:
+        incumbent = by_name.get(verdict.reviewer)
+        if incumbent is None or (
+            _override_state_severity(verdict, latest_commit_ts)
+            > _override_state_severity(incumbent, latest_commit_ts)
+        ):
             by_name[verdict.reviewer] = verdict
 
     audits: list[_OverrideAudit] = []
@@ -1174,6 +1202,33 @@ def _build_override_audits(
             block_comment_url=url,
         ))
     return audits
+
+
+def _override_state_severity(verdict, latest_commit_ts: str) -> int:
+    """Rank a reviewer's verdict by how much it necessitated the override.
+
+    Used to pick the most faithful state to record when a reviewer posted on
+    BOTH paths (DEC-050 audit fidelity): the audit should describe the
+    most-blocking / least-satisfied state, not whichever path happened to sort
+    first. Higher = more blocking:
+
+        0  a fresh APPROVED           — satisfies the gate; override redundant
+        1  a stale APPROVED           — predates HEAD, no longer counts
+        2  a stale CHANGES_REQUESTED  — a recorded block, now stale
+        3  a fresh CHANGES_REQUESTED  — an active block
+
+    Freshness is relative to `latest_commit_ts` (strictly-after = fresh), the
+    same anchor the gate and `_describe_override_state` use.
+    """
+    fresh = verdict.timestamp > latest_commit_ts
+    if verdict.token == CHANGES_REQUESTED:
+        return 3 if fresh else 2
+    if verdict.token == APPROVED:
+        return 0 if fresh else 1
+    # Defensive: an unrecognised token ranks between APPROVED and
+    # CHANGES_REQUESTED (fresh above stale) so it still wins over a satisfying
+    # fresh APPROVED but yields to a real block.
+    return 2 if fresh else 1
 
 
 def _describe_override_state(

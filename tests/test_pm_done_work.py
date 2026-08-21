@@ -536,7 +536,8 @@ def test_done_work_post_ci_bypass_audit_idempotent(dw, monkeypatch) -> None:
 # the helpers.
 
 
-def _wire_main_seams(dw, monkeypatch, *, rollup, gate_passed=True):
+def _wire_main_seams(dw, monkeypatch, *, rollup, gate_passed=True,
+                     mode="human", agent_gate_result=None):
     """Monkeypatch done-work's heavy seams so main() reaches the CI gate.
 
     Membership/session-guard/branch/PR resolution and the approval gate are
@@ -544,9 +545,16 @@ def _wire_main_seams(dw, monkeypatch, *, rollup, gate_passed=True):
     real `evaluate_ci_gate` decides. Returns a dict recording the merge and
     audit side-effects the CI-gate outcome drives (so a test can assert the
     red-CI-under-`--bypass`-only path never reaches the merge).
+
+    `mode` sets what `resolve_mode` reports ("human" or "agent"). When
+    `agent_gate_result` is supplied, `_check_agent_gate` is stubbed to return
+    it — letting a test drive the full agent-mode path (including a
+    per-reviewer override's audit posting) without a live gate resolution.
+    `calls["order"]` records the sequence of override-audit and merge
+    side-effects so a test can assert the audit lands BEFORE the merge.
     """
     calls = {"merged": False, "ci_audit": False, "approval_audit": False,
-             "moved": False}
+             "moved": False, "override_audits": [], "order": []}
 
     monkeypatch.setattr(dw, "resolve_capability_root", lambda arg: Path("/cap"))
     monkeypatch.setattr(dw, "load_adopter_config", lambda root: {})
@@ -571,7 +579,7 @@ def _wire_main_seams(dw, monkeypatch, *, rollup, gate_passed=True):
     monkeypatch.setattr(
         dw, "resolve_mode",
         lambda config, issue_labels=None: type(
-            "M", (), {"mode": "human", "source": "default"},
+            "M", (), {"mode": mode, "source": "default"},
         )(),
     )
     monkeypatch.setattr(
@@ -580,6 +588,19 @@ def _wire_main_seams(dw, monkeypatch, *, rollup, gate_passed=True):
             passed=gate_passed, passed_via="stub",
             refusal_message="" if gate_passed else "[refused] approval gate",
         ),
+    )
+    if agent_gate_result is not None:
+        monkeypatch.setattr(
+            dw, "_check_agent_gate", lambda *a, **k: agent_gate_result,
+        )
+
+    def _stub_reviewer_override_audit(pr_number, audit, reason, invoker, config):
+        calls["override_audits"].append(audit.reviewer)
+        calls["order"].append(("override_audit", audit.reviewer))
+        return True
+
+    monkeypatch.setattr(
+        dw, "_post_reviewer_override_audit", _stub_reviewer_override_audit,
     )
     monkeypatch.setattr(
         dw, "_gh_get_pr_body", lambda pr_number, config: "## Test plan\n- [x] ok\n",
@@ -599,6 +620,7 @@ def _wire_main_seams(dw, monkeypatch, *, rollup, gate_passed=True):
 
     def _stub_merge(pr_number, *, pr_title, admin, config):
         calls["merged"] = True
+        calls["order"].append(("merged", None))
         return True
 
     def _stub_move(issue_number, target, cap_root_arg):
@@ -713,3 +735,39 @@ def test_bypass_reviewer_refused_in_human_mode(dw, monkeypatch, capsys):
     err = capsys.readouterr().err
     assert "agent-mode" in err
     assert "human mode" in err
+
+
+def test_agent_mode_override_happy_path_merges_after_audit(dw, monkeypatch):
+    """Full agent-mode happy path across the main() seam: --bypass-reviewer with
+    --bypass-reason drives main() → _check_agent_gate (passing WITH an override)
+    → the override audit posts → the merge proceeds. The audit lands BEFORE the
+    merge (DEC-050 — the trail survives a partial failure)."""
+    gate = dw._GateResult(
+        passed=True,
+        passed_via=(
+            "reviewer APPROVED; design-reviewer satisfied-by-override"
+        ),
+        override_audits=[dw._OverrideAudit(
+            reviewer="design-reviewer",
+            capability="ux-ui-design",
+            state="a fresh CHANGES_REQUESTED (an active block)",
+            block_comment_url="https://example.test/c/design-reviewer",
+        )],
+    )
+    calls = _wire_main_seams(
+        dw, monkeypatch, rollup=_GREEN_ROLLUP,
+        mode="agent", agent_gate_result=gate,
+    )
+    rc = _run_main(
+        dw, monkeypatch,
+        ["42", "--bypass-reviewer", "design-reviewer",
+         "--bypass-reason", "flaky false block", "--yes"],
+    )
+    assert rc == 0
+    assert calls["merged"] is True
+    # Exactly the one expected override audit posted...
+    assert calls["override_audits"] == ["design-reviewer"]
+    # ...and it posted BEFORE the merge.
+    assert calls["order"] == [
+        ("override_audit", "design-reviewer"), ("merged", None),
+    ]
