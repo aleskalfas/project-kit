@@ -408,42 +408,64 @@ def _validate_issue(
 
     has_board = bool(config.get("has_projects_v2_board", False))
     if not has_board:
-        priority_labels = [lbl for lbl in labels if axis_labels.is_axis_label(lbl, "priority")]
-        workstream_labels = [lbl for lbl in labels if axis_labels.is_axis_label(lbl, "workstream")]
-        if len(priority_labels) == 0:
-            findings.append(
-                Finding(
-                    SEVERITY_HARD_REJECT,
-                    "classification.priority.missing",
-                    "no `priority:*` label present (required in label-fallback "
-                    "mode per classification.yaml).",
-                )
-            )
-        elif len(priority_labels) > 1:
-            findings.append(
-                Finding(
-                    SEVERITY_HARD_REJECT,
-                    "classification.priority.multiple",
-                    f"multiple `priority:*` labels: {', '.join(priority_labels)}",
-                )
-            )
-        if len(workstream_labels) == 0:
-            findings.append(
-                Finding(
-                    SEVERITY_HARD_REJECT,
-                    "classification.workstream.missing",
-                    "no `workstream:*` label present (required in label-"
-                    "fallback mode per classification.yaml).",
-                )
-            )
-        elif len(workstream_labels) > 1:
-            findings.append(
-                Finding(
-                    SEVERITY_HARD_REJECT,
-                    "classification.workstream.multiple",
-                    f"multiple `workstream:*` labels: {', '.join(workstream_labels)}",
-                )
-            )
+        # Resolve each axis THROUGH THE SEAM, exactly as `type` does above
+        # (#742). Reading the kit prefix unconditionally was wrong twice over
+        # for a no-board adopter carrying a substrate map:
+        #
+        #   * LABEL-BOUND axis — `create-issue` writes the adopter's REMAPPED
+        #     label (e.g. `P1`) through the write seam, while this gate demanded
+        #     the kit `priority:High`. Writer and reader disagreed and NOTHING
+        #     detected it: pre-check's substrate-conflict check (#709) keys on a
+        #     configured board crossed with a label binding, so with no board it
+        #     skips. Same unsatisfiable-gate class as the reported board case,
+        #     through a path with no alarm on it.
+        #   * OMITTED axis in a PRESENT map — demanding the kit label is the
+        #     exact hazard DEC-036 D2 exists to prevent ("a brownfield adopter
+        #     who simply omits an axis they can't serve must get degradation,
+        #     not a silent fall-back to greenfield refusal on labels they cannot
+        #     create"). An omitted axis degrades; it does not fall back.
+        #
+        # Greenfield (no map at all) is byte-unchanged: kit labels, same
+        # findings, same severities.
+        for axis, kit_label_glob in (("priority", "`priority:*`"), ("workstream", "`workstream:*`")):
+            if axis_labels.axis_is_label_bound(axis, substrate_map):
+                # The adopter's own labels are the substrate; require one.
+                # Presence-only, mirroring the `type` bound arm (no multiplicity
+                # check there either — the remap's own shape governs).
+                if axis_labels.resolve_read(axis, labels, substrate_map) is None:
+                    findings.append(
+                        Finding(
+                            SEVERITY_HARD_REJECT,
+                            f"classification.{axis}.missing",
+                            f"no {axis} label present — substrate-map.yaml binds "
+                            f"`{axis}` to a label remap; one of the adopter's "
+                            f"remapped {axis} labels is required (see the "
+                            f"`{axis}` binding in project/substrate-map.yaml).",
+                        )
+                    )
+            elif axis_labels.axis_expects_kit_labels(axis, substrate_map):
+                # Greenfield: the kit's own `<axis>:*` label. Unchanged.
+                present = [lbl for lbl in labels if axis_labels.is_axis_label(lbl, axis)]
+                if len(present) == 0:
+                    findings.append(
+                        Finding(
+                            SEVERITY_HARD_REJECT,
+                            f"classification.{axis}.missing",
+                            f"no {kit_label_glob} label present (required in "
+                            "label-fallback mode per classification.yaml).",
+                        )
+                    )
+                elif len(present) > 1:
+                    findings.append(
+                        Finding(
+                            SEVERITY_HARD_REJECT,
+                            f"classification.{axis}.multiple",
+                            f"multiple {kit_label_glob} labels: {', '.join(present)}",
+                        )
+                    )
+            # else: present map, axis bound to title-prefix / derive /
+            # unsupported / absent — nothing kit-side to carry, so no presence
+            # demand (mirrors the `type` arm's else, and DEC-036 D2's degrade).
 
     # Mandatory assignment (per DEC-019 / mandatory-issue-state.yaml).
     state_fields = (mandatory_state or {}).get("required_fields") or {}

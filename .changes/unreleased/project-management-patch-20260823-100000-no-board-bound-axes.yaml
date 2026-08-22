@@ -1,0 +1,14 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  A no-board brownfield adopter whose substrate map binds priority or workstream
+  to their own labels no longer hits an unsatisfiable gate (#742): create-issue
+  wrote the remapped label through the seam while validate-issue demanded the
+  kit priority:*/workstream:* label, and pre-check could not detect it (its
+  conflict check keys on a configured board). Both axes now resolve through the
+  ADR-026 seam, exactly as type already did. An axis OMITTED from a present map
+  now degrades instead of falling back to a kit-label demand, per DEC-036 D2.
+  show-issue reports a label-bound axis by its resolved value rather than
+  "unset / on board". Greenfield behaviour is unchanged.
