@@ -1717,3 +1717,191 @@ def test_label_only_adopter_gets_no_membership_finding(
     )
     assert "board_membership.unverified" not in labels
     assert "board_membership.missing" not in labels
+
+
+# --- no-board adopter with label-bound priority/workstream (#742) -----------
+
+
+@pytest.fixture
+def brownfield_priority_ws_label_map(vi):
+    """A NO-BOARD brownfield map binding priority + workstream to the adopter's
+    own labels (their native `P0/P1/P2` and `area/*`), with `type` left on the
+    kit label.
+
+    This is the shape that had no coverage and no alarm: `create-issue` wrote
+    the REMAPPED label through the write seam while the presence gate demanded
+    the kit `priority:*`, and pre-check's substrate-conflict check (#709) skips
+    because there is no board.
+    """
+    return vi.axis_labels.SubstrateMap(
+        axes={
+            "priority": {"label": {"remap": {"High": "P0", "Medium": "P1", "Low": "P2"}}},
+            "workstream": {"label": {"remap": {"cli": "area/cli", "docs": "area/docs"}}},
+        }
+    )
+
+
+@pytest.fixture
+def brownfield_type_only_map(vi):
+    """A present map binding ONLY `type` — priority and workstream are OMITTED.
+
+    Per DEC-036 D2 an omitted axis DEGRADES; it must not fall back to demanding
+    kit labels the adopter may be unable to create.
+    """
+    return vi.axis_labels.SubstrateMap(
+        axes={"type": {"label": {"remap": {"feature": "kind/feature", "task": "kind/task"}}}}
+    )
+
+
+def _no_board_labels(
+    vi, issue_types, titles, body_format, label_fallback_config, *, labels, substrate_map
+):
+    issue = _make_issue(
+        title="[Task] Wire the sandbox allowlist",
+        body=(
+            "Feature: #1\n\n"
+            "## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
+        ),
+        labels=labels,
+    )
+    return _labels(
+        vi._validate_issue(
+            issue=issue,
+            issue_types=issue_types,
+            titles=titles,
+            body_format=body_format,
+            config=label_fallback_config,
+            substrate_map=substrate_map,
+        )
+    )
+
+
+def test_no_board_label_bound_axes_accept_the_remapped_labels(
+    vi, issue_types, titles, body_format, label_fallback_config, brownfield_priority_ws_label_map
+) -> None:
+    """THE BUG (#742): the adopter's own `P1` / `area/cli` — what `create-issue`
+    actually writes through the seam — must satisfy the gate. Before the fix the
+    gate demanded the kit `priority:*` / `workstream:*`, so the writer and the
+    reader disagreed and nothing detected it."""
+    found = _no_board_labels(
+        vi,
+        issue_types,
+        titles,
+        body_format,
+        label_fallback_config,
+        labels=["type:feature", "P1", "area/cli"],
+        substrate_map=brownfield_priority_ws_label_map,
+    )
+    assert "classification.priority.missing" not in found
+    assert "classification.workstream.missing" not in found
+
+
+def test_no_board_label_bound_axes_still_refuse_when_absent(
+    vi, issue_types, titles, body_format, label_fallback_config, brownfield_priority_ws_label_map
+) -> None:
+    """The fix must not become a hole: a bound axis with NONE of the adopter's
+    remapped labels is a genuine missing value — hard-reject, exactly as
+    greenfield gates a missing kit label."""
+    found = _no_board_labels(
+        vi,
+        issue_types,
+        titles,
+        body_format,
+        label_fallback_config,
+        labels=["type:feature"],
+        substrate_map=brownfield_priority_ws_label_map,
+    )
+    assert "classification.priority.missing" in found
+    assert "classification.workstream.missing" in found
+
+
+def test_no_board_label_bound_does_not_demand_the_kit_label(
+    vi, issue_types, titles, body_format, label_fallback_config, brownfield_priority_ws_label_map
+) -> None:
+    """The kit prefix is no longer demanded for a bound axis — the message must
+    name the adopter's remap, not `priority:*`, so the diagnosis points at the
+    substrate that actually carries the axis."""
+    issue = _make_issue(
+        title="[Task] Wire the sandbox allowlist",
+        body=(
+            "Feature: #1\n\n"
+            "## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
+        ),
+        labels=["type:feature"],
+    )
+    findings = vi._validate_issue(
+        issue=issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        config=label_fallback_config,
+        substrate_map=brownfield_priority_ws_label_map,
+    )
+    detail = next(
+        f.detail for f in findings if f.label == "classification.priority.missing"
+    )
+    assert "substrate-map.yaml" in detail
+    assert "priority:*" not in detail
+
+
+def test_no_board_omitted_axis_degrades_not_kit_fallback(
+    vi, issue_types, titles, body_format, label_fallback_config, brownfield_type_only_map
+) -> None:
+    """DEC-036 D2: an axis OMITTED from a present map degrades — it must not
+    fall back to demanding kit labels the adopter may be unable to create. The
+    old code demanded them, which is the same hazard D2 exists to prevent."""
+    found = _no_board_labels(
+        vi,
+        issue_types,
+        titles,
+        body_format,
+        label_fallback_config,
+        labels=["kind/task"],
+        substrate_map=brownfield_type_only_map,
+    )
+    assert "classification.priority.missing" not in found
+    assert "classification.workstream.missing" not in found
+
+
+def test_greenfield_no_board_behaviour_is_unchanged(
+    vi, issue_types, titles, body_format, label_fallback_config
+) -> None:
+    """No map at all ⇒ byte-unchanged: kit labels demanded, same findings."""
+    missing = _no_board_labels(
+        vi,
+        issue_types,
+        titles,
+        body_format,
+        label_fallback_config,
+        labels=["type:feature"],
+        substrate_map=None,
+    )
+    assert "classification.priority.missing" in missing
+    assert "classification.workstream.missing" in missing
+    clean = _no_board_labels(
+        vi,
+        issue_types,
+        titles,
+        body_format,
+        label_fallback_config,
+        labels=["type:feature", "priority:Medium", "workstream:cli"],
+        substrate_map=None,
+    )
+    assert "classification.priority.missing" not in clean
+    assert "classification.workstream.missing" not in clean
+
+
+def test_greenfield_multiple_kit_labels_still_reported(
+    vi, issue_types, titles, body_format, label_fallback_config
+) -> None:
+    """The multiplicity check survives the refactor for the greenfield arm."""
+    found = _no_board_labels(
+        vi,
+        issue_types,
+        titles,
+        body_format,
+        label_fallback_config,
+        labels=["type:feature", "priority:High", "priority:Low", "workstream:cli"],
+        substrate_map=None,
+    )
+    assert "classification.priority.multiple" in found

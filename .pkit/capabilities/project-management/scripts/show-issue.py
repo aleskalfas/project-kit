@@ -120,12 +120,17 @@ def main() -> int:
 
     issue_types = _read_yaml(capability_root / "schemas" / "issue-types.yaml", yaml_loader)
     body_format = _read_yaml(capability_root / "schemas" / "body-format.yaml", yaml_loader)
+    # The adopter's substrate map, so a LABEL-BOUND axis is reported by its
+    # resolved value rather than as unset (#742): show-issue is the first
+    # command an operator reaches for when diagnosing classification, and
+    # reading only kit prefixes made it deny a value that was plainly set.
+    substrate_map = axis_labels.load_substrate_map(capability_root)
 
     issue = _gh_get_issue(args.issue_number, config)
     if issue is None:
         return 2
 
-    summary = _summarise(issue, issue_types, body_format)
+    summary = _summarise(issue, issue_types, body_format, substrate_map)
 
     if args.field is not None:
         for line in _field_lines_for(summary)[args.field]:
@@ -137,7 +142,12 @@ def main() -> int:
     return 0
 
 
-def _summarise(issue: dict, issue_types: dict, body_format: dict) -> dict:
+def _summarise(
+    issue: dict,
+    issue_types: dict,
+    body_format: dict,
+    substrate_map: "axis_labels.SubstrateMap | None" = None,
+) -> dict:
     title = str(issue.get("title", ""))
     # Read-side strip (ADR-037): the agent composes edits against
     # footer-free text, so it never sees or mishandles the footer bytes.
@@ -162,16 +172,45 @@ def _summarise(issue: dict, issue_types: dict, body_format: dict) -> dict:
     criteria = _extract_criteria(body, checkbox_headings(body_format))
 
     type_labels = [lbl for lbl in labels if axis_labels.is_axis_label(lbl, "type")]
-    priority_labels = [lbl for lbl in labels if axis_labels.is_axis_label(lbl, "priority")]
-    workstream_labels = [lbl for lbl in labels if axis_labels.is_axis_label(lbl, "workstream")]
-    other_labels = [
-        lbl
-        for lbl in labels
-        if not any(
-            axis_labels.is_axis_label(lbl, ax)
-            for ax in ("type", "priority", "workstream")
-        )
-    ]
+
+    def _axis_display(axis: str) -> list[str]:
+        """The axis's labels as the OPERATOR should read them (#742).
+
+        A label-bound axis lives on the adopter's own labels, so reading only
+        the kit `<axis>:*` prefix reported `<unset / on board>` for a value that
+        was plainly set — actively misleading in the command an operator reaches
+        for first when diagnosing exactly this. Resolve through the seam
+        (ADR-026) and render `<their-label> -> <kit value>` so both the
+        substrate and the methodology value are visible.
+        """
+        if axis_labels.axis_is_label_bound(axis, substrate_map):
+            resolved = axis_labels.resolve_read(axis, labels, substrate_map)
+            if resolved is None:
+                return []
+            bound = [
+                lbl
+                for lbl in labels
+                if axis_labels.resolve_read(axis, [lbl], substrate_map) is not None
+            ]
+            return [f"{lbl} -> {resolved}" for lbl in bound] or [resolved]
+        return [lbl for lbl in labels if axis_labels.is_axis_label(lbl, axis)]
+
+    priority_labels = _axis_display("priority")
+    workstream_labels = _axis_display("workstream")
+    def _is_axis_carried(lbl: str) -> bool:
+        """Whether a label is already reported on an axis line — kit-prefixed,
+        or the adopter's own label for a bound axis (#742), so a remapped label
+        is not also listed under `other labels`."""
+        for ax in ("type", "priority", "workstream"):
+            if axis_labels.is_axis_label(lbl, ax):
+                return True
+            if axis_labels.axis_is_label_bound(ax, substrate_map) and (
+                axis_labels.resolve_read(ax, [lbl], substrate_map) is not None
+            ):
+                return True
+        return False
+
+    other_labels = [lbl for lbl in labels if not _is_axis_carried(lbl)]
 
     return {
         "title": title,
