@@ -69,6 +69,14 @@ architecture-docs:
 adr-records:
   - docs/architecture/decisions/
 
+# Process-authoring targets (per ADR-051). The `process-author` agent's write
+# authority: your own process-definition files and predicate-script locations,
+# at FILE granularity — not whole capability subtrees, and never `package.yaml`
+# (the process commands own predicate registration). Ships as an explicit empty
+# list, so the agent deploys owning nothing until you nominate paths; an entry
+# that resolves into sync-managed content is refused at deploy time.
+process-authoring-targets: []
+
 # Per-agent overrides (optional): replace categories for a specific agent.
 # overrides:
 #   product-manager:
@@ -92,6 +100,12 @@ PROPAGATED_AREAS: tuple[str, ...] = (
     "permissions",
     "rules",
     "process",
+    # The lifecycle area carries `ownership.py` — the single implementation of
+    # "does sync manage this path?" that adapters' agent resolvers import in the
+    # adopter's tree (ADR-051 Decision point 3, realized the ADR-003 way). It
+    # must therefore reach adopters, which also lands the area README that the
+    # propagated `rules/core.md` already cites for the migration-script contract.
+    "lifecycle",
     # Backbone migrations must reach the adopter tree: `pkit upgrade` reads
     # `<target>/.pkit/migrations/backbone/` *after* sync to run pending
     # backbone migrations (ADR-033 §4 — fixes a pre-existing omission where

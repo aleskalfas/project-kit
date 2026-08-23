@@ -18,11 +18,21 @@ import pytest
 SOURCE_REPO = Path(__file__).resolve().parents[1]
 DEPLOY_SCRIPT = SOURCE_REPO / ".pkit" / "adapters" / "claude-code" / "deploy-agents.sh"
 RESOLVE_SCRIPT = SOURCE_REPO / ".pkit" / "adapters" / "claude-code" / "_resolve_agent.py"
+OWNERSHIP_MODULE = SOURCE_REPO / ".pkit" / "lifecycle" / "ownership.py"
+
+# The one write-carrying overlay category shipped today (ADR-051). Read from the
+# real module rather than restated, so a rename can't leave these tests
+# exercising a category nothing guards.
+WRITE_CARRYING_CATEGORY = "process-authoring-targets"
 
 
 @pytest.fixture
 def mock_kit(tmp_path: Path) -> Path:
     """Stage a minimal kit layout under tmp_path with the adapter scripts copied in.
+
+    Includes the propagated `.pkit/lifecycle/ownership.py` the resolver imports
+    for its write-authority check (ADR-051) — a synced adopter tree always has
+    it, so staging it is what makes this fixture a faithful stand-in.
 
     Returns the project root (the directory containing `.pkit/`).
     """
@@ -32,6 +42,10 @@ def mock_kit(tmp_path: Path) -> Path:
     shutil.copy2(RESOLVE_SCRIPT, adapter_dir / "_resolve_agent.py")
     (adapter_dir / "deploy-agents.sh").chmod(0o755)
     (adapter_dir / "_resolve_agent.py").chmod(0o755)
+
+    lifecycle_dir = tmp_path / ".pkit" / "lifecycle"
+    lifecycle_dir.mkdir(parents=True)
+    shutil.copy2(OWNERSHIP_MODULE, lifecycle_dir / "ownership.py")
 
     (tmp_path / ".pkit" / "agents" / "core").mkdir(parents=True)
     (tmp_path / ".pkit" / "agents" / "project").mkdir(parents=True)
@@ -174,6 +188,201 @@ def test_deploy_unresolved_category_degrades_not_aborts(mock_kit: Path) -> None:
     assert "1 agent(s) skipped" in result.stdout            # end-of-run summary
     assert (mock_kit / ".claude" / "agents" / "fine.md").is_file()      # rest deployed
     assert not (mock_kit / ".claude" / "agents" / "broken.md").exists()  # the gap one skipped
+
+
+# --- write-carrying categories (ADR-051) -------------------------------------
+#
+# `process-authoring-targets` grants the core `process-author` agent write
+# authority over paths only the adopter can enumerate. Three properties are
+# exercised here: the explicit-`[]` form deploys the agent inert, a bare/absent
+# key skips it with remediation that does NOT promise `adopt`, and an entry
+# resolving into sync-managed content is refused outright.
+
+def _write_carrying_agent(root: Path, name: str = "process-author") -> None:
+    _write_agent(
+        root,
+        "core",
+        name,
+        f"---\nname: {name}\ndescription: Test.\n"
+        f"owns:\n  - <{WRITE_CARRYING_CATEGORY}>\n---\n\n# Teeth\n",
+    )
+
+
+def _overlay(root: Path, body: str) -> None:
+    (root / ".pkit" / "agents" / "project" / "overlay.yaml").write_text(body, encoding="utf-8")
+
+
+def _register_capability(root: Path, name: str, *, origin: str | None) -> None:
+    """Register *name* in the backbone manifest, optionally with an origin."""
+    lines = [
+        "schema_version: 1",
+        "backbone_version: 1.0.0",
+        "components:",
+        "  - kind: capability",
+        f"    name: {name}",
+        f"    manifest: .pkit/capabilities/{name}/manifest.yaml",
+    ]
+    if origin is not None:
+        lines.append(f"    origin: {origin}")
+    (root / ".pkit" / "manifest.yaml").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def test_deploy_write_carrying_explicit_empty_list_deploys_inert(mock_kit: Path) -> None:
+    """The shipped form: `cat: []` resolves to an empty `owns:` and the agent deploys."""
+    _write_carrying_agent(mock_kit)
+    _overlay(mock_kit, f"{WRITE_CARRYING_CATEGORY}: []\n")
+
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    assert "created" in result.stdout
+    assert "skipped" not in result.stdout
+    deployed = mock_kit / ".claude" / "agents" / "process-author.md"
+    assert deployed.is_file()
+    content = deployed.read_text()
+    assert "owns: []" in content                          # inert: owns nothing
+    assert f"<{WRITE_CARRYING_CATEGORY}>" not in content  # placeholder resolved
+
+
+def test_deploy_write_carrying_bare_key_skips_with_honest_remediation(mock_kit: Path) -> None:
+    """A bare key (`cat:` with no value) does not resolve → the agent is skipped.
+
+    The remediation must not advertise `pkit agents adopt`: there is no
+    conventional default for paths core cannot enumerate, so adopt would refuse.
+    """
+    _write_carrying_agent(mock_kit)
+    _overlay(mock_kit, f"{WRITE_CARRYING_CATEGORY}:\n")
+
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    assert "skipped" in result.stdout and "process-author" in result.stdout
+    assert f"<{WRITE_CARRYING_CATEGORY}>" in result.stdout      # the category named
+    assert "cannot serve" in result.stdout                     # adopt ruled out …
+    assert "pkit agents reconcile --write" in result.stdout     # … the real path named
+    assert "Deploy it:  pkit agents adopt" not in result.stdout  # generic advice suppressed
+    assert not (mock_kit / ".claude" / "agents" / "process-author.md").exists()
+
+
+def test_deploy_write_carrying_absent_key_skips(mock_kit: Path) -> None:
+    """An absent key skips exactly as a bare one does — no overlay file at all."""
+    _write_carrying_agent(mock_kit)
+
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    assert "skipped" in result.stdout and "process-author" in result.stdout
+    assert not (mock_kit / ".claude" / "agents" / "process-author.md").exists()
+
+
+def test_deploy_write_carrying_rejects_sync_managed_path(mock_kit: Path) -> None:
+    """A core area is sync-managed, so the category may not name it (ADR-051)."""
+    _write_carrying_agent(mock_kit)
+    _overlay(mock_kit, f"{WRITE_CARRYING_CATEGORY}:\n  - .pkit/agents/core/\n")
+
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr          # degrade, not abort
+    assert "skipped" in result.stdout
+    assert "sync-managed" in result.stdout                # the reason
+    assert ".pkit/agents/core/" in result.stdout          # the offending path, named
+    assert "overlay.yaml" in result.stdout                # where to fix it
+    assert not (mock_kit / ".claude" / "agents" / "process-author.md").exists()
+
+
+def test_deploy_write_carrying_rejects_kit_shipped_capability_subtree(mock_kit: Path) -> None:
+    """A registered kit-shipped capability's own subtree is sync-managed."""
+    _write_carrying_agent(mock_kit)
+    _register_capability(mock_kit, "shipped-cap", origin="kit-shipped")
+    _overlay(
+        mock_kit,
+        f"{WRITE_CARRYING_CATEGORY}:\n  - .pkit/capabilities/shipped-cap/schemas/flow.yaml\n",
+    )
+
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    assert "skipped" in result.stdout and "sync-managed" in result.stdout
+    assert ".pkit/capabilities/shipped-cap/schemas/flow.yaml" in result.stdout
+
+
+def test_deploy_write_carrying_accepts_project_tree_in_kit_shipped_capability(
+    mock_kit: Path,
+) -> None:
+    """`project/` inside a kit-shipped capability is adopter-owned by tier (ADR-051)."""
+    _write_carrying_agent(mock_kit)
+    _register_capability(mock_kit, "shipped-cap", origin="kit-shipped")
+    target = ".pkit/capabilities/shipped-cap/project/process/predicates/"
+    _overlay(mock_kit, f"{WRITE_CARRYING_CATEGORY}:\n  - {target}\n")
+
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    assert "created" in result.stdout
+    assert "skipped" not in result.stdout
+    content = (mock_kit / ".claude" / "agents" / "process-author.md").read_text()
+    assert target in content
+
+
+def test_deploy_write_carrying_accepts_unregistered_capability_subtree(mock_kit: Path) -> None:
+    """The bootstrap window: a subtree authored but not yet registered is admissible."""
+    _write_carrying_agent(mock_kit)
+    _register_capability(mock_kit, "some-other-cap", origin="kit-shipped")
+    target = ".pkit/capabilities/fresh-cap/schemas/renovation.yaml"
+    _overlay(mock_kit, f"{WRITE_CARRYING_CATEGORY}:\n  - {target}\n")
+
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    assert "created" in result.stdout
+    assert "skipped" not in result.stdout
+    assert target in (mock_kit / ".claude" / "agents" / "process-author.md").read_text()
+
+
+def test_deploy_write_carrying_accepts_incubated_capability_subtree(mock_kit: Path) -> None:
+    """An incubated capability is adopter-owned (COR-031 D1) — admissible."""
+    _write_carrying_agent(mock_kit)
+    _register_capability(mock_kit, "mine", origin="incubated-in-repo")
+    target = ".pkit/capabilities/mine/schemas/renovation.yaml"
+    _overlay(mock_kit, f"{WRITE_CARRYING_CATEGORY}:\n  - {target}\n")
+
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    assert "created" in result.stdout
+    assert target in (mock_kit / ".claude" / "agents" / "process-author.md").read_text()
+
+
+def test_deploy_read_carrying_category_may_name_sync_managed_paths(mock_kit: Path) -> None:
+    """The constraint guards *write* authority only.
+
+    `architecture-docs` legitimately points at kit-shipped records (project-kit's
+    own overlay does exactly that), so a non-write-carrying category must not be
+    checked — otherwise shipping the constraint would break existing installs.
+    """
+    _write_agent(
+        mock_kit,
+        "core",
+        "architect",
+        "---\nname: architect\ndescription: Test.\nowns:\n  - <architecture-docs>\n---\n\n# Arch\n",
+    )
+    _overlay(mock_kit, "architecture-docs:\n  - .pkit/decisions/core/\n")
+
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    assert "created" in result.stdout
+    assert ".pkit/decisions/core/" in (mock_kit / ".claude" / "agents" / "architect.md").read_text()
+
+
+def test_deploy_missing_ownership_module_fails_loudly(mock_kit: Path) -> None:
+    """Without the shared predicate the check cannot run — skip loudly, never silently.
+
+    Deploying an agent whose write grant was never validated is the outcome
+    ADR-051 exists to prevent, so an absent `.pkit/lifecycle/ownership.py` skips
+    every placeholder-bearing agent with a `pkit sync` pointer.
+    """
+    (mock_kit / ".pkit" / "lifecycle" / "ownership.py").unlink()
+    _write_carrying_agent(mock_kit)
+    _overlay(mock_kit, f"{WRITE_CARRYING_CATEGORY}: []\n")
+
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr      # still degrades, not aborts
+    assert "skipped" in result.stdout
+    assert "ownership.py" in result.stdout
+    assert "pkit sync" in result.stdout
+    assert not (mock_kit / ".claude" / "agents" / "process-author.md").exists()
 
 
 def test_deploy_idempotent_reports_exists(mock_kit: Path) -> None:

@@ -17,7 +17,7 @@ from pathlib import Path
 import click
 import pytest
 
-from project_kit import install
+from project_kit import agents_overlay, install
 
 
 @pytest.fixture
@@ -349,6 +349,50 @@ def test_install_does_not_propagate_rules_project_md(tmp_target: Path) -> None:
         ".pkit/rules/project.md was copied into the adopter tree; "
         "it is adopter-owned and must not propagate"
     )
+
+
+# ── lifecycle area propagation + the seeded overlay (ADR-051) ─────────────
+
+
+@pytest.mark.usefixtures("stub_adapter_primitives")
+def test_install_propagates_lifecycle_ownership_module(tmp_target: Path) -> None:
+    """`ownership.py` must reach adopters: an adapter's resolver imports it in-tree.
+
+    It is the single implementation of "does sync manage this path?" (ADR-051);
+    the resolver runs where `project_kit` is not importable, so an unpropagated
+    module means the write-authority check cannot run at all.
+    """
+    assert "lifecycle" in install.PROPAGATED_AREAS
+    install.install_kit(tmp_target)
+    lifecycle = tmp_target / ".pkit" / "lifecycle"
+    assert (lifecycle / "ownership.py").is_file()
+    assert (lifecycle / "README.md").is_file()
+
+
+@pytest.mark.usefixtures("stub_adapter_primitives")
+def test_seeded_overlay_ships_write_carrying_categories_as_empty_lists(
+    tmp_target: Path,
+) -> None:
+    """Fresh installs get the *explicit empty list* form (ADR-051 Decision point 1).
+
+    The distinction is mechanical, not cosmetic: `[]` resolves to an empty
+    `owns:` and the agent deploys inert, whereas a bare or absent key does not
+    resolve and the agent is skipped. Every write-carrying category the shared
+    registry declares must therefore appear in the seed, filled with `[]`.
+    """
+    install.install_kit(tmp_target)
+    overlay = tmp_target / ".pkit" / "agents" / "project" / "overlay.yaml"
+    values = agents_overlay.load_overlay_values(tmp_target)
+    for category in agents_overlay.write_carrying_categories(tmp_target):
+        assert f"{category}: []" in overlay.read_text(encoding="utf-8"), (
+            f"seeded overlay is missing `{category}: []`"
+        )
+        assert values.defaults[category] == [], (
+            f"seeded `{category}` must resolve to an empty list, not "
+            f"{values.defaults[category]!r}"
+        )
+    # Non-vacuous: the registry is populated, so the loop above asserted something.
+    assert agents_overlay.write_carrying_categories(tmp_target)
 
 
 # ── find_source_kit resolution order (ADR-033) ────────────────────────────

@@ -22,3 +22,11 @@ architecture-docs:
 # its architectural decisions per PRJ-005; records land here.
 adr-records:
   - docs/architecture/decisions/
+
+# Process-authoring targets (per ADR-051) — the `process-author` agent's write
+# authority. Empty is the correct value *here*: project-kit ships the process
+# substrate and its definitions rather than authoring definitions as an adopter,
+# so every definition in this tree is sync-managed content the category may not
+# name. The explicit `[]` (rather than a bare or absent key) is what makes the
+# agent deploy inert instead of being skipped.
+process-authoring-targets: []

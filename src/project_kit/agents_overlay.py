@@ -28,6 +28,7 @@ parity test pins it to the adapter resolver's actual behaviour.
 """
 from __future__ import annotations
 
+import importlib.util
 import io
 import re
 import subprocess
@@ -55,6 +56,44 @@ CONVENTIONAL_CATEGORY_DEFAULTS: dict[str, str] = {
     "architecture-docs": "docs/architecture",
     "adr-records": "docs/architecture/decisions",
 }
+
+
+def _ownership_mod(target_root: Path) -> Any | None:
+    """Load the lifecycle layer's ownership module from *target_root*, or None.
+
+    The same-code gesture ADR-003 established for the permission core, applied
+    to the tier-ownership predicate ADR-051 requires be implemented once: the
+    module lives in-tree at `.pkit/lifecycle/ownership.py` because an adapter's
+    deploy resolver runs where `project_kit` is not importable, and the backbone
+    reads *that* copy rather than keeping its own.
+
+    Returns None when the module is absent — a tree that has not synced since
+    the lifecycle layer started carrying it. Callers degrade (the pre-ADR-051
+    behaviour) rather than failing; the deploy resolver, whose check is the
+    load-bearing one, fails loudly instead.
+    """
+    path = target_root / ".pkit" / "lifecycle" / "ownership.py"
+    if not path.is_file():
+        return None
+    spec = importlib.util.spec_from_file_location("pkit_lifecycle_ownership", path)
+    if spec is None or spec.loader is None:
+        return None
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def write_carrying_categories(target_root: Path) -> frozenset[str]:
+    """Overlay categories that carry write authority and ship as `[]` (ADR-051).
+
+    Read from the shared ownership module so the set is declared once. An
+    unreachable module yields the empty set, which makes every category take the
+    conventional-default path — the behaviour that predates the category.
+    """
+    mod = _ownership_mod(target_root)
+    if mod is None:
+        return frozenset()
+    return frozenset(mod.WRITE_CARRYING_CATEGORIES)
 
 # The frontmatter keys whose list items may hold `<category>` placeholders,
 # mirrored from the claude-code adapter's `_resolve_agent.py`. A guard test
@@ -335,15 +374,26 @@ def render_status(target_root: Path) -> str:
     )]
     status_part = None
     if skipped:
-        cats = ", ".join(missing_categories(target_root))
+        missing = missing_categories(target_root)
+        cats = ", ".join(missing)
+        warn_lines = [
+            "Deploy the skipped agent(s):  pkit agents adopt <agent>",
+            "Custom doc layout:            pkit agents reconcile --write → set paths → pkit sync",
+        ]
+        # A write-carrying category (ADR-051) names paths only the adopter can
+        # enumerate, so `adopt` has nothing to create for it — say so here rather
+        # than let the lead line send the adopter to a command that must refuse.
+        write_carrying = sorted(set(missing) & write_carrying_categories(target_root))
+        if write_carrying:
+            warn_lines.append(
+                f"Not adoptable ({', '.join(write_carrying)}): reconcile --write fills "
+                f"it with an empty list; the agent then deploys inert."
+            )
         status_part = cli_render.status(
             "Skipped", f"{len(skipped)} agent(s)",
             gloss=f"undefined overlay categor(ies): {cats}",
             placement="footer",
-            warn=(
-                "Deploy the skipped agent(s):  pkit agents adopt <agent>\n"
-                "Custom doc layout:            pkit agents reconcile --write → set paths → pkit sync"
-            ),
+            warn="\n".join(warn_lines),
         )
     commands = [
         ("pkit agents adopt <agent>", "create conventional dirs + wire overlay + deploy in one step"),
@@ -359,8 +409,14 @@ def render_status(target_root: Path) -> str:
 def reconcile_overlay(target_root: Path, *, write: bool) -> tuple[list[str], str]:
     """Surface referenced-but-undefined categories into the overlay.
 
-    Four states per referenced category:
+    Five states per referenced category:
 
+    - **missing + write-carrying** (ADR-051): the category grants write
+      authority over paths only the adopter can enumerate, so it has no
+      conventional default and ships as an explicit empty list → write
+      ``cat: []`` **uncommented**, which restores fresh-install parity: the
+      agent deploys *inert* (owning nothing) rather than being skipped, and the
+      adopter nominates paths when they are ready.
     - **missing + conventional dir exists** (detect-then-fill): the category is
       absent from the overlay AND the conventional default directory for it
       exists under the project root → write the category **uncommented** with
@@ -399,10 +455,16 @@ def reconcile_overlay(target_root: Path, *, write: bool) -> tuple[list[str], str
 
     truly_missing = [c for c in missing if not _is_defined(c) and not _is_commented_stub(c)]
 
-    # Partition missing categories: auto-fill (conventional dir exists) vs stub.
+    # Partition missing categories: empty-fill (write-carrying, ADR-051),
+    # auto-fill (conventional dir exists), or stub.
+    write_carrying = write_carrying_categories(target_root)
+    empty_fill: list[str] = []
     auto_fill: list[tuple[str, str]] = []   # (category, path)
     to_stub: list[str] = []
     for cat in truly_missing:
+        if cat in write_carrying:
+            empty_fill.append(cat)
+            continue
         conv = _conventional_dir_exists(cat)
         if conv is not None:
             auto_fill.append((cat, conv))
@@ -416,8 +478,41 @@ def reconcile_overlay(target_root: Path, *, write: bool) -> tuple[list[str], str
     lines: list[str] = []
     to_add: list[str] = []
 
+    if empty_fill:
+        to_add += empty_fill
+        verb = "would fill" if not write else "filled"
+        lines.append(cli_render.style(
+            "strong",
+            f"{verb} {len(empty_fill)} write-carrying categor(ies) with an empty list "
+            f"— the agent deploys inert until you nominate paths:",
+        ))
+        for cat in empty_fill:
+            lines.append(f"  {cat}: []")
+        if write:
+            if not path.is_file():
+                raise FileNotFoundError(f"overlay not found at {path}; run `pkit init` first.")
+            block_lines = [
+                "",
+                "# --- added by `pkit agents reconcile` (write-carrying; ships empty) ---",
+                "# These categories grant an agent WRITE authority over paths only you can",
+                "# enumerate, so they ship as an explicit empty list: the agent deploys",
+                "# owning nothing. Add your own paths when ready — an entry that resolves",
+                "# into sync-managed content is refused at deploy time.",
+            ]
+            for cat in empty_fill:
+                block_lines.append(f"{cat}: []")
+            with path.open("a", encoding="utf-8") as fh:
+                fh.write("\n".join(block_lines) + "\n")
+            lines.append("")
+            lines.append("empty list written — run `pkit sync` to deploy the agent(s) inert.")
+        else:
+            lines.append("")
+            lines.append("(dry-run — re-run with `--write` to write these entries.)")
+
     if auto_fill:
         to_add += [cat for cat, _ in auto_fill]
+        if lines:
+            lines.append("")
         verb = "would auto-fill" if not write else "auto-filled"
         lines.append(cli_render.style(
             "strong",
@@ -555,9 +650,12 @@ def adopt_agent(
     overlay or filesystem, deploys again (the deploy step itself is idempotent),
     and returns a result with empty *dirs_created* and *categories_wired*.
 
-    Raises :class:`click.ClickException` when the agent is unknown, or references
-    a category that has no conventional default (so no canonical dir can be
-    created — the adopter must set the path manually via ``reconcile``).
+    Raises :class:`click.ClickException` when the agent is unknown, or when a
+    category it still needs has no conventional default (so no canonical dir can
+    be created — the adopter must set the path via ``reconcile``). For a
+    *write-carrying* category (ADR-051) that refusal is structural rather than
+    incidental, and says so: core cannot enumerate the adopter's paths, so
+    ``reconcile``'s empty-list fill is the only honest path.
     """
     # --- Validate the agent exists and references categories ---
     kit_agents = discover_kit_agents(target_root)
@@ -575,16 +673,6 @@ def adopt_agent(
             f"agent {agent_name!r} references no overlay categories — nothing to adopt."
         )
 
-    # --- Check for categories without a conventional default ---
-    no_default = [c for c in sorted(referenced) if c not in CONVENTIONAL_CATEGORY_DEFAULTS]
-    if no_default:
-        raise click.ClickException(
-            f"agent {agent_name!r} references categor(ies) with no conventional default: "
-            f"{', '.join(no_default)}.\n"
-            f"Use `pkit agents reconcile --write` to add a commented stub, then set real "
-            f"paths manually before running `pkit sync`."
-        )
-
     # --- Load overlay ---
     path = _overlay_path(target_root)
     if not path.is_file():
@@ -599,6 +687,32 @@ def adopt_agent(
     # Determine which categories need action.
     undefined = [c for c in sorted(referenced) if not _is_defined(c)]
     already_set = [c for c in sorted(referenced) if _is_defined(c)]
+
+    # --- Check the categories still needing action for a conventional default ---
+    # Judged over `undefined`, not everything referenced: an agent whose
+    # write-carrying category is already set has nothing for adopt to create and
+    # should just deploy, not error.
+    no_default = [c for c in undefined if c not in CONVENTIONAL_CATEGORY_DEFAULTS]
+    if no_default:
+        write_carrying = write_carrying_categories(target_root)
+        if set(no_default) <= write_carrying:
+            # ADR-051: `adopt` structurally cannot serve a write-carrying
+            # category — there is no conventional path to create for paths only
+            # the adopter can enumerate. Point at the command that can.
+            raise click.ClickException(
+                f"agent {agent_name!r} references write-carrying categor(ies) "
+                f"`adopt` cannot serve: {', '.join(no_default)}.\n"
+                f"These grant write authority over paths only you can enumerate, so "
+                f"there is no conventional default to create.\n"
+                f"Run `pkit agents reconcile --write` — it fills them with an empty "
+                f"list, and the agent deploys owning nothing until you nominate paths."
+            )
+        raise click.ClickException(
+            f"agent {agent_name!r} references categor(ies) with no conventional default: "
+            f"{', '.join(no_default)}.\n"
+            f"Use `pkit agents reconcile --write` to add a commented stub, then set real "
+            f"paths manually before running `pkit sync`."
+        )
 
     dirs_created: list[str] = []
     categories_wired: list[str] = []

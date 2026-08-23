@@ -173,12 +173,27 @@ deploy_one() {
         # remediation, deploy the rest, and don't abort the whole sync/upgrade
         # over an unrelated capability. The deploy is idempotent — once the
         # overlay defines the category, the next sync deploys the agent.
-        local skip_reason
-        skip_reason="$(cat "$tmperr")"
+        #
+        # The resolver's stderr is "reason on line 1, optional remediation
+        # after". When it supplies remediation of its own, print that verbatim:
+        # the generic `adopt` advice below is wrong for a write-carrying
+        # category, which names paths only the adopter can enumerate so there is
+        # no conventional default for `adopt` to create (ADR-051). The resolver
+        # knows which categories those are because the shared ownership module
+        # declares them; this script stays dumb about it.
+        local skip_reason remediation
+        skip_reason="$(head -n 1 "$tmperr")"
+        remediation="$(tail -n +2 "$tmperr")"
         status "skipped" "$name — $skip_reason."
-        printf "  %s\n"    "         Deploy it:  pkit agents adopt $name"
-        printf "  %s\n"    "         (custom doc layout? run \`pkit agents reconcile --write\`, set the"
-        printf "  %s\n"    "          paths in overlay.yaml, then \`pkit sync\`)"
+        if [ -n "$remediation" ]; then
+            while IFS= read -r line; do
+                printf "  %s\n" "         $line"
+            done <<<"$remediation"
+        else
+            printf "  %s\n"    "         Deploy it:  pkit agents adopt $name"
+            printf "  %s\n"    "         (custom doc layout? run \`pkit agents reconcile --write\`, set the"
+            printf "  %s\n"    "          paths in overlay.yaml, then \`pkit sync\`)"
+        fi
         rm -f "$tmpfile" "$tmperr"
         unresolved=$((unresolved + 1))
         return 0
@@ -251,7 +266,8 @@ fi
 echo "Done."
 if [ "$unresolved" -gt 0 ]; then
     echo "  note: $unresolved agent(s) skipped — overlay category not set; the rest deployed."
-    echo "        → Deploy the skipped agent(s):  pkit agents adopt <agent>"
-    echo "        → Custom doc layout:            pkit agents reconcile --write → set paths → pkit sync"
+    echo "        → Per-agent remediation is printed above; it differs by category."
+    echo "        → Conventional doc layout:      pkit agents adopt <agent>"
+    echo "        → Anything else:                pkit agents reconcile --write → set paths → pkit sync"
 fi
 exit $exit_code
