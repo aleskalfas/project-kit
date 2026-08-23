@@ -206,7 +206,7 @@ Per-agent overrides replace; copying base entries into the override is the expli
 
 ### Write-carrying categories
 
-Most categories name paths an agent *reads*. A few name paths a **core-shipped agent writes**, and those carry an extra contract, recorded in [ADR-051](../../docs/architecture/decisions/ADR-051-process-author-edit-authority.md). One ships today:
+Most categories name paths an agent *reads*. A few name paths a **core-shipped agent writes**, and those carry an extra contract (recorded in the architecture record that introduced the first one — this project's `<adr-records>` tree). One ships today:
 
 | Category | Consumer | Meaning |
 |---|---|---|
