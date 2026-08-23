@@ -153,3 +153,7 @@ a universal comment would force inventing an annotation surface where none exist
 - **No behaviour change / no migration.** No flag is renamed, no gate changes
   severity; the schema field is additive. Version impact is the adopter's
   docs/wording bump policy.
+
+## Amendment (2026-08-21) — parameterised bypass member (DEC-050)
+
+[project-management:DEC-050] extends this family with a **parameterised, repeatable** member: `done-work --bypass-reviewer <name> --bypass-reason "<r>"`, a per-reviewer override of the approval gate. This is the one shape this record did not contemplate — its `--bypass[-<gate>]` suffix was a *fixed* gate name, whereas `--bypass-reviewer`'s target is a reviewer-name *parameter*. It remains a member of the `--bypass` family (audited, reason-required, bypassable-with-audit), not a new `--override-*` verb — the convention holds; only the suffix gains a parameterised form.

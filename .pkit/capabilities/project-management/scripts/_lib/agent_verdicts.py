@@ -99,6 +99,10 @@ class Verdict:
     * `body` — the full comment body (the reasons the read surface shows).
     * `timestamp` — the comment's `createdAt` (ISO-8601 UTC; string-comparable
       for the latest-by-timestamp selection).
+    * `url` — the comment's `url` (empty when the source comment carried none);
+      lets a consumer link back to the exact comment — e.g. `done-work`'s
+      per-reviewer-override audit pointing at the block comment it waived
+      (project-management:DEC-050).
     """
 
     reviewer: str
@@ -106,6 +110,7 @@ class Verdict:
     path: str
     body: str
     timestamp: str
+    url: str = ""
 
 
 def parse_verdict_line(first_line: str) -> tuple[str | None, str, str | None]:
@@ -211,6 +216,7 @@ def latest_verdicts_per_reviewer(
                 path=path,
                 body=body,
                 timestamp=timestamp,
+                url=str(comment.get("url") or ""),
             )
 
     return sorted(latest.values(), key=lambda v: (v.path, v.reviewer))

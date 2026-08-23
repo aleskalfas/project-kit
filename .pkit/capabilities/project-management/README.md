@@ -246,7 +246,7 @@ For the standard development flow, seven verb-subject commands compose over `mov
 | `create-draft <N>` | (none — issue stays In Progress) | Opens draft PR via `gh pr create --draft` |
 | `review-work <N> [--reviewer @<u>]` | In Progress → Review | Opens ready PR or flips draft→ready; assigns reviewers |
 | `back-to-draft <N>` | (none — issue stays in Review) | Flips PR to draft; dismisses prior APPROVED reviews |
-| `done-work <N> [--bypass "<R>"] [--bypass-ci "<R>"] [--skip-checkbox-gate]` | Review → Done | Squash-merge via three-way approval gate (APPROVED review / `Approved`-prefix comment / `--bypass`), the **DEC-007 checkbox close-gate** (every `- [ ]` in the closing issue ticked; `--skip-checkbox-gate` overrides, discouraged) **and** the CI-status gate (checks must be green; `--bypass-ci` overrides only that gate — `--bypass` never clears a red CI); pulls main |
+| `done-work <N> [--bypass "<R>"] [--bypass-ci "<R>"] [--skip-checkbox-gate] [--bypass-reviewer <name> … --bypass-reason "<R>"]` | Review → Done | Squash-merge via three-way approval gate (APPROVED review / `Approved`-prefix comment / `--bypass`), the **DEC-007 checkbox close-gate** (every `- [ ]` in the closing issue ticked; `--skip-checkbox-gate` overrides, discouraged) **and** the CI-status gate (checks must be green; `--bypass-ci` overrides only that gate — `--bypass` never clears a red CI); `--bypass-reviewer` (agent mode) satisfies ONE named required reviewer's slot, audited, leaving the rest gating; pulls main |
 | `handoff-issue <N> --to @<u> --reason "<R>"` | (none — no state change) | Audit comment + reassign |
 
 All seven are idempotent at the level of observable state — re-running after a partial failure recovers cleanly. Audit comments use DEC-024's template-stamp markers (`<!-- pkit-hook: <name> -->`) so re-posts detect existing entries and skip.
@@ -408,7 +408,7 @@ Mode is resolved per-PR by three layers (highest wins):
 
 `done-work`'s gate evaluates the resolved mode:
 - **human mode** — three-way OR (APPROVED review / `Approved`-prefix comment from non-author / `--bypass`).
-- **agent mode** — DEC-028's gate-checker: at least one configured path (remote-bot OR local-agent) has a fresh APPROVED verdict post-dating the latest commit, plus `--bypass`. The gate counts a verdict only when its comment carries the `<!-- pkit-verdict -->` marker the reviewer path stamps (#593) — a bare `Reviewer agent … APPROVED` line posted by any other path (hand-typed, or a freeform note) does not gate. The read surface (`show-pr --field review`) still displays every verdict-shaped comment, marked or not.
+- **agent mode** — DEC-028's gate-checker: at least one configured path (remote-bot OR local-agent) has a fresh APPROVED verdict post-dating the latest commit, plus `--bypass`. The gate counts a verdict only when its comment carries the `<!-- pkit-verdict -->` marker the reviewer path stamps (#593) — a bare `Reviewer agent … APPROVED` line posted by any other path (hand-typed, or a freeform note) does not gate. The read surface (`show-pr --field review`) still displays every verdict-shaped comment, marked or not. Under a reviewer panel (DEC-032's resolved required set), a reviewer's slot is *also* satisfiable by an audited **per-reviewer override** (`--bypass-reviewer`, see below) — a `satisfied-by-override` state distinct from an APPROVED, leaving every other required reviewer gating.
 
 For the local-agent path, run `pkit project-management review-pr <N>` after `review-work` to invoke every registered local agent against the PR diff. Each agent posts a `Reviewer agent (local, <name>): APPROVED|CHANGES_REQUESTED` comment. Re-running re-invokes and posts a fresh verdict (post-date-latest-commit handles staleness).
 
@@ -439,11 +439,34 @@ A failing check is **bypassable-with-audit** (`schemas/validation-severity.yaml`
 
 The current gate treats **any** non-green check as bypass-required — it does not yet distinguish GitHub-required from advisory checks (that distinction is not exposed cleanly in `statusCheckRollup`). When required-vs-advisory becomes distinguishable, the intended refinement is: block a required check outright, allow an advisory check only via `--bypass`.
 
+#### Per-reviewer override — `--bypass-reviewer` (agent mode, per [project-management:DEC-050-per-reviewer-override])
+
+Under a reviewer **panel** (a resolved required set with more than one reviewer, per [project-management:DEC-032-conditional-reviewer-requirements]), the whole-gate `--bypass` is a blunt instrument: one over-eager reviewer blocking the merge forces you to discard *all* review to land. `done-work --bypass-reviewer <name> --bypass-reason "<reason>"` is the surgical alternative — it satisfies **one** named required reviewer's slot as a first-class **`satisfied-by-override`** state (distinct from a real APPROVED), while **every other required reviewer still gates**. Repeat the flag to waive several named reviewers; the single `--bypass-reason` applies to all of them.
+
+How it differs from the whole-gate `--bypass`:
+
+| | `--bypass "<reason>"` | `--bypass-reviewer <name> --bypass-reason "<reason>"` |
+|---|---|---|
+| Scope | Discards the **entire** approval gate | Satisfies **one** named reviewer's slot; the rest still gate |
+| Mode | Any mode | **Agent mode** only (human mode has no named reviewer set — refused) |
+| Target | The gate as a whole | A reviewer in the **freshly-resolved required set** (an unknown name is a hard error naming the set) |
+| Audit | One "Approved by bypass" comment on the issue | One **prose, verdict-distinct** comment **per overridden reviewer** on the PR — who / which / why + the reviewer's **state at override time** (`none` / a fresh `CHANGES_REQUESTED` / a stale `APPROVED`) and a link to the block comment when one exists |
+
+Key properties:
+
+- **Ephemeral, merge-time.** The override is evaluated once, at this invocation, against the currently-resolved set and current HEAD — exactly like `--bypass`. It is **not** persisted: a later `done-work` run without the flag re-resolves and re-gates. A new commit / reclassification / diff change simply re-resolves; re-supply the override if still intended.
+- **Not a synthetic verdict.** `satisfied-by-override` is a **separate gate-checker input**, never a fabricated APPROVED — so it never corrupts the DEC-028 verdict record or the `show-pr --field review` / ADR-042 read surface. The audit comment is deliberately **not** verdict-shaped (no `Reviewer agent:` first line, no `<!-- pkit-verdict -->` marker), so the gate's verdict reader never mistakes it for a verdict.
+- **Idempotent per reviewer + reason.** The audit stamp is keyed by the reviewer name *and* a hash of the reason: re-running the identical override is a no-op, while overriding a different reviewer — or the same reviewer with a different reason — posts its own audit.
+- **All-slots nudge.** Overriding *every* slot equals a whole-gate bypass by other means. It is allowed (it is audited), but the command **warns** and steers you to `--bypass` (one honest audit rather than N per-reviewer bypasses).
+- **Unresolvable set.** When the required set cannot be resolved at all (a broken contribution / an undeployed contributed agent), a per-reviewer override cannot help — it operates *within* a resolved set. The refusal points you at the whole-gate `--bypass`.
+
+It is a member of the `--bypass` family (audited, reason-required), not a new override verb — a *parameterised, repeatable* target, per [project-management:DEC-046-override-flag-convention]'s 2026-08-21 amendment.
+
 #### Override flags — `--bypass[-<gate>]` vs `--force` (per [project-management:DEC-046-override-flag-convention])
 
 Two override families run across the mutating commands, and which a command exposes is fixed by the stop it overrides — one question: **is it a `bypassable-with-audit` gate?**
 
-- **`--bypass[-<gate>]`** overrides a gate the severity model *designed* to be bypassable ([project-management:DEC-014-validation-severity-model]'s `bypassable-with-audit`): a **required reason**, and the DEC-014 audit comment posted *before* the mutation. A command with one bypassable gate spells it `--bypass` (`move-issue`, `promote-issue`); a command with several qualifies each — `done-work` carries `--bypass` (approval) **and** `--bypass-ci` (CI), and `merge-pr` carries `--bypass-ci`. `--bypass` never clears a red CI, and vice-versa.
+- **`--bypass[-<gate>]`** overrides a gate the severity model *designed* to be bypassable ([project-management:DEC-014-validation-severity-model]'s `bypassable-with-audit`): a **required reason**, and the DEC-014 audit comment posted *before* the mutation. A command with one bypassable gate spells it `--bypass` (`move-issue`, `promote-issue`); a command with several qualifies each — `done-work` carries `--bypass` (approval) **and** `--bypass-ci` (CI), and `merge-pr` carries `--bypass-ci`. `--bypass` never clears a red CI, and vice-versa. A **parameterised, repeatable** family member also lives on `done-work`: `--bypass-reviewer <name> --bypass-reason "<r>"` overrides *one* reviewer's slot on the agent-mode approval gate (see the per-reviewer override section above), per DEC-046's 2026-08-21 amendment for [project-management:DEC-050-per-reviewer-override].
 - **`--force`** overrides a **`hard-reject` finding** *or* a **hard script precondition** — a stop the methodology treats as firm. Boolean, no reason. Sites: `edit-issue` / `edit-pr` (body-validation findings), `open-pr` / `review-work` (validate-at-ready), `close-milestone` (open-children), `remove-workstream` (non-zero-issues). It audits **where the substrate can carry it** — an issue/PR comment, a milestone description-append; a bare label (`remove-workstream`) has no annotation surface, so the override shows in output only.
 - **Hard-reject is force-overridable.** DEC-014's `hard-reject` keeps `bypassable: false` (no in-band `--bypass`) but carries an out-of-band operator `--force` layer — recorded as `force_overridable: true` on its schema entry. `--force` is *not* the `--bypass` mechanism; it is a blunter, last-resort override.
 - **Known exception:** `--skip-checkbox-gate` (on `close-issue` and, since #734, on `done-work`) predates this convention and fits neither family — a plain reasonless skip of a `hard-reject` gate. It is documented as discouraged, and both closure paths spell it identically so they cannot diverge. Whether it should become an audited `--bypass "<reason>"` is an open question (#734's deferred follow-up), not a settled shape.
