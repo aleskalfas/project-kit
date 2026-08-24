@@ -1,0 +1,18 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  Parent-ref recognition now skips a DEC-013 `Integration: integration/<slug>`
+  marker (#763). The marker is defined as the first body line on a marked
+  descendant — above the parent-ref, no blank line between — but every parent-ref
+  recognizer read the parent-ref off the literal first content line, so a marked
+  descendant hard-rejected with "first body line does not match the parent-ref
+  form". That made DEC-013's marker propagation unusable: the project-manager
+  could not stamp the marker onto descendants without breaking their validation.
+  A single shared helper (`strip_integration_marker`) now drops a leading marker
+  line before the parent-ref is read, consumed uniformly by validate-issue,
+  create-issue, move-issue, close-issue, containment, show-tree, and the
+  inference layer. A marker line that does not match the `integration/<slug>`
+  form is left in place and still hard-rejects — the intended guard against a
+  typo'd marker.

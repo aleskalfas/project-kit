@@ -69,6 +69,7 @@ sys.path.insert(0, str(_HERE))
 from _lib import bootstrap_gate  # noqa: E402
 from _lib import axis_labels  # noqa: E402
 from _lib import containment  # noqa: E402
+from _lib import lifecycle_inference as infer  # noqa: E402
 from _lib import session_guard  # noqa: E402
 # DEC-007's checkbox close-gate — the ONE implementation (`_lib.checkbox_gate`),
 # shared with done-work, merge-pr and the engine's gate-checkboxes-ticked
@@ -640,9 +641,11 @@ def _infer_structural_type(title: str, issue_types: dict) -> str | None:
 
 
 def _walk_parent_chain(body: str) -> list[int]:
-    """Extract parent issue numbers from the body's parent-ref first line."""
+    """Extract parent issue numbers from the body's parent-ref first line. A
+    leading DEC-013 `Integration:` marker is skipped first (#763)."""
     if not body:
         return []
+    body = infer.strip_integration_marker(body)
     out: list[int] = []
     for line in body.splitlines():
         s = line.strip()

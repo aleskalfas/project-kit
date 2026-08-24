@@ -168,17 +168,45 @@ def branch_matches_issue(branch: str, issue_number: int) -> bool:
     return bool(re.match(rf"^[a-z]+/{issue_number}-", branch))
 
 
+#: The DEC-013 integration-branch marker. It sits ABOVE the parent-ref as the
+#: first body line (`Integration: integration/<slug>`), so every parent-ref
+#: recognizer must skip it or the marker shadows the parent-ref (#763).
+INTEGRATION_MARKER_RE = re.compile(r"^Integration:\s+integration/\S+\s*$")
+
+
+def strip_integration_marker(body: str) -> str:
+    """Return `body` with a leading DEC-013 `Integration:` marker line removed.
+
+    The marker is the first body line, above the parent-ref (DEC-013). Parent-ref
+    recognizers call this first so the marker doesn't shadow the parent-ref — the
+    single source of truth for the skip (the recognition is otherwise duplicated
+    across `validate-issue`, `create-issue`, `move-issue`/`close-issue`
+    `_walk_parent_chain`, `show-tree`, `containment`). No-op when absent."""
+    if not body:
+        return body
+    lines = body.splitlines()
+    for i, line in enumerate(lines):
+        if not line.strip():
+            continue  # skip leading blanks
+        if INTEGRATION_MARKER_RE.match(line.strip()):
+            del lines[i]
+            return "\n".join(lines)
+        return body  # first non-blank line is not the marker → unchanged
+    return body
+
+
 def parent_ref(child_body: str) -> int | None:
     """The parent issue number named on a child body's FIRST parent-ref line
     (e.g. `EPIC: #42` -> 42), or None when the body declares no parent-ref.
 
     The methodology's hierarchy source of truth: one parent-ref line by
     convention, on the first non-blank line (mirrors move-issue /
-    close-issue's `_walk_parent_chain` recognition). The first non-blank line
-    must match `<Word>: #<n>`; otherwise the body names no parent."""
+    close-issue's `_walk_parent_chain` recognition). A leading DEC-013
+    `Integration:` marker is skipped first (#763). The first non-blank line
+    thereafter must match `<Word>: #<n>`; otherwise the body names no parent."""
     if not child_body:
         return None
-    for line in child_body.splitlines():
+    for line in strip_integration_marker(child_body).splitlines():
         s = line.strip()
         if not s:
             continue

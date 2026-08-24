@@ -48,6 +48,7 @@ sys.path.insert(0, str(_HERE))
 from _lib import bootstrap_gate  # noqa: E402
 from _lib import axis_labels  # noqa: E402
 from _lib import classification_rules  # noqa: E402
+from _lib import lifecycle_inference as infer  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
@@ -560,7 +561,11 @@ def _validate_issue(
             parent_ref_optional = bool(type_entry.get("parent_ref_optional", False))
             parent_ref_form = str(type_entry.get("parent_ref_form", ""))
             if parent_ref_form and not parent_ref_optional:
-                first_line = body.lstrip().split("\n", 1)[0]
+                # A leading DEC-013 `Integration:` marker sits ABOVE the parent-ref
+                # (#763); skip it so the parent-ref line is what we validate.
+                first_line = (
+                    infer.strip_integration_marker(body).lstrip().split("\n", 1)[0]
+                )
                 # New canonical form: `Milestone: [#<N>](../milestone/<N>)`
                 _NEW_MILESTONE_RE = re.compile(
                     r"^Milestone:\s+\[#(\d+)\]\(\.\./milestone/\1\)\s*$"

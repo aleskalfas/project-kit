@@ -75,6 +75,8 @@ import re
 import subprocess
 from dataclasses import dataclass
 from enum import Enum
+
+from _lib import lifecycle_inference as _infer
 from typing import Any
 
 # Sibling module — the gh shell-out helper that pins the adopter's host/owner
@@ -564,6 +566,7 @@ def _body_names_parent(body: str, parent_number: int) -> bool:
     """
     if not body:
         return False
+    body = _infer.strip_integration_marker(body)  # DEC-013 marker above parent-ref (#763)
     for line in body.splitlines():
         s = line.strip()
         if not s:
