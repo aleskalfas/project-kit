@@ -373,16 +373,33 @@ _CODE_SUFFIXES = frozenset({
 # Filename suffixes treated as PURE DOCUMENTATION (not code) by the
 # `touches-code` floor — but ONLY for a file whose suffix is not in
 # `_CODE_SUFFIXES` (a code suffix always wins). A changed file with one of these
-# suffixes does not, on its own, make a diff "touch code". `.txt` is
+# suffixes does not, on its own, make a diff "touch code". Recognized in ANY
+# directory (a `.md` is documentation wherever it lives). `.txt` is
 # deliberately absent: `requirements.txt` / `CMakeLists.txt` / `constraints.txt`
 # are code-adjacent, so a bare `.txt` is left to fall through to the fail-closed
 # code default rather than be demoted to docs.
 _DOC_SUFFIXES = (".md", ".mdx", ".markdown", ".rst")
 
+# Recognized NON-code asset suffixes (images, diagrams, fonts, PDFs) treated as
+# documentation — but ONLY when the file lives under a `docs/` directory (an
+# illustration or screenshot that accompanies prose). Outside `docs/` they fall
+# through to the fail-closed code default. This is the ONLY way a non-doc-suffixed
+# file under `docs/` is demoted to documentation: an extensionless file or one
+# with an unrecognized suffix under `docs/` (e.g. `docs/tools/helper`) is NOT an
+# asset and stays code, so a script checked into a docs tree cannot slip past the
+# floor by lacking an extension.
+_DOC_ASSET_SUFFIXES = frozenset({
+    ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".ico", ".svg",
+    ".pdf", ".drawio", ".excalidraw",
+    ".woff", ".woff2", ".ttf", ".otf", ".eot",
+})
+
 # Path segments (matched case-insensitively) that mark a DOCUMENTATION
-# directory. A NON-code-suffixed file living under such a directory is demoted
-# to documentation (e.g. an image or diagram under `docs/`). A code-suffixed
-# file is code regardless — the `docs/` location never overrides a code suffix.
+# directory. A file under such a directory is demoted to documentation ONLY when
+# its suffix is a recognized doc-asset suffix (`_DOC_ASSET_SUFFIXES`, e.g. an
+# image or diagram). A code-suffixed file is code regardless — the `docs/`
+# location never overrides a code suffix — and an extensionless or
+# unknown-suffix file under `docs/` stays code (fail-closed), NOT documentation.
 _DOC_DIR_SEGMENTS = ("docs",)
 
 
@@ -398,12 +415,15 @@ def diff_touches_code(changed_paths: list[str]) -> bool:
          directory. `docs/conf.py` and `docs/deploy.sh` are code, so real code
          checked into a docs tree cannot escape the floor.
       2. Otherwise, a documentation suffix (`.md` / `.mdx` / `.markdown` /
-         `.rst`) OR a file under a `docs/` directory (matched
-         case-insensitively) is documentation — this is where a non-code asset
-         like `docs/img/diagram.png` is demoted.
-      3. Otherwise (an unknown suffix, or an extensionless file) → **code**, the
-         fail-closed default: when in doubt, the floor fires so the diff is not
-         silently waved through unreviewed.
+         `.rst`) is documentation in any directory; and a recognized non-code
+         asset suffix (image / diagram / font / PDF — `_DOC_ASSET_SUFFIXES`)
+         under a `docs/` directory (matched case-insensitively) is documentation
+         — this is where a non-code asset like `docs/img/diagram.png` is demoted.
+      3. Otherwise (an unknown suffix, or an extensionless file — including one
+         under `docs/`, e.g. `docs/tools/helper`) → **code**, the fail-closed
+         default: when in doubt, the floor fires so the diff is not silently
+         waved through unreviewed. A `docs/` location never demotes a file that
+         is not a recognized doc or asset suffix.
 
     A conscious call: config/schema changes count as code (a reviewer mandated
     on code-carrying PRs should see a changed `*.yaml`/`*.json`), and a diff
@@ -420,14 +440,19 @@ def _is_documentation_path(path: str) -> bool:
     """True when `path` is purely documentation (see `diff_touches_code`).
 
     Code-suffix-dominant and fail-closed: a code suffix returns False (code)
-    outright; only a non-code file that is doc-suffixed or under `docs/` returns
-    True; any remaining unknown suffix returns False (the code default).
+    outright; a documentation suffix returns True in any directory; a recognized
+    non-code asset suffix under `docs/` returns True; every remaining file —
+    including an extensionless or unknown-suffix file *under* `docs/` (e.g.
+    `docs/tools/helper`) — returns False (the fail-closed code default). A
+    `docs/` location alone never demotes a file to documentation.
     """
     posix = PurePosixPath(path)
     suffix = posix.suffix.lower()
     if suffix in _CODE_SUFFIXES:
         return False
-    if suffix in _DOC_SUFFIXES or _under_docs_dir(posix):
+    if suffix in _DOC_SUFFIXES:
+        return True
+    if suffix in _DOC_ASSET_SUFFIXES and _under_docs_dir(posix):
         return True
     return False
 

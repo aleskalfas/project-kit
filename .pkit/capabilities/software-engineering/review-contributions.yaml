@@ -1,0 +1,62 @@
+# Reviewer-contribution declaration for the software-engineering capability
+# (per project-management:DEC-032). Registers the code-review panel
+# ([software-engineering:DEC-002-code-review-panel]) into the pm merge gate
+# through the reviewer-contribution socket. pm's collector reads this file
+# when this capability is registered in `.pkit/manifest.yaml`'s `components:`
+# list (orphan-safe, install-driven per DEC-032 D5); its mere presence under a
+# registered capability activates these rules.
+#
+# The format reference + validator are the pm-owned
+# `schemas/review-contributions.{yaml,schema.json}`. Each rule pairs a required
+# reviewer-agent name with a predicate — a diff-property `floor` and/or a
+# classification `match`.
+#
+# Activation (per DEC-002 D1 + the DEC-032 amendment):
+#   * code-reviewer + security-reviewer ride the `touches-code` diff floor —
+#     required whenever a PR's diff touches any non-documentation file,
+#     independent of the closing issue's classification. This backstops #715's
+#     mislabeled/unclassified gate-escape: a code-carrying PR pulls in the
+#     correctness + security reviewers even when filed against a `type:docs`
+#     or unclassified issue.
+#   * docs-reviewer rides BOTH the `touches-code` floor and the `type` axis
+#     wildcard. The floor makes doc review fire on any code-carrying diff
+#     regardless of classification (closing the doc-lens escape a mislabeled /
+#     unclassified code PR would otherwise slip through); the `type:*` wildcard
+#     keeps it firing for a docs-only classified PR (which the floor, correctly,
+#     does not require). The `"*"` wildcard is forward-safe: a new `type` value
+#     added later still activates docs review without editing this file. A
+#     residual gap remains — an UNCLASSIFIED docs-only PR (touches no code, closes
+#     no classified issue) gets no doc review; that is a named, accepted gap
+#     (see the capability README).
+#
+# Each reviewer must resolve to a deployed agent file at
+# `.claude/agents/<name>.md` (the capability ships them under `agents/`,
+# deployed by the claude-code adapter's deploy-agents.sh). An undeployed
+# reviewer is kept VISIBLE as an unsatisfiable requirement (the collector's
+# fail-closed seam), never silently dropped.
+
+schema_version: 1
+
+contributions:
+  # Correctness/logic generalist — required on any code-carrying diff.
+  - floor: touches-code
+    reviewer: code-reviewer
+
+  # Security specialist — required on any code-carrying diff (the #715 harm:
+  # secrets-in-argv, shell=True/injection; a correctness generalist misses these).
+  - floor: touches-code
+    reviewer: security-reviewer
+
+  # Documentation reviewer — required on any code-carrying diff (the
+  # touches-code floor) AND for every classified PR (any type value). The floor
+  # entry closes the doc-lens escape: a code PR always gets doc review, even when
+  # unclassified or filed against a docs-typed issue — the same #715-style
+  # gate-escape backstop the code+security floors carry. The `type:*` match keeps
+  # docs review firing for a docs-only classified PR (which the floor, correctly,
+  # does not require). A reviewer named by both a floor and a match rule is
+  # required once — the resolver de-duplicates by reviewer name.
+  - floor: touches-code
+    reviewer: docs-reviewer
+  - match:
+      type: "*"
+    reviewer: docs-reviewer

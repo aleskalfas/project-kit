@@ -581,6 +581,12 @@ def test_floor_and_classification_dedup_same_reviewer(rr, rc) -> None:
         ("Docs/conf.py", True),  # code suffix still wins under Docs/.
         # --- unknown suffix is code (fail-closed default) ---
         ("mystery.xyz", True),
+        # --- extensionless / unknown-suffix file UNDER docs/ is code, not
+        #     documentation: the docs/ location alone must not demote it, or a
+        #     script checked in extensionless slips past the floor (G3). ---
+        ("docs/tools/helper", True),
+        ("docs/scripts/run", True),
+        ("docs/data.bin", True),  # unknown suffix under docs/ is still code.
     ],
 )
 def test_diff_touches_code_per_file(rr, path, is_code) -> None:
