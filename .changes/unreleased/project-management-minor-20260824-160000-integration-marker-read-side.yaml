@@ -1,5 +1,5 @@
 component: project-management
-kind: patch
+kind: minor
 custom:
   category: Fixed
 body: >
