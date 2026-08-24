@@ -462,6 +462,29 @@ Key properties:
 
 It is a member of the `--bypass` family (audited, reason-required), not a new override verb — a *parameterised, repeatable* target, per [project-management:DEC-046-override-flag-convention]'s 2026-08-21 amendment.
 
+#### The honest gate summary — per-perspective disposition (agent mode, per [software-engineering:DEC-002-code-review-panel] companion (c))
+
+When the agent-mode gate passes, `done-work` prints a **per-reviewer disposition summary** so a green gate can never imply every perspective reviewed the code (bug #715 origin, #753: `APPROVED` reads as "reviewed" even when a slot was only overridden). It enumerates each required reviewer in the resolved set as exactly one of:
+
+- **APPROVED** — a genuine fresh APPROVED verdict;
+- **overridden** — satisfied-by-override (DEC-050), shown **distinctly** from APPROVED — never folded into an "N approved" count — naming the operator, the reason, and the reviewer's state at override time (e.g. a fresh `CHANGES_REQUESTED` that was waived);
+- **NOT REVIEWED** — a required reviewer overridden with **no verdict posted at all**: a required-but-missing perspective, named explicitly rather than hidden behind the green gate.
+
+A closing **honesty line** counts and names every perspective that did *not* genuinely **approve** (or confirms all did). The rollup verb is "approve", not "review", on purpose: an overridden active block (a fresh `CHANGES_REQUESTED` that was waived) *did* review — what the merge lacks, in both the overridden and not-reviewed cases, is genuine sign-off. The per-reviewer lines above still distinguish the two. Sample:
+
+```
+  gate:    local agent (reviewer) APPROVED; local agent (design-reviewer, …) satisfied-by-override
+  reviewers (3 required):
+    - local agent (reviewer): APPROVED
+    - local agent (design-reviewer, required by capability `ux-ui-design`): overridden by alice, reason: "flaky false block" (was: a fresh CHANGES_REQUESTED (an active block))
+    - local agent (security-reviewer, required by capability `ux-ui-design`): NOT REVIEWED — overridden by alice, reason: "agent undeployed this run" (no verdict posted)
+  honesty: 2 of 3 required perspective(s) did NOT genuinely approve this PR (satisfied by override): local agent (design-reviewer, …), local agent (security-reviewer, …)
+```
+
+The summary is a **read/display projection** (per [ADR-042]): it reuses the disposition the gate already computed (`satisfied-by-override` set, resolved required set, per-reviewer verdicts) and **changes nothing** — the gate stays strict and the DEC-028 verdict record is untouched. The whole-gate `--bypass` and human-mode paths carry no per-reviewer block (there is no resolved reviewer set to enumerate); their one-line `gate:` label is already honest.
+
+**Boundary (deliberate, deferred):** even in agent mode a whole-gate `--bypass` prints only the bare `gate: --bypass: <reason>` one-liner — the skipped required panel is **not** enumerated per-perspective, because discarding the whole gate never resolves the required set. Enumerating the skipped panel on the `--bypass` path is an intentional scope boundary, left as a follow-up.
+
 #### Override flags — `--bypass[-<gate>]` vs `--force` (per [project-management:DEC-046-override-flag-convention])
 
 Two override families run across the mutating commands, and which a command exposes is fixed by the stop it overrides — one question: **is it a `bypassable-with-audit` gate?**
