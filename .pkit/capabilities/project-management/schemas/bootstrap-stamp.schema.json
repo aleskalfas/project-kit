@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "bootstrap-stamp.schema.json",
+  "title": "Bootstrap completion stamp — project-management capability",
+  "description": "Formal shape of the adopter's `project/bootstrap-stamp.yaml` — the machine-written attestation that `bootstrap` completed in THIS repository, and the input the prerequisite gate every non-exempt pm verb calls reads (#747, enforcing DEC-017's hard-gate role in code). Unlike the sibling adopter files, this one is never hand-edited: `bootstrap` writes it on a clean completion and `migrate` refreshes it, so the schema exists to document the contract and to keep `pkit data validate` clean rather than to guide an author. `additionalProperties: false` is load-bearing for the same reason as the config's: the gate reads the file through defensive access, so an unknown key would be silently ignored. Document-shaped schema: the file IS the resource (no top-level id collection). Companion per COR-018 / COR-023.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "bootstrap"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "source": {
+      "$ref": "refs.schema.json#/$defs/source"
+    },
+    "binds_to": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Repo-relative globs matching the adopter-data files this schema validates (COR-023 fallback binding). Present on the kit-shipped binding carrier; absent from adopter data files."
+    },
+    "pkit_schema": {
+      "type": "string",
+      "description": "Self-describing adopter-data binding tag, `project-management:bootstrap-stamp` (COR-023). The writer emits it so the file resolves to this schema by field as well as by glob."
+    },
+    "bootstrap": {
+      "type": "object",
+      "description": "The attestation itself. Its presence is not sufficient: the gate requires `completed_at` and `capability_version` to be non-empty, so a stub block reads as 'not bootstrapped' rather than as a pass.",
+      "required": [
+        "completed_at",
+        "capability_version",
+        "by"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "completed_at": {
+          "type": "string",
+          "minLength": 1,
+          "description": "ISO 8601 timestamp of the completion this stamp attests."
+        },
+        "capability_version": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The capability version installed when the stamp was written. Makes the stamp a staleness signal rather than a boolean: an upgrade whose bootstrap obligations changed is detectable by comparing this against the installed `package.yaml` version. Staleness is reported, never a refusal on its own."
+        },
+        "by": {
+          "type": "string",
+          "enum": [
+            "bootstrap",
+            "migrate",
+            "migration-grandfather"
+          ],
+          "description": "Which writer last wrote this stamp. `bootstrap` = the real event. `migrate` = refreshed on a successful migration (migrate never CREATES a stamp — that would let a never-bootstrapped project pass the gate). `migration-grandfather` = written by the capability migration that carried a pre-gate install forward, so the stamp records a PRESUMPTION (the install predates the gate and was in use) rather than an observed bootstrap."
+        },
+        "repo": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The normalised `origin` identity (`host/owner/repo`) of the repository the stamp was written for, or null when no origin could be resolved locally. The stamp lives in the seed-once `project/` subtree, so it can arrive by copy; the gate refuses a stamp naming a DIFFERENT repo than the one it runs in, which makes a copied or seeded stamp inert rather than fail-open. Compared only when both sides resolve — an unresolvable identity never fabricates a refusal."
+        }
+      }
+    }
+  }
+}

@@ -40,6 +40,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
+from _lib import bootstrap_gate  # noqa: E402
 from _lib import axis_labels  # noqa: E402
 from _lib import provenance  # noqa: E402
 from _lib.criteria import FALLBACK_HEADINGS, checkbox_headings  # noqa: E402
@@ -107,6 +108,11 @@ def main() -> int:
             f"error: {CAPABILITY_NAME} capability not found.",
             file=sys.stderr,
         )
+        return 2
+
+    # Prerequisite gate (#747): refuse on an un-bootstrapped project rather
+    # than operating on assumed defaults. See _lib/bootstrap_gate.py.
+    if not bootstrap_gate.enforce("show-issue", capability_root=capability_root):
         return 2
 
     yaml_loader = YAML(typ="safe")

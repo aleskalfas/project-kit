@@ -53,6 +53,43 @@ SCRIPT = SCRIPTS_DIR / "back-fill.py"
 TARGET_REPO = "ai-platform-incubation/spyre"
 
 
+def _mark_bootstrapped(cap_root: Path) -> None:
+    """Make a staged tree look like the bootstrapped project it stands in for.
+
+    Every pm verb except the five setup/diagnosis ones refuses a project with no
+    bootstrap stamp or no adopter config (the #747 prerequisite gate); a staged
+    tree standing in for a live project is a bootstrapped one. The config is
+    seeded only when absent, so a test that stages its own keeps it, and the
+    stamp is left unbound (`repo:` null) so no git remote is needed in a tmp tree.
+    """
+    project = cap_root / "project"
+    project.mkdir(parents=True, exist_ok=True)
+    config = project / "config.yaml"
+    if not config.is_file():
+        config.write_text(
+            "schema_version: 1\ndefault_branch: main\nworkstreams: []\n",
+            encoding="utf-8",
+        )
+    (project / "bootstrap-stamp.yaml").write_text(
+        "schema_version: 1\n"
+        "bootstrap:\n"
+        "  completed_at: '2026-01-01T00:00:00+00:00'\n"
+        "  capability_version: 0.0.0-test\n"
+        "  by: bootstrap\n"
+        "  repo:\n",
+        encoding="utf-8",
+    )
+
+
+@pytest.fixture(autouse=True)
+def _bootstrapped_tree(tmp_path: Path) -> None:
+    """Every main() test here drives back-fill with `--capability-root tmp_path`,
+    and the #747 prerequisite gate refuses a project with no bootstrap stamp.
+    Stamp it once for the whole file: these tests target the apply loop, not the
+    gate (which has its own coverage in test_pm_bootstrap_gate*.py)."""
+    _mark_bootstrapped(tmp_path)
+
+
 @pytest.fixture(scope="module")
 def apply_mod():
     """The apply engine module (`_lib/back_fill_apply.py`)."""

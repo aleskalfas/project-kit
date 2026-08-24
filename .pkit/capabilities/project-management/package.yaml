@@ -124,7 +124,7 @@ commands:
     help: Read-only view of one workstream entry (resolves from workstreams.yaml or config.yaml legacy fallback).
   context-workstream:
     script: scripts/context-workstream.py
-    help: "Report-context read verb (pkit ADR-050): print the current workstream — branch <type>/<N>-<slug> -> issue #N -> its workstream:* label — bare on stdout, or nothing when underivable. Read-only, always exits 0; invoked by the backbone's report compose through the dispatcher so the backbone never reads pm vocabulary itself."
+    help: "Report-context read verb (pkit ADR-050): print the current workstream — branch <type>/<N>-<slug> -> issue #N -> its workstream:* label — bare on stdout, or nothing when underivable. Read-only; exits 0 on success or when underivable, 2 when the capability is not bootstrapped (#747); invoked by the backbone's report compose through the dispatcher so the backbone never reads pm vocabulary itself."
   list-workstreams:
     script: scripts/list-workstreams.py
     help: List every workstream — filterable by status (active/deprecated/all). Surfaces parse errors + duplicate-name warnings.

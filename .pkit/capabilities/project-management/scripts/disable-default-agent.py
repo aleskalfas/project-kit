@@ -43,6 +43,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
+from _lib import bootstrap_gate  # noqa: E402
 from _lib import session_guard  # noqa: E402
 from _lib.gh import load_adopter_config  # noqa: E402
 from _lib.membership import (  # noqa: E402
@@ -121,6 +122,11 @@ def main() -> int:
     capability_root = resolve_capability_root(args.capability_root)
     if capability_root is None:
         print(f"error: {CAPABILITY_NAME} capability not found.", file=sys.stderr)
+        return 2
+
+    # Prerequisite gate (#747): refuse on an un-bootstrapped project rather
+    # than operating on assumed defaults. See _lib/bootstrap_gate.py.
+    if not bootstrap_gate.enforce("disable-default-agent", capability_root=capability_root):
         return 2
 
     project_root = capability_root.parent.parent.parent

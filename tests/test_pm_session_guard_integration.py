@@ -26,6 +26,34 @@ PROMOTE_ISSUE = CAP_SRC / "scripts" / "promote-issue.py"
 ADD_MEMBER = CAP_SRC / "scripts" / "add-member.py"
 
 
+def _mark_bootstrapped(cap_root: Path) -> None:
+    """Make a staged tree look like the bootstrapped project it stands in for.
+
+    Every pm verb except the five setup/diagnosis ones refuses a project with no
+    bootstrap stamp or no adopter config (the #747 prerequisite gate); a staged
+    tree standing in for a live project is a bootstrapped one. The config is
+    seeded only when absent, so a test that stages its own keeps it, and the
+    stamp is left unbound (`repo:` null) so no git remote is needed in a tmp tree.
+    """
+    project = cap_root / "project"
+    project.mkdir(parents=True, exist_ok=True)
+    config = project / "config.yaml"
+    if not config.is_file():
+        config.write_text(
+            "schema_version: 1\ndefault_branch: main\nworkstreams: []\n",
+            encoding="utf-8",
+        )
+    (project / "bootstrap-stamp.yaml").write_text(
+        "schema_version: 1\n"
+        "bootstrap:\n"
+        "  completed_at: '2026-01-01T00:00:00+00:00'\n"
+        "  capability_version: 0.0.0-test\n"
+        "  by: bootstrap\n"
+        "  repo:\n",
+        encoding="utf-8",
+    )
+
+
 def _git_init(path: Path) -> None:
     path.mkdir(parents=True, exist_ok=True)
     subprocess.run(
@@ -44,7 +72,13 @@ def _minimal_capability_tree(anchor: Path) -> Path:
     shutil.copytree(CAP_SRC / "schemas", cap / "schemas")
     shutil.copytree(CAP_SRC / "templates", cap / "templates")
     (cap / "project").mkdir(parents=True)
-    (cap / "project" / "config.yaml").write_text("schema_version: 1\n")
+    # A config that satisfies the #747 prerequisite gate's shape check — the
+    # real companion schema came along with schemas/, and it declares these
+    # three keys required.
+    (cap / "project" / "config.yaml").write_text(
+        "schema_version: 1\ndefault_branch: main\nworkstreams: []\n"
+    )
+    _mark_bootstrapped(cap)
     return cap
 
 
@@ -171,7 +205,10 @@ def _minimal_member_capability_tree(anchor: Path) -> Path:
     members.yaml."""
     cap = anchor / ".pkit" / "capabilities" / "project-management"
     (cap / "project").mkdir(parents=True)
+    # No schemas/ here, so the gate's config-shape rules cannot be derived and
+    # stand down; the stamp is what the gate needs from this tree.
     (cap / "project" / "config.yaml").write_text("schema_version: 1\n")
+    _mark_bootstrapped(cap)
     return cap
 
 

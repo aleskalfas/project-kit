@@ -34,6 +34,34 @@ def dw():
 # ---- _check_approval_gate ---------------------------------------------
 
 
+def _mark_bootstrapped(cap_root: Path) -> None:
+    """Make a staged tree look like the bootstrapped project it stands in for.
+
+    Every pm verb except the five setup/diagnosis ones refuses a project with no
+    bootstrap stamp or no adopter config (the #747 prerequisite gate); a staged
+    tree standing in for a live project is a bootstrapped one. The config is
+    seeded only when absent, so a test that stages its own keeps it, and the
+    stamp is left unbound (`repo:` null) so no git remote is needed in a tmp tree.
+    """
+    project = cap_root / "project"
+    project.mkdir(parents=True, exist_ok=True)
+    config = project / "config.yaml"
+    if not config.is_file():
+        config.write_text(
+            "schema_version: 1\ndefault_branch: main\nworkstreams: []\n",
+            encoding="utf-8",
+        )
+    (project / "bootstrap-stamp.yaml").write_text(
+        "schema_version: 1\n"
+        "bootstrap:\n"
+        "  completed_at: '2026-01-01T00:00:00+00:00'\n"
+        "  capability_version: 0.0.0-test\n"
+        "  by: bootstrap\n"
+        "  repo:\n",
+        encoding="utf-8",
+    )
+
+
 def _stub_pr_view(reviews, comments, author_login="author"):
     def fake_gh_run(args, config, **kwargs):
         import subprocess
@@ -207,6 +235,7 @@ def test_invoke_move_issue_exits_zero_when_issue_already_done(
 
     # Minimal config.yaml (label-fallback substrate).
     (project_dir / "config.yaml").write_text("has_projects_v2_board: false\n")
+    _mark_bootstrapped(cap_root)
 
     # Copy the real schema files that move-issue.py reads.
     import shutil
@@ -575,6 +604,11 @@ def _wire_main_seams(
         )(),
     )
     monkeypatch.setattr(dw.session_guard, "enforce", lambda **kw: True)
+    # This file targets done-work's approval / CI / checkbox gates, not the
+    # #747 prerequisite gate (covered in test_pm_bootstrap_gate*.py); the fake
+    # capability root above has no tree to stamp, so neutralise it here — the
+    # same treatment the foreign-repo guard gets on the line above.
+    monkeypatch.setattr(dw.bootstrap_gate, "enforce", lambda *a, **kw: True)
     monkeypatch.setattr(dw, "_find_issue_branch", lambda n: "fix/42-slug")
     monkeypatch.setattr(
         dw, "_find_pr_for_branch",

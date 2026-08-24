@@ -242,6 +242,7 @@ def _invoke_set(rpr, monkeypatch, tmp_path, *, collection, labels):
 
     cap_root = tmp_path / ".pkit" / "capabilities" / "project-management"
     cap_root.mkdir(parents=True, exist_ok=True)
+    _mark_bootstrapped(cap_root)
     agents_dir = tmp_path / ".claude" / "agents"
     agents_dir.mkdir(parents=True, exist_ok=True)
     # The invoke loop requires each agent's file to exist; deploy them all so
@@ -331,6 +332,34 @@ def _run_gate(dw, monkeypatch, *, collection, labels, approved_names, refs_rc=0)
     return dw._check_agent_gate(99, {}, config, "resolved", CAP_ROOT)
 
 
+def _mark_bootstrapped(cap_root: Path) -> None:
+    """Make a staged tree look like the bootstrapped project it stands in for.
+
+    Every pm verb except the five setup/diagnosis ones refuses a project with no
+    bootstrap stamp or no adopter config (the #747 prerequisite gate); a staged
+    tree standing in for a live project is a bootstrapped one. The config is
+    seeded only when absent, so a test that stages its own keeps it, and the
+    stamp is left unbound (`repo:` null) so no git remote is needed in a tmp tree.
+    """
+    project = cap_root / "project"
+    project.mkdir(parents=True, exist_ok=True)
+    config = project / "config.yaml"
+    if not config.is_file():
+        config.write_text(
+            "schema_version: 1\ndefault_branch: main\nworkstreams: []\n",
+            encoding="utf-8",
+        )
+    (project / "bootstrap-stamp.yaml").write_text(
+        "schema_version: 1\n"
+        "bootstrap:\n"
+        "  completed_at: '2026-01-01T00:00:00+00:00'\n"
+        "  capability_version: 0.0.0-test\n"
+        "  by: bootstrap\n"
+        "  repo:\n",
+        encoding="utf-8",
+    )
+
+
 # ---- the guard --------------------------------------------------------
 
 
@@ -394,6 +423,7 @@ def test_invoke_set_equals_gate_set_on_fail_closed(dw, rpr, rc, monkeypatch, tmp
     monkeypatch.setattr(rpr, "gh_run", fake_gh_run_rpr)
     cap_root = tmp_path / ".pkit" / "capabilities" / "project-management"
     cap_root.mkdir(parents=True, exist_ok=True)
+    _mark_bootstrapped(cap_root)
     (tmp_path / ".claude" / "agents").mkdir(parents=True, exist_ok=True)
     monkeypatch.setattr(rpr, "resolve_capability_root", lambda arg: cap_root)
     monkeypatch.setattr(rpr, "load_adopter_config", lambda root: {

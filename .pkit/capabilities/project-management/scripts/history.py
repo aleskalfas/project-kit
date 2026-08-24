@@ -40,6 +40,7 @@ from pathlib import Path
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
+from _lib import bootstrap_gate  # noqa: E402
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import resolve_capability_root  # noqa: E402
 
@@ -66,6 +67,12 @@ def main() -> int:
     if capability_root is None:
         print("error: project-management capability not found.", file=sys.stderr)
         return 2
+
+    # Prerequisite gate (#747): refuse on an un-bootstrapped project rather
+    # than operating on assumed defaults. See _lib/bootstrap_gate.py.
+    if not bootstrap_gate.enforce("history", capability_root=capability_root):
+        return 2
+
     config = load_adopter_config(capability_root)
 
     journal = _read_journal(args.issue_number)

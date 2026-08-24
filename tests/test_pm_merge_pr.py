@@ -355,6 +355,10 @@ def _wire_merge_seams(mp, monkeypatch, *, rollup):
         )(),
     )
     monkeypatch.setattr(mp.session_guard, "enforce", lambda **kw: True)
+    # This file targets merge-pr's CI / checkbox gates, not the #747 prerequisite gate (covered in
+    # test_pm_bootstrap_gate*.py); the fake capability root above has no tree
+    # to stamp, so neutralise the gate here.
+    monkeypatch.setattr(mp.bootstrap_gate, "enforce", lambda *a, **kw: True)
     monkeypatch.setattr(
         mp, "_read_yaml",
         lambda path, loader: {"formats": {"pr": {"pattern": r"^fix: .+$"}}},

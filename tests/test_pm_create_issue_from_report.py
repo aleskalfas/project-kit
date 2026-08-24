@@ -62,6 +62,34 @@ class _FakeLink:
         self.ok = ok
 
 
+def _mark_bootstrapped(cap_root: Path) -> None:
+    """Make a staged tree look like the bootstrapped project it stands in for.
+
+    Every pm verb except the five setup/diagnosis ones refuses a project with no
+    bootstrap stamp or no adopter config (the #747 prerequisite gate); a staged
+    tree standing in for a live project is a bootstrapped one. The config is
+    seeded only when absent, so a test that stages its own keeps it, and the
+    stamp is left unbound (`repo:` null) so no git remote is needed in a tmp tree.
+    """
+    project = cap_root / "project"
+    project.mkdir(parents=True, exist_ok=True)
+    config = project / "config.yaml"
+    if not config.is_file():
+        config.write_text(
+            "schema_version: 1\ndefault_branch: main\nworkstreams: []\n",
+            encoding="utf-8",
+        )
+    (project / "bootstrap-stamp.yaml").write_text(
+        "schema_version: 1\n"
+        "bootstrap:\n"
+        "  completed_at: '2026-01-01T00:00:00+00:00'\n"
+        "  capability_version: 0.0.0-test\n"
+        "  by: bootstrap\n"
+        "  repo:\n",
+        encoding="utf-8",
+    )
+
+
 def _stage_capability_tree(tmp_path: Path) -> Path:
     """Stage a minimal pm capability tree main() can run against (no board)."""
     root = tmp_path / ".pkit" / "capabilities" / "project-management"
@@ -97,6 +125,7 @@ def _stage_capability_tree(tmp_path: Path) -> Path:
     )
     # Empty members → open mode (membership passes for any resolved identity).
     (root / "project" / "members.yaml").write_text("members: []\n", encoding="utf-8")
+    _mark_bootstrapped(root)
     return root
 
 

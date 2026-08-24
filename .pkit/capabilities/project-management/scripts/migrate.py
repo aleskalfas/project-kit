@@ -43,6 +43,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
+from _lib import bootstrap_gate  # noqa: E402
 from _lib import session_guard  # noqa: E402
 
 
@@ -181,6 +182,7 @@ def main() -> int:
             f"No pending migrations. "
             f"({len(migrations)} manifest(s) total; {len(applied_versions)} already applied)."
         )
+        _refresh_bootstrap_stamp(capability_root, dry_run=args.dry_run)
         return 0
 
     print(f"{len(pending)} pending migration(s):")
@@ -200,7 +202,45 @@ def main() -> int:
             )
             break
 
+    if overall_status == 0:
+        _refresh_bootstrap_stamp(capability_root, dry_run=args.dry_run)
     return overall_status
+
+
+def _refresh_bootstrap_stamp(capability_root: Path, *, dry_run: bool) -> None:
+    """Refresh an EXISTING bootstrap stamp to the current capability version.
+
+    The stamp records which capability version last established the adopter's
+    expected state (#747); after a successful migrate that version is this one,
+    so refreshing keeps the staleness signal honest.
+
+    Refreshes only — it never CREATES a stamp. A project that never bootstrapped
+    must not become "bootstrapped" by running migrate (with `--skip-pre-check`
+    that would be a straight bypass of the gate); it is told to run bootstrap.
+    Never written on a dry run.
+    """
+    if dry_run:
+        return
+    path = bootstrap_gate.stamp_path(capability_root)
+    if not path.is_file():
+        print(
+            f"\nNote: no bootstrap stamp at {path}, so none was refreshed. "
+            f"migrate never creates one — run `pkit project-management "
+            f"bootstrap` to establish it (that is also what unblocks the other "
+            f"pm verbs).",
+        )
+        return
+    try:
+        bootstrap_gate.write_stamp(capability_root, by=bootstrap_gate.BY_MIGRATE)
+    except OSError as exc:
+        print(
+            f"\nwarning: could not refresh the bootstrap stamp at {path}: "
+            f"{exc}. The migration above applied; only the stamp's recorded "
+            f"version is stale.",
+            file=sys.stderr,
+        )
+        return
+    print(f"\nBootstrap stamp refreshed at {path}.")
 
 
 # ----- migration application -----------------------------------------

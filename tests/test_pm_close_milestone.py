@@ -268,6 +268,11 @@ def _prime_main(monkeypatch, cm, *, milestone, children):
     monkeypatch.setattr(cm, "resolve_invoker_identity", lambda config=None: "tester")
     monkeypatch.setattr(cm, "check_membership", lambda members, invoker: MagicMock(allowed=True))
     monkeypatch.setattr(cm.session_guard, "enforce", lambda override=False: True)
+    # This file targets close-milestone's close-trigger semantics, not the #747
+    # prerequisite gate (covered in test_pm_bootstrap_gate*.py); the stubbed
+    # capability root is the kit repo root, which carries no adopter tree to
+    # stamp, so neutralise the gate here — as the line above does for the guard.
+    monkeypatch.setattr(cm.bootstrap_gate, "enforce", lambda *a, **kw: True)
     monkeypatch.setattr(cm, "_read_yaml", lambda path, loader: {
         "types": {"epic": {"title_prefix": "EPIC", "title_case": "upper"}}
     })
