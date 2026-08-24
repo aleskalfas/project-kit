@@ -319,6 +319,13 @@ def main() -> int:
         # check runs before this branching, and so still refuses a
         # --bypass-reviewer with no --bypass-reason) but otherwise ignored here
         # — there is no per-reviewer slot left to satisfy.
+        #
+        # Boundary (deliberate, deferred): even in agent mode a whole-gate
+        # --bypass yields only the bare `gate: --bypass: <reason>` one-liner —
+        # the skipped required panel is NOT enumerated per-perspective, because
+        # discarding the whole gate never resolves the required set. Enumerating
+        # the skipped panel on this path is an intentional scope boundary, left
+        # as a follow-up (see the honest-gate-summary README subsection).
         gate_result = _GateResult(passed=True, passed_via=f"--bypass: {args.bypass}")
     elif mode_resolution.mode == "human":
         # The per-reviewer override targets the agent-mode reviewer set; human
@@ -1486,9 +1493,14 @@ def _render_gate_summary(
     satisfied-by-override (naming the operator + reason, DEC-050), or a
     required-but-`not reviewed` perspective — so a green gate can never imply
     every perspective reviewed the code (#715). Ends with an honesty line that
-    names every perspective which did NOT genuinely review, or confirms that all
-    did. Purely a projection of the gate's own result (ADR-042): it reads the
-    dispositions the gate computed and changes nothing.
+    names every perspective which did NOT genuinely APPROVE, or confirms that
+    all did. The rollup verb is "approve", not "review": an overridden active
+    block (a fresh CHANGES_REQUESTED that was waived) *did* review — what the
+    merge lacks in both the overridden and not-reviewed cases is genuine
+    sign-off. The per-reviewer lines above still distinguish the two ("was: a
+    fresh CHANGES_REQUESTED" vs. "no verdict posted"). Purely a projection of
+    the gate's own result (ADR-042): it reads the dispositions the gate computed
+    and changes nothing.
 
     Returns only the `gate:` line for the whole-gate --bypass and human-mode
     paths (no dispositions to enumerate; their `passed_via` is already honest).
@@ -1501,14 +1513,17 @@ def _render_gate_summary(
     operator = invoker.github_login or invoker.email or "<unresolved>"
     reason = override_reason.strip() or "(no reason recorded)"
     lines.append(f"  reviewers ({len(dispositions)} required):")
-    did_not_review: list[str] = []
+    # Perspectives that did not genuinely APPROVE — spanning both an overridden
+    # active block (which reviewed but was waived) and a not-reviewed slot. The
+    # rollup below reports the absence of sign-off, not of review.
+    did_not_approve: list[str] = []
     for d in dispositions:
         if d.disposition == DISPOSITION_APPROVED:
             lines.append(f"    - {d.label}: APPROVED")
             continue
         # Overridden or not-reviewed: shown DISTINCTLY from APPROVED, naming the
         # operator + reason (DEC-050 — never folded into an approved count).
-        did_not_review.append(d.label)
+        did_not_approve.append(d.label)
         if d.disposition == DISPOSITION_NOT_REVIEWED:
             lines.append(
                 f'    - {d.label}: NOT REVIEWED — overridden by {operator}, '
@@ -1521,11 +1536,11 @@ def _render_gate_summary(
                 f'reason: "{reason}"{was}'
             )
 
-    if did_not_review:
+    if did_not_approve:
         lines.append(
-            f"  honesty: {len(did_not_review)} of {len(dispositions)} required "
-            "perspective(s) did NOT genuinely review this PR (satisfied by "
-            f"override): {', '.join(did_not_review)}"
+            f"  honesty: {len(did_not_approve)} of {len(dispositions)} required "
+            "perspective(s) did NOT genuinely approve this PR (satisfied by "
+            f"override): {', '.join(did_not_approve)}"
         )
     else:
         lines.append(

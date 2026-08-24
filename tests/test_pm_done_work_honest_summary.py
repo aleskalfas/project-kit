@@ -221,9 +221,52 @@ def test_one_overridden_shown_distinct_with_operator_and_reason(dw, rc, monkeypa
     assert "overridden by alice" in design_line
     assert 'reason: "flaky false block"' in design_line
     assert "fresh CHANGES_REQUESTED" in design_line
-    # Honesty line names the overridden perspective as one that did not review.
-    assert "1 of 2 required perspective(s) did NOT genuinely review" in text
+    # Honesty line names the overridden perspective as one that did not approve.
+    # The verb is "approve", not "review": the overridden reviewer DID review (a
+    # fresh block, shown on its per-reviewer line) — it lacked genuine sign-off.
+    assert "1 of 2 required perspective(s) did NOT genuinely approve" in text
     assert "design-reviewer" in text.split("honesty:")[1]
+
+
+# ---- genuine approval that is ALSO named in --bypass-reviewer (W3) ----
+
+
+def test_genuine_approval_named_in_bypass_renders_approved(dw, rc, monkeypatch) -> None:
+    """W3: a reviewer with a genuine fresh APPROVED that is ALSO named in
+    --bypass-reviewer renders as APPROVED, not overridden.
+
+    `reviewer_approved` is checked BEFORE the override audit (both in the gate's
+    `passed_via` and in the disposition classifier), so a real sign-off is never
+    masked by a redundant override — the summary must not downgrade a genuine
+    APPROVED to satisfied-by-override just because the operator also waived it.
+    Guards the specific defect the earlier hardening fixed.
+    """
+    _wire(
+        dw, monkeypatch,
+        collection=_collection(rc, "design-reviewer"),
+        comments=[
+            # Both reviewers genuinely approved; the override on the baseline is
+            # redundant. Overriding only ONE slot avoids the all-slots nudge.
+            _local_verdict_comment("reviewer", "APPROVED"),
+            _local_verdict_comment("design-reviewer", "APPROVED"),
+        ],
+        closing_issue_labels={42: ["workstream:design"]},
+    )
+    result = dw._check_agent_gate(
+        99, {}, _config(), "resolved", CAP_ROOT,
+        override_reviewers=("reviewer",),
+    )
+    assert result.passed is True
+
+    by_label = {d.label: d.disposition for d in result.reviewer_dispositions}
+    assert by_label["local agent (reviewer)"] == dw.DISPOSITION_APPROVED
+
+    text = _summary(dw, result, reason="redundant override")
+    reviewer_line = _reviewer_line(text, "(reviewer)")
+    assert reviewer_line.endswith(": APPROVED")
+    assert "overridden" not in reviewer_line
+    # No slot lacked genuine sign-off, so the honesty line confirms all approved.
+    assert "all 2 required perspective(s) reviewed and approved." in text
 
 
 # ---- not reviewed / missing required perspective ---------------------
@@ -259,7 +302,7 @@ def test_not_reviewed_required_perspective_named(dw, rc, monkeypatch) -> None:
     design_line = _reviewer_line(text, "design-reviewer")
     assert "NOT REVIEWED — overridden by alice" in design_line
     assert "no verdict posted" in design_line
-    assert "did NOT genuinely review" in text
+    assert "did NOT genuinely approve" in text
     assert "design-reviewer" in text.split("honesty:")[1]
 
 
@@ -269,7 +312,7 @@ def test_not_reviewed_required_perspective_named(dw, rc, monkeypatch) -> None:
 def test_mixed_dispositions_all_enumerated(dw, rc, monkeypatch) -> None:
     """A panel with one genuine APPROVED, one overridden block, and one
     overridden-not-reviewed reviewer enumerates all three disposition kinds and
-    names the two that did not genuinely review."""
+    names the two that did not genuinely approve."""
     _wire(
         dw, monkeypatch,
         collection=_collection(rc, "design-reviewer", "security-reviewer"),
@@ -298,7 +341,7 @@ def test_mixed_dispositions_all_enumerated(dw, rc, monkeypatch) -> None:
     assert "overridden by alice" in _reviewer_line(text, "design-reviewer")
     assert "NOT REVIEWED — overridden by alice" in _reviewer_line(text, "security-reviewer")
     honesty = text.split("honesty:")[1]
-    assert "2 of 3 required perspective(s) did NOT genuinely review" in text
+    assert "2 of 3 required perspective(s) did NOT genuinely approve" in text
     assert "design-reviewer" in honesty
     assert "security-reviewer" in honesty
 
