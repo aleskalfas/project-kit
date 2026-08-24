@@ -157,6 +157,7 @@ from _lib import (  # noqa: E402
     axis_labels,
     back_fill_apply,
     board_fields,
+    bootstrap_gate,
     session_guard,
     substrate_writes,
 )
@@ -315,6 +316,11 @@ def main() -> int:
             "at .pkit/capabilities/project-management/.",
             file=sys.stderr,
         )
+        return 2
+
+    # Prerequisite gate (#747): refuse on an un-bootstrapped project rather
+    # than operating on assumed defaults. See _lib/bootstrap_gate.py.
+    if not bootstrap_gate.enforce("back-fill", capability_root=capability_root):
         return 2
 
     config = load_adopter_config(capability_root)

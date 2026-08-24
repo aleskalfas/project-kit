@@ -35,6 +35,7 @@ from pathlib import Path
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
+from _lib import bootstrap_gate  # noqa: E402
 from _lib import lifecycle_predicates as predicates  # noqa: E402
 
 
@@ -46,6 +47,11 @@ def main() -> int:
     parser.add_argument("--json", action="store_true", help="Emit the structured JSON contract.")
     parser.add_argument("--actor", default=None, help="The actor being gated (gates only).")
     args = parser.parse_args()
+
+    # Prerequisite gate (#747): refuse on an un-bootstrapped project rather
+    # than operating on assumed defaults. See _lib/bootstrap_gate.py.
+    if not bootstrap_gate.enforce("cascade-membership"):
+        return 2
 
     try:
         issue_number = int(args.issue_number)

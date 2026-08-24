@@ -1,0 +1,12 @@
+# Bootstrap completion stamp — machine-written, do NOT hand-edit.
+# Written by `bootstrap`, refreshed by `migrate`; read by the
+# prerequisite gate that every non-exempt pm verb calls (#747).
+# Deleting this file makes every gated pm verb refuse until
+# bootstrap runs again.
+schema_version: 1
+pkit_schema: project-management:bootstrap-stamp
+bootstrap:
+  completed_at: '2026-08-24T09:23:25.872468+00:00'
+  capability_version: 0.53.0
+  by: bootstrap
+  repo: github.com/aleskalfas/project-kit

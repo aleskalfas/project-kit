@@ -223,7 +223,7 @@ def _canonicalize_transport(raw: str) -> str | None:
     return None
 
 
-def _normalize_origin_url(raw: str) -> str:
+def normalize_origin_url(raw: str) -> str:
     """Normalise an origin URL so two clones of the same remote compare equal.
 
     Canonicalises the common ssh/https transport forms to one
@@ -235,6 +235,11 @@ def _normalize_origin_url(raw: str) -> str:
     drop a trailing ``.git`` / slash and case-fold — so the function never
     crashes and is never *less* strict than before. The whole result is
     case-folded (host and path casing are not significant for identity here).
+
+    Public because it has a second consumer: :mod:`_lib.bootstrap_gate` binds a
+    bootstrap stamp to the repo identity it was written for, and must derive
+    that identity with the SAME normaliser (COR-007 — one canonicaliser, not
+    two that drift).
     """
     canonical = _canonicalize_transport(raw)
     if canonical is not None:
@@ -256,7 +261,7 @@ def _origin_url(toplevel: Path) -> str | None:
     out = proc.stdout.strip()
     if not out:
         return None
-    return _normalize_origin_url(out)
+    return normalize_origin_url(out)
 
 
 def _repo_identity(start: Path | str) -> RepoIdentity | None:

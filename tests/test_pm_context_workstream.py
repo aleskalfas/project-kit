@@ -1,7 +1,16 @@
 """Tests for project-management's context-workstream read verb (pkit ADR-050).
 
-Covers the branch → issue → workstream-label derivation and the always-exit-0
-degrade contract (nothing printed on any miss), with `git`/`gh` monkeypatched.
+Covers the branch → issue → workstream-label derivation and the exit-0 degrade
+contract (nothing printed on any miss), with `git`/`gh` monkeypatched.
+
+The degrade contract is now "exit 0 on every MISS", not "exit 0 always": since
+#747 the verb is gated like every other non-exempt pm verb, so an
+un-bootstrapped project gets a refusal (exit 2) rather than a silently empty
+answer — a workstream derived from assumed defaults would be confidently wrong.
+The backbone's report-compose consumer already treats any non-zero exit as "no
+workstream", so the degrade path it relies on is unchanged. `_run_main`
+neutralises the gate for the derivation tests; the two tests at the bottom pin
+the gated behaviour itself.
 """
 
 from __future__ import annotations
@@ -37,6 +46,13 @@ def cw():
 
 
 def _run_main(cw, monkeypatch, capsys, *, argv: list[str] | None = None):
+    """Drive main() with the #747 prerequisite gate neutralised.
+
+    These tests target the branch → issue → workstream derivation, which
+    presupposes a bootstrapped project; the gate itself is pinned separately
+    below (and in test_pm_bootstrap_gate*.py).
+    """
+    monkeypatch.setattr(cw.bootstrap_gate, "enforce", lambda *a, **kw: True)
     monkeypatch.setattr(sys, "argv", ["context-workstream.py", *(argv or [])])
     code = cw.main()
     out = capsys.readouterr()
@@ -124,3 +140,45 @@ def test_silent_when_git_unavailable(cw, monkeypatch, capsys) -> None:
     monkeypatch.setattr(cw, "_current_branch", lambda: None)
     code, out, _err = _run_main(cw, monkeypatch, capsys)
     assert code == 0 and out == ""
+
+
+# --- the prerequisite gate (#747) ------------------------------------
+
+
+def test_unbootstrapped_project_refuses_and_prints_nothing(
+    cw, monkeypatch, capsys, tmp_path: Path
+) -> None:
+    """An un-bootstrapped project gets a REFUSAL, not an empty answer: a
+    workstream read off assumed kit labels would misreport an adopter who
+    remapped them (the silent-wrong-answer shape #747 closes). Nothing reaches
+    stdout, so a consumer that only reads stdout still sees "no workstream"."""
+    monkeypatch.setattr(cw, "_current_branch", lambda: "feat/644-context")
+    monkeypatch.setattr(cw, "resolve_capability_root", lambda explicit: tmp_path)
+
+    def explode(*a, **k):  # pragma: no cover — must not be reached
+        raise AssertionError("no gh call before the prerequisite gate passes")
+
+    monkeypatch.setattr(cw, "gh_get_issue", explode)
+    monkeypatch.setattr(
+        sys, "argv", ["context-workstream.py", "--capability-root", str(tmp_path)]
+    )
+    code = cw.main()
+    captured = capsys.readouterr()
+    assert code == 2
+    assert captured.out == ""
+    assert "prerequisites are not met" in captured.err
+
+
+def test_the_gate_runs_before_the_branch_read(cw, monkeypatch, capsys) -> None:
+    """The refusal precedes even the local `git branch` read, so a gated
+    invocation does no work at all."""
+
+    def explode() -> str:  # pragma: no cover — must not be reached
+        raise AssertionError("no branch read before the prerequisite gate passes")
+
+    monkeypatch.setattr(cw, "_current_branch", explode)
+    monkeypatch.setattr(
+        cw.bootstrap_gate, "enforce", lambda *a, **kw: False
+    )
+    monkeypatch.setattr(sys, "argv", ["context-workstream.py"])
+    assert cw.main() == 2

@@ -181,7 +181,7 @@ def test_ssh_and_https_clones_of_one_repo_are_same_repo(guard, tmp_path):
     The scp-like ssh form `git@github.com:org/repo.git` and the https form
     `https://github.com/org/repo.git` name ONE repo; before transport
     canonicalisation they normalised to different strings and false-DIVERGEd.
-    `_normalize_origin_url` now collapses both to `github.com/org/repo`."""
+    `normalize_origin_url` now collapses both to `github.com/org/repo`."""
     repo_a = tmp_path / "A"
     repo_b = tmp_path / "B"
     _git_init_with_origin(repo_a, "git@github.com:org/repo.git")
@@ -215,12 +215,12 @@ def test_normalize_origin_url_canonicalises_transports(guard):
         "https://github.com/org/repo",         # https, no .git
         "git@github.com:Org/Repo.git",         # casing not significant
     ]
-    normalised = {guard._normalize_origin_url(f) for f in forms}
+    normalised = {guard.normalize_origin_url(f) for f in forms}
     assert normalised == {"github.com/org/repo"}, normalised
 
     # Unrecognised forms fall back to strip+casefold (never crash, never less
     # strict) and stay DISTINCT from the canonical transport identity.
-    local = guard._normalize_origin_url("/var/git/org/repo.git")
+    local = guard.normalize_origin_url("/var/git/org/repo.git")
     assert local == "/var/git/org/repo"
     assert local != "github.com/org/repo"
 

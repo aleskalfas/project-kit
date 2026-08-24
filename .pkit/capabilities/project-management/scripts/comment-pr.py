@@ -33,7 +33,19 @@ from pathlib import Path
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
+from _lib import bootstrap_gate  # noqa: E402
 from _lib.comment import run_comment_verb  # noqa: E402
 
+
+def main() -> int:
+    # Prerequisite gate (#747): refuse on an un-bootstrapped project rather
+    # than operating on assumed defaults. `allow_help` because the shared
+    # runner owns the argument parsing, so the gate runs before argparse
+    # would answer `--help`. See _lib/bootstrap_gate.py.
+    if not bootstrap_gate.enforce("comment-pr", allow_help=True):
+        return 2
+    return run_comment_verb("pr")
+
+
 if __name__ == "__main__":
-    sys.exit(run_comment_verb("pr"))
+    sys.exit(main())

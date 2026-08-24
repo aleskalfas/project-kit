@@ -53,6 +53,7 @@ _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import (  # noqa: E402
     axis_labels,
+    bootstrap_gate,
     classification_rules,
     pr_validation,
     provenance,
@@ -169,6 +170,11 @@ def main() -> int:
             f"error: {CAPABILITY_NAME} capability not found.",
             file=sys.stderr,
         )
+        return 2
+
+    # Prerequisite gate (#747): refuse on an un-bootstrapped project rather
+    # than operating on assumed defaults. See _lib/bootstrap_gate.py.
+    if not bootstrap_gate.enforce("open-pr", capability_root=capability_root):
         return 2
 
     yaml_loader = YAML(typ="safe")

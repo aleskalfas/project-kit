@@ -44,7 +44,7 @@ from ruamel.yaml.error import YAMLError
 # pre-check and the DEC-032 contribution collector, per COR-007) and the
 # DEC-032 contribution collector itself (reused, not re-implemented).
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _lib import axis_labels  # noqa: E402
+from _lib import axis_labels, bootstrap_gate  # noqa: E402
 from _lib.agents import agent_deploy_path, agent_is_deployed  # noqa: E402
 from _lib.gh import gh_project_run  # noqa: E402
 from _lib.review_contributions import collect_contributions  # noqa: E402
@@ -175,6 +175,13 @@ def _read_capability_version(capability_root: Path) -> str:
 def _run_all_checks(capability_root: Path) -> list[CheckResult]:
     """Run every check in fixed order. Each check is independent."""
     results: list[CheckResult] = []
+
+    # 0. The bootstrap stamp (#747). Runs FIRST and outside the `gh`
+    #    short-circuit below, because it is a purely local read and it is the
+    #    single prerequisite that decides whether the other 60 pm verbs run at
+    #    all: an operator who hits "prerequisites are not met" comes here for
+    #    the answer, and it must be here even when `gh` is missing.
+    results.append(_check_bootstrap_stamp(capability_root))
 
     # 1+2. Tooling on PATH (git, gh) — every other check depends on these.
     results.append(_check_command_on_path("git"))
@@ -442,6 +449,51 @@ def _check_gh_host_auth(config: dict[str, Any]) -> CheckResult:
         )
     return CheckResult(
         "`gh` authenticated against configured host", "ok", f"host={host}"
+    )
+
+
+def _check_bootstrap_stamp(capability_root: Path) -> CheckResult:
+    """Report what the prerequisite gate sees (#747).
+
+    Three outcomes, and the middle one is the reason the stamp records a
+    version at all:
+
+      * **fail** — the gate refuses, so every non-exempt pm verb refuses. The
+        gate's own reason is the detail (missing stamp / broken config / a stamp
+        carried in from another repo), so this check answers "why is everything
+        refusing?" in one line.
+      * **warn** — the gate passes, but the stamp was written by an older
+        capability version. Non-blocking by design: most upgrades change nothing
+        about what bootstrap provisions, so refusing on drift would break every
+        command after every upgrade. Surfacing it *here* — in the diagnosis an
+        operator runs deliberately — is the whole point of recording the version
+        rather than a boolean, and avoids a per-command banner that would be
+        ignored within a week.
+      * **ok** — stamped by the installed version.
+    """
+    outcome = bootstrap_gate.evaluate(capability_root)
+    remediation = (
+        f"Run `pkit {CAPABILITY_NAME} bootstrap` (additive and idempotent). "
+        f"Direct: uv run --script .pkit/capabilities/{CAPABILITY_NAME}"
+        f"/scripts/bootstrap.py"
+    )
+    if not outcome.ok:
+        return CheckResult(
+            "bootstrap completed (stamp)",
+            "fail",
+            f"{outcome.reason} — every pm verb except bootstrap / pre-check / "
+            f"migrate / adopt-existing / self-test refuses until this is fixed",
+            remediation=remediation,
+        )
+    stale = bootstrap_gate.staleness_note(outcome)
+    if stale is not None:
+        return CheckResult("bootstrap completed (stamp)", "warn", stale, remediation=remediation)
+    stamp = outcome.stamp
+    return CheckResult(
+        "bootstrap completed (stamp)",
+        "ok",
+        f"bootstrapped {stamp.completed_at} by `{stamp.by}` "
+        f"at capability v{stamp.capability_version}",
     )
 
 

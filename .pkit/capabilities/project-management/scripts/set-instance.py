@@ -38,7 +38,7 @@ from pathlib import Path
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import session_guard  # noqa: E402
+from _lib import bootstrap_gate, session_guard  # noqa: E402
 from _lib.instance_identity import (  # noqa: E402
     clear_instance_id,
     read_instance_id,
@@ -82,6 +82,11 @@ def main() -> int:
             f"an adopter project with the capability installed.",
             file=sys.stderr,
         )
+        return 2
+
+    # Prerequisite gate (#747): refuse on an un-bootstrapped project rather
+    # than operating on assumed defaults. See _lib/bootstrap_gate.py.
+    if not bootstrap_gate.enforce("set-instance", capability_root=capability_root):
         return 2
 
     if args.show:

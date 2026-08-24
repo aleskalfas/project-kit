@@ -53,6 +53,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
+from _lib import bootstrap_gate  # noqa: E402
 from _lib.ci_checks import evaluate_ci_gate  # noqa: E402
 # DEC-007's checkbox close-gate — the ONE implementation (`_lib.checkbox_gate`),
 # shared with close-issue, done-work and the engine predicate.
@@ -148,6 +149,11 @@ def main() -> int:
             f"error: {CAPABILITY_NAME} capability not found.",
             file=sys.stderr,
         )
+        return 2
+
+    # Prerequisite gate (#747): refuse on an un-bootstrapped project rather
+    # than operating on assumed defaults. See _lib/bootstrap_gate.py.
+    if not bootstrap_gate.enforce("merge-pr", capability_root=capability_root):
         return 2
 
     yaml_loader = YAML(typ="safe")

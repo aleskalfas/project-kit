@@ -22,6 +22,13 @@ five lifecycle state labels (`state:todo`, `state:backlog`,
 `workflow.yaml`'s `states[].id` list. These labels are the substrate
 for the `move-issue` state machine on label-fallback adopters.
 
+On a clean completion it writes the **bootstrap stamp**
+(`project/bootstrap-stamp.yaml`) that the prerequisite gate every other pm
+verb calls reads (#747). No stamp is written for a dry run, an aborted
+confirmation, or a run with any failed creation — an incomplete bootstrap
+leaves the project gated, which is the honest answer. See
+`_lib/bootstrap_gate.py` for the gate contract and the stamp's shape.
+
 Contract per the capability's DEC-017-prerequisites-bootstrap-migrate-
 discipline. Programmatic, not AI-mediated.
 
@@ -51,6 +58,7 @@ from ruamel.yaml.error import YAMLError
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import axis_labels  # noqa: E402
+from _lib import bootstrap_gate  # noqa: E402
 from _lib import session_guard  # noqa: E402
 from _lib.gh import gh_run  # noqa: E402
 from _lib.label_contributions import (  # noqa: E402
@@ -180,6 +188,7 @@ def main() -> int:
     # ---- confirm before mutating ----
     if not plan.has_creates():
         print("Nothing to create — repo already in the methodology's expected initial state.")
+        _stamp_bootstrap_completed(capability_root)
         return 0
 
     if args.dry_run:
@@ -195,7 +204,47 @@ def main() -> int:
     _print_report(actions)
 
     failures = sum(1 for a in actions if a.status == "failed")
-    return 0 if failures == 0 else 1
+    if failures:
+        print(
+            "  ! No bootstrap stamp written — the project is not fully "
+            "bootstrapped while any creation failed. Fix the failures above "
+            "and re-run; bootstrap is additive and idempotent.",
+            file=sys.stderr,
+        )
+        return 1
+    _stamp_bootstrap_completed(capability_root)
+    return 0
+
+
+def _stamp_bootstrap_completed(capability_root: Path) -> None:
+    """Record that bootstrap completed, so the prerequisite gate opens (#747).
+
+    The stamp is what every gated pm verb reads to decide whether this project
+    may be operated on — bootstrap is the only verb that writes it on the happy
+    path (`migrate` refreshes an existing one). Written only when bootstrap
+    reached a clean end: nothing-to-create, or a plan applied with zero
+    failures. A dry run, an aborted confirmation, or any failed creation leaves
+    the project un-stamped and therefore still gated, which is the honest
+    answer.
+
+    A stamp-write failure is reported but does not fail the bootstrap: the
+    GitHub state it created is real either way, and the operator needs to know
+    which of the two happened.
+    """
+    try:
+        path = bootstrap_gate.write_stamp(
+            capability_root, by=bootstrap_gate.BY_BOOTSTRAP
+        )
+    except OSError as exc:
+        print(
+            f"  ! could not write the bootstrap stamp "
+            f"({bootstrap_gate.stamp_path(capability_root)}): {exc}. The "
+            f"GitHub state above was created, but pm commands will keep "
+            f"refusing until a stamp exists — fix the permissions and re-run.",
+            file=sys.stderr,
+        )
+        return
+    print(f"Bootstrap stamp written to {path} — pm commands are now unblocked.")
 
 
 # ----- plan computation + execution ----------------------------------

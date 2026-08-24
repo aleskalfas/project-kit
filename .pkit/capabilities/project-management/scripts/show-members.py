@@ -33,6 +33,7 @@ from ruamel.yaml.error import YAMLError
 # script's deps inline; shared helpers live at scripts/_lib/).
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
+from _lib import bootstrap_gate  # noqa: E402
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
@@ -70,6 +71,11 @@ def main() -> int:
             f"capability installed at .pkit/capabilities/{CAPABILITY_NAME}/.",
             file=sys.stderr,
         )
+        return 2
+
+    # Prerequisite gate (#747): refuse on an un-bootstrapped project rather
+    # than operating on assumed defaults. See _lib/bootstrap_gate.py.
+    if not bootstrap_gate.enforce("show-members", capability_root=capability_root):
         return 2
 
     file_path = members_path(capability_root)

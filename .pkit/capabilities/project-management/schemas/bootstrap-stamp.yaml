@@ -1,0 +1,45 @@
+# Bootstrap completion stamp — binding carrier for the project-management capability.
+#
+# The real stamp lives in an adopter's `project/bootstrap-stamp.yaml`, and —
+# unlike every sibling adopter file — it is MACHINE-WRITTEN, never hand-edited:
+# `bootstrap` writes it when it completes and `migrate` refreshes it. It is the
+# input the prerequisite gate reads before any non-exempt pm verb runs (#747,
+# putting DEC-017's "hard gate on every pm operation" into code instead of
+# documentation). Deleting the adopter's stamp makes every gated verb refuse
+# until bootstrap runs again.
+#
+# This kit-shipped file exists for the same two reasons `config.yaml` does:
+#   (a) it declares the COR-023 `binds_to:` glob, so `pkit data validate`
+#       resolves an adopter's stamp to its companion JSON Schema (the
+#       <schema>.yaml + <schema>.schema.json pair must both exist); and
+#   (b) it validates against that companion under `pkit schemas validate`.
+#
+# The body below is the reference instance — a well-formed stamp that doubles
+# as this schema's self-test. It is NOT a template to copy: run `bootstrap`.
+
+schema_version: 1
+
+# Adopter-data binding (per COR-023). The name is distinctive, so a segmented
+# glob (rather than a bare `**/bootstrap-stamp.yaml`) is belt-and-braces: it
+# keeps the binding scoped to this capability's adopter tree even if another
+# component ever ships a same-named file.
+binds_to:
+  - "**/project-management/project/bootstrap-stamp.yaml"
+
+pkit_schema: project-management:bootstrap-stamp
+
+# --- reference instance -------------------------------------------------
+
+bootstrap:
+  # When the attested bootstrap completed.
+  completed_at: '2026-01-01T00:00:00+00:00'
+  # The capability version installed at that moment — the staleness signal.
+  capability_version: 0.53.0
+  # Which writer produced this stamp: `bootstrap` (the real event), `migrate`
+  # (refreshed on a successful migration), or `migration-grandfather` (a
+  # pre-gate install carried forward — a presumption, not an observed event).
+  by: bootstrap
+  # The normalised `origin` identity this stamp was written for, so a stamp
+  # copied into another repo is inert rather than read as a pass. Null when no
+  # origin could be resolved locally.
+  repo: github.com/example-org/example-repo
