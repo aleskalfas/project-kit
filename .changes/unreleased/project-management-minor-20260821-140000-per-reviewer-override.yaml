@@ -4,25 +4,41 @@ custom:
   category: Added
 body: >
   Per-reviewer override on the merge gate (#735, project-management:DEC-050):
-  `done-work --bypass-reviewer <name> --bypass-reason "<r>"` (repeatable)
-  satisfies ONE named required reviewer's slot as a first-class
+  `done-work --bypass-reviewer <name> --bypass-reviewer-reason "<r>"`
+  (repeatable) satisfies ONE named required reviewer's slot as a first-class
   `satisfied-by-override` state — distinct from a fresh APPROVED — while every
   other required reviewer in the resolved set still gates. It is a member of
   DEC-046's `--bypass` family (audited, reason-required, a parameterised
   repeatable target), NOT the whole-gate `--bypass` that discards the entire
-  approval gate. Satisfied-by-override is a separate gate-checker input, never
-  a synthetic APPROVED verdict, so it never corrupts the DEC-028 verdict record
-  or the ADR-042 read surface. The override is ephemeral and merge-time —
-  evaluated once against the currently-resolved set and current HEAD, never
-  persisted for a later run to read back. A `--bypass-reviewer` name not in the
-  freshly-resolved required set is a hard error naming the set; overriding
-  every slot warns and steers to `--bypass`; an unresolvable set (broken
-  contribution / undeployed agent) is left to the whole-gate `--bypass`. Before
-  merging, a prose, verdict-grammar-distinct audit comment is posted per
-  overridden reviewer, recording the operator (name + email), the reason, the
-  overridden reviewer + provenance, and the reviewer's state at override time
-  (none / a fresh CHANGES_REQUESTED / a stale APPROVED) with a link to the
-  block comment when one exists — stamped per-reviewer(+reason) for
-  idempotency. Widens DEC-032 D3's satisfaction predicate (amended in place)
-  and extends DEC-046. Additive and migration-free: no override supplied is
-  today's behaviour.
+  approval gate; the reason flag is suffixed with its own flag's name because
+  `done-work` now carries three bypass-family flags and on
+  `move-issue`/`promote-issue` the bare `--bypass-reason` pairs with `--bypass`.
+  Supplying `--bypass` and `--bypass-reviewer` together is refused as
+  incoherent — the whole-gate bypass already subsumes waiving one slot, and
+  validating the names would require resolving the very set `--bypass` exists to
+  escape. Satisfied-by-override is a separate gate-checker input, never a
+  synthetic APPROVED verdict, so it never corrupts the DEC-028 verdict record or
+  the ADR-042 read surface. The override is ephemeral and merge-time — evaluated
+  once against the currently-resolved set and current HEAD, never persisted for
+  a later run to read back. A `--bypass-reviewer` name not in the
+  freshly-resolved required set is a hard error naming the set (names are
+  stripped, so shell-quoting whitespace is not a typo); overriding every slot
+  warns and steers to `--bypass`; an unresolvable set (broken contribution /
+  undeployed agent) is left to the whole-gate `--bypass`. The gate resolves each
+  required reviewer's standing ONCE, and every surface that reports the outcome
+  — the pass label, the refusal listing, and the audit comment — reads that one
+  record, so a reviewer with a genuine fresh APPROVED that is also named in
+  `--bypass-reviewer` reads APPROVED (override redundant) everywhere and never
+  as a waiver. Before merging, one audit comment per overridden reviewer is
+  posted to the PR: DEC-049's canonical `audit_comment_template` behind the
+  uniform `<!-- pkit-audit -->` marker, plus verdict-grammar-distinct prose
+  recording the operator (name + email), the reason, the overridden reviewer +
+  provenance, its state at override time (none / a fresh CHANGES_REQUESTED / a
+  stale APPROVED, read with the gate's own membership and author-exclusion
+  filters so a PR author's self-approval cannot describe it) with a link to the
+  block comment when one exists, and what the override actually did to the rest
+  of the gate. Stamped per (reviewer, reason, HEAD), so a re-run after new
+  commits re-audits against the current state rather than reusing a superseded
+  record. Widens DEC-032 D3's satisfaction predicate (amended in place) and
+  extends DEC-046. Additive and migration-free: no override supplied is today's
+  behaviour.
