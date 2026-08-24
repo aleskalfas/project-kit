@@ -18,10 +18,16 @@
 #     mislabeled/unclassified gate-escape: a code-carrying PR pulls in the
 #     correctness + security reviewers even when filed against a `type:docs`
 #     or unclassified issue.
-#   * docs-reviewer rides the `type` axis wildcard — required for every
-#     classified PR (any `type:*` value). The `"*"` wildcard is forward-safe:
-#     a new `type` value added later still activates docs review without
-#     editing this file.
+#   * docs-reviewer rides BOTH the `touches-code` floor and the `type` axis
+#     wildcard. The floor makes doc review fire on any code-carrying diff
+#     regardless of classification (closing the doc-lens escape a mislabeled /
+#     unclassified code PR would otherwise slip through); the `type:*` wildcard
+#     keeps it firing for a docs-only classified PR (which the floor, correctly,
+#     does not require). The `"*"` wildcard is forward-safe: a new `type` value
+#     added later still activates docs review without editing this file. A
+#     residual gap remains — an UNCLASSIFIED docs-only PR (touches no code, closes
+#     no classified issue) gets no doc review; that is a named, accepted gap
+#     (see the capability README).
 #
 # Each reviewer must resolve to a deployed agent file at
 # `.claude/agents/<name>.md` (the capability ships them under `agents/`,
@@ -41,7 +47,16 @@ contributions:
   - floor: touches-code
     reviewer: security-reviewer
 
-  # Documentation reviewer — required for every classified PR (any type value).
+  # Documentation reviewer — required on any code-carrying diff (the
+  # touches-code floor) AND for every classified PR (any type value). The floor
+  # entry closes the doc-lens escape: a code PR always gets doc review, even when
+  # unclassified or filed against a docs-typed issue — the same #715-style
+  # gate-escape backstop the code+security floors carry. The `type:*` match keeps
+  # docs review firing for a docs-only classified PR (which the floor, correctly,
+  # does not require). A reviewer named by both a floor and a match rule is
+  # required once — the resolver de-duplicates by reviewer name.
+  - floor: touches-code
+    reviewer: docs-reviewer
   - match:
       type: "*"
     reviewer: docs-reviewer
