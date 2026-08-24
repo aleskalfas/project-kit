@@ -1,0 +1,3 @@
+component: project-management
+kind: none
+body: Reconcile project-kit's own pm installed record to the released 0.54.0 for self-adoption; project-side install-state only, no adopter-facing surface.
