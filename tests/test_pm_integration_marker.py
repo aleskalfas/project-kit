@@ -21,12 +21,18 @@ import sys
 from pathlib import Path
 
 import pytest
+from ruamel.yaml import YAML
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 LIB = SCRIPTS / "_lib"
+SCHEMAS = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "schemas"
 
 MARKER = "Integration: integration/508-multi-instance-ownership"
+
+
+def _load_schema(name: str) -> dict:
+    return YAML(typ="safe").load((SCHEMAS / name).read_text(encoding="utf-8"))
 
 
 def _load(name: str, path: Path):
@@ -50,6 +56,35 @@ def infer():
 @pytest.fixture(scope="module")
 def containment():
     return _load("pm_containment_marker_ut", LIB / "containment.py")
+
+
+# --- schema is the contract (drift guard) ----------------------------------
+
+
+def test_marker_re_is_byte_identical_to_the_owning_schema(infer) -> None:
+    """The recognizer's pattern MUST equal body-format.yaml's
+    `integration_marker.pattern` — the schema that owns the marker's shape
+    (COR-018). If they drift, a typo'd marker could be silently stripped instead
+    of hard-rejecting. This test is the binding that keeps them in lock-step."""
+    body_format = _load_schema("body-format.yaml")
+    schema_pattern = body_format["integration_marker"]["pattern"]
+    assert infer.INTEGRATION_MARKER_RE.pattern == schema_pattern
+
+
+def test_git_conventions_marker_pattern_agrees_with_body_format() -> None:
+    """The two schemas that reference the marker's slug must agree (#763 reconciled
+    them). body-format owns the body form; git-conventions carries the git-side
+    view + the branch-name shape — same kebab slug in all three."""
+    body_format = _load_schema("body-format.yaml")
+    git_conv = _load_schema("git-conventions.yaml")
+    assert (
+        body_format["integration_marker"]["pattern"]
+        == git_conv["integration_branches"]["designation_marker_pattern"]
+    )
+    # branch name is `integration/<slug>` — same slug shape as the marker.
+    assert git_conv["integration_branches"]["branch_name_pattern"] == (
+        "^integration/[a-z0-9][a-z0-9-]*[a-z0-9]$"
+    )
 
 
 # --- strip_integration_marker ----------------------------------------------
@@ -78,6 +113,45 @@ def test_strip_skips_leading_blank_lines_before_the_marker(infer) -> None:
 
 def test_strip_tolerates_empty_body(infer) -> None:
     assert infer.strip_integration_marker("") == ""
+
+
+# --- malformed markers are NOT stripped (the typo'd-marker guard) -----------
+
+MALFORMED = [
+    "Integration: integration/Foo_Bar!!",   # invalid slug characters
+    "Integration:  integration/foo",         # two spaces after the key
+    "Integration: integration/foo-",         # trailing hyphen
+    "Integration: integration/x",            # single-char slug (min 2 per schema)
+    "Integration: integration/a/b/c",        # slashes in slug
+    "Integration:integration/foo",           # no space after the key
+]
+
+
+@pytest.mark.parametrize("bad", MALFORMED)
+def test_strip_leaves_a_malformed_marker_in_place(infer, bad) -> None:
+    """A line that attempts the marker but is malformed must NOT be stripped — it
+    falls through to the parent-ref check and hard-rejects, which is the guard."""
+    body = f"{bad}\nEPIC: #508\n\n## What\nx"
+    assert infer.strip_integration_marker(body) == body
+
+
+@pytest.mark.parametrize("bad", MALFORMED)
+def test_malformed_predicate_flags_an_attempted_but_wrong_marker(infer, bad) -> None:
+    body = f"{bad}\nEPIC: #508\n\n## What\nx"
+    assert infer.malformed_integration_marker(body) == bad
+
+
+def test_malformed_predicate_returns_none_for_a_valid_marker(infer) -> None:
+    body = f"{MARKER}\nEPIC: #508\n\n## What\nx"
+    assert infer.malformed_integration_marker(body) is None
+
+
+def test_malformed_predicate_returns_none_when_no_marker_attempted(infer) -> None:
+    assert infer.malformed_integration_marker("EPIC: #508\n\n## What\nx") is None
+
+
+def test_malformed_predicate_returns_none_for_empty_body(infer) -> None:
+    assert infer.malformed_integration_marker("") is None
 
 
 # --- infer.parent_ref ------------------------------------------------------

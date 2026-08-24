@@ -3,16 +3,23 @@ kind: patch
 custom:
   category: Fixed
 body: >
-  Parent-ref recognition now skips a DEC-013 `Integration: integration/<slug>`
+  Parent-ref recognition now honours the DEC-013 `Integration: integration/<slug>`
   marker (#763). The marker is defined as the first body line on a marked
   descendant — above the parent-ref, no blank line between — but every parent-ref
   recognizer read the parent-ref off the literal first content line, so a marked
   descendant hard-rejected with "first body line does not match the parent-ref
   form". That made DEC-013's marker propagation unusable: the project-manager
-  could not stamp the marker onto descendants without breaking their validation.
-  A single shared helper (`strip_integration_marker`) now drops a leading marker
-  line before the parent-ref is read, consumed uniformly by validate-issue,
-  create-issue, move-issue, close-issue, containment, show-tree, and the
-  inference layer. A marker line that does not match the `integration/<slug>`
-  form is left in place and still hard-rejects — the intended guard against a
-  typo'd marker.
+  could not stamp the marker onto descendants without breaking their validation
+  (the originating symptom was `edit-issue` rejecting every marked Feature/Task).
+  A single shared helper (`strip_integration_marker`) now drops a leading valid
+  marker before the parent-ref is read, consumed uniformly by validate-issue,
+  create-issue, edit-issue, move-issue, close-issue, containment, show-tree,
+  show-issue, and the inference layer. The helper's pattern is kept byte-identical
+  to `body-format.yaml`'s `integration_marker.pattern` (drift-guarded by a test),
+  so a line that only *attempts* the marker but is malformed is left in place and
+  still hard-rejects — validate-issue and edit-issue now surface that as a precise
+  `body.integration-marker` finding naming the expected form, rather than the
+  misleading `body.parent-ref` message the fall-through produced. The two schemas
+  that carry the marker's slug (`body-format.yaml`, `git-conventions.yaml`) are
+  reconciled to one kebab shape (they previously disagreed on the trailing
+  character and single-character slugs).

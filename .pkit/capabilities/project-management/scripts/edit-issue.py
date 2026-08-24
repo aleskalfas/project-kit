@@ -59,6 +59,7 @@ from _lib import bootstrap_gate  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib import session_guard  # noqa: E402
 from _lib import provenance  # noqa: E402
+from _lib import lifecycle_inference as infer  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
     check_membership,
@@ -374,6 +375,26 @@ def _validate(
                     )
                 )
 
+        # DEC-013 marker form (#763 AC3), parity with validate-issue. A first line
+        # that attempts an integration marker but is malformed hard-rejects here
+        # with a precise message, instead of the misleading `body.parent-ref` a
+        # malformed marker would otherwise trigger by falling through.
+        malformed_marker = infer.malformed_integration_marker(body)
+        if malformed_marker is not None:
+            marker_pattern = str(
+                (body_format.get("integration_marker") or {}).get("pattern") or ""
+            )
+            findings.append(
+                Finding(
+                    SEVERITY_HARD_REJECT,
+                    "body.integration-marker",
+                    f"first body line looks like a DEC-013 integration marker but "
+                    f"does not match the required form "
+                    f"`Integration: integration/<slug>` (pattern {marker_pattern!r}); "
+                    f"got {malformed_marker!r}.",
+                )
+            )
+
         # Parent-ref first line. Accepts three forms (parity with
         # validate-issue per #210):
         #   1. New canonical milestone link: `Milestone: [#<N>](../milestone/<N>)`
@@ -386,8 +407,13 @@ def _validate(
         if isinstance(type_entry, dict):
             parent_ref_optional = bool(type_entry.get("parent_ref_optional", False))
             parent_ref_form = str(type_entry.get("parent_ref_form", ""))
-            if parent_ref_form and not parent_ref_optional:
-                first_line = body.lstrip().split("\n", 1)[0]
+            if parent_ref_form and not parent_ref_optional and malformed_marker is None:
+                # DEC-013 (#763): a marked descendant carries the
+                # `Integration: integration/<slug>` marker above the parent-ref;
+                # skip it so the parent-ref on the next line is recognised.
+                first_line = (
+                    infer.strip_integration_marker(body).lstrip().split("\n", 1)[0]
+                )
                 _NEW_MILESTONE_RE = re.compile(
                     r"^Milestone:\s+\[#(\d+)\]\(\.\./milestone/\1\)\s*$"
                 )

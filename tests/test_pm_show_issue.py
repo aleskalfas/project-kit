@@ -160,6 +160,26 @@ def test_summarise_picks_up_classification_labels(si, issue_types, body_format) 
     assert all(s["present"] for s in summary["required_sections"])
 
 
+def test_summarise_reads_parent_ref_beneath_integration_marker(
+    si, issue_types, body_format
+) -> None:
+    """DEC-013 (#763): a marked descendant carries the `Integration:` marker above
+    the parent-ref; show-issue must render the parent-ref, not the marker line."""
+    issue = {
+        "title": "[Task] Install the Claude Code CLI inside the sandbox",
+        "body": (
+            "Integration: integration/508-multi-instance-ownership\n"
+            "Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n"
+            "## Doc impact\nnone."
+        ),
+        "labels": [{"name": "type:feature"}],
+        "state": "OPEN",
+        "url": "https://github.com/owner/repo/issues/42",
+    }
+    summary = si._summarise(issue, issue_types, body_format)
+    assert summary["parent_ref"] == "Feature: #1"
+
+
 def test_summarise_handles_no_assignees(si, issue_types, body_format) -> None:
     issue = {
         "title": "[Task] short title",
