@@ -65,6 +65,7 @@ from _lib import bootstrap_gate  # noqa: E402
 from _lib import axis_labels  # noqa: E402
 from _lib import classification_rules  # noqa: E402
 from _lib import containment  # noqa: E402
+from _lib import lifecycle_inference as infer  # noqa: E402
 from _lib.containment import link_sub_issue  # noqa: E402
 from _lib.gh import gh_project_run, gh_run, load_adopter_config  # noqa: E402
 from _lib.hooks import fire_hooks  # noqa: E402
@@ -522,7 +523,11 @@ def main() -> int:
         # for this type (#356) — the same option set validate-body accepts — rather
         # than demanding the single recomputed `expected_parent_ref`. This is the
         # path agents use, supplying their own (correctly-labelled) parent-ref.
-        first_line = body.lstrip().split("\n", 1)[0].strip()
+        # Skip a leading DEC-013 `Integration:` marker — it sits ABOVE the
+        # parent-ref (#763), so the parent-ref is the next line.
+        first_line = (
+            infer.strip_integration_marker(body).lstrip().split("\n", 1)[0].strip()
+        )
         matchers = _parent_ref_form_matchers(str(type_entry.get("parent_ref_form", "")))
         first_line_is_parent_ref = any(m.match(first_line) for m in matchers)
         # This first-line format check mirrors the requiredness gate above: it

@@ -556,6 +556,59 @@ def test_missing_parent_ref_first_line_is_hard_reject(
     assert "body.parent-ref" in _labels(findings)
 
 
+def test_parent_ref_found_beneath_dec013_integration_marker(
+    vi, issue_types, titles, body_format, label_fallback_config
+) -> None:
+    """DEC-013 (#763): a marked descendant carries `Integration: integration/<slug>`
+    as its first body line, above the parent-ref. Validation must skip the marker
+    and recognise the parent-ref on the next content line — NOT hard-reject the
+    marker as a malformed first line (the bug #763 fixes)."""
+    issue = _make_issue(
+        title="[Task] Wire the claim seam into start-work",
+        body=(
+            "Integration: integration/508-multi-instance-ownership\n"
+            "Feature: #510\n\n"
+            "## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
+        ),
+        labels=["type:feature", "priority:Medium", "workstream:cli"],
+    )
+    findings = vi._validate_issue(
+        issue=issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        config=label_fallback_config,
+    )
+    assert "body.parent-ref" not in _labels(findings)
+
+
+def test_malformed_integration_marker_is_a_precise_hard_reject(
+    vi, issue_types, titles, body_format, label_fallback_config
+) -> None:
+    """DEC-013 (#763) AC3: a first line that attempts the marker but is malformed
+    hard-rejects as `body.integration-marker` naming the expected form — NOT the
+    misleading `body.parent-ref` a fall-through would produce."""
+    issue = _make_issue(
+        title="[Task] Wire the claim seam into start-work",
+        body=(
+            "Integration: integration/Foo_Bar!!\n"
+            "Feature: #510\n\n"
+            "## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
+        ),
+        labels=["type:feature", "priority:Medium", "workstream:cli"],
+    )
+    findings = vi._validate_issue(
+        issue=issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        config=label_fallback_config,
+    )
+    labels = _labels(findings)
+    assert "body.integration-marker" in labels
+    assert "body.parent-ref" not in labels
+
+
 def test_epic_without_parent_ref_is_ok_because_parent_is_optional(
     vi, issue_types, titles, body_format, label_fallback_config
 ) -> None:

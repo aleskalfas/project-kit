@@ -43,6 +43,7 @@ sys.path.insert(0, str(_HERE))
 from _lib import bootstrap_gate  # noqa: E402
 from _lib import axis_labels  # noqa: E402
 from _lib import provenance  # noqa: E402
+from _lib import lifecycle_inference as infer  # noqa: E402
 from _lib.criteria import FALLBACK_HEADINGS, checkbox_headings  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import (  # noqa: E402
@@ -173,7 +174,9 @@ def _summarise(
     )
 
     structural_type = _infer_structural_type(title, issue_types)
-    parent_ref = _first_body_line(body)
+    # DEC-013 (#763): skip a leading `Integration: integration/<slug>` marker so
+    # the marker line isn't rendered as the parent-ref.
+    parent_ref = _first_body_line(infer.strip_integration_marker(body))
     required_sections = _required_section_status(structural_type, body, body_format)
     criteria = _extract_criteria(body, checkbox_headings(body_format))
 

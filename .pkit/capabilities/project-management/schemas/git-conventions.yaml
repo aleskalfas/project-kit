@@ -180,8 +180,13 @@ integration_branches:
     - "[issue-types:epic]"
     - "[issue-types:feature]"
     - "[issue-types:umbrella]"
-  branch_name_pattern: '^integration/[a-z0-9][a-z0-9-]*$'
-  designation_marker_pattern: '^Integration: integration/([a-z0-9][a-z0-9-]*)$'
+  # Kebab slug: starts and ends alphanumeric, no trailing hyphen — identical
+  # shape to body-format.yaml's `integration_marker.pattern`, which owns the
+  # marker's body form (this is its git-side view). Reconciled in #763 so the
+  # two schemas agree (they previously disagreed on the trailing character and
+  # single-char slugs).
+  branch_name_pattern: '^integration/[a-z0-9][a-z0-9-]*[a-z0-9]$'
+  designation_marker_pattern: '^Integration: integration/([a-z0-9][a-z0-9-]*[a-z0-9])$'
   designation_position: |
     First line of the owning issue's body, above the parent-ref. The
     body-format schema's `integration_marker` block declares the

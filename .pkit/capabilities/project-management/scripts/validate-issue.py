@@ -48,6 +48,7 @@ sys.path.insert(0, str(_HERE))
 from _lib import bootstrap_gate  # noqa: E402
 from _lib import axis_labels  # noqa: E402
 from _lib import classification_rules  # noqa: E402
+from _lib import lifecycle_inference as infer  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
@@ -554,13 +555,43 @@ def _validate_issue(
                         )
                     )
 
+        # DEC-013 marker form (#763 AC3). When the first content line *attempts*
+        # an integration marker (`Integration:` key) but does not match the valid
+        # `integration/<slug>` form, flag it precisely here. Otherwise the malformed
+        # line falls through to the parent-ref check below and produces a misleading
+        # `body.parent-ref` message. The marker's shape is owned by body-format.yaml
+        # (`integration_marker.pattern`); we surface that pattern in the message.
+        # Always hard-reject — the marker is agent-managed and, when present, must
+        # be the strict form regardless of hierarchy.
+        malformed_marker = infer.malformed_integration_marker(body)
+        if malformed_marker is not None:
+            marker_pattern = str(
+                (body_format.get("integration_marker") or {}).get("pattern") or ""
+            )
+            findings.append(
+                Finding(
+                    SEVERITY_HARD_REJECT,
+                    "body.integration-marker",
+                    f"first body line looks like a DEC-013 integration marker but "
+                    f"does not match the required form "
+                    f"`Integration: integration/<slug>` (pattern {marker_pattern!r}); "
+                    f"got {malformed_marker!r}.",
+                )
+            )
+
         # Parent-ref first line.
         type_entry = (issue_types.get("types") or {}).get(structural_type)
         if isinstance(type_entry, dict):
             parent_ref_optional = bool(type_entry.get("parent_ref_optional", False))
             parent_ref_form = str(type_entry.get("parent_ref_form", ""))
-            if parent_ref_form and not parent_ref_optional:
-                first_line = body.lstrip().split("\n", 1)[0]
+            # Skip when the marker is malformed — the marker finding above already
+            # names the real problem; a parent-ref finding here would be misleading.
+            if parent_ref_form and not parent_ref_optional and malformed_marker is None:
+                # A leading DEC-013 `Integration:` marker sits ABOVE the parent-ref
+                # (#763); skip it so the parent-ref line is what we validate.
+                first_line = (
+                    infer.strip_integration_marker(body).lstrip().split("\n", 1)[0]
+                )
                 # New canonical form: `Milestone: [#<N>](../milestone/<N>)`
                 _NEW_MILESTONE_RE = re.compile(
                     r"^Milestone:\s+\[#(\d+)\]\(\.\./milestone/\1\)\s*$"

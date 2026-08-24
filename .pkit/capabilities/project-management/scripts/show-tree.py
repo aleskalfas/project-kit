@@ -52,6 +52,7 @@ sys.path.insert(0, str(_HERE))
 from _lib import bootstrap_gate  # noqa: E402
 from _lib import axis_labels  # noqa: E402
 from _lib import containment  # noqa: E402
+from _lib import lifecycle_inference as infer  # noqa: E402
 from _lib import session_guard  # noqa: E402
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import (  # noqa: E402
@@ -383,6 +384,7 @@ def _first_parent_ref(body: str) -> int | None:
     read; it never decides the rendered child set."""
     if not body:
         return None
+    body = infer.strip_integration_marker(body)  # DEC-013 marker above parent-ref (#763)
     for line in body.splitlines():
         s = line.strip()
         if not s:

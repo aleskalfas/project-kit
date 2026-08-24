@@ -858,10 +858,12 @@ def _infer_current_state(
 def _walk_parent_chain(body: str) -> list[int]:
     """Extract parent issue numbers from the body's first non-blank lines.
 
-    Recognises forms like `EPIC: #42`, `Feature: #99`, `Umbrella: #5`.
+    Recognises forms like `EPIC: #42`, `Feature: #99`, `Umbrella: #5`. A leading
+    DEC-013 `Integration:` marker is skipped first (#763).
     """
     if not body:
         return []
+    body = infer.strip_integration_marker(body)
     out: list[int] = []
     for line in body.splitlines():
         s = line.strip()

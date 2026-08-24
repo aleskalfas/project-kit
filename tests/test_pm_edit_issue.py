@@ -210,6 +210,51 @@ def test_validate_flags_missing_parent_ref(
     assert "body.parent-ref" in labels
 
 
+def test_validate_accepts_a_marked_descendant(
+    ei, issue_types, titles, body_format
+) -> None:
+    """DEC-013 (#763) AC5: `edit-issue` must accept a marked descendant — the
+    `Integration: integration/<slug>` marker sits above the parent-ref, and this
+    is the originating symptom (edit-issue hard-rejected every marked Task)."""
+    findings = ei._validate(
+        title="[Task] Install the Claude Code CLI inside the sandbox",
+        body=(
+            "Integration: integration/508-multi-instance-ownership\n"
+            "Feature: #1\n\n"
+            "## What\nx\n"
+            "## Acceptance criteria\n- [ ] x\n"
+            "## Doc impact\nnone."
+        ),
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+    )
+    assert findings == []
+
+
+def test_validate_flags_a_malformed_marker_precisely(
+    ei, issue_types, titles, body_format
+) -> None:
+    """A malformed marker hard-rejects as `body.integration-marker` — NOT the
+    misleading `body.parent-ref` it would trigger by falling through (#763 AC3)."""
+    findings = ei._validate(
+        title="[Task] Install the Claude Code CLI inside the sandbox",
+        body=(
+            "Integration: integration/Foo_Bar!!\n"
+            "Feature: #1\n\n"
+            "## What\nx\n"
+            "## Acceptance criteria\n- [ ] x\n"
+            "## Doc impact\nnone."
+        ),
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+    )
+    labels = [f.label for f in findings]
+    assert "body.integration-marker" in labels
+    assert "body.parent-ref" not in labels
+
+
 def test_validate_flags_h1_in_body(
     ei, issue_types, titles, body_format
 ) -> None:

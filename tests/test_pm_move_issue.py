@@ -520,6 +520,14 @@ def test_walk_parent_chain_returns_empty_for_empty_body(mi) -> None:
     assert mi._walk_parent_chain("") == []
 
 
+def test_walk_parent_chain_skips_dec013_integration_marker(mi) -> None:
+    """DEC-013 (#763): the `Integration: integration/<slug>` marker is the first
+    body line on a marked descendant, above the parent-ref. The chain-walker
+    must skip it and still read the parent-ref off the next content line."""
+    body = "Integration: integration/508-multi-instance-ownership\nEPIC: #508\n\nbody"
+    assert mi._walk_parent_chain(body) == [508]
+
+
 # --- state ordering ---------------------------------------------------
 
 

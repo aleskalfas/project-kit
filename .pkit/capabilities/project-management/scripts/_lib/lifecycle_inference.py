@@ -168,17 +168,83 @@ def branch_matches_issue(branch: str, issue_number: int) -> bool:
     return bool(re.match(rf"^[a-z]+/{issue_number}-", branch))
 
 
+#: The DEC-013 integration-branch marker. It sits ABOVE the parent-ref as the
+#: first body line (`Integration: integration/<slug>`), so every parent-ref
+#: recognizer must skip it or the marker shadows the parent-ref (#763).
+# The marker's shape is owned by body-format.yaml `integration_marker.pattern`
+# (git-conventions.yaml's `designation_marker_pattern` is declared "the git-side
+# view" of the same shape). This constant is kept byte-identical to that schema
+# value — `tests/test_pm_integration_marker.py` drift-guards the equality, so the
+# schema stays the contract (COR-018). Anything looser would strip a typo'd
+# marker (e.g. `integration/Foo_Bar!!`) instead of letting it fall through and
+# hard-reject — the guard DEC-013 promises.
+INTEGRATION_MARKER_RE = re.compile(r"^Integration: integration/([a-z0-9][a-z0-9-]*[a-z0-9])$")
+
+# A line that *attempts* the marker — starts with the `Integration:` key — but may
+# be malformed. validate-issue uses this to distinguish "no marker" from "marker
+# present but wrong form", so it can emit a clear marker-form finding rather than a
+# misleading parent-ref message.
+ATTEMPTED_INTEGRATION_MARKER_RE = re.compile(r"^Integration:")
+
+
+def strip_integration_marker(body: str) -> str:
+    """Return `body` with a leading DEC-013 `Integration:` marker line removed.
+
+    The marker is the first body line, above the parent-ref (DEC-013). Parent-ref
+    recognizers call this first so the marker doesn't shadow the parent-ref — the
+    single source of truth for the skip (the recognition is otherwise duplicated
+    across `validate-issue`, `create-issue`, `move-issue`/`close-issue`
+    `_walk_parent_chain`, `show-tree`, `containment`). No-op when absent."""
+    if not body:
+        return body
+    lines = body.splitlines()
+    for i, line in enumerate(lines):
+        if not line.strip():
+            continue  # skip leading blanks
+        if INTEGRATION_MARKER_RE.match(line.strip()):
+            del lines[i]
+            return "\n".join(lines)
+        return body  # first non-blank line is not the marker → unchanged
+    return body
+
+
+def _first_content_line(body: str) -> str | None:
+    """First non-blank line of `body`, stripped; None when empty/all-blank."""
+    for line in (body or "").splitlines():
+        s = line.strip()
+        if s:
+            return s
+    return None
+
+
+def malformed_integration_marker(body: str) -> str | None:
+    """The first content line, when it *attempts* a DEC-013 integration marker
+    (`Integration:` key) but does not match the valid `integration/<slug>` form;
+    else None.
+
+    validate-issue uses this to emit a precise marker-form hard-reject (DEC-013 /
+    #763 AC3) instead of the misleading `body.parent-ref` message a malformed
+    marker would otherwise trigger by falling through to the parent-ref check."""
+    first = _first_content_line(body)
+    if first is None:
+        return None
+    if ATTEMPTED_INTEGRATION_MARKER_RE.match(first) and not INTEGRATION_MARKER_RE.match(first):
+        return first
+    return None
+
+
 def parent_ref(child_body: str) -> int | None:
     """The parent issue number named on a child body's FIRST parent-ref line
     (e.g. `EPIC: #42` -> 42), or None when the body declares no parent-ref.
 
     The methodology's hierarchy source of truth: one parent-ref line by
     convention, on the first non-blank line (mirrors move-issue /
-    close-issue's `_walk_parent_chain` recognition). The first non-blank line
-    must match `<Word>: #<n>`; otherwise the body names no parent."""
+    close-issue's `_walk_parent_chain` recognition). A leading DEC-013
+    `Integration:` marker is skipped first (#763). The first non-blank line
+    thereafter must match `<Word>: #<n>`; otherwise the body names no parent."""
     if not child_body:
         return None
-    for line in child_body.splitlines():
+    for line in strip_integration_marker(child_body).splitlines():
         s = line.strip()
         if not s:
             continue
