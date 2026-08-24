@@ -422,7 +422,12 @@ def main() -> int:
 
     print(f"done-work: #{args.issue_number}")
     print(f"  PR:      #{pr_number}")
-    print(f"  gate:    {gate_result.passed_via}")
+    # Honest gate summary (software-engineering:DEC-002 companion (c)): enumerate
+    # each required reviewer's disposition so a satisfied-by-override slot is
+    # shown distinctly from a genuine APPROVED (never folded into an approved
+    # count) and any required-but-not-reviewed perspective is named.
+    for line in _render_gate_summary(gate_result, invoker, override_reason):
+        print(line)
 
     if args.dry_run:
         print(f"(dry-run: would post bypass audit (if any), squash-merge --subject {pr_title!r}, pull main, call move-issue.)")
@@ -505,6 +510,37 @@ def main() -> int:
 # ---- approval gate ---------------------------------------------------
 
 
+# Per-reviewer disposition tokens for the honest gate summary
+# (software-engineering:DEC-002 companion (c)). Each required reviewer resolves
+# to exactly one of these in a passing agent-mode gate:
+#   APPROVED      — a genuine fresh APPROVED verdict;
+#   overridden    — satisfied-by-override, waiving a verdict that existed (a
+#                   fresh block or a stale APPROVED);
+#   not reviewed  — satisfied-by-override where the reviewer posted NO verdict
+#                   at all — a required perspective that never actually reviewed.
+DISPOSITION_APPROVED = "APPROVED"
+DISPOSITION_OVERRIDDEN = "overridden"
+DISPOSITION_NOT_REVIEWED = "not reviewed"
+
+
+@dataclass(frozen=True)
+class _ReviewerDisposition:
+    """One required reviewer's disposition for the honest gate summary
+    (software-engineering:DEC-002 companion (c), realising DEC-050's distinct
+    `satisfied-by-override` state).
+
+    A read/display projection of what the agent-mode gate already decided
+    (ADR-042: the read surface annotates; the gate stays strict) — it carries
+    no verdict authority. `override_state` is the reviewer's human-readable
+    state at override time (only for an overridden reviewer; `None` for a
+    genuine APPROVED).
+    """
+
+    label: str
+    disposition: str
+    override_state: str | None
+
+
 class _GateResult:
     def __init__(
         self,
@@ -513,6 +549,7 @@ class _GateResult:
         refusal_message: str = "",
         override_audits: "list[_OverrideAudit] | None" = None,
         warnings: "list[str] | None" = None,
+        reviewer_dispositions: "list[_ReviewerDisposition] | None" = None,
     ):
         self.passed = passed
         self.passed_via = passed_via
@@ -523,6 +560,11 @@ class _GateResult:
         # Soft, non-refusing notices the caller prints to stderr (e.g. the
         # all-slots override nudge, DEC-050).
         self.warnings = warnings or []
+        # Per-reviewer dispositions for the honest gate summary
+        # (software-engineering:DEC-002 companion (c)) — populated only by the
+        # passing agent-mode gate. Empty for the whole-gate --bypass and
+        # human-mode paths, whose `passed_via` is already honest.
+        self.reviewer_dispositions = reviewer_dispositions or []
 
 
 @dataclass(frozen=True)
@@ -535,12 +577,19 @@ class _OverrideAudit:
     reviewer), a human-readable description of the reviewer's *state at
     override time* (`none` / a fresh `CHANGES_REQUESTED` / a stale `APPROVED`,
     per the DEC), and a link to the block comment when one exists.
+
+    `reviewed` records whether the reviewer posted ANY verdict at override time
+    (regardless of freshness). It is `False` only for the `none` state — a
+    required perspective that never actually reviewed — and feeds the honest
+    gate summary's `not reviewed` disposition (software-engineering:DEC-002
+    companion (c)).
     """
 
     reviewer: str
     capability: str | None
     state: str
     block_comment_url: str | None
+    reviewed: bool = True
 
 
 def _check_approval_gate(
@@ -953,11 +1002,23 @@ def _check_agent_gate(
             latest_commit_ts=latest_commit_ts,
             contributed_by=contributed_by,
         )
+        # Per-reviewer dispositions for the honest gate summary
+        # (software-engineering:DEC-002 companion (c)). Reuses the same
+        # approved-predicate, override set, and override audits the gate already
+        # computed — a read/display projection, never a re-decision (ADR-042).
+        dispositions = _build_reviewer_dispositions(
+            remote_baseline=remote_baseline,
+            required_local=required_local,
+            contributed_by=contributed_by,
+            reviewer_approved=reviewer_approved,
+            audits_by_name={a.reviewer: a for a in override_audits},
+        )
         return _GateResult(
             passed=True,
             passed_via="; ".join(passed_via_parts),
             override_audits=override_audits,
             warnings=gate_warnings,
+            reviewer_dispositions=dispositions,
         )
 
     return _GateResult(
@@ -1295,12 +1356,14 @@ def _build_override_audits(
 
     audits: list[_OverrideAudit] = []
     for name in override_reviewers:
-        state, url = _describe_override_state(by_name.get(name), latest_commit_ts)
+        verdict = by_name.get(name)
+        state, url = _describe_override_state(verdict, latest_commit_ts)
         audits.append(_OverrideAudit(
             reviewer=name,
             capability=contributed_by.get(name),
             state=state,
             block_comment_url=url,
+            reviewed=verdict is not None,
         ))
     return audits
 
@@ -1359,6 +1422,117 @@ def _describe_override_state(
     # Defensive: an unrecognised token still audits.
     freshness = "fresh" if fresh else "stale"
     return f"a {freshness} {verdict.token}", url
+
+
+# ---- honest gate summary (software-engineering:DEC-002 companion (c)) --
+
+
+def _build_reviewer_dispositions(
+    *,
+    remote_baseline: list[str],
+    required_local: list[str],
+    contributed_by: dict[str, str],
+    reviewer_approved,
+    audits_by_name: "dict[str, _OverrideAudit]",
+) -> "list[_ReviewerDisposition]":
+    """One `_ReviewerDisposition` per required reviewer for the honest summary.
+
+    Classifies each reviewer in the resolved required set as a genuine
+    `APPROVED`, a satisfied-by-`overridden` slot (a verdict was waived), or a
+    required-but-`not reviewed` perspective (overridden with NO verdict posted).
+    A read/display projection of what the passing gate already decided — it
+    reuses the gate's own approved-predicate and the override audits, and never
+    alters the outcome (ADR-042). Ordered remote-baseline-first then local, to
+    match the `passed_via` and refusal-message ordering.
+    """
+    dispositions: list[_ReviewerDisposition] = []
+
+    def classify(name: str, label: str) -> _ReviewerDisposition:
+        if reviewer_approved(name):
+            return _ReviewerDisposition(
+                label=label,
+                disposition=DISPOSITION_APPROVED,
+                override_state=None,
+            )
+        # Not a genuine APPROVED, yet the gate passed — so this slot was
+        # satisfied-by-override (DEC-050). A reviewer that posted no verdict at
+        # override time is a required perspective that never reviewed.
+        audit = audits_by_name.get(name)
+        if audit is not None and not audit.reviewed:
+            disposition = DISPOSITION_NOT_REVIEWED
+        else:
+            disposition = DISPOSITION_OVERRIDDEN
+        return _ReviewerDisposition(
+            label=label,
+            disposition=disposition,
+            override_state=audit.state if audit is not None else None,
+        )
+
+    for name in remote_baseline:
+        if name not in required_local:
+            dispositions.append(classify(name, f"remote agent (@{name})"))
+    for name in required_local:
+        dispositions.append(classify(name, _reviewer_label(name, contributed_by)))
+    return dispositions
+
+
+def _render_gate_summary(
+    gate_result: "_GateResult", invoker: Identity, override_reason: str
+) -> list[str]:
+    """The honest approval-gate summary lines (software-engineering:DEC-002
+    companion (c)).
+
+    Enumerates each required reviewer's disposition — a genuine `APPROVED`, a
+    satisfied-by-override (naming the operator + reason, DEC-050), or a
+    required-but-`not reviewed` perspective — so a green gate can never imply
+    every perspective reviewed the code (#715). Ends with an honesty line that
+    names every perspective which did NOT genuinely review, or confirms that all
+    did. Purely a projection of the gate's own result (ADR-042): it reads the
+    dispositions the gate computed and changes nothing.
+
+    Returns only the `gate:` line for the whole-gate --bypass and human-mode
+    paths (no dispositions to enumerate; their `passed_via` is already honest).
+    """
+    lines = [f"  gate:    {gate_result.passed_via}"]
+    dispositions = gate_result.reviewer_dispositions
+    if not dispositions:
+        return lines
+
+    operator = invoker.github_login or invoker.email or "<unresolved>"
+    reason = override_reason.strip() or "(no reason recorded)"
+    lines.append(f"  reviewers ({len(dispositions)} required):")
+    did_not_review: list[str] = []
+    for d in dispositions:
+        if d.disposition == DISPOSITION_APPROVED:
+            lines.append(f"    - {d.label}: APPROVED")
+            continue
+        # Overridden or not-reviewed: shown DISTINCTLY from APPROVED, naming the
+        # operator + reason (DEC-050 — never folded into an approved count).
+        did_not_review.append(d.label)
+        if d.disposition == DISPOSITION_NOT_REVIEWED:
+            lines.append(
+                f'    - {d.label}: NOT REVIEWED — overridden by {operator}, '
+                f'reason: "{reason}" (no verdict posted)'
+            )
+        else:
+            was = f" (was: {d.override_state})" if d.override_state else ""
+            lines.append(
+                f'    - {d.label}: overridden by {operator}, '
+                f'reason: "{reason}"{was}'
+            )
+
+    if did_not_review:
+        lines.append(
+            f"  honesty: {len(did_not_review)} of {len(dispositions)} required "
+            "perspective(s) did NOT genuinely review this PR (satisfied by "
+            f"override): {', '.join(did_not_review)}"
+        )
+    else:
+        lines.append(
+            f"  honesty: all {len(dispositions)} required perspective(s) "
+            "reviewed and approved."
+        )
+    return lines
 
 
 # ---- side-effects ----------------------------------------------------

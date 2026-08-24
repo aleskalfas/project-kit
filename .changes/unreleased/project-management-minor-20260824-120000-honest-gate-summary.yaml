@@ -1,0 +1,19 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+body: >
+  `done-work`'s agent-mode approval-gate summary now enumerates each required
+  reviewer's disposition per-perspective, so a green gate can no longer imply
+  every perspective reviewed the code (#715, software-engineering:DEC-002
+  companion (c)). Each reviewer in the resolved required set is shown as one of:
+  **APPROVED** (a genuine fresh approval); **overridden** — a DEC-050
+  `satisfied-by-override` slot, shown *distinctly* from APPROVED (never folded
+  into an approved count), naming the operator, reason, and the reviewer's state
+  at override time; or **NOT REVIEWED** — a required reviewer overridden with no
+  verdict posted, named explicitly. A closing honesty line counts and names
+  every perspective that did not genuinely review. The summary is a read/display
+  projection (ADR-042): it renders the disposition the gate already computed and
+  never alters the gate decision or the DEC-028 verdict record. The whole-gate
+  `--bypass` and human-mode paths are unchanged (their one-line label is already
+  honest). Additive, migration-free.
