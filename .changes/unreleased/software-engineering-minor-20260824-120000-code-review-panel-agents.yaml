@@ -1,0 +1,24 @@
+component: software-engineering
+kind: minor
+custom:
+  category: Added
+body: >
+  The code-review panel ships ([software-engineering:DEC-002], #749): three
+  read-only reviewer agents — `code-reviewer` (correctness/logic generalist plus
+  general code quality and API-surface design), `security-reviewer` (auth,
+  secrets-in-argv, `shell=True`/command injection, crypto misuse, dependency
+  hygiene — the #715 harms), and `docs-reviewer` (documentation completeness,
+  docs-match-behaviour, understandability, leaning on DEC-015's doc obligations).
+  Each emits the DEC-028 verdict grammar (`Reviewer agent (local, <name>):
+  APPROVED | CHANGES_REQUESTED` + the `<!-- pkit-verdict -->` marker) so it folds
+  through pm's existing all-must-approve merge gate, and blocks only on objective
+  failures in its remit — softer/subjective findings post as APPROVED-with-comments
+  (DEC-002 D3). Universal review knowledge lives in each agent body; project-specific
+  rules are read from the overlay-resolved `<project-conventions>` corpus (D4). The
+  capability's new `review-contributions.yaml` registers the panel through pm's
+  reviewer-contribution socket (DEC-032): code-reviewer + security-reviewer on the
+  `touches-code` diff floor (any code-carrying PR, independent of classification —
+  backstopping #715's mislabeled-issue gate-escape), docs-reviewer on the `type`
+  wildcard (every classified PR). The capability now declares
+  `requires_capabilities: project-management` (COR-030). Additive — a project
+  without the panel installed, or a PR no rule matches, behaves as before.

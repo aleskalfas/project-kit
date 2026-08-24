@@ -1,0 +1,47 @@
+# Reviewer-contribution declaration for the software-engineering capability
+# (per project-management:DEC-032). Registers the code-review panel
+# ([software-engineering:DEC-002-code-review-panel]) into the pm merge gate
+# through the reviewer-contribution socket. pm's collector reads this file
+# when this capability is registered in `.pkit/manifest.yaml`'s `components:`
+# list (orphan-safe, install-driven per DEC-032 D5); its mere presence under a
+# registered capability activates these rules.
+#
+# The format reference + validator are the pm-owned
+# `schemas/review-contributions.{yaml,schema.json}`. Each rule pairs a required
+# reviewer-agent name with a predicate — a diff-property `floor` and/or a
+# classification `match`.
+#
+# Activation (per DEC-002 D1 + the DEC-032 amendment):
+#   * code-reviewer + security-reviewer ride the `touches-code` diff floor —
+#     required whenever a PR's diff touches any non-documentation file,
+#     independent of the closing issue's classification. This backstops #715's
+#     mislabeled/unclassified gate-escape: a code-carrying PR pulls in the
+#     correctness + security reviewers even when filed against a `type:docs`
+#     or unclassified issue.
+#   * docs-reviewer rides the `type` axis wildcard — required for every
+#     classified PR (any `type:*` value). The `"*"` wildcard is forward-safe:
+#     a new `type` value added later still activates docs review without
+#     editing this file.
+#
+# Each reviewer must resolve to a deployed agent file at
+# `.claude/agents/<name>.md` (the capability ships them under `agents/`,
+# deployed by the claude-code adapter's deploy-agents.sh). An undeployed
+# reviewer is kept VISIBLE as an unsatisfiable requirement (the collector's
+# fail-closed seam), never silently dropped.
+
+schema_version: 1
+
+contributions:
+  # Correctness/logic generalist — required on any code-carrying diff.
+  - floor: touches-code
+    reviewer: code-reviewer
+
+  # Security specialist — required on any code-carrying diff (the #715 harm:
+  # secrets-in-argv, shell=True/injection; a correctness generalist misses these).
+  - floor: touches-code
+    reviewer: security-reviewer
+
+  # Documentation reviewer — required for every classified PR (any type value).
+  - match:
+      type: "*"
+    reviewer: docs-reviewer
