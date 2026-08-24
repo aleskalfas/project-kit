@@ -7,3 +7,7 @@ components:
   - kind: capability
     name: project-management
     manifest: .pkit/capabilities/project-management/manifest.yaml
+  - kind: capability
+    name: software-engineering
+    manifest: .pkit/capabilities/software-engineering/manifest.yaml
+    origin: incubated-in-repo
