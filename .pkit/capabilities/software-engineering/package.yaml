@@ -11,4 +11,4 @@ requires_backbone: ">=1.0.0,<2.0.0"
 # the panel's activation relies on. COR-030 declares the versioned dependency.
 requires_capabilities:
   - name: project-management
-    version: ">=0.53.0,<1.0.0"
+    version: ">=0.54.0,<1.0.0"
