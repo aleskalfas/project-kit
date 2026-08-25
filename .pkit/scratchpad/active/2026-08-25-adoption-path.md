@@ -43,3 +43,41 @@ Did: `create-issue --type epic --kind maintenance`. Got: refused — "epic/featu
 ## Decision so far
 
 Drop the Milestone. Use: **EPIC** ("make adoption clear & simple") → this discovery Task (hosts the scratchpad) + friction-fix Tasks. Scratchpad persists on the discovery Task's branch (commit + push), retires to `done/` at the end.
+
+**F6 — README has no actual install instructions (fails at step 0).**
+Did: came to the pkit GitHub repo, looked for how to install. Expected: a copy-pasteable "get pkit" command in the first screen. Got: a `## Installation model` section that explains the *concept* of `init`/`sync`/`upgrade` and assumes `pkit` is already on PATH; the concrete command to obtain the CLI (the git URL / `uvx` / `uv tool install`) is nowhere — even though the text says "installs via a direct git URL," it never gives the URL or command. A newcomer cannot get from "found the repo" to "pkit running."
+Con-argument (amplified): if I can't even install it in the first minute, ad-hoc Claude generation (zero install) wins by default — the up-front-cost asymmetry, hit at second zero.
+Scope: prompts a from-the-ground review of README.md (and the docs generally).
+
+**F6 addendum — the install command exists, but only in a decision record + the cli README, never the front door.**
+The canonical `uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git` (+ `uv` prerequisite, HTTPS form for PAT) is in PRJ-004 and `.pkit/cli/README.md` — but not README.md. Even with full repo access it took a search to surface. Confirms: the front door must carry the literal install command, not defer it to depth docs.
+
+## README rebuild (in progress)
+
+Decided: rebuild README as an **adoption on-ramp** (not a navigation TOC). Headline first win = (a) `pkit init` → governed structure appears (one command, immediate). (b) file/move an issue through the governed workflow → moved to **next steps** (it needs capability install + bootstrap — too heavy to be the front-page win; ceremony-before-value, cf. F3). Code-review (c) deferred behind a hidden `<!-- TODO -->` until the comment/review format (#756/#757) lands.
+
+### Decided: communicating `pkit` (the CLI) vs `.pkit/` (the installed methodology)
+- **Lead plain:** "`pkit` is the command you install once (globally); `.pkit/` is the methodology it installs into each project — the `pkit` command operates on it."
+- **Git analogy as a follow-on note** for anyone who wants more: "like `git` and `.git/` — one tool, a per-project directory it operates on."
+- **Two-version nuance** (CLI version vs project `backbone_version`, pin/router) stays **out of the front door** — depth docs only, so it doesn't re-load the confusion it's meant to dissolve.
+
+### README design — settled so far
+- Shape: adoption **on-ramp**, not navigation TOC.
+- Sections: (1) title+one-line what · (2) why/hook incl. honest "why not just ask Claude" · (3) **install** (`uv` prereq → `uv tool install git+ssh://…` → verify) · (4) **headline first win: `pkit init`** → structure appears + `pkit status` · (5) mental model (4–5 building blocks) · (6) next steps by role (incl. the issue-workflow win (b)) · (7) depth links · hidden `<!-- TODO(c) -->` for code-review.
+- CLI-vs-`.pkit/`: plain + git note (placement TBD — likely a short callout right after install, or top of mental model).
+- **§2 hook — SETTLED (honest-investment positioning; survived a critic stress-test):**
+  - Spine: pkit isn't an alternative to Claude generating things — it's the *maintained, safe-to-update home* for that setup, so it doesn't rot and never fights your files.
+  - Lead differentiator (answers "but I own my ad-hoc setup"): a hand-rolled CLAUDE.md/agents rots (nobody improves it; a fix in project A never reaches B; no safe update channel). pkit is that channel — and you keep everything you write (maintains only its own files, only on `sync`, structurally can't touch/conflict with yours).
+  - "loads at session start" → demoted to table-stakes; real moat is the *coherent maintained set* (agents+skills+rules+gates), not a one-off you babysit.
+  - Own the cost: real path (`uv` → `uv tool install git+…` → `pkit init`) + one concept (CLI vs `.pkit/`) + bounded estimate (~5 min, 3 commands). Don't hide the setup cliff.
+  - "enforced" scoped to truth: structural checks CI can run (id-uniqueness, migration coverage, file-ownership, permission-gated mutations); +real PR merge gate *if* project-management installed. No claim of the deferred process enforcement.
+  - Concession → qualifying threshold placed *after* value: "pays for its setup when work repeats / must survive a new session / spans projects-people; for a true one-off you won't feel it." (no upstream exit ramp)
+  - Net shift: from "immediate wins that beat ad-hoc" (they honestly don't) → "the one thing ad-hoc can't give + the exact small cost + when it's worth it."
+- Still to brainstorm: the **4–5 mental-model building blocks** (§5).
+
+**F7 — Doc staleness is systemic, not just the README.**
+The feature-inventory pass found the project-management capability README prose still says "v0.2.0 / migrations empty" while the manifest is v0.54.0 with populated migrations; software-engineering carries an older schema_version reference. Same class as F6 (docs drift from shipped reality) — so "rebuild/review docs from the ground" is broader than README.md; the capability READMEs need a currency pass too. Candidate: a doc-currency check, or generate version/status lines from the manifest rather than hand-writing them.
+
+**F8 (strategic) — pkit's honest *immediate* differentiator over ad-hoc Claude is thin; the value is genuinely back-loaded.**
+critic stress-test of the hook showed every "immediate proof" fails one of {immediate, differentiated-from-ad-hoc}: session-start loading is a native harness feature (not a moat); safe/maintained updates are real+differentiated but felt only on the 2nd sync; opt-in loses "minimal" to ad-hoc. The one true differentiator — a *maintained, safe-to-update channel that never touches your files* (no-shared-files) + *you keep everything you write* — is back-loaded and was buried.
+Implication for adoption strategy: **do not fake immediacy.** The honest play is (1) drive setup cost to near-zero (the friction work), (2) frame pkit as an *investment* with a clear payoff threshold (repeats / survives a new session / spans projects-people), (3) answer the real objection ("I own my ad-hoc setup") head-on: pkit maintains only its own files, only on your command, and structurally can't overwrite yours. The colleague quit because cost was high AND immediate payoff invisible — spin can't fix that; only low cost + honest investment-framing can.
