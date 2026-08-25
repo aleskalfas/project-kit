@@ -393,12 +393,12 @@ review:
     remote_registered:                    # bot identity for the autonomous path
       - github_login: claude-bot
     local_registered:                     # local Claude Code agents the developer invokes
-      - name: reviewer                    # kit-shipped default (this capability's `agents/reviewer.md`)
+      - name: pm-reviewer                 # kit-shipped default (this capability's `agents/pm-reviewer.md`)
 ```
 
 Both `remote_registered:` and `local_registered:` are optional lists, capped at one entry each at v1 (per DEC-028). Each entry contributes a path to the agent gate's OR composition.
 
-The capability ships a default **`reviewer`** agent for the local path (per COR-026 — discipline-implying agents live in the capability that ships the discipline). It applies the conventions defined by this capability's schemas and DECs (Conventional Commits PR titles, branch/type alignment per DEC-013, classification axes complete per DEC-012, surface-change/migration discipline per COR-010, no-shared-files per COR-001) and emits the [project-management:DEC-028]-format verdict comment that `done-work`'s gate-checker consumes. Adopters who want the default register it as above; adopters with project-specific review needs author their own agent under `.claude/agents/` and register that name instead (subject to v1's singleton-per-path constraint). Note: the kit's universal `critic` agent (per COR-024) is **not** suitable for this slot — its role is adversarial review of *unbaked* proposals, not gating *shipped* PR diffs.
+The capability ships a default **`pm-reviewer`** agent for the local path (per COR-026 — discipline-implying agents live in the capability that ships the discipline). It applies the conventions defined by this capability's schemas and DECs (Conventional Commits PR titles, branch/type alignment per DEC-013, classification axes complete per DEC-012, surface-change/migration discipline per COR-010, no-shared-files per COR-001) and emits the [project-management:DEC-028]-format verdict comment that `done-work`'s gate-checker consumes. Adopters who want the default register it as above; adopters with project-specific review needs author their own agent under `.claude/agents/` and register that name instead (subject to v1's singleton-per-path constraint). Note: the kit's universal `critic` agent (per COR-024) is **not** suitable for this slot — its role is adversarial review of *unbaked* proposals, not gating *shipped* PR diffs.
 
 Mode is resolved per-PR by three layers (highest wins):
 

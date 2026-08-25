@@ -49,10 +49,10 @@ Agent invocation:
   At v1, the kit invokes Claude Code agents via the `claude` CLI when
   available. Adopters with non-Claude-Code harnesses or custom invocation
   flows can subclass / override by editing this script's `_invoke_agent`
-  function. Per DEC-028, this capability ships a default `reviewer` agent
-  at `.pkit/capabilities/project-management/agents/reviewer.md` that emits
+  function. Per DEC-028, this capability ships a default `pm-reviewer` agent
+  at `.pkit/capabilities/project-management/agents/pm-reviewer.md` that emits
   the local-path verdict format and applies pm conventions; adopters may
-  configure `local_registered: name: reviewer` to use it, register their
+  configure `local_registered: name: pm-reviewer` to use it, register their
   own agent under `.claude/agents/`, or replace the default entirely.
 
 Exit codes:

@@ -85,7 +85,7 @@ has_projects_v2_board: false
 #   mode: agent
 #   agents:
 #     local_registered:
-#       - name: reviewer
+#       - name: pm-reviewer
 #
 # mesh_peers:                         # per DEC-022
 #   - github://owner/repo
