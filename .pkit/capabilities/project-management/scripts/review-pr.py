@@ -107,11 +107,15 @@ from _lib.review_contributions import collect_contributions  # noqa: E402
 #
 # The `claude` subprocess invoking each reviewer is capped by a wall-clock
 # timeout. It is a SINGLE uniform knob applied to every reviewer — deliberately
-# not a per-agent map (COR-007: one value, not a table to maintain). The
-# default was raised from 300s to 600s because 300s demonstrably kills heavier
-# reviewers out of the box (e.g. `code-reviewer` needs ~323s). Resolve once in
-# `main()` and pass the value into every `_invoke_agent` call.
-DEFAULT_AGENT_TIMEOUT = 600
+# not a per-agent map (COR-007: one value, not a table to maintain). Reviewer
+# agent runs are slow AND variable (observed 300s to >600s on the same
+# reviewer), so the default is a GENEROUS CEILING — hit only on a genuinely
+# hung agent, not a typical wait. It has been raised twice as the ceiling kept
+# getting hit: 300s (original hardcode) → 600s → 1200s (300s killed heavier
+# reviewers out of the box; 600s still timed out `code-reviewer` on a real
+# panel review). Resolve once in `main()` and pass the value into every
+# `_invoke_agent` call.
+DEFAULT_AGENT_TIMEOUT = 1200
 AGENT_TIMEOUT_ENV = "PKIT_REVIEW_AGENT_TIMEOUT"
 
 

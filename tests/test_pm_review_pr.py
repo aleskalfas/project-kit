@@ -237,14 +237,15 @@ def test_invoke_nonzero_exit_returns_no_verdict(rpr, monkeypatch) -> None:
 
 # ---- per-agent reviewer timeout (issue #766) --------------------
 #
-# Precedence: --timeout flag > PKIT_REVIEW_AGENT_TIMEOUT env var > default 600.
-# The default was raised from 300s because 300s demonstrably kills heavier
-# reviewers out of the box. A single uniform value applies to every reviewer.
+# Precedence: --timeout flag > PKIT_REVIEW_AGENT_TIMEOUT env var > default 1200.
+# The default is a generous ceiling (reviewer runs are slow and variable,
+# observed 300s to >600s); it was raised 300s → 600s → 1200s as the ceiling
+# kept getting hit. A single uniform value applies to every reviewer.
 
 
-def test_timeout_default_is_600(rpr) -> None:
-    assert rpr.DEFAULT_AGENT_TIMEOUT == 600
-    assert rpr._resolve_agent_timeout(None, {}) == 600
+def test_timeout_default_is_1200(rpr) -> None:
+    assert rpr.DEFAULT_AGENT_TIMEOUT == 1200
+    assert rpr._resolve_agent_timeout(None, {}) == 1200
 
 
 def test_timeout_env_overrides_default(rpr) -> None:
@@ -259,7 +260,7 @@ def test_timeout_flag_overrides_env(rpr) -> None:
 
 def test_timeout_empty_env_falls_back_to_default(rpr) -> None:
     # An unset-but-present (empty string) env var is treated as absent.
-    assert rpr._resolve_agent_timeout(None, {rpr.AGENT_TIMEOUT_ENV: ""}) == 600
+    assert rpr._resolve_agent_timeout(None, {rpr.AGENT_TIMEOUT_ENV: ""}) == 1200
 
 
 @pytest.mark.parametrize("bad", ["abc", "12.5", ""])
@@ -301,8 +302,8 @@ def test_invoke_agent_passes_timeout_to_subprocess(rpr, monkeypatch) -> None:
     assert captured["timeout"] == 720
 
 
-def test_invoke_agent_defaults_timeout_to_600(rpr, monkeypatch) -> None:
-    """Omitting the timeout arg uses the raised default, not the old 300."""
+def test_invoke_agent_defaults_timeout_to_1200(rpr, monkeypatch) -> None:
+    """Omitting the timeout arg uses the raised default, not the old 300/600."""
     import subprocess
 
     captured: dict = {}
@@ -317,7 +318,7 @@ def test_invoke_agent_defaults_timeout_to_600(rpr, monkeypatch) -> None:
 
     monkeypatch.setattr(rpr.subprocess, "run", fake_run)
     rpr._invoke_agent("reviewer", 99, {})
-    assert captured["timeout"] == 600
+    assert captured["timeout"] == 1200
 
 
 # ---- _post_comment ----------------------------------------------
