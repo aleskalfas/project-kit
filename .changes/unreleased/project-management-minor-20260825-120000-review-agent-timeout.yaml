@@ -2,7 +2,7 @@ component: project-management
 kind: minor
 custom:
   category: Changed
-  pr: "766"
+  pr: "768"
 body: >
   `review-pr`'s per-agent reviewer timeout is now configurable and its default
   is raised from 300s to 1200s (#766). The default is a generous ceiling, not a

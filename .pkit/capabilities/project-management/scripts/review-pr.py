@@ -145,7 +145,7 @@ def _resolve_agent_timeout(cli_value: str | None, env: dict) -> int:
         raise ValueError(
             f"invalid reviewer timeout from {source}: {raw!r} is not an integer "
             "number of seconds."
-        )
+        ) from None
     if value <= 0:
         raise ValueError(
             f"invalid reviewer timeout from {source}: {value} — must be a "
