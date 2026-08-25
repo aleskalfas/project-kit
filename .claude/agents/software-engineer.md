@@ -16,8 +16,7 @@ reads:
     - COR-026
   paths:
     - .pkit/capabilities/software-engineering/decisions/DEC-001-producer-agent-and-conventions-seam.md
-  patterns:
-    - project-conventions
+  patterns: []
 ---
 
 # Software engineer
