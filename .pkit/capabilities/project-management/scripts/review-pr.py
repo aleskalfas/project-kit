@@ -103,6 +103,57 @@ from _lib.required_reviewers import (  # noqa: E402
 from _lib.review_contributions import collect_contributions  # noqa: E402
 
 
+# ---- per-agent reviewer timeout (issue #766) -------------------------
+#
+# The `claude` subprocess invoking each reviewer is capped by a wall-clock
+# timeout. It is a SINGLE uniform knob applied to every reviewer — deliberately
+# not a per-agent map (COR-007: one value, not a table to maintain). Reviewer
+# agent runs are slow AND variable (observed 300s to >600s on the same
+# reviewer), so the default is a GENEROUS CEILING — hit only on a genuinely
+# hung agent, not a typical wait. It has been raised twice as the ceiling kept
+# getting hit: 300s (original hardcode) → 600s → 1200s (300s killed heavier
+# reviewers out of the box; 600s still timed out `code-reviewer` on a real
+# panel review). Resolve once in `main()` and pass the value into every
+# `_invoke_agent` call.
+DEFAULT_AGENT_TIMEOUT = 1200
+AGENT_TIMEOUT_ENV = "PKIT_REVIEW_AGENT_TIMEOUT"
+
+
+def _resolve_agent_timeout(cli_value: str | None, env: dict) -> int:
+    """Resolve the per-agent reviewer timeout in seconds.
+
+    Precedence: `--timeout` flag > `PKIT_REVIEW_AGENT_TIMEOUT` env var >
+    default (`DEFAULT_AGENT_TIMEOUT`). One uniform value applies to every
+    reviewer (COR-007: no per-agent map).
+
+    A non-integer, zero, or negative value is a usage error and raises
+    `ValueError` with a helpful message (fail fast) rather than silently
+    falling back to the default — a bad knob should be corrected, not ignored.
+    """
+    if cli_value is not None:
+        raw: object = cli_value
+        source = "--timeout"
+    elif env.get(AGENT_TIMEOUT_ENV):
+        raw = env[AGENT_TIMEOUT_ENV]
+        source = f"${AGENT_TIMEOUT_ENV}"
+    else:
+        return DEFAULT_AGENT_TIMEOUT
+
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        raise ValueError(
+            f"invalid reviewer timeout from {source}: {raw!r} is not an integer "
+            "number of seconds."
+        ) from None
+    if value <= 0:
+        raise ValueError(
+            f"invalid reviewer timeout from {source}: {value} — must be a "
+            "positive number of seconds."
+        )
+    return value
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
@@ -123,8 +174,20 @@ def main() -> int:
         "what shows in the PR UI and satisfies branch protection; it is skipped "
         "automatically when you authored the PR (GitHub blocks self-approval).",
     )
+    parser.add_argument(
+        "--timeout", default=None, metavar="SECONDS",
+        help="Per-agent reviewer timeout in seconds (one uniform value applied "
+        f"to every reviewer). Precedence: this flag > ${AGENT_TIMEOUT_ENV} env "
+        f"var > default {DEFAULT_AGENT_TIMEOUT}. Must be a positive integer.",
+    )
     session_guard.add_override_argument(parser)
     args = parser.parse_args()
+
+    try:
+        agent_timeout = _resolve_agent_timeout(args.timeout, os.environ)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
 
     capability_root = resolve_capability_root(args.capability_root)
     if capability_root is None:
@@ -216,6 +279,7 @@ def main() -> int:
     required_local = list(resolution.required_local)
     contributed_by = dict(resolution.contributed_by)
     print(f"  agents: {', '.join(required_local)}")
+    print(f"  timeout: {agent_timeout}s per agent")
 
     # For each required reviewer, invoke and post verdict.
     failures = 0
@@ -238,7 +302,7 @@ def main() -> int:
             print(f"  [{name}] (dry-run) would invoke against PR #{pr_number}")
             continue
 
-        verdict, body = _invoke_agent(name, pr_number, config)
+        verdict, body = _invoke_agent(name, pr_number, config, agent_timeout)
         if verdict is None:
             print(f"  [{name}] invocation failed; no verdict to post.", file=sys.stderr)
             failures += 1
@@ -271,11 +335,17 @@ def main() -> int:
 
 def _invoke_agent(
     name: str, pr_number: int | None, config: dict,
+    timeout: int = DEFAULT_AGENT_TIMEOUT,
 ) -> tuple[str | None, str]:
     """Invoke a Claude Code agent against the PR diff.
 
     Returns (verdict, body) — verdict is "APPROVED" or "CHANGES_REQUESTED"
     or None on failure. Body is the agent's freeform commentary.
+
+    `timeout` is the per-agent wall-clock cap in seconds (issue #766); a
+    reviewer that runs longer is killed and yields no verdict. The caller
+    resolves the value once (`_resolve_agent_timeout`) and passes the same
+    uniform value for every reviewer.
 
     At v1 this uses the `claude` CLI when available. Adopters with
     custom harnesses or invocation patterns override by editing this
@@ -308,7 +378,7 @@ def _invoke_agent(
     try:
         proc = subprocess.run(
             [claude_bin, "-p", prompt, "--agent", name],
-            capture_output=True, text=True, check=False, timeout=300,
+            capture_output=True, text=True, check=False, timeout=timeout,
         )
     except (subprocess.TimeoutExpired, FileNotFoundError) as exc:
         print(f"  [{name}] invocation error: {exc}", file=sys.stderr)
