@@ -39,7 +39,10 @@ validation-severity.yaml). The two overrides are independent deliberate
 acts: a merge blocked on both the approval gate and red CI needs both flags.
 
 Per-reviewer override (DEC-050): in agent mode, `--bypass-reviewer <name>`
-(repeatable, with a required `--bypass-reviewer-reason`) satisfies ONE named
+(repeatable, with a required `--bypass-reviewer-reason` — the bare
+`--bypass-reason` is still accepted as a DEPRECATED alias, since it shipped in
+project-management 0.54.0; same destination, warns, refuses if both are given,
+retires at the next major) satisfies ONE named
 required reviewer's slot as `satisfied-by-override` — a first-class state
 DISTINCT from a fresh APPROVED — while every other required reviewer still
 gates. It is a member of DEC-046's `--bypass` family (audited, reason-required),
