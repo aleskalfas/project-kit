@@ -65,8 +65,9 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
+from _lib import audit as _audit  # noqa: E402
 from _lib import axis_labels  # noqa: E402
+from _lib import bootstrap_gate  # noqa: E402
 from _lib import classification_rules  # noqa: E402
 from _lib import lifecycle_inference as infer  # noqa: E402
 from _lib import session_guard  # noqa: E402
@@ -85,56 +86,19 @@ from _lib.placeholder_detection import (  # noqa: E402
 
 
 SEVERITY_HARD_REJECT = "hard-reject"
-SEVERITY_BYPASSABLE = "bypassable-with-audit"
 SEVERITY_WARNING = "warning"
 
-#: The audit-comment provenance marker (DEC-049), uniform with the other
-#: `<!-- pkit-* -->` markers (verdict / provenance / hook). Filterable; the
-#: canonical audit-comment shape lives in the schema template below.
-_AUDIT_MARKER = "<!-- pkit-audit -->"
-
-#: Fallback if the schema can't be read — must match the schema's canonical form.
-_AUDIT_TEMPLATE_FALLBACK = f"{_AUDIT_MARKER}\nBypassed by <name> <<email>>: <reason>"
-
-
-def _load_audit_template(capability_root) -> str:
-    """The canonical audit-comment template, read from `validation-severity.yaml`'s
-    `severities.bypassable-with-audit.audit_comment_template` — the single source
-    of truth per DEC-049. Falls back to the known canonical form on any read error."""
-    from pathlib import Path as _Path
-
-    path = _Path(capability_root) / "schemas" / "validation-severity.yaml"
-    try:
-        data = YAML(typ="safe").load(path.read_text(encoding="utf-8"))
-        tmpl = data["severities"][SEVERITY_BYPASSABLE]["audit_comment_template"]
-        return tmpl.strip() if isinstance(tmpl, str) and tmpl.strip() else _AUDIT_TEMPLATE_FALLBACK
-    except (OSError, YAMLError, KeyError, TypeError):
-        return _AUDIT_TEMPLATE_FALLBACK
-
-
-def _render_audit_comment(capability_root, invoker, reason: str) -> str:
-    """Render the one canonical audit comment (DEC-049) from the schema template:
-    marker + actor (`<name> <<email>>`) + reason. `move-issue` is the sole audit
-    writer; the transition itself is recorded by the timeline (the comment carries
-    the *why*, not the state). Renders cleanly when the email is unresolved."""
-    template = _load_audit_template(capability_root)
-    name = (getattr(invoker, "github_login", None) or getattr(invoker, "email", None) or "unknown")
-    email = getattr(invoker, "email", None) or ""
-    body = template.replace("<name>", name).replace("<reason>", reason)
-    if email:
-        body = body.replace("<email>", email)
-    else:
-        body = body.replace(" <<email>>", "").replace("<<email>>", "")
-    return body
-
-
-def _audit_projection(config) -> str:
-    """The audit-comment projection level (DEC-049): `off` | `audit` | `full`.
-    Default `audit`. The engine journal records every move regardless of level;
-    this only controls how much is projected as GitHub comments."""
-    audit = config.get("audit") if isinstance(config, dict) else None
-    level = audit.get("projection") if isinstance(audit, dict) else None
-    return level if level in ("off", "audit", "full") else "audit"
+# The DEC-049 audit primitives — the canonical marker, the schema-sourced
+# template, the renderer and the projection knob — live ONCE in `_lib.audit`,
+# shared with every other audit-comment writer (COR-007). Re-exported under the
+# module-private names this script's call sites and tests already use, so the
+# extraction moved the implementation without moving the call surface.
+SEVERITY_BYPASSABLE = _audit.SEVERITY_BYPASSABLE
+_AUDIT_MARKER = _audit.AUDIT_MARKER
+_AUDIT_TEMPLATE_FALLBACK = _audit.AUDIT_TEMPLATE_FALLBACK
+_load_audit_template = _audit.load_audit_template
+_render_audit_comment = _audit.render_audit_comment
+_audit_projection = _audit.audit_projection
 
 
 def _pkit_version() -> str:
@@ -519,7 +483,7 @@ def main() -> int:
     if projection != "off" and is_bypass_audit:
         # Reason is guaranteed non-empty here: the bypassable authorisation
         # gate above refuses a --bypass without a non-empty --bypass-reason.
-        # move-issue is the SOLE audit-comment writer (DEC-049): it renders the
+        # move-issue is the sole writer of the TRANSITION audit comment (DEC-049): it renders the
         # one canonical comment from the schema template; wrappers pass the reason
         # through rather than posting their own (killing the #672 double-post).
         reason = (args.bypass_reason or "").strip()

@@ -1,0 +1,32 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The per-reviewer merge-gate override shipped in 0.54.0 reported itself
+  dishonestly in three states, which is the one thing DEC-050 exists to get
+  right (#755). `passed_via`, the gate's refusal text and the audit comment each
+  re-derived "was this slot overridden?" and disagreed: a reviewer with a
+  genuine fresh APPROVED who was also named in `--bypass-reviewer` was reported
+  as `satisfied-by-override`; the audit comment asserted "every other required
+  reviewer still gated" even when the override was redundant or when EVERY slot
+  was overridden; and the audit's "state at override time" was computed with the
+  permissive verdict reader, so the PR author's own self-approval — which the
+  gate correctly refuses to count — described what the override waived
+  (ADR-042's named anti-pattern). One per-reviewer satisfaction record now backs
+  all three surfaces, and the audit's scope sentence is derived from it rather
+  than asserted. Also fixed: `--bypass` silently swallowed `--bypass-reviewer`
+  (skipping the DEC-050 name validation and the audit) and is now refused as
+  incoherent; the idempotency stamp is keyed to HEAD as DEC-050 scopes it, and
+  hashes the reviewer name so a name containing `-->` can no longer break the
+  marker; a repeated `--bypass-reviewer X X` posts one audit; the all-slots
+  nudge survives every refusal path; and the audit renders DEC-049's canonical
+  line from the schema template through a shared `_lib/audit.py`. That comment is
+  posted **irrespective of `audit.projection`**, and writes no journal entry: the
+  engine journal has no entry shape for a gate override yet, so honouring `off`
+  here would delete the override trail rather than quieten it. `--bypass-reason` on
+  `done-work` is superseded by `--bypass-reviewer-reason` (the old spelling retained
+  as a deprecated alias) to end the collision with
+  its meaning on `move-issue`/`promote-issue`; the released spelling stays as a
+  deprecated alias sharing one destination (no second code path), warns, and
+  refuses if both are supplied.
