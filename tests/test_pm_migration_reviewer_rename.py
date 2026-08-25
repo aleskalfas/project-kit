@@ -45,6 +45,28 @@ CONFIG_DEFAULT = (
 CONFIG_MIGRATED = CONFIG_DEFAULT.replace("- name: reviewer", "- name: pm-reviewer")
 CONFIG_NO_REVIEW = "schema_version: 1\ndefault_branch: main\n"
 
+# The config-shape variants the capability's own docs demonstrate (DEC-028 /
+# the pm README register the default with a trailing inline comment) plus the
+# quoting / flow forms valid YAML permits. The `$`-anchored first-cut regex
+# missed every one of these, leaving a real registration pointing at the
+# deleted agent.
+CONFIG_INLINE_COMMENT = (
+    "schema_version: 1\n"
+    "review:\n"
+    "  mode: agent\n"
+    "  agents:\n"
+    "    local_registered:\n"
+    "      - name: reviewer                 # matches `.claude/agents/reviewer.md` (default)\n"
+)
+CONFIG_QUOTED = CONFIG_DEFAULT.replace("- name: reviewer", '- name: "reviewer"')
+CONFIG_FLOW = (
+    "schema_version: 1\n"
+    "review:\n"
+    "  mode: agent\n"
+    "  agents:\n"
+    "    local_registered: [{name: reviewer}]\n"
+)
+
 
 @pytest.fixture(scope="module")
 def agents_mod():
@@ -64,6 +86,7 @@ def _install(
     *,
     config: str | None = CONFIG_DEFAULT,
     deployed: str | None = None,  # "kit-copy" | "adopter-copy" | "kit-symlink" | None
+    new_deployed: bool = False,  # also lay down .claude/agents/pm-reviewer.md
 ) -> Path:
     """Lay down an installed-adopter shape for the migration to act on."""
     cap = root / ".pkit" / "capabilities" / "project-management"
@@ -84,6 +107,11 @@ def _install(
         deployed_reviewer.write_text("---\nname: reviewer\n---\nmy own agent\n", encoding="utf-8")
     elif deployed == "kit-symlink":
         deployed_reviewer.symlink_to(cap / "agents" / "reviewer.md")
+
+    if new_deployed:
+        (claude_agents / "pm-reviewer.md").write_text(
+            f"---\n{MARKER}\nname: pm-reviewer\n---\nbody\n", encoding="utf-8"
+        )
     return cap
 
 
@@ -117,8 +145,39 @@ def test_default_kit_copy_is_rewritten_and_stale_copy_removed(tmp_path) -> None:
 
 def test_post_sync_default_with_deployed_already_removed_is_rewritten(tmp_path) -> None:
     """Sync-has-run ordering: deploy-agents.sh already stale-removed the old
-    copy, so only the config entry remains to rewrite."""
-    cap = _install(tmp_path, deployed=None)
+    reviewer.md AND laid down pm-reviewer.md. That pm-reviewer.md presence is the
+    positive kit signal that lets the absent-reviewer.md case rewrite the config."""
+    cap = _install(tmp_path, deployed=None, new_deployed=True)
+    proc = _run(tmp_path)
+    assert proc.returncode == 0, proc.stderr
+    assert _registered_names(cap) == ["pm-reviewer"]
+
+
+# --- Config-shape breadth: the shapes the `$`-anchored first cut missed ------
+
+
+def test_inline_comment_shape_is_rewritten(tmp_path) -> None:
+    """The exact shape the capability's docs demonstrate — a trailing inline
+    comment after `name: reviewer` — must be rewritten, not left dangling."""
+    cap = _install(tmp_path, config=CONFIG_INLINE_COMMENT, deployed="kit-copy")
+    proc = _run(tmp_path)
+    assert proc.returncode == 0, proc.stderr
+    assert _registered_names(cap) == ["pm-reviewer"]
+    # The trailing comment survives; only the token is rewritten.
+    assert "# matches" in (cap / "project" / "config.yaml").read_text(encoding="utf-8")
+
+
+def test_quoted_value_shape_is_rewritten(tmp_path) -> None:
+    """A quoted `name: "reviewer"` value is the default too."""
+    cap = _install(tmp_path, config=CONFIG_QUOTED, deployed="kit-copy")
+    proc = _run(tmp_path)
+    assert proc.returncode == 0, proc.stderr
+    assert _registered_names(cap) == ["pm-reviewer"]
+
+
+def test_flow_style_shape_is_rewritten(tmp_path) -> None:
+    """Flow-style `local_registered: [{name: reviewer}]` is the default too."""
+    cap = _install(tmp_path, config=CONFIG_FLOW, deployed="kit-copy")
     proc = _run(tmp_path)
     assert proc.returncode == 0, proc.stderr
     assert _registered_names(cap) == ["pm-reviewer"]
@@ -146,6 +205,17 @@ def test_adopter_custom_reviewer_is_not_rewritten(tmp_path) -> None:
     assert proc.returncode == 0, proc.stderr
     assert _registered_names(cap) == ["reviewer"]
     assert (tmp_path / ".claude" / "agents" / "reviewer.md").exists()
+
+
+def test_absent_reviewer_without_pm_reviewer_signal_is_not_rewritten(tmp_path) -> None:
+    """No deployed reviewer.md AND no deployed pm-reviewer.md ⇒ no positive kit
+    signal. The config `reviewer` could be an adopter's undeployed/custom agent,
+    so it is NOT silently taken over (advisory disambiguator for the absent-file
+    branch)."""
+    cap = _install(tmp_path, deployed=None, new_deployed=False)
+    proc = _run(tmp_path)
+    assert proc.returncode == 0, proc.stderr
+    assert _registered_names(cap) == ["reviewer"]
 
 
 # --- Clean no-ops ------------------------------------------------------------
