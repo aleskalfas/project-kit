@@ -1,7 +1,7 @@
 ---
 id: PRJ-009
 title: project-kit dogfoods its own code-review panel
-status: proposed
+status: accepted
 date: 2026-08-24
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
