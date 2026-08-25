@@ -273,6 +273,13 @@ def main() -> int:
             "reviewer's state at override time, before merging."
         ),
     )
+    # ONE destination, two spellings (COR-007: an alias, never a second
+    # implementation). `--bypass-reviewer-reason` is canonical; the released
+    # `--bypass-reason` (shipped on done-work in project-management 0.54.0)
+    # stays accepted as a DEPRECATED alias so a caller written against that
+    # release keeps working — renaming a published flag outright would be a
+    # breaking CLI signature change owing a migration (COR-010). Both write
+    # `args.bypass_reviewer_reason`; nothing downstream knows which was typed.
     parser.add_argument(
         "--bypass-reviewer-reason", default=None, metavar="REASON",
         help=(
@@ -282,6 +289,18 @@ def main() -> int:
             "its flag rather than spelled --bypass-reason, because done-work "
             "carries three bypass-family flags and on move-issue/promote-issue "
             "--bypass-reason is the reason for the whole-gate --bypass."
+        ),
+    )
+    parser.add_argument(
+        "--bypass-reason", dest="bypass_reviewer_reason", default=None,
+        metavar="REASON",
+        help=(
+            "DEPRECATED alias for --bypass-reviewer-reason, kept because it "
+            "shipped in project-management 0.54.0. Prefer the canonical "
+            "spelling: on move-issue/promote-issue --bypass-reason is the "
+            "reason for the whole-gate --bypass, and that collision is what "
+            "the rename fixes. Warns when used; scheduled for removal at the "
+            "next major."
         ),
     )
     parser.add_argument(
@@ -370,6 +389,30 @@ def main() -> int:
         ) if name
     )
     override_reason = (args.bypass_reviewer_reason or "").strip()
+    # The deprecated spelling shares `dest` with the canonical one (one code
+    # path), so argparse cannot report which was typed — argv can. Both given
+    # is ambiguous under argparse's last-wins, so refuse rather than silently
+    # pick; one deprecated spelling warns and proceeds.
+    _spellings = [a for a in sys.argv[1:] if a.split("=", 1)[0] in
+                  ("--bypass-reason", "--bypass-reviewer-reason")]
+    if len({a.split("=", 1)[0] for a in _spellings}) > 1:
+        print(
+            "[refused] --bypass-reason and --bypass-reviewer-reason are the "
+            "same option (the former is a deprecated alias). Supplying both is "
+            "ambiguous — pass only --bypass-reviewer-reason.",
+            file=sys.stderr,
+        )
+        return 1
+    if any(a.split("=", 1)[0] == "--bypass-reason" for a in _spellings):
+        print(
+            "[warn] --bypass-reason is a DEPRECATED alias on done-work; use "
+            "--bypass-reviewer-reason. The old spelling shipped in "
+            "project-management 0.54.0 and still works, but on "
+            "move-issue/promote-issue --bypass-reason means the reason for the "
+            "whole-gate --bypass — the collision the rename fixes. Scheduled "
+            "for removal at the next major.",
+            file=sys.stderr,
+        )
     if override_reviewers and not override_reason:
         print(
             "[refused] --bypass-reviewer requires "

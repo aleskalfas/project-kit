@@ -1101,3 +1101,4 @@ def test_override_ephemeral_not_persisted(dw, rc, monkeypatch) -> None:
     assert result.passed is False
     # The prior audit did not stand in for a fresh APPROVED.
     assert "design-reviewer" in result.refusal_message
+

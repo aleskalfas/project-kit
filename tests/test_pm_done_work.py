@@ -1024,3 +1024,57 @@ def test_agent_mode_override_happy_path_merges_after_audit(dw, monkeypatch):
     assert calls["order"] == [
         ("override_audit", "design-reviewer"), ("merged", None),
     ]
+
+
+# ---- the deprecated `--bypass-reason` alias (DEC-050, released in pm 0.54.0) ---
+#
+# `--bypass-reason` shipped on done-work in project-management 0.54.0, so
+# renaming it outright would be a breaking CLI signature change owing a
+# migration (COR-010). It stays accepted as a deprecated ALIAS — emphatically
+# not a second implementation: both spellings write the single
+# `bypass_reviewer_reason` destination, so exactly one code path consumes the
+# reason. Because they share a dest, argparse cannot report which was typed;
+# the deprecation notice and the both-spellings refusal read argv instead,
+# which is what these tests pin.
+
+_ALIAS_BODY = "## What\n\nA change.\n"
+
+
+def test_deprecated_reason_alias_still_works_and_warns(dw, monkeypatch, capsys):
+    """The released spelling keeps working, and says it is deprecated."""
+    _wire_main_seams(
+        dw, monkeypatch, rollup=_GREEN_ROLLUP, issue=_issue(_ALIAS_BODY),
+    )
+    rc = _run_main(dw, monkeypatch, ["42", "--bypass-reason", "still fine", "--yes"])
+    err = capsys.readouterr().err
+    assert "DEPRECATED" in err, "the old spelling must announce its deprecation"
+    assert "--bypass-reviewer-reason" in err, "and name the canonical spelling"
+    # Without --bypass-reviewer the reason is inert, so the merge proceeds
+    # exactly as an unadorned run would: the alias changes no behaviour.
+    assert rc == 0
+
+
+def test_canonical_reason_flag_does_not_warn(dw, monkeypatch, capsys):
+    _wire_main_seams(
+        dw, monkeypatch, rollup=_GREEN_ROLLUP, issue=_issue(_ALIAS_BODY),
+    )
+    rc = _run_main(
+        dw, monkeypatch, ["42", "--bypass-reviewer-reason", "fine", "--yes"],
+    )
+    assert "DEPRECATED" not in capsys.readouterr().err
+    assert rc == 0
+
+
+def test_both_reason_spellings_are_refused_as_ambiguous(dw, monkeypatch, capsys):
+    """Two spellings of one option is ambiguous — refuse, don't let argparse
+    silently resolve it by last-wins."""
+    calls = _wire_main_seams(
+        dw, monkeypatch, rollup=_GREEN_ROLLUP, issue=_issue(_ALIAS_BODY),
+    )
+    rc = _run_main(dw, monkeypatch, [
+        "42", "--bypass-reviewer", "code-reviewer",
+        "--bypass-reviewer-reason", "a", "--bypass-reason", "b", "--yes",
+    ])
+    assert rc == 1
+    assert calls["merged"] is False, "an ambiguous invocation must not merge"
+    assert "ambiguous" in capsys.readouterr().err
