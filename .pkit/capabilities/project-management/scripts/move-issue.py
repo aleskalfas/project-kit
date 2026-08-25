@@ -483,7 +483,7 @@ def main() -> int:
     if projection != "off" and is_bypass_audit:
         # Reason is guaranteed non-empty here: the bypassable authorisation
         # gate above refuses a --bypass without a non-empty --bypass-reason.
-        # move-issue is the SOLE audit-comment writer (DEC-049): it renders the
+        # move-issue is the sole writer of the TRANSITION audit comment (DEC-049): it renders the
         # one canonical comment from the schema template; wrappers pass the reason
         # through rather than posting their own (killing the #672 double-post).
         reason = (args.bypass_reason or "").strip()

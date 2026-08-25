@@ -21,9 +21,12 @@ body: >
   hashes the reviewer name so a name containing `-->` can no longer break the
   marker; a repeated `--bypass-reviewer X X` posts one audit; the all-slots
   nudge survives every refusal path; and the audit renders DEC-049's canonical
-  line from the schema template through a shared `_lib/audit.py`, so the
-  `audit.projection` knob and the engine journal apply. `--bypass-reason` on
-  `done-work` is renamed `--bypass-reviewer-reason` to end the collision with
+  line from the schema template through a shared `_lib/audit.py`. That comment is
+  posted **irrespective of `audit.projection`**, and writes no journal entry: the
+  engine journal has no entry shape for a gate override yet, so honouring `off`
+  here would delete the override trail rather than quieten it. `--bypass-reason` on
+  `done-work` is superseded by `--bypass-reviewer-reason` (the old spelling retained
+  as a deprecated alias) to end the collision with
   its meaning on `move-issue`/`promote-issue`; the released spelling stays as a
   deprecated alias sharing one destination (no second code path), warns, and
   refuses if both are supplied.

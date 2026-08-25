@@ -1078,3 +1078,27 @@ def test_both_reason_spellings_are_refused_as_ambiguous(dw, monkeypatch, capsys)
     assert rc == 1
     assert calls["merged"] is False, "an ambiguous invocation must not merge"
     assert "ambiguous" in capsys.readouterr().err
+
+
+def test_abbreviated_canonical_flag_cannot_evade_the_ambiguity_refusal(
+    dw, monkeypatch, capsys,
+):
+    """`--bypass-reviewer-reas` must not bind the canonical flag.
+
+    The alias detection reads argv literally (two spellings share one dest, so
+    argparse cannot report which was typed). With prefix abbreviation enabled,
+    an abbreviated canonical flag paired with the deprecated spelling would
+    satisfy neither literal, evading both the deprecation notice and the
+    both-spellings refusal — landing in argparse's silent last-wins, which is
+    the outcome the refusal exists to prevent. `allow_abbrev=False` closes it,
+    so an abbreviation is now rejected outright by argparse.
+    """
+    _wire_main_seams(
+        dw, monkeypatch, rollup=_GREEN_ROLLUP, issue=_issue(_ALIAS_BODY),
+    )
+    with pytest.raises(SystemExit) as exc:
+        _run_main(dw, monkeypatch, [
+            "42", "--bypass-reviewer", "code-reviewer",
+            "--bypass-reviewer-reas", "a", "--bypass-reason", "b", "--yes",
+        ])
+    assert exc.value.code == 2, "argparse must reject the abbreviation, not bind it"

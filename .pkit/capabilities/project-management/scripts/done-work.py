@@ -228,6 +228,13 @@ def _head_key(commits: list) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
+        # No prefix abbreviation: `--bypass-reason` and `--bypass-reviewer-reason`
+        # share one destination, so the deprecation notice and the both-spellings
+        # refusal below read argv literally. With abbreviation on, `--bypass-reviewer-reas`
+        # would bind the canonical flag while evading that scan, letting an
+        # abbreviation + the alias slip past the refusal into argparse's silent
+        # last-wins — the outcome the refusal exists to prevent.
+        allow_abbrev=False,
         description=(
             "Squash-merge the PR for an issue + transition Review → Done. "
             "Per DEC-026 with the human-mode three-way OR approval gate."
