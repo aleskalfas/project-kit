@@ -235,6 +235,91 @@ def test_invoke_nonzero_exit_returns_no_verdict(rpr, monkeypatch) -> None:
     assert verdict is None
 
 
+# ---- per-agent reviewer timeout (issue #766) --------------------
+#
+# Precedence: --timeout flag > PKIT_REVIEW_AGENT_TIMEOUT env var > default 600.
+# The default was raised from 300s because 300s demonstrably kills heavier
+# reviewers out of the box. A single uniform value applies to every reviewer.
+
+
+def test_timeout_default_is_600(rpr) -> None:
+    assert rpr.DEFAULT_AGENT_TIMEOUT == 600
+    assert rpr._resolve_agent_timeout(None, {}) == 600
+
+
+def test_timeout_env_overrides_default(rpr) -> None:
+    env = {rpr.AGENT_TIMEOUT_ENV: "900"}
+    assert rpr._resolve_agent_timeout(None, env) == 900
+
+
+def test_timeout_flag_overrides_env(rpr) -> None:
+    env = {rpr.AGENT_TIMEOUT_ENV: "900"}
+    assert rpr._resolve_agent_timeout("450", env) == 450
+
+
+def test_timeout_empty_env_falls_back_to_default(rpr) -> None:
+    # An unset-but-present (empty string) env var is treated as absent.
+    assert rpr._resolve_agent_timeout(None, {rpr.AGENT_TIMEOUT_ENV: ""}) == 600
+
+
+@pytest.mark.parametrize("bad", ["abc", "12.5", ""])
+def test_timeout_invalid_flag_non_integer_errors(rpr, bad) -> None:
+    with pytest.raises(ValueError) as exc:
+        rpr._resolve_agent_timeout(bad, {})
+    assert "--timeout" in str(exc.value)
+
+
+@pytest.mark.parametrize("bad", ["0", "-1", "-600"])
+def test_timeout_non_positive_flag_errors(rpr, bad) -> None:
+    with pytest.raises(ValueError) as exc:
+        rpr._resolve_agent_timeout(bad, {})
+    assert "positive" in str(exc.value)
+
+
+def test_timeout_invalid_env_errors_and_names_env(rpr) -> None:
+    with pytest.raises(ValueError) as exc:
+        rpr._resolve_agent_timeout(None, {rpr.AGENT_TIMEOUT_ENV: "nope"})
+    assert rpr.AGENT_TIMEOUT_ENV in str(exc.value)
+
+
+def test_invoke_agent_passes_timeout_to_subprocess(rpr, monkeypatch) -> None:
+    """The resolved timeout reaches `subprocess.run`'s `timeout=` kwarg."""
+    import subprocess
+
+    captured: dict = {}
+    monkeypatch.setattr(rpr.shutil, "which", lambda _bin: "/usr/bin/claude")
+
+    def fake_run(args, **kwargs):
+        captured.update(kwargs)
+        return subprocess.CompletedProcess(
+            args=args, returncode=0,
+            stdout="Reviewer agent (local, reviewer): APPROVED\n", stderr="",
+        )
+
+    monkeypatch.setattr(rpr.subprocess, "run", fake_run)
+    rpr._invoke_agent("reviewer", 99, {}, 720)
+    assert captured["timeout"] == 720
+
+
+def test_invoke_agent_defaults_timeout_to_600(rpr, monkeypatch) -> None:
+    """Omitting the timeout arg uses the raised default, not the old 300."""
+    import subprocess
+
+    captured: dict = {}
+    monkeypatch.setattr(rpr.shutil, "which", lambda _bin: "/usr/bin/claude")
+
+    def fake_run(args, **kwargs):
+        captured.update(kwargs)
+        return subprocess.CompletedProcess(
+            args=args, returncode=0,
+            stdout="Reviewer agent (local, reviewer): APPROVED\n", stderr="",
+        )
+
+    monkeypatch.setattr(rpr.subprocess, "run", fake_run)
+    rpr._invoke_agent("reviewer", 99, {})
+    assert captured["timeout"] == 600
+
+
 # ---- _post_comment ----------------------------------------------
 
 
@@ -344,7 +429,7 @@ def _wire_main(
         lambda pr_number, config, repo_root, baseline: resolution,
     )
 
-    def fake_invoke(name, pr_number, config):
+    def fake_invoke(name, pr_number, config, timeout=None):
         invoked.append(name)
         return "APPROVED", "body"
 

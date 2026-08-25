@@ -412,6 +412,8 @@ Mode is resolved per-PR by three layers (highest wins):
 
 For the local-agent path, run `pkit project-management review-pr <N>` after `review-work` to invoke every registered local agent against the PR diff. Each agent posts a `Reviewer agent (local, <name>): APPROVED|CHANGES_REQUESTED` comment. Re-running re-invokes and posts a fresh verdict (post-date-latest-commit handles staleness).
 
+Each reviewer subprocess is capped by a wall-clock **timeout** (seconds). It is a single uniform knob applied to every reviewer — deliberately not a per-agent map (COR-007). Resolution precedence: the `--timeout <seconds>` flag > the `PKIT_REVIEW_AGENT_TIMEOUT` env var > the default **600**. (The default was raised from 300, which demonstrably killed heavier reviewers out of the box — e.g. `code-reviewer` needs ~323s.) A non-integer, zero, or negative value is a usage error (fail fast) rather than a silent fall-back. Raise it for a slow reviewer with `pkit project-management review-pr <N> --timeout 900`, or set `PKIT_REVIEW_AGENT_TIMEOUT` once in your environment.
+
 #### Freeform comments — `comment-issue` / `comment-pr` (per [project-management:DEC-047-freeform-comment-verb])
 
 The `project-manager` agent is denied direct `gh` writes, so it posts a **freeform** comment — evidence, analysis, a triage rationale — through a validated verb rather than raw `gh`. (The *structured* comments the methodology emits — audit notes, DEC-028 verdicts, filing provenance — stay side-effects of their own verbs.)

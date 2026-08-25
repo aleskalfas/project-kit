@@ -1,0 +1,14 @@
+component: project-management
+kind: minor
+custom:
+  category: Changed
+  pr: "766"
+body: >
+  `review-pr`'s per-agent reviewer timeout is now configurable and its default
+  is raised from 300s to 600s (#766). The old hardcoded 300s silently killed
+  heavier reviewers out of the box (e.g. `code-reviewer` needs ~323s). The
+  timeout is a single uniform knob applied to every reviewer — deliberately not
+  a per-agent map (COR-007). Resolution precedence: the new `--timeout <seconds>`
+  flag > the `PKIT_REVIEW_AGENT_TIMEOUT` env var > the default 600. A
+  non-integer, zero, or negative value is a usage error (fail fast) rather than
+  a silent fall-back.
