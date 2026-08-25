@@ -1,9 +1,14 @@
 """Agent overlay diagnostics + reconcile + adopt (per COR-013).
 
 The `pkit agents` surface: a read-only diagnostic of which kit-shipped agents
-will deploy vs. be skipped (because they reference an overlay *category* the
-adopter's `.pkit/agents/project/overlay.yaml` does not define), plus an
-explicit `reconcile` that surfaces the missing categories into the overlay as
+will deploy vs. be skipped. An agent is skipped only when it references an
+overlay *category* the adopter's `.pkit/agents/project/overlay.yaml` does not
+define through a *hard* channel (any list key or `reads.paths` /
+`reads.records`); a category referenced *only* via `reads.patterns` is an
+**optional read** (ADR-052) whose absence never skips — the agent deploys
+without it and the undefined optional categories surface in their own
+`Optional` footer state. Plus an explicit `reconcile` that surfaces the
+missing categories into the overlay as
 commented stubs or (when the conventional default directory exists) as
 uncommented, deploy-ready entries, and an explicit `adopt` that creates the
 conventional directories, wires the overlay uncommented, and deploys the agent
@@ -349,10 +354,11 @@ def expand_placeholders(
 
     The backbone twin of the adapter resolver's ``expand_list``: a list value
     extends the output, a scalar contributes one entry, a literal (non-placeholder)
-    item is kept as-is. Where the adapter *exits* on an undefined category (which
-    makes the deploy skip the agent, loudly), this returns the undefined category
-    names alongside the entries it could resolve — the caller decides what an
-    unresolvable category means for it.
+    item is kept as-is. Where the adapter *exits* on an undefined category
+    referenced through a *hard* channel (which makes the deploy skip the agent,
+    loudly — a patterns-only optional read is dropped instead, per ADR-052), this
+    returns the undefined category names alongside the entries it could resolve —
+    the caller decides what an unresolvable category means for it.
 
     Returns ``(entries, undefined_categories)``.
     """

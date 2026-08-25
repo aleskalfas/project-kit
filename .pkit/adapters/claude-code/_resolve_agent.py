@@ -14,8 +14,12 @@ Invoked by `deploy-agents.sh` once per agent. Reads:
 Writes the resolved agent file content to stdout (frontmatter with
 placeholders substituted + original body). Exits non-zero with a clear
 error message if a placeholder references a category the overlay does
-not define, or if a *write-carrying* category names sync-managed content
-(the no-shared-files invariant at the agent surface, per ADR-051).
+not define *through a hard channel* (any list key or `reads.paths` /
+`reads.records`), or if a *write-carrying* category names sync-managed
+content (the no-shared-files invariant at the agent surface, per ADR-051).
+A category referenced *only* through `reads.patterns` is an **optional
+read** (ADR-052): undefined, its item is dropped and the resolver still
+exits 0 so the agent deploys as a generalist.
 
 This script *applies* that last check but does not *define* it. The
 sync-managed predicate and the write-carrying category registry live
