@@ -81,3 +81,23 @@ The feature-inventory pass found the project-management capability README prose 
 **F8 (strategic) — pkit's honest *immediate* differentiator over ad-hoc Claude is thin; the value is genuinely back-loaded.**
 critic stress-test of the hook showed every "immediate proof" fails one of {immediate, differentiated-from-ad-hoc}: session-start loading is a native harness feature (not a moat); safe/maintained updates are real+differentiated but felt only on the 2nd sync; opt-in loses "minimal" to ad-hoc. The one true differentiator — a *maintained, safe-to-update channel that never touches your files* (no-shared-files) + *you keep everything you write* — is back-loaded and was buried.
 Implication for adoption strategy: **do not fake immediacy.** The honest play is (1) drive setup cost to near-zero (the friction work), (2) frame pkit as an *investment* with a clear payoff threshold (repeats / survives a new session / spans projects-people), (3) answer the real objection ("I own my ad-hoc setup") head-on: pkit maintains only its own files, only on your command, and structurally can't overwrite yours. The colleague quit because cost was high AND immediate payoff invisible — spin can't fix that; only low cost + honest investment-framing can.
+
+## Docs-that-stick levers (PERSIST — review all docs against these)
+
+*Pattern extracted (COR-007) mid-README-work: a reusable docs-quality discipline. Candidate carrier: a "writing docs that stick" guide + a review pass across all docs (carrier TBD — doc vs skill vs PRJ).*
+
+1. **Anchor to an existing schema (analogy)** — map new concepts onto something the reader already models deeply; strength = *structural* mapping, not surface; fence where the analogy leaks.
+2. **Curiosity gap / problem-first** — open with the felt pain so the concept arrives as the answer to a question they're already asking ("the hook inside").
+3. **Concreteness + worked example** — show the actual tree/commands/before-after; abstraction floats, instances stick.
+4. **Experience before model (ordering)** — a model explaining something you've *done* sticks; put mental model AFTER the first-win.
+5. **Cognitive load / chunking (~4 max)** — chunk the pieces under one unifying metaphor so they're one chunk, not many.
+6. **Honest emotion = recognition + relief + trust** — use recognition ("that's exactly my pain") and honesty-as-disarming; never hype/FOMO (repels, esp. at our honesty bar).
+7. **Dual coding** — a small diagram/tree beside the words ~doubles retention.
+
+## Core analogy (DECIDED): package-manager for your project's methodology
+- backbone = the runtime/tool · capabilities = **packages you install** · no-shared-files = *you never edit installed packages, they never edit your code* · versioning = *lockfile + upgrade + migrations*.
+- Fence (where it leaks): pkit installs **readable content into your repo**, not a hidden vendor dir.
+- Chunks all four §5 building blocks onto one deep dev schema (lever 1+5).
+
+## Docs principle (DECIDED): core stands alone, illustrated by real capabilities
+- Explain the CORE abstractly (package-manager model needs no specific capability). Then anchor with a real worked example (`pkit capabilities install project-management` …) per lever 3. Core must be *separable* — "PM is one instance," never "you must know PM to get pkit." Use the most relatable capability (PM / code-review) for examples.
