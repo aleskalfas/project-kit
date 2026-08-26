@@ -375,3 +375,49 @@ Where this timeline reports documented fact vs. where it inferred:
 
 - **Not exhaustively cross-checked against implementation.** This is an archaeology of the *decision records*, not of the code. Where a record says a feature "ships" or was "realized in ADR-NNN", that is the record's own claim, not verified against the shipped CLI or capability trees.
 
+
+## Dependency map — what's built on the back of what (at a glance)
+
+*The load-bearing spine only (~14 of 44 nodes). Root (bedrock) at top; "built on" flows downward. The striking shape: an hourglass — every foundational primitive funnels INTO `capabilities`, and every applied layer builds back OUT of it (the waist).*
+
+```
+                    ╔═══════════════════════════════════════════╗
+                    ║   BEDROCK                                  ║   every file has ONE owner;
+                    ║   no-shared-files invariant                ║   nothing is assumed —
+                    ║   + decision records (COR · PRJ · ADR)     ║   it's decided, as a record
+                    ╚════════════════════╤══════════════════════╝
+                                         │
+             ┌───────────────────────────┼───────────────────────────┐
+             ▼                           ▼                            ▼
+   content mechanisms (001)       CLI surface (004)          artifact roles (006)
+   propagate · extend ·           verbs mirror the           5 shapes: decision · doc ·
+   suspend  + merge (002)         mechanisms                 skill · agent · scratchpad
+             │
+             ▼
+   lifecycle (010)  —  versioned tiers · migrations
+             │
+       ┌─────┴────────┬──────────────┬───────────────┐
+       ▼              ▼              ▼               ▼
+    agents (013)   schemas (018)  scratchpads(012)  areas (011)
+       │              │
+       └──────┬───────┘        … all of the above become the ingredients of ↓
+              ▼
+   ╔════════════════════════════════════════════╗
+   ║  CAPABILITIES (017)  ◄── the pivot / waist  ║  opt-in installable disciplines:
+   ║  opt-in bundles of decisions · schemas ·    ║  the whole stack above, packaged
+   ║  skills · agents · scripts                   ║  and version-gated
+   ╚════════════════════╤═══════════════════════╝
+                        │
+        ┌───────────────┼────────────────┬────────────────────┐
+        ▼               ▼                ▼                    ▼
+  dependencies +   origin /         reviewer stack        PROCESS SUBSTRATE (033)
+  dispatch         incubation       critic · architect    content-free state engine →
+  (030 · 021)      (031)            (024 · 026)            slots un-deferred one-by-one
+                                                           → authoring layer (044)
+
+  ── running through every layer (disciplines, not nodes) ──────────────────────────
+     extract-on-recurrence (007)  ·  universal-applicability: core-vs-project (014)
+     ·  permissions, realized by adapters (028)
+```
+
+**Read it as:** bedrock → mechanisms/CLI/roles → lifecycle → four reusable primitives (agents · schemas · scratchpads · areas) → **converge into capabilities** → applied layers fan back out (ecosystem · reviewer stack · process substrate). The two meta-disciplines are the *soil*, not nodes — applied at every layer.
