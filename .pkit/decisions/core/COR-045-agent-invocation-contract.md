@@ -1,7 +1,7 @@
 ---
 id: COR-045
 title: "Dispatching an agent: transports vary, but a gate is satisfied only by a durable artifact"
-status: proposed
+status: accepted
 date: 2026-08-25
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
