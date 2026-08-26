@@ -34,7 +34,7 @@ Verify:
 pkit --help
 ```
 
-That's the whole cost: `uv` + one command. `pkit` is now on your PATH, shared across all your projects.
+If that isn't found, run `uv tool update-shell` and reopen your shell (it adds `uv`'s tool directory to your `PATH`). That's the whole cost: `uv` + one command. `pkit` is now on your PATH, shared across all your projects.
 
 ### Two things named "pkit"
 
@@ -67,9 +67,9 @@ Think of pkit as a **package manager for your project's methodology**. Four idea
 1. **The tool vs. the install.** `pkit` (the CLI) manages `.pkit/` (the methodology in your repo) — exactly like a package manager and the packages it installs.
 2. **Capabilities are packages.** A small always-there **backbone**, plus **opt-in capabilities** — disciplines you install only if you want them (issue-tracking, code-review, citations). Add what you need, ignore the rest.
 3. **Two owners, never shared.** Every file belongs to *either* the kit (synced — don't edit) *or* you (yours — never touched). That's *why* updates can't conflict, and why you keep everything you write.
-4. **Versioned, upgrades cleanly.** `pkit upgrade` pulls new versions and runs any migrations automatically — like bumping a dependency, lockfile and all.
+4. **Versioned, upgrades cleanly.** `pkit upgrade` pulls new versions and runs any migrations automatically — like upgrading a dependency; a project can even pin itself to a fixed version if you want.
 
-What `pkit init` created:
+The shape of `.pkit/`:
 
 ```
 .pkit/
@@ -78,8 +78,9 @@ What `pkit init` created:
 ├── agents/        # roles your AI delegates to (deployed into the harness)
 ├── skills/        # authoring procedures the AI runs
 ├── schemas/       # machine-readable config the tools read
-├── capabilities/  # the disciplines you install
-└── manifest.yaml  # what's installed, and at what version
+├── capabilities/  # the disciplines you install (appears once you install one)
+├── manifest.yaml  # what's installed, and at what version
+└── …              # and more (cli, adapters, lifecycle, …)
 ```
 
 ## Next steps
