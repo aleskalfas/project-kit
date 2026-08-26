@@ -97,7 +97,7 @@ pkit capabilities install project-management
 - **Project managers** → the `project-management` capability: issue hierarchy, a state machine, branch/PR conventions, a merge gate. Start at [`.pkit/capabilities/project-management/README.md`](.pkit/capabilities/project-management/README.md).
 - **Developers** → `software-engineering`: an agent that writes code to *your* conventions, plus a code-review panel on your PRs. And when a pattern recurs, you can grow your own capability without re-erecting the framework — the primitives (decisions, schemas, skills, agents) are already there.
 
-**What actually gates on day one** (honestly — no more than this): structural checks your CI can run — decision-id uniqueness, migration coverage, the one-owner file invariant, permission-gated mutations. Install `project-management` and you additionally get a real PR merge gate.
+**What actually gates on day one** (honestly — no more than this): structural checks your CI can run — decision-id uniqueness (`pkit decisions validate`), migration coverage (`pkit migrations check-diff`), reference-graph consistency (`pkit refs validate`), and permission-gated mutations. Install `project-management` and you additionally get a real PR merge gate.
 
 ## Go deeper
 
