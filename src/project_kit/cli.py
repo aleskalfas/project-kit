@@ -608,11 +608,14 @@ def _print_release_plan(plan: ReleasePlan) -> None:
 
 
 # Human phrase for each install-target classification, shown in the announcement.
+# No phrase calls a non-repository a "git repository" (#787): DUBIOUS_OWNERSHIP is
+# a real repo git refused, and PKIT_INSTALL is an adopted project — neither is
+# mislabelled, and neither proceeds to an install.
 _INIT_REASON_PHRASE: dict[InitTargetReason, str] = {
     InitTargetReason.GIT_ROOT: "git repository root — your current directory",
-    InitTargetReason.GIT_SUBFOLDER: "git repository root above your current directory",
-    InitTargetReason.WALKUP_PKIT: "nearest project-kit install above your current directory",
-    InitTargetReason.WALKUP_GIT: "nearest git repository above your current directory",
+    InitTargetReason.GIT_SUBFOLDER: "git repository root — you are in a subfolder",
+    InitTargetReason.DUBIOUS_OWNERSHIP: "a git repository git could not verify (dubious ownership)",
+    InitTargetReason.PKIT_INSTALL: "an existing project-kit install above your current directory",
     InitTargetReason.NONE: "your current directory — no git repository found above it",
 }
 
@@ -672,22 +675,79 @@ def _announce_init_target(
     "--yes",
     is_flag=True,
     default=False,
-    help="Accept the resolved target non-interactively (skip the confirm).",
+    help=(
+        "Accept the confirm for a target that IS your current directory (a fresh "
+        "non-git folder). It will NOT install at a resolved parent — use --root for "
+        "that, so a non-interactive run never installs somewhere you are not standing."
+    ),
 )
-def init(dry_run: bool, here: bool, yes: bool) -> None:
+@click.option(
+    "--root",
+    "root",
+    type=click.Path(file_okay=False, path_type=Path),
+    default=None,
+    help=(
+        "Install at this explicit path, non-interactively. The sanctioned way to "
+        "install at a resolved parent (e.g. a git repository root) in CI, where a "
+        "bare --yes is refused as a footgun (#787)."
+    ),
+)
+def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
     """First install: propagation + seed + merge per COR-001 / COR-002 / COR-004.
 
     Announces the resolved install target and why it was chosen, then confirms
     before installing anywhere other than the current directory (issue #780).
+    Validates the resolved target so a broken/vestigial `.git` no longer offers a
+    workspace folder as a root, and guides rather than silently installing into a
+    repository git cannot verify (issue #787).
     """
     cwd = Path.cwd()
+
+    if here and root is not None:
+        raise click.ClickException(
+            "Pass either --here or --root <path>, not both — they name different "
+            "install targets."
+        )
+
+    # An explicit --root is the operator naming the target unambiguously — the
+    # sanctioned non-interactive install-at-a-parent path (#787). It bypasses the
+    # resolution-driven confirm/guard machinery (which exists to stop a *silent*
+    # install at a resolved parent), but still honours the already-adopted
+    # redirect and install_kit's own refusals.
+    if root is not None:
+        target = root.resolve()
+        if router.looks_like_pkit_install(target / ".pkit"):
+            raise click.ClickException(
+                f"{target} is already a project-kit project.\n"
+                f"       Run `pkit sync` to refresh it."
+            )
+        click.echo(f"pkit init -> {target}  (explicit target, --root)")
+        install_kit(target, dry_run=dry_run)
+        return
+
     target, reason = resolve_init_target(cwd)
+
+    # A structurally-real repository git refused to verify (dubious ownership /
+    # safe.directory — routine in Docker / CI / sudo trees). Never silently drop a
+    # shadowed .pkit/ inside it; guide the operator to the fix (#787). Fires ahead
+    # of --here: installing at cwd here is exactly the shadowing footgun.
+    if reason == InitTargetReason.DUBIOUS_OWNERSHIP:
+        _announce_init_target(target, reason, [], here=here)
+        raise click.ClickException(
+            f"{target} looks like a git repository, but git refused to verify it "
+            f"(dubious ownership / safe.directory).\n"
+            f"       project-kit will not install a shadowed .pkit/ inside a repository "
+            f"it cannot confirm.\n"
+            f"       Fix the ownership (e.g. `git config --global --add safe.directory "
+            f"{target}`) and\n"
+            f"       re-run, or name an explicit target with `pkit init --root <path>`."
+        )
 
     # --here is refused only when CWD is a strict subfolder of a git worktree —
     # the one topology where a .pkit/ at CWD is unreachable, because every command
-    # resolves to the git root, not the subfolder. In git-root/none/walk-up cases
-    # there is no git-root-wins precedence overriding CWD (the walk-up finds the
-    # nearest .pkit, which would be the one at CWD), so --here is honored there.
+    # resolves to the git root, not the subfolder. In git-root/none/pkit-install
+    # cases there is no git-root-wins precedence overriding CWD, so --here is
+    # honored there (an explicit standalone install at cwd).
     if here:
         if reason == InitTargetReason.GIT_SUBFOLDER:
             raise click.ClickException(
@@ -709,9 +769,10 @@ def init(dry_run: bool, here: bool, yes: bool) -> None:
 
     # Already a project-kit project → refuse re-run. `init` is one-shot, not
     # idempotent (COR-004): re-running would resurface seeded content or silently
-    # skip already-seeded paths. Recovery flows through `pkit sync`. Fires before
-    # the confirm so the operator is never prompted-then-refused for an install
-    # that could not proceed anyway (issue #780).
+    # skip already-seeded paths. Recovery flows through `pkit sync`. This is also
+    # the PKIT_INSTALL-ancestor redirect (#787): the ancestor is the target and it
+    # carries a real install. Fires before the confirm so the operator is never
+    # prompted-then-refused for an install that could not proceed anyway (#780).
     if target_has_install:
         raise click.ClickException(
             f"{target} is already a project-kit project.\n"
@@ -720,29 +781,57 @@ def init(dry_run: bool, here: bool, yes: bool) -> None:
 
     # An install sits between CWD and the target, but the target has none:
     # installing there would leave two installs straddling CWD (split-brain).
-    # This is the observed #780 incident — refuse unless the operator insists.
-    if off_target and not yes:
+    # This is the observed #780 incident — refuse and point at the explicit
+    # --root override (a bare --yes must never install off-cwd, #787).
+    if off_target:
         found = off_target[0]
         raise click.ClickException(
             f"refusing to create a second project-kit install.\n"
             f"       Found an existing install at {found}/.pkit,\n"
             f"       but the resolved target {target} has none — installing there would\n"
             f"       leave two installs straddling your current directory (a split-brain).\n"
-            f"       Run `pkit init` from {found}, `pkit sync` to refresh it, or pass --yes\n"
-            f"       to install at {target} anyway."
+            f"       Run `pkit init` from {found}, `pkit sync` to refresh it, or\n"
+            f"       `pkit init --root {target}` to install at {target} anyway."
         )
 
-    # Confirm before installing anywhere other than CWD, and before creating a
-    # standalone install in a non-git folder. `--here` and `--yes` are explicit
-    # acceptances; `--dry-run` only previews, so it skips the prompt.
-    needs_confirm = target.resolve() != cwd.resolve() or reason == InitTargetReason.NONE
-    if needs_confirm and not yes and not here and not dry_run:
+    # A target above cwd (a git repository root you are inside): install into it
+    # interactively (explicit confirm on a tty), but never via a bare --yes on a
+    # non-interactive stdin — that is the CI footgun #787 closes. --dry-run only
+    # previews, so it skips the prompt.
+    if target.resolve() != cwd.resolve():
+        if yes:
+            raise click.ClickException(
+                f"--yes will not install at {target}, which is not your current "
+                f"directory.\n"
+                f"       This guards against a non-interactive run installing somewhere "
+                f"you are not standing.\n"
+                f"       Re-run with `pkit init --root {target}` to install there "
+                f"explicitly, or cd into it first."
+            )
+        if not dry_run:
+            if not _stdin_is_tty():
+                raise click.ClickException(
+                    f"the install target {target} is not your current directory, and "
+                    f"stdin is not a terminal.\n"
+                    f"       Re-run with `pkit init --root {target}` to install there, or "
+                    f"`pkit init --here`\n"
+                    f"       to install in the current directory."
+                )
+            if not click.confirm(f"Install project-kit into {target}?", default=False):
+                click.echo("Aborted.")
+                return
+        install_kit(target, dry_run=dry_run)
+        return
+
+    # Target IS the current directory (GIT_ROOT, --here, or a fresh non-git
+    # folder). NONE still confirms — a fresh non-git folder offers to init here;
+    # --yes / --here accept it, --dry-run previews. GIT_ROOT / --here install
+    # straight (installing where you stand is never a footgun).
+    if reason == InitTargetReason.NONE and not yes and not here and not dry_run:
         if not _stdin_is_tty():
             raise click.ClickException(
-                f"the install target {target} is not your current directory, and stdin "
-                f"is not a terminal.\n"
-                f"       Re-run with --yes to accept {target}, or --here to install in "
-                f"the current directory."
+                f"no git repository found and stdin is not a terminal.\n"
+                f"       Re-run with --yes to install project-kit into {target}."
             )
         if not click.confirm(f"Install project-kit into {target}?", default=False):
             click.echo("Aborted.")

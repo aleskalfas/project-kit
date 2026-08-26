@@ -1,0 +1,22 @@
+component: backbone
+kind: minor
+custom:
+  category: Changed
+  pr: "787"
+body: >
+  `pkit init` now validates the target it resolves instead of trusting a bare
+  `.git` on sight (#787). A workspace folder carrying a broken or vestigial
+  `.git` (one git itself will not open) is no longer offered as an install root
+  and never mislabelled a "git repository" — init falls through to offering an
+  install in your current directory. A structurally-real repository that git
+  refuses to verify (dubious ownership / safe.directory, routine in Docker/CI/
+  sudo trees) is now detected and guided — init refuses, names the
+  `safe.directory` remedy and the explicit-target escape rather than dropping a
+  shadowed `.pkit/` inside it. From a subfolder of an already-adopted project,
+  init refuses and redirects to `pkit sync`. A new `--root <path>` installs at
+  an explicit target non-interactively — the sanctioned way to install at a
+  resolved parent (e.g. a git repository root) in CI; a bare `--yes` no longer
+  installs anywhere other than your current directory, so an unattended run can
+  never install somewhere you are not standing. The shared root resolver
+  (`find_target_root`) likewise rejects a broken `.git`, and still resolves a
+  `.pkit/`-marked project with no git at all.
