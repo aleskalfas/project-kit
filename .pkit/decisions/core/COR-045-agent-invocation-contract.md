@@ -62,7 +62,7 @@ Under COR-028 the report reaches an adopter who can close the gap elsewhere, and
 
 ### 2. A gate is satisfied by a durable artifact, never by a dispatcher's report
 
-Where an agent's outcome is used to **gate** work rather than merely inform it, the gate is satisfied only by a durable artifact the invocation produced — one the gate-checker can read independently, attribute to the path that produced it, and find later.
+Where an agent's outcome is used to **gate** work rather than merely inform it, the gate is satisfied only by a durable artifact written on the agent's behalf by the transport realization — one the gate-checker can read independently, attribute to the path that produced it, and find later.
 
 The reasoning is that a gate's checker is a *different party at a different time*. Making the artifact the sole evidence has three consequences worth stating plainly:
 
@@ -78,7 +78,7 @@ An artifact should be **attributable** — a gate can tell one produced by its s
 
 ### 3. The invariant: a result or a named failure, never silence
 
-Independently of gates, an invocation ends in the agent's output or a **named** failure — the agent could not be started, exceeded its budget, produced nothing interpretable, or finished without its output being collectable. The kinds are distinguished because their remedies differ: a budget too small and an agent that was never available look identical from a distance and want opposite responses.
+Independently of gates, an invocation ends in the agent's output or a **named** failure — the agent could not be started, exceeded its budget, produced nothing interpretable, or finished without returning output over a transport that declared itself collectable. That last kind turns on the *declared* property, not the outcome: a transport a project deliberately configured as non-collectable returning nothing is its ordinary operation, not a failure. The kinds are distinguished because their remedies differ: a budget too small and an agent that was never available look identical from a distance and want opposite responses.
 
 This taxonomy governs **invocation** and reaches no further: other boundaries in a system have their own failure vocabularies, authored for their own reasons, and nothing here supersedes them.
 
