@@ -664,7 +664,7 @@ def _announce_init_target(
     default=False,
     help=(
         "Install into the current directory instead of a resolved parent. Refused "
-        "when the current directory is a subdirectory of a git worktree — a .pkit/ "
+        "when the current directory is a subfolder of a git worktree — a .pkit/ "
         "there is unreachable, as every command resolves to the git root."
     ),
 )
@@ -683,11 +683,16 @@ def init(dry_run: bool, here: bool, yes: bool) -> None:
     cwd = Path.cwd()
     target, reason = resolve_init_target(cwd)
 
+    # --here is refused only when CWD is a strict subfolder of a git worktree —
+    # the one topology where a .pkit/ at CWD is unreachable, because every command
+    # resolves to the git root, not the subfolder. In git-root/none/walk-up cases
+    # there is no git-root-wins precedence overriding CWD (the walk-up finds the
+    # nearest .pkit, which would be the one at CWD), so --here is honored there.
     if here:
-        if target.resolve() != cwd.resolve():
+        if reason == InitTargetReason.GIT_SUBFOLDER:
             raise click.ClickException(
-                f"--here refused: the current directory is a subdirectory of the "
-                f"project rooted at {target}.\n"
+                f"--here refused: the current directory is a subfolder of the git "
+                f"worktree rooted at {target}.\n"
                 f"       A .pkit/ created here would be unreachable — every pkit command "
                 f"resolves to the\n"
                 f"       git root, not this subfolder. Run `pkit init` from {target}, or "
@@ -708,10 +713,7 @@ def init(dry_run: bool, here: bool, yes: bool) -> None:
     if target_has_install:
         click.echo()
         click.echo(f"{target} is already a project-kit project.")
-        click.echo("  Run `pkit sync` to refresh kit-owned content,")
-        click.echo(
-            "  or `pkit init --here` for a standalone install in the current directory."
-        )
+        click.echo("  Run `pkit sync` to refresh kit-owned content.")
         return
 
     # An install sits between CWD and the target, but the target has none:

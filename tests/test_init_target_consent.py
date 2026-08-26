@@ -279,6 +279,26 @@ def test_init_here_in_non_git_dir_targets_cwd(
     assert spy_install == [(tmp_path.resolve(), False)]  # target is CWD, no prompt
 
 
+def test_init_here_in_walkup_pkit_targets_cwd(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spy_install
+) -> None:
+    """--here is honored in a walk-up-pkit topology (no git repo, an install-marked
+    ancestor above CWD): with no git-root-wins precedence, a .pkit/ at CWD is
+    reachable, so --here installs a standalone at CWD rather than being refused."""
+    _mark_install(tmp_path)  # install-marked ancestor, no .git
+    nested = tmp_path / "deep"
+    nested.mkdir()
+    monkeypatch.chdir(nested)
+    monkeypatch.setenv("PATH", "/nonexistent")  # force the walkup-pkit reason
+    # Precondition: resolver classifies this as walkup-pkit (not git-subfolder).
+    _, reason = resolve_init_target(nested)
+    assert reason == InitTargetReason.WALKUP_PKIT
+    result = CliRunner().invoke(main, ["init", "--here"])
+    assert result.exit_code == 0, result.output
+    assert "--here refused" not in result.output
+    assert spy_install == [(nested.resolve(), False)]  # standalone install at CWD
+
+
 # ---- CLI gate: --yes / --dry-run overrides (#7) -----------------------------
 
 
