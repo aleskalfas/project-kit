@@ -128,3 +128,21 @@ Fix candidates: (a) when resolved-root ≠ CWD, CONFIRM before mutating ("about 
 **F11 correction — the mechanism is the CWD-walk fallback, not a git-toplevel walk (`git-public` isn't a git repo at all).**
 `git rev-parse --show-toplevel` FAILED (no enclosing git repo anywhere), so pkit fell back to its CWD-walk, which climbed up until it found an existing *pkit install* — `git-public` already was one (`.pkit/`, `.claude/`, `CLAUDE.md` with the include). So `pkit init` re-init'd the **ancestor install**, not the empty CWD. This instance was BENIGN: same version (v1.149.0) → settings merge was byte-identical (no-op), `.pkit/` refresh idempotent, only a stray empty `pkit_test/` left. No real cleanup needed.
 But the footgun is unchanged in severity: **`init` (a CREATE op) silently re-targets an ancestor root/install instead of the CWD, with no confirmation.** It's benign only when the ancestor is already pkit at a matching version; it is dangerous when the ancestor is a real project you didn't mean to touch, or a different version, or would receive a fresh unwanted install. Correct behavior for `init` specifically: default to the CWD; refuse-or-confirm when the CWD is nested inside an existing install / a resolved root ≠ CWD.
+
+## `pkit init` location scenarios (collected — feeds README happy-paths + automated tests)
+
+*Resolution today (`install.py::find_target_root`): (1) `git rev-parse --show-toplevel` → the git **repo root**; (2) else walk UP for `.git` or an install-marked `.pkit/`; (3) else refuse. Note: it targets the git **root**, never the CWD-subfolder, and a truly-empty non-git folder is refused.*
+
+| # | Scenario (where you run `pkit init`) | Current behavior | Class | Desired (self-descriptive) |
+|---|---|---|---|---|
+| 1 | Fresh folder made its own git repo (`git init`) | installs at CWD ✓ | **happy** | install; one-line "installing into <cwd>" is enough |
+| 2 | Existing git repo, at its root | installs at CWD (=root) ✓ | **happy** | install; announce target |
+| 3 | Truly-empty isolated folder, no git, no pkit ancestor | **REFUSES** ("run inside a git repository…") | **happy (broken)** | offer: "not a git repo — `git init` here and install? [y/N]" (or install with CWD as root) — don't just refuse |
+| 4 | Subfolder of a single git repo | installs at the **repo root**, not the subfolder ⚠ | **advanced** | detect + confirm: "you're in a subfolder; I'll install at the repo root <path> — proceed? (`--here` to target this folder)" |
+| 5 | Subfolder whose non-git parent already has a pkit install (F11) | silently **re-inits the ancestor** ⚠ footgun | **advanced** | detect + choose: "existing pkit install at <ancestor>; re-init it, or init a NEW one here?" |
+| 6 | A separate/nested git repo inside a workspace (the real "some repos in a monorepo") | installs at that repo's root ✓ (git toplevel) | **advanced (intended)** | works; this is the supported monorepo path — document it |
+| 7 | Single git monorepo, want pkit in one subproject only | **can't** (toplevel → repo root) | **advanced (unsupported)** | document the limitation; `--here`/nested-repo is the workaround |
+
+**Design principle (maintainer's, affirmed):** the CLI should be *self-descriptive about consent* (COR-004) — analyze the situation, state what it will do and **why**, and **confirm when the resolved target ≠ CWD or an existing install would be re-targeted**. Happy paths (1,2,3) proceed cleanly; ambiguous/advanced (4,5,7) confirm or flag.
+
+**Projection plan:** README teaches only the happy paths (1,2,3 — "in a git repo, run `pkit init`"); the advanced cases (4–7) go to comprehensive docs; the whole matrix becomes the **automated test suite** for init location resolution. F11 is the fix for #5.
