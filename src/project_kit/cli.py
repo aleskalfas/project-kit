@@ -707,14 +707,16 @@ def init(dry_run: bool, here: bool, yes: bool) -> None:
 
     _announce_init_target(target, reason, installs, here=here)
 
-    # Already a project-kit project → redirect to sync rather than confirm-
-    # then-hard-refuse. Fires before the confirm so the operator is never
-    # prompted for an install that could not proceed anyway (issue #780).
+    # Already a project-kit project → refuse re-run. `init` is one-shot, not
+    # idempotent (COR-004): re-running would resurface seeded content or silently
+    # skip already-seeded paths. Recovery flows through `pkit sync`. Fires before
+    # the confirm so the operator is never prompted-then-refused for an install
+    # that could not proceed anyway (issue #780).
     if target_has_install:
-        click.echo()
-        click.echo(f"{target} is already a project-kit project.")
-        click.echo("  Run `pkit sync` to refresh kit-owned content.")
-        return
+        raise click.ClickException(
+            f"{target} is already a project-kit project.\n"
+            f"       Run `pkit sync` to refresh it."
+        )
 
     # An install sits between CWD and the target, but the target has none:
     # installing there would leave two installs straddling CWD (split-brain).

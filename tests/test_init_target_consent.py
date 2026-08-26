@@ -5,8 +5,9 @@ a git root or install-marked ancestor that could be far above the operator's
 current directory (the F11 footgun). These tests cover the hardened behaviour:
 a reason-returning target resolver, an always-on announcement, a confirm before
 installing anywhere other than CWD, a hard refusal on a non-interactive stdin,
-a split-brain refusal, an already-installed sync redirect, and the `--here` /
-`--yes` overrides.
+a split-brain refusal, an already-installed refusal that points to `pkit sync`
+(init is one-shot, not idempotent — COR-004), and the `--here` / `--yes`
+overrides.
 
 The pure resolver (`resolve_init_target` / `scan_pkit_installs`) is tested
 directly; the CLI gate is tested through `CliRunner` with `install_kit` stubbed
@@ -203,20 +204,22 @@ def test_init_git_subfolder_non_tty_refuses_even_with_piped_yes(
     assert spy_install == []
 
 
-# ---- CLI gate: already installed → sync redirect (#5) -----------------------
+# ---- CLI gate: already installed → refuse, point to sync (#5) ---------------
 
 
-def test_init_walkup_pkit_already_installed_redirects_to_sync(
+def test_init_walkup_pkit_already_installed_refuses_pointing_to_sync(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spy_install
 ) -> None:
+    # `init` is one-shot, not idempotent (COR-004): a second run on an already-
+    # installed target refuses (non-zero) with a message pointing at `pkit sync`.
     _mark_install(tmp_path)  # target already a pkit project
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("PATH", "/nonexistent")  # force the walkup-pkit reason
     result = CliRunner().invoke(main, ["init"])
-    assert result.exit_code == 0, result.output
+    assert result.exit_code != 0
     assert "already a project-kit project" in result.output
     assert "pkit sync" in result.output
-    assert spy_install == []  # never confirm-then-hard-refuse
+    assert spy_install == []  # refused before any install or confirm
 
 
 # ---- CLI gate: off-target install between CWD and target → refuse (#3) -------

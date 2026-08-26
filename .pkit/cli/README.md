@@ -50,7 +50,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # or: brew install uv
 
 | Command | Operation | Mutates? | Idempotent? |
 |---|---|---|---|
-| `init` | first install: announce target + confirm off-CWD, then propagation + seed + merge (`--here` / `--yes` / `--dry-run`) | yes | no — redirects to `pkit sync` when already installed |
+| `init` | first install: announce target + confirm off-CWD, then propagation + seed + merge (`--here` / `--yes` / `--dry-run`) | yes | no — refuses re-run (points you to `pkit sync`) |
 | `sync` | re-run propagation | yes | yes |
 | `merge [<target>...]` | re-run merge for one or all targets | yes | yes |
 | `upgrade` | version-aware migrations + sync; **pins the project by default** at the version it upgrades to (ADR-049) — `--no-pin` opts out (keep following the installed global tool). In an already-pinned project it auto-advances the `.pkit/version-pin` directive to the latest release (reconcile forward via `uvx`, flip the pin last; no `uv tool install`); offline-safe; self-host is never pinned | yes | yes |
@@ -140,7 +140,7 @@ Runs first install in this order:
 - **Announces on every run** — including the happy path — the resolved install target, *why* it was chosen (your current directory as the git root, a git root above you, the nearest install-marked ancestor, or a fresh non-git folder), and any real project-kit install (a `looks_like_pkit_install` match, not a bare `.pkit/`) found between your current directory and the target or at it.
 - **Confirms before installing anywhere other than your current directory**, and before creating a standalone install in a fresh non-git folder. On an interactive terminal it prompts; on a **non-interactive / piped stdin it refuses** rather than auto-confirming (a piped `yes |` no longer silently installs somewhere you did not expect) — re-run with `--yes` to accept the target, or `--here` to install in the current directory.
 - **Refuses an off-target split-brain**: if an install sits between your current directory and the resolved target but the target itself has none, installing there would leave two installs straddling your current directory. `init` refuses and names the existing install; pass `--yes` to install at the target anyway.
-- **Redirects to `pkit sync` when the target is already a project-kit project** — it prints that fact and points you at `pkit sync` to refresh kit-owned content, exiting 0. This is no longer a hard refuse; there is nothing to confirm because the install could not proceed anyway.
+- **Refuses to re-run when the target is already a project-kit project** — `init` is one-shot, not idempotent (COR-004): it exits non-zero, names the project, and points you at `pkit sync` to refresh kit-owned content. The refusal fires before any confirm, so you are never prompted for an install that could not proceed anyway.
 
 Flags:
 
