@@ -179,7 +179,7 @@ If the capability ships a `permissions/` fragment, also run `pkit schemas valida
 Then in a scratch adopter:
 
 ```
-cd /tmp/scratch-adopter && pkit init
+cd /tmp/scratch-adopter && pkit init --here     # --here installs into this fresh non-git dir (bypasses the off-CWD confirm)
 pkit capabilities install <name>               # subtree copies in, manifest registers
 pkit status                                     # capability appears under installed
 pkit capabilities uninstall <name>             # tree removed, manifest unregisters
