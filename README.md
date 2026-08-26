@@ -1,71 +1,111 @@
 # project-kit
 
-> A reusable methodology + workflow framework for AI-assisted projects.
+> Install a working methodology into your AI-assisted project — and keep it maintained, like a dependency.
 
-**Status:** active — implemented and self-hosting (project-kit adopts its own methodology). The installable methodology lives under [`.pkit/`](.pkit/README.md); the current version is recorded in [`.pkit/VERSION`](.pkit/VERSION).
+<!-- TODO(c): add a "first win: the code-review gate catches a real defect" section once the comment + review format (#756/#757) lands. -->
 
-**CLI binary:** `pkit` (per [PRJ-001](.pkit/decisions/project/PRJ-001-cli-binary-name.md))
+## Why
+
+You've probably done this: you write your conventions into `CLAUDE.md`, have Claude generate a couple of agent files, and it works — until it **rots**. Nobody improves it, a fix you make in project A never reaches project B, and there's no safe way to pull updates. You end up owning a pile you now have to maintain by hand.
+
+**project-kit is the missing piece: the maintained, versioned, *safe-to-update* home for your project's methodology** — the rules, decisions, agents, and disciplines your AI reads at the start of every session. It installs like a dependency and upgrades like one. And it **never touches the files you write** — every file has exactly one owner (the kit's, or yours), so an update structurally *cannot* clobber your work.
+
+That's the honest pitch, including its limit:
+
+> **For a genuine one-off, just ask Claude — really.** project-kit earns its setup when your work **repeats**, must **survive a new session**, or spans **projects and people**. The payoff is real but it accrues over time; the setup cost is small and paid once (below).
+
+Built for **Claude Code** today.
+
+## Install
+
+**Prerequisite:** [`uv`](https://docs.astral.sh/uv/) (the Python tool installer).
+
+Then install `pkit` once, globally, from the git URL:
+
+```
+uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git
+```
+
+*(HTTPS form if you authenticate with a token: `uv tool install git+https://github.com/aleskalfas/project-kit.git`.)*
+
+Verify:
+
+```
+pkit --help
+```
+
+If that isn't found, run `uv tool update-shell` and reopen your shell (it adds `uv`'s tool directory to your `PATH`). That's the whole cost: `uv` + one command. `pkit` is now on your PATH, shared across all your projects.
+
+### Two things named "pkit"
+
+- **`pkit`** — the **command** you just installed, once, globally.
+- **`.pkit/`** — the **methodology** that command installs *into a project* (next step). The `pkit` command operates on it.
+
+*(If it helps: `pkit` is to `.pkit/` as `git` is to `.git/` — one tool, a per-project directory it operates on.)*
+
+## First win — stand it up
+
+In any repo:
+
+```
+cd your-project
+pkit init
+```
+
+One command, and a `.pkit/` appears — a working methodology wired into your project: decision records, hard rules loaded into your `CLAUDE.md`, agents deployed into Claude Code. See how it's wired:
+
+```
+pkit status
+```
+
+That's it — your next AI session already sees the methodology.
+
+## The mental model
+
+Think of pkit as a **package manager for your project's methodology**. Four ideas, and you can reason about the whole system:
+
+1. **The tool vs. the install.** `pkit` (the CLI) manages `.pkit/` (the methodology in your repo) — exactly like a package manager and the packages it installs.
+2. **Capabilities are packages.** A small always-there **backbone**, plus **opt-in capabilities** — disciplines you install only if you want them (issue-tracking, code-review, citations). Add what you need, ignore the rest.
+3. **Two owners, never shared.** Every file belongs to *either* the kit (synced — don't edit) *or* you (yours — never touched). That's *why* updates can't conflict, and why you keep everything you write.
+4. **Versioned, upgrades cleanly.** `pkit upgrade` pulls new versions and runs any migrations automatically — like upgrading a dependency; a project can even pin itself to a fixed version if you want.
+
+The shape of `.pkit/`:
+
+```
+.pkit/
+├── decisions/     # the "why" — records (COR-… kit-owned · PRJ-… yours)
+├── rules/         # hard rules, auto-loaded into your CLAUDE.md
+├── agents/        # roles your AI delegates to (deployed into the harness)
+├── skills/        # authoring procedures the AI runs
+├── schemas/       # machine-readable config the tools read
+├── capabilities/  # the disciplines you install (appears once you install one)
+├── manifest.yaml  # what's installed, and at what version
+└── …              # and more (cli, adapters, lifecycle, …)
+```
+
+## Next steps
+
+**Add a discipline (a capability).** For example, team-style issue tracking bound to GitHub:
+
+```
+pkit capabilities install project-management
+```
+
+…then file and move issues through a governed workflow (`pkit project-management …`) — the process is enforced by the tool, not remembered by you.
+
+**By role:**
+- **Project managers** → the `project-management` capability: issue hierarchy, a state machine, branch/PR conventions, a merge gate. Start at [`.pkit/capabilities/project-management/README.md`](.pkit/capabilities/project-management/README.md).
+- **Developers** → `software-engineering`: an agent that writes code to *your* conventions, plus a code-review panel on your PRs. And when a pattern recurs, you can grow your own capability without re-erecting the framework — the primitives (decisions, schemas, skills, agents) are already there.
+
+**What actually gates on day one** (honestly — no more than this): structural checks your CI can run — decision-id uniqueness (`pkit decisions validate`), migration coverage (`pkit migrations check-diff`), reference-graph consistency (`pkit refs validate`), and permission-gated mutations. Install `project-management` and you additionally get a real PR merge gate.
+
+## Go deeper
+
+- **Adopting / navigating the kit:** [`.pkit/README.md`](.pkit/README.md) — maps every area; the foundational pattern is in [`.pkit/decisions/README.md`](.pkit/decisions/README.md).
+- **The command surface:** [`.pkit/cli/README.md`](.pkit/cli/README.md).
+- **Working on project-kit itself:** [`CONTRIBUTING.md`](CONTRIBUTING.md).
+- **Session instructions for AI agents:** [`CLAUDE.md`](CLAUDE.md).
 
 ---
 
-## What this is
-
-`project-kit` packages a working methodology — workflow rules, a decision-record system, an agent matrix, hard rules, schemas, scripts — into something that can be installed into any project and kept in sync as the methodology evolves.
-
-The pattern: when an improvement is made in one project (a clearer hard rule, a sharper agent prompt, a better schema), it lands in `project-kit` and propagates outward to the projects that have adopted it.
-
-## What this is *not*
-
-- Not a library. No imports from `project-kit` into runtime code. Other projects do not depend on it as a runtime artifact.
-- Not a packaged product. It installs via a direct git URL — no registry (per [PRJ-004](.pkit/decisions/project/PRJ-004-distribution-channel.md)).
-- Not a substitute for thinking. The methodology is opinionated but not exhaustive — projects still make their own architectural decisions (and record them as PRJ / ADR records).
-
-## What's in the box
-
-The kit installs / synchronises a fixed set of files and conventions into a target project under `.pkit/`, plus the host-side glue an AI harness expects. The areas:
-
-- **[`decisions/`](.pkit/decisions/README.md)** — the decision-record system. Two namespaces: `core/` (kit-shipped, `COR-` prefixed) and `project/` (yours, `PRJ-` prefixed). Home of the no-shared-files invariant.
-- **[`capabilities/`](.pkit/capabilities/)** — opt-in installable disciplines (per COR-017). `project-management` (issue lifecycle, board state machine, label axes, PR conventions), `evidence`, `software-engineering`. Adopters install the ones they need.
-- **[`rules/`](.pkit/rules/README.md)** — universal hard rules + tool hygiene, loaded into every adopter's `CLAUDE.md`.
-- **[`agents/`](.pkit/agents/README.md)** — agent definitions (persistent roles AI harnesses delegate against), deployed by the adapter.
-- **[`skills/`](.pkit/skills/README.md)** — installable, harness-agnostic agent skills.
-- **[`schemas/`](.pkit/schemas/README.md)** — YAML schemas + JSON Schema companions; the structured source of truth capabilities read at runtime.
-- **[`adapters/`](.pkit/adapters/README.md)** — translate kit content into the format/locations a specific harness expects (`claude-code` today).
-- **[`lifecycle/`](.pkit/lifecycle/README.md)** — packaging, manifest schema, upgrade + migration framework.
-- **[`cli/`](.pkit/cli/README.md)** — the `pkit` command-line surface.
-
-[`.pkit/README.md`](.pkit/README.md) is the adopter-facing entry point that maps these areas.
-
-## Installation model
-
-Two operations on a target project:
-
-1. **`pkit init`** — first-time install. Propagates kit-owned content, seeds project-side files, and merges adapter-owned config into a fresh repo.
-
-2. **`pkit sync`** — refresh kit-owned content in a project that's already initialised, without clobbering project-owned files (the no-shared-files invariant guarantees the two never collide).
-
-Upgrades across kit versions go through **`pkit upgrade`**, which runs any migrations the new version ships (per COR-010).
-
-## CLI sketch
-
-`pkit` is implemented in Python (per [PRJ-003](.pkit/decisions/project/PRJ-003-implementation-language.md)). The principal commands:
-
-```
-pkit init                 First install: propagate + seed + merge.
-pkit sync                 Refresh kit-owned content from the source kit.
-pkit merge                Re-run merge delivery on adapter-owned config files.
-pkit upgrade              Move the project to a newer backbone version (runs migrations).
-pkit status               Show how project-kit is wired in this project.
-pkit validate             Check project state against the kit's invariants.
-pkit version [bump ...]   Show or bump the version.
-pkit new <kind> ...       Scaffold a decision, adapter, migration, area, agent, capability, ...
-pkit capabilities ...     Manage capabilities: list, install (kit-shipped), register (in-repo/incubated), ...
-```
-
-`pkit --help` lists the full surface (including `agents`, `schemas`, `migrations`, `scratchpad`, `permissions`, and per-capability subcommand groups such as `pkit project-management ...`). See [`.pkit/cli/README.md`](.pkit/cli/README.md) for the per-command contract.
-
-## Where to go next
-
-- **Adopting or navigating the kit:** [`.pkit/README.md`](.pkit/README.md) — maps every area; start at [`.pkit/decisions/README.md`](.pkit/decisions/README.md) for the foundational pattern.
-- **Working on project-kit itself:** [`CONTRIBUTING.md`](CONTRIBUTING.md) — kit-maintainer guidance (the axiom / project-neutrality / principles-not-inventory disciplines, the acceptance gate, running checks). First clone: run `mise trust` once to enable the task runner (or run the `uv run ...` commands directly — mise is optional).
-- **Session instructions for AI agents:** [`CLAUDE.md`](CLAUDE.md).
+*Not a library (nothing imports from it), not a registry package (installs from the git URL, per [PRJ-004](.pkit/decisions/project/PRJ-004-distribution-channel.md)), and not a substitute for thinking — it's opinionated scaffolding you still steer.*
