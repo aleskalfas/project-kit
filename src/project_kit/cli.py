@@ -10,6 +10,7 @@ the rest of new).
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -22,7 +23,14 @@ from project_kit import __version__
 from project_kit import cli_render
 from project_kit.decisions import stamp_decision
 from project_kit.dispatcher import CapabilityDispatchGroup
-from project_kit.install import find_source_kit, find_target_root, install_kit
+from project_kit.install import (
+    InitTargetReason,
+    find_source_kit,
+    find_target_root,
+    install_kit,
+    resolve_init_target,
+    scan_pkit_installs,
+)
 from project_kit.merge import run_merge
 from project_kit.scaffolds import (
     AreaVariant,
@@ -599,6 +607,50 @@ def _print_release_plan(plan: ReleasePlan) -> None:
     click.echo(f"  changesets to consume: {len(plan.consumed)}")
 
 
+# Human phrase for each install-target classification, shown in the announcement.
+_INIT_REASON_PHRASE: dict[InitTargetReason, str] = {
+    InitTargetReason.GIT_ROOT: "git repository root — your current directory",
+    InitTargetReason.GIT_SUBFOLDER: "git repository root above your current directory",
+    InitTargetReason.WALKUP_PKIT: "nearest project-kit install above your current directory",
+    InitTargetReason.WALKUP_GIT: "nearest git repository above your current directory",
+    InitTargetReason.NONE: "your current directory — no git repository found above it",
+}
+
+
+def _stdin_is_tty() -> bool:
+    """Whether stdin is an interactive terminal.
+
+    Isolated so `pkit init`'s confirm gate is unit-testable: a piped
+    `yes | pkit init` has a non-tty stdin and must be refused, not
+    auto-confirmed (issue #780).
+    """
+    return sys.stdin.isatty()
+
+
+def _announce_init_target(
+    target: Path,
+    reason: InitTargetReason,
+    installs: list[Path],
+    *,
+    here: bool,
+) -> None:
+    """Print the resolved install target, why it was chosen, and any existing
+    project-kit installs on the path between CWD and the target (issue #780).
+
+    The announcement is `init`'s primary safety mechanism: it makes the target
+    visible in *every* case — including the happy path — so a silent install at
+    a resolved parent can no longer surprise the operator.
+    """
+    if here:
+        click.echo(f"pkit init -> {target}  (current directory, --here)")
+    else:
+        click.echo(f"pkit init -> {target}  ({_INIT_REASON_PHRASE[reason]})")
+    for install_dir in installs:
+        at_target = install_dir.resolve() == target.resolve()
+        where = "the target" if at_target else "between here and the target"
+        click.echo(f"  found existing install at {install_dir}/.pkit  ({where})")
+
+
 @main.command()
 @click.option(
     "--dry-run",
@@ -606,15 +658,97 @@ def _print_release_plan(plan: ReleasePlan) -> None:
     default=False,
     help="Show what would be installed without writing any files (per COR-004).",
 )
-def init(dry_run: bool) -> None:
-    """First install: propagation + seed + merge per COR-001 / COR-002 / COR-004."""
-    target_root = find_target_root()
-    if target_root is None:
+@click.option(
+    "--here",
+    is_flag=True,
+    default=False,
+    help=(
+        "Install into the current directory instead of a resolved parent. Refused "
+        "when the current directory is a subfolder of a git worktree — a .pkit/ "
+        "there is unreachable, as every command resolves to the git root."
+    ),
+)
+@click.option(
+    "--yes",
+    is_flag=True,
+    default=False,
+    help="Accept the resolved target non-interactively (skip the confirm).",
+)
+def init(dry_run: bool, here: bool, yes: bool) -> None:
+    """First install: propagation + seed + merge per COR-001 / COR-002 / COR-004.
+
+    Announces the resolved install target and why it was chosen, then confirms
+    before installing anywhere other than the current directory (issue #780).
+    """
+    cwd = Path.cwd()
+    target, reason = resolve_init_target(cwd)
+
+    # --here is refused only when CWD is a strict subfolder of a git worktree —
+    # the one topology where a .pkit/ at CWD is unreachable, because every command
+    # resolves to the git root, not the subfolder. In git-root/none/walk-up cases
+    # there is no git-root-wins precedence overriding CWD (the walk-up finds the
+    # nearest .pkit, which would be the one at CWD), so --here is honored there.
+    if here:
+        if reason == InitTargetReason.GIT_SUBFOLDER:
+            raise click.ClickException(
+                f"--here refused: the current directory is a subfolder of the git "
+                f"worktree rooted at {target}.\n"
+                f"       A .pkit/ created here would be unreachable — every pkit command "
+                f"resolves to the\n"
+                f"       git root, not this subfolder. Run `pkit init` from {target}, or "
+                f"split this\n"
+                f"       folder into its own git repository first."
+            )
+        target = cwd
+
+    installs = scan_pkit_installs(cwd, target)
+    target_has_install = router.looks_like_pkit_install(target / ".pkit")
+    off_target = [d for d in installs if d.resolve() != target.resolve()]
+
+    _announce_init_target(target, reason, installs, here=here)
+
+    # Already a project-kit project → refuse re-run. `init` is one-shot, not
+    # idempotent (COR-004): re-running would resurface seeded content or silently
+    # skip already-seeded paths. Recovery flows through `pkit sync`. Fires before
+    # the confirm so the operator is never prompted-then-refused for an install
+    # that could not proceed anyway (issue #780).
+    if target_has_install:
         raise click.ClickException(
-            "pkit init must be run inside a git repository or a directory "
-            "pkit can resolve as a project root."
+            f"{target} is already a project-kit project.\n"
+            f"       Run `pkit sync` to refresh it."
         )
-    install_kit(target_root, dry_run=dry_run)
+
+    # An install sits between CWD and the target, but the target has none:
+    # installing there would leave two installs straddling CWD (split-brain).
+    # This is the observed #780 incident — refuse unless the operator insists.
+    if off_target and not yes:
+        found = off_target[0]
+        raise click.ClickException(
+            f"refusing to create a second project-kit install.\n"
+            f"       Found an existing install at {found}/.pkit,\n"
+            f"       but the resolved target {target} has none — installing there would\n"
+            f"       leave two installs straddling your current directory (a split-brain).\n"
+            f"       Run `pkit init` from {found}, `pkit sync` to refresh it, or pass --yes\n"
+            f"       to install at {target} anyway."
+        )
+
+    # Confirm before installing anywhere other than CWD, and before creating a
+    # standalone install in a non-git folder. `--here` and `--yes` are explicit
+    # acceptances; `--dry-run` only previews, so it skips the prompt.
+    needs_confirm = target.resolve() != cwd.resolve() or reason == InitTargetReason.NONE
+    if needs_confirm and not yes and not here and not dry_run:
+        if not _stdin_is_tty():
+            raise click.ClickException(
+                f"the install target {target} is not your current directory, and stdin "
+                f"is not a terminal.\n"
+                f"       Re-run with --yes to accept {target}, or --here to install in "
+                f"the current directory."
+            )
+        if not click.confirm(f"Install project-kit into {target}?", default=False):
+            click.echo("Aborted.")
+            return
+
+    install_kit(target, dry_run=dry_run)
 
 
 @main.command()
