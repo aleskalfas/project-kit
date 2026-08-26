@@ -84,7 +84,15 @@ Implication for adoption strategy: **do not fake immediacy.** The honest play is
 
 ## Docs-that-stick levers (PERSIST — review all docs against these)
 
-*Pattern extracted (COR-007) mid-README-work: a reusable docs-quality discipline. Candidate carrier: a "writing docs that stick" guide + a review pass across all docs (carrier TBD — doc vs skill vs PRJ).*
+*Pattern extracted (COR-007) mid-README-work: a reusable docs-quality discipline.*
+
+**Carrier — DECIDED: a doc now; let recurrence pull it up (do NOT ship as a capability).**
+Rationale = pkit's own principles: COR-007 (extract on recurrence, n≈1 today → a capability now is speculative generality); COR-006/017 (a capability is a heavyweight discipline-bundle — wrong shape for 7 principles + a checklist); COR-014 (writing docs well is universal → core, not a project capability).
+- **Now:** a **doc** — "Writing docs that stick" (the 7 levers as a reference guide). Cheapest carrier that holds the value; commits to nothing.
+- **On recurrence** (applied to a few docs, proves useful): promote to a **skill** an agent runs, OR — lighter — feed the levers as knowledge the existing `software-engineering` **`docs-reviewer`** reads via the `<project-conventions>` corpus (the seam ADR-052 just repaired). No new capability needed for that path.
+- **Only if it earns real weight** (own schemas/scripts/release cadence/cross-adopter demand): reconsider a dedicated carrier — and even then likely **core**, not an opt-in capability.
+- **Review-all-docs-against-it** = a **Task** (under EPIC #775), separate from the doc.
+- Meta (a genuine for-pkit argument, lived): the framework stopped us over-building here in real time — same class as F3 (ceremony before value).
 
 1. **Anchor to an existing schema (analogy)** — map new concepts onto something the reader already models deeply; strength = *structural* mapping, not surface; fence where the analogy leaks.
 2. **Curiosity gap / problem-first** — open with the felt pain so the concept arrives as the answer to a question they're already asking ("the hook inside").
