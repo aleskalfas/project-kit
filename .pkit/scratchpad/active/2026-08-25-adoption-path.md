@@ -156,3 +156,15 @@ critic (on #780) proved the maintainer's original want — install pkit into one
 - **Doc-currency sweep tool (COR-007)** — the "grep every doc for a now-stale contract" step has recurred on README, ADR-052, and the init change. A recurrence worth a tool/check (e.g. a `pkit docs check` or a docs-reviewer aid) rather than a manual sweep each time.
 - **Deferred monorepo-subproject ADR** — (already recorded above) nearer-`.pkit`-wins resolution; must reconcile the 3 resolvers; write before any nested-`.pkit` feature ships.
 - **Extract the shared resolver mechanic** (architect) — `find_target_root` + `resolve_init_target` are near-copies of git-first+walk-up; extract one private helper, both become thin projections. Small, non-urgent COR-007.
+
+## F12 — init confirm UX is wrong (from LIVE test of merged #780; must be REDESIGNED)
+Test: `pkit init` in `git-public/pkit_test` (a non-git subfolder). Output:
+`pkit init -> /…/git-public (nearest git repository above your current directory) / Install project-kit into /…/git-public? [y/N]` → aborted.
+Root cause: `git-public` has a **broken/vestigial `.git`** (git `rev-parse` fails there) and no `.pkit`; the resolver's walk-up matched `(cur/.git).exists()` → `WALKUP_GIT` → mislabeled a *workspace folder for repos* as a "git repository", and steered init to that parent.
+Critiques (all valid):
+1. y/N gives no rationale to install into a PARENT — innocent user has no basis to say yes.
+2. `git-public` is the user's workspace folder, not a git repo (broken `.git`); calling it a "git repository" is inaccurate, and init shouldn't offer a workspace-parent at all.
+3. init should **primarily recommend the CURRENT path**; only when it detects you're inside a repo/marker structure should it OFFER the parent — a **choice, not yes/no**.
+Redesign direction: CWD-primary; on a detected parent marker present a choice ([1] here [default] / [2] <parent>) with accurate phrasing; validate a `.git` is a *real* repo before calling it one (use `rev-parse` success, not `.git`-exists).
+CONSTRAINT to reconcile (RF1): a subfolder of a *valid* git repo can't safely install-here (git-toplevel-wins → a subfolder `.pkit/` is unreachable/split-brain). So: valid-git-subfolder → git-root is the safe primary (install-here refused, explained); all other cases (non-git, broken-.git workspace, pkit-install ancestor) → **here-primary, parent optional**.
+Process: FOLLOW-UP refinement of #780 — design properly, and per maintainer directive TEST ON BRANCH before merging to main (no autonomous merges).
