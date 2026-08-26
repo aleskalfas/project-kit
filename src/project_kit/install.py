@@ -14,6 +14,7 @@ import stat
 import subprocess
 from contextlib import ExitStack
 from dataclasses import dataclass
+from enum import StrEnum
 from importlib.resources import as_file, files
 from pathlib import Path
 
@@ -160,6 +161,99 @@ def find_target_root(start: Path | None = None) -> Path | None:
             return cur
         cur = cur.parent
     return None
+
+
+class InitTargetReason(StrEnum):
+    """Why `resolve_init_target` picked the target it did — the classification
+    `pkit init` announces before installing (issue #780).
+
+    A `StrEnum` so each member doubles as its announce token and callers
+    (and tests) can compare against the plain string. The distinction that
+    matters for the CLI gate is `GIT_ROOT` (the safe happy path — target *is*
+    the current directory) versus everything else (the target is a resolved
+    ancestor, so a bare `pkit init` would install away from where the operator
+    is standing — the #780 footgun).
+    """
+
+    GIT_ROOT = "git-root"  # CWD is itself the git worktree root
+    GIT_SUBFOLDER = "git-subfolder"  # CWD is a subdirectory of a git worktree
+    WALKUP_PKIT = "walkup-pkit"  # no git binary; nearest ancestor is an install-marked .pkit
+    WALKUP_GIT = "walkup-git"  # no git binary; nearest ancestor carries .git
+    NONE = "none"  # no git repo and no install-marked ancestor — target is CWD
+
+
+def resolve_init_target(start: Path | None = None) -> tuple[Path, InitTargetReason]:
+    """Resolve where `pkit init` would install, plus *why* — the reason drives the
+    announce-and-confirm gate in the `init` command (issue #780).
+
+    The reason-returning sibling of `find_target_root`: same resolution order
+    (git `rev-parse --show-toplevel` first, then a `.git`/install-marked-`.pkit`
+    walk-up), but it reports the classification so the CLI can distinguish the
+    safe happy path (CWD *is* the git root) from the footgun cases (the target is
+    a resolved ancestor).
+
+    The `GIT_ROOT` vs `GIT_SUBFOLDER` split is by symlink-resolved comparison of
+    `cwd.resolve()` against the resolved `git rev-parse --show-toplevel`, so a
+    worktree whose working directory differs from CWD still classifies correctly.
+    When git is unavailable the walk-up mirrors `find_target_root` (a `.git`
+    *file* worktree marker counts, not just a directory) and reports which marker
+    matched. With no marker anywhere the target is CWD itself (`NONE`) rather than
+    None — the caller offers to init here instead of hard-refusing (issue #780).
+    """
+    cwd = start if start is not None else Path.cwd()
+    cwd_resolved = cwd.resolve()
+
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+            cwd=cwd,
+            check=False,
+        )
+        if result.returncode == 0:
+            git_root = Path(result.stdout.strip()).resolve()
+            if git_root == cwd_resolved:
+                return git_root, InitTargetReason.GIT_ROOT
+            return git_root, InitTargetReason.GIT_SUBFOLDER
+    except FileNotFoundError:
+        pass
+
+    cur = cwd_resolved
+    while cur != cur.parent:
+        # `.git` may be a directory (normal repo) or a file (worktree marker);
+        # `.exists()` catches both, matching `find_target_root`.
+        if (cur / ".git").exists():
+            return cur, InitTargetReason.WALKUP_GIT
+        if looks_like_pkit_install(cur / ".pkit"):
+            return cur, InitTargetReason.WALKUP_PKIT
+        cur = cur.parent
+    return cwd_resolved, InitTargetReason.NONE
+
+
+def scan_pkit_installs(cwd: Path, target: Path) -> list[Path]:
+    """Directories from `cwd` up to and including `target` whose `.pkit/` is a
+    real install (`looks_like_pkit_install`, not bare existence).
+
+    Feeds `pkit init`'s announcement and its off-target-install refusal (issue
+    #780): an install found *between* CWD and the resolved target, when the
+    target itself has none, means a bare `pkit init` would create a second,
+    split-brain install straddling the operator's current directory. Returned
+    deepest-first. `target` is an ancestor-or-equal of `cwd` for every
+    `resolve_init_target` outcome, so the walk terminates at `target`; a
+    defensive filesystem-root guard bounds it regardless.
+    """
+    cwd_resolved = cwd.resolve()
+    target_resolved = target.resolve()
+    found: list[Path] = []
+    cur = cwd_resolved
+    while True:
+        if looks_like_pkit_install(cur / ".pkit"):
+            found.append(cur)
+        if cur == target_resolved or cur == cur.parent:
+            break
+        cur = cur.parent
+    return found
 
 
 # A real source checkout's `.pkit/` is distinguished from anything else by the
