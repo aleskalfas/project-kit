@@ -52,7 +52,7 @@ cd your-project
 pkit init
 ```
 
-One command, and a `.pkit/` appears — a working methodology wired into your project: decision records, hard rules loaded into your `CLAUDE.md`, agents deployed into Claude Code. See how it's wired:
+One command, and a `.pkit/` appears — a working methodology wired into your project: decision records, hard rules loaded into your `CLAUDE.md`, agents deployed into Claude Code. `init` announces where it will install before writing anything, and asks first if that target isn't your current folder. See how it's wired:
 
 ```
 pkit status
