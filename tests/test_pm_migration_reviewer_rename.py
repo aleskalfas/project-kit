@@ -268,8 +268,10 @@ def test_project_registers_pm_reviewer(agents_mod) -> None:
     under the new name, and never the old one.
 
     Asserts membership, not cardinality: this test's subject is the RENAME, and
-    DEC-032 D3 lifted the singleton cap on `local_registered` (the config schema
-    states "N >= 2 is valid"). An equality assertion against a one-element list
+    DEC-032 D3 lifted the singleton cap on `local_registered`
+    (`schemas/config.schema.json` states "N >= 2 is valid" on the property
+    itself -- named precisely because the YAML reference alongside it carries
+    no cardinality statement). An equality assertion against a one-element list
     would forbid the second baseline reviewer that decision permits — the
     rename's guarantee is that `pm-reviewer` is registered and `reviewer` is
     gone, whatever else the adopter registers alongside it (#788).
