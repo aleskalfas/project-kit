@@ -17,6 +17,15 @@ from project_kit.migrations import (
 )
 
 
+def _make_git_dir(root: Path) -> None:
+    """Give `root` a structurally-real `.git/` (objects/ + refs/) so
+    `find_target_root` resolves it. A bare/vestigial `.git` no longer qualifies
+    (#787); these tests stub the git diff, so the `.git` is only a resolution
+    marker."""
+    (root / ".git" / "objects").mkdir(parents=True, exist_ok=True)
+    (root / ".git" / "refs").mkdir(parents=True, exist_ok=True)
+
+
 # --- _classify_path ----------------------------------------------------
 
 
@@ -401,15 +410,17 @@ def test_cli_check_diff_passes_when_clean(
         "_git_diff_name_status",
         lambda root, base, **kw: [("A", ".pkit/skills/core/added.md", None)],
     )
-    # Set up a minimal target dir so find_target_root succeeds.
+    # Set up a minimal target dir so find_target_root succeeds. The `.git` must
+    # be structurally real (objects/ + refs/) — a bare/vestigial `.git` no longer
+    # resolves as a root (#787). The git diff itself is stubbed above.
     (tmp_path / ".pkit").mkdir()
-    (tmp_path / ".git").mkdir()
+    _make_git_dir(tmp_path)
     runner = CliRunner()
     with runner.isolated_filesystem(temp_dir=tmp_path):
         import shutil
 
         shutil.copytree(tmp_path / ".pkit", Path.cwd() / ".pkit", dirs_exist_ok=True)
-        (Path.cwd() / ".git").mkdir(exist_ok=True)
+        _make_git_dir(Path.cwd())
         result = runner.invoke(main, ["migrations", "check-diff", "--base", "main"])
     assert result.exit_code == 0, result.output
     assert "No migration-triggering" in result.output
@@ -424,13 +435,13 @@ def test_cli_check_diff_fails_when_uncovered(
         lambda root, base, **kw: [("D", ".pkit/skills/core/old.md", None)],
     )
     (tmp_path / ".pkit").mkdir()
-    (tmp_path / ".git").mkdir()
+    _make_git_dir(tmp_path)
     runner = CliRunner()
     with runner.isolated_filesystem(temp_dir=tmp_path):
         import shutil
 
         shutil.copytree(tmp_path / ".pkit", Path.cwd() / ".pkit", dirs_exist_ok=True)
-        (Path.cwd() / ".git").mkdir(exist_ok=True)
+        _make_git_dir(Path.cwd())
         result = runner.invoke(main, ["migrations", "check-diff", "--base", "main"])
     assert result.exit_code != 0
     assert "UNCOVERED" in result.output

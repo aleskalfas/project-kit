@@ -8,73 +8,82 @@ author: Ales Kalfas <kalfas.ales@gmail.com>
 
 ## Context
 
-Every `pkit` command operates against a *project root* — the directory that contains `.pkit/` and usually `.git/`. The CLI must resolve this root before doing anything else: install reads/writes inside it; sync rewrites kit-owned trees beneath it; status reports against it; the authoring commands (`pkit new <kind>`) all stamp relative to it.
+Every `pkit` command operates against a *project root* — the directory that holds the project's installed methodology (and usually its version-control repository). A command must resolve that root before doing anything else: install writes inside it, refresh rewrites kit-owned content beneath it, status reports against it, the authoring commands stamp relative to it.
 
-Users invoke `pkit` from varied working directories — the repo root, deep subdirectories, freshly-cloned trees not yet initialised, and occasionally from outside any project tree. The resolution shapes the user experience of every command: whether the user must remember a flag, set an environment variable, `cd` to root, or can simply invoke `pkit` from wherever they are.
-
-This ADR captures behaviour already in production (the bash dispatcher established it; the Python port preserves parity). The proposed status is the acceptance-gate gesture per [PRJ-005](../../../.pkit/decisions/project/PRJ-005-adopt-adrs.md); the behaviour itself isn't under redesign here.
+Users invoke `pkit` from wherever they happen to be — the repository root, a deep subdirectory, a freshly-cloned tree not yet initialised, occasionally from outside any project. How the root is resolved shapes the experience of every command: whether the user must remember a flag, set a variable, change directory first, or can simply run `pkit` where they stand.
 
 ## Decision
 
-The CLI resolves the project root *implicitly from cwd* — no `--root` flag, no `PKIT_ROOT` environment variable, no per-user config, no requirement to `cd` to the project root before invoking. Every command starts by calling a single resolver and refuses cleanly when the resolution returns nothing.
+The CLI resolves the project root **implicitly from the current working directory** — no flag, no environment variable, no per-user config, no requirement to change directory first. Every command resolves the root before acting and fails cleanly when there is none.
 
 The contract:
 
-- **Inputs**: the user's current working directory.
-- **Outputs**: a single directory (the project root) or none.
-- **No side channels**: the resolver doesn't read environment variables, config files, or flags. The cwd is the only input.
-- **Idempotent**: same (cwd, filesystem state) always produces the same answer.
+- **Input** — the current working directory, and nothing else.
+- **Output** — exactly one project root, or none.
+- **No side channels** — no environment variables, config files, or flags feed the resolution. (`init`'s `--root` is not an exception: it *replaces* the resolution with an explicit target rather than feeding a signal into it.)
+- **Deterministic** — the same directory and filesystem state always resolve the same way.
 
-### Current realisation
+### How the root is found
 
-A two-stage strategy implemented as `find_target_root()` in `src/project_kit/install.py`:
+Resolution proceeds in two steps:
 
-1. **Stage 1 — `git rev-parse --show-toplevel`.** Invoke git as a subprocess from cwd. If git returns 0, use the resolved-and-trimmed stdout.
-2. **Stage 2 — directory-walk fallback.** If stage 1 fails (git not installed, cwd not inside a git repo, git returns non-zero), walk up the resolved cwd; return the first ancestor with `.git/` (as a directory) or `.pkit/` (as a directory).
-3. **No resolution** — return `None`. Callers raise a context-appropriate "not in a project tree" error.
+1. **Ask version control first.** git is the authority on which repository encloses a directory, and it answers correctly for the cases a hand-rolled search gets wrong — symlinked paths, linked worktrees, and submodules (each submodule is its own scope). When git identifies an enclosing repository, that repository's root *is* the project root.
 
-The two-stage shape originated in the bash dispatcher (where `git rev-parse` + a directory-walk is the idiomatic shape) and was preserved in the Python port. The realisation may evolve; the contract above is the architectural commitment.
+2. **Otherwise, search upward — but trust only a genuine marker.** When there is no version control to consult (it isn't installed, or the directory isn't inside a repository), walk toward the filesystem root looking for a project marker: an installed methodology, or a repository. A marker is accepted **only when it is real** — an empty or broken repository marker is not a project and is passed over. This is what stops a *workspace folder* — a directory that merely *holds* repositories, sometimes carrying a defunct marker — from being mistaken for a project root. The upward search deliberately needs no version-control tool present, because project-kit does not require one.
+
+If neither step finds a root, the command reports that it is not inside a project — with one exception: **install** offers the current directory, because it necessarily runs before any project exists.
+
+### Two readings of the situation, for two kinds of command
+
+The same resolution is surfaced at two levels, and the difference is *consent*:
+
+- **Steady-state commands** (refresh, status, upgrade, the authoring commands) receive a plain answer — *this root, or none* — carrying no policy about what to do with it.
+
+- **Install** is the one command that *creates* a project, so it is the one that makes a consent decision, and it reads the situation more richly and guides the user:
+  - nothing found → offer to install in the current directory;
+  - the current directory is *inside* a repository → the repository root is the target, and installing in a subfolder is refused (a project placed below the root would be shadowed by it and never resolved);
+  - the directory looks like a real repository that version control declines to vouch for (an ownership restriction, say) → **guide the user to resolve it** rather than silently installing in the wrong place;
+  - the current directory is already inside an adopted project → **refuse, and point the user at refresh** — install is a one-time bootstrap of a single root ([COR-004](../../../.pkit/decisions/core/COR-004-cli-surface.md)); a second, nested install is out of scope and deferred to the monorepo-support decision.
+
+Only install carries this richer reading. The steady-state answer stays policy-free, so no ordinary command inherits install's consent rules.
 
 ## Rationale
 
-**Why implicit resolution.** Every alternative imposes friction on the common case (running `pkit` from a subdirectory of a known project). A `--root` flag adds an extra discoverable surface to every command's `--help`; an environment variable adds stale-state confusion when forgotten; requiring `cd` to root breaks the most common workflow (running pkit from inside a deeply-nested subdir). Implicit resolution is the lowest-friction default; explicit override mechanisms can be added later as non-breaking extensions if a real use case emerges.
+**Why implicit resolution.** Every alternative adds friction to the common case — running `pkit` from a subdirectory of a known project. A flag adds a surface to every command's help; a variable goes stale when forgotten; requiring the user to change directory first breaks the most common workflow. Implicit resolution is the lowest-friction default, and an explicit override can be added later without breaking it.
 
-**Why git first.** `git rev-parse --show-toplevel` is git's canonical answer to "where is the repo root for this cwd?" and handles three non-trivial cases reimplementations get wrong:
+**Why defer to version control first.** git already answers "where is the enclosing repository root?" and gets three awkward cases right: symlinked directories (resolved consistently), linked worktrees (whose marker is a file, not a directory), and submodules (each treated as its own independent scope). pkit inherits git's repository-boundary model rather than trying to reimplement or override it.
 
-- **Symlinked directories** — git returns the resolved path consistently.
-- **Worktrees** — `.git` is a file (not a directory) inside a worktree; `--show-toplevel` returns the worktree root, not the main repo or the parent.
-- **Submodules** — from inside a submodule, git returns the submodule root, not the parent repo. This means submodules are treated as independent pkit scopes: each can have its own `.pkit/` (or not), and operating from inside a submodule operates against the submodule's scope. The semantic choice is inherited from git's repo-boundary model; pkit doesn't try to override it.
+**Why keep a fallback.** project-kit does not *require* version control. A project used without it — or before it is initialised — must still resolve. The upward search serves that case.
 
-**Why a fallback at all.** project-kit doesn't *require* git. A project that uses pkit without version control (or hasn't initialised git yet) should still resolve correctly. The directory-walk lets `pkit status`, `pkit validate`, etc. work without git on PATH.
+**Why the fallback validates.** Trusting any marker on sight mistakes a directory that merely *contains* projects for a project itself. Validating that a marker is genuine closes that gap **without removing the fallback** — removing it would break the no-version-control case the fallback exists to serve. The correction is to verify, not to drop the search.
+
+**Why two levels.** Deciding *where to create a project* is a consent act that belongs only to the command making it. Pushing that classification onto every read-only command would leak install's policy into places that need nothing more than a plain root. Keeping the rich reading inside install keeps the shared answer simple.
 
 ### Known limitations
 
-- **Nested `.pkit/` is invisible to git.** If `.pkit/` lives at `/path/to/sub/.pkit/` inside a larger git repo at `/path/to/.git/`, Stage 1 returns the git root (`/path/to`) — not the directory containing `.pkit/`. The command then looks for `.pkit/` at `/path/to/` and fails with "not in a project tree" even though pkit *is* installed deeper. Workaround: install `.pkit/` at the git root (the standard layout) or invoke from inside the `.pkit/`-containing subtree without leaving it.
+- **A project installed *below* the repository root is invisible.** If the methodology is installed in a subdirectory of a larger repository, version control resolves to the *repository* root; the command looks for the project there, not deeper, and reports "not in a project" even though one exists further down. The standard layout — methodology installed at the repository root, no nested installs — avoids this. The motivating case for lifting it is a single repository that deliberately houses several independent projects in subfolders — each its own methodology scope, with its own configuration, capabilities, and decisions. Supporting that is the substance of the deferred monorepo-support decision: it must settle whether a project's scope may sit *below* the repository boundary at all, and — if so — which claim wins when a command runs from inside such a subfolder: the enclosing repository, or the nearer project.
 
-This limitation is a bug only if encountered; the standard layout (`.pkit/` at the repo root, no nested installs) avoids it. A future `--root` flag (per the rejected alternative below) handles it as an override.
-
-- **The router resolves the boundary git-less and nearest-wins; commands resolve git-first and root-wins — they disagree in the nested case.** The pre-`click` entry-point router ([ADR-039](ADR-039-pkit-entry-point-router.md)) picks *which* pkit version/tree serves an invocation via `_enclosing_project` — a pure filesystem walk to the *nearest* `.git`/install-marked-`.pkit` boundary, deliberately git-less so the hot path spawns no subprocess. The two-stage command resolver above is git-*first*, so `git rev-parse` returns the *worktree root*. For every git-native topology these agree (a submodule or worktree has a `.git` entry, so the nearest-boundary walk stops exactly where `git rev-parse` does). They diverge only in the nested-`.pkit`-below-the-git-root case (the limitation above): the router selects the deeper subtree's version/pin while the command it dispatches then operates on the git root's `.pkit/` — a silent mis-target, not a crash. `pkit init`'s split-brain refusal (see below) now actively defends against *creating* that topology, but pre-existing or cloned instances of it remain resolvable inconsistently. Reconciling the two precedences (git-root-wins everywhere, or nearest-`.pkit`-wins everywhere) is the substance of the deferred monorepo-subproject support; that future ADR supersedes this bullet.
+- **The pre-dispatch router and the commands can disagree in that nested case.** A separate, deliberately lightweight resolver decides *which* installed version serves an invocation before a command runs ([ADR-039](ADR-039-pkit-entry-point-router.md)); for speed it uses a cheaper "nearest marker" rule and skips the genuine-marker validation the commands apply. For every ordinary repository layout the two agree. They diverge only in the nested case above — and even then the disagreement is harmless for a defunct marker, resolving to "run the tool itself," the same as no match. Bringing the router and the commands onto one shared rule, and settling which precedence wins when a project sits below a repository root, is the substance of the deferred monorepo-support decision, which supersedes this limitation.
 
 ### Alternatives considered
 
-- **`--root <path>` flag on every command, as default.** Rejected — adds a discoverable surface to every command's `--help`, increasing surface area for a need that's the exception, not the rule. Can be added later as an *optional* override (precedes the two-stage chain in resolution).
-
-- **`PKIT_ROOT` environment variable.** Rejected — environment-variable-driven roots produce confusing behaviour when the variable is forgotten and stale across shells.
-
-- **CWD-only: require cwd = root.** Rejected — breaks the common case of invoking pkit from a deeply-nested subdirectory.
-
-- **`.pkit/`-walk only, no git involvement.** Rejected — doesn't handle pre-init (the `pkit init` command itself, which runs before `.pkit/` exists). A pure `.pkit/`-walk would force `pkit init` to take `--target` explicitly; the git-first path lets init resolve the surrounding git repo and bootstrap inside it.
-
-- **`.git/`-walk only, no `git rev-parse` subprocess.** Rejected — worktrees have `.git` as a *file*, not a directory; a naive walk misses them. Reusing git is one subprocess; reimplementing git's resolution is many edge cases.
-
-- **`pyproject.toml`-walk (like many Python tools).** Rejected — project-kit's adopters aren't necessarily Python projects. Tying root resolution to a Python-specific marker would prevent adoption by Go, Rust, or shell-only projects.
-
-- **Project-root marker file (e.g., `.pkitroot`).** Rejected — adds a third marker file alongside `.git/` and `.pkit/` for the same purpose. The existing markers are sufficient.
+- **A root flag on every command, as the default.** Rejected — adds a surface to every command's help for a need that is the exception, not the rule. Can be added later as an optional override ahead of the implicit default.
+- **An environment variable.** Rejected — a variable-driven root produces confusing behaviour when it is forgotten or stale across shells.
+- **Require the current directory to be the root.** Rejected — breaks the common case of running `pkit` from a nested subdirectory.
+- **Search for the installed methodology only, never consulting version control.** Rejected — it can't handle install, which runs *before* the project exists; install would have to be told its target explicitly.
+- **Reimplement the repository search instead of asking git.** Rejected — linked worktrees and submodules are edge cases git already resolves; reimplementing them invites bugs for no gain.
+- **Drop the fallback once version control has been consulted.** Rejected — this conflates a *broken* marker (the case validation fixes) with a *real* repository that version control merely declined to vouch for; the latter would end up installed in the wrong place, worse than the problem being fixed. Validate, don't delete.
+- **Put install's guided classification into the shared resolver.** Rejected — leaks install's consent policy into read-only commands. The classification belongs to install alone.
+- **Decide the broken-versus-declined case from version control's error text.** Rejected — error text is fragile across locales and tool versions; the distinction is available more robustly from the repository's own shape and whether the tool succeeded.
+- **Run the genuine-marker validation in the lightweight pre-dispatch router too.** Rejected — the router must stay fast and dependency-free; unifying the resolvers is deferred with the monorepo-support decision.
+- **A language-specific marker (e.g. a Python project file).** Rejected — adopters are not all Python projects; a language-specific marker would exclude others.
+- **A dedicated root-marker file.** Rejected — adds a third marker for a job the existing two already do.
 
 ## Implications
 
-- The resolution *contract* (git-first, then walk-up) is single; its realisation now has three code paths that must stay in step. Post-init commands call `find_target_root()` and receive `Path | None`. `pkit init` calls a reason-returning sibling, `resolve_init_target()`, which applies the *same* two-stage order but (a) classifies the outcome (`GIT_ROOT` / `GIT_SUBFOLDER` / walk-up markers / `NONE`) so the consent gate can distinguish the happy path from an install at a resolved parent, and (b) never returns `None` — it falls back to CWD, because init runs *before* `.pkit/` exists and must be able to offer to init here (issue #780). The bash dispatcher carries a third mirror of the same order. These are one contract with two Python projections plus a shell mirror, not one function — so the "single-point change" property holds only if a change to the resolution order is applied to all three. Factoring the shared git-first-plus-walk-up mechanic into one helper that both Python entry points project from would restore the single-point property; it is a refactor the codebase has earned but not yet taken (COR-007).
-- `pkit init` announces its resolved target on every run and confirms before installing anywhere other than CWD, refuses `--here` inside a git subfolder (a `.pkit/` there is unreachable — every command resolves to the git root), and refuses to create a second install that would straddle an existing one between CWD and the target (a split-brain). This is the first place the codebase actively *defends* the one-`.pkit/`-per-tree invariant this ADR's resolution model assumes rather than merely relying on it (issue #780).
-- Commands receive `Path | None` from the resolver and decide the error message themselves: `pkit init` can phrase "the project doesn't exist yet"; `pkit status` phrases "not in a project tree". The contract gives commands the flexibility their context needs without expanding the resolver's API.
-- An override mechanism — `--root` flag, `PKIT_ROOT` env var, or marker file — can be added later as a non-breaking extension: it would short-circuit ahead of the two-stage chain. The implicit-default-from-cwd contract stands as the floor.
-- Adopters who symlink a `.pkit/` tree from outside their repo get the symlink's *target* directory as their root, not the symlink's location, because `git rev-parse --show-toplevel` resolves symlinks. Acceptable; not encountered in practice.
+- **One resolution rule, realised in more than one place.** The two-step rule is expressed by the shared read-only resolver and install's guided resolver — which now draw on one underlying implementation ([COR-007](../../../.pkit/decisions/core/COR-007-pattern-extraction.md)) — plus a lightweight pre-dispatch mirror that stays intentionally cheaper (see *Known limitations*). A change to the resolution *order* must be applied everywhere it is mirrored.
+- **Install actively defends the one-project-per-tree assumption this model rests on.** It announces its resolved target, confirms before installing anywhere but the current directory, refuses a subfolder install that would be shadowed, guides rather than mis-installs when a repository can't be vouched for, and refuses a second install that would straddle an existing one — redirecting an already-adopted tree to refresh instead.
+- **Read-only commands get a plain root; install gets the guided reading.** Steady-state commands receive a root-or-none and phrase their own "not in a project" message; install consumes the richer classification so it can offer to install here and guide the subfolder, un-vouchable, and already-adopted cases — without that policy leaking into the shared answer.
+- **An override can be added later** — a flag, an environment variable, or a marker file — as a non-breaking extension ahead of the implicit default; `init` already carries such an override today (`--root <path>`, scoped to that one command). The implicit-from-cwd contract is the floor.
+- **Symlinked project trees resolve to their target directory**, because version control resolves symlinks to their real location. Acceptable; not encountered in practice.
+- **A scenario matrix is the test suite.** The behaviour is pinned by the set of situations it must handle — install-here, inside-a-subfolder, the un-vouchable repository, the already-adopted ancestor, a project with no version control, and the broken-marker case the validation rejects — exercised against both resolvers.

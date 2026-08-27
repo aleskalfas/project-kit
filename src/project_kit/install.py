@@ -128,18 +128,13 @@ class InstallContext:
     dry_run: bool
 
 
-def find_target_root(start: Path | None = None) -> Path | None:
-    """Resolve the project root by `git rev-parse --show-toplevel` first,
-    then by walking up looking for `.git/` or an install-marked `.pkit/`.
-    Mirrors the bash dispatcher's `find_target_root` helper.
-
-    A `.pkit/` ancestor qualifies only when it looks like a real install
-    (`looks_like_pkit_install`: `manifest.yaml`, or `decisions/` for installs
-    pre-dating the manifest layer). A bare/foreign `.pkit` — e.g. a stray
-    junk `~/.pkit/` — is skipped and the walk continues upward, so out-of-
-    project commands never resolve `$HOME` as a root (#656).
+def _git_toplevel(cwd: Path) -> Path | None:
+    """`git rev-parse --show-toplevel` from `cwd`, resolved; `None` when git is
+    unusable *from here* — the binary is absent, or git declines (cwd is not in a
+    repository git will vouch for: either a clean "not a repository" or a
+    dubious-ownership refusal). A decline falls through to the validated walk-up,
+    where broken-vs-dubious is disambiguated per candidate (ADR-001).
     """
-    cwd = start if start is not None else Path.cwd()
     try:
         result = subprocess.run(
             ["git", "rev-parse", "--show-toplevel"],
@@ -148,87 +143,195 @@ def find_target_root(start: Path | None = None) -> Path | None:
             cwd=cwd,
             check=False,
         )
-        if result.returncode == 0:
-            return Path(result.stdout.strip())
     except FileNotFoundError:
-        pass
-
-    cur = cwd.resolve()
-    while cur != cur.parent:
-        # `.git` may be a directory (normal repo) or a file (worktree marker
-        # pointing at the main repo's worktrees dir). Either form counts.
-        if (cur / ".git").exists() or looks_like_pkit_install(cur / ".pkit"):
-            return cur
-        cur = cur.parent
+        return None
+    if result.returncode == 0 and result.stdout.strip():
+        return Path(result.stdout.strip()).resolve()
     return None
+
+
+def _git_accepts(candidate: Path) -> bool | None:
+    """Whether git will vouch for `candidate` as a work tree — `True` when `git -C
+    candidate rev-parse` succeeds, `False` when git refuses it (a valid repository
+    git declines on ownership grounds — safe.directory / dubious ownership, exit
+    128), `None` when the git binary is absent.
+
+    The valid-vs-refused distinction is drawn on exit status alone, never on
+    parsed stderr prose, which is locale- and version-fragile (ADR-001). Callers
+    reach this only for a candidate that already passed the subprocess-free
+    structural check, so a non-zero exit here means "real repo, git refused", not
+    "not a repo".
+    """
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(candidate), "rev-parse", "--is-inside-work-tree"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        return None
+    return result.returncode == 0
+
+
+def _looks_like_git_repo(git_entry: Path) -> bool:
+    """Subprocess-free structural check that a `.git` entry is a *real* repository
+    marker, not a broken/vestigial one (ADR-001; issue #787).
+
+    A sibling in spirit to `looks_like_pkit_install`: both let the root walks
+    reject a plausible-looking-but-hollow marker without spawning a process, so
+    the walk continues past it. Two shapes qualify:
+
+    - a `.git/` **directory** carrying both `objects/` and `refs/` (a real repo);
+    - a `.git` **file** whose content is a `gitdir:` pointer (a worktree /
+      submodule marker) — the pointer target is not required to exist, matching
+      git's own tolerance of a dangling worktree link.
+
+    Anything else — an empty `.git/`, a directory missing `objects/` or `refs/`,
+    a file without a `gitdir:` line — is broken/vestigial and fails. Because it
+    needs no `git` binary, this is the shared correctness floor that holds even
+    when git is absent, preserving project-kit's no-git guarantee.
+    """
+    if git_entry.is_dir():
+        return (git_entry / "objects").is_dir() and (git_entry / "refs").is_dir()
+    if git_entry.is_file():
+        try:
+            content = git_entry.read_text(encoding="utf-8", errors="replace").strip()
+        except OSError:
+            return False
+        if not content.startswith("gitdir:"):
+            return False
+        return bool(content[len("gitdir:") :].strip())
+    return False
+
+
+@dataclass(frozen=True)
+class _RootResolution:
+    """Neutral resolution facts shared by `find_target_root` and
+    `resolve_init_target` (ADR-001).
+
+    Deliberately carries no init-consent classification: the shared floor must
+    not leak init's one-shot policy into the many read-only callers. Each
+    projection maps these facts onto its own return contract.
+    """
+
+    root: Path | None  # resolved project root, or None if nothing valid was found
+    dubious: bool = False  # root is a real repo git refused (dubious ownership)
+    is_pkit_install: bool = False  # resolved via an install-marked .pkit, no valid git
+
+
+def _resolve_root(cwd: Path) -> _RootResolution:
+    """Git-first, then a structurally-validated walk-up — the shared correctness
+    floor behind both `find_target_root` and `resolve_init_target` (ADR-001; the
+    COR-007 extraction of three near-identical walks).
+
+    Stage 1 — `git rev-parse --show-toplevel` from cwd is authoritative when it
+    succeeds. Stage 2 (git absent or declined) — walk up *validating* each
+    candidate rather than trusting a bare `.git` on sight (the #787 bug: a
+    workspace folder with a broken/vestigial `.git` was resolved as a root):
+
+    - a structurally-real `.git` (per `_looks_like_git_repo`) resolves the root;
+      when git is present it arbitrates valid (accepted) vs `dubious` (refused on
+      ownership grounds), and when absent structure alone is authoritative;
+    - an install-marked `.pkit/` with no valid git resolves it as a pkit install;
+    - a broken/vestigial `.git` is skipped and the walk continues upward;
+    - nothing valid anywhere → `root=None`.
+    """
+    cwd_resolved = cwd.resolve()
+
+    toplevel = _git_toplevel(cwd)
+    if toplevel is not None:
+        return _RootResolution(root=toplevel)
+
+    cur = cwd_resolved
+    while True:
+        if _looks_like_git_repo(cur / ".git"):
+            # Structurally a repo. Git, when present, arbitrates whether it is one
+            # git will vouch for (valid) or one it refuses on ownership grounds
+            # (dubious); with the binary absent, structure is authoritative.
+            if _git_accepts(cur) is False:
+                return _RootResolution(root=cur, dubious=True)
+            return _RootResolution(root=cur)
+        if looks_like_pkit_install(cur / ".pkit"):
+            return _RootResolution(root=cur, is_pkit_install=True)
+        if cur == cur.parent:
+            return _RootResolution(root=None)
+        cur = cur.parent
+
+
+def find_target_root(start: Path | None = None) -> Path | None:
+    """Resolve the project root by `git rev-parse --show-toplevel` first, then by
+    a structurally-validated walk-up. A thin projection over `_resolve_root` — the
+    shared correctness floor (ADR-001).
+
+    Returns the resolved root or `None`: read-only callers (`sync` / `status` /
+    `upgrade` / the authoring commands) want a dumb root-or-none answer and must
+    not carry init's consent policy. A structurally-real repository git merely
+    *refused* (dubious ownership) still resolves — it is a real root git declined
+    to confirm, not a broken one. A broken/vestigial `.git` no longer resolves
+    (the #787 floor fix); an install-marked `.pkit/` still resolves a no-git
+    project (#656 — a bare/foreign `.pkit` is skipped).
+
+    Note: the pre-`click` router (`router._enclosing_project`) still matches a
+    bare `.git` on existence — it is the stdlib-only, no-subprocess hot path
+    (ADR-039) and cannot adopt the `git -C` validation here. Reconciling the three
+    resolvers onto one shared structural validator is deferred to the
+    monorepo-subproject ADR (ADR-001).
+    """
+    cwd = start if start is not None else Path.cwd()
+    return _resolve_root(cwd).root
 
 
 class InitTargetReason(StrEnum):
     """Why `resolve_init_target` picked the target it did — the classification
-    `pkit init` announces before installing (issue #780).
+    `pkit init` announces (and guides on) before installing (issues #780, #787).
 
-    A `StrEnum` so each member doubles as its announce token and callers
-    (and tests) can compare against the plain string. The distinction that
-    matters for the CLI gate is `GIT_ROOT` (the safe happy path — target *is*
-    the current directory) versus everything else (the target is a resolved
-    ancestor, so a bare `pkit init` would install away from where the operator
-    is standing — the #780 footgun).
+    A `StrEnum` so each member doubles as its announce token and callers (and
+    tests) can compare against the plain string. `GIT_ROOT` is the safe happy path
+    (target *is* the current directory); the others each carry a distinct consent
+    outcome (the CLI gate maps them): install at a resolved parent behind a
+    confirm, refuse-and-guide a dubious repository, or refuse-and-redirect an
+    already-adopted ancestor.
     """
 
-    GIT_ROOT = "git-root"  # CWD is itself the git worktree root
-    GIT_SUBFOLDER = "git-subfolder"  # CWD is a subdirectory of a git worktree
-    WALKUP_PKIT = "walkup-pkit"  # no git binary; nearest ancestor is an install-marked .pkit
-    WALKUP_GIT = "walkup-git"  # no git binary; nearest ancestor carries .git
-    NONE = "none"  # no git repo and no install-marked ancestor — target is CWD
+    GIT_ROOT = "git-root"  # cwd is itself the git worktree root — install here
+    GIT_SUBFOLDER = "git-subfolder"  # cwd is inside a valid worktree, below its root
+    DUBIOUS_OWNERSHIP = "dubious-ownership"  # a real repo git refused (safe.directory) — guide
+    PKIT_INSTALL = "pkit-install"  # an ancestor is an install-marked .pkit — redirect to sync
+    NONE = "none"  # no repo and no install-marked ancestor — target is cwd
 
 
 def resolve_init_target(start: Path | None = None) -> tuple[Path, InitTargetReason]:
     """Resolve where `pkit init` would install, plus *why* — the reason drives the
-    announce-and-confirm gate in the `init` command (issue #780).
+    announce/confirm/guide gate in the `init` command (issues #780, #787).
 
-    The reason-returning sibling of `find_target_root`: same resolution order
-    (git `rev-parse --show-toplevel` first, then a `.git`/install-marked-`.pkit`
-    walk-up), but it reports the classification so the CLI can distinguish the
-    safe happy path (CWD *is* the git root) from the footgun cases (the target is
-    a resolved ancestor).
+    The init-consent projection of `_resolve_root`: same validated resolution as
+    `find_target_root`, but classified into the guided outcomes init needs
+    (`find_target_root` stays a dumb root-or-none floor — ADR-001).
+    Never returns `None`: init runs *before* `.pkit/` exists and must be able to
+    offer to install here, so an unresolved walk falls back to CWD (`NONE`).
 
-    The `GIT_ROOT` vs `GIT_SUBFOLDER` split is by symlink-resolved comparison of
-    `cwd.resolve()` against the resolved `git rev-parse --show-toplevel`, so a
-    worktree whose working directory differs from CWD still classifies correctly.
-    When git is unavailable the walk-up mirrors `find_target_root` (a `.git`
-    *file* worktree marker counts, not just a directory) and reports which marker
-    matched. With no marker anywhere the target is CWD itself (`NONE`) rather than
-    None — the caller offers to init here instead of hard-refusing (issue #780).
+    - `GIT_ROOT` / `GIT_SUBFOLDER` — cwd is a valid repo root / a subfolder of one
+      (target is the repo root; `--here` is refused as a split-brain).
+    - `DUBIOUS_OWNERSHIP` — a structurally-real repo git refused (dubious
+      ownership); the CLI guides rather than dropping a shadowed `.pkit/`.
+    - `PKIT_INSTALL` — an already-adopted ancestor; the CLI refuses and redirects
+      to `pkit sync` (init is one-shot / one-root per COR-004).
+    - `NONE` — target is cwd (a fresh non-git folder).
     """
     cwd = start if start is not None else Path.cwd()
     cwd_resolved = cwd.resolve()
+    resolution = _resolve_root(cwd)
 
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "--show-toplevel"],
-            capture_output=True,
-            text=True,
-            cwd=cwd,
-            check=False,
-        )
-        if result.returncode == 0:
-            git_root = Path(result.stdout.strip()).resolve()
-            if git_root == cwd_resolved:
-                return git_root, InitTargetReason.GIT_ROOT
-            return git_root, InitTargetReason.GIT_SUBFOLDER
-    except FileNotFoundError:
-        pass
-
-    cur = cwd_resolved
-    while cur != cur.parent:
-        # `.git` may be a directory (normal repo) or a file (worktree marker);
-        # `.exists()` catches both, matching `find_target_root`.
-        if (cur / ".git").exists():
-            return cur, InitTargetReason.WALKUP_GIT
-        if looks_like_pkit_install(cur / ".pkit"):
-            return cur, InitTargetReason.WALKUP_PKIT
-        cur = cur.parent
-    return cwd_resolved, InitTargetReason.NONE
+    if resolution.root is None:
+        return cwd_resolved, InitTargetReason.NONE
+    if resolution.dubious:
+        return resolution.root, InitTargetReason.DUBIOUS_OWNERSHIP
+    if resolution.is_pkit_install:
+        return resolution.root, InitTargetReason.PKIT_INSTALL
+    if resolution.root == cwd_resolved:
+        return resolution.root, InitTargetReason.GIT_ROOT
+    return resolution.root, InitTargetReason.GIT_SUBFOLDER
 
 
 def scan_pkit_installs(cwd: Path, target: Path) -> list[Path]:
@@ -648,7 +751,12 @@ def _run_adapter_primitive(script: Path, ctx: InstallContext) -> None:
 # matters: settings merge precedes content deploys because some skills
 # may rely on settings being in place. Adding a new primitive: extend
 # this list and document the new script's contract in the adapter README.
-_ADAPTER_PRIMITIVES = ("merge-settings.sh", "merge-claude-md.sh", "deploy-skills.sh", "deploy-agents.sh")
+_ADAPTER_PRIMITIVES = (
+    "merge-settings.sh",
+    "merge-claude-md.sh",
+    "deploy-skills.sh",
+    "deploy-agents.sh",
+)
 
 
 def run_installed_adapter_primitives(ctx: InstallContext) -> None:
@@ -685,7 +793,9 @@ def _print_next_steps(ctx: InstallContext) -> None:
     click.echo("     fallback for machines that don't have project-kit cloned.")
     click.echo()
     click.echo("  2. Fill in adopter-side configs as needed:")
-    click.echo("       .pkit/capabilities/<name>/project/config.yaml        (per installed capability)")
+    click.echo(
+        "       .pkit/capabilities/<name>/project/config.yaml        (per installed capability)"
+    )
     click.echo("       .pkit/adapters/claude-code/settings/project/settings.json")
     click.echo(
         "                                                          (project-specific allows)"
