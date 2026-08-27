@@ -20,7 +20,7 @@ The contract:
 
 - **Input** — the current working directory, and nothing else.
 - **Output** — exactly one project root, or none.
-- **No side channels** — no environment variables, config files, or flags feed the resolution.
+- **No side channels** — no environment variables, config files, or flags feed the resolution. (`init`'s `--root` is not an exception: it *replaces* the resolution with an explicit target rather than feeding a signal into it.)
 - **Deterministic** — the same directory and filesystem state always resolve the same way.
 
 ### How the root is found
