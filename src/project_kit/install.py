@@ -133,7 +133,7 @@ def _git_toplevel(cwd: Path) -> Path | None:
     unusable *from here* — the binary is absent, or git declines (cwd is not in a
     repository git will vouch for: either a clean "not a repository" or a
     dubious-ownership refusal). A decline falls through to the validated walk-up,
-    where broken-vs-dubious is disambiguated per candidate (ADR-001 Amendment 1).
+    where broken-vs-dubious is disambiguated per candidate (ADR-001).
     """
     try:
         result = subprocess.run(
@@ -157,10 +157,10 @@ def _git_accepts(candidate: Path) -> bool | None:
     128), `None` when the git binary is absent.
 
     The valid-vs-refused distinction is drawn on exit status alone, never on
-    parsed stderr prose, which is locale- and version-fragile (ADR-001 Amendment
-    1 A1). Callers reach this only for a candidate that already passed the
-    subprocess-free structural check, so a non-zero exit here means "real repo,
-    git refused", not "not a repo".
+    parsed stderr prose, which is locale- and version-fragile (ADR-001). Callers
+    reach this only for a candidate that already passed the subprocess-free
+    structural check, so a non-zero exit here means "real repo, git refused", not
+    "not a repo".
     """
     try:
         result = subprocess.run(
@@ -176,7 +176,7 @@ def _git_accepts(candidate: Path) -> bool | None:
 
 def _looks_like_git_repo(git_entry: Path) -> bool:
     """Subprocess-free structural check that a `.git` entry is a *real* repository
-    marker, not a broken/vestigial one (ADR-001 Amendment 1 A1; issue #787).
+    marker, not a broken/vestigial one (ADR-001; issue #787).
 
     A sibling in spirit to `looks_like_pkit_install`: both let the root walks
     reject a plausible-looking-but-hollow marker without spawning a process, so
@@ -208,7 +208,7 @@ def _looks_like_git_repo(git_entry: Path) -> bool:
 @dataclass(frozen=True)
 class _RootResolution:
     """Neutral resolution facts shared by `find_target_root` and
-    `resolve_init_target` (ADR-001 Amendment 1 A2/A5).
+    `resolve_init_target` (ADR-001).
 
     Deliberately carries no init-consent classification: the shared floor must
     not leak init's one-shot policy into the many read-only callers. Each
@@ -222,8 +222,8 @@ class _RootResolution:
 
 def _resolve_root(cwd: Path) -> _RootResolution:
     """Git-first, then a structurally-validated walk-up — the shared correctness
-    floor behind both `find_target_root` and `resolve_init_target` (ADR-001
-    Amendment 1 A5; the COR-007 extraction of three near-identical walks).
+    floor behind both `find_target_root` and `resolve_init_target` (ADR-001; the
+    COR-007 extraction of three near-identical walks).
 
     Stage 1 — `git rev-parse --show-toplevel` from cwd is authoritative when it
     succeeds. Stage 2 (git absent or declined) — walk up *validating* each
@@ -262,7 +262,7 @@ def _resolve_root(cwd: Path) -> _RootResolution:
 def find_target_root(start: Path | None = None) -> Path | None:
     """Resolve the project root by `git rev-parse --show-toplevel` first, then by
     a structurally-validated walk-up. A thin projection over `_resolve_root` — the
-    shared correctness floor (ADR-001 Amendment 1 A5).
+    shared correctness floor (ADR-001).
 
     Returns the resolved root or `None`: read-only callers (`sync` / `status` /
     `upgrade` / the authoring commands) want a dumb root-or-none answer and must
@@ -276,7 +276,7 @@ def find_target_root(start: Path | None = None) -> Path | None:
     bare `.git` on existence — it is the stdlib-only, no-subprocess hot path
     (ADR-039) and cannot adopt the `git -C` validation here. Reconciling the three
     resolvers onto one shared structural validator is deferred to the
-    monorepo-subproject ADR (ADR-001 Amendment 1 A3).
+    monorepo-subproject ADR (ADR-001).
     """
     cwd = start if start is not None else Path.cwd()
     return _resolve_root(cwd).root
@@ -307,7 +307,7 @@ def resolve_init_target(start: Path | None = None) -> tuple[Path, InitTargetReas
 
     The init-consent projection of `_resolve_root`: same validated resolution as
     `find_target_root`, but classified into the guided outcomes init needs
-    (`find_target_root` stays a dumb root-or-none floor — ADR-001 Amendment 1 A2).
+    (`find_target_root` stays a dumb root-or-none floor — ADR-001).
     Never returns `None`: init runs *before* `.pkit/` exists and must be able to
     offer to install here, so an unresolved walk falls back to CWD (`NONE`).
 
@@ -751,7 +751,12 @@ def _run_adapter_primitive(script: Path, ctx: InstallContext) -> None:
 # matters: settings merge precedes content deploys because some skills
 # may rely on settings being in place. Adding a new primitive: extend
 # this list and document the new script's contract in the adapter README.
-_ADAPTER_PRIMITIVES = ("merge-settings.sh", "merge-claude-md.sh", "deploy-skills.sh", "deploy-agents.sh")
+_ADAPTER_PRIMITIVES = (
+    "merge-settings.sh",
+    "merge-claude-md.sh",
+    "deploy-skills.sh",
+    "deploy-agents.sh",
+)
 
 
 def run_installed_adapter_primitives(ctx: InstallContext) -> None:
@@ -788,7 +793,9 @@ def _print_next_steps(ctx: InstallContext) -> None:
     click.echo("     fallback for machines that don't have project-kit cloned.")
     click.echo()
     click.echo("  2. Fill in adopter-side configs as needed:")
-    click.echo("       .pkit/capabilities/<name>/project/config.yaml        (per installed capability)")
+    click.echo(
+        "       .pkit/capabilities/<name>/project/config.yaml        (per installed capability)"
+    )
     click.echo("       .pkit/adapters/claude-code/settings/project/settings.json")
     click.echo(
         "                                                          (project-specific allows)"
