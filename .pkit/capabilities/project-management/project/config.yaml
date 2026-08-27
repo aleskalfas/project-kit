@@ -73,13 +73,18 @@ milestone_categories:
     close_trigger_default: content-based
     description: "Outcome bundle of related EPICs; closes when every child EPIC closes. No date."
 
-# Review-mode configuration per [project-management:DEC-027-review-modes]
-# and [project-management:DEC-028-agent-as-approver-paths].
+# Review-mode configuration per [project-management:DEC-027-review-modes],
+# [project-management:DEC-028-agent-as-approver-paths], and
+# [project-management:DEC-032-conditional-reviewer-requirements] — DEC-032 D3
+# is what makes the two-reviewer baseline below legal (it lifted DEC-028's
+# singleton cap) and it replaces DEC-028's gate-checker steps 6-7: the
+# resolved required set is AND-composed, so BOTH reviewers must approve.
 #
-# project-kit dogfoods its own capability: agent-mode (the default) with
-# the capability's default `pm-reviewer` agent registered. The remote path
-# is unconfigured today — project-kit has no bot identity. Adopters who
-# want the autonomous-loop closure point ship a bot via the remote path.
+# project-kit dogfoods its own capability: agent-mode (the default) with two
+# baseline local reviewers — the capability's default `pm-reviewer` and core's
+# `methodology-reviewer`. The remote path is unconfigured today — project-kit
+# has no bot identity. Adopters who want the autonomous-loop closure point
+# ship a bot via the remote path.
 review:
   mode: agent
   agents:

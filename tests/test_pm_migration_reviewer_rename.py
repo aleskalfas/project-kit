@@ -282,8 +282,12 @@ def test_project_registers_pm_reviewer(agents_mod) -> None:
     names = _registered_names(CAPABILITY)
     assert "pm-reviewer" in names
     assert "reviewer" not in names
-    # Baseline-first ordering: the capability's own default heads the list.
-    assert doc["review"]["agents"]["local_registered"][0]["name"] == "pm-reviewer"
+    # No ordering assertion: the resolved set is de-duplicated and AND-composed,
+    # so position within `local_registered` is not observable at the gate. (The
+    # "baseline-first" term in `_lib/required_reviewers.py` means baseline names
+    # precede CONTRIBUTED ones in the resolved set -- it says nothing about the
+    # order of entries within the baseline list itself.)
+    assert isinstance(doc["review"]["agents"]["local_registered"], list)
 
 
 def test_resolver_finds_pm_reviewer_after_deploy(agents_mod, tmp_path) -> None:
