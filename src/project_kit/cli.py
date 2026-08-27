@@ -684,12 +684,12 @@ def _announce_init_target(
 @click.option(
     "--root",
     "root",
-    type=click.Path(file_okay=False, path_type=Path),
+    type=click.Path(exists=True, dir_okay=True, file_okay=False, path_type=Path),
     default=None,
     help=(
         "Install at this explicit path, non-interactively. The sanctioned way to "
         "install at a resolved parent (e.g. a git repository root) in CI, where a "
-        "bare --yes is refused as a footgun (#787)."
+        "bare --yes is refused as a footgun. Mutually exclusive with --here."
     ),
 )
 def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
@@ -720,6 +720,25 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
             raise click.ClickException(
                 f"{target} is already a project-kit project.\n"
                 f"       Run `pkit sync` to refresh it."
+            )
+        # A --root naming a strict subfolder of a valid git worktree would create
+        # the exact unreachable .pkit/ the guided flow refuses — every steady-state
+        # command resolves to the git root, not the subfolder. We do NOT refuse it:
+        # the explicit --root is the operator's consent, and a hard refusal would
+        # foreclose the deferred monorepo-support path (ADR-001's known limitation).
+        # Warn loudly and proceed. Reuses the validated resolver (a GIT_SUBFOLDER
+        # reason means "below a valid worktree root") rather than a hand-rolled walk.
+        worktree_root, root_reason = resolve_init_target(target)
+        if root_reason == InitTargetReason.GIT_SUBFOLDER:
+            click.echo(
+                f"⚠ WARNING: {target} is a subfolder of the git worktree rooted at "
+                f"{worktree_root}.\n"
+                f"       Installing here creates a nested .pkit/ that steady-state pkit "
+                f"commands cannot\n"
+                f"       resolve — they resolve to the git root, not this subfolder — "
+                f"until the deferred\n"
+                f"       monorepo-support decision lands. Proceeding because --root is "
+                f"explicit."
             )
         click.echo(f"pkit init -> {target}  (explicit target, --root)")
         install_kit(target, dry_run=dry_run)

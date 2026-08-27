@@ -538,6 +538,39 @@ def test_init_root_at_already_installed_redirects_to_sync(
     assert spy_install == []
 
 
+def test_init_root_nonexistent_path_refused_no_tree_created(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spy_install
+) -> None:
+    """A --root at a path that does not exist is refused at the CLI boundary
+    (click's `exists=True`), so a typo never materialises a whole .pkit/ tree at
+    it — the install is never reached (#791)."""
+    monkeypatch.chdir(tmp_path)
+    missing = tmp_path / "does-not-exist"
+    result = CliRunner().invoke(main, ["init", "--root", str(missing)])
+    assert result.exit_code != 0
+    assert not missing.exists()  # the typo'd path was never created
+    assert spy_install == []
+
+
+def test_init_root_subfolder_of_worktree_warns_and_installs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spy_install
+) -> None:
+    """A --root naming a strict subfolder of a valid git worktree warns loudly
+    (the nested .pkit/ would be unreachable — steady-state commands resolve to the
+    git root) but still installs: the explicit --root is the operator's consent,
+    not a refusal, so the deferred monorepo-support path stays open (#791)."""
+    _git_init(tmp_path)
+    sub = tmp_path / "pkg"
+    sub.mkdir()
+    monkeypatch.chdir(tmp_path)
+    result = CliRunner().invoke(main, ["init", "--root", str(sub)])
+    assert result.exit_code == 0, result.output
+    assert "WARNING" in result.output
+    assert "subfolder" in result.output
+    assert str(tmp_path.resolve()) in result.output  # names the worktree root
+    assert spy_install == [(sub.resolve(), False)]  # still installs, at the subfolder
+
+
 def test_init_dry_run_skips_confirm_even_when_non_tty(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spy_install, set_tty
 ) -> None:

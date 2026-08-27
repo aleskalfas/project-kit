@@ -2,7 +2,7 @@ component: backbone
 kind: minor
 custom:
   category: Changed
-  pr: "787"
+  pr: "791"
 body: >
   `pkit init` now validates the target it resolves instead of trusting a bare
   `.git` on sight (#787). A workspace folder carrying a broken or vestigial
@@ -17,6 +17,10 @@ body: >
   an explicit target non-interactively — the sanctioned way to install at a
   resolved parent (e.g. a git repository root) in CI; a bare `--yes` no longer
   installs anywhere other than your current directory, so an unattended run can
-  never install somewhere you are not standing. The shared root resolver
+  never install somewhere you are not standing. `--root` must point at an
+  existing directory — a typo fails cleanly at the CLI boundary instead of
+  materialising a tree — and warns loudly when it names a subfolder of a git
+  worktree, where the nested `.pkit/` would be unreachable until monorepo
+  support lands. The shared root resolver
   (`find_target_root`) likewise rejects a broken `.git`, and still resolves a
   `.pkit/`-marked project with no git at all.
