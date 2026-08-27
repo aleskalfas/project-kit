@@ -264,11 +264,23 @@ def test_shipped_agent_is_pm_reviewer(agents_mod) -> None:
 
 
 def test_project_registers_pm_reviewer(agents_mod) -> None:
-    """project-kit dogfoods the rename — its own config registers pm-reviewer."""
+    """project-kit dogfoods the rename — its own config registers pm-reviewer
+    under the new name, and never the old one.
+
+    Asserts membership, not cardinality: this test's subject is the RENAME, and
+    DEC-032 D3 lifted the singleton cap on `local_registered` (the config schema
+    states "N >= 2 is valid"). An equality assertion against a one-element list
+    would forbid the second baseline reviewer that decision permits — the
+    rename's guarantee is that `pm-reviewer` is registered and `reviewer` is
+    gone, whatever else the adopter registers alongside it (#788).
+    """
     doc = YAML(typ="safe").load(
         (CAPABILITY / "project" / "config.yaml").read_text(encoding="utf-8")
     )
-    assert _registered_names(CAPABILITY) == ["pm-reviewer"]
+    names = _registered_names(CAPABILITY)
+    assert "pm-reviewer" in names
+    assert "reviewer" not in names
+    # Baseline-first ordering: the capability's own default heads the list.
     assert doc["review"]["agents"]["local_registered"][0]["name"] == "pm-reviewer"
 
 
