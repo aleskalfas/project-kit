@@ -85,6 +85,15 @@ review:
   agents:
     local_registered:
       - name: pm-reviewer
+      # Core-shipped disciplines auditor (#788). Registered UNCONDITIONALLY: it
+      # fires on every PR, not only methodology-touching ones. Accepted because
+      # most of this repo's PRs touch `.pkit/`, so the over-fire is small.
+      # Diff-conditional firing (`when: { floor: touches-methodology }`) is
+      # deferred to #789 — deliberately not built before over-firing is observed.
+      # Registered because #781, a records-only PR, was gated by three reviewers
+      # who each disclaimed jurisdiction over its substance and approved anyway;
+      # this agent, invoked by hand outside the gate, found six blockers.
+      - name: methodology-reviewer
 
 # Audit/journal comment projection (per DEC-049). The engine journal is the
 # canonical audit trail regardless; this controls how much is projected as
