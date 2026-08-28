@@ -144,14 +144,28 @@ syntax highlight · markdown · traceback · badge/label · banner · help/usage
 ### The three renderers + selection
 - **json** — the structured agent contract (byte-stable, versioned). · **human** — the styled TTY view. · **plain** — no-ANSI, pipe-safe baseline.
 - **Selection (resolved once at the boundary):** explicit flag (`--json` / `--plain` / `--output …`) wins; else auto from `isatty(stdout)` + `NO_COLOR`/`TERM=dumb`.
-- **↳ OPEN DECISION — the non-TTY default** (see discussion): plain-with-`--json`-opt-in (backward-compatible) vs json-by-default (research's agent-first pick, but breaking).
+- **Non-TTY default (decided): `plain`, with `json` opt-in via `--json`** — backward-compatible; keeps ADR-011's plain baseline as the default; agents pass `--json` (byte-stable, ADR-024). (json-by-default when a caller *signals* it's an agent is a possible future, on recurrence.)
+
+### Flag surface (per the earlier architect guidance)
+- `--json` → the json renderer (agent contract) · `--plain` → the plain renderer (clig.dev standard) · `--color auto|always|never` → colour within the human renderer (already exists).
+- Don't overload `--color` with mode; **defer a tri-state `--output human|json|plain` enum** until the human view diverges structurally (it doesn't while the panels ban holds — architect's coupling: the mode enum and the panels ban stand or fall together).
+- `--json`/`--plain` mutually exclusive; `--quiet`/`-q` suppresses non-essential events (info/success), never errors.
 
 ### pkit's binding (the Python realization)
 - `cli_render.py` becomes pkit's **binding** of the spec: the event types + the human/plain renderers + the json serializer. ADR-006's parts ≈ the events; `view()` ≈ the human renderer; `--json` ≈ the json renderer.
 - The excluded genres (install, next-steps, status) get expressed as **events** so they flow through the renderers — the architect's Tier-1, and the concrete first pain-fix.
 
 ### Requirement → architecture map
-_(todo — map each §3 requirement to the piece that satisfies it.)_
+- **Human group** (scannable structure, intentional emphasis, wrapping, symbols, guidance, progress) → the **human renderer** (zones + colour roles + symbols + `wrap()`; `suggestions` / `progress` event types).
+- **Machine group** (plain & stable, structured surface, same-info) → the **plain + json renderers** over the *same events*; same-info holds by construction; json byte-stable (ADR-024).
+- **Cross-cutting** — one house style → the shared spec + renderers; no cost leak → human-only deps lazy-loaded on the human path; context-adaptive → the selection logic; quiet → `--quiet` filters events; streaming → incremental events (JSONL in json, append in human).
+- **Agent-contract** — spans two layers:
+  - _rendering:_ structured errors (`error` event → json on stderr), token efficiency (`--fields` / `--compact` on the json renderer), versioned schema (`schema_version` on json).
+  - _command-layer (a **second** architecture layer):_ semantic exit codes, `--help --json` + hard-fail-unknown-flags, aggregate commands, the mutation protocol (`confirm-required` + envelope + `--confirm` — connects to `init`'s `--yes`/`--root`).
+- **Takeaway:** the `cli` capability spans **two layers** — the **output vocabulary/renderers** *and* the **command-contract** (exit codes, help, unknown-flag, mutation). Both are part of the discipline.
 
-### Sequencing
-_(todo — Tier-1 readability first, then broaden, then agent-contract, then extract the capability.)_
+### Sequencing (build-and-prove → extract)
+1. **Stage 1 — the pain fix (now):** express install / next-steps (+ `status`) as events; build the human + plain renderers over them (extend `cli_render`). No json-default change, no new deps. Readability win; proves the vocabulary. _(= architect's Tier-1.)_
+2. **Stage 2 — broaden:** migrate more commands to events; solidify the core-10 vocabulary + author the **spec as a schema**. The "conventions stopped churning" checkpoint.
+3. **Stage 3 — agent-contract:** structured errors, semantic exit codes, `--help --json` + hard-fail-unknown-flags, token controls, mutation protocol, versioned schema.
+4. **Stage 4 — extract the capability:** lift spec + reviewer + conformance into `capabilities/cli/`; pkit ADRs → parameters; land the COR-017 per-language-binding extension. On the stability / second-consumer trigger.
