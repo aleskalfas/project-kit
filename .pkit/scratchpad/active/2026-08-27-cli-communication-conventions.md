@@ -27,35 +27,35 @@ Approach: settle the **problem + requirements** first (below), *then* derive the
 ## 3. Requirements (draft — reshape freely)
 
 ### Human-facing
-- **H1** — scannable structure: clear sections / zones + visual hierarchy.
-- **H2** — semantic emphasis / colour, used with intention (not everything coloured).
-- **H3** — correct wrapping to terminal width.
-- **H4** — symbols where they clarify (`✓ ⚠ →`).
-- **H5** — guidance: surface the important line; suggest what to do next.
+- **Scannable structure** — clear sections / zones + visual hierarchy.
+- **Intentional emphasis** — semantic colour / emphasis, used sparingly (not everything coloured).
+- **Correct wrapping** — wrap to the terminal width.
+- **Clarifying symbols** — `✓ ⚠ →` where they help, not as clutter.
+- **Guidance** — surface the line that matters; suggest what to do next.
 
 ### Machine / agent-facing
-- **M1** — non-TTY / pipe / CI output is plain, stable, greppable (no colour codes, animations, or width-reflow that breaks parsing).
-- **M2** — a structured surface (JSON) for programmatic use, stable across environments.
-- **M3** — **same information in every rendering** — nothing visible only in the pretty view.
+- **Plain & stable** — non-TTY / pipe / CI output is plain, stable, greppable (no colour codes, animations, or width-reflow that breaks parsing).
+- **Structured surface** — a JSON surface for programmatic use, stable across environments.
+- **Same information everywhere** — nothing visible only in the pretty view.
 
 ### Cross-cutting
-- **X1** — one consistent house style across all commands (not per-command ad-hoc).
-- **X2** — the human / pretty path must not impose cost (startup latency, heavy deps) on the machine path.
-- **X3** — adapt to context automatically (interactive vs not) + an explicit override.
+- **One house style** — consistent across all commands, not per-command ad-hoc.
+- **No cost leak** — the human / pretty path imposes no startup or dependency cost on the machine path.
+- **Context-adaptive + override** — auto-detect interactive vs not, plus an explicit override.
 
 ### Agent-contract (from the 2024–26 agent-CLI prior art, §6)
-- **A1** — structured **errors**: JSON on stderr `{code, message, remediation}`; strict stdout (data) / stderr (messages) separation.
-- **A2** — **semantic exit codes** (not just 0/1): distinguish auth / validation / confirm-required / transient-vs-deterministic.
-- **A3** — `--help` is a stable **contract**: offer `--help --json` (structured flag inventory); **hard-fail on unknown commands/flags** (no silent guessing).
-- **A4** — **token efficiency** for agents: `--fields` / `--compact` / `--raw`; prefer aggregate commands over many round-trips.
-- **A5** — **mutation confirmation as a protocol** (non-interactive): exit-code + a JSON envelope of the proposed change + an exact re-run `--confirm` command — not a TTY prompt. (Connects to the `init` `--yes`/`--root`/confirm work.)
-- **A6** — the machine schema is **versioned + extensible** (the `--porcelain=v2` lesson; agents tolerate added fields); **graceful empty states** (`(no matches)`, not an error code).
+- **Structured errors** — JSON on stderr `{code, message, remediation}`; strict stdout (data) / stderr (messages) separation.
+- **Semantic exit codes** — not just 0/1: distinguish auth / validation / confirm-required / transient-vs-deterministic.
+- **Help as contract** — `--help --json` (structured flag inventory); hard-fail on unknown commands/flags (no silent guessing).
+- **Token efficiency** — `--fields` / `--compact` / `--raw`; prefer aggregate commands over many round-trips.
+- **Mutation protocol** — non-interactive confirmation: exit-code + a JSON envelope of the proposed change + an exact re-run `--confirm` command, not a TTY prompt. (Connects to the `init` `--yes`/`--root`/confirm work.)
+- **Versioned schema** — the machine schema is versioned + extensible (the `--porcelain=v2` lesson; agents tolerate added fields); graceful empty states (`(no matches)`, not an error code).
 
 ## 4. Constraints (must respect)
 
-- **K1** — evolve the accepted CLI architecture, don't ignore it: ADR-006 (data ↔ presentation split), ADR-011 (TTY styling + the "structure reads with zero styling" invariant), ADR-024 (wrapping + byte-stable JSON).
-- **K2** — don't needlessly couple output to a heavy third-party lib's release cadence.
-- **K3** — land incrementally; avoid a long half-migrated / inconsistent window.
+- **Evolve, don't ignore** — build on the accepted CLI architecture: ADR-006 (data ↔ presentation split), ADR-011 (TTY styling + the "structure reads with zero styling" invariant), ADR-024 (wrapping + byte-stable JSON).
+- **No heavy-dep coupling** — don't tie output to a third-party lib's release cadence needlessly.
+- **Land incrementally** — avoid a long half-migrated / inconsistent window.
 
 ## 5. Out of scope (confirm)
 
