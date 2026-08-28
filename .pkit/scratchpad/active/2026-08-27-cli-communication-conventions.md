@@ -32,6 +32,7 @@ Approach: settle the **problem + requirements** first (below), *then* derive the
 - **Correct wrapping** — wrap to the terminal width.
 - **Clarifying symbols** — `✓ ⚠ →` where they help, not as clutter.
 - **Guidance** — surface the line that matters; suggest what to do next.
+- **Progress & responsiveness** — show progress for long-running ops; print something quickly so it never looks hung.
 
 ### Machine / agent-facing
 - **Plain & stable** — non-TTY / pipe / CI output is plain, stable, greppable (no colour codes, animations, or width-reflow that breaks parsing).
@@ -42,6 +43,8 @@ Approach: settle the **problem + requirements** first (below), *then* derive the
 - **One house style** — consistent across all commands, not per-command ad-hoc.
 - **No cost leak** — the human / pretty path imposes no startup or dependency cost on the machine path.
 - **Context-adaptive + override** — auto-detect interactive vs not, plus an explicit override.
+- **Quiet mode** — `--quiet` / `-q` suppresses non-essential output.
+- **Streaming (long-running)** — stream output/events as work happens; a machine-parseable event stream for agents (cf. `terraform -json`).
 
 ### Agent-contract (from the 2024–26 agent-CLI prior art, §6)
 - **Structured errors** — JSON on stderr `{code, message, remediation}`; strict stdout (data) / stderr (messages) separation.
@@ -60,6 +63,7 @@ Approach: settle the **problem + requirements** first (below), *then* derive the
 ## 5. Out of scope (confirm)
 
 - Full-screen TUI / interactive full-screen programs.
+- Localisation / i18n — likely defer for a dev-tool CLI (audience is developers + agents); confirm.
 - _(others?)_
 
 ## 6. Prior art (research — how others solve one-CLI-two-audiences)
