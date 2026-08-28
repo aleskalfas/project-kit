@@ -9,7 +9,7 @@ started: 2026-08-27
 > The `architect` agent's full exploration of the unified comment render seam,
 > delivered via **file hand-off** because a spawned agent's text doesn't return to
 > the caller in this harness (bug #771). Companion to
-> `2026-08-27-render-seam-and-merge-gate-decisions.md` — that note is the
+> `2026-08-27-comment-render-seam-decisions.md` (Feature #757) — that note is the
 > *decisions*, this is the *reasoning*. Retire when the ADR is authored.
 >
 > Note: reflects the architect's *original* recommendation (a hidden machine
