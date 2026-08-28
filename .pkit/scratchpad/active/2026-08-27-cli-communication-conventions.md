@@ -16,6 +16,8 @@ Approach: settle the **problem + requirements** first (below), *then* derive the
 - **AI agent** invoking pkit (the agent-mediated usage model — a dominant consumer for pkit).
 - **Script / pipe / CI** — non-interactive, parses the output.
 
+**Weighting (decided):** model **(b)** — the structured/plain rendering is the **source of truth** (canonical, stable, versioned); the human view is a **renderer derived on top**; the **default renderer is picked by TTY** (pretty on a terminal, structured when piped). Agents/pipes are the dominant consumer; the human is secondary but genuinely served. Source-of-truth ≠ default format. (Grounded in §6 prior art; aligns with pkit's existing ADR-006 shape.)
+
 ## 2. Problem
 
 - For **humans**, today's output (especially procedural commands — the `init` install dump, the post-init next-steps, `status`) is a dense, flat, largely-unstyled wall: no visual hierarchy, hard to scan, hard to find the one line that matters.
@@ -40,6 +42,14 @@ Approach: settle the **problem + requirements** first (below), *then* derive the
 - **X1** — one consistent house style across all commands (not per-command ad-hoc).
 - **X2** — the human / pretty path must not impose cost (startup latency, heavy deps) on the machine path.
 - **X3** — adapt to context automatically (interactive vs not) + an explicit override.
+
+### Agent-contract (from the 2024–26 agent-CLI prior art, §6)
+- **A1** — structured **errors**: JSON on stderr `{code, message, remediation}`; strict stdout (data) / stderr (messages) separation.
+- **A2** — **semantic exit codes** (not just 0/1): distinguish auth / validation / confirm-required / transient-vs-deterministic.
+- **A3** — `--help` is a stable **contract**: offer `--help --json` (structured flag inventory); **hard-fail on unknown commands/flags** (no silent guessing).
+- **A4** — **token efficiency** for agents: `--fields` / `--compact` / `--raw`; prefer aggregate commands over many round-trips.
+- **A5** — **mutation confirmation as a protocol** (non-interactive): exit-code + a JSON envelope of the proposed change + an exact re-run `--confirm` command — not a TTY prompt. (Connects to the `init` `--yes`/`--root`/confirm work.)
+- **A6** — the machine schema is **versioned + extensible** (the `--porcelain=v2` lesson; agents tolerate added fields); **graceful empty states** (`(no matches)`, not an error code).
 
 ## 4. Constraints (must respect)
 
