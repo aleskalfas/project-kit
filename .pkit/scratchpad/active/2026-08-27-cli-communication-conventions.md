@@ -126,3 +126,32 @@ syntax highlight · markdown · traceback · badge/label · banner · help/usage
 - **Methodology gap (surfaced):** COR-017 assumes capabilities ship _Python scripts run by the pkit CLI_; a capability whose deliverable is a _per-language adopter-imported library_ is a **new sub-shape** needing its own decision (a COR-017 extension) — landed at extraction, when it has a real consumer.
 - **Timing — build-and-prove first, extract second (COR-007 + ADR-006's evolvability reasoning).** Extracting an unproven, unshipped discipline into a multi-language contract for one Python consumer is anticipation. So: (1) spec now + pkit binding; (2) Tier-1 proves the vocabulary on real commands; (3) extract `capabilities/cli/` on the stability trigger (conventions stop churning, or a 2nd consumer / language appears) + land the COR-017 extension then.
 - **Reviewers:** run `critic` + `architect` on the concrete extraction plan (esp. the COR-017 extension) before committing.
+
+## 9. Architecture (draft — building systematically)
+
+### The shape: a 3-stage pipeline (the convergent pattern)
+1. **Produce** — a command builds semantic **events** (tagged data from the vocabulary); it never formats strings.
+2. **Select** — one renderer is chosen *at the command boundary* from context (TTY + `NO_COLOR`/`TERM` + flags).
+3. **Render** — the selected renderer turns events → bytes (data → stdout; messages/progress/errors → stderr).
+
+### The spec (language-agnostic canon)
+- **Event model** — every output is `{type, …payload}`; `type` from the vocabulary (discriminated union); payload is **pure data** (no ANSI/layout); severity + render-hints are advisory attributes.
+- **Vocabulary** — the closed core-10 `type`s (§7), each with a payload schema + a required rendering per mode. New `type`s ride the extension protocol.
+- **Renderer contract** — a renderer maps `event → bytes`. Three obligations: **json** (canonical, byte-stable), **human** (styled TTY projection), **plain** (structure-only, ADR-011 zero-styling baseline).
+- **Stream discipline** — data → stdout; messages/progress/logs/errors → stderr.
+- **Extension protocol** — a new `type` implements the one-method renderable (human + plain; json auto from payload) + registers a name; **unknown `type` → structured-payload fallback**, never an error.
+
+### The three renderers + selection
+- **json** — the structured agent contract (byte-stable, versioned). · **human** — the styled TTY view. · **plain** — no-ANSI, pipe-safe baseline.
+- **Selection (resolved once at the boundary):** explicit flag (`--json` / `--plain` / `--output …`) wins; else auto from `isatty(stdout)` + `NO_COLOR`/`TERM=dumb`.
+- **↳ OPEN DECISION — the non-TTY default** (see discussion): plain-with-`--json`-opt-in (backward-compatible) vs json-by-default (research's agent-first pick, but breaking).
+
+### pkit's binding (the Python realization)
+- `cli_render.py` becomes pkit's **binding** of the spec: the event types + the human/plain renderers + the json serializer. ADR-006's parts ≈ the events; `view()` ≈ the human renderer; `--json` ≈ the json renderer.
+- The excluded genres (install, next-steps, status) get expressed as **events** so they flow through the renderers — the architect's Tier-1, and the concrete first pain-fix.
+
+### Requirement → architecture map
+_(todo — map each §3 requirement to the piece that satisfies it.)_
+
+### Sequencing
+_(todo — Tier-1 readability first, then broaden, then agent-contract, then extract the capability.)_
