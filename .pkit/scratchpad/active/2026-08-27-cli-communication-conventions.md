@@ -85,3 +85,34 @@ Approach: settle the **problem + requirements** first (below), *then* derive the
 **Verdict for an agent-dominant tool (answers the §1 weighting):** the structured/plain rendering is the **source of truth** (canonical, stable, versioned); the human view is a **derived renderer on top**; the **default is picked by TTY** (pretty on a terminal, JSON when piped). NOT pretty-first-then-derive-plain — that's the legacy retrofit shape git/kubectl/aws had to migrate *away* from. Source-of-truth ≠ default format.
 
 **Happy alignment:** pkit's accepted architecture is already this shape — ADR-006's semantic-data *parts* are the data model, `view()` is the human renderer, `--json` dumps the parts. We evolve in the validated direction, not rework it.
+
+## 7. Output vocabulary (research — the components/use-cases to cover + extensibility)
+
+**Convergent pattern across every library** (Rich `__rich_console__`, listr2 pluggable renderers, Bubble Tea `Model`+`View()`, ink, clig.dev `--json`/`--plain`): a **semantic data model** separated from a **swappable renderer** — none bakes ANSI/layout into the data. This *is* the architecture, and it is already pkit's ADR-006 shape.
+
+### Common-core message types (~10 — the 80/20; ship as a closed, documented core)
+- **Message + severity** — a styled status line; severity is an *attribute* (debug · info · success · warn · error), not its own type.
+- **Key-value detail** — one record's fields. *(Gap: no library makes this first-class — everyone fakes it with a 2-col table; worth making first-class for agents.)*
+- **List / Table** — N items, columns optional.
+- **Tree / hierarchy** — nested data.
+- **Progress** — determinate (bar + ETA) or indeterminate (spinner); one type with a flag.
+- **Success / state-change** — a change happened.
+- **Error + remediation** — failure with a fix hint + code. *(Also under-served by libraries; pkit's `init` refusals already do this well.)*
+- **Next-steps / suggestions** — recommend the next command(s).
+- **Prompt** — confirm · select · input · secret; non-interactive answer via flags/stdin.
+- **Empty state** — a query legitimately returned nothing (not an error).
+- **Summary / recap** — end-of-run rollup.
+- _Near-core (fold in as needed):_ diff / change-preview · streaming log (JSONL) · multi-task progress · structured dump · pagination notice.
+
+### Long tail (adopters add as needed)
+syntax highlight · markdown · traceback · badge/label · banner · help/usage · sparkline · file/date picker · toast · live dashboard · hyperlink (OSC-8) · rate meter.
+
+### Presentation components + pipe-safety (render side)
+- **Pipe-safe (degrade gracefully):** styled status line (→ plain prefix), table (→ TSV), list, tree (→ ASCII indent), key-value block, panel (→ border stripped), structured dump.
+- **TTY-only (down-convert or suppress off-TTY):** progress bar, spinner, live/auto-refresh, multi-task view, prompts (inert non-interactively). Progress down-converts to periodic `{type:progress,current,total}` events for agents — never an animation.
+
+### Extensibility (the "future" surface)
+- **Closed small core + open protocol.** The core set is the stable, documented types agents rely on; new use-cases implement a **one-method renderable protocol** (Rich's `__rich_console__` shape) + register a name — no fork.
+- **Swappable renderers keyed on context** — agent/JSON (default), human-TTY, plain — auto-selected by TTY + `NO_COLOR`, flag-overridable.
+- **Unknown-type fallback** — an unknown `type` dumps its payload as a structured object rather than erroring; a new type never breaks a consumer. Discriminated-union tagging (`type`) enables both machine dispatch *and* graceful degradation.
+- Every event carries a `type` tag + a **pure-data payload** (no ANSI/layout); the renderer consumes severity/colour/hints — the data never holds them.
