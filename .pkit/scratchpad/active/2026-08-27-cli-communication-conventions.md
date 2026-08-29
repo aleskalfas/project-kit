@@ -169,3 +169,20 @@ syntax highlight · markdown · traceback · badge/label · banner · help/usage
 2. **Stage 2 — broaden:** migrate more commands to events; solidify the core-10 vocabulary + author the **spec as a schema**. The "conventions stopped churning" checkpoint.
 3. **Stage 3 — agent-contract:** structured errors, semantic exit codes, `--help --json` + hard-fail-unknown-flags, token controls, mutation protocol, versioned schema.
 4. **Stage 4 — extract the capability:** lift spec + reviewer + conformance into `capabilities/cli/`; pkit ADRs → parameters; land the COR-017 per-language-binding extension. On the stability / second-consumer trigger.
+
+## 10. Decision: build the full discipline (maintainer) — critic corrections folded
+
+Maintainer call (overriding critic's de-scope; critic is opposition, not veto): **build the full CLI-output discipline** — event model, vocabulary, renderers, toward the language-agnostic spec + `cli` capability — not just the minimal leaf-fix. The anticipation cost (one Python consumer, no second-language consumer yet) is accepted with eyes open; architect to structure it so **pkit's own binding is the proof and the per-language seam is *extensible, not pre-built*.**
+
+**Critic's durable corrections — folded as build constraints (they hold regardless of scope):**
+- **Retract the literal "structured when piped."** For pkit the dominant non-TTY consumer is the plain-text script/CI path; there is no general JSON surface to default to. Non-TTY default = **plain**; `--json` opt-in (decision A stands). (b) survives as *"the **event model** is the source of truth"*; the *default rendering* is plain, not JSON. Fix §1/§6 wording.
+- **Two renderers, not three.** "Plain" is the *same* styled path with colour/width off (one gate, `strip_ansi(styled)==plain`), not a separate renderer. Renderers = the **styled path** (human↔plain via the colour/width gate) + a **`--json` serializer**. No second human/plain code path (drift).
+- **The vocabulary is *evolving*, not "closed."** pkit's own genera break a closed core on contact (install = log/summary, `permissions diff` = change-preview → near-core; `status` pinned). Treat the core as a growing set (ADR-006's model-shaped-churn reality).
+- **`status` is byte-parity-pinned** — exclude it, or migrate only behind its parity test. Not in the first slice.
+- **ADR-006 deliberately excluded install/status/next-steps** as different genera — building the event model over them **amends ADR-006** (its exclusion + A′-vs-B/promotion-trigger reasoning). A conscious ADR change + maintainer sign-off, not a silent widening.
+- **The command-contract (`--help --json`, semantic exit codes, mutation protocol) is a *second layer*** — kept in the discipline but sequenced separately, its own record(s).
+- **Output-byte shifts need PRJ-002 changesets.**
+- **§8 "spec-first now" reconciled:** author the spec *as we build and prove it in pkit* (pkit's binding is the reference); multi-language bindings + capability extraction still land on the stability trigger (Stage-4), not up front.
+- **Sequencing correction:** prove the event model on a **settled** genre first (a stable read-view), *then* generalise to the churny install/next-steps genre.
+
+**Next:** `architect` shapes the ADR reconciliation (amend ADR-006/011, reconcile ADR-024), the discipline's record structure, the sequencing, and the capability/spec/COR-017 shape — required now, because this modifies accepted foundational ADRs.
