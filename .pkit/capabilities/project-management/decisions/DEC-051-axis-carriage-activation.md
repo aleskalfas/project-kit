@@ -1,7 +1,7 @@
 ---
 id: DEC-051
 title: A map binding wins over the board flag for the axes it names; elsewhere the flag still governs carriage
-status: proposed
+status: accepted
 date: 2026-08-25
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
