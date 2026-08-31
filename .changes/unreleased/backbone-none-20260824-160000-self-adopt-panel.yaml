@@ -1,3 +1,0 @@
-component: backbone
-kind: none
-body: Project-side self-adoption of the code-review panel (manifest registration + PRJ-009); project-kit's own install-state, no adopter-facing surface.
