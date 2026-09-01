@@ -66,6 +66,7 @@ from _lib.membership import (  # noqa: E402
     resolve_capability_root,
     resolve_invoker_identity,
 )
+from _lib.structural_type import infer_structural_type  # noqa: E402
 
 
 SEVERITY_HARD_REJECT = "hard-reject"
@@ -336,7 +337,7 @@ def _validate(
     """
     findings: list[Finding] = []
 
-    structural_type = _infer_structural_type(title, issue_types, classification or {})
+    structural_type = infer_structural_type(title, issue_types, classification=classification or {})
     if structural_type is None:
         findings.append(
             Finding(
@@ -471,49 +472,6 @@ def _validate(
         findings = [f for f in findings if not f.label.startswith("body.")]
     return findings
 
-
-def _infer_structural_type(
-    title: str,
-    issue_types: dict,
-    classification: dict | None = None,
-) -> str | None:
-    """Infer the structural type from the title prefix.
-
-    Checks two sources in order:
-    1. issue-types.yaml `types[*].title_prefix` — the structural-type
-       prefixes ([EPIC], [Feature], [Umbrella], [Task]).
-    2. classification.yaml `axes.type.title_prefix_by_value` — the
-       kind-driven prefixes ([Bug], [Docs], [Test], [Refactor], [Chore]).
-       Kind-prefixes are restricted to the `task` structural type per the
-       schema's `structural_restriction` rule.
-
-    Returns the structural type string, or None when no prefix matches.
-    """
-    types = issue_types.get("types") or {}
-    for type_name, entry in types.items():
-        if not isinstance(entry, dict):
-            continue
-        prefix = entry.get("title_prefix", "")
-        case = entry.get("title_case", "title")
-        rendered = str(prefix)
-        if case == "upper":
-            rendered = rendered.upper()
-        if title.startswith(f"[{rendered}] "):
-            return str(type_name)
-
-    # Check kind-driven prefixes from classification.yaml.
-    # These only appear on Task-shape issues (structural_restriction in schema).
-    if classification:
-        prefix_by_value = (
-            classification.get("axes", {})
-            .get("type", {})
-            .get("title_prefix_by_value", {})
-        )
-        for _kind_value, kind_prefix in prefix_by_value.items():
-            if isinstance(kind_prefix, str) and title.startswith(f"[{kind_prefix}] "):
-                return "task"
-
-    return None
 
 
 def _title_pattern_for(titles: dict, structural_type: str) -> str | None:

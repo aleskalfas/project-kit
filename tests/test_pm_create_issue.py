@@ -161,11 +161,11 @@ def _ISSUE_TYPES() -> dict:
 
 def test_infer_structural_type_from_title_prefix(ci) -> None:
     types = _ISSUE_TYPES()
-    assert ci._infer_structural_type("[EPIC] Big thesis", types) == "epic"
-    assert ci._infer_structural_type("[Feature] A capability", types) == "feature"
-    assert ci._infer_structural_type("[Umbrella] A bucket", types) == "umbrella"
-    assert ci._infer_structural_type("[Bug] something", types) is None  # not a prefix
-    assert ci._infer_structural_type("no prefix at all", types) is None
+    assert ci.infer_structural_type("[EPIC] Big thesis", types) == "epic"
+    assert ci.infer_structural_type("[Feature] A capability", types) == "feature"
+    assert ci.infer_structural_type("[Umbrella] A bucket", types) == "umbrella"
+    assert ci.infer_structural_type("[Bug] something", types) is None  # not a prefix
+    assert ci.infer_structural_type("no prefix at all", types) is None
 
 
 def test_parent_ref_label_matches_parent_type(ci) -> None:

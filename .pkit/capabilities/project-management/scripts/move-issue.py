@@ -83,6 +83,7 @@ from _lib.placeholder_detection import (  # noqa: E402
     PHASE_TRANSITION,
     detect_placeholder_residuals,
 )
+from _lib.structural_type import infer_structural_type  # noqa: E402
 
 
 SEVERITY_HARD_REJECT = "hard-reject"
@@ -268,8 +269,8 @@ def main() -> int:
     state = str(issue.get("state", "")).lower()
     milestone = issue.get("milestone") or {}
 
-    structural_type = _infer_structural_type(
-        title, issue_types, classification, labels
+    structural_type = infer_structural_type(
+        title, issue_types, classification=classification, labels=labels
     )
     if structural_type is None:
         # Unrecoverable: no [Type] title prefix AND no `type:*` kind label to
@@ -706,90 +707,6 @@ def _bypass_reason_missing(bypass: bool, bypass_reason: str | None) -> bool:
     return bool(bypass) and not (bypass_reason or "").strip()
 
 
-def _infer_structural_type(
-    title: str,
-    issue_types: dict,
-    classification: dict | None = None,
-    labels: list[str] | None = None,
-) -> str | None:
-    """Infer the structural type, title prefix first, then the `type:*` label.
-
-    PRECEDENCE: the title prefix wins; the `type:*` kind label is the fallback,
-    consulted only when no prefix matches. (Structural-type inference also runs
-    in create-issue / validate-issue / the engine; a future parity pass per
-    DEC-033 should align those sites with this precedence rule.)
-
-    Sources, in order:
-    1. issue-types.yaml `types[*].title_prefix` — the structural-type
-       prefixes ([EPIC], [Feature], [Umbrella], [Task]).
-    2. classification.yaml `axes.type.title_prefix_by_value` — the
-       kind-driven prefixes ([Bug], [Docs], [Test], [Refactor], [Chore]).
-       Kind-prefixes are restricted to the `task` structural type.
-    3. FALLBACK — the issue's `type:*` kind label, when no prefix matched.
-       Only ever recovers `task` (see `_structural_type_from_kind_label`); a
-       container with an edited-away prefix has no `type:*` label and stays
-       unrecoverable, surfaced as malformed by the caller.
-    """
-    types = issue_types.get("types") or {}
-    for type_name, entry in types.items():
-        if not isinstance(entry, dict):
-            continue
-        prefix = entry.get("title_prefix", "")
-        case = entry.get("title_case", "title")
-        rendered = str(prefix)
-        if case == "upper":
-            rendered = rendered.upper()
-        if title.startswith(f"[{rendered}] "):
-            return str(type_name)
-
-    # Check kind-driven prefixes from classification.yaml.
-    # These only appear on Task-shape issues per the structural_restriction rule.
-    if classification:
-        prefix_by_value = (
-            classification.get("axes", {})
-            .get("type", {})
-            .get("title_prefix_by_value", {})
-        )
-        for _kind_value, kind_prefix in prefix_by_value.items():
-            if isinstance(kind_prefix, str) and title.startswith(f"[{kind_prefix}] "):
-                return "task"
-
-    # Fallback: recover the structural type from the `type:*` kind label when the
-    # title prefix was edited away. Task-only by construction (see helper).
-    if labels and classification:
-        return _structural_type_from_kind_label(labels, classification)
-
-    return None
-
-
-def _structural_type_from_kind_label(
-    labels: list[str],
-    classification: dict,
-) -> str | None:
-    """Recover the structural type from the issue's `type:*` kind label.
-
-    A `type:*` label carries only *kind* (bug/docs/test/refactor/maintenance/
-    feature) and exists only on Tasks: per classification.yaml's
-    `structural_restriction`, every non-feature kind maps to the single
-    structural type `task`, while feature-kind containers (epic/feature/
-    umbrella) carry no distinguishing `type:*` label. The kind→structural
-    mapping is READ from `allowed_structural_types_per_kind` rather than
-    hardcoded — a kind recovers a structural type only when its allowed-set is
-    unambiguous (exactly one type), which is true for every task-only kind and
-    false for the multi-valued `feature` kind. So this only ever recovers
-    `task`; an ambiguous or unknown kind returns None.
-    """
-    kind = axis_labels.read("type", labels)
-    if kind is None:
-        return None
-    # The kind→structural table is read through the shared _lib reader — the one
-    # place `allowed_structural_types_per_kind` is parsed (COR-007 single source).
-    allowed = classification_rules.allowed_structural_types_per_kind(classification)
-    candidates = allowed.get(kind) if isinstance(allowed, dict) else None
-    if isinstance(candidates, list) and len(candidates) == 1:
-        only = candidates[0]
-        return str(only) if isinstance(only, str) else None
-    return None
 
 
 def _infer_current_state(

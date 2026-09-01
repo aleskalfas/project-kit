@@ -1,0 +1,25 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  Structural-type inference now agrees across every command (#793). An issue's
+  type is read from its title prefix, and that read was implemented nine times
+  across seven divergent bodies — so the same title resolved differently
+  depending on which command you asked. A kind-prefixed Task resolved under
+  `move-issue` and returned nothing under `show-issue`, `show-tree`, and
+  `close-issue`, which is most of the issues an adopter files: every `[Bug]`,
+  `[Docs]`, `[Test]`, `[Refactor]`, and `[Chore]` issue displayed as
+  `<unrecognised prefix>` and rendered as `[?]` in the hierarchy, despite those
+  prefixes being exactly what the title schema prescribes for a Task carrying
+  that kind label. The resolver is now a single implementation in
+  `_lib/structural_type.py` consulting four vocabularies in a fixed precedence —
+  adopter prefixes under a brownfield substrate map (which short-circuits, so a
+  map binding the type axis elsewhere still resolves to nothing rather than
+  falling through to the kit's vocabulary), the kit's own structural prefixes,
+  the kind-driven prefixes from `classification.yaml`, and the `type:*` label as
+  a fallback for a title whose prefix was edited away. Each vocabulary beyond the
+  kit prefixes is opt-in per caller, so wiring the nine call sites through one
+  implementation preserved each one's behaviour; the fix is the four commands
+  that now supply the classification schema they previously never loaded. This is
+  the parity pass `move-issue`'s own docstring called for and nobody performed.

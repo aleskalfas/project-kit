@@ -728,15 +728,15 @@ def test_severity_from_token_falls_back_to_warning_on_bad_input(vi) -> None:
 
 
 def test_infer_structural_type_recognises_each_prefix(vi, issue_types) -> None:
-    assert vi._infer_structural_type("[EPIC] x", issue_types) == "epic"
-    assert vi._infer_structural_type("[Feature] x", issue_types) == "feature"
-    assert vi._infer_structural_type("[Umbrella] x", issue_types) == "umbrella"
-    assert vi._infer_structural_type("[Task] x", issue_types) == "task"
+    assert vi.infer_structural_type("[EPIC] x", issue_types) == "epic"
+    assert vi.infer_structural_type("[Feature] x", issue_types) == "feature"
+    assert vi.infer_structural_type("[Umbrella] x", issue_types) == "umbrella"
+    assert vi.infer_structural_type("[Task] x", issue_types) == "task"
 
 
 def test_infer_structural_type_returns_none_for_unknown_prefix(vi, issue_types) -> None:
-    assert vi._infer_structural_type("Plain title", issue_types) is None
-    assert vi._infer_structural_type("[Bug] something", issue_types) is None
+    assert vi.infer_structural_type("Plain title", issue_types) is None
+    assert vi.infer_structural_type("[Bug] something", issue_types) is None
 
 
 # --- milestone parent-ref forms (new canonical vs. old deprecated) ---
@@ -1461,13 +1461,13 @@ def test_brownfield_adopter_epic_infers_structural_type_via_seam(
     """The `[Epic]` prefix resolves to the `epic` structural type through the seam
     (not the kit `[EPIC]`), and the kit vocabulary would NOT have matched it."""
     assert (
-        vi._infer_structural_type(
-            "[Epic] x", issue_types, brownfield_type_prefix_map
+        vi.infer_structural_type(
+            "[Epic] x", issue_types, substrate_map=brownfield_type_prefix_map
         )
         == "epic"
     )
     # The kit greenfield vocabulary renders `[EPIC]`, so it does NOT match `[Epic]`.
-    assert vi._infer_structural_type("[Epic] x", issue_types, None) is None
+    assert vi.infer_structural_type("[Epic] x", issue_types, substrate_map=None) is None
 
 
 def test_brownfield_unknown_prefix_hard_rejects_undeterminable_type(

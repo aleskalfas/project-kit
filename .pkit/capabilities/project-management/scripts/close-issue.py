@@ -88,6 +88,7 @@ from _lib.membership import (  # noqa: E402
     resolve_capability_root,
     resolve_invoker_identity,
 )
+from _lib.structural_type import infer_structural_type  # noqa: E402
 
 
 VALID_MODES = ("wont-do", "pr-merge", "cascade-eligibility-close")
@@ -193,6 +194,11 @@ def main() -> int:
     issue_types = _read_yaml(
         capability_root / "schemas" / "issue-types.yaml", yaml_loader
     )
+    # Kind-driven title prefixes ([Bug]/[Docs]/[Test]/[Refactor]/[Chore]) live in
+    # classification.yaml; without it a kind-prefixed Task reads as unrecognised.
+    classification = _read_yaml(
+        capability_root / "schemas" / "classification.yaml", yaml_loader
+    )
 
     # The adopter's optional substrate-map (ADR-026): None ⇒ greenfield (state
     # is a `state:*` label); a present map may bind `state` to a `derive`
@@ -212,7 +218,7 @@ def main() -> int:
         lbl.get("name", "") if isinstance(lbl, dict) else str(lbl)
         for lbl in (issue.get("labels") or [])
     ]
-    structural_type = _infer_structural_type(title, issue_types)
+    structural_type = infer_structural_type(title, issue_types, classification=classification)
 
     print(f"close-issue: #{args.issue_number}")
     print(f"  title:        {title}")
@@ -624,20 +630,6 @@ def _gh_close_issue(issue_number: int, *, reason: str = "completed", config: dic
         return False
     return True
 
-
-def _infer_structural_type(title: str, issue_types: dict) -> str | None:
-    types = issue_types.get("types") or {}
-    for type_name, entry in types.items():
-        if not isinstance(entry, dict):
-            continue
-        prefix = entry.get("title_prefix", "")
-        case = entry.get("title_case", "title")
-        rendered = str(prefix)
-        if case == "upper":
-            rendered = rendered.upper()
-        if title.startswith(f"[{rendered}] "):
-            return str(type_name)
-    return None
 
 
 def _walk_parent_chain(body: str) -> list[int]:

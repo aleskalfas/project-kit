@@ -137,6 +137,7 @@ from _lib.membership import (  # noqa: E402
     resolve_capability_root,
     resolve_invoker_identity,
 )
+from _lib.structural_type import infer_structural_type  # noqa: E402
 
 
 @dataclass(frozen=True)
@@ -270,7 +271,7 @@ def main() -> int:
         # validate-issue use) before any mutation. `--kind feature` on those
         # types is the allowed kind, so it passes here and lands as a no-op
         # (label already type:feature, no prefix change).
-        structural_type = _infer_structural_type(title, issue_types, classification)
+        structural_type = infer_structural_type(title, issue_types, classification=classification)
         if (
             structural_type is not None
             and not classification_rules.kind_allowed_for_structural_type(
@@ -308,7 +309,7 @@ def main() -> int:
         if args.parent < 1:
             errors.append(f"parent must be a positive issue number; got {args.parent}")
         else:
-            structural_type = _infer_structural_type(title, issue_types, classification)
+            structural_type = infer_structural_type(title, issue_types, classification=classification)
             if structural_type is None:
                 errors.append(
                     f"cannot set --parent: issue title {title!r} has no recognised "
@@ -992,7 +993,7 @@ def _plan_kind(
     # kind-driven (today: the leaf `task`). For epic/feature/umbrella the only
     # kind that reaches here is `feature` (the up-front gate refuses any other),
     # whose structural prefix already matches — so nothing to realign.
-    structural_type = _infer_structural_type(title, issue_types, classification)
+    structural_type = infer_structural_type(title, issue_types, classification=classification)
     if structural_type is not None and classification_rules.kind_drives_title(
         structural_type, classification
     ):
@@ -1114,32 +1115,6 @@ def _adopter_workstreams(config: dict) -> set[str]:
         return set(ws.keys())
     return set()
 
-
-def _infer_structural_type(
-    title: str, issue_types: dict, classification: dict | None = None
-) -> str | None:
-    """Infer the structural type from the title prefix (parity with edit-issue)."""
-    types = issue_types.get("types") or {}
-    for type_name, entry in types.items():
-        if not isinstance(entry, dict):
-            continue
-        prefix = entry.get("title_prefix", "")
-        case = entry.get("title_case", "title")
-        rendered = str(prefix)
-        if case == "upper":
-            rendered = rendered.upper()
-        if title.startswith(f"[{rendered}] "):
-            return str(type_name)
-    if classification:
-        prefix_by_value = (
-            classification.get("axes", {})
-            .get("type", {})
-            .get("title_prefix_by_value", {})
-        )
-        for _kind_value, kind_prefix in prefix_by_value.items():
-            if isinstance(kind_prefix, str) and title.startswith(f"[{kind_prefix}] "):
-                return "task"
-    return None
 
 
 def _parent_ref_line(type_entry: dict, parent_num: int) -> str:

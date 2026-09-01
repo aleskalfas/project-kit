@@ -97,6 +97,7 @@ from _lib.membership import (  # noqa: E402
     resolve_invoker_identity,
 )
 from _lib.milestone import resolve_milestone  # noqa: E402
+from _lib.structural_type import infer_structural_type  # noqa: E402
 
 # The audit marker written into the Milestone description on close. Its
 # presence guards re-append so a re-run is idempotent.
@@ -206,8 +207,13 @@ def main() -> int:
     issue_types = _read_yaml(
         capability_root / "schemas" / "issue-types.yaml", yaml_loader
     )
+    # Kind-driven title prefixes ([Bug]/[Docs]/[Test]/[Refactor]/[Chore]) live in
+    # classification.yaml; without it a kind-prefixed Task reads as unrecognised.
+    classification = _read_yaml(
+        capability_root / "schemas" / "classification.yaml", yaml_loader
+    )
 
-    children = _gh_list_milestone_children(number, title, config, issue_types)
+    children = _gh_list_milestone_children(number, title, config, issue_types, classification)
     if children is None:
         return 3
     open_children = [c for c in children if c["state"] != "closed"]
@@ -422,7 +428,8 @@ def _gh_get_milestone(number: int, config: dict) -> dict | None:
 
 
 def _gh_list_milestone_children(
-    number: int, title: str, config: dict, issue_types: dict
+    number: int, title: str, config: dict, issue_types: dict,
+    classification: dict | None = None,
 ) -> list[dict] | None:
     """Resolve the milestone's child issues — the union of native + textual.
 
@@ -480,7 +487,7 @@ def _gh_list_milestone_children(
                 "number": num,
                 "title": row_title,
                 "state": str(row.get("state", "")).lower(),
-                "type": _infer_structural_type(row_title, issue_types),
+                "type": infer_structural_type(row_title, issue_types, classification=classification),
             }
         )
     children.sort(key=lambda c: c["number"])
@@ -532,23 +539,6 @@ def _gh_close_milestone(number: int, description: str, config: dict) -> bool:
 
 # ---- structural-type inference (mirrors close-issue) ----------------
 
-
-def _infer_structural_type(title: str, issue_types: dict) -> str | None:
-    types = issue_types.get("types") or {}
-    for type_name, entry in types.items():
-        if not isinstance(entry, dict):
-            continue
-        prefix = entry.get("title_prefix", "")
-        case = entry.get("title_case", "title")
-        rendered = str(prefix)
-        if case == "upper":
-            rendered = rendered.upper()
-        if title.startswith(f"[{rendered}] "):
-            return str(type_name)
-    return None
-
-
-# ---- I/O helpers ----------------------------------------------------
 
 
 def _read_yaml(path: Path, yaml_loader: YAML) -> dict:

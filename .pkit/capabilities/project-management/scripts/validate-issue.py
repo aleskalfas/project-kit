@@ -61,6 +61,7 @@ from _lib.placeholder_detection import (  # noqa: E402
     PHASE_TRANSITION,
     detect_placeholder_residuals,
 )
+from _lib.structural_type import infer_structural_type  # noqa: E402
 
 
 SEVERITY_HARD_REJECT = "hard-reject"
@@ -238,7 +239,7 @@ def _validate_issue(
     # Infer structural type from the title prefix, substrate-aware (#553): the
     # kit's own prefix vocabulary in greenfield, the ADOPTER's declared prefixes
     # when the substrate-map binds `type` via title-prefix.
-    structural_type = _infer_structural_type(title, issue_types, substrate_map)
+    structural_type = infer_structural_type(title, issue_types, substrate_map=substrate_map)
 
     # Title format / pattern.
     #
@@ -687,50 +688,6 @@ def _validate_issue(
 
     return findings
 
-
-def _infer_structural_type(
-    title: str,
-    issue_types: dict,
-    substrate_map: "axis_labels.SubstrateMap | None" = None,
-) -> str | None:
-    """Map the title prefix to the structural type name, substrate-aware (#553).
-
-    The prefix vocabulary the title is read against depends on the substrate:
-
-    * **Greenfield** (``substrate_map is None``) ⇒ the kit's own rendered
-      prefixes from ``issue-types.yaml`` (``[EPIC]`` / ``[Feature]`` /
-      ``[Umbrella]`` / ``[Task]``), byte-unchanged.
-    * **Map binds ``type`` via ``title-prefix``** ⇒ the ADOPTER's own declared
-      prefixes, via the seam's :func:`axis_labels.resolve_title_prefix_read` (which
-      reads the same binding shape ``pre-check`` validates against). This is the
-      R1 fix: an AUJ ``[Epic]`` title (adopter prefix, ≠ the kit's ``[EPIC]``)
-      resolves here instead of failing ``title.format`` against the kit vocabulary.
-    * **Map binds ``type`` otherwise** (``label`` / ``derive`` / ``unsupported`` /
-      absent) ⇒ ``None`` — the type is not carried in the title under such a
-      binding, so the kit prefix vocabulary does not apply (mirrors ``pre-check``
-      skipping title-prefix alignment for non-title-prefix bindings). The caller
-      keys the ``title.format`` demand on whether the type is title-carried, so a
-      ``None`` here does NOT spuriously fail a label-bound brownfield issue.
-    """
-    if substrate_map is not None:
-        if axis_labels.axis_title_prefix_remap("type", substrate_map) is None:
-            # `type` not title-carried under the map — the kit prefix vocabulary
-            # does not apply; the structural type is not read from the title.
-            return None
-        return axis_labels.resolve_title_prefix_read("type", title, substrate_map)
-
-    types = issue_types.get("types") or {}
-    for type_name, entry in types.items():
-        if not isinstance(entry, dict):
-            continue
-        prefix = entry.get("title_prefix", "")
-        case = entry.get("title_case", "title")
-        rendered = str(prefix)
-        if case == "upper":
-            rendered = rendered.upper()
-        if title.startswith(f"[{rendered}] "):
-            return str(type_name)
-    return None
 
 
 def _expected_type_prefixes(
