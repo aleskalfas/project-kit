@@ -13,8 +13,8 @@ nobody performed. Per COR-007, the recurrence (nine copies) is the trigger to
 extract rather than repeat; per ADR-031's sole-constructor discipline applied
 to a read, callers ask this module rather than re-deriving the vocabulary.
 
-Three vocabularies, consulted in a fixed precedence
----------------------------------------------------
+Four vocabularies, consulted in a fixed precedence
+--------------------------------------------------
 
 1. **Adopter prefixes**, when a brownfield `substrate_map` binds the `type`
    axis to `title-prefix`. This SHORT-CIRCUITS: under a map the kit's own
@@ -29,9 +29,10 @@ Three vocabularies, consulted in a fixed precedence
    `[Refactor]` / `[Chore]`. These only ever resolve to `task`, per
    classification.yaml's `structural_restriction`.
 4. **The `type:*` kind label**, as a fallback when no prefix matched — for a
-   title whose prefix was edited away. Only ever recovers `task`; a container
-   carries no distinguishing kind label and stays unrecoverable, which the
-   caller surfaces as malformed.
+   title whose prefix was edited away. Requires **both** `labels` and
+   `classification`; supplying only one leaves the fallback inert. Only ever
+   recovers `task`; a container carries no distinguishing kind label and stays
+   unrecoverable, which the caller surfaces as malformed.
 
 Callers opt in by what they pass. Passing only `issue_types` reproduces the
 prefix-only behaviour exactly, so wiring a previously-prefix-only caller

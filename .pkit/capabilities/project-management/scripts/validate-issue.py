@@ -239,6 +239,11 @@ def _validate_issue(
     # Infer structural type from the title prefix, substrate-aware (#553): the
     # kit's own prefix vocabulary in greenfield, the ADOPTER's declared prefixes
     # when the substrate-map binds `type` via title-prefix.
+    # Brownfield-strict: `classification` is deliberately NOT passed. Under a
+    # substrate map the adopter's vocabulary is the yardstick and a non-match
+    # must resolve to None (the undeterminable close-gate failure below relies
+    # on it); in greenfield this validator judges the kit's own title contract,
+    # where a kind prefix is the Task prefix already. Do not "align" this (#793).
     structural_type = infer_structural_type(title, issue_types, substrate_map=substrate_map)
 
     # Title format / pattern.

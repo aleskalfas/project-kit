@@ -1158,6 +1158,11 @@ def _detect_parent_structural_type(
     title = payload.get("title") if isinstance(payload, dict) else None
     if not isinstance(title, str):
         return None
+    # Prefix-only BY DESIGN: this infers a *parent's* structural type, and
+    # containers (EPIC/Feature/Umbrella) never carry kind prefixes. Passing
+    # `classification` here would resolve a kind-prefixed Task as a candidate
+    # parent, which the containment graph then rejects anyway — a behaviour
+    # change, not a fix. Do not "align" this in a future parity pass (#793).
     return infer_structural_type(title, issue_types)
 
 

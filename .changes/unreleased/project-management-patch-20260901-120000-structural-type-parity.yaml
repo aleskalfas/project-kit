@@ -3,7 +3,8 @@ kind: patch
 custom:
   category: Fixed
 body: >
-  Structural-type inference now agrees across every command (#793). An issue's
+  Structural-type inference now agrees across every command that reports it
+  (#793). An issue's
   type is read from its title prefix, and that read was implemented nine times
   across seven divergent bodies — so the same title resolved differently
   depending on which command you asked. A kind-prefixed Task resolved under
@@ -21,5 +22,9 @@ body: >
   a fallback for a title whose prefix was edited away. Each vocabulary beyond the
   kit prefixes is opt-in per caller, so wiring the nine call sites through one
   implementation preserved each one's behaviour; the fix is the four commands
-  that now supply the classification schema they previously never loaded. This is
+  that now supply the classification schema they previously never loaded. Two
+  callers deliberately abstain and are unchanged: `create-issue` infers a
+  *parent's* type, where containers carry no kind prefix, and `validate-issue`
+  stays brownfield-strict so a title matching no adopter prefix still resolves
+  to nothing. This is
   the parity pass `move-issue`'s own docstring called for and nobody performed.

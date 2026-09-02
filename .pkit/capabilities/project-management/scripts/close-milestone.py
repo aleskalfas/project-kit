@@ -537,7 +537,7 @@ def _gh_close_milestone(number: int, description: str, config: dict) -> bool:
     return True
 
 
-# ---- structural-type inference (mirrors close-issue) ----------------
+# ---- I/O helpers ----------------------------------------------------
 
 
 
