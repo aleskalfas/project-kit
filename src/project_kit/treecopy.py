@@ -46,6 +46,7 @@ def refresh_owned_tree(
     *,
     is_owned: OwnershipPredicate,
     exclude: frozenset[str] = frozenset(),
+    seed_owned: bool = True,
     dry_run: bool = False,
 ) -> None:
     """Refresh `dest` from `source`, preserving adopter-owned paths (COR-001).
@@ -53,8 +54,8 @@ def refresh_owned_tree(
     - **kit-owned source file** (`is_owned` False): copied with `shutil.copy2`
       (preserving mode/executable bit + mtime), overwriting any existing file.
     - **adopter-owned source file** (`is_owned` True): copied only when the
-      destination is absent (seed-once); an existing adopter file is never
-      overwritten.
+      destination is absent (seed-once) — *and only when* `seed_owned` is True.
+      An existing adopter file is never overwritten either way.
     - **kit-owned dest file with no live source counterpart**: pruned (an
       orphan from a prior version, or an `exclude`d artifact).
     - **adopter-owned dest file**: never pruned, never overwritten.
@@ -66,6 +67,16 @@ def refresh_owned_tree(
     install's copy of an now-excluded artifact is pruned). This is the generic
     seam capability skip-state rides on; the primitive knows nothing of
     "skipped artifacts".
+
+    `seed_owned=False` means the source's adopter-owned paths are **never**
+    copied — not even into an absent destination — and its adopter-owned
+    directories are not materialised. Use it when the source is another
+    *project's* instance data rather than a neutral template: seeding it would
+    hand one project's state to another. The caller is then responsible for
+    creating whatever empty structure the adopter needs (the area install path
+    does exactly this: it skips the source `project/` tree and stubs an empty
+    directory instead). Adopter-owned destination paths remain untouched and
+    unpruned regardless of this flag.
 
     `dry_run` short-circuits to a no-op (writes nothing), matching the
     behaviour of the callers' existing dry-run paths.
@@ -86,6 +97,8 @@ def refresh_owned_tree(
     #    source dirs are reproduced, matching shutil.copytree).
     dest.mkdir(parents=True, exist_ok=True)
     for rel in sorted(source_dirs):
+        if not seed_owned and is_owned(rel):
+            continue
         (dest / rel).mkdir(parents=True, exist_ok=True)
 
     # 2. Copy files. Adopter-owned files are seeded only when absent.
@@ -93,8 +106,11 @@ def refresh_owned_tree(
         if rel.as_posix() in exclude:
             continue
         target = dest / rel
-        if is_owned(rel) and target.exists():
-            continue  # seed-once: never overwrite adopter content
+        if is_owned(rel):
+            if not seed_owned:
+                continue  # source's own instance data — never hand it over
+            if target.exists():
+                continue  # seed-once: never overwrite adopter content
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src_path, target)
 

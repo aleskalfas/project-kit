@@ -156,7 +156,12 @@ def test_sync_preserves_installed_capability_project_content(
         / "project"
         / "config.yaml"
     )
-    assert config.is_file(), "seeded config.yaml should exist after install"
+    # Install no longer seeds the source project's own `project/` files (#812),
+    # so the adopter authors their config here — which is what a real adopter
+    # does, and what makes this test's subject (no-clobber on sync) meaningful
+    # rather than incidental to a seed.
+    assert not config.exists(), "install must not seed the source project's config"
+    config.parent.mkdir(parents=True, exist_ok=True)
     config.write_text(
         "schema_version: 1\ndefault_branch: develop  # adopter customisation\n",
         encoding="utf-8",
