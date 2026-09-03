@@ -39,18 +39,21 @@ Why the stamp lives under ``project/`` and carries a repo identity
 -----------------------------------------------------------------
 The stamp is adopter state, so it lives in the capability's adopter-owned
 ``project/`` subtree — the one part of the tree ``pkit sync`` preserves
-(``treecopy.refresh_owned_tree`` seeds ``project/`` once and never overwrites
-it, while every kit-owned path refreshes wholesale and root-level orphans are
-pruned). It deliberately does **not** live in the capability's
+(``treecopy.refresh_owned_tree`` never overwrites or prunes ``project/``,
+while every kit-owned path refreshes wholesale and root-level orphans are
+pruned; since #812 the capability path also never *seeds* it from source). It deliberately does **not** live in the capability's
 ``manifest.yaml``: that file is re-stamped from scratch by
 ``_stamp_component_manifest`` on every install / refresh, so a stamp written
 there would be erased by the next ``pkit sync``, and — because the kit source
 tree carries its own ``manifest.yaml`` — an adopter would inherit the *kit's*
 stamp on install. Either failure re-opens the hole this gate closes.
 
-``project/`` has the mirror-image hazard: it is seeded from source on a fresh
-install, so a stamp committed in one repo could be copied into another and read
-as "already bootstrapped" there. The stamp therefore records the **repo
+``project/`` has the mirror-image hazard: a stamp committed in one repo can
+still arrive in another and be read as "already bootstrapped" there. Install no
+longer seeds ``project/`` from source (#812, which this hazard helped motivate),
+but two vectors remain — a repo started by copying another project's ``.pkit/``
+tree, and any adopter still carrying a stamp seeded by a pre-#812 install, which
+is deliberately not cleaned up (see the cleanup task under the #811 epic). The stamp therefore records the **repo
 identity** it was written for (the normalised ``origin`` URL, read locally via
 git — no network) and the gate refuses when the stamp names a *different* repo
 than the one it is running in. A copied or seeded stamp is inert rather than
@@ -463,9 +466,10 @@ def _read_stamp(capability_root: Path) -> tuple[Stamp | None, str]:
 def _repo_binding_problem(stamp: Stamp, capability_root: Path) -> str | None:
     """Refuse a stamp that was written for a *different* repository.
 
-    The stamp lives in the seed-once ``project/`` subtree, so it can arrive by
-    copy (a fresh capability install seeds ``project/`` from source; a repo
-    started by copying another project's ``.pkit/`` tree carries it too). A
+    The stamp lives in the adopter-owned ``project/`` subtree, so it can arrive
+    by copy — a repo started by copying another project's ``.pkit/`` tree, or an
+    adopter still carrying one seeded by a pre-#812 install (installs no longer
+    seed ``project/`` from source, but existing trees are not cleaned up). A
     stamp naming another repo attests nothing about *this* one.
 
     Fires only when BOTH identities resolve and differ — an unresolvable

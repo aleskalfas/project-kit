@@ -57,8 +57,10 @@ _NAME_RE = re.compile(r"^[a-z][a-z0-9-]*[a-z0-9]$|^[a-z]$")
 _yaml = YAML(typ="safe")
 
 # A capability's top-level `project/` subtree is adopter-owned (the
-# no-shared-files invariant, COR-001): seeded at install, never overwritten
-# or removed on refresh. See `_copy_capability_tree`.
+# no-shared-files invariant, COR-001): never overwritten or removed on
+# refresh, and never seeded from the source either — the source's own
+# `project/` tree is that project's instance data, not a template (#812).
+# See `_copy_capability_tree`.
 _CAPABILITY_PROJECT_SUBTREE = "project"
 
 
