@@ -142,11 +142,11 @@ def test_all_boxes_ticked_true_when_no_boxes_at_all(ci) -> None:
 
 
 def test_infer_structural_type_recognises_task(ci, issue_types) -> None:
-    assert ci._infer_structural_type("[Task] x", issue_types) == "task"
+    assert ci.infer_structural_type("[Task] x", issue_types) == "task"
 
 
 def test_infer_structural_type_returns_none_for_unknown(ci, issue_types) -> None:
-    assert ci._infer_structural_type("Plain", issue_types) is None
+    assert ci.infer_structural_type("Plain", issue_types) is None
 
 
 # --- parent-chain walking --------------------------------------------

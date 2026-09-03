@@ -83,6 +83,7 @@ from _lib.placeholder_detection import (  # noqa: E402
     PHASE_CREATE,
     detect_placeholder_residuals,
 )
+from _lib.structural_type import infer_structural_type  # noqa: E402
 
 
 VALID_STRUCTURAL_TYPES = ("epic", "feature", "umbrella", "task")
@@ -1112,24 +1113,6 @@ def _title_prefix_for(
     return rendered
 
 
-def _infer_structural_type(title: str, issue_types: dict) -> str | None:
-    """Map an issue's ``[Prefix]`` title to its structural type name.
-
-    Mirrors the helper validate-issue / show-issue / show-tree use, so the
-    parent-type detection here reads a parent's type the same way the rest of the
-    capability does.
-    """
-    types = issue_types.get("types") or {}
-    for type_name, entry in types.items():
-        if not isinstance(entry, dict):
-            continue
-        rendered = str(entry.get("title_prefix", ""))
-        if entry.get("title_case", "title") == "upper":
-            rendered = rendered.upper()
-        if rendered and title.startswith(f"[{rendered}] "):
-            return str(type_name)
-    return None
-
 
 def _parent_ref_label(issue_types: dict, parent_type: str) -> str | None:
     """The parent-ref label for a parent of structural type ``parent_type``.
@@ -1175,7 +1158,12 @@ def _detect_parent_structural_type(
     title = payload.get("title") if isinstance(payload, dict) else None
     if not isinstance(title, str):
         return None
-    return _infer_structural_type(title, issue_types)
+    # Prefix-only BY DESIGN: this infers a *parent's* structural type, and
+    # containers (EPIC/Feature/Umbrella) never carry kind prefixes. Passing
+    # `classification` here would resolve a kind-prefixed Task as a candidate
+    # parent, which the containment graph then rejects anyway — a behaviour
+    # change, not a fix. Do not "align" this in a future parity pass (#793).
+    return infer_structural_type(title, issue_types)
 
 
 def _parent_ref_form_matchers(parent_ref_form: str) -> list[re.Pattern[str]]:

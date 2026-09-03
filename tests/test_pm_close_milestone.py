@@ -277,7 +277,7 @@ def _prime_main(monkeypatch, cm, *, milestone, children):
         "types": {"epic": {"title_prefix": "EPIC", "title_case": "upper"}}
     })
     monkeypatch.setattr(cm, "_gh_get_milestone", lambda n, config: milestone)
-    monkeypatch.setattr(cm, "_gh_list_milestone_children", lambda n, t, config, types: children)
+    monkeypatch.setattr(cm, "_gh_list_milestone_children", lambda n, t, config, types, classification=None: children)
     close_mock = MagicMock(return_value=True)
     monkeypatch.setattr(cm, "_gh_close_milestone", close_mock)
     return close_mock

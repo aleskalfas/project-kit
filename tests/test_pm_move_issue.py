@@ -34,6 +34,7 @@ CAPABILITY_ROOT = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
 LIB_PATH = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 
 sys.path.insert(0, str(LIB_PATH))
+from _lib.structural_type import structural_type_from_kind_label  # noqa: E402
 from _lib.placeholder_detection import (  # noqa: E402
     PHASE_TRANSITION,
     detect_placeholder_residuals,
@@ -395,12 +396,12 @@ def test_plan_board_substrate_no_label_mutation(mi) -> None:
 
 
 def test_infer_structural_type_recognises_each_prefix(mi, issue_types) -> None:
-    assert mi._infer_structural_type("[EPIC] x", issue_types) == "epic"
-    assert mi._infer_structural_type("[Task] x", issue_types) == "task"
+    assert mi.infer_structural_type("[EPIC] x", issue_types) == "epic"
+    assert mi.infer_structural_type("[Task] x", issue_types) == "task"
 
 
 def test_infer_structural_type_none_on_unknown(mi, issue_types) -> None:
-    assert mi._infer_structural_type("Plain", issue_types) is None
+    assert mi.infer_structural_type("Plain", issue_types) is None
 
 
 # --- structural type: type:* label fallback (issue #370) -------------
@@ -422,8 +423,8 @@ def test_infer_structural_type_prefix_wins_over_label(
     resolves to `feature` from the prefix; the label fallback is never consulted.
     """
     assert (
-        mi._infer_structural_type(
-            "[Feature] x", issue_types, classification, ["type:bug"]
+        mi.infer_structural_type(
+            "[Feature] x", issue_types, classification=classification, labels=["type:bug"]
         )
         == "feature"
     )
@@ -434,16 +435,16 @@ def test_infer_structural_type_recovers_task_from_label_when_prefix_absent(
 ) -> None:
     """Acceptance 1 & 2 — prefix edited away + `type:*` label ⇒ recover `task`."""
     assert (
-        mi._infer_structural_type(
-            "edited-away title", issue_types, classification, ["type:bug"]
+        mi.infer_structural_type(
+            "edited-away title", issue_types, classification=classification, labels=["type:bug"]
         )
         == "task"
     )
     # Holds for every task-only kind, not just bug.
     for kind in ("docs", "test", "refactor", "maintenance"):
         assert (
-            mi._infer_structural_type(
-                "edited-away title", issue_types, classification, [f"type:{kind}"]
+            mi.infer_structural_type(
+                "edited-away title", issue_types, classification=classification, labels=[f"type:{kind}"]
             )
             == "task"
         ), f"kind {kind!r} must recover structural type 'task'"
@@ -459,11 +460,9 @@ def test_infer_structural_type_container_without_label_is_malformed(
     than be silently guessed.
     """
     assert (
-        mi._infer_structural_type(
+        mi.infer_structural_type(
             "edited-away epic title",
-            issue_types,
-            classification,
-            ["priority:High", "workstream:core"],
+            issue_types, classification=classification, labels=["priority:High", "workstream:core"],
         )
         is None
     )
@@ -476,8 +475,8 @@ def test_infer_structural_type_feature_kind_label_is_ambiguous(
     recover a unique structural type — the fallback returns None rather than
     guessing (only task-only kinds are unambiguous)."""
     assert (
-        mi._infer_structural_type(
-            "edited-away title", issue_types, classification, ["type:feature"]
+        mi.infer_structural_type(
+            "edited-away title", issue_types, classification=classification, labels=["type:feature"]
         )
         is None
     )
@@ -488,9 +487,9 @@ def test_structural_type_from_kind_label_reads_mapping(
 ) -> None:
     """The helper reads the kind→structural mapping straight from the schema's
     `allowed_structural_types_per_kind` (single-valued ⇒ recoverable)."""
-    assert mi._structural_type_from_kind_label(["type:bug"], classification) == "task"
-    assert mi._structural_type_from_kind_label(["type:feature"], classification) is None
-    assert mi._structural_type_from_kind_label(["priority:High"], classification) is None
+    assert structural_type_from_kind_label(["type:bug"], classification) == "task"
+    assert structural_type_from_kind_label(["type:feature"], classification) is None
+    assert structural_type_from_kind_label(["priority:High"], classification) is None
 
 
 # --- parent-chain walking --------------------------------------------
