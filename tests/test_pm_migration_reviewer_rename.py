@@ -264,12 +264,30 @@ def test_shipped_agent_is_pm_reviewer(agents_mod) -> None:
 
 
 def test_project_registers_pm_reviewer(agents_mod) -> None:
-    """project-kit dogfoods the rename — its own config registers pm-reviewer."""
+    """project-kit dogfoods the rename — its own config registers pm-reviewer
+    under the new name, and never the old one.
+
+    Asserts membership, not cardinality: this test's subject is the RENAME, and
+    DEC-032 D3 lifted the singleton cap on `local_registered`
+    (`schemas/config.schema.json` states "N >= 2 is valid" on the property
+    itself -- named precisely because the YAML reference alongside it carries
+    no cardinality statement). An equality assertion against a one-element list
+    would forbid the second baseline reviewer that decision permits — the
+    rename's guarantee is that `pm-reviewer` is registered and `reviewer` is
+    gone, whatever else the adopter registers alongside it (#788).
+    """
     doc = YAML(typ="safe").load(
         (CAPABILITY / "project" / "config.yaml").read_text(encoding="utf-8")
     )
-    assert _registered_names(CAPABILITY) == ["pm-reviewer"]
-    assert doc["review"]["agents"]["local_registered"][0]["name"] == "pm-reviewer"
+    names = _registered_names(CAPABILITY)
+    assert "pm-reviewer" in names
+    assert "reviewer" not in names
+    # No ordering assertion: the resolved set is de-duplicated and AND-composed,
+    # so position within `local_registered` is not observable at the gate. (The
+    # "baseline-first" term in `_lib/required_reviewers.py` means baseline names
+    # precede CONTRIBUTED ones in the resolved set -- it says nothing about the
+    # order of entries within the baseline list itself.)
+    assert isinstance(doc["review"]["agents"]["local_registered"], list)
 
 
 def test_resolver_finds_pm_reviewer_after_deploy(agents_mod, tmp_path) -> None:
