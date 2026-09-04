@@ -1,0 +1,29 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  Installing or updating a capability no longer copies the source project's own
+  `project/` tree into the adopter (#812). That subtree is adopter-owned by
+  tier, but it was being seeded from wherever the capability was distributed
+  from — so every fresh adopter received the source project's instance data,
+  and because seed-once is per *file* while `pkit sync` re-copies installed
+  capabilities, each new file the source accrued arrived on the next update
+  too. Four consequences, all verified by running the real install path into an
+  empty directory: the default-agent activation file shipped already present,
+  and since the adapter activates on file *presence*, a fresh adopter silently
+  got `project-manager` as their default agent — contradicting DEC-030's
+  guarantee that installation "creates the template but no activation file" and
+  the capability README's "off by default"; the bootstrap stamp shipped, so an
+  adopter whose repo identity could not be resolved had their setup gate read
+  it as completion and run every gated verb against foreign defaults with no
+  labels provisioned; per-issue audit journals shipped, keyed by issue number,
+  so an adopter's issue #446 inherited another project's #446 governance
+  history; and the config and workstream taxonomy shipped, making the source
+  project's own work areas the adopter's allowed classification values. Install
+  now stubs an empty `project/` directory instead, mirroring what the area
+  install path has always done. Adopter content is never touched — the change
+  removes a copy and adds no delete, which the regression tests assert
+  explicitly. Files already seeded into existing adopters are not cleaned up
+  here; that needs content-based discrimination to avoid deleting an adopter's
+  own work and is tracked separately.

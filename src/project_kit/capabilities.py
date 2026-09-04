@@ -57,8 +57,10 @@ _NAME_RE = re.compile(r"^[a-z][a-z0-9-]*[a-z0-9]$|^[a-z]$")
 _yaml = YAML(typ="safe")
 
 # A capability's top-level `project/` subtree is adopter-owned (the
-# no-shared-files invariant, COR-001): seeded at install, never overwritten
-# or removed on refresh. See `_copy_capability_tree`.
+# no-shared-files invariant, COR-001): never overwritten or removed on
+# refresh, and never seeded from the source either — the source's own
+# `project/` tree is that project's instance data, not a template (#812).
+# See `_copy_capability_tree`.
 _CAPABILITY_PROJECT_SUBTREE = "project"
 
 
@@ -1258,12 +1260,25 @@ def _copy_capability_tree(
     """Refresh capability content into dest, omitting any skipped artifacts.
 
     Routes through the shared ownership-aware tree-refresh primitive
-    (`treecopy.refresh_owned_tree`), so the capability's adopter-owned
-    top-level ``project/`` subtree is seeded once and never overwritten or
-    removed on refresh, while kit-owned content refreshes wholesale (new
-    files appear, removed files disappear, modified files update). This is
-    the same mechanic the area/adapter sync uses — reimplementing it here
+    (`treecopy.refresh_owned_tree`), so kit-owned content refreshes wholesale
+    (new files appear, removed files disappear, modified files update) while
+    the adopter's own ``project/`` tree is never overwritten or removed. This
+    is the same mechanic the area/adapter sync uses — reimplementing it here
     is what caused the #332 clobber.
+
+    ``seed_owned=False`` is the fix for #812: the source's ``project/`` subtree
+    is the SOURCE PROJECT's instance data, not a neutral template, so seeding
+    it handed one project's state to every adopter. It shipped project-kit's
+    own default-agent activation (switching on an agent DEC-030 promises stays
+    off), its bootstrap stamp (which a fresh adopter's setup gate then read as
+    completion), its issue-lifecycle journals (keyed by issue number, so an
+    adopter's issue #446 inherited project-kit's #446 history), and its config
+    and workstream taxonomy. The area install path never had this defect — it
+    skips the source ``project/`` tree and stubs an empty directory instead;
+    capabilities were simply never brought in line.
+
+    Seeding a *neutral starter* config is a separate question and deliberately
+    not done here: that is new install behaviour and needs its own record.
     """
     # Skipped skills/agents become generic relative-path exclusions for the
     # primitive (it knows nothing of "skipped artifacts"). Decisions and
@@ -1274,8 +1289,18 @@ def _copy_capability_tree(
         if kind in ("skill", "agent")
     )
     treecopy.refresh_owned_tree(
-        source, dest, is_owned=_capability_owned, exclude=exclude
+        source, dest, is_owned=_capability_owned, exclude=exclude,
+        seed_owned=False,
     )
+    # Stub the adopter-owned tree so the directory exists to be written into,
+    # mirroring the area install path's `_touch(project_dst / ".gitkeep")`.
+    # Only the top level: nested structure is the adopter's to create as they
+    # use it, and materialising the source's nested dirs would leak its shape.
+    project_dir = dest / _CAPABILITY_PROJECT_SUBTREE
+    project_dir.mkdir(parents=True, exist_ok=True)
+    keep = project_dir / ".gitkeep"
+    if not any(project_dir.iterdir()):
+        keep.touch()
 
 
 def _register_in_backbone_manifest(
