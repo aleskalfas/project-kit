@@ -1,0 +1,28 @@
+component: project-management
+kind: minor
+custom:
+  category: Fixed
+body: >
+  A migration retires state seeded into adopters from the source project's
+  `project/` tree (#814). The seeding itself was stopped in the backbone
+  (#812), but that removed nothing already on disk — the copy primitive never
+  prunes adopter-owned paths, by design — so without this an adopter who
+  installed earlier keeps every seeded file and behaves differently from a
+  fresh install of the same version. It acts only on a POSITIVE signal of kit
+  provenance, following the precedent the reviewer-rename migration set in the
+  same directory: a lifecycle journal byte-identical to one this version
+  shipped is provably foreign and is removed (a foreign journal is actively
+  harmful — `pm history <N>` reads it as this project's history); a bootstrap
+  stamp naming a different repo than the tree it sits in is removed, since it
+  otherwise reads as "already bootstrapped" and every gated verb then runs
+  against foreign defaults. Where no positive signal exists the file is
+  reported and left alone: the default-agent activation file is byte-identical
+  whether it was seeded or the adopter ran `enable-default-agent`, and enabling
+  leaves no record, so removing it could silently disable a feature they chose
+  — the migration prints the remediation instead; and `config.yaml` /
+  `workstreams.yaml` are kept because they may have been edited on top of the
+  seed and their values are frequently correct anyway, so deleting an adopter's
+  only working config to purify its provenance would do more harm than the
+  residue. Known limit, stated rather than hidden: the embedded hashes are this
+  version's shipped set, so an adopter who never synced may hold an older set,
+  which is reported rather than removed.
