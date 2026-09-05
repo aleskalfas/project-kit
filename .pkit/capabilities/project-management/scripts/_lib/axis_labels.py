@@ -310,8 +310,8 @@ def axis_disposition(
     """Whether ``axis`` is SERVED or degrades, per the ADR-026 ternary.
 
     * No map (``substrate_map is None``) ⇒ ``"served"`` (greenfield identity).
-    * Map present, axis bound (``label`` / ``title-prefix`` / ``derive``) ⇒
-      ``"served"``.
+    * Map present, axis bound (``label`` / ``title-prefix`` / ``derive`` /
+      ``board``) ⇒ ``"served"``.
     * Map present, axis ``unsupported`` OR absent from the map ⇒
       ``"unsupported"`` (absent ≡ unsupported, the load-bearing rule).
 
@@ -333,9 +333,9 @@ def axis_disposition(
         return "unsupported"
     if binding.get("unsupported") is True:
         return "unsupported"
-    if any(key in binding for key in ("label", "title-prefix", "derive")):
+    if any(key in binding for key in ("label", "title-prefix", "derive", "board")):
         return "served"
-    # A binding mapping with none of the four arms is malformed; fail closed.
+    # A binding mapping with none of the five arms is malformed; fail closed.
     return "unsupported"
 
 
@@ -415,6 +415,46 @@ def axis_is_title_carried(
     if not isinstance(binding, dict):
         return False
     return "title-prefix" in binding
+
+
+def axis_is_board_carried(
+    axis: str, substrate_map: SubstrateMap | None
+) -> bool:
+    """Whether ``axis`` is carried by a field on the configured Projects-v2 board.
+
+    True only when a map is present AND binds ``axis`` via ``board: true``. The
+    board arm is parameterless by design: it names the SUBSTRATE, while the field
+    identity (field id / option id) stays a write parameter on the DEC-024
+    ``after_create_issue`` hook. So this predicate answers "is it on the board?",
+    never "which field?" — the latter is not the seam's to know.
+
+    This is the board mirror of :func:`axis_is_title_carried`, and exists for the
+    same reason. A label writer that keys only on :func:`resolve_write` sees
+    ``DEGRADE`` for a board-carried axis and — if it treats DEGRADE as the
+    axis being unsupported — reports "unsupported under your substrate-map" for
+    an axis that is SERVED, and softens every rule needing it. The axis is not
+    degraded; it is simply not label-carried. Consult this BEFORE resolving, and
+    contribute no label without emitting a degrade advisory.
+
+    Distinct from ``unsupported: true``, and the distinction is the whole point of
+    the arm ([project-management:DEC-051-axis-carriage-activation], decision
+    point 2): ``unsupported`` names no substrate and degrades the rules needing
+    the axis; ``board`` names one and keeps them in force. Before the arm existed
+    adopters were told to spell board carriage ``unsupported: true``, which said
+    the opposite of what they meant.
+
+    Admissible on ``priority`` and ``workstream`` only — the schema refuses it on
+    ``type`` (PR-title alignment reads the type label) and, for now, on ``state``
+    (reading a board Status field needs a detector kind that does not exist yet).
+    This function does not re-check admissibility: the schema is the gate, and a
+    second copy of the rule here would be a source of truth that can disagree.
+    """
+    if substrate_map is None:
+        return False
+    binding = substrate_map.axes.get(axis)
+    if not isinstance(binding, dict):
+        return False
+    return binding.get("board") is True
 
 
 def axis_is_label_bound(
@@ -674,7 +714,18 @@ def resolve_write(
         # transitions. Refuse to invent one (fail closed).
         return DEGRADE
 
-    # Malformed binding (none of the four arms matched) ⇒ fail closed.
+    if binding.get("board") is True:
+        # A board-carried axis has no write-LABEL either: the value lives on a
+        # Projects-v2 field, written through the board write primitive, not
+        # through this seam. Same DEGRADE as `derive`, and for the same reason —
+        # but note the axis is SERVED (`axis_disposition` above), NOT degraded.
+        # A consumer that reports DEGRADE as "unsupported under your
+        # substrate-map" would be lying about a served axis, so label writers
+        # must consult `axis_is_board_carried` BEFORE resolving, exactly as they
+        # already consult `axis_is_title_carried` for the title arm.
+        return DEGRADE
+
+    # Malformed binding (none of the five arms matched) ⇒ fail closed.
     return DEGRADE
 
 
@@ -806,10 +857,14 @@ def resolve_read(
     * **Map present, axis bound to ``label``** ⇒ the kit value whose remapped
       adopter label is present (reverse of the ``label`` ``remap``). ``None`` if
       none of the adopter's mapped labels is on the issue.
-    * **Map present, axis ``derive``-bound / ``title-prefix`` / ``unsupported`` /
-      absent** ⇒ ``None``. A derived axis is read by :func:`derive_state` from
-      open/closed, NOT from a label; a title-prefix axis is read from the title,
-      not the labels; an unsupported/absent axis carries no value the seam reads.
+    * **Map present, axis ``derive``-bound / ``title-prefix`` / ``board`` /
+      ``unsupported`` / absent** ⇒ ``None``. A derived axis is read by
+      :func:`derive_state` from open/closed, NOT from a label; a title-prefix
+      axis is read from the title, not the labels; a ``board`` axis's value is on
+      a Projects-v2 field, read through the board read seam, not from labels; an
+      unsupported/absent axis carries no value the seam reads. Note ``None`` here
+      does NOT mean degraded — a ``board`` axis is served, it simply is not
+      label-carried.
 
     This is deliberately the LABEL-arm reverse-remap only — the ``state`` axis's
     ``derive`` read goes through :func:`derive_state` (it needs the open/closed
@@ -830,7 +885,7 @@ def resolve_read(
                 if isinstance(adopter_label, str) and adopter_label in present:
                     return str(kit_value)
         return None
-    # derive / title-prefix / unsupported / malformed — not a label read.
+    # derive / title-prefix / board / unsupported / malformed — not a label read.
     return None
 
 
