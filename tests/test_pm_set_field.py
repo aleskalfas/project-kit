@@ -186,18 +186,24 @@ def test_plan_labels_batch_priority_and_workstream(sf) -> None:
     assert set(add) == {"priority:Medium", "workstream:cli"}
 
 
-# --- axis routing: which substrate owns the axis (#724) ----------------------
+# --- axis routing: which substrate owns the axis (#724, #712) ----------------
 #
-# The routing predicate is deliberately the SAME pair pre-check's cross-substrate
-# conflict check keys on (`has_projects_v2_board` × `axis_is_label_bound`), so the
-# writer and the gate cannot disagree about where an axis lives.
+# Routing asks `_lib/axis_carriage` and nothing else
+# ([project-management:DEC-051-axis-carriage-activation]): where the map binds the
+# axis, the binding decides and the board flag is not consulted for it; where the
+# map is silent, the flag governs as before. The previous predicate — the flag
+# crossed with `axis_is_label_bound` — resolved board-versus-label FIRST, so under
+# a configured board a label-bound axis never reached the seam at all.
+
+_BOARD = {"has_projects_v2_board": True, "projects_v2_board_id": 7}
+_NO_BOARD = {"has_projects_v2_board": False}
 
 
 def test_route_axes_no_board_sends_everything_to_labels(sf) -> None:
     label_axes, board_axes, results = sf._route_axes(
         priority="High",
         workstream="cli",
-        has_board=False,
+        config=_NO_BOARD,
         substrate_map=None,
     )
     assert label_axes == {"priority": "High", "workstream": "cli"}
@@ -206,10 +212,11 @@ def test_route_axes_no_board_sends_everything_to_labels(sf) -> None:
 
 
 def test_route_axes_board_claims_priority_and_workstream(sf) -> None:
+    """The map is silent, so the flag still governs — today's behaviour, kept."""
     label_axes, board_axes, results = sf._route_axes(
         priority="High",
         workstream="cli",
-        has_board=True,
+        config=_BOARD,
         substrate_map=None,
     )
     assert board_axes == {"priority": "High", "workstream": "cli"}
@@ -217,44 +224,82 @@ def test_route_axes_board_claims_priority_and_workstream(sf) -> None:
     assert results == []
 
 
-def test_route_axes_label_bound_axis_under_a_board_is_the_two_claimant_refusal(
-    sf, axis_labels
-) -> None:
-    """The #708 root cause: config says board, the map binds the axis to a label.
-    set-field refuses rather than picking a winner (that is #712's call) — and says
-    the value went nowhere, keeping #709's posture."""
-    sm = axis_labels.SubstrateMap(axes={"priority": {"label": {"High": "P0"}}})
+def test_route_axes_label_binding_wins_over_the_board_flag(sf, axis_labels) -> None:
+    """The #708 config — board flag on, map binds `priority` to the adopter's own
+    labels — is no longer a refusal: the binding governs the axis it names, so the
+    value routes to the LABEL plan and the board is not consulted for it."""
+    sm = axis_labels.SubstrateMap(axes={"priority": {"label": {"remap": {"High": "P0"}}}})
     label_axes, board_axes, results = sf._route_axes(
         priority="High",
         workstream=None,
-        has_board=True,
+        config=_BOARD,
         substrate_map=sm,
         board_id=7,
     )
-    assert label_axes == {} and board_axes == {}
-    refusal = next(r for r in results if r.field == "priority")
-    assert refusal.ok is False and refusal.changed is False
-    assert "TWO SUBSTRATES" in refusal.message
-    assert "NOT SET" in refusal.message
-    assert "#7" in refusal.message
-    assert "pre-check" in refusal.message
+    assert label_axes == {"priority": "High"}
+    assert board_axes == {}
+    assert results == []
 
 
 def test_route_axes_mixed_map_splits_the_two_axes(sf, axis_labels) -> None:
-    """Only the label-bound axis is diverted; a board-claimed sibling still routes
-    to the board."""
+    """Per-axis, not per-project: a bound axis follows its binding while a sibling
+    the map does not bind still falls through to the flag. `unsupported` names no
+    substrate, so it does NOT govern — it falls through exactly as an omitted axis
+    does (DEC-051 decision point 1)."""
     sm = axis_labels.SubstrateMap(
-        axes={"priority": {"label": {"High": "P0"}}, "workstream": {"unsupported": True}}
+        axes={
+            "priority": {"label": {"remap": {"High": "P0"}}},
+            "workstream": {"unsupported": True},
+        }
     )
     label_axes, board_axes, results = sf._route_axes(
         priority="High",
         workstream="cli",
-        has_board=True,
+        config=_BOARD,
         substrate_map=sm,
     )
+    assert label_axes == {"priority": "High"}
     assert board_axes == {"workstream": "cli"}
-    assert label_axes == {}
-    assert [r.field for r in results] == ["priority"]
+    assert results == []
+
+
+def test_route_axes_degraded_axis_is_a_note_not_a_refusal(sf, axis_labels) -> None:
+    """No board to fall through to: an `unsupported` axis has nowhere to go by the
+    adopter's OWN declaration, which stays a note (`ok=True`) — degradation working
+    as designed, not a write the verb declined."""
+    sm = axis_labels.SubstrateMap(axes={"priority": {"unsupported": True}})
+    label_axes, board_axes, results = sf._route_axes(
+        priority="High",
+        workstream=None,
+        config=_NO_BOARD,
+        substrate_map=sm,
+    )
+    assert label_axes == {} and board_axes == {}
+    note = next(r for r in results if r.field == "priority")
+    assert note.ok is True and note.changed is False
+    assert "unsupported under your substrate-map" in note.message
+
+
+def test_route_axes_title_carried_axis_is_refused_never_labelled(
+    sf, axis_labels
+) -> None:
+    """A title-prefix binding is SERVED but is not a substrate set-field writes for
+    priority — and routing it to the label planner would apply the PREFIX string as
+    a `gh --label` the tracker does not have. Refused, non-zero, never written."""
+    sm = axis_labels.SubstrateMap(
+        axes={"priority": {"title-prefix": {"remap": {"High": "[P0]"}}}}
+    )
+    label_axes, board_axes, results = sf._route_axes(
+        priority="High",
+        workstream=None,
+        config=_NO_BOARD,
+        substrate_map=sm,
+    )
+    assert label_axes == {} and board_axes == {}
+    refusal = next(r for r in results if r.field == "priority")
+    assert refusal.ok is False and refusal.changed is False
+    assert "NOT SET" in refusal.message
+    assert "in the issue TITLE" in refusal.message
 
 
 def test_board_field_name_is_title_cased_axis(sf) -> None:
@@ -436,11 +481,12 @@ def test_label_substrate_path_is_untouched_by_the_board_path(sf) -> None:
     assert all(r.ok for r in results)
 
 
-def test_unsupported_axis_under_map_is_still_a_note_not_a_refusal(sf, axis_labels) -> None:
-    """Scope guard: an axis the adopter explicitly declared `unsupported` has
-    nowhere to write BY DECLARATION — that stays a note (`ok=True`), unchanged by
-    #709, which is about the board/label DISAGREEMENT."""
-    sm = axis_labels.SubstrateMap(axes={"priority": {"unsupported": True}})
+def test_plan_labels_value_with_no_remap_entry_is_a_refusal(sf, axis_labels) -> None:
+    """DEC-051 decision point 5: routing has already established that a LABEL
+    carries this axis, so the only remaining degrade is the value-unresolvable
+    fourth arm — the adopter's `remap` has no entry for this value. It landed
+    nowhere, so it must not report success (it used to return `ok=True`)."""
+    sm = axis_labels.SubstrateMap(axes={"priority": {"label": {"remap": {"Low": "P2"}}}})
     results, add, remove = sf._plan_labels(
         priority="High",
         workstream=None,
@@ -448,7 +494,27 @@ def test_unsupported_axis_under_map_is_still_a_note_not_a_refusal(sf, axis_label
         substrate_map=sm,
     )
     assert add == [] and remove == []
-    assert next(r for r in results if r.field == "priority").ok is True
+    refused = next(r for r in results if r.field == "priority")
+    assert refused.ok is False and refused.changed is False
+    assert "NOT SET" in refused.message
+
+
+def test_plan_labels_strips_the_adopters_own_stale_label(sf, axis_labels) -> None:
+    """A `label`-bound axis's substrate is the adopter's OWN label name, which
+    carries no `priority:` prefix — a prefix-only stale search would add `P0` and
+    leave `P2` behind, two values on a single-valued axis."""
+    sm = axis_labels.SubstrateMap(
+        axes={"priority": {"label": {"remap": {"High": "P0", "Low": "P2"}}}}
+    )
+    results, add, remove = sf._plan_labels(
+        priority="High",
+        workstream=None,
+        current_labels=["P2", "type:bug"],
+        substrate_map=sm,
+    )
+    assert add == ["P0"]
+    assert remove == ["P2"]
+    assert all(r.ok for r in results)
 
 
 def test_field_list_dedupes_and_preserves_order(sf) -> None:
@@ -1208,15 +1274,43 @@ def test_main_mixed_axes_both_substrates_applied_is_a_clean_success(
     assert "updated" in out
 
 
-def test_main_two_claimant_conflict_refuses_and_writes_nothing(
+def test_main_map_binding_wins_over_the_board_flag(
     sf, tmp_path, monkeypatch, capsys
 ) -> None:
-    """The #708 config: board flag on, substrate-map binds `priority` to a label.
-    set-field refuses the axis (it will not pick a winner), writes nothing, and
-    points at pre-check."""
+    """The #708 config end-to-end: board flag on, substrate-map binds `priority` to
+    the adopter's own labels. The binding governs — the adopter's label is written,
+    the board is not touched, and the call succeeds. Before DEC-051 this was a
+    refusal that recorded the value nowhere."""
     root = _stage_capability_root(tmp_path, has_board=True)
     (root / "project" / "substrate-map.yaml").write_text(
-        "schema_version: 1\naxes:\n  priority:\n    label:\n      High: P0\n",
+        "schema_version: 1\naxes:\n  priority:\n    label:\n      remap:\n        High: P0\n",
+        encoding="utf-8",
+    )
+    captured = _run_main(
+        sf,
+        monkeypatch,
+        root=root,
+        argv=["42", "--priority", "High"],
+        issue=_TASK_ISSUE,
+        board_state=_board_state(sf),
+    )
+    out = capsys.readouterr().out
+
+    assert captured["rc"] == 0
+    assert captured["labels"] == [(["P0"], [])]
+    assert captured["board"] == []
+    assert "[refused]" not in out
+
+
+def test_main_label_bound_value_with_no_remap_entry_never_exits_zero(
+    sf, tmp_path, monkeypatch, capsys
+) -> None:
+    """The posture DEC-051 decision point 5 requires be preserved on the path the
+    inversion now enters: a value with no remap entry lands nowhere, so it is a
+    refusal with a non-zero exit — never `no change (all fields already set)`."""
+    root = _stage_capability_root(tmp_path, has_board=True)
+    (root / "project" / "substrate-map.yaml").write_text(
+        "schema_version: 1\naxes:\n  priority:\n    label:\n      remap:\n        Low: P2\n",
         encoding="utf-8",
     )
     captured = _run_main(
@@ -1231,5 +1325,5 @@ def test_main_two_claimant_conflict_refuses_and_writes_nothing(
 
     assert captured["rc"] == 1
     assert captured["board"] == [] and captured["labels"] == []
-    assert "TWO SUBSTRATES" in out
-    assert "pre-check" in out
+    assert "NOT SET" in out
+    assert "no change (all fields already set)" not in out

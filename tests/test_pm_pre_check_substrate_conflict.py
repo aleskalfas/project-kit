@@ -80,8 +80,10 @@ def _mockingbird_map(axis_labels):
 
 
 def _workaround_map(axis_labels):
-    """The report's own workaround: the board-backed axis is `unsupported: true`,
-    so the map AGREES with the writer — no conflict."""
+    """The report's own (now-withdrawn) workaround: the board-backed axis is
+    `unsupported: true`. It names no substrate, so it makes no competing claim —
+    no conflict. It is NOT the way to declare board carriage; see
+    `test_board_arm_is_not_a_conflict` for the shape that replaced it."""
     return axis_labels.SubstrateMap(
         axes={
             "priority": {"unsupported": True},
@@ -123,9 +125,13 @@ def test_conflict_detail_names_both_claimants_and_consequence(pc, axis_labels) -
     # Consequence.
     assert "BOTH substrates" in fail.detail
     assert "unsatisfiable" in fail.detail
-    # Remediation offers both single-substrate exits.
+    # Remediation offers both single-substrate exits. The board-backed one names
+    # `board: true` — NOT `unsupported: true`, which the arm's arrival withdrew
+    # (it declares the axis has no encoding, the opposite of board carriage;
+    # project-management:DEC-051 decision point 1).
     assert fail.remediation is not None
-    assert "unsupported: true" in fail.remediation
+    assert "board: true" in fail.remediation
+    assert "unsupported: true" not in fail.remediation
     assert "has_projects_v2_board: false" in fail.remediation
 
 

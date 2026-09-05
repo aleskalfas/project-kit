@@ -52,6 +52,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
+from _lib import axis_carriage  # noqa: E402
 from _lib import axis_labels  # noqa: E402
 from _lib import session_guard  # noqa: E402
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
@@ -73,19 +74,35 @@ SELF_TEST_STATE_VALUE = "todo"
 SELF_TEST_PRIORITY_VALUE = "Low"
 
 
-def _seed_labels(capability_root, has_board: bool) -> list[str]:
-    """The throwaway issue's seed labels, resolved through `resolve_write`. A
-    DEGRADE'd axis (present-map unsupported / derive / value-unresolvable) is
-    omitted — never coerced to a kit label."""
+def _seed_labels(capability_root, config: dict) -> list[str]:
+    """The throwaway issue's seed labels — only the axes a LABEL carries.
+
+    Each axis's substrate is resolved by `_lib/axis_carriage` first and only a
+    label-carried one is resolved to a write-label through the seam; a DEGRADE'd
+    axis (present-map unsupported / derive / value-unresolvable) is omitted rather
+    than coerced to a kit label.
+
+    Asking per axis fixes a live bug: `priority` was resolved UNCONDITIONALLY,
+    outside the board guard that wrapped `state`. On a greenfield board adopter
+    that resolves to the kit's `priority:Low` — a label `bootstrap` deliberately
+    did not create, because the board carries the axis — so `gh issue create`
+    failed on a label that does not exist and the self-test could not pass on a
+    correctly-configured project.
+    """
     substrate_map = axis_labels.load_substrate_map(capability_root)
     out: list[str] = []
-    priority = axis_labels.resolve_write("priority", SELF_TEST_PRIORITY_VALUE, substrate_map)
-    if isinstance(priority, str):
-        out.append(priority)
-    if not has_board:
-        state = axis_labels.resolve_write("state", SELF_TEST_STATE_VALUE, substrate_map)
-        if isinstance(state, str):
-            out.append(state)
+    for axis, value in (
+        ("priority", SELF_TEST_PRIORITY_VALUE),
+        ("state", SELF_TEST_STATE_VALUE),
+    ):
+        if axis_carriage.carriage(axis, config, substrate_map) not in (
+            "kit-label",
+            "adopter-label",
+        ):
+            continue
+        resolved = axis_labels.resolve_write(axis, value, substrate_map)
+        if isinstance(resolved, str):
+            out.append(resolved)
     return out
 SELF_TEST_BODY = """\
 ## What
@@ -174,17 +191,26 @@ def main() -> int:
         return 2
 
     config = load_adopter_config(capability_root)
-    has_board = bool(config.get("has_projects_v2_board", False))
+    substrate_map = axis_labels.load_substrate_map(capability_root)
 
     print("self-test: project-management capability")
     print(f"  capability root: {capability_root}")
-    print(f"  substrate:       {'board' if has_board else 'label-fallback'}")
+    # Per axis, not per project: a board adopter can bind an axis to their own
+    # labels, so there is no single "the substrate" to name
+    # ([project-management:DEC-051-axis-carriage-activation]).
+    print(
+        "  substrate:       "
+        + ", ".join(
+            f"{axis}={axis_carriage.carriage(axis, config, substrate_map)}"
+            for axis in ("priority", "state")
+        )
+    )
     if args.dry_run:
         print("  mode:            dry-run (no GitHub mutations)")
     print()
 
     if args.dry_run:
-        _print_dry_run_plan(capability_root, has_board)
+        _print_dry_run_plan(capability_root, config)
         return 0
 
     # Foreign-repo mutation guard (COR-039 / ADR-034). self-test creates and
@@ -199,7 +225,7 @@ def main() -> int:
     state = SelfTestState()
 
     # Step 1: create throwaway issue.
-    issue_number = _step_create_issue(capability_root, config, has_board, state)
+    issue_number = _step_create_issue(capability_root, config, state)
     if issue_number is None:
         _print_summary(state)
         return 1
@@ -227,11 +253,11 @@ def main() -> int:
 
 
 def _step_create_issue(
-    capability_root, config: dict, has_board: bool, state: SelfTestState
+    capability_root, config: dict, state: SelfTestState
 ) -> int | None:
     """Step 1: create the throwaway issue and return its number."""
     label_args: list[str] = []
-    for lbl in _seed_labels(capability_root, has_board):
+    for lbl in _seed_labels(capability_root, config):
         label_args.extend(["--label", lbl])
 
     try:
@@ -520,12 +546,12 @@ def _ensure_milestone(title: str, config: dict) -> tuple[int | None, bool]:
         return None, False
 
 
-def _print_dry_run_plan(capability_root, has_board: bool) -> None:
+def _print_dry_run_plan(capability_root, config: dict) -> None:
     """Print what the self-test would do without running it."""
-    seed = _seed_labels(capability_root, has_board)
+    seed = _seed_labels(capability_root, config)
     print("plan (dry-run):")
     print(f"  1. Create issue: '{SELF_TEST_TITLE}'")
-    print(f"     labels: {', '.join(seed) if seed else '(none — axes degraded under substrate-map)'}")
+    print(f"     labels: {', '.join(seed) if seed else '(none — no axis is label-carried here)'}")
     print(f"  2. Ensure milestone '{SELF_TEST_MILESTONE}' exists; attach to issue")
     print("  3. move-issue --to backlog --yes (todo → backlog state transition)")
     print("  4. move-issue --to in-progress --yes (backlog → in-progress)")

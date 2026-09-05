@@ -33,16 +33,24 @@ classification.yaml), so --kind labels regardless of board substrate.
 
 Board-carried axes (#724, from #723 / report #708)
 -------------------------------------------------
-Under `has_projects_v2_board: true`, priority/workstream live on a Projects-v2
-single-select field rather than a label — and set-field now WRITES it. Everything
-is resolved from names the adopter already speaks, at runtime, through the board
-READ seam (`_lib/board_fields`): the board NUMBER in config → the project node id;
-the field whose NAME matches the axis (`priority` → `Priority`, the Title-case
-convention Projects-v2 boards use); the option whose NAME matches the requested
-value; and the issue's own card (item) id. No hand-configured ids — before this,
-the ONLY writer of a board field was an `after_create_issue` `set-board-field`
-hook whose entries carry field/option ids the adopter had to dig out of the API by
-hand, which is the pain report #708 describes.
+Where `_lib/axis_carriage` resolves priority/workstream to the BOARD — a map that
+binds the axis `board: true`, or a configured board on an axis the map is silent
+about ([project-management:DEC-051-axis-carriage-activation]) — the value lives on
+a Projects-v2 single-select field rather than a label, and set-field WRITES it. A
+map that binds the axis to a label wins over the board flag, and the value is
+written as that label instead: the flag is not consulted for an axis the adopter
+has explicitly bound.
+
+Everything about the board write is resolved from names the adopter already
+speaks, at runtime, through the board READ seam (`_lib/board_fields`): the board
+NUMBER in config → the project node id; the field whose NAME matches the axis
+(`priority` → `Priority`, the Title-case convention Projects-v2 boards use); the
+option whose NAME matches the requested value; and the issue's own card (item) id.
+
+No hand-configured ids — before this, the ONLY writer of a board field was an
+`after_create_issue` `set-board-field` hook whose entries carry field/option ids
+the adopter had to dig out of the API by hand, which is the pain report #708
+describes.
 
 The write itself is constructed and executed only by `_lib/substrate_writes`
 (ADR-031's sole constructor for a non-label substrate write) — the same primitive
@@ -124,6 +132,7 @@ from ruamel.yaml.error import YAMLError
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import bootstrap_gate  # noqa: E402
+from _lib import axis_carriage  # noqa: E402
 from _lib import axis_labels  # noqa: E402
 from _lib import board_fields  # noqa: E402
 from _lib import classification_rules  # noqa: E402
@@ -230,7 +239,6 @@ def main() -> int:
         capability_root / "schemas" / "classification.yaml", yaml_loader
     )
     substrate_map = axis_labels.load_substrate_map(capability_root)
-    has_board = bool(config.get("has_projects_v2_board", False))
 
     # `id` + `url` are for the board path: `id` is the issue's GraphQL node id (the
     # key the card lookup asks `projectItems` on) and `url` renders the exact
@@ -359,7 +367,7 @@ def main() -> int:
     label_axes, board_axes, routing_results = _route_axes(
         priority=args.priority,
         workstream=args.workstream,
-        has_board=has_board,
+        config=config,
         substrate_map=substrate_map,
         board_id=config.get("projects_v2_board_id"),
     )
@@ -506,7 +514,7 @@ def _route_axes(
     *,
     priority: str | None,
     workstream: str | None,
-    has_board: bool,
+    config: dict,
     substrate_map: "axis_labels.SubstrateMap | None",
     board_id: int | str | None = None,
 ) -> tuple[dict[str, str], dict[str, str], list[FieldResult]]:
@@ -514,21 +522,50 @@ def _route_axes(
 
     Returns ``(label_axes, board_axes, results)`` — the axes to plan as labels, the
     axes to plan as board single-selects, and any result the routing itself
-    produced (today: the two-claimants refusal).
+    produced (today: the degrade refusal).
 
-    The predicate for "the board owns this axis" is `has_projects_v2_board: true`
-    AND the substrate-map does NOT bind the axis to a label — deliberately the SAME
-    pair pre-check's cross-substrate conflict check keys on (its
-    `BOARD_CLAIMED_AXES` list crossed with `axis_labels.axis_is_label_bound`), so
-    the writer and the gate cannot disagree about which axis lives where. Binding
-    shape is read only through the seam (ADR-026).
+    **Which substrate owns the axis is asked of `_lib/axis_carriage`, and of
+    nothing else** ([project-management:DEC-051-axis-carriage-activation] decision
+    points 1 and 4). Where the map binds the axis, the binding is the answer and
+    `has_projects_v2_board` is not consulted for it; where the map is silent, the
+    flag governs exactly as before. This replaces the previous predicate — the flag
+    crossed with `axis_is_label_bound` — which was the same pair pre-check's
+    cross-substrate conflict check keyed on. That statement of the invariant is
+    updated rather than preserved: the two claimants no longer *conflict*, so what
+    the two sides must share is the ANSWER, not a duplicated cross, and one
+    composition is the stronger guarantee of that.
 
-    When BOTH claim the axis, set-field refuses it rather than picking a winner:
-    which declaration wins is a methodology decision (the #712 question), not
-    something a verb should settle by implementation order, and the state is
-    exactly what pre-check hard-fails on with both remediations spelled out. The
-    refusal keeps #709's posture — the value was recorded nowhere, and the caller
-    is told so with a non-zero exit.
+    **Honest as-built note.** pre-check's refusal has NOT softened yet. [DEC-051]
+    decision point 5 rules that it becomes a warning, and its own implications
+    order that softening LAST — after the consumers are rewired — because relaxing
+    it first would make the reported state less detectable than it is today. So
+    between this change and that one, an adopter in the reported configuration gets
+    a working write here and a hard failure from `pre-check`. That is the ordering
+    the record asks for, not a disagreement about where the axis lives.
+
+    The arms:
+
+      * ``board`` ⇒ the board plan (the field write, resolved by name at write
+        time);
+      * ``kit-label`` / ``adopter-label`` ⇒ the label plan — the kit's own label in
+        greenfield, the adopter's remapped label under a `label:` binding;
+      * ``title`` / ``derived`` ⇒ **refused**, non-zero exit. These are substrates
+        set-field does not write for these axes — it realigns a title prefix only
+        for `--kind`, and a derived axis is computed from tracker state rather than
+        set — so the axis is SERVED but this verb cannot serve it, and a value it
+        declined to record must never read as success (#709). Routing them away
+        from the label planner also stops a live mis-write: for a title-bound axis
+        `resolve_write` returns the PREFIX string, which the label planner would
+        apply as a `gh --label` the tracker does not have;
+      * ``degrade`` ⇒ a NOTE (`ok=True`), not a refusal. Here the adopter has
+        declared the axis `unsupported` (or omitted it from a present map, which
+        the schema defines as equivalent): the value has nowhere to go BY THEIR
+        OWN DECLARATION, which is degradation working as designed rather than a
+        write the verb declined. That scoping is deliberate and predates this
+        change (#709 draws the refusal line at the board/label disagreement), and
+        it is what the rest of the capability does with a declared-unsupported axis
+        — `create-issue` files the issue and emits an advisory. The value-level
+        degrade is a different matter and IS a refusal; see `_plan_labels`.
     """
     label_axes: dict[str, str] = {}
     board_axes: dict[str, str] = {}
@@ -538,32 +575,46 @@ def _route_axes(
     for axis, value in (("priority", priority), ("workstream", workstream)):
         if value is None:
             continue
-        if has_board and axis_labels.axis_is_label_bound(axis, substrate_map):
+        carried = axis_carriage.carriage(axis, config, substrate_map)
+        if carried == "board":
+            board_axes[axis] = value
+            continue
+        if carried in ("kit-label", "adopter-label"):
+            label_axes[axis] = value
+            continue
+        if carried == "degrade":
+            # Declared unsupported (or omitted, which the schema defines as the
+            # same): nothing carries the axis by the adopter's own declaration.
             results.append(
                 FieldResult(
                     field=axis,
-                    ok=False,
+                    ok=True,
                     changed=False,
                     message=(
-                        f"{axis}: TWO SUBSTRATES claim `{axis}` — "
-                        f"project/config.yaml sets `has_projects_v2_board: true` "
-                        f"(board{board_ref}), so the axis is a board field, while "
-                        f"project/substrate-map.yaml binds `{axis}` to one of your "
-                        f"own labels, which is where every reader looks. NOT SET: "
-                        f"{value!r} was not recorded on either substrate — "
-                        f"set-field will not pick a winner between two adopter "
-                        f"declarations. Run `pkit project-management pre-check`: it "
-                        f"fails on this conflict and names both ways out (board-"
-                        f"backed: mark the axis `unsupported: true` in the map; "
-                        f"label-backed: set `has_projects_v2_board: false`)."
+                        f"{axis}: unsupported under your substrate-map "
+                        f"(value {value!r}); not set here"
                     ),
                 )
             )
             continue
-        if has_board:
-            board_axes[axis] = value
-            continue
-        label_axes[axis] = value
+        # SERVED, but on a substrate this verb does not write. Refuse rather than
+        # write nowhere and report success.
+        where = axis_carriage.describe(axis, config, substrate_map)
+        results.append(
+            FieldResult(
+                field=axis,
+                ok=False,
+                changed=False,
+                message=(
+                    f"{axis}: set-field does not write the substrate that carries "
+                    f"`{axis}` — it is carried {where}. NOT SET: {value!r} was not "
+                    f"recorded on any substrate. Bind `{axis}` to a label (or "
+                    f"`board: true`, with a board configured{board_ref}) in "
+                    f"project/substrate-map.yaml, or set the value on its own "
+                    f"substrate directly."
+                ),
+            )
+        )
 
     return label_axes, board_axes, results
 
@@ -585,6 +636,16 @@ def _plan_labels(
     Pure — no gh reads. Only axes `_route_axes` assigned to the LABEL substrate
     reach here; a board-carried axis is planned by `_plan_board_fields` instead, so
     this function no longer needs to know whether a board exists.
+
+    A DEGRADE reaching this function therefore means exactly ONE thing, and it is
+    not "the axis is unsupported": routing has already established that a label
+    carries this axis, so the only way `resolve_write` can decline is the
+    value-unresolvable fourth arm (ADR-026) — the adopter's `remap` has no entry
+    for this methodology value. That is a REFUSAL, not a no-op. Reporting it as
+    `ok=True, changed=False` (which this did) let a value land on no substrate and
+    still exit zero — the never-report-success-on-a-declined-write posture
+    [project-management:DEC-051-axis-carriage-activation] decision point 5 requires
+    be preserved on whichever path the inversion now enters.
     """
     results: list[FieldResult] = []
     to_add: list[str] = []
@@ -598,11 +659,15 @@ def _plan_labels(
             results.append(
                 FieldResult(
                     field=axis,
-                    ok=True,
+                    ok=False,
                     changed=False,
                     message=(
-                        f"{axis}: unsupported under your substrate-map "
-                        f"(value {value!r}); not labelled"
+                        f"{axis}: your substrate-map binds `{axis}` to your own "
+                        f"labels but its `remap` has no entry for {value!r}, so "
+                        f"there is no label to write. NOT SET: {value!r} was not "
+                        f"recorded on any substrate. Add a `remap` entry for "
+                        f"{value!r} in project/substrate-map.yaml (or pass a value "
+                        f"your map remaps)."
                     ),
                 )
             )
@@ -617,9 +682,14 @@ def _plan_labels(
                 )
             )
             continue
+        # Map-aware stale search: under a `label` binding the substrate is the
+        # adopter's OWN label name, which carries no `<axis>:` prefix — a
+        # prefix-only search would add the new label and leave the old one on the
+        # issue, accumulating two values on a single-valued axis.
         stale = [
-            lbl for lbl in current_labels
-            if axis_labels.is_axis_label(lbl, axis) and lbl != resolved
+            lbl
+            for lbl in axis_labels.carried_labels(axis, current_labels, substrate_map)
+            if lbl != resolved
         ]
         to_remove.extend(stale)
         to_add.append(resolved)
@@ -823,8 +893,9 @@ def _plan_board_fields(
                         f"`{field_name}`. It offers: "
                         f"{', '.join(offered) or '(no fields)'}. {unset} Rename or "
                         f"add a `{field_name}` single-select on the board, or bind "
-                        f"`{axis}` to a label in project/substrate-map.yaml and set "
-                        f"`has_projects_v2_board: false`."
+                        f"`{axis}` to a label in project/substrate-map.yaml — a "
+                        f"binding wins over the board flag for the axis it names, "
+                        f"so the board keeps working for everything else."
                     ),
                 )
             )
@@ -927,11 +998,22 @@ def _plan_kind(
     (task) issue with any kind, or epic/feature/umbrella with kind `feature` (the
     kind they carry by definition, which lands as a no-op here).
 
-    The `type` axis is ALWAYS a label (per classification.yaml), so unlike
-    priority/workstream there is no board-degrade path: the kind label resolves
+    The `type` axis is ALWAYS a label (per classification.yaml, and the map's
+    `board:` arm is inadmissible on it), so unlike priority/workstream there is no
+    board path here and no carriage question to ask: the kind label resolves
     through the SAME `axis_labels.resolve_write` create-issue uses, then diffs
-    against the issue's current `type:*` label(s) — already-correct is a no-op,
-    a change removes the stale `type:*` label and adds the new one.
+    against the issue's current type label(s) — already-correct is a no-op, a
+    change removes the stale one and adds the new one.
+
+    **Known gap, unfixed here and NOT touched by the carriage rewiring
+    (#712).** A `title-prefix`-bound `type` axis is not detected before resolving:
+    `resolve_write` returns the PREFIX string (`[Task]`), which this plans as a
+    `gh --label` the tracker does not have — the #454 failure, in set-field rather
+    than create-issue, where `_build_labels` guards it by consulting the binding
+    kind first. It is left alone deliberately rather than patched in passing: the
+    right behaviour for such an adopter is a design question (realigning the title
+    prefix may BE the correct write for them, in which case this should not refuse
+    but retitle), and it is unrelated to which substrate the board flag claims.
 
     Title-prefix realignment (the create-issue coupling, reused): the new prefix
     is read from classification.yaml's `title_prefix_by_value[<kind>]` — the same
@@ -973,9 +1055,14 @@ def _plan_kind(
             )
         )
     else:
+        # Map-aware stale search, as in `_plan_labels`: under a `label` binding the
+        # substrate is the adopter's own label name, which carries no `type:`
+        # prefix, so a prefix-only search would leave the old kind label in place
+        # beside the new one.
         stale = [
-            lbl for lbl in current_labels
-            if axis_labels.is_axis_label(lbl, "type") and lbl != resolved
+            lbl
+            for lbl in axis_labels.carried_labels("type", current_labels, substrate_map)
+            if lbl != resolved
         ]
         to_remove.extend(stale)
         to_add.append(resolved)
