@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "substrate-map.schema.json",
   "title": "Substrate map — adopter axis→substrate bindings (brownfield)",
-  "description": "Formal shape of substrate-map.yaml — the OPTIONAL adopter-side file by which a brownfield project binds each methodology axis (type, priority, workstream, state) onto whatever its immutable tracker already encodes (per project-management:DEC-036, read-path contract ADR-026). The file's presence is the activation signal: ABSENT ⇒ greenfield (every axis reads the kit's own labels, byte-unchanged); PRESENT ⇒ each axis resolves through its declared binding, and any axis NOT listed degrades (treated as `unsupported`, NOT greenfield). Per axis EXACTLY ONE binding: `label` (a value→value remap onto existing labels), `title-prefix` (a value→prefix remap), `derive` (a detection predicate, lifecycle-state), or `unsupported: true`. Two top-level MODE selectors sit beside `axes` (neither is a label-encoded axis): `hierarchy` (`gated`/`advisory` — parent-requiredness, DEC-036 D4) and `containment` (`native`/`textual` — the containment substrate, DEC-039 D2 / ADR-035). Document-shaped schema: the file IS the resource (no id collection). Companion per COR-018 / the .pkit/schemas/ area conventions.",
+  "description": "Formal shape of substrate-map.yaml — the OPTIONAL adopter-side file by which a brownfield project binds each methodology axis (type, priority, workstream, state) onto whatever its immutable tracker already encodes (per project-management:DEC-036, read-path contract ADR-026). The file's presence is the activation signal: ABSENT ⇒ greenfield (every axis reads the kit's own labels, byte-unchanged); PRESENT ⇒ each axis resolves through its declared binding, and any axis NOT listed degrades (treated as `unsupported`, NOT greenfield). Per axis EXACTLY ONE binding: `label` (a value→value remap onto existing labels), `title-prefix` (a value→prefix remap), `derive` (a detection predicate, lifecycle-state), `board: true` (the value lives on the configured Projects-v2 board field; `priority` / `workstream` only), or `unsupported: true`. Two top-level MODE selectors sit beside `axes` (neither is a label-encoded axis): `hierarchy` (`gated`/`advisory` — parent-requiredness, DEC-036 D4) and `containment` (`native`/`textual` — the containment substrate, DEC-039 D2 / ADR-035). Document-shaped schema: the file IS the resource (no id collection). Companion per COR-018 / the .pkit/schemas/ area conventions.",
   "type": "object",
   "required": [
     "schema_version",
@@ -46,19 +46,21 @@
       "properties": {
         "type": {
           "$ref": "#/$defs/axis_binding",
-          "description": "How the `type` axis is encoded in this tracker. The Feature-in-Feature containment invariant is keyed on `type` and stays HARD regardless of this binding (DEC-036 D4)."
+          "not": { "required": ["board"] },
+          "description": "How the `type` axis is encoded in this tracker. The Feature-in-Feature containment invariant is keyed on `type` and stays HARD regardless of this binding (DEC-036 D4). `board` is NOT admissible here: PR-title alignment reads the type LABEL, and a board field is invisible from a PR — the label-carriage is a functional dependency, not a preference."
         },
         "priority": {
           "$ref": "#/$defs/axis_binding",
-          "description": "How the `priority` axis is encoded (e.g. native P0/P1/P2 labels via a `label` remap)."
+          "description": "How the `priority` axis is encoded — native P0/P1/P2 labels via a `label` remap, or `board: true` when a Projects-v2 board field carries it."
         },
         "workstream": {
           "$ref": "#/$defs/axis_binding",
-          "description": "How the `workstream` axis is encoded, or `unsupported: true` when the tracker has no workstream encoding."
+          "description": "How the `workstream` axis is encoded — `board: true` when a Projects-v2 board field carries it, or `unsupported: true` when the tracker has no workstream encoding at all. The two are NOT interchangeable: `board` is served, `unsupported` degrades."
         },
         "state": {
           "$ref": "#/$defs/axis_binding",
-          "description": "How the lifecycle-state axis is encoded. Typically a `derive` predicate over open/closed + a blocked label (the DEC-033 detector swap), not a label remap."
+          "not": { "required": ["board"] },
+          "description": "How the lifecycle-state axis is encoded. Typically a `derive` predicate over open/closed + a blocked label (the DEC-033 detector swap), not a label remap. `board` is not YET admissible: state inference resolves closed→done, then a label read, then a milestone — there is no board arm, and reading a board Status field needs a new detector kind rather than a new binding."
         }
       }
     }
@@ -66,7 +68,7 @@
   "$defs": {
     "axis_binding": {
       "type": "object",
-      "description": "Exactly one binding per axis: `label`, `title-prefix`, `derive`, or `unsupported: true`. An optional `default` (a substrate value to seed on writes) MAY accompany any of them.",
+      "description": "Exactly one binding per axis: `label`, `title-prefix`, `derive`, `board: true`, or `unsupported: true`. An optional `default` (a substrate value to seed on writes) MAY accompany any of them — on a `board` arm it is corroborating metadata only (the hook carries the write), so a `default` with no matching `set-board-field` hook is reported.",
       "additionalProperties": false,
       "properties": {
         "default": {
@@ -83,6 +85,11 @@
         "derive": {
           "$ref": "#/$defs/derive_binding"
         },
+        "board": {
+          "type": "boolean",
+          "const": true,
+          "description": "Bind the axis to the configured Projects-v2 board — the value lives on a board field, NOT on a label. PARAMETERLESS by design: the field identity is a WRITE parameter declared on the DEC-024 `after_create_issue` hook (a second declaration point for it was refused in config for the same reason), and a field name here would be a claim about a live board this file cannot self-validate. Admissible on `priority` and `workstream` ONLY — `type` is label-carried by functional dependency (PR-title alignment reads the label) and board-carried `state` awaits a detector kind that can read a board Status field. REQUIRES `has_projects_v2_board: true`; the pair `board: true` + no configured board is unsatisfiable and is refused. Unlike `unsupported`, the axis is SERVED: rules needing it are not softened, and writers must not report a degraded label write as success."
+        },
         "unsupported": {
           "type": "boolean",
           "const": true,
@@ -90,10 +97,11 @@
         }
       },
       "oneOf": [
-        { "required": ["label"], "not": { "anyOf": [ { "required": ["title-prefix"] }, { "required": ["derive"] }, { "required": ["unsupported"] } ] } },
-        { "required": ["title-prefix"], "not": { "anyOf": [ { "required": ["label"] }, { "required": ["derive"] }, { "required": ["unsupported"] } ] } },
-        { "required": ["derive"], "not": { "anyOf": [ { "required": ["label"] }, { "required": ["title-prefix"] }, { "required": ["unsupported"] } ] } },
-        { "required": ["unsupported"], "not": { "anyOf": [ { "required": ["label"] }, { "required": ["title-prefix"] }, { "required": ["derive"] } ] } }
+        { "required": ["label"] },
+        { "required": ["title-prefix"] },
+        { "required": ["derive"] },
+        { "required": ["board"] },
+        { "required": ["unsupported"] }
       ]
     },
     "label_binding": {
