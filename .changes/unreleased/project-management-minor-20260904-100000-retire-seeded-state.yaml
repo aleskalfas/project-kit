@@ -12,11 +12,16 @@ body: >
   provenance, following the precedent the reviewer-rename migration set in the
   same directory: a lifecycle journal byte-identical to one this version
   shipped is provably foreign and is removed (a foreign journal is actively
-  harmful — `pm history <N>` reads it as this project's history); a bootstrap
-  stamp naming a different repo than the tree it sits in is removed, since it
-  otherwise reads as "already bootstrapped" and every gated verb then runs
-  against foreign defaults. Where no positive signal exists the file is
-  reported and left alone: the default-agent activation file is byte-identical
+  harmful — `pm history <N>` reads it as this project's history). Where no
+  signal is reliably available the file is reported and left alone. A bootstrap
+  stamp is reported rather than removed even though a foreign one is genuinely
+  harmful: judging it needs the same normaliser that wrote the value
+  (case-folding, userinfo, ports, ssh:// forms), a migration is shell-only by
+  convention here, and a divergent re-implementation would delete stamps that
+  are legitimately the adopter's — while the prerequisite gate already refuses
+  a foreign-repo stamp on every gated verb using that canonical normaliser, so
+  removing it here would be tidiness rather than protection. The default-agent
+  activation file is byte-identical
   whether it was seeded or the adopter ran `enable-default-agent`, and enabling
   leaves no record, so removing it could silently disable a feature they chose
   — the migration prints the remediation instead; and `config.yaml` /

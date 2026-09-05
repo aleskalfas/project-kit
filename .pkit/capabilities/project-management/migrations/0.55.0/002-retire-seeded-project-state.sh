@@ -23,11 +23,6 @@
 #     adopter's own journal for the same issue number is not byte-identical to
 #     another project's; equality is proof of origin. A foreign journal is also
 #     actively harmful — `pm history <N>` reads it as this project's history.
-#   * a bootstrap stamp naming a DIFFERENT repo than this tree. The stamp
-#     records its origin repo precisely so it cannot be trusted after a copy,
-#     and `_lib/bootstrap_gate.py` already implements that comparison for its
-#     fail-open guard. A seeded stamp is worse than useless: it reads as
-#     "already bootstrapped", so every gated verb runs against foreign defaults.
 #
 # REPORTED, NEVER REMOVED — no positive signal, or removal would harm:
 #   * `adapter-overlays/claude-code.json` — ambiguous BY CONSTRUCTION. It is
@@ -40,6 +35,17 @@
 #     seed, and their seeded values are frequently correct anyway
 #     (`default_branch: main`, `gh.host: github.com`). Deleting an adopter's
 #     only working config to purify its provenance would be actively harmful.
+#   * `bootstrap-stamp.yaml`. A seeded stamp is genuinely harmful — it reads as
+#     "already bootstrapped", so gated verbs would run against foreign defaults
+#     — but deciding whether one is foreign requires the SAME normaliser that
+#     wrote it (`session_guard.normalize_origin_url`: case-folding, userinfo,
+#     host:port, ssh:// forms). A migration is shell-only by convention here, and
+#     a divergent re-implementation would delete stamps that are legitimately
+#     the adopter's. Reported instead — and the adopter is not unprotected,
+#     because `bootstrap_gate._repo_binding_problem` already refuses a
+#     foreign-repo stamp at every gated verb using that canonical normaliser.
+#     Removing it here would be tidiness, not protection, and tidiness does not
+#     justify a data-loss risk.
 #   * any journal that does NOT match this version's shipped set — either the
 #     adopter's own, or seeded by an older version whose content this migration
 #     cannot know. Reported so it is a visible decision rather than a silent
@@ -130,18 +136,15 @@ fi
 
 STAMP="$PROJECT_DIR/bootstrap-stamp.yaml"
 if [ -f "$STAMP" ]; then
-    stamp_repo="$(grep -m1 '^repo:' "$STAMP" 2>/dev/null | sed 's/^repo:[[:space:]]*//' | tr -d '"' || true)"
-    origin="$(git -C "$ROOT" remote get-url origin 2>/dev/null || true)"
-    origin_norm="$(printf '%s' "$origin" | sed -E 's#^(https?://|git@)##; s#:#/#; s#\.git$##')"
-    if [ -z "$stamp_repo" ] || [ -z "$origin_norm" ]; then
-        notes+=("bootstrap-stamp.yaml kept — cannot compare repo identity (stamp or git origin unresolvable); verify by hand")
-    elif [ "$stamp_repo" = "$origin_norm" ]; then
-        : # names this repo — the adopter's own, nothing to say
-    else
-        rm -f "$STAMP"
-        removals+=("bootstrap-stamp.yaml — it attested setup for '$stamp_repo', not this repo, so the setup gate was reading it as completion")
-        removed=$((removed + 1))
-    fi
+    # Read only, for an informative message. `repo` is nested under the
+    # `bootstrap:` block by `bootstrap_gate.write_stamp`, so it is INDENTED —
+    # anchoring at column 0 matches nothing a real stamp contains.
+    stamp_repo="$(grep -m1 -E '^[[:space:]]*repo:' "$STAMP" 2>/dev/null \
+        | sed -E 's/^[[:space:]]*repo:[[:space:]]*//' | tr -d '"' || true)"
+    notes+=("bootstrap-stamp.yaml is present${stamp_repo:+, attesting setup for '$stamp_repo'}. Kept deliberately: comparing repo identity correctly requires the same
+          normaliser that WROTE the value (\`session_guard.normalize_origin_url\` — case-folding, userinfo, ports, ssh:// forms), and a shell re-implementation
+          that disagreed with it would delete a stamp that is legitimately yours. You are not unprotected meanwhile: the gate refuses a stamp naming a different
+          repo on every gated verb, using that same normaliser. If it names a project that is not yours, deleting it is safe and \`pkit pm bootstrap\` will re-stamp.")
 fi
 
 # --- Print: what needs YOUR decision, then what to look at, then what moved ---
