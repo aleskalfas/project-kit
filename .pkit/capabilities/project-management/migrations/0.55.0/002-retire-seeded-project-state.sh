@@ -89,9 +89,30 @@ ae07a406fe586ac3d792970f3c0cf4eab91b2d094d65ac4fbc2e16debf7c04cd
 _sha() { shasum -a 256 "$1" 2>/dev/null | cut -d' ' -f1; }
 
 removed=0
-reported=0
+actions=()      # things the adopter must decide — printed FIRST
+notes=()        # things kept for information
+removals=()     # what this migration took, as supporting detail
 
-# --- 1. Lifecycle journals: remove only byte-identical kit-shipped ones ------
+# --- Ambiguous / possibly-useful: report, never remove -----------------------
+# Measured against real adopters (mockingbird, interaction-gateway): this is the
+# ONLY seeded artifact that reached them, and it is the one no signal can judge.
+# So it leads the report rather than trailing a cleanup that often finds nothing.
+OVERLAY="$PROJECT_DIR/adapter-overlays/claude-code.json"
+if [ -f "$OVERLAY" ]; then
+    actions+=("the project-manager default agent is ACTIVE for this project (the adapter activates on the mere presence of adapter-overlays/claude-code.json).
+          That file is byte-identical whether it was seeded from the source project or you ran \`enable-default-agent\` yourself, and enabling leaves no
+          record — so this migration cannot tell, and will not guess.
+            -> If you did NOT enable it, you did not choose this: run \`pkit pm disable-default-agent\`.
+            -> If you did, nothing to do.")
+fi
+
+for f in config.yaml workstreams.yaml; do
+    if [ -f "$PROJECT_DIR/$f" ]; then
+        notes+=("$f kept — it may carry the source project's values (branch, host, doc mappings, taxonomy), but it may equally be yours or edited on top. Worth a look; not safe to remove for you.")
+    fi
+done
+
+# --- Provably foreign: remove --------------------------------------------------
 JOURNAL_DIR="$PROJECT_DIR/process/issue-lifecycle"
 if [ -d "$JOURNAL_DIR" ]; then
     while IFS= read -r journal; do
@@ -99,58 +120,44 @@ if [ -d "$JOURNAL_DIR" ]; then
         h="$(_sha "$journal")"
         if [ -n "$h" ] && printf '%s\n' "$SEEDED_JOURNAL_HASHES" | grep -qxF "$h"; then
             rm -f "$journal"
-            echo "  removed seeded journal $(basename "$journal") (byte-identical to the source project's)"
+            removals+=("$(basename "$journal") — byte-identical to the source project's, so provably not yours")
             removed=$((removed + 1))
         else
-            echo "  kept    journal $(basename "$journal") — not from this version's shipped set; yours, or seeded by an older version"
-            reported=$((reported + 1))
+            notes+=("journal $(basename "$journal") kept — not from this version's shipped set, so yours or seeded by an older version")
         fi
     done < <(find "$JOURNAL_DIR" -name '*.journal.jsonl' -type f 2>/dev/null | sort)
 fi
 
-# --- 2. Bootstrap stamp: remove only one naming a different repo -------------
 STAMP="$PROJECT_DIR/bootstrap-stamp.yaml"
 if [ -f "$STAMP" ]; then
     stamp_repo="$(grep -m1 '^repo:' "$STAMP" 2>/dev/null | sed 's/^repo:[[:space:]]*//' | tr -d '"' || true)"
     origin="$(git -C "$ROOT" remote get-url origin 2>/dev/null || true)"
     origin_norm="$(printf '%s' "$origin" | sed -E 's#^(https?://|git@)##; s#:#/#; s#\.git$##')"
     if [ -z "$stamp_repo" ] || [ -z "$origin_norm" ]; then
-        echo "  kept    bootstrap-stamp.yaml — cannot compare repo identity (stamp or git origin unresolvable); verify by hand"
-        reported=$((reported + 1))
+        notes+=("bootstrap-stamp.yaml kept — cannot compare repo identity (stamp or git origin unresolvable); verify by hand")
     elif [ "$stamp_repo" = "$origin_norm" ]; then
-        echo "  exists  bootstrap-stamp.yaml names this repo — yours, kept"
+        : # names this repo — the adopter's own, nothing to say
     else
         rm -f "$STAMP"
-        echo "  removed bootstrap-stamp.yaml — it attested setup for '$stamp_repo', not this repo; the setup gate was reading it as completion"
+        removals+=("bootstrap-stamp.yaml — it attested setup for '$stamp_repo', not this repo, so the setup gate was reading it as completion")
         removed=$((removed + 1))
     fi
 fi
 
-# --- 3. Ambiguous / possibly-useful: report, never remove --------------------
-OVERLAY="$PROJECT_DIR/adapter-overlays/claude-code.json"
-if [ -f "$OVERLAY" ]; then
-    cat <<'NOTE'
-  action  adapter-overlays/claude-code.json is present, so the project-manager
-          default agent is ACTIVE for this project (the adapter activates on
-          file presence). This file is byte-identical whether it was seeded from
-          the source project or you enabled it yourself, and enabling leaves no
-          record — so this migration cannot tell, and will not guess.
-          → If you did NOT run `enable-default-agent`, you did not choose this:
-            run `pkit pm disable-default-agent` to turn it off.
-          → If you did, nothing to do.
-NOTE
-    reported=$((reported + 1))
+# --- Print: what needs YOUR decision, then what to look at, then what moved ---
+if [ ${#actions[@]} -eq 0 ] && [ ${#notes[@]} -eq 0 ] && [ "$removed" -eq 0 ]; then
+    echo "  exists  no state seeded from the source project — nothing to retire"
+    exit 0
 fi
 
-for f in config.yaml workstreams.yaml; do
-    if [ -f "$PROJECT_DIR/$f" ]; then
-        echo "  check   $f may carry the source project's values (branch, host, doc mappings, workstream taxonomy). Kept — it may be edited or genuinely correct for you. Review it against your own project."
-        reported=$((reported + 1))
-    fi
+for a in ${actions[@]+"${actions[@]}"}; do
+    echo "  ACTION  $a"
+done
+for n in ${notes[@]+"${notes[@]}"}; do
+    echo "  check   $n"
+done
+for r in ${removals[@]+"${removals[@]}"}; do
+    echo "  removed $r"
 done
 
-if [ "$removed" -eq 0 ] && [ "$reported" -eq 0 ]; then
-    echo "  exists  no seeded state found — nothing to retire"
-else
-    echo "  retire-seeded-project-state: $removed removed, $reported to review"
-fi
+echo "  retire-seeded-project-state: ${#actions[@]} needing your decision, ${#notes[@]} to review, $removed removed"
