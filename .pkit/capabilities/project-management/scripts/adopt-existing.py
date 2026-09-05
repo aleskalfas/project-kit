@@ -48,19 +48,33 @@ The inference heuristics (corpus shape → candidate binding)
 Each conceptual axis (DEC-036) is mapped onto the best-fitting existing
 substrate, or marked ``unsupported`` when none fits:
 
-  * **priority → label remap** — when native priority labels (``P0``/``P1``/``P2``,
-    or ``priority:high`` etc.) are observed in use, draft a ``label`` binding
-    remapping the kit values (High/Medium/Low) onto them. Cite the labels seen
-    and their issue-usage coverage.
+  * **priority → label remap | board | unsupported** — when native priority labels
+    (``P0``/``P1``/``P2``, or ``priority:high`` etc.) are observed in use, draft a
+    ``label`` binding remapping the kit values (High/Medium/Low) onto them. Cite
+    the labels seen and their issue-usage coverage. Failing that, a
+    priority-shaped field on the configured Projects-v2 board drafts
+    ``board: true``.
   * **type → title-prefix** — when ``[Task]`` / ``[Epic]`` / ``[Feature]``-style
     bracket prefixes are observed across issue titles, draft a ``title-prefix``
     binding. Cite the prefixes seen and how many sampled issues carry each.
   * **state → derive** — always draftable from the universal open/closed
     substrate plus a ``Blocked``-style label convention (DEC-033 detector swap,
     reduced state set). Cite whether a blocked-style label was actually observed.
-  * **workstream → label remap | unsupported** — when ``workstream:*``-style
-    labels are observed, draft a ``label`` binding; otherwise ``unsupported``
-    (the AUJ case — no workstream encoding).
+  * **workstream → label remap | board | unsupported** — when ``workstream:*``-style
+    labels are observed, draft a ``label`` binding; failing that, a
+    workstream-shaped field on the configured Projects-v2 board drafts
+    ``board: true``; otherwise ``unsupported`` (the AUJ case — no workstream
+    encoding at all).
+
+The ``board: true`` arm names the BOARD as the substrate, never the FIELD: it is
+parameterless by design, so the field's identity stays a write parameter on the
+DEC-024 ``after_create_issue`` hook (the observed field name and its options are
+reported as context, because the human needs them to author that hook). The arm
+is admissible on ``priority`` and ``workstream`` only. Before it existed, this
+ceremony detected a board-shaped field and drafted ``unsupported: true`` over it
+— a declaration meaning the axis has NO encoding and every rule needing it
+degrades. That is where the live adopter's broken map came from, and it is
+withdrawn ([project-management:DEC-051] decision point 2).
 
 Inference reads ONLY what the reads returned; it never guesses a label/prefix it
 did not see. Coverage signals (``n/m sampled issues``) accompany each binding so
@@ -535,15 +549,24 @@ def infer_draft(inventory: Inventory) -> Draft:
 
 
 def _infer_priority(inventory: Inventory) -> AxisInference:
-    """priority → native priority-label remap, or unsupported.
+    """priority → native priority-label remap, else a board field, else unsupported.
 
     Walks the priority-label tiers (P0/P1/P2, priority:high/..., …); for each kit
     value (High/Medium/Low) takes the first observed candidate label. A remap is
     drafted only over the tiers actually observed — a partial set (only P0/P1
-    seen) drafts a partial remap and the evidence says so. None observed →
-    unsupported (no binding), echoing any observed-but-unrecognised priority-ish
-    labels so the human can tell "no priority axis" from "matcher didn't know my
-    shape" (G2).
+    seen) drafts a partial remap and the evidence says so. None observed → look
+    for a priority-shaped field on the configured Projects-v2 board and draft
+    ``board: true`` if one is there (DEC-051 decision point 2, symmetric with
+    workstream — the arm is admissible on exactly these two axes); only then
+    unsupported, echoing any observed-but-unrecognised priority-ish labels so the
+    human can tell "no priority axis" from "matcher didn't know my shape" (G2).
+
+    LABELS WIN over a board field when both are observed, keeping every existing
+    draft byte-identical. The evidence flags the overlap rather than resolving it
+    silently, because the pair is not free: a `label:` binding under
+    `has_projects_v2_board: true` is the cross-substrate conflict `pre-check`
+    refuses (#708), so the human has to pick one and should be told so here rather
+    than by a failing gate.
 
     Tier ORDERING is ASSUMED, never detected: label names + usage counts carry no
     urgency direction, so the remap is drawn in the conventional
@@ -572,14 +595,18 @@ def _infer_priority(inventory: Inventory) -> AxisInference:
             if unmatched
             else ""
         )
+        board_field = _board_field_candidate(inventory, "priority")
+        if board_field is not None:
+            return _board_arm_inference("priority", board_field, trailing=echo)
         return AxisInference(
             axis="priority",
             binding=None,
             evidence=(
                 "no native priority labels (P0/P1/P2 or priority:* style) "
-                "observed among the repo's labels — priority left UNSUPPORTED "
-                "(written explicitly as `unsupported: true`; classification goes "
-                "partial/advisory)."
+                "observed among the repo's labels"
+                + _no_board_field_note(inventory, "priority")
+                + " — priority left UNSUPPORTED (written explicitly as "
+                "`unsupported: true`; classification goes partial/advisory)."
                 + echo
             ),
             confidence="none",
@@ -611,6 +638,7 @@ def _infer_priority(inventory: Inventory) -> AxisInference:
             "this remap is upside-down; confirm the direction matches yours before "
             "accepting. (Confidence stays below `high` precisely because ordering "
             "is unverifiable from labels alone.)"
+            + _competing_board_field_note(inventory, "priority")
         ),
         confidence="low",
     )
@@ -767,11 +795,23 @@ def _infer_workstream(inventory: Inventory) -> AxisInference:
 
     The AUJ case is unsupported (no workstream encoding). When ``workstream:*``
     labels ARE observed, draft a label binding mapping each observed slug onto its
-    own label (an identity-ish remap the human refines). The board-field case
-    (workstream on a Projects-v2 single-select) is surfaced in the report as
-    context but NOT drafted as a binding — the substrate-map has no `field:` kind
-    (DEC-037 §3 names that deferred), so a field-carried workstream is recorded for
-    the human, not bound.
+    own label (an identity-ish remap the human refines).
+
+    Otherwise, before falling back to unsupported, look for a workstream-shaped
+    field on the configured Projects-v2 board: that is a real substrate, and
+    drafting ``unsupported: true`` over it declares the axis has NO encoding when
+    the board plainly carries it — the mis-declaration
+    [project-management:DEC-051] exists to end, manufactured by this very
+    ceremony ("the live adopter's broken map came out of it"). So a detected board
+    field now drafts ``board: true``, per DEC-051 decision point 2.
+
+    The map names the BOARD as the substrate; it still cannot name the FIELD. The
+    arm is parameterless by design — the field's identity is a *write* parameter
+    with an existing declaration point on the DEC-024 ``after_create_issue`` hook,
+    and a field name here would be a claim about a live board the map cannot
+    self-validate (DEC-037's deferral of a parameterised ``field:`` kind stands).
+    The field name and its options therefore stay in the report as CONTEXT — the
+    hook needs them, and the map deliberately does not carry them.
     """
     ws_labels = [
         obs for name, obs in _label_index(inventory)
@@ -794,6 +834,7 @@ def _infer_workstream(inventory: Inventory) -> AxisInference:
                     "workstream→label-remap inferred from observed "
                     f"`workstream:*` labels: {cited}. The human should confirm "
                     "the kit-value→label mapping (drafted as slug-identity)."
+                    + _competing_board_field_note(inventory, "workstream")
                 ),
                 confidence="low",
             )
@@ -810,16 +851,20 @@ def _infer_workstream(inventory: Inventory) -> AxisInference:
             + " — if one IS your workstream axis, map it by hand (or re-prefix to "
             "`workstream:`)."
         )
-    # Note a board-field candidate if one looks like it.
-    field_note = _workstream_field_note(inventory)
+    # No labels — but the board may carry it. A detected field drafts `board:
+    # true` rather than `unsupported: true` (DEC-051 decision point 2).
+    board_field = _board_field_candidate(inventory, "workstream")
+    if board_field is not None:
+        return _board_arm_inference("workstream", board_field, trailing=echo)
     return AxisInference(
         axis="workstream",
         binding=None,
         evidence=(
             "workstream left UNSUPPORTED (written explicitly as `unsupported: "
-            "true`) — no `workstream:*` labels observed."
+            "true`) — no `workstream:*` labels observed"
+            + _no_board_field_note(inventory, "workstream")
+            + "."
             + echo
-            + field_note
         ),
         confidence="none",
     )
@@ -844,35 +889,157 @@ def _unmatched_workstreamish_labels(inventory: Inventory) -> list[str]:
     return out[:8]
 
 
-def _workstream_field_note(inventory: Inventory) -> str:
-    """A report note when a board single-select field looks workstream-shaped.
+# ----- board-carried axes (the `board:` arm, DEC-051 decision point 2) ----
 
-    The substrate-map cannot bind a field (no `field:` kind — DEC-037 §3 defers
-    it), so this is surfaced as CONTEXT for the human (who would declare it on a
-    DEC-024 `after_create_issue` hook instead), never drafted as a binding.
+# The axes the substrate-map may declare board-carried. Mirrors the schema's
+# admissibility (`type` and `state` carry a `not: {required: [board]}`): `type` is
+# label-carried by functional dependency — PR-title alignment reads the label and
+# a board field is invisible from a PR — and a board-carried `state` awaits a
+# detector kind that can read a board Status field.
+BOARD_DECLARABLE_AXES: tuple[str, ...] = ("priority", "workstream")
+
+
+def _board_field_candidate(
+    inventory: Inventory, axis: str
+) -> dict[str, Any] | None:
+    """The observed Projects-v2 board field that looks like it carries ``axis``.
+
+    Substring match on the axis name, case-folded (a `Workstream` field, a
+    `Priority (T-shirt)` field). Looser than the WRITE path's resolution, which
+    matches the Title-cased axis name exactly-then-case-insensitively
+    (`set-field._board_field_name` → `board_fields.find_field`) — deliberately, so
+    a near-miss name is still *reported* to the human rather than silently
+    unnoticed. The evidence names the field, so a loose match is visible and
+    correctable, and the write path's stricter rule is stated there too.
+
+    Scoped to :data:`BOARD_DECLARABLE_AXES`, and that is the guard rather than a
+    convention: a future board-field detector added to `_infer_type` or
+    `_infer_state` would otherwise draft an arm the schema refuses, and the
+    ceremony's contract is that the draft it emits VALIDATES. A non-declarable
+    axis finds nothing here and falls through to its existing path.
+
+    Returns ``None`` when no board is configured (the inventory then holds no
+    fields at all) or nothing matches.
     """
-    for f in inventory.board_fields:
-        name = str(f.get("name", ""))
-        if "workstream" in name.casefold():
-            options = f.get("options")
-            opt_names = (
-                ", ".join(
-                    str(o.get("name"))
-                    for o in options
-                    if isinstance(o, dict) and o.get("name")
-                )
-                if isinstance(options, list)
-                else ""
-            )
-            return (
-                f" NOTE: a Projects-v2 board field named `{name}` was observed"
-                + (f" (options: {opt_names})" if opt_names else "")
-                + " — the substrate-map has no `field:` binding kind (DEC-037 §3 "
-                "defers it), so a field-carried workstream is declared on a "
-                "DEC-024 `after_create_issue` hook, not in this map. Recorded as "
-                "context for the human."
-            )
-    return ""
+    if axis not in BOARD_DECLARABLE_AXES:
+        return None
+    for field_obs in inventory.board_fields:
+        name = str(field_obs.get("name", ""))
+        if axis.casefold() in name.casefold():
+            return field_obs
+    return None
+
+
+def _board_field_description(field_obs: dict[str, Any]) -> str:
+    """``a board field named `X` (options: a, b)`` — the context the hook needs."""
+    name = str(field_obs.get("name", ""))
+    options = field_obs.get("options")
+    opt_names = (
+        ", ".join(
+            str(o.get("name"))
+            for o in options
+            if isinstance(o, dict) and o.get("name")
+        )
+        if isinstance(options, list)
+        else ""
+    )
+    return f"`{name}`" + (f" (options: {opt_names})" if opt_names else "")
+
+
+def _board_arm_inference(
+    axis: str, field_obs: dict[str, Any], *, trailing: str = ""
+) -> AxisInference:
+    """Draft ``board: true`` for ``axis``, citing the board field it was read from.
+
+    This is the repair [project-management:DEC-051] names for this ceremony: the
+    old code detected a board-shaped field and then drafted ``unsupported: true``
+    — a declaration the schema defines as the axis having NO encoding, with every
+    rule needing it degrading — because the map had no way to say "the board
+    carries this". It does now, and ``board: true`` says it. (DEC-051's own words:
+    "the live adopter's broken map came out of it".)
+
+    The FIELD is still not bindable, and the arm is parameterless by design: the
+    field's identity is a write parameter with an existing declaration point on
+    the DEC-024 ``after_create_issue`` hook, and a field name in the map would be
+    a claim about a live board the file cannot self-validate. So the observed name
+    and options go into the EVIDENCE, where the human needs them to author the
+    hook, and not into the draft.
+
+    Confidence is `low`, never `high`: the field NAME is a heuristic match, and
+    whether anything actually WRITES the field is a property of `hooks.yaml`,
+    which this ceremony neither reads nor drafts.
+    """
+    described = _board_field_description(field_obs)
+    return AxisInference(
+        axis=axis,
+        binding={"board": True},
+        evidence=(
+            f"{axis}→`board: true` inferred from a Projects-v2 board field named "
+            f"{described} on your configured board. The map names the BOARD as the "
+            f"substrate; it deliberately does NOT name the field — the arm is "
+            f"parameterless, and the field's identity is a write parameter you "
+            f"declare on a DEC-024 `after_create_issue` `set-board-field` hook "
+            f"(the field name and options above are recorded here because that "
+            f"hook needs them). REQUIRED: add that hook, or new issues get no "
+            f"value on the board. NOTE the field was matched by NAME as a "
+            f"substring of `{axis}`; the write path resolves the Title-cased axis "
+            f"name (`{axis.capitalize()}`) against the live board, so confirm the "
+            f"field is the one you mean and rename it if not. This replaces the "
+            f"previous draft for this shape, `unsupported: true`, which declared "
+            f"the axis had no encoding at all (DEC-051 decision point 2)."
+            + trailing
+        ),
+        confidence="low",
+    )
+
+
+def _competing_board_field_note(inventory: Inventory, axis: str) -> str:
+    """The note appended when a LABEL binding was drafted over a board field too.
+
+    Labels win — every existing draft stays byte-identical — but the overlap is
+    not free. Under `has_projects_v2_board: true` a `label:` binding on a
+    board-claimed axis is the cross-substrate conflict `pre-check` refuses
+    (report #708): the writers honour the flag and write no label, the readers
+    honour the map and look for one, and the value lands nowhere. So the draft
+    says which alternative exists and what it costs, instead of handing the human
+    a map whose next gate run fails without explanation.
+    """
+    field_obs = _board_field_candidate(inventory, axis)
+    if field_obs is None:
+        return ""
+    return (
+        f" ALSO OBSERVED: a Projects-v2 board field named "
+        f"{_board_field_description(field_obs)}. The label remap above was "
+        f"preferred, but the two substrates cannot both carry `{axis}`: under "
+        f"`has_projects_v2_board: true` a `label:` binding on this axis is the "
+        f"conflict `pre-check` refuses. If the BOARD is the real substrate, "
+        f"replace this binding with `{axis}: {{ board: true }}` and declare the "
+        f"field on an `after_create_issue` `set-board-field` hook; if the LABELS "
+        f"are, keep it and expect the board field to go unused."
+    )
+
+
+def _no_board_field_note(inventory: Inventory, axis: str) -> str:
+    """The half-sentence explaining that the board was looked at and had nothing.
+
+    Told apart from "never looked": a project with no board configured reads no
+    fields at all, and saying "no matching board field" there would imply a search
+    that did not happen. Mirrors the observed-but-unmatched label echoes — the
+    human should be able to tell "no substrate" from "matcher missed my shape".
+    """
+    if not inventory.has_board:
+        return " and no Projects-v2 board is configured to carry it"
+    offered = ", ".join(
+        f"`{f['name']}`" for f in inventory.board_fields
+        if isinstance(f.get("name"), str)
+    )
+    return (
+        " and no field on your Projects-v2 board is named for it"
+        + (f" (the board offers: {offered})" if offered else " (the board lists no fields)")
+        + f" — if one of them IS your {axis} axis, bind it by hand with "
+        f"`{axis}: {{ board: true }}` and declare the field on an "
+        f"`after_create_issue` `set-board-field` hook"
+    )
 
 
 def _infer_hierarchy(inventory: Inventory) -> tuple[str, str]:

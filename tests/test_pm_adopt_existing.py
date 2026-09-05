@@ -436,6 +436,208 @@ def test_workstream_unsupported_echoes_unrecognised_grouping_labels(ae, monkeypa
     assert "bug" not in ws.evidence
 
 
+# ----- board-carried axes: the `board: true` arm (DEC-051 decision point 2) ---
+# This ceremony is where the reported failure was MANUFACTURED: it detected a
+# workstream-shaped Projects-v2 board field and then drafted `unsupported: true`
+# over it, because the map had no way to say "the board carries this". That is a
+# declaration meaning the axis has NO encoding, with every rule needing it
+# degrading — the opposite of what the adopter meant. The arm exists now, and the
+# ceremony drafts it. ("The live adopter's broken map came out of it.")
+
+
+def _serve_board_fields(fields: list[dict], *, labels: list[dict] | None = None):
+    """A fake gh_run serving a board field-list, plus an optional label set."""
+    def serve(args, config=None, **kw):
+        if args[:3] == ["gh", "label", "list"]:
+            return subprocess.CompletedProcess(
+                args, 0, json.dumps(labels if labels is not None else [{"name": "bug"}]), "")
+        if args[:3] == ["gh", "issue", "list"]:
+            return subprocess.CompletedProcess(args, 0, json.dumps([]), "")
+        if args[:3] == ["gh", "project", "field-list"]:
+            return subprocess.CompletedProcess(args, 0, json.dumps({"fields": fields}), "")
+        if args[:3] == ["gh", "project", "view"]:
+            return subprocess.CompletedProcess(args, 0, json.dumps({"id": "PVT_b"}), "")
+        return subprocess.CompletedProcess(args, 0, "{}", "")
+    return serve
+
+
+_WORKSTREAM_FIELD = {"name": "Workstream", "options": [{"name": "Spyre"}, {"name": "Core"}]}
+_PRIORITY_FIELD = {"name": "Priority", "options": [{"name": "P0"}, {"name": "P1"}]}
+
+
+def _infer_with_board(ae, monkeypatch, fields, *, labels=None):
+    monkeypatch.setattr(ae, "gh_run", _serve_board_fields(fields, labels=labels))
+    inv = ae.take_inventory(_board_config(), sample_limit=200)
+    return inv, ae.infer_draft(inv)
+
+
+def test_workstream_board_field_drafts_the_board_arm(ae, monkeypatch) -> None:
+    """The repair. A workstream-shaped board field used to draft
+    `unsupported: true`; it now drafts `board: true`."""
+    _, draft = _infer_with_board(ae, monkeypatch, [_WORKSTREAM_FIELD, {"name": "Status"}])
+    ws = next(i for i in draft.inferences if i.axis == "workstream")
+    assert ws.binding == {"board": True}
+    assert draft.substrate_map()["axes"]["workstream"] == {"board": True}
+
+
+def test_priority_board_field_drafts_the_board_arm(ae, monkeypatch) -> None:
+    """Symmetric with workstream — the arm is admissible on both axes, and a
+    board adopter with no priority LABELS is in exactly the same position."""
+    _, draft = _infer_with_board(ae, monkeypatch, [_PRIORITY_FIELD])
+    pri = next(i for i in draft.inferences if i.axis == "priority")
+    assert pri.binding == {"board": True}
+
+
+def test_board_arm_draft_records_the_field_as_context_not_as_a_binding(
+    ae, monkeypatch
+) -> None:
+    """The map names the BOARD, never the FIELD: the arm is parameterless by
+    design, so the field's identity stays a write parameter on the DEC-024
+    `after_create_issue` hook. The observed name and options belong in the
+    EVIDENCE — the human needs them to author that hook — and nowhere in the
+    draft."""
+    _, draft = _infer_with_board(ae, monkeypatch, [_WORKSTREAM_FIELD])
+    ws = next(i for i in draft.inferences if i.axis == "workstream")
+    # Context preserved.
+    assert "Workstream" in ws.evidence
+    assert "Spyre" in ws.evidence and "Core" in ws.evidence
+    assert "set-board-field" in ws.evidence
+    # …and kept OUT of the drafted binding.
+    assert ws.binding == {"board": True}
+    assert "field" not in ws.binding
+
+
+def test_board_arm_draft_does_not_seed_a_default(ae, monkeypatch) -> None:
+    """A `default:` on a `board:` arm is corroborating metadata only — the hook
+    carries the write. Seeding one here would describe a write this ceremony has
+    no way to arrange."""
+    _, draft = _infer_with_board(ae, monkeypatch, [_WORKSTREAM_FIELD, _PRIORITY_FIELD])
+    for axis in ("workstream", "priority"):
+        binding = next(i for i in draft.inferences if i.axis == axis).binding
+        assert binding is not None
+        assert "default" not in binding
+
+
+def test_board_arm_draft_is_schema_valid(ae, monkeypatch, schema_validator) -> None:
+    """`board: true` is a `oneOf` branch on `priority` and `workstream`. The whole
+    drafted document has to validate — the ceremony must never hand the human a
+    draft `pkit schemas validate` would reject."""
+    _, draft = _infer_with_board(ae, monkeypatch, [_WORKSTREAM_FIELD, _PRIORITY_FIELD])
+    errors = list(schema_validator.iter_errors(draft.substrate_map()))
+    assert errors == [], [e.message for e in errors]
+
+
+def test_board_arm_confidence_is_never_high(ae, monkeypatch) -> None:
+    """The field is matched by NAME (a heuristic), and whether anything WRITES it
+    is a property of hooks.yaml, which this ceremony neither reads nor drafts."""
+    _, draft = _infer_with_board(ae, monkeypatch, [_WORKSTREAM_FIELD])
+    ws = next(i for i in draft.inferences if i.axis == "workstream")
+    assert ws.confidence == "low"
+
+
+def test_board_arm_evidence_retracts_the_old_unsupported_draft(ae, monkeypatch) -> None:
+    """The human reading the audit may have seen the previous draft for this same
+    corpus. Saying what changed, and why, is the retraction reaching the person
+    who acted on the old advice."""
+    _, draft = _infer_with_board(ae, monkeypatch, [_WORKSTREAM_FIELD])
+    ws = next(i for i in draft.inferences if i.axis == "workstream")
+    assert "unsupported: true" in ws.evidence
+    assert "no encoding" in ws.evidence
+
+
+def test_no_board_field_still_drafts_unsupported(ae, monkeypatch) -> None:
+    """The honest `unsupported` case is untouched: an adopter who genuinely has no
+    workstream encoding still gets `unsupported: true`, and now also learns which
+    board fields were looked at."""
+    _, draft = _infer_with_board(ae, monkeypatch, [{"name": "Status"}, {"name": "Size"}])
+    ws = next(i for i in draft.inferences if i.axis == "workstream")
+    assert ws.binding is None
+    assert "UNSUPPORTED" in ws.evidence
+    assert "Status" in ws.evidence and "Size" in ws.evidence
+
+
+def test_unsupported_evidence_distinguishes_no_board_from_no_match(
+    ae, monkeypatch
+) -> None:
+    """"No board configured" and "a board that has no such field" are different
+    facts, and only one of them is a search that happened. Conflating them would
+    imply a lookup that never ran."""
+    monkeypatch.setattr(ae, "gh_run", _serve_auj_reads)  # `_config()` has no board
+    inv = ae.take_inventory(_config(), sample_limit=200)
+    ws = next(i for i in ae.infer_draft(inv).inferences if i.axis == "workstream")
+    assert "no Projects-v2 board is configured" in ws.evidence
+
+    _, draft = _infer_with_board(ae, monkeypatch, [{"name": "Status"}])
+    ws2 = next(i for i in draft.inferences if i.axis == "workstream")
+    assert "no field on your Projects-v2 board is named for it" in ws2.evidence
+
+
+def test_labels_win_over_a_board_field_but_the_overlap_is_reported(
+    ae, monkeypatch
+) -> None:
+    """Precedence is unchanged — labels first — so every existing draft stays
+    byte-identical. But under a configured board a `label:` binding on a
+    board-claimed axis is the cross-substrate conflict pre-check REFUSES (#708),
+    so the draft has to name the alternative rather than hand the human a map
+    whose next gate run fails without explanation."""
+    _, draft = _infer_with_board(
+        ae, monkeypatch, [_PRIORITY_FIELD],
+        labels=[{"name": "P0"}, {"name": "P1"}, {"name": "P2"}],
+    )
+    pri = next(i for i in draft.inferences if i.axis == "priority")
+    assert pri.binding == {
+        "label": {"remap": {"High": "P0", "Medium": "P1", "Low": "P2"}},
+        "default": "P1",
+    }
+    assert "ALSO OBSERVED" in pri.evidence
+    assert "board: true" in pri.evidence
+    assert "pre-check` refuses" in pri.evidence
+
+
+def test_board_declarable_axes_match_the_schema(ae) -> None:
+    """`type` and `state` refuse the arm in the schema, so the ceremony must never
+    draft it for them — a draft it emits has to validate."""
+    schema = json.loads(SUBSTRATE_MAP_SCHEMA.read_text(encoding="utf-8"))
+    axis_props = schema["properties"]["axes"]["properties"]
+    admitted = {
+        axis for axis, spec in axis_props.items()
+        if spec.get("not", {}).get("required") != ["board"]
+    }
+    assert set(ae.BOARD_DECLARABLE_AXES) == admitted == {"priority", "workstream"}
+
+
+def test_detection_is_scoped_to_the_declarable_axes(ae, monkeypatch) -> None:
+    """The admissibility set is the GUARD, not a convention: a board-field
+    detector later added to `_infer_type` or `_infer_state` would otherwise draft
+    an arm the schema refuses. A non-declarable axis finds nothing, so it falls
+    through to its existing path."""
+    monkeypatch.setattr(
+        ae, "gh_run",
+        _serve_board_fields([{"name": "Type"}, {"name": "State"}, _PRIORITY_FIELD]),
+    )
+    inv = ae.take_inventory(_board_config(), sample_limit=200)
+    assert ae._board_field_candidate(inv, "type") is None
+    assert ae._board_field_candidate(inv, "state") is None
+    assert ae._board_field_candidate(inv, "priority") == _PRIORITY_FIELD
+
+
+def test_board_field_detection_is_still_a_read(ae, monkeypatch) -> None:
+    """The mutate-nothing invariant (DEC-037 §1) is not weakened by drafting the
+    arm: the only new input is the field list the ceremony already read."""
+    calls: list[list[str]] = []
+
+    inner = _serve_board_fields([_WORKSTREAM_FIELD])
+
+    def recording(args, config=None, **kw):
+        calls.append(list(args))
+        return inner(args, config=config, **kw)
+
+    monkeypatch.setattr(ae, "gh_run", recording)
+    ae.infer_draft(ae.take_inventory(_board_config(), sample_limit=200))
+    assert calls
+    assert not any(_is_mutating_call(c) for c in calls)
+
+
 def test_type_low_coverage_prefix_is_low_confidence(ae, monkeypatch) -> None:
     """G7 — a coincidental bracket prefix carried by a tiny fraction of issues
     (e.g. one `[Feature]` changelog marker among many plain titles) must read `low`
