@@ -182,7 +182,6 @@ def test_bootstrap_compute_plan_constructs_byte_identical_labels(
     plan = bootstrap._compute_plan(
         config={},
         classification=classification,
-        has_board=False,
         with_starter_epic=False,
         capability_root=cap_root,
     )

@@ -22,15 +22,21 @@ precedence, so position is identical (behaviour parity is the acceptance
 bar). The parity-critical wrapper-side concerns STAY here: membership,
 placeholder, authorisation/bypass/TTY, and the forward cascade.
 
-The substrate-specific mechanics differ per adopter config:
+The substrate-specific mechanics differ per adopter config. WHICH substrate
+carries `state` is asked of `_lib/axis_carriage` — the map governs the axis
+where it binds it, and `has_projects_v2_board` governs only where the map is
+silent (per [project-management:DEC-051-axis-carriage-activation]):
 
-  * Board-substrate adopters (`config.has_projects_v2_board == true`):
-    the Projects v2 single-select `Status` field carries the state.
+  * `board` — the Projects v2 single-select `Status` field carries the state.
     State changes go through `gh project item-edit` (deferred at v1 —
     surfaces as a dry-run guidance message until kit issue #122 lands).
-  * Label-fallback adopters: the state lives as a `state:*` label.
-    State changes happen via `gh issue edit --add-label state:<new>
-    --remove-label state:<old>`.
+  * `kit-label` / `adopter-label` — the state lives as a label: the kit's
+    `state:*` in greenfield, or the adopter's own label under a `label:`
+    binding. State changes happen via `gh issue edit --add-label <new>
+    --remove-label <old>`, both resolved through the seam.
+  * `derived` / `degrade` — no label is written or removed (a derived state is
+    carried by open/closed, and a degraded one by nothing); the wrapper's other
+    domain side-effects still fire.
 
 Cascade per DEC-006 fires upward on forward transitions; the script
 walks the parent chain via the issue body's parent-ref line.
@@ -66,6 +72,7 @@ from ruamel.yaml.error import YAMLError
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import audit as _audit  # noqa: E402
+from _lib import axis_carriage  # noqa: E402
 from _lib import axis_labels  # noqa: E402
 from _lib import bootstrap_gate  # noqa: E402
 from _lib import classification_rules  # noqa: E402
@@ -308,7 +315,13 @@ def main() -> int:
             state=state, milestone=milestone, labels=labels, substrate_map=substrate_map
         )
 
-    has_board = bool(config.get("has_projects_v2_board", False))
+    # WHICH substrate carries `state` — one question, one answer, asked of the
+    # accessor ([project-management:DEC-051-axis-carriage-activation] decision
+    # point 4). Every branch below that used to read `has_projects_v2_board`
+    # reads this instead: under a map that binds `state` to the adopter's own
+    # labels, a configured board no longer suppresses the label write, and under
+    # a `derive` binding the label planner already writes nothing.
+    state_on_board = axis_carriage.is_board_carried("state", config, substrate_map)
 
     # Idempotency check: issue is already at the requested state.
     #
@@ -325,12 +338,12 @@ def main() -> int:
         print(f"  current:      {current_state}")
         print(f"  target:       {args.to}")
         print("\n[noop] already at target state; reconciling labels if needed.")
-        if not args.dry_run and not has_board:
+        if not args.dry_run and not state_on_board:
             plan = _compute_plan(
                 issue_number=args.issue_number,
                 current_state=current_state,
                 target_state=args.to,
-                has_board=False,
+                state_on_board=False,
                 labels=labels,
                 substrate_map=substrate_map,
             )
@@ -431,7 +444,7 @@ def main() -> int:
     print(f"  authorisation: {transition.authorisation}")
     print(f"  severity:      {transition.severity}")
 
-    if has_board:
+    if state_on_board:
         print(
             f"\n[note] board substrate detected (projects_v2_board_id="
             f"{config.get('projects_v2_board_id')}). State lives on the "
@@ -444,7 +457,7 @@ def main() -> int:
         issue_number=args.issue_number,
         current_state=current_state,
         target_state=args.to,
-        has_board=has_board,
+        state_on_board=state_on_board,
         labels=labels,
         substrate_map=substrate_map,
     )
@@ -492,7 +505,7 @@ def main() -> int:
             return 3
 
     # Execute.
-    if has_board:
+    if state_on_board:
         # Deferred: at v1 we only narrate the planned change for board
         # adopters. The label removal/add path is the operational one.
         print(
@@ -572,11 +585,18 @@ def _compute_plan(
     issue_number: int,
     current_state: str,
     target_state: str,
-    has_board: bool,
+    state_on_board: bool,
     labels: list[str],
     substrate_map: "axis_labels.SubstrateMap | None" = None,
 ) -> Plan:
-    if has_board:
+    """The label add/remove pair for a state move, or an empty plan.
+
+    ``state_on_board`` is the carriage answer from `_lib/axis_carriage`, not a
+    read of ``has_projects_v2_board``: under a map binding `state` to the
+    adopter's own labels, a configured board must NOT suppress the label write
+    ([project-management:DEC-051-axis-carriage-activation]).
+    """
+    if state_on_board:
         return Plan(issue_number=issue_number, add_label=None, remove_label=None)
     # Label substrate. The state write is RESOLVED through the seam's write-path
     # resolver (ADR-026 sole-constructor + fail-closed): greenfield (no
@@ -593,8 +613,15 @@ def _compute_plan(
         return Plan(issue_number=issue_number, add_label=None, remove_label=None)
     new_label = new_label_resolved
     old_label = None
-    for lbl in labels:
-        if axis_labels.is_axis_label(lbl, "state") and lbl != new_label:
+    # Map-aware stale search. A prefix-only match (`is_axis_label`) finds the kit's
+    # `state:*` and nothing else — but under a `label` binding the substrate IS the
+    # adopter's own label name, which carries no prefix. `resolve_write` would then
+    # add their new state label while the old one stayed on the issue: two states on
+    # a single-valued axis, and no gate reads the adopter's vocabulary to notice.
+    # The seam's `carried_labels` matches both the kit prefix and the binding's
+    # declared values, so greenfield is unchanged and the bound case is repaired.
+    for lbl in axis_labels.carried_labels("state", labels, substrate_map):
+        if lbl != new_label:
             old_label = lbl
             break
     return Plan(
@@ -1063,7 +1090,12 @@ def _cascade_parent(
         issue_number=parent_num,
         current_state=parent_state,
         target_state=cascade_target,
-        has_board=False,  # cascade only fires for label substrate
+        # Same carriage question as the child's own move, asked the same way. It
+        # was hardcoded False ("cascade only fires for label substrate"), which
+        # was not true of the code: the cascade runs after the board branch too,
+        # so a board adopter's parents were label-written by a path whose own
+        # comment said it could not be reached.
+        state_on_board=axis_carriage.is_board_carried("state", config, substrate_map),
         labels=parent_labels,
         substrate_map=substrate_map,
     )

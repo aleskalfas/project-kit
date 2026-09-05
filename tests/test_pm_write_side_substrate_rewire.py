@@ -96,6 +96,12 @@ def mi():
     return _load("pm_move_issue_rewire", "move-issue.py")
 
 
+# The adopter config the carriage accessor reads. A board claims `priority` /
+# `workstream` only where the map is silent about them
+# ([project-management:DEC-051-axis-carriage-activation] decision point 3).
+_BOARD_CONFIG = {"has_projects_v2_board": True, "projects_v2_board_id": 7}
+
+
 # --- create-issue: mapped labels under a present map ----------------------
 
 
@@ -106,7 +112,7 @@ def test_create_issue_emits_mapped_priority_label_not_kit_label(ci) -> None:
         kind="task",
         priority="High",
         workstream="cli",
-        has_board=False,
+        config={},
         substrate_map=AUJ_MAP,
     )
     assert "P0" in labels
@@ -126,10 +132,15 @@ def test_create_issue_title_prefix_type_writes_no_label(ci) -> None:
         kind="task",
         priority="High",
         workstream=None,
-        has_board=True,  # board ⇒ only the type axis would be labelled
+        config=_BOARD_CONFIG,
         substrate_map=AUJ_MAP,
     )
-    assert labels == []
+    # No bracket string reaches a label. (`priority` IS labelled here — `P0`, per
+    # the map's own binding, which now wins over the board flag; this assertion is
+    # about the title-carried type axis, so it names that claim rather than
+    # leaning on an empty list.)
+    assert not any(lbl.startswith("[") for lbl in labels)
+    assert "[Task]" not in labels
     # The title-carried axis is absent from the resolved-by-axis map — the
     # pre-flight display reads "(not labelled …)" for it, and no bracket string
     # ever reaches a label.
@@ -143,7 +154,7 @@ def test_create_issue_omits_unsupported_workstream_with_advisory(ci) -> None:
         kind="task",
         priority="High",
         workstream="cli",
-        has_board=False,
+        config={},
         substrate_map=AUJ_MAP,
     )
     assert "workstream:cli" not in labels
@@ -165,10 +176,11 @@ def test_create_issue_title_prefix_type_no_label_no_advisory(ci) -> None:
         kind="feature",
         priority="High",
         workstream=None,
-        has_board=True,
+        config=_BOARD_CONFIG,
         substrate_map=AUJ_MAP,
     )
-    assert labels == []
+    assert not any(lbl.startswith("[") for lbl in labels)
+    assert "[Feature]" not in labels
     assert "type:feature" not in labels
     # Title-carried, not degraded ⇒ NO advisory for the type axis.
     assert not any("type" in a for a in advisories), advisories
@@ -195,7 +207,7 @@ def test_create_issue_applies_axis_default_when_value_blank(ci) -> None:
         kind="task",
         priority="High",
         workstream=None,
-        has_board=False,
+        config={},
         substrate_map=map_with_ws_default,
     )
     assert "area/core" in labels
@@ -217,7 +229,7 @@ def test_create_issue_filer_value_overrides_axis_default(ci) -> None:
         kind="task",
         priority="High",
         workstream="cli",
-        has_board=False,
+        config={},
         substrate_map=map_with_ws_default,
     )
     assert "area/cli" in labels
@@ -232,7 +244,7 @@ def test_create_issue_greenfield_parity_byte_identical(ci) -> None:
         kind="bug",
         priority="High",
         workstream="cli",
-        has_board=False,
+        config={},
         substrate_map=None,
     )
     assert labels == ["type:bug", "priority:High", "workstream:cli"]
@@ -249,7 +261,7 @@ def test_create_issue_greenfield_parity_byte_identical(ci) -> None:
         kind="feature",
         priority="Medium",
         workstream=None,
-        has_board=True,
+        config=_BOARD_CONFIG,
         substrate_map=None,
     )
     assert board_labels == ["type:feature"]
@@ -268,7 +280,7 @@ def test_move_issue_derive_bound_state_writes_no_state_label(mi) -> None:
         issue_number=42,
         current_state="in-progress",
         target_state="done",
-        has_board=False,
+        state_on_board=False,
         labels=["priority:High"],  # a stale kit state label would be here in greenfield
         substrate_map=AUJ_MAP,
     )
@@ -296,7 +308,7 @@ def test_move_issue_derive_bound_state_does_not_strip_a_prior_label(mi) -> None:
         issue_number=42,
         current_state="in-progress",
         target_state="done",
-        has_board=False,
+        state_on_board=False,
         labels=["state:in-progress"],
         substrate_map=AUJ_MAP,
     )
@@ -311,7 +323,7 @@ def test_move_issue_greenfield_parity_byte_identical(mi) -> None:
         issue_number=42,
         current_state="todo",
         target_state="backlog",
-        has_board=False,
+        state_on_board=False,
         labels=["state:todo", "type:feature"],
         substrate_map=None,
     )
@@ -326,7 +338,7 @@ def test_move_issue_greenfield_default_arg_is_none_map(mi) -> None:
         issue_number=7,
         current_state="todo",
         target_state="backlog",
-        has_board=False,
+        state_on_board=False,
         labels=[],
     )
     assert plan.add_label == "state:backlog"
@@ -371,7 +383,7 @@ def test_mutation_create_issue_coerced_degrade_leaks_kit_label_is_caught(ci) -> 
         kind="task",
         priority="High",
         workstream="cli",
-        has_board=False,
+        config={},
         substrate_map=AUJ_MAP,
     )
     assert_no_kit_label_leak(real_labels)
@@ -398,7 +410,7 @@ def test_mutation_move_issue_coerced_degrade_leaks_state_label_is_caught(mi) -> 
         issue_number=42,
         current_state="in-progress",
         target_state="done",
-        has_board=False,
+        state_on_board=False,
         labels=[],
         substrate_map=AUJ_MAP,
     )

@@ -62,6 +62,7 @@ from ruamel.yaml.error import YAMLError
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import bootstrap_gate  # noqa: E402
+from _lib import axis_carriage  # noqa: E402
 from _lib import axis_labels  # noqa: E402
 from _lib import classification_rules  # noqa: E402
 from _lib import containment  # noqa: E402
@@ -133,7 +134,8 @@ def main() -> int:
         default=None,
         help=(
             "Workstream slug per the adopter's workstreams list. Required "
-            "in label-fallback mode (no Projects v2 board)."
+            "whenever a LABEL carries the workstream axis — greenfield, or a "
+            "`label:` binding in substrate-map.yaml — and no `default:` covers it."
         ),
     )
     parser.add_argument(
@@ -404,7 +406,7 @@ def main() -> int:
         args.milestone = resolved.number
         milestone_title = resolved.title
 
-    # Workstream requirement when in label-fallback mode.
+    # Workstream requirement when a LABEL carries the axis.
     #
     # The gate MIRRORS the writer's (`_build_labels`) write/no-write decision for
     # the workstream axis, reusing the SAME seam predicates and the SAME
@@ -413,16 +415,21 @@ def main() -> int:
     # workstream LABEL is the substrate AND no such label would be written for an
     # omitted value:
     #
-    #   * The workstream is label-carried only in greenfield (the kit's own
-    #     `workstream:*` label IS the adopter's substrate — `axis_expects_kit_labels`)
-    #     or when the axis is bound to an adopter-REMAPPED label
-    #     (`axis_is_label_bound`). A `title-prefix` / `derive` / `unsupported` /
-    #     absent axis is NOT label-carried — `_build_labels` writes NO workstream
-    #     label for it (title-carried ⇒ skipped before resolution; derive /
-    #     unsupported / absent ⇒ `resolve_write` DEGRADEs) — so demanding
+    #   * The workstream is label-carried when the carriage accessor says so —
+    #     `kit-label` (greenfield: the kit's own `workstream:*` label IS the
+    #     adopter's substrate) or `adopter-label` (bound to a REMAPPED label). A
+    #     `title` / `derived` / `board` / `degrade` carriage is NOT label-carried —
+    #     `_build_labels` writes no workstream label for it — so demanding
     #     `--workstream` would refuse a filing for a value the next stage discards:
     #     the #559 / #443 false gate (it over-fired on these sibling arms). The
     #     gate does not fire there.
+    #   * Carriage is asked ONCE, of `_lib/axis_carriage`, and the board flag is
+    #     not consulted separately ([project-management:DEC-051-axis-carriage-
+    #     activation] decision point 4). The gate previously carried its own
+    #     `not has_board` term, which resolved board-versus-label FIRST: under a
+    #     configured board a label-bound workstream never reached the seam, so the
+    #     gate stayed silent while `_build_labels` went on to write the label. The
+    #     mirror was broken exactly where the report said it was.
     #   * On a label-carried axis, an omitted `--workstream` is already covered
     #     when the adopter declared a `default:` that resolves to a REAL write
     #     under the writer's own `resolve_write` (`_build_labels` seeds `value or
@@ -437,24 +444,23 @@ def main() -> int:
     # fires exactly as before. This is a mirror of the writer, not a stronger
     # invariant — it demands `--workstream` only when a label would actually be
     # written once a value is supplied.
-    has_board = bool(config.get("has_projects_v2_board", False))
-    workstream_label_carried = axis_labels.axis_expects_kit_labels(
-        "workstream", substrate_map
-    ) or axis_labels.axis_is_label_bound("workstream", substrate_map)
+    workstream_carriage = axis_carriage.carriage("workstream", config, substrate_map)
+    workstream_label_carried = workstream_carriage in ("kit-label", "adopter-label")
     workstream_default = axis_labels.axis_default("workstream", substrate_map)
     default_writes_a_label = workstream_default is not None and isinstance(
         axis_labels.resolve_write("workstream", workstream_default, substrate_map),
         str,
     )
     if (
-        not has_board
-        and args.workstream is None
+        args.workstream is None
         and workstream_label_carried
         and not default_writes_a_label
     ):
         print(
-            "error: --workstream is required in label-fallback mode "
-            "(no Projects v2 board configured in project/config.yaml).",
+            f"error: --workstream is required. workstream is carried "
+            f"{axis_carriage.describe('workstream', config, substrate_map)}, so a "
+            f"label IS written for it — and no value was given, with no `default:` "
+            f"in project/substrate-map.yaml to supply one.",
             file=sys.stderr,
         )
         return 2
@@ -593,7 +599,7 @@ def main() -> int:
         kind=args.kind,
         priority=args.priority,
         workstream=args.workstream,
-        has_board=has_board,
+        config=config,
         substrate_map=substrate_map,
     )
     for advisory in label_advisories:
@@ -633,6 +639,14 @@ def main() -> int:
             f"  from-report: #{args.from_report}  "
             "(will link the new issue into its Tracked by via `pkit report link`)"
         )
+    # Board MEMBERSHIP, not carriage: every issue belongs on the configured board
+    # (DEC-019), whatever substrate carries its classification axes. This read of
+    # `has_projects_v2_board` is the flag's own job and must NOT be routed through
+    # the carriage accessor — doing so would silently drop the membership
+    # requirement for any board adopter who wrote a single label binding
+    # ([project-management:DEC-051-axis-carriage-activation], "board membership
+    # stays with the flag").
+    has_board = bool(config.get("has_projects_v2_board", False))
     board_id = args.board if args.board is not None else config.get("projects_v2_board_id")
     if has_board:
         print(f"  board:      v2/{board_id}  (auto-add per DEC-019)")
@@ -849,7 +863,7 @@ def _build_labels(
     kind: str,
     priority: str,
     workstream: str | None,
-    has_board: bool,
+    config: dict,
     substrate_map: "axis_labels.SubstrateMap | None",
 ) -> tuple[list[str], list[str], dict[str, str]]:
     """Resolve the applied-label list for a new issue through the seam (ADR-026).
@@ -872,14 +886,27 @@ def _build_labels(
         advisory line;
       * a present map, axis bound via ``title-prefix`` ⇒ the axis is carried in
         the TITLE, not a label, so it contributes **no label** and no advisory
-        (:func:`axis_labels.axis_is_title_carried`, #454). This is distinct from
-        DEGRADE: the axis is served (in the title), just not label-carried.
+        (#454). This is distinct from DEGRADE: the axis is served (in the title),
+        just not label-carried. The same holds for the ``board`` and ``derive``
+        arms — see the carriage paragraph below, which is how all three are now
+        recognised.
+
+    **Carriage is resolved first, per axis, for every axis.** Which substrate
+    carries an axis is asked of :func:`axis_carriage.carriage`
+    ([project-management:DEC-051-axis-carriage-activation] decision point 4): a
+    map binding governs the axis it names, and the board flag governs only where
+    the map is silent. ``priority`` and ``workstream`` used to be appended to the
+    resolution list only ``if not has_board`` — a board-versus-label decision taken
+    BEFORE the seam was consulted, so under a configured board a label-bound
+    priority never reached the seam and no label was written for an axis whose map
+    said labels carry it. That is the ordering inversion the report describes
+    (#708). The ``type`` axis already resolved in the pinned order in this same
+    function, which is why it was never affected — it is the in-tree oracle for the
+    shape the other two now follow.
 
     Where the adopter declared a per-axis ``default:`` and the resolved value
     is missing, the seam's :func:`axis_labels.axis_default` supplies it before
-    resolution. ``priority`` / ``workstream`` are only carried in label-fallback
-    mode (no board), exactly as before — under a board those axes live on the
-    Projects v2 fields, not on labels.
+    resolution.
 
     DEGRADE is filtered structurally: it is a non-str singleton, so the
     ``isinstance(resolved, str)`` gate skips it. This is the call-site half of
@@ -889,27 +916,47 @@ def _build_labels(
     advisories: list[str] = []
     resolved_by_axis: dict[str, str] = {}
 
-    # type axis (carried as the classification `type:<kind>` label / its remap).
-    # priority + workstream are only label-carried in label-fallback mode — under
-    # a board they live on the Projects v2 fields, not on labels. The value may
-    # be blank (workstream is nullable); the adopter's per-axis `default:` seeds
-    # it before resolution.
-    axes_to_apply: list[tuple[str, str | None]] = [("type", kind)]
-    if not has_board:
-        axes_to_apply.append(("priority", priority))
-        axes_to_apply.append(("workstream", workstream))
+    # All three axes are considered; each one's SUBSTRATE decides whether a label
+    # is written for it. The value may be blank (workstream is nullable); the
+    # adopter's per-axis `default:` seeds it before resolution.
+    axes_to_apply: list[tuple[str, str | None]] = [
+        ("type", kind),
+        ("priority", priority),
+        ("workstream", workstream),
+    ]
 
     for axis, value in axes_to_apply:
-        # A `title-prefix`-bound axis is carried in the TITLE (applied via
-        # issue-types.yaml's `title_prefix`), not a label — so it contributes NO
-        # write-label (#454). Skipping here BEFORE resolution is deliberate: for
-        # such an axis `resolve_write` returns the prefix STRING (e.g. `[Feature]`
-        # for `--kind feature` when the map remaps `feature: "[Feature]"`), which
-        # a naive writer would apply as a `gh --label` — but the tracker has no
-        # bracket labels, so `gh issue create` hard-fails `'[Feature]' not found`.
-        # This is not a DEGRADE (the axis IS served, in the title); it is simply
-        # not a LABEL axis, so no advisory is emitted.
-        if axis_labels.axis_is_title_carried(axis, substrate_map):
+        # Carriage FIRST — the composition ordering ADR-026 pins and DEC-051
+        # restores. Only a label-carried axis is resolved to a write-label:
+        #
+        #   * `title` — carried in the TITLE (applied via issue-types.yaml's
+        #     `title_prefix`), so it contributes NO write-label (#454). Skipping
+        #     BEFORE resolution is what makes it safe: `resolve_write` returns the
+        #     prefix STRING (e.g. `[Feature]` for `--kind feature` under a
+        #     `feature: "[Feature]"` remap), which a naive writer applies as a
+        #     `gh --label` — and the tracker has no bracket labels, so
+        #     `gh issue create` hard-fails `'[Feature]' not found`.
+        #   * `board` — carried by a Projects-v2 field, written by the
+        #     `after_create_issue` hook, not by this label writer.
+        #   * `derived` — computed from tracker state (open/closed + a blocked
+        #     label); there is no write-label to compose.
+        #
+        # None of the three is a DEGRADE: the axis IS served, just not by a label,
+        # so no advisory is emitted for them. Emitting one would report a served
+        # axis as unsupported and soften every rule that needs it — the lie the
+        # board arm makes newly reachable, since `resolve_write` returns DEGRADE
+        # for a board-carried axis exactly as it does for a genuinely absent one
+        # (ADR-053 decision point 6).
+        #
+        # A `degrade` carriage deliberately does NOT skip here: it falls through to
+        # `resolve_write`, DEGRADEs, and emits the advisory below — unchanged,
+        # because for an axis the adopter declared unsupported (or omitted) that
+        # advisory is TRUE. Only the served-elsewhere arms are filtered out.
+        if axis_carriage.carriage(axis, config, substrate_map) in (
+            "title",
+            "board",
+            "derived",
+        ):
             continue
         # Apply the adopter's declared per-axis default only when the caller
         # gave no explicit value (workstream is the only nullable axis here;
@@ -917,9 +964,9 @@ def _build_labels(
         resolved_value = value or axis_labels.axis_default(axis, substrate_map)
         if not resolved_value:
             # No value and no default — nothing to label on this axis. This is
-            # the greenfield workstream-omitted case (a board adopter never
-            # reaches here for workstream; a label-fallback adopter is required
-            # to pass --workstream upstream), so it is not an advisory.
+            # the greenfield workstream-omitted case (an axis the board carries
+            # never reaches here; a label-carried one is required upstream), so it
+            # is not an advisory.
             continue
         resolved = axis_labels.resolve_write(axis, resolved_value, substrate_map)
         if isinstance(resolved, str):

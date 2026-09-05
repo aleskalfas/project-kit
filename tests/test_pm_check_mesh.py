@@ -25,6 +25,12 @@ SCRIPT_PATH = (
 
 
 @pytest.fixture(scope="module")
+def axis_labels(cm):
+    """The seam module `check-mesh` imports — reused to build a fixture map."""
+    return cm.axis_labels
+
+
+@pytest.fixture(scope="module")
 def cm():
     module_name = "pm_check_mesh_under_test"
     spec = importlib.util.spec_from_file_location(module_name, SCRIPT_PATH)
@@ -149,14 +155,14 @@ def test_compare_no_drift_when_identical(cm) -> None:
         members=[{"github_login": "alice"}],
         milestones=["M1"],
     )
-    drift = cm._compare(local, [peer], {"has_projects_v2_board": False})
+    drift = cm._compare(local, [peer], None)
     assert drift == []
 
 
 def test_compare_detects_version_drift(cm) -> None:
     local = _make_state(cm, "us/local", version="0.6.0")
     peer = _make_state(cm, "them/peer", version="0.5.0")
-    drift = cm._compare(local, [peer], {})
+    drift = cm._compare(local, [peer], None)
     kinds = [d["kind"] for d in drift]
     assert "capability-version" in kinds
 
@@ -168,23 +174,41 @@ def test_compare_detects_type_label_drift(cm) -> None:
     peer = _make_state(
         cm, "them/peer", labels=["type:feature", "type:bug", "type:incident"]
     )
-    drift = cm._compare(local, [peer], {})
+    drift = cm._compare(local, [peer], None)
     type_drift = [d for d in drift if d["kind"] == "type-labels"]
     assert len(type_drift) == 1
     assert type_drift[0]["in_peer_only"] == ["type:incident"]
 
 
-def test_compare_skips_priority_labels_for_board_adopter(cm) -> None:
+def test_compare_skips_kit_label_axes_under_a_present_map(cm, axis_labels) -> None:
+    """The predicate is the SEAM's `axis_expects_kit_labels`, not carriage: under a
+    present map no axis reads the kit's own `<axis>:*` labels, so comparing those
+    label sets across peers compares a vocabulary neither peer uses. This is
+    deliberately NOT routed through the carriage accessor — a board adopter who
+    binds `priority` to their own labels would then start comparing KIT
+    `priority:*` sets, which is the wrong vocabulary either way.
+
+    The predicate is the CARRIAGE accessor's `expects_kit_labels`, not the seam's
+    same-named one: the seam's is `substrate_map is None` and cannot see the
+    board, so under greenfield WITH a board it would compare kit `priority:*`
+    sets that neither peer uses."""
+    sm = axis_labels.SubstrateMap(
+        axes={"priority": {"label": {"remap": {"High": "P0"}}}}
+    )
     local = _make_state(cm, "us/local", labels=["priority:High"])
     peer = _make_state(cm, "them/peer", labels=["priority:High", "priority:Low"])
-    drift = cm._compare(local, [peer], {"has_projects_v2_board": True})
+    drift = cm._compare(local, [peer], sm)
     assert not any(d["kind"] == "priority-labels" for d in drift)
+    assert not any(d["kind"] == "type-labels" for d in drift)
 
 
-def test_compare_flags_priority_drift_for_label_adopter(cm) -> None:
+def test_compare_flags_priority_drift_in_greenfield(cm) -> None:
+    """No map ⇒ the kit's labels ARE the substrate on both sides, so a difference
+    in the `priority:*` sets is real drift. A configured board does not enter the
+    decision: it never named this vocabulary."""
     local = _make_state(cm, "us/local", labels=["priority:High"])
     peer = _make_state(cm, "them/peer", labels=["priority:High", "priority:Low"])
-    drift = cm._compare(local, [peer], {"has_projects_v2_board": False})
+    drift = cm._compare(local, [peer], None)
     assert any(d["kind"] == "priority-labels" for d in drift)
 
 
@@ -197,7 +221,7 @@ def test_compare_detects_member_drift(cm) -> None:
         "them/peer",
         members=[{"github_login": "alice"}, {"github_login": "bob"}],
     )
-    drift = cm._compare(local, [peer], {})
+    drift = cm._compare(local, [peer], None)
     member_drift = [d for d in drift if d["kind"] == "members"]
     assert len(member_drift) == 1
     assert "bob" in member_drift[0]["in_peer_only"]
@@ -207,24 +231,24 @@ def test_compare_skips_members_when_either_empty(cm) -> None:
     """When either side is open-mode (empty members), skip the check."""
     local = _make_state(cm, "us/local", members=[])
     peer = _make_state(cm, "them/peer", members=[{"github_login": "x"}])
-    drift = cm._compare(local, [peer], {})
+    drift = cm._compare(local, [peer], None)
     assert not any(d["kind"] == "members" for d in drift)
 
 
 def test_compare_detects_milestone_drift(cm) -> None:
     local = _make_state(cm, "us/local", milestones=["M1", "M2"])
     peer = _make_state(cm, "them/peer", milestones=["M1"])
-    drift = cm._compare(local, [peer], {})
+    drift = cm._compare(local, [peer], None)
     ms_drift = [d for d in drift if d["kind"] == "milestones"]
     assert len(ms_drift) == 1
     assert "M2" in ms_drift[0]["in_local_only"]
 
 
-def test_compare_multiple_peers_each_contributes(cm) -> None:
+def test_compare_multiple_peers_each_contributes(cm, axis_labels) -> None:
     local = _make_state(cm, "us/local", version="0.6.0")
     peer1 = _make_state(cm, "p1/r", version="0.5.0")
     peer2 = _make_state(cm, "p2/r", version="0.6.0")
-    drift = cm._compare(local, [peer1, peer2], {})
+    drift = cm._compare(local, [peer1, peer2], axis_labels.SubstrateMap(axes={}))
     peers_in_drift = [d.get("peer") for d in drift if d["kind"] == "capability-version"]
     assert "p1/r" in peers_in_drift
     assert "p2/r" not in peers_in_drift

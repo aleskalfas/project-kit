@@ -360,7 +360,7 @@ def test_plan_label_substrate_adds_new_and_removes_old(mi) -> None:
         issue_number=42,
         current_state="todo",
         target_state="backlog",
-        has_board=False,
+        state_on_board=False,
         labels=["state:todo", "type:feature"],
     )
     assert plan.add_label == "state:backlog"
@@ -372,7 +372,7 @@ def test_plan_label_substrate_handles_no_prior_state_label(mi) -> None:
         issue_number=42,
         current_state="todo",
         target_state="backlog",
-        has_board=False,
+        state_on_board=False,
         labels=["type:feature"],
     )
     assert plan.add_label == "state:backlog"
@@ -384,7 +384,7 @@ def test_plan_board_substrate_no_label_mutation(mi) -> None:
         issue_number=42,
         current_state="todo",
         target_state="backlog",
-        has_board=True,
+        state_on_board=True,
         labels=[],
     )
     assert plan.add_label is None
@@ -575,7 +575,7 @@ def test_compute_plan_noop_with_stale_label_reconciles_label(mi) -> None:
         issue_number=42,
         current_state="done",
         target_state="done",
-        has_board=False,
+        state_on_board=False,
         labels=["state:review", "priority:High"],
     )
     assert plan.add_label == "state:done"
@@ -589,7 +589,7 @@ def test_compute_plan_noop_with_correct_label_no_mutation(mi) -> None:
         issue_number=42,
         current_state="done",
         target_state="done",
-        has_board=False,
+        state_on_board=False,
         labels=["state:done", "priority:High"],
     )
     # state:done is already correct; nothing to remove.
@@ -680,7 +680,7 @@ def test_cascade_review_child_bumps_behind_container_to_in_progress(mi) -> None:
         issue_number=1,
         current_state="backlog",
         target_state=capped,
-        has_board=False,
+        state_on_board=False,
         labels=["state:backlog"],
     )
     assert plan.add_label == "state:in-progress"

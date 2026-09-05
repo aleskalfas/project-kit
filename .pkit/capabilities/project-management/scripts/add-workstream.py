@@ -44,6 +44,7 @@ from ruamel.yaml.error import YAMLError
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import bootstrap_gate  # noqa: E402
+from _lib import axis_carriage  # noqa: E402
 from _lib import axis_labels  # noqa: E402
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 
@@ -183,7 +184,20 @@ def main() -> int:
 
     # Read current state.
     config = _read_yaml(capability_root / "project" / "config.yaml", yaml_loader)
-    has_board = bool(config.get("has_projects_v2_board", False))
+
+    # Whether the kit's own `workstream:*` labels may be CREATED here — asked of
+    # the carriage accessor, never of the board flag alone
+    # ([project-management:DEC-051-axis-carriage-activation] decision point 4).
+    # The flag alone answers "is a board configured?", which is not the same
+    # question: a board adopter whose map binds `workstream` to their own labels
+    # would pass a flag test and get an unmanaged `workstream:<slug>` label
+    # created. Only the greenfield (`kit-label`) arm mutates kit labels; every
+    # other carriage suppresses the label half and says so.
+    substrate_map = axis_labels.load_substrate_map(capability_root)
+    kit_label_note = axis_carriage.kit_label_mutation_note(
+        "workstream", config, substrate_map
+    )
+    kit_labels = kit_label_note is None
 
     current = _read_workstreams_file_or_legacy(capability_root, yaml_loader)
     parsed = parse_workstreams(current if current else None)
@@ -213,8 +227,10 @@ def main() -> int:
     if "deprecated_reason" in new_entry:
         print(f"  reason:      {new_entry['deprecated_reason']}")
     print(f"  target file: {workstreams_path(capability_root)}")
-    if not has_board and not args.skip_label:
+    if kit_labels and not args.skip_label:
         print(f"  label:       create `{axis_labels.label('workstream', args.slug)}` (label-substrate)")
+    elif kit_label_note is not None:
+        print(f"  label:       none — {kit_label_note}")
 
     if args.dry_run:
         print("\n[dry-run] nothing written; no gh invocation.")
@@ -230,7 +246,7 @@ def main() -> int:
         return 2
 
     # Create the label for label-substrate adopters.
-    if not has_board and not args.skip_label:
+    if kit_labels and not args.skip_label:
         if not _gh_label_create(args.slug, config):
             print(
                 "[warn] workstreams.yaml updated but gh label create failed; "
