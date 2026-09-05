@@ -642,6 +642,23 @@ def workstream_mutator_refusal(
     This is deliberately the MINIMAL safe gate, not the full present-map mutator
     feature: it prevents an unmanaged label ever being created, and defers the
     richer behaviour to #264.
+
+    **Why this was not widened to the SERVED-but-not-kit-label arms**
+    ([project-management:DEC-051-axis-carriage-activation]). Once the mutators gate
+    their kit-label half on carriage, a ``label`` / ``title-prefix`` / ``derive``
+    binding — and a board — must suppress that half too. Widening *this* function
+    to refuse on those arms was rejected for two reasons. First, it cannot see the
+    board: this seam reads the map only (it takes no ``config``, and ADR-053's
+    layering forbids the seam calling the carriage accessor), so a board-carried
+    axis would still slip past. Second, a refusal is the wrong posture for them: the
+    mutators' other half — editing the adopter's declared workstream vocabulary in
+    ``workstreams.yaml`` — stays meaningful under every one of those bindings, and a
+    board adopter runs these mutators today with the label half silently skipped, so
+    refusing would regress a working path. The kit-label half is instead gated (and
+    explained) by ``_lib/axis_carriage.kit_label_mutation_note``, which sees both
+    sources. This function keeps the one arm where refusal IS right: an
+    ``unsupported`` / absent axis names no substrate at all, so neither half of the
+    mutator has anything to act on.
     """
     substrate_map = load_substrate_map(capability_root)
     if axis_disposition("workstream", substrate_map) == "unsupported":
@@ -1010,6 +1027,50 @@ def read_all(axis: str, labels: list[str]) -> list[str]:
 def is_axis_label(name: str, axis: str) -> bool:
     """True when label ``name`` encodes axis ``axis`` (greenfield prefix match)."""
     return name.startswith(prefix(axis))
+
+
+def carried_labels(
+    axis: str, labels: list[str], substrate_map: SubstrateMap | None
+) -> list[str]:
+    """Every label in ``labels`` that carries ``axis``, kit-prefixed OR remapped.
+
+    The map-aware counterpart to :func:`is_axis_label`, for a writer replacing an
+    axis's value: it has to find the label(s) already carrying that axis in order
+    to strip them. A prefix match alone is only correct in greenfield. Under a
+    ``label`` binding the substrate is the adopter's OWN label name — ``P0``, with
+    no ``priority:`` prefix — so a prefix-only search finds nothing, the writer
+    adds the new label without removing the old one, and the issue accumulates two
+    values on a single-valued axis with nothing detecting it.
+
+    The two sets are UNIONed rather than switched between, deliberately: a
+    repository mid-adoption can hold a stale kit ``priority:High`` alongside the
+    adopter's ``P0``, and a writer that stripped only one of them would leave the
+    other behind. The union is a superset of the prefix-only behaviour, so a
+    greenfield caller is unchanged.
+
+    The remapped set is the binding's declared VALUES — the adopter's own
+    vocabulary for the axis. Only a ``label`` binding contributes them; a
+    ``title-prefix`` value is not a label, a ``derive`` predicate names none, and
+    an unsupported / absent / board-carried axis has no label vocabulary. Order
+    follows ``labels``; duplicates are not introduced.
+    """
+    vocabulary: set[str] = set()
+    if substrate_map is not None:
+        binding = substrate_map.axes.get(axis)
+        if isinstance(binding, dict):
+            label_binding = binding.get("label")
+            if isinstance(label_binding, dict):
+                remap = label_binding.get("remap")
+                if isinstance(remap, dict):
+                    vocabulary = {
+                        mapped
+                        for mapped in remap.values()
+                        if isinstance(mapped, str) and mapped
+                    }
+    return [
+        name for name in labels
+        if is_axis_label(name, axis) or name in vocabulary
+    ]
 
 
 # ----- capability-root discovery (shared shape) --------------------------

@@ -191,3 +191,80 @@ def expects_kit_labels(
     cannot create".
     """
     return carriage(axis, config, substrate_map) == "kit-label"
+
+
+# How each carriage reads in a sentence, for a message that has to tell an
+# adopter WHY the kit's own labels were not touched. One table, because every
+# consumer composing such a message would otherwise write its own phrasing and
+# they would drift (COR-007). `{axis}` is substituted by :func:`describe`.
+_CARRIAGE_PHRASE: dict[Carriage, str] = {
+    "kit-label": "by the kit's own `{axis}:*` labels",
+    "adopter-label": (
+        "by your OWN labels (a `label:` binding in project/substrate-map.yaml)"
+    ),
+    "title": (
+        "in the issue TITLE (a `title-prefix:` binding in project/substrate-map.yaml)"
+    ),
+    "derived": (
+        "by a detection predicate (a `derive:` binding in project/substrate-map.yaml)"
+    ),
+    "board": "on your Projects-v2 board (a board field, not a label)",
+    "degrade": "by nothing — the axis is unsupported under your substrate-map",
+}
+
+
+def describe(
+    axis: str,
+    config: dict[str, Any] | None,
+    substrate_map: axis_labels.SubstrateMap | None,
+) -> str:
+    """Where ``axis`` lives, as a phrase to drop into a message ("on your board…").
+
+    Naming the substrate is what turns "no label was created" from a silent
+    difference into something an adopter can act on, and the phrase has to agree
+    with the carriage that produced it — so it is derived from the same call
+    rather than re-guessed at each site.
+    """
+    return _CARRIAGE_PHRASE[carriage(axis, config, substrate_map)].format(axis=axis)
+
+
+def kit_label_mutation_note(
+    axis: str,
+    config: dict[str, Any] | None,
+    substrate_map: axis_labels.SubstrateMap | None,
+) -> str | None:
+    """``None`` when the kit's own ``<axis>:*`` labels may be MUTATED, else why not.
+
+    The gate for a mutator that creates / renames / deletes a kit ``<axis>:<value>``
+    label (the five workstream mutators). It is :func:`expects_kit_labels` plus the
+    sentence explaining the answer, kept in one place because five mutators ask the
+    same question and five hand-written phrasings would drift (COR-007).
+
+    Why a *note* rather than a refusal, and why the mutator must not simply swap
+    the board flag for this accessor: the naive substitution turns kit-label
+    mutation **on** for a board adopter whose map binds the axis to their own
+    labels. That does not merely write an unmanaged ``workstream:<slug>`` label —
+    ``remove`` / ``merge`` / ``split`` would issue ``gh label delete`` and
+    ``rename`` a ``gh label edit`` against a name the kit does not own. The
+    mutators' other half — editing the adopter's declared workstream vocabulary in
+    ``workstreams.yaml`` — stays meaningful on every carriage, and a board adopter
+    runs them today with the label half silently skipped, so a hard refusal here
+    would regress a working path. The label half is suppressed and *said out loud*
+    instead.
+
+    Distinct from :func:`axis_labels.workstream_mutator_refusal`, which is not
+    widened to cover these arms and stays the hard refusal for the one arm where
+    the mutator has nothing left to do: an ``unsupported`` / absent axis under a
+    present map names no substrate at all, so neither the label half nor the
+    vocabulary half means anything. The two run together — the refusal first, this
+    note second.
+    """
+    if expects_kit_labels(axis, config, substrate_map):
+        return None
+    return (
+        f"{axis} is carried {describe(axis, config, substrate_map)}, so the kit's "
+        f"`{axis}:*` labels are not this project's {axis} substrate: no kit label "
+        f"is created, renamed or deleted here. The declared {axis} vocabulary is "
+        f"still updated. (Managing an adopter-owned {axis} substrate from these "
+        f"mutators is the adopt-existing Feature #264.)"
+    )

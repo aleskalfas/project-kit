@@ -123,12 +123,14 @@ Reads the config and the capability's schemas; creates the methodology's require
 
 **Labels created by bootstrap:**
 
-- `type:*` (always) — one label per type value in `classification.yaml`.
-- `priority:*` (label-fallback mode) — one label per priority value.
-- `workstream:*` (label-fallback mode, per declared workstreams).
-- `state:*` (label-fallback mode) — one label per lifecycle state in `workflow.yaml` (`state:todo`, `state:backlog`, `state:in-progress`, `state:review`, `state:done`). These are the substrate for `move-issue`'s state machine on label-fallback adopters.
+bootstrap provisions the **kit's own** labels, so it creates a palette only for an axis the kit's labels actually carry — asked per axis of the carriage accessor (per [project-management:DEC-051-axis-carriage-activation]):
 
-Board adopters (`has_projects_v2_board: true`) skip `priority:*`, `workstream:*`, and `state:*` labels; those axes live as Projects v2 fields instead.
+- `type:*` — one label per type value in `classification.yaml`.
+- `priority:*` — one label per priority value.
+- `workstream:*` — per declared workstream.
+- `state:*` — one label per lifecycle state in `workflow.yaml` (`state:todo`, `state:backlog`, `state:in-progress`, `state:review`, `state:done`). These are the substrate for `move-issue`'s state machine.
+
+Two things suppress a palette. A **configured board** (`has_projects_v2_board: true`) claims `priority`, `workstream` and `state` where your `substrate-map.yaml` says nothing about them — those live as Projects v2 fields instead. And a **present `substrate-map.yaml`** suppresses every axis palette, including `type`: under a map, no axis reads the kit's `<axis>:*` labels, so creating them would leave unmanaged labels no reader looks at. Adopting an existing repo's own labels is `adopt-existing`'s job, not bootstrap's. Each suppressed palette is reported in the plan with the substrate that carries the axis instead.
 
 Optionally, file a starter EPIC so subsequent Task filings have a default parent:
 
