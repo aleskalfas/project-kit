@@ -51,11 +51,15 @@
 #     cannot know. Reported so it is a visible decision rather than a silent
 #     residue.
 #
-# KNOWN LIMIT, stated rather than hidden: the embedded hashes are this version's
-# shipped set. Because the leak was continuous through `sync`, an adopter who
-# synced recently holds exactly this set and is fully cleaned; one who installed
-# long ago and never synced may hold an older set, which is reported, not
-# removed. Hashes are embedded rather than compared against the live kit source
+# KNOWN LIMIT, stated rather than hidden: the embedded hashes are the set THIS
+# BUILD shipped, and that set is not a property of the repo. The journals are
+# git-ignored while packaging force-includes the tree wholesale, so what ships
+# depends on the build machine's working tree — this source tree holds 35 while
+# the current wheel carries 14. So an adopter may hold journals this migration
+# has no digest for, whether they installed long ago or synced from a
+# differently-built source. Those are reported, never removed, so the residue is
+# visible rather than silently deleted; but "fully cleaned" is not a promise
+# this migration can make. Hashes are embedded rather than compared against the live kit source
 # because #813 removes these files from the distribution entirely — after that
 # there is no source copy left to compare against.
 #
@@ -92,7 +96,27 @@ d160979f62999b03bf3a3afb55d1c72f97ba9f61fcd5c6f1784568cab8565b87
 ae07a406fe586ac3d792970f3c0cf4eab91b2d094d65ac4fbc2e16debf7c04cd
 "
 
-_sha() { shasum -a 256 "$1" 2>/dev/null | cut -d' ' -f1; }
+# Resolve a SHA-256 hasher ONCE. `shasum` is perl-provided (absent on minimal
+# Debian/Ubuntu images that ship perl-base only); `sha256sum` is absent on macOS.
+# Neither name alone is safe, and neither is in the dependency set migrations may
+# assume (bash, standard UNIX tools, git, gh, yq) — so absence must degrade, not
+# abort. Under `set -euo pipefail` a failing hasher inside a command
+# substitution exits the script at that line, and the runtime halts the WHOLE
+# upgrade with "state may be inconsistent", so this cannot be left to chance.
+HASHER=""
+if command -v shasum >/dev/null 2>&1; then
+    HASHER="shasum"
+elif command -v sha256sum >/dev/null 2>&1; then
+    HASHER="sha256sum"
+fi
+
+_sha() {
+    case "$HASHER" in
+        shasum)    shasum -a 256 "$1" | cut -d' ' -f1 ;;
+        sha256sum) sha256sum "$1" | cut -d' ' -f1 ;;
+        *)         return 1 ;;
+    esac
+}
 
 removed=0
 actions=()      # things the adopter must decide — printed FIRST
@@ -120,10 +144,16 @@ done
 
 # --- Provably foreign: remove --------------------------------------------------
 JOURNAL_DIR="$PROJECT_DIR/process/issue-lifecycle"
-if [ -d "$JOURNAL_DIR" ]; then
+if [ -d "$JOURNAL_DIR" ] && [ -z "$HASHER" ]; then
+    # No positive signal is obtainable, so judge nothing — the same discipline
+    # applied to the activation file and the stamp.
+    notes+=("lifecycle journals left untouched — no sha256 tool (shasum / sha256sum) is available, so their provenance cannot be established. Nothing is removed on a guess.")
+elif [ -d "$JOURNAL_DIR" ]; then
     while IFS= read -r journal; do
         [ -n "$journal" ] || continue
-        h="$(_sha "$journal")"
+        # `|| true` keeps a per-file hashing failure (unreadable file) from
+        # tripping `set -e` and halting the entire upgrade run.
+        h="$(_sha "$journal" 2>/dev/null || true)"
         if [ -n "$h" ] && printf '%s\n' "$SEEDED_JOURNAL_HASHES" | grep -qxF "$h"; then
             rm -f "$journal"
             removals+=("$(basename "$journal") — byte-identical to the source project's, so provably not yours")

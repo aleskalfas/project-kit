@@ -28,6 +28,9 @@ body: >
   `workstreams.yaml` are kept because they may have been edited on top of the
   seed and their values are frequently correct anyway, so deleting an adopter's
   only working config to purify its provenance would do more harm than the
-  residue. Known limit, stated rather than hidden: the embedded hashes are this
-  version's shipped set, so an adopter who never synced may hold an older set,
+  residue. Known limit, stated rather than hidden: the embedded hashes are the
+  set this build shipped, which is not a property of the repo — the journals are
+  git-ignored while packaging includes the tree wholesale, so what ships depends
+  on the build machine's working tree. An adopter may therefore hold journals
+  this migration has no digest for,
   which is reported rather than removed.
