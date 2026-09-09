@@ -42,33 +42,31 @@ This is that record.
 
 **The surfaces this contract governs, as they stand.**
 
-1. **`_lib/axis_carriage.py`** answers *where does this axis live*. It is pure —
-   no I/O, `config` arrives as an injected dict — and it returns a **closed set**
-   (`kit-label` / `adopter-label` / `title` / `derived` / `board` / `degrade`)
-   rather than a board/not-board boolean, so a consumer cannot satisfy the type
+1. **The carriage resolver** answers *where does this axis live*. It is pure —
+   no I/O, `config` arrives as an injected dict — and it returns a **closed set** of substrates —
+   the kit's own label, the adopter's own label, the title, a derived value, the
+   board, or nothing — rather than a board/not-board boolean, so a consumer cannot satisfy the type
    while still having to ask a second question to be correct. It reads binding
-   shape through the label seam (`_lib/axis_labels`); it calls no board code.
-2. **`_lib/board_fields.py`** is the board read seam: board identity (board
+   shape through the label seam; it calls no board code.
+2. **The board read seam** owns every read of the board: board identity (board
    number → project node id), the board's live field definitions and their
    options, and the per-issue card (item) lookup. Every read returns a result
    object carrying `ok` plus `gh`'s stderr **verbatim** on failure, and the
    module's posture is that the caller decides what a failure means.
 3. **The gates** that need a classification value. The classification presence
-   gate in `validate-issue.py` is the first and the forcing case.
+   gate is the first and the forcing case.
 
 **What exists on the board arm.** The map's `board:` arm is parameterless
 (`board: true`), admissible on `priority` and `workstream` only, with the field's
 identity staying a write parameter on the `after_create_issue` hook
 ([project-management:DEC-051-axis-carriage-activation], decision point 2). The
-label seam already carries its accessors: `axis_is_board_carried` reports the
-arm, and `resolve_write` returns `DEGRADE` for a board-carried axis because there
-is no label to write.
+label seam already answers both halves: whether an axis is board-carried, and
+that a board-carried axis has nothing for a label writer to write.
 
 **What does not exist yet.** There is no board **field-value** read in the seam.
-One exists in `back-fill.py` (`_read_current_field_value`, over
-`back_fill_apply.FIELD_REREAD_QUERY`), plumbed to a single caller, and its
-contract *is* that caller's posture: `read_ok=False` means "back-fill must skip",
-and a `None` current value covers both "the field is unset" and "we could not
+One exists inside the corpus back-fill, plumbed to a single caller, and its
+contract *is* that caller's posture: its success flag means "back-fill must skip" rather than "the board did not
+answer", and an empty value covers both "the field is unset" and "we could not
 read it".
 
 The architecturally-significant pins, each against a plausible alternative:
@@ -96,12 +94,11 @@ you one. Everything else stays as it is.
 
 **Layer 1 — carriage.** `axis_carriage.carriage(axis, config, substrate_map)`
 answers *where does this axis live*, purely, from an injected `config` dict and an
-already-loaded map. It performs **no I/O** and returns a member of the closed
-`Carriage` set. It calls the label seam to read binding shape; it never calls the
+already-loaded map. It performs **no I/O** and returns a member of that closed set. It calls the label seam to read binding shape; it never calls the
 board read seam. The one-way layering [pkit:ADR-026] pins holds in both
 directions: **carriage calls the seams; no seam calls carriage.**
 
-**Layer 2 — the board read seam.** `_lib/board_fields` owns every read of the
+**Layer 2 — the board read seam.** the board read seam owns every read of the
 board: identity, field definitions, item lookup, and — per point 5 — the field
 **value** read. It is posture-neutral: it returns a result object saying whether
 the board answered and what it said, with `gh`'s stderr verbatim on failure, and
@@ -160,21 +157,20 @@ raises on the same footing.
 ### 3. The error fires only where a value was genuinely expected
 
 The raise is scoped by carriage: it can occur **only** when
-`axis_carriage.carriage(...)` returns `board` for the axis being read.
-`is_board_carried` is the narrow predicate for a gate that only needs that split.
+carriage resolves to *board* for the axis being read. A narrow board/not-board
+predicate exists for a gate that needs only that split.
 
 **A project with no board is unaffected in every path** — no board read, no `gh`
 call, no new failure mode, no new latency. This holds structurally in the code
-today: `board_fields.board_number(config)` returns `None` when the flag is falsey
-or the id is unset, and every read short-circuits on that `None` before invoking
-`gh`. That property is load-bearing for this contract and **must be preserved by
+today: the board-identity read yields nothing when the flag is unset or the board id is
+absent, and every board read short-circuits on that before reaching the network. That property is load-bearing for this contract and **must be preserved by
 test, not by inspection**: a no-board fixture exercised through a composing gate
 asserts that **zero** `gh` invocations occur. Inspection does not survive the next
 author.
 
 ### 4. Reconciliation with back-fill — different drivers, not a conflict
 
-`back-fill --apply` fails **closed to a DRIFTED skip** when it cannot read a
+The corpus back-fill's apply path fails **closed to a drift-skip** when it cannot read a
 field's current value. **That is correct for back-fill and it stays.** It is not
 contradicted, softened, or superseded by point 2.
 
@@ -187,17 +183,15 @@ the adopter's repo, from a check that does not exist. Both drivers refuse to act
 on a value they could not read; for back-fill that refusal is "do not write", for
 a gate it can only be "raise".
 
-**A known defect, not a blessed posture.** Back-fill's *emitted-script* path fails
-**OPEN**: a failed re-read reads empty and the write proceeds, overwriting a value
-it never read (`_field_guarded_fragment` in `_lib/back_fill_apply.py`, whose
-generated comment says so). That is filed as
+**A known defect, not a blessed posture.** The back-fill's *emitted-script* path fails **OPEN**: a failed re-read reads empty and the write proceeds, overwriting a value
+it never read (whose generated comment says so). That is filed as
 [#816](https://github.com/aleskalfas/project-kit/issues/816) with a ruling that it
 should raise. It is cited here so no reader mistakes it for a third sanctioned
 posture; this contract neither depends on it nor endorses it.
 
 ### 5. The field-value read moves into the board read seam, and moves neutral
 
-The board field-value read belongs in **`_lib/board_fields`**, alongside the
+The board field-value read belongs in **the board read seam**, alongside the
 identity, field-definition and item reads — the module that is already the single
 home for board reads on COR-007's third-copy grounds. A gate that needs a board
 value asks the seam, exactly as it asks for the item id.
@@ -207,15 +201,14 @@ returns the seam's shape — whether the board answered, what it said, and `gh`'
 stderr verbatim when it did not — and back-fill maps that onto its own posture at
 its own boundary, where the DRIFTED-skip decision belongs. This is the easiest
 thing in this record to get wrong, because the existing function's contract *is*
-the posture: its `read_ok` conflates "the board answered" with "back-fill may
-proceed", and its `None` current conflates *unset* with *unread*. The promoted
+the posture: its success flag conflates "the board answered" with "back-fill may proceed",
+and its empty value conflates *unset* with *unread*. The promoted
 read separates both. Collapsing them would be worse than untidy: point 2 rules on
 unreadable and deliberately leaves *unset* open, so a seam that cannot **say**
 "the board answered, and the field is unset" makes the deferred question
 unanswerable later without re-plumbing the read.
 
-The re-read query stays a **single source of truth** shared by back-fill's
-`--apply` read and its emitted guard, so the two read surfaces cannot silently
+The re-read query stays a **single source of truth** shared by the back-fill's apply-path read and its emitted guard, so the two read surfaces cannot silently
 desync; the constant travels with the read rather than being copied.
 
 ### 6. The `board:` binding arm's read-path contract
@@ -226,7 +219,7 @@ the `board:` arm.
 - **The arm is parameterless** (`board: true`); the field's identity remains a
   write parameter on the `after_create_issue` hook. The read path needs no
   parameter because the seam resolves the field **by name** against the live
-  board — the Title-cased axis name, matched exact-first then case-insensitively,
+  board — by the axis's own name, matched exactly first and then case-insensitively,
   with the option matched the same way. Nothing in the map has to name a field.
 - **Admissible on `priority` and `workstream` only.** `type` is excluded
   permanently (PR-title alignment reads the type label, and a board field is
@@ -234,12 +227,11 @@ the `board:` arm.
   needs a detector kind that does not exist). The schema is the gate; the seam
   does not re-check admissibility, because a second copy of the rule is a source
   of truth that can disagree.
-- **A board-carried axis is SERVED, not degraded.** `resolve_write` returns
-  `DEGRADE` for it — correctly, since there is no label to write — so a consumer
+- **A board-carried axis is SERVED, not degraded.** write resolution reports nothing to write for it — correctly, since there is no label to write — so a consumer
   that keys only on the resolver reports "unsupported under your substrate-map"
   for an axis that is fully served, and softens every rule that needs it.
-  **Consumers consult `axis_is_board_carried` (or carriage) BEFORE resolving**,
-  exactly as they already consult `axis_is_title_carried` for the title arm. For a
+  **Consumers ask whether the axis is board-carried BEFORE resolving a write**,
+  exactly as they already ask it for the title arm. For a
   presence gate this means: demand no label for the axis, and ask the board.
 
 ### Boundaries — what this contract is NOT
@@ -341,13 +333,13 @@ implementation.
 
 ## Implications
 
-- **Carriage stays pure and injected.** `_lib/axis_carriage` takes `config` as a
+- **Carriage stays pure and injected.** the carriage resolver takes `config` as a
   dict and performs no I/O; it calls the label seam and never the board seam, and
   no seam calls it. A consumer needing a board value composes the two itself.
 - **The no-board silence is a tested property.** A no-board fixture driven through
   a composing gate asserts **zero** `gh` invocations. Without that test the scoping
   rule is an inspection result, and inspection does not survive the next author.
-- **The field-value read lands in `_lib/board_fields`** with the seam's neutral
+- **The field-value read lands in the board read seam** with the seam's neutral
   result shape, able to distinguish *the board answered and the field is unset*
   from *the board did not answer*, carrying `gh`'s stderr verbatim on the latter.
 - **Back-fill's observable behaviour is unchanged.** Its wrapper maps the neutral
@@ -361,14 +353,13 @@ implementation.
 - **The prerequisite check should report the `read:project` scope.** Promoting this
   read widens the blast radius of a token missing that scope: today it breaks
   back-fill's drift check only; once a gate reads field values it breaks the gate
-  for every adopter with a `board:` binding. `pre-check` verifies authentication
-  but not this scope. It should carry a finding — scoped the same way, fired when
+  for every adopter with a `board:` binding. The prerequisite check verifies authentication but not this scope. It should carry a finding — scoped the same way, fired when
   any axis resolves to `board` — so the adopter learns at prerequisite time rather
   than discovering it at gate time on a real issue. Recommended as part of this
   work; the check's exact shape is implementation scope.
-- **Consumers consult the board predicate before resolving.** `resolve_write`
-  returning `DEGRADE` for a board-carried axis is correct and is **not** a report
-  that the axis is unsupported; a consumer that keys only on the resolver lies
+- **Consumers ask the board predicate before resolving a write.** Nothing-to-write
+  is the correct answer for a board-carried axis and is **not** a report that the
+  axis is unsupported; a consumer that keys only on the resolver lies
   about a served axis and softens the rules that need it.
 - **Relationship to records.** No amendment to
   [project-management:DEC-051-axis-carriage-activation] is needed — that record
