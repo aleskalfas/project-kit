@@ -85,8 +85,9 @@ exclude = ["**/__pycache__", "**/*.pyc"]
 # per ADR-033 §3) and migrations.
 #
 # WHAT DEFINES THE SET, since this changed (#813): the bundle is everything
-# under the listed trees that is NOT adopter-owned by tier, as
-# `.pkit/lifecycle/ownership.py`'s `is_adopter_owned_by_tier` decides. It is
+# under the listed trees whose CONTENT is not adopter-owned by tier, as
+# `.pkit/lifecycle/ownership.py`'s `is_adopter_owned_by_tier` decides — plus the
+# empty directory markers noted above. It is
 # deliberately NOT the sync-propagation surface. ADR-033 D1 originally defined
 # it that way, reasoning the wheel could then never drift from what sync
 # copies; but sync-management additionally depends on capability registration
@@ -117,9 +118,14 @@ exclude = ["**/__pycache__", "**/*.pyc"]
 # `capabilities`, `agents`, `permissions`, `adapters`, `skills`, `rules`,
 # `schemas`, `cli`, `process`, `lifecycle`, `migrations`. Do not "helpfully"
 # restore any of them: they are force-included by `hatch_build.py`, file by
-# file, with every adopter-owned path withheld. The canonical list is that
-# file's `FILTERED_TREES`; a static entry here would ship the tree unfiltered
-# and silently reintroduce the defect.
+# file, with every adopter-owned path withheld — with one deliberate carve-out:
+# four EMPTY `.gitkeep` markers do ship at adopter-owned paths, listed in that
+# file's `ADOPTER_TIER_MARKERS`, because `install.py` reads the bundle's SHAPE
+# to decide whether to stub an adopter's `project/` scaffolding. They are layout,
+# not content, and a test asserts each is byte-empty. Finding
+# `agents/project/.gitkeep` in the wheel is correct, not a bug to "fix". The
+# canonical tree list is that file's `FILTERED_TREES`; a static entry here would
+# ship the tree unfiltered and silently reintroduce the defect.
 #
 # Why: a `project/` subtree at any depth is the ADOPTER's tier, so shipping this
 # project's copy seeded one project's state into every adopter (#811/#812) — and

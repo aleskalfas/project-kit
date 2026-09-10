@@ -167,8 +167,8 @@ class CapabilityBoundaryHook(BuildHookInterface):
         # contents: an empty marker per fully-withheld directory. The marker is
         # kit-owned layout, not adopter data, and it never reaches an adopter —
         # the area install path skips `project` when copying and only stubs it.
-        # Derived from what `install.py` GATES ON — the top-level `project/`
-        # tier of each tree — never from where withheld files happened to sit.
+        # Derived from `ADOPTER_TIER_MARKERS` — the directories `install.py`
+        # gates on — never from where withheld files happened to sit.
         #
         # The first version collected the parent of every withheld file, and
         # withheld files include git-IGNORED ones, so a marker materialised
@@ -180,9 +180,14 @@ class CapabilityBoundaryHook(BuildHookInterface):
         # materialised the source's nested adopter-tier layout, which #812
         # explicitly rejects ("nested structure is the adopter's to create").
         #
-        # Depth-1 `<tree>/project` is the whole requirement and every such
-        # directory carries tracked content, so the marker set is a function of
-        # tracked state alone.
+        # Depth is NOT the rule: the tuple deliberately includes
+        # `adapters/claude-code/settings/project` at depth 3, because
+        # `install.py` gates that adapter's settings scaffolding on it. An
+        # earlier revision of this comment claimed depth-1 was "the whole
+        # requirement" — a reader trusting that would delete the depth-3 entry
+        # as spurious and silently restore the scaffolding regression. Every
+        # declared directory carries tracked content, so the marker set is a
+        # function of tracked state alone.
         represented = {str(Path(dest).parent) for dest in include.values()}
         pending = [
             rel_dir for rel_dir in ADOPTER_TIER_MARKERS

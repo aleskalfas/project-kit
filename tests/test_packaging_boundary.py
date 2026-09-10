@@ -375,7 +375,13 @@ def test_adopter_tier_directories_are_represented(ownership, built_wheel: Path) 
     included as `core` + `README.md` only), so they are not asserted here.
     """
     entries = _kit_entries(built_wheel)
-    expected = ["agents/project", "permissions/project", "skills/project"]
+    # Derived from the declaration rather than hardcoded, so removing an entry
+    # from `ADOPTER_TIER_MARKERS` fails HERE too. Previously this listed the
+    # three depth-1 tiers by hand, so deleting the depth-3 adapter-settings
+    # entry — which `install.py` also gates on — would have passed both this
+    # test and the completeness test, silently restoring the regression.
+    expected = _declared_markers()
+    assert expected, "ADOPTER_TIER_MARKERS not found"
     missing = [
         d for d in expected
         if not any(e.startswith(d + "/") for e in entries)
@@ -468,10 +474,30 @@ def test_declared_marker_set_matches_the_source_tree() -> None:
         (REPO_ROOT / "hatch_build.py").read_text(encoding="utf-8"),
         re.MULTILINE,
     )
-    undeclared = [
-        f"{t}/project" for t in set(hook_trees)
-        if (KIT / t / "project").is_dir() and f"{t}/project" not in declared
-    ]
+    # Independent oracle: walk the SOURCE TREE for `project/` directories under
+    # a filtered tree, at ANY depth. Deriving the expectation from `declared`
+    # would be circular — deleting an entry would remove it from both sides and
+    # the test would pass, which is exactly what an earlier version did.
+    found = set()
+    for tree in set(hook_trees):
+        base = KIT / tree
+        if not base.is_dir():
+            continue
+        for d in base.rglob("project"):
+            if not d.is_dir() or "__pycache__" in d.parts:
+                continue
+            rel = d.relative_to(KIT).as_posix()
+            # A CAPABILITY's project/ needs no marker: `_copy_capability_tree`
+            # stubs it unconditionally (`project_dir.mkdir(parents=True,
+            # exist_ok=True)`) rather than gating on the source bundle having
+            # it. Only the paths an installer READS the bundle's shape for need
+            # to be declared, and conflating the two would demand a marker that
+            # serves nothing.
+            if rel.startswith("capabilities/"):
+                continue
+            found.add(rel)
+    undeclared = sorted(found - set(declared))
     assert not undeclared, (
-        f"adopter tiers present in the tree but not declared: {undeclared}"
+        "adopter tiers present in the source tree but not declared, so the "
+        f"bundle will not carry them and install.py will not stub them: {undeclared}"
     )
