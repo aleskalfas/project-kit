@@ -1,0 +1,37 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The distribution no longer carries adopter-owned paths, and is reproducible
+  (#813). The methodology tree is bundled by `force-include`, and hatchling's
+  `exclude` cannot filter force-included paths — so eleven `.pkit/` trees were
+  included wholesale, carrying each capability's adopter-owned `project/`
+  subtree plus the project-side trees of several areas: 51 such files in a
+  1.149.0 wheel. That is how one project's config, its default-agent activation
+  switch, its bootstrap stamp and its per-issue audit journals reached adopters
+  (the copy side of which was fixed separately). Worse, some of that content is
+  git-ignored runtime state, so what shipped depended on whatever untracked
+  files sat on the build machine: the released 1.149.0 wheel carries 14 journals
+  where a wheel built from a working tree carried 36 — two builds of one commit
+  produced different artifacts. The force-includes for those trees are now
+  rebuilt file by file by a build hook that asks the project's own ownership
+  predicate, rather than enumerating what to keep in a hand-maintained list
+  which had already drifted from the rule it was meant to mirror. A test asserts
+  the built artifact against that same predicate, so the two cannot diverge
+  again, and separately asserts that kit-owned content still ships and no build
+  cache does — the per-file force-include bypasses `exclude`, so the hook
+  reapplies those patterns itself. Both distributions are covered, by different
+  mechanisms — the wheel through the hook, the source distribution through an
+  exclude glob, since the two targets assemble differently — and a test compares
+  the two artifacts against each other rather than only against the predicate,
+  which is what caught a hole in the predicate itself: `project/` was matched
+  only at the depths then known, so the wheel was still shipping this project's
+  own harness permission allow-list. Nothing an adopter needs is removed:
+  verified that no kit-owned file is missing from either artifact, and a build from a
+  clean clone produces the same file list as one from a working tree carrying 36
+  untracked journals. The bundle also still carries the adopter-tier DIRECTORIES the
+  installer reads to decide whether to stub an adopter's `project/` scaffolding — as
+  empty markers, declared in code so both build paths emit the same set, since
+  discovering them from the filesystem made the artifact depend on untracked state
+  and produced no markers at all when the wheel was built from a source distribution.

@@ -33,23 +33,77 @@ dev = [
 path = ".pkit/VERSION"
 pattern = "^(?P<version>[0-9]+\\.[0-9]+\\.[0-9]+)$"
 
+[tool.hatch.build.targets.sdist]
+# The sdist has no force-include to override, so `exclude` works here — unlike
+# the wheel, where force-include is the higher-priority mechanism and the
+# filtering has to happen in `hatch_build.py`. Same rule, two mechanisms,
+# because the two targets assemble differently.
+#
+# Without this the sdist carried project-kit's own project-side state including
+# 36 git-ignored journals, so it had the same non-reproducibility as the wheel:
+# its contents depended on the build machine's untracked files.
+# Rule-shaped rather than enumerated: any `project/` directory anywhere under
+# `.pkit/` is the adopter tier, at every depth — which is the same positional
+# rule `ownership.is_adopter_owned_by_tier` applies. The wheel asks that
+# predicate directly; config globs cannot, so this mirrors it in the one form
+# hatchling accepts here.
+exclude = [
+  ".pkit/**/project",
+  ".pkit/project",
+  ".pkit/rules/project.md",
+  ".pkit/scratchpad/active",
+  ".pkit/scratchpad/done",
+  ".pkit/scratchpad/dropped",
+  # Install state and generated files. The wheel's comment already calls these
+  # "adopter- or maintainer-owned, never shipped"; the sdist had been shipping
+  # them regardless.
+  ".pkit/manifest.yaml",
+  ".pkit/.gitignore",
+]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/project_kit"]
 # Never sweep build caches into the bundled methodology tree. (NB: hatchling's
-# `exclude` does not filter force-included paths — the force-include below is a
+# `exclude` does not filter force-included paths — force-include is the
 # higher-priority mechanism — so it can only prune what the standard package
-# walk picks up. The one stale per-capability `manifest.yaml` that rides along
-# in the capabilities force-include is project-kit's own self-host install-state
-# receipt; it is functionally inert (capability install overwrites it with a
-# freshly-stamped receipt) and is slated for removal by ADR-033's COR-007
-# single-declaration follow-on.)
+# walk picks up. That is exactly why the tree filtering lives in
+# `hatch_build.py`, which reapplies these same patterns itself; missing that
+# once shipped 87 `.pyc` files.
+#
+# One stale per-capability `manifest.yaml` still travels — project-kit's own
+# self-host install-state receipt, functionally inert since a capability install
+# overwrites it with a freshly-stamped one. It is not withheld because
+# `is_adopter_owned_by_tier` is a TIER rule and that file is install *state*
+# sitting in a kit-owned directory, so the predicate cannot see it. Its former
+# removal plan — ADR-033's single-declaration follow-on — was retired by that
+# record's #813 amendment, so it needs a home of its own rather than a pointer
+# to a retired goal.)
 exclude = ["**/__pycache__", "**/*.pyc"]
 
 # Bundle the methodology content into the wheel as package data under
-# `project_kit/_kit/` (ADR-033). The bundled set is *exactly the propagation
-# surface* — what `pkit sync` copies — plus capability source (a distribution
-# medium per ADR-033 §3) and migrations. Defining it this way keeps the wheel
-# from ever drifting from what sync propagates.
+# `project_kit/_kit/` (ADR-033), plus capability source (a distribution medium
+# per ADR-033 §3) and migrations.
+#
+# WHAT DEFINES THE SET, since this changed (#813): the bundle is everything
+# under the listed trees whose CONTENT is not adopter-owned by tier, as
+# `.pkit/lifecycle/ownership.py`'s `is_adopter_owned_by_tier` decides — plus the
+# empty directory markers noted above. It is
+# deliberately NOT the sync-propagation surface. ADR-033 D1 originally defined
+# it that way, reasoning the wheel could then never drift from what sync
+# copies; but sync-management additionally depends on capability registration
+# and treats everything outside `.pkit/` as unmanaged, so it cannot answer
+# "may this be distributed?" — and defining the bundle by it is what let this
+# project's own `project/` state ship to every adopter (#811).
+#
+# The two answers therefore CAN differ, and today they differ on exactly one
+# tracked path: `.pkit/adapters/claude-code/settings/project/settings.json` is
+# adopter-owned by tier (so the bundle withholds it) while `is_sync_managed`
+# still calls it managed. That disagreement is a bug in the sync predicate, not
+# in the bundle — tracked as #823. Do not "fix" it by reverting this rule.
+#
+# `tests/test_packaging_boundary.py` asserts the built artifacts against the
+# predicate, and the wheel against the sdist, so the manifest cannot drift from
+# the rule again.
 #
 # Excluded by construction (adopter- or maintainer-owned, never shipped):
 #   - decisions/project/   project-kit's own PRJ records
@@ -60,22 +114,35 @@ exclude = ["**/__pycache__", "**/*.pyc"]
 # These are achieved by enumerating the included paths rather than the whole
 # tree: `decisions/` lists `core` + `README.md` only; `scratchpad/` lists its
 # `README.md` only.
+# ELEVEN `.pkit/` trees are deliberately absent from the list below —
+# `capabilities`, `agents`, `permissions`, `adapters`, `skills`, `rules`,
+# `schemas`, `cli`, `process`, `lifecycle`, `migrations`. Do not "helpfully"
+# restore any of them: they are force-included by `hatch_build.py`, file by
+# file, with every adopter-owned path withheld — with one deliberate carve-out:
+# four EMPTY `.gitkeep` markers do ship at adopter-owned paths, listed in that
+# file's `ADOPTER_TIER_MARKERS`, because `install.py` reads the bundle's SHAPE
+# to decide whether to stub an adopter's `project/` scaffolding. They are layout,
+# not content, and a test asserts each is byte-empty. Finding
+# `agents/project/.gitkeep` in the wheel is correct, not a bug to "fix". The
+# canonical tree list is that file's `FILTERED_TREES`; a static entry here would
+# ship the tree unfiltered and silently reintroduce the defect.
+#
+# Why: a `project/` subtree at any depth is the ADOPTER's tier, so shipping this
+# project's copy seeded one project's state into every adopter (#811/#812) — and
+# because some of it is git-ignored runtime state, the artifact depended on the
+# build machine's untracked files (#813). The hook asks
+# `.pkit/lifecycle/ownership.py` rather than carrying its own rule, and
+# `tests/test_packaging_boundary.py` asserts the built artifacts against that
+# predicate *and against each other*, so neither the manifest nor the two
+# targets can drift.
+[tool.hatch.build.targets.wheel.hooks.custom]
+path = "hatch_build.py"
+
 [tool.hatch.build.targets.wheel.force-include]
 ".pkit/VERSION" = "project_kit/_kit/VERSION"
 ".pkit/decisions/core" = "project_kit/_kit/decisions/core"
 ".pkit/decisions/README.md" = "project_kit/_kit/decisions/README.md"
 ".pkit/scratchpad/README.md" = "project_kit/_kit/scratchpad/README.md"
-".pkit/schemas" = "project_kit/_kit/schemas"
-".pkit/skills" = "project_kit/_kit/skills"
-".pkit/cli" = "project_kit/_kit/cli"
-".pkit/adapters" = "project_kit/_kit/adapters"
-".pkit/agents" = "project_kit/_kit/agents"
-".pkit/permissions" = "project_kit/_kit/permissions"
-".pkit/rules" = "project_kit/_kit/rules"
-".pkit/process" = "project_kit/_kit/process"
-".pkit/lifecycle" = "project_kit/_kit/lifecycle"
-".pkit/capabilities" = "project_kit/_kit/capabilities"
-".pkit/migrations" = "project_kit/_kit/migrations"
 
 [tool.ruff]
 line-length = 100

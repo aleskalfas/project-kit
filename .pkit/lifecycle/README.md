@@ -18,7 +18,7 @@ Developers don't stamp these layouts by hand. The kit ships authoring commands (
 .pkit/
 ├── manifest.yaml                                    ← backbone manifest (recorded version + component registry)
 ├── lifecycle/
-│   └── ownership.py                                 ← the sync-managed predicate (see "Reconciling derivable state")
+│   └── ownership.py                                 ← the ownership predicates (see "Reconciling derivable state")
 ├── migrations/
 │   └── backbone/
 │       └── <major>.<minor>.0/
@@ -286,15 +286,19 @@ The `kit-shipped` refresh above copies the source subtree wholesale. On its own 
 
 The guard is defence in depth, orthogonal to *why* the source is stale, and fires only on an unambiguous downgrade — an absent or unparseable version on either side is treated as "not a downgrade" so an unreadable manifest never blocks a routine sync. It is scoped to the `kit-shipped` refresh branch: the incubated skip-branch above is unchanged (no kit source to compare against), and the "no longer ships from source" orphan case is likewise untouched.
 
-### The sync-managed predicate (`ownership.py`)
+### The ownership predicates (`ownership.py`)
 
-The tier map above — which trees sync propagates over, which are the project's, and how a capability's `origin` changes the answer — is also a question *other* layers need to ask. `.pkit/lifecycle/ownership.py` answers it once, as `is_sync_managed(target_root, path)`, and every consumer imports that one definition.
+The tier map above — which trees sync propagates over, which are the project's, and how a capability's `origin` changes the answer — is also a question *other* layers need to ask. `.pkit/lifecycle/ownership.py` answers it as `is_sync_managed(target_root, path)`, and every consumer imports that one definition.
+
+It answers a **second, narrower** question beside it: `is_adopter_owned_by_tier(rel_posix)` — *does this `.pkit/`-relative path sit on the project side of the no-shared-files split, by tier alone?* The two are not interchangeable, and picking the wrong one is a real error. `is_sync_managed` additionally consults a capability's **registration** (an unregistered or `incubated-in-repo` capability is not sync-managed whatever its tier) and reads everything *outside* `.pkit/` as unmanaged — so `src/`, which legitimately ships, answers False. A caller asking "may this be distributed?" or "is this the adopter's?" needs the tier predicate; a caller asking "will sync overwrite this?" needs the sync one.
 
 It lives here rather than in the CLI package for the reason [ADR-003](../../docs/architecture/decisions/ADR-003-permission-core-code-home.md) records for the permission decision core: an adapter's deploy primitive runs **in the adopter's tree**, where the globally-installed `pkit` runtime is not importable. Propagated in-tree code is the only home both the CLI and a propagated adapter script can reach, so the area is propagated and the module ships with it. Dependency direction is inward — the CLI imports it, each adapter imports it, and it imports neither.
 
-Its first consumer is the agent-overlay write-authority check ([ADR-051](../../docs/architecture/decisions/ADR-051-process-author-edit-authority.md)): a *write-carrying* overlay category may not name sync-managed content, which is the no-shared-files invariant applied at the agent surface. The module also declares that category set (`WRITE_CARRYING_CATEGORIES`), beside the predicate that guards it. Re-deriving either per adapter would fork the ownership rule and silently skip the check on the next harness, so a test fails any adapter script that carries a copy.
+`is_sync_managed`'s first consumer is the agent-overlay write-authority check ([ADR-051](../../docs/architecture/decisions/ADR-051-process-author-edit-authority.md)): a *write-carrying* overlay category may not name sync-managed content, which is the no-shared-files invariant applied at the agent surface. The module also declares that category set (`WRITE_CARRYING_CATEGORIES`), beside the predicate that guards it. Re-deriving either per adapter would fork the ownership rule and silently skip the check on the next harness, so a test fails any adapter script that carries a copy.
 
-The predicate is deliberately **conservative under `.pkit/`**: anything the map does not recognise as project-owned reads as sync-managed. A false "managed" costs a rejected overlay entry the adopter re-points; a false "not managed" would hand out write authority over content the next sync overwrites.
+`is_adopter_owned_by_tier`'s consumers are the packaging build hook (`hatch_build.py`) and the test that holds it honest. The wheel bundles the methodology tree by force-include, and hatchling's `exclude` cannot filter force-included paths — so the manifest carried its own idea of which paths were adopter-owned, **disagreed with this module, and nothing could notice**: 51 adopter-owned files shipped, including git-ignored runtime state that made the artifact depend on the build machine. Deriving the boundary from this predicate is what closes that, and it is the same lesson ADR-051 records one altitude down — a second copy of an ownership rule forks silently.
+
+`is_sync_managed` is deliberately **conservative under `.pkit/`**: anything the map does not recognise as project-owned reads as sync-managed. A false "managed" costs a rejected overlay entry the adopter re-points; a false "not managed" would hand out write authority over content the next sync overwrites.
 
 ## Worked example
 
