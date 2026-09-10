@@ -382,6 +382,24 @@ def main() -> int:
         ),
     )
     parser.add_argument(
+        "--set",
+        action="append",
+        metavar="AXIS=VALUE",
+        default=None,
+        dest="set_axis",
+        help=(
+            "Seed a classification axis with VALUE for the corpus repair, instead "
+            "of the axis's substrate-map `default:`. Repeatable, one axis each "
+            "(e.g. --set priority=High --set workstream=platform). VALUE is the "
+            "METHODOLOGY value (`High`), not your substrate's label (`P1`) — it is "
+            "resolved through your map's remap exactly as the declared default is, "
+            "so the kit never writes a label you do not manage. Naming an axis "
+            "here is explicit, so unlike a declared default it is never silently "
+            "skipped: an axis whose value cannot be resolved, or which is not "
+            "carried by a label at all, is refused by name."
+        ),
+    )
+    parser.add_argument(
         "--yes",
         action="store_true",
         help=(
@@ -481,9 +499,12 @@ def _derive_plan(
     # The label kind's intents come from the map, not the hooks (DEC-037 §3), so
     # they resolve on their own path and join the same list — from here down every
     # phase treats all three kinds uniformly.
-    label_intents, label_errors = _resolve_label_intents(substrate_map, config)
+    set_overrides, set_errors = _parse_set_axis(getattr(args, "set_axis", None))
+    label_intents, label_errors = _resolve_label_intents(
+        substrate_map, config, set_overrides
+    )
     intents += label_intents
-    intent_errors += label_errors
+    intent_errors += set_errors + label_errors
 
     # Arm 2 (the fourth residual member): a covered set-board-field intent IS
     # declared AND the board node id cannot be resolved at all → global refusal.
@@ -919,9 +940,45 @@ def _intent_from_assign_milestone(
     )
 
 
+def _parse_set_axis(raw: list[str] | None) -> tuple[dict[str, str], list[str]]:
+    """Parse repeated ``--set AXIS=VALUE`` into ``({axis: value}, errors)``.
+
+    Malformed input is an error rather than a skip. The whole point of the flag is
+    that the operator named the axis on purpose, so anything that would cause the
+    request to be silently dropped has to be said out loud instead — a typo in an
+    axis name would otherwise look exactly like a repair that found nothing to do.
+    """
+    pairs: dict[str, str] = {}
+    errors: list[str] = []
+    for item in raw or []:
+        axis, sep, value = item.partition("=")
+        axis, value = axis.strip(), value.strip()
+        if not sep or not axis or not value:
+            errors.append(
+                f"--set {item!r} is not in AXIS=VALUE form (e.g. "
+                f"--set priority=High)."
+            )
+            continue
+        if axis not in LABEL_BACK_FILL_AXES:
+            errors.append(
+                f"--set names axis {axis!r}, which this repair does not write. "
+                f"Writable axes: {', '.join(LABEL_BACK_FILL_AXES)}."
+            )
+            continue
+        if axis in pairs and pairs[axis] != value:
+            errors.append(
+                f"--set names `{axis}` twice, with {pairs[axis]!r} and {value!r}. "
+                f"One value per axis."
+            )
+            continue
+        pairs[axis] = value
+    return pairs, errors
+
+
 def _resolve_label_intents(
     substrate_map: axis_labels.SubstrateMap | None,
     config: dict[str, Any],
+    overrides: dict[str, str] | None = None,
 ) -> tuple[list[BackFillIntent], list[str]]:
     """Resolve the ``set-axis-label`` intents — the corpus-repair kind (#818).
 
@@ -961,15 +1018,45 @@ def _resolve_label_intents(
     intents: list[BackFillIntent] = []
     errors: list[str] = []
 
+    overrides = overrides or {}
+
     for axis in LABEL_BACK_FILL_AXES:
+        # An axis named on the command line was named on purpose, so every arm
+        # below that would DROP it reports instead. A declared default staying
+        # silent is right — the adopter did not ask for this run to touch that
+        # axis — but silently ignoring an explicit request is how an operator
+        # concludes the repair ran and found nothing.
+        explicit = axis in overrides
         carried = axis_carriage.carriage(axis, config, substrate_map)
         if carried not in ("adopter-label", "kit-label"):
+            if explicit:
+                errors.append(
+                    f"--set names `{axis}`, but that axis is not carried by a "
+                    f"label here — it is carried "
+                    f"{axis_carriage.describe(axis, config, substrate_map)}. "
+                    f"This repair writes labels only. A board-carried axis is "
+                    f"back-filled by the board-field intent instead; a derived or "
+                    f"title-carried axis has no label to write. NOTHING was "
+                    f"written for `{axis}`."
+                )
             continue
-        value = axis_labels.axis_default(axis, substrate_map)
+        value = overrides.get(axis) or axis_labels.axis_default(axis, substrate_map)
         if not value:
             continue
         resolved = axis_labels.resolve_write(axis, value, substrate_map)
         if not isinstance(resolved, str):
+            if explicit:
+                errors.append(
+                    f"--set {axis}={value} cannot be written: your substrate-map "
+                    f"binds `{axis}` to your own labels and its `remap` has no "
+                    f"entry for {value!r}, so there is no label to write. The kit "
+                    f"will not substitute its own `{axis}:{value}` label — that "
+                    f"would create a label you do not manage. Add a `remap` entry "
+                    f"for {value!r} in {axis_labels.SUBSTRATE_MAP_RELATIVE_PATH}, "
+                    f"or name a value your remap covers. NOTHING was written for "
+                    f"`{axis}`."
+                )
+                continue
             errors.append(
                 f"skipping `{axis}` label back-fill: your substrate-map declares "
                 f"`default: {value}` for `{axis}` and binds the axis to your own "
@@ -985,7 +1072,7 @@ def _resolve_label_intents(
             BackFillIntent(
                 kind=SET_AXIS_LABEL_KIND,
                 citation=_label_intent_citation(
-                    axis, value, resolved, config, substrate_map
+                    axis, value, resolved, config, substrate_map, explicit=explicit
                 ),
                 axis=axis,
                 axis_value=value,
@@ -1003,6 +1090,8 @@ def _label_intent_citation(
     resolved: str,
     config: dict[str, Any],
     substrate_map: axis_labels.SubstrateMap | None,
+    *,
+    explicit: bool = False,
 ) -> str:
     """The why-line for one label intent (DEC-037 §2 propose-and-cite).
 
@@ -1013,10 +1102,20 @@ def _label_intent_citation(
     the last one to read a small proposed set correctly: it means "N issues had a
     gap", not "N issues out of the corpus were picked arbitrarily".
     """
+    source = (
+        f"`--set {axis}={value}` on this invocation, overriding any declared "
+        f"default (an operator choice made for this run only, recorded here so the "
+        f"reviewer sees a value that is NOT in the committed map)"
+        if explicit
+        else (
+            f"substrate-map `{axis}` axis `default: {value}` in "
+            f"{axis_labels.SUBSTRATE_MAP_RELATIVE_PATH} (DEC-037 §3 — for a "
+            f"label-carried axis the map's per-axis default IS the declaration "
+            f"point)"
+        )
+    )
     return (
-        f"substrate-map `{axis}` axis `default: {value}` in "
-        f"{axis_labels.SUBSTRATE_MAP_RELATIVE_PATH} (DEC-037 §3 — for a "
-        f"label-carried axis the map's per-axis default IS the declaration point). "
+        f"{source}. "
         f"`{axis}` is carried "
         f"{axis_carriage.describe(axis, config, substrate_map)}, and the write seam "
         f"resolves {value!r} to {resolved!r} on that substrate. Proposed ONLY for "

@@ -25,3 +25,17 @@ body: >
   gains additive `axis` / `axis_value` / `label_value` / `carrier_labels` keys and
   an `intent_errors` list, at the same `schema_version` — a plan saved by the
   previous version still applies.
+
+  The value written comes from the axis's substrate-map `default:` — the single
+  declaration point a label-carried axis already has — or from `--set
+  AXIS=VALUE` on the invocation, repeatable per axis, for a corpus with no
+  default declared or a repair that wants a different value once. VALUE is the
+  methodology value, not your substrate's label: it resolves through your remap
+  exactly as a declared default does, so the kit never writes a label you do not
+  manage.
+
+  A declared default that cannot be used stays silent, because you did not ask
+  that run to touch that axis. An axis named with `--set` is refused BY NAME
+  instead — an unknown axis, a value your remap has no entry for, or an axis
+  carried by something other than a label. Silently ignoring an explicit request
+  is how an operator concludes the repair ran and found nothing to do.
