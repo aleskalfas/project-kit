@@ -1,0 +1,26 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The distribution no longer carries adopter-owned paths, and is reproducible
+  (#813). The methodology tree is bundled by `force-include`, and hatchling's
+  `exclude` cannot filter force-included paths — so eleven `.pkit/` trees were
+  included wholesale, carrying each capability's adopter-owned `project/`
+  subtree plus the project-side trees of several areas: 51 such files in a
+  1.149.0 wheel. That is how one project's config, its default-agent activation
+  switch, its bootstrap stamp and its per-issue audit journals reached adopters
+  (the copy side of which was fixed separately). Worse, some of that content is
+  git-ignored runtime state, so what shipped depended on whatever untracked
+  files sat on the build machine: the released 1.149.0 wheel carries 14 journals
+  where a wheel built from a working tree carried 36 — two builds of one commit
+  produced different artifacts. The force-includes for those trees are now
+  rebuilt file by file by a build hook that asks the project's own ownership
+  predicate, rather than enumerating what to keep in a hand-maintained list
+  which had already drifted from the rule it was meant to mirror. A test asserts
+  the built artifact against that same predicate, so the two cannot diverge
+  again, and separately asserts that kit-owned content still ships and no build
+  cache does — the per-file force-include bypasses `exclude`, so the hook
+  reapplies those patterns itself. Nothing an adopter receives is removed:
+  verified that no kit-owned file was lost, and adding untracked runtime state
+  now changes the shipped file list not at all.

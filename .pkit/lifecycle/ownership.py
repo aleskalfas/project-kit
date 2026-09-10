@@ -28,8 +28,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ruamel.yaml import YAML
-
 # Capability origin (COR-031), duplicated from the lifecycle vocabulary as plain
 # strings so this module stays import-free. These are wire values in
 # `.pkit/manifest.yaml`, not internal constants — they cannot drift without a
@@ -74,10 +72,73 @@ _ADOPTER_OWNED_KIT_FILES: frozenset[str] = frozenset({
 # never touches their contents.
 _SCRATCHPAD_STATE_DIRS: frozenset[str] = frozenset({"active", "done", "dropped"})
 
-_yaml = YAML(typ="safe")
+def _load_yaml(text: str):
+    """Parse YAML, importing the parser lazily.
+
+    Deliberately not a module-level import. The tier predicate
+    (:func:`is_adopter_owned_by_tier`) is pure string logic, and the packaging
+    build hook loads this module in an isolated build environment where no
+    third-party runtime dependency is installed. Only the manifest read below
+    needs a parser, so only that path pays for one — a pure predicate should not
+    require a YAML library to import.
+    """
+    from ruamel.yaml import YAML  # noqa: PLC0415 - lazy by design, see above
+
+    return YAML(typ="safe").load(text)
 
 
 # --- the predicate -----------------------------------------------------------
+
+def is_adopter_owned_by_tier(rel_posix: str) -> bool:
+    """True when a `.pkit/`-relative path is adopter-owned *by tier alone*.
+
+    The registration-independent half of :func:`is_sync_managed`: it answers
+    "does this path sit on the project side of the no-shared-files split?"
+    without consulting any manifest, any origin, or any adopter's tree.
+
+    Two consumers need exactly this, and they must not disagree:
+
+    * **Packaging.** A distribution may carry kit-owned capability *source* (a
+      distribution medium, ADR-033) but must never carry the source project's
+      own project-side state — that is how one project's config, activation
+      switches and audit journals reached every adopter (#811 / #812).
+    * **The test that keeps packaging honest**, which asserts the built
+      distribution contains no such path.
+
+    Why not `is_sync_managed` for those two: it also returns False for
+    everything *outside* `.pkit/` (so `src/`, which legitimately ships, reads as
+    "not managed"), and for capability content whose origin is unregistered —
+    neither of which is a statement about tier. A packaging rule keyed on it
+    would either reject legitimate content or depend on the build machine's
+    manifest state.
+
+    `rel_posix` is relative to `.pkit/` (e.g. `capabilities/pm/project/x.yaml`).
+    """
+    parts = [p for p in rel_posix.strip("/").split("/") if p]
+    if not parts:
+        return False
+    # Adopter-owned top-level files (install state, version pin, .gitignore).
+    if len(parts) == 1 and parts[0] in _ADOPTER_OWNED_KIT_FILES:
+        return True
+    # `.pkit/project/` and `.pkit/<area>/project/`.
+    if parts[0] == "project":
+        return True
+    if parts[0] == "rules" and len(parts) > 1 and parts[1] == "project.md":
+        return True
+    if parts[0] == "scratchpad" and len(parts) > 1 and parts[1] in _SCRATCHPAD_STATE_DIRS:
+        return True
+    # `.pkit/capabilities/<name>/project/` — adopter tier inside any capability,
+    # whatever its origin (the same positional rule
+    # `_capability_path_is_sync_managed` applies).
+    # NB: index 2, not 3 — `is_sync_managed`'s parts carry the leading `.pkit`
+    # segment, these do not.
+    if parts[0] == "capabilities" and len(parts) > 2 and parts[2] == "project":
+        return True
+    # `.pkit/<area>/project/...`
+    if len(parts) > 1 and parts[1] == "project":
+        return True
+    return False
+
 
 def is_sync_managed(target_root: Path | str, raw_path: str) -> bool:
     """True when `pkit sync` propagates over *raw_path* in *target_root*.
@@ -249,7 +310,7 @@ def _registered_capability_origin(root: Path, name: str) -> str | None:
     if not manifest.is_file():
         return None
     try:
-        data = _yaml.load(manifest.read_text(encoding="utf-8")) or {}
+        data = _load_yaml(manifest.read_text(encoding="utf-8")) or {}
     except Exception:
         return ORIGIN_KIT_SHIPPED
     if not isinstance(data, dict):

@@ -46,8 +46,8 @@ packages = ["src/project_kit"]
 exclude = ["**/__pycache__", "**/*.pyc"]
 
 # Bundle the methodology content into the wheel as package data under
-# `project_kit/_kit/` (ADR-033). The bundled set is *exactly the propagation
-# surface* — what `pkit sync` copies — plus capability source (a distribution
+# `project_kit/_kit/` (ADR-033). The bundled set is the propagation
+# surface — what `pkit sync` copies — plus capability source (a distribution
 # medium per ADR-033 §3) and migrations. Defining it this way keeps the wheel
 # from ever drifting from what sync propagates.
 #
@@ -60,22 +60,23 @@ exclude = ["**/__pycache__", "**/*.pyc"]
 # These are achieved by enumerating the included paths rather than the whole
 # tree: `decisions/` lists `core` + `README.md` only; `scratchpad/` lists its
 # `README.md` only.
+# `.pkit/capabilities` is NOT listed below. It is force-included by
+# `hatch_build.py`, file by file, with every adopter-owned path withheld — a
+# capability's `project/` subtree is the ADOPTER's tier, so shipping this
+# project's copy of it seeded one project's state into every adopter (#811/#812)
+# and, because those journals are git-ignored, made the artifact depend on the
+# build machine's untracked state (#813). The hook asks
+# `.pkit/lifecycle/ownership.py` rather than carrying its own list, and
+# `tests/test_packaging_boundary.py` asserts the built artifact against the same
+# predicate so the two cannot drift.
+[tool.hatch.build.targets.wheel.hooks.custom]
+path = "hatch_build.py"
+
 [tool.hatch.build.targets.wheel.force-include]
 ".pkit/VERSION" = "project_kit/_kit/VERSION"
 ".pkit/decisions/core" = "project_kit/_kit/decisions/core"
 ".pkit/decisions/README.md" = "project_kit/_kit/decisions/README.md"
 ".pkit/scratchpad/README.md" = "project_kit/_kit/scratchpad/README.md"
-".pkit/schemas" = "project_kit/_kit/schemas"
-".pkit/skills" = "project_kit/_kit/skills"
-".pkit/cli" = "project_kit/_kit/cli"
-".pkit/adapters" = "project_kit/_kit/adapters"
-".pkit/agents" = "project_kit/_kit/agents"
-".pkit/permissions" = "project_kit/_kit/permissions"
-".pkit/rules" = "project_kit/_kit/rules"
-".pkit/process" = "project_kit/_kit/process"
-".pkit/lifecycle" = "project_kit/_kit/lifecycle"
-".pkit/capabilities" = "project_kit/_kit/capabilities"
-".pkit/migrations" = "project_kit/_kit/migrations"
 
 [tool.ruff]
 line-length = 100
