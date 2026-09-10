@@ -137,15 +137,20 @@ def is_adopter_owned_by_tier(rel_posix: str) -> bool:
         return True
     if parts[0] == "scratchpad" and len(parts) > 1 and parts[1] in _SCRATCHPAD_STATE_DIRS:
         return True
-    # `.pkit/capabilities/<name>/project/` — adopter tier inside any capability,
-    # whatever its origin (the same positional rule
-    # `_capability_path_is_sync_managed` applies).
-    # NB: index 2, not 3 — `is_sync_managed`'s parts carry the leading `.pkit`
-    # segment, these do not.
-    if parts[0] == "capabilities" and len(parts) > 2 and parts[2] == "project":
-        return True
-    # `.pkit/<area>/project/...`
-    if len(parts) > 1 and parts[1] == "project":
+    # A `project/` directory ANYWHERE under `.pkit/` is the adopter tier. Depth
+    # is not part of the rule: today that covers `<area>/project/` (depth 1),
+    # `capabilities/<name>/project/` (depth 2) and
+    # `adapters/<harness>/settings/project/` (depth 3), and it will cover
+    # whatever nesting an area adopts next without another edit here.
+    #
+    # This was originally written as two positional cases and MISSED the
+    # depth-3 adapter settings — so the wheel kept shipping this project's own
+    # permission allow-list (`Bash(uv:*)`, `Bash(ruff:*)`, …) into every
+    # adopter, the exact defect #813 exists to close, while the sdist's
+    # `**/project` glob excluded it. Two artifacts of one version disagreeing by
+    # rule is how the miss surfaced. The adapter README is explicit that this
+    # tier is "the adopter's project-specific additions".
+    if "project" in parts[:-1]:
         return True
     return False
 

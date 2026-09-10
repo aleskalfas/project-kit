@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import importlib.util
 import re
+import tarfile
 import zipfile
 from pathlib import Path
 
@@ -231,4 +232,75 @@ def test_every_kit_tree_is_accounted_for() -> None:
     assert not unaccounted, (
         "top-level .pkit/ entries in neither the hook's FILTERED_TREES nor "
         f"pyproject's force-include, and not adopter-owned: {unaccounted}"
+    )
+
+
+# --- the two artifacts must agree ------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def built_sdist(tmp_path_factory) -> Path:
+    import shutil
+    import subprocess
+
+    uv = shutil.which("uv")
+    if uv is None:
+        pytest.skip("uv not available to build an sdist")
+    out = tmp_path_factory.mktemp("sdist")
+    proc = subprocess.run(
+        [uv, "build", "--sdist", "--out-dir", str(out)],
+        cwd=REPO_ROOT, capture_output=True, text=True, timeout=600,
+    )
+    if proc.returncode != 0:
+        pytest.fail(f"sdist build failed:\n{proc.stdout}\n{proc.stderr}")
+    archives = list(out.glob("*.tar.gz"))
+    assert len(archives) == 1, archives
+    return archives[0]
+
+
+def _sdist_kit_entries(sdist: Path) -> set[str]:
+    archive = tarfile.open(sdist)
+    return {
+        name.split("/.pkit/", 1)[1]
+        for name in archive.getnames()
+        if "/.pkit/" in name and archive.getmember(name).isfile()
+    }
+
+
+def test_no_adopter_owned_path_ships_in_the_sdist(ownership, built_sdist: Path) -> None:
+    """The wheel and the sdist filter by different mechanisms — a build hook and
+    a config glob — because the two targets assemble differently. Both must
+    reach the same answer, and only the wheel had artifact coverage before."""
+    offenders = sorted(
+        rel for rel in _sdist_kit_entries(built_sdist)
+        if ownership.is_adopter_owned_by_tier(rel)
+    )
+    assert not offenders, f"adopter-owned path(s) in the sdist: {offenders[:10]}"
+
+
+def test_wheel_and_sdist_agree_on_kit_content(built_wheel: Path, built_sdist: Path) -> None:
+    """The assertion a predicate-based test cannot make.
+
+    `test_no_adopter_owned_path_ships` checks each artifact against the same
+    predicate, so a HOLE in that predicate is invisible to it — both artifacts
+    would agree with the rule and with each other's error. Comparing the two
+    artifacts uses each mechanism as an independent oracle for the other.
+
+    That is not hypothetical: the predicate originally matched `project/` only
+    at depths 1 and 2, missing `adapters/<harness>/settings/project/`, so the
+    wheel shipped this project's own permission allow-list while the sdist's
+    `**/project` glob excluded it. The per-artifact tests both passed.
+    """
+    wheel_only = _kit_entries(built_wheel)
+    sdist_only = _sdist_kit_entries(built_sdist)
+    # Deliberate asymmetry: the sdist is the source tree and carries entries the
+    # wheel never bundles (see the non-shipper set in the completeness test).
+    known_sdist_only = {"README.md", "release/README.md"}
+    in_wheel_not_sdist = sorted(set(wheel_only) - sdist_only)
+    in_sdist_not_wheel = sorted(sdist_only - set(wheel_only) - known_sdist_only)
+    assert not in_wheel_not_sdist, (
+        f"in the wheel but not the sdist: {in_wheel_not_sdist[:10]}"
+    )
+    assert not in_sdist_not_wheel, (
+        f"in the sdist but not the wheel: {in_sdist_not_wheel[:10]}"
     )

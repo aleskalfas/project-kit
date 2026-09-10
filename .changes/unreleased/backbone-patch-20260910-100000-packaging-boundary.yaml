@@ -21,6 +21,12 @@ body: >
   the built artifact against that same predicate, so the two cannot diverge
   again, and separately asserts that kit-owned content still ships and no build
   cache does — the per-file force-include bypasses `exclude`, so the hook
-  reapplies those patterns itself. Nothing an adopter receives is removed:
-  verified that no kit-owned file was lost, and adding untracked runtime state
-  now changes the shipped file list not at all.
+  reapplies those patterns itself. Both distributions are covered, by different
+  mechanisms — the wheel through the hook, the source distribution through an
+  exclude glob, since the two targets assemble differently — and a test compares
+  the two artifacts against each other rather than only against the predicate,
+  which is what caught a hole in the predicate itself: `project/` was matched
+  only at the depths then known, so the wheel was still shipping this project's
+  own harness permission allow-list. Nothing an adopter needs is removed:
+  verified that no kit-owned file is missing from either artifact, and adding
+  untracked runtime state now changes the shipped file list not at all.
