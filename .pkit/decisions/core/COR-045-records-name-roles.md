@@ -6,9 +6,9 @@ date: 2026-09-10
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
-> **In one sentence:** a record refers to a component by the role it plays — what answers a question, what owns a boundary, what a caller may rely on — rather than by the identifier that implements that role today.
+> **In one sentence:** a record refers to a thing the way it means it — by the role it plays where the role is the point, by name where the name is the point.
 >
-> The test is a counterfactual: **if this name changed tomorrow with no decision changing, would the record become wrong?** If yes, the record is naming an implementation where it should name a role.
+> One question separates them: **if this name changed tomorrow with no decision changing, would the record become wrong?** If yes, a role was meant and a name was written.
 >
 > This protects the property that makes a record worth trusting: it stays true without being edited.
 
@@ -24,26 +24,26 @@ This record governs only *how a record refers to things*. The neighbouring quest
 
 ## Decision
 
-1. **Refer to a role, not to the name of the thing playing it.** Name what a component is obliged to do, not where it currently lives or what it is currently called. Apply the counterfactual test above during authoring and during review.
+**Refer to a thing the way you mean it.** Where a record means *whatever plays this part* — what answers a question, what owns a boundary, what a caller may rely on — it names the part, not whichever component is playing it today. Where a record means a *particular name* — because that name is what the record decides, or because it belongs to something outside the project and is being recorded as a fact — it names it plainly.
 
-2. **Precision is required; it comes from the role, not the name.** This is not licence for vagueness. A record must stay falsifiable — a reader has to be able to tell whether the system conforms. That precision comes from describing the role sharply enough that only one thing could be playing it. Where a concrete anchor genuinely helps, its home is the work that implements the decision, which is expected to age, rather than the record, which is not.
+1. **Prefer the role when the role is what you mean.** A record reaching for a path, a module or a function to identify *the thing that does X* is naming an understudy for the part. The name will change; the part will not.
 
-3. **When the identifier is what the record decides, name it.** A record whose subject *is* a name — a canonical filename, a frontmatter key, a marker token, a schema field — is naming the decided thing, not an incidental anchor. The counterfactual settles it: if that name changed, the decision would have changed, so the test does not fire. The rule targets names a record mentions in passing, never the token it rules on.
+   The counterfactual tells you which you meant: **would this sentence become false if the name changed, and no decision changed?** If yes, you meant the role and wrote a name. If no — because changing the name would itself be changing the decision, or because the name is not yours to change — then the name *is* what you meant, and it belongs there.
 
-4. **Externally-owned names are pinned facts.** A third party's expected layout, a tool's flag, an upstream format's field: these are facts about something outside the project's control, not implementations of a project role. A record may pin them, and must, to stay checkable. The axiom discipline already permits naming external tools and specifications explicitly; this is the same allowance applied to their identifiers.
+2. **Precision is required either way.** Naming a role is not licence for vagueness. A record must stay falsifiable — a reader has to be able to tell whether the system conforms. That comes from describing the part sharply enough that only one thing could be playing it. Where a concrete anchor genuinely helps a reader, its home is the work implementing the decision, which is expected to age, rather than the record, which is not.
 
 ## Rationale
 
-**Why roles are more precise than names, not less.** A name feels concrete but conveys only location; the reader still has to go and look to learn what the thing does. A role states the obligation directly, which is the part that has to hold. A record naming which component owns a boundary stays checkable across any refactor. A record citing where that component currently sits stops being checkable the moment it moves — and, worse, still *looks* checkable while being wrong.
+**Why a role is usually more precise than a name.** A name feels concrete but conveys only location; the reader still has to go and look to learn what the thing does. A role states the obligation directly, which is the part that has to hold. A record naming which component owns a boundary stays checkable across any refactor. A record citing where that component currently sits stops being checkable the moment it moves — and, worse, still *looks* checkable while being wrong.
 
 **Why a record rather than the authoring guidance.** The disciplines that govern record authoring live in the maintainer guide, which is explicitly not delivered to adopting projects. An adopter authoring architectural, project, or capability records therefore receives no authoring discipline today beyond the schema — and those are precisely the namespaces where this habit concentrates. So the diagnosis is not "the guidance existed and was ignored"; for an adopter the guidance was never delivered at all. A rule that adopters must follow has to reach them.
 
-**Why a counterfactual rather than a prohibition.** A flat ban on identifiers would be wrong in the cases points 3 and 4 describe, and an author facing a wrong rule works around it rather than applying it. The counterfactual is a single question, answerable at the point of writing, that produces the right answer in all four cases — and it doubles as the review test, so author and reviewer apply the same instrument.
+**Why a counterfactual rather than a prohibition.** A flat ban would be wrong wherever the name is the point, and an author facing a wrong rule works around it rather than applying it. The counterfactual asks the author what they meant, which is the actual question — and because it needs no catalogue of permitted cases, a legitimate use nobody anticipated passes on its merits rather than by being on a list. It doubles as the review test, so author and reviewer apply one instrument.
 
 ### Alternatives considered
 
-- **Ban implementation identifiers outright.** Rejected — false for records whose decided subject is a name, and for externally-owned facts. A rule with unstated exceptions gets discretionary application, which is no rule.
-- **Permit identifiers wherever they aid precision.** Rejected as stated: precision is exactly why authors reach for them, so the exception consumes the rule. The legitimate need behind it is met by points 2 and 3 instead.
+- **Ban implementation identifiers outright, with a list of exceptions.** Rejected twice over. An exception list is an inventory, which a record is the wrong carrier for — the next legitimate case is absent from it and gets flagged. And needing the list at all was the signal that the rule was mis-stated: the cases are not exceptions to *avoid names*, they are instances of *meaning a name*.
+- **Permit identifiers wherever they aid precision.** Rejected as stated: precision is exactly why authors reach for them, so the permission consumes the rule. The legitimate need behind it is met by the counterfactual, which distinguishes a name that carries meaning from a name standing in for a role.
 - **Restrict the rule to architectural records.** Rejected on the evidence: the habit spans three id-spaces. There is one real asymmetry — architectural records have a custodian charged with auditing them against running reality, while the other id-spaces have no such owner — but that argues for extending the audit, not for narrowing the rule.
 - **Convert the existing corpus in one pass.** Rejected — turning a name into a role requires knowing which role the author meant, and that judgment is most reliable when someone is already working in the area. A bulk rewrite risks flattening meaning that cannot be recovered afterwards.
 - **Leave it to reviewer judgment without a stated rule.** Rejected — the habit accretes because each instance looks like diligence. A reviewer needs a test they can point at, not an instinct.
