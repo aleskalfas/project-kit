@@ -18,7 +18,7 @@ Developers don't stamp these layouts by hand. The kit ships authoring commands (
 .pkit/
 ├── manifest.yaml                                    ← backbone manifest (recorded version + component registry)
 ├── lifecycle/
-│   └── ownership.py                                 ← the sync-managed predicate (see "Reconciling derivable state")
+│   └── ownership.py                                 ← the ownership predicates (see "Reconciling derivable state")
 ├── migrations/
 │   └── backbone/
 │       └── <major>.<minor>.0/

@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import importlib.util
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -103,6 +104,7 @@ class CapabilityBoundaryHook(BuildHookInterface):
 
         include: dict[str, str] = {}
         withheld = 0
+        withheld_dirs: set[str] = set()
         for tree in FILTERED_TREES:
             base = KIT / tree
             if not base.is_dir():
@@ -130,8 +132,36 @@ class CapabilityBoundaryHook(BuildHookInterface):
                 rel_to_kit = path.relative_to(KIT).as_posix()
                 if is_adopter_owned(rel_to_kit):
                     withheld += 1
+                    withheld_dirs.add(Path(rel_to_kit).parent.as_posix())
                     continue
                 include[str(path)] = f"{DEST_ROOT}/{rel_to_kit}"
+
+        # A per-file force-include can only ship FILES, so a directory whose
+        # every file was withheld disappears from the bundle entirely. That is
+        # not cosmetic: `install.py` gates the adopter-side `project/`
+        # scaffolding on `(src / "project").is_dir()`, reading the bundle's
+        # shape as a proxy for "does this area have a project tier?". Losing the
+        # directory silently stopped the official install from stubbing
+        # `.pkit/<area>/project/` at all — a regression the file-level tests
+        # could not see, since they assert file presence.
+        #
+        # So ship the directory's *existence* while still withholding its
+        # contents: an empty marker per fully-withheld directory. The marker is
+        # kit-owned layout, not adopter data, and it never reaches an adopter —
+        # the area install path skips `project` when copying and only stubs it.
+        represented = {str(Path(dest).parent) for dest in include.values()}
+        pending = [
+            rel_dir for rel_dir in sorted(withheld_dirs)
+            if f"{DEST_ROOT}/{rel_dir}" not in represented
+        ]
+        if pending:
+            # One distinct source file per destination: hatchling keys
+            # force_include by source path, so a shared marker would collide.
+            marker_dir = Path(tempfile.mkdtemp(prefix="pkit-boundary-"))
+            for rel_dir in pending:
+                marker = marker_dir / (rel_dir.replace("/", "_") + ".gitkeep")
+                marker.write_text("", encoding="utf-8")
+                include[str(marker)] = f"{DEST_ROOT}/{rel_dir}/.gitkeep"
 
         build_data.setdefault("force_include", {}).update(include)
         self.app.display_info(

@@ -204,7 +204,15 @@ this is the durable foundation, not a throwaway step.
 > **Two descriptions elsewhere still use the retired phrasing**, flagged rather than edited
 > here because neither file is this record's to change. PRJ-004's implication glosses the
 > bundle as "the methodology content (the propagation surface)", and the CLI README describes
-> the bundle as "the methodology content `init` / `sync` / `upgrade` propagate". Both remain
-> substantively right about *what the install can do* — the bundle is a superset of the
-> propagated content — but both name the retired defining rule and should lose the gloss when
-> their owners next touch them.
+> the bundle as "the methodology content `init` / `sync` / `upgrade` propagate". Both name the
+> retired defining rule and should lose the gloss when their owners next touch them.
+>
+> An earlier revision of this paragraph called them "substantively right" on the grounds that
+> the bundle is a *superset* of the propagated content. **That is false, and this record's own
+> #823 paragraph is the counterexample:** `adapters/<harness>/settings/project/settings.json`
+> is adopter-owned by tier — so both artifacts withhold it — while `is_sync_managed` still
+> calls it managed. The bundle omits a path sync propagates, so the two sets merely *overlap*;
+> neither contains the other. The deferral stands on the narrower ground that these are other
+> records' files, not on a containment relation that does not hold — the difference matters,
+> because the false relation was doing the work of reassuring a reader that the glosses are
+> harmless.

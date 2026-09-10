@@ -136,11 +136,27 @@ def _kit_entries(wheel: Path) -> list[str]:
     return [n.split("/_kit/", 1)[1] for n in names if "/_kit/" in n and not n.endswith("/")]
 
 
-def test_no_adopter_owned_path_ships(ownership, built_wheel: Path) -> None:
-    """The load-bearing assertion: the manifest cannot drift from the rule."""
+def test_no_adopter_owned_content_ships(ownership, built_wheel: Path) -> None:
+    """The load-bearing assertion: the manifest cannot drift from the rule.
+
+    The exception is narrow and deliberate, not a loophole: an **empty**
+    `.gitkeep` may sit at an adopter-owned path, because the bundle has to carry
+    the *existence* of those directories for `install.py` to stub them (see
+    `test_adopter_tier_directories_are_represented`). It is layout, not adopter
+    data — and `test_directory_markers_carry_no_content` asserts each such
+    marker is byte-empty, so the carve-out cannot be used to smuggle anything.
+    Any adopter-owned path with content, or any non-`.gitkeep` name, still
+    fails here.
+    """
+    archive = zipfile.ZipFile(built_wheel)
+    by_rel = {
+        n.split("/_kit/", 1)[1]: n
+        for n in archive.namelist() if "/_kit/" in n and not n.endswith("/")
+    }
     offenders = sorted(
-        rel for rel in _kit_entries(built_wheel)
+        rel for rel, name in by_rel.items()
         if ownership.is_adopter_owned_by_tier(rel)
+        and not (Path(rel).name == ".gitkeep" and archive.read(name) == b"")
     )
     assert not offenders, (
         f"{len(offenders)} adopter-owned path(s) in the distribution: {offenders[:10]}"
@@ -296,7 +312,12 @@ def test_wheel_and_sdist_agree_on_kit_content(built_wheel: Path, built_sdist: Pa
     # Deliberate asymmetry: the sdist is the source tree and carries entries the
     # wheel never bundles (see the non-shipper set in the completeness test).
     known_sdist_only = {"README.md", "release/README.md"}
-    in_wheel_not_sdist = sorted(set(wheel_only) - sdist_only)
+    # The wheel carries empty directory markers the sdist has no need of: the
+    # sdist IS the source tree, and a wheel built from it regenerates the
+    # markers through the same hook. Legitimate asymmetry, recorded so it is a
+    # decision rather than an unexplained difference.
+    wheel_markers = {e for e in wheel_only if Path(e).name == ".gitkeep"}
+    in_wheel_not_sdist = sorted(set(wheel_only) - sdist_only - wheel_markers)
     in_sdist_not_wheel = sorted(sdist_only - set(wheel_only) - known_sdist_only)
     assert not in_wheel_not_sdist, (
         f"in the wheel but not the sdist: {in_wheel_not_sdist[:10]}"
@@ -304,3 +325,44 @@ def test_wheel_and_sdist_agree_on_kit_content(built_wheel: Path, built_sdist: Pa
     assert not in_sdist_not_wheel, (
         f"in the sdist but not the wheel: {in_sdist_not_wheel[:10]}"
     )
+
+
+def test_adopter_tier_directories_are_represented(ownership, built_wheel: Path) -> None:
+    """`install.py` reads the bundle's SHAPE, so withheld content must not take
+    the directory with it.
+
+    The area install path stubs an adopter's `project/` tier only when the
+    source bundle has that directory — `if (src / "project").is_dir()` — using
+    the bundle's shape as a proxy for "does this area have a project tier?".
+
+    A per-file force-include ships only files, so a directory whose every file
+    was withheld vanished from the bundle and the official install silently
+    stopped creating that scaffolding. The file-level assertions could not see
+    it: every *file* was correctly present or correctly absent. The hook now
+    ships an empty structural marker per fully-withheld directory.
+
+    Scoped to the trees the hook filters. `decisions/project` and `.pkit/project`
+    are absent from the bundle and always were (`decisions` is statically
+    included as `core` + `README.md` only), so they are not asserted here.
+    """
+    entries = _kit_entries(built_wheel)
+    expected = ["agents/project", "permissions/project", "skills/project"]
+    missing = [
+        d for d in expected
+        if not any(e.startswith(d + "/") for e in entries)
+    ]
+    assert not missing, (
+        "adopter-tier directories absent from the bundle, so install.py will "
+        f"not stub them: {missing}"
+    )
+
+
+def test_directory_markers_carry_no_content(ownership, built_wheel: Path) -> None:
+    """The markers exist to preserve layout, not to smuggle adopter data."""
+    archive = zipfile.ZipFile(built_wheel)
+    for name in archive.namelist():
+        if "/_kit/" not in name or not name.endswith(".gitkeep"):
+            continue
+        rel = name.split("/_kit/", 1)[1]
+        if ownership.is_adopter_owned_by_tier(rel):
+            assert archive.read(name) == b"", f"marker is not empty: {rel}"
