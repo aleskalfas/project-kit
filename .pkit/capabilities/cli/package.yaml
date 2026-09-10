@@ -1,0 +1,7 @@
+schema_version: 1
+component:
+  kind: capability
+  name: cli
+  version: 0.1.0
+description: <one-line summary of what discipline this capability formalises>
+requires_backbone: ">=1.149.0,<2.0.0"
