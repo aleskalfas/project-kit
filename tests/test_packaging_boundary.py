@@ -274,6 +274,27 @@ def built_sdist(tmp_path_factory) -> Path:
     return archives[0]
 
 
+def _declared_markers() -> list[str]:
+    """`ADOPTER_TIER_MARKERS` from `hatch_build.py`.
+
+    Handles the ANNOTATED assignment form (`x: tuple[...] = (...)`), which is
+    `ast.AnnAssign` rather than `ast.Assign` — an earlier version of this helper
+    walked only `Assign` and found nothing, reporting the tuple as missing.
+    """
+    import ast
+
+    tree = ast.parse((REPO_ROOT / "hatch_build.py").read_text(encoding="utf-8"))
+    for node in tree.body:
+        target_names: list[str] = []
+        if isinstance(node, ast.Assign):
+            target_names = [getattr(t, "id", "") for t in node.targets]
+        elif isinstance(node, ast.AnnAssign):
+            target_names = [getattr(node.target, "id", "")]
+        if "ADOPTER_TIER_MARKERS" in target_names and isinstance(node.value, ast.Tuple):
+            return [e.value for e in node.value.elts if isinstance(e, ast.Constant)]
+    return []
+
+
 def _sdist_kit_entries(sdist: Path) -> set[str]:
     archive = tarfile.open(sdist)
     return {
@@ -297,7 +318,7 @@ def test_no_adopter_owned_path_ships_in_the_sdist(ownership, built_sdist: Path) 
 def test_wheel_and_sdist_agree_on_kit_content(built_wheel: Path, built_sdist: Path) -> None:
     """The assertion a predicate-based test cannot make.
 
-    `test_no_adopter_owned_path_ships` checks each artifact against the same
+    `test_no_adopter_owned_content_ships` checks each artifact against the same
     predicate, so a HOLE in that predicate is invisible to it — both artifacts
     would agree with the rule and with each other's error. Comparing the two
     artifacts uses each mechanism as an independent oracle for the other.
@@ -312,10 +333,18 @@ def test_wheel_and_sdist_agree_on_kit_content(built_wheel: Path, built_sdist: Pa
     # Deliberate asymmetry: the sdist is the source tree and carries entries the
     # wheel never bundles (see the non-shipper set in the completeness test).
     known_sdist_only = {"README.md", "release/README.md"}
-    # The wheel carries empty directory markers the sdist has no need of: the
-    # sdist IS the source tree, and a wheel built from it regenerates the
-    # markers through the same hook. Legitimate asymmetry, recorded so it is a
-    # decision rather than an unexplained difference.
+    # The wheel carries empty directory markers; the sdist does not, because
+    # its `**/project` glob prunes those paths outright. A wheel built FROM the
+    # sdist still gets them: the marker set is DECLARED in `hatch_build.py`
+    # (`ADOPTER_TIER_MARKERS`) rather than discovered from the filesystem, and
+    # the code travels in both artifacts.
+    #
+    # An earlier revision of this comment claimed the sdist "regenerates the
+    # markers through the same hook" because the hook walked withheld files.
+    # That was false — the sdist has no adopter-owned files to withhold, so a
+    # wheel built from it emitted NO markers and the scaffolding regression
+    # returned. The false claim was licensing this very subtraction, hiding the
+    # difference that would have exposed it.
     wheel_markers = {e for e in wheel_only if Path(e).name == ".gitkeep"}
     in_wheel_not_sdist = sorted(set(wheel_only) - sdist_only - wheel_markers)
     in_sdist_not_wheel = sorted(sdist_only - set(wheel_only) - known_sdist_only)
@@ -366,3 +395,83 @@ def test_directory_markers_carry_no_content(ownership, built_wheel: Path) -> Non
         rel = name.split("/_kit/", 1)[1]
         if ownership.is_adopter_owned_by_tier(rel):
             assert archive.read(name) == b"", f"marker is not empty: {rel}"
+
+
+def test_marker_set_is_a_function_of_tracked_state(ownership, built_wheel: Path) -> None:
+    """Directory markers must not materialise from build-machine state.
+
+    The first version of the marker logic collected the parent of every
+    *withheld* file, and withheld files include git-ignored ones — so a marker
+    appeared for `project/process/issue-lifecycle/` purely because untracked
+    journals sat there. Two builds of one commit then differed (419 vs 418
+    entries from a clean clone), breaking the reproducibility obligation
+    ADR-033 records.
+
+    Asserted structurally rather than by cloning: every shipped marker must sit
+    at a `<tree>/project` path that carries **tracked** content, so the set
+    cannot depend on what is lying around untracked. `git ls-files` is the
+    oracle — the same question a clean clone answers, without the clone.
+    """
+    import subprocess
+
+    # Only the markers this hook GENERATES — identified by sitting at an
+    # adopter-owned path. The source tree also carries legitimate kit-owned
+    # `.gitkeep` files (`agents/core/`, each capability's `agents/`, …) which
+    # ship as ordinary content and are not this test's subject.
+    declared = _declared_markers()
+    markers = [
+        rel for rel in _kit_entries(built_wheel)
+        if Path(rel).name == ".gitkeep" and ownership.is_adopter_owned_by_tier(rel)
+    ]
+    assert markers, "expected directory markers; the scaffolding gate needs them"
+
+    offenders = []
+    for rel in markers:
+        rel_dir = str(Path(rel).parent)
+        # Must be one the code DECLARES. Stronger than a depth heuristic, which
+        # wrongly rejected the legitimate depth-3 adapter-settings tier: a
+        # marker outside the declared tuple means the logic went back to
+        # discovering directories from the filesystem, which is what made the
+        # artifact depend on untracked state.
+        if rel_dir not in declared:
+            offenders.append(f"{rel_dir} (not in ADOPTER_TIER_MARKERS)")
+            continue
+        tracked = subprocess.run(
+            ["git", "ls-files", "--", f".pkit/{rel_dir}"],
+            cwd=REPO_ROOT, capture_output=True, text=True,
+        ).stdout.strip()
+        if not tracked:
+            offenders.append(f"{rel_dir} (no tracked content — marker is state-dependent)")
+    assert not offenders, f"marker set is not a function of tracked state: {offenders}"
+
+
+def test_declared_marker_set_matches_the_source_tree() -> None:
+    """`ADOPTER_TIER_MARKERS` is declared in code so both build paths agree; this
+    keeps the declaration honest against the tree it describes.
+
+    Declared rather than discovered because the sdist prunes `**/project`, so a
+    wheel built FROM an sdist — what `pip install` does with a source
+    distribution — would discover nothing and silently drop the scaffolding
+    markers. Verified: before this, the source-built wheel carried three markers
+    and the sdist-built wheel carried none.
+    """
+    declared = _declared_markers()
+    assert declared, "ADOPTER_TIER_MARKERS not found in hatch_build.py"
+
+    fictional = [d for d in declared if not (KIT / d).is_dir()]
+    assert not fictional, f"declared marker dirs that do not exist: {fictional}"
+
+    # Every depth-1 `<tree>/project` under a filtered tree must be declared, so
+    # a newly added adopter tier cannot be silently omitted.
+    hook_trees = re.findall(
+        r'^\s*"(\w[\w-]*)",',
+        (REPO_ROOT / "hatch_build.py").read_text(encoding="utf-8"),
+        re.MULTILINE,
+    )
+    undeclared = [
+        f"{t}/project" for t in set(hook_trees)
+        if (KIT / t / "project").is_dir() and f"{t}/project" not in declared
+    ]
+    assert not undeclared, (
+        f"adopter tiers present in the tree but not declared: {undeclared}"
+    )

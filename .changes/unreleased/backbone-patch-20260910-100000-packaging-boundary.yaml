@@ -28,5 +28,10 @@ body: >
   which is what caught a hole in the predicate itself: `project/` was matched
   only at the depths then known, so the wheel was still shipping this project's
   own harness permission allow-list. Nothing an adopter needs is removed:
-  verified that no kit-owned file is missing from either artifact, and adding
-  untracked runtime state now changes the shipped file list not at all.
+  verified that no kit-owned file is missing from either artifact, and a build from a
+  clean clone produces the same file list as one from a working tree carrying 36
+  untracked journals. The bundle also still carries the adopter-tier DIRECTORIES the
+  installer reads to decide whether to stub an adopter's `project/` scaffolding — as
+  empty markers, declared in code so both build paths emit the same set, since
+  discovering them from the filesystem made the artifact depend on untracked state
+  and produced no markers at all when the wheel was built from a source distribution.

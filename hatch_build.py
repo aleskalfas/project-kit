@@ -67,6 +67,26 @@ FILTERED_TREES: tuple[str, ...] = (
 # the whole reason this hook exists — so a per-file force-include has to apply
 # the same patterns itself. Missing this shipped 87 `.pyc` files on the first
 # attempt, trading 41 unwanted files for 87 different ones.
+# Adopter-tier directories whose EXISTENCE the installer reads. `install.py`
+# stubs an adopter's `project/` tier only when the source bundle has that
+# directory — `if (src / "project").is_dir()` for an area, and
+# `if project_src.is_dir()` for an adapter's settings pair — so the bundle must
+# carry each one even though every file inside is withheld.
+#
+# DECLARED, not discovered. Deriving this from the filesystem breaks the build
+# path that matters most: the sdist prunes `**/project`, so a wheel built FROM
+# an sdist (what `pip install` does with a source distribution) finds no such
+# directory and emits no markers — and the scaffolding regression returns
+# silently. A declared tuple lives in the code, which is in both artifacts, so
+# both build paths emit the same set. `tests/test_packaging_boundary.py` asserts
+# the tuple against the source tree so it cannot drift into fiction.
+ADOPTER_TIER_MARKERS: tuple[str, ...] = (
+    "agents/project",
+    "permissions/project",
+    "skills/project",
+    "adapters/claude-code/settings/project",
+)
+
 EXCLUDED_PARTS: frozenset[str] = frozenset({"__pycache__", ".pytest_cache"})
 EXCLUDED_SUFFIXES: tuple[str, ...] = (".pyc", ".pyo")
 
@@ -104,7 +124,6 @@ class CapabilityBoundaryHook(BuildHookInterface):
 
         include: dict[str, str] = {}
         withheld = 0
-        withheld_dirs: set[str] = set()
         for tree in FILTERED_TREES:
             base = KIT / tree
             if not base.is_dir():
@@ -132,7 +151,6 @@ class CapabilityBoundaryHook(BuildHookInterface):
                 rel_to_kit = path.relative_to(KIT).as_posix()
                 if is_adopter_owned(rel_to_kit):
                     withheld += 1
-                    withheld_dirs.add(Path(rel_to_kit).parent.as_posix())
                     continue
                 include[str(path)] = f"{DEST_ROOT}/{rel_to_kit}"
 
@@ -149,9 +167,25 @@ class CapabilityBoundaryHook(BuildHookInterface):
         # contents: an empty marker per fully-withheld directory. The marker is
         # kit-owned layout, not adopter data, and it never reaches an adopter —
         # the area install path skips `project` when copying and only stubs it.
+        # Derived from what `install.py` GATES ON — the top-level `project/`
+        # tier of each tree — never from where withheld files happened to sit.
+        #
+        # The first version collected the parent of every withheld file, and
+        # withheld files include git-IGNORED ones, so a marker materialised
+        # purely from build-machine state: this tree produced 419 `_kit`
+        # entries against 418 from a clean clone of the same commit, the delta
+        # being a marker for `project/process/issue-lifecycle/` — a directory
+        # that exists locally only because of untracked journals. That broke the
+        # reproducibility obligation THIS CHANGE-SET records in ADR-033, and it
+        # materialised the source's nested adopter-tier layout, which #812
+        # explicitly rejects ("nested structure is the adopter's to create").
+        #
+        # Depth-1 `<tree>/project` is the whole requirement and every such
+        # directory carries tracked content, so the marker set is a function of
+        # tracked state alone.
         represented = {str(Path(dest).parent) for dest in include.values()}
         pending = [
-            rel_dir for rel_dir in sorted(withheld_dirs)
+            rel_dir for rel_dir in ADOPTER_TIER_MARKERS
             if f"{DEST_ROOT}/{rel_dir}" not in represented
         ]
         if pending:
