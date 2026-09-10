@@ -1,7 +1,7 @@
 ---
 id: COR-045
 title: A record names the role, not the thing currently playing it
-status: proposed
+status: accepted
 date: 2026-09-10
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
