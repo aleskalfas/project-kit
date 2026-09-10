@@ -480,6 +480,45 @@ Two override families run across the mutating commands, and which a command expo
 - **Out of scope:** `merge-pr --admin` is a `gh pr merge --admin` branch-protection passthrough, not a methodology override.
 - **New commands** pick the flag by the same question; a second bypassable gate takes a `--bypass-<gate>` name.
 
+#### Corpus back-fill — seeding (and repairing) a value across every issue (per [project-management:DEC-037-adoption-ceremony] §2)
+
+`back-fill` is the auditable **propose-and-cite** ceremony for a one-time bulk transform over your existing issues. It **enumerates** the proposed per-issue change, **cites** why each is proposed, and **presents the report as the gate** — nothing is written until you apply. Applying re-reads each issue immediately before writing (a value that drifted since the report is skipped, not overwritten), and is idempotent by value-equality, so a re-run after an interrupted apply completes only the rest.
+
+```
+pkit pm back-fill                     # the report — mutates nothing; this IS the gate
+pkit pm back-fill --json              # the same plan, machine-readable
+pkit pm back-fill --apply             # drive the reviewed plan (confirmation-gated; --yes for CI)
+pkit pm back-fill --emit-script       # draft-not-apply: a script you run yourself; pm writes nothing
+```
+
+**Change kinds, and where each one's intent is declared.** The declaration point differs by substrate, because the substrate-map cannot carry a board field-id or a milestone title (DEC-037 §3):
+
+| Kind | Writes | Declared in |
+|---|---|---|
+| `set-board-field` | a Projects v2 single-select / text **field value** | a `set-board-field` hook on `after_create_issue` in `project/hooks.yaml` |
+| `assign-milestone` | the issue's **milestone** | an `assign-milestone` hook on the same event |
+| `set-axis-label` | a classification axis's **label** | a per-axis `default:` on a **label-carried** axis in `project/substrate-map.yaml` |
+
+Each kind applies corpus-wide exactly what its declaration already seeds on a newly-filed issue — so declaring a go-forward default also enrols the historical corpus, which the report states in its header.
+
+**`set-axis-label` is the corpus-repair path.** It exists for the damage described in [project-management:DEC-051-axis-carriage-activation]: if you have a Projects v2 board configured *and* your map binds `priority` (or `workstream`) to your own labels, issues filed during the affected window got the value written to **neither** substrate. Four things about it are worth knowing before you run it:
+
+- **It writes *your* label, not ours.** The value resolves through the write seam under your `remap` — your `P0`, never the kit's `priority:High`. If your declared `default:` has no `remap` entry, the intent is reported **UNRESOLVABLE** and *nothing is written for that axis*: the kit will not substitute a label you do not manage. Add the `remap` entry and re-run.
+- **It fills gaps; it never overwrites.** An issue that already carries a value on the axis is not proposed at all — whether that value is the target or a different one somebody chose. A small proposed set means few gaps, not an arbitrary subset. This is also where its idempotency comes from: re-run it over a repaired corpus and it plans nothing.
+- **It only applies to a label-carried axis.** Which substrate carries an axis is resolved once, centrally: an axis bound `board: true` is `set-board-field`'s job, and a `title-prefix` / `derive` / unsupported axis has no label to write. `state` is excluded outright — it is derived from your tracker's own lifecycle, so seeding it would contradict the substrate rather than repair it.
+- **It needs a `default:` to have a value to write.** The lost per-issue values are not recoverable, so a corpus repair can only write a declared uniform value. If the axis has no `default:`, add one:
+
+```yaml
+schema_version: 1
+axes:
+  priority:
+    label:
+      remap: { High: P0, Medium: P1, Low: P2 }
+    default: Medium        # ← what back-fill seeds onto issues with no priority
+```
+
+**Note on `--emit-script`.** The emitted script re-checks each value before writing. The **label** guard fails *closed* — if the re-read itself fails, it skips rather than writing blind. The milestone and board-field guards currently fail *open* on a failed re-read (a known defect); `--apply` is the drift-safe path on every substrate.
+
 ### 5. (Optional) Declare lifecycle hooks
 
 Per [project-management:DEC-024-lifecycle-hooks], adopters can declare **post-action steps** the engine fires after each pm lifecycle event — set a board field after `create-issue`, post a templated comment after `close-issue`, assign a default milestone, or run a custom script. Hooks live in `project/hooks.yaml`:

@@ -1049,28 +1049,53 @@ def carried_labels(
     greenfield caller is unchanged.
 
     The remapped set is the binding's declared VALUES — the adopter's own
-    vocabulary for the axis. Only a ``label`` binding contributes them; a
-    ``title-prefix`` value is not a label, a ``derive`` predicate names none, and
-    an unsupported / absent / board-carried axis has no label vocabulary. Order
-    follows ``labels``; duplicates are not introduced.
+    vocabulary for the axis (:func:`axis_label_vocabulary`). Only a ``label``
+    binding contributes them; a ``title-prefix`` value is not a label, a ``derive``
+    predicate names none, and an unsupported / absent / board-carried axis has no
+    label vocabulary. Order follows ``labels``; duplicates are not introduced.
     """
-    vocabulary: set[str] = set()
-    if substrate_map is not None:
-        binding = substrate_map.axes.get(axis)
-        if isinstance(binding, dict):
-            label_binding = binding.get("label")
-            if isinstance(label_binding, dict):
-                remap = label_binding.get("remap")
-                if isinstance(remap, dict):
-                    vocabulary = {
-                        mapped
-                        for mapped in remap.values()
-                        if isinstance(mapped, str) and mapped
-                    }
+    vocabulary = set(axis_label_vocabulary(axis, substrate_map))
     return [
         name for name in labels
         if is_axis_label(name, axis) or name in vocabulary
     ]
+
+
+def axis_label_vocabulary(
+    axis: str, substrate_map: SubstrateMap | None
+) -> tuple[str, ...]:
+    """The adopter's own label names for ``axis`` — its declared ``remap`` values.
+
+    The vocabulary half of :func:`carried_labels`, exposed because a caller can
+    need the SET without an issue's labels in hand: a writer emitting a guard that
+    will run later (the corpus back-fill's ``--emit-script``) has to carry the
+    vocabulary with it, since a shell script cannot load the map. Reading it
+    through here rather than reaching into the binding keeps ADR-026's rule that
+    this module is the only reader of substrate-map shape.
+
+    Empty in greenfield (no map) and for every non-``label`` binding — a
+    ``title-prefix`` value is not a label, a ``derive`` predicate names none, and
+    an unsupported / absent / board-carried axis has no label vocabulary. Note what
+    it does NOT include: the kit's own ``<axis>:`` labels, which are a *prefix*
+    rather than an enumerable set (:func:`is_axis_label` is how those are matched).
+    Order follows the remap's declaration order; duplicates are dropped.
+    """
+    if substrate_map is None:
+        return ()
+    binding = substrate_map.axes.get(axis)
+    if not isinstance(binding, dict):
+        return ()
+    label_binding = binding.get("label")
+    if not isinstance(label_binding, dict):
+        return ()
+    remap = label_binding.get("remap")
+    if not isinstance(remap, dict):
+        return ()
+    return tuple(
+        dict.fromkeys(
+            mapped for mapped in remap.values() if isinstance(mapped, str) and mapped
+        )
+    )
 
 
 # ----- capability-root discovery (shared shape) --------------------------
