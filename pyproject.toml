@@ -74,10 +74,28 @@ packages = ["src/project_kit"]
 exclude = ["**/__pycache__", "**/*.pyc"]
 
 # Bundle the methodology content into the wheel as package data under
-# `project_kit/_kit/` (ADR-033). The bundled set is the propagation
-# surface — what `pkit sync` copies — plus capability source (a distribution
-# medium per ADR-033 §3) and migrations. Defining it this way keeps the wheel
-# from ever drifting from what sync propagates.
+# `project_kit/_kit/` (ADR-033), plus capability source (a distribution medium
+# per ADR-033 §3) and migrations.
+#
+# WHAT DEFINES THE SET, since this changed (#813): the bundle is everything
+# under the listed trees that is NOT adopter-owned by tier, as
+# `.pkit/lifecycle/ownership.py`'s `is_adopter_owned_by_tier` decides. It is
+# deliberately NOT the sync-propagation surface. ADR-033 D1 originally defined
+# it that way, reasoning the wheel could then never drift from what sync
+# copies; but sync-management additionally depends on capability registration
+# and treats everything outside `.pkit/` as unmanaged, so it cannot answer
+# "may this be distributed?" — and defining the bundle by it is what let this
+# project's own `project/` state ship to every adopter (#811).
+#
+# The two answers therefore CAN differ, and today they differ on exactly one
+# tracked path: `.pkit/adapters/claude-code/settings/project/settings.json` is
+# adopter-owned by tier (so the bundle withholds it) while `is_sync_managed`
+# still calls it managed. That disagreement is a bug in the sync predicate, not
+# in the bundle — tracked as #823. Do not "fix" it by reverting this rule.
+#
+# `tests/test_packaging_boundary.py` asserts the built artifacts against the
+# predicate, and the wheel against the sdist, so the manifest cannot drift from
+# the rule again.
 #
 # Excluded by construction (adopter- or maintainer-owned, never shipped):
 #   - decisions/project/   project-kit's own PRJ records
