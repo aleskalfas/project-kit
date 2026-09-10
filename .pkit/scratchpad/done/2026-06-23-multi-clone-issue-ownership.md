@@ -26,7 +26,7 @@ When **one person** runs **several clones of the same repo**, each with its own 
 - **The `user@instance1` assignee form is not possible on GitHub.** GitHub assignees must be real accounts; you cannot assign to a synthetic `user@instance1` handle. So instance identity has to be carried by a *second* signal layered on top of the single real assignee — a label, a Projects v2 field, a body marker, or a comment — **not** by encoding it into the assignee. (This is the first thing the user's sketch needs to bend around.)
 - **The capability already has a label-fallback substrate** for classification axes ([project-management:DEC-012-classification-axes]) and a Projects-v2-or-labels split — an instance marker can reuse that machinery.
 - **Team membership already sub-divides "who"** ([project-management:DEC-021-team-membership-gate]); an instance marker further sub-divides a single member's *sessions*. Worth checking the interaction.
-- **The clone-local config is a runtime-local file** — exactly the class the `.pkit/.gitignore` `runtime_ignore:` renderer just shipped (EPIC #154 / ADR-009 Amendment 1) was built for. The per-clone instance-id file should be declared `runtime_ignore:` so it's never committed. (Nice reuse — no new ignore mechanism needed.)
+- **The clone-local config is a runtime-local file** — exactly the class the `.pkit/.gitignore` `runtime_ignore:` renderer just shipped (EPIC #154 / ADR-009 rule 7) was built for. The per-clone instance-id file should be declared `runtime_ignore:` so it's never committed. (Nice reuse — no new ignore mechanism needed.)
 
 ## Candidate substrate for the instance marker (Decision D1)
 

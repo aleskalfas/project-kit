@@ -39,8 +39,12 @@ Keeping them apart is a correctness requirement, not tidiness:
   actually expect a board value**. That scoping is only implementable if you can
   ask "does this project expect a board value for this axis?" *without performing
   a board read* — otherwise the condition depends on the very operation it gates.
-* ADR-026's amendment pins a one-way layering: this module calls the seam, and
-  the seam never calls this module.
+* The layering runs one way: this module calls the seam, and the seam never
+  calls this module. The label read-path contract records this shape as pending
+  rather than pinned — it names what a carriage composition must look like and
+  leaves the placement to implementing work. The pin itself belongs to the board
+  read-path contract, which is `proposed`; until that is accepted this module
+  holds the shape by construction and by its own guard test, not by citation.
 
 What this module does NOT decide
 --------------------------------

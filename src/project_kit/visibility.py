@@ -34,7 +34,7 @@ from project_kit.manifest import read_backbone_manifest
 # (e.g. the claude-code adapter's `.claude/` deploys) via package.yaml.
 _BACKBONE_FOOTPRINT: tuple[str, ...] = (".pkit/",)
 
-# Core's OWN runtime-local ignore set (ADR-009 Amendment 1). The seam analogous
+# Core's OWN runtime-local ignore set (ADR-009 rule 7). The seam analogous
 # to `_BACKBONE_FOOTPRINT`: the runtime-local files core itself owns inside the
 # `.pkit/` subtree, declared here because the backbone has no `package.yaml` to
 # carry them. Naming these is not the layering inversion the amendment forbids —
@@ -44,7 +44,7 @@ _BACKBONE_FOOTPRINT: tuple[str, ...] = (".pkit/",)
 # Patterns are repo-root-relative strings declared verbatim, exactly as
 # `footprint` declarations are (the aggregator stores them as-given; the T2
 # `.pkit/.gitignore` renderer owns any rebasing onto the `.pkit/`-relative form
-# the nested carrier wants — Amendment 1, A1 rule 4).
+# the nested carrier wants — ADR-009 rule 7's `.pkit/`-subtree scope).
 #
 # The set covers two core surfaces, both of which have no `package.yaml` and so
 # can ONLY declare through this core-level seam (the per-component `package.yaml`
@@ -54,7 +54,7 @@ _BACKBONE_FOOTPRINT: tuple[str, ...] = (".pkit/",)
 #   - the **permissions surface**, which is a backbone-propagated code directory
 #     (synced via `PROPAGATED_AREAS`, like `adapters/`), NOT a COR-011
 #     area/capability — so it has no `package.yaml` of its own and piggybacks
-#     this core-level seam (Amendment 1, A1 rule 2). Its runtime-local files are
+#     this core-level seam (ADR-009 rule 7's per-component declaration seam). Its runtime-local files are
 #     PRJ-006's diagnose capture-log + TTL armed marker, the sandbox provenance
 #     sidecar, the ADR-032 per-machine active-profile sidecar, and the ADR-046
 #     profile-realization ledger, all under `.pkit/permissions/project/`.
@@ -119,7 +119,7 @@ def footprint(target_root: Path) -> list[str]:
     return _dedupe(out)
 
 
-# --- runtime-ignore aggregation (ADR-009 Amendment 1) ------------------------
+# --- runtime-ignore aggregation (ADR-009 rule 7) ------------------------
 #
 # Mirror image of the footprint aggregation above: the same manifest-walk over
 # installed adapters/capabilities, the same per-component package.yaml reader,
@@ -146,7 +146,7 @@ def runtime_ignore(target_root: Path) -> list[str]:
     """Aggregate runtime-local ignore patterns across installed components
     (backbone + permissions seam + each adapter/capability's declared
     `runtime_ignore`). De-duped, order-stable — the source list the T2
-    `.pkit/.gitignore` renderer wholesale-renders from (ADR-009 Amendment 1)."""
+    `.pkit/.gitignore` renderer wholesale-renders from (ADR-009 rule 7)."""
     out: list[str] = list(_BACKBONE_RUNTIME_IGNORE)
     manifest = read_backbone_manifest(target_root)
     if manifest is not None:
@@ -168,7 +168,7 @@ def _dedupe(paths: list[str]) -> list[str]:
     return deduped
 
 
-# --- runtime-ignore renderer (ADR-009 Amendment 1, T2) -----------------------
+# --- runtime-ignore renderer (ADR-009 rule 7) -----------------------
 #
 # The renderer that *consumes* the `runtime_ignore()` collector above and
 # wholesale-regenerates the pkit-owned `.pkit/.gitignore`. Lives at the CORE
@@ -181,7 +181,7 @@ _RUNTIME_IGNORE_PATH = ".pkit/.gitignore"
 
 _RUNTIME_IGNORE_HEADER = (
     "# pkit-owned — rendered wholesale by `pkit install` / `pkit sync` from each\n"
-    "# installed component's `runtime_ignore:` declaration (ADR-009 Amendment 1).\n"
+    "# installed component's `runtime_ignore:` declaration (ADR-009 rule 7).\n"
     "# DO NOT EDIT: regenerated from scratch every run; hand edits are overwritten.\n"
     "# An uninstalled component's lines are simply absent on the next render.\n"
 )
@@ -196,7 +196,7 @@ def _render_pattern(pattern: str) -> str:
     `.gitignore` matches patterns relative to *its own* directory (`.pkit/`), so
     the `.pkit/` prefix is stripped on render — `.pkit/permissions/.../x` becomes
     `permissions/.../x`, which the file at `.pkit/.gitignore` matches correctly
-    (Amendment 1, A1 rule 4). A pattern that is not under `.pkit/` cannot be
+    (ADR-009 rule 7's `.pkit/`-subtree scope). A pattern that is not under `.pkit/` cannot be
     covered by this carrier (none are in today's set); it is rendered verbatim
     rather than silently dropped, so a misdeclaration is visible in the output
     rather than swallowed.
@@ -220,7 +220,7 @@ def render_runtime_ignore_content(target_root: Path) -> str:
 
 def render_runtime_ignore(target_root: Path, *, dry_run: bool = False) -> str:
     """Wholesale-regenerate `.pkit/.gitignore` from current installed
-    components' `runtime_ignore:` declarations (ADR-009 Amendment 1, T2).
+    components' `runtime_ignore:` declarations (ADR-009 rule 7).
 
     Idempotent: re-running on unchanged declarations produces byte-identical
     output and rewrites the same content. `--dry-run` prints a would-render
