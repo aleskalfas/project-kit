@@ -67,6 +67,40 @@ The four DEC-037 §2 safety properties split across the phases:
     as an idempotent re-checking script the adopter runs themselves; pm executes
     no write in this mode.
 
+The third change kind — the corpus REPAIR path (#818)
+-----------------------------------------------------
+``set-axis-label`` writes a classification axis's value as a **label**, and exists
+because the two kinds above could not perform the repair the ceremony was named
+for. The damage: an adopter with a configured board whose map binds ``priority``
+(or ``workstream``) to their own labels filed issues during a window in which the
+writer honoured the board flag and wrote no label, while nothing wrote the board
+field — so the value landed on **neither** substrate
+([project-management:DEC-051-axis-carriage-activation]). Once the presence gates
+resolve through the seam, every such issue is refused for a missing label; without
+a repair the adopter goes from a silent miss to every pre-existing issue blocked
+with no tool to fix it. ``set-field`` writes one issue at a time, which is not a
+corpus repair; this ceremony is.
+
+Four properties distinguish it from the other two kinds, each of them load-bearing:
+
+  * **the label is resolved by the seam, never composed here** — the value is
+    whatever ``axis_labels.resolve_write`` returns under the adopter's map (their
+    ``P0``, not the kit's ``priority:High``). A value with no ``remap`` entry
+    resolves to DEGRADE and the whole intent is reported UNRESOLVABLE and dropped:
+    writing the kit's own label in its place would create a label the adopter does
+    not manage, which is the invariant the substrate design exists to protect;
+  * **candidacy is by carriage, asked of ``_lib/axis_carriage``** — only an
+    ``adopter-label`` / ``kit-label`` axis is a candidate. A ``board``-carried axis
+    is ``set-board-field``'s job; ``title`` / ``derived`` / ``degrade`` axes have no
+    label to write at all. The flag is never consulted here, and neither is the map
+    directly (DEC-051 point 4 — one composition, or the drift returns);
+  * **it fills gaps, it does not normalise** — an issue already carrying a value
+    for the axis is not proposed at all, whether that value is the target or one a
+    human chose. This is where its idempotency comes from too: a re-run over a
+    repaired corpus enumerates no gaps and plans nothing;
+  * **it gates and re-validates exactly as the others do** — same residual
+    pre-check, same confirmation, same fresh read before each write.
+
 Where the back-fill intent comes from (the convergence DEC-037 §3/§4 named)
 --------------------------------------------------------------------------
 DEC-037 §4 is explicit that population logic is **not a new slot** — it extends
@@ -82,6 +116,23 @@ That is the single declaration point DEC-037 §4 points at — it avoids inventi
 new substrate-map ``field:`` binding (DEC-037 §3 / ADR-031 name that as deferred
 trunk-Feature schema work, NOT this task), and it makes the **citation** concrete:
 "hook entry N (kind=set-board-field) on after_create_issue".
+
+The label kind reads its intent from the OTHER declaration point DEC-037 names —
+the substrate-map's per-axis ``default:`` — because §3 is explicit that the point
+differs by substrate kind: the map cannot carry a field-id or a milestone title (so
+those live on the hook), while for a label-bound axis "the default is the value the
+seam emits when the filer supplies none", which is exactly the value a corpus-wide
+seeding writes. So each kind reads from wherever the per-create default for its own
+substrate is already declared, and the back-fill invents no third place.
+
+**The consequence, stated plainly: an axis with no declared ``default:`` yields no
+label intent, and the corpus repair for it does nothing.** That is not a gap to
+route around — the kit cannot recover the per-issue value the broken window lost,
+so a corpus repair can only write a declared uniform value, and the map is where an
+adopter declares one. The remedy is a one-line map edit (add ``default:`` to the
+axis), after which the ceremony proposes and cites it like any other intent. A
+command-line ``--set <axis>=<value>`` would be a *new intent-declaration surface*,
+which this command deliberately does not build (see the scope note below).
 
 An undeclared semantic this couples (surfaced in the report header): because the
 back-fill reads its intent from the *same* ``after_create_issue`` hook that seeds
@@ -154,6 +205,7 @@ from typing import Any
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import (  # noqa: E402
+    axis_carriage,
     axis_labels,
     back_fill_apply,
     board_fields,
@@ -170,11 +222,26 @@ PLAN_SCHEMA_VERSION = 1
 # The back-fill drives exactly the two DEC-024 non-label-substrate kinds (DEC-037
 # §4 / ADR-031 §2). The other two kinds (`post-comment`, `custom-script`) are not
 # substrate writes and are out of the back-fill's scope.
-BACK_FILL_KINDS: tuple[str, ...] = ("set-board-field", "assign-milestone")
+BACK_FILL_KINDS: tuple[str, ...] = back_fill_apply.HOOK_DRIVEN_KINDS
 # The back-fill applies a default-seeding intent declared for new issues to the
 # EXISTING corpus, so it reads the new-issue event's hooks (DEC-037 §4 "the same
 # kind handlers, driven by the back-fill rather than by a lifecycle event").
 BACK_FILL_SOURCE_EVENT = "after_create_issue"
+
+# The third kind, and the axes it may seed. `type` / `priority` / `workstream` are
+# exactly the three axes `create-issue._build_labels` resolves to labels per issue,
+# so the back-fill seeds corpus-wide precisely what the filing verb seeds per file
+# — the same "apply the go-forward default one-time over the corpus" relation the
+# two hook-driven kinds have to their `after_create_issue` hook.
+#
+# `state` is deliberately absent. It is the one axis the capability DERIVES rather
+# than defaults: open/closed (plus a Blocked convention) carries it under a derive
+# binding, and the lifecycle verbs own it otherwise. Seeding a uniform state across
+# a historical corpus would stamp a start state onto issues the tracker has already
+# moved past — writing a value that contradicts the substrate rather than repairing
+# a gap in it.
+SET_AXIS_LABEL_KIND = back_fill_apply.SET_AXIS_LABEL_KIND
+LABEL_BACK_FILL_AXES: tuple[str, ...] = ("type", "priority", "workstream")
 
 
 # ----- resolved intents (the cite half) ------------------------------
@@ -182,15 +249,18 @@ BACK_FILL_SOURCE_EVENT = "after_create_issue"
 
 @dataclass(frozen=True)
 class BackFillIntent:
-    """One resolved back-fill intent — a non-label substrate write to seed corpus-wide.
+    """One resolved back-fill intent — a substrate write to seed corpus-wide.
 
-    Sourced from one ``after_create_issue`` hook entry of a covered kind. ``citation``
-    is the human-readable "why this is proposed" line (DEC-037 §2 propose-and-cite);
-    ``axis_default_note`` corroborates it with the substrate-map per-axis ``default:``
-    when one is declared (DEC-036), else empty.
+    The two non-label kinds are sourced from one ``after_create_issue`` hook entry;
+    the label kind is sourced from a label-carried axis's substrate-map ``default:``
+    (DEC-037 §3 — the declaration point differs by substrate kind, and this is where
+    that split lands in the code). ``citation`` is the human-readable "why this is
+    proposed" line (DEC-037 §2 propose-and-cite); ``axis_default_note`` corroborates
+    it with the substrate-map per-axis ``default:`` when one is declared (DEC-036),
+    else empty.
     """
 
-    kind: str            # "set-board-field" | "assign-milestone"
+    kind: str            # one of back_fill_apply.APPLIABLE_KINDS
     citation: str        # why this intent is proposed
     axis_default_note: str = ""
     # set-board-field params (the field-value write inputs, ADR-031 / hook schema)
@@ -199,6 +269,16 @@ class BackFillIntent:
     text_value: str | None = None
     # assign-milestone params (the milestone write input)
     milestone_title: str | None = None
+    # set-axis-label params. `axis_value` is the METHODOLOGY value the adopter
+    # declared (`High`); `label_value` is what the write seam resolved it to on
+    # their substrate (`P0`) — the two are distinct and the plan shows both, so a
+    # reviewer sees what was asked for and what will actually be written.
+    axis: str | None = None
+    axis_value: str | None = None
+    label_value: str | None = None
+    # The labels that count as a value for this axis, snapshotted for the emitted
+    # script's guard (see back_fill_apply._axis_label_carrier_jq).
+    carrier_labels: tuple[str, ...] = ()
 
 
 @dataclass
@@ -216,6 +296,10 @@ class ProposedChange:
     observed: str | None          # current value read at plan time (for the human)
     prediction: str               # "already-satisfied" | "would-write" | "blocked"
     blocked_reason: str = ""
+    # Which classification axis this change carries — `set-axis-label` only, None
+    # for the two non-label kinds. It is what matches a proposed entry back to its
+    # intent when a plan declares the label kind for more than one axis.
+    axis: str | None = None
 
 
 # ----- script entry --------------------------------------------------
@@ -356,7 +440,7 @@ def main() -> int:
         return 0
 
     if apply_mode:
-        return _run_apply_or_emit(args, config, plan)
+        return _run_apply_or_emit(args, config, plan, capability_root)
 
     # report phase (default).
     if args.json:
@@ -394,6 +478,12 @@ def _derive_plan(
 
     substrate_map = axis_labels.load_substrate_map(capability_root)
     intents, intent_errors = _resolve_intents(capability_root, substrate_map)
+    # The label kind's intents come from the map, not the hooks (DEC-037 §3), so
+    # they resolve on their own path and join the same list — from here down every
+    # phase treats all three kinds uniformly.
+    label_intents, label_errors = _resolve_label_intents(substrate_map, config)
+    intents += label_intents
+    intent_errors += label_errors
 
     # Arm 2 (the fourth residual member): a covered set-board-field intent IS
     # declared AND the board node id cannot be resolved at all → global refusal.
@@ -422,9 +512,15 @@ def _derive_plan(
     target_repo = _resolve_repo_name_with_owner(config)
     item_ids = _resolve_board_item_ids(config, project_node_id, issues)
     proposed = _build_proposed_changes(
-        intents, issues, item_ids, project_node_id, target_repo
+        intents, issues, item_ids, project_node_id, target_repo,
+        substrate_map=substrate_map,
     )
-    return _plan_document(intents, proposed, gate, truncated=truncated), False
+    return (
+        _plan_document(
+            intents, proposed, gate, truncated=truncated, intent_errors=intent_errors
+        ),
+        False,
+    )
 
 
 def _print_no_intents(args: argparse.Namespace) -> None:
@@ -435,10 +531,15 @@ def _print_no_intents(args: argparse.Namespace) -> None:
         print(json.dumps(_plan_document([], [], empty_gate, truncated=False), indent=2))
         return
     print(
-        "No back-fill intents declared. The corpus back-fill drives the "
-        f"`{', '.join(BACK_FILL_KINDS)}` hooks on `{BACK_FILL_SOURCE_EVENT}` "
-        f"in {HOOKS_RELATIVE_PATH} (DEC-037 §4); none are declared, so "
-        "there is nothing to propose."
+        "No back-fill intents declared. The corpus back-fill drives two "
+        "declaration points:\n"
+        f"  * the `{', '.join(BACK_FILL_KINDS)}` hooks on "
+        f"`{BACK_FILL_SOURCE_EVENT}` in {HOOKS_RELATIVE_PATH} (DEC-037 §4), and\n"
+        f"  * a per-axis `default:` on a LABEL-carried axis "
+        f"({', '.join(LABEL_BACK_FILL_AXES)}) in "
+        f"{axis_labels.SUBSTRATE_MAP_RELATIVE_PATH} (DEC-037 §3), which seeds that "
+        f"axis's label across issues that carry no value for it.\n"
+        "Neither is declared, so there is nothing to propose."
     )
 
 
@@ -497,7 +598,7 @@ def _run_from_saved_plan(
         _print_gate_refusal(live_gate)
         return 2
 
-    return _run_apply_or_emit(args, config, plan)
+    return _run_apply_or_emit(args, config, plan, capability_root)
 
 
 def _residual_gate_for_saved_plan(
@@ -525,11 +626,15 @@ def _residual_gate_for_saved_plan(
 
 
 def _run_apply_or_emit(
-    args: argparse.Namespace, config: dict[str, Any], plan: dict[str, Any]
+    args: argparse.Namespace,
+    config: dict[str, Any],
+    plan: dict[str, Any],
+    capability_root: Path,
 ) -> int:
     """Dispatch the apply (mutating) or emit-script (draft) phase over a plan."""
     changes = back_fill_apply.planned_changes_from_plan(plan)
     truncated = bool(plan.get("truncated"))
+    _print_intent_errors(plan)
 
     if args.emit_script:
         # Draft-not-apply: pm executes NO write — it prints a script (DEC-037 §2).
@@ -554,12 +659,36 @@ def _run_apply_or_emit(
         print("back-fill: apply declined at the confirmation gate; nothing written.")
         return 2
 
+    # The LIVE map, not the plan's snapshot: the axis-label re-read asks the seam
+    # which labels carry the axis, and re-validate-at-apply means asking the
+    # substrate as it is now. The plan's own snapshot exists for the emitted
+    # script, which has no way to load a map at all.
+    substrate_map = axis_labels.load_substrate_map(capability_root)
     records = back_fill_apply.apply_plan(
-        changes, config, read_fresh=lambda c: _read_fresh_state(c, config)
+        changes,
+        config,
+        read_fresh=lambda c: _read_fresh_state(c, config, substrate_map),
     )
     summary = back_fill_apply.summarise(records)
     _print_apply_summary(records, summary)
     return back_fill_apply.exit_code_for(summary)
+
+
+def _print_intent_errors(plan: dict[str, Any]) -> None:
+    """Surface the declarations that could not become intents, on every phase.
+
+    The report phase prints these as it resolves them; the apply / emit-script
+    phases read a plan and would otherwise say nothing — so a value the back-fill
+    declined to write (an unresolvable remap entry, a malformed hook) would be
+    invisible on exactly the phase that mutates. Printed to stderr so it does not
+    contaminate the emitted script on stdout.
+    """
+    errors = plan.get("intent_errors")
+    if not isinstance(errors, list):
+        return
+    for err in errors:
+        if isinstance(err, str) and err:
+            print(f"  ! {err}", file=sys.stderr)
 
 
 def _confirm_apply(
@@ -790,6 +919,112 @@ def _intent_from_assign_milestone(
     )
 
 
+def _resolve_label_intents(
+    substrate_map: axis_labels.SubstrateMap | None,
+    config: dict[str, Any],
+) -> tuple[list[BackFillIntent], list[str]]:
+    """Resolve the ``set-axis-label`` intents — the corpus-repair kind (#818).
+
+    One intent per classification axis that satisfies all three of:
+
+      1. **its carriage is a label** — asked of ``_lib/axis_carriage``, and of
+         nothing else ([project-management:DEC-051-axis-carriage-activation] point
+         4). Only ``adopter-label`` and ``kit-label`` are candidates. A ``board``
+         axis is the ``set-board-field`` kind's job, and ``title`` / ``derived`` /
+         ``degrade`` axes have no label to write at all — so this is not "the map
+         binds a label", it is the one composed answer every consumer asks;
+      2. **a value is declared** — the axis's substrate-map ``default:``. DEC-037
+         §3 names that as the single declaration point for a label-bound axis's
+         default, so the back-fill reads its value from exactly where the
+         per-create default reads it, the same way the two hook-driven kinds read
+         theirs from exactly where the per-create hook reads them;
+      3. **the value resolves on the adopter's substrate** — through
+         ``axis_labels.resolve_write``. A value with no entry in the adopter's
+         ``remap`` returns DEGRADE, and the intent is then reported UNRESOLVABLE
+         and dropped. It is never written as the kit's own ``<axis>:<value>``:
+         that would create a label the adopter does not manage, which is the exact
+         invariant the substrate design exists to protect (ADR-026 part (ii)).
+
+    Returns ``(intents, errors)``, matching :func:`_resolve_intents`' shape — the
+    errors are surfaced in the report and carried in the plan so an unresolvable
+    value is visible to the human reviewing it, not silently absent.
+
+    Why the ``kit-label`` arm yields nothing in practice, and stays anyway: the
+    accessor returns ``kit-label`` only with NO map, and with no map there is no
+    ``default:`` to declare, so a greenfield project resolves no intent here. The
+    candidacy test still names both label carriages because that is the predicate
+    the rule states; narrowing it to ``adopter-label`` would encode an incidental
+    consequence of where defaults are declared as if it were the rule. A greenfield
+    corpus seeding would need a *value* declaration point, which this command
+    deliberately does not invent (see the module docstring's scope note).
+    """
+    intents: list[BackFillIntent] = []
+    errors: list[str] = []
+
+    for axis in LABEL_BACK_FILL_AXES:
+        carried = axis_carriage.carriage(axis, config, substrate_map)
+        if carried not in ("adopter-label", "kit-label"):
+            continue
+        value = axis_labels.axis_default(axis, substrate_map)
+        if not value:
+            continue
+        resolved = axis_labels.resolve_write(axis, value, substrate_map)
+        if not isinstance(resolved, str):
+            errors.append(
+                f"skipping `{axis}` label back-fill: your substrate-map declares "
+                f"`default: {value}` for `{axis}` and binds the axis to your own "
+                f"labels, but its `remap` has no entry for {value!r} — there is no "
+                f"label to write. UNRESOLVABLE, so no issue is touched for this "
+                f"axis (the kit will not write its own `{axis}:{value}` label in "
+                f"its place — that would create a label you do not manage). Add a "
+                f"`remap` entry for {value!r} in "
+                f"{axis_labels.SUBSTRATE_MAP_RELATIVE_PATH} and re-run."
+            )
+            continue
+        intents.append(
+            BackFillIntent(
+                kind=SET_AXIS_LABEL_KIND,
+                citation=_label_intent_citation(
+                    axis, value, resolved, config, substrate_map
+                ),
+                axis=axis,
+                axis_value=value,
+                label_value=resolved,
+                carrier_labels=axis_labels.axis_label_vocabulary(axis, substrate_map),
+            )
+        )
+
+    return intents, errors
+
+
+def _label_intent_citation(
+    axis: str,
+    value: str,
+    resolved: str,
+    config: dict[str, Any],
+    substrate_map: axis_labels.SubstrateMap | None,
+) -> str:
+    """The why-line for one label intent (DEC-037 §2 propose-and-cite).
+
+    Names the declaration it came from, the substrate that carries the axis (asked
+    of the same accessor that admitted it — `describe` composes over `carriage`, so
+    the sentence cannot disagree with the decision), the resolved label, and the
+    no-overwrite rule — the reviewer needs
+    the last one to read a small proposed set correctly: it means "N issues had a
+    gap", not "N issues out of the corpus were picked arbitrarily".
+    """
+    return (
+        f"substrate-map `{axis}` axis `default: {value}` in "
+        f"{axis_labels.SUBSTRATE_MAP_RELATIVE_PATH} (DEC-037 §3 — for a "
+        f"label-carried axis the map's per-axis default IS the declaration point). "
+        f"`{axis}` is carried "
+        f"{axis_carriage.describe(axis, config, substrate_map)}, and the write seam "
+        f"resolves {value!r} to {resolved!r} on that substrate. Proposed ONLY for "
+        f"issues that carry no `{axis}` value today; an issue that already has one "
+        f"is left alone."
+    )
+
+
 def _workstream_default_note(
     substrate_map: axis_labels.SubstrateMap | None,
 ) -> str:
@@ -817,10 +1052,15 @@ def _enumerate_corpus(
 ) -> list[dict[str, Any]]:
     """List the corpus issues with the fields the report needs (a READ).
 
-    Pulls ``number``, ``title``, and ``milestone`` (for value-equality
-    annotation of the milestone intent). Board field-value current state is not
-    available on the ``gh issue`` JSON surface, so the field intent's ``observed``
-    is left unresolved (the human sees "unknown — re-validated at apply").
+    Pulls ``number``, ``title``, ``milestone`` (for value-equality annotation of
+    the milestone intent) and ``labels`` (for the axis-label intent's
+    already-has-a-value test). Board field-value current state is not available on
+    the ``gh issue`` JSON surface, so the field intent's ``observed`` is left
+    unresolved (the human sees "unknown — re-validated at apply").
+
+    The field set is fixed rather than varied by which intents resolved: it is one
+    request either way, and a plan whose shape depends on which fields a previous
+    step happened to ask for is harder to reason about than one extra JSON key.
     """
     try:
         proc = gh_run(
@@ -828,7 +1068,7 @@ def _enumerate_corpus(
                 "gh", "issue", "list",
                 "--state", state,
                 "--limit", str(limit),
-                "--json", "number,title,milestone",
+                "--json", "number,title,milestone,labels",
             ],
             config,
             check=False,
@@ -1004,19 +1244,31 @@ def _build_proposed_changes(
     item_ids: dict[tuple[str, int], str],
     project_id: str | None,
     target_repo: str,
+    *,
+    substrate_map: axis_labels.SubstrateMap | None = None,
 ) -> list[ProposedChange]:
-    """Compute one proposed change per (issue, intent), with the constructed argv.
+    """Compute the proposed changes per (issue, intent), with the constructed argv.
 
     The write argv is constructed through ``substrate_writes`` ``*_args`` (ADR-031,
-    never inline). ``observed`` + ``prediction`` annotate the current state so the
-    human sees what looks already-satisfied — but the binding skip/write decision
-    is T2b's, made against a fresh read at apply time (re-validate-at-apply).
+    never inline) for the two non-label kinds, and through
+    ``back_fill_apply.axis_label_args`` — the apply engine's own single
+    construction point for that write — for the label kind. ``observed`` +
+    ``prediction`` annotate the current state so the human sees what looks
+    already-satisfied — but the binding skip/write decision is T2b's, made against
+    a fresh read at apply time (re-validate-at-apply).
 
     ``item_ids`` is keyed on (repo, number); the field-value path matches only
     ``target_repo``'s issues so a colliding number on another repo's board item
     cannot resolve. The global "no board resolvable" case is handled upstream by
     the residual gate (DEC-037 §2 fourth member); ``project_id`` is ``None`` here
     only when no field intent gated (milestone-only back-fill).
+
+    One change per (issue, intent) holds for the two non-label kinds. The label
+    kind is the exception, and deliberately: it proposes NOTHING for an issue that
+    already carries a value on the axis, so its count is "issues with a gap", not
+    "issues". That is where its no-overwrite rule and its idempotency both live —
+    re-running over a repaired corpus enumerates no gaps and so plans nothing at
+    all, rather than planning writes it would later skip.
     """
     proposed: list[ProposedChange] = []
     for issue in issues:
@@ -1031,6 +1283,10 @@ def _build_proposed_changes(
                         intent, number, title, item_ids, project_id, target_repo
                     )
                 )
+            elif intent.kind == SET_AXIS_LABEL_KIND:
+                change = _propose_axis_label(intent, number, title, issue, substrate_map)
+                if change is not None:
+                    proposed.append(change)
             else:  # assign-milestone
                 proposed.append(
                     _propose_milestone(intent, number, title, issue)
@@ -1130,6 +1386,75 @@ def _propose_milestone(
     )
 
 
+def _propose_axis_label(
+    intent: BackFillIntent,
+    number: int,
+    title: str,
+    issue: dict[str, Any],
+    substrate_map: axis_labels.SubstrateMap | None,
+) -> ProposedChange | None:
+    """Propose one axis-label write for one issue — or ``None`` to propose nothing.
+
+    ``None`` is returned whenever the issue ALREADY carries a value for the axis,
+    which covers both of the skip cases the repair must honour and is the single
+    place its no-overwrite rule is enforced:
+
+      * the value is the target → nothing to do (this is what makes a re-run over a
+        repaired corpus plan nothing at all — idempotency at enumeration rather
+        than a write predicted and then skipped);
+      * the value is some OTHER value the adopter set → **not ours to change**. The
+        kind exists to fill a gap left by a defect, not to normalise a corpus onto
+        a default. Overwriting here would take a value a human chose and replace it
+        with one the map merely suggests.
+
+    "Carries a value" is asked of ``axis_labels.carried_labels``, which unions the
+    kit's own ``<axis>:*`` prefix with the adopter's remapped vocabulary. Matching
+    on the prefix alone would be blind to exactly the adopter this repair is for —
+    their labels have no ``priority:`` prefix, so every already-classified issue
+    would read as a gap and be given a second value on a single-valued axis.
+
+    ``observed`` is therefore always ``None`` on a proposed label change: the plan
+    only ever proposes into a confirmed gap, which is what lets the apply-time
+    predicate (``classify_change``) treat any value appearing later as drift.
+    """
+    axis = intent.axis or ""
+    label_value = intent.label_value or ""
+    names = _issue_label_names(issue)
+    if axis_labels.carried_labels(axis, names, substrate_map):
+        return None
+    return ProposedChange(
+        issue_number=number,
+        issue_title=title,
+        kind=SET_AXIS_LABEL_KIND,
+        citation=_full_citation(intent),
+        argv=back_fill_apply.axis_label_args(
+            issue_number=number, label=label_value
+        ),
+        observed=None,
+        prediction="would-write",
+        axis=axis,
+    )
+
+
+def _issue_label_names(issue: dict[str, Any]) -> list[str]:
+    """The label NAMES on one enumerated issue (``gh issue list --json labels``).
+
+    Tolerates a missing / mis-shaped ``labels`` block by reading it as no labels.
+    That is the read-side default the enumeration can afford: a proposed write is
+    re-validated against a fresh read before it lands, and the apply-time read
+    fails closed, so a mis-shaped plan-time read costs a proposal the apply then
+    declines — never a write against an unread issue.
+    """
+    raw = issue.get("labels")
+    if not isinstance(raw, list):
+        return []
+    return [
+        entry["name"]
+        for entry in raw
+        if isinstance(entry, dict) and isinstance(entry.get("name"), str)
+    ]
+
+
 def _full_citation(intent: BackFillIntent) -> str:
     """The full why-line for an intent, including any corroborating default note."""
     if intent.axis_default_note:
@@ -1146,6 +1471,7 @@ def _plan_document(
     gate: GateResult,
     *,
     truncated: bool,
+    intent_errors: list[str] | None = None,
 ) -> dict[str, Any]:
     """The machine-stable plan T2b consumes (`--json`).
 
@@ -1153,9 +1479,19 @@ def _plan_document(
       schema_version: int
       truncated: bool
       residual_pre_check: {passed, checks: [{label, status, detail}]}
-      intents: [{kind, citation, ...params}]
-      proposed: [{issue_number, issue_title, kind, citation, argv|null,
+      intent_errors: [str]
+      intents: [{kind, citation, axis|null, ...params}]
+      proposed: [{issue_number, issue_title, kind, citation, axis|null, argv|null,
                   observed|null, prediction, blocked_reason}]
+
+    ``intent_errors`` carries the declarations that could NOT become intents — a
+    malformed hook entry, or an axis whose declared default has no entry in the
+    adopter's remap. They belong in the plan and not only in the human report: a
+    value the back-fill declined to write is exactly what a reviewer needs to see,
+    and the ``--json`` consumer had no way to learn of it before.
+
+    ``axis`` is populated for ``set-axis-label`` only, and is what matches a
+    proposed entry to its intent when the plan carries the kind for several axes.
 
     ``truncated`` is True when the corpus enumeration hit ``--limit`` exactly, so
     the plan may be an INCOMPLETE view of the corpus — T2b must treat a truncated
@@ -1177,6 +1513,7 @@ def _plan_document(
                 for label, status, detail in gate.checks
             ],
         },
+        "intent_errors": list(intent_errors or []),
         "intents": [
             {
                 "kind": i.kind,
@@ -1185,6 +1522,10 @@ def _plan_document(
                 "single_select_option_id": i.single_select_option_id,
                 "text_value": i.text_value,
                 "milestone_title": i.milestone_title,
+                "axis": i.axis,
+                "axis_value": i.axis_value,
+                "label_value": i.label_value,
+                "carrier_labels": list(i.carrier_labels),
             }
             for i in intents
         ],
@@ -1198,6 +1539,7 @@ def _plan_document(
                 "observed": c.observed,
                 "prediction": c.prediction,
                 "blocked_reason": c.blocked_reason,
+                "axis": c.axis,
             }
             for c in proposed
         ],
@@ -1215,6 +1557,8 @@ def _print_context_header(capability_root: Path, config: dict[str, Any]) -> None
     print(f"  capability:  {capability_root} (v{version})")
     print(f"  intent src:  {capability_root / HOOKS_RELATIVE_PATH} "
           f"({BACK_FILL_SOURCE_EVENT} hooks)")
+    print(f"               {capability_root / axis_labels.SUBSTRATE_MAP_RELATIVE_PATH} "
+          f"(per-axis `default:` on a label-carried axis)")
     print(
         "  posture:     REPORT ONLY — no issue is mutated. Applying this plan "
         "is a separate operation (DEC-037 §2)."
@@ -1226,6 +1570,14 @@ def _print_context_header(capability_root: Path, config: dict[str, Any]) -> None
         "enrols the entire historical corpus. Separating a go-forward-only "
         "default from a retroactive back-fill is NOT yet expressible (one "
         "declaration drives both); known scope boundary, not built here."
+    )
+    print(
+        f"  repair note: `{SET_AXIS_LABEL_KIND}` proposes ONLY for issues carrying "
+        "no value on the axis — an issue that already has one is never overwritten, "
+        "so a small proposed set means few gaps, not an arbitrary subset. It writes "
+        "the label your substrate-map's `remap` names, resolved through the write "
+        "seam; a declared default with no `remap` entry is reported UNRESOLVABLE "
+        "and NOT written as the kit's own label."
     )
     print()
 
@@ -1289,7 +1641,11 @@ def _print_report_from_plan(plan: dict[str, Any]) -> None:
     proposed = plan.get("proposed") or []
     issue_count = len({c.get("issue_number") for c in proposed})
 
-    print(f"  {len(intents)} back-fill intent(s) over {issue_count} corpus issue(s):")
+    # "issue(s)", not "corpus issue(s)": the count is issues WITH A PROPOSED CHANGE,
+    # which for the two hook-driven kinds is the whole enumerated corpus but for
+    # `set-axis-label` is only the issues carrying a gap. Naming it "corpus" would
+    # under-report the corpus size whenever a label intent pruned anything.
+    print(f"  {len(intents)} back-fill intent(s) over {issue_count} issue(s):")
     for intent in intents:
         print(f"    - {_describe_intent_dict(intent)}")
         print(f"      cite: {intent.get('citation', '')}")
@@ -1306,7 +1662,14 @@ def _print_report_from_plan(plan: dict[str, Any]) -> None:
             "already-satisfied": "[noop]   ",
             "blocked": "[blocked]",
         }.get(change.get("prediction"), "[?]      ")
-        print(f"    {marker} #{change.get('issue_number')} {change.get('kind')}")
+        # The axis qualifies the kind for `set-axis-label` (a plan can carry it for
+        # several axes at once) and is absent for the two non-label kinds, whose
+        # lines are byte-identical to before.
+        axis_note = f" ({change['axis']})" if change.get("axis") else ""
+        print(
+            f"    {marker} #{change.get('issue_number')} "
+            f"{change.get('kind')}{axis_note}"
+        )
         if change.get("argv") is not None:
             print(f"               would run: {_render_argv(change['argv'])}")
         if change.get("observed") is not None:
@@ -1331,6 +1694,17 @@ def _print_report_from_plan(plan: dict[str, Any]) -> None:
 
 
 def _describe_intent_dict(intent: dict[str, Any]) -> str:
+    if intent.get("kind") == SET_AXIS_LABEL_KIND:
+        # Both values, always: the methodology value the adopter declared and the
+        # substrate value that will actually be written. Showing only the second
+        # hides which declaration produced it; showing only the first hides what
+        # lands on the tracker — and the gap between them is the whole point of
+        # the seam.
+        return (
+            f"{SET_AXIS_LABEL_KIND}: `{intent.get('axis')}` = "
+            f"{intent.get('axis_value')!r} → label {intent.get('label_value')!r} "
+            "(on corpus issues carrying no value for the axis)"
+        )
     if intent.get("kind") == "set-board-field":
         which = (
             f"single_select_option_id={intent.get('single_select_option_id')}"
@@ -1359,21 +1733,25 @@ def _render_argv(argv: list[str]) -> str:
 
 
 def _read_fresh_state(
-    change: back_fill_apply.PlannedChange, config: dict[str, Any]
+    change: back_fill_apply.PlannedChange,
+    config: dict[str, Any],
+    substrate_map: axis_labels.SubstrateMap | None = None,
 ) -> back_fill_apply.FreshState:
     """Read THIS issue's current value for the change's attribute, at apply time.
 
     This is the re-validate-at-apply read (DEC-037 §2): the value the attribute
     holds *right now*, immediately before the write decision — never the plan's
-    stale ``observed``. Routes by kind to the milestone read or the board
-    field-value read. A read that fails returns ``read_ok=False`` so the predicate
-    fails closed to a skip (never overwrite against an unconfirmed value).
+    stale ``observed``. Routes by kind to the milestone read, the board field-value
+    read, or the axis-label read. A read that fails returns ``read_ok=False`` so the
+    predicate fails closed to a skip (never overwrite against an unconfirmed value).
     """
     try:
         if change.kind == "assign-milestone":
             return _read_current_milestone(change.issue_number, config)
         if change.kind == "set-board-field":
             return _read_current_field_value(change, config)
+        if change.kind == SET_AXIS_LABEL_KIND:
+            return _read_current_axis_label(change, config, substrate_map)
     except Exception:
         # Defensive backstop: a fresh read that throws (an unforeseen response
         # shape, a transport quirk) must NOT crash the whole corpus loop mid-apply.
@@ -1408,6 +1786,57 @@ def _read_current_milestone(
     title = ms.get("title") if isinstance(ms, dict) else None
     return back_fill_apply.FreshState(
         current=title if isinstance(title, str) else None, read_ok=True
+    )
+
+
+def _read_current_axis_label(
+    change: back_fill_apply.PlannedChange,
+    config: dict[str, Any],
+    substrate_map: axis_labels.SubstrateMap | None,
+) -> back_fill_apply.FreshState:
+    """The label currently carrying this change's axis on the issue, or ``None``.
+
+    ``current`` is the first label the seam recognises as a value for the axis —
+    the adopter's remapped name or a kit ``<axis>:*`` one, asked of
+    ``axis_labels.carried_labels`` rather than matched here, so the apply agrees
+    with the enumeration about what "already has a value" means. ``None`` is a
+    CONFIRMED gap, which is the only state the write proceeds from.
+
+    Fails CLOSED (``read_ok=False``) on every shape that does not positively
+    confirm the label set: a missing ``gh``, a non-zero exit, unparseable JSON, or
+    a payload with no ``labels`` list. An empty list is a genuine "no labels" and
+    reads as a confirmed gap; an ABSENT one is a read that did not answer, and
+    treating it as a gap is precisely the fail-open mistake — it would write into
+    an issue whose classification we never saw.
+    """
+    axis = change.axis
+    if not axis:
+        return back_fill_apply.FreshState(current=None, read_ok=False)
+    try:
+        proc = gh_run(
+            ["gh", "issue", "view", str(change.issue_number), "--json", "labels"],
+            config,
+            check=False,
+        )
+    except FileNotFoundError:
+        return back_fill_apply.FreshState(current=None, read_ok=False)
+    if proc.returncode != 0:
+        return back_fill_apply.FreshState(current=None, read_ok=False)
+    try:
+        data = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        return back_fill_apply.FreshState(current=None, read_ok=False)
+    raw = data.get("labels") if isinstance(data, dict) else None
+    if not isinstance(raw, list):
+        return back_fill_apply.FreshState(current=None, read_ok=False)
+    names = [
+        entry["name"]
+        for entry in raw
+        if isinstance(entry, dict) and isinstance(entry.get("name"), str)
+    ]
+    carried = axis_labels.carried_labels(axis, names, substrate_map)
+    return back_fill_apply.FreshState(
+        current=carried[0] if carried else None, read_ok=True
     )
 
 
