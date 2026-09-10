@@ -98,11 +98,24 @@ class CapabilityBoundaryHook(BuildHookInterface):
         for tree in FILTERED_TREES:
             base = KIT / tree
             if not base.is_dir():
-                continue
+                # Fail loudly. Skipping silently would drop an entire tree from
+                # the distribution while the hook still reported success — the
+                # exact failure mode this change was made to end, and one this
+                # hook hit twice during development.
+                raise RuntimeError(
+                    f"hatch_build: .pkit/{tree} is listed in FILTERED_TREES but "
+                    "is not a directory. Either the tree was renamed (update the "
+                    "tuple) or the checkout is incomplete; shipping a wheel "
+                    "missing that tree silently is not an option."
+                )
             for path in sorted(base.rglob("*")):
                 if not path.is_file():
                     continue
-                if EXCLUDED_PARTS & set(path.parts):
+                rel_parts = path.relative_to(KIT).parts
+                # Scoped to the kit tree: matching `path.parts` would also test
+                # directories ABOVE the repo root, so a checkout under a
+                # directory named `__pycache__` would silently bundle nothing.
+                if EXCLUDED_PARTS & set(rel_parts):
                     continue
                 if path.suffix in EXCLUDED_SUFFIXES:
                     continue

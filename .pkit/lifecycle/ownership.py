@@ -1,19 +1,29 @@
 """Tier-ownership predicates the lifecycle layer owns (per COR-031 / ADR-051).
 
-**Propagated neutral code, not an area's content.** This module answers one
-question — *does `pkit sync` manage this path?* — for every consumer that needs
-it, and it lives here (in-tree, propagated) rather than in `src/project_kit/`
+**Propagated neutral code, not an area's content.** This module owns the
+project's ownership questions — *does `pkit sync` manage this path?*
+(:func:`is_sync_managed`) and *is this path adopter-owned by tier alone?*
+(:func:`is_adopter_owned_by_tier`) — for every consumer that needs one of them.
+The two are deliberately distinct: sync-management additionally depends on
+capability *registration* and treats everything outside `.pkit/` as unmanaged,
+so a caller asking about tier must not read it off the sync predicate. Each
+answer has exactly one definition here; what matters is that no consumer
+re-derives either, not that there is only one question. It lives here (in-tree,
+propagated) rather than in `src/project_kit/`
 for the reason ADR-003 records: an adapter's deploy resolver runs *in the
 adopter's tree*, where the global `pkit` runtime is not importable. Code both
 the backbone CLI and a propagated adapter script can import is the only home
-that keeps **one** definition of sync-managed-ness. ADR-051 requires exactly
-that: a per-adapter re-derivation would fork the ownership predicate and
-silently skip the check on any future harness.
+that keeps **one** definition of each. ADR-051 requires exactly that: a
+per-adapter re-derivation would fork the ownership predicate and silently skip
+the check on any future harness. The packaging build hook is the same lesson at
+a different altitude — the wheel manifest carried its own idea of which paths
+were adopter-owned, disagreed with this module, and nothing could notice
+(#813).
 
 Dependency direction is inward, as in ADR-003: the backbone CLI imports this,
 each adapter's resolver imports this, and this module imports neither.
 
-The predicate is *conservative under `.pkit/`*: everything the kit tree holds
+:func:`is_sync_managed` is *conservative under `.pkit/`*: everything the kit tree holds
 reads as sync-managed unless it falls in an enumerated adopter-owned carve-out.
 That direction is the safe one — a false "managed" costs a rejected overlay
 entry the adopter can re-point, while a false "not managed" hands an agent write
@@ -82,7 +92,7 @@ def _load_yaml(text: str):
     needs a parser, so only that path pays for one — a pure predicate should not
     require a YAML library to import.
     """
-    from ruamel.yaml import YAML  # noqa: PLC0415 - lazy by design, see above
+    from ruamel.yaml import YAML  # lazy by design — see the docstring above
 
     return YAML(typ="safe").load(text)
 

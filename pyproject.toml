@@ -33,6 +33,34 @@ dev = [
 path = ".pkit/VERSION"
 pattern = "^(?P<version>[0-9]+\\.[0-9]+\\.[0-9]+)$"
 
+[tool.hatch.build.targets.sdist]
+# The sdist has no force-include to override, so `exclude` works here — unlike
+# the wheel, where force-include is the higher-priority mechanism and the
+# filtering has to happen in `hatch_build.py`. Same rule, two mechanisms,
+# because the two targets assemble differently.
+#
+# Without this the sdist carried project-kit's own project-side state including
+# 36 git-ignored journals, so it had the same non-reproducibility as the wheel:
+# its contents depended on the build machine's untracked files.
+# Rule-shaped rather than enumerated: any `project/` directory anywhere under
+# `.pkit/` is the adopter tier, at every depth — which is the same positional
+# rule `ownership.is_adopter_owned_by_tier` applies. The wheel asks that
+# predicate directly; config globs cannot, so this mirrors it in the one form
+# hatchling accepts here.
+exclude = [
+  ".pkit/**/project",
+  ".pkit/project",
+  ".pkit/rules/project.md",
+  ".pkit/scratchpad/active",
+  ".pkit/scratchpad/done",
+  ".pkit/scratchpad/dropped",
+  # Install state and generated files. The wheel's comment already calls these
+  # "adopter- or maintainer-owned, never shipped"; the sdist had been shipping
+  # them regardless.
+  ".pkit/manifest.yaml",
+  ".pkit/.gitignore",
+]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/project_kit"]
 # Never sweep build caches into the bundled methodology tree. (NB: hatchling's
