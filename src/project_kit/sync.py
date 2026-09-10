@@ -69,7 +69,7 @@ def run_sync(target_root: Path, dry_run: bool = False, force: bool = False) -> N
             click.echo("  (dry-run — no changes will be written)")
         click.echo()
         install.run_installed_adapter_primitives(ctx)
-        # Render `.pkit/.gitignore` at the CORE tier (ADR-009 Amendment 1, T2).
+        # Render `.pkit/.gitignore` at the CORE tier (ADR-009 rule 7).
         # The self-host path runs ONLY the adapter-primitives runner and skips
         # propagation — but the renderer is a core step, not an adapter
         # primitive, so it must run here too or backbone/capability runtime
@@ -124,7 +124,7 @@ def run_sync(target_root: Path, dry_run: bool = False, force: bool = False) -> N
 
     _update_recorded_backbone_version(target_root, source_kit, ctx)
 
-    # Render `.pkit/.gitignore` at the CORE tier (ADR-009 Amendment 1, T2) —
+    # Render `.pkit/.gitignore` at the CORE tier (ADR-009 rule 7) —
     # wholesale from the current installed components' `runtime_ignore:`
     # declarations. A core step (sibling to propagation), not an adapter
     # primitive, so it covers backbone + capability declarations regardless of

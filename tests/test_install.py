@@ -163,7 +163,7 @@ def test_install_kit_dry_run_writes_nothing(tmp_target: Path) -> None:
 
 
 def test_install_kit_renders_runtime_ignore_gitignore(tmp_target: Path) -> None:
-    # The core-tier renderer (ADR-009 Amendment 1, T2) runs on install,
+    # The core-tier renderer (ADR-009 rule 7) runs on install,
     # producing a pkit-owned `.pkit/.gitignore`.
     install.install_kit(tmp_target)
     gi = tmp_target / ".pkit" / ".gitignore"

@@ -280,44 +280,75 @@ adopter's `substrate-map.yaml` exists. This keeps the greenfield path *identical
 to today (the indirection is inert when no map is present — point 2) and keeps
 each schema free of *this adopter's* substrate.
 
-**Reconciling with the pre-existing in-schema substrate switch.** The
-"schemas-clean" claim is **not** that the schemas are clean of *all* substrate
-concerns — they are not, today. `classification.yaml` already carries a
-`substrate_with_board` / `substrate_without_board` pair per axis (e.g. `priority`
-reads "Projects v2 single-select field" with a board, "label (`priority:*`)"
-without; `type` is "label regardless"). So the schemas **already branch on one
-substrate dimension** — board-vs-label, an *intra-greenfield* choice about where
-the adopter's *own* kit-managed encoding lives. The board-vs-label switch is the
-**degenerate, kit-internal binding**: it chooses between two substrates the kit
-*itself* manages (a board it created, or labels it created), within the greenfield
-world. `substrate-map.yaml` is the **general, adopter-immutable binding**: it
-remaps an axis onto a substrate the *adopter* owns and the kit cannot create.
+**Reconciling with the pre-existing board-versus-label substrate switch.** The
+"schemas-clean" claim is **not** that the consumers are clean of *all* substrate
+concerns — they are not. A board-versus-label dimension already sits alongside the
+adopter binding: `classification.yaml` carries a `substrate_with_board` /
+`substrate_without_board` pair per axis (e.g. `priority` reads "Projects v2
+single-select field" with a board, "label (`priority:*`)" without; `type` is
+"label regardless"). Those entries are **prose descriptions typed as plain
+strings** — human-readable notes, not machine-readable bindings — with **zero
+readers in code**; their whole footprint is four axis entries in
+`.pkit/capabilities/project-management/schemas/classification.yaml` (`type`,
+`priority`, `workstream`, `review`), four references in
+`classification.schema.json` (two `required` entries, two `properties`
+declarations), and the prose of this record. The branch that actually **executes**
+is an inline `config.get("has_projects_v2_board")` carriage read, taken **per
+site, scattered across the verbs**. So the accurate statement is: the schemas
+*describe* one substrate dimension in prose; the code *decides* it inline, per
+site. Board-versus-label is the **degenerate, kit-internal binding** — it chooses
+between two substrates the kit *itself* manages (a board it created, or labels it
+created), within the greenfield world; `substrate-map.yaml` is the **general,
+adopter-immutable binding** — it remaps an axis onto a substrate the *adopter*
+owns and the kit cannot create.
 
-The clean placement: the seam **composes over** the board-vs-label switch rather
-than absorbing it. Board-vs-label stays an in-schema concern (it is a property of
-the kit's own greenfield encoding, which the schema legitimately knows); the seam
-sits *above* it, resolving the adopter-binding question first (is this axis bound
-to the adopter's substrate, `unsupported`, or kit-managed?), and only in the
-kit-managed (greenfield) case does the existing `substrate_with_board` /
-`substrate_without_board` distinction apply underneath. Treating board-vs-label as
-a *degenerate binding the seam also owns* is a plausible later unification (one
-resolution surface for every substrate question) — **not pinned here**; v1 keeps
-board-vs-label inline and the seam composing over it, because the two are at
-different layers (kit-managed sub-choice vs. adopter-immutable remap) and folding
-them now is speculative generality (COR-007). So the honest claim: **greenfield is
-byte-unchanged** (the seam returns the identity, the existing board-vs-label
-switch is untouched), and the schemas gain **no new adopter-substrate field** —
-but they are *not* claimed clean of the kit-internal board-vs-label substrate
-distinction they already carry.
+Note what that per-site scatter means for point 1's argument: the scatter this
+record rejects for the adopter-immutable binding is already present, one layer
+down, for the kit-internal one.
 
-*(As-built correction, 2026-08-28: the two claims about **where** the branch
-lives — that the schemas "already branch on one substrate dimension" and that
-board-vs-label "stays an in-schema concern" — are false as executed. The
-`substrate_with_board` / `substrate_without_board` pair is prose read by no code;
-the branch is decided by inline `config.get("has_projects_v2_board")` reads
-scattered across the verbs, and the code inverts the composition ordering this
-subsection pins. The **ordering** itself is unchanged, and the "no new
-adopter-substrate field" claim stands. See the Amendment section.)*
+**The composition ordering, and the requirement it places on the code.** The clean
+placement: the seam **composes over** the board-versus-label switch rather than
+absorbing it. The seam sits *above* it, resolving the adopter-binding question
+first (is this axis bound to the adopter's substrate, `unsupported`, or
+kit-managed?), and only in the kit-managed (greenfield) case does the
+board-versus-label distinction apply underneath. That ordering is a **requirement
+on the code**, not merely a description of it: a site that answers the carriage
+question *before* the seam is reached resolves board-versus-label first and
+reaches the seam only in its no-board branch, so under a configured board the
+adopter's binding for that axis is **never consulted, by writer or by reader**.
+That failure is not hypothetical — it is the mechanism of a reported adopter
+failure ([#708](https://github.com/aleskalfas/project-kit/issues/708)): with a
+board configured and an axis bound to the repo's native labels, the filing path
+wrote no label, nothing wrote the board field, the reader resolved through the map
+and found nothing, and the presence gate that would have caught it did not run.
+Restoring the composition wherever it still runs backwards is implementation
+scope.
+
+Treating board-versus-label as a *degenerate binding the seam also owns* is a
+plausible later unification (one resolution surface for every substrate question)
+— **not pinned here**; the switch stays outside the seam and the seam composes
+over it, because the two are at different layers (kit-managed sub-choice vs.
+adopter-immutable remap) and folding them is speculative generality (COR-007). So
+the honest claim: **greenfield is byte-unchanged** (the seam returns the identity,
+the board-versus-label behaviour is untouched), and the consumer schemas gain **no
+new adopter-substrate field** — but they are *not* claimed clean of the
+kit-internal board-versus-label distinction they already describe.
+
+**The kit-internal half of that layering split is aging.** The split above rests
+partly on board-versus-label being a choice between "two substrates the kit
+*itself* manages." That half is weakening as executed. The field-setting verb
+resolves a Projects-v2 field **by name against the live board** and, when no field
+matches, lists the names the board does carry and tells the adopter to **rename
+their own field** rather than teaching the kit a mapping (`set-field.py`'s
+`_board_field_name`); and board writes are governed by their own non-label write
+contract ([ADR-031](ADR-031-substrate-write-path-contract.md)), not by this
+record's label read path. Under that reading the board is substrate the **adopter**
+owns and the kit cannot create — the same property that defines the seam's side of
+the split. This disturbs **no ruling**: the layering rejection rests on the
+differing resolution layers and failure semantics, not solely on who owns the
+substrate, and nothing here decides anything about a `board:` binding arm in the
+map. It is recorded so a reader re-reading this justification finds the aging
+noted rather than discovering it.
 
 ### 5. Lifecycle composes with DEC-033/DEC-034 — swap the detector, not the engine
 
@@ -398,6 +429,27 @@ unchanged, while the fold's membership *input* is a degraded read on a flat repo
   axis resolves to the adopter's substrate, so there is nothing to create), but
   the `adopt-existing` inventory/scaffold UX is a deferred Wave-2 Feature
   (DEC-036), not this contract.
+- **Not the placement of the carriage composition.** *Where* the composition
+  ordering lives — which component asks the adopter-binding question ahead of the
+  board-versus-label one — is delegated to implementing work and is **not pinned
+  here**. The shape under consideration, recorded as pending rather than decided:
+  that component sits **above** the seam and takes config as an **injected dict,
+  never loading it** — following the board-identity precedent
+  (`_lib/board_fields.py`, whose entry points all take `config: dict[str, Any]`)
+  rather than the self-loading map resolvers (`axis_labels.load_substrate_map`) —
+  with an explicit one-way layering direction: **it calls the seam; the seam never
+  calls it.** It composes with the accepted carriage-activation rule — a map
+  binding governs the axes it names, while the board flag governs carriage where
+  the map is silent
+  ([project-management:DEC-051](../../../.pkit/capabilities/project-management/decisions/DEC-051-axis-carriage-activation.md)).
+- **Not the ordering-shaped guard's exemption list.** The ordering-shaped
+  assertion the sole-constructor guard still needs (Implications, guard boundary)
+  requires a named exemption set, because several board-flag reads are legitimately
+  **not** carriage and must not be rewired: board **membership** (the
+  mandatory-state condition that every issue sit on the configured board), board
+  **identity** (existence and node-id resolution), and the **kit-label-creation
+  gating** in the workstream mutators. Enumerating them is per-site judgement over
+  the rewiring roster — implementation scope, and it would rot here.
 
 ## Rationale
 
@@ -491,15 +543,19 @@ fail-closed fold semantics for free over the derived state.
   soften the moment any input touching it went indeterminate. The fail-safe default
   is to hold the rule at its authored (hard) severity until a knob is explicitly
   added.
-- **Fold the board-vs-label switch into the seam now** (one resolution surface for
-  every substrate question). Rejected *for v1* — board-vs-label is a kit-internal
-  sub-choice (which kit-managed encoding) at a different layer from the
-  adopter-immutable remap the seam owns; unifying them with no second demanding
-  consumer is speculative generality (COR-007). The seam composes over the inline
-  switch; unification stays a later option.
-  *(As-built correction, 2026-08-28: the second ground — no second demanding
-  consumer — has expired; the board-field write path is one. The rejection stands
-  on the layering ground, which holds. See the Amendment section.)*
+- **Fold the board-versus-label switch into the seam** (one resolution surface for
+  every substrate question). Rejected — board-versus-label is a choice *within*
+  one resolution layer between two substrate kinds, at a different layer from the
+  adopter-immutable remap the seam owns, and absorbing it would give the seam two
+  jobs with different failure semantics. The rejection rests on that layering
+  ground **alone**: a second ground once stood beside it — speculative generality
+  with no second demanding consumer (COR-007) — and that ground no longer holds,
+  because the board-field write path is a second demanding consumer, and its own
+  contract names the gap it cannot close (which declaration wins is a methodology
+  decision, not something a verb should settle by implementation order). What that
+  gap calls for is to **restore** the composition — one carriage resolver above the
+  seam that asks the seam first — not to fold the switch into the seam. The seam
+  composes over the switch; unification stays a later option.
 - **A brownfield-specific lifecycle resolution path** parallel to the
   greenfield detector. Rejected — forks DEC-033's engine contract and forces
   ADR-023's fold to handle two shapes; a detector swap over a reduced state set
@@ -530,18 +586,26 @@ fail-closed fold semantics for free over the derived state.
   per-site convention; it also continuously verifies the ~26-site refactor stays
   done. Both halves together are the resolution-layer expression of EPIC #217
   constraint 1.
-- **Known boundary of guard half (b):** the grep/AST guard keys on a *literal* axis
-  prefix in source (`f"type:{v}"`, `"type:" + v`, `":".join`, `.format`) — it
-  catches every construction *shape* present today (scan-all over all non-seam
-  scripts), but a *variable*-prefix construction (`prefix_var + value` where
-  `prefix_var == "type:"`) evades it by design — that is the seam's own shape, which
-  is why the seam module is the one allow-listed exception. No call site does this
-  today; flagged so a future author does not mistake the guard for total. The seam
-  being the sole *named* exception is what keeps that boundary safe.
-  *(As-built correction, 2026-08-28: the boundary is wider than stated — the guard
-  also cannot catch an **ordering inversion**, because a site that resolves
-  board-vs-label first and never reaches the seam carries no axis-prefix literal
-  and so passes the guard trivially. See the Amendment section.)*
+- **Known boundary of guard half (b) — two blind spots, not one.** The grep/AST
+  guard keys on a *literal* axis prefix combined with a value in source
+  (`f"type:{v}"`, `"type:" + v`, `":".join`, `.format`). It catches every literal
+  construction *shape* present today (scan-all over all non-seam scripts), but two
+  classes escape it by construction. **First**, a *variable*-prefix construction
+  (`prefix_var + value` where `prefix_var == "type:"`) evades it — that is the
+  seam's own shape, which is why the seam module is the one allow-listed exception;
+  no call site does this today, and the seam being the sole *named* exception is
+  what keeps that boundary safe. **Second**, and wider: the guard cannot catch an
+  **ordering inversion**, because a site that resolves board-versus-label first and
+  never reaches the seam constructs no axis-prefix literal at all and so **passes
+  trivially**. That second gap is the same failure mode this record diagnoses one
+  layer down — "a writer that never asks the seam is unconstrained by anything the
+  seam guarantees," the argument that makes sole-constructor part (i) necessary —
+  recurring one layer **up**: sole-constructor makes the seam the only
+  *constructor* of a write-label, but it does not make the seam the only *decider*
+  of whether an axis is label-carried at all. Closing it needs a second,
+  ordering-shaped assertion, which is implementation scope (its exemption list is
+  named in *Boundaries*). Both blind spots are flagged so a future author does not
+  mistake the guard for total.
 - **The ~26-site refactor is in-scope for the trunk Feature.** Routing every
   write-path label through the seam (retiring the inline `f"type:{...}"` /
   `f"state:..."` constructions in `create-issue` / `move-issue` / `bootstrap` /
@@ -579,149 +643,3 @@ fail-closed fold semantics for free over the derived state.
   **no DEC-036 amendment**. Does not restate DEC-036; cites it as the decision.
 - **Acceptance gate.** Accepted by the maintainer before the trunk implementation
   built against it (per PRJ-005) — a forward design contract, not self-accepted.
-
-## Amendment (2026-08-28)
-
-**In-place drift correction: three of this record's as-built claims about *where*
-the board-versus-label branch lives are false as executed. No ruling changes.**
-Status is unchanged (`accepted`). The **composition ordering** this record pins —
-the adopter-binding question resolves first, and board-versus-label applies only
-underneath, in the kit-managed case — stands exactly as written, as does the
-claim that the consumer schemas gain **no new adopter-substrate field**. So do
-the ternary and its absent-≡-`unsupported` rule, the value-unresolvable fourth
-arm, the no-knob-stays-hard fail-safe, the two-part fail-closed invariant, and
-the lifecycle detector-swap composition. What changes is this record's
-*description* of the code and schema that ordering composes over, and the
-honesty of two claims — one about the guard's boundary, one about the grounds
-under a rejected alternative. **This amendment is deliberately partial**; the
-two items it owes are named at the end.
-
-**What is false as executed — the branch is not in the schemas.** Point 4
-reconciled the "schemas-clean" claim against a pre-existing in-schema substrate
-switch, saying the schemas "already branch on one substrate dimension" and that
-board-versus-label "stays an in-schema concern." Both statements are true of
-where the branch is *documented* and false of where it is *decided*. The
-`substrate_with_board` / `substrate_without_board` pair is a pair of **prose
-descriptions typed as plain strings** in the companion JSON schema — "Projects v2
-single-select field (`Priority`)", "label (`priority:*`)" — human-readable notes,
-not machine-readable bindings. Their entire footprint is four axis entries in
-`.pkit/capabilities/project-management/schemas/classification.yaml` (`type`,
-`priority`, `workstream`, `review`), four references in
-`classification.schema.json` (two `required` entries, two `properties`
-declarations), three prose mentions in this record — and **zero readers in
-code**. The branch that actually executes is inline
-`config.get("has_projects_v2_board")` carriage reads **scattered across the
-verbs**. So the accurate statement of point 4's premise is: the schemas
-*describe* one substrate dimension in prose; the code *decides* it inline, per
-site. Note what that means for point 1's argument — the scatter this record
-rejected for the adopter-immutable binding was already present, one layer down,
-for the kit-internal one.
-
-**And the code inverts the pinned ordering.** Two sites resolve
-board-versus-label **first** and reach the seam only in the no-board branch: the
-filing verb's `axes_to_apply` construction (`create-issue.py`, around line 897,
-which appends `priority` and `workstream` to the resolved-through-the-seam axis
-list only `if not has_board`) and the validator's presence-gate guard
-(`validate-issue.py`, around line 416, whose seam-resolving loop over those same
-two axes sits inside `if not has_board`). Under a configured board, priority and
-workstream therefore **never reach the seam at all** — the adopter's binding for
-those axes is not consulted, by writer or by reader. That is the mechanism of the
-reported adopter failure ([#708](https://github.com/aleskalfas/project-kit/issues/708)):
-with a board configured and `priority` bound to the repo's native labels, the
-filing verb wrote no label, nothing wrote the board field, the reader resolved
-through the map and found nothing, and the presence gate that would have caught
-it did not run. The ordering this record pinned is not merely undocumented in the
-code — it runs backwards. The `type` axis in those same two files is already
-conformant (it resolves through the seam unconditionally, ahead of any board
-read, because it is label-carried board or no board), which makes it a **working
-in-tree oracle** for the correction: the target shape already exists, one axis
-over, inside the same two functions.
-
-**The guard cannot catch this class of defect.** The known-boundary bullet above
-stated the guard's limit as variable-prefix construction. The boundary is wider:
-the guard keys on an axis-prefix **literal combined with a value**, so a site
-that resolves board-versus-label first and never reaches the seam constructs no
-axis-prefix literal at all and **passes trivially**. Both sites named above pass
-it today. This is the **same failure mode this record already diagnosed one layer
-down** — "a writer that never asks the seam is unconstrained by anything the seam
-guarantees," the argument that made sole-constructor part (i) necessary —
-recurring one layer **up**. Sole-constructor makes the seam the only
-*constructor* of a write-label; it does not make the seam the only *decider* of
-whether an axis is label-carried at all. A site that answers the carriage
-question before the seam is reached is outside the guard's reach by
-construction, not by oversight — so the guard needs a second, ordering-shaped
-assertion, which is implementation scope (below).
-
-**The expired ground under a rejected alternative — and why the rejection still
-stands.** The alternative "Fold the board-vs-label switch into the seam now" was
-rejected *for v1* on two grounds: **layering**, and **speculative generality with
-no second demanding consumer** (COR-007). The second ground has **expired**. The
-board-field write path did not exist when this record was authored; it does now,
-and it is that second consumer — its own docstring names the gap it cannot close
-("which declaration wins is a methodology decision … not something a verb should
-settle by implementation order", `set-field.py`), which is exactly the drift this
-record called speculative, now realised between that write path and the review
-path. **The rejection nonetheless stands, on the layering ground, which holds:**
-board-versus-label is a choice *within* one resolution layer between two
-substrate kinds, at a different layer from the adopter-immutable remap the seam
-owns, and absorbing it would give the seam two jobs with different failure
-semantics. The correction this drift calls for is to **restore** the composition
-— one carriage accessor above the seam that asks the seam first — not to fold the
-switch into the seam. This amendment reverses nothing; it retires one of two
-grounds and leaves the ruling standing on the other.
-
-**Deliberately partial — two items owed, deferred.** Two things this correction
-owes are **not settled here**, because they depend on a capability decision that
-is `proposed` at the time of writing — the rule that a map binding governs the
-axes it names while the board flag still governs carriage elsewhere
-([project-management:DEC-051](../../../.pkit/capabilities/project-management/decisions/DEC-051-axis-carriage-activation.md),
-on the same branch as this amendment) — and authoring them against a proposed
-record would breach the acceptance gate. Both land with the implementation, after
-that record is accepted:
-
-- **The placement pin for the carriage accessor.** Point 4 delegated *where* the
-  composition lives to implementing work, and that delegation is now being read
-  as owing a pin. The shape under consideration, recorded here as pending rather
-  than pinned: the accessor sits **above** the seam and takes config as an
-  **injected dict, never loading it** — following the board-identity precedent
-  (`_lib/board_fields.py`, whose entry points all take `config: dict[str, Any]`)
-  rather than the self-loading map resolvers (`axis_labels.load_substrate_map`) —
-  with an explicit one-way layering direction: **the accessor calls the seam; the
-  seam never calls the accessor.**
-- **The guard's exemption list.** The ordering-shaped guard needs a named
-  exemption set, because several flag reads are legitimately **not** carriage and
-  must not be rewired: board **membership** (the mandatory-state condition that
-  every issue sit on the configured board), board **identity** (existence and
-  node-id resolution), and the **kit-label-creation gating** in the workstream
-  mutators. Enumerating them is per-site judgement over the rewiring roster —
-  implementation scope, and it would rot here.
-
-**An observation that changes no ruling — the kit-internal half of the layering
-split is aging.** Point 4 rests its layering distinction partly on
-board-versus-label being a choice between "two substrates the kit *itself*
-manages." That half is weakening as executed. The field-setting verb resolves a
-Projects-v2 field **by name against the live board** and, when no field matches,
-lists the names the board does carry and tells the adopter to **rename their own
-field** rather than teaching the kit a mapping (`set-field.py`'s
-`_board_field_name`); and board writes are governed by their own non-label write
-contract ([ADR-031](ADR-031-substrate-write-path-contract.md)), not by this
-record's label read path. Under that reading the board is substrate the
-**adopter** owns and the kit cannot create — the same property that defines the
-seam's side of the split. This disturbs **no ruling**: the layering rejection
-above rests on the differing resolution layers and failure semantics, not solely
-on who owns the substrate, and nothing here decides anything about a `board:`
-binding arm in the map. It is recorded so a future author re-reading point 4's
-justification finds the aging noted rather than discovering it.
-
-**Maintainer sign-off required.** Per this record's own non-self-acceptance
-clause (the acceptance-gate implication above: accepted by the maintainer before
-implementation is built against it, not self-accepted) and
-[PRJ-005](../../../.pkit/decisions/project/PRJ-005-adopt-adrs.md), this amendment
-takes the maintainer's sign-off — the architect authors it, the maintainer
-accepts it. The drift it names is observable in the tree either way; what needs
-sign-off is its standing as this record's content.
-
-*Cross-reference: this section is the target of the three inline "As-built
-correction, 2026-08-28" markers — at point 4's schema-clean-indirection
-reconciliation, at the "Fold the board-vs-label switch into the seam now"
-rejected alternative, and at the guard-boundary Implications bullet.*

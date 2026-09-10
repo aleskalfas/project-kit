@@ -9,7 +9,7 @@ description: Project-management discipline realized from the pm-workflow methodo
 requires_backbone: ">=1.144.0,<2.0.0"
 aliases:
   - pm
-# Runtime-local files this capability owns under `.pkit/` (ADR-009 Amendment 1).
+# Runtime-local files this capability owns under `.pkit/` (ADR-009 rule 7).
 # Declared repo-root-relative, exactly as `footprint:` is; the renderer rebases
 # onto the `.pkit/`-relative form `.pkit/.gitignore` needs. The process journal
 # is per-clone audit state, not shared methodology content.

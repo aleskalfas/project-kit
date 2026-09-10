@@ -3,7 +3,7 @@
 The instance-ownership feature is opt-in per clone: ``set-instance <N>`` writes
 this clone's numeric **instance id** to a git-ignored runtime file under the
 capability's ``project/instance/`` directory (declared in ``runtime_ignore:`` per
-[pkit:ADR-009] Amendment 1, so it is never committed). A clone with no id set
+[pkit:ADR-009] rule 7, so it is never committed). A clone with no id set
 reads ``None``, and every ownership behaviour — marking, the clash guard, signed
 listings — no-ops. The presence of the id is the **sole activation gate**
 (DEC-035 point 1): a non-participating clone is byte-for-byte unchanged.

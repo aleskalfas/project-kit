@@ -49,7 +49,7 @@ that term already carries two meanings: team membership in
 1. **Activation is per-clone and opt-in.** A clone sets its own identity with a
    `set-instance <N>` command that writes a clone-local **instance id** to a
    git-ignored runtime file (declared via the capability's `runtime_ignore:`
-   key per [pkit:ADR-009] Amendment 1, so it is never committed). A clone with
+   key per [pkit:ADR-009] rule 7, so it is never committed). A clone with
    no instance id set behaves exactly as today — no marking, no guard, no
    signing. The presence of the id is the sole activation gate.
 
@@ -200,7 +200,7 @@ principle — noted so a future maintainer does not re-derive it as a COR.
 
 - **New command `set-instance <N>`** writes the clone-local id; the capability's
   `package.yaml` declares that runtime file under `runtime_ignore:` so it is
-  never committed (reuses the [pkit:ADR-009] Amendment 1 renderer; pure additive,
+  never committed (reuses the [pkit:ADR-009] rule 7 renderer; pure additive,
   trips no migration).
 - **`create-issue`, `start-work`, `done-work`, `close-issue`, `edit-issue`,
   `move-issue` gain ownership side-effects** (stamp / claim-commons / strip /
