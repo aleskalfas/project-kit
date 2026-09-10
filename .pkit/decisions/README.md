@@ -72,7 +72,7 @@ What situation or question prompted this decision?
 
 ## Decision
 
-What was decided. Single sentence ideally; complex decisions may use sub-sections (D1, D2, …) but the top line stays crisp.
+What was decided. Single sentence ideally; complex decisions may use a numbered list (1., 2., …) but the top line stays crisp.
 
 ## Rationale
 
