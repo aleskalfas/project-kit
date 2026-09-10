@@ -900,3 +900,114 @@ def test_report_end_to_end_over_the_reported_configuration(
     assert [(c["issue_number"], c["argv"][-1]) for c in plan["proposed"]] == [(1, "P0")]
     # The report half mutates nothing.
     assert not [c for c in issued if "edit" in c or "item-edit" in c]
+
+
+# --- `--set AXIS=VALUE` -----------------------------------------------------
+#
+# The flag exists because a corpus repair can only write ONE declared value, and
+# keying that solely to the map's `default:` left an adopter with no default
+# declared unable to repair at all until they edited a committed file.
+#
+# Its governing asymmetry: a DECLARED default that cannot be used stays silent
+# (the adopter never asked this run to touch that axis), but an axis named on the
+# command line was named on purpose — so every arm that would drop it reports
+# instead. Silently ignoring an explicit request is how an operator concludes the
+# repair ran and found nothing to do.
+
+def test_set_axis_parses_pairs(bf):
+    pairs, errors = bf._parse_set_axis(["priority=High", "workstream=platform"])
+    assert pairs == {"priority": "High", "workstream": "platform"}
+    assert errors == []
+
+
+def test_set_axis_rejects_malformed(bf):
+    pairs, errors = bf._parse_set_axis(["priority", "=High", "priority="])
+    assert pairs == {}
+    assert len(errors) == 3
+    assert all("AXIS=VALUE" in e for e in errors)
+
+
+def test_set_axis_rejects_unknown_axis(bf):
+    """A typo must not look like a repair that found nothing."""
+    pairs, errors = bf._parse_set_axis(["prioirty=High"])
+    assert pairs == {}
+    assert "prioirty" in errors[0]
+    assert "priority" in errors[0]  # names the writable axes
+
+
+def test_set_axis_rejects_conflicting_repeats(bf):
+    _pairs, errors = bf._parse_set_axis(["priority=High", "priority=Low"])
+    assert errors and "twice" in errors[0]
+
+
+def test_set_axis_tolerates_identical_repeat(bf):
+    pairs, errors = bf._parse_set_axis(["priority=High", "priority=High"])
+    assert pairs == {"priority": "High"}
+    assert errors == []
+
+
+def test_set_axis_overrides_the_declared_default(bf, axis_labels):
+    smap = axis_labels.SubstrateMap(
+        axes={"priority": {"label": {"remap": {"High": "P0", "Low": "P2"}}, "default": "Low"}}
+    )
+    intents, errors = bf._resolve_label_intents(
+        smap, {"has_projects_v2_board": False}, {"priority": "High"}
+    )
+    assert errors == []
+    assert [i.axis_value for i in intents] == ["High"]
+    assert [i.label_value for i in intents] == ["P0"]
+
+
+def test_set_axis_citation_records_the_override_provenance(bf, axis_labels):
+    """The reviewer must see that the value is NOT in the committed map."""
+    smap = axis_labels.SubstrateMap(
+        axes={"priority": {"label": {"remap": {"High": "P0"}}, "default": "High"}}
+    )
+    intents, _ = bf._resolve_label_intents(
+        smap, {"has_projects_v2_board": False}, {"priority": "High"}
+    )
+    assert "--set priority=High" in intents[0].citation
+    assert "NOT in the committed map" in intents[0].citation
+
+
+def test_set_axis_works_with_no_declared_default(bf, axis_labels):
+    """The gap the flag exists to close."""
+    smap = axis_labels.SubstrateMap(axes={"priority": {"label": {"remap": {"High": "P0"}}}})
+    cfg = {"has_projects_v2_board": False}
+    assert bf._resolve_label_intents(smap, cfg)[0] == []          # nothing declared
+    intents, errors = bf._resolve_label_intents(smap, cfg, {"priority": "High"})
+    assert errors == [] and len(intents) == 1
+
+
+def test_set_axis_refuses_a_non_label_axis_by_name(bf, axis_labels):
+    """Board-carried: the board-field intent's job, and saying nothing is wrong."""
+    smap = axis_labels.SubstrateMap(axes={"priority": {"board": True}})
+    intents, errors = bf._resolve_label_intents(
+        smap, {"has_projects_v2_board": True}, {"priority": "High"}
+    )
+    assert intents == []
+    assert errors and "not carried by a label" in errors[0]
+    assert "NOTHING was written" in errors[0]
+
+
+def test_set_axis_refuses_an_unresolvable_value_by_name(bf, axis_labels):
+    """Never substitutes the kit's own label for a value the remap omits."""
+    smap = axis_labels.SubstrateMap(axes={"priority": {"label": {"remap": {"High": "P0"}}}})
+    intents, errors = bf._resolve_label_intents(
+        smap, {"has_projects_v2_board": False}, {"priority": "Medium"}
+    )
+    assert intents == []
+    assert errors and "no label to write" in errors[0]
+    assert "priority:Medium" in errors[0]  # names what it refuses to invent
+
+
+def test_declared_default_stays_silent_where_explicit_would_shout(bf, axis_labels):
+    """The asymmetry, pinned: same unusable state, different loudness."""
+    smap = axis_labels.SubstrateMap(
+        axes={"priority": {"board": True}, "type": {"unsupported": True}}
+    )
+    cfg = {"has_projects_v2_board": True}
+    _, silent = bf._resolve_label_intents(smap, cfg)
+    _, loud = bf._resolve_label_intents(smap, cfg, {"priority": "High"})
+    assert silent == []
+    assert len(loud) == 1
