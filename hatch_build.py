@@ -2,10 +2,13 @@
 
 The methodology tree is bundled into the wheel by `force-include` (ADR-033), and
 hatchling's `exclude` **cannot filter force-included paths** — force-include is
-the higher-priority mechanism. So `.pkit/capabilities` was included wholesale,
-which carried each capability's adopter-owned `project/` subtree: in this repo
-that meant project-kit's own config, its default-agent activation switch, its
-bootstrap stamp and its per-issue audit journals (#811).
+the higher-priority mechanism. So eleven `.pkit/` trees were included wholesale
+(see `FILTERED_TREES`), carrying every adopter-owned `project/` subtree they
+held. In this repo that meant project-kit's own config, its default-agent
+activation switch, its bootstrap stamp, its per-issue audit journals (#811) —
+and, at a depth the first version of the tier predicate did not reach, its own
+harness permission allow-list at `adapters/<harness>/settings/project/`
+(`Bash(uv:*)`, `Bash(ruff:*)`, …), which is why the rule is now depth-free.
 
 Two consequences, both real:
 
@@ -19,11 +22,13 @@ Two consequences, both real:
 
 Rather than enumerate what to keep — a hand-maintained list that has already
 drifted once from the rule it was meant to mirror — this hook asks the project's
-own ownership predicate. `.pkit/capabilities` is dropped from the static
+own ownership predicate. Those eleven trees are dropped from the static
 `force-include` in `pyproject.toml` and rebuilt here, file by file, skipping
 anything `ownership.is_adopter_owned_by_tier` calls adopter-owned. One rule, and
-`tests/test_packaging_boundary.py` asserts the built artifact against the same
-function, so the manifest cannot drift from the predicate again.
+`tests/test_packaging_boundary.py` asserts the built artifacts against that same
+function **and against each other** — the cross-artifact check being the one
+that can catch a hole in the predicate itself, which a per-artifact check
+structurally cannot.
 """
 
 from __future__ import annotations
@@ -85,7 +90,10 @@ def _load_ownership():
 
 
 class CapabilityBoundaryHook(BuildHookInterface):
-    """Force-include capability source, minus every adopter-owned path."""
+    """Force-include every wholesale-bundled `.pkit/` tree, minus adopter-owned paths.
+
+    Scope is `FILTERED_TREES` below — eleven trees, not capabilities alone.
+    """
 
     PLUGIN_NAME = "pkit-capability-boundary"
 

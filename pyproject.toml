@@ -64,13 +64,20 @@ exclude = [
 [tool.hatch.build.targets.wheel]
 packages = ["src/project_kit"]
 # Never sweep build caches into the bundled methodology tree. (NB: hatchling's
-# `exclude` does not filter force-included paths — the force-include below is a
+# `exclude` does not filter force-included paths — force-include is the
 # higher-priority mechanism — so it can only prune what the standard package
-# walk picks up. The one stale per-capability `manifest.yaml` that rides along
-# in the capabilities force-include is project-kit's own self-host install-state
-# receipt; it is functionally inert (capability install overwrites it with a
-# freshly-stamped receipt) and is slated for removal by ADR-033's COR-007
-# single-declaration follow-on.)
+# walk picks up. That is exactly why the tree filtering lives in
+# `hatch_build.py`, which reapplies these same patterns itself; missing that
+# once shipped 87 `.pyc` files.
+#
+# One stale per-capability `manifest.yaml` still travels — project-kit's own
+# self-host install-state receipt, functionally inert since a capability install
+# overwrites it with a freshly-stamped one. It is not withheld because
+# `is_adopter_owned_by_tier` is a TIER rule and that file is install *state*
+# sitting in a kit-owned directory, so the predicate cannot see it. Its former
+# removal plan — ADR-033's single-declaration follow-on — was retired by that
+# record's #813 amendment, so it needs a home of its own rather than a pointer
+# to a retired goal.)
 exclude = ["**/__pycache__", "**/*.pyc"]
 
 # Bundle the methodology content into the wheel as package data under
@@ -106,15 +113,22 @@ exclude = ["**/__pycache__", "**/*.pyc"]
 # These are achieved by enumerating the included paths rather than the whole
 # tree: `decisions/` lists `core` + `README.md` only; `scratchpad/` lists its
 # `README.md` only.
-# `.pkit/capabilities` is NOT listed below. It is force-included by
-# `hatch_build.py`, file by file, with every adopter-owned path withheld — a
-# capability's `project/` subtree is the ADOPTER's tier, so shipping this
-# project's copy of it seeded one project's state into every adopter (#811/#812)
-# and, because those journals are git-ignored, made the artifact depend on the
-# build machine's untracked state (#813). The hook asks
-# `.pkit/lifecycle/ownership.py` rather than carrying its own list, and
-# `tests/test_packaging_boundary.py` asserts the built artifact against the same
-# predicate so the two cannot drift.
+# ELEVEN `.pkit/` trees are deliberately absent from the list below —
+# `capabilities`, `agents`, `permissions`, `adapters`, `skills`, `rules`,
+# `schemas`, `cli`, `process`, `lifecycle`, `migrations`. Do not "helpfully"
+# restore any of them: they are force-included by `hatch_build.py`, file by
+# file, with every adopter-owned path withheld. The canonical list is that
+# file's `FILTERED_TREES`; a static entry here would ship the tree unfiltered
+# and silently reintroduce the defect.
+#
+# Why: a `project/` subtree at any depth is the ADOPTER's tier, so shipping this
+# project's copy seeded one project's state into every adopter (#811/#812) — and
+# because some of it is git-ignored runtime state, the artifact depended on the
+# build machine's untracked files (#813). The hook asks
+# `.pkit/lifecycle/ownership.py` rather than carrying its own rule, and
+# `tests/test_packaging_boundary.py` asserts the built artifacts against that
+# predicate *and against each other*, so neither the manifest nor the two
+# targets can drift.
 [tool.hatch.build.targets.wheel.hooks.custom]
 path = "hatch_build.py"
 
