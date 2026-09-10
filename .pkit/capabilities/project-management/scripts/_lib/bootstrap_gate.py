@@ -52,8 +52,13 @@ stamp on install. Either failure re-opens the hole this gate closes.
 still arrive in another and be read as "already bootstrapped" there. Install no
 longer seeds ``project/`` from source (#812, which this hazard helped motivate),
 but two vectors remain — a repo started by copying another project's ``.pkit/``
-tree, and any adopter still carrying a stamp seeded by a pre-#812 install, which
-is deliberately not cleaned up (see the cleanup task under the #811 epic). The stamp therefore records the **repo
+tree, and any adopter still carrying a stamp seeded by a pre-#812 install. The
+#814 cleanup migration deliberately REPORTS such a stamp rather than
+removing it, and points the adopter here: deciding whether a stamp is
+foreign needs the same normaliser that wrote it, which lives in this
+module's canonicaliser, and a shell re-implementation that disagreed
+would delete stamps that are legitimately the adopter's. So this
+refusal stays the defence, not a stopgap awaiting cleanup. The stamp therefore records the **repo
 identity** it was written for (the normalised ``origin`` URL, read locally via
 git — no network) and the gate refuses when the stamp names a *different* repo
 than the one it is running in. A copied or seeded stamp is inert rather than
