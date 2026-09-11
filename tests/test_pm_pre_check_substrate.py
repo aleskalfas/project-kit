@@ -9,8 +9,11 @@ every axis — it never hard-refuses on labels a brownfield adopter cannot creat
 These exercise the pure (non-gh) pieces pre-check uses for the matrix: the
 substrate-map loader, `_check_substrate_capability_matrix`, and the per-axis
 kit-label gating. The gh-dependent checks (`_check_labels`'s `gh label list`)
-are not invoked here — the gating decision (`_axis_expects_kit_labels`) is what
-Task B changed and is what we pin.
+are not invoked here — the gating decision is what Task B changed and is what we
+pin. That decision now goes through `_lib/axis_carriage` rather than the seam
+predicate alone ([project-management:DEC-051-axis-carriage-activation] decision
+point 4), so the gating tests below thread a `config` too: the board flag is
+part of the answer wherever the map is silent.
 """
 
 from __future__ import annotations
@@ -163,26 +166,52 @@ def test_absent_axis_matrix_line_says_not_greenfield(pc, axis_labels) -> None:
 
 
 def test_kit_labels_expected_only_in_greenfield(pc, axis_labels) -> None:
-    """No map ⇒ kit labels expected (the original hard-check runs). Map present
-    ⇒ no axis expects kit labels (each is bound or degraded)."""
+    """No map and no board ⇒ kit labels expected (the original hard-check runs).
+    Map present ⇒ no axis expects kit labels (each is bound or degraded)."""
     for axis in axis_labels.AXES:
-        assert pc._axis_expects_kit_labels(axis, None) is True
+        assert pc.axis_carriage.expects_kit_labels(axis, {}, None) is True
 
     parsed = axis_labels.SubstrateMap(
         axes={"priority": {"label": {"remap": {"High": "P0"}}}, "workstream": {"unsupported": True}}
     )
     for axis in axis_labels.AXES:
-        assert pc._axis_expects_kit_labels(axis, parsed) is False
+        assert pc.axis_carriage.expects_kit_labels(axis, {}, parsed) is False
+
+
+def test_kit_labels_not_expected_for_a_board_claimed_axis(pc, axis_labels) -> None:
+    """The gating decision now sees the BOARD too (DEC-051 decision point 4).
+    Greenfield under a configured board: `type` is still kit-label-carried (it is
+    always a label), while the three board-claimable axes are not — which the
+    caller used to decide with its own `if has_board` instead of asking."""
+    board = {"has_projects_v2_board": True}
+    assert pc.axis_carriage.expects_kit_labels("type", board, None) is True
+    for axis in ("priority", "workstream", "state"):
+        assert pc.axis_carriage.expects_kit_labels(axis, board, None) is False
 
 
 def test_skip_line_distinguishes_bound_from_degraded(pc, axis_labels) -> None:
     parsed = axis_labels.SubstrateMap(
         axes={"priority": {"label": {"remap": {"High": "P0"}}}, "workstream": {"unsupported": True}}
     )
-    bound = pc._axis_label_check_skipped("priority", parsed)
-    degraded = pc._axis_label_check_skipped("workstream", parsed)
-    assert bound.status == "skip" and "bound" in bound.detail
+    bound = pc._axis_label_check_skipped("priority", {}, parsed)
+    degraded = pc._axis_label_check_skipped("workstream", {}, parsed)
+    assert bound.status == "skip" and "OWN labels" in bound.detail
     assert degraded.status == "skip" and "unsupported" in degraded.detail
+
+
+def test_skip_line_names_the_board_for_a_board_carried_axis(pc, axis_labels) -> None:
+    """The wording the map-only version could not produce: an axis the FLAG
+    carries (absent from the map entirely) used to read "unsupported/absent —
+    degraded", the opposite of the truth."""
+    parsed = axis_labels.SubstrateMap(
+        axes={"type": {"label": {"remap": {"bug": "kind/bug"}}}}
+    )
+    line = pc._axis_label_check_skipped(
+        "priority", {"has_projects_v2_board": True}, parsed
+    )
+    assert line.status == "skip"
+    assert "board" in line.detail
+    assert "unsupported" not in line.detail
 
 
 def test_state_label_check_degrades_under_derive_binding(pc, axis_labels) -> None:
@@ -191,9 +220,21 @@ def test_state_label_check_degrades_under_derive_binding(pc, axis_labels) -> Non
     parsed = axis_labels.SubstrateMap(
         axes={"state": {"derive": {"from": "open-closed", "states": {"done": "closed"}}}}
     )
-    result = pc._check_state_labels(Path("/nonexistent"), parsed)
+    result = pc._check_state_labels(Path("/nonexistent"), {}, parsed)
     assert result.status == "skip"
     assert "derive" in result.detail or "not required" in result.detail
+
+
+def test_state_label_check_degrades_under_a_board(pc) -> None:
+    """Greenfield + a configured board: `state` is board-carried, so the kit's
+    `state:*` labels are not demanded — and the check now SAYS so instead of
+    being skipped silently by its caller (no `gh` call is made either; the path
+    above would fail on the nonexistent capability root if it reached it)."""
+    result = pc._check_state_labels(
+        Path("/nonexistent"), {"has_projects_v2_board": True}, None
+    )
+    assert result.status == "skip"
+    assert "board" in result.detail
 
 
 # --- title-prefix alignment: the RF-1 hard-refuse hole (DEC-036 / ADR-026) -

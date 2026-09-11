@@ -61,6 +61,7 @@ from ruamel.yaml import YAML
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import bootstrap_gate  # noqa: E402
+from _lib import axis_carriage  # noqa: E402
 from _lib import axis_labels  # noqa: E402
 from _lib import session_guard  # noqa: E402
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
@@ -136,6 +137,7 @@ def main() -> int:
 
     yaml_loader = YAML(typ="safe")
     config = load_adopter_config(capability_root)
+    substrate_map = axis_labels.load_substrate_map(capability_root)
     members = _read_members(capability_root, yaml_loader)
     invoker = resolve_invoker_identity(config=config)
     membership = check_membership(members, invoker)
@@ -221,7 +223,7 @@ def main() -> int:
     # Per #219: previously this path errored with "no transition
     # backlog → backlog declared" and exited 2, forcing callers to
     # special-case the already-promoted state.
-    current_state = _detect_state_from_labels(args.issue_number, config)
+    current_state = _detect_current_state(args.issue_number, config, substrate_map)
     if current_state in ("backlog", "in-progress", "review", "done"):
         idempotent_detail = (
             "milestone reattached; no state transition needed"
@@ -255,14 +257,49 @@ def main() -> int:
     return 0
 
 
-def _detect_state_from_labels(issue_number: int, config: dict) -> str | None:
-    """Read the issue's `state:*` label and return the bare state name.
+def _detect_current_state(
+    issue_number: int,
+    config: dict,
+    substrate_map: axis_labels.SubstrateMap | None = None,
+) -> str | None:
+    """The issue's current state, read from whichever substrate CARRIES it.
 
-    Returns one of "todo", "backlog", "in-progress", "review", "done",
-    or None if no recognised state label is present (or the gh call
-    fails). Used by `promote-issue` for the idempotent-skip path on
-    already-promoted issues (per #219).
+    Returns one of "todo", "backlog", "in-progress", "review", "done", or None
+    when the state cannot be read here. Used by `promote-issue` for the
+    idempotent-skip path on already-promoted issues (per #219).
+
+    **Carriage is asked first** ([project-management:DEC-051-axis-carriage-
+    activation] decision point 4). The previous version read the kit's `state:`
+    prefix unconditionally, which was wrong in both directions:
+
+      * a `label`-bound `state` (the adopter's own `Ready` / `Inbox`) was never
+        found, so the skip never fired and an already-promoted issue failed with
+        "no transition backlog → backlog" — the #219 regression, through a
+        substrate #219 predates;
+      * under a configured board the kit's `state:*` labels are not the
+        substrate, but a STALE one left over from before the board (or from
+        another tool) was still trusted — a false skip, which is worse than no
+        skip: the promotion silently does not happen.
+
+    Only the two label carriages are readable here, and `resolve_read` covers
+    both (greenfield identity, or the adopter's reverse remap). The rest return
+    None, which the caller already treats as "unknown, proceed to move-issue" —
+    the safe direction, since move-issue re-reads the position through
+    `lifecycle_inference` with the full open/closed + milestone signal this
+    label-only read does not fetch:
+
+      * `board` — the value is on a Projects-v2 field. This function does NOT
+        read it: the board value read (and the rule that an unreadable board
+        raises) belongs to the board read-path contract, which is still
+        `proposed`. Building it here would breach the acceptance gate.
+      * `derived` — open/closed carries it, which needs a signal this label-only
+        read does not fetch; `lifecycle_inference.infer_current_state` is the
+        home of that read and move-issue performs it.
+      * `title` / `degrade` — no label carries the axis.
     """
+    carried = axis_carriage.carriage("state", config, substrate_map)
+    if carried not in ("kit-label", "adopter-label"):
+        return None
     try:
         proc = gh_run(
             ["gh", "issue", "view", str(issue_number), "--json", "labels"],
@@ -282,7 +319,10 @@ def _detect_state_from_labels(issue_number: int, config: dict) -> str | None:
         label.get("name", "") if isinstance(label, dict) else ""
         for label in labels
     ]
-    return axis_labels.read("state", names)
+    # Through the seam: identity in greenfield, the reverse remap under a
+    # `label` binding. Both return the kit's own state vocabulary, which is what
+    # the caller's already-promoted tuple is written in.
+    return axis_labels.resolve_read("state", names, substrate_map)
 
 
 # ---- gates --------------------------------------------------------------

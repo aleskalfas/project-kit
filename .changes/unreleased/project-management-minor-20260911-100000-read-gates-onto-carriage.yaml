@@ -1,0 +1,46 @@
+component: project-management
+kind: minor
+custom:
+  category: Fixed
+  pr: "712"
+body: >
+  The READ and presence gates now ask `_lib/axis_carriage` which substrate carries
+  an axis, closing the reader half of the ordering inversion DEC-051 settles. The
+  writers were rewired first; until now `validate-issue` and `pre-check` still
+  resolved board-versus-label BEFORE consulting the adopter's substrate-map, so
+  under a configured board `priority` and `workstream` never reached the seam at
+  all and the adopter's own binding was not consulted by the reader — the reported
+  failure (#708) seen from the other side. The `type` axis already resolved in the
+  pinned order in both files and was the in-tree oracle; it now asks the same
+  accessor as the other two rather than a second predicate that happens to agree.
+
+  What changes for an adopter whose map binds an axis to their own labels under a
+  configured board: `validate-issue` finds the label the writer actually wrote
+  (their `P0`, not the kit's `priority:High`) and hard-rejects its ABSENCE — a
+  state that previously passed clean because the gate did not run; `pre-check`
+  reports the kit-label check per axis, so one axis can be board-carried while
+  another is label-bound, which the old combined "board configured" skip line
+  could not express, and the `state:*` check now SAYS why it skipped instead of
+  being skipped silently by its caller.
+
+  Where an axis resolves to the BOARD, the presence gate demands no label and does
+  not claim the value is missing: it reports `classification.<axis>.unverified` at
+  `warning` — the severity `board_membership.unverified` already uses for the same
+  distinction — saying the value is board-carried and was not read here. This
+  commit deliberately does NOT read the board field; that read and its failure
+  semantics belong to a record still under review. No new severity, verdict token
+  or exit code: a board adopter's exit status is unchanged.
+
+  Two remaining map-blind readers are fixed with it. `promote-issue`'s
+  idempotent-skip read its state through the kit's `state:` prefix regardless of
+  substrate — so a `label`-bound state never matched and an already-promoted issue
+  failed with "no transition backlog → backlog", while under a board a STALE kit
+  label was trusted and silently skipped a promotion that had not happened. And
+  `pkit pm history --check-drift` scanned the timeline for the kit prefix alone,
+  showing zero state changes on a repo full of them; it now reads the adopter's own
+  vocabulary, and where no label carries state at all it reports that the check
+  could not run rather than printing a clean bill of health off an empty scan.
+
+  Board MEMBERSHIP (is this issue on the board, DEC-019) and board IDENTITY stay
+  with the flag, unrouted through carriage — routing them would silently drop the
+  membership requirement for any board adopter with a single label binding.

@@ -150,6 +150,8 @@ Read-only diagnostic. Walks every prerequisite the methodology depends on (gh au
 
 Pre-check is the **hard gate** on every pm operation per [project-management:DEC-017-prerequisites-bootstrap-migrate-discipline]. The project-manager invokes it as Step 0 of every action; CI workflows wire it in as a PR check.
 
+Each kit-label check runs only where the kit's own `<axis>:*` labels are that axis's substrate — asked per axis of the carriage accessor, which consults your `substrate-map.yaml` first and `has_projects_v2_board` only where the map is silent ([project-management:DEC-051-axis-carriage-activation]). Every other carriage skips with a line naming the substrate that does carry the axis, rather than demanding a label you may be unable to create.
+
 **What pre-check covers at v0.17.0+:**
 
 | Check | Label |
@@ -161,8 +163,8 @@ Pre-check is the **hard gate** on every pm operation per [project-management:DEC
 | Repo accessible | connectivity |
 | Projects v2 board resolves (board mode) | substrate |
 | `type:*` labels present | labels |
-| `priority:*` / `workstream:*` labels present (label-fallback) | labels |
-| `state:*` labels present (label-fallback) | labels — new in v0.17.0 |
+| `priority:*` / `workstream:*` labels present (where the kit's labels carry the axis) | labels |
+| `state:*` labels present (where the kit's labels carry the axis) | labels — new in v0.17.0 |
 | Default branch matches config | config |
 | `workstreams.yaml` parses cleanly | config / DEC-018 |
 | `mandatory-issue-state.yaml` present + valid | schema / DEC-019 |
