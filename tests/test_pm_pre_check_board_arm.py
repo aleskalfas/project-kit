@@ -468,14 +468,14 @@ def test_conflict_remediation_names_the_board_arm(pc, axis_labels) -> None:
     """The one place the withdrawn instruction was actually SHOWN to an adopter.
     It now names `board: true`."""
     sm = _map(axis_labels, {"priority": {"label": {"remap": {"High": "P0"}}}})
-    fail = next(
+    found = next(
         r
         for r in pc._check_substrate_board_conflict(BOARD_CONFIG, sm)
-        if r.status == "fail"
+        if r.status == "warn"
     )
-    assert fail.remediation is not None
-    assert "board: true" in fail.remediation
-    assert "unsupported: true" not in fail.remediation
+    assert found.remediation is not None
+    assert "board: true" in found.remediation
+    assert "unsupported: true" not in found.remediation
 
 
 def test_conflict_remediation_does_not_recommend_board_for_state(pc, axis_labels) -> None:
@@ -484,15 +484,15 @@ def test_conflict_remediation_does_not_recommend_board_for_state(pc, axis_labels
     rejects, so that arm gets the only honest instruction available: drop the
     binding and let the flag govern (decision point 3)."""
     sm = _map(axis_labels, {"state": {"label": {"remap": {"open": "Open"}}}})
-    fail = next(
+    found = next(
         r
         for r in pc._check_substrate_board_conflict(BOARD_CONFIG, sm)
-        if r.status == "fail"
+        if r.status == "warn"
     )
-    assert fail.remediation is not None
-    assert "state: { board: true }" not in fail.remediation
-    assert "cannot yet declare board carriage" in fail.remediation
-    assert "Remove the `label:` binding" in fail.remediation
+    assert found.remediation is not None
+    assert "state: { board: true }" not in found.remediation
+    assert "cannot yet declare board carriage" in found.remediation
+    assert "Remove the `label:` binding" in found.remediation
 
 
 def test_conflict_docstring_no_longer_calls_unsupported_the_board_shape(pc) -> None:
