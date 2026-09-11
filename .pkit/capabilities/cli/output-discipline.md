@@ -48,9 +48,9 @@ Two renderers over one event stream:
 - **Styled path** — the human view. Realized by the shipped leaves `style()` (colour gate, [ADR-011](../../../docs/architecture/decisions/ADR-011-cli-styling-layer.md)) and `wrap()` (width gate, [ADR-024](../../../docs/architecture/decisions/ADR-024-cli-prose-wrapping.md)). The **plain** rendering is *this same path with both gates off* — not a separate renderer — which is why `strip_ansi(styled) == plain` holds.
 - **Machine serializer** — the stable surface (`--json`), carrying the full structure, byte-stable across TTY / `COLUMNS` / piped.
 
-**Selection** is resolved once at the command boundary, exactly as colour and width already are:
+**Selection** — the renderer is resolved once at the command boundary. Colour (`resolve_color`) and width (`resolve_width`) already resolve there today; the event-based `--json` / `--plain` selection is _(planned)_ to join them. The target contract:
 
-- explicit flags win — `--json` (machine surface), `--plain` (styled path, gates off), `--color auto|always|never`;
+- explicit flags win — `--color auto|always|never` (shipped, global); `--json` (the machine surface — today a per-command option, _(planned)_ as a boundary-resolved selector); `--plain` (styled path with gates off — _(planned)_);
 - otherwise auto from `isatty(stdout)` + `NO_COLOR` / `TERM=dumb`.
 - **Non-TTY default is plain**, with `--json` opt-in (ADR-054 Decision 5).
 - Stream discipline: data → stdout; messages / progress / errors → stderr.
