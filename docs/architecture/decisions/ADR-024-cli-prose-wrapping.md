@@ -171,7 +171,9 @@ ADR-011's.**
    consumer parses). This is the prose analogue of ADR-011's
    `strip_ansi(styled) == plain` — the thing a script depends on, pinned so it
    cannot drift. The golden test stabilizes `render_status_json` across TTY,
-   `COLUMNS`, and piped invocations.
+   `COLUMNS`, and piped invocations. ([ADR-054](ADR-054-cli-output-discipline.md)
+   generalizes this into "the machine surface is the stable contract"; this
+   byte-stability is one of its two proven instances.)
 
    A **second, weaker net** guards the human narrative against a width-wrap
    *regression*: when width resolves to no-wrap (piped / indeterminable), the
