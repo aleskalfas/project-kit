@@ -123,12 +123,14 @@ Reads the config and the capability's schemas; creates the methodology's require
 
 **Labels created by bootstrap:**
 
-- `type:*` (always) — one label per type value in `classification.yaml`.
-- `priority:*` (label-fallback mode) — one label per priority value.
-- `workstream:*` (label-fallback mode, per declared workstreams).
-- `state:*` (label-fallback mode) — one label per lifecycle state in `workflow.yaml` (`state:todo`, `state:backlog`, `state:in-progress`, `state:review`, `state:done`). These are the substrate for `move-issue`'s state machine on label-fallback adopters.
+bootstrap provisions the **kit's own** labels, so it creates a palette only for an axis the kit's labels actually carry — asked per axis of the carriage accessor (per [project-management:DEC-051-axis-carriage-activation]):
 
-Board adopters (`has_projects_v2_board: true`) skip `priority:*`, `workstream:*`, and `state:*` labels; those axes live as Projects v2 fields instead.
+- `type:*` — one label per type value in `classification.yaml`.
+- `priority:*` — one label per priority value.
+- `workstream:*` — per declared workstream.
+- `state:*` — one label per lifecycle state in `workflow.yaml` (`state:todo`, `state:backlog`, `state:in-progress`, `state:review`, `state:done`). These are the substrate for `move-issue`'s state machine.
+
+Two things suppress a palette. A **configured board** (`has_projects_v2_board: true`) claims `priority`, `workstream` and `state` where your `substrate-map.yaml` says nothing about them — those live as Projects v2 fields instead. And a **present `substrate-map.yaml`** suppresses every axis palette, including `type`: under a map, no axis reads the kit's `<axis>:*` labels, so creating them would leave unmanaged labels no reader looks at. Adopting an existing repo's own labels is `adopt-existing`'s job, not bootstrap's. Each suppressed palette is reported in the plan with the substrate that carries the axis instead.
 
 Optionally, file a starter EPIC so subsequent Task filings have a default parent:
 
@@ -148,6 +150,8 @@ Read-only diagnostic. Walks every prerequisite the methodology depends on (gh au
 
 Pre-check is the **hard gate** on every pm operation per [project-management:DEC-017-prerequisites-bootstrap-migrate-discipline]. The project-manager invokes it as Step 0 of every action; CI workflows wire it in as a PR check.
 
+Each kit-label check runs only where the kit's own `<axis>:*` labels are that axis's substrate — asked per axis of the carriage accessor, which consults your `substrate-map.yaml` first and `has_projects_v2_board` only where the map is silent ([project-management:DEC-051-axis-carriage-activation]). Every other carriage skips with a line naming the substrate that does carry the axis, rather than demanding a label you may be unable to create.
+
 **What pre-check covers at v0.17.0+:**
 
 | Check | Label |
@@ -159,8 +163,8 @@ Pre-check is the **hard gate** on every pm operation per [project-management:DEC
 | Repo accessible | connectivity |
 | Projects v2 board resolves (board mode) | substrate |
 | `type:*` labels present | labels |
-| `priority:*` / `workstream:*` labels present (label-fallback) | labels |
-| `state:*` labels present (label-fallback) | labels — new in v0.17.0 |
+| `priority:*` / `workstream:*` labels present (where the kit's labels carry the axis) | labels |
+| `state:*` labels present (where the kit's labels carry the axis) | labels — new in v0.17.0 |
 | Default branch matches config | config |
 | `workstreams.yaml` parses cleanly | config / DEC-018 |
 | `mandatory-issue-state.yaml` present + valid | schema / DEC-019 |
@@ -477,6 +481,47 @@ Two override families run across the mutating commands, and which a command expo
 - **Known exception:** `--skip-checkbox-gate` (on `close-issue` and, since #734, on `done-work`) predates this convention and fits neither family — a plain reasonless skip of a `hard-reject` gate. It is documented as discouraged, and both closure paths spell it identically so they cannot diverge. Whether it should become an audited `--bypass "<reason>"` is an open question (#734's deferred follow-up), not a settled shape.
 - **Out of scope:** `merge-pr --admin` is a `gh pr merge --admin` branch-protection passthrough, not a methodology override.
 - **New commands** pick the flag by the same question; a second bypassable gate takes a `--bypass-<gate>` name.
+
+#### Corpus back-fill — seeding (and repairing) a value across every issue (per [project-management:DEC-037-adoption-ceremony] §2)
+
+`back-fill` is the auditable **propose-and-cite** ceremony for a one-time bulk transform over your existing issues. It **enumerates** the proposed per-issue change, **cites** why each is proposed, and **presents the report as the gate** — nothing is written until you apply. Applying re-reads each issue immediately before writing (a value that drifted since the report is skipped, not overwritten), and is idempotent by value-equality, so a re-run after an interrupted apply completes only the rest.
+
+```
+pkit pm back-fill                     # the report — mutates nothing; this IS the gate
+pkit pm back-fill --json              # the same plan, machine-readable
+pkit pm back-fill --apply             # drive the reviewed plan (confirmation-gated; --yes for CI)
+pkit pm back-fill --emit-script       # draft-not-apply: a script you run yourself; pm writes nothing
+```
+
+**Change kinds, and where each one's intent is declared.** The declaration point differs by substrate, because the substrate-map cannot carry a board field-id or a milestone title (DEC-037 §3):
+
+| Kind | Writes | Declared in |
+|---|---|---|
+| `set-board-field` | a Projects v2 single-select / text **field value** | a `set-board-field` hook on `after_create_issue` in `project/hooks.yaml` |
+| `assign-milestone` | the issue's **milestone** | an `assign-milestone` hook on the same event |
+| `set-axis-label` | a classification axis's **label** | a per-axis `default:` on a **label-carried** axis in `project/substrate-map.yaml` |
+
+Each kind applies corpus-wide exactly what its declaration already seeds on a newly-filed issue — so declaring a go-forward default also enrols the historical corpus, which the report states in its header.
+
+**`set-axis-label` is the corpus-repair path.** It exists for the damage described in [project-management:DEC-051-axis-carriage-activation]: if you have a Projects v2 board configured *and* your map binds `priority` (or `workstream`) to your own labels, issues filed during the affected window got the value written to **neither** substrate. Four things about it are worth knowing before you run it:
+
+- **It writes *your* label, not ours.** The value resolves through the write seam under your `remap` — your `P0`, never the kit's `priority:High`. If your declared `default:` has no `remap` entry, the intent is reported **UNRESOLVABLE** and *nothing is written for that axis*: the kit will not substitute a label you do not manage. Add the `remap` entry and re-run.
+- **It fills gaps; it never overwrites.** An issue that already carries a value on the axis is not proposed at all — whether that value is the target or a different one somebody chose. A small proposed set means few gaps, not an arbitrary subset. This is also where its idempotency comes from: re-run it over a repaired corpus and it plans nothing.
+- **It only applies to a label-carried axis.** Which substrate carries an axis is resolved once, centrally: an axis bound `board: true` is `set-board-field`'s job, and a `title-prefix` / `derive` / unsupported axis has no label to write. `state` is excluded outright — it is derived from your tracker's own lifecycle, so seeding it would contradict the substrate rather than repair it.
+- **It needs a value to write, from one of two places.** The lost per-issue values are not recoverable, so a corpus repair can only write one declared value across the affected issues. Either supply it for the run — `pkit pm back-fill --set priority=High`, repeatable per axis — or declare it in the map as the axis's `default:`, which is also what new issues get seeded with. The `--set` value is the methodology value (`High`), not your substrate's label (`P1`): it resolves through your remap exactly as a declared default does, so the kit never writes a label you do not manage. An axis named with `--set` is never silently skipped — an unknown axis, a value your remap has no entry for, or an axis a board rather than a label carries is refused by name.
+
+  To declare it in the map instead:
+
+```yaml
+schema_version: 1
+axes:
+  priority:
+    label:
+      remap: { High: P0, Medium: P1, Low: P2 }
+    default: Medium        # ← what back-fill seeds onto issues with no priority
+```
+
+**Note on `--emit-script`.** The emitted script re-checks each value before writing. The **label** guard fails *closed* — if the re-read itself fails, it skips rather than writing blind. The milestone and board-field guards currently fail *open* on a failed re-read (a known defect); `--apply` is the drift-safe path on every substrate.
 
 ### 5. (Optional) Declare lifecycle hooks
 

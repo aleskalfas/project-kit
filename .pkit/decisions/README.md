@@ -72,7 +72,7 @@ What situation or question prompted this decision?
 
 ## Decision
 
-What was decided. Single sentence ideally; complex decisions may use sub-sections (D1, D2, …) but the top line stays crisp.
+What was decided. Single sentence ideally; complex decisions may use a numbered list (1., 2., …) but the top line stays crisp.
 
 ## Rationale
 
@@ -112,6 +112,10 @@ Acceptance is intentionally cheap — flipping `proposed → accepted` is one li
 ## Refining an accepted record
 
 For clarifications, scope tweaks, or refinements that do not invalidate the original decision: edit the record in place. Git history is the change log — the spec does not duplicate it inside the record itself. For changes that overturn the original, write a new superseding record instead.
+
+**Editing in place means editing in place.** A correction is folded into the body so the record simply states what is true; it is not appended as an amendment section, a dated correction marker, or a "previously we believed" passage. Those turn a record into a changelog with a statement buried in it, and each one looks like diligence, so the habit spreads by imitation. If a record was wrong about a fact and the decision has not changed, fix the sentence. If the decision changed, supersede.
+
+Two in-body markers are *not* narration of a revision and are correct to keep: the **superseded-by** line a superseded record carries, and a **forward refinement pointer** naming a later record that extends this one (the `(refinement per <record>)` sub-section form). Both point at another record rather than at a discarded belief.
 
 ## Adding a record
 

@@ -66,7 +66,7 @@ def test_footprint_aggregates_backbone_and_adapter(repo: Path) -> None:
     assert vis.footprint(repo) == [".pkit/", ".claude/skills", ".claude/agents"]
 
 
-# --- runtime-ignore aggregation (ADR-009 Amendment 1) ------------------------
+# --- runtime-ignore aggregation (ADR-009 rule 7) ------------------------
 
 def _install_capability_with_runtime_ignore(
     root: Path, name: str, runtime_ignore: list[str]
@@ -128,7 +128,7 @@ def test_runtime_ignore_tolerates_component_without_key(repo: Path) -> None:
     assert vis.runtime_ignore(repo) == list(vis._BACKBONE_RUNTIME_IGNORE)
 
 
-# --- runtime-ignore renderer (ADR-009 Amendment 1, T2) -----------------------
+# --- runtime-ignore renderer (ADR-009 rule 7) -----------------------
 
 def test_render_strips_pkit_prefix_for_nested_gitignore(repo: Path) -> None:
     # Patterns are stored repo-root-relative; the file lives at `.pkit/.gitignore`,
@@ -267,7 +267,7 @@ def test_committed_pkit_gitignore_ignores_pm_journal() -> None:
 # --- visibility interaction of the rendered .pkit/.gitignore (ADR-009 Am.1 A2) -
 #
 # T4 (EPIC #154): pin how the rendered `.pkit/.gitignore` (T2) interacts with the
-# share/hide visibility mechanism (v1). The invariants, per ADR-009 Amendment 1
+# share/hide visibility mechanism (v1). The invariants, per ADR-009 rule 7
 # A2 ("Why this honours v1's privacy rationale"):
 #   - private routes the *entire* `.pkit/` tree into `info/exclude`, so the
 #     rendered `.pkit/.gitignore` is excluded along with it — inert, no committed

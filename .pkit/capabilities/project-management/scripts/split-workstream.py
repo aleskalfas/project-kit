@@ -49,6 +49,7 @@ from ruamel.yaml.error import YAMLError
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import bootstrap_gate  # noqa: E402
+from _lib import axis_carriage  # noqa: E402
 from _lib import axis_labels  # noqa: E402
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 
@@ -197,7 +198,18 @@ def main() -> int:
         return 1
 
     config = _read_yaml(capability_root / "project" / "config.yaml", yaml_loader)
-    has_board = bool(config.get("has_projects_v2_board", False))
+
+    # Whether the kit's own `workstream:*` labels may be CREATED, RETAGGED and
+    # DELETED here — asked of the carriage accessor, never of the board flag alone
+    # ([project-management:DEC-051-axis-carriage-activation] decision point 4). A
+    # flag-only test would let a board adopter whose map binds `workstream` to
+    # their own labels reach both `gh label create` (an unmanaged label) and
+    # `gh label delete` (a name the kit never owned).
+    substrate_map = axis_labels.load_substrate_map(capability_root)
+    kit_label_note = axis_carriage.kit_label_mutation_note(
+        "workstream", config, substrate_map
+    )
+    kit_labels = kit_label_note is None
 
     print(f"split-workstream: {args.source} → {', '.join(args.into)}")
     if args.default:
@@ -205,11 +217,13 @@ def main() -> int:
     else:
         print("  default retag: <none> — issues will be flagged but not retagged")
 
-    if not has_board and not args.skip_labels:
+    if kit_labels and not args.skip_labels:
         count = _gh_count_label_uses(axis_labels.label("workstream", args.source), config)
         print(
             f"  source label uses: {count if count is not None else '?'} issue(s)"
         )
+    elif kit_label_note is not None:
+        print(f"  source label uses: n/a — {kit_label_note}")
 
     if args.dry_run:
         print("\n[dry-run] nothing written; no gh invocation.")
@@ -238,7 +252,7 @@ def main() -> int:
         return 2
 
     # Label ops.
-    if not has_board and not args.skip_labels:
+    if kit_labels and not args.skip_labels:
         for slug in args.into:
             _gh_label_create(slug, config)
         if args.default:
@@ -257,7 +271,7 @@ def main() -> int:
         f"\n[ok] split workstream {args.source!r} into "
         f"{', '.join(args.into)}."
     )
-    if not args.default and not has_board:
+    if not args.default and kit_labels:
         print(
             f"[reminder] {args.source!r} label was kept (no --default). "
             "Manually retag each affected issue, then delete the label."

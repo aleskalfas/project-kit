@@ -123,7 +123,6 @@ def _compute_plan(bs, cap_root: Path, classification, existing: set[str]):
         return bs._compute_plan(
             config={"has_projects_v2_board": True},  # board mode: quiet axis noise
             classification=classification,
-            has_board=True,
             with_starter_epic=False,
             capability_root=cap_root,
         )

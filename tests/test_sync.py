@@ -65,7 +65,7 @@ def test_sync_self_host_runs_deploy_primitives_only(monkeypatch: pytest.MonkeyPa
 
     assert called["deploy"] == 1
     # The renderer is a CORE step, not an adapter primitive — it must run on the
-    # self-host short-circuit too (ADR-009 Amendment 1, T2), or backbone /
+    # self-host short-circuit too (ADR-009 rule 7), or backbone /
     # capability runtime ignores would never render without an adapter.
     assert called["render"] == 1
 

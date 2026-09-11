@@ -57,6 +57,8 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
+from _lib import axis_carriage  # noqa: E402
+from _lib import axis_labels  # noqa: E402
 from _lib import bootstrap_gate  # noqa: E402
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import (  # noqa: E402
@@ -159,7 +161,8 @@ def main() -> int:
     peer_states = [_gather_peer_state(p) for p in peers]
 
     # Compare.
-    drift = _compare(local, peer_states, config)
+    substrate_map = axis_labels.load_substrate_map(capability_root)
+    drift = _compare(local, peer_states, substrate_map, config)
 
     if args.json:
         out = {
@@ -259,9 +262,13 @@ def _gather_peer_state(peer: PeerSpec) -> PeerState:
 # ---- comparison -----------------------------------------------------
 
 
-def _compare(local: PeerState, peers: list[PeerState], config: dict) -> list[dict]:
+def _compare(
+    local: PeerState,
+    peers: list[PeerState],
+    substrate_map: axis_labels.SubstrateMap | None,
+    config: dict | None = None,
+) -> list[dict]:
     drift: list[dict] = []
-    has_board = bool(config.get("has_projects_v2_board", False))
 
     for peer in peers:
         # Capability version drift.
@@ -275,10 +282,24 @@ def _compare(local: PeerState, peers: list[PeerState], config: dict) -> list[dic
                     "severity": "warning",
                 })
 
-        # Label drift — only methodology-mandated classes.
+        # Label drift — only methodology-mandated classes, and only where the
+        # kit's OWN `<axis>:*` labels are the substrate.
+        #
+        # The predicate is the CARRIAGE accessor's `expects_kit_labels`, not the
+        # seam's same-named one. The seam's is `substrate_map is None` — a pure
+        # map-presence question that cannot see the board. Under greenfield WITH a
+        # board, priority and workstream live on board fields, so the kit's
+        # `priority:*` vocabulary means nothing to either peer; comparing it there
+        # is how a leftover kit label from before the board became a recurring
+        # drift warning that neither side can act on. The previous code skipped
+        # that case by reading the flag inline. Carriage answers it correctly for
+        # all four shapes — greenfield/board, greenfield/no-board, bound, and
+        # absent-from-a-present-map — which is exactly the drift this accessor
+        # exists to prevent, so this comparison asks it rather than keeping a
+        # second opinion.
         for axis in ("type", "priority", "workstream"):
-            if axis in ("priority", "workstream") and has_board:
-                continue  # board adopters don't use these labels
+            if not axis_carriage.expects_kit_labels(axis, config, substrate_map):
+                continue
             local_set = {l for l in local.labels if l.startswith(f"{axis}:")}
             peer_set = {l for l in peer.labels if l.startswith(f"{axis}:")}
             if local_set != peer_set:

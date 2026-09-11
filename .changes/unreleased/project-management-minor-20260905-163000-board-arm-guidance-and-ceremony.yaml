@@ -1,0 +1,44 @@
+component: project-management
+kind: minor
+custom:
+  category: Changed
+  pr: "794"
+body: >
+  The guidance that told adopters to spell board carriage `unsupported: true` is
+  withdrawn at its source, and the onboarding ceremony that produced that shape
+  now drafts `board: true`.
+
+  `pre-check`'s cross-substrate conflict message — the one place the withdrawn
+  instruction was actually shown to an adopter — now names `board: true` as the
+  board-backed exit, in both its live remediation and its docstring. The `state`
+  arm of that message is worded separately and deliberately: `board:` is
+  admissible on `priority` and `workstream` only, so a `state` adopter is told to
+  remove the competing binding rather than to write a map `pkit schemas validate`
+  would reject.
+
+  `adopt-existing` drafts `board: true` for a `priority`- or `workstream`-shaped
+  field on the configured Projects-v2 board. It previously detected such a field
+  and then drafted `unsupported: true` over it, because the map had no way to name
+  the board — which is where the reported adopter's broken map came from. The
+  field name and its options stay in the audit report as context (the
+  `after_create_issue` hook needs them; the map deliberately does not carry them),
+  and label bindings still win when both a label set and a board field are
+  observed — with the overlap now reported, since that pair is the conflict
+  `pre-check` refuses.
+
+  `pre-check` gains three checks for the arm. `board: true` under a config
+  declaring no board is **refused** — the pair is unsatisfiable, and that refusal
+  is deliberately hard. A `default:` on a `board:` arm with no `set-board-field`
+  hook behind it **warns**, bounded by what a hook can actually be matched to: a
+  hook declares an opaque `field_id` and never an axis, so an existing hook yields
+  "unverified" rather than a false all-clear. And a board-declarable axis absent
+  from a *present* map under a configured board is **reported** — carriage for
+  that axis is unchanged and still comes from the flag; the note says so and gives
+  the one-line edit that makes it explicit, which is how the cleanliness is bought
+  without changing anyone's configuration meaning.
+
+  A warn-on-detect capability migration reaches adopters who already followed the
+  old advice: it reports the one-line change where a configured board, an axis
+  marked `unsupported: true`, and a `set-board-field` hook all coincide. It never
+  edits `substrate-map.yaml` — the file is adopter-owned hand-authored intent, and
+  the three-way signature is a heuristic, not a proof.

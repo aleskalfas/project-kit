@@ -2293,7 +2293,7 @@ def test_build_labels_title_prefix_type_kind_feature_writes_no_label(ci) -> None
         kind="feature",
         priority="Medium",
         workstream=None,
-        has_board=False,
+        config={},
         substrate_map=substrate_map,
     )
     assert "[Feature]" not in labels
@@ -2312,7 +2312,7 @@ def test_build_labels_title_prefix_type_no_label_for_any_kind(ci) -> None:
             kind=kind,
             priority="Medium",
             workstream=None,
-            has_board=False,
+            config={},
             substrate_map=substrate_map,
         )
         assert not any(lbl.startswith("[") for lbl in labels), kind
@@ -2328,7 +2328,7 @@ def test_build_labels_title_prefix_map_still_writes_label_bound_axis(ci) -> None
         kind="feature",
         priority="Medium",
         workstream=None,
-        has_board=False,
+        config={},
         substrate_map=substrate_map,
     )
     assert "P1" in labels
@@ -2343,11 +2343,74 @@ def test_build_labels_greenfield_type_still_writes_kit_label(ci) -> None:
         kind="feature",
         priority="Medium",
         workstream=None,
-        has_board=False,
+        config={},
         substrate_map=None,
     )
     assert "type:feature" in labels
     assert resolved["type"] == "type:feature"
+
+
+# --- carriage decides the label, per axis (#712 / DEC-051) -------------------
+#
+# `priority` / `workstream` used to be appended to the resolution list only
+# `if not has_board` — a board-versus-label decision taken BEFORE the seam was
+# consulted. Under a configured board a label-bound axis never reached the seam,
+# so no label was written for an axis whose own map said labels carry it, and
+# nothing wrote the board field either: the value landed nowhere (#708).
+
+_BOARD_CONFIG_ONLY = {"has_projects_v2_board": True, "projects_v2_board_id": 7}
+
+
+def test_build_labels_map_binding_beats_the_board_flag(ci) -> None:
+    """A `label` binding governs the axis it names, board flag or not — the label
+    is written, and it is the ADOPTER's (`P0`), not the kit's `priority:High`."""
+    sm = ci.axis_labels.SubstrateMap(
+        axes={"priority": {"label": {"remap": {"High": "P0"}}}}
+    )
+    labels, advisories, resolved = ci._build_labels(
+        kind="feature",
+        priority="High",
+        workstream=None,
+        config=_BOARD_CONFIG_ONLY,
+        substrate_map=sm,
+    )
+    assert "P0" in labels
+    assert resolved["priority"] == "P0"
+    assert not any("priority" in a for a in advisories)
+
+
+def test_build_labels_board_carried_axis_writes_no_label_and_no_advisory(ci) -> None:
+    """The map is silent about `priority`, so the flag still governs and the board
+    carries it: no label — and NO "unsupported" advisory, because the axis is
+    SERVED. `resolve_write` returns DEGRADE for a board-carried axis exactly as it
+    does for an absent one, so a writer keying on the resolver alone would report a
+    served axis as unsupported (ADR-053 decision point 6)."""
+    labels, advisories, resolved = ci._build_labels(
+        kind="feature",
+        priority="High",
+        workstream=None,
+        config=_BOARD_CONFIG_ONLY,
+        substrate_map=None,
+    )
+    assert not any(lbl.startswith("priority") or lbl == "P0" for lbl in labels)
+    assert "priority" not in resolved
+    assert not any("priority" in a for a in advisories)
+
+
+def test_build_labels_declared_unsupported_axis_still_advises(ci) -> None:
+    """The advisory is not removed, only narrowed to the axes it is true of: an
+    axis the adopter declared `unsupported`, with no board to fall through to,
+    genuinely has no substrate and still says so."""
+    sm = ci.axis_labels.SubstrateMap(axes={"priority": {"unsupported": True}})
+    labels, advisories, _resolved = ci._build_labels(
+        kind="feature",
+        priority="High",
+        workstream=None,
+        config={"has_projects_v2_board": False},
+        substrate_map=sm,
+    )
+    assert not any(lbl.startswith("priority") for lbl in labels)
+    assert any("priority" in a and "unsupported" in a for a in advisories)
 
 
 def test_build_labels_label_bound_type_still_writes_its_label(ci) -> None:
@@ -2362,7 +2425,7 @@ def test_build_labels_label_bound_type_still_writes_its_label(ci) -> None:
         kind="feature",
         priority="Medium",
         workstream=None,
-        has_board=False,
+        config={},
         substrate_map=label_bound,
     )
     assert "kind/feature" in labels

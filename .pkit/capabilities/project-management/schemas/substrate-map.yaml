@@ -26,10 +26,20 @@
 #   - derive:       a detection predicate (lifecycle-state; the DEC-033
 #                   detector swap over open/closed). The predicate ENGINE
 #                   is sibling Wave-2 work — this declares the shape only.
+#   - board:        the value lives on a field of the configured Projects-v2
+#                   board, not on a label. PARAMETERLESS (`board: true`):
+#                   the field identity is a WRITE parameter declared on the
+#                   `after_create_issue` hook, and a field name here would
+#                   be a claim about a live board this file cannot check.
+#                   `priority` / `workstream` ONLY, and requires a board in
+#                   project/config.yaml. CONTRAST `unsupported`: a `board`
+#                   axis is SERVED — rules needing it are not softened.
 #   - unsupported:  the axis has no native encoding; degrade.
 # Any binding MAY carry an optional `default:` — a substrate value the
 # writer seeds when the caller supplies none. The read seam never invents
-# it; it is a write-side note.
+# it; it is a write-side note. On a `board` axis the `default:` is
+# corroborating metadata only (the hook carries the write), so one with no
+# matching `set-board-field` hook behind it is reported.
 #
 # A methodology value with no entry in a bound axis's remap is
 # *value-unresolvable within a bound axis* (ADR-026 fourth arm): it
@@ -116,10 +126,14 @@ axes:
         task: "[Task]"
         epic: "[Epic]"
 
-  # Workstream: the tracker has no workstream encoding — explicitly
-  # unsupported (equivalent to omitting the key; written for the record).
+  # Workstream: carried by a field on the configured Projects-v2 board.
+  # `board: true` says which SUBSTRATE holds it; the field identity and the
+  # option id live on the `after_create_issue` set-board-field hook. Do NOT
+  # write `unsupported: true` here to mean "the board has it" — that says
+  # the axis has no encoding at all and degrades every rule needing it.
   workstream:
-    unsupported: true
+    board: true
+    default: Platform
 
   # Lifecycle-state: derived from open/closed + a blocked label (the
   # DEC-033 detector swap). The reduced state set collapses the open-ish

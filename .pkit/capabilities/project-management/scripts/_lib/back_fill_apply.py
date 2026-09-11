@@ -51,17 +51,34 @@ failures would defeat the audit.
 
 Construction routes through the seam (ADR-031)
 ----------------------------------------------
-Every executed write goes through ``_lib.substrate_writes`` executing forms
-(``write_field_value`` / ``write_milestone``). This module NEVER string-builds a
-``gh`` write — the sole-constructor guard (``test_pm_substrate_write_seam``)
-covers it. The plan's ``argv`` is used only for *display* and for the emit-script
-(where it is the exact reviewed write, rendered verbatim, not re-derived).
+Every executed *non-label* write goes through ``_lib.substrate_writes`` executing
+forms (``write_field_value`` / ``write_milestone``). This module NEVER
+string-builds one of those — the sole-constructor guard
+(``test_pm_substrate_write_seam``) covers it. The plan's ``argv`` is used only for
+*display* and for the emit-script (where it is the exact reviewed write, rendered
+verbatim, not re-derived).
+
+The third kind is a LABEL write, and its seam is a different one
+-----------------------------------------------------------------
+``set-axis-label`` (the corpus-repair kind, #818) writes a classification axis's
+value as a **label**. ADR-031's seam is *non-label by charter* — it owns the
+Projects-v2 field value and the milestone — so the label write does not belong
+there. The seam that governs a label write is ADR-026's: the label *string* is
+produced only by ``axis_labels.resolve_write``, at plan time, in ``back-fill.py``.
+By the time a ``PlannedChange`` reaches this module the substrate value is already
+resolved (``change.target``), and what is left is the ``gh issue edit --add-label``
+argv, constructed once here (:func:`axis_label_args`) and consumed by both the
+plan and the apply so the two cannot desync. This module never composes an
+``<axis>:<value>`` label itself — doing so would route around ADR-026's sole
+constructor, which is exactly the unmanaged-label failure the substrate design
+exists to prevent.
 """
 
 from __future__ import annotations
 
 import json
 import shlex
+import subprocess
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
@@ -75,12 +92,66 @@ try:
 except ImportError:  # pragma: no cover
     from _lib import substrate_writes  # type: ignore[no-redef]
 
+# ADR-026's label seam. Used here for ONE thing — the `<axis>:` prefix the emitted
+# guard tests against. Asking the seam for it rather than spelling `f"{axis}:"`
+# keeps the prefix's definition in the single place that owns it; a second spelling
+# is how the two sides of a substrate question start to disagree.
+try:
+    import axis_labels  # type: ignore[import-not-found]
+except ImportError:  # pragma: no cover
+    from _lib import axis_labels  # type: ignore[no-redef]
+
+# The gh shell-out helper (adopter host/owner pinned per DEC-023). Imported the
+# same defensive way `substrate_writes` imports it, for the one write this module
+# executes itself: the label write, which ADR-031's non-label seam does not own.
+try:
+    from gh import gh_run  # type: ignore[import-not-found]
+except ImportError:  # pragma: no cover
+    try:
+        from _lib.gh import gh_run  # type: ignore[no-redef]
+    except ImportError:  # pragma: no cover
+        gh_run = None  # type: ignore[assignment]
+
 
 # The plan schema_version this engine consumes. Pinned so a saved plan produced
 # by a future, incompatible report half is refused rather than mis-applied
 # (DEC-037 §2 — applying against a plan whose shape you misread is exactly the
 # blind-overwrite failure mode the audit exists to rule out).
+#
+# NOT bumped by the `set-axis-label` kind (#818): every addition that kind makes
+# to the plan document is *additive and optional* — new keys on the intent and
+# proposed entries, and a new `kind` value. A plan saved by the two-kind engine is
+# read by this one unchanged (the new keys read as absent), which is why refusing
+# every previously-saved plan on upgrade would cost an adopter something and buy
+# nothing. The residual exposure is the reverse direction — a plan saved HERE and
+# applied by an older engine, which filters unknown kinds and would silently apply
+# only the other two. That is an exotic downgrade-then-apply path against an
+# ephemeral review artifact; bumping to close it would break the common path.
 CONSUMED_PLAN_SCHEMA_VERSION = 1
+
+# The kinds the back-fill can apply, and where each one's intent is DECLARED.
+#
+#   * the two hook-driven kinds read their write parameters from an
+#     `after_create_issue` hook entry (DEC-037 §4) — the map cannot carry a
+#     field-id / option-id / milestone-title;
+#   * `set-axis-label` reads its value from the substrate-map's per-axis
+#     `default:`, which DEC-037 §3 names as the single declaration point for a
+#     LABEL-bound axis ("the default is the value the seam emits").
+#
+# The split is the substrate's, not an inconsistency: DEC-037 §3 is explicit that
+# the declaration point differs by substrate kind.
+HOOK_DRIVEN_KINDS: tuple[str, ...] = ("set-board-field", "assign-milestone")
+SET_AXIS_LABEL_KIND = "set-axis-label"
+APPLIABLE_KINDS: tuple[str, ...] = (*HOOK_DRIVEN_KINDS, SET_AXIS_LABEL_KIND)
+
+# The axes a `set-axis-label` change may name. This is an ALLOW-LIST, not a
+# convenience: a plan document is adopter-supplied input on the `--plan` path,
+# and the axis it carries reaches the emitted shell script. An unvalidated axis
+# is a command-injection vector there, so it is filtered at the boundary exactly
+# as `kind` is, rather than trusted because the report path happens to constrain
+# it. Kept in sync with the writable set the report path uses; a plan naming
+# anything else is dropped with its change.
+APPLIABLE_AXES: tuple[str, ...] = ("type", "priority", "workstream")
 
 
 # ----- classification: the re-validate / idempotency predicates ------------
@@ -132,7 +203,7 @@ class PlannedChange:
     """
 
     issue_number: int
-    kind: str                 # "set-board-field" | "assign-milestone"
+    kind: str                 # one of APPLIABLE_KINDS
     target: str | None        # the value the write sets; None only when blocked upstream
     observed: str | None      # the plan-time enumerated value (drift reference only)
     argv: list[str] | None    # the exact reviewed write, or None when blocked
@@ -145,6 +216,14 @@ class PlannedChange:
     project_id: str | None = None
     single_select_option_id: str | None = None
     text_value: str | None = None
+    # `set-axis-label` writes only: which classification axis this change carries,
+    # and the adopter's own label names for it. `carrier_labels` is the plan-time
+    # snapshot of `axis_labels.axis_label_vocabulary` — the remapped values ONLY;
+    # the kit's `<axis>:` labels are a prefix rather than a set and the guard tests
+    # them as one. It travels in the plan because the EMITTED script has no way to
+    # load a map (see `_axis_label_guarded_fragment`); `--apply` asks the live map.
+    axis: str | None = None
+    carrier_labels: tuple[str, ...] = ()
 
 
 def classify_change(change: PlannedChange, fresh: FreshState) -> Disposition:
@@ -173,6 +252,15 @@ def classify_change(change: PlannedChange, fresh: FreshState) -> Disposition:
     the field to *exactly the target value*, that is not a write we need to fight
     over — it is already done, idempotent, regardless of what the plan enumerated.
     Only a drift to some *other* value blocks the write.
+
+    This predicate is NOT widened for ``set-axis-label``'s stricter "only ever fill
+    a gap, never replace a value" rule, and that is the point. The label kind
+    proposes a change only for an issue carrying no value on the axis, so its
+    ``observed`` is always ``None`` — and this predicate then yields exactly the
+    stricter behaviour on its own: a value that appeared since plan time is either
+    the target (ALREADY_SATISFIED) or something else (DRIFTED), and both skip. One
+    guard, three kinds; a second drift predicate beside this one would be the drift
+    it exists to prevent.
     """
     if change.argv is None:
         return Disposition.BLOCKED
@@ -281,12 +369,15 @@ def apply_plan(
 
 
 def _execute_change(change: PlannedChange, config: dict[str, Any]) -> ApplyRecord:
-    """Execute one WOULD_WRITE change through the substrate-writes seam.
+    """Execute one WOULD_WRITE change through its substrate's write path.
 
-    Routes by kind to the seam's executing form — never string-builds a ``gh``
-    write here (ADR-031). The seam returns a failure-posture-neutral result; THIS
-    is the layer that imposes the back-fill's posture on it (record applied on ok,
-    failed on not-ok; never raise, never abort the loop).
+    Routes by kind: the two non-label kinds go to ``substrate_writes``' executing
+    forms and are never string-built here (ADR-031); the label kind goes to
+    :func:`write_axis_label`, whose argv has its own single construction point in
+    this module and whose label VALUE was resolved by ADR-026's seam at plan time.
+    Each returns a failure-posture-neutral result; THIS is the layer that imposes
+    the back-fill's posture on it (record applied on ok, failed on not-ok; never
+    raise, never abort the loop).
     """
     if change.kind == "assign-milestone":
         result = substrate_writes.write_milestone(
@@ -301,7 +392,11 @@ def _execute_change(change: PlannedChange, config: dict[str, Any]) -> ApplyRecor
             single_select_option_id=change.single_select_option_id,
             text_value=change.text_value,
         )
-    else:  # pragma: no cover — kinds are constrained upstream to the two covered ones
+    elif change.kind == SET_AXIS_LABEL_KIND:
+        result = write_axis_label(
+            config, issue_number=change.issue_number, label=change.target or "",
+        )
+    else:  # pragma: no cover — kinds are constrained upstream to the covered ones
         return ApplyRecord(
             change.issue_number, change.kind, ApplyOutcome.FAILED,
             f"unknown back-fill kind {change.kind!r}",
@@ -315,6 +410,90 @@ def _execute_change(change: PlannedChange, config: dict[str, Any]) -> ApplyRecor
         change.issue_number, change.kind, ApplyOutcome.FAILED,
         result.error or result.detail or "write failed",
     )
+
+
+# ----- the label write (ADR-026's substrate, not ADR-031's) ----------------
+
+
+@dataclass(frozen=True)
+class LabelWriteResult:
+    """Outcome of one axis-label write — the neutral carrier for the third kind.
+
+    Deliberately NOT ``substrate_writes.SubstrateWriteResult``: that type belongs
+    to ADR-031's *non-label* contract, and reusing it here would quietly file a
+    label write under a seam whose charter excludes it. It carries the same three
+    fields ``_execute_change``'s shared tail reads (``ok`` / ``detail`` /
+    ``error``), so the tail treats all three kinds alike, and it is
+    failure-posture-neutral for the same reason its sibling is: it records what
+    happened, and the apply loop decides what that means.
+    """
+
+    ok: bool
+    detail: str = ""
+    error: str = ""
+
+
+def axis_label_args(*, issue_number: int | str, label: str) -> list[str]:
+    """Construct the ``gh issue edit <n> --add-label <label>`` argv.
+
+    The one construction point for the ``set-axis-label`` write, consumed by BOTH
+    the plan (``back-fill.py`` renders it as the reviewed argv) and the apply
+    (:func:`write_axis_label` re-derives it at write time), so what the human
+    reviewed and what runs cannot drift apart.
+
+    ``label`` is the **already-resolved substrate value** — whatever
+    ``axis_labels.resolve_write`` returned for this (axis, value) under the
+    adopter's map. This function neither composes nor validates a label name: a
+    label it was not handed is a label it must not invent (ADR-026 part (i)).
+
+    ``--add-label`` and not a remove-then-add: the change kind proposes ONLY for
+    issues carrying no value on the axis (the no-overwrite rule lives at
+    enumeration), so there is never a stale value of this axis to strip. That is
+    what distinguishes this from ``set-field``'s label surgery, which is a
+    deliberate re-set and therefore does remove the stale label.
+    """
+    return ["gh", "issue", "edit", str(issue_number), "--add-label", label]
+
+
+def write_axis_label(
+    config: dict[str, Any], *, issue_number: int | str, label: str
+) -> LabelWriteResult:
+    """Construct AND execute one axis-label write; return the neutral result.
+
+    Never raises on a failed write — a non-zero ``gh`` exit (or a missing binary)
+    yields ``ok=False`` with the stderr in ``error``, for the apply loop's audited
+    skip/report posture to act on (ADR-031 §6's posture, applied to the label
+    substrate).
+    """
+    args = axis_label_args(issue_number=issue_number, label=label)
+    try:
+        proc = _gh_call(args, config)
+    except FileNotFoundError:
+        return LabelWriteResult(
+            ok=False,
+            detail="gh issue edit --add-label failed: `gh` not on PATH",
+            error="`gh` not on PATH",
+        )
+    if proc.returncode != 0:
+        stderr = (proc.stderr or "").strip() or "no stderr"
+        return LabelWriteResult(
+            ok=False,
+            detail=f"gh issue edit --add-label failed: {stderr}",
+            error=stderr,
+        )
+    return LabelWriteResult(ok=True, detail=f"added label {label!r} to #{issue_number}")
+
+
+def _gh_call(args: list[str], config: dict[str, Any]) -> Any:
+    """Call ``gh`` through the helper (DEC-023 host/owner pinning).
+
+    Mirrors ``substrate_writes._gh_call``, including its direct-subprocess
+    fallback for the import contexts where the helper is unreachable, so the label
+    write's execution path matches the non-label ones.
+    """
+    if gh_run is not None:
+        return gh_run(args, config, check=False)
+    return subprocess.run(args, capture_output=True, text=True, check=False)
 
 
 def _drift_detail(change: PlannedChange, fresh: FreshState) -> str:
@@ -383,19 +562,29 @@ _EMIT_SCRIPT_HEADER = """\
 # the draft-not-apply form). pm did NOT touch your corpus; you run this.
 #
 # IDEMPOTENT BY RE-CHECK: each write below re-reads the issue's current value
-# before writing, on BOTH substrates — the milestone write re-reads the issue's
-# milestone, and the board-field write re-reads the field value via GraphQL. Each
-# skips when the current value already equals the target (idempotent) AND skips
-# when the current value is some OTHER non-target value (a concurrent edit / drift),
-# never overwriting it. So this script is safe to re-run, and a re-run after a
-# partial apply completes only the rest.
+# before writing, on EVERY substrate — the milestone write re-reads the issue's
+# milestone, the board-field write re-reads the field value via GraphQL, and the
+# axis-label write re-reads the issue's labels. Each skips when the current value
+# already equals the target (idempotent) AND skips when the current value is some
+# OTHER non-target value (a concurrent edit / drift), never overwriting it. So this
+# script is safe to re-run, and a re-run after a partial apply completes only the
+# rest.
 #
-# FAILS OPEN ON A FAILED RE-READ: the guards above only protect a SUCCESSFUL
-# re-read. If the re-read itself FAILS (a `gh` error / rate-limit / network drop),
-# the current value reads as empty and the write RUNS — even if the field actually
-# holds a concurrent human edit the failed read could not see. This emit-script is
-# best-effort. `pm back-fill --apply` is the drift-safe path: it fails CLOSED on an
-# indeterminate read (skips rather than overwrites a value it could not confirm).
+# WHAT A *FAILED* RE-READ DOES DIFFERS BY SUBSTRATE, and the difference is a known
+# defect rather than a design:
+#
+#   * milestone + board-field — FAILS OPEN ON A FAILED RE-READ. The guards above
+#     only protect a SUCCESSFUL re-read. If the re-read itself FAILS (a `gh` error /
+#     rate-limit / network drop), the current value reads as empty and
+#     the write RUNS — even if the attribute actually holds a concurrent human
+#     edit the failed read could not see. Filed as a defect (#816), ruled to raise.
+#   * axis-label — FAILS CLOSED: a failed re-read SKIPS the write, matching
+#     `--apply`. It is the newer guard and deliberately does not copy the shape
+#     above.
+#
+# `pm back-fill --apply` is the drift-safe path on every substrate: it fails CLOSED
+# on an indeterminate read (skips rather than overwrites a value it could not
+# confirm).
 #
 # It also does NOT re-validate against the plan's enumerated `observed` the way
 # `pm back-fill --apply` does (that drift check needs pm's plan and is strictly
@@ -448,6 +637,34 @@ def render_emit_script(
     return "\n".join(lines) + "\n"
 
 
+def _comment_safe(text: str) -> str:
+    """Flatten ``text`` so it cannot escape the bash comment it is rendered into.
+
+    A citation is adopter-controlled — it quotes a substrate-map ``default:``, a
+    value supplied on the command line, or a hook entry — and on the ``--plan``
+    path it is read verbatim from a supplied document. Rendered into a ``#``
+    comment, a newline in it ENDS the comment and turns the remainder of the line
+    into a live statement in a script the operator is about to run, disguised as
+    inert prose. Collapse every line break (and the carriage return that would
+    hide one from a diff) to a space.
+    """
+    return " ".join(str(text).replace("\r", "\n").split("\n")).strip()
+
+
+def _echo_line(message: str, *, stderr: bool = True) -> str:
+    """A bash ``echo`` of ``message`` that cannot execute anything.
+
+    ``message`` carries adopter-controlled text (axis names, label values). Inside
+    DOUBLE quotes bash still performs command substitution, so ``$(...)`` in that
+    text would run when the operator executes the emitted script. Single-quoting
+    via :func:`shlex.quote` makes the whole message a literal. The cost is that a
+    ``$current`` reference cannot be interpolated by the shell, so callers pass
+    the literal part here and append any shell variable outside the quotes.
+    """
+    redirect = " >&2" if stderr else ""
+    return f"echo {shlex.quote(message)}{redirect}"
+
+
 def _emit_one(change: PlannedChange) -> str:
     """Render one change as an idempotent, value-re-checking script fragment."""
     if change.argv is None:
@@ -456,7 +673,7 @@ def _emit_one(change: PlannedChange) -> str:
             f"{change.blocked_reason or 'no write could be constructed'} — skipped."
         )
     quoted = " ".join(shlex.quote(token) for token in change.argv)
-    cite = f"  # cite: {change.citation}" if change.citation else ""
+    cite = f"  # cite: {_comment_safe(change.citation)}" if change.citation else ""
 
     if change.kind == "set-board-field":
         # The field write carries its OWN guard, symmetric with the milestone one
@@ -465,6 +682,9 @@ def _emit_one(change: PlannedChange) -> str:
         # other value) — never blind-overwrite a human's concurrent edit. This
         # mirrors `--apply`'s drift-skip on the same substrate.
         return _field_guarded_fragment(change, quoted, cite)
+
+    if change.kind == SET_AXIS_LABEL_KIND:
+        return _axis_label_guarded_fragment(change, quoted, cite)
 
     guard = _milestone_guard(change)
     return (
@@ -562,6 +782,79 @@ def _field_guarded_fragment(change: PlannedChange, quoted: str, cite: str) -> st
     )
 
 
+def _axis_label_carrier_jq(axis_prefix: str, carrier_labels: tuple[str, ...]) -> str:
+    """A jq program selecting the first label on the issue that carries the axis.
+
+    Mirrors ``axis_labels.carried_labels``' rule exactly — the UNION of the kit's
+    own ``<axis>:`` prefix and the adopter's remapped vocabulary — because the same
+    rule has to hold on both apply paths. ``--apply`` gets it by calling the seam;
+    a static shell script cannot, so the vocabulary travels in the plan and this
+    renders it. Emits ``""`` when the issue carries no value for the axis, which is
+    the only case the guard below lets through to a write.
+
+    The prefix and each vocabulary entry are embedded as JSON string literals
+    (``json.dumps``) — jq needs quoted literals here, and json.dumps escapes any
+    quote or backslash an adopter's label name contains.
+    """
+    tests = [f"startswith({json.dumps(axis_prefix)})"]
+    tests += [f". == {json.dumps(name)}" for name in carrier_labels]
+    return (
+        f"[.labels[]?.name] | map(select({' or '.join(tests)})) | (.[0] // \"\")"
+    )
+
+
+def _axis_label_guarded_fragment(change: PlannedChange, quoted: str, cite: str) -> str:
+    """A bash fragment that re-reads the issue's labels and writes only when the
+    axis is still unvalued — the fail-CLOSED guard.
+
+    Three-way, mirroring ``--apply``'s ``classify_change``:
+
+      * **re-read FAILED** → skip. This is where it deliberately parts company with
+        the two older fragments, which treat an unreadable substrate as an unset one
+        and write anyway (#816). A failed read here proves nothing about the issue,
+        and this kind's whole contract is "only fill a gap" — so an unproven gap is
+        not a gap. `if ! current=$(...)` is what makes the distinction available at
+        all: it separates a non-zero `gh` exit from a successful read that returned
+        the empty string, which a bare ``|| echo ""`` collapses into one.
+      * **current non-empty** → the issue already carries a value for this axis
+        (the target, or another one a human set since plan time); skip either way.
+        Both are the same instruction — do not overwrite.
+      * **current empty** → the confirmed gap this change exists to fill; write.
+
+    The guard is inside an ``if`` condition, so ``set -e`` does not abort the script
+    on the failing read — the skip is reported and the loop continues, which is the
+    audited skip/report posture the ``--apply`` path also takes.
+    """
+    axis = change.axis or ""
+    jq = _axis_label_carrier_jq(axis_labels.prefix(axis), change.carrier_labels)
+    reread = (
+        f"gh issue view {change.issue_number} --json labels "
+        f"--jq {shlex.quote(jq)} 2>/dev/null"
+    )
+    tag = f"#{change.issue_number} {change.kind} ({axis})"
+    # Both messages are single-quoted through `_echo_line`: `axis` reaches them
+    # and, on the `--plan` path, is adopter-supplied. Inside double quotes bash
+    # would still run a `$(...)` in it when the operator executes this script —
+    # hidden in text that reads as an inert skip notice. `$current` is therefore
+    # appended OUTSIDE the quoted literal, since the shell must expand that one.
+    failed_read = _echo_line(
+        f"skip {tag}: could not re-read labels — failing closed, nothing written"
+    )
+    already_set = _echo_line(f"skip {tag}: already carries", stderr=False)
+    return (
+        f"# {_comment_safe(tag)}{cite}\n"
+        f"# guard fails CLOSED: a FAILED re-read SKIPS the write (never fills a gap "
+        f"it could not confirm).\n"
+        f"if ! current=$({reread}); then\n"
+        f"  {failed_read}\n"
+        f'elif [ -n "$current" ]; then\n'
+        f'  {already_set} "$current" {shlex.quote(f"for {axis}; not overwriting")} >&2\n'
+        f"else\n"
+        f"  {quoted}\n"
+        f"fi"
+    )
+
+
 # ----- consume-a-saved-plan helpers ----------------------------------------
 
 
@@ -604,24 +897,37 @@ def planned_changes_from_plan(plan: dict[str, Any]) -> list[PlannedChange]:
     value. Field-value writes also recover the ``item_id`` / ``field_id`` /
     ``project_id`` from the constructed ``argv`` (the plan's argv is the exact
     write, so its flag values are the seam inputs) — no re-derivation, no
-    string-building of a new write.
+    string-building of a new write. A ``set-axis-label`` entry recovers its target
+    (the resolved label) and its axis from the matching intent.
+
+    Intents are keyed by ``(kind, axis)`` rather than by kind alone, because a plan
+    can declare a ``set-axis-label`` intent for more than one axis and keying on
+    kind would collapse them onto whichever came first — writing `priority`'s label
+    for `workstream`'s change. For the two hook-driven kinds the axis is absent, so
+    the key degenerates to ``(kind, "")`` and the lookup is exactly what it was.
     """
     intents = plan.get("intents") or []
-    intent_by_kind: dict[str, dict[str, Any]] = {}
+    intent_by_key: dict[tuple[str, str], dict[str, Any]] = {}
     for intent in intents:
         if isinstance(intent, dict) and isinstance(intent.get("kind"), str):
-            intent_by_kind.setdefault(intent["kind"], intent)
+            intent_by_key.setdefault(_intent_key(intent), intent)
 
     out: list[PlannedChange] = []
     for entry in plan.get("proposed") or []:
         if not isinstance(entry, dict):
             continue
         kind = entry.get("kind")
-        if kind not in ("set-board-field", "assign-milestone"):
+        if entry.get("axis") is not None and entry.get("axis") not in APPLIABLE_AXES:
+            # A plan document is adopter-supplied on the `--plan` path and its
+            # axis reaches the emitted shell. The render site quotes it, but an
+            # unrecognised axis cannot produce a correct write in any case, so
+            # it is dropped here too rather than trusted downstream.
+            continue
+        if kind not in APPLIABLE_KINDS:
             continue
         argv = entry.get("argv")
         argv = argv if isinstance(argv, list) else None
-        intent = intent_by_kind.get(kind, {})
+        intent = intent_by_key.get(_intent_key(entry), {})
         target, seam_inputs = _target_and_inputs(kind, intent, argv)
         out.append(PlannedChange(
             issue_number=int(entry.get("issue_number", 0)),
@@ -636,6 +942,16 @@ def planned_changes_from_plan(plan: dict[str, Any]) -> list[PlannedChange]:
     return out
 
 
+def _intent_key(entry: dict[str, Any]) -> tuple[str, str]:
+    """The ``(kind, axis)`` key matching a proposed entry to its intent.
+
+    ``axis`` is empty for every kind but ``set-axis-label``, so the two hook-driven
+    kinds key exactly as they did when the map was kind-only.
+    """
+    axis = entry.get("axis")
+    return str(entry.get("kind", "")), axis if isinstance(axis, str) else ""
+
+
 def _target_and_inputs(
     kind: str, intent: dict[str, Any], argv: list[str] | None
 ) -> tuple[str | None, dict[str, Any]]:
@@ -648,6 +964,17 @@ def _target_and_inputs(
     """
     if kind == "assign-milestone":
         return intent.get("milestone_title"), {}
+    if kind == SET_AXIS_LABEL_KIND:
+        # `label_value` is what `axis_labels.resolve_write` returned at plan time —
+        # the adopter's own substrate value. It is READ from the plan, never
+        # recomposed here: this module has no business constructing a label.
+        carriers = intent.get("carrier_labels")
+        return intent.get("label_value"), {
+            "axis": intent.get("axis"),
+            "carrier_labels": tuple(
+                name for name in (carriers or []) if isinstance(name, str)
+            ),
+        }
     # set-board-field
     option_id = intent.get("single_select_option_id")
     text_value = intent.get("text_value")

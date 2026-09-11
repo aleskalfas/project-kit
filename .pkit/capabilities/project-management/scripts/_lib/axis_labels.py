@@ -310,8 +310,8 @@ def axis_disposition(
     """Whether ``axis`` is SERVED or degrades, per the ADR-026 ternary.
 
     * No map (``substrate_map is None``) ⇒ ``"served"`` (greenfield identity).
-    * Map present, axis bound (``label`` / ``title-prefix`` / ``derive``) ⇒
-      ``"served"``.
+    * Map present, axis bound (``label`` / ``title-prefix`` / ``derive`` /
+      ``board``) ⇒ ``"served"``.
     * Map present, axis ``unsupported`` OR absent from the map ⇒
       ``"unsupported"`` (absent ≡ unsupported, the load-bearing rule).
 
@@ -333,9 +333,9 @@ def axis_disposition(
         return "unsupported"
     if binding.get("unsupported") is True:
         return "unsupported"
-    if any(key in binding for key in ("label", "title-prefix", "derive")):
+    if any(key in binding for key in ("label", "title-prefix", "derive", "board")):
         return "served"
-    # A binding mapping with none of the four arms is malformed; fail closed.
+    # A binding mapping with none of the five arms is malformed; fail closed.
     return "unsupported"
 
 
@@ -415,6 +415,46 @@ def axis_is_title_carried(
     if not isinstance(binding, dict):
         return False
     return "title-prefix" in binding
+
+
+def axis_is_board_carried(
+    axis: str, substrate_map: SubstrateMap | None
+) -> bool:
+    """Whether ``axis`` is carried by a field on the configured Projects-v2 board.
+
+    True only when a map is present AND binds ``axis`` via ``board: true``. The
+    board arm is parameterless by design: it names the SUBSTRATE, while the field
+    identity (field id / option id) stays a write parameter on the DEC-024
+    ``after_create_issue`` hook. So this predicate answers "is it on the board?",
+    never "which field?" — the latter is not the seam's to know.
+
+    This is the board mirror of :func:`axis_is_title_carried`, and exists for the
+    same reason. A label writer that keys only on :func:`resolve_write` sees
+    ``DEGRADE`` for a board-carried axis and — if it treats DEGRADE as the
+    axis being unsupported — reports "unsupported under your substrate-map" for
+    an axis that is SERVED, and softens every rule needing it. The axis is not
+    degraded; it is simply not label-carried. Consult this BEFORE resolving, and
+    contribute no label without emitting a degrade advisory.
+
+    Distinct from ``unsupported: true``, and the distinction is the whole point of
+    the arm ([project-management:DEC-051-axis-carriage-activation], decision
+    point 2): ``unsupported`` names no substrate and degrades the rules needing
+    the axis; ``board`` names one and keeps them in force. Before the arm existed
+    adopters were told to spell board carriage ``unsupported: true``, which said
+    the opposite of what they meant.
+
+    Admissible on ``priority`` and ``workstream`` only — the schema refuses it on
+    ``type`` (PR-title alignment reads the type label) and, for now, on ``state``
+    (reading a board Status field needs a detector kind that does not exist yet).
+    This function does not re-check admissibility: the schema is the gate, and a
+    second copy of the rule here would be a source of truth that can disagree.
+    """
+    if substrate_map is None:
+        return False
+    binding = substrate_map.axes.get(axis)
+    if not isinstance(binding, dict):
+        return False
+    return binding.get("board") is True
 
 
 def axis_is_label_bound(
@@ -602,6 +642,23 @@ def workstream_mutator_refusal(
     This is deliberately the MINIMAL safe gate, not the full present-map mutator
     feature: it prevents an unmanaged label ever being created, and defers the
     richer behaviour to #264.
+
+    **Why this was not widened to the SERVED-but-not-kit-label arms**
+    ([project-management:DEC-051-axis-carriage-activation]). Once the mutators gate
+    their kit-label half on carriage, a ``label`` / ``title-prefix`` / ``derive``
+    binding — and a board — must suppress that half too. Widening *this* function
+    to refuse on those arms was rejected for two reasons. First, it cannot see the
+    board: this seam reads the map only (it takes no ``config``, and ADR-053's
+    layering forbids the seam calling the carriage accessor), so a board-carried
+    axis would still slip past. Second, a refusal is the wrong posture for them: the
+    mutators' other half — editing the adopter's declared workstream vocabulary in
+    ``workstreams.yaml`` — stays meaningful under every one of those bindings, and a
+    board adopter runs these mutators today with the label half silently skipped, so
+    refusing would regress a working path. The kit-label half is instead gated (and
+    explained) by ``_lib/axis_carriage.kit_label_mutation_note``, which sees both
+    sources. This function keeps the one arm where refusal IS right: an
+    ``unsupported`` / absent axis names no substrate at all, so neither half of the
+    mutator has anything to act on.
     """
     substrate_map = load_substrate_map(capability_root)
     if axis_disposition("workstream", substrate_map) == "unsupported":
@@ -674,7 +731,18 @@ def resolve_write(
         # transitions. Refuse to invent one (fail closed).
         return DEGRADE
 
-    # Malformed binding (none of the four arms matched) ⇒ fail closed.
+    if binding.get("board") is True:
+        # A board-carried axis has no write-LABEL either: the value lives on a
+        # Projects-v2 field, written through the board write primitive, not
+        # through this seam. Same DEGRADE as `derive`, and for the same reason —
+        # but note the axis is SERVED (`axis_disposition` above), NOT degraded.
+        # A consumer that reports DEGRADE as "unsupported under your
+        # substrate-map" would be lying about a served axis, so label writers
+        # must consult `axis_is_board_carried` BEFORE resolving, exactly as they
+        # already consult `axis_is_title_carried` for the title arm.
+        return DEGRADE
+
+    # Malformed binding (none of the five arms matched) ⇒ fail closed.
     return DEGRADE
 
 
@@ -806,10 +874,14 @@ def resolve_read(
     * **Map present, axis bound to ``label``** ⇒ the kit value whose remapped
       adopter label is present (reverse of the ``label`` ``remap``). ``None`` if
       none of the adopter's mapped labels is on the issue.
-    * **Map present, axis ``derive``-bound / ``title-prefix`` / ``unsupported`` /
-      absent** ⇒ ``None``. A derived axis is read by :func:`derive_state` from
-      open/closed, NOT from a label; a title-prefix axis is read from the title,
-      not the labels; an unsupported/absent axis carries no value the seam reads.
+    * **Map present, axis ``derive``-bound / ``title-prefix`` / ``board`` /
+      ``unsupported`` / absent** ⇒ ``None``. A derived axis is read by
+      :func:`derive_state` from open/closed, NOT from a label; a title-prefix
+      axis is read from the title, not the labels; a ``board`` axis's value is on
+      a Projects-v2 field, read through the board read seam, not from labels; an
+      unsupported/absent axis carries no value the seam reads. Note ``None`` here
+      does NOT mean degraded — a ``board`` axis is served, it simply is not
+      label-carried.
 
     This is deliberately the LABEL-arm reverse-remap only — the ``state`` axis's
     ``derive`` read goes through :func:`derive_state` (it needs the open/closed
@@ -830,7 +902,7 @@ def resolve_read(
                 if isinstance(adopter_label, str) and adopter_label in present:
                     return str(kit_value)
         return None
-    # derive / title-prefix / unsupported / malformed — not a label read.
+    # derive / title-prefix / board / unsupported / malformed — not a label read.
     return None
 
 
@@ -955,6 +1027,75 @@ def read_all(axis: str, labels: list[str]) -> list[str]:
 def is_axis_label(name: str, axis: str) -> bool:
     """True when label ``name`` encodes axis ``axis`` (greenfield prefix match)."""
     return name.startswith(prefix(axis))
+
+
+def carried_labels(
+    axis: str, labels: list[str], substrate_map: SubstrateMap | None
+) -> list[str]:
+    """Every label in ``labels`` that carries ``axis``, kit-prefixed OR remapped.
+
+    The map-aware counterpart to :func:`is_axis_label`, for a writer replacing an
+    axis's value: it has to find the label(s) already carrying that axis in order
+    to strip them. A prefix match alone is only correct in greenfield. Under a
+    ``label`` binding the substrate is the adopter's OWN label name — ``P0``, with
+    no ``priority:`` prefix — so a prefix-only search finds nothing, the writer
+    adds the new label without removing the old one, and the issue accumulates two
+    values on a single-valued axis with nothing detecting it.
+
+    The two sets are UNIONed rather than switched between, deliberately: a
+    repository mid-adoption can hold a stale kit ``priority:High`` alongside the
+    adopter's ``P0``, and a writer that stripped only one of them would leave the
+    other behind. The union is a superset of the prefix-only behaviour, so a
+    greenfield caller is unchanged.
+
+    The remapped set is the binding's declared VALUES — the adopter's own
+    vocabulary for the axis (:func:`axis_label_vocabulary`). Only a ``label``
+    binding contributes them; a ``title-prefix`` value is not a label, a ``derive``
+    predicate names none, and an unsupported / absent / board-carried axis has no
+    label vocabulary. Order follows ``labels``; duplicates are not introduced.
+    """
+    vocabulary = set(axis_label_vocabulary(axis, substrate_map))
+    return [
+        name for name in labels
+        if is_axis_label(name, axis) or name in vocabulary
+    ]
+
+
+def axis_label_vocabulary(
+    axis: str, substrate_map: SubstrateMap | None
+) -> tuple[str, ...]:
+    """The adopter's own label names for ``axis`` — its declared ``remap`` values.
+
+    The vocabulary half of :func:`carried_labels`, exposed because a caller can
+    need the SET without an issue's labels in hand: a writer emitting a guard that
+    will run later (the corpus back-fill's ``--emit-script``) has to carry the
+    vocabulary with it, since a shell script cannot load the map. Reading it
+    through here rather than reaching into the binding keeps ADR-026's rule that
+    this module is the only reader of substrate-map shape.
+
+    Empty in greenfield (no map) and for every non-``label`` binding — a
+    ``title-prefix`` value is not a label, a ``derive`` predicate names none, and
+    an unsupported / absent / board-carried axis has no label vocabulary. Note what
+    it does NOT include: the kit's own ``<axis>:`` labels, which are a *prefix*
+    rather than an enumerable set (:func:`is_axis_label` is how those are matched).
+    Order follows the remap's declaration order; duplicates are dropped.
+    """
+    if substrate_map is None:
+        return ()
+    binding = substrate_map.axes.get(axis)
+    if not isinstance(binding, dict):
+        return ()
+    label_binding = binding.get("label")
+    if not isinstance(label_binding, dict):
+        return ()
+    remap = label_binding.get("remap")
+    if not isinstance(remap, dict):
+        return ()
+    return tuple(
+        dict.fromkeys(
+            mapped for mapped in remap.values() if isinstance(mapped, str) and mapped
+        )
+    )
 
 
 # ----- capability-root discovery (shared shape) --------------------------

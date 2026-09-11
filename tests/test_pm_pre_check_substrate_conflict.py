@@ -80,8 +80,10 @@ def _mockingbird_map(axis_labels):
 
 
 def _workaround_map(axis_labels):
-    """The report's own workaround: the board-backed axis is `unsupported: true`,
-    so the map AGREES with the writer — no conflict."""
+    """The report's own (now-withdrawn) workaround: the board-backed axis is
+    `unsupported: true`. It names no substrate, so it makes no competing claim —
+    no conflict. It is NOT the way to declare board carriage; see
+    `test_board_arm_is_not_a_conflict` for the shape that replaced it."""
     return axis_labels.SubstrateMap(
         axes={
             "priority": {"unsupported": True},
@@ -91,47 +93,66 @@ def _workaround_map(axis_labels):
     )
 
 
-# --- the conflict shape fails ----------------------------------------------
+# --- the two-claimant shape warns, and no longer fails ----------------------
+#
+# It used to fail, and correctly: before a rule existed for which declaration
+# wins, the state was genuinely unsatisfiable — the writer honoured the flag and
+# wrote no label, nothing wrote the board field, the reader looked for a label
+# that never existed. The axis ended up set on NEITHER substrate (#708).
+#
+# The rule exists now: a binding governs the axis it names. Writer and reader ask
+# one accessor, the value lands on the adopter's own labels, and a hard refusal
+# here would block the configuration the rule sanctions. What survives is worth
+# saying once — the board's field for that axis goes unused — which is
+# information, not a broken prerequisite.
 
 
-def test_mockingbird_conflict_fails_and_names_the_axis(pc, axis_labels) -> None:
+def test_label_bound_axis_under_a_board_warns_and_names_the_axis(pc, axis_labels) -> None:
     results = pc._check_substrate_board_conflict(
         BOARD_CONFIG, _mockingbird_map(axis_labels)
     )
-    fails = [r for r in results if r.status == "fail"]
-    assert len(fails) == 1
-    assert "priority" in fails[0].label
+    warns = [r for r in results if r.status == "warn"]
+    assert len(warns) == 1
+    assert "priority" in warns[0].label
 
 
-def test_conflict_detail_names_both_claimants_and_consequence(pc, axis_labels) -> None:
-    """The message has to be actionable on its own: both files named, and what
-    the state costs the adopter (unset on both substrates ⇒ gate unsatisfiable)."""
-    fail = next(
+def test_the_configuration_is_no_longer_refused(pc, axis_labels) -> None:
+    """The load-bearing half of the softening: this must not flip the exit code.
+
+    A hard refusal would block the very state DEC-051 point 1 makes legal, and
+    would keep the reporting adopter's CI red on a configuration that now works.
+    """
+    results = pc._check_substrate_board_conflict(
+        BOARD_CONFIG, _mockingbird_map(axis_labels)
+    )
+    assert not any(r.status == "fail" for r in results)
+
+
+def test_warning_says_the_axis_works_and_what_is_unused(pc, axis_labels) -> None:
+    """Actionable on its own: which substrate carries it, that it works, and the
+    one consequence that is easy to miss."""
+    warn = next(
         r
         for r in pc._check_substrate_board_conflict(
             BOARD_CONFIG, _mockingbird_map(axis_labels)
         )
-        if r.status == "fail"
+        if r.status == "warn"
     )
-    # Claimant 1: the config flag (with the board id when known).
-    assert "config.yaml" in fail.detail
-    assert "has_projects_v2_board: true" in fail.detail
-    assert "#2" in fail.detail
-    # Claimant 2: the substrate-map's label binding.
-    assert "substrate-map.yaml" in fail.detail
-    assert "label" in fail.detail
-    # Consequence.
-    assert "BOTH substrates" in fail.detail
-    assert "unsatisfiable" in fail.detail
-    # Remediation offers both single-substrate exits.
-    assert fail.remediation is not None
-    assert "unsupported: true" in fail.remediation
-    assert "has_projects_v2_board: false" in fail.remediation
+    assert "your OWN labels" in warn.detail
+    assert "substrate-map.yaml" in warn.detail
+    assert "#2" in warn.detail                      # names the board it is about
+    assert "UNUSED" in warn.detail                  # the consequence
+    assert "works" in warn.detail                   # and that nothing is broken
+    # Remediation is advice, not a required fix.
+    assert warn.remediation is not None
+    assert "Nothing to fix" in warn.remediation
+    assert "board: true" in warn.remediation        # the exit, if they meant it
+    assert "unsupported: true" not in warn.remediation
 
 
-def test_conflict_reported_per_axis(pc, axis_labels) -> None:
-    """Two conflicting axes ⇒ two findings, each naming its own axis, so the
-    remediation is specific rather than an aggregate."""
+def test_reported_per_axis(pc, axis_labels) -> None:
+    """Two such axes ⇒ two findings, each naming its own, so the advice is
+    specific rather than an aggregate."""
     both = axis_labels.SubstrateMap(
         axes={
             "priority": {"label": {"remap": {"High": "P0"}}},
@@ -139,32 +160,31 @@ def test_conflict_reported_per_axis(pc, axis_labels) -> None:
         }
     )
     results = pc._check_substrate_board_conflict(BOARD_CONFIG, both)
-    labels = [r.label for r in results if r.status == "fail"]
+    labels = [r.label for r in results if r.status == "warn"]
     assert len(labels) == 2
     assert any("priority" in lbl for lbl in labels)
     assert any("workstream" in lbl for lbl in labels)
 
 
-def test_label_bound_state_axis_conflicts_too(pc, axis_labels) -> None:
-    """`state` is board-claimed as well (move-issue writes no `state:*` label
-    under a board), so a label-bound state axis is the same failure."""
+def test_label_bound_state_axis_warns_too(pc, axis_labels) -> None:
     sm = axis_labels.SubstrateMap(
         axes={"state": {"label": {"remap": {"open": "Status: Open"}}}}
     )
     results = pc._check_substrate_board_conflict(BOARD_CONFIG, sm)
-    assert any(r.status == "fail" and "state" in r.label for r in results)
+    assert any(r.status == "warn" and "state" in r.label for r in results)
 
 
-def test_conflict_is_a_fail_not_a_warn(pc, axis_labels) -> None:
-    """The severity choice is load-bearing: pre-check is the hard prerequisite
-    gate and this state makes the review gate unsatisfiable, so it must flip the
-    exit code, not whisper. (A `warn` would be lost in a passing run — exactly
-    the invisibility report #708 is about.)"""
-    results = pc._check_substrate_board_conflict(
-        BOARD_CONFIG, _mockingbird_map(axis_labels)
-    )
+def test_the_softening_does_not_reach_the_unsatisfiable_pair(pc, axis_labels) -> None:
+    """The one refusal that must survive.
+
+    `board: true` on an axis while the config declares no board is genuinely
+    unsatisfiable — "the value lives on my board" plus "I have no board" — and it
+    lives in its own check. Softening the two-claimant state must not sweep it in.
+    """
+    sm = axis_labels.SubstrateMap(axes={"priority": {"board": True}})
+    no_board = {"has_projects_v2_board": False}
+    results = pc._check_substrate_board_arm_satisfiable(no_board, sm)
     assert any(r.status == "fail" for r in results)
-    assert not any(r.status == "warn" for r in results)
 
 
 # --- clean configurations do not trip it -----------------------------------

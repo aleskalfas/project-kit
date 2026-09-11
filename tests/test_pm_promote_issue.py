@@ -57,10 +57,10 @@ def pi():
 # wrapper-local functions.
 
 
-# ---- _detect_state_from_labels (idempotency path, #219) ----------------
+# ---- _detect_current_state (idempotency path, #219) -------------------
 
 
-def test_detect_state_from_labels_returns_bare_state(pi, monkeypatch) -> None:
+def test_detect_current_state_returns_bare_state(pi, monkeypatch) -> None:
     """Issue with `state:backlog` label → returns `"backlog"`."""
     def fake_gh_run(args, config, **kwargs):
         import subprocess
@@ -76,10 +76,10 @@ def test_detect_state_from_labels_returns_bare_state(pi, monkeypatch) -> None:
             stderr="",
         )
     monkeypatch.setattr(pi, "gh_run", fake_gh_run)
-    assert pi._detect_state_from_labels(42, {}) == "backlog"
+    assert pi._detect_current_state(42, {}) == "backlog"
 
 
-def test_detect_state_from_labels_none_when_no_state_label(pi, monkeypatch) -> None:
+def test_detect_current_state_none_when_no_state_label(pi, monkeypatch) -> None:
     """No `state:*` label → returns None (the issue is at the implicit Todo state)."""
     def fake_gh_run(args, config, **kwargs):
         import subprocess
@@ -89,10 +89,10 @@ def test_detect_state_from_labels_none_when_no_state_label(pi, monkeypatch) -> N
             stderr="",
         )
     monkeypatch.setattr(pi, "gh_run", fake_gh_run)
-    assert pi._detect_state_from_labels(42, {}) is None
+    assert pi._detect_current_state(42, {}) is None
 
 
-def test_detect_state_from_labels_gh_failure_returns_none(pi, monkeypatch) -> None:
+def test_detect_current_state_gh_failure_returns_none(pi, monkeypatch) -> None:
     """gh view failure → None (caller treats as "unknown state, proceed to transition")."""
     def fake_gh_run(args, config, **kwargs):
         import subprocess
@@ -100,10 +100,10 @@ def test_detect_state_from_labels_gh_failure_returns_none(pi, monkeypatch) -> No
             args=args, returncode=1, stdout="", stderr="boom",
         )
     monkeypatch.setattr(pi, "gh_run", fake_gh_run)
-    assert pi._detect_state_from_labels(42, {}) is None
+    assert pi._detect_current_state(42, {}) is None
 
 
-def test_detect_state_from_labels_recognises_in_progress(pi, monkeypatch) -> None:
+def test_detect_current_state_recognises_in_progress(pi, monkeypatch) -> None:
     """All four post-Todo states are recognised — promote-issue exits cleanly on any of them."""
     for state in ("backlog", "in-progress", "review", "done"):
         def fake_gh_run(args, config, _state=state, **kwargs):
@@ -114,9 +114,61 @@ def test_detect_state_from_labels_recognises_in_progress(pi, monkeypatch) -> Non
                 stderr="",
             )
         monkeypatch.setattr(pi, "gh_run", fake_gh_run)
-        assert pi._detect_state_from_labels(42, {}) == state, (
+        assert pi._detect_current_state(42, {}) == state, (
             f"state:{state} label not recognised"
         )
+
+
+def _fake_gh_returning(labels: list[str]):
+    """A `gh issue view --json labels` stub returning ``labels``."""
+    def fake_gh_run(args, config, **kwargs):
+        import subprocess
+        return subprocess.CompletedProcess(
+            args=args, returncode=0,
+            stdout=json.dumps({"labels": [{"name": n} for n in labels]}),
+            stderr="",
+        )
+    return fake_gh_run
+
+
+def test_detect_current_state_reads_a_label_bound_state(pi, monkeypatch) -> None:
+    """A `label`-bound `state` (the adopter's own `Ready`) resolves to the kit
+    value, so the idempotent skip fires. The kit-prefix read found nothing here,
+    and promote-issue failed with "no transition backlog → backlog" — the #219
+    regression through a substrate #219 predates."""
+    smap = pi.axis_labels.SubstrateMap(
+        axes={"state": {"label": {"remap": {"backlog": "Ready", "todo": "Inbox"}}}}
+    )
+    monkeypatch.setattr(pi, "gh_run", _fake_gh_returning(["Ready", "type:bug"]))
+    assert pi._detect_current_state(42, {}, smap) == "backlog"
+
+
+def test_detect_current_state_ignores_a_stale_kit_label_under_a_board(
+    pi, monkeypatch
+) -> None:
+    """Under a configured board the kit's `state:*` labels are NOT the substrate,
+    so a stale one must not be trusted: a false skip means the promotion silently
+    does not happen. The board field itself is deliberately NOT read here."""
+    called: list = []
+
+    def fake_gh_run(args, config, **kwargs):  # pragma: no cover - must not run
+        called.append(args)
+        raise AssertionError("no gh call may be made for a board-carried state")
+
+    monkeypatch.setattr(pi, "gh_run", fake_gh_run)
+    assert pi._detect_current_state(42, {"has_projects_v2_board": True}, None) is None
+    assert called == []
+
+
+def test_detect_current_state_none_for_a_derive_bound_state(pi, monkeypatch) -> None:
+    """A `derive`-bound state is carried by open/closed, which this label-only
+    read does not fetch — None, so the caller proceeds and move-issue resolves
+    the position through `lifecycle_inference` with the full signal."""
+    smap = pi.axis_labels.SubstrateMap(
+        axes={"state": {"derive": {"from": "open-closed", "states": {"done": "closed"}}}}
+    )
+    monkeypatch.setattr(pi, "gh_run", _fake_gh_returning(["state:backlog"]))
+    assert pi._detect_current_state(42, {}, smap) is None
 
 
 # NOTE: promote-issue no longer posts its own audit comment (DEC-049 —
@@ -217,7 +269,7 @@ def _wire_main_mocks(
         return True
 
     monkeypatch.setattr(pi, "_attach_milestone", fake_attach)
-    monkeypatch.setattr(pi, "_detect_state_from_labels", lambda *_a: current_state)
+    monkeypatch.setattr(pi, "_detect_current_state", lambda *_a: current_state)
     monkeypatch.setattr(pi, "_invoke_move_issue", lambda *_a, **_k: move_issue_rc)
 
 

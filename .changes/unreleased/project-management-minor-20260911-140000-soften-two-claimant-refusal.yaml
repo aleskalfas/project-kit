@@ -1,0 +1,24 @@
+component: project-management
+kind: minor
+custom:
+  category: Changed
+  pr: "794"
+body: >
+  A configured board plus a `label:` binding on the same axis is no longer a
+  hard prerequisite failure. It reports a warning instead, and the run passes.
+
+  The refusal was right when it shipped: nothing decided which declaration won,
+  so the writer honoured the board flag and wrote no label, nothing wrote the
+  board field, and the reader looked for a label that never existed. The axis
+  ended up set on neither substrate and the capability's own verbs could not
+  satisfy its own gate.
+
+  A binding now governs the axis it names, writers and readers ask one accessor,
+  and the value lands on your own labels exactly as your map asked — so keeping
+  the refusal would block the configuration the rule sanctions. What survives is
+  worth saying once, which is what the warning says: the board's field for that
+  axis goes unused, because nothing writes it and no gate reads it.
+
+  This is the only softening. The genuinely unsatisfiable pair — `board: true`
+  on an axis while no board is configured — stays a hard refusal in its own
+  check.

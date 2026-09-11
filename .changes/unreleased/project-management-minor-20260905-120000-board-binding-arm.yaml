@@ -1,0 +1,28 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+  pr: "794"
+body: >
+  `substrate-map.yaml` gains a `board:` binding arm, so a brownfield adopter can
+  declare that a classification axis is carried by a field on their configured
+  Projects-v2 board. Parameterless by design (`board: true`): the field identity
+  stays a write parameter on the `after_create_issue` hook, and a field name in
+  the map would be a claim about a live board the file cannot self-validate.
+  Admissible on `priority` and `workstream` only — `type` is label-carried by
+  functional dependency (PR-title alignment reads the label), and a board-carried
+  `state` awaits a detector kind that can read a board Status field. `board: true`
+  under a config declaring no board is refused. An optional `default:` may
+  accompany the arm as corroborating metadata, and one with no matching
+  `set-board-field` hook behind it is reported.
+
+  Until now the map could not express board carriage at all, and the prerequisite
+  check's remediation told adopters to spell it `unsupported: true` — a
+  declaration the schema defines as the axis having no encoding and every rule
+  needing it degrading. That guidance is withdrawn.
+
+  Additive: an axis absent from a present map keeps today's carriage, and every
+  existing map continues to validate unchanged. The exactly-one-binding
+  constraint grows by one `oneOf` branch; the previous branches' explicit
+  mutual-exclusion clauses were redundant under `oneOf` and are removed, with no
+  change to the set of accepted documents.

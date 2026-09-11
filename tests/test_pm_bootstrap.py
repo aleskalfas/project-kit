@@ -126,7 +126,6 @@ def test_compute_plan_includes_state_labels_in_label_fallback(
         plan = bs._compute_plan(
             config={},
             classification=classification,
-            has_board=False,
             with_starter_epic=False,
             capability_root=tmp_path,
         )
@@ -160,7 +159,6 @@ def test_compute_plan_skips_existing_state_labels(
         plan = bs._compute_plan(
             config={},
             classification=classification,
-            has_board=False,
             with_starter_epic=False,
             capability_root=tmp_path,
         )
@@ -188,9 +186,8 @@ def test_compute_plan_omits_state_labels_in_board_mode(
     bs._fetch_existing_labels = lambda: set()
     try:
         plan = bs._compute_plan(
-            config={},
+            config={"has_projects_v2_board": True},
             classification=classification,
-            has_board=True,
             with_starter_epic=False,
             capability_root=tmp_path,
         )
@@ -201,6 +198,90 @@ def test_compute_plan_omits_state_labels_in_board_mode(
     assert state_creates == [], "Board mode: state labels should not be in creates"
     state_skipped = any("state:*" in msg for msg in plan.skipped_messages)
     assert state_skipped, "Board mode: should have a skip message for state:* labels"
+
+
+# --- the greenfield-only refusal (#712 / DEC-051) ---------------------------
+#
+# bootstrap provisions the KIT's own `<axis>:<value>` labels. Its comment used to
+# ASSERT that this was safe by construction — "brownfield adoption enters via
+# `adopt-existing`, so this map-blind construction is greenfield-by-construction" —
+# with nothing enforcing it. Nothing stopped a run in a repo carrying a
+# substrate-map, and it created the full kit palette for every axis: unmanaged
+# labels no reader looks at, which is the constraint-1 violation this provisioner
+# must never commit. The refusal is now explicit, asked per axis of the carriage
+# accessor with the polarity that matters — "do the KIT's labels carry this axis?",
+# never "is it on the board?".
+
+
+def test_compute_plan_creates_no_kit_palette_under_a_present_map(
+    bs, tmp_path, classification
+) -> None:
+    """A present substrate-map ⇒ NO kit axis labels are planned, for any axis, and
+    each is skipped with the substrate named."""
+    schemas_dir = tmp_path / "schemas"
+    schemas_dir.mkdir()
+    (schemas_dir / "workflow.yaml").write_text(
+        "states:\n  - id: todo\n  - id: done\n", encoding="utf-8"
+    )
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    (project_dir / "substrate-map.yaml").write_text(
+        "schema_version: 1\naxes:\n"
+        "  type:\n    label:\n      remap:\n        feature: kind/feature\n",
+        encoding="utf-8",
+    )
+
+    original = bs._fetch_existing_labels
+    bs._fetch_existing_labels = lambda: set()
+    try:
+        plan = bs._compute_plan(
+            config={},
+            classification=classification,
+            with_starter_epic=False,
+            capability_root=tmp_path,
+        )
+    finally:
+        bs._fetch_existing_labels = original
+
+    assert plan.label_creates == []
+    joined = " ".join(plan.skipped_messages)
+    for axis in ("type", "priority", "workstream", "state"):
+        assert f"{axis}:* labels" in joined, joined
+    assert "adopt-existing" in joined
+
+
+def test_compute_plan_board_adopter_with_a_label_binding_gets_no_kit_palette(
+    bs, tmp_path, classification
+) -> None:
+    """The polarity guard. A board adopter whose map binds `priority` to their own
+    labels is NOT-on-the-board for that axis — so a "skip when the board carries
+    it" test would hand them the entire kit `priority:*` palette. The predicate is
+    `expects_kit_labels`, which is False here, so nothing is created."""
+    schemas_dir = tmp_path / "schemas"
+    schemas_dir.mkdir()
+    (schemas_dir / "workflow.yaml").write_text("states:\n  - id: todo\n", encoding="utf-8")
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    (project_dir / "substrate-map.yaml").write_text(
+        "schema_version: 1\naxes:\n"
+        "  priority:\n    label:\n      remap:\n        High: P0\n",
+        encoding="utf-8",
+    )
+
+    original = bs._fetch_existing_labels
+    bs._fetch_existing_labels = lambda: set()
+    try:
+        plan = bs._compute_plan(
+            config={"has_projects_v2_board": True},
+            classification=classification,
+            with_starter_epic=False,
+            capability_root=tmp_path,
+        )
+    finally:
+        bs._fetch_existing_labels = original
+
+    assert not any(name.startswith("priority:") for _, name in plan.label_creates)
+    assert plan.label_creates == []
 
 
 # --- projects_v2_node_id cache population (#310) ----------------------------
@@ -220,7 +301,6 @@ def test_compute_plan_plans_node_id_when_board_uncached(
     plan = bs._compute_plan(
         config=config,
         classification=classification,
-        has_board=True,
         with_starter_epic=False,
         capability_root=tmp_path,
     )
@@ -246,7 +326,6 @@ def test_compute_plan_skips_node_id_when_already_cached(
     plan = bs._compute_plan(
         config=config,
         classification=classification,
-        has_board=True,
         with_starter_epic=False,
         capability_root=tmp_path,
     )
@@ -272,7 +351,6 @@ def test_compute_plan_no_node_id_in_label_fallback(
     plan = bs._compute_plan(
         config={},
         classification=classification,
-        has_board=False,
         with_starter_epic=False,
         capability_root=tmp_path,
     )
