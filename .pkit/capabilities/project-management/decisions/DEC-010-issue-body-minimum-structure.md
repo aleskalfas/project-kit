@@ -21,12 +21,13 @@ The minimum required body structure per issue type is fixed in [`schemas/body-fo
 
 ### Universal body rules
 
-These apply to every issue type, encoded in the schema's `universal_body_rules`:
+These apply to every issue type; except where a rule notes otherwise, each is encoded in the schema's `universal_body_rules`:
 
 - **First line is the ancestry parent-ref** per the type's `parent_ref_form` in [`schemas/issue-types.yaml`](../schemas/issue-types.yaml). When an `Integration: integration/<slug>` pre-line is present it precedes the parent-ref with no blank line between; otherwise the body opens directly with the parent-ref. Blank line, then content.
 - **No `# ...` h1 headings** — the issue title is the h1. Sections start at `## Title`.
 - **No `file:line` references** — line numbers go stale. Name the file and the identifier separately.
 - **No `## Implementation` / `## How` recipes** — bodies describe outcomes, not how to build them. Implementation belongs in the PR or a separate design doc.
+- **Lead with the current desired state, not the history** — the body opens with the task (what the issue *is*, what's true when it closes), not a narrative of how the scope evolved. "How we got here" — splits, renames, prior decisions — lives in the timeline, comments, or a linked decision. This is an **authoring-side** rule carried by the create-issue skill and the project-manager agent (which composes bodies via `--body-file`, bypassing the template); the quality is not reliably machine-detectable, so unlike the rules above it is **not** encoded as a validated `universal_body_rules` check — a warning-level nudge would only follow a robust heuristic.
 - **No predicted decision IDs** — reference only IDs that already exist.
 - **Checkboxes follow [project-management:DEC-007-checkbox-validation] and [project-management:DEC-009-living-documents]** — close-gate, ticks sticky, wording-free / scope-gated.
 
