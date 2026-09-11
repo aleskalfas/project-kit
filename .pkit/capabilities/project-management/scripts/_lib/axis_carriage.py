@@ -43,8 +43,7 @@ Keeping them apart is a correctness requirement, not tidiness:
   calls this module. The label read-path contract records this shape as pending
   rather than pinned — it names what a carriage composition must look like and
   leaves the placement to implementing work. The pin itself belongs to the board
-  read-path contract, which is `proposed`; until that is accepted this module
-  holds the shape by construction and by its own guard test, not by citation.
+  read-path contract, and the guard test holds the shape independently of it.
 
 What this module does NOT decide
 --------------------------------

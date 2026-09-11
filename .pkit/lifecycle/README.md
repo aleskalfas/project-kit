@@ -135,8 +135,8 @@ requires_capabilities:
 footprint:
   - .claude/skills
 
-# Optional: this component's runtime-local files to git-ignore (ADR-009
-# ADR-009 rule 7). Aggregated into the pkit-owned `.pkit/.gitignore`.
+# Optional: this component's runtime-local files to git-ignore
+# (ADR-009 rule 7). Aggregated into the pkit-owned `.pkit/.gitignore`.
 runtime_ignore:
   - .pkit/capabilities/<name>/project/some-runtime.log
 ```

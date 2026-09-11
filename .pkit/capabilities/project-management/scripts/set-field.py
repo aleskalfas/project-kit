@@ -534,38 +534,14 @@ def _route_axes(
     the two sides must share is the ANSWER, not a duplicated cross, and one
     composition is the stronger guarantee of that.
 
-    **Honest as-built note.** pre-check's refusal has NOT softened yet. [DEC-051]
-    decision point 5 rules that it becomes a warning, and its own implications
-    order that softening LAST — after the consumers are rewired — because relaxing
-    it first would make the reported state less detectable than it is today. So
-    between this change and that one, an adopter in the reported configuration gets
-    a working write here and a hard failure from `pre-check`. That is the ordering
-    the record asks for, not a disagreement about where the axis lives.
+    **The gate agrees with this writer.** pre-check reports the same
+    configuration as a warning, not a refusal — the two were briefly out of step
+    while the consumers were rewired ahead of the softening, deliberately, since
+    relaxing the gate first would have made the reported state less detectable
+    than the bug. Both sides now ask the one accessor, which is what makes the
+    agreement structural rather than a convention each has to remember.
 
-    The arms:
-
-      * ``board`` ⇒ the board plan (the field write, resolved by name at write
-        time);
-      * ``kit-label`` / ``adopter-label`` ⇒ the label plan — the kit's own label in
-        greenfield, the adopter's remapped label under a `label:` binding;
-      * ``title`` / ``derived`` ⇒ **refused**, non-zero exit. These are substrates
-        set-field does not write for these axes — it realigns a title prefix only
-        for `--kind`, and a derived axis is computed from tracker state rather than
-        set — so the axis is SERVED but this verb cannot serve it, and a value it
-        declined to record must never read as success (#709). Routing them away
-        from the label planner also stops a live mis-write: for a title-bound axis
-        `resolve_write` returns the PREFIX string, which the label planner would
-        apply as a `gh --label` the tracker does not have;
-      * ``degrade`` ⇒ a NOTE (`ok=True`), not a refusal. Here the adopter has
-        declared the axis `unsupported` (or omitted it from a present map, which
-        the schema defines as equivalent): the value has nowhere to go BY THEIR
-        OWN DECLARATION, which is degradation working as designed rather than a
-        write the verb declined. That scoping is deliberate and predates this
-        change (#709 draws the refusal line at the board/label disagreement), and
-        it is what the rest of the capability does with a declared-unsupported axis
-        — `create-issue` files the issue and emits an advisory. The value-level
-        degrade is a different matter and IS a refusal; see `_plan_labels`.
-    """
+"""
     label_axes: dict[str, str] = {}
     board_axes: dict[str, str] = {}
     results: list[FieldResult] = []

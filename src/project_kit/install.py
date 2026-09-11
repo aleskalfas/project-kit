@@ -454,8 +454,7 @@ def install_kit(target_root: Path, dry_run: bool = False) -> None:
 
 
 def _render_runtime_ignore(ctx: InstallContext) -> None:
-    """Wholesale-regenerate `.pkit/.gitignore` at the CORE tier (ADR-009
-    ADR-009 rule 7).
+    """Wholesale-regenerate `.pkit/.gitignore` at the CORE tier (ADR-009 rule 7).
 
     Runs *after* the manifest is stamped so the component walk sees every
     registered adapter/capability. Deliberately a core step — NOT an adapter

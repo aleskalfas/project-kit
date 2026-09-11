@@ -501,8 +501,10 @@ def _validate_issue(
             #
             # This gate deliberately does NOT read the board field. The board
             # value read, and the rule that an unreadable board raises, are the
-            # board read-path contract's to settle; that record is `proposed`,
-            # and building against it would breach the acceptance gate. So the
+            # board read-path contract's to settle. That read is specified but
+            # not yet built here, so the abstention is deliberate and stays
+            # until it is — a later change wires it, and this comment goes with
+            # it rather than the abstention quietly outliving its reason. So the
             # honest report is the one this gate can stand behind without a
             # network call: the axis is SERVED (a board field carries it), no
             # label is demanded — and this gate did not check the value.

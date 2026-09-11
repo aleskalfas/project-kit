@@ -165,8 +165,8 @@ def _report_drift(
     It says so instead, and keeps exit 0: an adopter whose state is board-carried
     or derived is correctly configured, not broken, so this is a skip and not the
     exit 2 an unreadable timeline earns. Reading the board's own change history
-    is a different feature, and the board read-path contract that would govern it
-    is still `proposed`.
+    is a different feature, governed by the board read-path contract and not
+    built here.
     """
     carried = axis_carriage.carriage("state", config, substrate_map)
     if carried not in ("kit-label", "adopter-label"):
