@@ -1395,25 +1395,31 @@ def test_validate_issue_and_pre_check_agree_on_type_disposition(
     """Gate-agreement (the #553 acceptance): validate-issue and pre-check must
     reach the SAME "are kit type labels required?" disposition on the same repo.
 
-    Both route through the one seam predicate — pre-check via its thin
-    `_axis_expects_kit_labels` adapter, validate-issue via the seam directly — so
-    they cannot disagree. Proven at the disposition seam in both substrates."""
+    Both now route through the one carriage accessor
+    ([project-management:DEC-051-axis-carriage-activation] decision point 4), so
+    they cannot disagree — and the agreement is pinned across the board flag too,
+    which is the axis of disagreement the accessor exists to close. `type` is
+    never board-carried, so the flag must not move either gate's answer."""
+    no_board: dict = {}
+    board = {"has_projects_v2_board": True}
     # Brownfield: a present map binding type→title-prefix ⇒ kit labels NOT required.
     assert (
-        vi.axis_labels.axis_expects_kit_labels("type", brownfield_type_prefix_map)
+        vi.axis_carriage.expects_kit_labels(
+            "type", no_board, brownfield_type_prefix_map
+        )
         is False
     )
-    assert (
-        precheck._axis_expects_kit_labels("type", brownfield_type_prefix_map) is False
-    )
     # Greenfield: no map ⇒ kit labels ARE required, both agree.
-    assert vi.axis_labels.axis_expects_kit_labels("type", None) is True
-    assert precheck._axis_expects_kit_labels("type", None) is True
-    # And they agree value-for-value in both substrates (one source of truth).
-    for smap in (None, brownfield_type_prefix_map):
-        assert vi.axis_labels.axis_expects_kit_labels(
-            "type", smap
-        ) == precheck._axis_expects_kit_labels("type", smap)
+    assert vi.axis_carriage.expects_kit_labels("type", no_board, None) is True
+    # And they agree value-for-value across both substrates AND both flag
+    # settings (one source of truth, asked by one accessor).
+    for config in (no_board, board):
+        for smap in (None, brownfield_type_prefix_map):
+            assert vi.axis_carriage.expects_kit_labels(
+                "type", config, smap
+            ) == precheck.axis_carriage.expects_kit_labels("type", config, smap)
+    # `type` is always a label: the flag never claims it.
+    assert vi.axis_carriage.expects_kit_labels("type", board, None) is True
 
 
 # --- R1: title-prefix inference is substrate-aware ---------------------
@@ -1559,12 +1565,14 @@ def test_gate_agreement_across_all_type_bindings(
     """validate-issue and pre-check reach the SAME type-substrate disposition on
     the same repo across every binding — kit-label, title-prefix (incl. the
     `[Epic]` vs kit `[EPIC]` mismatch), label-remap, derive, unsupported. Both
-    route through the one seam, so they cannot drift.
+    route through the one carriage accessor, so they cannot drift.
 
-    Proven at the seam predicates the two consumers share: the kit-label
-    disposition (`axis_expects_kit_labels`, via pre-check's thin adapter) and the
-    title-prefix vocabulary (`axis_title_prefix_remap`, which validate-issue's
-    inference and pre-check's alignment both read)."""
+    Proven at the two things the consumers share: the kit-label disposition
+    (`axis_carriage.expects_kit_labels`, now the single answerer for both) and
+    the title-prefix vocabulary (`axis_title_prefix_remap`, which validate-issue's
+    inference and pre-check's alignment both read). The flag is held OFF here;
+    the board-flag axis of agreement is pinned in
+    `test_validate_issue_and_pre_check_agree_on_type_disposition`."""
     derive_map = vi.axis_labels.SubstrateMap(
         axes={"type": {"derive": {"from": "open-closed"}}}
     )
@@ -1580,9 +1588,9 @@ def test_gate_agreement_across_all_type_bindings(
     }
     for name, smap in all_maps.items():
         # (1) kit-label disposition agrees between the two consumers.
-        assert vi.axis_labels.axis_expects_kit_labels(
-            "type", smap
-        ) == precheck._axis_expects_kit_labels("type", smap), name
+        assert vi.axis_carriage.expects_kit_labels(
+            "type", {}, smap
+        ) == precheck.axis_carriage.expects_kit_labels("type", {}, smap), name
         # (2) both read the adopter's title-prefix vocabulary through the SAME
         # seam accessor — identical remap (or None) for every binding.
         assert vi.axis_labels.axis_title_prefix_remap(
@@ -1609,7 +1617,12 @@ def test_gate_agreement_across_all_type_bindings(
     # The label-remap binding: both agree it is NOT kit-label-served, and
     # validate-issue reads the axis as label-bound (so it demands the remapped
     # label rather than skipping the axis — the G1 fix).
-    assert precheck._axis_expects_kit_labels("type", brownfield_type_label_map) is False
+    assert (
+        precheck.axis_carriage.expects_kit_labels(
+            "type", {}, brownfield_type_label_map
+        )
+        is False
+    )
     assert (
         vi.axis_labels.axis_is_label_bound("type", brownfield_type_label_map) is True
     )
@@ -1958,3 +1971,164 @@ def test_greenfield_multiple_kit_labels_still_reported(
         substrate_map=None,
     )
     assert "classification.priority.multiple" in found
+
+
+# --- the READER half of the ordering inversion (#708, DEC-051 D4) --------
+#
+# The presence gate used to open `if not has_board:` — a board-versus-label
+# decision taken BEFORE the seam was consulted, so under a configured board
+# `priority` and `workstream` never reached the seam and the adopter's own
+# binding was not consulted by the reader at all. #742 fixed the no-board half;
+# these pin the half a configured board still hid.
+
+
+def _board_labels(vi, issue_types, titles, body_format, board_config, *, labels,
+                  substrate_map):
+    return _labels(
+        vi._validate_issue(
+            issue=_make_issue(
+                title="[Task] Wire the sandbox allowlist",
+                body=(
+                    "Feature: #1\n\n"
+                    "## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
+                ),
+                labels=labels,
+            ),
+            issue_types=issue_types,
+            titles=titles,
+            body_format=body_format,
+            config=board_config,
+            substrate_map=substrate_map,
+        )
+    )
+
+
+def test_board_with_a_label_binding_accepts_the_remapped_label(
+    vi, issue_types, titles, body_format, board_config,
+    brownfield_priority_ws_label_map,
+) -> None:
+    """THE REPORTED CONFIGURATION (#708): board flag on, map binds priority and
+    workstream to the adopter's own labels. The writer already writes `P0` /
+    `area/cli` through the seam; the reader must look there too."""
+    found = _board_labels(
+        vi, issue_types, titles, body_format, board_config,
+        labels=["type:feature", "P1", "area/cli"],
+        substrate_map=brownfield_priority_ws_label_map,
+    )
+    assert "classification.priority.missing" not in found
+    assert "classification.workstream.missing" not in found
+    # And nothing claims the axes are board-carried — the map said otherwise.
+    assert "classification.priority.unverified" not in found
+
+
+def test_board_with_a_label_binding_still_refuses_when_absent(
+    vi, issue_types, titles, body_format, board_config,
+    brownfield_priority_ws_label_map,
+) -> None:
+    """The silent miss, made loud: under a board this gate did not run at all, so
+    an issue with NO value on either substrate passed clean. It is a genuine
+    missing value — hard-reject, exactly as the no-board case gates it."""
+    found = _board_labels(
+        vi, issue_types, titles, body_format, board_config,
+        labels=["type:feature"],
+        substrate_map=brownfield_priority_ws_label_map,
+    )
+    assert "classification.priority.missing" in found
+    assert "classification.workstream.missing" in found
+
+
+def test_board_carried_axis_reports_unverified_not_missing(
+    vi, issue_types, titles, body_format, board_config,
+) -> None:
+    """Greenfield under a board: the board carries priority/workstream. The gate
+    must demand no kit label AND not claim the value is missing — it reports that
+    it did not check. UNVERIFIED is not MISSING and is not satisfied either."""
+    findings = vi._validate_issue(
+        issue=_make_issue(
+            title="[Task] Wire the sandbox allowlist",
+            body=(
+                "Feature: #1\n\n"
+                "## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
+            ),
+            labels=["type:feature"],
+        ),
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        config=board_config,
+        substrate_map=None,
+    )
+    found = _labels(findings)
+    assert "classification.priority.missing" not in found
+    assert "classification.workstream.missing" not in found
+    assert "classification.priority.unverified" in found
+    assert "classification.workstream.unverified" in found
+
+
+def test_board_carried_unverified_is_a_warning_and_names_the_board(
+    vi, issue_types, titles, body_format, board_config,
+) -> None:
+    """No new severity: `warning`, the same one DEC-019's board_membership drift
+    knob resolves to for its own `.unverified`. And the message must say where the
+    value lives and that the gate did not read it — an adopter sent to "add a
+    priority label" for a board-carried axis learns to distrust the gate."""
+    findings = vi._validate_issue(
+        issue=_make_issue(
+            title="[Task] Wire the sandbox allowlist",
+            body=(
+                "Feature: #1\n\n"
+                "## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
+            ),
+            labels=["type:feature"],
+        ),
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        config=board_config,
+        substrate_map=None,
+    )
+    unverified = next(
+        f for f in findings if f.label == "classification.priority.unverified"
+    )
+    assert unverified.severity == vi.SEVERITY_WARNING
+    assert "board" in unverified.detail
+    assert "UNVERIFIED" in unverified.detail
+    assert "NOT a report that the value is missing" in unverified.detail
+
+
+def test_board_declared_in_the_map_is_also_unverified(
+    vi, issue_types, titles, body_format, board_config,
+) -> None:
+    """The `board: true` arm reaches the same place as the flag — one accessor,
+    one answer, whether the adopter declared it or the flag supplied it."""
+    smap = vi.axis_labels.SubstrateMap(axes={"priority": {"board": True}})
+    found = _board_labels(
+        vi, issue_types, titles, body_format, board_config,
+        labels=["type:feature"],
+        substrate_map=smap,
+    )
+    assert "classification.priority.unverified" in found
+    # `workstream` is absent from a PRESENT map under a board: the flag still
+    # carries it (DEC-051 decision point 3), so it too is unverified, not missing.
+    assert "classification.workstream.unverified" in found
+    assert "classification.workstream.missing" not in found
+
+
+def test_board_with_an_unsupported_axis_demands_nothing(
+    vi, issue_types, titles, body_format, label_fallback_config,
+) -> None:
+    """No board and a present map marking the axis `unsupported`: nothing carries
+    it, so nothing is demanded and nothing is reported unverified either — a
+    degraded axis is not an unchecked one."""
+    smap = vi.axis_labels.SubstrateMap(
+        axes={"priority": {"unsupported": True}, "workstream": {"unsupported": True}}
+    )
+    found = _no_board_labels(
+        vi, issue_types, titles, body_format, label_fallback_config,
+        labels=["type:feature"],
+        substrate_map=smap,
+    )
+    assert "classification.priority.missing" not in found
+    assert "classification.priority.unverified" not in found
+    assert "classification.workstream.missing" not in found
+    assert "classification.workstream.unverified" not in found

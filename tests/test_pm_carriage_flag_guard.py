@@ -94,20 +94,21 @@ ALLOWED_READS: dict[str, tuple[int, str]] = {
     ),
     "pre-check.py": (
         4,
-        "MIXED, and two of them are the deferred rewiring: board-id resolution "
-        "(identity) and the `board:` arm's satisfiability + the absent-axis nudge "
-        "(both statements ABOUT the flag, which is their subject). The carriage "
-        "branches it threads into `_check_labels` / `_check_state_labels` are a "
-        "READ-PATH gate, deliberately left for the commit that lands the repair "
-        "path — rewiring them now would hard-reject every pre-existing issue with "
-        "no tool to fix it.",
+        "IDENTITY + SUBJECT, all four: board-id resolution (identity), and the "
+        "cross-substrate conflict finding, the `board:` arm's satisfiability and "
+        "the absent-axis nudge — three diagnostics whose SUBJECT is the flag "
+        "itself ('you set this, and here is what it costs you'), not a carriage "
+        "decision taken from it. The carriage branches it used to thread into "
+        "`_check_labels` / `_check_state_labels` are gone: both now ask "
+        "`axis_carriage.expects_kit_labels` per axis.",
     ),
     "validate-issue.py": (
         1,
-        "MIXED — one read serving the board-membership drift finding (DEC-019, "
-        "must stay with the flag) and the classification presence gate. The gate "
-        "half is the deferred read-path rewiring, for the same repair-path reason "
-        "as pre-check.",
+        "MEMBERSHIP — the DEC-019 board-membership drift finding. 'Is this issue "
+        "ON the board' is not 'which substrate carries this axis', and routing it "
+        "through carriage would drop the requirement for any board adopter with "
+        "one label binding. The classification presence gate beside it no longer "
+        "reads the flag: it asks `axis_carriage.carriage` per axis.",
     ),
 }
 
