@@ -76,7 +76,7 @@ scoped strictly to read-for-understanding views.
 - **Why scope to read-views:** the command survey shows the other genera
   (key:value tree, progress, diagnostic list, confirmation, plain list) genuinely
   differ; forcing them onto this model would distort them, and `status` cannot
-  change output at all without breaking its parity test. ([ADR-053](ADR-053-cli-output-discipline.md)
+  change output at all without breaking its parity test. ([ADR-054](ADR-054-cli-output-discipline.md)
   later generalizes the A′ principle across these genera without forcing them onto
   the read-view shape — the scoping here was to the read-view *carrier*, not a claim
   that other genera stay unmodeled forever.)
@@ -131,10 +131,10 @@ scoped strictly to read-for-understanding views.
 - **Styling layer:** reserve a `render(style="plain"|"auto")` seam; build only
   `plain` now. The deferred dim-when-TTY layer (the `NO_COLOR`/non-TTY open
   question) slots in behind it without views changing.
-- **Scope boundary — the read-view is the *first* genre, generalized by [ADR-053](ADR-053-cli-output-discipline.md).** This renderer's `view()` assembler stays
+- **Scope boundary — the read-view is the *first* genre, generalized by [ADR-054](ADR-054-cli-output-discipline.md).** This renderer's `view()` assembler stays
   scoped to title+table+Legend documents; `status`/`install`/`next-steps`/mutations
   are **not** forced onto `view()`, which would distort them (the reason this record
-  scoped tightly). ADR-053 generalizes the *same A′ data-carrying-parts principle*
+  scoped tightly). ADR-054 generalizes the *same A′ data-carrying-parts principle*
   across those genera via a `type`-tagged **event model** — each genre gets its own
   event types rather than the read-view shape — so it **honors this record's
   anti-distortion rationale rather than overturning it**. The `schemas

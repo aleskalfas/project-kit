@@ -1,5 +1,5 @@
 ---
-id: ADR-053
+id: ADR-054
 title: CLI output is a rendered data model with two contracts (machine-stable, human-porcelain)
 status: accepted
 date: 2026-09-02
