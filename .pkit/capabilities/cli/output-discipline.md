@@ -71,4 +71,4 @@ Two renderers over one event stream:
 - **Universal (this capability owns):** the event model, the vocabulary + payload schemas, the renderer contract, the selection rules, the invariants, and a conformance suite.
 - **pkit-specific (stays the binding, in `src/`):** the role→colour palette, the zone rhythm, and the per-command wiring.
 
-The per-language-binding capability sub-shape (COR-017 extension) is authored when a second-language consumer appears (ADR-054 Decision 6).
+The per-language-binding capability sub-shape (COR-017 extension) is authored on a stability trigger — the conventions settle, or a second consumer/language appears (ADR-054 Decision 6).

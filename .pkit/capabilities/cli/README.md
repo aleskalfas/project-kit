@@ -12,6 +12,7 @@ The **universal** half of the discipline (the pkit-specific palette / zone rhyth
 - `schemas/` — _(planned)_ the vocabulary + payload schemas as structured data + a conformance description.
 - `decisions/` — _(planned)_ capability-internal decisions as the discipline's universal contract crystallises out of the pkit ADRs.
 - `agents/` — _(planned)_ a `cli-conventions-reviewer` that checks a CLI against the discipline.
+- `scripts/` · `skills/` · `migrations/` — empty layout placeholders for now (this is a shell; they fill in as the discipline is built and, later, extracted).
 
 ## Adopter setup
 
