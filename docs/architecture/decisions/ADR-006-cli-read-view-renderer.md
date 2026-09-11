@@ -76,7 +76,10 @@ scoped strictly to read-for-understanding views.
 - **Why scope to read-views:** the command survey shows the other genera
   (key:value tree, progress, diagnostic list, confirmation, plain list) genuinely
   differ; forcing them onto this model would distort them, and `status` cannot
-  change output at all without breaking its parity test.
+  change output at all without breaking its parity test. ([ADR-054](ADR-054-cli-output-discipline.md)
+  later generalizes the A′ principle across these genera without forcing them onto
+  the read-view shape — the scoping here was to the read-view *carrier*, not a claim
+  that other genera stay unmodeled forever.)
 - **Why A′ over B (the load-bearing choice):** the dominant force is evolvability —
   "we are not done defining the conventions; we must be able to change anything
   quickly." A single `view()` makes *structural* convention changes one-place
@@ -128,9 +131,14 @@ scoped strictly to read-for-understanding views.
 - **Styling layer:** reserve a `render(style="plain"|"auto")` seam; build only
   `plain` now. The deferred dim-when-TTY layer (the `NO_COLOR`/non-TTY open
   question) slots in behind it without views changing.
-- **Scope boundary:** do not migrate `status`/`install`/`schemas validate`/
-  mutations (different genera). The `schemas list`/`show`/`resolve` trio are
-  candidates — adopting them is a deliberate enhancement (add the missing blocks),
-  and would be the event that arms the A′→B promotion trigger.
+- **Scope boundary — the read-view is the *first* genre, generalized by [ADR-054](ADR-054-cli-output-discipline.md).** This renderer's `view()` assembler stays
+  scoped to title+table+Legend documents; `status`/`install`/`next-steps`/mutations
+  are **not** forced onto `view()`, which would distort them (the reason this record
+  scoped tightly). ADR-054 generalizes the *same A′ data-carrying-parts principle*
+  across those genera via a `type`-tagged **event model** — each genre gets its own
+  event types rather than the read-view shape — so it **honors this record's
+  anti-distortion rationale rather than overturning it**. The `schemas
+  list`/`show`/`resolve` trio remain `view()` candidates; adopting them arms the
+  A′→B promotion trigger, which stays deferred.
 - **Acceptance gate:** this record is `proposed`; building `cli_render` against it
   waits on acceptance.
