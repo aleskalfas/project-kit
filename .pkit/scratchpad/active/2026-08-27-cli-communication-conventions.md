@@ -189,7 +189,7 @@ Maintainer call (overriding critic's de-scope; critic is opposition, not veto): 
 
 ## 11. Architect verdict → the ADR-grounded plan
 
-- **Record structure:** a NEW **ADR-053** ("CLI output discipline — genre-general event model, two renderers, the machine surface is the contract") that *generalizes* the 006→011→024 line — stands ON them; **no supersession, no umbrella-subsumes.** Lineage: 006 read-views → 011 styling → 024 wrapping → **053 genre generalization**.
+- **Record structure:** a NEW **ADR-054** ("CLI output discipline — genre-general event model, two renderers, the machine surface is the contract") that *generalizes* the 006→011→024 line — stands ON them; **no supersession, no umbrella-subsumes.** Lineage: 006 read-views → 011 styling → 024 wrapping → **053 genre generalization**.
 - **Only ONE accepted element changes:** ADR-006 rule 5's genre exclusion — and it's **honored, not reversed** (a scoped in-place fold + forward-pointer; each genre gets its *own* event types, not forced onto the read-view shape). No status-flip. ADR-011/024 get one-line cross-ref folds (their invariants become instances of 053's generalized "machine surface is the contract").
 - **Event = superset of ADR-006's data-parts** (evolve `cli_render`, don't fork): existing `title()`/`status()`/`section()` dicts + a `type` discriminator + payload schema + extension protocol. **Affirm A′-not-B** (the unknown-type fallback is the *opposite* of Option B; ADR-006's B-deferral + trigger stand).
 - **Two renderers, confirmed** = a restatement of the shipped code (styled path [human↔plain via the colour/width gate] + `--json` serializer). §9's "three" was draft drift.
@@ -197,7 +197,7 @@ Maintainer call (overriding critic's de-scope; critic is opposition, not veto): 
 - **Sequencing (resolves the critic↔maintainer tension — decouple pain-relief from proof):**
   - **Slice 0 — pain fix now, NO event model:** route install/next-steps through the existing `style()`/`wrap()` leaves + zones. Readability win immediately; PRJ-002 changeset; no ADR-006 fold needed.
   - **Slice 1 — prove the event model on a *settled* read-view** (`permissions overview/explain` or `schemas list/show/resolve`) + `--json` + the generalized-invariant test. Low risk.
-  - **Slice 2 — generalize install/next-steps onto the proven model** (needs ADR-053 accepted + the ADR-006 fold applied). `status` later, behind its byte test.
+  - **Slice 2 — generalize install/next-steps onto the proven model** (needs ADR-054 accepted + the ADR-006 fold applied). `status` later, behind its byte test.
 - **Anticipation contained:** now = pkit binding + an evolving in-repo spec doc (authored as the binding proves each type); NO `capabilities/cli/`, no conformance suite, no 2nd-language binding. The per-language seam is *documented as extensible*, not built. Capability extraction + the COR-017 per-language-binding COR land on the stability trigger.
-- **Maintainer sign-off points:** (1) accept ADR-053 [primary gate]; (2) apply the ADR-006 fold [the one overturned element]; (3) apply ADR-011/024 cross-ref folds; (4) affirm A′-not-B; (5) PRJ-002 changesets per byte-shift; (6) defer the COR-017 sub-shape; (7) command-contract = separate records.
-- Architect drafted ADR-053's full body + the folds — ready to stamp on greenlight.
+- **Maintainer sign-off points:** (1) accept ADR-054 [primary gate]; (2) apply the ADR-006 fold [the one overturned element]; (3) apply ADR-011/024 cross-ref folds; (4) affirm A′-not-B; (5) PRJ-002 changesets per byte-shift; (6) defer the COR-017 sub-shape; (7) command-contract = separate records.
+- Architect drafted ADR-054's full body + the folds — ready to stamp on greenlight.
