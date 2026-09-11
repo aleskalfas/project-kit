@@ -1,7 +1,7 @@
 ---
 id: ADR-053
 title: An unreadable board raises where a value was expected; carriage, the board read, and failure posture stay three layers
-status: proposed
+status: accepted
 date: 2026-09-05
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
