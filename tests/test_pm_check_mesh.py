@@ -181,12 +181,8 @@ def test_compare_detects_type_label_drift(cm) -> None:
 
 
 def test_compare_skips_kit_label_axes_under_a_present_map(cm, axis_labels) -> None:
-    """The predicate is the SEAM's `axis_expects_kit_labels`, not carriage: under a
-    present map no axis reads the kit's own `<axis>:*` labels, so comparing those
-    label sets across peers compares a vocabulary neither peer uses. This is
-    deliberately NOT routed through the carriage accessor — a board adopter who
-    binds `priority` to their own labels would then start comparing KIT
-    `priority:*` sets, which is the wrong vocabulary either way.
+    """Kit label sets are compared only where the kit's labels really are the
+    axis's substrate on both sides.
 
     The predicate is the CARRIAGE accessor's `expects_kit_labels`, not the seam's
     same-named one: the seam's is `substrate_map is None` and cannot see the

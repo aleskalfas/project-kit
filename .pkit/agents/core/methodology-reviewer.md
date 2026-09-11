@@ -11,6 +11,7 @@ reads:
     - COR-007
     - COR-012
     - COR-013
+    - COR-045
     - PRJ-001
   paths:
     - CONTRIBUTING.md
@@ -94,7 +95,7 @@ These come up often enough to name:
 - **An amendment section on a record** — a dated "what we previously believed" block. Each one looks like diligence and they accrete by imitation, until the reader must work through archaeology to reach what is currently true. Fold it into the body, or supersede if the decision itself changed.
 - **Inventory pinned in a COR** — a `## Implications` list that enumerates every current bundle / area / command. The list will rot; move it to the relevant area's README and reference from the COR (per COR-007's pattern-extraction discipline).
 - **Project-kit-specific tokens leaking into a COR** — the binary name `pkit` is fine after PRJ-001 fixed it, but "project-kit" as a noun in COR prose suggests the record isn't truly project-neutral. Flag the phrasing and suggest generic rewording.
-- **Skill body claims that don't match frontmatter** — body mentions a record the frontmatter doesn't list, or frontmatter declares a reference the body never cites. The `pkit refs validate` check (planned in a future PR) catches these automatically; in the meantime, flag the drift manually.
+- **Skill body claims that don't match frontmatter** — body mentions a record the frontmatter doesn't list, or frontmatter declares a reference the body never cites. `pkit refs validate` catches these automatically; run it rather than eyeballing the frontmatter.
 - **`gates:` vs `reads.records:` confusion** — gates carry the acceptance-gate enforcement semantic; references that aren't load-bearing for the artifact's correct operation should live in `reads.records`, not gates. Over-broad gates make the skill brittle.
 
 ## What you are not

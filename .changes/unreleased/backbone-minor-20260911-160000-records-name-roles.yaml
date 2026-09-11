@@ -1,0 +1,34 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+  pr: "794"
+body: >
+  A new core record, COR-045, rules that a decision record refers to a thing the
+  way it means it — by the role something plays where the role is the point, by
+  name where the name is the point. One question separates them: would this
+  sentence become false if the name changed, with no decision changing? If yes,
+  a role was meant and a name was written.
+
+  It protects the property that makes a record worth trusting: it stays true
+  without being edited. A path or a function name is the fastest-moving part of
+  any project, so a record citing one goes wrong on the first rename while the
+  decision it records has not changed — and nobody notices, because nobody
+  re-reads accepted records looking for drift.
+
+  This is self-executing on sync: records you author from now on are held to it,
+  and the reviewer that audits records against the methodology's disciplines
+  applies it. Existing records convert on contact rather than in a sweep, since
+  turning a name into a role needs someone who knows which role the author meant.
+
+  The record-system specification gains the neighbouring rule it already owned,
+  now stated plainly: editing in place means editing in place — a correction is
+  folded into the body, not appended as an amendment section, a dated correction
+  marker, or a "previously we believed" passage. Two in-body markers are named
+  as correct and must not be stripped: the superseded-by line, and a forward
+  `(refinement per <record>)` pointer to a later record that extends this one.
+  Both point at another record rather than at a discarded belief.
+
+  The spec's Decision-section guidance also now says what the corpus actually
+  does — a numbered list rather than `D1, D2, …` labels. Older records using the
+  D-form are unaffected and their labels remain valid addresses.

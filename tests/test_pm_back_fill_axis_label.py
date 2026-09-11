@@ -1011,3 +1011,123 @@ def test_declared_default_stays_silent_where_explicit_would_shout(bf, axis_label
     _, loud = bf._resolve_label_intents(smap, cfg, {"priority": "High"})
     assert silent == []
     assert len(loud) == 1
+
+
+# --- generated-shell injection ----------------------------------------------
+#
+# The emitted script is bash a HUMAN runs, and the whole point of emitting it
+# rather than applying directly is that they can read it first. Text that
+# executes while reading as an inert skip notice defeats exactly that.
+#
+# Two adopter-controlled values reach it. `axis` is constrained on the report
+# path but arrives unvalidated from a supplied document on the `--plan` path;
+# `citation` quotes a substrate-map default, a `--set` value, or a hook entry,
+# and is likewise read verbatim from a plan.
+#
+# These tests RUN the fragment rather than asserting on its text: quoting bugs
+# are exactly the class a string assertion agrees with and a shell disagrees
+# with.
+
+import subprocess
+
+
+def _run_fragment(tmp_path, fragment: str) -> None:
+    """Execute an emitted fragment with a `gh` that always fails (guard path)."""
+    stub = tmp_path / "bin"
+    stub.mkdir()
+    (stub / "gh").write_text("#!/bin/sh\nexit 1\n")
+    (stub / "gh").chmod(0o755)
+    script = tmp_path / "frag.sh"
+    script.write_text(fragment)
+    subprocess.run(
+        ["bash", str(script)],
+        env={"PATH": f"{stub}:/usr/bin:/bin", "HOME": str(tmp_path)},
+        capture_output=True,
+        check=False,
+    )
+
+
+def _change(apply_mod, **over):
+    kw = dict(
+        issue_number=7,
+        kind="set-axis-label",
+        argv=["gh", "issue", "edit", "7", "--add-label", "P1"],
+        citation="substrate-map default",
+        axis="priority",
+        carrier_labels=["P0", "P1"],
+        target="P1",
+        observed=None,
+    )
+    kw.update(over)
+    return apply_mod.PlannedChange(**kw)
+
+
+def test_command_substitution_in_axis_does_not_execute(apply_mod, tmp_path):
+    marker = tmp_path / "PWNED_axis"
+    frag = apply_mod._emit_one(_change(apply_mod, axis=f"p$(touch {marker})"))
+    _run_fragment(tmp_path, frag)
+    assert not marker.exists(), "a $(...) in the axis executed from the emitted script"
+
+
+def test_newline_in_citation_cannot_escape_its_comment(apply_mod, tmp_path):
+    marker = tmp_path / "PWNED_citation"
+    frag = apply_mod._emit_one(_change(apply_mod, citation=f"default: High\ntouch {marker}  # "))
+    _run_fragment(tmp_path, frag)
+    assert not marker.exists(), "a newline in the citation opened an executable line"
+    assert frag.count("\n# cite") <= 1
+
+
+def test_carriage_return_in_citation_is_flattened_too(apply_mod, tmp_path):
+    """A bare CR hides the break from a diff while bash still sees a new line."""
+    marker = tmp_path / "PWNED_cr"
+    frag = apply_mod._emit_one(_change(apply_mod, citation=f"x\rtouch {marker}  # "))
+    _run_fragment(tmp_path, frag)
+    assert not marker.exists()
+
+
+def test_backtick_in_a_carrier_label_does_not_execute(apply_mod, tmp_path):
+    """A label name is adopter-authored free text and may contain anything."""
+    marker = tmp_path / "PWNED_label"
+    frag = apply_mod._emit_one(_change(apply_mod, carrier_labels=[f"`touch {marker}`", "P1"]))
+    _run_fragment(tmp_path, frag)
+    assert not marker.exists()
+
+
+def test_plan_parsing_drops_an_unrecognised_axis(apply_mod):
+    """The boundary filter, mirroring the one `kind` already had.
+
+    The render site quotes the axis, so this is defence in depth — but an axis
+    the engine does not write cannot produce a correct change in any case.
+    """
+    plan = {
+        "schema_version": apply_mod.CONSUMED_PLAN_SCHEMA_VERSION,
+        "intents": [{"kind": "set-axis-label", "axis": "priority", "target": "P1"}],
+        "proposed": [
+            {
+                "issue_number": 7,
+                "kind": "set-axis-label",
+                "axis": "p$(id)",
+                "argv": ["gh", "issue", "edit", "7", "--add-label", "P1"],
+            }
+        ],
+    }
+    assert apply_mod.planned_changes_from_plan(plan) == []
+
+
+def test_the_guard_still_skips_on_a_failed_read_after_quoting(apply_mod, tmp_path):
+    """The fix must not have broken the fail-closed behaviour it wraps."""
+    frag = apply_mod._emit_one(_change(apply_mod))
+    stub = tmp_path / "bin"
+    stub.mkdir()
+    (stub / "gh").write_text("#!/bin/sh\nexit 1\n")
+    (stub / "gh").chmod(0o755)
+    script = tmp_path / "frag.sh"
+    script.write_text(frag)
+    out = subprocess.run(
+        ["bash", str(script)],
+        env={"PATH": f"{stub}:/usr/bin:/bin", "HOME": str(tmp_path)},
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert "failing closed" in out.stderr

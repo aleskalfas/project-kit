@@ -445,6 +445,22 @@ def main() -> int:
                 file=sys.stderr,
             )
             return 2
+        if args.set_axis:
+            # `--set` names a value for THIS run; a saved plan already carries
+            # its resolved labels, so there is nothing here for the override to
+            # act on. Refusing is the same rule the flag applies everywhere
+            # else: an axis named on the command line was named on purpose, so a
+            # request that cannot be honoured is said out loud rather than
+            # dropped. Silently applying the plan's value while the operator
+            # believes theirs was used is the shape of miss this whole change
+            # exists to end.
+            print(
+                "error: --set cannot be combined with --plan. A saved plan "
+                "already carries the values it will write; re-derive a fresh "
+                "plan with --set to change them.",
+                file=sys.stderr,
+            )
+            return 2
         return _run_from_saved_plan(args, config, capability_root)
 
     # Otherwise derive the plan live: run the residual gate, resolve intents,
@@ -1006,9 +1022,14 @@ def _resolve_label_intents(
     errors are surfaced in the report and carried in the plan so an unresolvable
     value is visible to the human reviewing it, not silently absent.
 
-    Why the ``kit-label`` arm yields nothing in practice, and stays anyway: the
-    accessor returns ``kit-label`` only with NO map, and with no map there is no
-    ``default:`` to declare, so a greenfield project resolves no intent here. The
+    Why the ``kit-label`` arm is reachable, and how: the accessor returns
+    ``kit-label`` only with NO map, and with no map there is no ``default:`` to
+    declare — so a greenfield project resolves nothing here *from a declaration*.
+    It does resolve one from ``--set``, which supplies a value where no
+    declaration exists; on that path the label composed is the kit's own, which
+    is correct, because with no map the kit's labels ARE the substrate. A value
+    the kit's palette does not contain fails at the write rather than inventing
+    a label, since the label is only ever added, never created. The
     candidacy test still names both label carriages because that is the predicate
     the rule states; narrowing it to ``adopter-label`` would encode an incidental
     consequence of where defaults are declared as if it were the rule. A greenfield

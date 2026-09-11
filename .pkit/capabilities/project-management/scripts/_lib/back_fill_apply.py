@@ -144,6 +144,15 @@ HOOK_DRIVEN_KINDS: tuple[str, ...] = ("set-board-field", "assign-milestone")
 SET_AXIS_LABEL_KIND = "set-axis-label"
 APPLIABLE_KINDS: tuple[str, ...] = (*HOOK_DRIVEN_KINDS, SET_AXIS_LABEL_KIND)
 
+# The axes a `set-axis-label` change may name. This is an ALLOW-LIST, not a
+# convenience: a plan document is adopter-supplied input on the `--plan` path,
+# and the axis it carries reaches the emitted shell script. An unvalidated axis
+# is a command-injection vector there, so it is filtered at the boundary exactly
+# as `kind` is, rather than trusted because the report path happens to constrain
+# it. Kept in sync with the writable set the report path uses; a plan naming
+# anything else is dropped with its change.
+APPLIABLE_AXES: tuple[str, ...] = ("type", "priority", "workstream")
+
 
 # ----- classification: the re-validate / idempotency predicates ------------
 
@@ -628,6 +637,34 @@ def render_emit_script(
     return "\n".join(lines) + "\n"
 
 
+def _comment_safe(text: str) -> str:
+    """Flatten ``text`` so it cannot escape the bash comment it is rendered into.
+
+    A citation is adopter-controlled — it quotes a substrate-map ``default:``, a
+    value supplied on the command line, or a hook entry — and on the ``--plan``
+    path it is read verbatim from a supplied document. Rendered into a ``#``
+    comment, a newline in it ENDS the comment and turns the remainder of the line
+    into a live statement in a script the operator is about to run, disguised as
+    inert prose. Collapse every line break (and the carriage return that would
+    hide one from a diff) to a space.
+    """
+    return " ".join(str(text).replace("\r", "\n").split("\n")).strip()
+
+
+def _echo_line(message: str, *, stderr: bool = True) -> str:
+    """A bash ``echo`` of ``message`` that cannot execute anything.
+
+    ``message`` carries adopter-controlled text (axis names, label values). Inside
+    DOUBLE quotes bash still performs command substitution, so ``$(...)`` in that
+    text would run when the operator executes the emitted script. Single-quoting
+    via :func:`shlex.quote` makes the whole message a literal. The cost is that a
+    ``$current`` reference cannot be interpolated by the shell, so callers pass
+    the literal part here and append any shell variable outside the quotes.
+    """
+    redirect = " >&2" if stderr else ""
+    return f"echo {shlex.quote(message)}{redirect}"
+
+
 def _emit_one(change: PlannedChange) -> str:
     """Render one change as an idempotent, value-re-checking script fragment."""
     if change.argv is None:
@@ -636,7 +673,7 @@ def _emit_one(change: PlannedChange) -> str:
             f"{change.blocked_reason or 'no write could be constructed'} — skipped."
         )
     quoted = " ".join(shlex.quote(token) for token in change.argv)
-    cite = f"  # cite: {change.citation}" if change.citation else ""
+    cite = f"  # cite: {_comment_safe(change.citation)}" if change.citation else ""
 
     if change.kind == "set-board-field":
         # The field write carries its OWN guard, symmetric with the milestone one
@@ -795,16 +832,23 @@ def _axis_label_guarded_fragment(change: PlannedChange, quoted: str, cite: str) 
         f"--jq {shlex.quote(jq)} 2>/dev/null"
     )
     tag = f"#{change.issue_number} {change.kind} ({axis})"
+    # Both messages are single-quoted through `_echo_line`: `axis` reaches them
+    # and, on the `--plan` path, is adopter-supplied. Inside double quotes bash
+    # would still run a `$(...)` in it when the operator executes this script —
+    # hidden in text that reads as an inert skip notice. `$current` is therefore
+    # appended OUTSIDE the quoted literal, since the shell must expand that one.
+    failed_read = _echo_line(
+        f"skip {tag}: could not re-read labels — failing closed, nothing written"
+    )
+    already_set = _echo_line(f"skip {tag}: already carries", stderr=False)
     return (
-        f"# {tag}{cite}\n"
+        f"# {_comment_safe(tag)}{cite}\n"
         f"# guard fails CLOSED: a FAILED re-read SKIPS the write (never fills a gap "
         f"it could not confirm).\n"
         f"if ! current=$({reread}); then\n"
-        f'  echo "skip {tag}: could not re-read labels — failing closed, '
-        f'nothing written" >&2\n'
+        f"  {failed_read}\n"
         f'elif [ -n "$current" ]; then\n'
-        f'  echo "skip {tag}: already carries $current for {axis}; '
-        f'not overwriting" >&2\n'
+        f'  {already_set} "$current" {shlex.quote(f"for {axis}; not overwriting")} >&2\n'
         f"else\n"
         f"  {quoted}\n"
         f"fi"
@@ -873,6 +917,12 @@ def planned_changes_from_plan(plan: dict[str, Any]) -> list[PlannedChange]:
         if not isinstance(entry, dict):
             continue
         kind = entry.get("kind")
+        if entry.get("axis") is not None and entry.get("axis") not in APPLIABLE_AXES:
+            # A plan document is adopter-supplied on the `--plan` path and its
+            # axis reaches the emitted shell. The render site quotes it, but an
+            # unrecognised axis cannot produce a correct write in any case, so
+            # it is dropped here too rather than trusted downstream.
+            continue
         if kind not in APPLIABLE_KINDS:
             continue
         argv = entry.get("argv")

@@ -37,7 +37,7 @@ _BACKBONE_FOOTPRINT: tuple[str, ...] = (".pkit/",)
 # Core's OWN runtime-local ignore set (ADR-009 rule 7). The seam analogous
 # to `_BACKBONE_FOOTPRINT`: the runtime-local files core itself owns inside the
 # `.pkit/` subtree, declared here because the backbone has no `package.yaml` to
-# carry them. Naming these is not the layering inversion the amendment forbids —
+# carry them. Naming these is not the layering inversion ADR-009 rule 7 forbids —
 # that rule bars core from naming *adapter*/*capability* paths; these are all
 # core-owned.
 #
@@ -54,7 +54,8 @@ _BACKBONE_FOOTPRINT: tuple[str, ...] = (".pkit/",)
 #   - the **permissions surface**, which is a backbone-propagated code directory
 #     (synced via `PROPAGATED_AREAS`, like `adapters/`), NOT a COR-011
 #     area/capability — so it has no `package.yaml` of its own and piggybacks
-#     this core-level seam (ADR-009 rule 7's per-component declaration seam). Its runtime-local files are
+#     this core-level seam (ADR-009 rule 7's per-component declaration
+#     seam). Its runtime-local files are
 #     PRJ-006's diagnose capture-log + TTL armed marker, the sandbox provenance
 #     sidecar, the ADR-032 per-machine active-profile sidecar, and the ADR-046
 #     profile-realization ledger, all under `.pkit/permissions/project/`.

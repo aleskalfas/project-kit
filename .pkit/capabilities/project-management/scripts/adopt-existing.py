@@ -563,10 +563,10 @@ def _infer_priority(inventory: Inventory) -> AxisInference:
 
     LABELS WIN over a board field when both are observed, keeping every existing
     draft byte-identical. The evidence flags the overlap rather than resolving it
-    silently, because the pair is not free: a `label:` binding under
-    `has_projects_v2_board: true` is the cross-substrate conflict `pre-check`
-    refuses (#708), so the human has to pick one and should be told so here rather
-    than by a failing gate.
+    silently, because the pair is not free: a `label:` binding governs the axis it
+    names, so the labels carry the value and the observed board field goes unused.
+    Both substrates were observed and only the human knows which they meant, so
+    the evidence says which was chosen and what it costs.
 
     Tier ORDERING is ASSUMED, never detected: label names + usage counts carry no
     urgency direction, so the remap is drawn in the conventional
@@ -997,12 +997,13 @@ def _competing_board_field_note(inventory: Inventory, axis: str) -> str:
     """The note appended when a LABEL binding was drafted over a board field too.
 
     Labels win — every existing draft stays byte-identical — but the overlap is
-    not free. Under `has_projects_v2_board: true` a `label:` binding on a
-    board-claimed axis is the cross-substrate conflict `pre-check` refuses
-    (report #708): the writers honour the flag and write no label, the readers
-    honour the map and look for one, and the value lands nowhere. So the draft
-    says which alternative exists and what it costs, instead of handing the human
-    a map whose next gate run fails without explanation.
+    not free. A `label:` binding GOVERNS the axis it names, so the value lands on
+    the adopter's own labels and the board's field for that axis goes unused
+    ([project-management:DEC-051-axis-carriage-activation] decision point 1). That
+    configuration works — `pre-check` reports it as a warning, not a refusal — but
+    an adopter who configured a board field and expected it to be written wants to
+    know. So the draft names the alternative and what it costs, rather than
+    picking silently between two substrates the human can see and it cannot.
     """
     field_obs = _board_field_candidate(inventory, axis)
     if field_obs is None:
@@ -1010,9 +1011,10 @@ def _competing_board_field_note(inventory: Inventory, axis: str) -> str:
     return (
         f" ALSO OBSERVED: a Projects-v2 board field named "
         f"{_board_field_description(field_obs)}. The label remap above was "
-        f"preferred, but the two substrates cannot both carry `{axis}`: under "
-        f"`has_projects_v2_board: true` a `label:` binding on this axis is the "
-        f"conflict `pre-check` refuses. If the BOARD is the real substrate, "
+        f"preferred, and a `label:` binding GOVERNS the axis it names — so the "
+        f"value will land on your labels and the board's `{axis.title()}` field "
+        f"will go unused for it. That works; `pre-check` reports it as a warning, "
+        f"not a failure. If the BOARD is the real substrate, "
         f"replace this binding with `{axis}: {{ board: true }}` and declare the "
         f"field on an `after_create_issue` `set-board-field` hook; if the LABELS "
         f"are, keep it and expect the board field to go unused."

@@ -591,7 +591,9 @@ def test_labels_win_over_a_board_field_but_the_overlap_is_reported(
     }
     assert "ALSO OBSERVED" in pri.evidence
     assert "board: true" in pri.evidence
-    assert "pre-check` refuses" in pri.evidence
+    assert "will go unused" in pri.evidence
+    assert "warning, not a failure" in pri.evidence
+    assert "refuses" not in pri.evidence
 
 
 def test_board_declarable_axes_match_the_schema(ae) -> None:

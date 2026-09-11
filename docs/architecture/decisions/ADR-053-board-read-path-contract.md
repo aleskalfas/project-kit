@@ -92,14 +92,13 @@ you one. Everything else stays as it is.
 
 ### 1. Three layers, one direction
 
-**Layer 1 — carriage.** `axis_carriage.carriage(axis, config, substrate_map)`
-answers *where does this axis live*, purely, from an injected `config` dict and an
+**Layer 1 — carriage.** The carriage resolver answers *where does this axis
+live*, purely, from an injected configuration mapping and an
 already-loaded map. It performs **no I/O** and returns a member of that closed set. It calls the label seam to read binding shape; it never calls the
 board read seam. The one-way layering [pkit:ADR-026] pins holds in both
 directions: **carriage calls the seams; no seam calls carriage.**
 
-**Layer 2 — the board read seam.** the board read seam owns every read of the
-board: identity, field definitions, item lookup, and — per point 5 — the field
+**Layer 2 — the board read seam.** It owns every read of the board: identity, field definitions, item lookup, and — per point 5 — the field
 **value** read. It is posture-neutral: it returns a result object saying whether
 the board answered and what it said, with `gh`'s stderr verbatim on failure, and
 it decides nothing about what that means.
@@ -227,7 +226,8 @@ the `board:` arm.
   needs a detector kind that does not exist). The schema is the gate; the seam
   does not re-check admissibility, because a second copy of the rule is a source
   of truth that can disagree.
-- **A board-carried axis is SERVED, not degraded.** write resolution reports nothing to write for it — correctly, since there is no label to write — so a consumer
+- **A board-carried axis is SERVED, not degraded.** Write resolution reports
+  nothing to write for it — correctly, since there is no label to write — so a consumer
   that keys only on the resolver reports "unsupported under your substrate-map"
   for an axis that is fully served, and softens every rule that needs it.
   **Consumers ask whether the axis is board-carried BEFORE resolving a write**,
@@ -333,8 +333,8 @@ implementation.
 
 ## Implications
 
-- **Carriage stays pure and injected.** the carriage resolver takes `config` as a
-  dict and performs no I/O; it calls the label seam and never the board seam, and
+- **Carriage stays pure and injected.** The carriage resolver takes its
+  configuration as an injected mapping and performs no I/O; it calls the label seam and never the board seam, and
   no seam calls it. A consumer needing a board value composes the two itself.
 - **The no-board silence is a tested property.** A no-board fixture driven through
   a composing gate asserts **zero** `gh` invocations. Without that test the scoping
@@ -376,5 +376,10 @@ implementation.
 - **Surface change.** Adopters with a `board:` binding gain a new failure mode on
   the gate, so the change-set declares a changeset; version numbers are written by
   the release step.
-- **Acceptance gate.** Accepted by the maintainer before implementation is built
-  against it — a forward design contract, **not self-accepted**.
+- **Acceptance gate.** Maintainer-accepted, **not self-accepted**. The layering
+  and the scoping predicate this record pins were realised in code before the
+  acceptance landed, which inverted the intended order — the record states that
+  rather than claiming the order it wanted. What the gate did hold: the board
+  value read and the raising gate, the parts this record alone governs, were
+  deliberately not built until acceptance, and the code abstaining from them says
+  why at each site.
