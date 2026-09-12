@@ -46,6 +46,7 @@ from _lib import (  # noqa: E402
     axis_labels,
     bootstrap_gate,
     classification_rules,
+    lifecycle_inference as infer,
     session_guard,
 )
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
@@ -160,12 +161,17 @@ def main() -> int:
             )
             return 2
 
+    # Branch base (#835): the default branch, or a DEC-013 integration branch when
+    # the issue is marked — never the incidental HEAD.
+    base = _resolve_base_branch(config, str(issue.get("body") or ""))
+
     print(f"start-work: #{args.issue_number}")
     print(f"  branch:    {branch_name}")
+    print(f"  base:      {base}")
     print(f"  assignee:  {invoker.github_login or '(unknown invoker)'}")
 
     if args.dry_run:
-        print("(dry-run: would create branch, set assignee, and call move-issue --to in-progress.)")
+        print(f"(dry-run: would create branch off {base}, set assignee, and call move-issue --to in-progress.)")
         return 0
 
     if not args.yes and sys.stdin.isatty():
@@ -177,7 +183,7 @@ def main() -> int:
     # Create branch (idempotent — git checkout -b on existing branch fails;
     # we check existence first).
     if existing is None:
-        if not _create_branch(branch_name):
+        if not _create_branch(branch_name, base):
             return 2
     else:
         print(f"  branch {branch_name!r} already in repo; skipping creation")
@@ -205,7 +211,20 @@ def main() -> int:
 
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
-    return gh_get_issue(issue_number, config, fields="title,labels,assignees,state")
+    return gh_get_issue(
+        issue_number, config, fields="title,labels,assignees,state,body"
+    )
+
+
+def _resolve_base_branch(config: dict, body: str) -> str:
+    """The branch start-point (#835). When the issue body carries a DEC-013
+    `Integration: integration/<slug>` marker the base is that integration branch;
+    otherwise it is the adopter's `default_branch` (default `main`). Never the
+    incidental `HEAD` that happens to be checked out."""
+    slug = infer.integration_slug(body)
+    if slug:
+        return f"integration/{slug}"
+    return str(config.get("default_branch") or "main")
 
 
 def _derive_branch_prefix(
@@ -270,18 +289,36 @@ def _branch_matches_shape(name: str, issue_number: int) -> bool:
     return bool(re.match(rf"^[a-z]+/{issue_number}-[a-z0-9-]+$", name))
 
 
-def _create_branch(name: str) -> bool:
+def _create_branch(name: str, base: str) -> bool:
+    """Create `name` off `base` — the default branch or a DEC-013 integration
+    branch (#835) — NOT off the incidental `HEAD`. The base is fetched first so the
+    branch is cut from an up-to-date ref; fetch failure (e.g. offline) degrades to
+    the local `base` ref."""
+    fetched = subprocess.run(
+        ["git", "fetch", "origin", base],
+        capture_output=True, text=True, check=False,
+    ).returncode == 0
+    start_point = f"origin/{base}" if fetched else base
     proc = subprocess.run(
-        ["git", "checkout", "-b", name],
+        ["git", "checkout", "-b", name, start_point],
         capture_output=True, text=True, check=False,
     )
+    if proc.returncode != 0 and start_point != base:
+        # origin/<base> unresolvable (e.g. base not on origin) — fall back to the
+        # local base ref before giving up.
+        start_point = base
+        proc = subprocess.run(
+            ["git", "checkout", "-b", name, base],
+            capture_output=True, text=True, check=False,
+        )
     if proc.returncode != 0:
         print(
-            f"error: git checkout -b {name!r} failed: {proc.stderr.strip()}",
+            f"error: git checkout -b {name!r} off {base!r} failed: "
+            f"{proc.stderr.strip()}",
             file=sys.stderr,
         )
         return False
-    print(f"  created branch: {name}")
+    print(f"  created branch: {name} (off {start_point})")
     return True
 
 

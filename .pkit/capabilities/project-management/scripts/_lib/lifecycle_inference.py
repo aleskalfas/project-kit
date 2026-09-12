@@ -233,6 +233,18 @@ def malformed_integration_marker(body: str) -> str | None:
     return None
 
 
+def integration_slug(body: str) -> str | None:
+    """The `<slug>` from a DEC-013 `Integration: integration/<slug>` marker on the
+    body's first content line, or None when absent (or malformed). Consumers derive
+    the owning integration branch as `integration/<slug>` — e.g. start-work cuts a
+    marked issue's branch off `integration/<slug>` rather than the default base."""
+    first = _first_content_line(body)
+    if first is None:
+        return None
+    m = INTEGRATION_MARKER_RE.match(first)
+    return m.group(1) if m else None
+
+
 def parent_ref(child_body: str) -> int | None:
     """The parent issue number named on a child body's FIRST parent-ref line
     (e.g. `EPIC: #42` -> 42), or None when the body declares no parent-ref.
