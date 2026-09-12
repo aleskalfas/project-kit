@@ -49,11 +49,12 @@ pattern = "^(?P<version>[0-9]+\\.[0-9]+\\.[0-9]+)$"
 # hatchling accepts here.
 #
 # That covers the `project/` globs only. The two entries at the foot are a
-# hand-copy of `install._ADOPTER_OWNED_KIT_FILES`, and hand-copies drift —
-# which is this whole change's thesis. Adding an entry to that frozenset
-# requires a matching line here, or the sdist ships what the wheel withholds.
-# The frozenset's `version-pin` entry needs no line today only because no
-# `.pkit/version-pin` is tracked, so the sdist test passes vacuously on it.
+# hand-copy of `_ADOPTER_OWNED_KIT_FILES`, which lives in
+# `.pkit/lifecycle/ownership.py` — and hand-copies drift, which is this whole
+# change's thesis. Adding an entry to that frozenset requires a matching line
+# here, or the sdist ships what the wheel withholds. Its `version-pin` entry
+# needs no line today only because no `.pkit/version-pin` is tracked, so the
+# sdist test passes vacuously on it.
 exclude = [
   ".pkit/**/project",
   ".pkit/project",
