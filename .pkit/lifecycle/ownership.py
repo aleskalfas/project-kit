@@ -1,5 +1,11 @@
 """Tier-ownership predicates the lifecycle layer owns (per COR-031 / ADR-051).
 
+**Stdlib only at module level.** The packaging build hook loads this file by
+path in an isolated build environment where third-party packages are not
+importable, so every non-stdlib import must stay inside the function that
+needs it (see :func:`_load_yaml`). `test_ownership_has_no_third_party_module_level_import`
+enforces it.
+
 **Propagated neutral code, not an area's content.** This module owns the
 project's ownership questions — *does `pkit sync` manage this path?*
 (:func:`is_sync_managed`) and *is this path adopter-owned by tier alone?*
@@ -124,9 +130,13 @@ def is_adopter_owned_by_tier(rel_posix: str) -> bool:
 
     `rel_posix` is a FILE path relative to `.pkit/` (e.g.
     `capabilities/pm/project/x.yaml`). That precondition is load-bearing: the
-    tier rule reads every part *except the last*, so handing it a directory
-    path that names the tier itself — `agents/project` — answers False, while
-    the bare top-level `project` answers True through an earlier case. A
+    depth-free `project/` case reads every part *except the last*, so handing
+    it a directory path that names the tier itself — `agents/project` —
+    answers False, while the bare top-level `project` answers True through an
+    earlier case. (Other cases do read the final part: `rules/project.md` and
+    the top-level-file set are matched by name, and `scratchpad/active`
+    answers True as a directory. The precondition is about the `project/`
+    case, which is the one a packaging caller leans on.) A
     caller asking "is this directory the adopter's tier?" is asking a
     different question and must not use this predicate to answer it.
     """

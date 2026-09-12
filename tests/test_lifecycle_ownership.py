@@ -1,7 +1,9 @@
 """Tests for the lifecycle layer's tier-ownership predicate (ADR-051 / COR-031).
 
 `.pkit/lifecycle/ownership.py` answers "does `pkit sync` manage this path?" for
-every consumer that needs it. Two things are pinned here:
+every consumer that needs it. The module carries a second, narrower predicate —
+`is_adopter_owned_by_tier` — whose cases are pinned in
+`tests/test_packaging_boundary.py`, not here. Two things are pinned in this file:
 
 - **the tier map** — each boundary instance ADR-051 traces, decided the way that
   record decides it; and

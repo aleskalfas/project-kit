@@ -62,7 +62,8 @@ DEST_ROOT = "project_kit/_kit"
 # content and are deliberately absent — `pyproject.toml` enumerates their
 # kit-owned paths individually (`decisions/core`, `decisions/README.md`,
 # `scratchpad/README.md`), which excludes the adopter's paths by construction.
-# Adding one here would collide two force-include sources on one destination.
+# Adding one here would include it twice, by two mechanisms writing the same
+# destinations — the duplication this hook exists to remove.
 # A WHOLESALE tree left in the static list ships unfiltered — that is the bug.
 # Note the criterion is not "has a `project/` subdirectory": `rules` has none
 # and is a member because of `rules/project.md`.

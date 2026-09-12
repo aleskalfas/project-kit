@@ -39,8 +39,16 @@ The rule — not the list — is what this decides: the existing core/project ow
 determines what's in. By that rule the bundle **excludes** adopter-owned subtrees (for example
 a `project/` directory at any depth, such as `decisions/project/` or
 `capabilities/<name>/project/`; the maintainer's `scratchpad/{active,done,dropped}` notes;
-`manifest.yaml`; and `.gitignore` / `__pycache__` — illustrative of the rule's reach, not an
+`manifest.yaml`; and `.gitignore` — illustrative of the rule's reach, not an
 authoritative list).
+
+**Build caches are excluded by a second mechanism, not by this rule.** `__pycache__`, `.pyc`
+and `.pyo` are not adopter-owned — the ownership predicate answers False for them — and
+`pyproject.toml`'s `exclude` cannot filter force-included paths, which is the whole reason the
+hook exists. So the hook applies those patterns itself (`EXCLUDED_PARTS` / `EXCLUDED_SUFFIXES`
+in `hatch_build.py`); omitting them shipped 87 `.pyc` files on the first attempt, trading 41
+unwanted files for 87 different ones. Two obligations on the bundle, not one — an author who
+reimplements it from the ownership rule alone reproduces that bug.
 
 **The rule withholds adopter-owned *content*, not adopter-owned *shape* — one bounded exception
 (#813).** The rule above cannot erase a directory's existence, because the installer reads the
