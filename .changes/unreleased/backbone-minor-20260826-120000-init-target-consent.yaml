@@ -1,0 +1,17 @@
+component: backbone
+kind: minor
+custom:
+  category: Changed
+body: >
+  `pkit init` now tells you where it will install before it does, and asks first
+  when that target isn't your current folder (#780). Every run announces the
+  resolved target and why it was picked, plus any existing project-kit install it
+  finds between your current directory and that target. When the target is a
+  parent directory (a git repository root above you) or a fresh non-git folder,
+  init asks for confirmation on an interactive terminal and refuses on a
+  non-interactive one — a piped `yes |` no longer silently installs somewhere you
+  did not expect. If the target already has a project-kit install, init refuses
+  (non-zero) and points you at `pkit sync` to refresh it. A new `--here` installs
+  into the current directory (refused when it is a subfolder of a git worktree,
+  where a `.pkit/` there would be unreachable), and `--yes` accepts the resolved
+  target non-interactively; `--dry-run` still previews without prompting.

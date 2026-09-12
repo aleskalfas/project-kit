@@ -77,14 +77,14 @@ milestone_categories:
 # and [project-management:DEC-028-agent-as-approver-paths].
 #
 # project-kit dogfoods its own capability: agent-mode (the default) with
-# the capability's default `reviewer` agent registered. The remote path
+# the capability's default `pm-reviewer` agent registered. The remote path
 # is unconfigured today — project-kit has no bot identity. Adopters who
 # want the autonomous-loop closure point ship a bot via the remote path.
 review:
   mode: agent
   agents:
     local_registered:
-      - name: reviewer
+      - name: pm-reviewer
 
 # Audit/journal comment projection (per DEC-049). The engine journal is the
 # canonical audit trail regardless; this controls how much is projected as

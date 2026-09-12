@@ -65,7 +65,7 @@ You are the **software engineer** for this project. …
 
 - `name`, `description` — agent identity; `description` is the one-line summary surfaced by tooling.
 - `tools` — the harness-recognised tool names this agent is granted (e.g. for Claude Code: `Read`, `Edit`, `Bash`, `Agent`, …). The adapter translates this to the harness's expected format at deploy time.
-- `reads` — references the agent consults at task time. Split into `paths` (filesystem locations), `records` (decision-record IDs like `COR-NNN` or `PRJ-NNN`), and `patterns` (overlay-resolved placeholders).
+- `reads` — references the agent consults at task time. Split into `paths` (filesystem locations), `records` (decision-record IDs like `COR-NNN` or `PRJ-NNN`), and `patterns` (overlay-resolved placeholders). The `paths`/`records`-vs-`patterns` split is a load-bearing authoring lever, not just a filing convention: a category referenced through `reads.paths` or `reads.records` is a **hard** (required) read — if the overlay leaves it undefined the agent is skipped at deploy — whereas a category referenced *only* through `reads.patterns` is an **optional** (corpus) read — undefined resolves to a dropped item and the agent still deploys as a generalist. So a required read goes in `reads.paths`; an optional/corpus read whose absence is a normal early state (a project-conventions corpus, say) goes in `reads.patterns`. The undefined-category behaviour of each channel is spelled out under "Validation" below; the semantics are fixed by the optional-read contract (ADR-052 D1).
 - `owns` — paths the agent has write authority over; entries may be literal paths or `<category>` placeholders the overlay resolves. Every kit-relevant path is meant to have exactly one owning agent; `pkit refs validate` enforces that by flagging cross-agent overlaps over *resolved* paths — see "Exactly-one-owner over `owns:`" below for what it does and does not check. When a *core* agent's `owns:` carries a placeholder the adopter populates, that category is **write-carrying** and picks up extra rules (see "Write-carrying categories"). Agents-only (skills don't own paths).
 - `needs` — hook names this agent invokes. See the "Hooks" section.
 - `answers` — hook names a skill provides. Skills only.
@@ -223,7 +223,11 @@ Four rules apply to a write-carrying category:
 
 **Validation:**
 
-- Every category referenced by an agent template must be defined in the overlay — either at the top level or in `overrides.<agent>:`. An agent that references an undefined category is **skipped at deploy time** (loud, non-fatal — the rest still deploy). A *bare* key (`category:` with no value) counts as undefined; an explicit empty list (`category: []`) does not — it resolves to zero entries.
+- Every category referenced by an agent template resolves through the overlay — either at the top level or in `overrides.<agent>:`. What an *undefined* category does depends on the channel it is referenced through (the hard/optional split of the optional-read contract, ADR-052):
+  - **Undefined in a hard channel** (`owns` / `needs` / `answers` / `reads.paths` / `reads.records`) — the agent is **skipped at deploy time** (loud, non-fatal — the rest still deploy).
+  - **Undefined and referenced *only* through `reads.patterns`** — this is an **optional read**: the item is simply dropped from the resolved list and the agent **deploys anyway** (as a generalist, working without that corpus). A category referenced both optionally and hard is treated as hard — the hard reference wins.
+
+  A *bare* key (`category:` with no value) counts as undefined; an explicit empty list (`category: []`) does not — it resolves to zero entries.
 - A write-carrying category whose entry resolves into sync-managed content is **refused at deploy time**, naming the offending path; that agent is skipped and the rest still deploy.
 - Override entries for non-existent default categories produce a warning (likely typo / dead config).
 - Override entries for non-existent agents produce a warning.
@@ -237,12 +241,13 @@ Four rules apply to a write-carrying category:
   3. Runs the adapter's deploy step so the agent lands in `.claude/agents/` immediately.
 
   Idempotent: re-running on an already-adopted agent makes no changes and re-deploys. Errors clearly when the agent is unknown, references no overlay categories, or still needs a category with no registered conventional default (use `reconcile` for those). For a **write-carrying** category the refusal is structural and says so: core cannot enumerate your paths, so there is nothing for `adopt` to create.
-- `pkit agents reconcile [--write]` surfaces every referenced-but-undefined category into `overlay.yaml`. The command uses **detect-then-fill** logic — five states per missing category:
+- `pkit agents reconcile [--write]` surfaces every referenced-but-undefined category into `overlay.yaml`. The command uses **detect-then-fill** logic — six states per missing category:
   1. **Missing + write-carrying**: the category is written *uncommented* as `<category>: []` — the explicit empty list. The agent then deploys **inert** (owning nothing) rather than being skipped, which is what a fresh install gets from the seed. You nominate real paths when ready.
   2. **Missing + conventional default directory exists**: the category is written *uncommented* with the conventional path, ready for `pkit sync` to deploy the agent immediately with no manual step. Example: `architecture-docs` is auto-filled with `docs/architecture/` when that directory is present; `adr-records` with `docs/architecture/decisions/`.
-  3. **Missing + no conventional default directory**: a commented stub is appended (e.g. `# architecture-docs:`) with `<path/relative/to/project/root>` guidance; the adopter fills in a real path before running `pkit sync`. Or run `pkit agents adopt <agent>` to create the conventional layout and deploy it.
-  4. **Commented stub already present**: reconcile reports "uncomment + set real paths" guidance and does not append a duplicate. Or run `pkit agents adopt <agent>` to create the conventional layout and deploy it.
-  5. **Defined** (uncommented entry with paths, or an explicit `[]`): nothing is written; an adopter-set value is never overwritten.
+  3. **Missing + optional read (patterns-only), no conventional default**: the category is referenced *only* through some agent's `reads.patterns` (an optional corpus read, ADR-052), so its absence never skips the agent. A commented stub is appended, framed as an **optional read — the agent already deploys without it**; uncomment and set paths only to enrich the agent with your corpus, never as a prerequisite.
+  4. **Missing + no conventional default directory (hard)**: a commented stub is appended (e.g. `# architecture-docs:`) with `<path/relative/to/project/root>` guidance; because this is a hard read the agent stays **skipped** until the adopter fills in a real path and runs `pkit sync`. Or run `pkit agents adopt <agent>` to create the conventional layout and deploy it.
+  5. **Commented stub already present**: reconcile does not append a duplicate; its guidance splits by channel. A **hard** stub reports "uncomment + set real paths" as *action needed* (the agent is skipped until then) — or run `pkit agents adopt <agent>` to create the conventional layout and deploy it. An **optional** stub reports the same uncomment-to-enrich guidance but framed as optional — the agent already deploys.
+  6. **Defined** (uncommented entry with paths, or an explicit `[]`): nothing is written; an adopter-set value is never overwritten.
 
   This is the path for an adopter whose overlay predates a newly-shipped agent's categories — the repair is an explicit, idempotent gesture rather than an automatic sync mutation. Dry-run by default.
 

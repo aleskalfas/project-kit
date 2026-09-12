@@ -98,14 +98,14 @@ def test_first_parent_ref_skips_leading_whitespace(st) -> None:
 
 
 def test_infer_recognises_each_prefix(st, issue_types) -> None:
-    assert st._infer_structural_type("[EPIC] x", issue_types) == "epic"
-    assert st._infer_structural_type("[Feature] y", issue_types) == "feature"
-    assert st._infer_structural_type("[Umbrella] z", issue_types) == "umbrella"
-    assert st._infer_structural_type("[Task] w", issue_types) == "task"
+    assert st.infer_structural_type("[EPIC] x", issue_types) == "epic"
+    assert st.infer_structural_type("[Feature] y", issue_types) == "feature"
+    assert st.infer_structural_type("[Umbrella] z", issue_types) == "umbrella"
+    assert st.infer_structural_type("[Task] w", issue_types) == "task"
 
 
 def test_infer_none_for_unknown_prefix(st, issue_types) -> None:
-    assert st._infer_structural_type("plain", issue_types) is None
+    assert st.infer_structural_type("plain", issue_types) is None
 
 
 # --- issue parsing ---------------------------------------------------

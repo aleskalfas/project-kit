@@ -667,11 +667,11 @@ def test_plan_parent_preserves_milestone_link_form_recognised(sf) -> None:
 
 
 def test_infer_structural_type_task(sf, issue_types) -> None:
-    assert sf._infer_structural_type("[Task] x", issue_types) == "task"
+    assert sf.infer_structural_type("[Task] x", issue_types) == "task"
 
 
 def test_infer_structural_type_bug_via_classification(sf, issue_types, classification) -> None:
-    assert sf._infer_structural_type("[Bug] x", issue_types, classification) == "task"
+    assert sf.infer_structural_type("[Bug] x", issue_types, classification=classification) == "task"
 
 
 def test_parent_ref_line_uses_type_form(sf, issue_types) -> None:

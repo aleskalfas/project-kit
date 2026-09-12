@@ -26,33 +26,41 @@ REPO = Path(__file__).resolve().parent.parent
 # --- anti-drift guard: backbone keys must match the adapter resolver ---------
 
 def test_resolvable_keys_match_adapter_resolver():
-    """The (B) backbone scan only stays correct if its resolvable-key set equals
-    what `_resolve_agent.py` actually substitutes. Pin it."""
+    """The (B) backbone scan only stays correct if its resolvable-key set — and
+    the ADR-052 hard/optional channel split — equals what `_resolve_agent.py`
+    actually substitutes. Extract the resolver's *named* module-level tuples and
+    pin each against the backbone constant of the same name."""
     resolver = (REPO / ".pkit" / "adapters" / "claude-code" / "_resolve_agent.py").read_text()
-    # The adapter resolves these top-level list keys ...
-    m_top = re.search(r'for key in \(([^)]*)\):', resolver)
-    assert m_top, "could not find the top-level resolvable-key tuple in _resolve_agent.py"
-    top_keys = tuple(re.findall(r'"([a-z]+)"', m_top.group(1)))
-    # ... and these reads.* sub-keys.
-    m_reads = re.search(r'for k in \(([^)]*)\):', resolver)
-    assert m_reads, "could not find the reads.* resolvable-key tuple in _resolve_agent.py"
-    reads_keys = tuple(re.findall(r'"([a-z]+)"', m_reads.group(1)))
 
-    assert top_keys == ao.RESOLVABLE_LIST_KEYS
-    assert reads_keys == ao.RESOLVABLE_READS_KEYS
+    def _named_tuple(name: str) -> tuple[str, ...]:
+        # Match the module-level assignment `NAME[: annotation] = (...)` at the
+        # start of a line, ignoring any comment mentions of the same name.
+        m = re.search(rf'(?m)^{name}[^=(\n]*=\s*\(([^)]*)\)', resolver)
+        assert m, f"could not find the {name} tuple in _resolve_agent.py"
+        return tuple(re.findall(r'"([a-z]+)"', m.group(1)))
+
+    assert _named_tuple("RESOLVABLE_LIST_KEYS") == ao.RESOLVABLE_LIST_KEYS
+    assert _named_tuple("HARD_READS_KEYS") == ao.HARD_READS_KEYS
+    assert _named_tuple("OPTIONAL_READS_KEYS") == ao.OPTIONAL_READS_KEYS
 
 
 # --- fixtures ----------------------------------------------------------------
 
-def _agent(dir_: Path, name: str, *, owns=None, reads_paths=None, body="body") -> Path:
+def _agent(dir_: Path, name: str, *, owns=None, reads_paths=None,
+           reads_patterns=None, body="body") -> Path:
     dir_.mkdir(parents=True, exist_ok=True)
     fm = ["---"]
     if owns:
         fm.append("owns:")
         fm += [f"  - {x}" for x in owns]
-    if reads_paths:
-        fm += ["reads:", "  paths:"]
-        fm += [f"    - {x}" for x in reads_paths]
+    if reads_paths or reads_patterns:
+        fm.append("reads:")
+        if reads_paths:
+            fm.append("  paths:")
+            fm += [f"    - {x}" for x in reads_paths]
+        if reads_patterns:
+            fm.append("  patterns:")
+            fm += [f"    - {x}" for x in reads_patterns]
     fm.append("---")
     (dir_ / f"{name}.md").write_text("\n".join(fm) + f"\n{body}\n", encoding="utf-8")
     return dir_ / f"{name}.md"
@@ -575,6 +583,99 @@ def test_agents_status_says_write_carrying_is_not_adoptable(tmp_path, monkeypatc
     assert "Not adoptable" in result.output
     assert _WRITE_CARRYING in result.output
     assert "reconcile --write" in result.output
+
+
+# --- optional reads: patterns-only categories (ADR-052) ----------------------
+
+def test_optional_undefined_deploys_and_drops_item(tmp_path):
+    """A patterns-only category undefined in the overlay: the resolver deploys
+    the agent (exit 0) and drops the item; the backbone reports it deployable
+    with the category classed optional (ADR-052 Decision 3)."""
+    proj = _project(tmp_path, overlay="")
+    overlay = proj / ".pkit" / "agents" / "project" / "overlay.yaml"
+    src = _agent(proj / ".pkit" / "agents" / "core", "producer",
+                 reads_patterns=["<project-conventions>"])
+
+    code, fm, stderr = _resolve_via_adapter(src, "producer", overlay)
+    assert code == 0, stderr
+    reads = fm.get("reads") or {}
+    assert reads.get("patterns", []) == []  # the undefined optional item dropped
+
+    st = {s.name: s for s in ao.agent_overlay_statuses(proj)}["producer"]
+    assert st.deployable
+    assert st.optional == ("project-conventions",)
+    assert st.missing == ("project-conventions",)  # undefined, but non-blocking
+
+
+def test_optional_defined_substitutes_the_path(tmp_path):
+    """When the optional category *is* defined, the resolver substitutes the
+    resolved path just like any placeholder (ADR-052: defined → the path)."""
+    proj = _project(tmp_path, overlay="project-conventions:\n  - docs/conventions/\n")
+    overlay = proj / ".pkit" / "agents" / "project" / "overlay.yaml"
+    src = _agent(proj / ".pkit" / "agents" / "core", "producer",
+                 reads_patterns=["<project-conventions>"])
+
+    code, fm, stderr = _resolve_via_adapter(src, "producer", overlay)
+    assert code == 0, stderr
+    assert fm["reads"]["patterns"] == ["docs/conventions/"]
+
+    st = {s.name: s for s in ao.agent_overlay_statuses(proj)}["producer"]
+    assert st.deployable
+    assert st.missing == ()
+
+
+def test_patterns_plus_hard_reference_stays_hard(tmp_path):
+    """A category referenced both under `reads.patterns` and a hard key (`owns`)
+    is *hard* — the hard reference wins (ADR-052 Decision 2). Undefined → the
+    resolver exits non-zero and the backbone reports it not deployable."""
+    proj = _project(tmp_path, overlay="")
+    overlay = proj / ".pkit" / "agents" / "project" / "overlay.yaml"
+    src = _agent(proj / ".pkit" / "agents" / "core", "dual",
+                 owns=["<shared-cat>"], reads_patterns=["<shared-cat>"],
+                 body="owns `<shared-cat>`")
+
+    code, _fm, stderr = _resolve_via_adapter(src, "dual", overlay)
+    assert code != 0
+    assert "shared-cat" in stderr
+
+    st = {s.name: s for s in ao.agent_overlay_statuses(proj)}["dual"]
+    assert not st.deployable
+    assert "shared-cat" not in st.optional  # hard reference wins
+
+
+def test_reconcile_surfaces_optional_category_as_optional(tmp_path):
+    """reconcile adds a patterns-only category as an *optional* commented stub,
+    framed 'the agent already deploys', and the agent stays deployable."""
+    proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
+    _agent(proj / ".pkit" / "agents" / "core", "producer",
+           reads_patterns=["<project-conventions>"])
+    overlay = proj / ".pkit" / "agents" / "project" / "overlay.yaml"
+
+    added, report = ao.reconcile_overlay(proj, write=True)
+    assert "project-conventions" in added
+    text = overlay.read_text()
+    assert "# project-conventions:" in text  # commented (not a hard blocker)
+    assert "optional" in report.lower()
+
+    # The agent deploys regardless — the optional category never blocks it.
+    st = {s.name: s for s in ao.agent_overlay_statuses(proj)}["producer"]
+    assert st.deployable
+    assert ao.optional_categories(proj) == {"project-conventions"}
+
+
+def test_optional_drop_parity_with_adapter_resolver(tmp_path):
+    """The backbone deployability verdict and the real adapter resolver agree on
+    an undefined optional read: both let the agent deploy (resolver exit 0), and
+    the resolved patterns list is empty."""
+    proj = _project(tmp_path, overlay="")
+    overlay = proj / ".pkit" / "agents" / "project" / "overlay.yaml"
+    src = _agent(proj / ".pkit" / "agents" / "core", "producer",
+                 reads_patterns=["<project-conventions>"])
+
+    code, fm, _stderr = _resolve_via_adapter(src, "producer", overlay)
+    st = {s.name: s for s in ao.agent_overlay_statuses(proj)}["producer"]
+    assert (code == 0) is st.deployable is True
+    assert (fm.get("reads") or {}).get("patterns", []) == []
 
 
 # --- adopt (issue #47) -------------------------------------------------------

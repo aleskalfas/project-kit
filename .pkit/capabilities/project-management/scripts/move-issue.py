@@ -65,8 +65,9 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate  # noqa: E402
+from _lib import audit as _audit  # noqa: E402
 from _lib import axis_labels  # noqa: E402
+from _lib import bootstrap_gate  # noqa: E402
 from _lib import classification_rules  # noqa: E402
 from _lib import lifecycle_inference as infer  # noqa: E402
 from _lib import session_guard  # noqa: E402
@@ -82,59 +83,23 @@ from _lib.placeholder_detection import (  # noqa: E402
     PHASE_TRANSITION,
     detect_placeholder_residuals,
 )
+from _lib.structural_type import infer_structural_type  # noqa: E402
 
 
 SEVERITY_HARD_REJECT = "hard-reject"
-SEVERITY_BYPASSABLE = "bypassable-with-audit"
 SEVERITY_WARNING = "warning"
 
-#: The audit-comment provenance marker (DEC-049), uniform with the other
-#: `<!-- pkit-* -->` markers (verdict / provenance / hook). Filterable; the
-#: canonical audit-comment shape lives in the schema template below.
-_AUDIT_MARKER = "<!-- pkit-audit -->"
-
-#: Fallback if the schema can't be read — must match the schema's canonical form.
-_AUDIT_TEMPLATE_FALLBACK = f"{_AUDIT_MARKER}\nBypassed by <name> <<email>>: <reason>"
-
-
-def _load_audit_template(capability_root) -> str:
-    """The canonical audit-comment template, read from `validation-severity.yaml`'s
-    `severities.bypassable-with-audit.audit_comment_template` — the single source
-    of truth per DEC-049. Falls back to the known canonical form on any read error."""
-    from pathlib import Path as _Path
-
-    path = _Path(capability_root) / "schemas" / "validation-severity.yaml"
-    try:
-        data = YAML(typ="safe").load(path.read_text(encoding="utf-8"))
-        tmpl = data["severities"][SEVERITY_BYPASSABLE]["audit_comment_template"]
-        return tmpl.strip() if isinstance(tmpl, str) and tmpl.strip() else _AUDIT_TEMPLATE_FALLBACK
-    except (OSError, YAMLError, KeyError, TypeError):
-        return _AUDIT_TEMPLATE_FALLBACK
-
-
-def _render_audit_comment(capability_root, invoker, reason: str) -> str:
-    """Render the one canonical audit comment (DEC-049) from the schema template:
-    marker + actor (`<name> <<email>>`) + reason. `move-issue` is the sole audit
-    writer; the transition itself is recorded by the timeline (the comment carries
-    the *why*, not the state). Renders cleanly when the email is unresolved."""
-    template = _load_audit_template(capability_root)
-    name = (getattr(invoker, "github_login", None) or getattr(invoker, "email", None) or "unknown")
-    email = getattr(invoker, "email", None) or ""
-    body = template.replace("<name>", name).replace("<reason>", reason)
-    if email:
-        body = body.replace("<email>", email)
-    else:
-        body = body.replace(" <<email>>", "").replace("<<email>>", "")
-    return body
-
-
-def _audit_projection(config) -> str:
-    """The audit-comment projection level (DEC-049): `off` | `audit` | `full`.
-    Default `audit`. The engine journal records every move regardless of level;
-    this only controls how much is projected as GitHub comments."""
-    audit = config.get("audit") if isinstance(config, dict) else None
-    level = audit.get("projection") if isinstance(audit, dict) else None
-    return level if level in ("off", "audit", "full") else "audit"
+# The DEC-049 audit primitives — the canonical marker, the schema-sourced
+# template, the renderer and the projection knob — live ONCE in `_lib.audit`,
+# shared with every other audit-comment writer (COR-007). Re-exported under the
+# module-private names this script's call sites and tests already use, so the
+# extraction moved the implementation without moving the call surface.
+SEVERITY_BYPASSABLE = _audit.SEVERITY_BYPASSABLE
+_AUDIT_MARKER = _audit.AUDIT_MARKER
+_AUDIT_TEMPLATE_FALLBACK = _audit.AUDIT_TEMPLATE_FALLBACK
+_load_audit_template = _audit.load_audit_template
+_render_audit_comment = _audit.render_audit_comment
+_audit_projection = _audit.audit_projection
 
 
 def _pkit_version() -> str:
@@ -304,8 +269,8 @@ def main() -> int:
     state = str(issue.get("state", "")).lower()
     milestone = issue.get("milestone") or {}
 
-    structural_type = _infer_structural_type(
-        title, issue_types, classification, labels
+    structural_type = infer_structural_type(
+        title, issue_types, classification=classification, labels=labels
     )
     if structural_type is None:
         # Unrecoverable: no [Type] title prefix AND no `type:*` kind label to
@@ -519,7 +484,7 @@ def main() -> int:
     if projection != "off" and is_bypass_audit:
         # Reason is guaranteed non-empty here: the bypassable authorisation
         # gate above refuses a --bypass without a non-empty --bypass-reason.
-        # move-issue is the SOLE audit-comment writer (DEC-049): it renders the
+        # move-issue is the sole writer of the TRANSITION audit comment (DEC-049): it renders the
         # one canonical comment from the schema template; wrappers pass the reason
         # through rather than posting their own (killing the #672 double-post).
         reason = (args.bypass_reason or "").strip()
@@ -742,90 +707,6 @@ def _bypass_reason_missing(bypass: bool, bypass_reason: str | None) -> bool:
     return bool(bypass) and not (bypass_reason or "").strip()
 
 
-def _infer_structural_type(
-    title: str,
-    issue_types: dict,
-    classification: dict | None = None,
-    labels: list[str] | None = None,
-) -> str | None:
-    """Infer the structural type, title prefix first, then the `type:*` label.
-
-    PRECEDENCE: the title prefix wins; the `type:*` kind label is the fallback,
-    consulted only when no prefix matches. (Structural-type inference also runs
-    in create-issue / validate-issue / the engine; a future parity pass per
-    DEC-033 should align those sites with this precedence rule.)
-
-    Sources, in order:
-    1. issue-types.yaml `types[*].title_prefix` — the structural-type
-       prefixes ([EPIC], [Feature], [Umbrella], [Task]).
-    2. classification.yaml `axes.type.title_prefix_by_value` — the
-       kind-driven prefixes ([Bug], [Docs], [Test], [Refactor], [Chore]).
-       Kind-prefixes are restricted to the `task` structural type.
-    3. FALLBACK — the issue's `type:*` kind label, when no prefix matched.
-       Only ever recovers `task` (see `_structural_type_from_kind_label`); a
-       container with an edited-away prefix has no `type:*` label and stays
-       unrecoverable, surfaced as malformed by the caller.
-    """
-    types = issue_types.get("types") or {}
-    for type_name, entry in types.items():
-        if not isinstance(entry, dict):
-            continue
-        prefix = entry.get("title_prefix", "")
-        case = entry.get("title_case", "title")
-        rendered = str(prefix)
-        if case == "upper":
-            rendered = rendered.upper()
-        if title.startswith(f"[{rendered}] "):
-            return str(type_name)
-
-    # Check kind-driven prefixes from classification.yaml.
-    # These only appear on Task-shape issues per the structural_restriction rule.
-    if classification:
-        prefix_by_value = (
-            classification.get("axes", {})
-            .get("type", {})
-            .get("title_prefix_by_value", {})
-        )
-        for _kind_value, kind_prefix in prefix_by_value.items():
-            if isinstance(kind_prefix, str) and title.startswith(f"[{kind_prefix}] "):
-                return "task"
-
-    # Fallback: recover the structural type from the `type:*` kind label when the
-    # title prefix was edited away. Task-only by construction (see helper).
-    if labels and classification:
-        return _structural_type_from_kind_label(labels, classification)
-
-    return None
-
-
-def _structural_type_from_kind_label(
-    labels: list[str],
-    classification: dict,
-) -> str | None:
-    """Recover the structural type from the issue's `type:*` kind label.
-
-    A `type:*` label carries only *kind* (bug/docs/test/refactor/maintenance/
-    feature) and exists only on Tasks: per classification.yaml's
-    `structural_restriction`, every non-feature kind maps to the single
-    structural type `task`, while feature-kind containers (epic/feature/
-    umbrella) carry no distinguishing `type:*` label. The kind→structural
-    mapping is READ from `allowed_structural_types_per_kind` rather than
-    hardcoded — a kind recovers a structural type only when its allowed-set is
-    unambiguous (exactly one type), which is true for every task-only kind and
-    false for the multi-valued `feature` kind. So this only ever recovers
-    `task`; an ambiguous or unknown kind returns None.
-    """
-    kind = axis_labels.read("type", labels)
-    if kind is None:
-        return None
-    # The kind→structural table is read through the shared _lib reader — the one
-    # place `allowed_structural_types_per_kind` is parsed (COR-007 single source).
-    allowed = classification_rules.allowed_structural_types_per_kind(classification)
-    candidates = allowed.get(kind) if isinstance(allowed, dict) else None
-    if isinstance(candidates, list) and len(candidates) == 1:
-        only = candidates[0]
-        return str(only) if isinstance(only, str) else None
-    return None
 
 
 def _infer_current_state(

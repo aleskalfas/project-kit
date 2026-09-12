@@ -14,8 +14,12 @@ Invoked by `deploy-agents.sh` once per agent. Reads:
 Writes the resolved agent file content to stdout (frontmatter with
 placeholders substituted + original body). Exits non-zero with a clear
 error message if a placeholder references a category the overlay does
-not define, or if a *write-carrying* category names sync-managed content
-(the no-shared-files invariant at the agent surface, per ADR-051).
+not define *through a hard channel* (any list key or `reads.paths` /
+`reads.records`), or if a *write-carrying* category names sync-managed
+content (the no-shared-files invariant at the agent surface, per ADR-051).
+A category referenced *only* through `reads.patterns` is an **optional
+read** (ADR-052): undefined, its item is dropped and the resolver still
+exits 0 so the agent deploys as a generalist.
 
 This script *applies* that last check but does not *define* it. The
 sync-managed predicate and the write-carrying category registry live
@@ -42,6 +46,22 @@ from ruamel.yaml import YAML
 
 # `<root>/.pkit/adapters/claude-code/_resolve_agent.py` → `<root>`.
 TARGET_ROOT = Path(__file__).resolve().parents[3]
+
+# The frontmatter keys whose list items may carry `<category>` placeholders,
+# split by *channel* per ADR-052. The backbone scanner (`agents_overlay.py`)
+# mirrors these under the same names, and a parity test extracts both by name
+# and asserts equality — so the two implementations cannot drift on which keys
+# resolve, nor on which channel is hard vs. optional.
+#
+#   - RESOLVABLE_LIST_KEYS / HARD_READS_KEYS are *hard*: an undefined placeholder
+#     fails the deploy and skips the agent.
+#   - OPTIONAL_READS_KEYS (`reads.patterns`) is *optional*: an undefined
+#     placeholder is dropped and the agent still deploys — the empty-is-normal
+#     read channel (ADR-013 D1 / ADR-052). A category referenced *both* here and
+#     under a hard key is hard (the hard reference wins).
+RESOLVABLE_LIST_KEYS = ("owns", "needs", "answers")
+HARD_READS_KEYS = ("paths", "records")
+OPTIONAL_READS_KEYS = ("patterns",)
 
 
 def load_ownership():
@@ -103,6 +123,27 @@ def main(argv: list[str]) -> int:
 
     fm_data = yaml.load(io.StringIO(fm_yaml)) or {}
 
+    def _placeholder_cats(items: object) -> set[str]:
+        cats: set[str] = set()
+        if isinstance(items, list):
+            for item in items:
+                if isinstance(item, str) and item.startswith("<") and item.endswith(">"):
+                    cats.add(item[1:-1])
+        return cats
+
+    # The categories this agent references through a *hard* channel — any list
+    # key or `reads.paths` / `reads.records`. Computed once, before expanding,
+    # so the optional-read branch can tell a genuinely-optional category from one
+    # that is also hard-referenced elsewhere (in which case the hard reference
+    # wins and an undefined value still fails the deploy). Per ADR-052 Decision 2.
+    hard_cats: set[str] = set()
+    for key in RESOLVABLE_LIST_KEYS:
+        hard_cats |= _placeholder_cats(fm_data.get(key))
+    reads_fm = fm_data.get("reads")
+    if isinstance(reads_fm, dict):
+        for k in HARD_READS_KEYS:
+            hard_cats |= _placeholder_cats(reads_fm.get(k))
+
     ownership_cache: list = []
 
     def ownership():
@@ -129,7 +170,7 @@ def main(argv: list[str]) -> int:
         print("\n".join([f"{agent_name}: {reason_lines[0]}", *reason_lines[1:]]), file=sys.stderr)
         sys.exit(1)
 
-    def expand_list(items: list):
+    def expand_list(items: list, *, optional: bool = False):
         out: list = []
         for item in items:
             if isinstance(item, str) and item.startswith("<") and item.endswith(">"):
@@ -137,6 +178,12 @@ def main(argv: list[str]) -> int:
                 own = ownership()
                 resolved = resolve(cat)
                 if resolved is None:
+                    # An *optional read* (a `reads.patterns` category not also
+                    # hard-referenced elsewhere) tolerates absence: drop the item
+                    # and let the agent deploy — the empty-is-normal read channel
+                    # (ADR-052 Decision 3). Any hard reference still fails loudly.
+                    if optional and cat not in hard_cats:
+                        continue
                     # Undefined (absent key) or bare (`cat:` with no value) —
                     # both unresolvable, both skip the agent. The remediation
                     # depends on whether the category has a conventional default,
@@ -157,13 +204,16 @@ def main(argv: list[str]) -> int:
                 out.append(item)
         return out
 
-    for key in ("owns", "needs", "answers"):
+    for key in RESOLVABLE_LIST_KEYS:
         if key in fm_data and isinstance(fm_data[key], list):
             fm_data[key] = expand_list(fm_data[key])
     if "reads" in fm_data and isinstance(fm_data["reads"], dict):
-        for k in ("paths", "records", "patterns"):
+        for k in HARD_READS_KEYS:
             if k in fm_data["reads"] and isinstance(fm_data["reads"][k], list):
-                fm_data["reads"][k] = expand_list(fm_data["reads"][k])
+                fm_data["reads"][k] = expand_list(fm_data["reads"][k], optional=False)
+        for k in OPTIONAL_READS_KEYS:
+            if k in fm_data["reads"] and isinstance(fm_data["reads"][k], list):
+                fm_data["reads"][k] = expand_list(fm_data["reads"][k], optional=True)
 
     out = io.StringIO()
     yaml.dump(fm_data, out)

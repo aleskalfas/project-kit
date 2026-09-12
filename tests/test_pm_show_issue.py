@@ -68,15 +68,15 @@ def body_format() -> dict:
 
 
 def test_infer_returns_epic_for_uppercase_prefix(si, issue_types) -> None:
-    assert si._infer_structural_type("[EPIC] x", issue_types) == "epic"
+    assert si.infer_structural_type("[EPIC] x", issue_types) == "epic"
 
 
 def test_infer_returns_task_for_title_prefix(si, issue_types) -> None:
-    assert si._infer_structural_type("[Task] x", issue_types) == "task"
+    assert si.infer_structural_type("[Task] x", issue_types) == "task"
 
 
 def test_infer_returns_none_for_unrecognised_prefix(si, issue_types) -> None:
-    assert si._infer_structural_type("Plain title", issue_types) is None
+    assert si.infer_structural_type("Plain title", issue_types) is None
 
 
 # --- first body line --------------------------------------------------

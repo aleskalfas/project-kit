@@ -10,7 +10,7 @@ reads:
   paths:
     - .pkit/capabilities/software-engineering/decisions/DEC-001-producer-agent-and-conventions-seam.md
   patterns:
-    - project-conventions
+    - <project-conventions>
 ---
 
 # Software engineer

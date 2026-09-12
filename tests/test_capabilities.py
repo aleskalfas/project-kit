@@ -593,11 +593,21 @@ def test_refresh_preserves_adopter_project_files(
     assert "ghe.example.com" in config.read_text(encoding="utf-8")
 
 
-def test_refresh_seeds_absent_project_file_and_refreshes_core(
+def test_refresh_never_seeds_source_project_file_and_refreshes_core(
     kit_target: Path, kit_source: Path
 ) -> None:
-    """Refresh seeds a *new* project/ file the adopter lacks, and still
-    refreshes core-owned files (new appears, removed disappears)."""
+    """Refresh must NOT seed a source `project/` file the adopter lacks, and
+    must still refresh kit-owned files (new appears, removed disappears).
+
+    This assertion is INVERTED from its original form (#812). It previously
+    read "Refresh seeds a *new* project/ file the adopter lacks" and asserted
+    the seed appeared — which is a verbatim statement of the defect #811
+    documents: the source's `project/` tree is that project's own instance
+    data, so seeding it handed one project's config, activation switches,
+    bootstrap stamp, and per-issue audit journals to every adopter. The
+    kit-owned refresh half of this test is unchanged and still passes; only
+    the adopter-owned expectation flipped.
+    """
     _stage_capability_in_source(
         kit_source,
         "project-management",
@@ -628,8 +638,11 @@ def test_refresh_seeds_absent_project_file_and_refreshes_core(
     assert source is not None
     caps.refresh_capability(kit_target, source)
 
-    # New project/ seed appears (was absent in the adopter).
-    assert (installed / "project" / "workstreams.yaml").is_file()
+    # The source's project/ file must NOT appear, even though the adopter
+    # lacks it — absence is not an invitation to hand over another project's
+    # state. (Seeding a *neutral* starter is a separate question, deliberately
+    # unanswered here; it would be new install behaviour needing its own record.)
+    assert not (installed / "project" / "workstreams.yaml").exists()
     # Core-owned refresh: new skill appears, removed skill disappears.
     assert (installed / "skills" / "new-skill.md").is_file()
     assert not (installed / "skills" / "old-skill.md").exists()
@@ -2350,3 +2363,93 @@ def test_cli_install_enforces_backbone_satisfaction(
     assert result.exit_code != 0
     assert "requires backbone" in result.output
     assert not caps.is_installed(kit_target, "evidence")
+
+
+# --- #812: a capability install never seeds the source project's own state ---
+
+
+def _capability_src(root: Path) -> Path:
+    """A capability source whose `project/` tree holds the SOURCE's own state —
+    the shape project-kit itself had: an activation switch, a bootstrap stamp,
+    per-issue journals, and its own config and taxonomy."""
+    src = root / "project-management"
+    (src / "schemas").mkdir(parents=True)
+    (src / "schemas" / "issue-types.yaml").write_text("types: {}\n", encoding="utf-8")
+    proj = src / "project"
+    (proj / "adapter-overlays").mkdir(parents=True)
+    (proj / "adapter-overlays" / "claude-code.json").write_text(
+        '{"agent": "project-manager"}', encoding="utf-8"
+    )
+    (proj / "bootstrap-stamp.yaml").write_text(
+        "repo: github.com/someone/their-repo\n", encoding="utf-8"
+    )
+    (proj / "config.yaml").write_text("default_branch: main\n", encoding="utf-8")
+    (proj / "workstreams.yaml").write_text("workstreams:\n  cli: cli\n", encoding="utf-8")
+    (proj / "process" / "issue-lifecycle").mkdir(parents=True)
+    (proj / "process" / "issue-lifecycle" / "446.journal.jsonl").write_text(
+        '{"subject":"446","actor":"someone-else"}\n', encoding="utf-8"
+    )
+    return src
+
+
+def test_install_seeds_no_source_project_file(tmp_path: Path) -> None:
+    """Verified by running the copy and listing the result, not by reading the
+    packaging config — reading the config is what everyone did while it was
+    wrong."""
+    src = _capability_src(tmp_path / "src")
+    dest = tmp_path / "adopter" / ".pkit" / "capabilities" / "project-management"
+
+    caps._copy_capability_tree(src, dest, ())
+
+    assert (dest / "schemas" / "issue-types.yaml").is_file(), "kit content must arrive"
+    landed = sorted(p.name for p in (dest / "project").rglob("*") if p.is_file())
+    assert landed == [".gitkeep"], f"source project state leaked: {landed}"
+
+
+def test_install_leaves_default_agent_off(tmp_path: Path) -> None:
+    """The adapter activates on file PRESENCE, and DEC-030 guarantees install
+    creates no activation file."""
+    src = _capability_src(tmp_path / "src")
+    dest = tmp_path / "adopter" / ".pkit" / "capabilities" / "project-management"
+
+    caps._copy_capability_tree(src, dest, ())
+
+    assert not (dest / "project" / "adapter-overlays" / "claude-code.json").exists()
+
+
+def test_install_seeds_no_bootstrap_stamp(tmp_path: Path) -> None:
+    """A seeded stamp reads as 'already bootstrapped' on a fresh adopter whose
+    repo identity cannot be resolved — the setup gate fails open."""
+    src = _capability_src(tmp_path / "src")
+    dest = tmp_path / "adopter" / ".pkit" / "capabilities" / "project-management"
+
+    caps._copy_capability_tree(src, dest, ())
+
+    assert not (dest / "project" / "bootstrap-stamp.yaml").exists()
+
+
+def test_sync_never_seeds_and_never_clobbers(tmp_path: Path) -> None:
+    """Seed-once is per FILE and sync re-copies, so the leak was continuous:
+    every new source file arrived on the adopter's next update. The fix must
+    close that without touching what the adopter wrote."""
+    src = _capability_src(tmp_path / "src")
+    dest = tmp_path / "adopter" / ".pkit" / "capabilities" / "project-management"
+    caps._copy_capability_tree(src, dest, ())
+
+    proj = dest / "project"
+    (proj / "config.yaml").write_text("default_branch: trunk\n", encoding="utf-8")
+    (proj / "process" / "issue-lifecycle").mkdir(parents=True, exist_ok=True)
+    (proj / "process" / "issue-lifecycle" / "7.journal.jsonl").write_text(
+        '{"subject":"7"}\n', encoding="utf-8"
+    )
+    # The source accrues a new file, as project-kit's journals did (14 -> 30).
+    (src / "project" / "process" / "issue-lifecycle" / "999.journal.jsonl").write_text(
+        '{"subject":"999"}\n', encoding="utf-8"
+    )
+
+    caps._copy_capability_tree(src, dest, ())
+
+    assert (proj / "config.yaml").read_text(encoding="utf-8") == "default_branch: trunk\n"
+    assert (proj / "process" / "issue-lifecycle" / "7.journal.jsonl").is_file()
+    assert not (proj / "process" / "issue-lifecycle" / "999.journal.jsonl").exists()
+    assert not (proj / "process" / "issue-lifecycle" / "446.journal.jsonl").exists()

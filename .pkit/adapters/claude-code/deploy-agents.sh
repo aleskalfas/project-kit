@@ -22,9 +22,12 @@
 #   `overrides.<name>` taking precedence per COR-013.
 # - Idempotent: if the resolved content matches the destination,
 #   reports "exists"; otherwise overwrites.
-# - Unresolved overlay placeholder (a category an agent references but the
+# - Unresolved overlay placeholder in a *hard* channel (a category an agent
+#   references through a list key or `reads.paths` / `reads.records` but the
 #   project's overlay.yaml doesn't define) → skipped loudly with remediation,
-#   the rest deploy, the run exits 0 (an adopter-config gap, not fatal).
+#   the rest deploy, the run exits 0 (an adopter-config gap, not fatal). A
+#   category referenced *only* via `reads.patterns` is an optional read
+#   (ADR-052): undefined, its item is dropped and the agent still deploys.
 # - A listed agent whose canonical source doesn't resolve (e.g. a folder
 #   mid-build with no <name>/<name>.md per COR-015) is likewise skipped
 #   loudly rather than aborting the run (#537).

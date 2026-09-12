@@ -128,8 +128,9 @@ For every bypassable-with-audit mutation that the user overrode, post the audit 
 - **No-shared-files invariant** (COR-013 / COR-017) — you don't edit kit-shipped capability content; you only mutate adopter-side configuration files and GitHub state.
 - **Capability decision citations** use the form `[project-management:DEC-NNN-slug]` per COR-017.
 - **Cross-schema references** use the typed-token form per COR-019; resolve them by looking up the target schema entry.
-- **Schemas as source of truth** — the capability's schemas (per COR-018) carry every methodology rule. Don't paraphrase from prose; read from the YAML.
+- **Schemas as source of truth** — the capability's schemas (per COR-018) carry every *machine-checkable* methodology rule. Don't paraphrase from prose; read from the YAML.
 - **Storyboard as behavioural source for the batch-plan flow** (COR-016) — the scenarios in `storyboard.md` are the authored spec for what the user-facing dialogue looks like, what gates fire, and what mutations happen behind each turn.
+- **Issue bodies define the task, not its history** (per [project-management:DEC-010-issue-body-minimum-structure]) — when you compose a body (you do this via `--body-file`, which bypasses the template's outcome-first prompt), it must *define the current desired state*: what the issue is, and what's true when it closes. Lead with that; keep rationale minimal and after it; put "how we got here" — splits, renames, prior decisions, the discovery story — in the timeline, comments, or a linked decision, never in the lead. A fresh reader learns the task from the definition, not by reconstructing it from the history. (PR bodies are the exception — a PR body describes *what was done*, per [project-management:DEC-013-branch-and-pr-conventions]; this rule is issue-body-only.)
 
 ## What you don't do
 

@@ -1,0 +1,17 @@
+component: backbone
+kind: minor
+custom:
+  category: Changed
+  pr: "773"
+body: >
+  `pkit agents` now models an overlay category referenced only through
+  `reads.patterns` as an OPTIONAL read (ADR-052): its absence no longer skips
+  the agent. An agent whose only undefined categories are optional now reports
+  as deployable, and the undefined optional categories surface in a dedicated
+  `Optional` footer state ("agents deploy without them") rather than as a skip
+  cause. `reconcile` gains a sixth state for a missing optional (patterns-only)
+  category — appending a commented stub framed "the agent already deploys
+  without this" instead of an action-needed blocker. The agent-overlay status
+  gains an `optional` field with matching `agent_category_roles()` /
+  `optional_categories()` helpers, and `deployable` now counts only undefined
+  HARD categories as blocking.

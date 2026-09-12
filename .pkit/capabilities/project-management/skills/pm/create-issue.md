@@ -58,10 +58,11 @@ Direct-path is equivalent for adopters whose kit predates the dispatcher:
 
 ## Intent recognition before invocation
 
-Three judgments belong to the LLM before invoking the script — these are interpretation, not deterministic:
+Four judgments belong to the LLM before invoking the script — these are interpretation, not deterministic:
 
 1. **Pick the structural type.** Map the user's natural-language intent to one of `epic|feature|umbrella|task`. Default to Task for code-change intents from Implementer-role callers; default to EPIC or Feature for outcome-shaped intents from PM-role callers (per [project-management:DEC-008-pm-and-implementer-roles]). When ambiguous, ask.
 2. **Pick the parent.** From recent context, prior conversation, or by asking. If the type requires a parent (`parent_ref_optional: false` in `issue-types.yaml`) and none is supplied, the script refuses — pre-empt the refusal by asking up front.
 3. **Pick the workstream and priority defaults.** Infer the workstream from file paths or topic when possible; ask if ambiguous. Priority defaults to `Medium`; only override on explicit user signal.
+4. **Draft the body as a definition, not a history.** When you compose the body — especially via `--body-file`, which bypasses the template's outcome-first `## What` prompt — the body must **define the current desired state**: what the issue *is*, and what's true when it closes. Lead with that; keep rationale minimal and after it; put "how we got here" (splits, renames, prior decisions, the discovery story) in the timeline, comments, or a linked decision — never in the lead. A fresh reader should learn the task from the definition, not reconstruct it from the history. Per [project-management:DEC-010-issue-body-minimum-structure]. (PR bodies are the exception: a PR body legitimately describes *what was done* — the why-and-how of a completed change, per [project-management:DEC-013-branch-and-pr-conventions] — so this "lead with the current state" rule is issue-body-only.)
 
 Everything else is the script's job — pass the inferred arguments through and surface the result.

@@ -21,8 +21,7 @@ reads:
     - .pkit/capabilities/software-engineering/decisions/DEC-002-code-review-panel.md
     - .pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md
     - .pkit/capabilities/project-management/decisions/DEC-032-conditional-reviewer-requirements.md
-  patterns:
-    - project-conventions
+  patterns: []
 ---
 
 # Code reviewer
@@ -110,7 +109,7 @@ You do not post the comment yourself — `review-pr.py` consumes your stdout and
 
 - Not a producer. You review code; you never write or edit it. That's `software-engineer`.
 - Not the security or docs specialist. Security-specific defects are `security-reviewer`'s block remit; documentation completeness is `docs-reviewer`'s. You are the generalist alongside them.
-- Not the pm-conventions reviewer. Conventional Commits, branch shape, classification, surface-change discipline are the pm `reviewer`'s remit.
+- Not the pm-conventions reviewer. Conventional Commits, branch shape, classification, surface-change discipline are `pm-reviewer`'s remit.
 - Not an architecture reviewer. Cross-component design judgments are `architect`'s scope.
 - Not a merger. You emit a verdict; the gate-checker in `done-work` consumes it and decides whether to merge.
 - Not the owner of the conventions corpus. You **read** `<project-conventions>`; you never author it.

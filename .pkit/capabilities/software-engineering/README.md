@@ -47,8 +47,9 @@ pkit capabilities install software-engineering
 
 After install:
 
-- **Define where your conventions live.** Add a `project-conventions` category to `.pkit/agents/project/overlay.yaml`, pointing at the path(s) where you keep your code conventions. `pkit agents reconcile` will surface this category as referenced-but-undefined and can stub it for you; the `software-engineer` agent reads whatever it resolves to.
-- **An empty corpus is fine to start.** With no conventions defined yet, the agent behaves as a careful generalist and says so. Conventions accrete over time (e.g. via a generate → catch → encode loop); the agent picks them up as the corpus fills — no re-install needed.
+- **The agents deploy and work immediately — defining conventions is optional enrichment.** The panel and the producer read the project conventions corpus through the `<project-conventions>` overlay category, but that category is an **optional read** ([ADR-052](../../../docs/architecture/decisions/ADR-052-optional-read-category-empty-tolerance.md)): with it undefined the agents still deploy and act as careful generalists. `pkit agents reconcile` surfaces `project-conventions` as an *optional* category — framed "the agent already deploys without this" — never as a blocker.
+- **Define where your conventions live to enrich the agents.** Add a `project-conventions` category to `.pkit/agents/project/overlay.yaml`, pointing at the path(s) where you keep your code conventions (or uncomment the stub `reconcile` appends and fill in the paths). The resolved path is delivered into each agent's frontmatter via `<project-conventions>` placeholder resolution ([ADR-013](../../../docs/architecture/decisions/ADR-013-conventions-discovery-seam.md) D1); the agents then read whatever it resolves to.
+- **An empty corpus is fine to start.** With no conventions defined yet, the agents behave as careful generalists and say so. Conventions accrete over time (e.g. via a generate → catch → encode loop); the agents pick them up as the corpus fills — no re-install needed.
 
 ## Citing this capability's decisions
 

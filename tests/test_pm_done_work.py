@@ -644,7 +644,9 @@ def _wire_main_seams(
             dw, "_check_agent_gate", lambda *a, **k: agent_gate_result,
         )
 
-    def _stub_reviewer_override_audit(pr_number, audit, reason, invoker, config):
+    def _stub_reviewer_override_audit(
+        pr_number, audit, reason, invoker, config, **kwargs,
+    ):
         calls["override_audits"].append(audit.reviewer)
         calls["order"].append(("override_audit", audit.reviewer))
         return True
@@ -908,13 +910,14 @@ def test_done_work_fetches_the_issue_body_for_the_gate(dw, monkeypatch):
 
 
 def test_bypass_reviewer_requires_reason(dw, monkeypatch, capsys):
-    """`--bypass-reviewer` without `--bypass-reason` is refused before any gate
-    work — a per-reviewer override is audited, reason-required (DEC-050)."""
+    """`--bypass-reviewer` without `--bypass-reviewer-reason` is refused before
+    any gate work — a per-reviewer override is audited, reason-required
+    (DEC-050)."""
     calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
     rc = _run_main(dw, monkeypatch, ["42", "--bypass-reviewer", "design-reviewer", "--yes"])
     assert rc == 1
     assert calls["merged"] is False
-    assert "--bypass-reason" in capsys.readouterr().err
+    assert "--bypass-reviewer-reason" in capsys.readouterr().err
 
 
 def test_bypass_reviewer_refused_in_human_mode(dw, monkeypatch, capsys):
@@ -924,7 +927,7 @@ def test_bypass_reviewer_refused_in_human_mode(dw, monkeypatch, capsys):
     rc = _run_main(
         dw, monkeypatch,
         ["42", "--bypass-reviewer", "design-reviewer",
-         "--bypass-reason", "false block", "--yes"],
+         "--bypass-reviewer-reason", "false block", "--yes"],
     )
     assert rc == 1
     assert calls["merged"] is False
@@ -933,9 +936,61 @@ def test_bypass_reviewer_refused_in_human_mode(dw, monkeypatch, capsys):
     assert "human mode" in err
 
 
+def test_bypass_and_bypass_reviewer_together_refused(dw, monkeypatch, capsys):
+    """`--bypass` must not silently swallow `--bypass-reviewer`.
+
+    The whole-gate branch used to short-circuit with both flags supplied: the
+    reviewer name was never validated and no per-reviewer audit was posted, so a
+    typo'd (or reclassified-away) name was silently accepted — precisely the
+    no-op DEC-050 Decision 5 forbids. The combination is incoherent — a whole-gate
+    bypass already subsumes waiving one slot — so it refuses, before the merge.
+    """
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    rc = _run_main(
+        dw, monkeypatch,
+        ["42", "--bypass", "whole gate", "--bypass-reviewer", "typo-reviewer",
+         "--bypass-reviewer-reason", "false block", "--yes"],
+    )
+    assert rc == 1
+    assert calls["merged"] is False, "the refusal must land before the merge"
+    assert calls["approval_audit"] is False, "no whole-gate audit on a refusal"
+    assert calls["override_audits"] == [], "no per-reviewer audit on a refusal"
+    err = capsys.readouterr().err
+    assert "cannot be combined" in err
+    # The refusal names both flags and the reviewer whose waiver was dropped.
+    assert "--bypass-reviewer" in err
+    assert "typo-reviewer" in err
+
+
+def test_bypass_reviewer_name_is_stripped(dw, monkeypatch):
+    """A shell-quoting space around a name must not hard-error as unknown.
+
+    `--bypass-reviewer " design-reviewer "` reaches the gate as
+    `design-reviewer`; a whitespace-only value drops out entirely rather than
+    becoming an unnameable required reviewer.
+    """
+    seen: dict = {}
+
+    def fake_agent_gate(pr_number, pr, config, mode_source, cap_root, **kwargs):
+        seen["override_reviewers"] = kwargs.get("override_reviewers")
+        return dw._GateResult(passed=True, passed_via="stub")
+
+    _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP, mode="agent")
+    monkeypatch.setattr(dw, "_check_agent_gate", fake_agent_gate)
+    rc = _run_main(
+        dw, monkeypatch,
+        ["42", "--bypass-reviewer", " design-reviewer ",
+         "--bypass-reviewer", "   ",
+         "--bypass-reviewer-reason", "false block", "--yes"],
+    )
+    assert rc == 0
+    assert seen["override_reviewers"] == ("design-reviewer",)
+
+
 def test_agent_mode_override_happy_path_merges_after_audit(dw, monkeypatch):
     """Full agent-mode happy path across the main() seam: --bypass-reviewer with
-    --bypass-reason drives main() → _check_agent_gate (passing WITH an override)
+    --bypass-reviewer-reason drives main() → _check_agent_gate (passing WITH an
+    override)
     → the override audit posts → the merge proceeds. The audit lands BEFORE the
     merge (DEC-050 — the trail survives a partial failure)."""
     gate = dw._GateResult(
@@ -948,6 +1003,8 @@ def test_agent_mode_override_happy_path_merges_after_audit(dw, monkeypatch):
             capability="ux-ui-design",
             state="a fresh CHANGES_REQUESTED (an active block)",
             block_comment_url="https://example.test/c/design-reviewer",
+            head="deadbeef",
+            others_approved=("local agent (reviewer)",),
         )],
     )
     calls = _wire_main_seams(
@@ -957,7 +1014,7 @@ def test_agent_mode_override_happy_path_merges_after_audit(dw, monkeypatch):
     rc = _run_main(
         dw, monkeypatch,
         ["42", "--bypass-reviewer", "design-reviewer",
-         "--bypass-reason", "flaky false block", "--yes"],
+         "--bypass-reviewer-reason", "flaky false block", "--yes"],
     )
     assert rc == 0
     assert calls["merged"] is True
@@ -967,3 +1024,81 @@ def test_agent_mode_override_happy_path_merges_after_audit(dw, monkeypatch):
     assert calls["order"] == [
         ("override_audit", "design-reviewer"), ("merged", None),
     ]
+
+
+# ---- the deprecated `--bypass-reason` alias (DEC-050, released in pm 0.54.0) ---
+#
+# `--bypass-reason` shipped on done-work in project-management 0.54.0, so
+# renaming it outright would be a breaking CLI signature change owing a
+# migration (COR-010). It stays accepted as a deprecated ALIAS — emphatically
+# not a second implementation: both spellings write the single
+# `bypass_reviewer_reason` destination, so exactly one code path consumes the
+# reason. Because they share a dest, argparse cannot report which was typed;
+# the deprecation notice and the both-spellings refusal read argv instead,
+# which is what these tests pin.
+
+_ALIAS_BODY = "## What\n\nA change.\n"
+
+
+def test_deprecated_reason_alias_still_works_and_warns(dw, monkeypatch, capsys):
+    """The released spelling keeps working, and says it is deprecated."""
+    _wire_main_seams(
+        dw, monkeypatch, rollup=_GREEN_ROLLUP, issue=_issue(_ALIAS_BODY),
+    )
+    rc = _run_main(dw, monkeypatch, ["42", "--bypass-reason", "still fine", "--yes"])
+    err = capsys.readouterr().err
+    assert "DEPRECATED" in err, "the old spelling must announce its deprecation"
+    assert "--bypass-reviewer-reason" in err, "and name the canonical spelling"
+    # Without --bypass-reviewer the reason is inert, so the merge proceeds
+    # exactly as an unadorned run would: the alias changes no behaviour.
+    assert rc == 0
+
+
+def test_canonical_reason_flag_does_not_warn(dw, monkeypatch, capsys):
+    _wire_main_seams(
+        dw, monkeypatch, rollup=_GREEN_ROLLUP, issue=_issue(_ALIAS_BODY),
+    )
+    rc = _run_main(
+        dw, monkeypatch, ["42", "--bypass-reviewer-reason", "fine", "--yes"],
+    )
+    assert "DEPRECATED" not in capsys.readouterr().err
+    assert rc == 0
+
+
+def test_both_reason_spellings_are_refused_as_ambiguous(dw, monkeypatch, capsys):
+    """Two spellings of one option is ambiguous — refuse, don't let argparse
+    silently resolve it by last-wins."""
+    calls = _wire_main_seams(
+        dw, monkeypatch, rollup=_GREEN_ROLLUP, issue=_issue(_ALIAS_BODY),
+    )
+    rc = _run_main(dw, monkeypatch, [
+        "42", "--bypass-reviewer", "code-reviewer",
+        "--bypass-reviewer-reason", "a", "--bypass-reason", "b", "--yes",
+    ])
+    assert rc == 1
+    assert calls["merged"] is False, "an ambiguous invocation must not merge"
+    assert "ambiguous" in capsys.readouterr().err
+
+
+def test_abbreviated_canonical_flag_cannot_evade_the_ambiguity_refusal(
+    dw, monkeypatch, capsys,
+):
+    """`--bypass-reviewer-reas` must not bind the canonical flag.
+
+    The alias detection reads argv literally (two spellings share one dest, so
+    argparse cannot report which was typed). With prefix abbreviation enabled,
+    an abbreviated canonical flag paired with the deprecated spelling would
+    satisfy neither literal, evading both the deprecation notice and the
+    both-spellings refusal — landing in argparse's silent last-wins, which is
+    the outcome the refusal exists to prevent. `allow_abbrev=False` closes it,
+    so an abbreviation is now rejected outright by argparse.
+    """
+    _wire_main_seams(
+        dw, monkeypatch, rollup=_GREEN_ROLLUP, issue=_issue(_ALIAS_BODY),
+    )
+    with pytest.raises(SystemExit) as exc:
+        _run_main(dw, monkeypatch, [
+            "42", "--bypass-reviewer", "code-reviewer",
+            "--bypass-reviewer-reas", "a", "--bypass-reason", "b", "--yes",
+        ])
+    assert exc.value.code == 2, "argparse must reject the abbreviation, not bind it"

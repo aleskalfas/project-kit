@@ -61,6 +61,7 @@ from _lib.membership import (  # noqa: E402
     resolve_capability_root,
     resolve_invoker_identity,
 )
+from _lib.structural_type import infer_structural_type  # noqa: E402
 
 
 CLOSING_KEYWORD_RE = re.compile(
@@ -169,6 +170,11 @@ def main() -> int:
     issue_types = _read_yaml(
         capability_root / "schemas" / "issue-types.yaml", yaml_loader
     )
+    # Kind-driven title prefixes ([Bug]/[Docs]/[Test]/[Refactor]/[Chore]) live in
+    # classification.yaml; without it a kind-prefixed Task reads as unrecognised.
+    classification = _read_yaml(
+        capability_root / "schemas" / "classification.yaml", yaml_loader
+    )
 
     issues_raw = _gh_list_issues(state=args.state, limit=args.limit, config=config)
     if issues_raw is None:
@@ -177,7 +183,7 @@ def main() -> int:
     if prs_raw is None:
         return 2
 
-    issues = _parse_issues(issues_raw, issue_types)
+    issues = _parse_issues(issues_raw, issue_types, classification)
     prs = _parse_prs(prs_raw)
 
     # Build parent relationships through the containment read-seam (native-where-
@@ -224,7 +230,7 @@ def main() -> int:
 # ---- parsing --------------------------------------------------------
 
 
-def _parse_issues(raw: list, issue_types: dict) -> dict[int, Issue]:
+def _parse_issues(raw: list, issue_types: dict, classification: dict | None = None) -> dict[int, Issue]:
     out: dict[int, Issue] = {}
     for r in raw:
         if not isinstance(r, dict):
@@ -246,7 +252,7 @@ def _parse_issues(raw: list, issue_types: dict) -> dict[int, Issue]:
             body=str(r.get("body") or ""),
             labels=labels,
             milestone=ms_title,
-            structural_type=_infer_structural_type(title, issue_types),
+            structural_type=infer_structural_type(title, issue_types, classification=classification),
         )
     return out
 
@@ -271,20 +277,6 @@ def _parse_prs(raw: list) -> dict[int, PR]:
         )
     return out
 
-
-def _infer_structural_type(title: str, issue_types: dict) -> str | None:
-    types = issue_types.get("types") or {}
-    for type_name, entry in types.items():
-        if not isinstance(entry, dict):
-            continue
-        prefix = entry.get("title_prefix", "")
-        case = entry.get("title_case", "title")
-        rendered = str(prefix)
-        if case == "upper":
-            rendered = rendered.upper()
-        if title.startswith(f"[{rendered}] "):
-            return str(type_name)
-    return None
 
 
 def _link_parents(issues: dict[int, Issue], config: dict) -> None:

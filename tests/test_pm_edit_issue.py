@@ -497,11 +497,11 @@ def test_validate_body_only_drops_bad_title_finding(
 
 
 def test_infer_structural_type_recognises_task(ei, issue_types) -> None:
-    assert ei._infer_structural_type("[Task] foo", issue_types) == "task"
+    assert ei.infer_structural_type("[Task] foo", issue_types) == "task"
 
 
 def test_infer_structural_type_returns_none_for_unknown(ei, issue_types) -> None:
-    assert ei._infer_structural_type("Plain", issue_types) is None
+    assert ei.infer_structural_type("Plain", issue_types) is None
 
 
 @pytest.fixture
@@ -525,33 +525,33 @@ def classification() -> dict:
 
 def test_infer_structural_type_honours_bug_prefix(ei, issue_types, classification) -> None:
     """[Bug] prefix maps to structural type 'task' via classification.yaml."""
-    result = ei._infer_structural_type("[Bug] Fix the auth flow", issue_types, classification)
+    result = ei.infer_structural_type("[Bug] Fix the auth flow", issue_types, classification=classification)
     assert result == "task"
 
 
 def test_infer_structural_type_honours_docs_prefix(ei, issue_types, classification) -> None:
-    result = ei._infer_structural_type("[Docs] Update README", issue_types, classification)
+    result = ei.infer_structural_type("[Docs] Update README", issue_types, classification=classification)
     assert result == "task"
 
 
 def test_infer_structural_type_honours_chore_prefix(ei, issue_types, classification) -> None:
-    result = ei._infer_structural_type("[Chore] Bump dependency", issue_types, classification)
+    result = ei.infer_structural_type("[Chore] Bump dependency", issue_types, classification=classification)
     assert result == "task"
 
 
 def test_infer_structural_type_honours_refactor_prefix(ei, issue_types, classification) -> None:
-    result = ei._infer_structural_type("[Refactor] Extract helper", issue_types, classification)
+    result = ei.infer_structural_type("[Refactor] Extract helper", issue_types, classification=classification)
     assert result == "task"
 
 
 def test_infer_structural_type_honours_test_prefix(ei, issue_types, classification) -> None:
-    result = ei._infer_structural_type("[Test] Add coverage", issue_types, classification)
+    result = ei.infer_structural_type("[Test] Add coverage", issue_types, classification=classification)
     assert result == "task"
 
 
 def test_infer_structural_type_returns_none_without_classification(ei, issue_types) -> None:
     """Without classification data, [Bug] should return None — not a false match."""
-    result = ei._infer_structural_type("[Bug] Fix the auth flow", issue_types)
+    result = ei.infer_structural_type("[Bug] Fix the auth flow", issue_types)
     assert result is None
 
 

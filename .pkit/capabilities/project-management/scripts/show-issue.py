@@ -52,6 +52,7 @@ from _lib.membership import (  # noqa: E402
     resolve_capability_root,
     resolve_invoker_identity,
 )
+from _lib.structural_type import infer_structural_type  # noqa: E402
 
 
 def main() -> int:
@@ -126,6 +127,8 @@ def main() -> int:
         return 1
 
     issue_types = _read_yaml(capability_root / "schemas" / "issue-types.yaml", yaml_loader)
+    # Kind-driven prefixes ([Bug]/[Docs]/...) resolve to `task` via classification.yaml.
+    classification = _read_yaml(capability_root / "schemas" / "classification.yaml", yaml_loader)
     body_format = _read_yaml(capability_root / "schemas" / "body-format.yaml", yaml_loader)
     # The adopter's substrate map, so a LABEL-BOUND axis is reported by its
     # resolved value rather than as unset (#742): show-issue is the first
@@ -137,7 +140,7 @@ def main() -> int:
     if issue is None:
         return 2
 
-    summary = _summarise(issue, issue_types, body_format, substrate_map)
+    summary = _summarise(issue, issue_types, body_format, substrate_map, classification)
 
     if args.field is not None:
         for line in _field_lines_for(summary)[args.field]:
@@ -154,6 +157,7 @@ def _summarise(
     issue_types: dict,
     body_format: dict,
     substrate_map: "axis_labels.SubstrateMap | None" = None,
+    classification: dict | None = None,
 ) -> dict:
     title = str(issue.get("title", ""))
     # Read-side strip (ADR-037): the agent composes edits against
@@ -173,7 +177,7 @@ def _summarise(
         milestone.get("title") if isinstance(milestone, dict) else None
     )
 
-    structural_type = _infer_structural_type(title, issue_types)
+    structural_type = infer_structural_type(title, issue_types, classification=classification)
     # DEC-013 (#763): skip a leading `Integration: integration/<slug>` marker so
     # the marker line isn't rendered as the parent-ref.
     parent_ref = _first_body_line(infer.strip_integration_marker(body))
@@ -340,20 +344,6 @@ def _print_summary(issue_number: int, s: dict) -> None:
     if url:
         print(f"  url:          {url}")
 
-
-def _infer_structural_type(title: str, issue_types: dict) -> str | None:
-    types = issue_types.get("types") or {}
-    for type_name, entry in types.items():
-        if not isinstance(entry, dict):
-            continue
-        prefix = entry.get("title_prefix", "")
-        case = entry.get("title_case", "title")
-        rendered = str(prefix)
-        if case == "upper":
-            rendered = rendered.upper()
-        if title.startswith(f"[{rendered}] "):
-            return str(type_name)
-    return None
 
 
 def _first_body_line(body: str) -> str:

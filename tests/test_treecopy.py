@@ -165,3 +165,70 @@ def test_dry_run_writes_nothing(tmp_path: Path) -> None:
 
     assert not (dst / "a.txt").exists(), "dry-run must not copy"
     assert (dst / "orphan.txt").is_file(), "dry-run must not prune"
+
+
+# --- seed_owned=False: the source's own instance data is never handed over ---
+#
+# Regression cover for #812. The source project's `project/` tree is its own
+# state, not a neutral template, so seeding it gave every adopter another
+# project's config, its default-agent activation, its bootstrap stamp, and its
+# per-issue audit journals.
+
+
+def test_owned_source_not_seeded_when_seed_owned_false(tmp_path: Path) -> None:
+    src, dst = tmp_path / "src", tmp_path / "dst"
+    _write(src / "core" / "kit.txt", "kit")
+    _write(src / "project" / "config.yaml", "source project's config")
+    _write(src / "project" / "process" / "7.journal.jsonl", '{"subject":"7"}')
+
+    treecopy.refresh_owned_tree(
+        src, dst, is_owned=_project_owned, seed_owned=False
+    )
+
+    assert (dst / "core" / "kit.txt").read_text(encoding="utf-8") == "kit"
+    assert not (dst / "project" / "config.yaml").exists()
+    assert not (dst / "project" / "process" / "7.journal.jsonl").exists()
+
+
+def test_owned_source_dirs_not_materialised_when_seed_owned_false(
+    tmp_path: Path,
+) -> None:
+    """Not even the shape leaks — an empty mirror of the source's tree would
+    still tell the adopter how the source project organises its own state."""
+    src, dst = tmp_path / "src", tmp_path / "dst"
+    _write(src / "kit.txt", "kit")
+    (src / "project" / "process" / "issue-lifecycle").mkdir(parents=True)
+
+    treecopy.refresh_owned_tree(
+        src, dst, is_owned=_project_owned, seed_owned=False
+    )
+
+    assert not (dst / "project" / "process").exists()
+
+
+def test_adopter_content_survives_seed_owned_false(tmp_path: Path) -> None:
+    """The flag removes a copy; it must never add a delete."""
+    src, dst = tmp_path / "src", tmp_path / "dst"
+    _write(src / "kit.txt", "kit")
+    _write(src / "project" / "config.yaml", "source project's config")
+    _write(dst / "project" / "config.yaml", "the ADOPTER's config")
+    _write(dst / "project" / "notes.md", "adopter's own file")
+
+    treecopy.refresh_owned_tree(
+        src, dst, is_owned=_project_owned, seed_owned=False
+    )
+
+    assert (dst / "project" / "config.yaml").read_text(
+        encoding="utf-8"
+    ) == "the ADOPTER's config"
+    assert (dst / "project" / "notes.md").exists()
+
+
+def test_seed_owned_defaults_to_previous_behaviour(tmp_path: Path) -> None:
+    """Default True keeps seed-once, so the flag is opt-in per caller."""
+    src, dst = tmp_path / "src", tmp_path / "dst"
+    _write(src / "project" / "config.yaml", "seeded")
+
+    treecopy.refresh_owned_tree(src, dst, is_owned=_project_owned)
+
+    assert (dst / "project" / "config.yaml").read_text(encoding="utf-8") == "seeded"
