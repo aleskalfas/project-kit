@@ -122,7 +122,13 @@ def is_adopter_owned_by_tier(rel_posix: str) -> bool:
     would either reject legitimate content or depend on the build machine's
     manifest state.
 
-    `rel_posix` is relative to `.pkit/` (e.g. `capabilities/pm/project/x.yaml`).
+    `rel_posix` is a FILE path relative to `.pkit/` (e.g.
+    `capabilities/pm/project/x.yaml`). That precondition is load-bearing: the
+    tier rule reads every part *except the last*, so handing it a directory
+    path that names the tier itself — `agents/project` — answers False, while
+    the bare top-level `project` answers True through an earlier case. A
+    caller asking "is this directory the adopter's tier?" is asking a
+    different question and must not use this predicate to answer it.
     """
     parts = [p for p in rel_posix.strip("/").split("/") if p]
     if not parts:

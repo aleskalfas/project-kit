@@ -56,8 +56,11 @@ KIT = ROOT / ".pkit"
 DEST_ROOT = "project_kit/_kit"
 
 # The `.pkit/` subtrees this hook force-includes, replacing the static entries in
-# `pyproject.toml`. Every tree that can contain an adopter-owned `project/`
-# subdirectory belongs here; a tree left in the static list ships unfiltered.
+# `pyproject.toml`. Every tree that can hold adopter-owned content of ANY shape
+# belongs here — not only a `project/` subdirectory: `rules` has no such
+# directory and is a member because of `rules/project.md`, and `scratchpad`
+# state dirs are adopter-owned too. Ask `is_adopter_owned_by_tier`, not the
+# directory name. A tree left in the static list ships unfiltered.
 FILTERED_TREES: tuple[str, ...] = (
     "capabilities",
     "agents",
@@ -123,7 +126,7 @@ def _load_ownership():
 class CapabilityBoundaryHook(BuildHookInterface):
     """Force-include every wholesale-bundled `.pkit/` tree, minus adopter-owned paths.
 
-    Scope is `FILTERED_TREES` below — eleven trees, not capabilities alone. The
+    Scope is `FILTERED_TREES` above — eleven trees, not capabilities alone. The
     sole thing shipped at an adopter-owned path is an empty structural marker
     per `ADOPTER_TIER_MARKERS` entry, so the installer can still read the
     bundle's shape.

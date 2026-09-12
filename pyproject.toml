@@ -48,13 +48,16 @@ pattern = "^(?P<version>[0-9]+\\.[0-9]+\\.[0-9]+)$"
 # predicate directly; config globs cannot, so this mirrors it in the one form
 # hatchling accepts here.
 #
-# That covers the `project/` globs only. The two entries at the foot are a
-# hand-copy of `_ADOPTER_OWNED_KIT_FILES`, which lives in
-# `.pkit/lifecycle/ownership.py` — and hand-copies drift, which is this whole
-# change's thesis. Adding an entry to that frozenset requires a matching line
-# here, or the sdist ships what the wheel withholds. Its `version-pin` entry
-# needs no line today only because no `.pkit/version-pin` is tracked, so the
-# sdist test passes vacuously on it.
+# That covers the `project/` globs only. EVERY OTHER LINE BELOW IS A HAND-COPY
+# of a specific case in `.pkit/lifecycle/ownership.py`, and hand-copies drift —
+# which is this whole change's thesis. The mapping:
+#   `.pkit/rules/project.md`      <- the `rules/project.md` case
+#   `.pkit/scratchpad/{active,done,dropped}` <- `_SCRATCHPAD_STATE_DIRS`
+#   `.pkit/manifest.yaml`, `.pkit/.gitignore` <- `_ADOPTER_OWNED_KIT_FILES`
+# Widening any of those in that module requires a matching line here, or the
+# sdist ships what the wheel withholds. `_ADOPTER_OWNED_KIT_FILES`' third
+# entry, `version-pin`, needs no line today only because no `.pkit/version-pin`
+# is tracked — so the sdist test passes vacuously on it.
 exclude = [
   ".pkit/**/project",
   ".pkit/project",
@@ -93,9 +96,10 @@ exclude = ["**/__pycache__", "**/*.pyc"]
 # per ADR-033 §3) and migrations.
 #
 # WHAT DEFINES THE SET, since this changed (#813): the bundle is everything
-# under the listed trees whose CONTENT is not adopter-owned by tier, as
+# under `hatch_build.py`'s `FILTERED_TREES` plus the static entries below,
+# whose CONTENT is not adopter-owned by tier, as
 # `.pkit/lifecycle/ownership.py`'s `is_adopter_owned_by_tier` decides — plus the
-# empty directory markers noted above. It is
+# empty directory markers described below. It is
 # deliberately NOT the sync-propagation surface. ADR-033 D1 originally defined
 # it that way, reasoning the wheel could then never drift from what sync
 # copies; but sync-management additionally depends on capability registration
