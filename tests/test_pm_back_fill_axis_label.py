@@ -482,7 +482,7 @@ def test_residual_gate_refuses_a_label_only_back_fill(bf, tmp_path, monkeypatch)
     )
     args = bf.argparse.Namespace(json=False, apply=False, emit_script=False,
                                  limit=500, state="all")
-    plan, gate_failed = bf._derive_plan(cap, dict(BOARD_CONFIG), args)
+    plan, gate_failed, _errs = bf._derive_plan(cap, dict(BOARD_CONFIG), args)
     assert gate_failed is True and plan is None
 
 
@@ -500,7 +500,7 @@ def test_label_only_back_fill_does_not_gate_on_the_board(bf, tmp_path, monkeypat
     monkeypatch.setattr(bf, "_resolve_repo_name_with_owner", lambda _c: TARGET_REPO)
     args = bf.argparse.Namespace(json=True, apply=False, emit_script=False,
                                  limit=500, state="all")
-    plan, gate_failed = bf._derive_plan(cap, dict(BOARD_CONFIG), args)
+    plan, gate_failed, _errs = bf._derive_plan(cap, dict(BOARD_CONFIG), args)
     assert gate_failed is False
     assert [c["kind"] for c in plan["proposed"]] == [KIND]
 
@@ -1131,3 +1131,49 @@ def test_the_guard_still_skips_on_a_failed_read_after_quoting(apply_mod, tmp_pat
         check=False,
     )
     assert "failing closed" in out.stderr
+
+
+# --- intent errors survive every phase --------------------------------------
+#
+# The failure this guards: an intent that could not be resolved was reported
+# only on the human report phase. On `--apply`, `--emit-script` and `--json` the
+# early return discarded it and the command said "no intents declared" and
+# exited 0 — the mutating phases, where silence costs most.
+#
+# An error raised by an explicit `--set` is the sharper case. The operator named
+# that axis on purpose, so "nothing to do" answers a question nobody asked; it
+# is the same silent-miss shape the whole carriage change-set exists to end.
+
+def _args(bf, **over):
+    import argparse
+    kw = dict(
+        json=False, apply=False, emit_script=False, plan=None, set_axis=None,
+        limit=200, state="open", yes=False, capability_root=None,
+    )
+    kw.update(over)
+    return argparse.Namespace(**kw)
+
+
+def test_unresolvable_set_is_reported_on_apply(bf, capsys, tmp_path, monkeypatch):
+    """The mutating phase must not swallow the reason."""
+    errs = ["--set priority=Bogus cannot be written: no remap entry"]
+    bf._print_no_intents(_args(bf, apply=True, set_axis=["priority=Bogus"]), errs)
+    captured = capsys.readouterr()
+    assert "Bogus" in (captured.err + captured.out)
+
+
+def test_unresolvable_set_is_carried_in_the_json_plan(bf, capsys):
+    """A machine consumer sees the same reasons a human would."""
+    import json as _json
+    errs = ["--set priority=Bogus cannot be written: no remap entry"]
+    bf._print_no_intents(_args(bf, json=True, set_axis=["priority=Bogus"]), errs)
+    doc = _json.loads(capsys.readouterr().out)
+    assert doc["intent_errors"] == errs
+
+
+def test_no_intents_and_no_errors_stays_quiet(bf, capsys):
+    """The ordinary 'nothing declared' case is unchanged."""
+    bf._print_no_intents(_args(bf), None)
+    out = capsys.readouterr()
+    assert "No back-fill intents declared" in out.out
+    assert out.err == ""

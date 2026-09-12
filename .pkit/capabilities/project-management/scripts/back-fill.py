@@ -125,14 +125,23 @@ seam emits when the filer supplies none", which is exactly the value a corpus-wi
 seeding writes. So each kind reads from wherever the per-create default for its own
 substrate is already declared, and the back-fill invents no third place.
 
-**The consequence, stated plainly: an axis with no declared ``default:`` yields no
-label intent, and the corpus repair for it does nothing.** That is not a gap to
-route around — the kit cannot recover the per-issue value the broken window lost,
-so a corpus repair can only write a declared uniform value, and the map is where an
-adopter declares one. The remedy is a one-line map edit (add ``default:`` to the
-axis), after which the ceremony proposes and cites it like any other intent. A
-command-line ``--set <axis>=<value>`` would be a *new intent-declaration surface*,
-which this command deliberately does not build (see the scope note below).
+**A repair can only write ONE value, and it comes from one of two places.** The kit
+cannot recover the per-issue values the broken window lost — nobody knows which
+issues were High — so a corpus repair writes a single declared value across the
+affected set: a floor, not a restoration. That value is either the axis's
+substrate-map ``default:``, which is where an adopter already declares what a new
+issue gets seeded with, or ``--set <axis>=<value>`` supplied for the run.
+
+The two are deliberately asymmetric in how loudly they fail. A *declared* default
+that cannot be used stays silent — the adopter never asked this run to touch that
+axis. An axis named with ``--set`` was named on purpose, so every arm that would
+drop it reports instead: an unknown axis, a value the adopter's ``remap`` has no
+entry for, or an axis carried by a board rather than a label. Silently ignoring an
+explicit request is the same shape of miss this whole repair exists to end.
+
+``--set`` takes the METHODOLOGY value (``High``), never the substrate's label
+(``P1``): it resolves through the adopter's remap exactly as a declared default
+does, so no path here can write a label the adopter does not manage.
 
 An undeclared semantic this couples (surfaced in the report header): because the
 back-fill reads its intent from the *same* ``after_create_issue`` hook that seeds
@@ -465,13 +474,17 @@ def main() -> int:
 
     # Otherwise derive the plan live: run the residual gate, resolve intents,
     # enumerate the corpus, build the proposed changes.
-    plan, gate_failed = _derive_plan(capability_root, config, args)
+    plan, gate_failed, intent_errors = _derive_plan(capability_root, config, args)
     if gate_failed:
         return 2  # the gate refusal was already printed by _derive_plan.
     if plan is None:
-        # No intents declared — nothing to propose. Phase-appropriate message.
-        _print_no_intents(args)
-        return 0
+        # Nothing resolved. The reasons travel with the empty result so the
+        # mutating phases report them too — silence here is the failure this
+        # change-set exists to end.
+        _print_no_intents(args, intent_errors)
+        # An explicit `--set` that could not be honoured is a refusal, not a
+        # no-op: the operator named that axis, so the exit code says so.
+        return 2 if (args.set_axis and intent_errors) else 0
 
     if apply_mode:
         return _run_apply_or_emit(args, config, plan, capability_root)
@@ -491,8 +504,13 @@ def main() -> int:
 
 def _derive_plan(
     capability_root: Path, config: dict[str, Any], args: argparse.Namespace
-) -> tuple[dict[str, Any] | None, bool]:
+) -> tuple[dict[str, Any] | None, bool, list[str]]:
     """Run the gate, resolve intents, enumerate, and build the live plan document.
+
+    Returns ``(plan, gate_failed, intent_errors)``. The errors ride out
+    separately because they must survive the no-plan case: an intent that could
+    not be resolved is exactly what the caller has to say out loud, and on the
+    mutating phases there is no report to carry it.
 
     Returns ``(plan, gate_failed)``. ``gate_failed`` True means the residual gate
     refused (the refusal has already been printed); the caller returns 2. A
@@ -508,7 +526,7 @@ def _derive_plan(
     gate = _residual_pre_check(capability_root)
     if not gate.passed:
         _print_gate_refusal(gate)
-        return None, True
+        return None, True, []
 
     substrate_map = axis_labels.load_substrate_map(capability_root)
     intents, intent_errors = _resolve_intents(capability_root, substrate_map)
@@ -529,7 +547,7 @@ def _derive_plan(
     if has_field_intent and project_node_id is None:
         _add_board_unresolvable_failure(gate)
         _print_gate_refusal(gate)
-        return None, True
+        return None, True, intent_errors
 
     # Context header + gate-pass lines on the human-readable report phase only.
     human_report_phase = not args.json and not args.apply and not args.emit_script
@@ -542,7 +560,13 @@ def _derive_plan(
             print()
 
     if not intents:
-        return None, False
+        # No intent resolved. On the human report phase the errors were printed
+        # above; on every other phase they would vanish here, which is the
+        # failure this whole change-set exists to end — a request that lands
+        # nowhere with nobody told. An error raised by an EXPLICIT `--set` is
+        # worse still: the operator named that axis on purpose. So the errors
+        # travel out with the empty result and the caller reports them.
+        return None, False, intent_errors
 
     issues = _enumerate_corpus(config, limit=args.limit, state=args.state)
     truncated = len(issues) == args.limit
@@ -557,16 +581,37 @@ def _derive_plan(
             intents, proposed, gate, truncated=truncated, intent_errors=intent_errors
         ),
         False,
+        intent_errors,
     )
 
 
-def _print_no_intents(args: argparse.Namespace) -> None:
-    """The phase-appropriate 'no intents declared' message."""
+def _print_no_intents(
+    args: argparse.Namespace, intent_errors: list[str] | None = None
+) -> None:
+    """The phase-appropriate 'no intents declared' message.
+
+    ``intent_errors`` is why nothing resolved, and it must survive every phase.
+    An intent dropped for a reason — a value the adopter's remap cannot express,
+    an axis a board carries rather than a label — is a report the operator needs,
+    and on `--apply` / `--emit-script` there is no human report to carry it. An
+    error raised by an explicit `--set` is the sharper case: that axis was named
+    on purpose, so "nothing to do" is an answer to a question nobody asked.
+    """
+    errors = intent_errors or []
     if args.json:
-        # Emit a well-formed empty plan so a --json consumer parses it cleanly.
+        # Emit a well-formed empty plan so a --json consumer parses it cleanly —
+        # carrying the errors, so a machine consumer sees the same reasons a
+        # human would.
         empty_gate = GateResult(passed=True, checks=[])
-        print(json.dumps(_plan_document([], [], empty_gate, truncated=False), indent=2))
+        print(json.dumps(
+            _plan_document([], [], empty_gate, truncated=False, intent_errors=errors),
+            indent=2,
+        ))
         return
+    for err in errors:
+        print(f"  ! {err}", file=sys.stderr)
+    if errors:
+        print(file=sys.stderr)
     print(
         "No back-fill intents declared. The corpus back-fill drives two "
         "declaration points:\n"

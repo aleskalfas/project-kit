@@ -4,7 +4,7 @@ custom:
   category: Added
   pr: "794"
 body: >
-  A new core record, COR-045, rules that a decision record refers to a thing the
+  A new core record, COR-046, rules that a decision record refers to a thing the
   way it means it — by the role something plays where the role is the point, by
   name where the name is the point. One question separates them: would this
   sentence become false if the name changed, with no decision changing? If yes,

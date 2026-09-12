@@ -1,5 +1,5 @@
 ---
-id: COR-045
+id: COR-046
 title: A record names the role, not the thing currently playing it
 status: accepted
 date: 2026-09-10
