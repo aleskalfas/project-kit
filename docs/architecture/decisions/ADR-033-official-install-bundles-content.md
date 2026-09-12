@@ -243,7 +243,8 @@ this is the durable foundation, not a throwaway step.
 > **The two descriptions that carried the retired phrasing were corrected in this PR.** PRJ-004's
 > `pyproject.toml` implication and `.pkit/cli/README.md`'s install section both glossed the bundle
 > as the propagation surface; each now defines it by tier ownership, matching D1. The phrase
-> survives only where this record and the originating scratchpad note describe what was retired.
+> survives only where the retirement itself is what's being described — naming the gloss in order
+> to disown it, never to define the bundle.
 >
 > **Amended in place, not superseded — and here is the line.** What this record decides is
 > that the official install resolves methodology content from package data bundled in the

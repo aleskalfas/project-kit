@@ -55,7 +55,7 @@ pattern = "^(?P<version>[0-9]+\\.[0-9]+\\.[0-9]+)$"
 #   `.pkit/scratchpad/{active,done,dropped}` <- `_SCRATCHPAD_STATE_DIRS`
 #   `.pkit/manifest.yaml`, `.pkit/.gitignore` <- `_ADOPTER_OWNED_KIT_FILES`
 # Widening any of those in that module requires a matching line here, or the
-# sdist ships what the wheel withholds. `_ADOPTER_OWNED_KIT_FILES`' third
+# sdist ships what the wheel withholds. `_ADOPTER_OWNED_KIT_FILES`' remaining
 # entry, `version-pin`, needs no line today only because no `.pkit/version-pin`
 # is tracked — so the sdist test passes vacuously on it.
 exclude = [

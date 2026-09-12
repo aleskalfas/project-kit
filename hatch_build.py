@@ -56,11 +56,16 @@ KIT = ROOT / ".pkit"
 DEST_ROOT = "project_kit/_kit"
 
 # The `.pkit/` subtrees this hook force-includes, replacing the static entries in
-# `pyproject.toml`. Every tree that can hold adopter-owned content of ANY shape
-# belongs here — not only a `project/` subdirectory: `rules` has no such
-# directory and is a member because of `rules/project.md`, and `scratchpad`
-# state dirs are adopter-owned too. Ask `is_adopter_owned_by_tier`, not the
-# directory name. A tree left in the static list ships unfiltered.
+# `pyproject.toml`. Membership is about HOW a tree is bundled, not about what it
+# holds: a tree belongs here when the bundle takes it WHOLESALE, so something has
+# to filter it file by file. `decisions` and `scratchpad` also hold adopter-owned
+# content and are deliberately absent — `pyproject.toml` enumerates their
+# kit-owned paths individually (`decisions/core`, `decisions/README.md`,
+# `scratchpad/README.md`), which excludes the adopter's paths by construction.
+# Adding one here would collide two force-include sources on one destination.
+# A WHOLESALE tree left in the static list ships unfiltered — that is the bug.
+# Note the criterion is not "has a `project/` subdirectory": `rules` has none
+# and is a member because of `rules/project.md`.
 FILTERED_TREES: tuple[str, ...] = (
     "capabilities",
     "agents",
