@@ -190,3 +190,20 @@ def test_show_tree_extracts_parent_through_the_marker() -> None:
     st = _load("pm_show_tree_marker_ut", SCRIPTS / "show-tree.py")
     body = f"{MARKER}\nEPIC: #508\n\n## What\nx"
     assert st._first_parent_ref(body) == 508
+
+
+# --- integration_slug (start-work base derivation, #835) --------------------
+
+
+def test_integration_slug_extracts_the_marker_slug(infer) -> None:
+    body = f"{MARKER}\nEPIC: #508\n\n## What\nx"
+    assert infer.integration_slug(body) == "508-multi-instance-ownership"
+
+
+def test_integration_slug_none_without_marker(infer) -> None:
+    assert infer.integration_slug("EPIC: #508\n\n## What\nx") is None
+
+
+@pytest.mark.parametrize("bad", MALFORMED)
+def test_integration_slug_none_for_malformed_marker(infer, bad) -> None:
+    assert infer.integration_slug(f"{bad}\nEPIC: #508\n\n## What\nx") is None

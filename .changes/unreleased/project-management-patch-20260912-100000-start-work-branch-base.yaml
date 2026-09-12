@@ -1,0 +1,17 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `start-work` now creates the Task's branch off the correct **base** rather than
+  the incidental checked-out `HEAD` (#835). Previously it ran a bare
+  `git checkout -b <name>`, so running `start-work` while another feature branch
+  was checked out produced a branch **stacked on that branch**, carrying its
+  commits — which, on squash-merge, would land unrelated work on `main` under the
+  Task's subject and empty the other branch's PR. The base is now resolved to the
+  adopter's `default_branch` (default `main`), or to the DEC-013
+  `integration/<slug>` branch when the issue body carries the integration marker,
+  and is fetched from `origin` so the branch is cut from an up-to-date ref
+  (degrading to the local ref when offline). Base resolution takes only
+  `(config, body)` — never `HEAD` — so the checked-out branch can no longer leak
+  into it.
