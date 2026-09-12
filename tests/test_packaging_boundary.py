@@ -1,4 +1,4 @@
-"""The distribution carries no adopter-owned path (#813).
+"""The distribution carries no adopter-owned content (#813).
 
 `pyproject.toml` bundles the methodology tree with `force-include`, and
 hatchling's `exclude` cannot filter force-included paths. So the trees were
@@ -12,6 +12,13 @@ untracked state sat on the build machine.
 predicate, so the packaging manifest cannot drift from the rule again — which it
 had already done once, since `ownership.py` knew a capability's `project/` tree
 was adopter-owned while the packaging manifest did not.
+
+Content, not shape: the bundle does carry an empty `.gitkeep` at each declared
+adopter-tier directory, because `install.py` reads the bundle's shape to decide
+whether to stub an adopter's `project/` tier and a per-file force-include ships
+no directory whose every file was withheld. `test_adopter_tier_directories_are_represented`
+and its neighbours pin that set and assert each marker byte-empty; ADR-033 D1
+records the carve-out.
 """
 
 from __future__ import annotations

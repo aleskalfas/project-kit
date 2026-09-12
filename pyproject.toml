@@ -47,6 +47,13 @@ pattern = "^(?P<version>[0-9]+\\.[0-9]+\\.[0-9]+)$"
 # rule `ownership.is_adopter_owned_by_tier` applies. The wheel asks that
 # predicate directly; config globs cannot, so this mirrors it in the one form
 # hatchling accepts here.
+#
+# That covers the `project/` globs only. The two entries at the foot are a
+# hand-copy of `install._ADOPTER_OWNED_KIT_FILES`, and hand-copies drift —
+# which is this whole change's thesis. Adding an entry to that frozenset
+# requires a matching line here, or the sdist ships what the wheel withholds.
+# The frozenset's `version-pin` entry needs no line today only because no
+# `.pkit/version-pin` is tracked, so the sdist test passes vacuously on it.
 exclude = [
   ".pkit/**/project",
   ".pkit/project",

@@ -97,7 +97,7 @@ def _load_yaml(text: str):
     return YAML(typ="safe").load(text)
 
 
-# --- the predicate -----------------------------------------------------------
+# --- the predicates ----------------------------------------------------------
 
 def is_adopter_owned_by_tier(rel_posix: str) -> bool:
     """True when a `.pkit/`-relative path is adopter-owned *by tier alone*.
@@ -148,8 +148,9 @@ def is_adopter_owned_by_tier(rel_posix: str) -> bool:
     # permission allow-list (`Bash(uv:*)`, `Bash(ruff:*)`, …) into every
     # adopter, the exact defect #813 exists to close, while the sdist's
     # `**/project` glob excluded it. Two artifacts of one version disagreeing by
-    # rule is how the miss surfaced. The adapter README is explicit that this
-    # tier is "the adopter's project-specific additions".
+    # rule is how the miss surfaced. The Claude Code adapter's own README
+    # (`.pkit/adapters/claude-code/README.md`, not the area-level one) is
+    # explicit that this tier is "the adopter's project-specific additions".
     if "project" in parts[:-1]:
         return True
     return False

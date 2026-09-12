@@ -230,12 +230,20 @@ this is the durable foundation, not a throwaway step.
 >
 > **The drift D1 called impossible does exist, on one path — and it is not the bundle's bug.**
 > `.pkit/adapters/claude-code/settings/project/settings.json` is adopter-owned by tier (so the
-> bundle withholds it) while `is_sync_managed` still calls it managed. The adapter README
-> describes that file as the adopter's own project-specific additions, so the *sync* predicate
-> is the side that is wrong. Tracked as **#823**, deliberately unfixed in PR #820 because
-> correcting it changes adopter-visible sync behaviour and wants its own change-set. Recorded
-> here so a future reader meets the divergence as a known, located bug rather than as evidence
-> against this rule — do not reconcile it by reverting D1.
+> bundle withholds it) while `is_sync_managed` still calls it managed.
+> `.pkit/adapters/claude-code/README.md` describes that file as the adopter's own
+> project-specific additions, so the *sync* predicate is the side that is wrong. The same
+> divergence settles the relation between the two sets: the bundle omits a path sync propagates,
+> so bundle and sync surface merely **overlap** — neither contains the other, and the bundle is
+> in particular not a superset of what sync copies. Tracked as **#823**, deliberately unfixed in
+> PR #820 because correcting it changes adopter-visible sync behaviour and wants its own
+> change-set. Recorded here so a future reader meets the divergence as a known, located bug
+> rather than as evidence against this rule — do not reconcile it by reverting D1.
+>
+> **The two descriptions that carried the retired phrasing were corrected in this PR.** PRJ-004's
+> `pyproject.toml` implication and `.pkit/cli/README.md`'s install section both glossed the bundle
+> as the propagation surface; each now defines it by tier ownership, matching D1. The phrase
+> survives only where this record and the originating scratchpad note describe what was retired.
 >
 > **Amended in place, not superseded — and here is the line.** What this record decides is
 > that the official install resolves methodology content from package data bundled in the
@@ -249,19 +257,3 @@ this is the durable foundation, not a throwaway step.
 > (ADR-049), and PRJ-004's clarified implication. A superseding record would have to restate
 > §2 through §4 verbatim to remain operative, splitting one live decision across two records
 > for no semantic gain.
->
-> **Two descriptions elsewhere still use the retired phrasing**, flagged rather than edited
-> here because neither file is this record's to change. PRJ-004's implication glosses the
-> bundle as "the methodology content (the propagation surface)", and the CLI README describes
-> the bundle as "the methodology content `init` / `sync` / `upgrade` propagate". Both name the
-> retired defining rule and should lose the gloss when their owners next touch them.
->
-> An earlier revision of this paragraph called them "substantively right" on the grounds that
-> the bundle is a *superset* of the propagated content. **That is false, and this record's own
-> #823 paragraph is the counterexample:** `adapters/<harness>/settings/project/settings.json`
-> is adopter-owned by tier — so both artifacts withhold it — while `is_sync_managed` still
-> calls it managed. The bundle omits a path sync propagates, so the two sets merely *overlap*;
-> neither contains the other. The deferral stands on the narrower ground that these are other
-> records' files, not on a containment relation that does not hold — the difference matters,
-> because the false relation was doing the work of reassuring a reader that the glosses are
-> harmless.

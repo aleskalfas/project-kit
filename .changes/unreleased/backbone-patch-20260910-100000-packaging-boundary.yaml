@@ -3,7 +3,7 @@ kind: patch
 custom:
   category: Fixed
 body: >
-  The distribution no longer carries adopter-owned paths, and is reproducible
+  The distribution no longer carries adopter-owned content, and is reproducible
   (#813). The methodology tree is bundled by `force-include`, and hatchling's
   `exclude` cannot filter force-included paths — so eleven `.pkit/` trees were
   included wholesale, carrying each capability's adopter-owned `project/`
