@@ -42,6 +42,23 @@ a `project/` directory at any depth, such as `decisions/project/` or
 `manifest.yaml`; and `.gitignore` / `__pycache__` — illustrative of the rule's reach, not an
 authoritative list).
 
+**The rule withholds adopter-owned *content*, not adopter-owned *shape* — one bounded exception
+(#813).** The rule above cannot erase a directory's existence, because the installer reads the
+bundle's shape as well as its contents: it stubs an adopter's `project/` tier only where the source
+bundle *has* that directory (`(src / "project").is_dir()` for an area, `project_src.is_dir()`
+for an adapter's settings pair). Withholding every file in such a directory therefore deleted
+the directory from the artifact, and the official install silently stopped creating scaffolding
+it had created before. So the wheel ships one **empty** `.gitkeep` at each of four *declared*
+adopter-owned paths — `agents/project`, `permissions/project`, `skills/project`,
+`adapters/claude-code/settings/project` (`ADOPTER_TIER_MARKERS` in `hatch_build.py`). They are
+layout, not adopter data: each is asserted byte-empty by test, the set is declared in code
+rather than discovered from the filesystem, and none reaches an adopter, because the install
+path stubs those trees rather than copying them. **Finding `agents/project/.gitkeep` in the
+wheel is this rule working, not a leak to fix.** The general principle, and the bar any future
+exception must clear: a consumer that reads the artifact's *shape* constrains what the
+ownership rule may erase — and the carve-out stays bounded, declared, empty, and test-asserted.
+The amendment at the foot gives the mechanism and why the set is declared.
+
 *Corrected (#813).* This point originally defined the set as "exactly what `pkit sync`
 propagates", and inferred that the bundle could therefore never drift from what sync copies.
 The set is now defined by tier ownership, deliberately **not** by the sync surface, and is
@@ -145,7 +162,11 @@ this is the durable foundation, not a throwaway step.
   the original wholesale include they did not — some adopter-owned state that rode along is
   git-ignored, so the artifact depended on the build machine's untracked files (the released
   1.149.0 wheel carried 14 per-issue journals; a wheel built from a working tree carried 36).
-  A future change to the bundle definition must preserve this.
+  A future change to the bundle definition must preserve this. D1's directory-marker carve-out
+  is the first thing that had to clear this bar and nearly failed it: discovering the marker set
+  from withheld files read git-ignored state and emitted a marker no clean clone would produce
+  (419 `_kit` entries against 418 for the same commit). *Declaring* the set is what preserves
+  the property — the declaration is load-bearing for this obligation, not a stylistic choice.
 - **Wheel size** grows (all methodology content + capability source ship in `site-packages`),
   acceptable at current scale; revisit if a future capability bundles large binary assets.
 - **Surface change** → version bump per PRJ-002, and the migration-coverage check runs against
@@ -162,7 +183,8 @@ this is the durable foundation, not a throwaway step.
 > `.pkit/lifecycle/ownership.py`'s `is_adopter_owned_by_tier`, by both build targets: the
 > wheel's build hook calls it per file, and the sdist mirrors it as an `exclude` glob because
 > config globs cannot call a predicate. D1, §3, the corresponding Rationale paragraph and the
-> COR-007 follow-on are corrected above. Checkout-first resolution (§2) and the
+> COR-007 follow-on are corrected above, and D1 now also records the one bounded exception the
+> new mechanism forced (next paragraph but one). Checkout-first resolution (§2) and the
 > migrations-must-reach-adopters fix (§4) are untouched.
 >
 > **Why the old rule was wrong, not merely imprecise.** Sync-management is not a statement
@@ -178,6 +200,33 @@ this is the durable foundation, not a throwaway step.
 > what permitted that: the definition pointed at a predicate with no opinion on the question
 > being asked, so the packaging manifest kept its own idea of the boundary and nothing could
 > notice they disagreed.
+>
+> **The new mechanism forced one carve-out: the bundle carries shape, not only content.**
+> Replacing a wholesale `force-include` with a per-file one ships *files* — so a directory whose
+> every file is withheld vanishes from the artifact altogether. That is not cosmetic, because
+> `install.py` gates the adopter-side `project/` scaffolding on the source bundle *having* that
+> directory. The four adopter-tier directories disappearing meant the official wheel install
+> stopped stubbing `.pkit/<area>/project/` at all: a real regression, caught in review of this
+> PR and structurally invisible to tests that assert file presence. The fix ships an empty
+> `.gitkeep` at each of the four, declared as `ADOPTER_TIER_MARKERS` in `hatch_build.py`; D1
+> states the carve-out and the bar a future one would have to clear. Note what this says about
+> the boundary rule generally — `is_adopter_owned_by_tier` answers *may this content be
+> distributed?*, and that is the only question it answers. Which directory *shapes* the artifact
+> must carry is a separate fact, separately declared, because it is driven by a consumer rather
+> than by ownership.
+>
+> **Why that set is declared in code rather than discovered from the tree.** Two failures, both
+> measured on this branch. Collecting the parent of every withheld file made the artifact depend
+> on untracked state — withheld files include git-ignored ones, so this working tree produced
+> 419 `_kit` entries against 418 from a clean clone of the same commit, the extra marker standing
+> for a directory that exists locally only because of untracked journals. And the sdist prunes
+> `**/project`, so a wheel built *from* an sdist — what `pip install` does with a source
+> distribution — found no such directory, emitted no markers, and restored the regression on the
+> path most adopters take. A declared tuple lives in the code, and the code travels in both
+> artifacts, so both build paths emit the same set; a test asserts the tuple against the source
+> tree so the declaration cannot drift into fiction. Depth is deliberately not the rule — the
+> tuple includes `adapters/claude-code/settings/project` at depth 3 because `install.py` gates
+> that adapter's settings scaffolding on it.
 >
 > **The drift D1 called impossible does exist, on one path — and it is not the bundle's bug.**
 > `.pkit/adapters/claude-code/settings/project/settings.json` is adopter-owned by tier (so the

@@ -29,6 +29,16 @@ anything `ownership.is_adopter_owned_by_tier` calls adopter-owned. One rule, and
 function **and against each other** — the cross-artifact check being the one
 that can catch a hole in the predicate itself, which a per-artifact check
 structurally cannot.
+
+One carve-out, and the title line above is the rule it bends: the bundle does
+carry an empty `.gitkeep` at each declared adopter-tier directory
+(`ADOPTER_TIER_MARKERS`). `install.py` reads the bundle's *shape* — not merely
+its contents — to decide whether to stub an adopter's `project/` tier, and a
+per-file force-include ships no directory whose every file was withheld, so
+withholding the contents alone silently killed that scaffolding. The markers
+restore the shape while keeping the contents out: kit-owned layout rather than
+adopter data, asserted byte-empty by the same test module, and never copied to
+an adopter. ADR-033 D1 records the exception.
 """
 
 from __future__ import annotations
@@ -62,11 +72,6 @@ FILTERED_TREES: tuple[str, ...] = (
     "migrations",
 )
 
-# Build caches must never ride along. `pyproject.toml`'s `exclude` cannot help:
-# it filters only the standard package walk, not force-included paths — which is
-# the whole reason this hook exists — so a per-file force-include has to apply
-# the same patterns itself. Missing this shipped 87 `.pyc` files on the first
-# attempt, trading 41 unwanted files for 87 different ones.
 # Adopter-tier directories whose EXISTENCE the installer reads. `install.py`
 # stubs an adopter's `project/` tier only when the source bundle has that
 # directory — `if (src / "project").is_dir()` for an area, and
@@ -87,6 +92,11 @@ ADOPTER_TIER_MARKERS: tuple[str, ...] = (
     "adapters/claude-code/settings/project",
 )
 
+# Build caches must never ride along. `pyproject.toml`'s `exclude` cannot help:
+# it filters only the standard package walk, not force-included paths — which is
+# the whole reason this hook exists — so a per-file force-include has to apply
+# the same patterns itself. Missing this shipped 87 `.pyc` files on the first
+# attempt, trading 41 unwanted files for 87 different ones.
 EXCLUDED_PARTS: frozenset[str] = frozenset({"__pycache__", ".pytest_cache"})
 EXCLUDED_SUFFIXES: tuple[str, ...] = (".pyc", ".pyo")
 
@@ -113,7 +123,10 @@ def _load_ownership():
 class CapabilityBoundaryHook(BuildHookInterface):
     """Force-include every wholesale-bundled `.pkit/` tree, minus adopter-owned paths.
 
-    Scope is `FILTERED_TREES` below — eleven trees, not capabilities alone.
+    Scope is `FILTERED_TREES` below — eleven trees, not capabilities alone. The
+    sole thing shipped at an adopter-owned path is an empty structural marker
+    per `ADOPTER_TIER_MARKERS` entry, so the installer can still read the
+    bundle's shape.
     """
 
     PLUGIN_NAME = "pkit-capability-boundary"
@@ -190,7 +203,8 @@ class CapabilityBoundaryHook(BuildHookInterface):
         # function of tracked state alone.
         represented = {str(Path(dest).parent) for dest in include.values()}
         pending = [
-            rel_dir for rel_dir in ADOPTER_TIER_MARKERS
+            rel_dir
+            for rel_dir in ADOPTER_TIER_MARKERS
             if f"{DEST_ROOT}/{rel_dir}" not in represented
         ]
         if pending:
