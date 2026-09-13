@@ -28,7 +28,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CAPABILITY = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
 MIGRATION = (
-    CAPABILITY / "migrations" / "0.55.0" / "002-withdraw-unsupported-board-workaround.sh"
+    CAPABILITY / "migrations" / "0.55.0" / "003-withdraw-unsupported-board-workaround.sh"
 )
 
 BOARD_CONFIG = """\
