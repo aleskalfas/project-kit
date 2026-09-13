@@ -669,8 +669,14 @@ def _emit_one(change: PlannedChange) -> str:
     """Render one change as an idempotent, value-re-checking script fragment."""
     if change.argv is None:
         return (
+            # `blocked_reason` is adopter-reachable on the `--plan` path, where it
+            # is hydrated verbatim from a supplied document. It renders into a
+            # bash comment, so it needs the same flattening `citation` gets one
+            # branch below — a newline ends the comment and the rest of the line
+            # becomes a live statement, wearing the look of an inert skip notice.
             f"# [blocked] #{change.issue_number} {change.kind}: "
-            f"{change.blocked_reason or 'no write could be constructed'} — skipped."
+            f"{_comment_safe(change.blocked_reason) or 'no write could be constructed'}"
+            f" — skipped."
         )
     quoted = " ".join(shlex.quote(token) for token in change.argv)
     cite = f"  # cite: {_comment_safe(change.citation)}" if change.citation else ""
@@ -927,6 +933,16 @@ def planned_changes_from_plan(plan: dict[str, Any]) -> list[PlannedChange]:
             continue
         argv = entry.get("argv")
         argv = argv if isinstance(argv, list) else None
+        if argv and argv[0] != "gh":
+            # A plan document is adopter-supplied on the `--plan` path, and its
+            # argv is rendered into the emitted script. Per-token quoting makes
+            # the ARGUMENTS literal but argv[0] is the executable, so a plan
+            # carrying `["/bin/sh", "-c", ...]` emits a runnable command. This
+            # engine constructs nothing but `gh` invocations, so anything else
+            # did not come from here. Pinned at the same boundary that filters
+            # `kind` and `axis`, so the whole family is closed rather than two
+            # thirds of it.
+            continue
         intent = intent_by_key.get(_intent_key(entry), {})
         target, seam_inputs = _target_and_inputs(kind, intent, argv)
         out.append(PlannedChange(

