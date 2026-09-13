@@ -100,6 +100,12 @@ config_path, map_path, hooks_path = (Path(a) for a in sys.argv[1:4])
 # when marked `unsupported: true` under a board.
 BOARD_DECLARABLE = ("priority", "workstream")
 
+# The axes a configured board claims when the map is silent. Wider than the
+# declarable set: `state` cannot take a `board:` arm yet, but a board DOES carry
+# it absent a binding — so a `label:` binding on it is the same two-claimant
+# shape, and its corpus is damaged the same way.
+BOARD_CLAIMED = ("priority", "workstream", "state")
+
 
 def read(path):
     try:
@@ -117,17 +123,7 @@ if not re.search(r"^has_projects_v2_board:\s*true\s*(#.*)?$", config_text, re.M)
     print("NONE no configured Projects-v2 board")
     raise SystemExit(0)
 
-# --- signal 3: at least one set-board-field hook -------------------------
-hooks_text = read(hooks_path)
-if hooks_text is None or not re.search(
-    r"^\s*-?\s*kind:\s*[\"']?set-board-field[\"']?\s*(#.*)?$", hooks_text, re.M
-):
-    print("NONE no `set-board-field` hook declared")
-    raise SystemExit(0)
-
-# --- signal 2: a board-declarable axis marked `unsupported: true` --------
-# Indentation walk over the `axes:` block: find the top-level `axes:` key, then
-# each axis key one level in, then `unsupported: true` inside that axis's block.
+# --- read the map once; two conditions are scanned out of it ------------
 map_text = read(map_path)
 if map_text is None:
     print("NONE project/substrate-map.yaml unreadable")
@@ -140,10 +136,13 @@ def indent_of(line):
     return len(line) - len(line.lstrip(" "))
 
 
+# Indentation walk over the `axes:` block: find the top-level `axes:` key, then
+# each axis key one level in, then the arm inside that axis's block.
 axes_indent = None
 axis_indent = None
 current_axis = None
-found = []
+unsupported = []   # condition A — the withdrawn guidance
+label_bound = []   # condition B — the reported failure's own shape
 for line in lines:
     if not line.strip() or line.lstrip().startswith("#"):
         continue
@@ -164,25 +163,45 @@ for line in lines:
     if (
         current_axis in BOARD_DECLARABLE
         and re.match(r"^unsupported:\s*true\s*(#.*)?$", stripped)
-        and current_axis not in found
+        and current_axis not in unsupported
     ):
-        found.append(current_axis)
+        unsupported.append(current_axis)
+    if (
+        current_axis in BOARD_CLAIMED
+        and re.match(r"^label:\s*(#.*)?$", stripped)
+        and current_axis not in label_bound
+    ):
+        label_bound.append(current_axis)
 
-if not found:
-    print("NONE no board-declarable axis marked `unsupported: true`")
+# Condition A additionally requires a board-writing hook: without one, an axis
+# marked `unsupported: true` is most likely what it says — disabled — rather
+# than the withdrawn workaround. Condition B needs no hook; a `label:` binding
+# under a board IS the reported shape on its own.
+hooks_text = read(hooks_path)
+has_hook = bool(hooks_text) and bool(re.search(
+    r"^\s*-?\s*kind:\s*[\"']?set-board-field[\"']?\s*(#.*)?$", hooks_text, re.M
+))
+if not has_hook:
+    unsupported = []
+
+if not unsupported and not label_bound:
+    print("NONE no board-claimed axis is bound to labels or marked `unsupported: true`")
     raise SystemExit(0)
 
-print("MATCH " + " ".join(found))
+print("MATCH|" + " ".join(unsupported) + "|" + " ".join(label_bound))
 PYEOF
 )
 
-if [ "${detection%% *}" != "MATCH" ]; then
-    echo "  [ok] withdrawn guidance not in use — ${detection#NONE }"
+if [ "${detection%%|*}" != "MATCH" ]; then
+    echo "  [ok] no action needed — ${detection#NONE }"
     exit 0
 fi
 
-matched_axes=${detection#MATCH }
+rest=${detection#MATCH|}
+matched_axes=${rest%%|*}
+label_axes=${rest#*|}
 
+if [ -n "$matched_axes" ]; then
 cat <<EOF
   [warn] your substrate-map declares a board-carried axis the way the kit used to
          tell you to, and that instruction has been withdrawn:
@@ -230,5 +249,41 @@ cat <<EOF
   Re-running this migration after the edit is a no-op: an axis carrying
   \`board: true\` is no longer \`unsupported\` and matches nothing.
 EOF
+    [ -n "$label_axes" ] && echo
+fi
+
+if [ -n "$label_axes" ]; then
+cat <<EOF
+  [warn] issues filed before this upgrade may carry no value for an axis your
+         map binds to labels, on EITHER substrate:
+
+    File:  $SUBSTRATE_MAP
+    Axes:  $label_axes
+
+  project/config.yaml configures a Projects-v2 board while your map binds those
+  axes to your own labels. Until this release nothing decided which declaration
+  won, so the writers honoured the board flag and wrote no label, nothing wrote
+  the board field, and the readers looked for a label that was never written.
+  The value landed NOWHERE, and no gate reported it — that is the failure this
+  release fixes.
+
+  Newly filed issues are correct from now on: the binding governs, so the label
+  your remap names is written and read. What this cannot fix retroactively is
+  the issues already filed. Those carry no value, and the gates now ask for one.
+
+  This migration does NOT know whether your corpus is affected — answering that
+  means reading your issues, and a migration makes no network calls. To find out:
+
+    pkit pm back-fill
+
+  It reports what is missing and writes nothing. Every proposal cites where its
+  value came from, and you decide before anything is applied. It only fills a
+  confirmed gap — an issue that already carries a value is left alone — and the
+  value it writes comes from the axis's \`default:\` in your map, or from
+  \`--set <axis>=<value>\` if you would rather choose one for the run.
+
+  If your corpus is clean, it proposes nothing and exits.
+EOF
+fi
 
 exit 0

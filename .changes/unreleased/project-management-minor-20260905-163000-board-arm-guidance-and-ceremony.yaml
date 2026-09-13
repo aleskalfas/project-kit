@@ -42,3 +42,13 @@ body: >
   marked `unsupported: true`, and a `set-board-field` hook all coincide. It never
   edits `substrate-map.yaml` — the file is adopter-owned hand-authored intent, and
   the three-way signature is a heuristic, not a proof.
+
+  The upgrade-time retraction also now points at the repair. Its detection
+  previously required a `set-board-field` hook, so it matched only adopters who
+  followed the withdrawn `unsupported: true` guidance — and missed the adopters
+  with a `label:` binding under a configured board, whose already-filed issues
+  carry a value on NEITHER substrate. That population had the damaged corpus and
+  saw nothing on upgrade. The migration now reports that shape too and names
+  `pkit pm back-fill`, while stating plainly that it has not looked at your
+  issues: answering whether a corpus is affected means reading them, and a
+  migration makes no network calls. Still warn-only; still edits nothing.

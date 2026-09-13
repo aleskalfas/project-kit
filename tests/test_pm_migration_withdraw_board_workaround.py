@@ -209,7 +209,7 @@ def test_no_set_board_field_hook_is_clean(tmp_path: Path) -> None:
     result = _run(_make_adopter(tmp_path, hooks=NO_BOARD_HOOK))
     assert result.returncode == 0
     assert "[warn]" not in result.stdout
-    assert "set-board-field" in result.stdout
+    assert "no board-claimed axis" in result.stdout
 
 
 def test_no_hooks_file_at_all_is_clean(tmp_path: Path) -> None:
@@ -240,10 +240,22 @@ def test_capability_absent_skips(tmp_path: Path) -> None:
     assert "[skip]" in result.stdout
 
 
-def test_bound_axes_are_not_the_workaround(tmp_path: Path) -> None:
-    """An axis bound to the adopter's own labels is a legitimate brownfield
-    binding, not the withdrawn shape. (It IS the #708 conflict under a board —
-    `pre-check` owns that finding; this migration must not duplicate it.)"""
+def test_a_label_bound_axis_under_a_board_points_at_the_repair(tmp_path: Path) -> None:
+    """The reported failure's own shape, and the reason the detection widened.
+
+    An axis bound to the adopter's own labels under a configured board is not the
+    withdrawn `unsupported: true` workaround — it is a legitimate brownfield
+    binding, and from this release it WORKS. But it is also the configuration
+    whose already-filed issues carry a value on neither substrate, because until
+    now nothing decided which declaration won.
+
+    That adopter previously matched no signal and saw nothing on upgrade: the old
+    signature required a `set-board-field` hook, which this shape does not have.
+    So the one whose corpus is damaged was the one told nothing. The migration now
+    names the repair verb — it cannot know whether the corpus is affected without
+    reading issues, and a migration makes no network calls, so it points rather
+    than claims.
+    """
     root = _make_adopter(
         tmp_path,
         substrate_map=(
@@ -257,7 +269,33 @@ def test_bound_axes_are_not_the_workaround(tmp_path: Path) -> None:
     )
     result = _run(root)
     assert result.returncode == 0
-    assert "[warn]" not in result.stdout
+    assert "[warn]" in result.stdout
+    assert "pkit pm back-fill" in result.stdout
+    assert "priority" in result.stdout
+    # It must NOT claim the corpus is damaged — it has not looked.
+    assert "does NOT know whether your corpus is affected" in result.stdout
+    # And it must not confuse this with the withdrawn guidance.
+    assert "unsupported: true" not in result.stdout
+
+
+def test_no_hook_does_not_suppress_the_label_finding(tmp_path: Path) -> None:
+    """The old signature short-circuited on a missing hook before the map was
+    read. A `label:` binding needs no hook to be the damaged shape."""
+    root = _make_adopter(
+        tmp_path,
+        substrate_map=(
+            "schema_version: 1\n"
+            "axes:\n"
+            "  workstream:\n"
+            "    label:\n"
+            "      remap:\n"
+            "        cli: area/cli\n"
+        ),
+        hooks="after_create_issue: []\n",
+    )
+    result = _run(root)
+    assert result.returncode == 0
+    assert "pkit pm back-fill" in result.stdout
 
 
 # ----- idempotency ---------------------------------------------------------
@@ -269,7 +307,7 @@ def test_repaired_map_matches_nothing(tmp_path: Path) -> None:
     result = _run(_make_adopter(tmp_path, substrate_map=REPAIRED_MAP))
     assert result.returncode == 0
     assert "[warn]" not in result.stdout
-    assert "no board-declarable axis marked" in result.stdout
+    assert "no board-claimed axis is bound to labels" in result.stdout
 
 
 def test_rerun_on_a_repaired_map_is_a_byte_identical_noop(tmp_path: Path) -> None:
