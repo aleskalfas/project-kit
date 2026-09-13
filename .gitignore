@@ -20,3 +20,9 @@ build/
 !.claude/skills/**
 !.claude/agents/
 !.claude/agents/**
+
+# Reviewer-agent scratch workspaces. A review of PR #819 created `.rvw819/`
+# holding simulated foreign-project state to exercise the seeded-state
+# migration; a `git add -A` then committed it into #820 — a PR about not
+# shipping other projects' state — where it would have ridden into the sdist.
+.rvw*/

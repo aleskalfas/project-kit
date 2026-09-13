@@ -191,7 +191,11 @@ still ship content with the code + resolve it as a package resource).
 
 **Reviewer-corrected shape (the floor fix, #333):**
 
-- **Bundle the *propagation surface*, not "the `.pkit/` tree."** The wheel bundles *what
+- **Bundle the *propagation surface*, not "the `.pkit/` tree."**
+  *(Retired — superseded by ADR-033's #813 amendment: the bundle is defined by tier
+  ownership, not by the propagation surface, and the two sets merely overlap. Left as
+  written because this note records what was thought in June.)*
+  The wheel bundles *what
   `pkit sync` propagates* — under `project_kit/_kit/` — which by the existing core/project
   ownership rule automatically *excludes* adopter-owned subtrees: `decisions/project/` (PRJ
   records — project-kit's own, must not ship as core), `scratchpad/{active,done,dropped}`
@@ -248,6 +252,8 @@ that drift — the `capabilities`/`migrations` omissions are the evidence).
   the official-install drift axis is collapsed; matters mainly for checkout-driven upgrades.)
 - **COR-007 follow-on:** one declaration of the kit-owned tree consumed by both the build
   force-include and the propagator (`PROPAGATED_AREAS`) — fix now or file separately?
+  *(No longer open — ADR-033's #813 amendment retires this: the premise, that the two
+  consume one set, is false. They overlap; neither contains the other.)*
 
 ## Crystallises into (expected)
 

@@ -53,9 +53,10 @@
 #
 # KNOWN LIMIT, stated rather than hidden: the embedded hashes are the set THIS
 # BUILD shipped, and that set is not a property of the repo. The journals are
-# git-ignored while packaging force-includes the tree wholesale, so what ships
-# depends on the build machine's working tree — this source tree holds 35 while
-# the current wheel carries 14. So an adopter may hold journals this migration
+# git-ignored, and packaging force-included the tree wholesale until #813, so
+# what shipped depended on the build machine's working tree — a source tree
+# holding 35 against a wheel carrying 14. That is fixed going forward; the limit
+# remains real for the pre-#813 wheels that seeded the population this serves. So an adopter may hold journals this migration
 # has no digest for, whether they installed long ago or synced from a
 # differently-built source. Those are reported, never removed, so the residue is
 # visible rather than silently deleted; but "fully cleaned" is not a promise

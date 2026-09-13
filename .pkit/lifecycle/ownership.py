@@ -1,19 +1,35 @@
 """Tier-ownership predicates the lifecycle layer owns (per COR-031 / ADR-051).
 
-**Propagated neutral code, not an area's content.** This module answers one
-question — *does `pkit sync` manage this path?* — for every consumer that needs
-it, and it lives here (in-tree, propagated) rather than in `src/project_kit/`
+**Stdlib only at module level.** The packaging build hook loads this file by
+path in an isolated build environment where third-party packages are not
+importable, so every non-stdlib import must stay inside the function that
+needs it (see :func:`_load_yaml`). `test_ownership_has_no_third_party_module_level_import`
+enforces it.
+
+**Propagated neutral code, not an area's content.** This module owns the
+project's ownership questions — *does `pkit sync` manage this path?*
+(:func:`is_sync_managed`) and *is this path adopter-owned by tier alone?*
+(:func:`is_adopter_owned_by_tier`) — for every consumer that needs one of them.
+The two are deliberately distinct: sync-management additionally depends on
+capability *registration* and treats everything outside `.pkit/` as unmanaged,
+so a caller asking about tier must not read it off the sync predicate. Each
+answer has exactly one definition here; what matters is that no consumer
+re-derives either, not that there is only one question. It lives here (in-tree,
+propagated) rather than in `src/project_kit/`
 for the reason ADR-003 records: an adapter's deploy resolver runs *in the
 adopter's tree*, where the global `pkit` runtime is not importable. Code both
 the backbone CLI and a propagated adapter script can import is the only home
-that keeps **one** definition of sync-managed-ness. ADR-051 requires exactly
-that: a per-adapter re-derivation would fork the ownership predicate and
-silently skip the check on any future harness.
+that keeps **one** definition of each. ADR-051 requires exactly that: a
+per-adapter re-derivation would fork the ownership predicate and silently skip
+the check on any future harness. The packaging build hook is the same lesson at
+a different altitude — the wheel manifest carried its own idea of which paths
+were adopter-owned, disagreed with this module, and nothing could notice
+(#813).
 
 Dependency direction is inward, as in ADR-003: the backbone CLI imports this,
 each adapter's resolver imports this, and this module imports neither.
 
-The predicate is *conservative under `.pkit/`*: everything the kit tree holds
+:func:`is_sync_managed` is *conservative under `.pkit/`*: everything the kit tree holds
 reads as sync-managed unless it falls in an enumerated adopter-owned carve-out.
 That direction is the safe one — a false "managed" costs a rejected overlay
 entry the adopter can re-point, while a false "not managed" hands an agent write
@@ -27,8 +43,6 @@ scanning) and deliberately ignores capability origin.
 from __future__ import annotations
 
 from pathlib import Path
-
-from ruamel.yaml import YAML
 
 # Capability origin (COR-031), duplicated from the lifecycle vocabulary as plain
 # strings so this module stays import-free. These are wire values in
@@ -74,10 +88,89 @@ _ADOPTER_OWNED_KIT_FILES: frozenset[str] = frozenset({
 # never touches their contents.
 _SCRATCHPAD_STATE_DIRS: frozenset[str] = frozenset({"active", "done", "dropped"})
 
-_yaml = YAML(typ="safe")
+def _load_yaml(text: str):
+    """Parse YAML, importing the parser lazily.
+
+    Deliberately not a module-level import. The tier predicate
+    (:func:`is_adopter_owned_by_tier`) is pure string logic, and the packaging
+    build hook loads this module in an isolated build environment where no
+    third-party runtime dependency is installed. Only the manifest read below
+    needs a parser, so only that path pays for one — a pure predicate should not
+    require a YAML library to import.
+    """
+    from ruamel.yaml import YAML  # lazy by design — see the docstring above
+
+    return YAML(typ="safe").load(text)
 
 
-# --- the predicate -----------------------------------------------------------
+# --- the predicates ----------------------------------------------------------
+
+def is_adopter_owned_by_tier(rel_posix: str) -> bool:
+    """True when a `.pkit/`-relative path is adopter-owned *by tier alone*.
+
+    The registration-independent half of :func:`is_sync_managed`: it answers
+    "does this path sit on the project side of the no-shared-files split?"
+    without consulting any manifest, any origin, or any adopter's tree.
+
+    Two consumers need exactly this, and they must not disagree:
+
+    * **Packaging.** A distribution may carry kit-owned capability *source* (a
+      distribution medium, ADR-033) but must never carry the source project's
+      own project-side state — that is how one project's config, activation
+      switches and audit journals reached every adopter (#811 / #812).
+    * **The test that keeps packaging honest**, which asserts the built
+      distribution contains no such path.
+
+    Why not `is_sync_managed` for those two: it also returns False for
+    everything *outside* `.pkit/` (so `src/`, which legitimately ships, reads as
+    "not managed"), and for capability content whose origin is unregistered —
+    neither of which is a statement about tier. A packaging rule keyed on it
+    would either reject legitimate content or depend on the build machine's
+    manifest state.
+
+    `rel_posix` is a FILE path relative to `.pkit/` (e.g.
+    `capabilities/pm/project/x.yaml`). That precondition is load-bearing: the
+    depth-free `project/` case reads every part *except the last*, so handing
+    it a directory path that names the tier itself — `agents/project` —
+    answers False, while the bare top-level `project` answers True through an
+    earlier case. (Other cases do read the final part: `rules/project.md` and
+    the top-level-file set are matched by name, and `scratchpad/active`
+    answers True as a directory. The precondition is about the `project/`
+    case, which is the one a packaging caller leans on.) A
+    caller asking "is this directory the adopter's tier?" is asking a
+    different question and must not use this predicate to answer it.
+    """
+    parts = [p for p in rel_posix.strip("/").split("/") if p]
+    if not parts:
+        return False
+    # Adopter-owned top-level files (install state, version pin, .gitignore).
+    if len(parts) == 1 and parts[0] in _ADOPTER_OWNED_KIT_FILES:
+        return True
+    # `.pkit/project/` and `.pkit/<area>/project/`.
+    if parts[0] == "project":
+        return True
+    if parts[0] == "rules" and len(parts) > 1 and parts[1] == "project.md":
+        return True
+    if parts[0] == "scratchpad" and len(parts) > 1 and parts[1] in _SCRATCHPAD_STATE_DIRS:
+        return True
+    # A `project/` directory ANYWHERE under `.pkit/` is the adopter tier. Depth
+    # is not part of the rule: today that covers `<area>/project/` (depth 1),
+    # `capabilities/<name>/project/` (depth 2) and
+    # `adapters/<harness>/settings/project/` (depth 3), and it will cover
+    # whatever nesting an area adopts next without another edit here.
+    #
+    # This was originally written as two positional cases and MISSED the
+    # depth-3 adapter settings — so the wheel kept shipping this project's own
+    # permission allow-list (`Bash(uv:*)`, `Bash(ruff:*)`, …) into every
+    # adopter, the exact defect #813 exists to close, while the sdist's
+    # `**/project` glob excluded it. Two artifacts of one version disagreeing by
+    # rule is how the miss surfaced. The Claude Code adapter's own README
+    # (`.pkit/adapters/claude-code/README.md`, not the area-level one) is
+    # explicit that this tier is "the adopter's project-specific additions".
+    if "project" in parts[:-1]:
+        return True
+    return False
+
 
 def is_sync_managed(target_root: Path | str, raw_path: str) -> bool:
     """True when `pkit sync` propagates over *raw_path* in *target_root*.
@@ -249,7 +342,7 @@ def _registered_capability_origin(root: Path, name: str) -> str | None:
     if not manifest.is_file():
         return None
     try:
-        data = _yaml.load(manifest.read_text(encoding="utf-8")) or {}
+        data = _load_yaml(manifest.read_text(encoding="utf-8")) or {}
     except Exception:
         return ORIGIN_KIT_SHIPPED
     if not isinstance(data, dict):
