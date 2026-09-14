@@ -893,6 +893,22 @@ def plan_schema_ok(plan: dict[str, Any]) -> bool:
     return plan.get("schema_version") == CONSUMED_PLAN_SCHEMA_VERSION
 
 
+def _plan_issue_number(entry: dict[str, Any]) -> int | None:
+    """The entry's issue number, or None when the plan does not carry a usable one.
+
+    A plan document is adopter-supplied on the ``--plan`` path. Coercing its
+    issue number directly raised an uncaught error on a non-numeric value, which
+    surfaced as a traceback where every neighbouring malformed-plan path — the
+    schema pin, the recorded gate, and the kind / axis / executable filters —
+    returns a clean refusal instead. Same boundary, same posture.
+    """
+    raw = entry.get("issue_number", 0)
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return None
+
+
 def planned_changes_from_plan(plan: dict[str, Any]) -> list[PlannedChange]:
     """Reconstruct :class:`PlannedChange` objects from a saved ``--json`` plan.
 
@@ -932,7 +948,11 @@ def planned_changes_from_plan(plan: dict[str, Any]) -> list[PlannedChange]:
         if kind not in APPLIABLE_KINDS:
             continue
         argv = entry.get("argv")
-        argv = argv if isinstance(argv, list) else None
+        # An EMPTY list slips both guards below — `if argv and ...` short-circuits
+        # on the falsy `[]`, and the blocked-branch test is `argv is None` — and
+        # then renders an empty command body. Normalise it to None here so it
+        # takes the blocked-comment path it was always meant to.
+        argv = argv if isinstance(argv, list) and argv else None
         if argv and argv[0] != "gh":
             # A plan document is adopter-supplied on the `--plan` path, and its
             # argv is rendered into the emitted script. Per-token quoting makes
@@ -943,10 +963,13 @@ def planned_changes_from_plan(plan: dict[str, Any]) -> list[PlannedChange]:
             # `kind` and `axis`, so the whole family is closed rather than two
             # thirds of it.
             continue
+        issue_number = _plan_issue_number(entry)
+        if issue_number is None:
+            continue
         intent = intent_by_key.get(_intent_key(entry), {})
         target, seam_inputs = _target_and_inputs(kind, intent, argv)
         out.append(PlannedChange(
-            issue_number=int(entry.get("issue_number", 0)),
+            issue_number=issue_number,
             kind=str(kind),
             target=target,
             observed=entry.get("observed"),

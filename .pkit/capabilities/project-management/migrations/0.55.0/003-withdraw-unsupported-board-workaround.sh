@@ -190,7 +190,10 @@ if not unsupported and not label_bound:
 
 print("MATCH|" + " ".join(unsupported) + "|" + " ".join(label_bound))
 PYEOF
-)
+) || detection="NONE the scan could not run (python3 unavailable or the scan failed)"
+# `|| …` rather than letting `set -e` propagate: this script's contract is that
+# every path exits 0, because a REPORT must never break an upgrade. Without the
+# guard a missing python3 aborts the whole run for the sake of advice.
 
 if [ "${detection%%|*}" != "MATCH" ]; then
     echo "  [ok] no action needed — ${detection#NONE }"

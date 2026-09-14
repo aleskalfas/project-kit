@@ -541,8 +541,7 @@ def _route_axes(
     relaxing the gate first would have made the reported state less detectable
     than the bug. Both sides now ask the one accessor, which is what makes the
     agreement structural rather than a convention each has to remember.
-
-"""
+    """
     label_axes: dict[str, str] = {}
     board_axes: dict[str, str] = {}
     results: list[FieldResult] = []

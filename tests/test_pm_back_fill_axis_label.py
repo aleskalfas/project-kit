@@ -1229,3 +1229,28 @@ def test_plan_parsing_drops_a_foreign_executable(apply_mod):
         ],
     }
     assert apply_mod.planned_changes_from_plan(plan) == []
+
+
+def test_plan_parsing_drops_an_empty_argv(apply_mod):
+    """`[]` is falsy, so it slipped the executable guard and rendered an empty
+    command body. It takes the blocked path now."""
+    plan = {
+        "schema_version": apply_mod.CONSUMED_PLAN_SCHEMA_VERSION,
+        "intents": [{"kind": "assign-milestone", "target": "M1"}],
+        "proposed": [{"issue_number": 7, "kind": "assign-milestone", "argv": []}],
+    }
+    changes = apply_mod.planned_changes_from_plan(plan)
+    assert all(c.argv is None for c in changes)
+
+
+def test_plan_parsing_refuses_a_non_numeric_issue_number(apply_mod):
+    """Every other malformed-plan path returns a clean refusal; this one raised."""
+    plan = {
+        "schema_version": apply_mod.CONSUMED_PLAN_SCHEMA_VERSION,
+        "intents": [{"kind": "assign-milestone", "target": "M1"}],
+        "proposed": [
+            {"issue_number": "abc", "kind": "assign-milestone",
+             "argv": ["gh", "issue", "edit", "7"]}
+        ],
+    }
+    assert apply_mod.planned_changes_from_plan(plan) == []
