@@ -7,12 +7,17 @@ needs it (see :func:`_load_yaml`). `test_ownership_has_no_third_party_module_lev
 enforces it.
 
 **Propagated neutral code, not an area's content.** This module owns the
-project's ownership questions — *does `pkit sync` manage this path?*
-(:func:`is_sync_managed`) and *is this path adopter-owned by tier alone?*
-(:func:`is_adopter_owned_by_tier`) — for every consumer that needs one of them.
-The two are deliberately distinct: sync-management additionally depends on
-capability *registration* and treats everything outside `.pkit/` as unmanaged,
-so a caller asking about tier must not read it off the sync predicate. Each
+project's ownership questions — *is this path the kit's to manage, so an agent
+may not claim write authority over it?* (:func:`is_sync_managed`) and *is this
+path adopter-owned by tier alone?* (:func:`is_adopter_owned_by_tier`) — for
+every consumer that needs one of them. Note the first despite its name: `pkit
+sync` does not call it, and never has. Sync decides what it writes through the
+copy path's own ownership handling; this predicate's one production consumer is
+the ADR-051 write-authority guard. The name invited the other reading and cost
+a misfiled report (#823), so read the question, not the identifier. The two are
+deliberately distinct: the first additionally depends on capability
+*registration* and treats everything outside `.pkit/` as not-its, so a caller
+asking about tier must not read it off it. Each
 answer has exactly one definition here; what matters is that no consumer
 re-derives either, not that there is only one question. It lives here (in-tree,
 propagated) rather than in `src/project_kit/`
@@ -29,11 +34,15 @@ were adopter-owned, disagreed with this module, and nothing could notice
 Dependency direction is inward, as in ADR-003: the backbone CLI imports this,
 each adapter's resolver imports this, and this module imports neither.
 
-:func:`is_sync_managed` is *conservative under `.pkit/`*: everything the kit tree holds
-reads as sync-managed unless it falls in an enumerated adopter-owned carve-out.
-That direction is the safe one — a false "managed" costs a rejected overlay
-entry the adopter can re-point, while a false "not managed" hands an agent write
-authority over content the next `pkit sync` overwrites.
+:func:`is_sync_managed` is *conservative under `.pkit/`*: everything the kit tree
+holds reads as the kit's unless it falls in an enumerated adopter-owned
+carve-out. A false "not the kit's" is the costlier error — it hands an agent
+write authority over content the next refresh overwrites — which is why the
+bias points this way. But the other direction was understated here as costing
+only "a rejected overlay entry the adopter can re-point": when the misjudged
+path is the adopter's *own* file, there is nowhere else to point and they are
+locked out of it (#823). The bias stays; it is only safe while the map is right
+about the adopter's tier.
 
 Not to be confused with `capabilities._is_kit_propagated_path`, which answers a
 different question (*is this text kit's own example prose?*, for citation
@@ -172,8 +181,97 @@ def is_adopter_owned_by_tier(rel_posix: str) -> bool:
     return False
 
 
+# The adopter's tier, declared by POSITION. Depth is not the rule (#823) — and
+# neither is the bare presence of a `project` component. The boundary is a
+# property of where the copy paths draw their ownership line, and they draw it
+# at exactly these five places — keep this list and the tuple below in step:
+#
+#   `install.py` `_install_area`     -> `.pkit/project/`, `.pkit/<area>/project/`
+#                                       (`project` is in its unconditional
+#                                       `_handled` set, for EVERY area including
+#                                       `adapters`)
+#   `install.py` component registry  -> `.pkit/adapters/<harness>/project/`, the
+#                                       per-component manifest it writes there
+#                                       (`install.py:506`; `upgrade.py` reads it)
+#   `install.py` `_install_adapter`  -> the adapter settings pair (seeded on init,
+#                                       never written on sync)
+#   `capabilities.py` `_capability_owned` -> a capability's TOP-LEVEL `project/`,
+#                                       pinned verbatim by ADR-012 Decision 2
+#
+# A `project/` component at no declared position sits inside a kit-owned refresh
+# root — `<area>/core/`, `<area>/_defs/`, or below a capability's top level — and
+# is overwritten and orphan-pruned like any other kit content. Calling such a
+# path the adopter's would hand an agent write authority over content the next
+# refresh deletes. Note this is about *position*, not nesting depth: the adapter
+# entries above are deep and are still the adopter's.
+#
+# Each position is pinned by `test_the_two_predicates_agree_on_paths_this_repo_does
+# _not_have`, which declares its paths rather than discovering them — so deleting
+# an entry here fails a test rather than silently narrowing the adopter's tier.
+# That test exists because the real-tree walk could not see the adapter positions:
+# project-kit is the source repo and has no `.pkit/adapters/<name>/project/`.
+#
+# Why enumeration rather than a depth-free `"project" in parts` test: under that
+# test `agents/core/project/notes.md` carries two tier markers claiming opposite
+# owners, so COR-001's exactly-one-owner invariant needs a precedence rule — and
+# no precedence rule reproduces the copy paths. First-marker-wins gets
+# `agents/core/project/` right and `capabilities/pm/schemas/project/` wrong;
+# last-marker-wins gets both wrong. An enumeration cannot contradict itself.
+_ADOPTER_TIER_DIRS: tuple[tuple[str, ...], ...] = (
+    ("project",),
+    ("*", "project"),                          # `.pkit/<area>/project/`, adapters included
+    ("capabilities", "*", "project"),
+    ("adapters", "*", "project"),              # per-component manifest (install.py)
+    ("adapters", "*", "settings", "project"),
+)
+
+# `("*", "project")` must not swallow `capabilities`, whose second component is a
+# capability NAME rather than an area subdir; `("capabilities", "*", "project")`
+# above states that position properly. Adapters are deliberately NOT excluded:
+# an earlier revision skipped them too and thereby *narrowed* the tier, flipping
+# `.pkit/adapters/project/` from the adopter's to the kit's — the #823 defect one
+# directory over. `_install_area` puts `project` in its unconditional `_handled`
+# set for every area including `adapters`, so the kit never writes or prunes
+# there, and COR-003 gives every area a `project/` sibling. A hypothetical
+# adapter *named* `project` would collide with the area tier; the methodology's
+# own convention is what forbids that name, not this rule.
+_AREAS_EXCLUDED_FROM_WILDCARD: frozenset[str] = frozenset({"capabilities"})
+
+
+def _on_adopter_tier(parts: list[str]) -> bool:
+    """True when *parts* names an adopter tier directory, or anything inside it.
+
+    *parts* is a `.pkit/`-relative component list. Matching is by **prefix**, so
+    the tier directory itself answers True as well as its contents — which the
+    write-authority consumer needs, since overlay entries are usually
+    directories rather than files.
+    """
+    for pattern in _ADOPTER_TIER_DIRS:
+        if len(parts) < len(pattern):
+            continue
+        if pattern == ("*", "project") and parts[0] in _AREAS_EXCLUDED_FROM_WILDCARD:
+            continue
+        if all(want in ("*", have) for want, have in zip(pattern, parts)):
+            return True
+    return False
+
+
 def is_sync_managed(target_root: Path | str, raw_path: str) -> bool:
-    """True when `pkit sync` propagates over *raw_path* in *target_root*.
+    """True when *raw_path* is kit-owned content the adopter must not claim.
+
+    **Despite the name, `pkit sync` does not call this.** Sync decides what it
+    writes through the copy path's own ownership handling — adopter-owned files
+    are seeded only when absent and never overwritten — so a wrong answer here
+    does not put an adopter's file at risk. The one production consumer is the
+    agent-overlay write-authority check (ADR-051): a write-carrying category may
+    not name content the kit owns.
+
+    That matters because the name misleads in a specific, costly way. #823 was
+    filed as "sync will overwrite the adopter's settings", reasoning from this
+    name and this docstring; the measured consequence was the opposite — an
+    adopter locked out of granting write authority over their own file. Read
+    this as *is this the kit's to manage?*, and when reporting a defect in it,
+    measure the consumer rather than the name.
 
     *raw_path* is an overlay entry as written — target-root-relative (the normal
     form), absolute, with or without a trailing slash. An entry that resolves
@@ -182,9 +280,17 @@ def is_sync_managed(target_root: Path | str, raw_path: str) -> bool:
     The tier map, in the order it is applied:
 
     - Anything outside `.pkit/` — adopter territory, never propagated.
-    - `.pkit/project/`, `.pkit/<area>/project/`, `.pkit/rules/project.md`,
-      `.pkit/scratchpad/{active,done,dropped}/` and the adopter-owned top-level
-      files above — the project side of the no-shared-files split (COR-001).
+    - The adopter tier at any of its **declared positions** (`_ADOPTER_TIER_DIRS`,
+      checked before the capabilities branch below, which is why that branch's
+      own `project/` case is now an unreachable restatement) — `.pkit/project/`,
+      `.pkit/<area>/project/` (adapters included),
+      `.pkit/capabilities/<name>/project/`,
+      `.pkit/adapters/<harness>/project/` (the per-component manifest) and
+      `.pkit/adapters/<harness>/settings/project/` — plus
+      `.pkit/rules/project.md`, `.pkit/scratchpad/{active,done,dropped}/` and
+      the adopter-owned top-level files above: the project side of the
+      no-shared-files split (COR-001). A `project/` component elsewhere is
+      *inside* a kit-owned refresh root and is not the adopter's.
     - `.pkit/capabilities/<name>/project/` — adopter-owned **by tier**, so
       admissible even when the capability itself is kit-shipped (ADR-051).
     - `.pkit/capabilities/<name>/…` otherwise — sync-managed only when the
@@ -209,10 +315,15 @@ def is_sync_managed(target_root: Path | str, raw_path: str) -> bool:
         return False
     if parts[1] == "project":
         return False  # `.pkit/project/` — the adopter's own config tree.
+    # The adopter tier, by POSITION. Checked before the capabilities dispatch, so
+    # `capabilities/<name>/project/` is answered here rather than there. What keeps
+    # a capability literally *named* `project` from being misread is not the
+    # ordering — that is what exposes it — but `_AREAS_EXCLUDED_FROM_WILDCARD`
+    # holding `capabilities` out of the `("*", "project")` pattern.
+    if _on_adopter_tier(parts[1:]):
+        return False
     if parts[1] == "capabilities":
         return _capability_path_is_sync_managed(root, parts)
-    if len(parts) >= 3 and parts[2] == "project":
-        return False  # `.pkit/<area>/project/` — the project side of every area.
     if rel == ".pkit/rules/project.md":
         return False  # adopter-authored sibling of the propagated core.md.
     if parts[1] == "scratchpad" and len(parts) >= 3 and parts[2] in _SCRATCHPAD_STATE_DIRS:
@@ -316,6 +427,10 @@ def _capability_path_is_sync_managed(root: Path, parts: list[str]) -> bool:
     """Origin-aware verdict for a path under `.pkit/capabilities/`."""
     if len(parts) < 3:
         return True  # `.pkit/capabilities/` itself — the kit-owned container.
+    # Unreachable today: `_on_adopter_tier` answers `capabilities/<name>/project/`
+    # before `is_sync_managed` dispatches here. Kept as a local restatement of the
+    # invariant, so a future reordering cannot silently drop it — and deliberately
+    # NOT widened past the top level, which ADR-012 D2 pins as the capability rule.
     if len(parts) >= 4 and parts[3] == "project":
         return False  # adopter tier inside any capability, whatever its origin.
     origin = _registered_capability_origin(root, parts[2])

@@ -234,7 +234,13 @@ this is the durable foundation, not a throwaway step.
 > artifacts, so both build paths emit the same set; a test asserts the tuple against the source
 > tree so the declaration cannot drift into fiction. Depth is deliberately not the rule — the
 > tuple includes `adapters/claude-code/settings/project` at depth 3 because `install.py` gates
-> that adapter's settings scaffolding on it.
+> that adapter's settings scaffolding on it. **Read that as "the tuple is not derived from depth",
+> not as "a `project/` component at any depth is the adopter's".** The tuple is a declared
+> enumeration of the adopter-tier *positions*, and the second reading is false: a `project/`
+> directory nested below a kit-owned tier marker — inside an area's `core/`, or below a
+> capability's top level, which [ADR-012](ADR-012-ownership-aware-tree-refresh.md) D2 pins as
+> kit-owned — is refreshed and orphan-pruned by the copy primitive like any other kit content.
+> An ownership predicate that answered "the adopter's" there would contradict the copy path.
 >
 > **The drift D1 called impossible does exist, on one path — and it is not the bundle's bug.**
 > `.pkit/adapters/claude-code/settings/project/settings.json` is adopter-owned by tier (so the
@@ -247,6 +253,44 @@ this is the durable foundation, not a throwaway step.
 > PR #820 because correcting it changes adopter-visible sync behaviour and wants its own
 > change-set. Recorded here so a future reader meets the divergence as a known, located bug
 > rather than as evidence against this rule — do not reconcile it by reverting D1.
+>
+> **Closed (#823 / PR #844) — the divergence above no longer exists, and the set relation it
+> settled does not survive it.** `is_sync_managed` now tests the adopter tier by declared
+> **position** (`.pkit/project/`, `<area>/project/`, `capabilities/<name>/project/`,
+> `adapters/<harness>/project/`, `adapters/<harness>/settings/project/`) before dispatching on
+> capability registration, so the settings pair reads adopter-owned under both predicates.
+> Measured against what `pkit sync` actually copies, the bundle is therefore a proper
+> **superset** of the propagation surface rather than an overlapping set: it additionally
+> carries capability source, which §3 decides ships and never propagates. The retired witness
+> was in fact never sound — #823 also established that sync does not consult `is_sync_managed`
+> at all, and sync never *copies* `settings/project/settings.json` (init seeds it from a
+> constant, sync leaves it alone), so that path sat in the predicate's set and never in the
+> propagation surface. And superset is the direction this record **requires**, not an accident
+> it got away with: in an official install the bundle *is* the source sync reads, so anything
+> sync propagates and the bundle withholds is silently un-propagated for every tool-installed
+> adopter — D1's `.gitkeep` carve-out is that same obligation one level down, at shape rather
+> than content. What survives of the overlap claim is narrower and owes nothing to #823: against
+> what `is_sync_managed` calls *the kit's* — a different set from what sync copies — neither
+> side contains the other, since `.pkit/release/` and `.pkit/README.md` are the kit's and
+> deliberately undistributed, while the four `.gitkeep` markers are distributed and are not the
+> kit's. That is the COR-007 follow-on restated: *may this be distributed?* and *is this the
+> kit's?* remain different questions.
+>
+> **What stays open, and what the tests can actually see.** One predicate-level divergence
+> remains, with no instance in this tree: `is_adopter_owned_by_tier` is still depth-free where
+> `is_sync_managed` is now positional, so a `project/` directory nested inside a kit-owned
+> refresh root — `agents/core/project/…` — would be withheld from the bundle while the copy path
+> refreshes it as kit content; the reconciliation is tracked separately. Two tests hold the pair
+> together, and neither claims more than it can see: one walks the real tree and asserts no
+> contradiction on it, the other asserts agreement on **declared** paths this repo does not
+> have. The second exists because the first cannot see them — the positional enumeration's first
+> revision excluded `adapters` from `<area>/project/` and thereby flipped the per-component
+> manifest `install.py` writes at `.pkit/adapters/<name>/project/manifest.yaml` to the kit's, a
+> fresh instance of exactly the shape just closed, and the real-tree walk passed regardless
+> because the source repo has no such directory. Read that as the declared-not-discovered
+> argument of D1's marker tuple arriving one level up, at the predicates rather than at the
+> artifact: an assertion derived from the tree under test inherits that tree's blind spots, and
+> the paths that matter most here are the ones only an adopter has.
 >
 > **The two descriptions that carried the retired phrasing were corrected in this PR.** PRJ-004's
 > `pyproject.toml` implication and `.pkit/cli/README.md`'s install section both glossed the bundle

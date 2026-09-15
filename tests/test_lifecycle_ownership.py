@@ -1,7 +1,9 @@
 """Tests for the lifecycle layer's tier-ownership predicate (ADR-051 / COR-031).
 
-`.pkit/lifecycle/ownership.py` answers "does `pkit sync` manage this path?" for
-every consumer that needs it. The module carries a second, narrower predicate —
+`.pkit/lifecycle/ownership.py` answers "is this path the kit's to manage?" for
+every consumer that needs it — a question whose one production consumer is the
+agent-overlay write-authority guard, not `pkit sync`, despite the predicate's
+name. The module carries a second, narrower predicate —
 `is_adopter_owned_by_tier` — whose cases are pinned in
 `tests/test_packaging_boundary.py`, not here. Two things are pinned in this file:
 
@@ -297,3 +299,162 @@ def test_backbone_reads_the_registry_rather_than_restating_it() -> None:
     assert "WRITE_CARRYING_CATEGORIES" in text          # read from the module …
     assert "process-authoring-targets" not in text      # … never hard-coded here
     assert "ownership.py" in text
+
+
+# --- nested adopter tiers (#823) ---------------------------------------------
+#
+# The tier rule was depth-1: it saw `.pkit/<area>/project/` and missed
+# `.pkit/adapters/<harness>/settings/project/`, which nests one level deeper.
+# The closing "everything else under `.pkit/` is the kit's" rule then claimed
+# the adopter's own permission allow-list.
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        ".pkit/adapters/claude-code/settings/project/settings.json",
+        ".pkit/adapters/claude-code/settings/project/",
+        ".pkit/adapters/claude-code/settings/project",
+        ".pkit/adapters/some-future-harness/settings/project/settings.json",
+        # The adapters AREA tier. An earlier revision of this fix excluded
+        # `adapters` from the `<area>/project/` position and so *narrowed* the
+        # tier here — the #823 defect one directory over.
+        ".pkit/adapters/project/notes.md",
+        ".pkit/adapters/project/",
+        # The per-component adapter manifest: `install.py` registers it at
+        # `.pkit/adapters/<name>/project/manifest.yaml` and `upgrade.py` reads
+        # it. Absent from this repo (it is the source, not an adopter), which is
+        # why only a declared case catches it.
+        ".pkit/adapters/claude-code/project/manifest.yaml",
+        ".pkit/adapters/claude-code/project/",
+    ],
+)
+def test_the_declared_adopter_tier_positions_are_theirs(tmp_path: Path, path: str) -> None:
+    """The adopter tier is declared by position, and the adapter settings pair is one.
+
+    Depth-1 was too narrow — it missed this pair (#823). A depth-free
+    `"project" in parts` test is too wide, and is what the first attempt here
+    shipped: it claimed `agents/core/project/` too, which the copy path
+    deletes. See `_ADOPTER_TIER_DIRS`.
+    """
+    assert own.is_sync_managed(_project(tmp_path), path) is False
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        ".pkit/adapters/claude-code/settings/core/settings.json",
+        ".pkit/adapters/claude-code/README.md",
+        ".pkit/adapters/claude-code/settings/",
+        # The cases with teeth: a `project` component that is NOT on the adopter
+        # tier, because it sits inside a kit-owned refresh root. The first
+        # revision of this test carried only the three above — none of which has
+        # a `project` component at all, so they passed identically before and
+        # after the widening and could not detect an over-wide rule. These fail
+        # against a depth-free `"project" in parts` test, which is what the
+        # first attempt at #823 shipped.
+        ".pkit/agents/core/project/notes.md",
+        ".pkit/skills/core/project/x.md",
+        ".pkit/agents/core/project/",
+    ],
+)
+def test_the_kit_side_of_the_settings_pair_is_unaffected(tmp_path: Path, path: str) -> None:
+    """The fix widens the adopter's tier; it must not widen it over kit content.
+
+    Guards the direction that matters for ADR-051: this predicate gates *write
+    authority*, so a rule answering "not the kit's" too eagerly hands an agent
+    write access to paths `refresh_owned_tree` overwrites and orphan-prunes.
+    """
+    assert own.is_sync_managed(_project(tmp_path), path) is True
+
+
+def test_a_capability_subdir_named_project_stays_the_kits(tmp_path: Path) -> None:
+    """ADR-012 Decision 2 pins the capability rule as top-level-only, positional.
+
+    `_capability_owned` keys on `rel.parts[0] == "project"`, so a `project/`
+    directory nested under a capability subdir refreshes like any kit content.
+    This predicate must agree, or the write-authority guard grants access to
+    paths the capability refresh deletes.
+    """
+    root = _project(tmp_path, capabilities={"shipped": "kit-shipped"})
+    assert own.is_sync_managed(root, ".pkit/capabilities/shipped/schemas/project/flow.yaml") is True
+    assert own.is_sync_managed(root, ".pkit/capabilities/shipped/project/config.yaml") is False
+
+
+def test_a_write_carrying_category_may_name_the_adopters_settings(tmp_path: Path) -> None:
+    """The real consumer, and the check that fails on the unfixed predicate.
+
+    This is the falsifiable form of #823's acceptance: the originally-filed
+    criterion asked that the file survive a `pkit sync`, which passed on the
+    broken code too — sync never consults this predicate. The defect is only
+    observable here, at the write-authority guard.
+    """
+    root = _project(tmp_path)
+    category = sorted(own.WRITE_CARRYING_CATEGORIES)[0]
+    adopter_owned = ".pkit/adapters/claude-code/settings/project/"
+
+    assert own.sync_managed_offences(root, category, [adopter_owned]) == []
+    # …while the kit's half of the same pair is still refused.
+    assert own.sync_managed_offences(
+        root, category, [".pkit/adapters/claude-code/settings/core/"]
+    ) == [".pkit/adapters/claude-code/settings/core/"]
+
+
+def test_the_two_predicates_do_not_contradict_on_this_tree() -> None:
+    """Adopter-owned by tier implies not the kit's to manage — over the real tree.
+
+    Not equality: the two answer different questions, and `is_sync_managed`
+    additionally reads everything outside `.pkit/` as not-its and consults a
+    capability's registration. The invariant that must hold is the one whose
+    breach #823 reported — a path the tier rule calls the adopter's while this
+    predicate claims it for the kit.
+    """
+    kit = REPO / ".pkit"
+    claimed_by_both = []
+    claimed_by_neither = []
+    for path in kit.rglob("*"):
+        if not path.is_file():
+            continue
+        rel = path.relative_to(kit).as_posix()
+        tier = own.is_adopter_owned_by_tier(rel)
+        kits = own.is_sync_managed(REPO, f".pkit/{rel}")
+        if tier and kits:
+            claimed_by_both.append(rel)
+        # Skip `capabilities/` for the converse: `is_sync_managed` also answers
+        # "not the kit's" there for an unregistered or incubated capability —
+        # a registration fact, not a tier one, and a documented difference
+        # between the two predicates rather than a contradiction.
+        if not tier and not kits and not rel.startswith("capabilities/"):
+            claimed_by_neither.append(rel)
+
+    # The direction #823 reported: the tier rule calls it the adopter's while
+    # this predicate claims it for the kit.
+    assert claimed_by_both == []
+    # The converse, and the one that matters for write authority: this predicate
+    # says "not the kit's" — so the guard grants write — while the tier rule does
+    # not recognise it as the adopter's. The first revision of this test asserted
+    # only the direction above, which is why it stayed silent on an over-wide
+    # rule that granted write authority over kit content.
+    assert claimed_by_neither == []
+
+
+def test_the_two_predicates_agree_on_paths_this_repo_does_not_have() -> None:
+    """The real-tree walk is blind to paths that exist only in adopters.
+
+    project-kit is the source repo, so `.pkit/adapters/<name>/project/` — where
+    `install.py` registers each adapter's component manifest — does not exist
+    here. A tree walk therefore cannot see it, which is how an earlier revision
+    of this fix shipped a contradiction on exactly that path. These are declared
+    rather than discovered for the same reason `ADOPTER_TIER_MARKERS` is (#813):
+    an assertion derived from the tree under test inherits the tree's blind
+    spots.
+    """
+    adopter_owned = [
+        "project/config.yaml",
+        "agents/project/mine.md",
+        "adapters/project/notes.md",
+        "adapters/claude-code/project/manifest.yaml",
+        "adapters/claude-code/settings/project/settings.json",
+    ]
+    for rel in adopter_owned:
+        assert own.is_adopter_owned_by_tier(rel) is True, rel
+        assert own.is_sync_managed(REPO, f".pkit/{rel}") is False, rel
