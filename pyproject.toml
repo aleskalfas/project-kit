@@ -107,11 +107,12 @@ exclude = ["**/__pycache__", "**/*.pyc"]
 # "may this be distributed?" — and defining the bundle by it is what let this
 # project's own `project/` state ship to every adopter (#811).
 #
-# The two answers therefore CAN differ, and today they differ on exactly one
-# tracked path: `.pkit/adapters/claude-code/settings/project/settings.json` is
-# adopter-owned by tier (so the bundle withholds it) while `is_sync_managed`
-# still calls it managed. That disagreement is a bug in the sync predicate, not
-# in the bundle — tracked as #823. Do not "fix" it by reverting this rule.
+# The two answers therefore CAN differ — `src/` ships and is not under `.pkit/`
+# at all, so the sync predicate reads it as not-its while the bundle carries it.
+# They no longer differ on any adopter-tier path: the one that did,
+# `.pkit/adapters/claude-code/settings/project/settings.json`, was a bug in the
+# sync predicate rather than in the bundle, and is fixed (#823). Do not "fix" a
+# future disagreement by reverting this rule — check which side is wrong.
 #
 # `tests/test_packaging_boundary.py` asserts the built artifacts against the
 # predicate, and the wheel against the sdist, so the manifest cannot drift from

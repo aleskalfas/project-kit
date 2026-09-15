@@ -315,6 +315,17 @@ def test_backbone_reads_the_registry_rather_than_restating_it() -> None:
         ".pkit/adapters/claude-code/settings/project/",
         ".pkit/adapters/claude-code/settings/project",
         ".pkit/adapters/some-future-harness/settings/project/settings.json",
+        # The adapters AREA tier. An earlier revision of this fix excluded
+        # `adapters` from the `<area>/project/` position and so *narrowed* the
+        # tier here — the #823 defect one directory over.
+        ".pkit/adapters/project/notes.md",
+        ".pkit/adapters/project/",
+        # The per-component adapter manifest: `install.py` registers it at
+        # `.pkit/adapters/<name>/project/manifest.yaml` and `upgrade.py` reads
+        # it. Absent from this repo (it is the source, not an adopter), which is
+        # why only a declared case catches it.
+        ".pkit/adapters/claude-code/project/manifest.yaml",
+        ".pkit/adapters/claude-code/project/",
     ],
 )
 def test_the_declared_adopter_tier_positions_are_theirs(tmp_path: Path, path: str) -> None:
@@ -424,3 +435,26 @@ def test_the_two_predicates_do_not_contradict_on_this_tree() -> None:
     # only the direction above, which is why it stayed silent on an over-wide
     # rule that granted write authority over kit content.
     assert claimed_by_neither == []
+
+
+def test_the_two_predicates_agree_on_paths_this_repo_does_not_have() -> None:
+    """The real-tree walk is blind to paths that exist only in adopters.
+
+    project-kit is the source repo, so `.pkit/adapters/<name>/project/` — where
+    `install.py` registers each adapter's component manifest — does not exist
+    here. A tree walk therefore cannot see it, which is how an earlier revision
+    of this fix shipped a contradiction on exactly that path. These are declared
+    rather than discovered for the same reason `ADOPTER_TIER_MARKERS` is (#813):
+    an assertion derived from the tree under test inherits the tree's blind
+    spots.
+    """
+    adopter_owned = [
+        "project/config.yaml",
+        "agents/project/mine.md",
+        "adapters/project/notes.md",
+        "adapters/claude-code/project/manifest.yaml",
+        "adapters/claude-code/settings/project/settings.json",
+    ]
+    for rel in adopter_owned:
+        assert own.is_adopter_owned_by_tier(rel) is True, rel
+        assert own.is_sync_managed(REPO, f".pkit/{rel}") is False, rel

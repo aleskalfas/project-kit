@@ -205,15 +205,23 @@ def is_adopter_owned_by_tier(rel_posix: str) -> bool:
 # last-marker-wins gets both wrong. An enumeration cannot contradict itself.
 _ADOPTER_TIER_DIRS: tuple[tuple[str, ...], ...] = (
     ("project",),
-    ("*", "project"),                          # `.pkit/<area>/project/`
+    ("*", "project"),                          # `.pkit/<area>/project/`, adapters included
     ("capabilities", "*", "project"),
+    ("adapters", "*", "project"),              # per-component manifest (install.py)
     ("adapters", "*", "settings", "project"),
 )
 
-# `("*", "project")` must not swallow these two: they carry their own, deeper
-# entries above, and a bare `<area>/project` reading would claim a capability or
-# adapter directory named `project`.
-_TIER_AREAS_WITH_OWN_ENTRY: frozenset[str] = frozenset({"capabilities", "adapters"})
+# `("*", "project")` must not swallow `capabilities`, whose second component is a
+# capability NAME rather than an area subdir; `("capabilities", "*", "project")`
+# above states that position properly. Adapters are deliberately NOT excluded:
+# an earlier revision skipped them too and thereby *narrowed* the tier, flipping
+# `.pkit/adapters/project/` from the adopter's to the kit's — the #823 defect one
+# directory over. `_install_area` puts `project` in its unconditional `_handled`
+# set for every area including `adapters`, so the kit never writes or prunes
+# there, and COR-003 gives every area a `project/` sibling. A hypothetical
+# adapter *named* `project` would collide with the area tier; the methodology's
+# own convention is what forbids that name, not this rule.
+_TIER_AREAS_WITH_OWN_ENTRY: frozenset[str] = frozenset({"capabilities"})
 
 
 def _on_adopter_tier(parts: list[str]) -> bool:
@@ -259,8 +267,11 @@ def is_sync_managed(target_root: Path | str, raw_path: str) -> bool:
 
     - Anything outside `.pkit/` — adopter territory, never propagated.
     - The adopter tier at any of its **declared positions** (`_ADOPTER_TIER_DIRS`,
-      checked before the capabilities branch below) — `.pkit/project/`,
-      `.pkit/<area>/project/`, `.pkit/capabilities/<name>/project/` and
+      checked before the capabilities branch below, which is why that branch's
+      own `project/` case is now an unreachable restatement) — `.pkit/project/`,
+      `.pkit/<area>/project/` (adapters included),
+      `.pkit/capabilities/<name>/project/`,
+      `.pkit/adapters/<harness>/project/` (the per-component manifest) and
       `.pkit/adapters/<harness>/settings/project/` — plus
       `.pkit/rules/project.md`, `.pkit/scratchpad/{active,done,dropped}/` and
       the adopter-owned top-level files above: the project side of the
