@@ -1,10 +1,22 @@
 ---
 id: DEC-051
-title: Comment content model and house style — one model for every pkit-authored comment
-status: proposed
+title: Comment content model and house style — one model for every comment the capability posts
+status: accepted
 date: 2026-09-12
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
+
+> This record fixes one **content + house-style model** for every comment the capability
+> *posts* on a GitHub issue or PR — filing, override/audit, move, and review verdict, which
+> pkit **authors**, plus freeform notes and adopter hook messages, which it only **frames**
+> and never rewrites. The load-bearing rule is the **boundary rule**: a comment earns its
+> place only by carrying an *off-surface* fact — something GitHub's native surface does not
+> already show — and never exists merely to restate the comment-author, the bare state
+> transition, or the current version. Every posted comment wears one **frame** — a per-kind
+> `<!-- pkit-<kind> -->` marker plus a universal `<sub>🧰 pkit · … </sub>` provenance footer
+> — and authored payloads additionally follow the house style below. It fixes *what* each
+> comment carries and *how it reads*; *how the string is composed* is a companion ADR
+> (authored next).
 
 ## Context
 
@@ -58,11 +70,14 @@ the capability **posts**, pass-through included. The **payload line** styling is
 pkit-*authored* payloads only; a pass-through comment carries the frame around the
 user's untouched words.
 
-- **Icon vocabulary (schema-owned):** the footer's `🧰` is the one "this is pkit" mark,
-  carried **once** per comment — the payload line does *not* repeat it. `🤖` denotes an
-  agent acting within pkit. Each authored **kind** additionally leads with its **own**
-  distinguishing icon. The concrete glyph per kind is a schema-owned token
-  (`comment-style.yaml`), tuned for human readability — not fixed in this record.
+- **Icon vocabulary — two tiers.** Two **semantic anchors are pinned in this record**
+  because they carry meaning rather than decoration: `🧰`, the one "this is pkit" mark
+  (in the footer, carried **once** per comment — the payload line does *not* repeat it),
+  and `🤖`, an agent acting within pkit. Each authored **kind** additionally leads with its
+  **own** distinguishing icon, and those per-kind glyphs are **decorative and schema-owned**
+  (`comment-style.yaml`), tuned for human readability — not fixed here. The rule is the
+  seam: this record pins the two universal semantic marks; the schema owns the per-kind
+  decoration.
 - **Payload line** (authored payloads only): `<kind-icon> <kind> — <payload>` — the
   kind label, **no `🧰 pkit` prefix** (the footer already marks it as pkit; repeating it
   is redundant). A **move** additionally names the transition it made,
@@ -73,9 +88,14 @@ user's untouched words.
 - **Universal provenance footer:** every comment the capability posts ends with
   `<sub>🧰 pkit · tree <v> · pm <v> · cli <v></sub>` — the version-provenance stamp from
   [project-management:DEC-041-version-provenance-stamp], extended from bodies to comments.
-  It stamps the *post's* provenance (not the content), so pass-through comments carry it
-  too. It is the shared identity-and-version frame; it subsumes any per-kind version
-  stamp.
+  Its three axes are DEC-041's, in compact labels: `tree` = the **backbone version**, `pm`
+  = the **capability version**, `cli` = the **installed-CLI version**. It stamps the
+  *post's* provenance (not the content), so pass-through comments carry it too. It is the
+  shared identity-and-version frame; it subsumes any per-kind version stamp. **On a comment
+  the footer is a static, write-once stamp** — DEC-041's body footer is a *self-replacing*
+  region that every body write strips and reissues, but a comment is posted once and never
+  rewritten, so the comment footer records the versions in force at the post and does not
+  re-render.
 
 ### The per-kind content model
 
@@ -136,18 +156,29 @@ never rewrites a human's words.
   *content* each level projects.
 - **Amends the version-provenance stamp** ([project-management:DEC-041-version-provenance-stamp]):
   the footer is universal on **comments** the capability posts (pass-through included),
-  not only bodies. The filing comment is **kept** — it remains the load-bearing
+  not only bodies. On a comment it is a **static, write-once** stamp — a different object
+  from DEC-041's *self-replacing* body region (whose strip-and-reissue seam is ADR-037's),
+  so writing provenance onto comments is the companion render-seam ADR's concern, not
+  ADR-037's body seam. The filing comment is **kept** — it remains the load-bearing
   birth-version record — and wears the house-style frame **prospectively**: new filing
   comments use it; existing immutable ones are not edited (no back-fill, per DEC-041). Its
   recorded content (the birth versions + date) is unchanged.
 - **Amends the freeform-comment convention**
   ([project-management:DEC-047-freeform-comment-verb]): pass-through comments carry the
   frame (marker + footer) around the user's untouched payload.
+- **Back-references land on acceptance.** The three records amended above
+  ([project-management:DEC-049-audit-journal-model],
+  [project-management:DEC-041-version-provenance-stamp],
+  [project-management:DEC-047-freeform-comment-verb]) each gain an
+  `> **Amended by [project-management:DEC-051]**` note when this DEC is accepted, per the
+  bidirectional precedent DEC-050 set with DEC-032 / DEC-046.
 - **Out of scope — the render seam.** *How* the string is composed — the renderer, its
-  structured input contract (`format(data) → string`), where it lives, and the
-  `parse(render(x)) == x` round-trip guarantee — is a project-architectural concern
-  captured in a separate ADR authored next (ordering: this DEC fixes *what* is rendered;
-  the ADR fixes *how it holds*).
+  structured input contract (`format(data) → string`), where it lives, the
+  `parse(render(x)) == x` round-trip guarantee, and **where comment provenance is written**
+  (the static footer + immutable filing comment on comments, which ADR-037's body
+  strip-and-reissue seam does not cover) — is a project-architectural concern captured in a
+  separate ADR authored next (ordering: this DEC fixes *what* is rendered; the ADR fixes
+  *how it holds*).
 - **Out of scope — the aggregated review verdict grammar.** The one-review-per-round
   format and the merge-gate parser it reshapes are Feature #795's amendment to the
   agent-as-approver model ([project-management:DEC-028-agent-as-approver-paths]); this

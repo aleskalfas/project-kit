@@ -8,6 +8,11 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 When a bug surfaces in an issue or PR workflow, the first question is *which version of the methodology was in force when this was filed* — did the bug predate an upgrade or arrive with it. This record decides that the capability records that version provenance directly on the issue, in two complementary places: a **one-time, immutable filing comment** posted at creation (the load-bearing record that answers the before/after-upgrade question), and a **self-replacing footer** at the foot of the body that always reflects the version of the last script-mediated touch. Both are written only by the capability's scripts, never typed by an agent or a human. This record fixes *what* gets recorded and *why*; the structural contract that makes the footer tamper-proof — how every body write strips and reissues it — is pinned in a companion ADR (authored next).
 
+> **Amended by [project-management:DEC-051-comment-house-style].** The provenance footer is
+> extended from bodies to **comments** the pm capability posts (pass-through included), where
+> it is a **static, write-once** stamp rather than the self-replacing body region; the
+> immutable filing comment is kept and wears the house-style frame prospectively.
+
 ## Context
 
 An adopter who works across several projects pinned to different methodology versions cannot, today, tell from an issue whether a bug it describes predates or postdates a given upgrade. The creation timestamp is on the GitHub object, but the version that was active then is not — and it cannot be reconstructed reliably after the fact. A GitHub issue is not a git object: issues are filed and edited with no commit nearby, from uncommitted working trees, from other branches or clones, or from the web UI. So correlating an issue's timestamp against the version file's git history is a lossy heuristic, not ground truth. The only moment at which the version in force for an operation can be *observed* is the moment the operation runs. To have the fact later, the capability must record it then.
