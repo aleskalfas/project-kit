@@ -3,12 +3,16 @@ kind: patch
 custom:
   category: Fixed
 body: >
-  The ownership rule now recognises an adopter's `project/` tier at any depth,
-  not just directly under an area (#823). It previously matched
-  `.pkit/<area>/project/` only, so the adapter settings pair —
+  The ownership rule now recognises every declared position of an adopter's
+  `project/` tier, rather than only the one directly under an area (#823). It
+  matched `.pkit/<area>/project/` alone, so the adapter settings pair —
   `.pkit/adapters/<harness>/settings/project/`, which nests one level deeper —
   fell through to the closing "everything else under `.pkit/` is the kit's"
-  rule. The file that holds an adopter's own permission additions was therefore
+  rule. The tier is enumerated by position rather than by searching for a
+  `project` component at any depth: a `project/` directory inside a kit-owned
+  refresh root (`<area>/core/`, a capability subdir) belongs to the kit and is
+  overwritten and pruned like any other kit content, which ADR-012 Decision 2
+  already pinned for capabilities. The file that holds an adopter's own permission additions was therefore
   reported as kit-owned. The consequence is not what the report assumed and is
   worth stating precisely, because the predicate's name (`is_sync_managed`)
   describes a consumer it does not have: `pkit sync` never calls it, and decides
