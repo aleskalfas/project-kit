@@ -1,0 +1,41 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+  pr: "818"
+body: >
+  `back-fill` gains a third change kind, `set-axis-label` — the named repair path
+  for a corpus damaged by the carriage bug (DEC-051). It writes a classification
+  axis's value as a LABEL, resolved through the write seam under the adopter's own
+  `remap` (their `P0`, never the kit's `priority:High`); a declared default with no
+  `remap` entry is reported UNRESOLVABLE and skipped rather than written as the raw
+  kit value. Candidacy is scoped by carriage — only an axis the carriage accessor
+  resolves to the adopter's or the kit's labels qualifies, so a `board:`-bound axis
+  stays the existing `set-board-field` kind's job and a `title-prefix` / `derive` /
+  unsupported axis is not writable here at all; `state` is excluded outright as
+  lifecycle-derived. Its intent (the value to seed) is read from a label-carried
+  axis's per-axis `default:` in `substrate-map.yaml` — the declaration point
+  DEC-037 §3 names for a label-bound axis, mirroring how the two hook-driven kinds
+  read theirs from the `after_create_issue` hook. It proposes ONLY for issues
+  carrying no value on the axis, so it never overwrites a value somebody chose and
+  a re-run over a repaired corpus plans nothing. The residual pre-check gate, the
+  confirmation gesture and the re-validate-at-apply read all apply unchanged, and
+  its `--emit-script` guard fails CLOSED on a failed re-read (deliberately not the
+  fail-open shape the milestone and board-field fragments carry). The `--json` plan
+  gains additive `axis` / `axis_value` / `label_value` / `carrier_labels` keys and
+  an `intent_errors` list, at the same `schema_version` — a plan saved by the
+  previous version still applies.
+
+  The value written comes from the axis's substrate-map `default:` — the single
+  declaration point a label-carried axis already has — or from `--set
+  AXIS=VALUE` on the invocation, repeatable per axis, for a corpus with no
+  default declared or a repair that wants a different value once. VALUE is the
+  methodology value, not your substrate's label: it resolves through your remap
+  exactly as a declared default does, so the kit never writes a label you do not
+  manage.
+
+  A declared default that cannot be used stays silent, because you did not ask
+  that run to touch that axis. An axis named with `--set` is refused BY NAME
+  instead — an unknown axis, a value your remap has no entry for, or an axis
+  carried by something other than a label. Silently ignoring an explicit request
+  is how an operator concludes the repair ran and found nothing to do.

@@ -44,7 +44,7 @@ from ruamel.yaml.error import YAMLError
 # pre-check and the DEC-032 contribution collector, per COR-007) and the
 # DEC-032 contribution collector itself (reused, not re-implemented).
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _lib import axis_labels, bootstrap_gate  # noqa: E402
+from _lib import axis_carriage, axis_labels, bootstrap_gate  # noqa: E402
 from _lib.agents import agent_deploy_path, agent_is_deployed  # noqa: E402
 from _lib.gh import gh_project_run  # noqa: E402
 from _lib.review_contributions import collect_contributions  # noqa: E402
@@ -228,6 +228,17 @@ def _run_all_checks(capability_root: Path) -> list[CheckResult]:
         # (no map) cannot express the conflict, so this lives inside the
         # present-map block, beside the matrix that reads the same map.
         results.extend(_check_substrate_board_conflict(config, substrate_map))
+        # The `board:` arm's own three checks (DEC-051 decision points 2 + 3).
+        # All read the same already-loaded pair of files; none performs a `gh`
+        # call. Ordered hard-gate first, advisories after, matching the file's
+        # convention of putting the thing that flips the exit code up front.
+        results.extend(
+            _check_substrate_board_arm_satisfiable(config, substrate_map)
+        )
+        results.extend(_check_board_axis_absent_from_map(config, substrate_map))
+        results.extend(
+            _check_board_arm_default_has_hook(capability_root, substrate_map)
+        )
 
     # 3b. gh: block validation + host-pinned auth (per DEC-023).
     if config is not None:
@@ -258,16 +269,20 @@ def _run_all_checks(capability_root: Path) -> list[CheckResult]:
             )
         )
 
-    # 6. Required labels (classification axes + state labels in label-fallback).
-    #    A bound/unsupported axis (substrate_map present) degrades rather than
-    #    demanding the kit's own labels exist; greenfield is unchanged.
-    results.extend(_check_labels(capability_root, config, has_board, substrate_map))
+    # 6. Required labels. Which substrate carries each axis is asked of
+    #    `_lib/axis_carriage` inside the check, per axis — NOT decided here and
+    #    passed down. `has_board` is deliberately not threaded: the flag answers
+    #    carriage only where the map is silent, and deciding it at this level
+    #    before the seam is consulted is the ordering inversion DEC-051 decision
+    #    point 4 removes.
+    results.extend(_check_labels(capability_root, config, substrate_map))
 
-    # 6b. State labels presence (label-fallback mode only). A `state` axis bound
-    #     to a `derive` predicate (or unsupported) has no `state:*` labels to
-    #     check — degrade, don't refuse.
-    if not has_board:
-        results.append(_check_state_labels(capability_root, substrate_map))
+    # 6b. State labels presence. Same rule: the check asks carriage for `state`
+    #     and skips when the kit's `state:*` labels are not its substrate — a
+    #     board field, a `derive` predicate, the adopter's own labels, or nothing.
+    #     Calling it unconditionally is what lets it SAY so; the old
+    #     `if not has_board` guard skipped it silently.
+    results.append(_check_state_labels(capability_root, config, substrate_map))
 
     # 6c. Contributed labels (DEC-042): a manifest-registered capability may
     #     declare labels it needs. A missing one WARNS (does not fail) with a
@@ -642,36 +657,27 @@ def _check_board(
     return CheckResult("Projects v2 board", "ok", f"board #{board_id} resolves")
 
 
-def _axis_expects_kit_labels(
-    axis: str, substrate_map: "axis_labels.SubstrateMap | None"
-) -> bool:
-    """Whether the kit's own `<axis>:*` labels should exist for ``axis``.
-
-    Thin adapter over the seam's :func:`axis_labels.axis_expects_kit_labels` —
-    the single source of truth for this disposition, so ``pre-check`` (kit-label
-    existence) and ``validate-issue`` (per-issue presence gates) cannot drift.
-    See the seam function's docstring for the full contract.
-    """
-    return axis_labels.axis_expects_kit_labels(axis, substrate_map)
-
-
 def _axis_label_check_skipped(
-    axis: str, substrate_map: "axis_labels.SubstrateMap | None"
+    axis: str,
+    config: dict[str, Any] | None,
+    substrate_map: "axis_labels.SubstrateMap | None",
 ) -> CheckResult:
-    """The skip line for an axis whose kit-labels are not checked under a map."""
-    disposition = axis_labels.axis_disposition(axis, substrate_map)
-    if disposition == "served":
-        return CheckResult(
-            f"`{axis}:*` kit labels",
-            "skip",
-            f"axis `{axis}` bound to the adopter's substrate via "
-            f"substrate-map.yaml — kit `{axis}:*` labels not required.",
-        )
+    """The skip line for an axis whose kit `<axis>:*` labels are not its substrate.
+
+    The reason comes from :func:`axis_carriage.describe`, so the line names the
+    substrate the SAME accessor resolved rather than a phrase derived here from a
+    second reading of the map. That matters most for the two arms the old
+    map-only wording could not express: an axis carried on the board by the flag
+    alone (absent from the map entirely) read as "unsupported/absent — degraded",
+    which is the opposite of the truth, and an axis bound `board: true` read as
+    "bound to the adopter's substrate", which said nothing useful.
+    """
     return CheckResult(
         f"`{axis}:*` kit labels",
         "skip",
-        f"axis `{axis}` unsupported/absent in substrate-map.yaml — degraded, "
-        f"kit `{axis}:*` labels not required.",
+        f"axis `{axis}` is carried "
+        f"{axis_carriage.describe(axis, config, substrate_map)} — kit "
+        f"`{axis}:*` labels not required.",
     )
 
 
@@ -743,6 +749,24 @@ def _check_substrate_capability_matrix(
 
     The seam's `axis_disposition` is the single source of truth for served-vs-
     degraded; pre-check renders it, it does not re-derive it.
+
+    The `board: true` arm ([project-management:DEC-051] decision point 2) is
+    rendered by its own branch, ahead of the disposition read, for two reasons —
+    neither of which is a second disposition rule:
+
+    * The served arm names its binding KIND from a fixed tuple that does not
+      include `board`, so a board-armed axis would render `bound via ?`.
+    * Where the seam has not yet been taught the arm, `axis_disposition` falls
+      through to its fail-closed branch and answers `unsupported` — which would
+      print "explicitly `unsupported`" over an axis whose map says exactly the
+      opposite. That is the mis-description this change exists to remove, and
+      printing it here would reintroduce it at the one place an adopter reads.
+
+    The branch is therefore a RENDERING fix and is stable either way: the seam's
+    answer is untouched, no consumer behaviour moves with it, and the line says
+    the same true thing before and after the carriage accessor (decision point 4)
+    teaches `axis_disposition` the arm. Fold it into the served arm once that
+    landed and the kind tuple knows `board`.
     """
     results: list[CheckResult] = [
         CheckResult(
@@ -754,7 +778,19 @@ def _check_substrate_capability_matrix(
     ]
     for axis in axis_labels.AXES:
         disposition = axis_labels.axis_disposition(axis, substrate_map)
-        if disposition == "served":
+        if _axis_declares_board(axis, substrate_map):
+            results.append(CheckResult(
+                f"axis `{axis}` served",
+                "ok",
+                "bound via `board: true` — the map declares the value lives on a "
+                "field of your configured Projects-v2 board. The arm is "
+                "parameterless: the field's identity is declared on the "
+                "`after_create_issue` `set-board-field` hook, not here. SERVED, "
+                "not degraded — rules needing this axis stay in force "
+                "(contrast `unsupported: true`, which declares no encoding at "
+                "all).",
+            ))
+        elif disposition == "served":
             binding = substrate_map.axes.get(axis, {})
             kind = next(
                 (k for k in ("label", "title-prefix", "derive") if k in binding),
@@ -796,12 +832,45 @@ def _check_substrate_capability_matrix(
 # never claims it and a `label` binding on `type` is not a conflict.
 BOARD_CLAIMED_AXES: tuple[str, ...] = ("priority", "workstream", "state")
 
+# The axes on which the map may DECLARE board carriage — the `board: true` arm's
+# admissibility set, per [project-management:DEC-051] decision point 2 and the
+# schema's per-axis `not: {required: [board]}` restrictions. A strict subset of
+# BOARD_CLAIMED_AXES: `state` is board-CLAIMED by the flag today but not
+# board-DECLARABLE in the map, because reading a board Status field needs a new
+# detector kind rather than a new binding. `type` is neither (always a label:
+# PR-title alignment reads it, and a board field is invisible from a PR).
+#
+# Keep the two tuples distinct rather than collapsing them — a remediation that
+# tells a `state` adopter to write `board: true` hands them a map the schema
+# rejects.
+BOARD_DECLARABLE_AXES: tuple[str, ...] = ("priority", "workstream")
+
+
+def _axis_declares_board(
+    axis: str, substrate_map: "axis_labels.SubstrateMap"
+) -> bool:
+    """Whether the map binds ``axis`` with the `board: true` arm.
+
+    Delegates to the seam, which ADR-026 makes the sole reader of binding shape.
+    This was a LOCAL shape read while the seam had no `board:` predicate; the
+    predicate now exists and its own docstring warned to fold this in once it
+    landed, so the local copy is gone rather than left to drift.
+
+    Kept as a named wrapper because what these call sites ask is narrower than
+    carriage: "did the adopter WRITE `board: true` in the map?", a question about
+    the declaration itself — which is what the satisfiability check and the
+    remediations are about. Do NOT use it to decide which substrate carries a
+    value; that is :func:`axis_carriage.carriage`, and an axis can be
+    board-carried by the flag with no declaration at all.
+    """
+    return axis_labels.axis_is_board_carried(axis, substrate_map)
+
 
 def _check_substrate_board_conflict(
     config: dict[str, Any] | None,
     substrate_map: "axis_labels.SubstrateMap",
 ) -> list[CheckResult]:
-    """FAIL when an axis is claimed by BOTH substrates — the board and the map.
+    """WARN when the board flag and a `label:` binding both speak to one axis.
 
     The reported failure (#708, a brownfield adopter with a Projects v2 board):
     `config.yaml` declares `has_projects_v2_board: true` — so every *writer*
@@ -815,26 +884,48 @@ def _check_substrate_board_conflict(
     unset on BOTH substrates and the capability's own verbs cannot satisfy the
     capability's own gate — the adopter's only escape is a raw `gh issue edit`.
 
-    **Why `fail`, not `warn`** (the report offered either). pre-check is the hard
-    prerequisite gate — the thing that says "the methodology can operate here" —
-    and this state makes the review gate *unsatisfiable by the capability's own
-    tooling*, which is a broken prerequisite, not an advisory. It is also cheap
-    and unambiguous to fix (one of the two declarations changes), and a warn
-    would be lost in a passing run — exactly the invisibility the report is
-    about. Contrast the deliberate `warn` cases here (a missing contributed
-    label, DEC-042): those are self-healing via `bootstrap` and their consumers
-    fail closed on their own predicate. This one heals only by hand-backfilling
-    every issue filed in the meantime.
+    **Why this warns rather than fails.** It used to fail, and correctly: before
+    a rule existed for which declaration wins, the state was genuinely
+    unsatisfiable — the writer honoured the flag and wrote no label, nothing
+    wrote the board field, and the reader looked for a label that was never
+    written, so the axis ended up set on NEITHER substrate and the capability's
+    own verbs could not satisfy the capability's own gate. That is the reported
+    failure (#708).
+
+    The rule now exists: a binding governs the axis it names, and the flag is not
+    consulted for that axis ([project-management:DEC-051] decision point 1). The
+    writers and readers ask one accessor, so they cannot disagree, and the value
+    lands on the adopter's own labels exactly as their map asked. Keeping a hard
+    refusal here would block the very configuration the rule sanctions.
+
+    What survives is worth saying once: the board's field for that axis goes
+    unused. That is information an adopter may want — they configured a board
+    field that nothing will write — but it is not a broken prerequisite, so it is
+    reported and the gate passes. Note this is the ONLY softening: the
+    genuinely-unsatisfiable pair (`board: true` on an axis while no board is
+    configured) stays a hard refusal in its own check, and must not be swept in
+    with this one.
 
     **Only `label` bindings conflict.** The predicate is the seam's
     :func:`axis_labels.axis_is_label_bound` (a value→label remap onto the
     adopter's own labels) — the shape the report hits and the only one where a
-    suppressed label write starves a label read. An axis marked `unsupported:
-    true` (the report's own workaround shape, and what the `workstream` axis
-    already uses for board-backed axes) does not conflict — it agrees with the
-    writer. Neither does `derive` (state read from open/closed, which a board
-    does not suppress) nor `title-prefix` (carried in the title, not a label).
-    Binding shape is read only through the seam, per ADR-026.
+    suppressed label write starves a label read. `board: true` does not conflict:
+    it *names the board* as the substrate, which is the same answer the flag
+    gives. Nor does `derive` (state read from open/closed, which a board does not
+    suppress) or `title-prefix` (carried in the title, not a label). An axis
+    marked `unsupported: true` does not conflict either — it names no substrate,
+    so it makes no competing claim — but that is the whole of what it says, and
+    it must NOT be read as agreeing with the writer that the board carries the
+    value: `unsupported` declares the axis has *no* encoding and degrades every
+    rule needing it, where `board: true` declares it SERVED ([project-management:
+    DEC-051] decision point 1). The remediation below says `board: true` for that
+    reason; until the arm existed it said `unsupported: true`, which told adopters
+    to declare the opposite of what they meant.
+
+    Binding shape is read only through the seam, per ADR-026 — except the
+    `board:` arm, which has no seam predicate yet (it arrives with the carriage
+    accessor of [project-management:DEC-051] decision point 4); see
+    :func:`_axis_declares_board`.
     """
     if not (config and config.get("has_projects_v2_board")):
         return [CheckResult(
@@ -857,60 +948,393 @@ def _check_substrate_board_conflict(
             "cross-substrate axis conflict",
             "ok",
             "no axis is claimed by both substrates — every board-claimed axis "
-            f"({', '.join(BOARD_CLAIMED_AXES)}) is absent, `unsupported`, or "
-            "bound to a non-label substrate in substrate-map.yaml.",
+            f"({', '.join(BOARD_CLAIMED_AXES)}) is absent, `unsupported`, "
+            "`board: true`, or bound to a non-label substrate in "
+            "substrate-map.yaml.",
         )]
 
     return [
         CheckResult(
-            f"axis `{axis}` claimed by one substrate only",
-            "fail",
+            f"axis `{axis}` carriage",
+            "warn",
             (
-                f"CONFLICT — two claimants for `{axis}`: "
-                f"(1) project/config.yaml sets `has_projects_v2_board: true`"
-                f"{board_ref}, so every writer treats `{axis}` as a Projects-v2 "
-                f"board field and writes NO label; (2) project/substrate-map.yaml "
-                f"binds `{axis}` to the adopter's own labels (a `label:` remap), "
-                f"which is where every reader looks. Consequence: issues are "
-                f"filed with `{axis}` unset on BOTH substrates (no label, and no "
-                f"board field either — only an `after_create_issue` hook writes "
-                f"one), and the review gate that requires a value for `{axis}` "
-                f"becomes unsatisfiable by the capability's own verbs "
-                f"(create-issue will not write it, set-field refuses it, "
-                f"review-pr demands it)."
+                f"`{axis}` is carried by your OWN labels, not by the board. "
+                f"project/substrate-map.yaml binds `{axis}` with a `label:` "
+                f"remap, and a binding governs the axis it names, so "
+                f"`has_projects_v2_board: true`{board_ref} is not consulted for "
+                f"`{axis}` ([project-management:DEC-051] decision point 1). "
+                f"Writers write the label your remap names and readers look for "
+                f"the same one, so this configuration works — it is reported "
+                f"only because one consequence is easy to miss: your board's "
+                f"`{axis.title()}` field goes UNUSED for this axis. Nothing "
+                f"writes it and no gate reads it."
             ),
             remediation=(
-                f"Pick ONE substrate for `{axis}`. Board-backed: mark the axis "
-                f"`unsupported: true` in project/substrate-map.yaml (the shape a "
-                f"board-backed axis uses) and add an `after_create_issue` "
-                f"`set-board-field` hook so new issues get a board value — "
-                f"already-filed issues need their board field backfilled. "
-                f"Label-backed: keep the `label:` binding and set "
-                f"`has_projects_v2_board: false` in project/config.yaml "
-                f"(label-fallback mode, per DEC-012) so the writers label the "
-                f"axis they read. Either way the two files must agree "
-                f"(DEC-036 / ADR-026)."
+                f"Nothing to fix if that is what you meant — this is a warning, "
+                f"not a failure, and the value lands on your labels. If you "
+                f"intended the BOARD to carry `{axis}` instead, remove the "
+                f"`label:` binding: {_board_backed_remediation(axis)}"
             ),
         )
         for axis in conflicting
     ]
 
 
+def _board_backed_remediation(axis: str) -> str:
+    """The "declare the board as this axis's substrate" half of the remediation.
+
+    Per-axis because the `board:` arm is admissible on `priority` and `workstream`
+    ONLY ([project-management:DEC-051] decision point 2, enforced by the schema's
+    per-axis `not: {required: [board]}`). Telling a `state` adopter to write
+    `board: true` would hand them a map that `pkit schemas validate` rejects — so
+    `state` gets the only honest instruction available today: drop the competing
+    binding and let the flag govern, which is the carriage an axis the map does
+    not bind keeps (DEC-051 decision point 3).
+
+    NOTE what this REPLACED: both arms used to read "mark the axis `unsupported:
+    true` … (the shape a board-backed axis uses)". `unsupported` means the axis
+    has no encoding at all and every rule needing it degrades — the opposite of
+    board carriage. That guidance is withdrawn (DEC-051 decision point 1).
+    """
+    hook_clause = (
+        "Add an `after_create_issue` `set-board-field` hook so new issues get a "
+        "board value — already-filed issues need their board field backfilled."
+    )
+    if axis in BOARD_DECLARABLE_AXES:
+        return (
+            f"Board-backed: declare the substrate in project/substrate-map.yaml "
+            f"as `{axis}: {{ board: true }}` — the value lives on a field of your "
+            f"configured board. The arm is parameterless by design: the field's "
+            f"identity is a write parameter declared on the hook, not a second "
+            f"declaration in the map. {hook_clause}"
+        )
+    return (
+        f"Board-backed: the map cannot yet declare board carriage for `{axis}` — "
+        f"`board:` is admissible on "
+        f"{_axis_list(list(BOARD_DECLARABLE_AXES))} only, because reading a board "
+        f"Status field needs a new detector kind rather than a new binding "
+        f"(DEC-051 decision point 2). Remove the `label:` binding for `{axis}` so "
+        f"the map makes no claim on it; its carriage then stays with "
+        f"`has_projects_v2_board` exactly as today (DEC-051 decision point 3). "
+        f"{hook_clause}"
+    )
+
+
+# ----- the `board:` arm's own checks (DEC-051 decision point 2 + 3) ----
+
+
+def _check_substrate_board_arm_satisfiable(
+    config: dict[str, Any] | None,
+    substrate_map: "axis_labels.SubstrateMap",
+) -> list[CheckResult]:
+    """FAIL when the map declares `board: true` and the config declares no board.
+
+    The pair is *unsatisfiable*, not merely odd: the map says "this value lives on
+    a field of my Projects-v2 board" while the config says there is no board. No
+    substrate carries the axis, no verb can be told to write it, and nothing else
+    in either file supplies the missing half. `board: true` REQUIRES
+    `has_projects_v2_board: true` ([project-management:DEC-051] decision point 2,
+    and the arm's own schema description); the schema cannot enforce it because
+    the two declarations live in different files.
+
+    **This refusal must NOT be softened.** DEC-051 decision point 5 turns the
+    NEIGHBOURING double-claim refusal (:func:`_check_substrate_board_conflict`)
+    into a warning, because the rule it settles makes that state legal. This one
+    is new *with* that rule and stays hard — decision point 2 says so in as many
+    words ("that refusal is new, and must not inherit the softening in point 5").
+    A softening pass over this file must leave this check alone: nothing makes an
+    absent board satisfy a declaration that the board carries the value.
+    """
+    declaring = [
+        axis for axis in BOARD_DECLARABLE_AXES
+        if _axis_declares_board(axis, substrate_map)
+    ]
+    if not declaring:
+        return [CheckResult(
+            "`board:` binding satisfiable",
+            "skip",
+            "no axis declares `board: true` in substrate-map.yaml.",
+        )]
+
+    if config is None:
+        # The config check already reported that it could not be read; without it
+        # we cannot tell whether a board is configured. Do not guess a failure.
+        return [CheckResult(
+            "`board:` binding satisfiable",
+            "skip",
+            f"axis/axes {_axis_list(declaring)} declare "
+            "`board: true`, but project/config.yaml could not be read — "
+            "satisfiability is unknown until the config parses.",
+        )]
+
+    if config.get("has_projects_v2_board"):
+        return [CheckResult(
+            "`board:` binding satisfiable",
+            "ok",
+            f"{_axis_list(declaring)} declared `board: true` "
+            "and project/config.yaml configures a Projects-v2 board.",
+        )]
+
+    return [
+        CheckResult(
+            f"axis `{axis}` `board: true` has a board",
+            "fail",
+            (
+                f"UNSATISFIABLE — project/substrate-map.yaml binds `{axis}` with "
+                f"`board: true`, declaring that the value lives on a field of the "
+                f"configured Projects-v2 board, but project/config.yaml does not "
+                f"configure one (`has_projects_v2_board` is not true). There is no "
+                f"board to carry `{axis}`: no verb can write the value and no "
+                f"reader can find it, so the axis is unset on every substrate."
+            ),
+            remediation=(
+                f"Make the two files agree about `{axis}`. If you DO have a board: "
+                f"set `has_projects_v2_board: true` (and `projects_v2_board_id`) in "
+                f"project/config.yaml, and declare the field on an "
+                f"`after_create_issue` `set-board-field` hook — the map's arm is "
+                f"parameterless, so the hook is where the field's identity lives. "
+                f"If you do NOT have a board: replace `board: true` with the "
+                f"substrate that actually carries `{axis}` (a `label:` remap onto "
+                f"your own labels, or a `title-prefix:` remap), or "
+                f"`unsupported: true` if nothing carries it — but note that is a "
+                f"declaration that the axis has NO encoding and the rules needing "
+                f"it degrade, not a way to spell board carriage "
+                f"(DEC-051 decision point 1)."
+            ),
+        )
+        for axis in declaring
+    ]
+
+
+def _check_board_axis_absent_from_map(
+    config: dict[str, Any] | None,
+    substrate_map: "axis_labels.SubstrateMap",
+) -> list[CheckResult]:
+    """INFORM when a board-declarable axis is absent from a present map, under a board.
+
+    [project-management:DEC-051] decision point 3 keeps carriage for an axis the
+    map does not name exactly as it is today — under a configured board, the flag
+    carries it. Making a present map authoritative instead (anything unlisted
+    degrades) is tidier and was REJECTED: it is a silent behaviour change
+    delivered by upgrade to every board adopter with a partial map, whose priority
+    would stop being written and stop being demanded with nothing reported. The
+    cleanliness is bought with **this diagnostic instead of semantics** — same
+    destination, nobody's working configuration changes meaning.
+
+    So this is informational and never a failure. It reports the state the adopter
+    is in (the flag carries the axis) and the one-line edit that makes it explicit
+    (`board: true`), and stops there.
+
+    Scoped deliberately:
+
+    * **Only when a map is present.** A project with no map is greenfield and has
+      nothing to declare; the caller runs this inside the present-map block.
+    * **Only under a configured board.** With no board, an absent axis is
+      degrading rather than board-carried, and nudging toward `board: true` would
+      point at the unsatisfiable pair :func:`_check_substrate_board_arm_satisfiable`
+      refuses.
+    * **Only for strictly ABSENT axes.** An axis written `unsupported: true` is an
+      explicit declaration; re-reading it as an oversight is exactly the
+      overreach decision point 3 rejects. (An adopter holding the withdrawn
+      `unsupported`-means-board workaround is reached by the capability migration
+      that keys on the three-way signature, not by this nudge.)
+    """
+    if not (config and config.get("has_projects_v2_board")):
+        return []
+
+    absent = [
+        axis for axis in BOARD_DECLARABLE_AXES
+        if axis not in substrate_map.axes
+    ]
+    if not absent:
+        return []
+
+    return [
+        CheckResult(
+            f"axis `{axis}` carried by the board (undeclared)",
+            "skip",
+            (
+                f"INFO — `{axis}` is absent from project/substrate-map.yaml, so "
+                f"its carriage comes from `has_projects_v2_board: true` in "
+                f"project/config.yaml: your board carries it. That is unchanged "
+                f"and stays working (DEC-051 decision point 3). Declaring "
+                f"`{axis}: {{ board: true }}` in the map would say so explicitly, "
+                f"so the substrate is readable from the map rather than inferred "
+                f"from a flag. Optional — nothing degrades if you leave it."
+            ),
+        )
+        for axis in absent
+    ]
+
+
+def _check_board_arm_default_has_hook(
+    capability_root: Path,
+    substrate_map: "axis_labels.SubstrateMap",
+) -> list[CheckResult]:
+    """WARN when a `board:`-armed axis carries a `default:` that nothing writes.
+
+    On a `board:` arm the map's `default:` is **corroborating metadata only**: the
+    arm is parameterless and the actual write is carried by an
+    `after_create_issue` `set-board-field` hook ([project-management:DEC-051]
+    decision point 2 — "An optional `default:` may accompany the arm as
+    corroborating metadata only, since the hook carries the write; one with no
+    matching hook behind it is reported"). A `default:` with no hook behind it is
+    therefore a value the adopter believes is being seeded and which nothing
+    writes — silent, and exactly the failure class DEC-051 exists to end.
+
+    **The match is deliberately coarse, because a precise one is not available.**
+    A `set-board-field` hook declares `field_id` (an opaque Projects-v2 node id)
+    plus an option id or a text value; it names no axis and no field NAME. Nothing
+    readable offline maps a hook to the axis it serves, so this check does not
+    claim one. It reports only what it can actually know:
+
+    * **No `set-board-field` hook anywhere** ⇒ `warn`, and the claim is exact —
+      no hook writes any board field, so nothing writes this one.
+    * **A `set-board-field` hook exists, but not on `after_create_issue`** ⇒
+      `warn`, narrower claim — nothing seeds the field at filing time.
+    * **A `set-board-field` hook exists on `after_create_issue`** ⇒ `skip`, saying
+      the correspondence is UNVERIFIED rather than asserting it holds. Claiming a
+      match here would be a false claim; claiming a miss would be a false alarm.
+
+    `warn` (not `fail`) throughout: a missing seed value degrades the convenience
+    the `default:` describes, it does not make the axis unsatisfiable — the value
+    can still be set per-issue. Same posture as the DEC-042 contributed-label warn.
+    """
+    armed_with_default = [
+        axis for axis in BOARD_DECLARABLE_AXES
+        if _axis_declares_board(axis, substrate_map)
+        and isinstance(substrate_map.axes.get(axis, {}).get("default"), str)
+    ]
+    if not armed_with_default:
+        return []
+
+    hooks = _load_hooks_events(capability_root)
+    if hooks is None:
+        return [CheckResult(
+            "`board:` arm `default:` backed by a hook",
+            "skip",
+            f"{_axis_list(armed_with_default)} carry a `default:` on a `board:` "
+            "arm, but project/hooks.yaml could not be read — whether a "
+            "`set-board-field` hook backs them is unknown (the hooks.yaml check "
+            "reports the read failure itself).",
+        )]
+
+    on_create = _count_set_board_field_hooks(hooks.get("after_create_issue"))
+    elsewhere = sum(
+        _count_set_board_field_hooks(entries)
+        for event, entries in hooks.items()
+        if event != "after_create_issue"
+    )
+
+    if on_create:
+        return [CheckResult(
+            "`board:` arm `default:` backed by a hook",
+            "skip",
+            f"{_axis_list(armed_with_default)} carry a `default:` on a `board:` "
+            f"arm; {on_create} `after_create_issue` `set-board-field` hook(s) are "
+            "declared. UNVERIFIED: a hook names an opaque `field_id`, not an axis, "
+            "so pre-check cannot tell which axis a hook serves — check by hand "
+            "that each `default:` has the hook it claims.",
+        )]
+
+    if elsewhere:
+        detail = (
+            f"a `default:` on a `board:` arm is seeded by an `after_create_issue` "
+            f"`set-board-field` hook, and none is declared ({elsewhere} "
+            f"`set-board-field` hook(s) exist on other events). Nothing writes the "
+            f"board field at filing time, so a new issue is created with "
+            f"{_axis_list(armed_with_default)} unset on the board despite the "
+            f"`default:`."
+        )
+    else:
+        detail = (
+            f"a `default:` on a `board:` arm is seeded by an `after_create_issue` "
+            f"`set-board-field` hook, and project/hooks.yaml declares NO "
+            f"`set-board-field` hook at all. Nothing writes the board field, so the "
+            f"`default:` on {_axis_list(armed_with_default)} describes a value no "
+            f"verb ever seeds."
+        )
+
+    return [CheckResult(
+        "`board:` arm `default:` backed by a hook",
+        "warn",
+        detail,
+        remediation=(
+            "Either add an `after_create_issue` `set-board-field` hook in "
+            "project/hooks.yaml for the board field carrying the axis (the arm is "
+            "parameterless by design — the field's identity is declared on the "
+            "hook, per DEC-051 decision point 2), or drop the `default:` from the "
+            "`board:` arm so the map stops describing a seed nothing performs. "
+            "`set-field <N> --<axis> <value>` writes the board field per-issue in "
+            "the meantime."
+        ),
+    )]
+
+
+def _axis_list(axes: list[str]) -> str:
+    """Render axis names for a message: ``` `priority`, `workstream` ```."""
+    return ", ".join(f"`{a}`" for a in axes)
+
+
+def _load_hooks_events(capability_root: Path) -> dict[str, Any] | None:
+    """The `hooks:` mapping from `project/hooks.yaml` (event → entries), or None.
+
+    Returns ``{}`` for the legitimate no-hooks states (file absent, or present
+    with no `hooks:` block) and ``None`` when the file is present but cannot be
+    read as the expected shape. Deliberately silent about *why*:
+    :func:`_check_hooks_file` is the check that validates and reports this file,
+    and a second voice reporting the same parse failure would double-count it.
+    """
+    path = capability_root / HOOKS_FILE_PATH
+    if not path.is_file():
+        return {}
+    try:
+        data = YAML(typ="safe").load(path.read_text(encoding="utf-8")) or {}
+    except (OSError, YAMLError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    hooks = data.get("hooks")
+    if hooks is None:
+        return {}
+    if not isinstance(hooks, dict):
+        return None
+    return hooks
+
+
+def _count_set_board_field_hooks(entries: Any) -> int:
+    """How many `set-board-field` hook entries are in one event's list."""
+    if not isinstance(entries, list):
+        return 0
+    return sum(
+        1 for e in entries
+        if isinstance(e, dict) and e.get("kind") == "set-board-field"
+    )
+
+
 def _check_labels(
     capability_root: Path,
     config: dict[str, Any] | None,
-    has_board: bool,
     substrate_map: "axis_labels.SubstrateMap | None" = None,
 ) -> list[CheckResult]:
     """Verify the methodology's required labels exist on the repo.
 
-    Greenfield (``substrate_map is None``): every axis is served via the kit's
-    own labels, so each axis's labels must exist — the original hard-refuse
-    behaviour, unchanged. With a map present, an axis bound to the adopter's own
-    substrate (or unsupported) does NOT require the kit's `<axis>:*` labels: the
-    capability matrix (`_check_substrate_capability_matrix`) already reported its
-    disposition, so the per-axis kit-label check is skipped for it rather than
-    failing on labels the adopter cannot create.
+    The kit's `<axis>:*` labels are demanded for an axis only when they are that
+    axis's SUBSTRATE, which is asked per axis of :func:`axis_carriage.expects_kit_labels`
+    ([project-management:DEC-051-axis-carriage-activation] decision point 4).
+    Greenfield with no board is unchanged: every axis is kit-label-carried and
+    every check runs, hard-refusing a missing label. Every other carriage — the
+    adopter's own labels, a title prefix, a derived state, a board field, or
+    nothing — skips the check rather than failing on labels the adopter cannot
+    create, naming the substrate that does carry it.
+
+    **`has_board` is gone from the signature, deliberately.** It used to skip the
+    `priority` / `workstream` checks wholesale, a board-versus-label decision
+    taken before the seam was consulted — so a board adopter whose map bound
+    `priority` to their own labels got one combined "board configured" skip line
+    that was false for that axis. The flag still governs where the map is silent;
+    it is just asked through the accessor, per axis, like every other consumer.
+    The `type` axis already resolved in that order here and is the in-tree oracle.
     """
     results: list[CheckResult] = []
 
@@ -951,13 +1375,13 @@ def _check_labels(
     except (json.JSONDecodeError, KeyError, TypeError):
         existing = set()
 
-    # Required labels: type:* always (type is always-as-label) — UNLESS a
-    # substrate-map binds the axis to the adopter's own substrate, in which case
-    # the kit's `type:*` labels are not expected to exist (the matrix already
-    # reported the axis's disposition; fail-closed — the seam never resolves a
-    # bound/unsupported axis to a kit-label write).
-    if not _axis_expects_kit_labels("type", substrate_map):
-        results.append(_axis_label_check_skipped("type", substrate_map))
+    # Required labels: type:* always (type is always-as-label, board or no
+    # board) — UNLESS a substrate-map binds the axis to the adopter's own
+    # substrate, in which case the kit's `type:*` labels are not expected to
+    # exist (the matrix already reported the axis's disposition; fail-closed —
+    # the seam never resolves a bound/unsupported axis to a kit-label write).
+    if not axis_carriage.expects_kit_labels("type", config, substrate_map):
+        results.append(_axis_label_check_skipped("type", config, substrate_map))
     else:
         type_values = (
             classification.get("axes", {}).get("type", {}).get("values", [])
@@ -983,75 +1407,70 @@ def _check_labels(
                 )
             )
 
-    # In label-fallback mode, also check priority:* and workstream:*.
-    if has_board:
-        results.append(
-            CheckResult(
-                "`priority:*` / `workstream:*` labels",
-                "skip",
-                "board configured — priority/workstream live as board fields",
-            )
-        )
+    # priority:* and workstream:*, each gated on its OWN carriage. Under a
+    # configured board with no map both resolve to `board` and both skip, exactly
+    # as the old combined `if has_board` line did — but now one axis can be
+    # board-carried while the other is bound to the adopter's labels, which is
+    # the reported configuration (#708) the combined line could not express.
+    if not axis_carriage.expects_kit_labels("priority", config, substrate_map):
+        results.append(_axis_label_check_skipped("priority", config, substrate_map))
     else:
-        if not _axis_expects_kit_labels("priority", substrate_map):
-            results.append(_axis_label_check_skipped("priority", substrate_map))
-        else:
-            priority_values = (
-                classification.get("axes", {}).get("priority", {}).get("values", [])
-            )
-            missing_priority = [
-                v for v in priority_values if axis_labels.label("priority", v) not in existing
-            ]
-            if missing_priority:
-                results.append(
-                    CheckResult(
-                        "required `priority:*` labels exist",
-                        "fail",
-                        f"missing: {', '.join(axis_labels.label('priority', v) for v in missing_priority)}",
-                        remediation="Run `bootstrap` to create the missing labels.",
-                    )
-                )
-            else:
-                results.append(
-                    CheckResult(
-                        "required `priority:*` labels exist",
-                        "ok",
-                        f"all {len(priority_values)} labels present",
-                    )
-                )
-
-        if not _axis_expects_kit_labels("workstream", substrate_map):
-            results.append(_axis_label_check_skipped("workstream", substrate_map))
-            return results
-        workstreams = _resolve_workstream_slugs_for_check(capability_root, config or {})
-        missing_workstream = [
-            w for w in workstreams if axis_labels.label("workstream", w) not in existing
+        priority_values = (
+            classification.get("axes", {}).get("priority", {}).get("values", [])
+        )
+        missing_priority = [
+            v for v in priority_values if axis_labels.label("priority", v) not in existing
         ]
-        if missing_workstream:
+        if missing_priority:
             results.append(
                 CheckResult(
-                    "required `workstream:*` labels exist",
+                    "required `priority:*` labels exist",
                     "fail",
-                    f"missing: {', '.join(axis_labels.label('workstream', w) for w in missing_workstream)}",
+                    f"missing: {', '.join(axis_labels.label('priority', v) for v in missing_priority)}",
                     remediation="Run `bootstrap` to create the missing labels.",
                 )
             )
-        elif workstreams:
-            results.append(
-                CheckResult(
-                    "required `workstream:*` labels exist",
-                    "ok",
-                    f"all {len(workstreams)} labels present",
-                )
-            )
         else:
             results.append(
                 CheckResult(
-                    "`workstream:*` labels",
-                    "skip",
-                    "no workstreams declared in adopter config",
+                    "required `priority:*` labels exist",
+                    "ok",
+                    f"all {len(priority_values)} labels present",
                 )
             )
+
+    if not axis_carriage.expects_kit_labels("workstream", config, substrate_map):
+        results.append(_axis_label_check_skipped("workstream", config, substrate_map))
+        return results
+    workstreams = _resolve_workstream_slugs_for_check(capability_root, config or {})
+    missing_workstream = [
+        w for w in workstreams if axis_labels.label("workstream", w) not in existing
+    ]
+    if missing_workstream:
+        results.append(
+            CheckResult(
+                "required `workstream:*` labels exist",
+                "fail",
+                f"missing: {', '.join(axis_labels.label('workstream', w) for w in missing_workstream)}",
+                remediation="Run `bootstrap` to create the missing labels.",
+            )
+        )
+    elif workstreams:
+        results.append(
+            CheckResult(
+                "required `workstream:*` labels exist",
+                "ok",
+                f"all {len(workstreams)} labels present",
+            )
+        )
+    else:
+        results.append(
+            CheckResult(
+                "`workstream:*` labels",
+                "skip",
+                "no workstreams declared in adopter config",
+            )
+        )
 
     return results
 
@@ -1397,22 +1816,33 @@ def _print_human(results: list[CheckResult]) -> None:
 
 def _check_state_labels(
     capability_root: Path,
+    config: dict[str, Any] | None = None,
     substrate_map: "axis_labels.SubstrateMap | None" = None,
 ) -> CheckResult:
     """Verify all lifecycle state:* labels exist on the repo.
 
-    Only relevant in label-fallback mode (has_projects_v2_board: false).
-    Reads the canonical state IDs from workflow.yaml and checks each
-    state:<id> label is present on the remote. Reports [fail] with a
-    remediation pointer to `bootstrap` when any are missing.
+    Relevant only where the kit's own `state:*` labels ARE the state substrate,
+    which is asked of :func:`axis_carriage.expects_kit_labels` — greenfield with
+    no board claiming `state`. Reads the canonical state IDs from workflow.yaml
+    and checks each `state:<id>` label is present on the remote. Reports [fail]
+    with a remediation pointer to `bootstrap` when any are missing.
 
-    With a substrate-map present, the `state` axis no longer reads `state:*`
-    labels — it is bound to a `derive` predicate (open/closed + a blocked label,
-    the DEC-033 detector swap) or is unsupported. Either way the kit's `state:*`
-    labels are not required; degrade to a skip rather than refuse.
+    Every other carriage skips, naming the substrate instead: a board field (the
+    flag, where the map is silent), the adopter's own labels (a `label` binding),
+    a `derive` predicate (open/closed + a blocked label, the DEC-033 detector
+    swap), or nothing at all. The board arm used to be decided by the CALLER —
+    `if not has_board` around the call — so under a board this check did not run
+    and said nothing; the caller now calls unconditionally and the carriage
+    answer is reported here, where it can be seen
+    ([project-management:DEC-051-axis-carriage-activation] decision point 4).
+    Note `state` is board-CLAIMABLE by the flag but not board-DECLARABLE in the
+    map (BOARD_DECLARABLE_AXES) — the accessor knows the difference.
+
+    The carriage question is answered BEFORE the `gh label list` call, so a
+    skipping adopter pays no network round-trip.
     """
-    if not _axis_expects_kit_labels("state", substrate_map):
-        return _axis_label_check_skipped("state", substrate_map)
+    if not axis_carriage.expects_kit_labels("state", config, substrate_map):
+        return _axis_label_check_skipped("state", config, substrate_map)
     workflow_path = capability_root / "schemas" / "workflow.yaml"
     try:
         wf_data = YAML(typ="safe").load(workflow_path.read_text(encoding="utf-8")) or {}

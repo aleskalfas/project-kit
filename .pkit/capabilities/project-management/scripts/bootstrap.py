@@ -57,6 +57,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
+from _lib import axis_carriage  # noqa: E402
 from _lib import axis_labels  # noqa: E402
 from _lib import bootstrap_gate  # noqa: E402
 from _lib import session_guard  # noqa: E402
@@ -177,11 +178,9 @@ def main() -> int:
     repo = _resolve_repo_name_with_owner()
     _print_context_header(repo, capability_root)
 
-    has_board = bool(config.get("has_projects_v2_board"))
-
     # ---- compute the plan (read-only) ----
     plan = _compute_plan(
-        config, classification, has_board, args.with_starter_epic, capability_root
+        config, classification, args.with_starter_epic, capability_root
     )
     _print_plan(plan)
 
@@ -280,48 +279,83 @@ class Plan:
 def _compute_plan(
     config: dict[str, Any],
     classification: dict[str, Any],
-    has_board: bool,
     with_starter_epic: bool,
     capability_root: Path,
 ) -> Plan:
-    """Compare schemas+config against existing GitHub state; emit the plan."""
+    """Compare schemas+config against existing GitHub state; emit the plan.
+
+    Board state is read from ``config`` rather than passed alongside it: the
+    palette decision now asks the carriage accessor (which needs the config dict
+    anyway), and a separate ``has_board`` argument would be a second copy of one
+    fact that a caller could contradict — the two-declarations-that-disagree shape
+    this whole line of work exists to end.
+    """
     existing_labels = _fetch_existing_labels() or set()
 
     label_creates: list[tuple[str, str]] = []
     label_exists: list[str] = []
     skipped: list[str] = []
 
+    # bootstrap is the GREENFIELD label-palette provisioner: it creates the kit's
+    # OWN `<axis>:<value>` labels. Whether that is the right thing to do for an
+    # axis is asked per axis of the carriage accessor
+    # ([project-management:DEC-051-axis-carriage-activation] decision point 4) —
+    # and note the POLARITY, which is the whole safety of this call. The question
+    # is "do the KIT's labels carry this axis?" (`expects_kit_labels`), never "is
+    # this axis on the board?". Inverting it would be actively harmful here: an
+    # adopter whose map binds `priority` to their own labels is not-on-the-board,
+    # and a not-on-the-board test would hand them the entire kit `priority:*`
+    # palette as unmanaged labels — the exact constraint-1 violation this
+    # provisioner must never commit (DEC-036, EPIC #217 constraint 1).
+    #
+    # This is what the previous comment here ASSERTED — "brownfield adoption
+    # enters via `adopt-existing`, so this construction is greenfield-by-
+    # construction" — with nothing enforcing it. The assertion was false as
+    # executed: nothing stopped `bootstrap` running in a repo with a present
+    # substrate-map, and it created the full kit palette for every axis. The
+    # refusal is now explicit and tested rather than assumed.
+    substrate_map = axis_labels.load_substrate_map(capability_root)
+
     def _plan_axis(axis: str, values: list[str]) -> None:
         for v in values:
-            # Axis-label built only through the seam (ADR-026 sole-constructor).
-            # bootstrap is the GREENFIELD label-palette provisioner — it
-            # intentionally uses `label()` (kit identity), not `resolve_write`:
-            # provisioning the kit's own labels IS its job. Brownfield adoption
-            # against a present substrate-map enters via `adopt-existing` (#264),
-            # not bootstrap — so this map-blind construction is greenfield-by-
-            # construction, outside the write-rewire (#262/#265) scope.
+            # Axis-label built only through the seam (ADR-026 sole-constructor):
+            # `label()` (kit identity), not `resolve_write` — provisioning the
+            # kit's own labels IS this script's job, and the gate above has
+            # already established that the kit's labels are this axis's substrate.
             name = axis_labels.label(axis, v)
             if name in existing_labels:
                 label_exists.append(name)
             else:
                 label_creates.append((axis, name))
 
-    type_values = classification.get("axes", {}).get("type", {}).get("values", [])
-    _plan_axis("type", type_values)
+    def _kit_labels(axis: str) -> bool:
+        """Whether the kit's own `<axis>:*` palette is this axis's substrate."""
+        return axis_carriage.expects_kit_labels(axis, config, substrate_map)
 
-    if has_board:
+    def _skip_palette(axis: str) -> None:
         skipped.append(
-            "priority:* / workstream:* labels — board configured; "
-            "those axes live as board fields (not labels)."
+            f"{axis}:* labels — not created: {axis} is carried "
+            f"{axis_carriage.describe(axis, config, substrate_map)}, so the kit's "
+            f"palette is not this project's {axis} substrate and creating it would "
+            f"leave unmanaged labels. (Adopting an existing repo's own labels is "
+            f"`adopt-existing`, not `bootstrap`.)"
         )
-        skipped.append(
-            "state:* labels — board configured; state lives as a Projects v2 Status field."
-        )
+
+    if _kit_labels("type"):
+        type_values = classification.get("axes", {}).get("type", {}).get("values", [])
+        _plan_axis("type", type_values)
     else:
+        _skip_palette("type")
+
+    if _kit_labels("priority"):
         priority_values = (
             classification.get("axes", {}).get("priority", {}).get("values", [])
         )
         _plan_axis("priority", priority_values)
+    else:
+        _skip_palette("priority")
+
+    if _kit_labels("workstream"):
         workstreams = _resolve_workstream_slugs(capability_root, config)
         if workstreams:
             _plan_axis("workstream", workstreams)
@@ -330,7 +364,10 @@ def _compute_plan(
                 "workstream:* labels — no workstreams declared "
                 "(in workstreams.yaml or config.yaml fallback)."
             )
-        # Label-fallback mode: create state:* labels from workflow.yaml states.
+    else:
+        _skip_palette("workstream")
+
+    if _kit_labels("state"):
         state_ids = _resolve_state_ids(capability_root)
         if state_ids:
             _plan_axis("state", state_ids)
@@ -339,6 +376,8 @@ def _compute_plan(
                 "state:* labels — workflow.yaml missing or no states declared "
                 "(capability install may be corrupt)."
             )
+    else:
+        _skip_palette("state")
 
     # Contributed labels (DEC-042): capabilities registered in the manifest may
     # declare labels they need; provision any that are missing through a
@@ -354,9 +393,18 @@ def _compute_plan(
         starter_epic_exists = _starter_epic_already_filed()
 
     # Cache the invariant board → project-node-id mapping in config (#310) so
-    # create-issue skips the per-create `gh project view` read. Only in board mode,
-    # and only when not already cached.
-    board_node_id, board_node_id_note = _plan_project_node_id(config, has_board)
+    # create-issue skips the per-create `gh project view` read. Only when a board
+    # is configured, and only when not already cached.
+    #
+    # Board IDENTITY, not carriage — which is why this one reads the flag directly
+    # while the palette decision above asks the accessor. Routing it through
+    # carriage would lose the board's id for an adopter who bound a single axis to
+    # their own labels, and create-issue needs that id to put the issue on the
+    # board at all ([project-management:DEC-051-axis-carriage-activation]: "board
+    # membership stays with the flag").
+    board_node_id, board_node_id_note = _plan_project_node_id(
+        config, bool(config.get("has_projects_v2_board"))
+    )
 
     return Plan(
         label_creates=label_creates,

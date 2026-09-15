@@ -9,7 +9,7 @@ description: Project-management discipline realized from the pm-workflow methodo
 requires_backbone: ">=1.144.0,<2.0.0"
 aliases:
   - pm
-# Runtime-local files this capability owns under `.pkit/` (ADR-009 Amendment 1).
+# Runtime-local files this capability owns under `.pkit/` (ADR-009 rule 7).
 # Declared repo-root-relative, exactly as `footprint:` is; the renderer rebases
 # onto the `.pkit/`-relative form `.pkit/.gitignore` needs. The process journal
 # is per-clone audit state, not shared methodology content.
@@ -28,7 +28,7 @@ commands:
     help: Reconcile adopter state after a capability upgrade (per-change confirmation; refuses to run on pre-check failure).
   back-fill:
     script: scripts/back-fill.py
-    help: "Corpus back-fill — the auditable propose-and-cite ceremony (per DEC-037 §2 / ADR-031). Default (report) enumerates proposed per-issue non-label substrate writes (Projects-v2 field value; milestone) from the after_create_issue hooks, cites why each is proposed, gates on the residual pre-check subset, and mutates nothing; --json emits the machine-stable plan. --apply drives the reviewed plan to writes under the audited skip/report posture (re-validates each issue at apply time: drift→skip, already-set→skip; confirmation-gated, --yes for CI; non-zero exit on any write failure). --emit-script emits an idempotent re-checking script the adopter runs themselves (pm writes nothing). --plan <file> applies/emits from a saved --json plan."
+    help: "Corpus back-fill — the auditable propose-and-cite ceremony (per DEC-037 §2 / ADR-031). Default (report) enumerates proposed per-issue substrate writes — a Projects-v2 field value and a milestone from the after_create_issue hooks, plus an axis LABEL (set-axis-label) from a label-carried axis's substrate-map default, the corpus-repair kind that fills gaps and never overwrites — cites why each is proposed, gates on the residual pre-check subset, and mutates nothing; --json emits the machine-stable plan. --apply drives the reviewed plan to writes under the audited skip/report posture (re-validates each issue at apply time: drift→skip, already-set→skip; confirmation-gated, --yes for CI; non-zero exit on any write failure). --emit-script emits an idempotent re-checking script the adopter runs themselves (pm writes nothing). --plan <file> applies/emits from a saved --json plan. --set AXIS=VALUE supplies the repair value for this run instead of the axis's declared default (repeatable per axis; the methodology value, resolved through your remap; refused alongside --plan, whose values are already fixed)."
   adopt-existing:
     script: scripts/adopt-existing.py
     help: "Brownfield onboarding ceremony — inventory + draft, never apply (per DEC-037 §1). Inventories the live tracker through gh READS only (labels + usage, title-prefix patterns, open/closed + a Blocked convention, Projects-v2 fields, milestones), infers + DRAFTS a candidate substrate-map.yaml, and prints an AUDIT report showing the EVIDENCE for each inferred binding (with coverage/confidence signals) so the human's acceptance is informed, not reflexive. Self-checks the draft against substrate-map.schema.json. Mutates NOTHING — never writes the live map, never edits a label/field/issue, never installs. --out writes the DRAFT to a review file (refuses the live map path); --json emits the inventory+inferences+draft+schema-check machine-readably."

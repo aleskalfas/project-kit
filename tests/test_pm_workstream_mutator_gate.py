@@ -37,7 +37,7 @@ SCRIPTS = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
-from _lib import axis_labels  # noqa: E402
+from _lib import axis_carriage, axis_labels  # noqa: E402
 
 
 def _load(name: str, filename: str):
@@ -52,6 +52,11 @@ def _load(name: str, filename: str):
 @pytest.fixture(scope="module")
 def aw():
     return _load("pm_add_workstream_gate", "add-workstream.py")
+
+
+@pytest.fixture(scope="module")
+def rw():
+    return _load("pm_remove_workstream_gate", "remove-workstream.py")
 
 
 def _mark_bootstrapped(cap_root: Path) -> None:
@@ -187,3 +192,120 @@ def test_add_workstream_main_greenfield_reaches_label_step(
     assert rc == 0
     # Greenfield label-substrate adopter ⇒ the gh label create step ran.
     assert any("label" in cmd and "create" in cmd for cmd in seen), seen
+
+
+# --- carriage gates the kit-LABEL half (#712 / DEC-051) ----------------------
+#
+# The refusal above covers the one arm where the mutator has nothing to do at all.
+# The kit-label half needs a SECOND, different gate, and the difference is the
+# hazard [project-management:DEC-051-axis-carriage-activation] names: the mutators
+# gate kit-label creation on the board FLAG and build the label with the greenfield
+# constructor, so swapping the flag for the accessor naively turns kit-label
+# mutation ON for a board adopter with a label-bound workstream. `add` would create
+# an unmanaged `workstream:<slug>`; `remove` / `merge` / `split` would issue
+# `gh label delete` and `rename` a `gh label edit` — against a name the kit never
+# owned, covered by no guard. The gate is therefore "the kit's labels ARE this
+# axis's substrate" (`expects_kit_labels`), never "the axis is not on the board".
+
+
+BOARD = {"has_projects_v2_board": True, "projects_v2_board_id": 7}
+NO_BOARD = {"has_projects_v2_board": False}
+
+
+def test_kit_label_mutation_note_is_silent_in_greenfield() -> None:
+    """Greenfield: the kit's `workstream:*` labels ARE the adopter's substrate, so
+    the mutators run unchanged and the note is None."""
+    assert axis_carriage.kit_label_mutation_note("workstream", NO_BOARD, None) is None
+
+
+def test_kit_label_mutation_note_fires_for_a_label_bound_axis_under_a_board() -> None:
+    """The hazard case: a board configured AND a `label` binding. Carriage says the
+    adopter's own labels, so the kit-label half is suppressed — and the note names
+    the substrate, because "no label was created" is only actionable with a why."""
+    sm = axis_labels.SubstrateMap(
+        axes={"workstream": {"label": {"remap": {"cli": "area/cli"}}}}
+    )
+    note = axis_carriage.kit_label_mutation_note("workstream", BOARD, sm)
+    assert note is not None
+    assert "your OWN labels" in note
+    assert "#264" in note
+
+
+def test_kit_label_mutation_note_fires_for_a_board_carried_axis() -> None:
+    """Today's behaviour, preserved: a board adopter with no binding still skips
+    the label half — now with a reason attached instead of silently."""
+    note = axis_carriage.kit_label_mutation_note("workstream", BOARD, None)
+    assert note is not None
+    assert "Projects-v2 board" in note
+
+
+def _stage_label_bound_board_adopter(cap_root: Path) -> None:
+    """A board adopter whose map binds `workstream` to their own labels — the
+    reported #708 shape, applied to the workstream axis."""
+    project = cap_root / "project"
+    project.mkdir(parents=True, exist_ok=True)
+    (project / "config.yaml").write_text(
+        "schema_version: 1\ndefault_branch: main\nworkstreams: [cli]\n"
+        "has_projects_v2_board: true\nprojects_v2_board_id: 7\n",
+        encoding="utf-8",
+    )
+    _write_substrate_map(
+        cap_root, {"workstream": {"label": {"remap": {"cli": "area/cli"}}}}
+    )
+    _mark_bootstrapped(cap_root)
+
+
+def test_add_workstream_creates_no_kit_label_for_a_label_bound_board_adopter(
+    aw, tmp_path, monkeypatch
+) -> None:
+    """The mutator still updates the declared vocabulary (so it is not refused),
+    but issues NO `gh label` op: creating `workstream:<slug>` here would be an
+    unmanaged label, and not even the one the adopter's remap names."""
+    _stage_label_bound_board_adopter(tmp_path)
+
+    def fail_on_gh_label(cmd, config, *, check=True, **kwargs):
+        if "label" in cmd:
+            raise AssertionError(f"gh label op on a label-bound axis: {cmd}")
+        raise AssertionError(f"unexpected gh_run call: {cmd}")
+
+    monkeypatch.setattr(aw, "gh_run", fail_on_gh_label)
+    monkeypatch.setattr(sys, "argv", [
+        "add-workstream.py", "docs",
+        "--capability-root", str(tmp_path),
+        "--yes",
+    ])
+    assert aw.main() == 0
+    assert "docs" in (tmp_path / "project" / "workstreams.yaml").read_text(
+        encoding="utf-8"
+    )
+
+
+def test_remove_workstream_deletes_no_kit_label_for_a_label_bound_board_adopter(
+    rw, tmp_path, monkeypatch
+) -> None:
+    """The sharper edge of the same hazard: a `gh label delete` here would destroy
+    a label the kit never created — worse than writing one, and covered by no
+    guard."""
+    _stage_label_bound_board_adopter(tmp_path)
+    (tmp_path / "project" / "workstreams.yaml").write_text(
+        "schema_version: 1\nworkstreams:\n  cli:\n    name: cli\n    status: active\n",
+        encoding="utf-8",
+    )
+
+    def fail_on_gh_label(cmd, config, *, check=True, **kwargs):
+        if "label" in cmd:
+            raise AssertionError(f"gh label op on a label-bound axis: {cmd}")
+        raise AssertionError(f"unexpected gh_run call: {cmd}")
+
+    monkeypatch.setattr(rw, "gh_run", fail_on_gh_label)
+    monkeypatch.setattr(sys, "argv", [
+        "remove-workstream.py", "cli",
+        "--capability-root", str(tmp_path),
+        "--yes",
+    ])
+    assert rw.main() == 0
+    # The vocabulary edit still happened — the mutator ran, it just did not touch
+    # a label substrate it does not own.
+    assert "cli" not in (tmp_path / "project" / "workstreams.yaml").read_text(
+        encoding="utf-8"
+    )
