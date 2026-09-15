@@ -173,7 +173,21 @@ def is_adopter_owned_by_tier(rel_posix: str) -> bool:
 
 
 def is_sync_managed(target_root: Path | str, raw_path: str) -> bool:
-    """True when `pkit sync` propagates over *raw_path* in *target_root*.
+    """True when *raw_path* is kit-owned content the adopter must not claim.
+
+    **Despite the name, `pkit sync` does not call this.** Sync decides what it
+    writes through the copy path's own ownership handling — adopter-owned files
+    are seeded only when absent and never overwritten — so a wrong answer here
+    does not put an adopter's file at risk. The one production consumer is the
+    agent-overlay write-authority check (ADR-051): a write-carrying category may
+    not name content the kit owns.
+
+    That matters because the name misleads in a specific, costly way. #823 was
+    filed as "sync will overwrite the adopter's settings", reasoning from this
+    name and this docstring; the measured consequence was the opposite — an
+    adopter locked out of granting write authority over their own file. Read
+    this as *is this the kit's to manage?*, and when reporting a defect in it,
+    measure the consumer rather than the name.
 
     *raw_path* is an overlay entry as written — target-root-relative (the normal
     form), absolute, with or without a trailing slash. An entry that resolves
@@ -182,9 +196,12 @@ def is_sync_managed(target_root: Path | str, raw_path: str) -> bool:
     The tier map, in the order it is applied:
 
     - Anything outside `.pkit/` — adopter territory, never propagated.
-    - `.pkit/project/`, `.pkit/<area>/project/`, `.pkit/rules/project.md`,
-      `.pkit/scratchpad/{active,done,dropped}/` and the adopter-owned top-level
-      files above — the project side of the no-shared-files split (COR-001).
+    - Any path with a `project/` component at **any depth** — `.pkit/project/`,
+      `.pkit/<area>/project/`, and nested pairs such as
+      `.pkit/adapters/<harness>/settings/project/` — plus
+      `.pkit/rules/project.md`, `.pkit/scratchpad/{active,done,dropped}/` and
+      the adopter-owned top-level files above: the project side of the
+      no-shared-files split (COR-001).
     - `.pkit/capabilities/<name>/project/` — adopter-owned **by tier**, so
       admissible even when the capability itself is kit-shipped (ADR-051).
     - `.pkit/capabilities/<name>/…` otherwise — sync-managed only when the
@@ -211,8 +228,21 @@ def is_sync_managed(target_root: Path | str, raw_path: str) -> bool:
         return False  # `.pkit/project/` — the adopter's own config tree.
     if parts[1] == "capabilities":
         return _capability_path_is_sync_managed(root, parts)
-    if len(parts) >= 3 and parts[2] == "project":
-        return False  # `.pkit/<area>/project/` — the project side of every area.
+    # A `project/` component at ANY depth is the adopter's tier: `.pkit/project/`,
+    # `.pkit/<area>/project/`, and nested pairs like
+    # `.pkit/adapters/<harness>/settings/project/` (#823). Depth is deliberately not
+    # part of the rule. The depth-1 form missed the adapter settings pair — the
+    # adopter's own permission allow-list — and the closing rule below then called
+    # it kit-owned, which locked the adopter out of granting write authority over
+    # their own file.
+    #
+    # Note this tests every component INCLUDING the last, unlike
+    # `is_adopter_owned_by_tier`, which takes a file path and reads `parts[:-1]`.
+    # The asymmetry is deliberate: this predicate's consumer passes overlay
+    # entries, which are usually directories — so the tier directory itself has to
+    # answer adopter-owned, or the guard rejects the very path it should permit.
+    if "project" in parts[1:]:
+        return False
     if rel == ".pkit/rules/project.md":
         return False  # adopter-authored sibling of the propagated core.md.
     if parts[1] == "scratchpad" and len(parts) >= 3 and parts[2] in _SCRATCHPAD_STATE_DIRS:
@@ -316,8 +346,8 @@ def _capability_path_is_sync_managed(root: Path, parts: list[str]) -> bool:
     """Origin-aware verdict for a path under `.pkit/capabilities/`."""
     if len(parts) < 3:
         return True  # `.pkit/capabilities/` itself — the kit-owned container.
-    if len(parts) >= 4 and parts[3] == "project":
-        return False  # adopter tier inside any capability, whatever its origin.
+    if "project" in parts[3:]:
+        return False  # adopter tier at any depth inside a capability, whatever its origin.
     origin = _registered_capability_origin(root, parts[2])
     if origin is None:
         return False  # not registered — nothing reconciles it against source.

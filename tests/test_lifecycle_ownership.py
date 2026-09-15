@@ -1,7 +1,8 @@
 """Tests for the lifecycle layer's tier-ownership predicate (ADR-051 / COR-031).
 
-`.pkit/lifecycle/ownership.py` answers "does `pkit sync` manage this path?" for
-every consumer that needs it. The module carries a second, narrower predicate —
+`.pkit/lifecycle/ownership.py` answers "is this path the kit's to manage?" for
+every consumer that needs it — a question whose one production consumer is the
+agent-overlay write-authority guard, not `pkit sync`, despite the predicate's name. The module carries a second, narrower predicate —
 `is_adopter_owned_by_tier` — whose cases are pinned in
 `tests/test_packaging_boundary.py`, not here. Two things are pinned in this file:
 
@@ -297,3 +298,82 @@ def test_backbone_reads_the_registry_rather_than_restating_it() -> None:
     assert "WRITE_CARRYING_CATEGORIES" in text          # read from the module …
     assert "process-authoring-targets" not in text      # … never hard-coded here
     assert "ownership.py" in text
+
+
+# --- nested adopter tiers (#823) ---------------------------------------------
+#
+# The tier rule was depth-1: it saw `.pkit/<area>/project/` and missed
+# `.pkit/adapters/<harness>/settings/project/`, which nests one level deeper.
+# The closing "everything else under `.pkit/` is the kit's" rule then claimed
+# the adopter's own permission allow-list.
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        ".pkit/adapters/claude-code/settings/project/settings.json",
+        ".pkit/adapters/claude-code/settings/project/",
+        ".pkit/adapters/claude-code/settings/project",
+        ".pkit/adapters/some-future-harness/settings/project/settings.json",
+        ".pkit/an/arbitrarily/deep/project/file.yaml",
+    ],
+)
+def test_a_project_component_at_any_depth_is_the_adopters(tmp_path: Path, path: str) -> None:
+    """Depth is not part of the rule — only the presence of a `project/` component."""
+    assert own.is_sync_managed(_project(tmp_path), path) is False
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        ".pkit/adapters/claude-code/settings/core/settings.json",
+        ".pkit/adapters/claude-code/README.md",
+        ".pkit/adapters/claude-code/settings/",
+    ],
+)
+def test_the_kit_side_of_the_settings_pair_is_unaffected(tmp_path: Path, path: str) -> None:
+    """The fix widens the adopter's tier; it must not widen it over kit content.
+
+    Guards the direction that matters for ADR-051: this predicate gates *write
+    authority*, so a rule that answered False too eagerly would hand an agent
+    write access to kit-owned paths.
+    """
+    assert own.is_sync_managed(_project(tmp_path), path) is True
+
+
+def test_a_write_carrying_category_may_name_the_adopters_settings(tmp_path: Path) -> None:
+    """The real consumer, and the check that fails on the unfixed predicate.
+
+    This is the falsifiable form of #823's acceptance: the originally-filed
+    criterion asked that the file survive a `pkit sync`, which passed on the
+    broken code too — sync never consults this predicate. The defect is only
+    observable here, at the write-authority guard.
+    """
+    root = _project(tmp_path)
+    category = sorted(own.WRITE_CARRYING_CATEGORIES)[0]
+    adopter_owned = ".pkit/adapters/claude-code/settings/project/"
+
+    assert own.sync_managed_offences(root, category, [adopter_owned]) == []
+    # …while the kit's half of the same pair is still refused.
+    assert own.sync_managed_offences(
+        root, category, [".pkit/adapters/claude-code/settings/core/"]
+    ) == [".pkit/adapters/claude-code/settings/core/"]
+
+
+def test_the_two_predicates_do_not_contradict_on_this_tree() -> None:
+    """Adopter-owned by tier implies not the kit's to manage — over the real tree.
+
+    Not equality: the two answer different questions, and `is_sync_managed`
+    additionally reads everything outside `.pkit/` as not-its and consults a
+    capability's registration. The invariant that must hold is the one whose
+    breach #823 reported — a path the tier rule calls the adopter's while this
+    predicate claims it for the kit.
+    """
+    kit = REPO / ".pkit"
+    contradictions = [
+        rel
+        for path in kit.rglob("*")
+        if path.is_file()
+        for rel in [path.relative_to(kit).as_posix()]
+        if own.is_adopter_owned_by_tier(rel) and own.is_sync_managed(REPO, f".pkit/{rel}")
+    ]
+    assert contradictions == []
