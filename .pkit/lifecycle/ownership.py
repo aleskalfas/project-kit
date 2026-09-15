@@ -184,18 +184,32 @@ def is_adopter_owned_by_tier(rel_posix: str) -> bool:
 # The adopter's tier, declared by POSITION. Depth is not the rule (#823) — and
 # neither is the bare presence of a `project` component. The boundary is a
 # property of where the copy paths draw their ownership line, and they draw it
-# at exactly these four places:
+# at exactly these five places — keep this list and the tuple below in step:
 #
 #   `install.py` `_install_area`     -> `.pkit/project/`, `.pkit/<area>/project/`
+#                                       (`project` is in its unconditional
+#                                       `_handled` set, for EVERY area including
+#                                       `adapters`)
+#   `install.py` component registry  -> `.pkit/adapters/<harness>/project/`, the
+#                                       per-component manifest it writes there
+#                                       (`install.py:506`; `upgrade.py` reads it)
 #   `install.py` `_install_adapter`  -> the adapter settings pair (seeded on init,
 #                                       never written on sync)
 #   `capabilities.py` `_capability_owned` -> a capability's TOP-LEVEL `project/`,
 #                                       pinned verbatim by ADR-012 Decision 2
 #
-# A `project/` component anywhere else sits inside a kit-owned refresh root
-# (`<area>/core/`, `<area>/_defs/`, a capability subdir) and is overwritten and
-# orphan-pruned like any other kit content. Calling such a path the adopter's
-# would hand an agent write authority over content the next refresh deletes.
+# A `project/` component at no declared position sits inside a kit-owned refresh
+# root — `<area>/core/`, `<area>/_defs/`, or below a capability's top level — and
+# is overwritten and orphan-pruned like any other kit content. Calling such a
+# path the adopter's would hand an agent write authority over content the next
+# refresh deletes. Note this is about *position*, not nesting depth: the adapter
+# entries above are deep and are still the adopter's.
+#
+# Each position is pinned by `test_the_two_predicates_agree_on_paths_this_repo_does
+# _not_have`, which declares its paths rather than discovering them — so deleting
+# an entry here fails a test rather than silently narrowing the adopter's tier.
+# That test exists because the real-tree walk could not see the adapter positions:
+# project-kit is the source repo and has no `.pkit/adapters/<name>/project/`.
 #
 # Why enumeration rather than a depth-free `"project" in parts` test: under that
 # test `agents/core/project/notes.md` carries two tier markers claiming opposite
@@ -221,7 +235,7 @@ _ADOPTER_TIER_DIRS: tuple[tuple[str, ...], ...] = (
 # there, and COR-003 gives every area a `project/` sibling. A hypothetical
 # adapter *named* `project` would collide with the area tier; the methodology's
 # own convention is what forbids that name, not this rule.
-_TIER_AREAS_WITH_OWN_ENTRY: frozenset[str] = frozenset({"capabilities"})
+_AREAS_EXCLUDED_FROM_WILDCARD: frozenset[str] = frozenset({"capabilities"})
 
 
 def _on_adopter_tier(parts: list[str]) -> bool:
@@ -235,7 +249,7 @@ def _on_adopter_tier(parts: list[str]) -> bool:
     for pattern in _ADOPTER_TIER_DIRS:
         if len(parts) < len(pattern):
             continue
-        if pattern == ("*", "project") and parts[0] in _TIER_AREAS_WITH_OWN_ENTRY:
+        if pattern == ("*", "project") and parts[0] in _AREAS_EXCLUDED_FROM_WILDCARD:
             continue
         if all(want in ("*", have) for want, have in zip(pattern, parts)):
             return True
@@ -301,8 +315,11 @@ def is_sync_managed(target_root: Path | str, raw_path: str) -> bool:
         return False
     if parts[1] == "project":
         return False  # `.pkit/project/` — the adopter's own config tree.
-    # The adopter tier, by POSITION. Checked before the capabilities dispatch so a
-    # capability literally named `project` is not misread as one.
+    # The adopter tier, by POSITION. Checked before the capabilities dispatch, so
+    # `capabilities/<name>/project/` is answered here rather than there. What keeps
+    # a capability literally *named* `project` from being misread is not the
+    # ordering — that is what exposes it — but `_AREAS_EXCLUDED_FROM_WILDCARD`
+    # holding `capabilities` out of the `("*", "project")` pattern.
     if _on_adopter_tier(parts[1:]):
         return False
     if parts[1] == "capabilities":

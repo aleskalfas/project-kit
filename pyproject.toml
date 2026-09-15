@@ -109,7 +109,7 @@ exclude = ["**/__pycache__", "**/*.pyc"]
 #
 # The two answers therefore CAN differ — `src/` ships and is not under `.pkit/`
 # at all, so the sync predicate reads it as not-its while the bundle carries it.
-# They no longer differ on any adopter-tier path: the one that did,
+# They no longer differ on any tracked adopter-tier path: the one that did,
 # `.pkit/adapters/claude-code/settings/project/settings.json`, was a bug in the
 # sync predicate rather than in the bundle, and is fixed (#823). Do not "fix" a
 # future disagreement by reverting this rule — check which side is wrong.
