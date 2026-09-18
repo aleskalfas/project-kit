@@ -164,7 +164,10 @@ def test_capabilities_container_itself_is_kit_owned(tmp_path: Path) -> None:
 def test_unknown_kit_subtree_reads_as_managed(tmp_path: Path) -> None:
     """Conservative under `.pkit/`: a tree the map does not know is not admissible.
 
-    A false "managed" costs a rejected overlay entry the adopter re-points; a
+    A false "not the kit's" hands out write authority over content the next
+    refresh deletes, which is why the bias points this way. The converse is
+    not as cheap as this test's name suggests: when the misjudged path is the
+    adopter's own, there is nowhere else to point it (#823). Formerly: a
     false "not managed" hands out write authority over content sync overwrites.
     """
     assert own.is_sync_managed(_project(tmp_path), ".pkit/some-future-area/thing.yaml") is True

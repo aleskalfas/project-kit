@@ -162,11 +162,18 @@ def is_adopter_owned_by_tier(rel_posix: str) -> bool:
         return True
     if parts[0] == "scratchpad" and len(parts) > 1 and parts[1] in _SCRATCHPAD_STATE_DIRS:
         return True
-    # A `project/` directory ANYWHERE under `.pkit/` is the adopter tier. Depth
-    # is not part of the rule: today that covers `<area>/project/` (depth 1),
-    # `capabilities/<name>/project/` (depth 2) and
-    # `adapters/<harness>/settings/project/` (depth 3), and it will cover
+    # A `project/` directory ANYWHERE under `.pkit/` is the adopter tier for
+    # THIS predicate. Depth is not part of the rule: today that covers
+    # `<area>/project/` (depth 1), `capabilities/<name>/project/` (depth 2)
+    # and `adapters/<harness>/settings/project/` (depth 3), and it will cover
     # whatever nesting an area adopts next without another edit here.
+    #
+    # This deliberately DIFFERS from `_ADOPTER_TIER_DIRS`, which `is_sync_managed`
+    # uses: that rule is positional, so a `project/` directory inside a kit-owned
+    # refresh root (`agents/core/project/…`) is the kit's there and the adopter's
+    # here. No such path exists today. Reconciling the two — one tier definition
+    # behind both predicates — is #838; do not read this comment as endorsing the
+    # depth-free rule for ownership generally.
     #
     # This was originally written as two positional cases and MISSED the
     # depth-3 adapter settings — so the wheel kept shipping this project's own
@@ -291,10 +298,11 @@ def is_sync_managed(target_root: Path | str, raw_path: str) -> bool:
       `.pkit/rules/project.md`, `.pkit/scratchpad/{active,done,dropped}/` and
       the adopter-owned top-level files above: the project side of the
       no-shared-files split (COR-001). A `project/` component elsewhere is
-      *inside* a kit-owned refresh root and is not the adopter's.
-    - `.pkit/capabilities/<name>/project/` — adopter-owned **by tier**, so
-      admissible even when the capability itself is kit-shipped (ADR-051).
-    - `.pkit/capabilities/<name>/…` otherwise — sync-managed only when the
+      *inside* a kit-owned refresh root and is not the adopter's. This step
+      answers a capability's `project/` tree too — adopter-owned **by tier**,
+      admissible even when the capability itself is kit-shipped (ADR-051) —
+      which is why the capability branch's own copy of that case never runs.
+    - `.pkit/capabilities/<name>/…` — sync-managed only when the
       capability is *registered* with origin `kit-shipped`. An
       `incubated-in-repo` capability is the adopter's own (COR-031 D1), and one
       that is **not registered at all** — a just-authored subtree in the
