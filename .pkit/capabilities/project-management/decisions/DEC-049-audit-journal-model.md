@@ -11,7 +11,10 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 > **Amended by [project-management:DEC-052-comment-house-style].** The audit/override comment
 > keeps the authoriser only when the poster differs from the authoriser (dropped when
 > self-posted), the move comment is reframed as the intent-log, and an overridden move is one
-> comment carrying both payloads — content only; projection-level *coverage* is unchanged.
+> comment carrying both payloads. The uniform `<!-- pkit-audit -->` marker becomes the
+> per-kind marker model, and the sole-writer rule generalises from `move-issue` to *each
+> governed transition's own mutator* (`close-issue` / `close-pr` / `reopen-issue` included) —
+> preserving the one-comment-per-mutation guarantee. Projection-level *coverage* is unchanged.
 
 ## Context
 

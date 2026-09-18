@@ -7,8 +7,9 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
 > This record fixes one **content + house-style model** for every comment the capability
-> *posts* on a GitHub issue or PR — filing, override/audit, move, and review verdict, which
-> pkit **authors**, plus freeform notes and adopter hook messages, which it only **frames**
+> *posts* on a GitHub issue or PR — such as filing, override/audit, move, and review
+> verdict, which pkit **authors**, plus freeform notes and adopter hook messages, which it
+> only **frames**
 > and never rewrites. The load-bearing rule is the **boundary rule**: a comment earns its
 > place only by carrying an *off-surface* fact — something GitHub's native surface does not
 > already show — and never exists merely to restate the comment-author, the bare state
@@ -97,30 +98,65 @@ user's untouched words.
   rewritten, so the comment footer records the versions in force at the post and does not
   re-render.
 
-### The per-kind content model
+### The per-kind model: rules here, the roster is inventory
 
-Each kind's off-surface payload:
+This record owns the durable **rules** every kind obeys (below). The *set* of kinds and
+each kind's off-surface payload is **inventory** — it grows and shifts as the capability
+gains verbs — so it is **destined for `comment-style.yaml`** (authored with the render
+seam): once that schema exists, adding or changing a kind is a **schema entry governed by
+the boundary rule**, not a rewrite of this record — the *principles-not-inventory* split.
+Until then the current roster lives here (the table below); relocating it is an
+implementation step, not a re-decision. The load-bearing **decisions** certain kinds carry
+— filing's keep-not-drop, the override and move amendments to DEC-049, the verdict grammar
+deferred to #795 — live in the Rationale and Implications below, **not** in the table, so
+the table stays pure payload inventory that relocates without residue.
 
-| Kind | Comment? | Off-surface payload |
-|---|---|---|
-| provenance | footer (not a standalone comment) | the item's current pkit version |
-| filing | yes (at creation) | the **birth version** (filed-under versions + date), frozen — the load-bearing before/after-upgrade record per [project-management:DEC-041-version-provenance-stamp]; wears the frame, **not** dropped (the footer carries only the *current* version and loses the birth version on the first edit) |
-| override / audit | yes (projection ≥ `audit`) | the **reason** a gate was overridden, plus the **authoriser** when the comment is posted under a different identity than them (the bot-authored path), where the authoriser is off-surface; the authoriser is dropped only when it *equals* the comment-author (self-posted, where it is redundant) |
-| move | yes (projection `full`) | the transition `<from> → <to>` as context + the **intent** as the off-surface core — trigger + **causation** (e.g. `cascade ← #613`); a compact gate-result roll-up may also ride as context, not as the comment's point |
-| verdict | yes | the review **findings** + the machine gate signal — the same payload whether delivered as a comment or a native-review body (the transport is [project-management:DEC-028-agent-as-approver-paths]'s / #672's concern, not this record's) |
-| freeform · hook | yes | the user's / adopter's words — pass-through (framed, payload never restyled). Two distinct kinds, each with its own marker (`pkit-freeform`, `pkit-hook`) |
+**Rules every kind obeys:**
+
+- **Off-surface payload + frame.** Each authored kind carries an off-surface fact as its
+  payload (the boundary rule) and wears the frame; the authored payload line is
+  `<kind-icon> <kind> — <payload>`.
+- **A transition names itself.** A **move** carries its transition `<from> → <to>` as
+  context and its **intent** — trigger + causation (e.g. `cascade ← #613`) — as the
+  off-surface core.
+- **A reason-bearing transition puts its reason on its own line.** Some transitions carry a
+  *rationale* rather than a mechanical trigger — a **won't-do close**, a **no-merge PR
+  close**, a **reopen with a reason**. Their reason **drops to its own paragraph** (a clean
+  sentence, or a short list; never crammed into the header line): a declined close reads
+  `move · <from> → done — won't do` with the reason below, distinct from a completion close
+  and from a mechanical close (a cascade or duplicate close carries only its trigger, via
+  the intent rule above). The rationale is off-surface — GitHub shows *closed as not
+  planned*, never *why* — so it is the comment's payload. Each such comment is written
+  **once, by the mutator that performs the transition** (`close-issue`, `close-pr`,
+  `reopen-issue`), preserving DEC-049's one-comment-per-mutation invariant.
+- **Pass-through is framed, never restyled** (freeform, hook): the frame wraps the user's
+  or adopter's untouched words; each pass-through kind keeps its own marker.
+
+**The current roster** — pure `kind → payload` inventory, moving to `comment-style.yaml`
+at implementation (the decisions these kinds carry live in the Rationale/Implications, not
+here):
+
+| Kind | Off-surface payload |
+|---|---|
+| filing | the **birth version** — the filed-under versions + date, frozen |
+| override / audit | the **reason** a gate was overridden, plus the **authoriser** when the poster differs from them |
+| move | the transition `<from> → <to>` + **intent** (trigger + causation); a **reason-bearing** move carries its reason as its own paragraph (the rule above) |
+| verdict | the review **findings** + the machine gate signal |
+| freeform · hook | pass-through — the user's / adopter's words, framed, never restyled (markers `pkit-freeform` / `pkit-hook`) |
 
 **Composition — one mutation, one comment.** When a single mutation is both a move and an
 override (a gated transition that required a bypass), it is **one** comment, honouring
 DEC-049's one-audit-comment-per-mutation invariant: the move's intent carries the override
-**reason** folded in (and the authoriser per the override rule), under a single marker.
-There are never two comments — nor two markers — for one mutation.
+**reason** folded in (and the authoriser per the override rule), under a **single marker —
+the primary kind's** (an audited move carries `pkit-move`; a standalone override,
+`pkit-override`). There are never two comments — nor two markers — for one mutation.
 
 Projection levels are owned by [project-management:DEC-049-audit-journal-model] (`off` /
 `audit` / `full`); this record does **not** redefine which mutations a level covers. It
-fixes the **content + frame** of each projected comment: at `audit`, the override's
-reason; at `full`, DEC-049's every-governed-mutation set, each stamped with its
-off-surface payload (the intent-log for a move, and so on). Narrowing `full` here would
+fixes the **content + frame** of each projected comment: at `audit`, the override-or-authorisation
+reason (a bypass justification, or a won't-do rationale); at `full`, DEC-049's
+every-governed-mutation set, each stamped with its off-surface payload (the intent-log for
+a move, and so on). Narrowing `full` here would
 let a governed mutation read as ungoverned under DEC-049's drift check — so coverage
 stays DEC-049's.
 
@@ -152,6 +188,14 @@ never rewrites a human's words.
   (keeping it on the bot-authored path, where it is off-surface); the move comment is
   reframed as the intent-log; an overridden move is one comment carrying both payloads
   (the composition rule above), preserving the one-comment-per-mutation invariant.
+  DEC-049's **sole-writer** rule — named there as `move-issue` — is generalised to *the
+  underlying mutator of each governed transition*: reason-bearing closures and reopens
+  (`close-issue`, `close-pr`, `reopen-issue`) each write their own single comment, bringing
+  those transitions into audit-content scope while keeping the no-double-post guarantee (one
+  comment per mutation, written by the mutator, never a wrapper).
+  DEC-049's uniform `<!-- pkit-audit -->` marker is refined to the **per-kind** marker model
+  (an audited move carries `pkit-move`, a standalone override `pkit-override`), so an audited
+  mutation is tagged by its kind rather than one generic audit marker.
   Projection-level *coverage* is unchanged (DEC-049's) — this record fixes only the
   *content* each level projects.
 - **Amends the version-provenance stamp** ([project-management:DEC-041-version-provenance-stamp]):
@@ -166,6 +210,14 @@ never rewrites a human's words.
 - **Amends the freeform-comment convention**
   ([project-management:DEC-047-freeform-comment-verb]): pass-through comments carry the
   frame (marker + footer) around the user's untouched payload.
+- **The roster is inventory, destined for the schema.** The *set* of kinds and each kind's
+  payload is inventory: it lives in the table above **today** and moves to
+  `comment-style.yaml` when the render seam is implemented. From then on a new *roster
+  entry* — a kind's marker + payload — is a **schema change governed by the boundary rule**,
+  not a rewrite of this record, and the render-seam ADR's drift guard (ADR-054, once
+  accepted) keeps the schema and the reading code in sync. A new *rule* — like the
+  reason-bearing grammar this record adds — is still a decision here: the split is durable
+  rules in the DEC, evolving roster in the schema.
 - **Back-references land on acceptance.** The three records amended above
   ([project-management:DEC-049-audit-journal-model],
   [project-management:DEC-041-version-provenance-stamp],
