@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# project-management 0.55.0 — resource: retract the `unsupported: true`-means-
-# board-carriage guidance where an adopter acted on it (DEC-051 decision point 2).
+# project-management 0.55.0 — resource: report the two carriage states an adopter
+# may be holding after DEC-051 — the withdrawn `unsupported: true`-means-board
+# guidance, and the label-bound-under-a-board shape whose corpus may need repair.
 #
 # Until the `board:` binding arm existed, `substrate-map.yaml` had no way to say
 # "this axis lives on a field of my Projects-v2 board". So `pre-check`'s own
@@ -41,21 +42,41 @@
 #     separately running their own board hook — in which case `unsupported: true`
 #     is exactly right and rewriting it would be the regression.
 #
-# The three-way signature it reports:
-#   1. project/config.yaml declares `has_projects_v2_board: true`;
-#   2. project/substrate-map.yaml marks `priority` and/or `workstream`
-#      `unsupported: true` (the two axes the `board:` arm is admissible on —
-#      `type` is label-carried by functional dependency and a board-carried
-#      `state` awaits a detector kind, so neither can take the repair); and
-#   3. project/hooks.yaml declares at least one `set-board-field` hook — the
-#      corroborating signal that a board field is in fact being written.
+# TWO conditions are reported, out of one walk of the map. Both require a
+# configured board (`has_projects_v2_board: true` in project/config.yaml);
+# neither is reported without one.
 #
-# All three must hold. Any one missing and the state is not the workaround.
+# CONDITION A — the withdrawn guidance. project/substrate-map.yaml marks
+#   `priority` and/or `workstream` `unsupported: true` (the two axes the
+#   `board:` arm is admissible on — `type` is label-carried by functional
+#   dependency and a board-carried `state` awaits a detector kind, so neither
+#   can take the repair), AND project/hooks.yaml declares at least one
+#   `set-board-field` hook. The hook is required here and that is deliberate:
+#   without one, an axis marked `unsupported: true` is most likely what it says
+#   — disabled — rather than the workaround. Reports the one-line edit to
+#   `board: true`.
 #
-# Idempotent: a map already carrying `board: true` matches nothing (the axis is
-# no longer `unsupported`), as does a map with no board, no hook, or no
-# `unsupported` board-claimable axis. Every path exits 0 — this is a report, not
-# a gate, and it must not break an upgrade.
+# CONDITION B — the reported failure's own shape. The map binds `priority`,
+#   `workstream` or `state` with a `label:` arm. NO hook is required: a label
+#   binding under a board IS the two-claimant state on its own. Until DEC-051
+#   nothing decided which declaration won, so issues filed before this release
+#   may carry a value on neither substrate. Reports `pkit pm back-fill` as the
+#   way to find out, and says plainly that this script has not looked — that
+#   means reading issues, and a migration makes no network calls.
+#
+#   Condition B was added because the original signature missed the adopter who
+#   needed it most: the reported configuration has no hook, so it matched
+#   nothing and saw nothing on upgrade, while its corpus was the damaged one.
+#
+# Either condition may fire alone, or both together on different axes — a map
+# carrying `board: true` on one axis and a `label:` binding on another reports B
+# for the second while matching nothing for the first.
+#
+# Idempotent: an axis moved to `board: true` is no longer `unsupported` and no
+# longer `label`-bound, so it matches neither condition on a re-run. A project
+# with no configured board matches nothing at all. Every path exits 0 — this is
+# a report, not a gate, and it must not break an upgrade; the scan is guarded so
+# that even a missing `python3` reports rather than aborting the run.
 #
 # Run via the upgrade runtime with ROOT=<adopter root>.
 
