@@ -192,7 +192,8 @@ def is_adopter_owned_by_tier(rel_posix: str) -> bool:
 #                                       `adapters`)
 #   `install.py` component registry  -> `.pkit/adapters/<harness>/project/`, the
 #                                       per-component manifest it writes there
-#                                       (`install.py:506`; `upgrade.py` reads it)
+#                                       (the component registry writes it;
+#                                       `upgrade.py` reads it)
 #   `install.py` `_install_adapter`  -> the adapter settings pair (seeded on init,
 #                                       never written on sync)
 #   `capabilities.py` `_capability_owned` -> a capability's TOP-LEVEL `project/`,

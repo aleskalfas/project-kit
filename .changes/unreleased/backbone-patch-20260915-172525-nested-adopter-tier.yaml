@@ -3,29 +3,31 @@ kind: patch
 custom:
   category: Fixed
 body: >
-  The ownership rule now recognises every declared position of an adopter's
-  `project/` tier, rather than only the one directly under an area (#823). It
-  matched `.pkit/<area>/project/` alone, so the adapter settings pair —
-  `.pkit/adapters/<harness>/settings/project/`, which nests one level deeper —
-  fell through to the closing "everything else under `.pkit/` is the kit's"
-  rule. The tier is enumerated by position rather than by searching for a
-  `project` component at any depth: a `project/` directory inside a kit-owned
-  refresh root (`<area>/core/`, a capability subdir) belongs to the kit and is
-  overwritten and pruned like any other kit content, which ADR-012 Decision 2
-  already pinned for capabilities. The file that holds an adopter's own permission additions was therefore
-  reported as kit-owned. The consequence is not what the report assumed and is
-  worth stating precisely, because the predicate's name (`is_sync_managed`)
-  describes a consumer it does not have: `pkit sync` never calls it, and decides
-  what it writes through the copy path, which already treats adopter-owned files
-  as seed-once — verified by installing a scratch adopter, writing a sentinel
-  into that file and running a sync, which left it byte-identical. The one
+  An adopter's own `project/` tier is recognised at every position it occupies,
+  not only directly under an area (#823). The rule matched `.pkit/<area>/project/`
+  alone, so two deeper positions fell through to the closing "everything else
+  under `.pkit/` is the kit's" rule: the adapter settings pair
+  (`.pkit/adapters/<harness>/settings/project/`, which holds an adopter's own
+  permission additions) and the per-component adapter manifest
+  (`.pkit/adapters/<harness>/project/manifest.yaml`). Both were reported as
+  kit-owned. The consequence was not what it first appeared, and the difference
+  is worth stating because the predicate's name (`is_sync_managed`) describes a
+  consumer it does not have: `pkit sync` never calls it, and decides what it
+  writes through the copy path, which already treats adopter-owned files as
+  seed-once — verified by installing a scratch adopter, writing a sentinel into
+  that settings file and running a sync, which left it byte-identical. The one
   production consumer is the agent-overlay write-authority guard, so the real
   effect was that an adopter could not grant an agent write authority over their
-  own allow-list: the guard rejected the path as kit content. It now accepts it,
-  while still refusing the kit's half of the same settings pair. The same
-  depth-1 assumption is fixed for capability subtrees. A test asserts the two
-  ownership predicates never contradict each other across the real tree — a path
-  the tier rule calls the adopter's can no longer read as the kit's — and the
-  predicate's docstring, the lifecycle README and the test module now say what
-  the predicate actually governs, since the previous wording is what produced
-  the misfiled report.
+  own allow-list: the guard refused the path as kit content. It now accepts it,
+  while still refusing the kit's half of the same settings pair. The tier is
+  enumerated by position rather than by searching for a `project` component at
+  any depth: a `project/` directory inside a kit-owned refresh root — an area's
+  `core/`, or below a capability's top level — belongs to the kit and is
+  overwritten and pruned like any other kit content, which ADR-012 Decision 2
+  already pinned for capabilities and which this change leaves unchanged. Tests
+  assert the two ownership predicates never contradict each other, over the real
+  tree and over declared paths this repo does not contain — the adapter
+  positions exist only in installed adopters, so a tree walk alone cannot see
+  them. The predicate's docstring, the lifecycle README, the agents README and
+  the packaging comments now state what the predicate actually governs, since
+  the previous wording is what produced the misfiled report.
