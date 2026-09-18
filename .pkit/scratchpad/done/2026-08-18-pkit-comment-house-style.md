@@ -2,6 +2,9 @@
 authors:
   - Aleš Kalfas <kalfas.ales@gmail.com>
 started: 2026-08-18
+retired: 2026-09-18
+produced:
+  - DEC-051
 ---
 
 # Pkit comment house style

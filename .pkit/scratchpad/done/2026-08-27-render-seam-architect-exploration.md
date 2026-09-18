@@ -2,6 +2,10 @@
 authors:
   - Aleš Kalfas <kalfas.ales@gmail.com>
 started: 2026-08-27
+retired: 2026-09-18
+produced:
+  - DEC-051
+  - ADR-053
 ---
 
 # Render seam — architect exploration (rationale companion)
