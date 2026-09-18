@@ -1,0 +1,73 @@
+component: project-management
+kind: minor
+custom:
+  category: Changed
+  pr: "794"
+body: >
+  The write verbs, the workstream mutators and `bootstrap` now ask one accessor
+  where a classification axis lives, instead of each deciding for itself from the
+  board flag (#712, from report #708). Where your `substrate-map.yaml` binds an
+  axis, that binding governs it and `has_projects_v2_board` is not consulted for
+  that axis; where the map says nothing, the flag governs exactly as before, so a
+  configuration with no bindings behaves identically.
+
+  `create-issue` resolves each axis's substrate BEFORE deciding board-versus-label.
+  Previously `priority` and `workstream` were considered for labelling only when no
+  board was configured — a decision taken before the seam was consulted — so a
+  board adopter whose map bound `priority` to their own labels got no label written
+  and no board field either: the value landed on neither substrate, silently. The
+  `type` axis already resolved in the correct order in the same function. The
+  `--workstream` requirement follows the same answer, so it now fires for a
+  label-bound workstream under a configured board (where the label really is
+  written) and stays silent where nothing would be.
+
+  `set-field` routes each axis three ways instead of crossing the flag with the
+  map. An axis the map binds to labels is now WRITTEN as that label rather than
+  refused as a two-substrate conflict — the state DEC-051 makes legal. Two honesty
+  fixes ride along: a value with no `remap` entry is a refusal with a non-zero exit
+  rather than `ok`-with-no-change (it landed nowhere), and an axis served by a
+  substrate `set-field` does not write — a title prefix, a derive predicate — is
+  refused by name instead of being handed to the label planner, which would have
+  applied the title PREFIX as a label the tracker does not have. An axis you
+  declared `unsupported` is still a note, not a refusal: that is degradation by
+  your own declaration.
+
+  `move-issue` asks the same question for `state`, so a configured board no longer
+  suppresses a label write the map asked for, and the forward cascade uses the same
+  answer as the move itself instead of assuming labels. When replacing a value on a
+  label-bound axis, `set-field` and `move-issue` now find the stale label through
+  the map's own vocabulary — a prefix-only search never matched the adopter's own
+  label name, so the new value was added and the old one left in place, two values
+  on a single-valued axis.
+
+  The five workstream mutators no longer create, rename or delete kit
+  `workstream:*` labels unless the kit's labels are actually that axis's substrate.
+  A naive flag-for-accessor swap would have turned kit-label mutation ON for a
+  board adopter with a label-bound workstream: `add` would create an unmanaged
+  label, and `remove` / `merge` / `split` / `rename` would delete or rename a name
+  the kit never owned. The declared workstream vocabulary is still updated and the
+  suppressed label half now says which substrate carries the axis instead of
+  skipping silently.
+
+  `bootstrap` refuses to provision a kit label palette for an axis the kit's labels
+  do not carry, and that refusal is now enforced rather than assumed. Its comment
+  claimed the map-blind construction was "greenfield by construction"; nothing
+  stopped a run in a repo carrying a `substrate-map.yaml`, and it created the full
+  kit palette for every axis. A present map now suppresses every axis palette
+  (adopting an existing repo's labels is `adopt-existing`'s job), each reported in
+  the plan with the substrate that carries the axis instead.
+
+  `self-test` no longer seeds a `priority:Low` label on a board adopter — it
+  resolved that axis unconditionally, outside the guard that wrapped `state`, so
+  the throwaway issue was created with a label `bootstrap` deliberately never made
+  and `gh issue create` failed on a correctly-configured project. `check-mesh`
+  compares kit label sets across peers only where the kit's labels are actually
+  that axis's substrate, asked of the same accessor. A greenfield project WITH a
+  board previously skipped the comparison by reading the flag inline; a
+  map-presence test alone would have resumed comparing `priority:*` sets that
+  neither peer uses, turning a leftover label from before the board into a
+  recurring drift warning nobody can act on.
+
+  A guard test keeps the invariant from eroding: exactly one site may read
+  `has_projects_v2_board` to decide carriage, and every other read of the flag —
+  board identity, board membership — is named with the job it does.

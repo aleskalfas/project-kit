@@ -33,7 +33,7 @@ Three classification axes — `type`, `priority`, `workstream` — each required
 
 - **Type is always a label** regardless of board presence — it drives PR-title alignment from [project-management:DEC-011-title-formats] and lives on the issue everywhere it's referenced (PR links, issue cards, board cards).
 - **Type is mutually exclusive within its axis** — no issue carries two `type:*` labels. An issue spanning multiple kinds picks the dominant kind.
-- **Priority and Workstream prefer board fields** when a Projects v2 board exists; fall back to labels when not.
+- **Priority and Workstream prefer board fields** when a Projects v2 board exists; fall back to labels when not. **Narrowed** by [project-management:DEC-051-axis-carriage-activation]: this table governs only where the adopter's substrate map is silent about the axis. Where the map binds it, that binding decides and the board flag is not consulted for that axis.
 - **Workstream values are project-specific.** The capability mandates the axis; adopters declare the allowed value set in project-side configuration the project-manager reads at runtime. Cross-repo Workstream alignment uses org-level Projects v2 fields when adopters use them.
 - **Sub-tasks and Milestones carry no classification axes** — sub-tasks are markdown; Milestones are a separate primitive with their own classification (the close-trigger marker from [project-management:DEC-016-time-bound-containers]).
 
@@ -85,7 +85,7 @@ Workstream as a Projects v2 field reflects the team's existing reality — works
 ## Implications
 
 - The project-manager reads project-side configuration to know the allowed `type:*`, `priority:*`, and `workstream:*` values for the adopter. Config location is the adopter's project namespace; the agent prompts on first run if missing.
-- When a board exists, the project-manager maintains parity between board fields and any legacy label fallbacks during transition.
-- Status (the state machine from [project-management:DEC-006-state-machine-and-cascade]) is *also* a Projects v2 field when a board exists, and inferred from native primitives otherwise.
+- When a board exists, the project-manager maintains parity between board fields and any legacy label fallbacks during transition. **Narrowed** by [project-management:DEC-051-axis-carriage-activation]: where a map binding carries the axis, there is no parity to maintain — the board's field for it goes deliberately unused, and the prerequisite check reports that as information rather than asking for it to be reconciled.
+- Status (the state machine from [project-management:DEC-006-state-machine-and-cascade]) is *also* a Projects v2 field when a board exists, and inferred from native primitives otherwise. **Narrowed** by [project-management:DEC-051-axis-carriage-activation]: a map binding on the state axis governs it instead — a `derive` binding is the common case, and reading a board Status field is not yet built, so the board carries state only where the map is silent.
 - Adoption work on a project landing this capability includes: rename existing workstream labels to Workstream-field values (when migrating); create the `type:*` and `priority:*` label sets; backfill unlabeled open issues; reconcile any Status board field to the canonical five states.
 - The pr_type_mapping is the contract bridging issue-side and PR-side type vocabularies. Adding a new `type:*` value (rare; methodology-fixed set) requires adding a `pr_type_mapping` entry simultaneously.

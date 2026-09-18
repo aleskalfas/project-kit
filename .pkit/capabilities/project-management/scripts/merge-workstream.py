@@ -48,6 +48,7 @@ from ruamel.yaml.error import YAMLError
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import bootstrap_gate  # noqa: E402
+from _lib import axis_carriage  # noqa: E402
 from _lib import axis_labels  # noqa: E402
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 
@@ -173,19 +174,30 @@ def main() -> int:
         return 1
 
     config = _read_yaml(capability_root / "project" / "config.yaml", yaml_loader)
-    has_board = bool(config.get("has_projects_v2_board", False))
+
+    # Whether the kit's own `workstream:*` labels may be RETAGGED and DELETED here
+    # — asked of the carriage accessor, never of the board flag alone
+    # ([project-management:DEC-051-axis-carriage-activation] decision point 4). A
+    # flag-only test would let a board adopter whose map binds `workstream` to
+    # their own labels reach `gh label delete` on a name the kit never owned.
+    substrate_map = axis_labels.load_substrate_map(capability_root)
+    kit_label_note = axis_carriage.kit_label_mutation_note(
+        "workstream", config, substrate_map
+    )
+    kit_labels = kit_label_note is None
 
     # Per-loser issue counts (best-effort).
     print(f"merge-workstream: survivor={args.survivor}")
     impact: dict[str, int] = {}
-    if not has_board and not args.skip_labels:
+    if kit_labels and not args.skip_labels:
         for loser in args.losers:
             n = _gh_count_label_uses(axis_labels.label("workstream", loser), config)
             impact[loser] = n
             print(f"  loser {loser!r}: {n if n is not None else '?'} issue(s) tagged {axis_labels.label('workstream', loser)}")
     else:
+        reason = kit_label_note or "--skip-labels"
         for loser in args.losers:
-            print(f"  loser {loser!r}: (board-substrate or --skip-labels; gh label ops skipped)")
+            print(f"  loser {loser!r}: (gh label ops skipped — {reason})")
 
     if args.dry_run:
         print("\n[dry-run] nothing written; no gh invocation.")
@@ -214,7 +226,7 @@ def main() -> int:
         return 2
 
     # Label mutations.
-    if not has_board and not args.skip_labels:
+    if kit_labels and not args.skip_labels:
         for loser in args.losers:
             ok = _gh_merge_label(loser, args.survivor, config)
             if not ok:

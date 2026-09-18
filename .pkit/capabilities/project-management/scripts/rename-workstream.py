@@ -44,6 +44,7 @@ from ruamel.yaml.error import YAMLError
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import bootstrap_gate  # noqa: E402
+from _lib import axis_carriage  # noqa: E402
 from _lib import axis_labels  # noqa: E402
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 
@@ -160,12 +161,25 @@ def main() -> int:
         return 1
 
     config = _read_yaml(capability_root / "project" / "config.yaml", yaml_loader)
-    has_board = bool(config.get("has_projects_v2_board", False))
+
+    # Whether the kit's own `workstream:*` labels may be RENAMED here — asked of
+    # the carriage accessor, never of the board flag alone
+    # ([project-management:DEC-051-axis-carriage-activation] decision point 4). A
+    # flag-only test would let a board adopter whose map binds `workstream` to
+    # their own labels reach `gh label edit --name`, renaming a label the kit
+    # never owned.
+    substrate_map = axis_labels.load_substrate_map(capability_root)
+    kit_label_note = axis_carriage.kit_label_mutation_note(
+        "workstream", config, substrate_map
+    )
+    kit_labels = kit_label_note is None
 
     print(f"rename-workstream: {args.old} → {args.new}")
     print(f"  file:        {path}")
-    if not has_board and not args.skip_label:
+    if kit_labels and not args.skip_label:
         print(f"  label:       rename `{axis_labels.label('workstream', args.old)}` → `{axis_labels.label('workstream', args.new)}`")
+    elif kit_label_note is not None:
+        print(f"  label:       none — {kit_label_note}")
 
     if args.dry_run:
         print("\n[dry-run] nothing written; no gh invocation.")
@@ -179,7 +193,7 @@ def main() -> int:
     if not _rename_in_file(yaml, data, args.old, args.new, path):
         return 2
 
-    if not has_board and not args.skip_label:
+    if kit_labels and not args.skip_label:
         ok = _gh_label_rename(args.old, args.new, config)
         if not ok:
             print(
