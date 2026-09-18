@@ -521,7 +521,12 @@ axes:
     default: Medium        # ← what back-fill seeds onto issues with no priority
 ```
 
-**Note on `--emit-script`.** The emitted script re-checks each value before writing. The **label** guard fails *closed* — if the re-read itself fails, it skips rather than writing blind. The milestone and board-field guards currently fail *open* on a failed re-read (a known defect); `--apply` is the drift-safe path on every substrate.
+**Note on `--emit-script`.** The emitted script re-checks each value before writing, and **every guard fails closed**: a re-read that does not positively confirm the current value never writes against it. What follows the failure differs by substrate, deliberately:
+
+- **board field** — the run **stops** with an error naming the issue and the field. A board that will not answer is a broken tool, not an unset field; fix the cause (a rate limit, a network drop, a token without the `project` scope) and re-run the script, which is idempotent and completes only what is left. A board that *answers* "no value" is a genuine missing value and is still written.
+- **milestone and label** — that one write is skipped and reported, and the run continues, matching `--apply`'s audited skip. A project with no board never emits a board read at all, so a milestone-only back-fill has no way to reach the error above.
+
+`--apply` remains the stronger path either way: it also re-validates each write against the value the plan enumerated, which a standalone script cannot do.
 
 ### 5. (Optional) Declare lifecycle hooks
 
