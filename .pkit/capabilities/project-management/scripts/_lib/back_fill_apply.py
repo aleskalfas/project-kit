@@ -565,31 +565,34 @@ _EMIT_SCRIPT_HEADER = """\
 # before writing, on EVERY substrate — the milestone write re-reads the issue's
 # milestone, the board-field write re-reads the field value via GraphQL, and the
 # axis-label write re-reads the issue's labels. Each skips when the current value
-# already equals the target (idempotent) AND skips when the current value is some
-# OTHER non-target value (a concurrent edit / drift), never overwriting it. So this
-# script is safe to re-run, and a re-run after a partial apply completes only the
-# rest.
+# already equals the target (idempotent), so this script is safe to re-run and a
+# re-run after a partial apply completes only the rest.
 #
-# WHAT A *FAILED* RE-READ DOES DIFFERS BY SUBSTRATE, and the difference is a known
-# defect rather than a design:
+# DRIFT — the current value is some OTHER non-target value, i.e. a concurrent human
+# edit — is skipped rather than overwritten by the board-field and the axis-label
+# guards. The MILESTONE write is the stated exception: a back-fill milestone intent
+# seeds ONE milestone across the corpus, so it writes whenever the current
+# milestone differs from the target, which is what `pm back-fill --apply` also does
+# for a milestone value its plan already enumerated.
 #
-#   * milestone + board-field — FAILS OPEN ON A FAILED RE-READ. The guards above
-#     only protect a SUCCESSFUL re-read. If the re-read itself FAILS (a `gh` error /
-#     rate-limit / network drop), the current value reads as empty and
-#     the write RUNS — even if the attribute actually holds a concurrent human
-#     edit the failed read could not see. Filed as a defect (#816), ruled to raise.
-#   * axis-label — FAILS CLOSED: a failed re-read SKIPS the write, matching
-#     `--apply`. It is the newer guard and deliberately does not copy the shape
-#     above.
+# A *FAILED* RE-READ NEVER WRITES — every guard here fails CLOSED. A read that did
+# not positively confirm the current value proves nothing about it, so nothing is
+# written against it. What happens AFTER the failure differs by substrate, and the
+# difference is deliberate:
 #
-# `pm back-fill --apply` is the drift-safe path on every substrate: it fails CLOSED
-# on an indeterminate read (skips rather than overwrites a value it could not
-# confirm).
+#   * board-field — the run STOPS with an error naming the issue and the field. A
+#     board that will not answer is a broken tool, not an unset field, and a bulk
+#     run against a board you cannot read is not a run worth finishing. Fix the
+#     cause — a rate limit, a network drop, or a token without the `project`
+#     scope — and re-run this script; being idempotent, it completes only the rest.
+#   * milestone + axis-label — that ONE write is skipped and reported, and the run
+#     continues. This is `pm back-fill --apply`'s audited skip posture, on the two
+#     substrates whose read does not depend on a board.
 #
-# It also does NOT re-validate against the plan's enumerated `observed` the way
-# `pm back-fill --apply` does (that drift check needs pm's plan and is strictly
-# stronger) — prefer `--apply` when the corpus may have changed materially since
-# the plan was drafted; review before running either way.
+# `pm back-fill --apply` remains the stronger path: it ALSO re-validates each write
+# against the plan's enumerated `observed` (a drift check that needs pm's plan),
+# which this script cannot do — prefer `--apply` when the corpus may have changed
+# materially since the plan was drafted; review before running either way.
 set -euo pipefail
 """
 
@@ -606,13 +609,20 @@ def render_emit_script(
     SCRIPT EXECUTES NO WRITE FROM THIS PROCESS — it is text. Two guarantees the
     emitted script itself carries:
 
-      * **idempotent + drift-safe** — BOTH substrates are guarded by a fresh
-        value-read: the milestone write re-reads the issue's milestone, and the
-        board-field write re-reads the field value (the same GraphQL field-values
-        query ``--apply`` uses). Each skips when the current value already equals
-        the target (idempotent) and skips — never overwrites — when it is some other
-        non-target value (a concurrent human edit). Re-running is a no-op for
-        already-applied issues and completes the rest (property 2 in the script);
+      * **idempotent, and fail-closed on an unconfirmed read** — every write is
+        guarded by a fresh value-read: the milestone write re-reads the issue's
+        milestone, the board-field write re-reads the field value (the same GraphQL
+        field-values query ``--apply`` uses), the axis-label write re-reads the
+        issue's labels. Each skips when the current value already equals the target,
+        so re-running is a no-op for already-applied issues and completes the rest
+        (property 2 in the script). None of them writes against a value the re-read
+        did not confirm: the milestone and axis-label guards skip that one write,
+        the board-field guard reports an error and stops the run (an unreadable
+        board is a broken tool, not an unset field — #816). The board-field and
+        axis-label guards additionally skip a CONFIRMED other value (a concurrent
+        human edit) rather than overwriting it; the milestone guard writes over a
+        differing milestone, because seeding one milestone corpus-wide is what that
+        kind means, and the emitted header states the asymmetry;
       * **uses the plan's exact reviewed argv** — each write renders the plan's
         ``argv`` verbatim (``shlex.quote``-d), so what runs is exactly what the
         human reviewed, not a re-derivation.
@@ -682,35 +692,75 @@ def _emit_one(change: PlannedChange) -> str:
     cite = f"  # cite: {_comment_safe(change.citation)}" if change.citation else ""
 
     if change.kind == "set-board-field":
-        # The field write carries its OWN guard, symmetric with the milestone one
-        # (R2): re-read the current board-field value and skip both the idempotent
-        # case (already the target) AND the drift case (a concurrent edit to some
-        # other value) — never blind-overwrite a human's concurrent edit. This
-        # mirrors `--apply`'s drift-skip on the same substrate.
+        # The field write carries its OWN guard: re-read the current board-field
+        # value and skip both the idempotent case (already the target) AND the
+        # drift case (a concurrent edit to some other value) — never blind-overwrite
+        # a human's concurrent edit. This mirrors `--apply`'s drift-skip on the same
+        # substrate, and is the one guard that treats an UNREADABLE board as an
+        # error that stops the run rather than a skip (#816).
         return _field_guarded_fragment(change, quoted, cite)
 
     if change.kind == SET_AXIS_LABEL_KIND:
         return _axis_label_guarded_fragment(change, quoted, cite)
 
-    guard = _milestone_guard(change)
+    return _milestone_guarded_fragment(change, quoted, cite)
+
+
+def _milestone_guarded_fragment(change: PlannedChange, quoted: str, cite: str) -> str:
+    """A bash fragment that re-reads the issue's milestone and writes only when the
+    read CONFIRMED a value other than the target — the fail-CLOSED milestone guard.
+
+    Three-way:
+
+      * **re-read FAILED** → skip. This is the #816 repair on this substrate: the
+        read used to end in ``|| echo ""``, which collapsed a failed read and a
+        genuinely unset milestone into the same empty string, and the write then
+        ran against a value the script never read. ``if ! current=$(...)``
+        separates a non-zero ``gh`` exit from a successful empty read, which is the
+        distinction that collapse destroyed.
+      * **current != target** → write. The milestone kind seeds ONE milestone across
+        the corpus, so a current value that differs — including a different
+        milestone a human set — is what the write is for. That is deliberately NOT
+        the board field's "non-empty means drift" rule: it matches what
+        ``--apply``'s :func:`classify_change` does with a milestone its plan
+        enumerated, and the emitted header states the asymmetry.
+      * **current == target** → already satisfied, skip (idempotent).
+
+    A failed read SKIPS rather than erroring — unlike the board field, which stops
+    the run. The milestone read is an ordinary ``gh issue view``: it needs no board,
+    no ``project`` token scope, and no Projects-v2 GraphQL surface, so it is not the
+    "the board will not answer" failure the error posture exists for, and a
+    milestone-only back-fill (a project with no board at all) must gain no new
+    failure mode from that repair.
+
+    The read sits in the ``if`` condition, so ``set -e`` does not abort the script
+    on it — the skip is reported and the loop continues, the audited skip/report
+    posture ``--apply`` also takes.
+    """
+    target = change.target or ""
+    tag = f"#{change.issue_number} {change.kind}"
+    # Bound out of the f-string below: a backslash inside an f-string expression
+    # is a SyntaxError before 3.12, and these scripts target >=3.10.
+    milestone_jq = shlex.quote('.milestone.title // ""')
+    reread = (
+        f"gh issue view {change.issue_number} --json milestone "
+        f"--jq {milestone_jq} 2>/dev/null"
+    )
+    failed_read = _echo_line(
+        f"skip {tag}: could not re-read the milestone — failing closed, "
+        f"nothing written"
+    )
     return (
-        f"# #{change.issue_number} {change.kind}{cite}\n"
-        f"{guard}\n"
+        f"# {tag}{cite}\n"
+        f"# guard fails CLOSED: a FAILED re-read SKIPS the write (never writes "
+        f"against a value it could not read).\n"
+        f"if ! current=$({reread}); then\n"
+        f"  {failed_read}\n"
+        f'elif [ "$current" != {shlex.quote(target)} ]; then\n'
         f"  {quoted}\n"
         f"else\n"
-        f'  echo "skip #{change.issue_number} {change.kind}: already satisfied" >&2\n'
+        f'  {_echo_line(f"skip {tag}: already satisfied")}\n'
         f"fi"
-    )
-
-
-def _milestone_guard(change: PlannedChange) -> str:
-    """A bash guard that runs the milestone write only if the issue's current
-    milestone differs from the target (idempotent re-check)."""
-    target = change.target or ""
-    return (
-        f'current=$(gh issue view {change.issue_number} '
-        f'--json milestone --jq ".milestone.title // \\"\\"" 2>/dev/null || echo "")\n'
-        f'if [ "$current" != {shlex.quote(target)} ]; then'
     )
 
 
@@ -731,54 +781,115 @@ FIELD_REREAD_QUERY = (
 )
 
 
+def _field_reread_jq(field_id: str) -> str:
+    """The ``--jq`` program for the board-field re-read: the value of the matching
+    field, or a jq ERROR when the response did not positively confirm one.
+
+    The shell-side half of the fail-CLOSED guard, and the mirror of ``--apply``'s
+    :func:`back-fill.py._read_current_field_value`. Both answer the same question —
+    "did this response positively confirm the field's current value?" — and both
+    must answer it the same way, so the rule is spelled once per surface and the
+    surfaces are checked against each other by test:
+
+      * a populated ``errors`` array → NOT confirmed. GitHub's GraphQL returns a
+        200 with ``errors`` populated and ``data`` null on rate limits and
+        transient failures, so exit code alone does not see this one;
+      * ``data`` / ``node`` / ``fieldValues`` / ``nodes`` null or absent at any hop
+        → NOT confirmed (that is the shape a transient failure degrades to);
+      * ``nodes`` a present list → CONFIRMED. An empty list, or a list with no
+        entry for this field, is a genuine "the field is unset" and yields ``""``,
+        which is the one case the guard below lets through to a write.
+
+    A jq ``error`` exits non-zero, which is what makes the failure visible to the
+    ``if ! current=$(...)`` test — the distinction a ``|| echo ""`` destroyed by
+    turning every failure into the empty string that means "unset, write it" (#816).
+
+    ``field_id`` is embedded as a JSON string literal (``json.dumps``) — jq needs a
+    quoted literal in ``== "<id>"``, and json.dumps escapes any quote or backslash
+    in it; the whole program is then shell-quoted as one token by the caller.
+    """
+    literal = json.dumps(field_id)
+    return (
+        'if (.errors // [] | length) > 0 then error("board-read-unconfirmed")'
+        ' else (.data.node.fieldValues.nodes'
+        ' | if type == "array"'
+        f' then map(select(.field.id? == {literal}))'
+        ' | (.[0].optionId // .[0].text // "")'
+        ' else error("board-read-unconfirmed") end) end'
+    )
+
+
 def _field_guarded_fragment(change: PlannedChange, quoted: str, cite: str) -> str:
     """A bash fragment that re-reads the board field and writes only on the clean
-    no-drift case — symmetric with the milestone guard (R2).
+    no-drift case — the fail-CLOSED board-field guard.
 
-    Three-way, mirroring ``--apply``'s ``classify_change``:
-      * current == target          → idempotent, skip (echo);
-      * current non-empty & != target → DRIFT (a concurrent edit), skip + echo —
-        never overwrite (this is what an unguarded ``item-edit`` got wrong);
-      * current empty / unset       → run the reviewed ``item-edit`` write.
+    Four-way, and the first arm is the #816 repair:
 
-    The re-read uses the same GraphQL field-values query the apply path uses; the
-    ``--jq`` selects the value of the field whose id matches this change's field.
-    If the GraphQL read itself fails (empty ``current``), the field is treated as
-    unset and the write runs — the same posture as the report-time enumeration; the
-    drift-safe ``--apply`` path remains the stronger option and the header says so.
+      * **re-read NOT CONFIRMED** → report an ERROR naming the issue and the field,
+        write nothing, and STOP THE RUN (``exit 1``). A board that will not answer
+        is a broken tool, not a missing value; continuing would mean guessing at a
+        value the script never read, and the guess this guard used to make was
+        "unset" — which is exactly the branch that writes. The failure clusters
+        (a rate limit, an expired network, a token without the ``project`` scope
+        affect every subsequent read too), so stopping loses nothing a re-run does
+        not recover: the script is idempotent, and re-running completes the rest.
+      * **current == target** → idempotent, skip;
+      * **current non-empty and != target** → DRIFT (a concurrent edit), skip —
+        never overwrite;
+      * **current empty** → the CONFIRMED unset this change exists to fill; write.
+
+    Note what the first arm is not: an empty value on a successful read is still a
+    genuine unset and still writes. "The board answered 'nothing'" and "the board
+    did not answer" are different facts, and :func:`_field_reread_jq` is where they
+    are separated — ``if ! current=$(...)`` can only act on the distinction once jq
+    has made it, because a non-confirming response otherwise arrives with exit 0.
+
+    This is the one guard in the emitted script that stops the run rather than
+    skipping one write. The milestone and axis-label guards skip and continue,
+    matching ``--apply``'s audited skip/report; the difference is scoped to the
+    substrate the ruling names and is stated in the emitted header. A project with
+    no board declares no ``set-board-field`` intent, so no fragment of this shape is
+    ever emitted for it — the error cannot reach a corpus that expects no board
+    value.
+
+    Unlike the other two re-reads this one does NOT send ``gh``'s stderr to
+    /dev/null: the run stops here, and gh's own message ("Resource not accessible
+    by personal access token", a rate-limit notice) is the most actionable thing
+    the operator can be handed.
     """
     target = change.target or ""
     field_id = change.field_id or ""
     item_id = change.item_id or ""
-    # --jq: from the field-values nodes, pick the one whose field id == this field,
-    # emit its optionId or text; default empty when absent/unreadable. The leading
-    # `?` keeps a transient null `data`/`node`/`fieldValues` from raising a jq error
-    # (it yields empty → treated as unset), so a rate-limited re-read degrades to the
-    # same "field unset" posture as a failed read rather than aborting the script.
-    # The field id is embedded as a JSON string literal (`json.dumps`), NOT shell-
-    # quoted — jq needs a quoted string literal in `== "<id>"`, and json.dumps gives
-    # exactly that (and escapes any quote in the id); the whole jq program is then
-    # shell-quoted as one token below.
-    jq = (
-        f'(.data.node.fieldValues.nodes? // [])'
-        f' | map(select(.field.id == {json.dumps(field_id)}))'
-        f' | (.[0].optionId // .[0].text // "")'
-    )
+    jq = _field_reread_jq(field_id)
     reread = (
-        f"current=$(gh api graphql "
+        f"gh api graphql "
         f"-f query={shlex.quote(FIELD_REREAD_QUERY)} "
         f"-F item={shlex.quote(item_id)} "
-        f"--jq {shlex.quote(jq)} 2>/dev/null || echo \"\")"
+        f"--jq {shlex.quote(jq)}"
+    )
+    tag = f"#{change.issue_number} {change.kind}"
+    # `field_id` is adopter-reachable on the `--plan` path, so the message is
+    # single-quoted through `_echo_line` rather than interpolated into a
+    # double-quoted echo where a `$(...)` in it would run.
+    unreadable = _echo_line(
+        f"ERROR {tag}: could not confirm the current value of board field "
+        f"{field_id} — the board did not answer (a rate limit, a network drop, or "
+        f"a token without the `project` scope). Nothing was written for this issue "
+        f"and the run STOPS here: an unreadable board is a broken tool, not an "
+        f"unset field. Fix the cause and re-run this script — it is idempotent, so "
+        f"it completes only what is left."
     )
     return (
-        f"# #{change.issue_number} {change.kind}{cite}\n"
-        f"# guard fails OPEN: a FAILED re-read reads empty and the write runs "
-        f"below (use pm back-fill --apply for the drift-safe, fail-closed read).\n"
-        f"{reread}\n"
-        f'if [ "$current" = {shlex.quote(target)} ]; then\n'
-        f'  echo "skip #{change.issue_number} {change.kind}: already satisfied" >&2\n'
+        f"# {tag}{cite}\n"
+        f"# guard fails CLOSED: a re-read that does not CONFIRM the current value "
+        f"is an error — nothing is written and the run stops.\n"
+        f"if ! current=$({reread}); then\n"
+        f"  {unreadable}\n"
+        f"  exit 1\n"
+        f'elif [ "$current" = {shlex.quote(target)} ]; then\n'
+        f'  echo "skip {tag}: already satisfied" >&2\n'
         f'elif [ -n "$current" ]; then\n'
-        f'  echo "skip #{change.issue_number} {change.kind}: DRIFT — current '
+        f'  echo "skip {tag}: DRIFT — current '
         f'value is $current, not the planned target; not overwriting a '
         f'concurrent edit (use pm back-fill --apply for the drift-safe path)" '
         f">&2\n"
@@ -922,14 +1033,16 @@ def planned_changes_from_plan(plan: dict[str, Any]) -> list[PlannedChange]:
     string-building of a new write. A ``set-axis-label`` entry recovers its target
     (the resolved label) and its axis from the matching intent.
 
-    Intents are keyed by ``(kind, axis)`` rather than by kind alone, because a plan
-    can declare a ``set-axis-label`` intent for more than one axis and keying on
-    kind would collapse them onto whichever came first — writing `priority`'s label
-    for `workstream`'s change. For the two hook-driven kinds the axis is absent, so
-    the key degenerates to ``(kind, "")`` and the lookup is exactly what it was.
+    Intents are keyed by the WRITE THEY DECLARE — see :func:`_intent_key` — and not
+    by kind, because a plan may legitimately carry two intents of one kind (two
+    board fields, two milestones, two label-bound axes) and keying on kind alone
+    collapses them onto whichever came first: the second intent's changes then
+    recover the FIRST intent's target, and a plan that reviewed correctly applies a
+    wrong value (#826). An entry whose intent cannot be identified is BLOCKED rather
+    than applied against a guessed target — guessing is the defect, not the repair.
     """
     intents = plan.get("intents") or []
-    intent_by_key: dict[tuple[str, str], dict[str, Any]] = {}
+    intent_by_key: dict[tuple[str, ...], dict[str, Any]] = {}
     for intent in intents:
         if isinstance(intent, dict) and isinstance(intent.get("kind"), str):
             intent_by_key.setdefault(_intent_key(intent), intent)
@@ -966,8 +1079,24 @@ def planned_changes_from_plan(plan: dict[str, Any]) -> list[PlannedChange]:
         issue_number = _plan_issue_number(entry)
         if issue_number is None:
             continue
-        intent = intent_by_key.get(_intent_key(entry), {})
-        target, seam_inputs = _target_and_inputs(kind, intent, argv)
+        intent = intent_by_key.get(_entry_key(entry, argv))
+        blocked_reason = str(entry.get("blocked_reason", ""))
+        if argv is not None and intent is None:
+            # The plan carries a write no declared intent accounts for — a
+            # hand-edited or truncated document, since the report half emits one
+            # intent per write it constructs. The target that write would be
+            # re-validated against is exactly what the intent carries, so there is
+            # nothing to validate it with; applying anyway would compare the fresh
+            # read against `None` and could drive an empty write (a milestone
+            # cleared, a label with no name). Blocked reports it and writes nothing,
+            # which is the posture every other malformed-plan arm here takes.
+            argv = None
+            blocked_reason = (
+                "no intent in the saved plan declares this write, so the value it "
+                "would be re-validated against cannot be recovered; re-run the "
+                "report to produce a fresh plan"
+            )
+        target, seam_inputs = _target_and_inputs(kind, intent or {}, argv)
         out.append(PlannedChange(
             issue_number=issue_number,
             kind=str(kind),
@@ -975,20 +1104,91 @@ def planned_changes_from_plan(plan: dict[str, Any]) -> list[PlannedChange]:
             observed=entry.get("observed"),
             argv=argv,
             citation=str(entry.get("citation", "")),
-            blocked_reason=str(entry.get("blocked_reason", "")),
+            blocked_reason=blocked_reason,
             **seam_inputs,
         ))
     return out
 
 
-def _intent_key(entry: dict[str, Any]) -> tuple[str, str]:
-    """The ``(kind, axis)`` key matching a proposed entry to its intent.
+def _intent_key(intent: dict[str, Any]) -> tuple[str, ...]:
+    """The key identifying one declared intent: its kind plus the write it declares.
 
-    ``axis`` is empty for every kind but ``set-axis-label``, so the two hook-driven
-    kinds key exactly as they did when the map was kind-only.
+    The plan document records the intent→change association only implicitly — the
+    report half holds the intent object while it builds each change, so it never
+    needs a key, but the saved document carries two lists and reconstruction has to
+    re-derive the link. The key is therefore the only thing standing between a
+    reviewed plan and a wrongly-applied one, and it has to identify the intent, not
+    merely its kind:
+
+      * ``assign-milestone`` — the milestone title it assigns;
+      * ``set-board-field`` — the field it writes and the value it writes there;
+      * ``set-axis-label`` — the classification axis it fills.
+
+    :func:`_entry_key` derives the SAME key from a proposed entry, off the exact
+    argv the report constructed from these very parameters. The two functions are
+    two spellings of one rule, which is why they sit together and why a test drives
+    a real report-produced plan through both rather than trusting the symmetry.
+
+    Two intents declaring the identical write still collapse — but they declare the
+    same target, so the change recovers the value it was going to get anyway.
     """
-    axis = entry.get("axis")
-    return str(entry.get("kind", "")), axis if isinstance(axis, str) else ""
+    kind = str(intent.get("kind", ""))
+    if kind == SET_AXIS_LABEL_KIND:
+        return (kind, _key_part(intent.get("axis")))
+    if kind == "assign-milestone":
+        return (kind, _key_part(intent.get("milestone_title")))
+    if kind == "set-board-field":
+        # `substrate_writes.field_value_args` renders the single-select option when
+        # one is present and the text only otherwise; the key mirrors that
+        # precedence, because it is the argv it has to match.
+        option = _key_part(intent.get("single_select_option_id"))
+        text = "" if option else _key_part(intent.get("text_value"))
+        return (kind, _key_part(intent.get("field_id")), option, text)
+    # An intent of some other kind — the plan's `intents` list is not filtered the
+    # way its `proposed` entries are, and a hook kind this engine does not apply
+    # (`post-comment`, say) can appear there. Keyed on kind alone, it matches no
+    # entry, which is the right outcome: there is nothing here to apply it to.
+    return (kind,)
+
+
+def _entry_key(entry: dict[str, Any], argv: list[str] | None) -> tuple[str, ...]:
+    """The same key as :func:`_intent_key`, derived from a proposed entry.
+
+    The entry's own keys carry the issue, not the write, so the write-identifying
+    half comes off ``argv`` — the plan's exact reviewed write, whose flag values ARE
+    the parameters the intent declared (the entry's ``axis`` is the exception: the
+    label write's argv carries the resolved label, not the axis, so the axis travels
+    on the entry itself). Reading the reviewed argv rather than re-deriving anything
+    is the same discipline :func:`_target_and_inputs` already applies to the seam
+    inputs.
+
+    A blocked entry has no argv and so no write-identifying half; it keys to the
+    empty discriminator, matches no real intent, and stays blocked — which is what
+    it already was.
+    """
+    kind = str(entry.get("kind", ""))
+    if kind == SET_AXIS_LABEL_KIND:
+        return (kind, _key_part(entry.get("axis")))
+    if kind == "assign-milestone":
+        return (kind, _key_part(_argv_flag(argv, "--milestone")))
+    if kind == "set-board-field":
+        return (
+            kind,
+            _key_part(_argv_flag(argv, "--field-id")),
+            _key_part(_argv_flag(argv, "--single-select-option-id")),
+            _key_part(_argv_flag(argv, "--text")),
+        )
+    return (kind,)  # pragma: no cover — kinds are filtered to APPLIABLE_KINDS
+
+
+def _key_part(value: Any) -> str:
+    """One key component as a string — ``""`` for an absent value.
+
+    A plan document is adopter-supplied on the ``--plan`` path, so a parameter may
+    arrive as a number where the argv side spells it as text; both sides normalise
+    through here so the two keys cannot miss each other over a type.
+    """
+    return "" if value is None else str(value)
 
 
 def _target_and_inputs(

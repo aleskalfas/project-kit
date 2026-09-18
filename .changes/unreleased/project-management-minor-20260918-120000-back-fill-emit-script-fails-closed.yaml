@@ -1,0 +1,24 @@
+component: project-management
+kind: minor
+custom:
+  category: Fixed
+body: >
+  `back-fill --emit-script`'s value guards now fail **closed** (#816). The
+  milestone and board-field re-reads ended in `|| echo ""`, which collapsed a
+  FAILED read and a genuinely-empty value into the same empty string — and the
+  empty branch is the branch that WRITES, so a rate limit, a network drop, or a
+  token without the `project` scope silently overwrote a value the script never
+  read. Both fragments now use `if ! current=$(...)`, which separates a non-zero
+  `gh` exit from a successful empty read, and the board-field re-read's `--jq`
+  raises on every response that does not positively confirm a value (a populated
+  GraphQL `errors` array; a null `data`/`node`/`fieldValues` at any hop) —
+  mirroring the rule `--apply` already applied. An unreadable **board** is an
+  ERROR naming the issue, the field and the likely causes, and it stops the run:
+  a board that will not answer is a broken tool, not a missing value. An
+  unreadable milestone or label skips that one write and the run continues, as
+  `--apply` does. A board that *answers* "unset" is still a genuine missing
+  value and is still written, and a project with no board emits no board read at
+  all, so a milestone-only back-fill gains no new failure mode. The emitted
+  header's "guard fails OPEN" admission is retracted, and its claim that every
+  substrate skips drift is corrected: the milestone write seeds one milestone
+  corpus-wide and does write over a differing one, as `--apply` does.
