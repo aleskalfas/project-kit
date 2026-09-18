@@ -1,5 +1,5 @@
 ---
-id: DEC-051
+id: DEC-052
 title: Comment content model and house style — one model for every comment the capability posts
 status: accepted
 date: 2026-09-12
@@ -170,7 +170,7 @@ never rewrites a human's words.
   ([project-management:DEC-049-audit-journal-model],
   [project-management:DEC-041-version-provenance-stamp],
   [project-management:DEC-047-freeform-comment-verb]) each gain an
-  `> **Amended by [project-management:DEC-051]**` note when this DEC is accepted, per the
+  `> **Amended by [project-management:DEC-052]**` note when this DEC is accepted, per the
   bidirectional precedent DEC-050 set with DEC-032 / DEC-046.
 - **Out of scope — the render seam.** *How* the string is composed — the renderer, its
   structured input contract (`format(data) → string`), where it lives, the

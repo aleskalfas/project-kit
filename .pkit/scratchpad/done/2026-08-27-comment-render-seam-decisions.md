@@ -4,8 +4,8 @@ authors:
 started: 2026-08-27
 retired: 2026-09-18
 produced:
-  - DEC-051
-  - ADR-053
+  - DEC-052
+  - ADR-054
 ---
 
 # Comment render seam + house-style decisions (settled design → realization)

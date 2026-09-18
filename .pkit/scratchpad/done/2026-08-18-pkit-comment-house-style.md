@@ -4,7 +4,7 @@ authors:
 started: 2026-08-18
 retired: 2026-09-18
 produced:
-  - DEC-051
+  - DEC-052
 ---
 
 # Pkit comment house style

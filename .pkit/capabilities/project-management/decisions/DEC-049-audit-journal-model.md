@@ -8,7 +8,7 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 > pkit records what it does to an issue/PR in two roles with a clear hierarchy. The **engine journal** — substrate-neutral, append-only, one entry per pkit-governed mutation with actor + pkit/capability version — is the **canonical audit trail**. **GitHub comments are a configurable, provenance-stamped *projection* of it**, never a second source of truth: intensity `off` / `audit` *(default)* / `full`. Override/authorisation justifications (a DEC-014 bypass, a `--force`) are the `audit` floor — the *why* that must survive even a failed mutation and be visible to a reviewer. `full` stamps **every** governed mutation with the pkit + capability versions, making the **governance boundary** visible: a GitHub timeline event with **no matching pkit record** is an out-of-band (ungoverned) change — also machine-detectable via `pkit pm history <N> --check-drift`. One canonical comment format from a single schema field, exactly **one** audit comment per audited mutation, a uniform `<!-- pkit-audit -->` marker.
 
-> **Amended by [project-management:DEC-051-comment-house-style].** The audit/override comment
+> **Amended by [project-management:DEC-052-comment-house-style].** The audit/override comment
 > keeps the authoriser only when the poster differs from the authoriser (dropped when
 > self-posted), the move comment is reframed as the intent-log, and an overridden move is one
 > comment carrying both payloads — content only; projection-level *coverage* is unchanged.

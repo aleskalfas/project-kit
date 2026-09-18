@@ -20,7 +20,7 @@ merge-gate bypass and a prompt-injection amplifier. It is a genuine new agent
 capability (the agent's direct `gh …comment` is denied today), made safe by that
 refusal plus a positive `<!-- pkit-freeform -->` marker.
 
-> **Amended by [project-management:DEC-051-comment-house-style].** Pass-through freeform
+> **Amended by [project-management:DEC-052-comment-house-style].** Pass-through freeform
 > comments carry the house-style **frame** (the per-kind marker + universal provenance footer)
 > around the user's untouched payload; the payload itself is never restyled.
 

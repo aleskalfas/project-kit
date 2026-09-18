@@ -6,7 +6,7 @@ started: 2026-09-13
 
 # Comment kinds rendered example
 
-Companion to **DEC-051** (`comment-house-style`) — every pkit comment kind rendered as it
+Companion to **DEC-052** (`comment-house-style`) — every pkit comment kind rendered as it
 would appear on GitHub, so the content + style model can be eyeballed before the DEC is
 accepted and before the render-seam ADR pins the exact bytes.
 
@@ -153,7 +153,7 @@ freestanding override sub-block (the consistency win).
 > <sub>🧰 pkit · tree `1.150.0` · pm `0.55.0` · cli `1.150.0`</sub>
 
 `<!-- pkit-verdict -->` — single-reviewer content model; the one-review-per-round
-**aggregate layout** is Feature #795's grammar, not DEC-051. *(Resolved: no dedicated
+**aggregate layout** is Feature #795's grammar, not DEC-052. *(Resolved: no dedicated
 verdict kind-icon — the `⛔️` / `✅` outcome glyph is the verdict's identity in the icon
 column; a second leading glyph would break the one-glyph-per-kind rule.)*
 
@@ -179,5 +179,5 @@ not pkit's to change.*
 
 ## Retirement
 
-Illustrative companion to DEC-051; retire with the DEC (or drop) once the render-seam ADR
+Illustrative companion to DEC-052; retire with the DEC (or drop) once the render-seam ADR
 lands the concrete renderer and the readability loop has converged the final format.
