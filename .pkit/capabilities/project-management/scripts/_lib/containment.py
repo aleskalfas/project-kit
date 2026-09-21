@@ -655,6 +655,15 @@ class IssueCorpus:
         return out
 
     @property
+    def titles(self) -> dict[int, str]:
+        out: dict[int, str] = {}
+        for row in self.rows:
+            number = row.get("number")
+            if isinstance(number, int):
+                out[number] = str(row.get("title") or "")
+        return out
+
+    @property
     def states(self) -> dict[int, str]:
         out: dict[int, str] = {}
         for row in self.rows:
@@ -665,17 +674,28 @@ class IssueCorpus:
 
 
 def fetch_issue_corpus(
-    config: dict[str, Any], *, fields: str = _CORPUS_FIELDS
+    config: dict[str, Any],
+    *,
+    fields: str = _CORPUS_FIELDS,
+    state: str = "all",
+    limit: int = CORPUS_CEILING,
 ) -> IssueCorpus | None:
-    """Fetch every issue, reporting whether the fetch was exhaustive.
+    """Fetch the issue corpus, reporting whether the fetch was exhaustive.
 
     Returns ``None`` when the query itself failed — distinct from a complete
     fetch of an empty tracker, and distinct from a truncated one.
+
+    ``limit`` defaults to the seam's ceiling, which is not a view control: a gate
+    wants every row or an honest refusal. A *renderer* may lower it deliberately
+    (``show-tree --limit``), and then `complete` is what lets it label the view as
+    partial instead of presenting a short answer as the whole one. ``state``
+    likewise exists for renderers; a gate must not filter, since a closed child
+    still counts.
     """
     args = [
         "gh", "issue", "list",
-        "--state", "all",
-        "--limit", str(CORPUS_CEILING),
+        "--state", state,
+        "--limit", str(limit),
         "--json", fields,
     ]
     try:
@@ -693,8 +713,9 @@ def fetch_issue_corpus(
     rows = tuple(row for row in parsed if isinstance(row, dict))
     # Measure the ceiling against what `gh` RETURNED, not against what survived
     # filtering: a dropped non-dict row would otherwise make a struck ceiling
-    # read as complete.
-    return IssueCorpus(rows=rows, complete=len(parsed) < CORPUS_CEILING)
+    # read as complete. Measured against the limit actually requested, so a
+    # renderer's lowered limit is judged against its own ask.
+    return IssueCorpus(rows=rows, complete=len(parsed) < limit)
 
 
 def resolve_children(

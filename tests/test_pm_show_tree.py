@@ -7,6 +7,8 @@ parsing, orphan detection.
 from __future__ import annotations
 
 import importlib.util
+import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -312,3 +314,56 @@ def test_closed_issues_not_counted_as_orphans(st, issue_types, monkeypatch) -> N
     _link_parents_textual_only(st, issues, monkeypatch)
     orphans = st._detect_orphans(issues, {})
     assert 1 not in orphans["open_issues_with_no_parent_ref"]
+
+
+# --- a bounded render says it is bounded (#863) -------------------------------
+
+
+def _run_show_tree(st, monkeypatch, capsys, *, total: int, limit: int, fmt: str = "text"):
+    """Render a tracker of `total` issues through a `--limit` of `limit`.
+
+    The `gh` stub honours `--limit` the way the real command does; without that
+    the corpus would never be short and the label could never fire.
+    """
+    def fake_gh(args, config, **kwargs):
+        joined = " ".join(args)
+        if "pr" in args:
+            return subprocess.CompletedProcess(args, 0, stdout="[]", stderr="")
+        if "issue" in args and "list" in args:
+            n = int(args[args.index("--limit") + 1])
+            rows = [
+                {"number": i, "title": f"t{i}", "body": "## What", "state": "OPEN",
+                 "labels": [], "milestone": None}
+                for i in range(1, total + 1)
+            ]
+            return subprocess.CompletedProcess(
+                args, 0, stdout=json.dumps(rows[:n]), stderr=""
+            )
+        return subprocess.CompletedProcess(args, 0, stdout="[]", stderr="")
+
+    monkeypatch.setattr(st, "gh_run", fake_gh)
+    monkeypatch.setattr(st.containment, "_gh_call", fake_gh)
+    monkeypatch.setattr(sys, "argv", ["show-tree", "--format", fmt, "--limit", str(limit)])
+    st.main()
+    return capsys.readouterr()
+
+
+def test_a_truncated_render_says_so(st, monkeypatch, capsys) -> None:
+    """A tree built from a bounded corpus cannot tell "no other children" from
+    "I stopped looking" — and this is the command people use to check whether a
+    container is ready to close, so it must not present a short tree as whole."""
+    captured = _run_show_tree(st, monkeypatch, capsys, total=40, limit=10)
+    assert "[partial]" in captured.err
+    assert "higher --limit" in captured.err
+
+
+def test_a_complete_render_carries_no_notice(st, monkeypatch, capsys) -> None:
+    """The label has to mean something: absent when the corpus was exhausted."""
+    captured = _run_show_tree(st, monkeypatch, capsys, total=4, limit=10)
+    assert "[partial]" not in captured.err
+
+
+def test_json_carries_the_same_caveat(st, monkeypatch, capsys) -> None:
+    """A machine consumer gets the verdict too, not just the human reader."""
+    captured = _run_show_tree(st, monkeypatch, capsys, total=40, limit=10, fmt="json")
+    assert json.loads(captured.out)["complete"] is False

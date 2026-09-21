@@ -1,0 +1,22 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `show-tree` and the children-view refresh no longer present a partial answer as
+  a complete one (#863). Both built their own issue corpus — `show-tree` at the
+  operator's `--limit`, the refresh at a fixed 1000 rows — and neither could tell
+  a truncated fetch from an exhaustive one, so a bounded tree looked identical to
+  a whole one and a parent's children comment could omit children with no hint
+  that anything was missing. Acquisition now goes through the containment seam,
+  which reports whether it saw the whole tracker. `show-tree --limit` stays a
+  view control with its default unchanged, and a render that struck it is marked
+  partial in every format it emits — `[partial]` in text, a note in markdown,
+  `"complete": false` in JSON — while a complete render carries no such mark, so
+  the label carries information. The children-view refresh takes the stricter
+  line and skips rather than publishing a short list: that comment is the only
+  parent-side view of children on trackers without native sub-issues and it
+  carries no hedge of its own, so a stale view is better than a confidently wrong
+  one. The same change fixes a failed fetch there rendering as an *empty*
+  children list, which was indistinguishable from a parent that genuinely has
+  none.

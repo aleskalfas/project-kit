@@ -176,9 +176,21 @@ def main() -> int:
         capability_root / "schemas" / "classification.yaml", yaml_loader
     )
 
-    issues_raw = _gh_list_issues(state=args.state, limit=args.limit, config=config)
-    if issues_raw is None:
+    # Acquisition belongs to the containment seam (ADR-035 §5); `--limit` and
+    # `--state` stay view controls, and the seam's verdict is what lets a bounded
+    # render admit it is bounded rather than pass a short tree off as the whole
+    # one (#863).
+    corpus = containment.fetch_issue_corpus(
+        config,
+        fields="number,title,body,state,labels,milestone",
+        state=args.state,
+        limit=args.limit,
+    )
+    if corpus is None:
+        print("error: gh issue list failed.", file=sys.stderr)
         return 2
+    issues_raw = list(corpus.rows)
+    partial = not corpus.complete
     prs_raw = _gh_list_prs(state=args.state, limit=args.limit, config=config)
     if prs_raw is None:
         return 2
@@ -217,12 +229,18 @@ def main() -> int:
             ],
             "orphans": orphans,
             "tree_roots": [n for n in tree if issues[n].parent_number is None],
+            # Machine-readable consumers need the same caveat the humans get.
+            "complete": not partial,
         }
         print(json.dumps(out, indent=2))
     elif args.format == "markdown":
         _print_markdown(issues, prs, orphans, tree)
+        if partial:
+            print(f"\n> **Partial view** — {_PARTIAL_NOTE.format(limit=args.limit)}")
     else:
         _print_text(issues, prs, orphans, tree)
+        if partial:
+            print(f"\n[partial] {_PARTIAL_NOTE.format(limit=args.limit)}", file=sys.stderr)
 
     return 0
 
@@ -576,36 +594,14 @@ def _md_branch(
 # ---- gh wrappers ----------------------------------------------------
 
 
-def _gh_list_issues(*, state: str, limit: int, config: dict) -> list | None:
-    try:
-        proc = gh_run(
-            [
-                "gh",
-                "issue",
-                "list",
-                "--state",
-                state,
-                "--limit",
-                str(limit),
-                "--json",
-                "number,title,body,state,labels,milestone",
-            ],
-            config,
-            check=False,
-        )
-    except FileNotFoundError:
-        print("error: `gh` not on PATH.", file=sys.stderr)
-        return None
-    if proc.returncode != 0:
-        print(
-            f"error: gh issue list failed.\nstderr: {proc.stderr.strip()}",
-            file=sys.stderr,
-        )
-        return None
-    try:
-        return json.loads(proc.stdout)
-    except json.JSONDecodeError:
-        return None
+# Said the same way in every format, because the distinction it draws is the
+# whole point: a bounded render cannot tell "this parent has no other children"
+# from "I stopped looking", and this command is how people check whether a
+# container is ready to close.
+_PARTIAL_NOTE = (
+    "the tree was built from the first {limit} issues, so a parent may have "
+    "children not shown here — re-run with a higher --limit for a complete view"
+)
 
 
 def _gh_list_prs(*, state: str, limit: int, config: dict) -> list | None:
