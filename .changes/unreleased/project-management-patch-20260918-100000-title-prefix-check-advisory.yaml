@@ -1,0 +1,9 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The pre-check title-prefix alignment check no longer blocks pm operations
+  over already-existing issue titles — an unrecognised or missing prefix is
+  now an advisory warning — and issues filed through `pkit report` are
+  excluded from the sample instead of being counted as drift (#852).
