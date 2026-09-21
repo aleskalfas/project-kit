@@ -10,7 +10,8 @@ body parent-refs in parallel (ADR-026's one-read-seam discipline, mirrored on th
 containment axis).
 
 These tests are OFFLINE: the native `…/sub_issues` read is mocked at
-`_gh_call` / `read_native_child_numbers`, the textual side is the in-hand corpus.
+`_gh_call` / `read_native_children`; the textual side is either an in-hand
+corpus or one the seam acquires, which this file also covers via `_stub_gh_list`.
 
 The acceptance cases the issue enumerates:
   * native-only parent

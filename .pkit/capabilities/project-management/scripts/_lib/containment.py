@@ -639,10 +639,10 @@ def resolve_children(
     """Resolve a parent's children — native-where-present, textual-otherwise,
     native-wins on conflict (DEC-005).
 
-    The sole read-seam for "what are this parent's children?" Both ``show-tree``
-    and the DEC-034 closure-fold child-walk resolve through it so neither
-    re-derives containment (the ADR-026 one-read-seam discipline applied to the
-    containment axis).
+    The sole read-seam for "what are this parent's children?" ``show-tree``, the
+    DEC-034 closure fold and ``close-issue``'s open-children walk all resolve
+    through it, so none re-derives containment (the ADR-026 one-read-seam
+    discipline applied to the containment axis).
 
     Args:
       parent_number   — the parent whose children to resolve.
@@ -682,15 +682,28 @@ def resolve_children(
          rescue a truncated textual scan: the rows never fetched are exactly
          where a textual-only child would be.
 
-    API cost (the deliberate shape): the textual side is free (corpus already in
-    hand); the native side is **one call per parent resolved**, NOT per corpus
-    issue. Both consumers resolve children one parent at a time (``show-tree``
-    walks known parents; the closure fold resolves a single container), so native
-    reads scale with *parents queried*, not corpus size. A whole-tree ``show-tree``
-    does pay one native call per node that has children — bounded by the tree's
-    internal-node count, well under the corpus size, and the price of honouring
-    "native wins" without a private GraphQL batch (a batched ``subIssues`` GraphQL
-    pass is a later optimisation, not pinned here — COR-007 speculative-generality
+    API cost — two shapes, and the difference matters before you drop ``corpus=``:
+
+    * **Corpus supplied** — the textual side is free (you already paid for the
+      fetch); the native side is one ``…/sub_issues`` call per parent resolved.
+    * **Corpus omitted** (the seam acquires) — the textual side costs one FULL
+      enumeration per call, plus the same one native call per parent.
+
+    The native side is per *parent resolved*, never per corpus issue, so it
+    scales with parents queried. The textual side does not: a caller that
+    resolves many parents in a loop and omits ``corpus`` pays a whole-tracker
+    enumeration on every iteration. ``show-tree`` is exactly that shape — it
+    walks candidate parents — which is why it supplies its own corpus and must
+    keep doing so. A gate resolving a single container should omit it and let
+    the seam vouch for completeness.
+
+    Three consumers today: ``show-tree`` (supplies), the DEC-034 closure fold's
+    ``cascade_members`` (omits), and ``close-issue._find_open_children``
+    (supplies, with a completeness claim). A whole-tree ``show-tree`` pays one
+    native call per node that has children — bounded by the tree's internal-node
+    count, well under the corpus size, and the price of honouring "native wins"
+    without a private GraphQL batch (a batched ``subIssues`` GraphQL pass is a
+    later optimisation, not pinned here — COR-007 speculative-generality
     restraint).
     """
     native = read_native_children(config, parent_number=parent_number)

@@ -129,8 +129,8 @@ Feature (EPIC #343), citing DEC-039. The sites:
 1. **`resolve_children`** (`_lib/containment.py`) — the one read seam, and the one
    corpus fetcher. Native side: one `GET …/sub_issues` per parent
    (`read_native_children`), three-valued — `READ`, a determinate `UNSUPPORTED`
-   (404/410/422), or an indeterminate `UNREADABLE` (missing `gh`, non-zero exit,
-   unparseable payload). Textual side: every issue in the corpus whose body
+   (a non-zero exit whose stderr carries 404/410/422), or an indeterminate
+   `UNREADABLE` (missing `gh`, any other non-zero exit, unparseable payload). Textual side: every issue in the corpus whose body
    first-line parent-ref names the parent, where the corpus is either fetched by the
    seam (`fetch_issue_corpus`, *truncated* when `CORPUS_CEILING` is struck) or
    supplied by the caller *with* a completeness claim — a corpus handed over without
