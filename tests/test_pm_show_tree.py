@@ -326,7 +326,6 @@ def _run_show_tree(st, monkeypatch, capsys, *, total: int, limit: int, fmt: str 
     the corpus would never be short and the label could never fire.
     """
     def fake_gh(args, config, **kwargs):
-        joined = " ".join(args)
         if "pr" in args:
             return subprocess.CompletedProcess(args, 0, stdout="[]", stderr="")
         if "issue" in args and "list" in args:
@@ -353,8 +352,11 @@ def test_a_truncated_render_says_so(st, monkeypatch, capsys) -> None:
     "I stopped looking" — and this is the command people use to check whether a
     container is ready to close, so it must not present a short tree as whole."""
     captured = _run_show_tree(st, monkeypatch, capsys, total=40, limit=10)
+    # stdout as well as stderr: a redirected render must keep the caveat, which
+    # is the case the label exists for. The README and ADR both promise both.
+    assert "[partial]" in captured.out
     assert "[partial]" in captured.err
-    assert "higher --limit" in captured.err
+    assert "higher --limit" in captured.out
 
 
 def test_a_complete_render_carries_no_notice(st, monkeypatch, capsys) -> None:

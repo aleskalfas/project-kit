@@ -20,7 +20,13 @@ Surfaces orphans:
 
 Output formats: text tree (default), JSON, markdown.
 
-Read-only. Membership gate per DEC-021 runs at startup (read mode).
+Read-only EXCEPT `--refresh-children-views`, which rewrites each parent's
+children comment (textual mode) and is gated by the foreign-repo session guard.
+Membership gate per DEC-021 runs at startup (read mode).
+
+Exit 1 covers a membership refusal and a refused write — the refresh declines
+rather than rendering children comments from a corpus the seam could not vouch
+for, since that write outlives the command.
 
 Self-contained via PEP 723; runs via
   uv run --script .pkit/capabilities/project-management/scripts/show-tree.py

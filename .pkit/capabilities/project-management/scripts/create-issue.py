@@ -1011,16 +1011,16 @@ def _refresh_parent_children_view(
     over the only parent-side child list a textual-mode tracker has, and it
     carries no hedge of its own, so a stale view beats a confidently short one.
     """
-    corpus, titles, complete = _fetch_issue_corpus(config)
-    if not complete:
+    corpus, titles, reason = _fetch_issue_corpus(config)
+    if reason is not None:
         # Refuse to publish rather than publish a short list. The comment is the
         # only parent-side view of children in textual mode, and it carries no
         # hedge of its own — a reader takes it as the parent's children, full
         # stop. Skipping leaves the previous render in place, which is stale at
         # worst; overwriting it with a partial one is confidently wrong.
         print(
-            "[warn] children view not refreshed: the issue corpus could not be "
-            "read in full, and a partial list would read as the complete one",
+            f"[warn] children view not refreshed: {reason}, and a partial list "
+            "would read as the complete one",
             file=sys.stderr,
         )
         return
@@ -1035,7 +1035,9 @@ def _refresh_parent_children_view(
     print(f"{prefix} {result.detail}", file=sys.stderr)
 
 
-def _fetch_issue_corpus(config: dict) -> tuple[dict[int, str], dict[int, str], bool]:
+def _fetch_issue_corpus(
+    config: dict,
+) -> tuple[dict[int, str], dict[int, str], str | None]:
     """The issue corpus for the children-view render, and whether it is whole.
 
     Acquisition belongs to the containment seam (ADR-035 §5), which enumerates to
@@ -1045,15 +1047,19 @@ def _fetch_issue_corpus(config: dict) -> tuple[dict[int, str], dict[int, str], b
     parent that genuinely has none, and past 1000 issues a short list read as the
     complete set (#863).
 
-    The third element is that honesty: False when the corpus is missing or
-    truncated, so the caller can refuse to publish rather than overwrite the
-    parent's children comment with a short list under a heading that claims to
-    be complete.
+    The third element is that honesty: None when the corpus is whole, otherwise
+    the fact that made it partial — the query failed, or it was not enumerated to
+    exhaustion. The caller refuses to publish rather than overwrite the parent's
+    children comment with a short list under a heading claiming to be complete,
+    and reports which fact it established rather than a guess at the cause
+    (ADR-035 point 5).
     """
     corpus = containment.fetch_issue_corpus(config, fields="number,body,title")
     if corpus is None:
-        return {}, {}, False
-    return corpus.bodies, corpus.titles, corpus.complete
+        return {}, {}, "the issue list could not be read at all"
+    if not corpus.complete:
+        return corpus.bodies, corpus.titles, "the issue corpus was not read in full"
+    return corpus.bodies, corpus.titles, None
 
 
 def _resolve_repo_name_with_owner_safe() -> str:
