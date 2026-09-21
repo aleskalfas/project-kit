@@ -5,6 +5,7 @@ started: 2026-09-13
 retired: 2026-09-21
 produced:
   - COR-047
+  - DEC-029
 ---
 
 # Agent teams adopter default
