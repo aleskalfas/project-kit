@@ -34,9 +34,10 @@ read-path/sole-constructor seam) and
 sole-constructor): **how** containment resolves on read and constructs on write,
 and the invariants each side must never violate. It is the on-call/maintainer
 reference for the seam realized by the merged #344 (native write) + #345
-(`resolve_children` read seam) ahead of the Track-2 textual-view build (EPIC
-#343); it pins the contract, not the selector schema or the render-on-demand UX
-(those land with the Feature, citing DEC-039).
+(`resolve_children` read seam) + #865 (seam-owned corpus acquisition and the
+completeness verdict), ahead of the Track-2 textual-view build (EPIC #343); it
+pins the contract, not the selector schema or the render-on-demand UX (those land
+with the Feature, citing DEC-039).
 
 **The contract, in one breath:** containment has **one read seam** — a single
 resolution point (`resolve_children` in `_lib/containment.py`) answering "what are
@@ -54,7 +55,7 @@ applied to a third substrate).
 determinacy, one write constructor per substrate.** Four parts, structural only
 together: (i) **every containment consumer resolves children only by asking the
 seam** — `show-tree`, the [project-management:DEC-034](../../../.pkit/capabilities/project-management/decisions/DEC-034-cascade-slot-binding.md)
-closure-fold child-walk, and `close-issue`'s parent-chain walk all route through
+closure-fold child-walk, and `close-issue`'s open-children walk all route through
 `resolve_children`; none re-parses body parent-refs directly, so there is one
 place containment is resolved and one place native-wins is enforced; (ii) **the
 seam unions the two substrates with native-wins dedup** — a child present under
@@ -103,21 +104,21 @@ refined DEC-005 to native-*where-available* and made the textual child-side ref
 the universal spine written in both modes. This ADR pins how that refined rule
 resolves at the seam.
 
-**The realization surface — resolution converged, acquisition did not.** As ADR-026
+**The realization surface — the seam fetches, resolves, and vouches.** As ADR-026
 enumerated its ~26 inline label sites and ADR-031 its four (then six) non-label
 sites, this Context names the containment realization as-built. Unlike those two,
 containment landed seam-first: #344 supplied the native write through one
-construction point (`add_sub_issue_args` / `link_sub_issue`), and #345 supplied the
+construction point (`add_sub_issue_args` / `link_sub_issue`), #345 supplied the
 one read seam (`resolve_children`), converging the three pre-existing
-body-parent-ref walkers onto it. What converged is the *resolution* — each walker
-asks the seam rather than parsing bodies itself. **Corpus acquisition stayed with
-the consumers**, so point 5 of this contract runs ahead of the code: every consumer
-still runs its own `gh issue list` under a ceiling it picks itself (`close-issue`'s
-child-walk reads 500 rows and cannot tell a full page from a truncated one; the
-closure-fold reads the same 500 but does report the ceiling as indeterminate;
-`show-tree` takes the operator's `--limit`, default 500), and the seam's return
-carries a `native_supported` boolean that collapses *unsupported* and *unreadable*
-into one value. The sites below name that gap where it sits.
+body-parent-ref walkers onto it, and #865 moved corpus acquisition and the
+completeness verdict behind that same seam. The seam now fetches the corpus itself
+(`fetch_issue_corpus`, under `CORPUS_CEILING`), reads the native panel three-valued
+(`read_native_children` → `READ` / `UNSUPPORTED` / `UNREADABLE`), and returns
+`complete` + `incomplete_reason` alongside the child set; every gate consumer holds
+on an incomplete answer rather than acting on it. Two consumers still fetch their
+own corpus — both renderers rather than gates, both tracked (`show-tree`, #864;
+`create-issue`'s children-view refresh, #863). The sites below name where each one
+stands against that contract.
 
 As project-kit's own capability-architecture record, concrete site names
 are in scope (per [PRJ-005](../../../.pkit/decisions/project/PRJ-005-adopt-adrs.md));
@@ -125,25 +126,34 @@ the selector schema (`substrate-map.yaml`'s `containment: native | textual` axis
 and the render-on-demand textual-view UX are not — they land with the Track-2
 Feature (EPIC #343), citing DEC-039. The sites:
 
-1. **`resolve_children`** (`_lib/containment.py`) — the one read seam. Native side:
-   one `GET …/sub_issues` per parent (`read_native_child_numbers`), two-valued as
-   built — unsupported (404/410/422) and unreadable (missing `gh`, non-zero exit,
-   unparseable payload) both degrade to textual-only; point 5 requires the
-   three-valued read instead. Textual side: every issue in the caller-supplied corpus
-   whose body first-line parent-ref names the parent — the corpus arrives with no
-   claim about its own completeness. Union with native-wins dedup. **The sole
-   resolver — consumers route through it.**
+1. **`resolve_children`** (`_lib/containment.py`) — the one read seam, and the one
+   corpus fetcher. Native side: one `GET …/sub_issues` per parent
+   (`read_native_children`), three-valued — `READ`, a determinate `UNSUPPORTED`
+   (404/410/422), or an indeterminate `UNREADABLE` (missing `gh`, non-zero exit,
+   unparseable payload). Textual side: every issue in the corpus whose body
+   first-line parent-ref names the parent, where the corpus is either fetched by the
+   seam (`fetch_issue_corpus`, *truncated* when `CORPUS_CEILING` is struck) or
+   supplied by the caller *with* a completeness claim — a corpus handed over without
+   one is not vouched for. Union with native-wins dedup, returned with `complete` /
+   `incomplete_reason`. **The sole resolver — consumers route through it.**
 2. **`show-tree`** — the parent → children tree renderer. **Converged — resolves
-   through `resolve_children`;** fetches its own corpus at the operator's `--limit`
-   (default 500).
+   through `resolve_children`;** still fetches its own corpus at the operator's
+   `--limit` (default 500) and supplies it without a completeness claim, so the seam
+   marks the resolution incomplete. A renderer rather than a gate, which point 5
+   permits to use an incomplete answer; tracked as #864.
 3. **The DEC-034 closure-fold child-walk** (`_lib/lifecycle_predicates.py`) — the
-   cascade membership read. **Converged — resolves through `resolve_children`;**
-   fetches its own corpus at a 500 ceiling and reports a struck ceiling as
-   indeterminate — the only consumer that does.
-4. **`close-issue`** — the parent-chain walk on close. **Converged — resolves
-   through `resolve_children`;** fetches its own corpus at a 500 ceiling with no
-   truncation detection, so a corpus larger than the ceiling yields a short child
-   set indistinguishable from a complete one.
+   cascade membership read. **Converged — resolves *and* acquires through the seam;**
+   `cascade_members` asks `resolve_children` with no corpus of its own and maps an
+   incomplete resolution to indeterminate. Its sibling `parent_has_active_descendant`
+   takes the corpus from `fetch_issue_corpus` and holds on an incomplete one; it
+   filters by the textual ref itself because it needs each row's state, labels and
+   milestone to infer position — which the child set does not carry.
+4. **`close-issue`** — the open-children walk behind the refused-cascade hint
+   (`_find_open_children`). **Converged — resolves *and* acquires through the seam;**
+   it takes the corpus from `fetch_issue_corpus` (it needs each row's state to filter
+   the resolved children to the still-open ones), hands it to `resolve_children`
+   *with* its completeness claim, and refuses rather than reporting a child set when
+   the resolution is incomplete.
 5. **`link_sub_issue` / `add_sub_issue_args`** (`_lib/containment.py`) — the one
    native containment write construction point; `create-issue` calls it on
    `--parent`, any future parent-link mutation reuses it. **The sole constructor of
@@ -189,7 +199,7 @@ string-built inline.
 
 "What are this parent's children, and via which substrate?" is answered by a
 **single read seam** (`resolve_children`), not re-derived per consumer. `show-tree`,
-the DEC-034 closure-fold child-walk, and `close-issue`'s parent-chain walk all
+the DEC-034 closure-fold child-walk, and `close-issue`'s open-children walk all
 resolve through it; none re-parses body parent-refs directly. The seam takes a
 parent number, and either acquires the corpus itself or accepts one the caller
 supplies *with* its completeness claim (point 5); it returns the resolved child set,
@@ -343,8 +353,11 @@ The contract therefore carries a determinacy channel:
   caller holding a corpus already passes it in *together with* its completeness
   claim. One fetcher, one place the ceiling semantics live. Leaving acquisition to
   each consumer puts a separately chosen ceiling at every call site behind a seam
-  that cannot tell one from another — the state the realization is in today (see
-  Context), and the reason this half of the contract is not optional.
+  that cannot tell one from another, and both failure modes then show up at once:
+  a tracker that crossed 507 issues struck the closure fold's own 500-row ceiling
+  and refused every container close, while `close-issue`'s hint fetched the same
+  500 rows with no truncation check and would have served a short child set as a
+  whole one (#846). That is why this half of the contract is not optional.
 
 **The write-mode selector never selects the read strategy.** The seam consults
 *both* substrates on every resolution, regardless of the `containment: native |
@@ -511,8 +524,8 @@ carries the verdict.
 - **One containment read seam** (`resolve_children` in `_lib/containment.py`) that
   `show-tree`, the DEC-034 closure-fold child-walk, and `close-issue` resolve
   through; no consumer re-parses body parent-refs directly. The *resolution* half is
-  realized by the merged **#345**; seam-owned corpus acquisition is contract ahead of
-  code (Context).
+  realized by the merged **#345**, the *acquisition + determinacy* half by **#865**
+  (Context).
 - **Native-wins is a seam invariant over the union of both substrates** — a child
   present both ways is NATIVE, a textual-only child is TEXTUAL, a native child the
   corpus scan missed is still NATIVE; native support is a property of the *read* (an

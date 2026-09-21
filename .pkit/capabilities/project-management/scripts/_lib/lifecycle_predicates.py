@@ -221,9 +221,11 @@ def cascade_members(parent_number: int) -> dict[str, Any]:
     hierarchy child regardless of parent), `membership` would NOT catch it.
     Parent-faithfulness lives here and only here.
 
-    Indeterminate (the engine holds the whole fold fail-closed) on a gh failure
-    or a pagination-ceiling hit — never a confident "no children" on a partial
-    read (that could let an `all` vacuously satisfy via `on_empty`).
+    Indeterminate (the engine holds the whole fold fail-closed) whenever the seam
+    cannot vouch for the child set: a gh failure, a corpus not enumerated to
+    exhaustion, or a native read that failed rather than being unsupported. Never
+    a confident "no children" on a partial read — that could let an `all`
+    vacuously satisfy via `on_empty`, closing a container over a live child.
     """
     capability_root = _capability_root()
     if capability_root is None:
