@@ -64,14 +64,21 @@ code_path_to_doc_mapping:
 workstreams: []
 
 # Milestone categories per [project-management:DEC-016-time-bound-containers].
-# project-kit is feature-driven (no calendar; releases when work lands);
-# Milestones serve as outcome bundles wrapping related EPICs that close
-# together. One category is enough.
+# project-kit is feature-driven (no calendar; releases when work lands), so the
+# primary Milestone is an outcome bundle wrapping related EPICs that close
+# together. A second, date-based `housekeeping` category is the closable rolling
+# parent for standing maintenance/tooling work — paired with workstream:housekeeping
+# for cross-period grouping. A rolling container, never a forever-bucket
+# (DEC-016 "closability is the test").
 milestone_categories:
   milestone:
     title_format: "Milestone {n}: {name}"
     close_trigger_default: content-based
     description: "Outcome bundle of related EPICs; closes when every child EPIC closes. No date."
+  housekeeping:
+    title_format: "Housekeeping {n}: {name}"
+    close_trigger_default: date-based
+    description: "Rolling per-period bucket of maintenance/tooling tasks; date-based, closes each period and rolls open items forward. Cross-period grouping is workstream:housekeeping."
 
 # Review-mode configuration per [project-management:DEC-027-review-modes]
 # and [project-management:DEC-028-agent-as-approver-paths].
