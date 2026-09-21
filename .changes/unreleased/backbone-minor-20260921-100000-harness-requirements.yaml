@@ -2,6 +2,7 @@ component: backbone
 kind: minor
 custom:
   category: Added
+  pr: "868"
 body: >
   The methodology now declares what it requires of the harness that hosts
   it, as observable behaviour in a new core schema pair shipping with its
