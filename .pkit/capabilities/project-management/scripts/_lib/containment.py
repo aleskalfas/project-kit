@@ -421,14 +421,19 @@ class ChildResolution:
     Fields:
       children          — the resolved children, sorted by number, deduped across
                           substrates with native-wins.
-      native_supported  — False when the native sub-issues read returned
-                          unsupported (404/410/422 / missing ``gh``); the result
-                          is then textual-only (graceful degradation, like the
-                          write side). True when the native read succeeded (even
-                          if it returned zero native children). None is not used —
-                          a failed-but-supported read also yields textual-only
-                          with this False (the consumer cannot tell, and need not:
-                          the textual projection is the documented fallback).
+      native_supported  — False only when the instance has **no native
+                          substrate** (404/410/422); the result is then
+                          textual-only, and that is a COMPLETE answer. True when
+                          the endpoint exists — including when the read of it
+                          failed, which is reported through ``complete`` rather
+                          than by pretending the substrate is absent.
+      complete          — False when the seam cannot vouch for the child set: an
+                          unreadable native read, or a corpus that was not
+                          enumerated to exhaustion (or supplied without a
+                          completeness claim). A gating consumer must check this:
+                          an incomplete answer is not a smaller child set, it is
+                          no answer.
+      incomplete_reason — why, in operator-facing words; None when complete.
 
     Convenience accessors keep call sites terse and stop each consumer from
     re-deriving the same projections off ``children``.
@@ -618,8 +623,10 @@ def fetch_issue_corpus(
     if not isinstance(parsed, list):
         return None
     rows = tuple(row for row in parsed if isinstance(row, dict))
-    # Exactly the ceiling means there may be rows we never saw.
-    return IssueCorpus(rows=rows, complete=len(rows) < CORPUS_CEILING)
+    # Measure the ceiling against what `gh` RETURNED, not against what survived
+    # filtering: a dropped non-dict row would otherwise make a struck ceiling
+    # read as complete.
+    return IssueCorpus(rows=rows, complete=len(parsed) < CORPUS_CEILING)
 
 
 def resolve_children(
@@ -689,12 +696,14 @@ def resolve_children(
     native = read_native_children(config, parent_number=parent_number)
     native_supported = native.supported
     native_set = native.numbers
+    fetch_failed = False
 
     if corpus is None:
         fetched = fetch_issue_corpus(config)
         if fetched is None:
             corpus = {}
             corpus_complete = False
+            fetch_failed = True
         else:
             corpus = fetched.bodies
             corpus_complete = fetched.complete
@@ -713,7 +722,9 @@ def resolve_children(
     # truncated textual scan: the rows never fetched are exactly where a
     # textual-only child would be.
     incomplete_reason: str | None = None
-    if native.outcome is NativeReadOutcome.UNREADABLE:
+    if fetch_failed:
+        incomplete_reason = "the issue list could not be read at all (gh failure)"
+    elif native.outcome is NativeReadOutcome.UNREADABLE:
         incomplete_reason = (
             "the native sub-issues read failed (not an unsupported endpoint), so a "
             "native child set may exist and was not seen"

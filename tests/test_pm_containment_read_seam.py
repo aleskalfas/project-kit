@@ -286,7 +286,7 @@ def _stub_gh_list(containment, monkeypatch, *, total: int, child_at: int, parent
     rows than the tracker holds gets a short list, exactly as in production.
     """
     def fake_gh(args, config):
-        if "issue" not in args:  # the native sub-issues read
+        if args[1] == "api":  # the native sub-issues read, not the corpus list
             return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 404")
         limit = int(args[args.index("--limit") + 1])
         rows = [

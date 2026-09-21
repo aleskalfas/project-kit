@@ -37,17 +37,24 @@ def st():
 
 def _link_parents_textual_only(st, issues, monkeypatch) -> None:
     """Run `_link_parents` with the native `…/sub_issues` read stubbed to
-    unsupported (None) → textual-only resolution through the containment seam.
+    unsupported → textual-only resolution through the containment seam.
 
     show-tree no longer parses body parent-refs directly; it routes child
     building through `_lib.containment.resolve_children` (ADR-026). These linkage
     tests assert the TEXTUAL projection, so the native side is stubbed off; the
     native-wins / mixed-mode behaviour is proven in the read-seam test.
     """
+    # Patch the function the resolver ACTUALLY calls. Stubbing the legacy
+    # two-valued wrapper intercepted nothing, so these tests issued real
+    # `gh api …/sub_issues` requests against whatever repo the git remote
+    # resolves to — passing only because show-tree ignores the completeness
+    # verdict and a failed native read degrades to a textual render.
     monkeypatch.setattr(
         st.containment,
-        "read_native_child_numbers",
-        lambda _config, *, parent_number: None,
+        "read_native_children",
+        lambda _config, *, parent_number: st.containment.NativeRead(
+            numbers=set(), outcome=st.containment.NativeReadOutcome.UNSUPPORTED
+        ),
     )
     st._link_parents(issues, {})
 

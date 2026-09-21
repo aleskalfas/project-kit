@@ -546,7 +546,9 @@ def _find_open_children(parent_num: int, config: dict) -> list[int] | None:
     re-parsing body parent-refs. The seam returns ALL children; this helper
     filters to the still-OPEN ones for the "what to close first" hint.
 
-    Empty list = all children closed (or none); None on gh failure.
+    Empty list = all children closed (or none). None means "cannot say" —
+    a gh failure, or a resolution the seam could not vouch for — and the caller
+    holds rather than closing.
     """
     # Acquisition belongs to the seam (ADR-035 §5). This used to fetch 500 rows
     # and compute open children with NO truncation check: past 500 issues a child
