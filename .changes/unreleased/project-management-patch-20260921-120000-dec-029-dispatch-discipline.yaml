@@ -1,0 +1,8 @@
+component: project-management
+kind: patch
+custom:
+  category: Changed
+body: >
+  The project-manager agent's rule to dispatch helpers without a name is now
+  recorded in its own decision record as standing discipline, tied to the
+  harness requirement it protects (#854).
