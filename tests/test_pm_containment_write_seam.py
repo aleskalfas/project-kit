@@ -462,7 +462,7 @@ def test_refresh_creates_when_no_marked_comment(containment, monkeypatch) -> Non
         if "/comments" in " ".join(args) and "--paginate" in args:
             return subprocess.CompletedProcess(args, 0, stdout="[]", stderr="")
         if "--paginate" in args:  # native sub_issues read → unsupported (textual)
-            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 404")
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 410: Gone")
         return subprocess.CompletedProcess(args, 0, stdout="{}", stderr="")
 
     monkeypatch.setattr(containment, "_gh_call", fake_gh)
@@ -491,7 +491,7 @@ def test_refresh_overwrites_existing_marked_comment_not_appends(
                 args, 0, stdout=_comments_payload((55, stale)), stderr=""
             )
         if "--paginate" in args:  # native read → textual fallback
-            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 404")
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 410: Gone")
         return subprocess.CompletedProcess(args, 0, stdout="{}", stderr="")
 
     monkeypatch.setattr(containment, "_gh_call", fake_gh)
@@ -527,7 +527,7 @@ def test_refresh_idempotent_when_body_unchanged(containment, monkeypatch) -> Non
                 args, 0, stdout=_comments_payload((55, current)), stderr=""
             )
         if "--paginate" in args:  # native read → textual fallback
-            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 404")
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 410: Gone")
         raise AssertionError("no write must happen on an unchanged body")
 
     monkeypatch.setattr(containment, "_gh_call", fake_gh)
@@ -548,7 +548,7 @@ def test_refresh_content_matches_resolve_children(containment, monkeypatch) -> N
         if "/comments" in joined and "--paginate" in args:
             return subprocess.CompletedProcess(args, 0, stdout="[]", stderr="")
         if "--paginate" in args:  # native read → textual fallback
-            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 404")
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 410: Gone")
         # the POST create — capture the body argument.
         captured["args"] = args
         return subprocess.CompletedProcess(args, 0, stdout="{}", stderr="")
@@ -574,7 +574,7 @@ def test_refresh_failed_read_is_failed_not_duplicate_post(containment, monkeypat
         if "/comments" in joined and "--paginate" in args:
             return subprocess.CompletedProcess(args, 1, stdout="", stderr="transient")
         if "--paginate" in args:
-            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 404")
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 410: Gone")
         raise AssertionError("must not write when the comment list is unreadable")
 
     monkeypatch.setattr(containment, "_gh_call", fake_gh)
@@ -591,7 +591,7 @@ def test_refresh_write_failure_is_failed_not_raised(containment, monkeypatch) ->
         if "/comments" in joined and "--paginate" in args:
             return subprocess.CompletedProcess(args, 0, stdout="[]", stderr="")
         if "--paginate" in args:
-            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 404")
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 410: Gone")
         return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 500")
 
     monkeypatch.setattr(containment, "_gh_call", fake_gh)
@@ -1020,3 +1020,48 @@ def test_seam_constructs_the_children_comment_write() -> None:
     by name)."""
     src = SEAM_MODULE.read_text(encoding="utf-8")
     assert "/comments" in src and "PATCH" in src
+
+
+# --- the write path attributes a 404 too (#869) ------------------------------
+
+
+def _link_with(containment, monkeypatch, *, stderr: str, repo_visible: bool):
+    """Attempt a native link whose POST fails with `stderr`, probe stubbed."""
+    def fake_gh(args, config):
+        joined = " ".join(args)
+        if ".id" in joined:
+            # The CHILD's database-id lookup always succeeds: failing it too would
+            # abort the link before the classifier ever runs, and the test would
+            # pass on the unfixed code for an unrelated reason.
+            return subprocess.CompletedProcess(args, 0, stdout="999\n", stderr="")
+        if ".number" in joined:
+            # The attribution probe — this is the one `repo_visible` answers.
+            return subprocess.CompletedProcess(
+                args, 0 if repo_visible else 1, stdout="342\n", stderr=""
+            )
+        if "--paginate" in args:
+            return subprocess.CompletedProcess(args, 0, stdout="[]", stderr="")
+        return subprocess.CompletedProcess(args, 1, stdout="", stderr=stderr)
+
+    monkeypatch.setattr(containment, "_gh_call", fake_gh)
+    return containment.link_sub_issue({}, parent_number=342, child_number=344)
+
+
+def test_link_404_with_an_unreachable_repo_is_failed_not_unsupported(
+    containment, monkeypatch
+) -> None:
+    """A broken token must not be announced as "this instance lacks sub-issues".
+
+    The write path's behaviour changes here, deliberately. Reporting UNSUPPORTED
+    is a quiet no-op an operator has no reason to investigate, so a scope-poor
+    token looked like a feature that simply is not available — while the textual
+    ref silently became the only record. FAILED names the fault instead. Both
+    directions route through one classifier so they cannot hold different
+    notions of the same fact about the instance (#869).
+    """
+    result = _link_with(
+        containment, monkeypatch,
+        stderr="gh: HTTP 404: Not Found (https://api.github.com/repos/o/r/issues/342/sub_issues)",
+        repo_visible=False,
+    )
+    assert result.outcome == containment.LinkOutcome.FAILED
