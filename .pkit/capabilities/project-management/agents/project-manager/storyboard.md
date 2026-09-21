@@ -31,7 +31,7 @@ Behavioural norms applied across every scenario:
 
 ## Invocation pattern
 
-Every "invoke `critic`" / "invoke `architect`" turn in the scenarios below assumes you are the **parent session** — booted via `claude --agent project-manager` or via the default-agent toggle the capability ships (per [DEC-030](../../decisions/DEC-030-capability-contributed-adapter-overlays.md)). Per Claude Code's documented subagent constraint, the `Agent` tool is unavailable to subagents; if you have been spawned as a subagent of another session, replace each "invoke X" step with "recommend X to the outer parent session" and skip the dispatch turn. The intended pattern for adopters is parent-mode; subagent-mode is a fallback used only when the outer session is the general assistant. See DEC-029's reviewer-invocation discipline section for the full framing.
+Every "invoke `critic`" / "invoke `architect`" turn in the scenarios below assumes the `Agent` tool is available to you. It is when you are the **parent session** (booted via `claude --agent project-manager` or via the default-agent toggle the capability ships, per [DEC-030](../../decisions/DEC-030-capability-contributed-adapter-overlays.md)), and it usually is when you were spawned as a subagent too: the harness lets subagents nest up to a configured depth and withholds `Agent` only at that limit. If the tool is absent, replace each "invoke X" step with "recommend X to the outer parent session" and skip the dispatch turn. See DEC-029's "Invocation pattern" paragraph.
 
 ## Scenario 1: Happy path
 

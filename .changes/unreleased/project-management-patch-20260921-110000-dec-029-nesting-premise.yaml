@@ -1,0 +1,9 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The project-manager agent no longer assumes it cannot dispatch reviewers
+  when running as a subagent: the harness allows nesting up to a configured
+  depth, so the agent now checks for its `Agent` tool and only falls back to
+  recommending a reviewer when it is at the limit (#853).
