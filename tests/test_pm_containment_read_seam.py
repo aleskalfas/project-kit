@@ -408,3 +408,57 @@ def test_conclusive_statuses_need_no_probe(containment, monkeypatch, status: str
     )
     assert res.native_supported is False
     assert res.complete is True, "a conclusive absence is still a complete answer"
+
+
+# --- the full attribution table (#869) ---------------------------------------
+
+
+def _classify(containment, monkeypatch, *, stderr: str, repo_visible: bool):
+    """Run the failure classifier with the parent-issue probe stubbed."""
+    def fake_gh(args, config):
+        if "sub_issues" in " ".join(args):
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr=stderr)
+        return subprocess.CompletedProcess(
+            args, 0 if repo_visible else 1, stdout="342", stderr=""
+        )
+
+    monkeypatch.setattr(containment, "_gh_call", fake_gh)
+    return containment._classify_native_failure({}, parent_number=342, stderr=stderr)
+
+
+@pytest.mark.parametrize(
+    "stderr, repo_visible, expected, why",
+    [
+        # Conclusive: an invisible repository never yields these.
+        ("gh: HTTP 410: Gone", False, "UNSUPPORTED", "410 needs no probe"),
+        ("gh: HTTP 422: Unprocessable Entity", False, "UNSUPPORTED", "422 needs no probe"),
+        # Ambiguous: same status, opposite meanings, settled by the probe.
+        (
+            "gh: HTTP 404: Not Found (https://api.github.com/repos/o/r/issues/342/sub_issues)",
+            True, "UNSUPPORTED", "404 + parent visible -> the endpoint is absent",
+        ),
+        (
+            "gh: HTTP 404: Not Found (https://api.github.com/repos/o/r/issues/342/sub_issues)",
+            False, "UNREADABLE", "404 + parent unreachable -> a visibility fault",
+        ),
+        # gh's code-less phrasing of the same ambiguity, per the predicate's own note.
+        ("gh: Not Found", True, "UNSUPPORTED", "bare not-found + parent visible"),
+        ("gh: Not Found", False, "UNREADABLE", "bare not-found + parent unreachable"),
+        # Never ambiguous, so never probed.
+        ("gh: HTTP 401: Bad credentials", True, "UNREADABLE", "auth is not absence"),
+        ("error connecting to api.github.com", True, "UNREADABLE", "network is not absence"),
+    ],
+)
+def test_native_failure_attribution(
+    containment, monkeypatch, stderr: str, repo_visible: bool, expected: str, why: str
+) -> None:
+    """Every classification case, pinned against realistic `gh` stderr.
+
+    The two 404 rows are the point: identical text, opposite verdicts, decided by
+    whether the repository can be seen at all. A fine-grained token missing
+    `Issues: read` returns 404 rather than 401 on a private repo, so without the
+    probe that row reads as "this instance has no sub-issues" and a close gate
+    answers from the textual side alone (#869).
+    """
+    outcome = _classify(containment, monkeypatch, stderr=stderr, repo_visible=repo_visible)
+    assert outcome.name == expected, why
