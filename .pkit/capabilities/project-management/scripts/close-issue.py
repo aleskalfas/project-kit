@@ -546,15 +546,17 @@ def _find_open_children(parent_num: int, config: dict) -> list[int] | None:
     re-parsing body parent-refs. The seam returns ALL children; this helper
     filters to the still-OPEN ones for the "what to close first" hint.
 
-    Empty list = all children closed (or none). None means "cannot say" —
-    a gh failure, or a resolution the seam could not vouch for — and the caller
-    holds rather than closing.
+    Diagnostic only: the engine fold is the decision, and the sole caller reaches
+    this after that fold has already refused. Empty list = all children closed
+    (or none). None means "cannot say" — a gh failure, or a resolution the seam
+    could not vouch for — and the hint is omitted rather than shown short.
     """
     # Acquisition belongs to the seam (ADR-035 §5). This used to fetch 500 rows
-    # and compute open children with NO truncation check: past 500 issues a child
-    # in the unseen rows simply did not exist here, and the container closed over
-    # it. That silent fail-open is why the loud indeterminate in the eligibility
-    # predicate was the safer of the two paths (#846).
+    # and compute open children with NO truncation check, so past 500 issues the
+    # hint could omit still-open children — or list none at all — while the user
+    # read it as the full set of what to close. It never closed anything: the
+    # engine fold is the decision and it had already refused (see the call site).
+    # A short list presented as a whole one is still worth refusing over (#846).
     corpus = containment.fetch_issue_corpus(config, fields="number,state,body")
     if corpus is None:
         print("error: gh issue list failed.", file=sys.stderr)

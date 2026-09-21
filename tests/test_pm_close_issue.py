@@ -223,12 +223,13 @@ def test_find_open_children_returns_none_on_gh_failure(ci, monkeypatch) -> None:
 
 
 def test_find_open_children_refuses_a_truncated_corpus(ci, monkeypatch) -> None:
-    """The silent fail-open #846 found, and the reason it was the dangerous path.
+    """A truncated corpus yields no hint rather than a misleadingly short one.
 
-    This function used to fetch 500 rows and compute open children with no
-    truncation check at all, so past 500 issues a still-open child in the unseen
-    rows read as "no open children" and the container closed over it. It must
-    refuse instead — `None` is the fail-closed answer the caller already handles.
+    This is diagnostic output, not a gate: the sole caller runs it after the
+    engine fold has already refused the close, to list what the user must close
+    first. Before #846 it fetched 500 rows with no truncation check, so past 500
+    issues it could omit still-open children — or show none — while reading as
+    the complete set. `None` suppresses the hint, which is the honest answer.
     """
     rows = [{"number": 10, "state": "OPEN", "body": "Feature: #5\n\n## What"}]
     _fake_gh_list(ci, monkeypatch, rows, complete=False)
