@@ -58,7 +58,7 @@ def _link_parents_textual_only(st, issues, monkeypatch) -> None:
             numbers=set(), outcome=st.containment.NativeReadOutcome.UNSUPPORTED
         ),
     )
-    st._link_parents(issues, {})
+    st._link_parents(issues, {}, corpus_complete=True)
 
 
 @pytest.fixture
@@ -367,3 +367,79 @@ def test_json_carries_the_same_caveat(st, monkeypatch, capsys) -> None:
     """A machine consumer gets the verdict too, not just the human reader."""
     captured = _run_show_tree(st, monkeypatch, capsys, total=40, limit=10, fmt="json")
     assert json.loads(captured.out)["complete"] is False
+
+
+def test_refresh_children_views_refuses_on_a_bounded_corpus(st, monkeypatch, capsys) -> None:
+    """The refresh WRITES, so a bounded corpus must stop it — not merely label it.
+
+    The refresh has two triggers and only `create-issue`'s was gated at first;
+    this one ran before the completeness check and would full-overwrite each
+    parent's children comment from a truncated view. Worse than the read-side
+    defect, because each comment is replaced wholesale and the damage outlives
+    the command.
+    """
+    wrote: list = []
+
+    def fake_gh(args, config, **kwargs):
+        if "pr" in args:
+            return subprocess.CompletedProcess(args, 0, stdout="[]", stderr="")
+        if "issue" in args and "list" in args:
+            n = int(args[args.index("--limit") + 1])
+            rows = [
+                {"number": i, "title": f"t{i}", "body": "## What", "state": "OPEN",
+                 "labels": [], "milestone": None}
+                for i in range(1, 41)
+            ]
+            return subprocess.CompletedProcess(args, 0, stdout=json.dumps(rows[:n]), stderr="")
+        wrote.append(args)
+        return subprocess.CompletedProcess(args, 0, stdout="[]", stderr="")
+
+    monkeypatch.setattr(st, "gh_run", fake_gh)
+    monkeypatch.setattr(st.containment, "_gh_call", fake_gh)
+    monkeypatch.setattr(st.session_guard, "enforce", lambda **_kw: True)
+    monkeypatch.setattr(
+        sys, "argv",
+        ["show-tree", "--format", "text", "--limit", "10", "--refresh-children-views"],
+    )
+    rc = st.main()
+    captured = capsys.readouterr()
+
+    assert rc == 1, "a refused write must not exit success"
+    assert "[refused]" in captured.err
+    assert not any("comment" in " ".join(map(str, c)) for c in wrote), "nothing may be written"
+
+
+def test_an_unreadable_native_panel_labels_the_render(st, monkeypatch, capsys) -> None:
+    """A complete corpus is not sufficient: the seam must vouch per parent too.
+
+    The corpus here is whole — no limit is struck — but the native sub-issues
+    read fails in a way that cannot be attributed to an absent endpoint, so a
+    parent may have children nobody saw. Driving the label off `corpus.complete`
+    alone rendered that as a complete tree, which is the same "no other children"
+    vs "I could not see them" confusion the label exists to prevent.
+    """
+    def fake_gh(args, config, **kwargs):
+        joined = " ".join(args)
+        if "pr" in args:
+            return subprocess.CompletedProcess(args, 0, stdout="[]", stderr="")
+        if "issue" in args and "list" in args:
+            # #2 names #1 as its parent, so #1 is a candidate parent and the
+            # seam is actually asked about it. Without that nothing resolves and
+            # the test would pass for want of a question rather than a verdict.
+            rows = [
+                {"number": 1, "title": "t1", "body": "## What", "state": "OPEN",
+                 "labels": [], "milestone": None},
+                {"number": 2, "title": "t2", "body": "EPIC: #1\n\n## What",
+                 "state": "OPEN", "labels": [], "milestone": None},
+            ]
+            return subprocess.CompletedProcess(args, 0, stdout=json.dumps(rows), stderr="")
+        if "sub_issues" in joined:
+            # Reachable endpoint, unreadable answer -> the seam cannot vouch.
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr="error connecting")
+        return subprocess.CompletedProcess(args, 0, stdout="[]", stderr="")
+
+    monkeypatch.setattr(st, "gh_run", fake_gh)
+    monkeypatch.setattr(st.containment, "_gh_call", fake_gh)
+    monkeypatch.setattr(sys, "argv", ["show-tree", "--format", "json", "--limit", "500"])
+    st.main()
+    assert json.loads(capsys.readouterr().out)["complete"] is False

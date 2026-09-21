@@ -117,8 +117,9 @@ def main() -> int:
         type=int,
         default=500,
         help=(
-            "Max issues to fetch from gh (default: 500). Increase for "
-            "large repos."
+            "Max issues to fetch from gh (default: 500). A render that strikes "
+            "this limit is marked partial, and --refresh-children-views refuses "
+            "rather than writing from a bounded view. Increase for large repos."
         ),
     )
     parser.add_argument(
@@ -190,7 +191,7 @@ def main() -> int:
         print("error: gh issue list failed.", file=sys.stderr)
         return 2
     issues_raw = list(corpus.rows)
-    partial = not corpus.complete
+    corpus_truncated = not corpus.complete
     prs_raw = _gh_list_prs(state=args.state, limit=args.limit, config=config)
     if prs_raw is None:
         return 2
@@ -201,7 +202,13 @@ def main() -> int:
     # Build parent relationships through the containment read-seam (native-where-
     # present / textual-otherwise / native-wins per DEC-005) — show-tree does NOT
     # parse body parent-refs directly (ADR-026 one-read-seam discipline).
-    _link_parents(issues, config)
+    incomplete_parents = _link_parents(issues, config, corpus_complete=corpus.complete)
+    # Two independent reasons the view may be short, and both must label it: the
+    # corpus was bounded, or the seam could not vouch for some parent's child set
+    # (an unreadable native panel). Either one makes "no other children" and
+    # "I could not see them" indistinguishable, which is what the label exists
+    # to prevent.
+    partial = corpus_truncated or bool(incomplete_parents)
 
     orphans = _detect_orphans(issues, prs)
     tree = _build_tree(issues)
@@ -215,6 +222,17 @@ def main() -> int:
     # foreign-repo session guard; a no-op in native mode (the writer's mode gate).
     if args.refresh_children_views:
         if not session_guard.enforce(override=args.allow_foreign_repo):
+            return 1
+        if partial:
+            # Refuse rather than overwrite. Each comment is replaced wholesale,
+            # so rendering from a bounded corpus would drop real children from a
+            # view that carries no hedge — and unlike a bounded tree render, the
+            # damage persists after the command exits.
+            print(
+                f"[refused] children views not refreshed: {_PARTIAL_NOTE.format(limit=args.limit)}. "
+                "Re-run with a --limit that covers the tracker.",
+                file=sys.stderr,
+            )
             return 1
         _refresh_children_views(issues, capability_root, config)
 
@@ -240,7 +258,12 @@ def main() -> int:
     else:
         _print_text(issues, prs, orphans, tree)
         if partial:
-            print(f"\n[partial] {_PARTIAL_NOTE.format(limit=args.limit)}", file=sys.stderr)
+            # stdout, so a redirected or piped render keeps the caveat — losing it
+            # there is precisely the case this label exists for. Repeated on
+            # stderr so it is also visible when stdout is being consumed.
+            note = f"\n[partial] {_PARTIAL_NOTE.format(limit=args.limit)}"
+            print(note)
+            print(note, file=sys.stderr)
 
     return 0
 
@@ -297,9 +320,17 @@ def _parse_prs(raw: list) -> dict[int, PR]:
 
 
 
-def _link_parents(issues: dict[int, Issue], config: dict) -> None:
+def _link_parents(
+    issues: dict[int, Issue], config: dict, *, corpus_complete: bool
+) -> list[int]:
     """Populate parent_number + children + child_substrate via the containment
     read-seam (``_lib.containment.resolve_children``).
+
+    Returns the parents whose child set the seam could not vouch for, so the
+    caller can label the render. The corpus's own completeness is passed IN
+    rather than assumed: a caller that supplies a corpus without claiming it is
+    whole gets an incomplete verdict for every parent, which would make the
+    label meaningless by always firing.
 
     For each candidate parent the seam resolves its children native-where-present
     / textual-otherwise with native-wins (DEC-005); show-tree never parses body
@@ -319,6 +350,7 @@ def _link_parents(issues: dict[int, Issue], config: dict) -> None:
     call per corpus issue.)
     """
     corpus = {num: issue.body for num, issue in issues.items()}
+    incomplete_parents: list[int] = []
     textual_parents = {
         parent
         for body in corpus.values()
@@ -333,14 +365,22 @@ def _link_parents(issues: dict[int, Issue], config: dict) -> None:
         if not is_candidate:
             continue
         resolution = containment.resolve_children(
-            config, parent_number=num, corpus=corpus
+            config, parent_number=num, corpus=corpus, corpus_complete=corpus_complete
         )
+        # A per-parent verdict can be incomplete even when the corpus is whole:
+        # an UNREADABLE native panel for THIS parent means children may exist
+        # unseen. Uncollected, the render would look complete while one parent's
+        # child list was silently short — the defect this command is being
+        # taught to admit to.
+        if not resolution.complete:
+            incomplete_parents.append(num)
         for child in resolution.children:
             if child.number not in issues:
                 continue  # a native child outside the fetched corpus — skip render
             issues[child.number].parent_number = num
             issue.children.append(child.number)
             issue.child_substrate[child.number] = child.substrate.value
+    return incomplete_parents
 
 
 def _refresh_children_views(

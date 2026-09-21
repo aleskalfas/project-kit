@@ -1006,9 +1006,10 @@ def _refresh_parent_children_view(
 
     Failure-posture-neutral: every outcome is reported as a one-line stderr note
     and NONE fails the create (the child-side textual ref is the spine). A corpus
-    fetch that fails degrades to a corpus carrying just this parent + nothing else,
-    so the render still runs (the textual side simply finds no children there) —
-    but in practice the new child is in the corpus, so the view reflects it.
+    that could not be read in full does NOT degrade to a partial render — the
+    publish is skipped, leaving the previous comment in place. This is a write
+    over the only parent-side child list a textual-mode tracker has, and it
+    carries no hedge of its own, so a stale view beats a confidently short one.
     """
     corpus, titles, complete = _fetch_issue_corpus(config)
     if not complete:
@@ -1045,8 +1046,9 @@ def _fetch_issue_corpus(config: dict) -> tuple[dict[int, str], dict[int, str], b
     complete set (#863).
 
     The third element is that honesty: False when the corpus is missing or
-    truncated, so the caller can say the view is partial rather than publish a
-    short list under a heading that claims to be the parent's children.
+    truncated, so the caller can refuse to publish rather than overwrite the
+    parent's children comment with a short list under a heading that claims to
+    be complete.
     """
     corpus = containment.fetch_issue_corpus(config, fields="number,body,title")
     if corpus is None:
