@@ -443,3 +443,26 @@ def test_an_unreadable_native_panel_labels_the_render(st, monkeypatch, capsys) -
     monkeypatch.setattr(sys, "argv", ["show-tree", "--format", "json", "--limit", "500"])
     st.main()
     assert json.loads(capsys.readouterr().out)["complete"] is False
+
+
+def test_a_truncated_view_reports_truncation_not_its_consequence(st) -> None:
+    """When both causes hold, name the root one.
+
+    A bounded corpus is handed to the seam as an unvouched one, so every parent
+    then reports incomplete *as a consequence*. Reporting that instead told the
+    operator "the corpus was read in full" while it plainly had been cut at the
+    limit, and pointed them away from the remedy that would actually work.
+    """
+    both = st._partial_note(limit=5, truncated=True, incomplete_parents=[1, 2, 3])
+    assert "first 5 issues" in both
+    assert "read in full" not in both
+
+    only_unvouched = st._partial_note(limit=500, truncated=False, incomplete_parents=[7])
+    assert "#7" in only_unvouched
+    assert "higher --limit will not help" in only_unvouched
+
+    # Unreachable by construction, but a fallback that invents a cause is the one
+    # thing this function exists to prevent.
+    neither = st._partial_note(limit=500, truncated=False, incomplete_parents=[])
+    assert "not established" in neither
+    assert "--limit" not in neither

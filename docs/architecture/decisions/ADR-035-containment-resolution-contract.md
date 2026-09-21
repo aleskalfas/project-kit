@@ -159,15 +159,22 @@ Feature (EPIC #343), citing DEC-039. The sites:
 2. **`show-tree`** — the parent → children tree renderer. **Converged — resolves
    *and* acquires through the seam;** it asks `fetch_issue_corpus` at the operator's
    `--limit` (default 500) and `--state` — the view controls the seam admits for a
-   renderer — and the verdict on *that ask* is what the render reports: a tree built
-   from a struck limit is marked `[partial]` in text (on stdout *and* stderr, so a
-   redirected render keeps the caveat), as a `> **Partial view**` note in markdown,
-   and as `"complete": false` in JSON, while a complete render carries no mark at
-   all — which is what makes the mark informative. A renderer rather than a gate, so
-   point 5 licenses it to use an incomplete answer *labelled*; its own write trigger
-   does not inherit that licence (site 6). One residual narrowness: the label is
-   driven by the corpus verdict rather than by each parent's `ChildResolution`, so a
-   native panel that was *unreadable* for one parent does not yet reach it.
+   renderer — and the verdict on *that ask* is one of the two facts the render
+   reports: a tree built from a struck limit is marked `[partial]` in text (on
+   stdout *and* stderr, so a redirected render keeps the caveat), as a
+   `> **Partial view**` note in markdown, and as `"complete": false` with an
+   `incomplete_reason` beside it in JSON, while a complete render carries no mark
+   at all — which is what makes the mark informative. A renderer rather than a gate,
+   so point 5 licenses it to use an incomplete answer *labelled*; its own write
+   trigger does not inherit that licence (site 6). The second fact is each parent's
+   own `ChildResolution`: `_link_parents` forwards the corpus's completeness claim
+   into the seam and returns the parents it could not vouch for, so an *unreadable*
+   native panel marks the render partial even when the corpus was whole. The note
+   names whichever of the two it established — truncation first when both hold,
+   since a bounded corpus reaches the seam as an unvouched one and every parent then
+   reports incomplete as a *consequence*, so naming the consequence would tell the
+   operator the corpus had been read in full — and asserts nothing when neither is
+   established.
 3. **The DEC-034 closure-fold child-walk** (`_lib/lifecycle_predicates.py`) — the
    cascade membership read. **Converged — resolves *and* acquires through the seam;**
    `cascade_members` asks `resolve_children` with no corpus of its own and maps an
@@ -198,9 +205,12 @@ Feature (EPIC #343), citing DEC-039. The sites:
    previous render standing, `show-tree` exits non-zero without writing — and the
    same refusal covers a corpus that could not be read at all, which would otherwise
    render an *empty* children list indistinguishable from a parent that genuinely has
-   none. The refusal sits at each trigger rather than inside the writer, which
-   renders from whatever corpus it is handed; a third trigger must carry the check
-   itself (point 5's write posture).
+   none. Each refusal reports the fact the seam established and prescribes no
+   remedy that presumes another — the message is the operator's only route to
+   unblocking the write, so a misattributed cause there costs more than on a render
+   (point 5's non-gate bullet). The refusal sits at each trigger rather than inside
+   the writer, which renders from whatever corpus it is handed; a third trigger must
+   carry the check itself (point 5's write posture).
 
 The architecturally-significant pins, each carrying an alternative DEC-039 already
 rejected or this ADR holds against:
@@ -465,6 +475,24 @@ The contract therefore carries a determinacy channel:
   covers a corpus that could not be read at all for the same reason: rendering that
   as an empty children list is indistinguishable from a parent that genuinely has
   none, which is the silently-short failure in its purest form.
+  **Whichever of the two answers a consumer gives, the account it prints is bounded
+  by what the seam established.** A partial mark, or a refusal's stated reason, may
+  say *less* than the seam knows — "the view may be short; the reason was not
+  established" is an honest signal — but it must never assert a cause the seam did
+  not establish. A prescribed remedy is that assertion in working clothes: *re-run
+  with a higher limit* says the corpus was bounded, so printing it when the corpus
+  was read in full and a native panel was merely unreadable sends the operator to
+  raise the limit, meet the same signal again, and learn nothing, while the access
+  fault that actually hid the children goes unnamed. Distinguishing causes at all
+  sits *below* this contract — a consumer with one possible cause has nothing to
+  distinguish, and nothing here obliges one to name a cause. The contract binds only
+  the other direction: whatever a signal does name must be what the seam
+  established. The prohibition binds the refusing consumer hardest: a
+  blocked write's message is the operator's only route to unblocking it. This is
+  the *unsupported* verdict's shape one layer out — the cheap wrong answer converts
+  an indeterminacy into a confident diagnosis, and is wrong in exactly the case the
+  signal exists for while reading correctly on every well-credentialed repo, which
+  is why it is pinned here rather than left to each site's wording.
 - **The seam owns acquisition, not only resolution.** Completeness is a property of
   *how the corpus was fetched*, so the fetch belongs behind the seam: the seam
   supplies the corpus read (paginate to exhaustion, under a *default* ceiling set far
@@ -717,8 +745,12 @@ mechanism is pinned here and not left as an implementation detail.
   consumer that only renders may proceed provided it marks the output partial in
   every format (and leaves a complete render unmarked, so the mark means something);
   a consumer that writes the child set somewhere durable refuses and leaves the
-  previous state standing. `show-tree` labels (`[partial]` on stdout and stderr,
-  a `> **Partial view**` note in markdown, `"complete": false` in JSON); the textual
+  previous state standing. Either way the wording is bounded by what the seam
+  established: it may name no cause, but never one the seam did not establish, and
+  a prescribed remedy (*raise the limit*) asserts one. `show-tree` labels
+  (`[partial]` on stdout and stderr, a `> **Partial view**` note in markdown,
+  `"complete": false` with an `incomplete_reason` beside it in JSON, so a machine
+  consumer is not sent back to inferring the cause either); the textual
   children-view refresh refuses at both of its triggers, including on a corpus that
   could not be read at all — rendering that as an empty children list is
   indistinguishable from a parent with none.

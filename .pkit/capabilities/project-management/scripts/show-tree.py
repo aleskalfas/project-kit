@@ -229,8 +229,8 @@ def main() -> int:
             # view that carries no hedge — and unlike a bounded tree render, the
             # damage persists after the command exits.
             print(
-                f"[refused] children views not refreshed: {_PARTIAL_NOTE.format(limit=args.limit)}. "
-                "Re-run with a --limit that covers the tracker.",
+                "[refused] children views not refreshed: "
+                f"{_partial_note(limit=args.limit, truncated=corpus_truncated, incomplete_parents=incomplete_parents)}",
                 file=sys.stderr,
             )
             return 1
@@ -247,21 +247,32 @@ def main() -> int:
             ],
             "orphans": orphans,
             "tree_roots": [n for n in tree if issues[n].parent_number is None],
-            # Machine-readable consumers need the same caveat the humans get.
+            # Machine-readable consumers need the same caveat the humans get —
+            # including WHY, since a bare False sends them back to inferring the
+            # cause, which is the habit the seam pays an extra call to avoid.
             "complete": not partial,
+            "incomplete_reason": (
+                _partial_note(
+                    limit=args.limit,
+                    truncated=corpus_truncated,
+                    incomplete_parents=incomplete_parents,
+                )
+                if partial
+                else None
+            ),
         }
         print(json.dumps(out, indent=2))
     elif args.format == "markdown":
         _print_markdown(issues, prs, orphans, tree)
         if partial:
-            print(f"\n> **Partial view** — {_PARTIAL_NOTE.format(limit=args.limit)}")
+            print(f"\n> **Partial view** — {_partial_note(limit=args.limit, truncated=corpus_truncated, incomplete_parents=incomplete_parents)}")
     else:
         _print_text(issues, prs, orphans, tree)
         if partial:
             # stdout, so a redirected or piped render keeps the caveat — losing it
             # there is precisely the case this label exists for. Repeated on
             # stderr so it is also visible when stdout is being consumed.
-            note = f"\n[partial] {_PARTIAL_NOTE.format(limit=args.limit)}"
+            note = f"\n[partial] {_partial_note(limit=args.limit, truncated=corpus_truncated, incomplete_parents=incomplete_parents)}"
             print(note)
             print(note, file=sys.stderr)
 
@@ -638,10 +649,44 @@ def _md_branch(
 # whole point: a bounded render cannot tell "this parent has no other children"
 # from "I stopped looking", and this command is how people check whether a
 # container is ready to close.
-_PARTIAL_NOTE = (
+_PARTIAL_TRUNCATED = (
     "the tree was built from the first {limit} issues, so a parent may have "
     "children not shown here — re-run with a higher --limit for a complete view"
 )
+
+_PARTIAL_UNVOUCHED = (
+    "the child set could not be vouched for on {count} parent(s) ({parents}), so "
+    "children may exist that are not shown — the corpus was read in full, so a "
+    "higher --limit will not help; retry, and check access to the sub-issues API"
+)
+
+
+def _partial_note(
+    *, limit: int, truncated: bool, incomplete_parents: list[int]
+) -> str:
+    """Name the fact that made the view partial, not merely that it is partial.
+
+    Two causes, two remedies. A single note told every operator to raise
+    `--limit`, which is the wrong advice when the corpus was already complete and
+    the seam simply could not vouch for a parent — they would raise the limit,
+    see the same warning, and have no way to tell why.
+
+    Truncation is reported FIRST because it is the root cause when both hold: a
+    bounded corpus is passed to the seam as an unvouched one, so every parent
+    then reports incomplete as a consequence. Naming the consequence would tell
+    the operator the corpus was read in full when it plainly was not.
+    """
+    if truncated:
+        return _PARTIAL_TRUNCATED.format(limit=limit)
+    if incomplete_parents:
+        shown = ", ".join(f"#{n}" for n in incomplete_parents[:5])
+        if len(incomplete_parents) > 5:
+            shown += ", …"
+        return _PARTIAL_UNVOUCHED.format(count=len(incomplete_parents), parents=shown)
+    # Unreachable while the caller only asks when something is partial — but a
+    # fallback that invents a cause is exactly what this function exists to
+    # prevent, so it says only what is known.
+    return "the view may be short; the reason was not established"
 
 
 def _gh_list_prs(*, state: str, limit: int, config: dict) -> list | None:

@@ -656,6 +656,9 @@ class IssueCorpus:
 
     @property
     def titles(self) -> dict[int, str]:
+        """Issue titles, for renderers. Requires ``title`` in the fetch's
+        ``fields`` — the default set omits it, and without it every value is the
+        empty string with nothing to say why."""
         out: dict[int, str] = {}
         for row in self.rows:
             number = row.get("number")
