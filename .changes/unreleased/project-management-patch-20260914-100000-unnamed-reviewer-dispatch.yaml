@@ -1,0 +1,25 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The `project-manager` agent now dispatches reviewer helpers **without** a
+  `name`, closing a silent review-truncation defect (#851). Under Claude
+  Code's experimental agent-teams feature, passing a `name` to the `Agent`
+  tool promotes the spawn from a fire-once subagent to a persistent teammate,
+  and a teammate's result reaches the lead **hard-truncated at 4064
+  characters** (terminated by `[result truncated — ask the agent for the rest
+  via SendMessage]`). The remainder is reachable only via `SendMessage`, which
+  the agent's tool grant does not include. Because reviewer output routinely
+  runs 8–12 KB, more than half of every `critic` / `architect` review was
+  being discarded — and the surviving prefix reads as a complete answer, so
+  the loss was invisible. Measured on three named teammates in one real
+  session, each capped at exactly 4064 characters. The agent body states the
+  discipline as a **capability check rather than a remembered convention**:
+  if the `Agent` tool exposes a `name` parameter, teams is enabled and the
+  hazard is live; if it does not, naming is not expressible — and the correct
+  action (dispatch unnamed) is identical either way. No settings are written
+  and no harness toggle is authored. This is **standing discipline**, not an
+  interim measure: a harness-level check can detect that agent teams is
+  enabled, but it cannot stop a dispatcher from naming a spawn — only the
+  acting agent at the moment of dispatch can.
