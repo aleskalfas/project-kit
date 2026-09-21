@@ -1,0 +1,45 @@
+# Harness requirements — the properties the methodology requires of the
+# harness that hosts it (COR-047).
+#
+# Each entry states one requirement as observable behaviour any harness could
+# satisfy (never as one harness's key, flag, or tool), names where its truth
+# is visible (its observation point), and cites the defect or design
+# dependency that admitted it. Adapters answer these entries in their own
+# support declarations; a requirement with no declaration for the harness in
+# use, or whose observation point a verification pass cannot reach, resolves
+# indeterminate — never satisfied. Admission is demand-driven: an entry needs
+# evidence to enter, and a transient one names its retirement condition.
+
+schema_version: 1
+
+
+# Entries. Lookup by id.
+#
+# Per-entry fields (declared in the companion's $defs.entry.properties):
+#   title:                short name
+#   behaviour:            the observable behaviour, harness-neutral
+#   observation_point:    out-of-session | interposed-runtime | in-session
+#   evidence:             the defect or design dependency that admitted it
+#   retirement_condition: (optional) when a transient requirement retires
+requirements:
+  delegated-result-complete:
+    title: A delegated helper's full result reaches the agent that delegated to it
+    behaviour: >-
+      When an agent delegates work to a helper through the harness, the helper's
+      complete result is delivered back to the delegating agent — uncut, and
+      without any further exchange being needed to retrieve the remainder.
+    observation_point: in-session
+    evidence: >-
+      Measured in a live session on 2026-09-12: with the harness's experimental
+      multi-agent feature enabled, three helpers spawned with a name each
+      returned a result hard-truncated at exactly 4064 characters, the remainder
+      retrievable only through a messaging tool the delegating agent did not
+      hold. Reviewer output routinely runs 8–12 KB, so more than half of each
+      review was silently lost while the surviving prefix read as complete. The
+      methodology's own reviewer dispatch depends on this behaviour; its interim
+      mitigation is to dispatch helpers unnamed, recorded as standing discipline
+      for the project-management agent.
+    retirement_condition: >-
+      The harness delivers a helper's full result to the delegating agent
+      regardless of how the helper was spawned, or removes the delivery mode
+      that truncates it — verified by repeating the measurement.

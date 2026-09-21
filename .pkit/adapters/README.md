@@ -24,6 +24,16 @@ Per COR-005's bundle/adapter pattern: each adapter is an alternative implementat
 
 - **`claude-code/`** — the Claude Code adapter. Ships permissions baseline (settings/), a deploy script for skills (deploy-skills.sh), and the runtime conventions Claude Code expects.
 
+## Harness requirements
+
+The methodology depends on properties of the harness that hosts it — behaviour it cannot set, only require. Those requirements are declared once, as data, in `.pkit/schemas/harness-requirements.yaml` (companion `harness-requirements.schema.json`), governed by [COR-047](../decisions/core/COR-047-harness-requirement-declaration.md). Each entry states one requirement as **observable behaviour any harness could satisfy** — never as one harness's key, flag, or tool — names its **observation point** (where its truth is visible: outside a session, at the harness's own runtime hook points, or only to an agent inside a session), and cites the **evidence** that admitted it. Admission is demand-driven: an entry needs a demonstrated defect or a concrete design dependency, and a transient one names its retirement condition.
+
+**What an adapter owes.** Each adapter answers the requirements for its own harness with a *support declaration*: a graded answer per requirement — the grading must distinguish "not achievable on this harness at all" from "achievable at a cost" — optionally bounded to a range of harness versions, and never widened automatically. The grade labels and the observation-point set are shared vocabulary owned by this area, so answers stay comparable across harnesses. An adapter that declares nothing owes nothing to exist: **silence resolves indeterminate, never satisfied**, so an incomplete declaration set never masquerades as a passing one.
+
+**What the report says.** A verification pass resolves every requirement to `satisfied`, `unsatisfied`, or `indeterminate`, carrying the adapter's declared grade and whether the answer was `observed` or `computed`. A requirement whose observation point the pass cannot reach resolves `indeterminate` and names what could resolve it — a check that quietly passes what it did not examine is worse than no check. The layer **detects**; it does not alter the harness's configuration or duplicate a harness-owned value into methodology state. It runs on demand and at lifecycle boundaries, never on a per-operation path.
+
+**Status.** The requirement set ships with its first entry (`delegated-result-complete`). The support-declaration shape, each adapter's answers, and the on-demand report are not yet shipped; until an adapter declares, every requirement resolves `indeterminate` for it — which is the honest state, not a defect.
+
 ## Adding a new harness
 
 1. Create `.pkit/adapters/<new-harness-name>/`.
