@@ -329,21 +329,74 @@ def test_title_prefix_type_unsupported_skips_entirely(
     assert "not served via kit title-prefixes" in results[0].detail
 
 
-def test_title_prefix_greenfield_still_fails_on_unknown_prefix(
+def test_title_prefix_greenfield_warns_on_unknown_prefix(
     pc, axis_labels, monkeypatch
 ) -> None:
-    """Greenfield parity: with NO map, an unrecognised prefix is still a hard
-    fail (the original behaviour is unchanged)."""
+    """Greenfield: an unrecognised prefix is a non-blocking `warn`, never a
+    `fail`. The check is a drift detector, not a prerequisite — an
+    already-mis-titled issue cannot make the next mutation fail mid-way — the
+    failure mode DEC-017 frames the hard gate around. Refusing on it held every
+    filing operation shut for no safety gain."""
     _stub_issue_list(pc, monkeypatch, [{"number": 9, "title": "[Wat] mystery"}])
     results = pc._check_title_prefix_alignment(_LIVE_CAP_ROOT, None)
-    assert any(r.status == "fail" for r in results)
+    assert any(r.status == "warn" and "#9 [Wat]" in r.detail for r in results)
+    assert not any(r.status == "fail" for r in results)
 
 
-def test_title_prefix_greenfield_still_fails_on_no_prefix(
+def test_title_prefix_greenfield_warns_on_no_prefix(
     pc, axis_labels, monkeypatch
 ) -> None:
-    """Greenfield parity: with NO map, a no-prefix issue is still a hard fail."""
+    """Greenfield: a no-prefix issue is a non-blocking `warn`, never a `fail`
+    (same reasoning as the unknown-prefix case)."""
     _stub_issue_list(pc, monkeypatch, [_NO_PREFIX_ISSUE])
     results = pc._check_title_prefix_alignment(_LIVE_CAP_ROOT, None)
-    assert any(r.status == "fail" for r in results)
+    assert any(r.status == "warn" for r in results)
+    assert not any(r.status == "fail" for r in results)
+
+
+def test_title_prefix_excludes_report_channel_issues(
+    pc, axis_labels, monkeypatch
+) -> None:
+    """Issues filed by the kit's own report command carry a `report:<kind>`
+    label and their own prefix vocabulary (`[CR]` / `[Feedback]` / `[Bug]`).
+    They are not work items: the check skips them from the sample and says
+    so, rather than counting the kit's own output as drift. (`[Bug]` reports
+    only ever passed by coincidence of sharing the pm `bug` kind's prefix.)"""
+    _stub_issue_list(pc, monkeypatch, [
+        {"number": 797, "title": "[CR] widen the thing",
+         "labels": [{"name": "report:change-request"}]},
+        {"number": 798, "title": "[Feedback] nice",
+         "labels": [{"name": "report:feedback"}]},
+        {"number": 12, "title": "[Task] real work item", "labels": []},
+    ])
+    results = pc._check_title_prefix_alignment(_LIVE_CAP_ROOT, None)
+    assert not any(r.status in ("fail", "warn") for r in results)
+    ok = [r for r in results if r.status == "ok"]
+    assert len(ok) == 1
+    assert "all 1 sampled" in ok[0].detail
+    assert "2 report-channel issue(s) excluded" in ok[0].detail
+
+
+def test_title_prefix_all_report_channel_skips(pc, axis_labels, monkeypatch) -> None:
+    """When every sampled issue is report-channel there is nothing to validate;
+    the check says so as a `skip` rather than claiming "all 0 sampled ... ok"."""
+    _stub_issue_list(pc, monkeypatch, [
+        {"number": 1, "title": "[CR] x", "labels": [{"name": "report:change-request"}]},
+    ])
+    results = pc._check_title_prefix_alignment(_LIVE_CAP_ROOT, None)
+    assert len(results) == 1 and results[0].status == "skip"
+    assert "1 report-channel issue(s) excluded" in results[0].detail
+
+
+def test_title_prefix_present_map_carries_exclusion_note(pc, axis_labels, monkeypatch) -> None:
+    """Under a present map the findings degrade to `skip`; the report-channel
+    exclusion count must still be stated there, not only on the greenfield
+    `warn` / `ok` paths (PR #858 review)."""
+    _stub_issue_list(pc, monkeypatch, [
+        {"number": 9, "title": "[Wat] mystery", "labels": []},
+        {"number": 797, "title": "[CR] widen", "labels": [{"name": "report:change-request"}]},
+    ])
+    results = pc._check_title_prefix_alignment(_LIVE_CAP_ROOT, _auj_map(axis_labels))
+    assert all(r.status != "fail" for r in results)
+    assert any("1 report-channel issue(s) excluded" in r.detail for r in results)
 

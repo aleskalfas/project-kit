@@ -311,10 +311,13 @@ def _run_all_checks(capability_root: Path) -> list[CheckResult]:
         results.extend(_check_review_block(config, capability_root))
 
     # 13. Title-prefix alignment (sample of open issues cross-validated
-    #     against issue-types.yaml + classification.yaml prefixes). Under a
-    #     present map the `type` axis may be bound to the adopter's own title
-    #     prefixes (or unsupported/derived) — so the kit's prefix vocabulary is
-    #     not the right yardstick and a mismatch must degrade, never refuse.
+    #     against issue-types.yaml + classification.yaml prefixes). This is a
+    #     DRIFT DETECTOR, not a prerequisite: a mis-titled existing issue cannot
+    #     make the next mutation fail mid-way (the failure mode DEC-017 frames
+    #     pre-check around), so it never returns `fail` — greenfield `warn`s, a
+    #     present map degrades to `skip`. Issues filed by the kit's own report
+    #     channel (`report:*` label) carry their own prefix vocabulary and are
+    #     excluded from the sample rather than counted as drift.
     results.extend(_check_title_prefix_alignment(capability_root, substrate_map))
 
     return results
@@ -1927,9 +1930,21 @@ def _check_title_prefix_alignment(
     of recognised prefixes, then samples up to _TITLE_PREFIX_SAMPLE_LIMIT
     open issues and flags any whose title prefix is unrecognised.
 
-    Greenfield (``substrate_map is None``) — unchanged: the kit owns the title
-    format, so an unrecognised or absent prefix is a hard ``fail`` (the original
-    behaviour). This is the only mode in which this check returns ``fail``.
+    This check never returns ``fail``. It is a drift detector — "has something
+    been filed outside the title convention?" — and DEC-017 frames the hard gate
+    around prerequisites whose absence makes an operation fail mid-way and
+    leave partial state. An already-mis-titled issue cannot do that to the
+    next mutation, so refusing on it held the door shut for no safety gain.
+
+    Greenfield (``substrate_map is None``) — the kit owns the title format, so
+    an unrecognised or absent prefix is reported as a ``warn`` (non-blocking,
+    exit code unchanged, rendered distinctly from ``ok``).
+
+    Report-channel exclusion (both modes) — issues carrying a ``report:*`` label
+    were filed by the kit's own report command, which stamps its own prefixes
+    (``[Bug]`` / ``[Feedback]`` / ``[CR]``) and namespaces its labels precisely
+    so they never collide with a project's work-item vocabulary. They are not
+    work items and are skipped from the sample, not counted as drift.
 
     Present map — the `type` axis may be bound to the ADOPTER's own title
     prefixes, derived, unsupported, or absent. The kit's prefix vocabulary is no
@@ -2030,7 +2045,7 @@ def _check_title_prefix_alignment(
             "gh", "issue", "list",
             "--state", "open",
             "--limit", str(_TITLE_PREFIX_SAMPLE_LIMIT),
-            "--json", "number,title",
+            "--json", "number,title,labels",
         ],
         capture_output=True,
         text=True,
@@ -2059,9 +2074,20 @@ def _check_title_prefix_alignment(
     bracket_re = _re.compile(r"^\[([^\]]+)\] ")
     mismatches: list[str] = []
     no_prefix: list[int] = []
+    report_channel: list[int] = []
     for issue in issues:
         title = str(issue.get("title", ""))
         number = issue.get("number", "?")
+        # Skip the kit's own report-channel issues (`report:<kind>` label):
+        # they carry the report command's prefix vocabulary, not the
+        # work-item one, and are not this check's subject.
+        label_names = {
+            str(lbl.get("name", "")) if isinstance(lbl, dict) else str(lbl)
+            for lbl in (issue.get("labels") or [])
+        }
+        if any(name.startswith("report:") for name in label_names):
+            report_channel.append(number)
+            continue
         m = bracket_re.match(title)
         if not m:
             no_prefix.append(number)
@@ -2071,12 +2097,23 @@ def _check_title_prefix_alignment(
             mismatches.append(f"#{number} [{prefix}]")
 
     results: list[CheckResult] = []
-    sampled = len(issues)
+    sampled = len(issues) - len(report_channel)
+    excluded_note = (
+        f" ({len(report_channel)} report-channel issue(s) excluded)"
+        if report_channel else ""
+    )
 
-    # Under a present map this whole check is advisory: a mismatch or a
-    # no-prefix issue degrades to a `skip` finding, never a `fail`. Greenfield
-    # keeps the original hard `fail`. `known_prefixes` here is the adopter's own
-    # declared prefixes when advisory, the kit set otherwise.
+    if sampled == 0:
+        return [CheckResult(
+            "title-prefix alignment",
+            "skip",
+            f"every sampled open issue is report-channel{excluded_note}; nothing to validate",
+        )]
+
+    # This check never `fail`s (see docstring). Under a present map a mismatch
+    # or a no-prefix issue degrades to a `skip` finding; greenfield reports a
+    # non-blocking `warn`. `known_prefixes` here is the adopter's own declared
+    # prefixes when advisory, the kit set otherwise.
     if mismatches:
         if advisory:
             results.append(CheckResult(
@@ -2086,19 +2123,21 @@ def _check_title_prefix_alignment(
                 f"not in the adopter's declared substrate-map prefixes "
                 f"({', '.join(mismatches)}) — advisory under substrate-map.yaml, "
                 f"not a refusal. Adopter prefixes: "
-                + ", ".join(f"[{p}]" for p in sorted(known_prefixes)) + ".",
+                + ", ".join(f"[{p}]" for p in sorted(known_prefixes)) + "."
+                + excluded_note,
             ))
         else:
             results.append(CheckResult(
                 "title-prefix alignment",
-                "fail",
+                "warn",
                 (
                     f"{len(mismatches)} issue(s) in sample of {sampled} have unrecognised "
-                    f"prefix: {', '.join(mismatches)}"
+                    f"prefix: {', '.join(mismatches)}{excluded_note}"
                 ),
                 remediation=(
-                    "Update the issue titles or the prefix vocabulary in "
-                    "issue-types.yaml / classification.yaml. Known prefixes: "
+                    "Advisory — does not block. Update the issue titles or the prefix "
+                    "vocabulary in issue-types.yaml / classification.yaml. Known "
+                    "prefixes: "
                     + ", ".join(f"[{p}]" for p in sorted(known_prefixes)) + "."
                 ),
             ))
@@ -2107,7 +2146,8 @@ def _check_title_prefix_alignment(
             "title-prefix alignment",
             "ok",
             f"all {sampled} sampled open issue(s) have recognised prefixes"
-            + (" (validated against adopter substrate-map prefixes)" if advisory else ""),
+            + (" (validated against adopter substrate-map prefixes)" if advisory else "")
+            + excluded_note,
         ))
 
     if no_prefix:
@@ -2119,21 +2159,21 @@ def _check_title_prefix_alignment(
                 f"({', '.join(f'#{n}' for n in no_prefix[:10])}"
                 + (" ..." if len(no_prefix) > 10 else "")
                 + ") — advisory under substrate-map.yaml; a brownfield tracker "
-                "need not bracket-prefix every issue.",
+                "need not bracket-prefix every issue." + excluded_note,
             ))
         else:
             results.append(CheckResult(
                 "title-prefix: issues without bracket prefix",
-                "fail",
+                "warn",
                 (
                     f"{len(no_prefix)} issue(s) in sample have no `[Prefix] ` title: "
                     f"{', '.join(f'#{n}' for n in no_prefix[:10])}"
                     + (" ..." if len(no_prefix) > 10 else "")
                 ),
                 remediation=(
-                    "Issue titles must start with a `[Prefix] ` bracket per the "
-                    "methodology's title format rules. Use edit-issue or the "
-                    "project-manager to fix the titles."
+                    "Advisory — does not block. Issue titles should start with a "
+                    "`[Prefix] ` bracket per the methodology's title format rules. "
+                    "Use edit-issue or the project-manager to fix the titles."
                 ),
             ))
 
