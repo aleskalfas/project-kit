@@ -631,6 +631,248 @@ def test_planned_changes_recover_target_and_seam_inputs(apply_mod, fixture_plan)
     assert "not on" in blocked.blocked_reason
 
 
+# ----------------------------------------------------------------------------
+# #826: two intents of one kind in a plan must not collapse onto the first.
+#
+# The saved plan carries two lists — `intents` and `proposed` — and records the
+# link between them only implicitly. Keying the reconstruction on `kind` alone
+# made the second intent's changes recover the FIRST intent's target: a plan that
+# reviewed correctly wrote the wrong value, which is the propose-and-cite ceremony
+# failing at the one thing it promises. These pin the real key.
+# ----------------------------------------------------------------------------
+
+
+def _two_field_intents() -> list[dict]:
+    """Two `set-board-field` hooks — one seeding Priority, one Workstream. The
+    shape from the issue, and a legal adopter configuration."""
+    return [
+        {
+            "kind": "set-board-field",
+            "citation": "hook entry 0 (kind=set-board-field) on after_create_issue",
+            "field_id": "FIELD_PRIORITY",
+            "single_select_option_id": "OPT_P2",
+            "text_value": None,
+            "milestone_title": None,
+        },
+        {
+            "kind": "set-board-field",
+            "citation": "hook entry 1 (kind=set-board-field) on after_create_issue",
+            "field_id": "FIELD_WORKSTREAM",
+            "single_select_option_id": "OPT_SPYRE",
+            "text_value": None,
+            "milestone_title": None,
+        },
+    ]
+
+
+def _field_entry(number: int, item_id: str, field_id: str, option_id: str) -> dict:
+    return {
+        "issue_number": number,
+        "issue_title": f"issue {number}",
+        "kind": "set-board-field",
+        "citation": "hook entry",
+        "argv": [
+            "gh", "project", "item-edit", "--id", item_id,
+            "--field-id", field_id, "--project-id", "PROJ_NODE",
+            "--single-select-option-id", option_id,
+        ],
+        "observed": None,
+        "prediction": "would-write",
+        "blocked_reason": "",
+    }
+
+
+def test_two_field_intents_each_recover_their_own_target(apply_mod) -> None:
+    """The defect, directly: the Workstream change used to recover Priority's
+    option id, because both entries keyed as `("set-board-field", "")`."""
+    plan = _plan(
+        intents=_two_field_intents(),
+        proposed=[
+            _field_entry(1, "ITEM_1", "FIELD_PRIORITY", "OPT_P2"),
+            _field_entry(1, "ITEM_1", "FIELD_WORKSTREAM", "OPT_SPYRE"),
+        ],
+    )
+    changes = apply_mod.planned_changes_from_plan(plan)
+    by_field = {c.field_id: c for c in changes}
+    assert len(changes) == 2
+    assert by_field["FIELD_PRIORITY"].target == "OPT_P2"
+    assert by_field["FIELD_PRIORITY"].single_select_option_id == "OPT_P2"
+    assert by_field["FIELD_WORKSTREAM"].target == "OPT_SPYRE"
+    assert by_field["FIELD_WORKSTREAM"].single_select_option_id == "OPT_SPYRE"
+
+
+def test_two_field_intents_drive_their_own_write_argv(apply_mod, monkeypatch) -> None:
+    """The same defect one layer down, where it does the damage: assert the argv
+    each intent's change actually WRITES through the seam. A target recovered from
+    the wrong intent becomes a wrong value on the adopter's board."""
+    plan = _plan(
+        intents=_two_field_intents(),
+        proposed=[
+            _field_entry(1, "ITEM_1", "FIELD_PRIORITY", "OPT_P2"),
+            _field_entry(1, "ITEM_1", "FIELD_WORKSTREAM", "OPT_SPYRE"),
+        ],
+    )
+    written: list[list[str]] = []
+
+    def _record(config, **kw):
+        argv = apply_mod.substrate_writes.field_value_args(**kw)
+        written.append(argv)
+        return apply_mod.substrate_writes.SubstrateWriteResult(
+            ok=True, executed=True, argv=tuple(argv), detail="ok",
+        )
+
+    monkeypatch.setattr(apply_mod.substrate_writes, "write_field_value", _record)
+    changes = apply_mod.planned_changes_from_plan(plan)
+    records = apply_mod.apply_plan(
+        changes, {}, read_fresh=lambda _c: apply_mod.FreshState(current=None),
+    )
+    assert [r.outcome for r in records] == [apply_mod.ApplyOutcome.APPLIED] * 2
+    assert written == [
+        ["gh", "project", "item-edit", "--id", "ITEM_1",
+         "--field-id", "FIELD_PRIORITY", "--project-id", "PROJ_NODE",
+         "--single-select-option-id", "OPT_P2"],
+        ["gh", "project", "item-edit", "--id", "ITEM_1",
+         "--field-id", "FIELD_WORKSTREAM", "--project-id", "PROJ_NODE",
+         "--single-select-option-id", "OPT_SPYRE"],
+    ]
+
+
+def test_two_milestone_intents_each_recover_their_own_title(apply_mod) -> None:
+    """The same shape on the other hook-driven kind."""
+    plan = _plan(
+        intents=[
+            dict(MILESTONE_INTENT, milestone_title="Milestone 1"),
+            dict(MILESTONE_INTENT, milestone_title="Milestone 2"),
+        ],
+        proposed=[
+            {"issue_number": 1, "kind": "assign-milestone", "observed": None,
+             "argv": ["gh", "issue", "edit", "1", "--milestone", "Milestone 2"]},
+            {"issue_number": 2, "kind": "assign-milestone", "observed": None,
+             "argv": ["gh", "issue", "edit", "2", "--milestone", "Milestone 1"]},
+        ],
+    )
+    changes = apply_mod.planned_changes_from_plan(plan)
+    assert [c.target for c in changes] == ["Milestone 2", "Milestone 1"]
+
+
+def test_two_label_axes_still_each_recover_their_own_label(apply_mod) -> None:
+    """The case the (kind, axis) key already handled correctly — pinned so the
+    real key does not regress it on its way in."""
+    plan = _plan(
+        intents=[
+            {"kind": "set-axis-label", "axis": "priority", "label_value": "P0",
+             "carrier_labels": ["P0", "P1"]},
+            {"kind": "set-axis-label", "axis": "workstream", "label_value": "ws-spyre",
+             "carrier_labels": ["ws-spyre"]},
+        ],
+        proposed=[
+            {"issue_number": 1, "kind": "set-axis-label", "axis": "workstream",
+             "observed": None,
+             "argv": ["gh", "issue", "edit", "1", "--add-label", "ws-spyre"]},
+            {"issue_number": 2, "kind": "set-axis-label", "axis": "priority",
+             "observed": None,
+             "argv": ["gh", "issue", "edit", "2", "--add-label", "P0"]},
+        ],
+    )
+    changes = apply_mod.planned_changes_from_plan(plan)
+    assert [(c.axis, c.target) for c in changes] == [
+        ("workstream", "ws-spyre"), ("priority", "P0"),
+    ]
+
+
+def test_a_plan_saved_before_the_fix_reconstructs_correctly(apply_mod, bf) -> None:
+    """The saved-plan compatibility decision, pinned: a plan saved before the fix
+    APPLIES CORRECTLY rather than being refused.
+
+    Nothing was added to the plan document to make the key work — it is derived
+    from the intent's own declared parameters and from the exact argv the report
+    constructed from them, both of which every schema_version-1 plan already
+    carries. So the repair reaches plans already on disk, which matters because the
+    0.55.0 migration tells adopters to run back-fill right now; refusing them would
+    cost a re-plan and buy nothing.
+
+    The plan here is built by the REPORT half, so this also checks that
+    `_intent_key` and `_entry_key` are two spellings of one rule rather than two
+    rules that happen to agree on hand-written fixtures.
+    """
+    intents = [
+        bf.BackFillIntent(
+            kind="set-board-field", citation="hook entry 0",
+            field_id="FIELD_PRIORITY", single_select_option_id="OPT_P2",
+        ),
+        bf.BackFillIntent(
+            kind="set-board-field", citation="hook entry 1",
+            field_id="FIELD_WORKSTREAM", single_select_option_id="OPT_SPYRE",
+        ),
+        bf.BackFillIntent(
+            kind="assign-milestone", citation="hook entry 2",
+            milestone_title="Milestone 1",
+        ),
+    ]
+    issues = [{"number": 1, "title": "one", "milestone": None}]
+    proposed = bf._build_proposed_changes(
+        intents, issues, {(TARGET_REPO, 1): "ITEM_1"}, "PROJ_NODE", TARGET_REPO,
+    )
+    plan = bf._plan_document(
+        intents, proposed, bf.GateResult(passed=True, checks=[]), truncated=False,
+    )
+    changes = apply_mod.planned_changes_from_plan(plan)
+    assert [(c.field_id, c.target) for c in changes] == [
+        ("FIELD_PRIORITY", "OPT_P2"),
+        ("FIELD_WORKSTREAM", "OPT_SPYRE"),
+        (None, "Milestone 1"),
+    ]
+
+
+def test_an_entry_no_intent_declares_is_blocked_not_guessed(apply_mod) -> None:
+    """Tightening the key means an entry can now match nothing. It must BLOCK, not
+    apply against a `None` target — a milestone write with no target clears the
+    issue's milestone, and a label write with no target adds an empty label. Every
+    other malformed-plan arm in this parser refuses the same way."""
+    plan = _plan(
+        intents=[dict(MILESTONE_INTENT, milestone_title="Milestone 1")],
+        proposed=[
+            {"issue_number": 1, "kind": "assign-milestone", "observed": "Milestone 9",
+             "argv": ["gh", "issue", "edit", "1", "--milestone", "Milestone 9"]},
+        ],
+    )
+    changes = apply_mod.planned_changes_from_plan(plan)
+    assert len(changes) == 1
+    assert changes[0].argv is None
+    assert "no intent" in changes[0].blocked_reason
+    records = apply_mod.apply_plan(
+        changes, {}, read_fresh=lambda _c: apply_mod.FreshState(current="Milestone 9"),
+    )
+    assert records[0].outcome is apply_mod.ApplyOutcome.BLOCKED
+
+
+def test_the_report_phase_associates_by_construction_not_by_key(bf) -> None:
+    """#826 asks whether the report phase shares the keying. It does not — it holds
+    the intent object while it builds each change, so the link is direct and cannot
+    collapse. The divergence is therefore not report-versus-apply behaviour; it is
+    that the saved document drops a link the report never needed to name, which is
+    what the key reconstructs. Pinned so a future refactor of the report half does
+    not quietly introduce the same collapse there.
+    """
+    intents = [
+        bf.BackFillIntent(kind="set-board-field", citation="c0",
+                          field_id="FIELD_A", single_select_option_id="OPT_A"),
+        bf.BackFillIntent(kind="set-board-field", citation="c1",
+                          field_id="FIELD_B", single_select_option_id="OPT_B"),
+    ]
+    proposed = bf._build_proposed_changes(
+        intents, [{"number": 1, "title": "one"}],
+        {(TARGET_REPO, 1): "ITEM_1"}, "PROJ_NODE", TARGET_REPO,
+    )
+    def _flag(argv, flag):
+        return argv[argv.index(flag) + 1]
+
+    assert [_flag(c.argv, "--field-id") for c in proposed] == ["FIELD_A", "FIELD_B"]
+    assert [
+        _flag(c.argv, "--single-select-option-id") for c in proposed
+    ] == ["OPT_A", "OPT_B"]
+
+
 # ============================================================================
 # End-to-end through back-fill.py main(): --apply, --emit-script, confirmation
 # ============================================================================
@@ -1338,11 +1580,15 @@ def _extract_emit_jq(apply_mod, change) -> str:
     """Pull the exact --jq program out of the emitted field fragment, so the jq
     test exercises the REAL expression the script ships (not a copy that can drift)."""
     fragment = apply_mod._emit_one(change)
-    # The fragment embeds `--jq <quoted-program>`; recover it via shell tokenisation.
+    # The fragment embeds `--jq <quoted-program>` inside a `current=$(...)` command
+    # substitution, which now sits in an `if !` condition — take the substitution's
+    # body and tokenise that, so the extractor does not depend on the guard's shape.
     reread_line = next(
-        line for line in fragment.split("\n") if line.startswith("current=$(")
+        line for line in fragment.split("\n") if "current=$(" in line
     )
-    tokens = shlex.split(reread_line)
+    inner = reread_line.split("current=$(", 1)[1]
+    inner = inner[: inner.rindex(")")]
+    tokens = shlex.split(inner)
     return tokens[tokens.index("--jq") + 1]
 
 
@@ -1362,19 +1608,20 @@ def _extract_emit_jq(apply_mod, change) -> str:
         pytest.param(
             {"data": {"node": {"fieldValues": {"nodes": []}}}}, "", id="empty-unset",
         ),
-        pytest.param({"data": {"node": None}}, "", id="node-null-degrades-to-empty"),
         pytest.param(
-            {"data": {"node": {"fieldValues": None}}}, "",
-            id="fieldValues-null-degrades-to-empty",
+            {"data": {"node": {"fieldValues": {"nodes": [
+                {"optionId": "OPT_OTHER", "field": {"id": "OTHER_FIELD"}}]}}}},
+            "", id="another-fields-value-is-still-unset-for-ours",
         ),
     ],
 )
-def test_emit_field_jq_program_is_valid_over_graphql_shapes(
+def test_emit_field_jq_program_confirms_a_value_over_graphql_shapes(
     apply_mod, payload, expected
 ) -> None:
-    """The embedded --jq program is valid jq over every GraphQL shape: it extracts
-    the matching field's optionId/text, and degrades a transient null node to empty
-    (treated as unset) WITHOUT a jq error that would abort the script."""
+    """The embedded --jq program is valid jq over every CONFIRMING GraphQL shape: it
+    extracts the matching field's optionId/text, and yields the empty string — a
+    genuine "unset", which the guard still writes over — when the response
+    positively says the field has no value."""
     import subprocess as sp
 
     change = _field_planned(apply_mod, 9, target="OPT_TARGET", observed=None)
@@ -1384,6 +1631,42 @@ def test_emit_field_jq_program_is_valid_over_graphql_shapes(
         input=json.dumps(payload), capture_output=True, text=True, check=True,
     )
     assert result.stdout.strip() == expected
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        pytest.param(
+            {"errors": [{"message": "API rate limit exceeded"}], "data": None},
+            id="graphql-errors-payload",
+        ),
+        pytest.param({"data": {"node": None}}, id="node-null"),
+        pytest.param({"data": {"node": {"fieldValues": None}}}, id="fieldValues-null"),
+        pytest.param({"data": None}, id="data-null"),
+        pytest.param({}, id="empty-body"),
+    ],
+)
+def test_emit_field_jq_program_fails_on_an_unconfirmed_read(apply_mod, payload) -> None:
+    """#816: every NON-confirming shape must make the jq program EXIT NON-ZERO.
+
+    This is the whole mechanism of the fail-closed guard. GitHub's GraphQL returns
+    HTTP 200 with a populated `errors` array and a null `data` on a rate limit, so
+    the process exit code alone cannot see the failure — jq has to raise, or the
+    shell's `if ! current=$(...)` has nothing to test. Mirrors `--apply`'s
+    `_read_current_field_value`, which fails closed on exactly these shapes.
+    """
+    import subprocess as sp
+
+    change = _field_planned(apply_mod, 9, target="OPT_TARGET", observed=None)
+    jq_program = _extract_emit_jq(apply_mod, change)
+    result = sp.run(
+        ["jq", "-r", jq_program],
+        input=json.dumps(payload), capture_output=True, text=True, check=False,
+    )
+    assert result.returncode != 0, (
+        f"an unconfirmed read must not exit 0 with a value the guard would trust: "
+        f"{result.stdout!r}"
+    )
 
 
 def test_emit_header_does_not_falsely_claim_field_recheck(apply_mod) -> None:
@@ -1399,24 +1682,274 @@ def test_emit_header_does_not_falsely_claim_field_recheck(apply_mod) -> None:
     assert "board-field write re-reads" in script or "board-field write re-reads" in script.replace("\n", " ")
 
 
-def test_emit_script_is_honest_about_fail_open_on_failed_reread(apply_mod) -> None:
-    """Honesty-in-the-emitted-artifact: the emit-script guards FAIL OPEN — a re-read
-    that FAILS reads empty and the write RUNS (it can't see a concurrent edit it
-    failed to read). The emitted text must say so, and must point at
-    `pm back-fill --apply` as the drift-safe (fail-closed) path. Without this line
-    the header only advertised the protected (successful-read) case."""
+def test_emit_script_states_the_fail_closed_posture(apply_mod) -> None:
+    """Honesty-in-the-emitted-artifact (#816). The guards now fail CLOSED, and the
+    header has to say what that means per substrate: the board-field guard stops the
+    run on a read it could not confirm, the other two skip that one write. The old
+    "guard fails OPEN / the write RUNS" admission must be gone — not because it was
+    dishonest, but because it is no longer true."""
     change = _field_planned(apply_mod, 1, target="OPT_TARGET", observed=None)
     script = apply_mod.render_emit_script([change])
     flat = script.replace("\n", " ")
-    # The header states the fail-open posture and names the failed re-read.
-    assert "FAILS OPEN" in flat
-    assert "fail" in flat.lower() and "re-read" in flat.lower()
-    assert "the write RUNS" in flat
-    # It points at --apply as the drift-safe path that fails closed.
+    # The retracted admission is gone from both the header and the per-change guard.
+    assert "FAILS OPEN" not in flat
+    assert "fails OPEN" not in flat
+    assert "the write RUNS" not in flat
+    # The posture is stated, and the board-field guard carries it inline.
     assert "fails CLOSED" in flat
+    assert "A *FAILED* RE-READ NEVER WRITES" in flat
+    assert "guard fails CLOSED" in flat
+    # --apply is still named as the stronger path (it re-validates against `observed`).
     assert "pm back-fill --apply" in flat
-    # The per-change field guard also carries the honest fail-open note inline.
-    assert "guard fails OPEN" in flat
+
+
+# ----------------------------------------------------------------------------
+# #816: the emitted guards fail CLOSED — executed, not asserted on as text.
+#
+# The defect these pin: the two older guards re-read with `... || echo ""`, which
+# collapsed a FAILED read and a genuinely-empty field into one empty string. The
+# empty branch is the branch that WRITES, so a rate limit, a network drop, or a
+# token without the `project` scope silently overwrote a value the script never
+# read. Quoting and exit-code behaviour is the class of bug a string assertion
+# agrees with and a shell disagrees with, so every case below RUNS the fragment
+# against a stub `gh`.
+# ----------------------------------------------------------------------------
+
+
+def _stub_gh(bin_dir: Path, body: str) -> None:
+    """Install a stub `gh` on PATH whose behaviour `body` defines."""
+    import stat
+
+    bin_dir.mkdir(parents=True, exist_ok=True)
+    fake = bin_dir / "gh"
+    fake.write_text("#!/usr/bin/env bash\n" + body, encoding="utf-8")
+    fake.chmod(fake.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+
+
+def _graphql_stub_body(payload: str, *, exit_code: int = 0, write_marker: Path) -> str:
+    """A stub `gh` that emulates the one behaviour of `gh api graphql` this guard
+    depends on: the response body is piped through the `--jq` program, and the
+    program's failure is the command's failure.
+
+    Emulating it (rather than echoing a bare value) is what lets a GraphQL `errors`
+    payload — HTTP 200, exit 0, `data: null` — be tested at all: real `gh` also
+    detects that shape itself, so a stub that only mimicked gh's exit code would
+    prove the guard survives the easy half of the failure.
+    """
+    return (
+        'if [ "$1" = "api" ]; then\n'
+        "  prog=\"\"\n"
+        "  while [ $# -gt 0 ]; do\n"
+        '    if [ "$1" = "--jq" ]; then prog="$2"; fi\n'
+        "    shift\n"
+        "  done\n"
+        f"  printf '%s' {shlex.quote(payload)} | jq -r \"$prog\" || exit 5\n"
+        f"  exit {exit_code}\n"
+        "fi\n"
+        'if [ "$1" = "project" ] && [ "$2" = "item-edit" ]; then\n'
+        f"  touch {shlex.quote(str(write_marker))}\n"
+        "  exit 0\n"
+        "fi\n"
+        'if [ "$1" = "issue" ] && [ "$2" = "edit" ]; then\n'
+        f"  touch {shlex.quote(str(write_marker))}\n"
+        "  exit 0\n"
+        "fi\n"
+        "exit 0\n"
+    )
+
+
+def _run_emitted(fragment: str, bin_dir: Path):
+    """Run one emitted fragment under the emitted script's own `set -euo pipefail`."""
+    import os
+    import subprocess as sp
+
+    env = dict(os.environ, PATH=f"{bin_dir}:{os.environ['PATH']}")
+    return sp.run(
+        ["bash", "-c", "set -euo pipefail\n" + fragment + "\n"],
+        env=env, capture_output=True, text=True, check=False,
+    )
+
+
+def test_field_guard_errors_and_writes_nothing_when_the_board_read_fails(
+    apply_mod, tmp_path
+) -> None:
+    """#816's core case: `gh` itself fails (rate limit / network / missing scope).
+
+    Before the fix the read collapsed to "" and the write RAN. Now the guard reports
+    an error and stops — and, critically, the item-edit does not run.
+    """
+    change = _field_planned(apply_mod, 9, target="OPT_TARGET", observed=None)
+    marker = tmp_path / "write-ran"
+    _stub_gh(tmp_path / "bin", (
+        'if [ "$1" = "api" ]; then echo "gh: HTTP 403" >&2; exit 1; fi\n'
+        f"touch {shlex.quote(str(marker))}\n"
+        "exit 0\n"
+    ))
+    result = _run_emitted(apply_mod._emit_one(change), tmp_path / "bin")
+    assert not marker.exists(), "an unreadable board must not produce a write"
+    assert result.returncode != 0, "an unreadable board stops the run"
+    assert "ERROR #9" in result.stderr
+
+
+def test_field_guard_names_the_issue_the_field_and_the_likely_causes(
+    apply_mod, tmp_path
+) -> None:
+    """The error has to be actionable: which issue, which field, and what to check."""
+    change = _field_planned(apply_mod, 9, target="OPT_TARGET", observed=None)
+    _stub_gh(tmp_path / "bin", 'exit 1\n')
+    err = _run_emitted(apply_mod._emit_one(change), tmp_path / "bin").stderr
+    assert "#9" in err
+    assert "FIELD_WS" in err
+    assert "rate limit" in err
+    assert "network" in err
+    assert "project" in err and "scope" in err
+
+
+def test_field_guard_writes_nothing_on_a_graphql_errors_payload(
+    apply_mod, tmp_path
+) -> None:
+    """The regression test #816 asks for by name.
+
+    GitHub returns HTTP 200 with a populated `errors` array and a null `data` on a
+    rate limit, so the read "succeeds" by exit code while confirming nothing. The
+    old jq degraded that to "" — the write branch. It must now not write.
+    """
+    change = _field_planned(apply_mod, 9, target="OPT_TARGET", observed=None)
+    marker = tmp_path / "write-ran"
+    _stub_gh(tmp_path / "bin", _graphql_stub_body(
+        json.dumps({"errors": [{"message": "API rate limit exceeded"}], "data": None}),
+        exit_code=0, write_marker=marker,
+    ))
+    result = _run_emitted(apply_mod._emit_one(change), tmp_path / "bin")
+    assert not marker.exists(), "a GraphQL errors payload must not produce a write"
+    assert result.returncode != 0
+    assert "ERROR #9" in result.stderr
+
+
+def test_field_guard_still_writes_a_confirmed_unset(apply_mod, tmp_path) -> None:
+    """The complement, and the line the fix must not cross: a board that ANSWERS
+    "this field has no value" is a genuine missing value, and the back-fill exists
+    to fill it. Only a board that will not answer is an error."""
+    change = _field_planned(apply_mod, 9, target="OPT_TARGET", observed=None)
+    marker = tmp_path / "write-ran"
+    _stub_gh(tmp_path / "bin", _graphql_stub_body(
+        json.dumps({"data": {"node": {"fieldValues": {"nodes": []}}}}),
+        write_marker=marker,
+    ))
+    result = _run_emitted(apply_mod._emit_one(change), tmp_path / "bin")
+    assert result.returncode == 0, result.stderr
+    assert marker.exists(), "a CONFIRMED unset field must still be written"
+
+
+def test_field_guard_still_skips_a_confirmed_drift(apply_mod, tmp_path) -> None:
+    """The drift skip must survive the fail-closed rework: a confirmed OTHER value
+    is a concurrent human edit, skipped and reported, and the run continues."""
+    change = _field_planned(apply_mod, 9, target="OPT_TARGET", observed=None)
+    marker = tmp_path / "write-ran"
+    _stub_gh(tmp_path / "bin", _graphql_stub_body(
+        json.dumps({"data": {"node": {"fieldValues": {"nodes": [
+            {"optionId": "OPT_HUMAN", "field": {"id": "FIELD_WS"}}]}}}}),
+        write_marker=marker,
+    ))
+    result = _run_emitted(apply_mod._emit_one(change), tmp_path / "bin")
+    assert result.returncode == 0, result.stderr
+    assert not marker.exists()
+    assert "DRIFT" in result.stderr
+
+
+def test_milestone_guard_writes_nothing_when_the_re_read_fails(
+    apply_mod, tmp_path
+) -> None:
+    """The second fail-open fragment. `gh issue view` fails; before the fix the
+    milestone read as "" — which differs from the target — and the write ran,
+    overwriting whatever the failed read could not see."""
+    change = _milestone_planned(apply_mod, 5, target="Milestone 1", observed=None)
+    marker = tmp_path / "write-ran"
+    _stub_gh(tmp_path / "bin", (
+        'if [ "$1" = "issue" ] && [ "$2" = "view" ]; then exit 1; fi\n'
+        f"touch {shlex.quote(str(marker))}\n"
+        "exit 0\n"
+    ))
+    result = _run_emitted(apply_mod._emit_one(change), tmp_path / "bin")
+    assert not marker.exists(), "an unreadable milestone must not produce a write"
+    assert "failing closed" in result.stderr
+
+
+def test_milestone_guard_skips_rather_than_stopping_the_run(
+    apply_mod, tmp_path
+) -> None:
+    """The scope line the ruling draws: the ERROR is the board's, not every
+    substrate's. A milestone read needs no board, no `project` token scope and no
+    Projects-v2 surface, so a project with no board at all must gain NO new failure
+    mode from the repair — its emitted script skips the unreadable write, reports
+    it, and carries on to the next one."""
+    changes = [
+        _milestone_planned(apply_mod, 5, target="Milestone 1", observed=None),
+        _milestone_planned(apply_mod, 6, target="Milestone 1", observed=None),
+    ]
+    script = apply_mod.render_emit_script(changes)
+    _stub_gh(tmp_path / "bin", (
+        'if [ "$1" = "issue" ] && [ "$2" = "view" ]; then exit 1; fi\n'
+        "exit 0\n"
+    ))
+    import os
+    import subprocess as sp
+    env = dict(os.environ, PATH=f"{tmp_path / 'bin'}:{os.environ['PATH']}")
+    result = sp.run(
+        ["bash", "-c", script], env=env, capture_output=True, text=True, check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stderr.count("failing closed") == 2, \
+        "each unreadable milestone is reported and the run continues"
+    assert "back-fill emit-script complete." in result.stderr
+
+
+def test_milestone_guard_still_writes_and_still_skips_a_satisfied_value(
+    apply_mod, tmp_path
+) -> None:
+    """The fail-closed rework must not change what a CONFIRMED read does."""
+    change = _milestone_planned(apply_mod, 5, target="Milestone 1", observed=None)
+    for current, expect_write in (("", True), ("Milestone 1", False)):
+        marker = tmp_path / f"write-ran-{expect_write}"
+        _stub_gh(tmp_path / "bin", (
+            'if [ "$1" = "issue" ] && [ "$2" = "view" ]; then '
+            f"printf '%s\\n' {shlex.quote(current)}; exit 0; fi\n"
+            'if [ "$1" = "issue" ] && [ "$2" = "edit" ]; then '
+            f"touch {shlex.quote(str(marker))}; exit 0; fi\n"
+            "exit 0\n"
+        ))
+        result = _run_emitted(apply_mod._emit_one(change), tmp_path / "bin")
+        assert result.returncode == 0, result.stderr
+        assert marker.exists() is expect_write, f"current={current!r}"
+
+
+def test_a_project_with_no_board_emits_no_board_read_at_all(apply_mod) -> None:
+    """#816's scope criterion, as a test rather than an inspection: a milestone-only
+    back-fill — what a project with no board produces, since `board_number(config)`
+    returning None means no `set-board-field` intent resolves — emits no GraphQL
+    board read, and so cannot reach the new error at all."""
+    script = apply_mod.render_emit_script([
+        _milestone_planned(apply_mod, 1, target="M1", observed=None),
+        _milestone_planned(apply_mod, 2, target="M1", observed="M0"),
+    ])
+    assert "gh api graphql" not in script
+    assert "fieldValues" not in script
+    assert "ERROR" not in script
+    assert "exit 1" not in script
+
+
+def test_a_project_with_no_board_makes_no_gh_call_resolving_one(bf, monkeypatch) -> None:
+    """The structural half of the same criterion, at the source: with no board
+    configured, the board resolution short-circuits BEFORE any `gh` call — so a
+    milestone-only back-fill neither reads a board nor can fail on one."""
+    def _explode(*args, **kwargs):
+        raise AssertionError("a project with no board must make no gh call")
+
+    monkeypatch.setattr(bf, "gh_run", _explode)
+    assert bf._resolve_project_node_id({}) is None
+    assert bf._resolve_project_node_id(
+        {"has_projects_v2_board": False, "projects_v2_board_id": 7}
+    ) is None
 
 
 # ============================================================================

@@ -1,0 +1,19 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  Reconstructing a saved back-fill plan no longer collapses two intents of the
+  same kind (#826). Intents were keyed by change `kind` alone, so an adopter
+  with two `set-board-field` hooks — one seeding Priority, one Workstream — had
+  the second intent's changes recover the FIRST intent's target, writing a wrong
+  value at apply time after a plan that reviewed correctly. The same held for two
+  `assign-milestone` hooks. Intents are now keyed by the write they declare (the
+  milestone title; the field id plus the value written there; the axis for a
+  label write), derived on the proposed side from the plan's exact reviewed argv,
+  and the degenerate `(kind, "")` arm that preserved the old behaviour for the
+  two hook-driven kinds is gone. **Plans saved before this fix apply correctly
+  rather than being refused** — nothing was added to the plan document, so the
+  key is derived from what every `schema_version: 1` plan already carries. A
+  proposed entry no declared intent accounts for is now reported as BLOCKED
+  rather than applied against an unrecoverable target.
