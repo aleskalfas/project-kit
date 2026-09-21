@@ -1,0 +1,8 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  The methodology now declares what it requires of the harness that hosts
+  it, as observable behaviour in a new core schema pair shipping with its
+  first entry, under a new accepted core record on harness requirements.

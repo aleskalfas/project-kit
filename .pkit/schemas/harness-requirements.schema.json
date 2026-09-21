@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "harness-requirements.schema.json",
+  "title": "Harness requirements",
+  "description": "Formal shape of harness-requirements.yaml \u2014 the properties the methodology requires of the harness that hosts it, each stated as observable behaviour with its observation point and the evidence that admitted it (COR-047). Adapters answer these in their own support declarations; a requirement with no declaration, or whose observation point a check cannot reach, resolves indeterminate. Companion per COR-018 / the .pkit/schemas/ area conventions.",
+  "x-pkit-id-collection": "/requirements",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "requirements"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "source": {
+      "$ref": "refs.schema.json#/$defs/source"
+    },
+    "requirements": {
+      "type": "object",
+      "patternProperties": {
+        "^[a-z][a-z0-9-]*$": {
+          "$ref": "#/$defs/entry"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Entries. Keys are kebab-case ids; values match $defs.entry."
+    }
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "title",
+        "behaviour",
+        "observation_point",
+        "evidence"
+      ],
+      "description": "One harness requirement (COR-047). Stated as behaviour any harness could satisfy \u2014 never as one harness's key, flag, or tool.",
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Short name for the requirement."
+        },
+        "behaviour": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The observable behaviour the methodology depends on, in harness-neutral terms (COR-047 point 1)."
+        },
+        "observation_point": {
+          "type": "string",
+          "enum": [
+            "out-of-session",
+            "interposed-runtime",
+            "in-session"
+          ],
+          "description": "Where the requirement's truth is visible (COR-047 point 4): out-of-session \u2014 configuration, environment, versions, platform; interposed-runtime \u2014 code the harness runs at its own hook points, which sees calls but not schemas; in-session \u2014 only an agent holding the harness's own view of its tools. A verification pass that cannot reach this point resolves indeterminate."
+        },
+        "evidence": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The demonstrated defect or concrete design dependency that admitted the requirement (COR-047 point 9)."
+        },
+        "retirement_condition": {
+          "type": "string",
+          "description": "For a requirement that exists because of a transient defect in a foreign tool: the condition under which it retires (COR-047 point 9)."
+        }
+      }
+    }
+  }
+}
