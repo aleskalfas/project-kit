@@ -548,39 +548,30 @@ def _find_open_children(parent_num: int, config: dict) -> list[int] | None:
 
     Empty list = all children closed (or none); None on gh failure.
     """
-    proc = gh_run(
-        [
-            "gh", "issue", "list", "--state", "all", "--limit", "500",
-            "--json", "number,state,body",
-        ],
+    # Acquisition belongs to the seam (ADR-035 §5). This used to fetch 500 rows
+    # and compute open children with NO truncation check: past 500 issues a child
+    # in the unseen rows simply did not exist here, and the container closed over
+    # it. That silent fail-open is why the loud indeterminate in the eligibility
+    # predicate was the safer of the two paths (#846).
+    corpus = containment.fetch_issue_corpus(config, fields="number,state,body")
+    if corpus is None:
+        print("error: gh issue list failed.", file=sys.stderr)
+        return None
+    states = corpus.states
+    resolution = containment.resolve_children(
         config,
-        check=False,
+        parent_number=parent_num,
+        corpus=corpus.bodies,
+        corpus_complete=corpus.complete,
     )
-    if proc.returncode != 0:
+    if not resolution.complete:
         print(
-            f"error: gh issue list failed (exit {proc.returncode}).\n"
-            f"stderr: {proc.stderr.strip()}",
+            f"error: cannot determine #{parent_num}'s open children — "
+            f"{resolution.incomplete_reason}. Refusing rather than closing over "
+            "a child that may exist.",
             file=sys.stderr,
         )
         return None
-    try:
-        rows = json.loads(proc.stdout)
-    except (ValueError, json.JSONDecodeError):
-        print("error: gh issue list returned malformed JSON.", file=sys.stderr)
-        return None
-    corpus: dict[int, str] = {}
-    states: dict[int, str] = {}
-    for r in rows:
-        if not isinstance(r, dict):
-            continue
-        num = r.get("number")
-        if not isinstance(num, int):
-            continue
-        corpus[num] = str(r.get("body") or "")
-        states[num] = str(r.get("state", "")).lower()
-    resolution = containment.resolve_children(
-        config, parent_number=parent_num, corpus=corpus
-    )
     open_children = [
         n for n in resolution.numbers if states.get(n) != "closed"
     ]

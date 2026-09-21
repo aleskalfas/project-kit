@@ -1,0 +1,28 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  Closing a container works again past 500 issues, and no longer closes one over
+  a child it never saw (#846). Resolving "does this parent have open children?"
+  meant downloading the whole tracker and filtering locally, with each consumer
+  fetching its own copy and judging completeness differently — 500 rows with a
+  ceiling check in the cascade predicate, 500 with no check at all in
+  `close-issue`, 1000 unchecked in `create-issue`, an operator limit in
+  `show-tree`. One seam, four ceilings. At 507 issues this repo crossed the
+  smallest of them: the eligibility predicate correctly refused, so every EPIC,
+  Feature and Umbrella became uncloseable — while the unchecked path in the same
+  command would have closed a container over an open child sitting in the rows it
+  never fetched. The loud failure was masking the dangerous one. The constant
+  behind it was named for open issues and sized against them (143), while the
+  query it fed asked for every issue (507) — so the margin looked ample right up
+  until it was gone. Acquisition now belongs to the containment seam, which
+  enumerates to exhaustion and reports an incomplete answer rather than serving a
+  short one as whole; the gate holds on incomplete instead of guessing. The seam
+  also stops collapsing two different native-read outcomes: an endpoint that is
+  absent (this instance has no native sub-issues) is a complete textual-only
+  answer, while an endpoint that could not be reached is not — collapsing them
+  let a transient error silently drop natively-linked children whose bodies carry
+  no parent-ref line. A caller may still supply its own corpus, but must say
+  whether it is complete. `create-issue` and `show-tree` still fetch their own
+  and are unchanged here.

@@ -23,6 +23,7 @@ The acceptance cases the issue enumerates:
 from __future__ import annotations
 
 import importlib.util
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -56,10 +57,14 @@ def _native(*numbers: int) -> str:
     return f"[{entries}]"
 
 
-def _stub_native(containment, monkeypatch, *, stdout: str, returncode: int = 0):
-    """Stub the native `…/sub_issues` GET at `_gh_call`."""
+def _stub_native(containment, monkeypatch, *, stdout: str, returncode: int = 0, stderr: str = ""):
+    """Stub the native `…/sub_issues` GET at `_gh_call`.
+
+    ``stderr`` matters: it is what separates an instance with no native
+    substrate (404/410/422) from one that could not be reached (ADR-035 §5).
+    """
     def fake_gh(args, config):
-        return subprocess.CompletedProcess(args, returncode, stdout=stdout, stderr="")
+        return subprocess.CompletedProcess(args, returncode, stdout=stdout, stderr=stderr)
 
     monkeypatch.setattr(containment, "_gh_call", fake_gh)
 
@@ -159,21 +164,44 @@ def test_mixed_native_child_absent_from_corpus_still_native(containment, monkeyp
     assert res.textual_numbers == [345]
 
 
-def test_unsupported_instance_is_textual_only(containment, monkeypatch) -> None:
-    """An instance without native sub-issues (404/410/422 → native read None)
-    degrades to TEXTUAL-ONLY — graceful, the mirror of the write side's
-    UNSUPPORTED no-op. The textual projection carries the relationship."""
-    _stub_native(containment, monkeypatch, stdout="", returncode=1)  # native unreadable
-    corpus = {
-        344: "EPIC: #342\n\n## What",
-        345: "EPIC: #342\n\n## What",
-        342: "EPIC body",
-    }
-    res = containment.resolve_children({}, parent_number=342, corpus=corpus)
-    assert res.native_supported is False, "native read failed → flagged unsupported"
+_MIXED_CORPUS = {
+    344: "EPIC: #342\n\n## What",
+    345: "EPIC: #342\n\n## What",
+    342: "EPIC body",
+}
+
+
+def test_unsupported_instance_is_textual_only_and_determinate(containment, monkeypatch) -> None:
+    """An instance without native sub-issues degrades to TEXTUAL-ONLY, and that
+    degradation is a COMPLETE answer — the mirror of the write side's UNSUPPORTED
+    no-op. There is no native substrate to have missed anything (ADR-035 §5)."""
+    _stub_native(containment, monkeypatch, stdout="", returncode=1, stderr="HTTP 404: Not Found")
+    res = containment.resolve_children(
+        {}, parent_number=342, corpus=_MIXED_CORPUS, corpus_complete=True
+    )
+    assert res.native_supported is False, "404 → no native substrate here"
     assert res.numbers == [344, 345], "textual projection still resolves both children"
-    assert res.native_numbers == []
     assert res.textual_numbers == [344, 345]
+    assert res.complete is True, "textual-only is the whole answer when native is unsupported"
+
+
+def test_unreadable_native_makes_the_resolution_incomplete(containment, monkeypatch) -> None:
+    """A native read that FAILED is not the same as one that is unsupported.
+
+    This is the fail-open ADR-035 §5 closes: collapsing the two let a transient
+    error degrade silently to textual-only, dropping any natively-linked child
+    whose body carries no parent-ref line. The seam must now say it cannot vouch
+    for the set.
+    """
+    _stub_native(
+        containment, monkeypatch, stdout="", returncode=1, stderr="error connecting: connection reset"
+    )
+    res = containment.resolve_children(
+        {}, parent_number=342, corpus=_MIXED_CORPUS, corpus_complete=True
+    )
+    assert res.native_supported is True, "a reachable-but-failing endpoint is not 'unsupported'"
+    assert res.complete is False, "a native child set may exist and was not seen"
+    assert res.incomplete_reason and "native" in res.incomplete_reason
 
 
 def test_parent_excludes_itself_and_foreign_children(containment, monkeypatch) -> None:
@@ -242,3 +270,80 @@ def test_close_issue_find_open_children_routes_through_the_seam() -> None:
     src = (SCRIPTS / "close-issue.py").read_text(encoding="utf-8")
     assert _imports_containment(SCRIPTS / "close-issue.py")
     assert "resolve_children" in src
+
+
+# --- acquisition: the seam owns it, and says when it did not see everything ---
+#
+# #846: `cascade-members` enumerated the whole tracker with a 500-row ceiling
+# named `_OPEN_ISSUES_LIMIT` while querying `--state all`. At 507 issues it
+# struck the ceiling on every call, so no container in the repo could close.
+
+
+def _stub_gh_list(containment, monkeypatch, *, total: int, child_at: int, parent: int):
+    """Stub `gh issue list`, HONOURING `--limit` the way gh does.
+
+    Honouring the limit is what gives this test teeth: a caller asking for fewer
+    rows than the tracker holds gets a short list, exactly as in production.
+    """
+    def fake_gh(args, config):
+        if "issue" not in args:  # the native sub-issues read
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 404")
+        limit = int(args[args.index("--limit") + 1])
+        rows = [
+            {
+                "number": n,
+                "state": "open",
+                "body": (f"EPIC: #{parent}\n" if n == child_at else "## What\nno ref"),
+            }
+            for n in range(1, total + 1)
+        ]
+        return subprocess.CompletedProcess(
+            args, 0, stdout=json.dumps(rows[:limit]), stderr=""
+        )
+
+    monkeypatch.setattr(containment, "_gh_call", fake_gh)
+
+
+def test_a_child_beyond_the_old_ceiling_still_resolves(containment, monkeypatch) -> None:
+    """The regression #846 reported, at the size that caused it.
+
+    A 600-issue tracker with the only child at row 550. Under the retired 500-row
+    ceiling that row was never fetched, so the child was invisible and the gate
+    reported indeterminate. The seam's ceiling is far above any plausible corpus,
+    so the child resolves and the answer is complete.
+    """
+    _stub_gh_list(containment, monkeypatch, total=600, child_at=550, parent=5)
+    res = containment.resolve_children({}, parent_number=5)
+    assert res.numbers == [550], "the child past the old ceiling must be seen"
+    assert res.complete is True
+
+
+def test_striking_the_acquisition_ceiling_is_reported_not_swallowed(
+    containment, monkeypatch
+) -> None:
+    """A struck ceiling yields an INCOMPLETE answer, never a short one served whole.
+
+    This is the property `close-issue` lacked entirely: it fetched 500 rows and
+    computed open children with no truncation check, so past 500 issues it would
+    close a container over a child it never saw.
+    """
+    _stub_gh_list(
+        containment, monkeypatch, total=containment.CORPUS_CEILING + 10, child_at=1, parent=5
+    )
+    res = containment.resolve_children({}, parent_number=5)
+    assert res.complete is False
+    assert res.incomplete_reason and "exhaustion" in res.incomplete_reason
+
+
+def test_a_supplied_corpus_without_a_completeness_claim_is_not_vouched_for(
+    containment, monkeypatch
+) -> None:
+    """A caller may still supply a corpus — but it must say whether it is whole.
+
+    Absent the claim the seam reports incomplete rather than assuming, because
+    assuming is precisely how four consumers ended up with four ceilings.
+    """
+    _stub_native(containment, monkeypatch, stdout="[]")
+    res = containment.resolve_children({}, parent_number=5, corpus={9: "EPIC: #5\n"})
+    assert res.numbers == [9]
+    assert res.complete is False

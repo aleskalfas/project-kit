@@ -436,6 +436,8 @@ class ChildResolution:
 
     children: tuple[ResolvedChild, ...]
     native_supported: bool
+    complete: bool = True
+    incomplete_reason: str | None = None
 
     @property
     def numbers(self) -> list[int]:
@@ -451,6 +453,74 @@ class ChildResolution:
     def textual_numbers(self) -> list[int]:
         """Child numbers that resolved from the TEXTUAL substrate only, sorted."""
         return sorted(c.number for c in self.children if c.substrate is ChildSubstrate.TEXTUAL)
+
+
+class NativeReadOutcome(Enum):
+    """How the native sub-issues read went — three outcomes, not two.
+
+    ``UNSUPPORTED`` and ``UNREADABLE`` both yield no child set, but they mean
+    opposite things for completeness and must not be collapsed (ADR-035 §5):
+
+    * ``READ`` — the endpoint answered. The set is authoritative, empty included.
+    * ``UNSUPPORTED`` — 404/410/422, or no ``gh``: this instance has no native
+      substrate at all, so the textual projection genuinely IS the whole answer.
+      Degrading to textual-only is a *determinate* result.
+    * ``UNREADABLE`` — auth, network, a transient 5xx, an unparseable payload: a
+      native child set may exist and was not seen. Degrading here would silently
+      drop natively-linked children whose bodies carry no parent-ref line, which
+      on a close gate is a fail-open.
+    """
+
+    READ = "read"
+    UNSUPPORTED = "unsupported"
+    UNREADABLE = "unreadable"
+
+
+@dataclass(frozen=True)
+class NativeRead:
+    """A native read's child numbers plus how the read went."""
+
+    numbers: set[int]
+    outcome: NativeReadOutcome
+
+    @property
+    def supported(self) -> bool:
+        return self.outcome is not NativeReadOutcome.UNSUPPORTED
+
+
+def read_native_children(
+    config: dict[str, Any], *, parent_number: int | str
+) -> NativeRead:
+    """The native child set, with the outcome that produced it.
+
+    Prefer this over :func:`read_native_child_numbers`, which cannot distinguish
+    "no native substrate here" from "I could not reach it".
+    """
+    args = list_sub_issues_args(parent_number=parent_number)
+    try:
+        proc = _gh_call(args, config)
+    except FileNotFoundError:
+        # No `gh` at all — the instance offers no native substrate to this
+        # process, which is the unsupported case rather than a transient fault.
+        return NativeRead(numbers=set(), outcome=NativeReadOutcome.UNSUPPORTED)
+    if proc.returncode != 0:
+        outcome = (
+            NativeReadOutcome.UNSUPPORTED
+            if _is_unsupported(proc.stderr or "")
+            else NativeReadOutcome.UNREADABLE
+        )
+        return NativeRead(numbers=set(), outcome=outcome)
+    payload = _parse_concatenated_arrays((proc.stdout or "").strip())
+    if payload is None:
+        # The endpoint answered and we could not read it: a child set may exist.
+        return NativeRead(numbers=set(), outcome=NativeReadOutcome.UNREADABLE)
+    numbers: set[int] = set()
+    for entry in payload:
+        if isinstance(entry, dict):
+            raw = entry.get("number")
+            if isinstance(raw, int):
+                numbers.add(raw)
+    return NativeRead(numbers=numbers, outcome=NativeReadOutcome.READ)
 
 
 def read_native_child_numbers(
@@ -471,30 +541,88 @@ def read_native_child_numbers(
     native sub-issues — distinct from ``None``, and it does NOT trigger textual
     fallback (the parent genuinely has no native children).
     """
-    args = list_sub_issues_args(parent_number=parent_number)
+    read = read_native_children(config, parent_number=parent_number)
+    return read.numbers if read.outcome is NativeReadOutcome.READ else None
+
+
+# The seam's own corpus acquisition. Set far above any plausible tracker: this is
+# not a view control, it is the point past which the seam refuses to pretend it
+# saw everything. Struck => the answer is incomplete, never a short answer served
+# as a whole one. `gh issue list` paginates internally up to --limit, so one call
+# fetches to exhaustion below the ceiling.
+CORPUS_CEILING = 5000
+
+_CORPUS_FIELDS = "number,body,state,labels,milestone"
+
+
+@dataclass(frozen=True)
+class IssueCorpus:
+    """Every issue the seam could see, and whether that is all of them.
+
+    ``complete`` is the honest signal the consumers lacked: each of them fetched
+    its own corpus with a different ceiling and only one noticed when it struck
+    one, so the same seam answered with four different notions of completeness.
+    """
+
+    rows: tuple[dict[str, Any], ...]
+    complete: bool
+
+    @property
+    def bodies(self) -> dict[int, str]:
+        out: dict[int, str] = {}
+        for row in self.rows:
+            number = row.get("number")
+            if isinstance(number, int):
+                out[number] = str(row.get("body") or "")
+        return out
+
+    @property
+    def states(self) -> dict[int, str]:
+        out: dict[int, str] = {}
+        for row in self.rows:
+            number = row.get("number")
+            if isinstance(number, int):
+                out[number] = str(row.get("state", "")).lower()
+        return out
+
+
+def fetch_issue_corpus(
+    config: dict[str, Any], *, fields: str = _CORPUS_FIELDS
+) -> IssueCorpus | None:
+    """Fetch every issue, reporting whether the fetch was exhaustive.
+
+    Returns ``None`` when the query itself failed — distinct from a complete
+    fetch of an empty tracker, and distinct from a truncated one.
+    """
+    args = [
+        "gh", "issue", "list",
+        "--state", "all",
+        "--limit", str(CORPUS_CEILING),
+        "--json", fields,
+    ]
     try:
         proc = _gh_call(args, config)
     except FileNotFoundError:
         return None
     if proc.returncode != 0:
         return None
-    payload = _parse_concatenated_arrays((proc.stdout or "").strip())
-    if payload is None:
+    try:
+        parsed = json.loads(proc.stdout or "[]")
+    except (ValueError, json.JSONDecodeError):
         return None
-    numbers: set[int] = set()
-    for entry in payload:
-        if isinstance(entry, dict):
-            raw = entry.get("number")
-            if isinstance(raw, int):
-                numbers.add(raw)
-    return numbers
+    if not isinstance(parsed, list):
+        return None
+    rows = tuple(row for row in parsed if isinstance(row, dict))
+    # Exactly the ceiling means there may be rows we never saw.
+    return IssueCorpus(rows=rows, complete=len(rows) < CORPUS_CEILING)
 
 
 def resolve_children(
     config: dict[str, Any],
     *,
     parent_number: int,
-    corpus: dict[int, str],
+    corpus: dict[int, str] | None = None,
+    corpus_complete: bool | None = None,
 ) -> ChildResolution:
     """Resolve a parent's children — native-where-present, textual-otherwise,
     native-wins on conflict (DEC-005).
@@ -535,9 +663,22 @@ def resolve_children(
     pass is a later optimisation, not pinned here — COR-007 speculative-generality
     restraint).
     """
-    native = read_native_child_numbers(config, parent_number=parent_number)
-    native_supported = native is not None
-    native_set = native or set()
+    native = read_native_children(config, parent_number=parent_number)
+    native_supported = native.supported
+    native_set = native.numbers
+
+    if corpus is None:
+        fetched = fetch_issue_corpus(config)
+        if fetched is None:
+            corpus = {}
+            corpus_complete = False
+        else:
+            corpus = fetched.bodies
+            corpus_complete = fetched.complete
+    elif corpus_complete is None:
+        # A caller that supplies a corpus must claim its completeness. Absent a
+        # claim the seam cannot vouch for it, so it says so rather than assuming.
+        corpus_complete = False
 
     textual_set = {
         number
@@ -545,13 +686,33 @@ def resolve_children(
         if number != parent_number and _body_names_parent(body, parent_number)
     }
 
+    # Determinacy, per ADR-035 §5. A non-empty native panel does NOT rescue a
+    # truncated textual scan: the rows never fetched are exactly where a
+    # textual-only child would be.
+    incomplete_reason: str | None = None
+    if native.outcome is NativeReadOutcome.UNREADABLE:
+        incomplete_reason = (
+            "the native sub-issues read failed (not an unsupported endpoint), so a "
+            "native child set may exist and was not seen"
+        )
+    elif not corpus_complete:
+        incomplete_reason = (
+            "the issue corpus was not enumerated to exhaustion, so a textual-only "
+            "child may sit in the rows that were never fetched"
+        )
+
     resolved: list[ResolvedChild] = []
     for number in native_set:
         resolved.append(ResolvedChild(number=number, substrate=ChildSubstrate.NATIVE))
     for number in textual_set - native_set:  # native-wins: skip textual dupes
         resolved.append(ResolvedChild(number=number, substrate=ChildSubstrate.TEXTUAL))
     resolved.sort(key=lambda c: c.number)
-    return ChildResolution(children=tuple(resolved), native_supported=native_supported)
+    return ChildResolution(
+        children=tuple(resolved),
+        native_supported=native_supported,
+        complete=incomplete_reason is None,
+        incomplete_reason=incomplete_reason,
+    )
 
 
 def _body_names_parent(body: str, parent_number: int) -> bool:

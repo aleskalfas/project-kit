@@ -318,20 +318,14 @@ def test_parent_walk_indeterminate_when_issue_list_hits_ceiling(
     """A full page of issues means there may be unseen rows -> the descendant
     walk is indeterminate (fail-closed), not a confident 'no active descendant'.
     """
-    import json
-
-    monkeypatch.setattr(predicates, "_capability_root", lambda: REPO_ROOT)
-    monkeypatch.setattr(predicates, "_config", lambda _root: {})
-    full_page = [
-        {"number": n, "body": "", "state": "open", "labels": [], "milestone": {}}
-        for n in range(predicates._OPEN_ISSUES_LIMIT)
-    ]
-    monkeypatch.setattr(
-        predicates, "gh_run", lambda *a, **k: _completed(json.dumps(full_page))
+    _stub_list_issues(
+        monkeypatch,
+        [{"number": 1, "body": "", "state": "open", "labels": [], "milestone": {}}],
+        complete=False,
     )
     out = predicates.parent_has_active_descendant(10)
     assert out[predicates.INDETERMINATE_KEY] is True
-    assert "ceiling" in out["reason"]
+    assert "exhaustion" in out["reason"]
 
 
 def test_pr_merge_gate_indeterminate_when_pr_list_hits_ceiling(
@@ -389,10 +383,18 @@ def _stub_fetch_issue(monkeypatch: pytest.MonkeyPatch, issue: dict) -> None:
     monkeypatch.setattr(predicates, "_fetch_issue", lambda _n, _c, _f: issue)
 
 
-def _stub_list_issues(monkeypatch: pytest.MonkeyPatch, issues: list[dict]) -> None:
+def _stub_list_issues(
+    monkeypatch: pytest.MonkeyPatch, issues: list[dict], *, complete: bool = True
+) -> None:
+    """Stub the corpus at the containment seam, which now owns acquisition."""
+    containment = predicates.containment
     monkeypatch.setattr(predicates, "_capability_root", lambda: REPO_ROOT)
     monkeypatch.setattr(predicates, "_config", lambda _root: {})
-    monkeypatch.setattr(predicates, "_list_issues", lambda _c: issues)
+    monkeypatch.setattr(
+        containment,
+        "fetch_issue_corpus",
+        lambda _c, **_kw: containment.IssueCorpus(rows=tuple(issues), complete=complete),
+    )
 
 
 def _stub_merged_pr(monkeypatch: pytest.MonkeyPatch, pr: dict | None) -> None:

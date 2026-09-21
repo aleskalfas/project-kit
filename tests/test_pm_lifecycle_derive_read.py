@@ -543,7 +543,12 @@ def test_parent_active_descendant_map_aware(monkeypatch: pytest.MonkeyPatch) -> 
     ]
     monkeypatch.setattr(predicates, "_capability_root", lambda: REPO_ROOT)
     monkeypatch.setattr(predicates, "_config", lambda _root: {})
-    monkeypatch.setattr(predicates, "_list_issues", lambda _c: children)
+    _containment = predicates.containment
+    monkeypatch.setattr(
+        _containment,
+        "fetch_issue_corpus",
+        lambda _c, **_kw: _containment.IssueCorpus(rows=tuple(children), complete=True),
+    )
     monkeypatch.setattr(
         predicates.axis_labels, "load_substrate_map", lambda _root: DERIVE_MAP
     )
