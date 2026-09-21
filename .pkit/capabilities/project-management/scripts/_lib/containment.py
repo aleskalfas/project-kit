@@ -62,7 +62,7 @@ relied upon.
 Graceful degradation (the textual ref is the fallback)
 ------------------------------------------------------
 Where the instance does not support sub-issues — an older GHES, the feature
-turned off, the endpoint returning 404 / 410 / 422 — the native write degrades
+turned off — the native write degrades
 to a **no-op**: the link result reports ``unsupported`` and the caller carries
 on. The textual first-line parent-ref (written unchanged by ``create-issue``)
 carries the relationship in that case. A native write never fails the create.
@@ -98,7 +98,9 @@ class LinkOutcome(Enum):
     LINKED       — the native link was created this call.
     ALREADY       — the child was already a sub-issue of the parent (idempotent
                     no-op, value-equality per DEC-026).
-    UNSUPPORTED  — the instance does not support sub-issues (404/410/422/feature
+    UNSUPPORTED  — the instance does not support sub-issues (a conclusive 410/422,
+                   or a 404 attributed to the endpoint rather than to an unseeable
+                   repository — see `_classify_native_failure`; feature
                     off); the textual ref is the fallback. NOT a failure.
     FAILED       — the write was attempted and failed for a reason that is NOT
                     "unsupported" (auth, network, missing `gh`). The caller still
@@ -140,9 +142,16 @@ class LinkResult:
 
 
 # HTTP statuses that mean "this instance does not support sub-issues" — degrade
-# to a no-op rather than a failure. 404 (endpoint absent on older GHES), 410
-# (gone), 422 (unprocessable — feature off / not enabled for this repo).
-_UNSUPPORTED_STATUSES = (404, 410, 422)
+# to a no-op rather than a failure. 410 (gone) and 422 (unprocessable — feature
+# off / not enabled for this repo) say the endpoint is gone or unusable — an invisible repository never
+# produces them, so they name feature-absence unambiguously.
+_UNSUPPORTED_STATUSES = (410, 422)
+
+# 404 is the ambiguous one, and no amount of stderr parsing resolves it: GitHub
+# answers 404 both for "this endpoint does not exist here" and for "you may not
+# know this repository exists". Same status, same message, opposite meanings for
+# a close gate. `_classify_native_failure` settles it by probing instead.
+_AMBIGUOUS_STATUS = 404
 
 
 def add_sub_issue_args(*, parent_number: int | str, child_database_id: int | str) -> list[str]:
@@ -232,7 +241,7 @@ def link_sub_issue(
       3. POST the add.
 
     Never raises and never returns a fatal posture for an *unsupported* instance:
-    a 404 / 410 / 422 (or a missing endpoint on older GHES) yields
+    a conclusive 410 / 422, or a 404 attributed to the endpoint, yields
     :attr:`LinkOutcome.UNSUPPORTED` so the caller carries the textual ref as the
     fallback. A genuine error (auth / network / missing ``gh``, or an
     unresolvable child id) yields :attr:`LinkOutcome.FAILED` for the caller to
@@ -274,7 +283,10 @@ def link_sub_issue(
         )
 
     stderr = (proc.stderr or "").strip()
-    if _is_unsupported(stderr):
+    if (
+        _classify_native_failure(config, parent_number=parent_number, stderr=stderr)
+        is NativeReadOutcome.UNSUPPORTED
+    ):
         return LinkResult(
             LinkOutcome.UNSUPPORTED,
             detail="native sub-issues unsupported on this instance; textual ref recorded",
@@ -320,19 +332,74 @@ def _list_sub_issue_ids(
 
 
 def _is_unsupported(stderr: str) -> bool:
-    """True when ``gh``'s stderr indicates the instance lacks sub-issue support.
+    """True when ``gh``'s stderr *unambiguously* says the endpoint is absent.
 
-    ``gh api`` prints an ``HTTP <status>`` line on a non-2xx response; the
-    unsupported statuses (404 / 410 / 422) mean the endpoint is absent or the
-    feature is off. Matched as a substring of the stderr so the exact phrasing
-    of ``gh``'s error line does not have to be pinned.
+    ``gh api`` prints an ``HTTP <status>`` line on a non-2xx response. Only
+    410/422 are conclusive here. **404 is deliberately excluded**: GitHub returns
+    it both for a missing endpoint and for a repository the caller may not see,
+    so reading it as "unsupported" hands a close gate a determinate answer on no
+    evidence whenever a token lacks scope (#869). Use
+    :func:`_classify_native_failure`, which probes rather than guesses; this
+    predicate answers only the part text can decide.
     """
     lowered = stderr.lower()
-    for status in _UNSUPPORTED_STATUSES:
-        if f"http {status}" in lowered or f"({status})" in lowered:
-            return True
+    return any(
+        f"http {status}" in lowered or f"({status})" in lowered
+        for status in _UNSUPPORTED_STATUSES
+    )
+
+
+def _mentions_ambiguous_status(stderr: str) -> bool:
+    """True when stderr carries a 404, or gh's bare code-less phrasing of one."""
+    lowered = stderr.lower()
+    if f"http {_AMBIGUOUS_STATUS}" in lowered or f"({_AMBIGUOUS_STATUS})" in lowered:
+        return True
     # `gh` sometimes phrases a missing endpoint as "Not Found" without the code.
     return "not found" in lowered
+
+
+def _classify_native_failure(
+    config: dict[str, Any], *, parent_number: int | str, stderr: str
+) -> NativeReadOutcome:
+    """Why a native sub-issues call failed — asked of the API, not of the text.
+
+    The one call both the read and the write path route through, so they cannot
+    drift into different notions of "unsupported" — ADR-026's one-reader
+    discipline applied to failure attribution, and ADR-035 §3 on why the two
+    directions must not each hold their own definition of the same fact.
+
+    A 404 on `…/sub_issues` is genuinely ambiguous, so it is settled by probing
+    the parent issue itself — the same `gh api repos/{owner}/{repo}/issues/<n>`
+    call :func:`resolve_issue_database_id` already makes:
+
+    * the probe succeeds — repository, credentials and parent are all visible, so
+      a 404 on the *sub-resource* really is an absent endpoint -> UNSUPPORTED
+    * the probe fails — a repository, credential or visibility fault, and a
+      native child set may exist unseen -> UNREADABLE
+    * the probe cannot run at all -> UNREADABLE, the fail-closed default
+
+    One extra call, only on the failure path, once per parent resolved. That is
+    negligible against a gate that would otherwise answer confidently on no
+    evidence — and the cost is paid only when something is already wrong.
+    """
+    if _is_unsupported(stderr):
+        return NativeReadOutcome.UNSUPPORTED
+    if not _mentions_ambiguous_status(stderr):
+        return NativeReadOutcome.UNREADABLE
+    try:
+        probe = _gh_call(
+            [
+                "gh", "api",
+                f"repos/{{owner}}/{{repo}}/issues/{parent_number}",
+                "--jq", ".number",
+            ],
+            config,
+        )
+    except FileNotFoundError:
+        return NativeReadOutcome.UNREADABLE
+    if probe.returncode != 0:
+        return NativeReadOutcome.UNREADABLE
+    return NativeReadOutcome.UNSUPPORTED
 
 
 def _parse_concatenated_arrays(text: str) -> list | None:
@@ -422,7 +489,8 @@ class ChildResolution:
       children          — the resolved children, sorted by number, deduped across
                           substrates with native-wins.
       native_supported  — False only when the instance has **no native
-                          substrate** (404/410/422); the result is then
+                          substrate** (a conclusive status, or an attributed
+                          404); the result is then
                           textual-only, and that is a COMPLETE answer. True when
                           the endpoint exists — including when the read of it
                           failed, which is reported through ``complete`` rather
@@ -467,9 +535,11 @@ class NativeReadOutcome(Enum):
     opposite things for completeness and must not be collapsed (ADR-035 §5):
 
     * ``READ`` — the endpoint answered. The set is authoritative, empty included.
-    * ``UNSUPPORTED`` — 404/410/422: this instance has no native substrate at
-      all, so the textual projection genuinely IS the whole answer. Degrading to
-      textual-only is a *determinate* result.
+    * ``UNSUPPORTED`` — this instance has no native substrate at all, so the
+      textual projection genuinely IS the whole answer, and degrading to it is a
+      *determinate* result. Reached two ways and no other: a conclusive 410/422,
+      or a 404 the probe attributes to the endpoint. It is the seam's only
+      fail-open surface, so it has to be earned rather than inferred (#869).
     * ``UNREADABLE`` — auth, network, a transient 5xx, an unparseable payload, or
       no ``gh`` on PATH: a native child set may exist and was not seen. Absence
       of the tool is not evidence about the instance. Degrading here would silently
@@ -512,10 +582,8 @@ def read_native_children(
         # is the unreadable case (ADR-035 §2).
         return NativeRead(numbers=set(), outcome=NativeReadOutcome.UNREADABLE)
     if proc.returncode != 0:
-        outcome = (
-            NativeReadOutcome.UNSUPPORTED
-            if _is_unsupported(proc.stderr or "")
-            else NativeReadOutcome.UNREADABLE
+        outcome = _classify_native_failure(
+            config, parent_number=parent_number, stderr=proc.stderr or ""
         )
         return NativeRead(numbers=set(), outcome=outcome)
     payload = _parse_concatenated_arrays((proc.stdout or "").strip())
@@ -541,8 +609,8 @@ def read_native_child_numbers(
     write half's idempotency read uses — but keyed on the child ``number`` (the
     methodology's stable id) rather than the database ``id`` the *write* needs.
 
-    Returns ``None`` when the native read did not succeed — a 404/410/422 (older
-    GHES / feature off), a missing ``gh``, a non-zero exit, or an unparseable
+    Returns ``None`` when the native read did not succeed, for any reason —
+    an absent endpoint, a missing ``gh``, a non-zero exit, or an unparseable
     payload. An empty set is a *successful* read of a parent with no native
     sub-issues, distinct from ``None``.
 

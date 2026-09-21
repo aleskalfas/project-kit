@@ -35,7 +35,8 @@ sole-constructor): **how** containment resolves on read and constructs on write,
 and the invariants each side must never violate. It is the on-call/maintainer
 reference for the seam realized by the merged #344 (native write) + #345
 (`resolve_children` read seam) + #865 (seam-owned corpus acquisition and the
-completeness verdict), ahead of the Track-2 textual-view build (EPIC #343); it
+completeness verdict) + #869 (the *unsupported* verdict attributed by probe, one
+definition for both paths), ahead of the Track-2 textual-view build (EPIC #343); it
 pins the contract, not the selector schema or the render-on-demand UX (those land
 with the Feature, citing DEC-039).
 
@@ -67,8 +68,10 @@ either substrate after a forward switch, and the seam unions them deterministica
 (iii) **the seam reports whether its answer is complete, and an incomplete answer is
 an indeterminacy rather than a child set** — the native read distinguishes
 *unsupported* (no native substrate, so textual is the whole answer) from *unreadable*
-(a native child set may exist and was not seen), the textual scan reports *complete*
-vs *truncated*, and either indeterminacy makes the whole resolution incomplete; a
+(a native child set may exist and was not seen) — a distinction it *establishes* by
+asking the API, never infers from a failed call's status — the textual scan reports
+*complete* vs *truncated*, and either indeterminacy makes the whole resolution
+incomplete; a
 gate consumer maps an incomplete resolution to indeterminate, never to a child set
 and never to "no children"; and (iv) **every containment write is constructed in
 exactly one point per substrate** — the native link via `add_sub_issue_args` /
@@ -110,12 +113,16 @@ sites, this Context names the containment realization as-built. Unlike those two
 containment landed seam-first: #344 supplied the native write through one
 construction point (`add_sub_issue_args` / `link_sub_issue`), #345 supplied the
 one read seam (`resolve_children`), converging the three pre-existing
-body-parent-ref walkers onto it, and #865 moved corpus acquisition and the
-completeness verdict behind that same seam. The seam now fetches the corpus itself
+body-parent-ref walkers onto it, #865 moved corpus acquisition and the
+completeness verdict behind that same seam, and #869 made the *unsupported* verdict
+an attribution the seam establishes rather than a reading of the failed call's text,
+with the write path routed through the same classification. The seam now fetches the corpus itself
 (`fetch_issue_corpus`, under `CORPUS_CEILING`), reads the native panel three-valued
-(`read_native_children` → `READ` / `UNSUPPORTED` / `UNREADABLE`), and returns
-`complete` + `incomplete_reason` alongside the child set; every gate consumer holds
-on an incomplete answer rather than acting on it. Two consumers still fetch their
+(`read_native_children` → `READ` / `UNSUPPORTED` / `UNREADABLE`, the two non-`READ`
+verdicts decided in one classification point that *attributes* a failed call rather
+than reading its error text), and returns `complete` + `incomplete_reason` alongside
+the child set; every gate consumer holds on an incomplete answer rather than acting
+on it. Two consumers still fetch their
 own corpus — both renderers rather than gates, both tracked (`show-tree`, #864;
 `create-issue`'s children-view refresh, #863). The sites below name where each one
 stands against that contract.
@@ -128,9 +135,13 @@ Feature (EPIC #343), citing DEC-039. The sites:
 
 1. **`resolve_children`** (`_lib/containment.py`) — the one read seam, and the one
    corpus fetcher. Native side: one `GET …/sub_issues` per parent
-   (`read_native_children`), three-valued — `READ`, a determinate `UNSUPPORTED`
-   (a non-zero exit whose stderr carries 404/410/422), or an indeterminate
-   `UNREADABLE` (missing `gh`, any other non-zero exit, unparseable payload). Textual side: every issue in the corpus whose body
+   (`read_native_children`), three-valued — `READ`, a determinate `UNSUPPORTED`,
+   or an indeterminate `UNREADABLE`. A non-zero exit is classified in one place
+   (`_classify_native_failure`): a conclusive status (410/422) is `UNSUPPORTED`
+   outright; an ambiguous 404 is `UNSUPPORTED` only when a probe of the parent
+   issue itself succeeds, attributing the 404 to the sub-resource rather than to
+   the repository; everything else — a probe that fails or cannot run, a missing
+   `gh`, an unparseable payload — is `UNREADABLE`. Textual side: every issue in the corpus whose body
    first-line parent-ref names the parent, where the corpus is either fetched by the
    seam (`fetch_issue_corpus`, *truncated* when `CORPUS_CEILING` is struck) or
    supplied by the caller *with* a completeness claim — a corpus handed over without
@@ -157,7 +168,11 @@ Feature (EPIC #343), citing DEC-039. The sites:
 5. **`link_sub_issue` / `add_sub_issue_args`** (`_lib/containment.py`) — the one
    native containment write construction point; `create-issue` calls it on
    `--parent`, any future parent-link mutation reuses it. **The sole constructor of
-   the native containment write.**
+   the native containment write.** Its `UNSUPPORTED` verdict comes from the read
+   side's classification point, not from a predicate of its own, so the two paths
+   cannot hold different notions of "unsupported" — a write that fails on a
+   credential fault reports `FAILED` to the operator rather than quietly
+   degrading to the textual spine.
 
 The architecturally-significant pins, each carrying an alternative DEC-039 already
 rejected or this ADR holds against:
@@ -183,6 +198,11 @@ rejected or this ADR holds against:
    and leaving each consumer to fetch its own corpus under its own ceiling — the
    shape that lets a truncated scan or an unreadable native panel reach a close gate
    as a confident, silently short child set.
+6. **The `UNSUPPORTED` verdict is attributed by asking the API** (a conclusive
+   status, or a 404 the parent-issue probe pins on the sub-resource) vs. inferred
+   from the failed call's status or error text — which cannot separate an absent
+   endpoint from a repository the caller may not see, and so grants determinacy on
+   no evidence.
 
 ## Decision
 
@@ -236,15 +256,29 @@ invariant**:
   from the corpus scan is still NATIVE (the native panel is authoritative even for
   a child the textual scan missed); a textual-only child is TEXTUAL.
 - **Native support is a property of the read, not of the repo.** When the native
-  `GET …/sub_issues` reports the substrate **unsupported** (404/410/422 — older
-  GHES, feature off), the seam degrades to **textual-only** — the read mirror of the
-  write side's UNSUPPORTED no-op, and a *determinate* answer: there is no native
-  substrate for a child to hide in, so textual is the whole story. A merely
-  **unreadable** panel (auth, network, a transient 5xx, a missing `gh`) is a
-  different fact and does not license that degradation: a native child set may exist
-  and was not seen, so the resolution is incomplete (point 5). An *empty* native read
-  is distinct again — a successful read of a parent with no native children, which
-  does **not** trigger textual fallback.
+  `GET …/sub_issues` establishes the substrate **unsupported** — a conclusive status
+  (410 gone, 422 unprocessable: an older GHES, the feature off), or a 404 the seam
+  has *attributed to the endpoint* rather than to the repository — the seam degrades
+  to **textual-only**: the read mirror of the write side's UNSUPPORTED no-op, and a
+  *determinate* answer, because there is no native substrate for a child to hide in
+  and textual is the whole story. A merely **unreadable** panel (auth, a token
+  missing issue scope, a repository the caller may not see, network, a transient 5xx,
+  a missing `gh`) is a different fact and does not license that degradation: a native
+  child set may exist and was not seen, so the resolution is incomplete (point 5). An
+  *empty* native read is distinct again — a successful read of a parent with no
+  native children, which does **not** trigger textual fallback.
+- **Attribution, not inference — the seam asks the API which fact obtains.** The two
+  facts above are not separable from the failed response: GitHub answers **404** both
+  for an endpoint that does not exist here and for a repository the caller may not
+  know exists, with the same status and the same message. So the seam does not read a
+  verdict off the status or the error text. It settles the ambiguous case by making a
+  second, narrower request — the parent issue itself, the call child-id resolution
+  already makes. **Probe succeeds** ⇒ repository, credentials and parent are all
+  visible, so the 404 belongs to the sub-resource ⇒ `UNSUPPORTED`. **Probe fails, or
+  cannot run at all** ⇒ a repository, credential or visibility fault ⇒ `UNREADABLE`,
+  the fail-closed default. Only a conclusive status short-circuits the probe: an
+  invisible repository never produces a 410 or a 422. One extra call, on the failure
+  path only, once per parent resolved — paid only when something is already wrong.
 
 State the invariant precisely: **native-wins is enforced once, at the seam, over
 the union of both substrates — so a mixed-substrate repo resolves deterministically
@@ -289,6 +323,17 @@ is the spine — and reports a one-line note keyed on the outcome. An UNSUPPORTE
 instance degrades the native write to a no-op (the textual ref carries the
 relationship); a native write never fails the create.
 
+**"Unsupported" is defined once, for both directions.** The write path does not
+carry its own notion of feature-absence: when the add fails, it asks the *read*
+side's classification point (point 2's attribution) what the failure was, and only
+its `UNSUPPORTED` answer degrades the write to a no-op. This matters because the
+two paths have opposite postures on the same fact — the read degrades to
+textual-only, the write degrades to silence — so a second definition would let
+them disagree about the same instance, and the cheap wrong one loses the operator
+signal outright: a broken credential announced as "native sub-issues unsupported
+on this instance" is a no-op the operator has no reason to investigate, where
+`FAILED` names the fault. One definition, two postures.
+
 ### 4. The textual parent-side view is render-on-demand full-overwrite, never append
 
 Where there is no native panel, the parent-side children view is a **generated
@@ -319,12 +364,32 @@ property, and rows alone cannot carry it. A scan that stopped at a pagination
 ceiling returns a child set indistinguishable from an exhaustive one — a **silently
 short** answer feeding a gate whose whole job is to refuse on doubt, and the one
 failure mode such a gate cannot detect for itself. The native side carries the same
-hazard in a different form: *unsupported* (404/410/422 — the instance has no native
-substrate, so textual genuinely is the whole answer) and *unreadable* (auth, network,
-a transient 5xx, a missing `gh` — a native child set may exist and was not seen) are
-different facts about the world. Degrading an unsupported read to textual-only is
-sound; degrading an unreadable one discards children and presents the remainder as
-though it were everything.
+hazard in a different form: *unsupported* (the instance has no native substrate, so
+textual genuinely is the whole answer) and *unreadable* (auth, a token without issue
+scope, network, a transient 5xx, a missing `gh` — a native child set may exist and
+was not seen) are different facts about the world. Degrading an unsupported read to
+textual-only is sound; degrading an unreadable one discards children and presents the
+remainder as though it were everything.
+
+**And the failed response does not say which fact obtains.** Both native calls are
+REST, so a non-2xx carries a status — but the statuses do not partition cleanly:
+GitHub returns **404** for an absent endpoint *and* for a repository the caller may
+not see, identically. The read that matters most is the one a scope-poor credential
+produces, because it is silent: a fine-grained token without issue read on a private
+repository answers 404 rather than 401, so taking the status at face value hands a
+close gate a *determinate* textual-only answer precisely when the native panel is
+invisible — and public-repo work keeps succeeding, so nothing surfaces the fault
+(#869). No predicate over the status or the error text can separate the two causes,
+because there is nothing in the response to separate them by. Determinacy here is
+therefore something the seam must **establish**, not something it may infer: a
+conclusive status (410/422, which an invisible repository never produces) settles it
+directly, and an ambiguous 404 is settled by the parent-issue probe of point 2 —
+`UNSUPPORTED` only when that probe proves the repository, the credentials and the
+parent are all visible. A failure the seam cannot attribute is `UNREADABLE`. This
+is the load-bearing direction of the bias, and the reason the check is an API call
+rather than a string match: the cheaper text predicate is exactly the one that
+resolves an unknown into a confident answer, and simplifying to it reopens the gate
+fail-open without changing a single visible behaviour on a well-credentialed repo.
 
 The contract therefore carries a determinacy channel:
 
@@ -339,6 +404,13 @@ The contract therefore carries a determinacy channel:
   **incomplete** whatever the other half returned. A non-empty native panel does not
   rescue a truncated textual scan: the rows never fetched are exactly where a
   textual-only child would be.
+- ***Unsupported* is the only failed native read that still counts as complete —
+  so it must be earned, not assumed.** It is the one verdict that converts a call
+  that did not answer into a whole answer, which makes it the seam's single
+  fail-open surface. It is reached two ways and no other: a conclusive status, or a
+  404 the parent-issue probe attributes to the sub-resource. Every failure the seam
+  cannot attribute — including one it could not probe — falls to *unreadable*. The
+  default direction of the ambiguity is indeterminate.
 - **An incomplete resolution is an indeterminate answer for any gate consumer.** It
   is never reported as a confident child set and never as "no children" — the
   fail-closed posture the process substrate requires (COR-033), which the cascade
@@ -397,7 +469,9 @@ textual mechanism that can answer a gate.
   routing) explicitly; the selector is a manual operator declaration. The seam
   degrades on the *read* (unsupported native call → textual-only) regardless; the
   manual selector is the operator's deliberate choice, orthogonal to the read-time
-  degradation.
+  degradation. The parent-issue probe (point 2) is **not** auto-detection either: it
+  runs only after a call has already failed, it attributes *that* failure, it is
+  never cached, and its answer feeds the resolution in hand — never the selector.
 - **Not a reconciliation back-fill.** Switching existing issues from textual to
   native (a [project-management:DEC-037](../../../.pkit/capabilities/project-management/decisions/DEC-037-adoption-ceremony.md)
   `migrate`-family op) is deferred by DEC-039, not pinned here. This ADR pins that
@@ -475,6 +549,25 @@ confidently short child set closes a container over open work and is invisible a
 the moment it matters. A gate can only be as honest as the seam it asks, so the seam
 carries the verdict.
 
+**Why the unsupported verdict costs an extra call.** Every other outcome the seam
+reports is free — it falls out of a response it already has. This one does not,
+because the response is genuinely ambiguous: 404 names an absent endpoint and an
+unseeable repository with the same status and the same words, and the second is what
+a scope-poor credential produces. A seam that must vouch for its own answer cannot
+build the one verdict that *grants* completeness out of evidence that does not
+distinguish the two cases; the alternative is not a cheaper check but a confident
+guess. So the seam pays for the distinction — one narrow request, on the failure path
+only, once per parent — and the cost lands exactly where it is affordable, since the
+call only happens when something is already wrong. Placing that classification behind
+the seam rather than at the read and write call sites is the same one-reader move as
+points 1 and 5: "unsupported" is one fact about the instance, and two definitions of
+it would let the two paths disagree about the same repository while each looked
+locally correct. The architectural shape to protect is that **the fail-open verdict
+is the expensive one**. A future author optimising the probe away is left with a
+predicate that is right on every well-credentialed repository and wrong in precisely
+the case the gate exists for — a regression with no visible symptom, which is why the
+mechanism is pinned here and not left as an implementation detail.
+
 ### Alternatives considered
 
 - **Each consumer re-derives children by parsing body parent-refs itself** (no read
@@ -512,6 +605,25 @@ carries the verdict.
   instance has no native children to miss, while an unreadable panel may be hiding
   a child set that was simply not fetched. Collapsing them turns a transient auth or
   network failure into a confident, short child set at a close gate.
+- **Classify the failure from its status or error text** (treat a 404 on
+  `…/sub_issues` as unsupported). Rejected — it is the previous alternative wearing
+  a status code: GitHub returns 404 both for an absent endpoint and for a repository
+  the caller may not see, so the predicate silently collapses *unreadable* into
+  *unsupported* for every scope-poor credential, and a fine-grained token missing
+  issue read on a private repository lands there rather than on a 401 (#869). No
+  richer text matching rescues it; the distinction is not in the response. The seam
+  attributes the ambiguous case by probing the parent issue instead, and treats an
+  unattributable failure as unreadable.
+- **Probe unconditionally, on every failed native read** rather than only on the
+  ambiguous status. Rejected as needless — an invisible repository never yields a 410
+  or a 422, so those statuses already name feature-absence on their own; probing them
+  buys nothing and puts a second request on a path that is already answered.
+- **Let the write path keep its own unsupported predicate** (the read probes, the
+  write reads the status). Rejected — one fact about the instance with two
+  definitions drifts, and the write's posture makes the wrong answer quiet: a
+  credential fault reported as "unsupported" degrades to a silent no-op the operator
+  has no reason to investigate, where `FAILED` names the fault. Both paths route
+  through the one classification point and keep their own postures.
 - **Resolve the textual half through the tracker's search index** rather than a full
   corpus enumeration. Rejected — the index is asynchronous and therefore stale in
   exactly the window after child activity when a close gate runs, the query cannot
@@ -524,8 +636,8 @@ carries the verdict.
 - **One containment read seam** (`resolve_children` in `_lib/containment.py`) that
   `show-tree`, the DEC-034 closure-fold child-walk, and `close-issue` resolve
   through; no consumer re-parses body parent-refs directly. The *resolution* half is
-  realized by the merged **#345**, the *acquisition + determinacy* half by **#865**
-  (Context).
+  realized by the merged **#345**, the *acquisition + determinacy* half by **#865**,
+  and the *attributed unsupported verdict* by **#869** (Context).
 - **Native-wins is a seam invariant over the union of both substrates** — a child
   present both ways is NATIVE, a textual-only child is TEXTUAL, a native child the
   corpus scan missed is still NATIVE; native support is a property of the *read* (an
@@ -540,6 +652,16 @@ carries the verdict.
   consumer maps an incomplete resolution to indeterminate, never to a child set and
   never to "no children". The seam owns the default corpus acquisition so the ceiling
   semantics live in one place.
+- **The *unsupported* verdict is attributed, never inferred from a failed call** —
+  reached by a conclusive status (410/422, which an invisible repository cannot
+  produce) or by a 404 that a probe of the parent issue pins on the sub-resource
+  rather than on the repository; every failure the seam cannot attribute, including
+  one it could not probe, is *unreadable*. This is the seam's one fail-open surface
+  (an unsupported read still counts as complete), so it costs one extra request on
+  the failure path rather than a status match. **Both the read and the write path
+  route through that single classification point** — one definition of "unsupported",
+  two postures on it: the read degrades to textual-only, the write degrades to a
+  no-op, and a write that failed on credentials reports `FAILED` instead.
 - **Both substrates are consulted on every resolution** — the
   `containment: native | textual` selector governs *writes* only and is not an input
   to the read seam, because the declared write mode makes no claim about what a

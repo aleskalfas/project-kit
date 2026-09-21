@@ -1,0 +1,23 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  A repository the caller cannot see is no longer mistaken for one without
+  native sub-issues (#869). GitHub answers 404 both for an absent endpoint and
+  for a repository you may not know exists, and the containment seam read that
+  status as "this instance has no native sub-issues" — a determinate answer that
+  let a close gate resolve a parent's children from body parent-refs alone, so
+  any child linked natively but carrying no parent-ref line went unseen. The
+  fault is quiet and selective rather than exotic: a fine-grained token missing
+  `Issues: read`, or unauthorised SSO, returns 404 rather than 401 on a private
+  repository, so public-repo work keeps succeeding while private repositories
+  silently report no native children. No reading of the error text can separate
+  the two causes, since both produce the same status and the same message, so
+  the seam now asks the API: 410 and 422 still name feature-absence outright,
+  while a 404 is attributed by probing the parent issue itself — visible parent
+  means the endpoint really is absent, an unreachable one means the answer
+  cannot be vouched for and the gate holds. One extra call, only when a read has
+  already failed. The link-writing path routes through the same classifier, so a
+  broken token there now reports a failure instead of announcing the feature
+  unsupported and hiding the cause.

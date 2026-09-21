@@ -462,7 +462,7 @@ def test_refresh_creates_when_no_marked_comment(containment, monkeypatch) -> Non
         if "/comments" in " ".join(args) and "--paginate" in args:
             return subprocess.CompletedProcess(args, 0, stdout="[]", stderr="")
         if "--paginate" in args:  # native sub_issues read → unsupported (textual)
-            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 404")
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 410: Gone")
         return subprocess.CompletedProcess(args, 0, stdout="{}", stderr="")
 
     monkeypatch.setattr(containment, "_gh_call", fake_gh)
@@ -491,7 +491,7 @@ def test_refresh_overwrites_existing_marked_comment_not_appends(
                 args, 0, stdout=_comments_payload((55, stale)), stderr=""
             )
         if "--paginate" in args:  # native read → textual fallback
-            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 404")
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 410: Gone")
         return subprocess.CompletedProcess(args, 0, stdout="{}", stderr="")
 
     monkeypatch.setattr(containment, "_gh_call", fake_gh)
@@ -527,7 +527,7 @@ def test_refresh_idempotent_when_body_unchanged(containment, monkeypatch) -> Non
                 args, 0, stdout=_comments_payload((55, current)), stderr=""
             )
         if "--paginate" in args:  # native read → textual fallback
-            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 404")
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 410: Gone")
         raise AssertionError("no write must happen on an unchanged body")
 
     monkeypatch.setattr(containment, "_gh_call", fake_gh)
@@ -548,7 +548,7 @@ def test_refresh_content_matches_resolve_children(containment, monkeypatch) -> N
         if "/comments" in joined and "--paginate" in args:
             return subprocess.CompletedProcess(args, 0, stdout="[]", stderr="")
         if "--paginate" in args:  # native read → textual fallback
-            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 404")
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 410: Gone")
         # the POST create — capture the body argument.
         captured["args"] = args
         return subprocess.CompletedProcess(args, 0, stdout="{}", stderr="")
@@ -574,7 +574,7 @@ def test_refresh_failed_read_is_failed_not_duplicate_post(containment, monkeypat
         if "/comments" in joined and "--paginate" in args:
             return subprocess.CompletedProcess(args, 1, stdout="", stderr="transient")
         if "--paginate" in args:
-            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 404")
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 410: Gone")
         raise AssertionError("must not write when the comment list is unreadable")
 
     monkeypatch.setattr(containment, "_gh_call", fake_gh)
@@ -591,7 +591,7 @@ def test_refresh_write_failure_is_failed_not_raised(containment, monkeypatch) ->
         if "/comments" in joined and "--paginate" in args:
             return subprocess.CompletedProcess(args, 0, stdout="[]", stderr="")
         if "--paginate" in args:
-            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 404")
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 410: Gone")
         return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 500")
 
     monkeypatch.setattr(containment, "_gh_call", fake_gh)

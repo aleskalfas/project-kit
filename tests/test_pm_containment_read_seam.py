@@ -58,13 +58,23 @@ def _native(*numbers: int) -> str:
     return f"[{entries}]"
 
 
-def _stub_native(containment, monkeypatch, *, stdout: str, returncode: int = 0, stderr: str = ""):
-    """Stub the native `…/sub_issues` GET at `_gh_call`.
+def _stub_native(
+    containment, monkeypatch, *, stdout: str, returncode: int = 0, stderr: str = "",
+    repo_visible: bool = True,
+):
+    """Stub the native `…/sub_issues` GET at `_gh_call`, and the 404 probe.
 
-    ``stderr`` matters: it is what separates an instance with no native
-    substrate (404/410/422) from one that could not be reached (ADR-035 §5).
+    ``stderr`` separates the conclusive statuses (410/422) from everything else.
+    A **404 is ambiguous** — an absent endpoint and an invisible repository are
+    textually identical — so it is settled by probing the parent issue.
+    ``repo_visible`` is that probe's answer (#869).
     """
     def fake_gh(args, config):
+        joined = " ".join(args)
+        if "sub_issues" not in joined:  # the parent-issue probe
+            return subprocess.CompletedProcess(
+                args, 0 if repo_visible else 1, stdout="342", stderr=""
+            )
         return subprocess.CompletedProcess(args, returncode, stdout=stdout, stderr=stderr)
 
     monkeypatch.setattr(containment, "_gh_call", fake_gh)
@@ -176,11 +186,14 @@ def test_unsupported_instance_is_textual_only_and_determinate(containment, monke
     """An instance without native sub-issues degrades to TEXTUAL-ONLY, and that
     degradation is a COMPLETE answer — the mirror of the write side's UNSUPPORTED
     no-op. There is no native substrate to have missed anything (ADR-035 §5)."""
-    _stub_native(containment, monkeypatch, stdout="", returncode=1, stderr="HTTP 404: Not Found")
+    _stub_native(
+        containment, monkeypatch, stdout="", returncode=1,
+        stderr="HTTP 404: Not Found", repo_visible=True,
+    )
     res = containment.resolve_children(
         {}, parent_number=342, corpus=_MIXED_CORPUS, corpus_complete=True
     )
-    assert res.native_supported is False, "404 → no native substrate here"
+    assert res.native_supported is False, "404 with the repo visible → endpoint absent"
     assert res.numbers == [344, 345], "textual projection still resolves both children"
     assert res.textual_numbers == [344, 345]
     assert res.complete is True, "textual-only is the whole answer when native is unsupported"
@@ -288,7 +301,7 @@ def _stub_gh_list(containment, monkeypatch, *, total: int, child_at: int, parent
     """
     def fake_gh(args, config):
         if args[1] == "api":  # the native sub-issues read, not the corpus list
-            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 404")
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 410: Gone")
         limit = int(args[args.index("--limit") + 1])
         rows = [
             {
@@ -348,3 +361,50 @@ def test_a_supplied_corpus_without_a_completeness_claim_is_not_vouched_for(
     res = containment.resolve_children({}, parent_number=5, corpus={9: "EPIC: #5\n"})
     assert res.numbers == [9]
     assert res.complete is False
+
+
+# --- the ambiguous 404 (#869) ------------------------------------------------
+#
+# GitHub answers 404 both for "this endpoint is absent" and for "you may not
+# know this repository exists". Reading the second as the first hands a close
+# gate a determinate child set whenever a token lacks scope — and since a
+# fine-grained PAT without `Issues: read` returns 404 rather than 401 on a
+# private repo, it fails quietly while public-repo work keeps succeeding.
+
+
+def test_an_invisible_repository_is_not_an_absent_endpoint(containment, monkeypatch) -> None:
+    """The same 404, settled by whether the repository can be seen at all.
+
+    Against the text-only predicate this asserted the opposite: `HTTP 404` alone
+    resolved to UNSUPPORTED, so a credential fault produced a *complete*
+    textual-only answer and the gate closed over any natively-linked child whose
+    body carries no parent-ref line.
+    """
+    _stub_native(
+        containment, monkeypatch, stdout="", returncode=1,
+        stderr="HTTP 404: Not Found (https://api.github.com/repos/o/r/issues/342/sub_issues)",
+        repo_visible=False,
+    )
+    res = containment.resolve_children(
+        {}, parent_number=342, corpus=_MIXED_CORPUS, corpus_complete=True
+    )
+    assert res.complete is False, "a 404 we cannot attribute must not read as determinate"
+    assert res.incomplete_reason and "native" in res.incomplete_reason
+    assert res.native_supported is True, "the endpoint is not known to be absent"
+
+
+@pytest.mark.parametrize("status", ["HTTP 410: Gone", "HTTP 422: Unprocessable Entity"])
+def test_conclusive_statuses_need_no_probe(containment, monkeypatch, status: str) -> None:
+    """410/422 name feature-absence outright — an invisible repo never yields them.
+
+    `repo_visible=False` would flip a 404; these must resolve UNSUPPORTED anyway,
+    which proves they short-circuit before the probe rather than passing by luck.
+    """
+    _stub_native(
+        containment, monkeypatch, stdout="", returncode=1, stderr=status, repo_visible=False,
+    )
+    res = containment.resolve_children(
+        {}, parent_number=342, corpus=_MIXED_CORPUS, corpus_complete=True
+    )
+    assert res.native_supported is False
+    assert res.complete is True, "a conclusive absence is still a complete answer"
