@@ -32,7 +32,7 @@ Milestones in this methodology serve two distinct roles depending on project sha
 
 The choice is per-project — set at adoption time and revisited only when the project's shape changes (a flat feature-driven project starts theming work into bundles; a time-driven team drops sprints in favour of release-when-ready). Multiple shapes can also coexist in one repo via the categories mechanism below.
 
-**Closability is the test** — every Milestone, whatever its shape, must have a definable "done" state. A milestone titled `Methodology hardening` or `Adopter onboarding` that could "live forever" is a category not a deliverable; the right shape there is workstream-level grouping (`workstream:methodology-hardening`) rather than a Milestone.
+**Closability is the test** — every Milestone, whatever its shape, must have a definable "done" state; a theme that could "live forever" (`Methodology hardening`, or a housekeeping backlog) must not be modelled as a never-closing Milestone. Such a standing theme is served by **two** primitives with different jobs: a **workstream** (`workstream:housekeeping`) carries the cross-cutting *grouping* — a classification label per [project-management:DEC-012-classification-axes], so it groups issues but never *parents* them — while, where the work needs a *closable structural parent*, a **rolling `date-based` Milestone** (`Housekeeping 2026-Q3`, closing each period and rolling its open children forward) supplies one that stays continuous in practice yet closable by construction. The continuity comes from rollforward, not from refusing to close.
 
 ### Milestone categories — mandatory declaration before use
 
