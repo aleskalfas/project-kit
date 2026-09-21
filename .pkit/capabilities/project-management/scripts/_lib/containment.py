@@ -421,14 +421,19 @@ class ChildResolution:
     Fields:
       children          — the resolved children, sorted by number, deduped across
                           substrates with native-wins.
-      native_supported  — False when the native sub-issues read returned
-                          unsupported (404/410/422 / missing ``gh``); the result
-                          is then textual-only (graceful degradation, like the
-                          write side). True when the native read succeeded (even
-                          if it returned zero native children). None is not used —
-                          a failed-but-supported read also yields textual-only
-                          with this False (the consumer cannot tell, and need not:
-                          the textual projection is the documented fallback).
+      native_supported  — False only when the instance has **no native
+                          substrate** (404/410/422); the result is then
+                          textual-only, and that is a COMPLETE answer. True when
+                          the endpoint exists — including when the read of it
+                          failed, which is reported through ``complete`` rather
+                          than by pretending the substrate is absent.
+      complete          — False when the seam cannot vouch for the child set: an
+                          unreadable native read, or a corpus that was not
+                          enumerated to exhaustion (or supplied without a
+                          completeness claim). A gating consumer must check this:
+                          an incomplete answer is not a smaller child set, it is
+                          no answer.
+      incomplete_reason — why, in operator-facing words; None when complete.
 
     Convenience accessors keep call sites terse and stop each consumer from
     re-deriving the same projections off ``children``.
@@ -436,6 +441,8 @@ class ChildResolution:
 
     children: tuple[ResolvedChild, ...]
     native_supported: bool
+    complete: bool = True
+    incomplete_reason: str | None = None
 
     @property
     def numbers(self) -> list[int]:
@@ -453,6 +460,77 @@ class ChildResolution:
         return sorted(c.number for c in self.children if c.substrate is ChildSubstrate.TEXTUAL)
 
 
+class NativeReadOutcome(Enum):
+    """How the native sub-issues read went — three outcomes, not two.
+
+    ``UNSUPPORTED`` and ``UNREADABLE`` both yield no child set, but they mean
+    opposite things for completeness and must not be collapsed (ADR-035 §5):
+
+    * ``READ`` — the endpoint answered. The set is authoritative, empty included.
+    * ``UNSUPPORTED`` — 404/410/422: this instance has no native substrate at
+      all, so the textual projection genuinely IS the whole answer. Degrading to
+      textual-only is a *determinate* result.
+    * ``UNREADABLE`` — auth, network, a transient 5xx, an unparseable payload, or
+      no ``gh`` on PATH: a native child set may exist and was not seen. Absence
+      of the tool is not evidence about the instance. Degrading here would silently
+      drop natively-linked children whose bodies carry no parent-ref line, which
+      on a close gate is a fail-open.
+    """
+
+    READ = "read"
+    UNSUPPORTED = "unsupported"
+    UNREADABLE = "unreadable"
+
+
+@dataclass(frozen=True)
+class NativeRead:
+    """A native read's child numbers plus how the read went."""
+
+    numbers: set[int]
+    outcome: NativeReadOutcome
+
+    @property
+    def supported(self) -> bool:
+        return self.outcome is not NativeReadOutcome.UNSUPPORTED
+
+
+def read_native_children(
+    config: dict[str, Any], *, parent_number: int | str
+) -> NativeRead:
+    """The native child set, with the outcome that produced it.
+
+    Prefer this over :func:`read_native_child_numbers`, which cannot distinguish
+    "no native substrate here" from "I could not reach it".
+    """
+    args = list_sub_issues_args(parent_number=parent_number)
+    try:
+        proc = _gh_call(args, config)
+    except FileNotFoundError:
+        # No `gh` at all. This says nothing about the INSTANCE — a native child
+        # set may well exist and we simply cannot look. Calling it unsupported
+        # would license a determinate textual-only answer on no evidence, so it
+        # is the unreadable case (ADR-035 §2).
+        return NativeRead(numbers=set(), outcome=NativeReadOutcome.UNREADABLE)
+    if proc.returncode != 0:
+        outcome = (
+            NativeReadOutcome.UNSUPPORTED
+            if _is_unsupported(proc.stderr or "")
+            else NativeReadOutcome.UNREADABLE
+        )
+        return NativeRead(numbers=set(), outcome=outcome)
+    payload = _parse_concatenated_arrays((proc.stdout or "").strip())
+    if payload is None:
+        # The endpoint answered and we could not read it: a child set may exist.
+        return NativeRead(numbers=set(), outcome=NativeReadOutcome.UNREADABLE)
+    numbers: set[int] = set()
+    for entry in payload:
+        if isinstance(entry, dict):
+            raw = entry.get("number")
+            if isinstance(raw, int):
+                numbers.add(raw)
+    return NativeRead(numbers=numbers, outcome=NativeReadOutcome.READ)
+
+
 def read_native_child_numbers(
     config: dict[str, Any], *, parent_number: int | str
 ) -> set[int] | None:
@@ -463,81 +541,189 @@ def read_native_child_numbers(
     write half's idempotency read uses — but keyed on the child ``number`` (the
     methodology's stable id) rather than the database ``id`` the *write* needs.
 
-    Returns ``None`` when the native read is **unsupported or unreadable** — a
-    404/410/422 (older GHES / feature off), a missing ``gh``, a non-zero exit, or
-    an unparseable payload. ``None`` is the signal to the resolver to fall back to
-    **textual-only** (graceful degradation, the read mirror of the write side's
-    UNSUPPORTED no-op). An empty set is a *successful* read of a parent with no
-    native sub-issues — distinct from ``None``, and it does NOT trigger textual
-    fallback (the parent genuinely has no native children).
+    Returns ``None`` when the native read did not succeed — a 404/410/422 (older
+    GHES / feature off), a missing ``gh``, a non-zero exit, or an unparseable
+    payload. An empty set is a *successful* read of a parent with no native
+    sub-issues, distinct from ``None``.
+
+    Retained for callers that only need the numbers. :func:`resolve_children` no
+    longer uses it: collapsing "no native substrate here" with "could not reach
+    it" loses the distinction a gate depends on, so the resolver calls
+    :func:`read_native_children` instead. Prefer that one in new code.
     """
-    args = list_sub_issues_args(parent_number=parent_number)
+    read = read_native_children(config, parent_number=parent_number)
+    return read.numbers if read.outcome is NativeReadOutcome.READ else None
+
+
+# The seam's own corpus acquisition. Set far above any plausible tracker: this is
+# not a view control, it is the point past which the seam refuses to pretend it
+# saw everything. Struck => the answer is incomplete, never a short answer served
+# as a whole one. `gh issue list` paginates internally up to --limit, so one call
+# fetches to exhaustion below the ceiling.
+CORPUS_CEILING = 5000
+
+_CORPUS_FIELDS = "number,body,state,labels,milestone"
+
+
+@dataclass(frozen=True)
+class IssueCorpus:
+    """Every issue the seam could see, and whether that is all of them.
+
+    ``complete`` is the honest signal the consumers lacked: each of them fetched
+    its own corpus with a different ceiling and only one noticed when it struck
+    one, so the same seam answered with four different notions of completeness.
+    """
+
+    rows: tuple[dict[str, Any], ...]
+    complete: bool
+
+    @property
+    def bodies(self) -> dict[int, str]:
+        out: dict[int, str] = {}
+        for row in self.rows:
+            number = row.get("number")
+            if isinstance(number, int):
+                out[number] = str(row.get("body") or "")
+        return out
+
+    @property
+    def states(self) -> dict[int, str]:
+        out: dict[int, str] = {}
+        for row in self.rows:
+            number = row.get("number")
+            if isinstance(number, int):
+                out[number] = str(row.get("state", "")).lower()
+        return out
+
+
+def fetch_issue_corpus(
+    config: dict[str, Any], *, fields: str = _CORPUS_FIELDS
+) -> IssueCorpus | None:
+    """Fetch every issue, reporting whether the fetch was exhaustive.
+
+    Returns ``None`` when the query itself failed — distinct from a complete
+    fetch of an empty tracker, and distinct from a truncated one.
+    """
+    args = [
+        "gh", "issue", "list",
+        "--state", "all",
+        "--limit", str(CORPUS_CEILING),
+        "--json", fields,
+    ]
     try:
         proc = _gh_call(args, config)
     except FileNotFoundError:
         return None
     if proc.returncode != 0:
         return None
-    payload = _parse_concatenated_arrays((proc.stdout or "").strip())
-    if payload is None:
+    try:
+        parsed = json.loads(proc.stdout or "[]")
+    except (ValueError, json.JSONDecodeError):
         return None
-    numbers: set[int] = set()
-    for entry in payload:
-        if isinstance(entry, dict):
-            raw = entry.get("number")
-            if isinstance(raw, int):
-                numbers.add(raw)
-    return numbers
+    if not isinstance(parsed, list):
+        return None
+    rows = tuple(row for row in parsed if isinstance(row, dict))
+    # Measure the ceiling against what `gh` RETURNED, not against what survived
+    # filtering: a dropped non-dict row would otherwise make a struck ceiling
+    # read as complete.
+    return IssueCorpus(rows=rows, complete=len(parsed) < CORPUS_CEILING)
 
 
 def resolve_children(
     config: dict[str, Any],
     *,
     parent_number: int,
-    corpus: dict[int, str],
+    corpus: dict[int, str] | None = None,
+    corpus_complete: bool | None = None,
 ) -> ChildResolution:
     """Resolve a parent's children — native-where-present, textual-otherwise,
     native-wins on conflict (DEC-005).
 
-    The sole read-seam for "what are this parent's children?" Both ``show-tree``
-    and the DEC-034 closure-fold child-walk resolve through it so neither
-    re-derives containment (the ADR-026 one-read-seam discipline applied to the
-    containment axis).
+    The sole read-seam for "what are this parent's children?" ``show-tree``, the
+    DEC-034 closure fold and ``close-issue``'s open-children walk all resolve
+    through it, so none re-derives containment (the ADR-026 one-read-seam
+    discipline applied to the containment axis).
 
     Args:
-      parent_number — the parent whose children to resolve.
-      corpus        — the already-fetched issue corpus as ``{number: body}`` for
-                      EVERY issue the caller knows about. The textual side is
-                      resolved from this map with **zero** extra API calls — the
-                      caller has already paid for the corpus fetch (``show-tree``
-                      and the closure-fold both ``gh issue list`` the whole repo
-                      once). See the cost note below.
+      parent_number   — the parent whose children to resolve.
+      corpus          — optional ``{number: body}``. Omit it and the seam
+                        acquires the corpus itself via :func:`fetch_issue_corpus`,
+                        which is the path every gate should take. Supply one only
+                        when you already hold it (``show-tree`` renders from a
+                        corpus it fetched for other reasons).
+      corpus_complete — required *with* ``corpus``: your claim about whether that
+                        map is the whole tracker. Omit the claim and the seam
+                        treats the answer as **not vouched for**
+                        (``complete=False``) rather than assuming — assuming is
+                        how four consumers ended up with four ceilings (#846).
+
+    Returns a :class:`ChildResolution` carrying the child set, each child's
+    substrate, ``native_supported``, and a **completeness verdict**
+    (``complete`` + ``incomplete_reason``). A consumer gating on the child set
+    must check ``complete``: an incomplete answer is not a smaller child set, it
+    is *no answer*, and holding fail-closed is the only correct response.
 
     Resolution:
       1. Native side — one ``GET …/sub_issues`` call for THIS parent
-         (:func:`read_native_child_numbers`). Unsupported/unreadable → textual-
-         only (``native_supported=False``).
+         (:func:`read_native_children`, three-valued). ``UNSUPPORTED`` → the
+         instance has no native substrate, so textual-only is the *complete*
+         answer (``native_supported=False``). ``UNREADABLE`` → a native child set
+         may exist unseen, so the resolution is **incomplete** while
+         ``native_supported`` stays True: the endpoint is not absent, it was not
+         reachable.
       2. Textual side — every corpus issue whose body first-line parent-ref names
          ``parent_number`` (``_body_names_parent``), excluding the parent itself.
       3. Union with **native-wins dedup**: a child present both ways is NATIVE; a
          child present only textually is TEXTUAL; a native child not in the
          corpus is still NATIVE (mixed-mode — the native panel is authoritative
          even for a child the textual scan missed).
+      4. Determinacy — an incomplete corpus or an unreadable native read makes
+         the whole resolution incomplete. A non-empty native panel does **not**
+         rescue a truncated textual scan: the rows never fetched are exactly
+         where a textual-only child would be.
 
-    API cost (the deliberate shape): the textual side is free (corpus already in
-    hand); the native side is **one call per parent resolved**, NOT per corpus
-    issue. Both consumers resolve children one parent at a time (``show-tree``
-    walks known parents; the closure fold resolves a single container), so native
-    reads scale with *parents queried*, not corpus size. A whole-tree ``show-tree``
-    does pay one native call per node that has children — bounded by the tree's
-    internal-node count, well under the corpus size, and the price of honouring
-    "native wins" without a private GraphQL batch (a batched ``subIssues`` GraphQL
-    pass is a later optimisation, not pinned here — COR-007 speculative-generality
+    API cost — two shapes, and the difference matters before you drop ``corpus=``:
+
+    * **Corpus supplied** — the textual side is free (you already paid for the
+      fetch); the native side is one ``…/sub_issues`` call per parent resolved.
+    * **Corpus omitted** (the seam acquires) — the textual side costs one FULL
+      enumeration per call, plus the same one native call per parent.
+
+    The native side is per *parent resolved*, never per corpus issue, so it
+    scales with parents queried. The textual side does not: a caller that
+    resolves many parents in a loop and omits ``corpus`` pays a whole-tracker
+    enumeration on every iteration. ``show-tree`` is exactly that shape — it
+    walks candidate parents — which is why it supplies its own corpus and must
+    keep doing so. A gate resolving a single container should omit it and let
+    the seam vouch for completeness.
+
+    Three consumers today: ``show-tree`` (supplies), the DEC-034 closure fold's
+    ``cascade_members`` (omits), and ``close-issue._find_open_children``
+    (supplies, with a completeness claim). A whole-tree ``show-tree`` pays one
+    native call per node that has children — bounded by the tree's internal-node
+    count, well under the corpus size, and the price of honouring "native wins"
+    without a private GraphQL batch (a batched ``subIssues`` GraphQL pass is a
+    later optimisation, not pinned here — COR-007 speculative-generality
     restraint).
     """
-    native = read_native_child_numbers(config, parent_number=parent_number)
-    native_supported = native is not None
-    native_set = native or set()
+    native = read_native_children(config, parent_number=parent_number)
+    native_supported = native.supported
+    native_set = native.numbers
+    fetch_failed = False
+
+    if corpus is None:
+        fetched = fetch_issue_corpus(config)
+        if fetched is None:
+            corpus = {}
+            corpus_complete = False
+            fetch_failed = True
+        else:
+            corpus = fetched.bodies
+            corpus_complete = fetched.complete
+    elif corpus_complete is None:
+        # A caller that supplies a corpus must claim its completeness. Absent a
+        # claim the seam cannot vouch for it, so it says so rather than assuming.
+        corpus_complete = False
 
     textual_set = {
         number
@@ -545,13 +731,35 @@ def resolve_children(
         if number != parent_number and _body_names_parent(body, parent_number)
     }
 
+    # Determinacy, per ADR-035 §5. A non-empty native panel does NOT rescue a
+    # truncated textual scan: the rows never fetched are exactly where a
+    # textual-only child would be.
+    incomplete_reason: str | None = None
+    if fetch_failed:
+        incomplete_reason = "the issue list could not be read at all (gh failure)"
+    elif native.outcome is NativeReadOutcome.UNREADABLE:
+        incomplete_reason = (
+            "the native sub-issues read failed (not an unsupported endpoint), so a "
+            "native child set may exist and was not seen"
+        )
+    elif not corpus_complete:
+        incomplete_reason = (
+            "the issue corpus was not enumerated to exhaustion, so a textual-only "
+            "child may sit in the rows that were never fetched"
+        )
+
     resolved: list[ResolvedChild] = []
     for number in native_set:
         resolved.append(ResolvedChild(number=number, substrate=ChildSubstrate.NATIVE))
     for number in textual_set - native_set:  # native-wins: skip textual dupes
         resolved.append(ResolvedChild(number=number, substrate=ChildSubstrate.TEXTUAL))
     resolved.sort(key=lambda c: c.number)
-    return ChildResolution(children=tuple(resolved), native_supported=native_supported)
+    return ChildResolution(
+        children=tuple(resolved),
+        native_supported=native_supported,
+        complete=incomplete_reason is None,
+        incomplete_reason=incomplete_reason,
+    )
 
 
 def _body_names_parent(body: str, parent_number: int) -> bool:

@@ -50,18 +50,14 @@ def _indeterminate(reason: str) -> dict[str, Any]:
     return {"result": False, "reason": reason, INDETERMINATE_KEY: True}
 
 
-# Pagination ceilings for the `gh list` queries below. When a returned list hits
-# its ceiling there MAY be more rows we never saw, so the query is honestly
+# Pagination ceiling for the merged-PR lookup below. When the returned list hits
+# its ceiling there MAY be rows we never saw, so the query is honestly
 # indeterminate (fail-closed, COR-033) — not a confident negative. Kept named so
-# the limit and its ceiling-check can never drift apart.
-_OPEN_ISSUES_LIMIT = 500
+# the limit and its ceiling-check can never drift apart, and measured against the
+# set the query actually fetches: the issue-corpus ceiling now lives behind the
+# containment seam, which owns acquisition (ADR-035 §5).
 _MERGED_PRS_LIMIT = 100
 
-# Sentinel for "the gh list hit its pagination ceiling": there may be more rows
-# than we fetched, so the query is indeterminate rather than a confident
-# negative. Distinct from `_GH_ERROR` (the query itself failed) only in the
-# message; both map to fail-closed indeterminate.
-_GH_CEILING = object()
 
 
 # --- shared issue access --------------------------------------------------
@@ -157,14 +153,21 @@ def parent_has_active_descendant(parent_number: int) -> dict[str, Any]:
         return _indeterminate("project-management capability not found")
     config = _config(capability_root)
     substrate_map = axis_labels.load_substrate_map(capability_root)
-    children = _list_issues(config)
-    if children is None:
+    # Corpus + completeness both come from the seam (ADR-035 §5). This walk still
+    # filters by the TEXTUAL parent-ref itself, because it needs each row's state,
+    # labels and milestone to infer position — which the child-set resolver does
+    # not carry. A natively-linked child whose body has no parent-ref line is
+    # therefore invisible here; that gap is older than this change and is not the
+    # close gate (this predicate informs forward-cascade reasoning).
+    corpus = containment.fetch_issue_corpus(config)
+    if corpus is None:
         return _indeterminate("could not list issues (gh failure)")
-    if children is _GH_CEILING:
+    if not corpus.complete:
         return _indeterminate(
-            f"issue list hit the pagination ceiling ({_OPEN_ISSUES_LIMIT}); "
-            "descendant walk may be incomplete"
+            f"the issue corpus was not enumerated to exhaustion "
+            f"(ceiling {containment.CORPUS_CEILING}); descendant walk may be incomplete"
         )
+    children = corpus.rows
     active: list[int] = []
     for child in children:
         body = str(child.get("body") or "")
@@ -218,30 +221,26 @@ def cascade_members(parent_number: int) -> dict[str, Any]:
     hierarchy child regardless of parent), `membership` would NOT catch it.
     Parent-faithfulness lives here and only here.
 
-    Indeterminate (the engine holds the whole fold fail-closed) on a gh failure
-    or a pagination-ceiling hit — never a confident "no children" on a partial
-    read (that could let an `all` vacuously satisfy via `on_empty`).
+    Indeterminate (the engine holds the whole fold fail-closed) whenever the seam
+    cannot vouch for the child set: a gh failure, a corpus not enumerated to
+    exhaustion, or a native read that failed rather than being unsupported. Never
+    a confident "no children" on a partial read — that could let an `all`
+    vacuously satisfy via `on_empty`, closing a container over a live child.
     """
     capability_root = _capability_root()
     if capability_root is None:
         return _indeterminate("project-management capability not found")
     config = _config(capability_root)
-    issues = _list_issues(config)
-    if issues is None:
-        return _indeterminate("could not list issues (gh failure)")
-    if issues is _GH_CEILING:
+    # The seam acquires the corpus and reports whether it saw all of it; this
+    # predicate no longer keeps its own ceiling (ADR-035 §5). Enumerating the
+    # whole tracker to answer a question about one parent is what hit a 500-row
+    # ceiling at 507 issues and blocked every container close (#846).
+    resolution = containment.resolve_children(config, parent_number=parent_number)
+    if not resolution.complete:
         return _indeterminate(
-            f"issue list hit the pagination ceiling ({_OPEN_ISSUES_LIMIT}); "
-            "the child set may be incomplete"
+            f"the child set for #{parent_number} may be incomplete: "
+            f"{resolution.incomplete_reason}"
         )
-    corpus = {
-        number: str(child.get("body") or "")
-        for child in issues
-        if isinstance((number := child.get("number")), int)
-    }
-    resolution = containment.resolve_children(
-        config, parent_number=parent_number, corpus=corpus
-    )
     members = [str(n) for n in resolution.numbers]
     return {
         "members": members,
@@ -295,47 +294,6 @@ def cascade_membership(child_number: int) -> dict[str, Any]:
         ),
         "detail": {"parent_ref": parent},
     }
-
-
-def _list_issues(config: dict[str, Any]) -> Any:
-    """List EVERY issue (`--state all`) for a child/descendant walk. Returns the
-    parsed list, `None` on a gh failure, or the `_GH_CEILING` sentinel when the
-    result hits the pagination ceiling (there may be unseen rows -> the caller
-    maps that to indeterminate). Shared by the descendant walk (forward-cascade
-    reasoning) and the cascade `members` candidate-set source (DEC-034).
-    """
-    try:
-        proc = gh_run(
-            [
-                "gh",
-                "issue",
-                "list",
-                "--state",
-                "all",
-                "--limit",
-                str(_OPEN_ISSUES_LIMIT),
-                "--json",
-                "number,body,state,labels,milestone",
-            ],
-            config,
-            check=False,
-        )
-    except FileNotFoundError:
-        return None
-    if proc.returncode != 0:
-        return None
-    try:
-        parsed = json.loads(proc.stdout)
-    except (json.JSONDecodeError, ValueError):
-        return None
-    if not isinstance(parsed, list):
-        return None
-    if len(parsed) >= _OPEN_ISSUES_LIMIT:
-        return _GH_CEILING
-    return parsed
-
-
-# --- gates ----------------------------------------------------------------
 
 
 def gate_checkboxes_ticked(issue_number: int) -> dict[str, Any]:

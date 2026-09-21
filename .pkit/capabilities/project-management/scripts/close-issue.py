@@ -546,41 +546,36 @@ def _find_open_children(parent_num: int, config: dict) -> list[int] | None:
     re-parsing body parent-refs. The seam returns ALL children; this helper
     filters to the still-OPEN ones for the "what to close first" hint.
 
-    Empty list = all children closed (or none); None on gh failure.
+    Diagnostic only: the engine fold is the decision, and the sole caller reaches
+    this after that fold has already refused. Empty list = all children closed
+    (or none). None means "cannot say" — a gh failure, or a resolution the seam
+    could not vouch for — and the hint is omitted rather than shown short.
     """
-    proc = gh_run(
-        [
-            "gh", "issue", "list", "--state", "all", "--limit", "500",
-            "--json", "number,state,body",
-        ],
+    # Acquisition belongs to the seam (ADR-035 §5). This used to fetch 500 rows
+    # and compute open children with NO truncation check, so past 500 issues the
+    # hint could omit still-open children — or list none at all — while the user
+    # read it as the full set of what to close. It never closed anything: the
+    # engine fold is the decision and it had already refused (see the call site).
+    # A short list presented as a whole one is still worth refusing over (#846).
+    corpus = containment.fetch_issue_corpus(config, fields="number,state,body")
+    if corpus is None:
+        print("error: gh issue list failed.", file=sys.stderr)
+        return None
+    states = corpus.states
+    resolution = containment.resolve_children(
         config,
-        check=False,
+        parent_number=parent_num,
+        corpus=corpus.bodies,
+        corpus_complete=corpus.complete,
     )
-    if proc.returncode != 0:
+    if not resolution.complete:
         print(
-            f"error: gh issue list failed (exit {proc.returncode}).\n"
-            f"stderr: {proc.stderr.strip()}",
+            f"error: cannot determine #{parent_num}'s open children — "
+            f"{resolution.incomplete_reason}. Refusing rather than closing over "
+            "a child that may exist.",
             file=sys.stderr,
         )
         return None
-    try:
-        rows = json.loads(proc.stdout)
-    except (ValueError, json.JSONDecodeError):
-        print("error: gh issue list returned malformed JSON.", file=sys.stderr)
-        return None
-    corpus: dict[int, str] = {}
-    states: dict[int, str] = {}
-    for r in rows:
-        if not isinstance(r, dict):
-            continue
-        num = r.get("number")
-        if not isinstance(num, int):
-            continue
-        corpus[num] = str(r.get("body") or "")
-        states[num] = str(r.get("state", "")).lower()
-    resolution = containment.resolve_children(
-        config, parent_number=parent_num, corpus=corpus
-    )
     open_children = [
         n for n in resolution.numbers if states.get(n) != "closed"
     ]

@@ -1,0 +1,23 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  Containers can be closed again in trackers with more than 500 issues (#846).
+  Resolving "does this parent have open children?" meant downloading the whole
+  tracker and filtering locally, with each consumer fetching its own copy and
+  judging completeness differently — so one seam carried four ceilings, only one
+  of which was checked. Past the smallest of them the close gate refused every
+  container, correctly but permanently. The unchecked path in the same command —
+  the hint listing which children to close, printed after that refusal — could
+  omit still-open children while reading as the complete set; it decided nothing,
+  but a short list served as a whole one is worth refusing over too. Acquisition
+  now belongs to the containment seam, which enumerates to exhaustion and returns
+  a completeness verdict with the child set; a gate holds on an incomplete answer
+  instead of treating a short list as the whole one, and the hint is omitted
+  rather than shown short. The seam also stops collapsing two different
+  native-read outcomes: an endpoint that is absent means textual-only is the
+  complete answer, while an endpoint that could not be reached does not —
+  collapsing them let a transient error silently drop natively-linked children
+  whose bodies carry no parent-ref line. A caller may still supply its own
+  corpus, but must say whether it is complete.

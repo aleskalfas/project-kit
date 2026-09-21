@@ -141,22 +141,65 @@ def test_members_empty_when_no_children(monkeypatch) -> None:
     assert predicates.INDETERMINATE_KEY not in out  # determinate empty, not a failure
 
 
+def _stub_corpus(monkeypatch, corpus, *, native_outcome=None):
+    """Stub the seam's acquisition + native read. `corpus=None` = query failed."""
+    containment = predicates.containment
+    monkeypatch.setattr(predicates, "_capability_root", lambda: REPO_ROOT)
+    monkeypatch.setattr(predicates, "_config", lambda _root: {})
+    monkeypatch.setattr(containment, "fetch_issue_corpus", lambda _c, **_kw: corpus)
+    outcome = native_outcome or containment.NativeReadOutcome.UNSUPPORTED
+    monkeypatch.setattr(
+        containment,
+        "read_native_children",
+        lambda _config, *, parent_number: containment.NativeRead(
+            numbers=set(), outcome=outcome
+        ),
+    )
+
+
 def test_members_indeterminate_on_gh_failure(monkeypatch) -> None:
     # A broken members read is INDETERMINATE — the engine holds the whole fold
     # fail-closed (never a confident "no members" that satisfied could fail-open).
-    monkeypatch.setattr(predicates, "_capability_root", lambda: REPO_ROOT)
-    monkeypatch.setattr(predicates, "_config", lambda _root: {})
-    monkeypatch.setattr(predicates, "_list_issues", lambda _c: None)
+    _stub_corpus(monkeypatch, None)
     out = predicates.cascade_members(5)
     assert out.get(predicates.INDETERMINATE_KEY) is True
 
 
-def test_members_indeterminate_on_pagination_ceiling(monkeypatch) -> None:
-    monkeypatch.setattr(predicates, "_capability_root", lambda: REPO_ROOT)
-    monkeypatch.setattr(predicates, "_config", lambda _root: {})
-    monkeypatch.setattr(predicates, "_list_issues", lambda _c: predicates._GH_CEILING)
+def test_members_indeterminate_when_the_corpus_was_truncated(monkeypatch) -> None:
+    """The bug #846 was filed for: past the acquisition ceiling a child may sit in
+    rows never fetched, so the member set must not be served as the whole one."""
+    containment = predicates.containment
+    _stub_corpus(
+        monkeypatch,
+        containment.IssueCorpus(
+            rows=({"number": 9, "state": "open", "body": "Feature: #5\n"},),
+            complete=False,
+        ),
+    )
     out = predicates.cascade_members(5)
     assert out.get(predicates.INDETERMINATE_KEY) is True
+    assert "incomplete" in out["reason"]
+
+
+def test_members_indeterminate_when_the_native_read_failed(monkeypatch) -> None:
+    """An UNREADABLE native read is not an unsupported one.
+
+    Before ADR-035 §5 both collapsed to "textual-only", so a transient error
+    silently dropped any natively-linked child whose body carries no parent-ref
+    line — a fail-open on a close gate. A complete corpus does not rescue it.
+    """
+    containment = predicates.containment
+    _stub_corpus(
+        monkeypatch,
+        containment.IssueCorpus(
+            rows=({"number": 9, "state": "open", "body": "Feature: #5\n"},),
+            complete=True,
+        ),
+        native_outcome=containment.NativeReadOutcome.UNREADABLE,
+    )
+    out = predicates.cascade_members(5)
+    assert out.get(predicates.INDETERMINATE_KEY) is True
+    assert "native" in out["reason"]
 
 
 # --- cascade-membership: the per-subject confirmation ---------------------
@@ -283,13 +326,30 @@ def _stub_list_issues(
 ) -> None:
     monkeypatch.setattr(predicates, "_capability_root", lambda: REPO_ROOT)
     monkeypatch.setattr(predicates, "_config", lambda _root: {})
-    monkeypatch.setattr(predicates, "_list_issues", lambda _c: issues)
-    # The cascade member-set now resolves through the containment read-seam, which
-    # issues a native `…/sub_issues` read. Stub it so these (offline) tests never
-    # touch the network: `native=None` means "native unsupported" → textual-only
-    # (the member set is then exactly the body parent-ref walk these tests assert).
+    # Acquisition now belongs to the seam (ADR-035 §5), so the corpus is stubbed
+    # there rather than in the predicate. `complete=True` says the stub IS the
+    # whole tracker — these tests assert child sets, not truncation behaviour.
+    containment = predicates.containment
     monkeypatch.setattr(
-        predicates.containment,
-        "read_native_child_numbers",
-        lambda _config, *, parent_number: native,
+        containment,
+        "fetch_issue_corpus",
+        lambda _config, **_kw: containment.IssueCorpus(
+            rows=tuple(issues), complete=True
+        ),
+    )
+    # The native `…/sub_issues` read is stubbed so these (offline) tests never
+    # touch the network: `native=None` means the instance has no native substrate
+    # → textual-only, which is a DETERMINATE answer (the member set is then
+    # exactly the body parent-ref walk these tests assert).
+    monkeypatch.setattr(
+        containment,
+        "read_native_children",
+        lambda _config, *, parent_number: containment.NativeRead(
+            numbers=native or set(),
+            outcome=(
+                containment.NativeReadOutcome.UNSUPPORTED
+                if native is None
+                else containment.NativeReadOutcome.READ
+            ),
+        ),
     )

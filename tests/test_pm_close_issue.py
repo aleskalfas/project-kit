@@ -169,15 +169,31 @@ def test_walk_parent_chain_returns_empty_for_empty_body(ci) -> None:
 # ---- _find_open_children (cascade-eligibility, issue #118) -----------------
 
 
-def _fake_gh_list(ci, monkeypatch, rows, *, returncode=0) -> None:
-    """Patch the module's gh_run so _find_open_children sees `rows`."""
-    import json
-    from subprocess import CompletedProcess
+def _fake_gh_list(ci, monkeypatch, rows, *, returncode=0, complete=True) -> None:
+    """Stub the corpus at the containment seam, which now owns acquisition.
 
-    def fake_gh_run(cmd, config, *, check=True, **kwargs):
-        return CompletedProcess(cmd, returncode, json.dumps(rows), "")
-
-    monkeypatch.setattr(ci, "gh_run", fake_gh_run)
+    `returncode=1` models a failed query (the seam returns None); `complete=False`
+    models a struck ceiling — which `_find_open_children` must refuse rather than
+    answer from, since a child may sit in the rows it never fetched.
+    """
+    containment = ci.containment
+    monkeypatch.setattr(
+        containment,
+        "fetch_issue_corpus",
+        lambda _c, **_kw: (
+            None
+            if returncode != 0
+            else containment.IssueCorpus(rows=tuple(rows), complete=complete)
+        ),
+    )
+    # No native substrate in these offline tests: a determinate textual-only read.
+    monkeypatch.setattr(
+        containment,
+        "read_native_children",
+        lambda _config, *, parent_number: containment.NativeRead(
+            numbers=set(), outcome=containment.NativeReadOutcome.UNSUPPORTED
+        ),
+    )
 
 
 def test_find_open_children_returns_only_open_children_of_parent(ci, monkeypatch) -> None:
@@ -203,6 +219,20 @@ def test_find_open_children_empty_when_all_children_closed(ci, monkeypatch) -> N
 
 def test_find_open_children_returns_none_on_gh_failure(ci, monkeypatch) -> None:
     _fake_gh_list(ci, monkeypatch, [], returncode=1)
+    assert ci._find_open_children(5, {}) is None
+
+
+def test_find_open_children_refuses_a_truncated_corpus(ci, monkeypatch) -> None:
+    """A truncated corpus yields no hint rather than a misleadingly short one.
+
+    This is diagnostic output, not a gate: the sole caller runs it after the
+    engine fold has already refused the close, to list what the user must close
+    first. Before #846 it fetched 500 rows with no truncation check, so past 500
+    issues it could omit still-open children — or show none — while reading as
+    the complete set. `None` suppresses the hint, which is the honest answer.
+    """
+    rows = [{"number": 10, "state": "OPEN", "body": "Feature: #5\n\n## What"}]
+    _fake_gh_list(ci, monkeypatch, rows, complete=False)
     assert ci._find_open_children(5, {}) is None
 
 

@@ -16,8 +16,9 @@ place** that answers "what are this parent's children, and via which substrate"
 place** that constructs a containment write (the native link today, the
 render-on-demand textual children view tomorrow). The read seam unions the two
 substrates with **native-wins** dedup so a repo holding children created under
-either substrate resolves correctly. That is the whole decision; everything below
-is the rigor behind it.
+either substrate resolves correctly, and it says whether the set it returns is the
+*complete* one — a gate that closes a container cannot act on a child set that might
+be short. That is the whole decision; everything below is the rigor behind it.
 
 [project-management:DEC-039](../../../.pkit/capabilities/project-management/decisions/DEC-039-containment-substrate-selection.md)
 decided the *rule* — containment is a **selectable substrate** (native sub-issues
@@ -31,28 +32,30 @@ sibling** to [ADR-026](ADR-026-substrate-map-read-path-contract.md) (the label
 read-path/sole-constructor seam) and
 [ADR-031](ADR-031-substrate-write-path-contract.md) (the non-label write-path
 sole-constructor): **how** containment resolves on read and constructs on write,
-and the one invariant each side must never violate. It is the on-call/maintainer
+and the invariants each side must never violate. It is the on-call/maintainer
 reference for the seam realized by the merged #344 (native write) + #345
-(`resolve_children` read seam) ahead of the Track-2 textual-view build (EPIC
-#343); it pins the contract, not the selector schema or the render-on-demand UX
-(those land with the Feature, citing DEC-039).
+(`resolve_children` read seam) + #865 (seam-owned corpus acquisition and the
+completeness verdict), ahead of the Track-2 textual-view build (EPIC #343); it
+pins the contract, not the selector schema or the render-on-demand UX (those land
+with the Feature, citing DEC-039).
 
 **The contract, in one breath:** containment has **one read seam** — a single
 resolution point (`resolve_children` in `_lib/containment.py`) answering "what are
-this parent's children, and via which substrate," native-where-present /
-textual-otherwise, with **native-wins as a seam invariant** — and **one write
-construction point** per containment substrate (the native sub-issue link today;
-the render-on-demand textual children-comment tomorrow), each under the grep/AST
-sole-constructor guard ADR-031 established. No consumer re-derives containment by
-parsing body parent-refs itself (ADR-026's one-reader discipline, applied to the
-containment axis); no script string-builds a containment write inline (ADR-031's
-sole-constructor discipline, applied to a third substrate).
+this parent's children, via which substrate, and is that answer complete,"
+native-where-present / textual-otherwise, with **native-wins** and **an honest
+completeness verdict** as seam invariants — and **one write construction point** per
+containment substrate (the native sub-issue link today; the render-on-demand textual
+children-comment tomorrow), each under the grep/AST sole-constructor guard ADR-031
+established. No consumer re-derives containment by parsing body parent-refs itself
+(ADR-026's one-reader discipline, applied to the containment axis); no script
+string-builds a containment write inline (ADR-031's sole-constructor discipline,
+applied to a third substrate).
 
-**The load-bearing invariants — one read seam with native-wins, one write
-constructor per substrate.** Three parts, structural only together: (i) **every
-containment consumer resolves children only by asking the seam** — `show-tree`,
-the [project-management:DEC-034](../../../.pkit/capabilities/project-management/decisions/DEC-034-cascade-slot-binding.md)
-closure-fold child-walk, and `close-issue`'s parent-chain walk all route through
+**The load-bearing invariants — one read seam with native-wins and honest
+determinacy, one write constructor per substrate.** Four parts, structural only
+together: (i) **every containment consumer resolves children only by asking the
+seam** — `show-tree`, the [project-management:DEC-034](../../../.pkit/capabilities/project-management/decisions/DEC-034-cascade-slot-binding.md)
+closure-fold child-walk, and `close-issue`'s open-children walk all route through
 `resolve_children`; none re-parses body parent-refs directly, so there is one
 place containment is resolved and one place native-wins is enforced; (ii) **the
 seam unions the two substrates with native-wins dedup** — a child present under
@@ -61,11 +64,17 @@ TEXTUAL, and a native child the textual scan missed is still NATIVE; this is
 DEC-005's native-wins rule lifted from a single-substrate tie-break to a
 **mixed-mode reconciliation** invariant (a repo may hold children created under
 either substrate after a forward switch, and the seam unions them deterministically);
-and (iii) **every containment write is constructed in exactly one point per
-substrate** — the native link via `add_sub_issue_args` / `link_sub_issue`, the
-future textual view via a single render-on-demand writer — never string-built
-inline, under the same grep/AST guard ADR-031 holds for field-value and milestone
-writes. The textual parent-side view is a **full-overwrite of a generated
+(iii) **the seam reports whether its answer is complete, and an incomplete answer is
+an indeterminacy rather than a child set** — the native read distinguishes
+*unsupported* (no native substrate, so textual is the whole answer) from *unreadable*
+(a native child set may exist and was not seen), the textual scan reports *complete*
+vs *truncated*, and either indeterminacy makes the whole resolution incomplete; a
+gate consumer maps an incomplete resolution to indeterminate, never to a child set
+and never to "no children"; and (iv) **every containment write is constructed in
+exactly one point per substrate** — the native link via `add_sub_issue_args` /
+`link_sub_issue`, the future textual view via a single render-on-demand writer —
+never string-built inline, under the same grep/AST guard ADR-031 holds for
+field-value and milestone writes. The textual parent-side view is a **full-overwrite of a generated
 do-not-edit comment** (single source, render-on-demand), **never an append** —
 DEC-039 D4's storage decision, recorded here as a write-construction invariant.
 
@@ -95,29 +104,56 @@ refined DEC-005 to native-*where-available* and made the textual child-side ref
 the universal spine written in both modes. This ADR pins how that refined rule
 resolves at the seam.
 
-**The realization surface — convergence already merged.** As ADR-026 enumerated
-its ~26 inline label sites and ADR-031 its four (then six) non-label sites, this
-Context names the containment realization as-built. Unlike those two, containment
-landed seam-first: #344 supplied the native write through one construction point
-(`add_sub_issue_args` / `link_sub_issue`), and #345 supplied the one read seam
-(`resolve_children`), converging the three pre-existing body-parent-ref walkers
-onto it. As project-kit's own capability-architecture record, concrete site names
+**The realization surface — the seam fetches, resolves, and vouches.** As ADR-026
+enumerated its ~26 inline label sites and ADR-031 its four (then six) non-label
+sites, this Context names the containment realization as-built. Unlike those two,
+containment landed seam-first: #344 supplied the native write through one
+construction point (`add_sub_issue_args` / `link_sub_issue`), #345 supplied the
+one read seam (`resolve_children`), converging the three pre-existing
+body-parent-ref walkers onto it, and #865 moved corpus acquisition and the
+completeness verdict behind that same seam. The seam now fetches the corpus itself
+(`fetch_issue_corpus`, under `CORPUS_CEILING`), reads the native panel three-valued
+(`read_native_children` → `READ` / `UNSUPPORTED` / `UNREADABLE`), and returns
+`complete` + `incomplete_reason` alongside the child set; every gate consumer holds
+on an incomplete answer rather than acting on it. Two consumers still fetch their
+own corpus — both renderers rather than gates, both tracked (`show-tree`, #864;
+`create-issue`'s children-view refresh, #863). The sites below name where each one
+stands against that contract.
+
+As project-kit's own capability-architecture record, concrete site names
 are in scope (per [PRJ-005](../../../.pkit/decisions/project/PRJ-005-adopt-adrs.md));
 the selector schema (`substrate-map.yaml`'s `containment: native | textual` axis)
 and the render-on-demand textual-view UX are not — they land with the Track-2
 Feature (EPIC #343), citing DEC-039. The sites:
 
-1. **`resolve_children`** (`_lib/containment.py`) — the one read seam. Native side:
-   one `GET …/sub_issues` per parent (`read_native_child_numbers`); unsupported /
-   unreadable (404/410/422, missing `gh`) degrades to textual-only. Textual side:
-   every corpus issue whose body first-line parent-ref names the parent. Union with
-   native-wins dedup. **The sole resolver — consumers route through it.**
+1. **`resolve_children`** (`_lib/containment.py`) — the one read seam, and the one
+   corpus fetcher. Native side: one `GET …/sub_issues` per parent
+   (`read_native_children`), three-valued — `READ`, a determinate `UNSUPPORTED`
+   (a non-zero exit whose stderr carries 404/410/422), or an indeterminate
+   `UNREADABLE` (missing `gh`, any other non-zero exit, unparseable payload). Textual side: every issue in the corpus whose body
+   first-line parent-ref names the parent, where the corpus is either fetched by the
+   seam (`fetch_issue_corpus`, *truncated* when `CORPUS_CEILING` is struck) or
+   supplied by the caller *with* a completeness claim — a corpus handed over without
+   one is not vouched for. Union with native-wins dedup, returned with `complete` /
+   `incomplete_reason`. **The sole resolver — consumers route through it.**
 2. **`show-tree`** — the parent → children tree renderer. **Converged — resolves
-   through `resolve_children`.**
+   through `resolve_children`;** still fetches its own corpus at the operator's
+   `--limit` (default 500) and supplies it without a completeness claim, so the seam
+   marks the resolution incomplete. A renderer rather than a gate, which point 5
+   permits to use an incomplete answer; tracked as #864.
 3. **The DEC-034 closure-fold child-walk** (`_lib/lifecycle_predicates.py`) — the
-   cascade membership read. **Converged — resolves through `resolve_children`.**
-4. **`close-issue`** — the parent-chain walk on close. **Converged — resolves
-   through `resolve_children`.**
+   cascade membership read. **Converged — resolves *and* acquires through the seam;**
+   `cascade_members` asks `resolve_children` with no corpus of its own and maps an
+   incomplete resolution to indeterminate. Its sibling `parent_has_active_descendant`
+   takes the corpus from `fetch_issue_corpus` and holds on an incomplete one; it
+   filters by the textual ref itself because it needs each row's state, labels and
+   milestone to infer position — which the child set does not carry.
+4. **`close-issue`** — the open-children walk behind the refused-cascade hint
+   (`_find_open_children`). **Converged — resolves *and* acquires through the seam;**
+   it takes the corpus from `fetch_issue_corpus` (it needs each row's state to filter
+   the resolved children to the still-open ones), hands it to `resolve_children`
+   *with* its completeness claim, and refuses rather than reporting a child set when
+   the resolution is incomplete.
 5. **`link_sub_issue` / `add_sub_issue_args`** (`_lib/containment.py`) — the one
    native containment write construction point; `create-issue` calls it on
    `--parent`, any future parent-link mutation reuses it. **The sole constructor of
@@ -142,29 +178,38 @@ rejected or this ADR holds against:
    parent-side view vs. a stored body block appended on every child-create
    (DEC-039 D4 rejected the latter; recorded here as a write-construction
    invariant, not re-litigated).
+5. **The seam answers with a determinacy** (complete vs incomplete, with the native
+   read three-valued and acquisition behind the seam) vs. answering with rows alone
+   and leaving each consumer to fetch its own corpus under its own ceiling — the
+   shape that lets a truncated scan or an unreadable native panel reach a close gate
+   as a confident, silently short child set.
 
 ## Decision
 
 **In plain terms:** containment consumers stop parsing body parent-refs themselves
 and start asking *one seam* "what are this parent's children?" The seam answers
 with the union of the two substrates, native-wins on conflict, degrading to
-textual-only where native is unsupported. And every containment *write* — the
-native link today, the textual children view tomorrow — is constructed in *one
-place* per substrate, never string-built inline.
+textual-only where native is unsupported — and it says whether that answer is the
+whole story, because a child set that might be short is not an answer a close gate
+can act on. And every containment *write* — the native link today, the textual
+children view tomorrow — is constructed in *one place* per substrate, never
+string-built inline.
 
 ### 1. One containment read seam — resolution lives in exactly one auditable place
 
 "What are this parent's children, and via which substrate?" is answered by a
 **single read seam** (`resolve_children`), not re-derived per consumer. `show-tree`,
-the DEC-034 closure-fold child-walk, and `close-issue`'s parent-chain walk all
+the DEC-034 closure-fold child-walk, and `close-issue`'s open-children walk all
 resolve through it; none re-parses body parent-refs directly. The seam takes a
-parent number and the already-fetched corpus and returns the resolved child set
-plus the substrate each child came from and whether native was supported.
+parent number, and either acquires the corpus itself or accepts one the caller
+supplies *with* its completeness claim (point 5); it returns the resolved child set,
+the substrate each child came from, and how determinate that answer is.
 
 This is ADR-026's one-reader discipline applied to the containment axis: the
-indirection (native panel read + textual body-ref scan + native-wins dedup) sits
-in one place where it can be audited, tested, and reasoned about as a unit, and no
-second consumer re-derives what one seam already resolves. A consumer re-parsing
+indirection (corpus acquisition + native panel read + textual body-ref scan +
+native-wins dedup + the completeness verdict) sits in one place where it can be
+audited, tested, and reasoned about as a unit, and no second consumer re-derives
+what one seam already resolves. A consumer re-parsing
 body parent-refs itself would (a) duplicate the native-panel read and the dedup
 logic, and (b) give native-wins N places to drift instead of one to audit —
 exactly the scatter the single seam exists to prevent. The seam owns the textual
@@ -191,11 +236,15 @@ invariant**:
   from the corpus scan is still NATIVE (the native panel is authoritative even for
   a child the textual scan missed); a textual-only child is TEXTUAL.
 - **Native support is a property of the read, not of the repo.** When the native
-  `GET …/sub_issues` returns unsupported/unreadable (404/410/422, missing `gh`),
-  the seam degrades to **textual-only** (`native_supported=False`) — the read
-  mirror of the write side's UNSUPPORTED no-op. An *empty* native read is distinct:
-  it is a successful read of a parent with no native children and does **not**
-  trigger textual fallback.
+  `GET …/sub_issues` reports the substrate **unsupported** (404/410/422 — older
+  GHES, feature off), the seam degrades to **textual-only** — the read mirror of the
+  write side's UNSUPPORTED no-op, and a *determinate* answer: there is no native
+  substrate for a child to hide in, so textual is the whole story. A merely
+  **unreadable** panel (auth, network, a transient 5xx, a missing `gh`) is a
+  different fact and does not license that degradation: a native child set may exist
+  and was not seen, so the resolution is incomplete (point 5). An *empty* native read
+  is distinct again — a successful read of a parent with no native children, which
+  does **not** trigger textual fallback.
 
 State the invariant precisely: **native-wins is enforced once, at the seam, over
 the union of both substrates — so a mixed-substrate repo resolves deterministically
@@ -258,6 +307,80 @@ in-UI visibility with none of those failure modes — the visibility goal and th
 storage decision are separable, and only visibility is wanted (DEC-039 Rationale).
 The child-side textual ref remains the **universal spine** written in both modes;
 the parent-side comment is a derived, regenerable view, never the source.
+
+### 5. The seam reports determinacy — an incomplete answer is never a child set
+
+**In plain terms:** "I found three children" and "I found three children and I know
+there are no others" are different answers, and a close gate needs the second. The
+seam has to say which one it is handing back.
+
+Points 1 and 2 settle *how* the two substrates reconcile; completeness is a separate
+property, and rows alone cannot carry it. A scan that stopped at a pagination
+ceiling returns a child set indistinguishable from an exhaustive one — a **silently
+short** answer feeding a gate whose whole job is to refuse on doubt, and the one
+failure mode such a gate cannot detect for itself. The native side carries the same
+hazard in a different form: *unsupported* (404/410/422 — the instance has no native
+substrate, so textual genuinely is the whole answer) and *unreadable* (auth, network,
+a transient 5xx, a missing `gh` — a native child set may exist and was not seen) are
+different facts about the world. Degrading an unsupported read to textual-only is
+sound; degrading an unreadable one discards children and presents the remainder as
+though it were everything.
+
+The contract therefore carries a determinacy channel:
+
+- **Each half reports its own outcome, not just its rows.** The native read is
+  three-valued — a successful read (possibly empty), a determinate *unsupported*,
+  or an indeterminate *unreadable*. The textual scan is two-valued — *complete* (the
+  corpus was enumerated to exhaustion) or *truncated* (a ceiling was struck, or the
+  caller supplied a corpus it does not claim is exhaustive).
+- **The resolution is complete only when neither half is indeterminate.** A
+  successful-or-unsupported native read plus a complete textual scan is complete.
+  An unreadable native panel, or a truncated textual scan, makes the resolution
+  **incomplete** whatever the other half returned. A non-empty native panel does not
+  rescue a truncated textual scan: the rows never fetched are exactly where a
+  textual-only child would be.
+- **An incomplete resolution is an indeterminate answer for any gate consumer.** It
+  is never reported as a confident child set and never as "no children" — the
+  fail-closed posture the process substrate requires (COR-033), which the cascade
+  slot states explicitly for membership: indeterminate membership overrides the
+  `on_empty` policy (COR-037). A consumer that is *not* a gate — a diagnostic hint,
+  a rendered view — may use an incomplete resolution, but must label it partial
+  rather than present it as the child set.
+- **The seam owns acquisition, not only resolution.** Completeness is a property of
+  *how the corpus was fetched*, so the fetch belongs behind the seam: the seam
+  supplies the default corpus read (paginate to exhaustion, under a ceiling set far
+  above any plausible corpus that still reports *truncated* when struck), and a
+  caller holding a corpus already passes it in *together with* its completeness
+  claim. One fetcher, one place the ceiling semantics live. Leaving acquisition to
+  each consumer puts a separately chosen ceiling at every call site behind a seam
+  that cannot tell one from another, and both failure modes then show up at once:
+  a tracker that crossed 507 issues struck the closure fold's own 500-row ceiling
+  and refused every container close, while `close-issue`'s hint fetched the same
+  500 rows with no truncation check and would have served a short child set as a
+  whole one (#846). That is why this half of the contract is not optional.
+
+**The write-mode selector never selects the read strategy.** The seam consults
+*both* substrates on every resolution, regardless of the `containment: native |
+textual` axis
+[DEC-039](../../../.pkit/capabilities/project-management/decisions/DEC-039-containment-substrate-selection.md)
+D2 introduces. That axis declares how this capability **writes**; it makes no claim
+about what a pre-existing corpus **contains** — a brownfield import, a hand-filed
+issue, an issue predating native linking, or a native write that degraded (DEC-005:
+a native-link failure never fails the create) all leave children the declared mode
+does not describe. Reading native-only because the mode says `native` would miss
+every such child and answer "no children" to a close gate. This is point 2's
+mixed-mode reconciliation restated as a prohibition: the seam does not assume one
+substrate, and the selector is not an input to it.
+
+**What this forecloses.** Resolving the textual half through the tracker's *search*
+index (matching the parent-ref text) is rejected as a gate mechanism. Search
+indexing is asynchronous — stale in exactly the window after child activity when a
+close gate runs; the query cannot express the first-line-position constraint the
+textual ref actually carries, so its matches need post-filtering and its misses are
+invisible; and the index offers no completeness guarantee at all. It would convert a
+loud indeterminate into a quiet false negative, the precise failure this section
+exists to prevent. Full enumeration with an honest truncation signal is the only
+textual mechanism that can answer a gate.
 
 ### Boundaries — what this contract is NOT
 
@@ -340,6 +463,18 @@ wanted. This is DEC-039 D4's Rationale; recorded here because it is a
 write-construction invariant (overwrite, never append) the single construction
 point must honour.
 
+**Why determinacy belongs to the seam, not to each consumer.** Whether an answer is
+complete depends on how the corpus was acquired and on what the native panel did —
+both of which the seam either performs or is handed. A consumer downstream of it
+sees only rows, so it cannot reconstruct the difference between "these are the
+children" and "these are the children I managed to see"; asking each consumer to
+track its own completeness re-creates exactly the per-site divergence the one-reader
+discipline removes, one level up. The asymmetry of the failure decides the posture:
+an over-cautious indeterminate costs a retry or a manual override, while a
+confidently short child set closes a container over open work and is invisible at
+the moment it matters. A gate can only be as honest as the seam it asks, so the seam
+carries the verdict.
+
 ### Alternatives considered
 
 - **Each consumer re-derives children by parsing body parent-refs itself** (no read
@@ -372,19 +507,43 @@ point must honour.
   child-create plus a second source of truth that drifts from the read seam.
   Render-on-demand full-overwrite of a generated comment delivers the same
   visibility with none of those failure modes.
+- **Treat an unreadable native panel as an unsupported one** (any failed native read
+  degrades to textual-only). Rejected — the two are different facts: an unsupported
+  instance has no native children to miss, while an unreadable panel may be hiding
+  a child set that was simply not fetched. Collapsing them turns a transient auth or
+  network failure into a confident, short child set at a close gate.
+- **Resolve the textual half through the tracker's search index** rather than a full
+  corpus enumeration. Rejected — the index is asynchronous and therefore stale in
+  exactly the window after child activity when a close gate runs, the query cannot
+  express the first-line-position constraint the parent-ref carries, and it offers no
+  completeness guarantee at all. It converts a loud indeterminate into a quiet false
+  negative.
 
 ## Implications
 
 - **One containment read seam** (`resolve_children` in `_lib/containment.py`) that
   `show-tree`, the DEC-034 closure-fold child-walk, and `close-issue` resolve
-  through; no consumer re-parses body parent-refs directly. Realized by the merged
-  **#345**.
+  through; no consumer re-parses body parent-refs directly. The *resolution* half is
+  realized by the merged **#345**, the *acquisition + determinacy* half by **#865**
+  (Context).
 - **Native-wins is a seam invariant over the union of both substrates** — a child
   present both ways is NATIVE, a textual-only child is TEXTUAL, a native child the
-  corpus scan missed is still NATIVE; native support is a property of the *read*
-  (unsupported degrades to textual-only; an empty native read is not a fallback
-  trigger). This makes a **mixed-substrate (forward-switched) repo** resolve
-  deterministically for every consumer.
+  corpus scan missed is still NATIVE; native support is a property of the *read* (an
+  *unsupported* substrate degrades to textual-only, an *unreadable* panel does not,
+  and an empty native read is not a fallback trigger). This makes a
+  **mixed-substrate (forward-switched) repo** resolve deterministically for every
+  consumer.
+- **The seam reports determinacy, and an incomplete resolution is indeterminate** —
+  the native read distinguishes *unsupported* (determinate; textual is the whole
+  answer) from *unreadable* (indeterminate), the textual scan reports *complete* vs
+  *truncated*, and either indeterminacy makes the whole resolution incomplete. A gate
+  consumer maps an incomplete resolution to indeterminate, never to a child set and
+  never to "no children". The seam owns the default corpus acquisition so the ceiling
+  semantics live in one place.
+- **Both substrates are consulted on every resolution** — the
+  `containment: native | textual` selector governs *writes* only and is not an input
+  to the read seam, because the declared write mode makes no claim about what a
+  pre-existing corpus contains.
 - **One write construction point per containment substrate** — the native sub-issue
   link via `add_sub_issue_args` / `link_sub_issue` (realized by the merged
   **#344**), the render-on-demand textual children view via a single writer (Track-2,
@@ -421,5 +580,6 @@ point must honour.
   cites it as the decision.
 - **Acceptance.** `accepted` — the maintainer sign-off on DEC-039 (refine DEC-005 +
   extend DEC-036) covers the direction, and this ADR is the architect-owned contract
-  pinning how that accepted rule resolves (PRJ-005). It introduces no new abstraction
-  beyond the merged #344/#345 and supersedes nothing.
+  pinning how that accepted rule resolves (PRJ-005). It introduces no abstraction
+  beyond the seam #344/#345 already established — the determinacy channel is a
+  property that seam must carry, not a new boundary — and supersedes nothing.
