@@ -387,3 +387,16 @@ def test_title_prefix_all_report_channel_skips(pc, axis_labels, monkeypatch) -> 
     assert len(results) == 1 and results[0].status == "skip"
     assert "1 report-channel issue(s) excluded" in results[0].detail
 
+
+def test_title_prefix_present_map_carries_exclusion_note(pc, axis_labels, monkeypatch) -> None:
+    """Under a present map the findings degrade to `skip`; the report-channel
+    exclusion count must still be stated there, not only on the greenfield
+    `warn` / `ok` paths (PR #858 review)."""
+    _stub_issue_list(pc, monkeypatch, [
+        {"number": 9, "title": "[Wat] mystery", "labels": []},
+        {"number": 797, "title": "[CR] widen", "labels": [{"name": "report:change-request"}]},
+    ])
+    results = pc._check_title_prefix_alignment(_LIVE_CAP_ROOT, _auj_map(axis_labels))
+    assert all(r.status != "fail" for r in results)
+    assert any("1 report-channel issue(s) excluded" in r.detail for r in results)
+

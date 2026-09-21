@@ -313,11 +313,11 @@ def _run_all_checks(capability_root: Path) -> list[CheckResult]:
     # 13. Title-prefix alignment (sample of open issues cross-validated
     #     against issue-types.yaml + classification.yaml prefixes). This is a
     #     DRIFT DETECTOR, not a prerequisite: a mis-titled existing issue cannot
-    #     make the next mutation fail mid-way (the failure mode DEC-017 frames pre-check around),
-    #     so it never returns `fail` — greenfield `warn`s, a present map degrades
-    #     to `skip`. Issues filed by the kit's own report channel (`report:*`
-    #     label) carry their own prefix vocabulary and are excluded from the
-    #     sample rather than counted as drift.
+    #     make the next mutation fail mid-way (the failure mode DEC-017 frames
+    #     pre-check around), so it never returns `fail` — greenfield `warn`s, a
+    #     present map degrades to `skip`. Issues filed by the kit's own report
+    #     channel (`report:*` label) carry their own prefix vocabulary and are
+    #     excluded from the sample rather than counted as drift.
     results.extend(_check_title_prefix_alignment(capability_root, substrate_map))
 
     return results
@@ -2123,7 +2123,8 @@ def _check_title_prefix_alignment(
                 f"not in the adopter's declared substrate-map prefixes "
                 f"({', '.join(mismatches)}) — advisory under substrate-map.yaml, "
                 f"not a refusal. Adopter prefixes: "
-                + ", ".join(f"[{p}]" for p in sorted(known_prefixes)) + ".",
+                + ", ".join(f"[{p}]" for p in sorted(known_prefixes)) + "."
+                + excluded_note,
             ))
         else:
             results.append(CheckResult(
@@ -2158,7 +2159,7 @@ def _check_title_prefix_alignment(
                 f"({', '.join(f'#{n}' for n in no_prefix[:10])}"
                 + (" ..." if len(no_prefix) > 10 else "")
                 + ") — advisory under substrate-map.yaml; a brownfield tracker "
-                "need not bracket-prefix every issue.",
+                "need not bracket-prefix every issue." + excluded_note,
             ))
         else:
             results.append(CheckResult(

@@ -171,7 +171,7 @@ Each kit-label check runs only where the kit's own `<axis>:*` labels are that ax
 | Mesh config URIs valid | config / DEC-022 |
 | `hooks.yaml` shape + per-kind validation | hooks / DEC-024 |
 | `review:` block valid | config / DEC-027 + DEC-028 |
-| Title-prefix alignment (sample of open issues) | data quality — new in v0.17.0 |
+| Title-prefix alignment (sample of open issues) | data quality — new in v0.17.0 (advisory: warns, never fails) |
 
 ### 4b. (Optional) Smoke-test the installation
 
