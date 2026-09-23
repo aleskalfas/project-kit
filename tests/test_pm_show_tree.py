@@ -7,6 +7,8 @@ parsing, orphan detection.
 from __future__ import annotations
 
 import importlib.util
+import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -56,7 +58,7 @@ def _link_parents_textual_only(st, issues, monkeypatch) -> None:
             numbers=set(), outcome=st.containment.NativeReadOutcome.UNSUPPORTED
         ),
     )
-    st._link_parents(issues, {})
+    st._link_parents(issues, {}, corpus_complete=True)
 
 
 @pytest.fixture
@@ -312,3 +314,193 @@ def test_closed_issues_not_counted_as_orphans(st, issue_types, monkeypatch) -> N
     _link_parents_textual_only(st, issues, monkeypatch)
     orphans = st._detect_orphans(issues, {})
     assert 1 not in orphans["open_issues_with_no_parent_ref"]
+
+
+# --- a bounded render says it is bounded (#863) -------------------------------
+
+
+def _run_show_tree(st, monkeypatch, capsys, *, total: int, limit: int, fmt: str = "text"):
+    """Render a tracker of `total` issues through a `--limit` of `limit`.
+
+    The `gh` stub honours `--limit` the way the real command does; without that
+    the corpus would never be short and the label could never fire.
+    """
+    def fake_gh(args, config, **kwargs):
+        if "pr" in args:
+            return subprocess.CompletedProcess(args, 0, stdout="[]", stderr="")
+        if "issue" in args and "list" in args:
+            n = int(args[args.index("--limit") + 1])
+            rows = [
+                {"number": i, "title": f"t{i}", "body": "## What", "state": "OPEN",
+                 "labels": [], "milestone": None}
+                for i in range(1, total + 1)
+            ]
+            return subprocess.CompletedProcess(
+                args, 0, stdout=json.dumps(rows[:n]), stderr=""
+            )
+        return subprocess.CompletedProcess(args, 0, stdout="[]", stderr="")
+
+    monkeypatch.setattr(st, "gh_run", fake_gh)
+    monkeypatch.setattr(st.containment, "_gh_call", fake_gh)
+    monkeypatch.setattr(sys, "argv", ["show-tree", "--format", fmt, "--limit", str(limit)])
+    st.main()
+    return capsys.readouterr()
+
+
+def test_a_truncated_render_says_so(st, monkeypatch, capsys) -> None:
+    """A tree built from a bounded corpus cannot tell "no other children" from
+    "I stopped looking" — and this is the command people use to check whether a
+    container is ready to close, so it must not present a short tree as whole."""
+    captured = _run_show_tree(st, monkeypatch, capsys, total=40, limit=10)
+    # stdout as well as stderr: a redirected render must keep the caveat, which
+    # is the case the label exists for. The README and ADR both promise both.
+    assert "[partial]" in captured.out
+    assert "[partial]" in captured.err
+    assert "higher --limit" in captured.out
+
+
+def test_a_complete_render_carries_no_notice(st, monkeypatch, capsys) -> None:
+    """The label has to mean something: absent when the corpus was exhausted."""
+    captured = _run_show_tree(st, monkeypatch, capsys, total=4, limit=10)
+    assert "[partial]" not in captured.err
+
+
+def test_json_carries_the_same_caveat(st, monkeypatch, capsys) -> None:
+    """A machine consumer gets the verdict too, not just the human reader."""
+    captured = _run_show_tree(st, monkeypatch, capsys, total=40, limit=10, fmt="json")
+    assert json.loads(captured.out)["complete"] is False
+
+
+def test_refresh_children_views_refuses_on_a_bounded_corpus(st, monkeypatch, capsys) -> None:
+    """The refresh WRITES, so a bounded corpus must stop it — not merely label it.
+
+    The refresh has two triggers and only `create-issue`'s was gated at first;
+    this one ran before the completeness check and would full-overwrite each
+    parent's children comment from a truncated view. Worse than the read-side
+    defect, because each comment is replaced wholesale and the damage outlives
+    the command.
+    """
+    wrote: list = []
+
+    def fake_gh(args, config, **kwargs):
+        if "pr" in args:
+            return subprocess.CompletedProcess(args, 0, stdout="[]", stderr="")
+        if "issue" in args and "list" in args:
+            n = int(args[args.index("--limit") + 1])
+            rows = [
+                {"number": i, "title": f"t{i}", "body": "## What", "state": "OPEN",
+                 "labels": [], "milestone": None}
+                for i in range(1, 41)
+            ]
+            return subprocess.CompletedProcess(args, 0, stdout=json.dumps(rows[:n]), stderr="")
+        wrote.append(args)
+        return subprocess.CompletedProcess(args, 0, stdout="[]", stderr="")
+
+    monkeypatch.setattr(st, "gh_run", fake_gh)
+    monkeypatch.setattr(st.containment, "_gh_call", fake_gh)
+    monkeypatch.setattr(st.session_guard, "enforce", lambda **_kw: True)
+    monkeypatch.setattr(
+        sys, "argv",
+        ["show-tree", "--format", "text", "--limit", "10", "--refresh-children-views"],
+    )
+    rc = st.main()
+    captured = capsys.readouterr()
+
+    assert rc == 1, "a refused write must not exit success"
+    assert "[refused]" in captured.err
+    assert not any("comment" in " ".join(map(str, c)) for c in wrote), "nothing may be written"
+
+
+def test_an_unreadable_native_panel_labels_the_render(st, monkeypatch, capsys) -> None:
+    """A complete corpus is not sufficient: the seam must vouch per parent too.
+
+    The corpus here is whole — no limit is struck — but the native sub-issues
+    read fails in a way that cannot be attributed to an absent endpoint, so a
+    parent may have children nobody saw. Driving the label off `corpus.complete`
+    alone rendered that as a complete tree, which is the same "no other children"
+    vs "I could not see them" confusion the label exists to prevent.
+    """
+    def fake_gh(args, config, **kwargs):
+        joined = " ".join(args)
+        if "pr" in args:
+            return subprocess.CompletedProcess(args, 0, stdout="[]", stderr="")
+        if "issue" in args and "list" in args:
+            # #2 names #1 as its parent, so #1 is a candidate parent and the
+            # seam is actually asked about it. Without that nothing resolves and
+            # the test would pass for want of a question rather than a verdict.
+            rows = [
+                {"number": 1, "title": "t1", "body": "## What", "state": "OPEN",
+                 "labels": [], "milestone": None},
+                {"number": 2, "title": "t2", "body": "EPIC: #1\n\n## What",
+                 "state": "OPEN", "labels": [], "milestone": None},
+            ]
+            return subprocess.CompletedProcess(args, 0, stdout=json.dumps(rows), stderr="")
+        if "sub_issues" in joined:
+            # Reachable endpoint, unreadable answer -> the seam cannot vouch.
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr="error connecting")
+        return subprocess.CompletedProcess(args, 0, stdout="[]", stderr="")
+
+    monkeypatch.setattr(st, "gh_run", fake_gh)
+    monkeypatch.setattr(st.containment, "_gh_call", fake_gh)
+    monkeypatch.setattr(sys, "argv", ["show-tree", "--format", "json", "--limit", "500"])
+    st.main()
+    assert json.loads(capsys.readouterr().out)["complete"] is False
+
+
+def test_a_truncated_view_reports_truncation_not_its_consequence(st) -> None:
+    """When both causes hold, name the root one.
+
+    A bounded corpus is handed to the seam as an unvouched one, so every parent
+    then reports incomplete *as a consequence*. Reporting that instead told the
+    operator "the corpus was read in full" while it plainly had been cut at the
+    limit, and pointed them away from the remedy that would actually work.
+    """
+    both = st._partial_note(limit=5, truncated=True, incomplete_parents=[1, 2, 3])
+    assert "first 5 issues" in both
+    assert "read in full" not in both
+
+    only_unvouched = st._partial_note(limit=500, truncated=False, incomplete_parents=[7])
+    assert "#7" in only_unvouched
+    assert "higher --limit will not help" in only_unvouched
+
+    # Unreachable by construction, but a fallback that invents a cause is the one
+    # thing this function exists to prevent.
+    neither = st._partial_note(limit=500, truncated=False, incomplete_parents=[])
+    assert "not established" in neither
+    assert "--limit" not in neither
+
+
+def test_refresh_refuses_a_filtered_corpus(st, monkeypatch, capsys) -> None:
+    """A filter is not a truncation, and the completeness verdict cannot see it.
+
+    `--state open` yields a corpus that is *complete for what it asked* while
+    every closed child is absent from it. Writing a parent's children comment
+    from that view drops them silently — the same defect as a bounded corpus,
+    arriving with `complete=True`, so the truncation guard does not catch it.
+    Measured on this repo when found: 148 of 530 issues visible.
+    """
+    wrote: list = []
+
+    def fake_gh(args, config, **kwargs):
+        if "pr" in args:
+            return subprocess.CompletedProcess(args, 0, stdout="[]", stderr="")
+        if "issue" in args and "list" in args:
+            return subprocess.CompletedProcess(args, 0, stdout=json.dumps([
+                {"number": 1, "title": "t1", "body": "## What", "state": "OPEN",
+                 "labels": [], "milestone": None},
+            ]), stderr="")
+        wrote.append(args)
+        return subprocess.CompletedProcess(args, 0, stdout="[]", stderr="")
+
+    monkeypatch.setattr(st, "gh_run", fake_gh)
+    monkeypatch.setattr(st.containment, "_gh_call", fake_gh)
+    monkeypatch.setattr(st.session_guard, "enforce", lambda **_kw: True)
+    # The DEFAULT state, which is what makes this matter: the plain invocation
+    # was the one writing a filtered view.
+    monkeypatch.setattr(sys, "argv", ["show-tree", "--refresh-children-views"])
+    rc = st.main()
+    captured = capsys.readouterr()
+
+    assert rc == 1
+    assert "--state all" in captured.err, "the refusal must name the remedy that works"
+    assert not any("comment" in " ".join(map(str, c)) for c in wrote)

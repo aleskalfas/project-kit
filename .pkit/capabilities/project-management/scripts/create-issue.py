@@ -1006,11 +1006,24 @@ def _refresh_parent_children_view(
 
     Failure-posture-neutral: every outcome is reported as a one-line stderr note
     and NONE fails the create (the child-side textual ref is the spine). A corpus
-    fetch that fails degrades to a corpus carrying just this parent + nothing else,
-    so the render still runs (the textual side simply finds no children there) —
-    but in practice the new child is in the corpus, so the view reflects it.
+    that could not be read in full does NOT degrade to a partial render — the
+    publish is skipped, leaving the previous comment in place. This is a write
+    over the only parent-side child list a textual-mode tracker has, and it
+    carries no hedge of its own, so a stale view beats a confidently short one.
     """
-    corpus, titles = _fetch_issue_corpus(config)
+    corpus, titles, reason = _fetch_issue_corpus(config)
+    if reason is not None:
+        # Refuse to publish rather than publish a short list. The comment is the
+        # only parent-side view of children in textual mode, and it carries no
+        # hedge of its own — a reader takes it as the parent's children, full
+        # stop. Skipping leaves the previous render in place, which is stale at
+        # worst; overwriting it with a partial one is confidently wrong.
+        print(
+            f"[warn] children view not refreshed: {reason}, and a partial list "
+            "would read as the complete one",
+            file=sys.stderr,
+        )
+        return
     result = containment.refresh_children_comment(
         config,
         parent_number=parent_number,
@@ -1022,48 +1035,31 @@ def _refresh_parent_children_view(
     print(f"{prefix} {result.detail}", file=sys.stderr)
 
 
-def _fetch_issue_corpus(config: dict) -> tuple[dict[int, str], dict[int, str]]:
-    """Fetch ``({number: body}, {number: title})`` for the open issue corpus.
+def _fetch_issue_corpus(
+    config: dict,
+) -> tuple[dict[int, str], dict[int, str], str | None]:
+    """The issue corpus for the children-view render, and whether it is whole.
 
-    Used by the children-view refresh so `resolve_children` resolves the textual
-    side (child bodies naming the parent) with no per-issue API call. Reads via
-    `gh issue list --json number,body,title` through the gh helper (DEC-023
-    host/owner pinning). Returns two empty maps on any failure — the caller's
-    refresh is failure-posture-neutral, so a missing corpus degrades to an
-    empty-children render rather than an error.
+    Acquisition belongs to the containment seam (ADR-035 §5), which enumerates to
+    exhaustion and says when it could not. This used to run its own
+    `gh issue list --limit 1000` and return two empty maps on any failure — so a
+    broken fetch rendered as an EMPTY children list, indistinguishable from a
+    parent that genuinely has none, and past 1000 issues a short list read as the
+    complete set (#863).
+
+    The third element is that honesty: None when the corpus is whole, otherwise
+    the fact that made it partial — the query failed, or it was not enumerated to
+    exhaustion. The caller refuses to publish rather than overwrite the parent's
+    children comment with a short list under a heading claiming to be complete,
+    and reports which fact it established rather than a guess at the cause
+    (ADR-035 point 5).
     """
-    try:
-        proc = gh_run(
-            [
-                "gh", "issue", "list",
-                "--state", "all",
-                "--limit", "1000",
-                "--json", "number,body,title",
-            ],
-            config,
-            check=False,
-        )
-    except FileNotFoundError:
-        return {}, {}
-    if proc.returncode != 0:
-        return {}, {}
-    try:
-        rows = json.loads(proc.stdout)
-    except (json.JSONDecodeError, ValueError):
-        return {}, {}
-    corpus: dict[int, str] = {}
-    titles: dict[int, str] = {}
-    for row in rows if isinstance(rows, list) else []:
-        if not isinstance(row, dict):
-            continue
-        number = row.get("number")
-        if not isinstance(number, int):
-            continue
-        corpus[number] = str(row.get("body") or "")
-        title = row.get("title")
-        if isinstance(title, str) and title:
-            titles[number] = title
-    return corpus, titles
+    corpus = containment.fetch_issue_corpus(config, fields="number,body,title")
+    if corpus is None:
+        return {}, {}, "the issue list could not be read at all"
+    if not corpus.complete:
+        return corpus.bodies, corpus.titles, "the issue corpus was not read in full"
+    return corpus.bodies, corpus.titles, None
 
 
 def _resolve_repo_name_with_owner_safe() -> str:
