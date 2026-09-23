@@ -19,7 +19,12 @@ body: >
   otherwise sends them round the same loop. JSON gains `incomplete_reason`
   alongside the verdict for the same reason — a bare false sends a machine
   consumer back to guessing the cause. The children-view refresh takes the stricter
-  line and skips rather than publishing a short list: that comment is the only
+  line and refuses rather than publishing a partial list — including when the
+  corpus was *filtered* rather than cut short, which the completeness verdict
+  cannot see: `--state open` is complete for what it asked while every closed
+  child is missing from it, so the default `show-tree --refresh-children-views`
+  had been rewriting each parent's children comment with closed children
+  silently dropped. that comment is the only
   parent-side view of children on trackers without native sub-issues and it
   carries no hedge of its own, so a stale view is better than a confidently wrong
   one. The same change fixes a failed fetch there rendering as an *empty*

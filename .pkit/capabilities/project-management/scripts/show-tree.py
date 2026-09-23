@@ -229,6 +229,20 @@ def main() -> int:
     if args.refresh_children_views:
         if not session_guard.enforce(override=args.allow_foreign_repo):
             return 1
+        if args.state != "all":
+            # A FILTER is not a truncation, and the completeness verdict cannot
+            # see it: an open-only corpus is complete for what it asked, while
+            # every closed child is missing from it. Writing a parent's children
+            # comment from that view drops them silently — the same defect as a
+            # bounded corpus, arriving with `complete=True`. The seam says why a
+            # gate must not filter: a closed child still counts.
+            print(
+                f"[refused] children views not refreshed: --state {args.state} hides "
+                "children from the write, and a closed child is still a child. "
+                "Re-run with --state all.",
+                file=sys.stderr,
+            )
+            return 1
         if partial:
             # Refuse rather than overwrite. Each comment is replaced wholesale,
             # so rendering from a bounded corpus would drop real children from a

@@ -468,3 +468,39 @@ def test_a_truncated_view_reports_truncation_not_its_consequence(st) -> None:
     neither = st._partial_note(limit=500, truncated=False, incomplete_parents=[])
     assert "not established" in neither
     assert "--limit" not in neither
+
+
+def test_refresh_refuses_a_filtered_corpus(st, monkeypatch, capsys) -> None:
+    """A filter is not a truncation, and the completeness verdict cannot see it.
+
+    `--state open` yields a corpus that is *complete for what it asked* while
+    every closed child is absent from it. Writing a parent's children comment
+    from that view drops them silently — the same defect as a bounded corpus,
+    arriving with `complete=True`, so the truncation guard does not catch it.
+    Measured on this repo when found: 148 of 530 issues visible.
+    """
+    wrote: list = []
+
+    def fake_gh(args, config, **kwargs):
+        if "pr" in args:
+            return subprocess.CompletedProcess(args, 0, stdout="[]", stderr="")
+        if "issue" in args and "list" in args:
+            return subprocess.CompletedProcess(args, 0, stdout=json.dumps([
+                {"number": 1, "title": "t1", "body": "## What", "state": "OPEN",
+                 "labels": [], "milestone": None},
+            ]), stderr="")
+        wrote.append(args)
+        return subprocess.CompletedProcess(args, 0, stdout="[]", stderr="")
+
+    monkeypatch.setattr(st, "gh_run", fake_gh)
+    monkeypatch.setattr(st.containment, "_gh_call", fake_gh)
+    monkeypatch.setattr(st.session_guard, "enforce", lambda **_kw: True)
+    # The DEFAULT state, which is what makes this matter: the plain invocation
+    # was the one writing a filtered view.
+    monkeypatch.setattr(sys, "argv", ["show-tree", "--refresh-children-views"])
+    rc = st.main()
+    captured = capsys.readouterr()
+
+    assert rc == 1
+    assert "--state all" in captured.err, "the refusal must name the remedy that works"
+    assert not any("comment" in " ".join(map(str, c)) for c in wrote)
