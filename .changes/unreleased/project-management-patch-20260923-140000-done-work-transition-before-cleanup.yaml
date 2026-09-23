@@ -2,6 +2,7 @@ component: project-management
 kind: patch
 custom:
   category: Fixed
+  pr: "881"
 body: >
   `done-work` now transitions the issue right after the squash-merge and treats
   every local branch step as a warning, so a worktree on a detached HEAD or one
