@@ -24,6 +24,18 @@ def _setup_demo_capability(target_root: Path) -> Path:
     """Stamp a capability + a namespace-owning schema."""
     schemas = target_root / ".pkit" / "capabilities" / "demo" / "schemas"
     schemas.mkdir(parents=True)
+    return _write_issue_types_pair(schemas)
+
+
+def _setup_core_area(target_root: Path) -> Path:
+    """Stamp the same namespace-owning schema into the core schemas area (`.pkit/schemas/`)."""
+    schemas = target_root / ".pkit" / "schemas"
+    schemas.mkdir(parents=True)
+    return _write_issue_types_pair(schemas)
+
+
+def _write_issue_types_pair(schemas: Path) -> Path:
+    """Write the `issue-types` pair into `schemas`; returns the directory."""
     yaml_body = (
         "schema_version: 1\n"
         "types:\n"
@@ -199,3 +211,31 @@ def test_find_namespace_owner_returns_capability(tmp_path: Path) -> None:
 def test_find_namespace_owner_returns_none_for_unknown(tmp_path: Path) -> None:
     _setup_demo_capability(tmp_path)
     assert find_namespace_owner(tmp_path, "nope") is None
+
+
+# core schemas area (.pkit/schemas/), #879 -------------------------------
+
+
+def test_find_namespace_owner_returns_core_for_core_area(tmp_path: Path) -> None:
+    _setup_core_area(tmp_path)
+    assert find_namespace_owner(tmp_path, "issue-types") == "core"
+
+
+def test_load_schema_accepts_core_owner(tmp_path: Path) -> None:
+    _setup_core_area(tmp_path)
+    data = load_schema(tmp_path, "core", "issue-types")
+    assert "task" in data["types"]
+
+
+def test_resolve_token_resolves_core_area_namespace(tmp_path: Path) -> None:
+    _setup_core_area(tmp_path)
+    entry = resolve_token(tmp_path, "[issue-types:task]")
+    assert entry["role"] == "A unit of work."
+
+
+def test_resolve_token_unknown_namespace_names_both_homes(tmp_path: Path) -> None:
+    with pytest.raises(SchemaLookupError) as excinfo:
+        resolve_token(tmp_path, "[nope:task]")
+    message = str(excinfo.value)
+    assert ".pkit/schemas/" in message
+    assert ".pkit/capabilities/*/schemas/" in message

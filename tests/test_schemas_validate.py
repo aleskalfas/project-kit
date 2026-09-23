@@ -94,6 +94,31 @@ def test_discover_walks_multiple_capabilities(tmp_path: Path) -> None:
     assert {p.yaml_path.stem for p in pairs} == {"a", "b"}
 
 
+def test_discover_includes_core_schemas_area(tmp_path: Path) -> None:
+    """The whole-tree walk covers `.pkit/schemas/*.yaml` too — direct children only (#879)."""
+    core = tmp_path / ".pkit" / "schemas"
+    core.mkdir(parents=True)
+    _write_schema_pair(core, "core-ns", yaml_body=_MINIMAL_YAML, json_schema=_MINIMAL_JSON_SCHEMA)
+    (core / "_defs").mkdir()
+    (core / "_defs" / "refs.schema.json").write_text("{}", encoding="utf-8")
+    cap = _make_capability(tmp_path, "demo")
+    _write_schema_pair(cap, "cap-ns", yaml_body=_MINIMAL_YAML)
+
+    pairs = discover_schema_pairs(tmp_path)
+    assert [p.yaml_path.stem for p in pairs] == ["core-ns", "cap-ns"]
+    assert pairs[0].yaml_path.parent == core
+
+
+def test_validate_all_reports_core_area_pair_issues(tmp_path: Path) -> None:
+    """A defective core pair fails the no-PATH gate, not just a path-scoped run."""
+    core = tmp_path / ".pkit" / "schemas"
+    core.mkdir(parents=True)
+    _write_schema_pair(core, "orphan", yaml_body=_MINIMAL_YAML)  # no companion
+    report = validate_all(tmp_path)
+    assert report.pairs_checked == 1
+    assert any("missing companion" in i.message for i in report.issues)
+
+
 def test_discover_at_path_single_file(tmp_path: Path) -> None:
     schemas = _make_capability(tmp_path, "demo")
     yaml_path, _ = _write_schema_pair(schemas, "alpha", yaml_body=_MINIMAL_YAML)
@@ -1067,6 +1092,25 @@ def test_summarize_schemas_reports_load_errors_without_crashing(tmp_path: Path) 
     assert by_name["ok"].load_error is None
 
 
+def test_summarize_schemas_labels_core_area_owner(tmp_path: Path) -> None:
+    """A core-area schema summarises under the reserved owner name `core`."""
+    core = tmp_path / ".pkit" / "schemas"
+    core.mkdir(parents=True)
+    _write_schema_pair(core, "target", yaml_body=_TARGET_YAML, json_schema=_TARGET_JSON_SCHEMA)
+    summaries = summarize_schemas(tmp_path)
+    assert [(s.capability, s.name) for s in summaries] == [("core", "target")]
+    assert summaries[0].is_namespace_owner is True
+
+
+def test_detail_namespace_finds_core_area_namespace(tmp_path: Path) -> None:
+    core = tmp_path / ".pkit" / "schemas"
+    core.mkdir(parents=True)
+    _write_schema_pair(core, "target", yaml_body=_TARGET_YAML, json_schema=_TARGET_JSON_SCHEMA)
+    detail = detail_namespace(tmp_path, "target")
+    assert isinstance(detail, NamespaceDetail)
+    assert [eid for eid, _ in detail.entries] == ["task", "feature"]
+
+
 def test_detail_namespace_finds_known_namespace(tmp_path: Path) -> None:
     schemas = _make_capability(tmp_path, "demo")
     _write_schema_pair(schemas, "target", yaml_body=_TARGET_YAML, json_schema=_TARGET_JSON_SCHEMA)
@@ -1120,6 +1164,17 @@ def test_cli_schemas_list(cli_target: Path) -> None:
     assert "capability: demo" in result.output
     assert "target" in result.output
     assert "task, feature" in result.output or "feature, task" in result.output
+
+
+def test_cli_schemas_list_groups_core_area(cli_target: Path) -> None:
+    core = cli_target / ".pkit" / "schemas"
+    core.mkdir()
+    _write_schema_pair(core, "target", yaml_body=_TARGET_YAML, json_schema=_TARGET_JSON_SCHEMA)
+    runner = CliRunner()
+    result = runner.invoke(main, ["schemas", "list"])
+    assert result.exit_code == 0, result.output
+    assert "core schemas area" in result.output
+    assert "capability: core" not in result.output
 
 
 def test_cli_schemas_show(cli_target: Path) -> None:
