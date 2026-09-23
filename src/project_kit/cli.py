@@ -263,7 +263,7 @@ def _target_kit() -> Path:
 @main.group(invoke_without_command=True)
 @click.pass_context
 def version(ctx: click.Context) -> None:
-    """Show or bump the backbone version of the project at the working directory."""
+    """Show this pkit's version, or bump the backbone version of the project at the working directory."""
     if ctx.invoked_subcommand is None:
         click.echo(f"pkit {__version__}")
 
