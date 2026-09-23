@@ -6,7 +6,11 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
+import pytest
+from click.testing import CliRunner
+
 from project_kit import changesets, release
+from project_kit.cli import main
 
 
 def _git(repo: Path, *args: str) -> None:
@@ -241,3 +245,85 @@ def test_docs_only_diff_is_not_a_release(tmp_path: Path) -> None:
     result = release.check_changesets(source_kit, "main")
     assert not result.release_exempt
     assert result.ok  # not surface at all
+
+
+# --- The root the guard reads (#877): the working directory, not the checkout
+# that owns the interpreter ----------------------------------------------------
+
+
+def _make_checkout_with_worktree(tmp_path: Path) -> tuple[Path, Path]:
+    """A project-kit-shaped checkout on `main` plus a git worktree of it on a
+    branch that adds a capability the checkout does not have, and touches it.
+
+    Returns `(checkout, worktree)`. The checkout carries `.pkit/decisions/` so
+    `source_checkout_root()` accepts it as the tree owning the interpreter.
+    """
+    checkout = tmp_path / "checkout"
+    checkout.mkdir()
+    _make_repo(checkout)
+    (checkout / ".pkit" / "decisions").mkdir()
+    _git(checkout, "add", "-A")
+    _git(checkout, "checkout", "-q", "main")
+
+    worktree = tmp_path / "worktree"
+    _git(checkout, "worktree", "add", "-q", "-b", "wt", str(worktree), "main")
+    extra = worktree / ".pkit" / "capabilities" / "extra"
+    extra.mkdir(parents=True)
+    (extra / "package.yaml").write_text(
+        "schema_version: 1\ncomponent:\n  kind: capability\n  name: extra\n"
+        '  version: 0.1.0\nrequires_backbone: ">=0.1.0,<2.0.0"\n',
+        encoding="utf-8",
+    )
+    (extra / "README.md").write_text("extra\n", encoding="utf-8")
+    _git(worktree, "add", "-A")
+    _git(worktree, "commit", "-q", "-m", "add extra capability")
+    return checkout, worktree
+
+
+def _point_interpreter_at(monkeypatch, checkout: Path) -> None:
+    """Make `install.source_checkout_root()` derive `checkout` from `__file__` —
+    the editable-install shape where the module lives inside one fixed tree."""
+    from project_kit import install
+
+    monkeypatch.setattr(install, "__file__", str(checkout / "src" / "project_kit" / "install.py"))
+
+
+def test_guard_reads_the_worktree_at_cwd_not_the_interpreter_checkout(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """From a worktree, `release check` diffs and discovers components in the
+    worktree — the `extra` capability exists only there — and says which tree it
+    is operating on."""
+
+
+    checkout, worktree = _make_checkout_with_worktree(tmp_path)
+    _point_interpreter_at(monkeypatch, checkout)
+    monkeypatch.chdir(worktree)
+
+    result = CliRunner().invoke(main, ["release", "check", "--base", "main"])
+
+    assert result.exit_code == 1, result.output
+    assert "changeset guard: touched extra" in result.stdout
+    assert "surface change without a changeset for: extra" in result.output
+    assert "note: operating on" in result.stderr
+    assert str(worktree.resolve()) in result.stderr
+    assert str(checkout.resolve()) in result.stderr
+    assert "note:" not in result.stdout
+
+
+def test_guard_from_the_checkout_itself_is_silent_and_unchanged(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Self-host / dev live-edit: cwd is the checkout, both roots coincide — no
+    notice, and the worktree-only component is invisible."""
+
+
+    checkout, _worktree = _make_checkout_with_worktree(tmp_path)
+    _point_interpreter_at(monkeypatch, checkout)
+    monkeypatch.chdir(checkout)
+
+    result = CliRunner().invoke(main, ["release", "check", "--base", "main"])
+
+    assert result.exit_code == 0, result.output
+    assert "no surface-touched components" in result.stdout
+    assert result.stderr == ""

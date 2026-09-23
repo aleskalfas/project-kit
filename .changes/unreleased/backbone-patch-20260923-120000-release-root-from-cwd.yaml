@@ -1,0 +1,11 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+  pr: "880"
+body: >
+  The `release` and `version` commands now operate on the repository at the
+  working directory, so `pkit release check` run from a git worktree reports
+  that worktree's diff and changesets rather than those of the checkout that
+  owns the `pkit` binary, and prints a one-line notice when the two differ
+  (#877).
