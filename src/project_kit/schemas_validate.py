@@ -38,7 +38,8 @@ without this check, a hand-edited definition is shape-checked by nothing.
 Shape only; `validate_instance` documents why the resolver passes don't
 apply to an instance.
 
-Discovery: walks `<target_root>/.pkit/capabilities/*/schemas/` for YAML
+Discovery: walks every schemas home — `<target_root>/.pkit/schemas/` (the core
+area, first) and `<target_root>/.pkit/capabilities/*/schemas/` — for YAML
 files; for each, looks for a sibling `<name>.schema.json`. A YAML
 without a companion surfaces as an issue (per COR-018 the companion is
 required). The validator can also operate on a specific path passed in
