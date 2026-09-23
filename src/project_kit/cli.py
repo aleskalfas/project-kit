@@ -28,6 +28,7 @@ from project_kit.install import (
     find_source_kit,
     find_target_root,
     install_kit,
+    source_checkout_root,
     resolve_init_target,
     scan_pkit_installs,
 )
@@ -230,10 +231,39 @@ def agents_adopt(agent_name: str) -> None:
     click.echo("\n".join(lines))
 
 
+def _target_kit() -> Path:
+    """The `.pkit/` of the project the `version` / `release` commands operate on.
+
+    Resolved from the working directory (`find_target_root`, the same root every
+    other command uses), **not** from `find_source_kit()`: that one follows the
+    interpreter's own location, so with an editable install it names the checkout
+    that owns the virtualenv whatever the cwd — and `release check` run from a git
+    worktree would silently diff the main checkout instead (#877). The two roots
+    coincide in the common self-host case (running from the checkout itself);
+    when they differ, say so once on stderr so the operator knows which tree the
+    command is reading and writing. Not an error — a worktree of the same repo is
+    a legitimate place to run from.
+    """
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    target_kit = target_root / ".pkit"
+    if not target_kit.is_dir():
+        raise click.ClickException(f"no .pkit/ at {target_root} — not a project-kit project.")
+    checkout = source_checkout_root()
+    if checkout is not None and checkout != target_root:
+        click.echo(
+            f"note: operating on {target_root} (working directory), "
+            f"not on the checkout that owns this pkit ({checkout}).",
+            err=True,
+        )
+    return target_kit
+
+
 @main.group(invoke_without_command=True)
 @click.pass_context
 def version(ctx: click.Context) -> None:
-    """Show the source kit's backbone version, or bump it."""
+    """Show or bump the backbone version of the project at the working directory."""
     if ctx.invoked_subcommand is None:
         click.echo(f"pkit {__version__}")
 
@@ -255,7 +285,7 @@ def version_bump(segment: str, pre: str | None) -> None:
     (`X.Y.Z<kind>1`). Without it, `pre` as the segment increments the
     existing pre-release counter (`1.2.0rc1` -> `1.2.0rc2`). See PRJ-002.
     """
-    source_kit = find_source_kit()
+    source_kit = _target_kit()
     if segment == "pre":
         if pre is not None:
             raise click.ClickException(
@@ -274,7 +304,7 @@ def version_promote() -> None:
 
     Refuses if VERSION has no pre-release suffix. See PRJ-002.
     """
-    source_kit = find_source_kit()
+    source_kit = _target_kit()
     promote_version(source_kit)
 
 
@@ -287,7 +317,7 @@ def version_promote() -> None:
 )
 def version_tag(push: bool) -> None:
     """Tag HEAD as `v<version>` from .pkit/VERSION (per PRJ-002 + PRJ-004)."""
-    source_kit = find_source_kit()
+    source_kit = _target_kit()
     tag_version(source_kit, push=push)
 
 
@@ -300,7 +330,7 @@ def version_tag(push: bool) -> None:
 )
 def version_untag(push: bool) -> None:
     """Remove the `v<version>` tag matching .pkit/VERSION (local; --push for remote)."""
-    source_kit = find_source_kit()
+    source_kit = _target_kit()
     untag_version(source_kit, push=push)
 
 
@@ -313,7 +343,7 @@ def version_unbump() -> None:
     version cannot be determined unambiguously (e.g., pre-release, pre-1.0
     boundary) — set VERSION by hand in that case.
     """
-    source_kit = find_source_kit()
+    source_kit = _target_kit()
     unbump_version(source_kit)
 
 
@@ -359,7 +389,7 @@ def release_plan(as_json: bool) -> None:
     """Preview the release computed from pending changesets (read-only)."""
     import json
 
-    source_kit = find_source_kit()
+    source_kit = _target_kit()
     plan = compute_release(source_kit)
     if as_json:
         click.echo(json.dumps(release_summary(source_kit, plan), indent=2))
@@ -398,7 +428,7 @@ def release_apply(tag: bool, push: bool, no_broaden: bool, yes: bool) -> None:
     `--no-broaden` is given; a backbone release widens every component as
     before. Both are widen-only. See `.pkit/release/README.md`.
     """
-    source_kit = find_source_kit()
+    source_kit = _target_kit()
     plan = compute_release(source_kit)
     _print_release_plan(plan)
     _warn_migration_mismatches(source_kit, plan)
@@ -432,7 +462,7 @@ def release_check(base: str, skip: bool | None) -> None:
     `skip-changeset` label (PKIT_CHANGESET_SKIP env). Surface is a human
     judgment (PRJ-002 D2) — this path heuristic can mis-fire; the override exists.
     """
-    source_kit = find_source_kit()
+    source_kit = _target_kit()
     skip_active = bool(skip) or _env_flag("PKIT_CHANGESET_SKIP")
     result = check_changesets(source_kit, base, skip=skip_active)
 
@@ -484,7 +514,7 @@ def release_lint(skip: bool | None) -> None:
     Reads committed files only (no PR context), so it runs in the shared check
     aggregator. Escape hatch: `--skip` or the PKIT_CHANGELOG_LINT_SKIP env var.
     """
-    source_kit = find_source_kit()
+    source_kit = _target_kit()
     skip_active = bool(skip) or _env_flag("PKIT_CHANGELOG_LINT_SKIP")
     result = lint_release_format(source_kit, skip=skip_active)
 
@@ -524,7 +554,7 @@ def release_merge(pr: int, dry_run: bool) -> None:
     backbone tag on the resulting push to `main` (PRJ-004). Human-gated: a human
     decides to run it; nothing auto-merges.
     """
-    source_kit = find_source_kit()
+    source_kit = _target_kit()
     click.echo(merge_release_pr(source_kit.parent, pr, dry_run=dry_run))
 
 
@@ -547,7 +577,7 @@ def release_publish_notes(version: str, dry_run: bool) -> None:
     `gh` context (no hardcoded owner/repo). A missing tag is a clear error;
     `--dry-run` prints the notes without calling `gh`.
     """
-    source_kit = find_source_kit()
+    source_kit = _target_kit()
     click.echo(publish_release_notes(source_kit.parent, version, dry_run=dry_run))
 
 
@@ -563,7 +593,7 @@ def release_check_shareable(component: str) -> None:
     detectable local-only assumptions (absolute paths / `file://` URLs). It
     checks any component by name — project-neutral, no project-kit specifics.
     """
-    source_kit = find_source_kit()
+    source_kit = _target_kit()
     report = check_shareable(source_kit, component)
 
     for warning in report.warnings:

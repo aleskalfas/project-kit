@@ -404,19 +404,42 @@ def _bundled_source_kit() -> Path:
     return _materialised_bundle
 
 
+def source_checkout_root() -> Path | None:
+    """The project-kit checkout that owns the running interpreter, or `None`.
+
+    Derived from `__file__` (`<repo>/src/project_kit/install.py`, so the repo is
+    two parents up) and accepted only when that repo carries a real source
+    `.pkit/`. `None` means the package runs from an installed wheel with no
+    checkout around it (the bundled-content case).
+
+    This is a property of *where the code is*, not of the working directory —
+    with an editable install it points at the same checkout from any cwd, which
+    is exactly why the version/release commands must not derive the repository
+    they operate on from it (#877; see `find_target_root` for that root).
+    """
+    checkout = Path(__file__).resolve().parents[2]
+    if _looks_like_source_checkout(checkout / ".pkit"):
+        return checkout
+    return None
+
+
 def find_source_kit() -> Path:
     """Return the methodology source kit's `.pkit/`-equivalent directory.
 
     Checkout-first (ADR-033 §2): when invoked from a real project-kit checkout
-    (`__file__` at `<repo>/src/project_kit/install.py`, so `.pkit/` is two
-    parents up), and that directory looks like a real source tree, return it —
-    preserving dev live-edit and self-host. Otherwise (the official `uv tool`
-    install, where no checkout `.pkit/` exists) fall back to the bundled
-    `project_kit/_kit/` shipped in the wheel.
+    (`source_checkout_root`), return its `.pkit/` — preserving dev live-edit and
+    self-host. Otherwise (the official `uv tool` install, where no checkout
+    `.pkit/` exists) fall back to the bundled `project_kit/_kit/` shipped in the
+    wheel.
+
+    This is the kit *content* the CLI ships (templates, decisions, the bundled
+    tree) — the thing `pkit init` / `sync` copy *from*. It is not the project
+    being operated on; that is `find_target_root`, resolved from the working
+    directory.
     """
-    checkout = Path(__file__).resolve().parents[2] / ".pkit"
-    if _looks_like_source_checkout(checkout):
-        return checkout
+    checkout = source_checkout_root()
+    if checkout is not None:
+        return checkout / ".pkit"
     return _bundled_source_kit()
 
 
