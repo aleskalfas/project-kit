@@ -76,15 +76,25 @@ Phase D (DEC-027 mode resolution) wires the per-PR mode lookup that
 chooses between this human-mode gate and DEC-028's agent-verdict gate.
 v1 ships with the human-mode gate as the default.
 
-Side-effects:
-  - `gh pr merge --squash --delete-branch`.
-  - `git pull` (main) after the merge.
+Side-effects, in order (#878):
+  - `gh pr merge --squash` — WITHOUT `--delete-branch`: that flag makes gh
+    check out the default branch locally and delete the local head, and the
+    whole `gh pr merge` exits non-zero when the working tree cannot do so
+    (detached HEAD; `main` checked out in another worktree) — after the
+    remote merge has already landed.
+  - Composes over `move-issue.py --to done` IMMEDIATELY after the merge, so
+    no best-effort step can stand between the irreversible merge and the
+    lifecycle transition.
+  - Best-effort branch cleanup, after the transition: delete the remote head
+    ref through the API (`gh api -X DELETE .../git/refs/heads/<branch>`, no
+    local-checkout dependency), then `git checkout main`, `git pull
+    --ff-only`, `git branch -D <branch>`. Each step warns with its reason and
+    continues; none can fail the run.
   - Audit comment "Approved by bypass: <reason>" if --bypass is used
     (stamped + idempotent per DEC-024).
   - Per-reviewer-override audit comment(s) on the PR if --bypass-reviewer is
     used (prose, verdict-grammar-distinct, stamped per (reviewer, reason, HEAD)
     + idempotent per DEC-050).
-  - Composes over `move-issue.py --to done`.
   - `done-work` does NOT roll back the merge if a downstream step
     fails — merge irreversibility is the architectural constraint per
     DEC-026 failure semantics.
@@ -575,7 +585,12 @@ def main() -> int:
     print(f"  gate:    {gate_result.passed_via}")
 
     if args.dry_run:
-        print(f"(dry-run: would post bypass audit (if any), squash-merge --subject {pr_title!r}, pull main, call move-issue.)")
+        print(
+            f"(dry-run: would post bypass audit (if any), squash-merge "
+            f"--subject {pr_title!r}, call move-issue, then best-effort "
+            f"cleanup: delete remote branch {branch!r}, checkout main + pull, "
+            f"delete local branch.)"
+        )
         return 0
 
     if not args.yes and sys.stdin.isatty():
@@ -639,21 +654,28 @@ def main() -> int:
 
     print(f"  merged PR #{pr_number}")
 
-    # Pull main locally (best-effort; merge irreversibility means we don't
-    # roll back on pull failure — the merge is durable).
-    _git_pull_main()
-
-    # Compose over move-issue for the state transition + cascade.
-    rc = _invoke_move_issue(args.issue_number, "done", args.capability_root)
-    if rc != 0:
+    # Compose over move-issue for the state transition + cascade — FIRST,
+    # before any branch cleanup. The merge is irreversible and GitHub's
+    # `Closes #N` has already closed the issue, so a best-effort step failing
+    # ahead of this call would strand the pm state at Review (#878).
+    move_rc = _invoke_move_issue(args.issue_number, "done", args.capability_root)
+    if move_rc != 0:
         print(
-            f"[warn] PR merged but move-issue exited {rc}. The merge is "
+            f"[warn] PR merged but move-issue exited {move_rc}. The merge is "
             "durable; re-run `move-issue --to done` to complete the "
             "lifecycle transition.",
             file=sys.stderr,
         )
-        return rc
 
+    # Branch cleanup — best-effort, never fatal. The remote head ref goes
+    # through the API so it has no local-checkout dependency; the local steps
+    # warn and continue when the working tree cannot switch to main
+    # (detached HEAD, `main` held by another worktree).
+    _gh_delete_remote_branch(branch, config)
+    _git_cleanup_local(branch)
+
+    if move_rc != 0:
+        return move_rc
     print(f"\n[ok] merged + closed #{args.issue_number}")
     return 0
 
@@ -1901,9 +1923,13 @@ def _gh_pr_merge(pr_number: int | None, *, pr_title: str, admin: bool, config: d
     # gate-validated title for both single- and multi-commit PRs.  GitHub's
     # default for a single-commit PR is the commit message, not the title —
     # the --subject flag overrides that (DEC-013; fixes #33).
+    # No `--delete-branch`: it makes gh check out the default branch locally
+    # and delete the local head, and the whole merge exits non-zero when the
+    # working tree cannot do so — after the remote merge has already landed
+    # (#878). Branch cleanup is `_gh_delete_remote_branch` + `_git_cleanup_local`.
     cmd = [
         "gh", "pr", "merge", str(pr_number),
-        "--squash", "--delete-branch",
+        "--squash",
         "--subject", pr_title,
     ]
     if admin:
@@ -1918,23 +1944,67 @@ def _gh_pr_merge(pr_number: int | None, *, pr_title: str, admin: bool, config: d
     return True
 
 
-def _git_pull_main() -> None:
-    # Switch to main + pull. Best-effort; failures are warnings.
-    proc = subprocess.run(
-        ["git", "checkout", "main"], capture_output=True, text=True, check=False,
+def _gh_delete_remote_branch(branch: str, config: dict) -> None:
+    """Delete the PR's remote head ref through the API — best-effort.
+
+    Replaces `gh pr merge --delete-branch`'s remote half without its local
+    half (#878): the API call needs nothing from the working tree, so a
+    detached HEAD or a `main` held by another worktree cannot fail it. A ref
+    that is already gone (a repository that auto-deletes head branches on
+    merge) is reported, not warned about.
+    """
+    proc = gh_run(
+        ["gh", "api", "-X", "DELETE",
+         f"repos/{{owner}}/{{repo}}/git/refs/heads/{branch}"],
+        config, check=False,
     )
+    if proc.returncode == 0:
+        print(f"  deleted remote branch {branch}")
+        return
+    stderr = proc.stderr.strip()
+    if "Reference does not exist" in stderr:
+        print(f"  remote branch {branch} already deleted")
+        return
+    print(
+        f"[warn] could not delete remote branch {branch}: {stderr}. The merge "
+        f"is durable; delete it by hand (`git push origin --delete {branch}`).",
+        file=sys.stderr,
+    )
+
+
+def _git_cleanup_local(branch: str) -> None:
+    """Switch to main, fast-forward it, delete the local head branch — best-effort.
+
+    Every step warns with git's reason and continues; none can fail the run.
+    When the checkout cannot happen (detached HEAD, `main` checked out in
+    another worktree) the pull is skipped — pulling into whatever IS checked
+    out would be wrong — but the branch delete is still attempted, since it
+    needs only that the branch is not the one checked out here. `-D` (not
+    `-d`) because a squash-merged branch is never an ancestor of main; this
+    matches what `gh pr merge --delete-branch` did.
+    """
+    def _git(*argv: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            ["git", *argv], capture_output=True, text=True, check=False,
+        )
+
+    proc = _git("checkout", "main")
     if proc.returncode != 0:
         print(
             f"[warn] git checkout main failed: {proc.stderr.strip()}",
             file=sys.stderr,
         )
-        return
-    proc = subprocess.run(
-        ["git", "pull", "--ff-only"], capture_output=True, text=True, check=False,
-    )
+    else:
+        proc = _git("pull", "--ff-only")
+        if proc.returncode != 0:
+            print(
+                f"[warn] git pull failed: {proc.stderr.strip()}",
+                file=sys.stderr,
+            )
+    proc = _git("branch", "-D", branch)
     if proc.returncode != 0:
         print(
-            f"[warn] git pull failed: {proc.stderr.strip()}",
+            f"[warn] git branch -D {branch} failed: {proc.stderr.strip()}",
             file=sys.stderr,
         )
 
