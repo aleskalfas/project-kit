@@ -677,12 +677,20 @@ def _wire_main_seams(
 
     def _stub_move(issue_number, target, cap_root_arg):
         calls["moved"] = True
+        calls["order"].append(("moved", None))
         return 0
+
+    def _stub_delete_remote(branch, config):
+        calls["order"].append(("remote_delete", branch))
+
+    def _stub_cleanup_local(branch):
+        calls["order"].append(("local_cleanup", branch))
 
     monkeypatch.setattr(dw, "_post_ci_bypass_audit", _stub_ci_audit)
     monkeypatch.setattr(dw, "_post_bypass_audit_idempotent", _stub_approval_audit)
     monkeypatch.setattr(dw, "_gh_pr_merge", _stub_merge)
-    monkeypatch.setattr(dw, "_git_pull_main", lambda: None)
+    monkeypatch.setattr(dw, "_gh_delete_remote_branch", _stub_delete_remote)
+    monkeypatch.setattr(dw, "_git_cleanup_local", _stub_cleanup_local)
     monkeypatch.setattr(dw, "_invoke_move_issue", _stub_move)
     return calls
 
@@ -1020,8 +1028,9 @@ def test_agent_mode_override_happy_path_merges_after_audit(dw, monkeypatch):
     assert calls["merged"] is True
     # Exactly the one expected override audit posted...
     assert calls["override_audits"] == ["design-reviewer"]
-    # ...and it posted BEFORE the merge.
-    assert calls["order"] == [
+    # ...and it posted BEFORE the merge (the post-merge transition + cleanup
+    # entries follow; only the audit/merge ordering is under test here).
+    assert calls["order"][:2] == [
         ("override_audit", "design-reviewer"), ("merged", None),
     ]
 
@@ -1102,3 +1111,201 @@ def test_abbreviated_canonical_flag_cannot_evade_the_ambiguity_refusal(
             "--bypass-reviewer-reas", "a", "--bypass-reason", "b", "--yes",
         ])
     assert exc.value.code == 2, "argparse must reject the abbreviation, not bind it"
+
+
+# ---- post-merge sequence: transition before best-effort cleanup (#878) ---
+#
+# `gh pr merge --delete-branch` checks out the default branch locally and
+# deletes the local head; from a worktree that is on a detached HEAD, or one
+# whose `main` is checked out elsewhere, that local half fails AFTER the remote
+# merge has landed — and the script used to abort there, never calling
+# move-issue, so GitHub showed the issue closed while pm state said Review.
+# The fix: merge without `--delete-branch`, transition immediately, then clean
+# up (remote ref via the API, local steps) as warnings that never abort.
+
+_DETACHED_HEAD_ERR = (
+    "could not determine current branch: failed to run git: not on any branch"
+)
+_MAIN_HELD_ELSEWHERE_ERR = (
+    "fatal: 'main' is already used by worktree at '/repo/wt-main'"
+)
+
+
+def test_gh_pr_merge_has_no_local_delete_branch_half(dw, monkeypatch) -> None:
+    """The merge command carries no `--delete-branch`, so gh never needs the
+    working tree's current branch and the remote merge cannot be failed by a
+    local checkout problem."""
+    import subprocess
+
+    captured: list[list[str]] = []
+
+    def fake_gh_run(args, config, **kwargs):
+        captured.append(list(args))
+        return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(dw, "gh_run", fake_gh_run)
+    assert dw._gh_pr_merge(42, pr_title="fix: x", admin=False, config={}) is True
+    assert captured[0][:4] == ["gh", "pr", "merge", "42"]
+    assert "--squash" in captured[0]
+    assert "--delete-branch" not in captured[0]
+
+
+def test_transition_runs_immediately_after_merge_before_cleanup(dw, monkeypatch):
+    """merge → move-issue → remote delete → local cleanup, in that order."""
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+    assert rc == 0
+    assert calls["order"] == [
+        ("merged", None),
+        ("moved", None),
+        ("remote_delete", "fix/42-slug"),
+        ("local_cleanup", "fix/42-slug"),
+    ]
+
+
+def _fake_git(monkeypatch, dw, *, checkout_stderr="", branch_d_stderr=""):
+    """Stub `subprocess.run` for the local git steps: `checkout main` and
+    `branch -D` fail with the given stderr (empty = succeed); `pull` succeeds.
+    Returns the list of git argvs seen."""
+    import subprocess
+
+    seen: list[list[str]] = []
+
+    def fake_run(argv, **kwargs):
+        seen.append(list(argv))
+        if argv[:3] == ["git", "checkout", "main"] and checkout_stderr:
+            return subprocess.CompletedProcess(argv, 128, stdout="", stderr=checkout_stderr)
+        if argv[:3] == ["git", "branch", "-D"] and branch_d_stderr:
+            return subprocess.CompletedProcess(argv, 1, stdout="", stderr=branch_d_stderr)
+        return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(dw.subprocess, "run", fake_run)
+    return seen
+
+
+def _script_error_lines(stderr: str) -> list[str]:
+    return [ln for ln in stderr.splitlines() if ln.lower().startswith("error:")]
+
+
+def test_detached_head_worktree_completes_merge_and_transition(
+    dw, monkeypatch, capsys,
+):
+    """Trigger 1 (#878): the working tree is on a detached HEAD. The local step
+    reports it as a warning; the merge and the transition both complete."""
+    real_cleanup = dw._git_cleanup_local
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    monkeypatch.setattr(dw, "_git_cleanup_local", real_cleanup)
+    seen = _fake_git(monkeypatch, dw, checkout_stderr=_DETACHED_HEAD_ERR)
+
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+
+    err = capsys.readouterr().err
+    assert rc == 0
+    assert calls["merged"] is True
+    assert calls["moved"] is True
+    assert ("remote_delete", "fix/42-slug") in calls["order"]
+    assert f"[warn] git checkout main failed: {_DETACHED_HEAD_ERR}" in err
+    assert _script_error_lines(err) == []
+    # The pull is skipped when main could not be checked out; the local head
+    # is not checked out on a detached HEAD, so its delete is still attempted.
+    assert ["git", "pull", "--ff-only"] not in seen
+    assert ["git", "branch", "-D", "fix/42-slug"] in seen
+
+
+def test_main_held_by_other_worktree_completes_merge_and_transition(
+    dw, monkeypatch, capsys,
+):
+    """Trigger 2 (#878): `main` is checked out in a different worktree, so the
+    local checkout is refused and the head branch (the one checked out here)
+    cannot be deleted. Both are warnings; merge and transition complete."""
+    real_cleanup = dw._git_cleanup_local
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    monkeypatch.setattr(dw, "_git_cleanup_local", real_cleanup)
+    branch_err = "error: cannot delete branch 'fix/42-slug' used by worktree at '/repo/wt-42'"
+    seen = _fake_git(
+        monkeypatch, dw,
+        checkout_stderr=_MAIN_HELD_ELSEWHERE_ERR, branch_d_stderr=branch_err,
+    )
+
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+
+    err = capsys.readouterr().err
+    assert rc == 0
+    assert calls["merged"] is True
+    assert calls["moved"] is True
+    assert ("remote_delete", "fix/42-slug") in calls["order"]
+    assert f"[warn] git checkout main failed: {_MAIN_HELD_ELSEWHERE_ERR}" in err
+    assert f"[warn] git branch -D fix/42-slug failed: {branch_err}" in err
+    assert _script_error_lines(err) == []
+    assert ["git", "pull", "--ff-only"] not in seen
+
+
+def test_cleanup_still_runs_when_move_issue_fails(dw, monkeypatch, capsys):
+    """A move-issue failure is reported and returned, but does not skip the
+    branch cleanup — the two are independent after the merge."""
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+
+    def failing_move(issue_number, target, cap_root_arg):
+        calls["order"].append(("moved", None))
+        return 1
+
+    monkeypatch.setattr(dw, "_invoke_move_issue", failing_move)
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+    assert rc == 1
+    assert "[warn] PR merged but move-issue exited 1" in capsys.readouterr().err
+    assert [kind for kind, _ in calls["order"]] == [
+        "merged", "moved", "remote_delete", "local_cleanup",
+    ]
+
+
+def test_remote_branch_deleted_via_api(dw, monkeypatch, capsys) -> None:
+    """The remote head ref is deleted with `gh api -X DELETE` on the repo's
+    refs endpoint — no dependency on the local checkout."""
+    import subprocess
+
+    captured: list[list[str]] = []
+
+    def fake_gh_run(args, config, **kwargs):
+        captured.append(list(args))
+        return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(dw, "gh_run", fake_gh_run)
+    dw._gh_delete_remote_branch("fix/42-slug", {})
+    assert captured == [[
+        "gh", "api", "-X", "DELETE",
+        "repos/{owner}/{repo}/git/refs/heads/fix/42-slug",
+    ]]
+    assert "deleted remote branch fix/42-slug" in capsys.readouterr().out
+
+
+def test_remote_branch_already_gone_is_not_a_warning(dw, monkeypatch, capsys) -> None:
+    """A repository that auto-deletes head branches on merge answers 422
+    'Reference does not exist' — reported as already deleted, not warned."""
+    import subprocess
+
+    def fake_gh_run(args, config, **kwargs):
+        return subprocess.CompletedProcess(
+            args=args, returncode=1, stdout="",
+            stderr="gh: Reference does not exist (HTTP 422)",
+        )
+
+    monkeypatch.setattr(dw, "gh_run", fake_gh_run)
+    dw._gh_delete_remote_branch("fix/42-slug", {})
+    out = capsys.readouterr()
+    assert "remote branch fix/42-slug already deleted" in out.out
+    assert "[warn]" not in out.err
+
+
+def test_remote_branch_delete_failure_is_a_warning(dw, monkeypatch, capsys) -> None:
+    import subprocess
+
+    def fake_gh_run(args, config, **kwargs):
+        return subprocess.CompletedProcess(
+            args=args, returncode=1, stdout="", stderr="gh: boom (HTTP 500)",
+        )
+
+    monkeypatch.setattr(dw, "gh_run", fake_gh_run)
+    dw._gh_delete_remote_branch("fix/42-slug", {})
+    err = capsys.readouterr().err
+    assert "[warn] could not delete remote branch fix/42-slug: gh: boom (HTTP 500)" in err
+    assert "git push origin --delete fix/42-slug" in err
