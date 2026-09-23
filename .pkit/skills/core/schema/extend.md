@@ -10,7 +10,7 @@ For authoring an entirely new schema (a new namespace), see `schema-author`. Thi
 Per the schemas area's conventions, verify each record in `gates:` is `accepted`:
 
 - **COR-008** — git workflow conventions. Used for the commit step.
-- **COR-018** — capabilities adopt the schemas mechanism. Used to confirm the schema is one this skill should be modifying (schemas under `.pkit/capabilities/*/schemas/`).
+- **COR-018** — capabilities adopt the schemas mechanism. Used to confirm the schema is one this skill should be modifying (schemas under `.pkit/schemas/` (the core area) or `.pkit/capabilities/*/schemas/`).
 - **COR-019** — schema reference form. Used to know whether the new entry's fields involve cross-schema references (typed tokens vs bare ids).
 
 Halt if any is `proposed` or `superseded`.
@@ -26,7 +26,7 @@ pkit schemas list                       # see all installed namespaces
 pkit schemas show <namespace>           # inspect the namespace's existing entries
 ```
 
-If the namespace doesn't exist among installed capabilities, the user is asking for a new schema, not an extension — switch to `schema-author`.
+If the namespace doesn't exist in either home — the core area (`.pkit/schemas/`) or an installed capability's `schemas/` — the user is asking for a new schema, not an extension — switch to `schema-author`.
 
 ### 2. Pick an id
 
