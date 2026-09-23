@@ -315,7 +315,7 @@ The data file's `schema_version` field declares which schema version the data wa
 
 The CLI surface for the binding mechanism. Resolves the binding for one adopter data file (or every YAML in a directory, recursively), runs JSON Schema validation against the resolved schema, and reports findings. Exits non-zero on any unresolved binding or validation failure.
 
-This command is **distinct from `pkit schemas validate`** — the latter validates capability-side schema pairs (the spec); the former validates adopter-side data files against those schemas. Two artefacts, two surfaces.
+This command is **distinct from `pkit schemas validate`** — the latter validates the schema pairs in both homes — the core area (`.pkit/schemas/`) and every installed capability's `schemas/` (the spec); the former validates adopter-side data files against those schemas. Two artefacts, two surfaces.
 
 ### Cross-file references in adopter data: `x-pkit-reference-namespace` (COR-029)
 

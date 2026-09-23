@@ -12,16 +12,22 @@ changes.
   never linger.
 
 - `stamp_new_schema` scaffolds a new YAML + JSON Schema companion pair
-  under a capability's `schemas/` directory. Stamps the envelope, an
-  empty collection, and the `x-pkit-id-collection` annotation pointing
-  at it. Validates the stamp; rolls back if anything fails.
+  under a capability's `schemas/` directory, or under the core schemas
+  area for the reserved target `core`. Stamps the envelope, an empty
+  collection, and the `x-pkit-id-collection` annotation pointing at it.
+  Validates the stamp; rolls back if anything fails.
 
 - `rename_entry` renames an entry id across the schemas mechanism:
   the namespace owner's collection key, every `[<namespace>:<old>]`
-  typed token in any YAML under capabilities, and every mapping-key
+  typed token in any YAML under any schemas home, and every mapping-key
   reference in fields whose companion declares
   `x-pkit-keys-from-namespace: <namespace>`. Validates everything;
   rolls back all changes on any failure.
+
+Every operation resolves a namespace through the same two schemas homes
+`schemas_validate.iter_schema_homes` enumerates — the core schemas area
+(`.pkit/schemas/`) and each installed capability's `schemas/` — so a
+namespace `pkit new schema core` stamps is one `add` / `rename` can find.
 """
 
 from __future__ import annotations
@@ -37,7 +43,11 @@ from ruamel.yaml import YAML
 from project_kit.schemas import find_namespace_owner
 from project_kit.schemas_validate import (
     _ID_COLLECTION_ANNOTATION,
+    CORE_SCHEMAS_OWNER,
     _resolve_json_pointer,
+    iter_schema_homes,
+    schemas_home,
+    unknown_namespace_message,
     validate_path,
 )
 
@@ -102,19 +112,17 @@ def add_entry_to_namespace(
 
     Returns the YAML file path. Raises:
 
-    - `SchemaAuthoringError` if the namespace doesn't exist, the entry
-      id collides with an existing one, or the resulting file fails
-      validation.
+    - `SchemaAuthoringError` if the namespace doesn't exist in any schemas
+      home, the entry id collides with an existing one, or the resulting
+      file fails validation.
     """
-    capability = find_namespace_owner(target_root, namespace)
-    if capability is None:
-        raise SchemaAuthoringError(
-            f"namespace {namespace!r} not found among installed capabilities."
-        )
+    owner = find_namespace_owner(target_root, namespace)
+    if owner is None:
+        raise SchemaAuthoringError(unknown_namespace_message(namespace))
 
-    capability_dir = target_root / ".pkit" / "capabilities" / capability / "schemas"
-    yaml_path = capability_dir / f"{namespace}.yaml"
-    companion_path = capability_dir / f"{namespace}.schema.json"
+    schemas_dir = schemas_home(target_root, owner)
+    yaml_path = schemas_dir / f"{namespace}.yaml"
+    companion_path = schemas_dir / f"{namespace}.schema.json"
 
     schema = json.loads(companion_path.read_text(encoding="utf-8"))
     pointer = schema[_ID_COLLECTION_ANNOTATION]
@@ -351,29 +359,33 @@ def stamp_new_schema(
 
     # `core` is the reserved target for the core schemas area (.pkit/schemas/);
     # any other value names a capability under .pkit/capabilities/<cap>/schemas/.
-    if capability == "core":
-        schemas_dir = target_root / ".pkit" / "schemas"
+    # Both map through `schemas_home`, the same resolution `add` / `rename` use.
+    schemas_dir = schemas_home(target_root, capability)
+    if capability == CORE_SCHEMAS_OWNER:
         if not schemas_dir.is_dir():
             raise SchemaAuthoringError(
                 f"core schemas area not found at {schemas_dir} — expected "
                 f".pkit/schemas/ in this project tree."
             )
     else:
-        capability_dir = target_root / ".pkit" / "capabilities" / capability
+        capability_dir = schemas_dir.parent
         if not capability_dir.is_dir():
             raise SchemaAuthoringError(
                 f"capability {capability!r} not found at "
                 f"{capability_dir.relative_to(target_root) if target_root in capability_dir.parents or capability_dir == target_root else capability_dir}. "
                 f"Create the capability first via `pkit new capability`."
             )
-        schemas_dir = capability_dir / "schemas"
         schemas_dir.mkdir(exist_ok=True)
 
     yaml_path = schemas_dir / f"{name}.yaml"
     companion_path = schemas_dir / f"{name}.schema.json"
 
     if yaml_path.exists() or companion_path.exists():
-        location = "the core schemas area" if capability == "core" else f"capability {capability!r}"
+        location = (
+            "the core schemas area"
+            if capability == CORE_SCHEMAS_OWNER
+            else f"capability {capability!r}"
+        )
         raise SchemaAuthoringError(
             f"schema {name!r} already exists in {location}. "
             f"Edit the existing files, or pick a different name."
@@ -522,7 +534,7 @@ def rename_entry(
     1. The namespace owner's collection — mapping form: rename the key;
        list form: update the `id:` field of the matching item.
     2. Every value-position typed token `[<namespace>:<old_id>]` in any
-       YAML under installed capabilities.
+       YAML under any schemas home (the core area + installed capabilities).
     3. Every mapping-key reference in fields whose companion declares
        `x-pkit-keys-from-namespace: <namespace>`.
 
@@ -544,20 +556,19 @@ def rename_entry(
             f"new id {new_id!r} is identical to old id; nothing to rename."
         )
 
-    capability = find_namespace_owner(target_root, namespace)
-    if capability is None:
-        raise SchemaAuthoringError(
-            f"namespace {namespace!r} not found among installed capabilities."
-        )
+    owner = find_namespace_owner(target_root, namespace)
+    if owner is None:
+        raise SchemaAuthoringError(unknown_namespace_message(namespace))
 
-    capabilities_dir = target_root / ".pkit" / "capabilities"
-    owner_yaml = (
-        capabilities_dir / capability / "schemas" / f"{namespace}.yaml"
-    )
+    owner_yaml = schemas_home(target_root, owner) / f"{namespace}.yaml"
     owner_companion = owner_yaml.with_suffix(".schema.json")
 
-    # Discover every YAML across capabilities (used for token + key scans).
-    all_yamls = sorted(capabilities_dir.glob("*/schemas/*.yaml"))
+    # Discover every YAML + companion across every schemas home (used for
+    # the token + key scans). Direct children only — `_defs/` and
+    # `examples/` hold no namespace data.
+    homes = [schemas_dir for _owner, schemas_dir in iter_schema_homes(target_root)]
+    all_yamls = [p for home in homes for p in sorted(home.glob("*.yaml"))]
+    all_companions = [p for home in homes for p in sorted(home.glob("*.schema.json"))]
 
     # Take backups of every file we'll touch. We rewrite under a backup
     # → write → validate → (rollback-on-fail) flow.
@@ -597,7 +608,6 @@ def rename_entry(
         # companion whose `x-pkit-keys-from-namespace` points at our
         # namespace, find the data path and rename old_id → new_id in
         # the YAML's mapping at that path.
-        all_companions = sorted(capabilities_dir.glob("*/schemas/*.schema.json"))
         for companion_path in all_companions:
             try:
                 schema = json.loads(companion_path.read_text(encoding="utf-8"))

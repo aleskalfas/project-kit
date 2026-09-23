@@ -31,6 +31,19 @@ def _setup_namespace(tmp_path: Path) -> tuple[Path, Path]:
     # Root-walk install marker (#656): find_target_root only accepts a .pkit/
     # ancestor that carries manifest.yaml (or decisions/).
     (tmp_path / ".pkit" / "manifest.yaml").write_text("backbone_version: 0.0.0\n", encoding="utf-8")
+    return _write_issue_types_pair(schemas)
+
+
+def _setup_core_namespace(tmp_path: Path) -> tuple[Path, Path]:
+    """Stamp the same namespace-owning schema into the core schemas area (`.pkit/schemas/`)."""
+    schemas = tmp_path / ".pkit" / "schemas"
+    schemas.mkdir(parents=True)
+    (tmp_path / ".pkit" / "manifest.yaml").write_text("backbone_version: 0.0.0\n", encoding="utf-8")
+    return _write_issue_types_pair(schemas)
+
+
+def _write_issue_types_pair(schemas: Path) -> tuple[Path, Path]:
+    """Write the `issue-types` mapping-form pair into `schemas`. Returns (yaml, companion) paths."""
     yaml_body = (
         "# A taxonomy.\n"
         "schema_version: 1\n"
@@ -879,3 +892,96 @@ def test_cli_schemas_rename_unknown_namespace_errors(tmp_path: Path) -> None:
         result = runner.invoke(main, ["schemas", "rename", "nope", "a", "b"])
     assert result.exit_code != 0
     assert "not found" in result.output
+
+
+# add / rename — core schemas area (.pkit/schemas/), #879 ---------------
+
+
+def test_add_to_core_namespace_stamped_by_new_schema(tmp_path: Path) -> None:
+    """The skill's stamp-then-add pairing works for the reserved `core` target."""
+    _core_schemas_area(tmp_path)
+    (tmp_path / ".pkit" / "manifest.yaml").write_text("backbone_version: 0.0.0\n", encoding="utf-8")
+    stamped = stamp_new_schema(
+        tmp_path, capability="core", name="harness-reqs", collection_name="requirements"
+    )
+    # The stamped `$defs.entry` declares no fields yet, so an empty entry is
+    # the shape the fresh stamp accepts.
+    yaml_path = add_entry_to_namespace(tmp_path, "harness-reqs", "first", {})
+    assert yaml_path == stamped.yaml_path
+    assert yaml_path.parent == tmp_path / ".pkit" / "schemas"
+    assert "first:" in yaml_path.read_text(encoding="utf-8")
+
+
+def test_add_to_core_namespace_fixture_pair(tmp_path: Path) -> None:
+    yaml_path, _ = _setup_core_namespace(tmp_path)
+    returned = add_entry_to_namespace(
+        tmp_path, "issue-types", "umbrella", {"role": "A bucket of related Tasks."}
+    )
+    assert returned == yaml_path
+    content = yaml_path.read_text(encoding="utf-8")
+    assert content.startswith("# A taxonomy.")
+    assert "umbrella:" in content
+
+
+def test_add_unknown_namespace_names_both_homes(tmp_path: Path) -> None:
+    _setup_namespace(tmp_path)
+    with pytest.raises(SchemaAuthoringError) as excinfo:
+        add_entry_to_namespace(tmp_path, "nope", "foo", {"role": "x"})
+    message = str(excinfo.value)
+    assert ".pkit/schemas/" in message
+    assert ".pkit/capabilities/*/schemas/" in message
+
+
+def test_cli_schemas_add_core_namespace(tmp_path: Path) -> None:
+    _setup_core_namespace(tmp_path)
+    runner = CliRunner()
+    with runner.isolated_filesystem(temp_dir=tmp_path):
+        import shutil
+
+        shutil.copytree(tmp_path / ".pkit", Path.cwd() / ".pkit", dirs_exist_ok=True)
+        result = runner.invoke(
+            main,
+            ["schemas", "add", "issue-types", "umbrella", "--from", "-"],
+            input="role: A bucket of related Tasks.\n",
+        )
+        written = (Path.cwd() / ".pkit" / "schemas" / "issue-types.yaml").read_text(
+            encoding="utf-8"
+        )
+    assert result.exit_code == 0, result.output
+    assert "Added entry 'umbrella'" in result.output
+    assert ".pkit/schemas/issue-types.yaml" in result.output
+    assert "umbrella:" in written
+
+
+def test_rename_core_namespace_owner(tmp_path: Path) -> None:
+    yaml_path, _ = _setup_core_namespace(tmp_path)
+    result = rename_entry(tmp_path, "issue-types", "feature", "capability")
+    assert isinstance(result, RenameResult)
+    assert [c.kind for c in result.changes] == ["owner-key"]
+    assert result.changes[0].yaml_path == yaml_path
+    content = yaml_path.read_text(encoding="utf-8")
+    assert "capability:" in content
+    assert "feature:" not in content
+
+
+def test_rename_unknown_namespace_names_both_homes(tmp_path: Path) -> None:
+    with pytest.raises(SchemaAuthoringError) as excinfo:
+        rename_entry(tmp_path, "nope", "a", "b")
+    message = str(excinfo.value)
+    assert ".pkit/schemas/" in message
+    assert ".pkit/capabilities/*/schemas/" in message
+
+
+def test_cli_schemas_rename_core_namespace(tmp_path: Path) -> None:
+    _setup_core_namespace(tmp_path)
+    runner = CliRunner()
+    with runner.isolated_filesystem(temp_dir=tmp_path):
+        import shutil
+
+        shutil.copytree(tmp_path / ".pkit", Path.cwd() / ".pkit", dirs_exist_ok=True)
+        result = runner.invoke(
+            main, ["schemas", "rename", "issue-types", "feature", "capability"]
+        )
+    assert result.exit_code == 0, result.output
+    assert "Renamed 'feature'" in result.output
+    assert "[owner-key] .pkit/schemas/issue-types.yaml" in result.output

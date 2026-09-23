@@ -3234,9 +3234,10 @@ def schemas() -> None:
 def schemas_validate(path: Path | None, shape_only: bool) -> None:
     """Validate YAML schemas against their JSON Schema companions + resolve references.
 
-    Default (no PATH): walks every installed capability's `schemas/`
-    directory under the current project, validates each YAML against
-    its sibling `<name>.schema.json`, and reports findings.
+    Default (no PATH): walks the core schemas area (`.pkit/schemas/`) and
+    every installed capability's `schemas/` directory under the current
+    project, validates each YAML against its sibling `<name>.schema.json`,
+    and reports findings.
 
     With PATH: validates the YAML schemas at the given file or
     directory. Useful for adopters running the validator against
@@ -3271,7 +3272,7 @@ def schemas_validate(path: Path | None, shape_only: bool) -> None:
 
 @schemas.command("list")
 def schemas_list() -> None:
-    """List every schema under installed capabilities, grouped by capability.
+    """List every schema in the core area and installed capabilities, grouped by owner.
 
     For each schema, shows whether it owns a namespace (companion declares
     `x-pkit-id-collection`) and, if so, how many entries the namespace
@@ -3294,7 +3295,7 @@ def schemas_show(namespace: str) -> None:
 
     NAMESPACE matches the schema's filename stem (e.g., `issue-types`,
     `validation-severity`). Errors cleanly when the namespace is unknown
-    or ambiguous (declared by multiple capabilities).
+    or ambiguous (declared by multiple owners).
     """
     from project_kit import schemas_validate as schemas_mod
 
@@ -3363,7 +3364,7 @@ def schemas_rename(namespace: str, old_id: str, new_id: str) -> None:
     \b
     1. The namespace owner's collection (mapping key or list item id).
     2. Every value-position typed token `[<namespace>:<old_id>]` in
-       any YAML under installed capabilities.
+       any YAML under the core schemas area or installed capabilities.
     3. Every mapping-key reference in fields whose companion declares
        `x-pkit-keys-from-namespace: <namespace>`.
 

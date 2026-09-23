@@ -20,6 +20,9 @@ Typical usage:
     for state_id, state in workflow["states"].items():
         ...
 
+    # The reserved owner `core` names the core schemas area (`.pkit/schemas/`).
+    catalog = load_schema(root, "core", "privilege-catalog")
+
     # Walk a namespace's entries with id + data pairs.
     for type_id, type_def in iter_entries(root, "project-management", "issue-types"):
         print(type_id, type_def.get("role", ""))
@@ -48,6 +51,9 @@ from project_kit.schemas_validate import (
     _resolve_json_pointer,
     _stringify_dates,
     _yaml,
+    iter_schema_homes,
+    schemas_home,
+    unknown_namespace_message,
 )
 
 
@@ -65,8 +71,9 @@ def load_schema(target_root: Path, capability: str, name: str) -> Any:
     """Load and return the parsed YAML for one schema.
 
     `target_root` is the project root containing `.pkit/`. `capability` is
-    the capability's name (`project-management`, etc.); `name` is the
-    schema's YAML stem (`issue-types`, `workflow`, etc.).
+    the owner's name — a capability (`project-management`, etc.) or the
+    reserved `core` for the core schemas area (`.pkit/schemas/`); `name` is
+    the schema's YAML stem (`issue-types`, `workflow`, etc.).
 
     Result is the YAML data, with `datetime.date` values coerced to ISO
     strings (matching what the validator sees). Cached per
@@ -94,8 +101,7 @@ def iter_entries(
     (no annotation), if the companion is missing/malformed, or if the
     pointer doesn't resolve.
     """
-    capability_dir = target_root / ".pkit" / "capabilities" / capability / "schemas"
-    companion_path = capability_dir / f"{name}.schema.json"
+    companion_path = schemas_home(target_root, capability) / f"{name}.schema.json"
     if not companion_path.is_file():
         raise SchemaLookupError(
             f"capability {capability!r} schema {name!r}: companion "
@@ -142,10 +148,10 @@ def iter_entries(
 def resolve_token(target_root: Path, token: str) -> Any:
     """Resolve a typed token (`[<namespace>:<id>]`) to its target entry data.
 
-    Walks every installed capability's schemas to find the one whose YAML
-    stem matches `<namespace>` and whose companion has the
-    `x-pkit-id-collection` annotation. Returns the entry's data (the
-    mapping value or list item) for the matching id.
+    Walks every schemas home (the core schemas area, then every installed
+    capability) to find the schema whose YAML stem matches `<namespace>`
+    and whose companion has the `x-pkit-id-collection` annotation. Returns
+    the entry's data (the mapping value or list item) for the matching id.
 
     Raises `SchemaLookupError` for malformed tokens, missing namespaces,
     or unknown ids.
@@ -157,11 +163,9 @@ def resolve_token(target_root: Path, token: str) -> Any:
             f"with both halves kebab-case."
         )
     namespace, id_value = m.group(1), m.group(2)
-    capability = _find_capability_for_namespace(target_root, namespace)
+    capability = _find_owner_for_namespace(target_root, namespace)
     if capability is None:
-        raise SchemaLookupError(
-            f"namespace {namespace!r} not found among installed capabilities."
-        )
+        raise SchemaLookupError(unknown_namespace_message(namespace))
     for entry_id, entry_data in iter_entries(target_root, capability, namespace):
         if entry_id == id_value:
             return entry_data
@@ -172,13 +176,15 @@ def resolve_token(target_root: Path, token: str) -> Any:
 
 
 def find_namespace_owner(target_root: Path, namespace: str) -> str | None:
-    """Locate which capability owns the named namespace.
+    """Locate which owner declares the named namespace.
 
-    Returns the capability's name, or None if no installed capability
-    declares the namespace. Useful when a caller wants to introspect
-    layout before reading.
+    Returns the owner's name — a capability's name, or `core` when the
+    namespace lives in the core schemas area (`.pkit/schemas/`) — or None
+    if no schemas home declares it. Pass the result to `load_schema` /
+    `iter_entries`, or map it to a directory via
+    `schemas_validate.schemas_home`.
     """
-    return _find_capability_for_namespace(target_root, namespace)
+    return _find_owner_for_namespace(target_root, namespace)
 
 
 def clear_cache() -> None:
@@ -194,9 +200,7 @@ def _load_cached(cache_key: tuple[str, str, str]) -> Any:
     """LRU-cached schema loader keyed by (resolved_target_root, capability, name)."""
     target_root_str, capability, name = cache_key
     target_root = Path(target_root_str)
-    yaml_path = (
-        target_root / ".pkit" / "capabilities" / capability / "schemas" / f"{name}.yaml"
-    )
+    yaml_path = schemas_home(target_root, capability) / f"{name}.yaml"
     if not yaml_path.is_file():
         raise SchemaLookupError(
             f"capability {capability!r} schema {name!r}: YAML file "
@@ -218,21 +222,16 @@ def _load_cached(cache_key: tuple[str, str, str]) -> Any:
     return _stringify_dates(data)
 
 
-def _find_capability_for_namespace(target_root: Path, namespace: str) -> str | None:
-    """Walk capabilities looking for the one that owns `namespace`.
+def _find_owner_for_namespace(target_root: Path, namespace: str) -> str | None:
+    """Walk every schemas home looking for the owner of `namespace`.
 
-    A capability owns the namespace if its schemas dir contains
-    `<namespace>.yaml` AND the matching `<namespace>.schema.json` declares
-    `x-pkit-id-collection`. Returns the first match (deterministic by
-    sorted order); None if no match.
+    A home owns the namespace if it contains `<namespace>.schema.json`
+    declaring `x-pkit-id-collection`. Homes are visited in
+    `iter_schema_homes` order (the core area, then capabilities sorted), so
+    the first match is deterministic; None if no home matches.
     """
-    capabilities_dir = target_root / ".pkit" / "capabilities"
-    if not capabilities_dir.is_dir():
-        return None
-    for cap_dir in sorted(capabilities_dir.iterdir()):
-        if not cap_dir.is_dir():
-            continue
-        companion = cap_dir / "schemas" / f"{namespace}.schema.json"
+    for owner, schemas_dir in iter_schema_homes(target_root):
+        companion = schemas_dir / f"{namespace}.schema.json"
         if not companion.is_file():
             continue
         try:
@@ -240,5 +239,5 @@ def _find_capability_for_namespace(target_root: Path, namespace: str) -> str | N
         except json.JSONDecodeError:
             continue
         if isinstance(schema.get(_ID_COLLECTION_ANNOTATION), str):
-            return cap_dir.name
+            return owner
     return None

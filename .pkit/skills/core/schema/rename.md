@@ -42,7 +42,7 @@ Kebab-case (`^[a-z][a-z0-9-]*$`). Doesn't collide with another existing id in th
 Two quick scans help understand the rename's scope:
 
 ```
-grep -r "\[<namespace>:<old_id>\]" .pkit/capabilities/*/schemas/   # token sites
+grep -r "\[<namespace>:<old_id>\]" .pkit/schemas/ .pkit/capabilities/*/schemas/   # token sites
 pkit schemas show <namespace>                                       # owner before
 ```
 
@@ -57,7 +57,7 @@ pkit schemas rename <namespace> <old_id> <new_id>
 The command:
 
 - Updates the namespace owner's collection (mapping form: rename the key; list form: update the `id:` field of the matching item).
-- Walks every YAML under `.pkit/capabilities/*/schemas/` and replaces `[<namespace>:<old_id>]` with `[<namespace>:<new_id>]`.
+- Walks every YAML under `.pkit/schemas/` and `.pkit/capabilities/*/schemas/` (every schemas home, core area first) and replaces `[<namespace>:<old_id>]` with `[<namespace>:<new_id>]`.
 - Walks every companion for `x-pkit-keys-from-namespace: <namespace>`; for each, renames the matching key in the corresponding YAML's mapping.
 - Re-validates every affected file via the same shape + resolver passes `pkit schemas validate` runs.
 - On any failure, restores every touched file to its prior state and reports the issue.

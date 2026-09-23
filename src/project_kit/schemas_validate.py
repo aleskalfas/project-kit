@@ -38,7 +38,8 @@ without this check, a hand-edited definition is shape-checked by nothing.
 Shape only; `validate_instance` documents why the resolver passes don't
 apply to an instance.
 
-Discovery: walks `<target_root>/.pkit/capabilities/*/schemas/` for YAML
+Discovery: walks every schemas home — `<target_root>/.pkit/schemas/` (the core
+area, first) and `<target_root>/.pkit/capabilities/*/schemas/` — for YAML
 files; for each, looks for a sibling `<name>.schema.json`. A YAML
 without a companion surfaces as an issue (per COR-018 the companion is
 required). The validator can also operate on a specific path passed in
@@ -206,22 +207,69 @@ _NamespaceCacheEntry = _NamespaceTarget | str
 _NamespaceCache = dict[tuple[Path, str], _NamespaceCacheEntry]
 
 
-def _iter_capability_schema_yaml(target_root: Path) -> Iterator[Path]:
-    """Yield every `<target_root>/.pkit/capabilities/*/schemas/*.yaml`, sorted."""
+# The reserved owner name for the core schemas area (`.pkit/schemas/`) — the
+# home for schemas a core subsystem owns, as opposed to a capability's
+# `.pkit/capabilities/<capability>/schemas/`. `pkit new schema core <name>`
+# stamps there; every other schemas verb resolves the same two homes through
+# `schemas_home` / `iter_schema_homes` below, so a namespace the stamp wrote
+# is one the sibling verbs can find (#879).
+CORE_SCHEMAS_OWNER = "core"
+
+
+def schemas_home(target_root: Path, owner: str) -> Path:
+    """The schemas directory an owner name denotes.
+
+    `core` (`CORE_SCHEMAS_OWNER`) names the core schemas area
+    `<target_root>/.pkit/schemas/`; any other value names a capability,
+    `<target_root>/.pkit/capabilities/<owner>/schemas/`. The single place the
+    owner-name → directory mapping lives, so the stamp, the read-side
+    loaders, and the authoring verbs agree on where a namespace lives.
+    """
+    if owner == CORE_SCHEMAS_OWNER:
+        return target_root / ".pkit" / "schemas"
+    return target_root / ".pkit" / "capabilities" / owner / "schemas"
+
+
+def iter_schema_homes(target_root: Path) -> Iterator[tuple[str, Path]]:
+    """Yield `(owner, schemas_dir)` for every schemas home present on disk.
+
+    The core schemas area first (owner `core`), then each installed
+    capability's `schemas/` in sorted order. A home that does not exist is
+    skipped, so a tree without `.pkit/schemas/` or without capabilities
+    simply yields fewer homes.
+    """
+    core_dir = schemas_home(target_root, CORE_SCHEMAS_OWNER)
+    if core_dir.is_dir():
+        yield CORE_SCHEMAS_OWNER, core_dir
     capabilities_dir = target_root / ".pkit" / "capabilities"
     if not capabilities_dir.is_dir():
         return
     for cap_dir in sorted(capabilities_dir.iterdir()):
         schemas_dir = cap_dir / "schemas"
-        if not schemas_dir.is_dir():
-            continue
+        if schemas_dir.is_dir():
+            yield cap_dir.name, schemas_dir
+
+
+def unknown_namespace_message(namespace: str) -> str:
+    """The shared "namespace not found" sentence, naming both homes searched."""
+    return (
+        f"namespace {namespace!r} not found in the core schemas area "
+        f"(.pkit/schemas/) or among installed capabilities "
+        f"(.pkit/capabilities/*/schemas/)."
+    )
+
+
+def _iter_home_schema_yaml(target_root: Path) -> Iterator[Path]:
+    """Yield every `*.yaml` directly under each schemas home, sorted per home."""
+    for _owner, schemas_dir in iter_schema_homes(target_root):
         yield from sorted(schemas_dir.glob("*.yaml"))
 
 
 def discover_schema_pairs(target_root: Path) -> list[SchemaPair]:
-    """Discover all (YAML, companion) pairs under installed capabilities.
+    """Discover all (YAML, companion) pairs under every schemas home.
 
-    Walks `<target_root>/.pkit/capabilities/*/schemas/*.yaml`. For each
+    Walks `<target_root>/.pkit/schemas/*.yaml` (the core schemas area) and
+    `<target_root>/.pkit/capabilities/*/schemas/*.yaml`. For each
     YAML, derives the expected companion path
     `<name>.schema.json` in the same directory. Returns the pair
     regardless of whether the companion exists; missing-companion is a
@@ -238,21 +286,21 @@ def discover_schema_pairs(target_root: Path) -> list[SchemaPair]:
     """
     return [
         SchemaPair(yaml_path=p, companion_path=p.with_suffix(".schema.json"))
-        for p in _iter_capability_schema_yaml(target_root)
+        for p in _iter_home_schema_yaml(target_root)
         if _is_schema_definition(p)
     ]
 
 
 def discover_pointered_instances(target_root: Path) -> list[PointeredInstance]:
-    """Discover every pointered instance under installed capabilities.
+    """Discover every pointered instance under every schemas home.
 
     Same walk as `discover_schema_pairs` — the two partition the YAML under
-    `.pkit/capabilities/*/schemas/`: a file either is a schema definition
+    each schemas home: a file either is a schema definition
     (needs a companion) or declares an external `$schema` (is validated
     against it). Adopter-side data files outside that tree are
     `pkit data validate`'s surface (COR-023), not this one's.
     """
-    return _pointered_instances(_iter_capability_schema_yaml(target_root))
+    return _pointered_instances(_iter_home_schema_yaml(target_root))
 
 
 # Matches a `# yaml-language-server: $schema=<path>` directive comment (the
@@ -673,7 +721,7 @@ def validate_instance(
 
 
 def validate_all(target_root: Path, *, resolve: bool = True) -> ValidationReport:
-    """Discover + validate every capability schema pair under target_root.
+    """Discover + validate every schema pair under target_root's schemas homes.
 
     Per COR-023 (superseding COR-022): there is no separate
     `bindings.yaml` file to validate — adopter-data binding patterns
@@ -1280,25 +1328,20 @@ def _resolve_json_pointer(data: Any, pointer: str) -> Any:
 
 
 def summarize_schemas(target_root: Path) -> list[SchemaSummary]:
-    """Walk installed capabilities and produce a summary of every schema.
+    """Walk every schemas home and produce a summary of every schema.
 
-    For each `*.yaml` under `<target_root>/.pkit/capabilities/*/schemas/`,
+    For each `*.yaml` under a schemas home (see `iter_schema_homes`),
     derives whether the schema owns a namespace (its companion declares
     `x-pkit-id-collection`) and, if so, the set of ids defined in its
     collection. Schemas with load issues surface the error in
-    `load_error` instead of crashing the walk.
+    `load_error` instead of crashing the walk. The summary's `capability`
+    is the home's owner name — `core` for the core schemas area.
     """
-    summaries: list[SchemaSummary] = []
-    capabilities_dir = target_root / ".pkit" / "capabilities"
-    if not capabilities_dir.is_dir():
-        return summaries
-    for cap_dir in sorted(capabilities_dir.iterdir()):
-        schemas_dir = cap_dir / "schemas"
-        if not schemas_dir.is_dir():
-            continue
-        for yaml_path in sorted(schemas_dir.glob("*.yaml")):
-            summaries.append(_summarize_one(cap_dir.name, yaml_path))
-    return summaries
+    return [
+        _summarize_one(owner, yaml_path)
+        for owner, schemas_dir in iter_schema_homes(target_root)
+        for yaml_path in sorted(schemas_dir.glob("*.yaml"))
+    ]
 
 
 def _summarize_one(capability: str, yaml_path: Path) -> SchemaSummary:
@@ -1394,15 +1437,12 @@ def detail_namespace(target_root: Path, namespace: str) -> NamespaceDetail | str
     if not matches:
         owners = sorted({s.name for s in summaries if s.is_namespace_owner})
         avail = ", ".join(owners) if owners else "(none)"
-        return (
-            f"namespace {namespace!r} not found among installed capabilities. "
-            f"Available namespaces: {avail}."
-        )
+        return f"{unknown_namespace_message(namespace)} Available namespaces: {avail}."
     if len(matches) > 1:
         locs = ", ".join(f"{m.capability}/{m.name}" for m in matches)
         return (
-            f"namespace {namespace!r} is ambiguous — declared in multiple "
-            f"capabilities: {locs}."
+            f"namespace {namespace!r} is ambiguous — declared by multiple "
+            f"owners: {locs}."
         )
     summary = matches[0]
     if summary.load_error:
@@ -1466,16 +1506,23 @@ def resolve_token_to_target(target_root: Path, token: str) -> TokenResolution | 
 
 
 def print_schema_list(summaries: list[SchemaSummary]) -> None:
-    """Render the schema list grouped by capability."""
+    """Render the schema list grouped by owner (the core area, then each capability)."""
     if not summaries:
-        click.echo("  No schemas found under .pkit/capabilities/*/schemas/.")
+        click.echo(
+            "  No schemas found under .pkit/schemas/ or .pkit/capabilities/*/schemas/."
+        )
         return
     by_cap: dict[str, list[SchemaSummary]] = {}
     for s in summaries:
         by_cap.setdefault(s.capability, []).append(s)
     click.echo()
     for cap_name in sorted(by_cap):
-        click.echo("  " + cli_render.style("heading", f"capability: {cap_name}"))
+        heading = (
+            "core schemas area"
+            if cap_name == CORE_SCHEMAS_OWNER
+            else f"capability: {cap_name}"
+        )
+        click.echo("  " + cli_render.style("heading", heading))
         for s in sorted(by_cap[cap_name], key=lambda x: x.name):
             if s.load_error:
                 click.echo(f"    {s.name:24}  ERROR: {s.load_error}")
