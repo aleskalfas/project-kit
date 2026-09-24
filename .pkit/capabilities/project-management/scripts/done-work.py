@@ -676,8 +676,9 @@ def main() -> int:
     # through the API so it has no local-checkout dependency; the local steps
     # warn and continue when the working tree cannot switch to the default
     # branch (detached HEAD, the default branch held by another worktree).
-    pr_merge.delete_remote_branch(branch, config)
-    pr_merge.cleanup_local(branch, config)
+    cross = bool(pr.get("isCrossRepository")) if pr else False
+    pr_merge.delete_remote_branch(branch, config, cross_repository=cross)
+    pr_merge.cleanup_local(branch, config, cross_repository=cross)
 
     if move_rc != 0:
         return move_rc
@@ -2010,7 +2011,7 @@ def _find_issue_branch(issue_number: int) -> str | None:
 def _find_pr_for_branch(branch: str, config: dict) -> dict | None:
     proc = gh_run(
         ["gh", "pr", "list", "--head", branch, "--state", "open",
-         "--json", "number,isDraft,headRefName,title"],
+         "--json", "number,isDraft,headRefName,title,isCrossRepository"],
         config, check=False,
     )
     if proc.returncode != 0:

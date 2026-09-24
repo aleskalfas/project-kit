@@ -166,7 +166,7 @@ def test_remote_branch_deleted_via_api(lib, monkeypatch, capsys) -> None:
         return _ok(args)
 
     monkeypatch.setattr(lib, "gh_run", fake_gh_run)
-    lib.delete_remote_branch("fix/42-slug", {})
+    lib.delete_remote_branch("fix/42-slug", {}, cross_repository=False)
     assert captured == [[
         "gh", "api", "-X", "DELETE",
         "repos/{owner}/{repo}/git/refs/heads/fix/42-slug",
@@ -184,7 +184,7 @@ def test_remote_branch_already_gone_is_not_a_warning(lib, monkeypatch, capsys) -
             stderr="gh: Reference does not exist (HTTP 422)",
         ),
     )
-    lib.delete_remote_branch("fix/42-slug", {})
+    lib.delete_remote_branch("fix/42-slug", {}, cross_repository=False)
     out = capsys.readouterr()
     assert "remote branch fix/42-slug already deleted" in out.out
     assert "[warn]" not in out.err
@@ -197,7 +197,7 @@ def test_remote_branch_delete_failure_is_a_warning(lib, monkeypatch, capsys) -> 
             args=args, returncode=1, stdout="", stderr="gh: boom (HTTP 500)",
         ),
     )
-    lib.delete_remote_branch("fix/42-slug", {})
+    lib.delete_remote_branch("fix/42-slug", {}, cross_repository=False)
     err = capsys.readouterr().err
     assert "[warn] could not delete remote branch fix/42-slug: gh: boom (HTTP 500)" in err
     assert "git push origin --delete fix/42-slug" in err
@@ -229,7 +229,7 @@ def test_cleanup_local_sequence_on_the_configured_default_branch(lib, monkeypatc
     """checkout <default_branch> → pull --ff-only → branch -D <head>; the
     default branch is the adopter's `default_branch`, not a hardcoded main."""
     seen = _fake_git(monkeypatch, lib)
-    lib.cleanup_local("fix/42-slug", {"default_branch": "develop"})
+    lib.cleanup_local("fix/42-slug", {"default_branch": "develop"}, cross_repository=False)
     assert seen == [
         ["git", "checkout", "develop"],
         ["git", "pull", "--ff-only"],
@@ -240,7 +240,7 @@ def test_cleanup_local_sequence_on_the_configured_default_branch(lib, monkeypatc
 
 def test_cleanup_local_defaults_to_main_when_config_is_silent(lib, monkeypatch):
     seen = _fake_git(monkeypatch, lib)
-    lib.cleanup_local("fix/42-slug", {})
+    lib.cleanup_local("fix/42-slug", {}, cross_repository=False)
     assert seen[0] == ["git", "checkout", "main"]
 
 
@@ -250,7 +250,7 @@ def test_cleanup_local_checkout_failure_skips_pull_still_deletes(lib, monkeypatc
     would be wrong), still attempt the branch delete."""
     err_text = "fatal: 'main' is already used by worktree at '/repo/wt-main'"
     seen = _fake_git(monkeypatch, lib, checkout_stderr=err_text)
-    lib.cleanup_local("fix/42-slug", {})
+    lib.cleanup_local("fix/42-slug", {}, cross_repository=False)
     err = capsys.readouterr().err
     assert f"[warn] git checkout main failed: {err_text}" in err
     assert ["git", "pull", "--ff-only"] not in seen
@@ -259,7 +259,7 @@ def test_cleanup_local_checkout_failure_skips_pull_still_deletes(lib, monkeypatc
 
 def test_cleanup_local_pull_failure_is_a_warning(lib, monkeypatch, capsys):
     seen = _fake_git(monkeypatch, lib, pull_stderr="fatal: Not possible to fast-forward")
-    lib.cleanup_local("fix/42-slug", {})
+    lib.cleanup_local("fix/42-slug", {}, cross_repository=False)
     assert "[warn] git pull failed: fatal: Not possible to fast-forward" in capsys.readouterr().err
     assert ["git", "branch", "-D", "fix/42-slug"] in seen
 
@@ -269,5 +269,37 @@ def test_cleanup_local_branch_delete_failure_is_a_warning(lib, monkeypatch, caps
     locally — a warning naming git's reason, never an exception."""
     branch_err = "error: cannot delete branch 'fix/42-slug' used by worktree at '/repo/wt-42'"
     _fake_git(monkeypatch, lib, branch_d_stderr=branch_err)
-    lib.cleanup_local("fix/42-slug", {})
+    lib.cleanup_local("fix/42-slug", {}, cross_repository=False)
     assert f"[warn] git branch -D fix/42-slug failed: {branch_err}" in capsys.readouterr().err
+
+
+def test_delete_remote_branch_never_touches_base_repo_for_a_fork_pr(lib, monkeypatch, capsys):
+    """Security (PR #896 review): a fork PR's head name is chosen by the fork's
+    author and may name an unrelated base-repository branch. The API delete
+    targets the BASE repo, so for a cross-repository PR no gh call is made."""
+    calls: list[list[str]] = []
+    monkeypatch.setattr(lib, "gh_run", lambda args, config, **kw: calls.append(list(args)) or _ok(args))
+    lib.delete_remote_branch("release/1.x", {}, cross_repository=True)
+    assert calls == []
+    assert "lives in a fork" in capsys.readouterr().out
+
+
+def test_cleanup_local_never_force_deletes_a_same_named_branch_for_a_fork_pr(lib, monkeypatch):
+    """A local branch sharing a fork PR's head name is not that PR's head;
+    `git branch -D` would discard its unpushed work, so it is not run."""
+    import subprocess
+    seen: list[list[str]] = []
+    monkeypatch.setattr(lib.subprocess, "run", lambda argv, **kw: seen.append(list(argv)) or subprocess.CompletedProcess(argv, 0, stdout="", stderr=""))
+    lib.cleanup_local("release/1.x", {}, cross_repository=True)
+    assert ["git", "branch", "-D", "release/1.x"] not in seen
+    assert seen[0] == ["git", "checkout", "main"]
+
+
+def test_cross_repository_is_a_required_keyword(lib):
+    """No default: every caller must state whether the PR is cross-repository,
+    so a later caller cannot silently reintroduce the fork-PR deletion hole."""
+    import inspect
+    for fn in (lib.delete_remote_branch, lib.cleanup_local):
+        p = inspect.signature(fn).parameters["cross_repository"]
+        assert p.kind is inspect.Parameter.KEYWORD_ONLY
+        assert p.default is inspect.Parameter.empty

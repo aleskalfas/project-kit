@@ -71,14 +71,29 @@ def squash_merge(
     return True
 
 
-def delete_remote_branch(branch: str, config: dict[str, Any]) -> None:
+def delete_remote_branch(
+    branch: str, config: dict[str, Any], *, cross_repository: bool,
+) -> None:
     """Delete the PR's remote head ref through the API — best-effort.
+
+    `cross_repository` is required and has no default: the ref is deleted in
+    the BASE repository (`{owner}/{repo}` resolves there), so for a PR whose
+    head lives in a fork the head-branch name is chosen by the fork's author
+    and may name an unrelated branch of the base repo. Such a PR's head is
+    never deleted here — the fork owns its branch. Every caller must state
+    which case it is in, so a later caller cannot reintroduce the hole.
 
     The API call needs nothing from the working tree, so a detached HEAD or a
     default branch held by another worktree cannot fail it. A ref that is
     already gone (a repository that auto-deletes head branches on merge) is
     reported, not warned about.
     """
+    if cross_repository:
+        print(
+            f"  head branch {branch} lives in a fork; not deleting a "
+            f"base-repository ref of that name"
+        )
+        return
     proc = gh_run(
         ["gh", "api", "-X", "DELETE",
          f"repos/{{owner}}/{{repo}}/git/refs/heads/{branch}"],
@@ -98,7 +113,9 @@ def delete_remote_branch(branch: str, config: dict[str, Any]) -> None:
     )
 
 
-def cleanup_local(branch: str, config: dict[str, Any]) -> None:
+def cleanup_local(
+    branch: str, config: dict[str, Any], *, cross_repository: bool,
+) -> None:
     """Switch to the default branch, fast-forward it, delete the local head — best-effort.
 
     The default branch is the adopter's `default_branch` (`main` when the
@@ -109,6 +126,10 @@ def cleanup_local(branch: str, config: dict[str, Any]) -> None:
     but the branch delete is still attempted, since it needs only that the
     branch is not the one checked out here. `-D` (not `-d`) because a
     squash-merged branch is never an ancestor of the base branch.
+
+    For a cross-repository PR the local delete is skipped: a local branch
+    sharing the fork branch's name is not that PR's head, and `-D` would
+    discard its unpushed work.
     """
     default_branch = str(config.get("default_branch") or "main")
 
@@ -130,6 +151,8 @@ def cleanup_local(branch: str, config: dict[str, Any]) -> None:
                 f"[warn] git pull failed: {proc.stderr.strip()}",
                 file=sys.stderr,
             )
+    if cross_repository:
+        return
     proc = _git("branch", "-D", branch)
     if proc.returncode != 0:
         print(

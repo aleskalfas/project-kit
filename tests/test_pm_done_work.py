@@ -623,10 +623,11 @@ def _wire_main_seams(
         calls["order"].append(("moved", None))
         return 0
 
-    def _stub_delete_remote(branch, config):
+    def _stub_delete_remote(branch, config, **kwargs):
+        calls.setdefault("cross", []).append(kwargs.get("cross_repository"))
         calls["order"].append(("remote_delete", branch))
 
-    def _stub_cleanup_local(branch, config):
+    def _stub_cleanup_local(branch, config, **kwargs):
         calls["order"].append(("local_cleanup", branch))
 
     monkeypatch.setattr(dw, "_post_ci_bypass_audit", _stub_ci_audit)

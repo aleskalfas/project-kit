@@ -342,8 +342,11 @@ def main() -> int:
     # warning on the local delete, not a failed merge.
     head_branch = str(pr.get("headRefName") or "")
     if head_branch:
-        pr_merge.delete_remote_branch(head_branch, config)
-        pr_merge.cleanup_local(head_branch, config)
+        # A fork PR's head name is chosen by the fork's author; never act on
+        # a base-repository or local branch of that name.
+        cross = bool(pr.get("isCrossRepository"))
+        pr_merge.delete_remote_branch(head_branch, config, cross_repository=cross)
+        pr_merge.cleanup_local(head_branch, config, cross_repository=cross)
     else:
         print(
             "[warn] PR reports no head branch; skipping branch cleanup.",
@@ -478,7 +481,7 @@ def _gh_get_pr(pr_number: int, config: dict) -> dict | None:
                 "view",
                 str(pr_number),
                 "--json",
-                "title,body,state,url,headRefName,baseRefName,statusCheckRollup",
+                "title,body,state,url,headRefName,baseRefName,statusCheckRollup,isCrossRepository",
             ],
             config,
             check=False,

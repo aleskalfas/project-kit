@@ -271,7 +271,7 @@ def test_post_ci_bypass_audit_reports_gh_failure(mp, monkeypatch) -> None:
 # hard-refuses; --bypass-ci clears it, posts the audit, and merges.
 
 
-def _wire_merge_seams(mp, monkeypatch, *, rollup, head_branch="fix/42-slug"):
+def _wire_merge_seams(mp, monkeypatch, *, rollup, head_branch="fix/42-slug", cross_repository=False):
     """Stub merge-pr's heavy seams so main() reaches the CI gate on *rollup*.
 
     `calls["order"]` records the post-merge side-effects (merge, hooks, remote
@@ -307,7 +307,7 @@ def _wire_merge_seams(mp, monkeypatch, *, rollup, head_branch="fix/42-slug"):
         lambda pr_number, config: {
             "title": "fix: a thing", "body": "Closes #42\n## Test plan\n- [x] ok",
             "state": "open", "url": "http://pr/99", "headRefName": head_branch,
-            "statusCheckRollup": rollup,
+            "statusCheckRollup": rollup, "isCrossRepository": cross_repository,
         },
     )
     monkeypatch.setattr(
@@ -328,10 +328,11 @@ def _wire_merge_seams(mp, monkeypatch, *, rollup, head_branch="fix/42-slug"):
     def _stub_hooks(name, **kwargs):
         calls["order"].append(("hooks", name))
 
-    def _stub_delete_remote(branch, config):
+    def _stub_delete_remote(branch, config, **kwargs):
+        calls.setdefault("cross", []).append(kwargs.get("cross_repository"))
         calls["order"].append(("remote_delete", branch))
 
-    def _stub_cleanup_local(branch, config):
+    def _stub_cleanup_local(branch, config, **kwargs):
         calls["order"].append(("local_cleanup", branch))
 
     monkeypatch.setattr(mp, "_post_ci_bypass_audit", _stub_ci_audit)
@@ -505,3 +506,12 @@ def test_dry_run_describes_the_outcome_not_the_flag(mp, monkeypatch, capsys):
     assert "[dry-run] gh pr merge --squash --subject 'fix: a thing'" in out
     assert "--delete-branch" not in out
     assert "remote head branch deleted" in out
+
+
+def test_fork_pr_merge_passes_cross_repository_to_cleanup(mp, monkeypatch):
+    """merge-pr reads isCrossRepository from the PR and hands it to the shared
+    helper, so a fork PR's head name never drives a base-repository delete."""
+    calls = _wire_merge_seams(mp, monkeypatch, rollup=_MP_GREEN, cross_repository=True)
+    rc = _run_merge_main(mp, monkeypatch, ["99", "--yes"])
+    assert rc == 0
+    assert calls["cross"] == [True]
