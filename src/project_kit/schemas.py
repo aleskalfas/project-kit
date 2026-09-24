@@ -52,6 +52,7 @@ from project_kit.schemas_validate import (
     _stringify_dates,
     _yaml,
     iter_schema_homes,
+    owner_label,
     schemas_home,
     unknown_namespace_message,
 )
@@ -104,20 +105,20 @@ def iter_entries(
     companion_path = schemas_home(target_root, capability) / f"{name}.schema.json"
     if not companion_path.is_file():
         raise SchemaLookupError(
-            f"capability {capability!r} schema {name!r}: companion "
+            f"{owner_label(capability)} schema {name!r}: companion "
             f"{companion_path} not found."
         )
     try:
         schema = json.loads(companion_path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
         raise SchemaLookupError(
-            f"capability {capability!r} schema {name!r}: companion "
+            f"{owner_label(capability)} schema {name!r}: companion "
             f"{companion_path} is not valid JSON: {exc.msg}."
         ) from exc
     pointer = schema.get(_ID_COLLECTION_ANNOTATION)
     if not isinstance(pointer, str):
         raise SchemaLookupError(
-            f"capability {capability!r} schema {name!r}: companion lacks "
+            f"{owner_label(capability)} schema {name!r}: companion lacks "
             f"the {_ID_COLLECTION_ANNOTATION!r} annotation, so it doesn't "
             f"own an id collection. Use load_schema() instead to read the "
             f"YAML directly."
@@ -127,7 +128,7 @@ def iter_entries(
         collection = _resolve_json_pointer(data, pointer)
     except (KeyError, ValueError) as exc:
         raise SchemaLookupError(
-            f"capability {capability!r} schema {name!r}: "
+            f"{owner_label(capability)} schema {name!r}: "
             f"{_ID_COLLECTION_ANNOTATION} pointer {pointer!r} did not resolve: {exc}."
         ) from exc
     if isinstance(collection, dict):
@@ -139,7 +140,7 @@ def iter_entries(
                 yield str(item["id"]), item
     else:
         raise SchemaLookupError(
-            f"capability {capability!r} schema {name!r}: "
+            f"{owner_label(capability)} schema {name!r}: "
             f"{_ID_COLLECTION_ANNOTATION} pointer {pointer!r} resolved to "
             f"{type(collection).__name__}; expected mapping or list-of-objects-with-id."
         )
@@ -171,7 +172,7 @@ def resolve_token(target_root: Path, token: str) -> Any:
             return entry_data
     raise SchemaLookupError(
         f"id {id_value!r} not found in namespace {namespace!r} "
-        f"(owned by capability {capability!r})."
+        f"(owned by {owner_label(capability)})."
     )
 
 
@@ -203,21 +204,21 @@ def _load_cached(cache_key: tuple[str, str, str]) -> Any:
     yaml_path = schemas_home(target_root, capability) / f"{name}.yaml"
     if not yaml_path.is_file():
         raise SchemaLookupError(
-            f"capability {capability!r} schema {name!r}: YAML file "
+            f"{owner_label(capability)} schema {name!r}: YAML file "
             f"{yaml_path} not found."
         )
     try:
         text = yaml_path.read_text(encoding="utf-8")
     except OSError as exc:
         raise SchemaLookupError(
-            f"capability {capability!r} schema {name!r}: could not read "
+            f"{owner_label(capability)} schema {name!r}: could not read "
             f"{yaml_path}: {exc}."
         ) from exc
     try:
         data = _yaml.load(text)
     except Exception as exc:  # ruamel.yaml raises various YAMLError subclasses
         raise SchemaLookupError(
-            f"capability {capability!r} schema {name!r}: YAML parse error: {exc}."
+            f"{owner_label(capability)} schema {name!r}: YAML parse error: {exc}."
         ) from exc
     return _stringify_dates(data)
 

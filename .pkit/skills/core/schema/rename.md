@@ -127,7 +127,7 @@ plus prose references in: <list of touched files>.
   1. `git mv <old_name>.yaml <new_name>.yaml`
   2. `git mv <old_name>.schema.json <new_name>.schema.json`
   3. Update `$id` in the companion: `<new_name>.schema.json`.
-  4. Walk every YAML under capabilities; replace `[<old_name>:` with `[<new_name>:` (use `grep` + `sed`).
+  4. Walk every YAML under `.pkit/schemas/` and `.pkit/capabilities/*/schemas/` (every schemas home); replace `[<old_name>:` with `[<new_name>:` (use `grep` + `sed`).
   5. Walk every companion; replace `x-pkit-keys-from-namespace: <old>` with `<new>`; replace cross-file `$ref` paths like `<old>.schema.json#/...` with `<new>.schema.json#/...`.
   6. `pkit schemas validate` to confirm.
 

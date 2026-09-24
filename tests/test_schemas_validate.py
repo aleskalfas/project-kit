@@ -1098,7 +1098,7 @@ def test_summarize_schemas_labels_core_area_owner(tmp_path: Path) -> None:
     core.mkdir(parents=True)
     _write_schema_pair(core, "target", yaml_body=_TARGET_YAML, json_schema=_TARGET_JSON_SCHEMA)
     summaries = summarize_schemas(tmp_path)
-    assert [(s.capability, s.name) for s in summaries] == [("core", "target")]
+    assert [(s.owner, s.name) for s in summaries] == [("core", "target")]
     assert summaries[0].is_namespace_owner is True
 
 
@@ -1186,6 +1186,8 @@ def test_cli_schemas_show(cli_target: Path) -> None:
     assert "Namespace: target" in result.output
     assert "task" in result.output
     assert "feature" in result.output
+    assert "Owner:" in result.output
+    assert "Capability:" not in result.output
 
 
 def test_cli_schemas_show_unknown_errors(cli_target: Path) -> None:

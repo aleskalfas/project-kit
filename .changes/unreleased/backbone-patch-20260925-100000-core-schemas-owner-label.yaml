@@ -1,0 +1,8 @@
+component: backbone
+kind: patch
+custom:
+  category: Changed
+body: >
+  `pkit schemas show` and schema loading errors now name a namespace's owner
+  as the core schemas area or its capability, instead of calling the core
+  area a capability (#882).
