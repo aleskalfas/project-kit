@@ -407,8 +407,9 @@ closure_triggers:
     applies_to:
       - "[issue-types:task]"
     mechanism: |
-      Agent opens PR → user authorises merge → agent squash-merges with
-      `--delete-branch`. GitHub's `Closes #N` keyword in the PR body
+      Agent opens PR → user authorises merge → agent squash-merges
+      (head branch deleted on merge). GitHub's `Closes #N` keyword in the
+      PR body
       auto-closes the Task on merge. Cascade-check runs against the
       Task's parents immediately after.
 

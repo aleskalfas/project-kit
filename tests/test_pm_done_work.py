@@ -397,80 +397,21 @@ def test_gh_get_pr_body_extracts_body(dw, monkeypatch) -> None:
 
 
 # ---- squash-merge subject regression (issue #33) ---------------------
+#
+# The merge command — `--squash --subject <PR title>`, no `--delete-branch` —
+# is `_lib.pr_merge.squash_merge`, shared with merge-pr; its #33 subject
+# regression lives in test_pm_pr_merge_lib.py. Here: done-work hands the
+# gate-validated PR title (not any commit subject) through to it.
 
 
-def test_gh_pr_merge_uses_pr_title_as_subject(dw, monkeypatch) -> None:
-    """_gh_pr_merge passes --subject <PR title> to `gh pr merge --squash`.
-
-    Regression for #33: for a single-commit PR, GitHub defaults the squash
-    subject to the commit message, not the PR title.  The --subject flag
-    overrides this so the landed subject always equals the gate-validated
-    title (DEC-013).
-    """
-    import subprocess
-
-    captured: list[list[str]] = []
-
-    def fake_gh_run(args, config, **kwargs):
-        captured.append(list(args))
-        return subprocess.CompletedProcess(
-            args=args, returncode=0, stdout="", stderr="",
-        )
-
-    monkeypatch.setattr(dw, "gh_run", fake_gh_run)
-    result = dw._gh_pr_merge(
-        42,
-        pr_title="fix(pm-scripts): squash subject uses PR title",
-        admin=False,
-        config={},
-    )
-
-    assert result is True, "Expected _gh_pr_merge to succeed"
-    assert captured, "Expected gh_run to be called"
-    argv = captured[0]
-    assert "--squash" in argv, "--squash must be present"
-    assert "--subject" in argv, "--subject must be present in gh pr merge argv"
-    subject_idx = argv.index("--subject")
-    assert argv[subject_idx + 1] == "fix(pm-scripts): squash subject uses PR title", (
-        f"--subject value must be the PR title; got {argv[subject_idx + 1]!r}"
-    )
-
-
-def test_gh_pr_merge_subject_not_commit_message(dw, monkeypatch) -> None:
-    """The squash subject is the PR title, not whatever commit message was on the branch.
-
-    Simulates a single-commit PR whose commit subject differs from the PR
-    title (the live bug: PR #32 landed 'feat(...)' despite the title being
-    'fix(...)'). Asserts that _gh_pr_merge passes the PR title — not the
-    commit message — as --subject.
-    """
-    import subprocess
-
-    pr_title = "fix(pm-permissions): correct enforcement runtime"
-    commit_subject = "feat(pm-permissions): implement runtime enforcement"
-
-    captured: list[list[str]] = []
-
-    def fake_gh_run(args, config, **kwargs):
-        captured.append(list(args))
-        return subprocess.CompletedProcess(
-            args=args, returncode=0, stdout="", stderr="",
-        )
-
-    monkeypatch.setattr(dw, "gh_run", fake_gh_run)
-    dw._gh_pr_merge(32, pr_title=pr_title, admin=False, config={})
-
-    argv = captured[0]
-    assert "--subject" in argv
-    subject_idx = argv.index("--subject")
-    landed_subject = argv[subject_idx + 1]
-    assert landed_subject == pr_title, (
-        f"Expected PR title as --subject, got {landed_subject!r}. "
-        f"commit_subject={commit_subject!r} must NOT be used."
-    )
-    assert landed_subject != commit_subject, (
-        "Squash subject must be the PR title, not the commit message."
-    )
+def test_main_hands_pr_title_to_the_shared_merge(dw, monkeypatch) -> None:
+    """The landed squash subject is the PR title done-work validated, so a
+    single-commit PR whose commit subject differs still lands under the title
+    (DEC-013; #33)."""
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+    assert rc == 0
+    assert calls["merge_kwargs"] == {"pr_title": "fix: x", "admin": False}
 
 
 # ---- CI-status gate (#498) -------------------------------------------
@@ -596,7 +537,8 @@ def _wire_main_seams(
     side-effects so a test can assert the audit lands BEFORE the merge.
     """
     calls = {"merged": False, "ci_audit": False, "approval_audit": False,
-             "moved": False, "override_audits": [], "order": []}
+             "moved": False, "override_audits": [], "order": [],
+             "merge_kwargs": {}}
 
     monkeypatch.setattr(dw, "resolve_capability_root", lambda arg: Path("/cap"))
     monkeypatch.setattr(dw, "load_adopter_config", lambda root: {})
@@ -672,6 +614,7 @@ def _wire_main_seams(
 
     def _stub_merge(pr_number, *, pr_title, admin, config):
         calls["merged"] = True
+        calls["merge_kwargs"] = {"pr_title": pr_title, "admin": admin}
         calls["order"].append(("merged", None))
         return True
 
@@ -680,17 +623,20 @@ def _wire_main_seams(
         calls["order"].append(("moved", None))
         return 0
 
-    def _stub_delete_remote(branch, config):
+    def _stub_delete_remote(branch, config, **kwargs):
+        calls.setdefault("cross", []).append(kwargs.get("cross_repository"))
         calls["order"].append(("remote_delete", branch))
 
-    def _stub_cleanup_local(branch):
+    def _stub_cleanup_local(branch, config, **kwargs):
         calls["order"].append(("local_cleanup", branch))
 
     monkeypatch.setattr(dw, "_post_ci_bypass_audit", _stub_ci_audit)
     monkeypatch.setattr(dw, "_post_bypass_audit_idempotent", _stub_approval_audit)
-    monkeypatch.setattr(dw, "_gh_pr_merge", _stub_merge)
-    monkeypatch.setattr(dw, "_gh_delete_remote_branch", _stub_delete_remote)
-    monkeypatch.setattr(dw, "_git_cleanup_local", _stub_cleanup_local)
+    # The merge mechanic is `_lib.pr_merge`'s (shared with merge-pr); stub it
+    # on the module done-work calls through.
+    monkeypatch.setattr(dw.pr_merge, "squash_merge", _stub_merge)
+    monkeypatch.setattr(dw.pr_merge, "delete_remote_branch", _stub_delete_remote)
+    monkeypatch.setattr(dw.pr_merge, "cleanup_local", _stub_cleanup_local)
     monkeypatch.setattr(dw, "_invoke_move_issue", _stub_move)
     return calls
 
@@ -1121,7 +1067,9 @@ def test_abbreviated_canonical_flag_cannot_evade_the_ambiguity_refusal(
 # merge has landed — and the script used to abort there, never calling
 # move-issue, so GitHub showed the issue closed while pm state said Review.
 # The fix: merge without `--delete-branch`, transition immediately, then clean
-# up (remote ref via the API, local steps) as warnings that never abort.
+# up (remote ref via the API, local steps) as warnings that never abort. The
+# mechanic itself (`_lib.pr_merge`) is unit-tested in test_pm_pr_merge_lib.py;
+# these tests cover done-work's sequencing of it.
 
 _DETACHED_HEAD_ERR = (
     "could not determine current branch: failed to run git: not on any branch"
@@ -1129,25 +1077,6 @@ _DETACHED_HEAD_ERR = (
 _MAIN_HELD_ELSEWHERE_ERR = (
     "fatal: 'main' is already used by worktree at '/repo/wt-main'"
 )
-
-
-def test_gh_pr_merge_has_no_local_delete_branch_half(dw, monkeypatch) -> None:
-    """The merge command carries no `--delete-branch`, so gh never needs the
-    working tree's current branch and the remote merge cannot be failed by a
-    local checkout problem."""
-    import subprocess
-
-    captured: list[list[str]] = []
-
-    def fake_gh_run(args, config, **kwargs):
-        captured.append(list(args))
-        return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
-
-    monkeypatch.setattr(dw, "gh_run", fake_gh_run)
-    assert dw._gh_pr_merge(42, pr_title="fix: x", admin=False, config={}) is True
-    assert captured[0][:4] == ["gh", "pr", "merge", "42"]
-    assert "--squash" in captured[0]
-    assert "--delete-branch" not in captured[0]
 
 
 def test_transition_runs_immediately_after_merge_before_cleanup(dw, monkeypatch):
@@ -1192,9 +1121,9 @@ def test_detached_head_worktree_completes_merge_and_transition(
 ):
     """Trigger 1 (#878): the working tree is on a detached HEAD. The local step
     reports it as a warning; the merge and the transition both complete."""
-    real_cleanup = dw._git_cleanup_local
+    real_cleanup = dw.pr_merge.cleanup_local
     calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
-    monkeypatch.setattr(dw, "_git_cleanup_local", real_cleanup)
+    monkeypatch.setattr(dw.pr_merge, "cleanup_local", real_cleanup)
     seen = _fake_git(monkeypatch, dw, checkout_stderr=_DETACHED_HEAD_ERR)
 
     rc = _run_main(dw, monkeypatch, ["42", "--yes"])
@@ -1218,9 +1147,9 @@ def test_main_held_by_other_worktree_completes_merge_and_transition(
     """Trigger 2 (#878): `main` is checked out in a different worktree, so the
     local checkout is refused and the head branch (the one checked out here)
     cannot be deleted. Both are warnings; merge and transition complete."""
-    real_cleanup = dw._git_cleanup_local
+    real_cleanup = dw.pr_merge.cleanup_local
     calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
-    monkeypatch.setattr(dw, "_git_cleanup_local", real_cleanup)
+    monkeypatch.setattr(dw.pr_merge, "cleanup_local", real_cleanup)
     branch_err = "error: cannot delete branch 'fix/42-slug' used by worktree at '/repo/wt-42'"
     seen = _fake_git(
         monkeypatch, dw,
@@ -1256,56 +1185,3 @@ def test_cleanup_still_runs_when_move_issue_fails(dw, monkeypatch, capsys):
     assert [kind for kind, _ in calls["order"]] == [
         "merged", "moved", "remote_delete", "local_cleanup",
     ]
-
-
-def test_remote_branch_deleted_via_api(dw, monkeypatch, capsys) -> None:
-    """The remote head ref is deleted with `gh api -X DELETE` on the repo's
-    refs endpoint — no dependency on the local checkout."""
-    import subprocess
-
-    captured: list[list[str]] = []
-
-    def fake_gh_run(args, config, **kwargs):
-        captured.append(list(args))
-        return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
-
-    monkeypatch.setattr(dw, "gh_run", fake_gh_run)
-    dw._gh_delete_remote_branch("fix/42-slug", {})
-    assert captured == [[
-        "gh", "api", "-X", "DELETE",
-        "repos/{owner}/{repo}/git/refs/heads/fix/42-slug",
-    ]]
-    assert "deleted remote branch fix/42-slug" in capsys.readouterr().out
-
-
-def test_remote_branch_already_gone_is_not_a_warning(dw, monkeypatch, capsys) -> None:
-    """A repository that auto-deletes head branches on merge answers 422
-    'Reference does not exist' — reported as already deleted, not warned."""
-    import subprocess
-
-    def fake_gh_run(args, config, **kwargs):
-        return subprocess.CompletedProcess(
-            args=args, returncode=1, stdout="",
-            stderr="gh: Reference does not exist (HTTP 422)",
-        )
-
-    monkeypatch.setattr(dw, "gh_run", fake_gh_run)
-    dw._gh_delete_remote_branch("fix/42-slug", {})
-    out = capsys.readouterr()
-    assert "remote branch fix/42-slug already deleted" in out.out
-    assert "[warn]" not in out.err
-
-
-def test_remote_branch_delete_failure_is_a_warning(dw, monkeypatch, capsys) -> None:
-    import subprocess
-
-    def fake_gh_run(args, config, **kwargs):
-        return subprocess.CompletedProcess(
-            args=args, returncode=1, stdout="", stderr="gh: boom (HTTP 500)",
-        )
-
-    monkeypatch.setattr(dw, "gh_run", fake_gh_run)
-    dw._gh_delete_remote_branch("fix/42-slug", {})
-    err = capsys.readouterr().err
-    assert "[warn] could not delete remote branch fix/42-slug: gh: boom (HTTP 500)" in err
-    assert "git push origin --delete fix/42-slug" in err

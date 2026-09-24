@@ -165,7 +165,7 @@ class _NamespaceTarget:
 class SchemaSummary:
     """High-level info about one schema for `pkit schemas list` output."""
 
-    capability: str
+    owner: str  # the schemas home's owner: a capability name, or `core` for the core area
     name: str  # the YAML stem; also the namespace name when the schema owns one
     yaml_path: Path
     companion_path: Path
@@ -181,7 +181,7 @@ class NamespaceDetail:
     """Detailed info about a namespace for `pkit schemas show` output."""
 
     namespace: str
-    capability: str
+    owner: str  # a capability name, or `core` for the core schemas area
     yaml_path: Path
     companion_path: Path
     id_collection_pointer: str
@@ -214,6 +214,18 @@ _NamespaceCache = dict[tuple[Path, str], _NamespaceCacheEntry]
 # `schemas_home` / `iter_schema_homes` below, so a namespace the stamp wrote
 # is one the sibling verbs can find (#879).
 CORE_SCHEMAS_OWNER = "core"
+
+
+def owner_label(owner: str) -> str:
+    """Human-readable name of a schemas-home owner, for messages and porcelain.
+
+    `core` reads as "core schemas area"; any other owner is a capability and
+    reads as `capability '<name>'`. Keeps a broken core pair from being
+    reported as "capability 'core'".
+    """
+    if owner == CORE_SCHEMAS_OWNER:
+        return "core schemas area"
+    return f"capability {owner!r}"
 
 
 def schemas_home(target_root: Path, owner: str) -> Path:
@@ -1334,8 +1346,8 @@ def summarize_schemas(target_root: Path) -> list[SchemaSummary]:
     derives whether the schema owns a namespace (its companion declares
     `x-pkit-id-collection`) and, if so, the set of ids defined in its
     collection. Schemas with load issues surface the error in
-    `load_error` instead of crashing the walk. The summary's `capability`
-    is the home's owner name — `core` for the core schemas area.
+    `load_error` instead of crashing the walk. The summary's `owner` is
+    the home's owner name — `core` for the core schemas area.
     """
     return [
         _summarize_one(owner, yaml_path)
@@ -1344,13 +1356,13 @@ def summarize_schemas(target_root: Path) -> list[SchemaSummary]:
     ]
 
 
-def _summarize_one(capability: str, yaml_path: Path) -> SchemaSummary:
+def _summarize_one(owner: str, yaml_path: Path) -> SchemaSummary:
     """Build a `SchemaSummary` for one YAML schema."""
     companion = yaml_path.with_suffix(".schema.json")
     name = yaml_path.stem
     if not companion.is_file():
         return SchemaSummary(
-            capability=capability,
+            owner=owner,
             name=name,
             yaml_path=yaml_path,
             companion_path=companion,
@@ -1364,7 +1376,7 @@ def _summarize_one(capability: str, yaml_path: Path) -> SchemaSummary:
         schema = json.loads(companion.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
         return SchemaSummary(
-            capability=capability,
+            owner=owner,
             name=name,
             yaml_path=yaml_path,
             companion_path=companion,
@@ -1377,7 +1389,7 @@ def _summarize_one(capability: str, yaml_path: Path) -> SchemaSummary:
     pointer = schema.get(_ID_COLLECTION_ANNOTATION)
     if not isinstance(pointer, str):
         return SchemaSummary(
-            capability=capability,
+            owner=owner,
             name=name,
             yaml_path=yaml_path,
             companion_path=companion,
@@ -1391,7 +1403,7 @@ def _summarize_one(capability: str, yaml_path: Path) -> SchemaSummary:
         data = _yaml.load(yaml_path.read_text(encoding="utf-8"))
     except YAMLError as exc:
         return SchemaSummary(
-            capability=capability,
+            owner=owner,
             name=name,
             yaml_path=yaml_path,
             companion_path=companion,
@@ -1406,7 +1418,7 @@ def _summarize_one(capability: str, yaml_path: Path) -> SchemaSummary:
         collection = _resolve_json_pointer(data, pointer)
     except (KeyError, ValueError) as exc:
         return SchemaSummary(
-            capability=capability,
+            owner=owner,
             name=name,
             yaml_path=yaml_path,
             companion_path=companion,
@@ -1418,7 +1430,7 @@ def _summarize_one(capability: str, yaml_path: Path) -> SchemaSummary:
         )
     ids = _collect_ids(collection) or []
     return SchemaSummary(
-        capability=capability,
+        owner=owner,
         name=name,
         yaml_path=yaml_path,
         companion_path=companion,
@@ -1439,7 +1451,7 @@ def detail_namespace(target_root: Path, namespace: str) -> NamespaceDetail | str
         avail = ", ".join(owners) if owners else "(none)"
         return f"{unknown_namespace_message(namespace)} Available namespaces: {avail}."
     if len(matches) > 1:
-        locs = ", ".join(f"{m.capability}/{m.name}" for m in matches)
+        locs = ", ".join(f"{m.owner}/{m.name}" for m in matches)
         return (
             f"namespace {namespace!r} is ambiguous — declared by multiple "
             f"owners: {locs}."
@@ -1462,7 +1474,7 @@ def detail_namespace(target_root: Path, namespace: str) -> NamespaceDetail | str
                 entries.append((str(item["id"]), item))
     return NamespaceDetail(
         namespace=summary.name,
-        capability=summary.capability,
+        owner=summary.owner,
         yaml_path=summary.yaml_path,
         companion_path=summary.companion_path,
         id_collection_pointer=summary.id_collection_pointer,
@@ -1512,18 +1524,18 @@ def print_schema_list(summaries: list[SchemaSummary]) -> None:
             "  No schemas found under .pkit/schemas/ or .pkit/capabilities/*/schemas/."
         )
         return
-    by_cap: dict[str, list[SchemaSummary]] = {}
+    by_owner: dict[str, list[SchemaSummary]] = {}
     for s in summaries:
-        by_cap.setdefault(s.capability, []).append(s)
+        by_owner.setdefault(s.owner, []).append(s)
     click.echo()
-    for cap_name in sorted(by_cap):
+    for owner in sorted(by_owner):
         heading = (
             "core schemas area"
-            if cap_name == CORE_SCHEMAS_OWNER
-            else f"capability: {cap_name}"
+            if owner == CORE_SCHEMAS_OWNER
+            else f"capability: {owner}"
         )
         click.echo("  " + cli_render.style("heading", heading))
-        for s in sorted(by_cap[cap_name], key=lambda x: x.name):
+        for s in sorted(by_owner[owner], key=lambda x: x.name):
             if s.load_error:
                 click.echo(f"    {s.name:24}  ERROR: {s.load_error}")
             elif s.is_namespace_owner:
@@ -1547,7 +1559,10 @@ def print_namespace_detail(
     """Render one namespace's entries (ordered, with one-line summaries)."""
     click.echo()
     click.echo(cli_render.style("title", f"Namespace: {detail.namespace}"))
-    click.echo(f"  Capability: {detail.capability}")
+    owner = (
+        "core schemas area" if detail.owner == CORE_SCHEMAS_OWNER else detail.owner
+    )
+    click.echo(f"  Owner:      {owner}")
     click.echo(f"  YAML:       {_rel(detail.yaml_path, target_root)}")
     click.echo(f"  Companion:  {_rel(detail.companion_path, target_root)}")
     click.echo(

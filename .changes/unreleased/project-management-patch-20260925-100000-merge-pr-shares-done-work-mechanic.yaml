@@ -1,0 +1,10 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `merge-pr` now merges, deletes the remote head branch, and cleans up the
+  local checkout the same way `done-work` does, so a worktree on a detached
+  HEAD or one whose `main` is checked out elsewhere no longer turns a landed
+  merge into an error; both verbs now return to the project's configured
+  default branch rather than assuming `main` (#882).

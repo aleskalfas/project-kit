@@ -343,7 +343,7 @@ Deferred to successor decisions (each pending a real consumer, per COR-029): cro
 
 ### Authoring
 
-The `schema` skill (composite per COR-020) covers adopter-data schemas through its `author.md` and `extend.md` sub-procedures. Stamping a schema that describes adopter-data files includes adding the `binds_to:` field to that schema's YAML alongside the namespace content; adopter files themselves carry `pkit_schema:` + the IDE directive as recommended.
+The `schema` skill (composite per COR-020) covers adopter-data schemas through its `author.md` and `extend.md` sub-procedures. A pair is stamped into its owner's home by `pkit new schema <owner> <name>` — `<owner>` is a capability name, or `core` to stamp into this area (`.pkit/schemas/`), which the sibling verbs (`schemas validate` / `list` / `show` / `add` / `rename`) treat as an owner alongside every capability. Stamping a schema that describes adopter-data files includes adding the `binds_to:` field to that schema's YAML alongside the namespace content; adopter files themselves carry `pkit_schema:` + the IDE directive as recommended.
 
 ## Tooling expectations
 
@@ -364,11 +364,16 @@ A schema's value depends on tooling actually consuming the companion. Five tooli
 ```
 .pkit/schemas/
 ├── README.md                  # this file — mechanism overview, conventions, patterns
-└── _defs/                     # kit-wide shared $defs library (cross-file $ref target)
-    └── refs.schema.json       # canonical reference_token + source patterns
+├── _defs/                     # kit-wide shared $defs library (cross-file $ref target)
+│   └── refs.schema.json       # canonical reference_token + source patterns
+├── privilege-catalog.yaml     # a core-owned schema pair: data ...
+├── privilege-catalog.schema.json   # ... + companion, side by side
+├── harness-requirements.yaml
+├── harness-requirements.schema.json
+└── …                          # further core-owned pairs, one per namespace
 ```
 
-The `_defs/` directory holds JSON Schema fragments that every capability (and adopter project) `$ref` into. New shared patterns land as additional `$defs` in `refs.schema.json`, or as additional sibling files when a coherent group of patterns earns its own file.
+This area is a **schemas home** in its own right — the core-owned one, owner name `core` — holding the pairs that belong to the core rather than to any capability (the permission model's catalogs and profiles, the harness requirements, …). It sits alongside each installed capability's `schemas/` and is walked first by every schemas verb. The `_defs/` directory holds JSON Schema fragments that every capability (and adopter project) `$ref` into. New shared patterns land as additional `$defs` in `refs.schema.json`, or as additional sibling files when a coherent group of patterns earns its own file.
 
 ## What's *not* in this area
 

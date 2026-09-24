@@ -76,20 +76,21 @@ Phase D (DEC-027 mode resolution) wires the per-PR mode lookup that
 chooses between this human-mode gate and DEC-028's agent-verdict gate.
 v1 ships with the human-mode gate as the default.
 
-Side-effects, in order (#878):
-  - `gh pr merge --squash` — WITHOUT `--delete-branch`: that flag makes gh
-    check out the default branch locally and delete the local head, and the
-    whole `gh pr merge` exits non-zero when the working tree cannot do so
-    (detached HEAD; `main` checked out in another worktree) — after the
-    remote merge has already landed.
+Side-effects, in order (#878; the merge mechanic itself lives once in
+`_lib.pr_merge`, shared with `merge-pr`):
+  - `gh pr merge --squash --subject <PR title>` — WITHOUT `--delete-branch`:
+    that flag makes gh check out the default branch locally and delete the
+    local head, and the whole `gh pr merge` exits non-zero when the working
+    tree cannot do so (detached HEAD; the default branch checked out in
+    another worktree) — after the remote merge has already landed.
   - Composes over `move-issue.py --to done` IMMEDIATELY after the merge, so
     no best-effort step can stand between the irreversible merge and the
     lifecycle transition.
   - Best-effort branch cleanup, after the transition: delete the remote head
     ref through the API (`gh api -X DELETE .../git/refs/heads/<branch>`, no
-    local-checkout dependency), then `git checkout main`, `git pull
-    --ff-only`, `git branch -D <branch>`. Each step warns with its reason and
-    continues; none can fail the run.
+    local-checkout dependency), then `git checkout <default_branch>`, `git
+    pull --ff-only`, `git branch -D <branch>`. Each step warns with its reason
+    and continues; none can fail the run.
   - Audit comment "Approved by bypass: <reason>" if --bypass is used
     (stamped + idempotent per DEC-024).
   - Per-reviewer-override audit comment(s) on the PR if --bypass-reviewer is
@@ -121,6 +122,7 @@ from ruamel.yaml import YAML
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import bootstrap_gate  # noqa: E402
+from _lib import pr_merge  # noqa: E402
 from _lib import session_guard  # noqa: E402
 from _lib.ci_checks import evaluate_ci_gate  # noqa: E402
 # DEC-007's checkbox close-gate — the ONE implementation (`_lib.checkbox_gate`),
@@ -648,8 +650,11 @@ def main() -> int:
 
     # Squash-merge with an explicit subject so the landed commit subject
     # equals the gate-validated PR title regardless of commit count
-    # (DEC-013: squash-commit subject = PR title; fixes #33).
-    if not _gh_pr_merge(pr_number, pr_title=pr_title, admin=args.admin, config=config):
+    # (DEC-013: squash-commit subject = PR title; fixes #33). The mechanic is
+    # `_lib.pr_merge`'s — the one implementation `merge-pr` also runs.
+    if not pr_merge.squash_merge(
+        pr_number, pr_title=pr_title, admin=args.admin, config=config,
+    ):
         return 3
 
     print(f"  merged PR #{pr_number}")
@@ -669,10 +674,11 @@ def main() -> int:
 
     # Branch cleanup — best-effort, never fatal. The remote head ref goes
     # through the API so it has no local-checkout dependency; the local steps
-    # warn and continue when the working tree cannot switch to main
-    # (detached HEAD, `main` held by another worktree).
-    _gh_delete_remote_branch(branch, config)
-    _git_cleanup_local(branch)
+    # warn and continue when the working tree cannot switch to the default
+    # branch (detached HEAD, the default branch held by another worktree).
+    cross = bool(pr.get("isCrossRepository")) if pr else False
+    pr_merge.delete_remote_branch(branch, config, cross_repository=cross)
+    pr_merge.cleanup_local(branch, config, cross_repository=cross)
 
     if move_rc != 0:
         return move_rc
@@ -1916,99 +1922,6 @@ def _post_reviewer_override_audit(
     )
 
 
-def _gh_pr_merge(pr_number: int | None, *, pr_title: str, admin: bool, config: dict) -> bool:
-    if pr_number is None:
-        return False
-    # Force --subject to the PR title so the squash-commit subject equals the
-    # gate-validated title for both single- and multi-commit PRs.  GitHub's
-    # default for a single-commit PR is the commit message, not the title —
-    # the --subject flag overrides that (DEC-013; fixes #33).
-    # No `--delete-branch`: it makes gh check out the default branch locally
-    # and delete the local head, and the whole merge exits non-zero when the
-    # working tree cannot do so — after the remote merge has already landed
-    # (#878). Branch cleanup is `_gh_delete_remote_branch` + `_git_cleanup_local`.
-    cmd = [
-        "gh", "pr", "merge", str(pr_number),
-        "--squash",
-        "--subject", pr_title,
-    ]
-    if admin:
-        cmd.append("--admin")
-    proc = gh_run(cmd, config, check=False)
-    if proc.returncode != 0:
-        print(
-            f"error: gh pr merge failed: {proc.stderr.strip()}",
-            file=sys.stderr,
-        )
-        return False
-    return True
-
-
-def _gh_delete_remote_branch(branch: str, config: dict) -> None:
-    """Delete the PR's remote head ref through the API — best-effort.
-
-    Replaces `gh pr merge --delete-branch`'s remote half without its local
-    half (#878): the API call needs nothing from the working tree, so a
-    detached HEAD or a `main` held by another worktree cannot fail it. A ref
-    that is already gone (a repository that auto-deletes head branches on
-    merge) is reported, not warned about.
-    """
-    proc = gh_run(
-        ["gh", "api", "-X", "DELETE",
-         f"repos/{{owner}}/{{repo}}/git/refs/heads/{branch}"],
-        config, check=False,
-    )
-    if proc.returncode == 0:
-        print(f"  deleted remote branch {branch}")
-        return
-    stderr = proc.stderr.strip()
-    if "Reference does not exist" in stderr:
-        print(f"  remote branch {branch} already deleted")
-        return
-    print(
-        f"[warn] could not delete remote branch {branch}: {stderr}. The merge "
-        f"is durable; delete it by hand (`git push origin --delete {branch}`).",
-        file=sys.stderr,
-    )
-
-
-def _git_cleanup_local(branch: str) -> None:
-    """Switch to main, fast-forward it, delete the local head branch — best-effort.
-
-    Every step warns with git's reason and continues; none can fail the run.
-    When the checkout cannot happen (detached HEAD, `main` checked out in
-    another worktree) the pull is skipped — pulling into whatever IS checked
-    out would be wrong — but the branch delete is still attempted, since it
-    needs only that the branch is not the one checked out here. `-D` (not
-    `-d`) because a squash-merged branch is never an ancestor of main; this
-    matches what `gh pr merge --delete-branch` did.
-    """
-    def _git(*argv: str) -> subprocess.CompletedProcess[str]:
-        return subprocess.run(
-            ["git", *argv], capture_output=True, text=True, check=False,
-        )
-
-    proc = _git("checkout", "main")
-    if proc.returncode != 0:
-        print(
-            f"[warn] git checkout main failed: {proc.stderr.strip()}",
-            file=sys.stderr,
-        )
-    else:
-        proc = _git("pull", "--ff-only")
-        if proc.returncode != 0:
-            print(
-                f"[warn] git pull failed: {proc.stderr.strip()}",
-                file=sys.stderr,
-            )
-    proc = _git("branch", "-D", branch)
-    if proc.returncode != 0:
-        print(
-            f"[warn] git branch -D {branch} failed: {proc.stderr.strip()}",
-            file=sys.stderr,
-        )
-
-
 # ---- PR-placeholder helpers ------------------------------------------
 
 # Body-format descriptor for the PR placeholder check (mirrors the
@@ -2098,7 +2011,7 @@ def _find_issue_branch(issue_number: int) -> str | None:
 def _find_pr_for_branch(branch: str, config: dict) -> dict | None:
     proc = gh_run(
         ["gh", "pr", "list", "--head", branch, "--state", "open",
-         "--json", "number,isDraft,headRefName,title"],
+         "--json", "number,isDraft,headRefName,title,isCrossRepository"],
         config, check=False,
     )
     if proc.returncode != 0:

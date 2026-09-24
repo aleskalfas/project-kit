@@ -38,7 +38,7 @@ Kebab-case, starts with a lowercase letter, unique within the namespace. The nam
 
 ### 3. Inspect the entry shape
 
-Read the namespace's JSON Schema companion to learn the required + optional fields for each entry. The companion lives at `.pkit/capabilities/<cap>/schemas/<namespace>.schema.json`. Look at the per-entry sub-shape (typically referenced from `patternProperties` for mapping-form collections, or `items` for list-form).
+Read the namespace's JSON Schema companion to learn the required + optional fields for each entry. The companion lives next to its YAML in whichever schemas home owns the namespace: `.pkit/schemas/<namespace>.schema.json` (the core area) or `.pkit/capabilities/<cap>/schemas/<namespace>.schema.json`. Look at the per-entry sub-shape (typically referenced from `patternProperties` for mapping-form collections, or `items` for list-form).
 
 Key questions:
 
