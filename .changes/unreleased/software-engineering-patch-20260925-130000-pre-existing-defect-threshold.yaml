@@ -2,7 +2,7 @@ component: software-engineering
 kind: patch
 custom:
   category: Fixed
-  pr: ""
+  pr: "899"
 body: >
   The code-review panel now states when a pre-existing defect blocks: only when
   the change asserts it away — the PR title or body claims to fix or guard
