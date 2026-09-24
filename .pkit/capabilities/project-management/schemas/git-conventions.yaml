@@ -2,8 +2,9 @@
 #
 # One entry per git-surface convention. Branch names follow
 # `<conv-type>/<issue-number>-<slug>`; PR bodies require a
-# `Closes #N` reference; merges are squash-with-delete-branch (one PR →
-# one commit on the base branch); force-push is allowed before review
+# `Closes #N` reference; merges are squash-merges that delete the head
+# branch (one PR → one commit on the base branch); force-push is allowed
+# before review
 # and forbidden after. Plus the optional, owner-designated integration-
 # branch construct for outcomes that assemble several Tasks before
 # promoting to `main`.
@@ -118,14 +119,13 @@ conventions:
     surface_kind: merge
     pattern: null
     description: |
-      Squash-merge with `--delete-branch`. Equivalent to
-      `gh pr merge --squash --delete-branch`. Squash-commit subject =
-      PR title (Conventional Commits); squash-commit body = PR body
-      (preserves context in `git log`). No merge-commits,
-      no rebase-merge, no manual cherry-picks — one PR maps to one
-      commit on the base branch.
+      Squash-merge; head branch deleted on merge. One squash commit on
+      the base branch whose subject = PR title (Conventional Commits)
+      and whose body = PR body (preserves context in `git log`). The
+      head branch is deleted on merge. No merge-commits, no rebase-merge, no manual
+      cherry-picks — one PR maps to one commit on the base branch.
     rules:
-      - rule: "Merge uses squash-with-delete-branch; no merge-commits."
+      - rule: "Merge is a squash that deletes the head branch; no merge-commits."
         severity: "[validation-severity:hard-reject]"
 
   force-push:
@@ -212,7 +212,7 @@ integration_branches:
     runs on each descendant close. The owning issue becomes
     eligible-to-close when every marked descendant closes; the final
     closure is a separate `integration/<slug>` → main PR with
-    `Closes #<owning>` in the body — squash-merged with
-    `--delete-branch`. Merging that PR closes the owning issue and
+    `Closes #<owning>` in the body — squash-merged, the integration
+    branch deleted on merge. Merging that PR closes the owning issue and
     triggers any further ancestor cascade.
   force_push_allowed: false

@@ -58,7 +58,7 @@ Three behaviours, encoded in the schema's `cascade` block:
 
 Four paths reach Done, encoded as schema entries:
 
-- **`pr-merge-into-main`** — Task's normal path. PR opens → user authorises merge → agent squash-merges with `--delete-branch` → GitHub's `Closes #N` auto-closes the Task → cascade runs.
+- **`pr-merge-into-main`** — Task's normal path. PR opens → user authorises merge → agent squash-merges (head branch deleted on merge) → GitHub's `Closes #N` auto-closes the Task → cascade runs.
 - **`pr-merge-into-integration`** — same mechanics but PR base is `integration/<slug>` (per [project-management:DEC-013-branch-and-pr-conventions]).
 - **`manual-wont-do`** — user authorises with a reason; agent verifies all checkboxes are ticked or removed per [project-management:DEC-007-checkbox-validation], records the reason in a close comment.
 - **`cascade-eligibility-close`** — triggered by closure cascade; agent validates parent's close criteria and prompts user per-level.

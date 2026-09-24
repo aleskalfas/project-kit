@@ -7,9 +7,10 @@
 # ///
 """Project-management capability — merge-pr (verb-subject per DEC-020).
 
-Merges a GitHub PR with the methodology's squash-and-delete-branch
-policy (git-conventions.yaml's `merge` convention). Before invoking
-`gh pr merge --squash --delete-branch`:
+Merges a GitHub PR per the methodology's merge convention
+(git-conventions.yaml's `merge` entry): one squash commit whose subject is
+the PR title, no merge commits, head branch deleted on merge. Before the
+merge:
 
   * Membership gate (DEC-021).
   * Checkbox close-gate (DEC-007) on every issue the PR closes —
@@ -25,6 +26,21 @@ policy (git-conventions.yaml's `merge` convention). Before invoking
     merging. The CI override is deliberately its own flag, separate from
     any general `--bypass`, so overriding another gate never silently
     clears a red CI.
+
+Side-effects, in order (the merge mechanic lives once in `_lib.pr_merge`,
+shared with `done-work`; #882):
+  - `gh pr merge --squash --subject <PR title>` — WITHOUT `--delete-branch`:
+    that flag makes gh check out the default branch locally and delete the
+    local head, and the whole command exits non-zero when the working tree
+    cannot do so (a detached HEAD; the head branch checked out in a worktree,
+    #587) — after the remote merge has already landed.
+  - `after_merge_pr` hooks (DEC-024) IMMEDIATELY after the merge, so no
+    best-effort step stands between the irreversible merge and them.
+  - Best-effort branch cleanup: delete the remote head ref through the API,
+    then `git checkout <default_branch>`, `git pull --ff-only`, `git branch
+    -D <head>`. Each step warns with its reason and continues; none can fail
+    the run — a head branch checked out in a worktree simply leaves a
+    warning where the local delete would have been.
 
 Self-contained via PEP 723; runs via
   uv run --script .pkit/capabilities/project-management/scripts/merge-pr.py 99
@@ -44,7 +60,6 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import subprocess
 import sys
 from pathlib import Path
 
@@ -54,6 +69,7 @@ from ruamel.yaml.error import YAMLError
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import bootstrap_gate  # noqa: E402
+from _lib import pr_merge  # noqa: E402
 from _lib.ci_checks import evaluate_ci_gate  # noqa: E402
 # DEC-007's checkbox close-gate — the ONE implementation (`_lib.checkbox_gate`),
 # shared with close-issue, done-work and the engine predicate.
@@ -83,9 +99,10 @@ CI_BYPASS_AUDIT_STAMP = "<!-- pkit-hook: merge-pr-ci-bypass -->"
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Merge a PR per the methodology's squash-and-delete-branch "
-            "policy. Enforces the checkbox close-gate on every closing "
-            "issue + the PR's own body."
+            "Merge a PR per the methodology's merge convention: one squash "
+            "commit titled after the PR, head branch deleted on merge. "
+            "Enforces the checkbox close-gate on every closing issue + the "
+            "PR's own body."
         ),
     )
     parser.add_argument(
@@ -269,12 +286,13 @@ def main() -> int:
         if not ci_gate.passing:
             note = " (would post CI-bypass audit comment first)"
         print(
-            f"\n[dry-run] gh pr merge --squash --delete-branch "
-            f"--subject {pr_title!r} would be invoked{note}; nothing written."
+            f"\n[dry-run] gh pr merge --squash --subject {pr_title!r} would "
+            f"be invoked{note}, then the remote head branch deleted and the "
+            "local checkout tidied; nothing written."
         )
         return 0
     if not args.yes and sys.stdin.isatty():
-        reply = input("Merge with squash + delete-branch? [y/N] ").strip().lower()
+        reply = input("Squash-merge and delete the head branch? [y/N] ").strip().lower()
         if reply not in ("y", "yes"):
             print("aborted.", file=sys.stderr)
             return 0
@@ -293,19 +311,19 @@ def main() -> int:
             )
             return 3
 
-    head_branch = str(pr.get("headRefName", ""))
-    if not _gh_merge(
-        args.pr_number,
-        pr_title=pr_title,
-        head_branch=head_branch,
-        admin=args.admin,
-        config=config,
+    # Squash-merge with the PR title as the landed subject (DEC-013; #33).
+    # No `--delete-branch`: the mechanic is `_lib.pr_merge`'s — the one
+    # implementation `done-work` also runs (#882).
+    if not pr_merge.squash_merge(
+        args.pr_number, pr_title=pr_title, admin=args.admin, config=config,
     ):
         return 3
 
     print(f"\n[ok] merged: {pr_url}")
 
-    # Fire after_merge_pr hooks per DEC-024.
+    # Fire after_merge_pr hooks per DEC-024 — FIRST, before any best-effort
+    # branch cleanup, so a cleanup warning can never stand between the
+    # irreversible merge and the hooks.
     fire_hooks(
         "after_merge_pr",
         context={
@@ -317,6 +335,20 @@ def main() -> int:
         config=config,
         capability_root=capability_root,
     )
+
+    # Branch cleanup — best-effort, never fatal. The remote head ref goes
+    # through the API (no local-checkout dependency); the local steps warn
+    # and continue, so a head branch checked out in a worktree (#587) is a
+    # warning on the local delete, not a failed merge.
+    head_branch = str(pr.get("headRefName") or "")
+    if head_branch:
+        pr_merge.delete_remote_branch(head_branch, config)
+        pr_merge.cleanup_local(head_branch, config)
+    else:
+        print(
+            "[warn] PR reports no head branch; skipping branch cleanup.",
+            file=sys.stderr,
+        )
 
     return 0
 
@@ -469,104 +501,6 @@ def _gh_get_pr(pr_number: int, config: dict) -> dict | None:
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
     return gh_get_issue(issue_number, config, fields="title,body,state")
-
-
-def _gh_merge(
-    pr_number: int, *, pr_title: str, head_branch: str, admin: bool, config: dict
-) -> bool:
-    # Force --subject to the PR title so the squash-commit subject equals the
-    # gate-validated title for both single- and multi-commit PRs.  GitHub's
-    # default for a single-commit PR is the commit message, not the title —
-    # the --subject flag overrides that (DEC-013; fixes #33).
-    cmd = [
-        "gh",
-        "pr",
-        "merge",
-        str(pr_number),
-        "--squash",
-        "--delete-branch",
-        "--subject", pr_title,
-    ]
-    if admin:
-        cmd.append("--admin")
-    try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
-    except FileNotFoundError:
-        return False
-    if proc.returncode != 0:
-        # A branch checked out in a git worktree cannot be deleted locally —
-        # git refuses. So `gh pr merge --delete-branch` merges the PR and deletes
-        # the *remote* branch, then exits non-zero on the failed *local* delete,
-        # misreporting a successful merge as a failure (#587). Detect that exact
-        # case — the head branch is checked out in a worktree AND the PR did in
-        # fact merge — and report the success it is, leaving the local branch in
-        # place with a precise notice. The `merged?` re-check guards against a
-        # genuine merge failure that merely coincides with a checked-out branch.
-        worktree = _branch_checked_out_worktree(head_branch)
-        if worktree is not None and _pr_is_merged(pr_number, config):
-            print(
-                f"[notice] merged; the remote branch was deleted, but local branch "
-                f"{head_branch!r} was left in place — it is checked out in the "
-                f"worktree at {worktree} and cannot be deleted while checked out. "
-                f"Remove it after switching away (e.g. `git worktree remove "
-                f"{worktree}`, or `git branch -d {head_branch}` once nothing has "
-                "it checked out)."
-            )
-            return True
-        print(
-            f"error: gh pr merge failed (exit {proc.returncode}).\n"
-            f"stderr: {proc.stderr.strip()}",
-            file=sys.stderr,
-        )
-        return False
-    return True
-
-
-def _pr_is_merged(pr_number: int, config: dict) -> bool:
-    """True iff the PR's state is MERGED (re-queried after a merge attempt)."""
-    pr = _gh_get_pr(pr_number, config)
-    if not pr:
-        return False
-    return str(pr.get("state", "")).lower() == "merged"
-
-
-def _branch_checked_out_worktree(branch: str) -> str | None:
-    """Return the worktree path where `branch` is checked out, or None.
-
-    Reads `git worktree list --porcelain` and matches `branch` against each
-    worktree's checked-out ref. A branch checked out in any worktree of this
-    repo cannot be deleted locally, which is the #587 failure cause.
-    """
-    if not branch:
-        return None
-    try:
-        proc = subprocess.run(
-            ["git", "worktree", "list", "--porcelain"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-    except FileNotFoundError:
-        return None
-    if proc.returncode != 0:
-        return None
-    return _parse_worktree_branch(proc.stdout, branch)
-
-
-def _parse_worktree_branch(porcelain_output: str, branch: str) -> str | None:
-    """Pure parse of `git worktree list --porcelain` → the worktree path whose
-    checked-out branch is `branch`, or None. Each worktree stanza opens with a
-    `worktree <path>` line and (when a branch is checked out) carries a
-    `branch refs/heads/<name>` line."""
-    current_path: str | None = None
-    for line in porcelain_output.splitlines():
-        if line.startswith("worktree "):
-            current_path = line[len("worktree "):].strip()
-        elif line.startswith("branch "):
-            ref = line[len("branch "):].strip()
-            if ref in (f"refs/heads/{branch}", branch):
-                return current_path
-    return None
 
 
 def _read_yaml(path: Path, yaml_loader: YAML) -> dict:

@@ -1,7 +1,8 @@
-"""Tests for project-management's merge-pr script's pure logic.
+"""Tests for project-management's merge-pr script.
 
 Covers closing-issue extraction, checkbox detection, PR-title pattern
-lookup.
+lookup, the CI-status gate, and the post-merge sequence (merge → hooks →
+best-effort branch cleanup through the shared `_lib.pr_merge` mechanic).
 """
 
 from __future__ import annotations
@@ -143,78 +144,11 @@ def test_pr_title_pattern_rejects_invalid_titles(mp, titles) -> None:
 
 
 # --- squash-merge subject regression (issue #33) ---------------------
-
-
-def test_gh_merge_uses_pr_title_as_subject(mp, monkeypatch) -> None:
-    """_gh_merge passes --subject <PR title> to `gh pr merge --squash`.
-
-    Regression for #33: GitHub defaults the squash subject to the commit
-    message for single-commit PRs, defeating the PR-title type-alignment gate
-    (DEC-013).  The --subject flag locks the landed subject to the PR title.
-    """
-    import subprocess
-
-    captured: list[list[str]] = []
-
-    def fake_run(args, **kwargs):
-        captured.append(list(args))
-        return subprocess.CompletedProcess(
-            args=args, returncode=0, stdout="", stderr="",
-        )
-
-    monkeypatch.setattr(mp.subprocess, "run", fake_run)
-    result = mp._gh_merge(
-        99,
-        pr_title="fix(pm-scripts): squash subject uses PR title",
-        head_branch="fix/pm-scripts-subject",
-        admin=False,
-        config={},
-    )
-
-    assert result is True
-    assert captured, "Expected subprocess.run to be called"
-    argv = captured[0]
-    assert "--squash" in argv
-    assert "--subject" in argv, "--subject must be present so the landed commit subject equals the PR title"
-    subject_idx = argv.index("--subject")
-    assert argv[subject_idx + 1] == "fix(pm-scripts): squash subject uses PR title", (
-        f"--subject value must be the PR title; got {argv[subject_idx + 1]!r}"
-    )
-
-
-def test_gh_merge_subject_not_commit_message(mp, monkeypatch) -> None:
-    """For a single-commit PR the squash subject must be the PR title, not the commit message.
-
-    Simulates the live bug (PR #32): the commit carried 'feat(...)' but the PR
-    title was 'fix(...)'.  Asserts that _gh_merge passes the PR title argument
-    verbatim and not any commit-derived subject.
-    """
-    import subprocess
-
-    pr_title = "fix(pm-permissions): correct enforcement runtime"
-    commit_subject = "feat(pm-permissions): implement runtime enforcement"
-
-    captured: list[list[str]] = []
-
-    def fake_run(args, **kwargs):
-        captured.append(list(args))
-        return subprocess.CompletedProcess(
-            args=args, returncode=0, stdout="", stderr="",
-        )
-
-    monkeypatch.setattr(mp.subprocess, "run", fake_run)
-    mp._gh_merge(
-        32, pr_title=pr_title, head_branch="fix/x", admin=False, config={}
-    )
-
-    argv = captured[0]
-    assert "--subject" in argv
-    subject_idx = argv.index("--subject")
-    landed_subject = argv[subject_idx + 1]
-    assert landed_subject == pr_title
-    assert landed_subject != commit_subject, (
-        "Squash subject must be the PR title, not the commit message."
-    )
+#
+# The merge command itself — `--squash --subject <PR title>`, no
+# `--delete-branch` — is `_lib.pr_merge.squash_merge`, shared with done-work;
+# its #33 subject regression lives in test_pm_pr_merge_lib.py. Here: merge-pr
+# hands the gate-validated PR title through to it (see the sequencing tests).
 
 
 # --- CI-status gate (#498) -------------------------------------------
@@ -337,9 +271,14 @@ def test_post_ci_bypass_audit_reports_gh_failure(mp, monkeypatch) -> None:
 # hard-refuses; --bypass-ci clears it, posts the audit, and merges.
 
 
-def _wire_merge_seams(mp, monkeypatch, *, rollup):
-    """Stub merge-pr's heavy seams so main() reaches the CI gate on *rollup*."""
-    calls = {"merged": False, "ci_audit": False}
+def _wire_merge_seams(mp, monkeypatch, *, rollup, head_branch="fix/42-slug"):
+    """Stub merge-pr's heavy seams so main() reaches the CI gate on *rollup*.
+
+    `calls["order"]` records the post-merge side-effects (merge, hooks, remote
+    ref delete, local cleanup) so a test can assert their sequence; the merge
+    mechanic is stubbed on `_lib.pr_merge`, the module merge-pr calls through.
+    """
+    calls = {"merged": False, "ci_audit": False, "order": [], "merge_kwargs": {}}
 
     monkeypatch.setattr(mp, "resolve_capability_root", lambda arg: Path("/cap"))
     monkeypatch.setattr(mp, "load_adopter_config", lambda root: {})
@@ -367,7 +306,7 @@ def _wire_merge_seams(mp, monkeypatch, *, rollup):
         mp, "_gh_get_pr",
         lambda pr_number, config: {
             "title": "fix: a thing", "body": "Closes #42\n## Test plan\n- [x] ok",
-            "state": "open", "url": "http://pr/99",
+            "state": "open", "url": "http://pr/99", "headRefName": head_branch,
             "statusCheckRollup": rollup,
         },
     )
@@ -380,13 +319,26 @@ def _wire_merge_seams(mp, monkeypatch, *, rollup):
         calls["ci_audit"] = True
         return True
 
-    def _stub_merge(pr_number, *, pr_title, head_branch, admin, config):
+    def _stub_merge(pr_number, *, pr_title, admin, config):
         calls["merged"] = True
+        calls["merge_kwargs"] = {"pr_title": pr_title, "admin": admin}
+        calls["order"].append(("merged", pr_number))
         return True
 
+    def _stub_hooks(name, **kwargs):
+        calls["order"].append(("hooks", name))
+
+    def _stub_delete_remote(branch, config):
+        calls["order"].append(("remote_delete", branch))
+
+    def _stub_cleanup_local(branch, config):
+        calls["order"].append(("local_cleanup", branch))
+
     monkeypatch.setattr(mp, "_post_ci_bypass_audit", _stub_ci_audit)
-    monkeypatch.setattr(mp, "_gh_merge", _stub_merge)
-    monkeypatch.setattr(mp, "fire_hooks", lambda *a, **k: None)
+    monkeypatch.setattr(mp.pr_merge, "squash_merge", _stub_merge)
+    monkeypatch.setattr(mp.pr_merge, "delete_remote_branch", _stub_delete_remote)
+    monkeypatch.setattr(mp.pr_merge, "cleanup_local", _stub_cleanup_local)
+    monkeypatch.setattr(mp, "fire_hooks", _stub_hooks)
     return calls
 
 
@@ -452,96 +404,104 @@ def test_merge_green_ci_no_bypass_needed(mp, monkeypatch):
     assert calls["ci_audit"] is False
 
 
-# --- worktree checked-out branch on --delete-branch (#587) -----------
+# --- post-merge sequence: hooks, then best-effort cleanup (#882) --------
 #
-# `gh pr merge --delete-branch` cannot delete a local branch that is checked out
-# in a worktree; it merges + deletes the remote branch, then exits non-zero on
-# the failed local delete. merge-pr must detect that exact case and report the
-# merge as the success it is, not a failure.
+# merge-pr shares done-work's merge mechanic (`_lib.pr_merge`): squash-merge
+# without `--delete-branch`, fire the after-merge hooks, then delete the remote
+# head ref through the API and tidy the local checkout as warnings that never
+# fail the verb. That structurally retires the #587 special case (a head
+# branch checked out in a worktree used to make `gh pr merge --delete-branch`
+# exit non-zero after the remote merge had landed): the local delete now just
+# warns.
 
 
-_WORKTREE_PORCELAIN = """\
-worktree /repo/main
-HEAD 1111111111111111111111111111111111111111
-branch refs/heads/main
-
-worktree /repo/wt-feature
-HEAD 2222222222222222222222222222222222222222
-branch refs/heads/fix/587-thing
-
-worktree /repo/wt-detached
-HEAD 3333333333333333333333333333333333333333
-detached
-"""
-
-
-def test_parse_worktree_branch_finds_checked_out(mp) -> None:
-    assert (
-        mp._parse_worktree_branch(_WORKTREE_PORCELAIN, "fix/587-thing")
-        == "/repo/wt-feature"
-    )
-    assert mp._parse_worktree_branch(_WORKTREE_PORCELAIN, "main") == "/repo/main"
+def test_merge_sequence_is_merge_hooks_remote_delete_local_cleanup(mp, monkeypatch):
+    """merge → after_merge_pr hooks → remote ref delete → local cleanup, in
+    that order, with the gate-validated PR title handed to the merge."""
+    calls = _wire_merge_seams(mp, monkeypatch, rollup=_MP_GREEN)
+    rc = _run_merge_main(mp, monkeypatch, ["99", "--yes"])
+    assert rc == 0
+    assert calls["order"] == [
+        ("merged", 99),
+        ("hooks", "after_merge_pr"),
+        ("remote_delete", "fix/42-slug"),
+        ("local_cleanup", "fix/42-slug"),
+    ]
+    assert calls["merge_kwargs"] == {"pr_title": "fix: a thing", "admin": False}
 
 
-def test_parse_worktree_branch_none_when_absent(mp) -> None:
-    assert mp._parse_worktree_branch(_WORKTREE_PORCELAIN, "fix/999-absent") is None
+def test_merge_passes_admin_through(mp, monkeypatch):
+    calls = _wire_merge_seams(mp, monkeypatch, rollup=_MP_GREEN)
+    rc = _run_merge_main(mp, monkeypatch, ["99", "--yes", "--admin"])
+    assert rc == 0
+    assert calls["merge_kwargs"]["admin"] is True
 
 
-def test_parse_worktree_branch_ignores_detached_and_partial_match(mp) -> None:
-    # A detached worktree contributes no branch; a prefix of a real branch
-    # must not match (exact ref only).
-    assert mp._parse_worktree_branch(_WORKTREE_PORCELAIN, "fix/587") is None
-    assert mp._parse_worktree_branch("", "anything") is None
+def test_merge_failure_exits_3_and_skips_hooks_and_cleanup(mp, monkeypatch):
+    """A failed remote merge is a gh failure (exit 3); nothing after it runs."""
+    calls = _wire_merge_seams(mp, monkeypatch, rollup=_MP_GREEN)
+
+    def failing_merge(pr_number, *, pr_title, admin, config):
+        calls["order"].append(("merged", pr_number))
+        return False
+
+    monkeypatch.setattr(mp.pr_merge, "squash_merge", failing_merge)
+    rc = _run_merge_main(mp, monkeypatch, ["99", "--yes"])
+    assert rc == 3
+    assert calls["order"] == [("merged", 99)]
 
 
-class _FakeProc:
-    def __init__(self, returncode: int, stderr: str = "") -> None:
-        self.returncode = returncode
-        self.stderr = stderr
-        self.stdout = ""
+def test_head_branch_checked_out_in_worktree_is_a_warning_not_a_failure(
+    mp, monkeypatch, capsys,
+):
+    """#587's trigger under the shared mechanic: the head branch is checked
+    out in a worktree, so the local `branch -D` is refused. The merge and the
+    hooks complete, the verb exits 0, and the refusal is a warning."""
+    import subprocess
+
+    real_cleanup = mp.pr_merge.cleanup_local
+    calls = _wire_merge_seams(mp, monkeypatch, rollup=_MP_GREEN)
+    monkeypatch.setattr(mp.pr_merge, "cleanup_local", real_cleanup)
+    branch_err = "error: cannot delete branch 'fix/42-slug' used by worktree at '/repo/wt-42'"
+    seen: list[list[str]] = []
+
+    def fake_run(argv, **kwargs):
+        seen.append(list(argv))
+        if argv[:3] == ["git", "branch", "-D"]:
+            return subprocess.CompletedProcess(argv, 1, stdout="", stderr=branch_err)
+        return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(mp.pr_merge.subprocess, "run", fake_run)
+    rc = _run_merge_main(mp, monkeypatch, ["99", "--yes"])
+
+    err = capsys.readouterr().err
+    assert rc == 0
+    assert calls["merged"] is True
+    assert ("hooks", "after_merge_pr") in calls["order"]
+    assert ("remote_delete", "fix/42-slug") in calls["order"]
+    assert ["git", "branch", "-D", "fix/42-slug"] in seen
+    assert f"[warn] git branch -D fix/42-slug failed: {branch_err}" in err
+    assert not [ln for ln in err.splitlines() if ln.lower().startswith("error:")]
 
 
-def _stub_gh_merge_nonzero(mp, monkeypatch) -> None:
-    """Make the `gh pr merge` subprocess call return non-zero (local-delete
-    failure shape)."""
-    monkeypatch.setattr(
-        mp.subprocess,
-        "run",
-        lambda *a, **k: _FakeProc(1, "failed to delete local branch"),
-    )
+def test_missing_head_branch_skips_cleanup_with_a_warning(mp, monkeypatch, capsys):
+    """No `headRefName` on the PR ⇒ the merge and hooks still run; cleanup is
+    skipped with a warning rather than deleting an empty ref."""
+    calls = _wire_merge_seams(mp, monkeypatch, rollup=_MP_GREEN, head_branch="")
+    rc = _run_merge_main(mp, monkeypatch, ["99", "--yes"])
+    assert rc == 0
+    assert [kind for kind, _ in calls["order"]] == ["merged", "hooks"]
+    assert "no head branch" in capsys.readouterr().err
 
 
-def test_gh_merge_reports_success_when_branch_in_worktree_and_merged(mp, monkeypatch):
-    """Non-zero exit + branch checked out in a worktree + PR actually merged ⇒
-    treat as success (the #587 fix)."""
-    _stub_gh_merge_nonzero(mp, monkeypatch)
-    monkeypatch.setattr(mp, "_branch_checked_out_worktree", lambda b: "/repo/wt-x")
-    monkeypatch.setattr(mp, "_pr_is_merged", lambda n, c: True)
-    ok = mp._gh_merge(
-        99, pr_title="fix(x): y", head_branch="fix/587-thing", admin=False, config={}
-    )
-    assert ok is True
-
-
-def test_gh_merge_reports_failure_when_worktree_but_not_merged(mp, monkeypatch):
-    """Non-zero exit + branch in a worktree but the PR did NOT merge ⇒ a real
-    failure (the merged? guard prevents a false success)."""
-    _stub_gh_merge_nonzero(mp, monkeypatch)
-    monkeypatch.setattr(mp, "_branch_checked_out_worktree", lambda b: "/repo/wt-x")
-    monkeypatch.setattr(mp, "_pr_is_merged", lambda n, c: False)
-    ok = mp._gh_merge(
-        99, pr_title="fix(x): y", head_branch="fix/587-thing", admin=False, config={}
-    )
-    assert ok is False
-
-
-def test_gh_merge_reports_failure_when_not_a_worktree(mp, monkeypatch):
-    """Non-zero exit with the branch not checked out anywhere ⇒ a real failure
-    (unchanged behaviour for the normal path)."""
-    _stub_gh_merge_nonzero(mp, monkeypatch)
-    monkeypatch.setattr(mp, "_branch_checked_out_worktree", lambda b: None)
-    monkeypatch.setattr(mp, "_pr_is_merged", lambda n, c: True)
-    ok = mp._gh_merge(
-        99, pr_title="fix(x): y", head_branch="fix/587-thing", admin=False, config={}
-    )
-    assert ok is False
+def test_dry_run_describes_the_outcome_not_the_flag(mp, monkeypatch, capsys):
+    """`--dry-run` names the squash + subject and the head-branch deletion
+    without invoking gh, and no longer advertises `--delete-branch`."""
+    calls = _wire_merge_seams(mp, monkeypatch, rollup=_MP_GREEN)
+    rc = _run_merge_main(mp, monkeypatch, ["99", "--dry-run"])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert calls["order"] == []
+    assert "[dry-run] gh pr merge --squash --subject 'fix: a thing'" in out
+    assert "--delete-branch" not in out
+    assert "remote head branch deleted" in out

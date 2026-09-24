@@ -152,7 +152,7 @@
         "closure_path": {
           "type": "string",
           "minLength": 1,
-          "description": "How the owning issue and integration branch close. Marked descendants close on merge into the integration branch via `Closes #N`. Owning issue closes via a final `integration/<slug>` → main PR with `Closes #<owning>` — squash-merged with --delete-branch."
+          "description": "How the owning issue and integration branch close. Marked descendants close on merge into the integration branch via `Closes #N`. Owning issue closes via a final `integration/<slug>` → main PR with `Closes #<owning>` — squash-merged, the integration branch deleted on merge."
         },
         "force_push_allowed": {
           "type": "boolean",

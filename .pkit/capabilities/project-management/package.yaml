@@ -91,7 +91,7 @@ commands:
     help: Open a GitHub PR per the methodology's branch + title conventions. Derives the closing issue from the branch name; the Conventional Commits <type> from the issue's type:* label.
   merge-pr:
     script: scripts/merge-pr.py
-    help: Merge a PR with squash + delete-branch per git-conventions.yaml. Enforces the DEC-007 checkbox close-gate on every closing issue + the PR body.
+    help: Merge a PR per git-conventions.yaml's merge convention — one squash commit titled after the PR, head branch deleted on merge (remote ref via the API; local cleanup best-effort). Enforces the DEC-007 checkbox close-gate on every closing issue + the PR body.
   close-pr:
     script: scripts/close-pr.py
     help: Close a PR without merging; optionally records an audit reason and deletes the source branch.
