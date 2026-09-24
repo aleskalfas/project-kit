@@ -367,3 +367,31 @@ def test_collect_contributions_end_to_end_undeployed_agent_fails_closed(rr, tmp_
     )
     assert not res.ok
     assert res.error.kind == rr.ERROR_COLLECTION
+
+
+# ---------------------------------------------------------------------------
+# D3 pre-existing-defect clause — one rule, three bodies (#883)
+# ---------------------------------------------------------------------------
+
+_PANEL_AGENTS = ("code-reviewer", "security-reviewer", "docs-reviewer")
+_PRE_EXISTING_LEAD = "- **A pre-existing defect blocks only when the change asserts it away**"
+
+
+def _pre_existing_clause(agent: str) -> str:
+    body = (
+        REPO_ROOT / ".pkit" / "capabilities" / "software-engineering" / "agents" / f"{agent}.md"
+    ).read_text(encoding="utf-8")
+    lines = [line for line in body.splitlines() if line.startswith(_PRE_EXISTING_LEAD)]
+    assert len(lines) == 1, f"{agent}: expected exactly one pre-existing-defect clause, found {len(lines)}"
+    return lines[0]
+
+
+def test_pre_existing_clause_is_identical_across_the_panel():
+    """The block threshold is per-agent but shared (DEC-002 D3): the three copies must not drift."""
+    clauses = {agent: _pre_existing_clause(agent) for agent in _PANEL_AGENTS}
+    assert len(set(clauses.values())) == 1, "pre-existing-defect clause differs between panel agents"
+
+
+@pytest.mark.parametrize("agent", _PANEL_AGENTS)
+def test_pre_existing_clause_cites_d3(agent):
+    assert "[software-engineering:DEC-002-code-review-panel] D3" in _pre_existing_clause(agent)
