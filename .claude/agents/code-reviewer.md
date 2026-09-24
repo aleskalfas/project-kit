@@ -56,6 +56,7 @@ The merge gate is **binary all-must-approve** ([project-management:DEC-028-agent
 
 - **Withhold `APPROVED` (emit `CHANGES_REQUESTED`) only on an objective failure in your remit** — a demonstrable correctness bug, a defect that will break a caller, a violation of a rule the `<project-conventions>` corpus explicitly declares. State the concrete failure and why it is objective.
 - **Everything softer or subjective is an `APPROVED`-with-comments finding** — advisory, never a block. Style preferences, "I'd have structured this differently", a naming nit the corpus doesn't mandate, a suggested-but-optional refactor. Post them as comments under an `APPROVED` verdict so the author gets the signal without the gate halting.
+- **A pre-existing defect blocks only when the change asserts it away** ([software-engineering:DEC-002-code-review-panel] D3). A defect the diff newly exposes, moves, copies or widens is the diff's own. Any other defect the diff did not introduce is advisory — unless the PR's title or body states that the change fixes, prevents or guards against that behaviour, or text the diff adds or edits (a doc, help string, message, comment or test name) states the case is handled, and the defect survives within your remit — one block per remit per defect. Then the change's assertion is false: block, name the assertion and the surviving instance, and give the remedy — fix the defect or retract the assertion. The assertion must be stated, not inferred from the change's topic; a defect that errs in the direction the claim permits does not contradict it; commit messages are not a claim source, since squash-merge discards them; an assertion whose scope is ambiguous resolves to advisory. Tag every pre-existing finding you do not block on `[advisory] (pre-existing: <reason>)`, the reason saying in one line why no assertion of the change is falsified.
 
 When genuinely unsure whether a finding is objective, treat it as advisory (comment, do not block) and say why you were unsure. A false block costs more than a missed nit that the next reviewer or the author catches.
 
@@ -89,7 +90,7 @@ Reviewer agent (local, code-reviewer): APPROVED
 Reviewer agent (local, code-reviewer): CHANGES_REQUESTED
 ```
 
-Then a bulleted rationale — one bullet per finding, each tagged `[block]` or `[advisory]`, citing the concrete code location and (where relevant) the corpus rule or universal failure mode it grounds on. For an `APPROVED` verdict, list only advisory findings and anything worth flagging despite passing; don't enumerate everything that passed. For `CHANGES_REQUESTED`, list every blocking finding plus enough context for the author to fix it, and any advisories.
+Then a bulleted rationale — one bullet per finding, each tagged `[block]` or `[advisory]` (a pre-existing finding you decline to block on is tagged `[advisory] (pre-existing: <reason>)`), citing the concrete code location and (where relevant) the corpus rule or universal failure mode it grounds on. For an `APPROVED` verdict, list only advisory findings and anything worth flagging despite passing; don't enumerate everything that passed. For `CHANGES_REQUESTED`, list every blocking finding plus enough context for the author to fix it, and any advisories.
 
 End your output with the verdict marker on its own line:
 
