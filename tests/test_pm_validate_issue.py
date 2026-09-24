@@ -239,6 +239,226 @@ def test_valid_task_passes_title_check(
     assert title_findings == []
 
 
+# --- kind-driven Task prefixes (#895) --------------------------------
+#
+# create-issue writes `[Bug]` / `[Docs]` / `[Test]` / `[Refactor]` / `[Chore]`
+# Task titles and titles.yaml's `issue-task` pattern admits them, but
+# validate-issue once called the shared resolver without `classification`, so
+# every kind-prefixed Task resolved to no structural type and hard-rejected
+# `title.format`.
+
+
+@pytest.fixture
+def titles_kind_prefixed() -> dict:
+    """titles.yaml fixture carrying the shipped kind-prefixed `issue-task` pattern."""
+    return {
+        "formats": {
+            "issue-epic": {"pattern": r"^\[EPIC\] .+$"},
+            "issue-feature": {"pattern": r"^\[Feature\] .+$"},
+            "issue-umbrella": {"pattern": r"^\[Umbrella\] .+$"},
+            "issue-task": {"pattern": r"^\[(Task|Bug|Docs|Test|Refactor|Chore)\] .+$"},
+        },
+    }
+
+
+_TASK_BODY = (
+    "Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n"
+    "## Doc impact\nnone."
+)
+
+_KIND_PREFIXES = [
+    ("Task", "feature"),
+    ("Bug", "bug"),
+    ("Docs", "docs"),
+    ("Test", "test"),
+    ("Refactor", "refactor"),
+    ("Chore", "maintenance"),
+]
+
+
+@pytest.mark.parametrize("phase", ["create", "transition"])
+@pytest.mark.parametrize("prefix,kind", _KIND_PREFIXES)
+def test_kind_prefixed_task_passes_title_check(
+    vi,
+    issue_types,
+    titles_kind_prefixed,
+    body_format,
+    classification,
+    label_fallback_config,
+    prefix,
+    kind,
+    phase,
+) -> None:
+    issue = _make_issue(
+        title=f"[{prefix}] Resolve the kind-driven prefix vocabulary",
+        body=_TASK_BODY,
+        labels=[f"type:{kind}", "priority:Medium", "workstream:cli"],
+    )
+    findings = vi._validate_issue(
+        issue=issue,
+        issue_types=issue_types,
+        titles=titles_kind_prefixed,
+        body_format=body_format,
+        classification=classification,
+        config=label_fallback_config,
+        phase=phase,
+    )
+    assert [f for f in findings if f.label.startswith("title.")] == []
+    assert "classification.type.structural-mismatch" not in _labels(findings)
+
+
+@pytest.mark.parametrize("phase", ["create", "transition"])
+@pytest.mark.parametrize(
+    "title,kind,expected_prefix",
+    [
+        # titles.yaml's own examples_bad entry.
+        ("[Task] Fix the auth bug in the login flow", "bug", "[Bug]"),
+        ("[Docs] Fix the auth bug in the login flow", "bug", "[Bug]"),
+        ("[Bug] Expand the CLI authoring manual", "docs", "[Docs]"),
+        ("[Chore] Add the resolver feature", "feature", "[Task]"),
+    ],
+)
+def test_kind_prefix_disagreeing_with_kind_label_is_reported(
+    vi,
+    issue_types,
+    titles_kind_prefixed,
+    body_format,
+    classification,
+    label_fallback_config,
+    title,
+    kind,
+    expected_prefix,
+    phase,
+) -> None:
+    issue = _make_issue(
+        title=title,
+        body=_TASK_BODY,
+        labels=[f"type:{kind}", "priority:Medium", "workstream:cli"],
+    )
+    findings = vi._validate_issue(
+        issue=issue,
+        issue_types=issue_types,
+        titles=titles_kind_prefixed,
+        body_format=body_format,
+        classification=classification,
+        config=label_fallback_config,
+        phase=phase,
+    )
+    mismatch = [f for f in findings if f.label == "title.kind-prefix-mismatch"]
+    assert len(mismatch) == 1
+    # Phase-split like the structural mismatch (#410): titles.yaml's hard-reject
+    # at the point of manufacture, a non-blocking warning at transition so
+    # already-filed drifted Tasks are not newly walled.
+    expected_severity = (
+        vi.SEVERITY_WARNING if phase == vi.PHASE_TRANSITION else vi.SEVERITY_HARD_REJECT
+    )
+    assert mismatch[0].severity == expected_severity
+    assert expected_prefix in mismatch[0].detail
+    # The prefix IS recognised — this is a mismatch, not an unknown prefix.
+    assert "title.format" not in _labels(findings)
+
+
+@pytest.mark.parametrize("prefix,_kind", _KIND_PREFIXES[1:])
+def test_kind_prefix_resolves_only_to_task_never_a_container(
+    vi, issue_types, classification, prefix, _kind
+) -> None:
+    assert (
+        vi.infer_structural_type(
+            f"[{prefix}] x", issue_types, classification=classification
+        )
+        == "task"
+    )
+
+
+@pytest.mark.parametrize(
+    "title", ["[EPIC] A big thesis", "[Feature] Deliver the widget", "[Umbrella] Group"]
+)
+def test_container_with_feature_kind_gets_no_kind_prefix_finding(
+    vi, issue_types, titles_kind_prefixed, body_format, classification,
+    label_fallback_config, title,
+) -> None:
+    """Containers are not kind-driven: their structural prefix is correct as-is."""
+    issue = _make_issue(
+        title=title,
+        body="EPIC: #1\n\n## What\nx.",
+        labels=["type:feature", "priority:Medium", "workstream:cli"],
+    )
+    findings = vi._validate_issue(
+        issue=issue,
+        issue_types=issue_types,
+        titles=titles_kind_prefixed,
+        body_format=body_format,
+        classification=classification,
+        config=label_fallback_config,
+    )
+    assert "title.kind-prefix-mismatch" not in _labels(findings)
+    assert "title.format" not in _labels(findings)
+
+
+def test_title_format_message_names_kind_prefixes_in_greenfield(
+    vi, issue_types, titles_kind_prefixed, body_format, classification,
+    label_fallback_config,
+) -> None:
+    issue = _make_issue(
+        title="Random title with no prefix",
+        body=_TASK_BODY,
+        labels=["type:bug", "priority:Medium", "workstream:cli"],
+    )
+    findings = vi._validate_issue(
+        issue=issue,
+        issue_types=issue_types,
+        titles=titles_kind_prefixed,
+        body_format=body_format,
+        classification=classification,
+        config=label_fallback_config,
+    )
+    title_format = [f for f in findings if f.label == "title.format"]
+    assert len(title_format) == 1
+    detail = title_format[0].detail
+    for prefix in ("[EPIC]", "[Feature]", "[Umbrella]", "[Task]", "[Bug]",
+                   "[Docs]", "[Test]", "[Refactor]", "[Chore]"):
+        assert prefix in detail
+    # `[Task]` is both a structural and a kind prefix — named once.
+    assert detail.count("[Task]") == 1
+
+
+def test_expected_type_prefixes_without_classification_is_structural_only(
+    vi, issue_types
+) -> None:
+    assert vi._expected_type_prefixes(issue_types) == [
+        "[EPIC]", "[Feature]", "[Umbrella]", "[Task]"
+    ]
+
+
+def test_brownfield_title_prefix_map_ignores_kind_prefixes(
+    vi, issue_types, titles_kind_prefixed, body_format, classification,
+    board_config, brownfield_type_prefix_map,
+) -> None:
+    """Passing `classification` must not widen the adopter's vocabulary: a kit
+    kind prefix the adopter never declared still resolves to no type and
+    hard-rejects with the adopter's prefixes named — unchanged by #895."""
+    issue = _make_issue(
+        title="[Bug] fix the crash in the adopter repo",
+        body=_TASK_BODY,
+        labels=[],
+    )
+    findings = vi._validate_issue(
+        issue=issue,
+        issue_types=issue_types,
+        titles=titles_kind_prefixed,
+        body_format=body_format,
+        classification=classification,
+        config=board_config,
+        substrate_map=brownfield_type_prefix_map,
+    )
+    title_format = [f for f in findings if f.label == "title.format"]
+    assert len(title_format) == 1
+    assert title_format[0].severity == vi.SEVERITY_HARD_REJECT
+    assert "adopter's declared" in title_format[0].detail
+    assert "[Bug]" not in title_format[0].detail.split("expected one of")[1]
+    assert "title.kind-prefix-mismatch" not in _labels(findings)
+
+
 # --- classification --------------------------------------------------
 
 

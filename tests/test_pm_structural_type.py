@@ -95,6 +95,18 @@ def test_kind_prefixes_are_opt_in_so_extraction_preserved_behaviour(
     assert infer_structural_type(title, issue_types) is None
 
 
+@pytest.mark.parametrize("kind", ["bug", "docs", "test", "refactor", "maintenance"])
+def test_every_kind_prefix_resolves_to_task_never_a_container(
+    kind, issue_types, classification
+) -> None:
+    """Kind prefixes are task-only by construction (structural_restriction)."""
+    prefix = classification["axes"]["type"]["title_prefix_by_value"][kind]
+    assert (
+        infer_structural_type(f"[{prefix}] x", issue_types, classification=classification)
+        == "task"
+    )
+
+
 # ---- label fallback --------------------------------------------------------
 
 
