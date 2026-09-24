@@ -6,7 +6,7 @@ custom:
 body: >
   The code-review panel now states when a pre-existing defect blocks: only when
   the change asserts it away — the PR title or body claims to fix or guard
-  against that behaviour, or text the diff adds says the case is handled — and
+  against that behaviour, or text the diff adds or edits says the case is handled — and
   the defect survives in the reviewer's remit. Defects the diff newly exposes,
   moves, copies or widens count as the diff's own. Every other pre-existing
   finding stays advisory and is tagged `[advisory] (pre-existing: <reason>)` (#883).

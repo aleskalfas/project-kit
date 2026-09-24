@@ -82,7 +82,7 @@ Read `<project-conventions>` and note which of its security rules apply to this 
 
 ### 3. Review the diff
 
-Walk each changed hunk against the remit and the corpus rules. For every finding, decide: real vulnerability (block) or hardening (comment), per the threshold — with the objective classes (an actually-interpolated injection, a credential in argv) always blocks when present.
+Walk each changed hunk against the remit and the corpus rules. For every finding, decide: real vulnerability (block) or hardening (comment), per the threshold — with the objective classes (an actually-interpolated injection, a credential in argv) always blocks when the change owns them. For a finding the change does not own, apply the pre-existing rule above.
 
 ### 4. Emit the verdict
 
