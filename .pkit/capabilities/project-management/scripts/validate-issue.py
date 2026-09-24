@@ -246,12 +246,21 @@ def _validate_issue(
     # Infer structural type from the title prefix, substrate-aware (#553): the
     # kit's own prefix vocabulary in greenfield, the ADOPTER's declared prefixes
     # when the substrate-map binds `type` via title-prefix.
-    # Brownfield-strict: `classification` is deliberately NOT passed. Under a
-    # substrate map the adopter's vocabulary is the yardstick and a non-match
-    # must resolve to None (the undeterminable close-gate failure below relies
-    # on it); in greenfield this validator judges the kit's own title contract,
-    # where a kind prefix is the Task prefix already. Do not "align" this (#793).
-    structural_type = infer_structural_type(title, issue_types, substrate_map=substrate_map)
+    # `classification` IS passed so greenfield recognises the kind-driven Task
+    # prefixes (`[Bug]` / `[Docs]` / `[Test]` / `[Refactor]` / `[Chore]`) that
+    # create-issue writes and titles.yaml's `issue-task` pattern allows (#895).
+    # Brownfield is unaffected: a present `substrate_map` short-circuits the
+    # resolver before the kind-driven vocabulary is consulted, so an adopter
+    # non-match still resolves to None (the undeterminable close-gate failure
+    # below relies on it). `labels` is deliberately NOT passed — a title whose
+    # prefix is missing must still fail `title.format`, not be recovered from
+    # its `type:*` label.
+    structural_type = infer_structural_type(
+        title,
+        issue_types,
+        classification=classification,
+        substrate_map=substrate_map,
+    )
 
     # Title format / pattern.
     #
@@ -273,7 +282,7 @@ def _validate_issue(
         "type", substrate_map
     )
     if type_title_carried and structural_type is None:
-        expected = _expected_type_prefixes(issue_types, substrate_map)
+        expected = _expected_type_prefixes(issue_types, substrate_map, classification)
         if substrate_map is None:
             findings.append(
                 Finding(
@@ -412,6 +421,47 @@ def _validate_issue(
                         "to 'feature'.",
                     )
                 )
+            # Title prefix vs kind label (titles.yaml `issue-task` validation:
+            # "Title prefix matches the issue's kind label per
+            # classification.yaml's `title_prefix_by_value` map", tagged
+            # hard-reject). Applies only where the kind drives the title
+            # (`task` today, read from the restriction table) and only in
+            # greenfield, where the kit owns the title format.
+            #
+            # Phase-split exactly like the structural mismatch above (#410):
+            # the schema's hard-reject at `--phase create` refuses the mismatch
+            # where it is manufactured; at `--phase transition` it is a warning,
+            # because a pre-existing prefix/kind drift is cosmetic to the move
+            # in flight (the closing PR's conv-type reads the label, not the
+            # prefix). Hard-rejecting at transition would newly wall every
+            # already-filed drifted Task that validated clean before #895.
+            if (
+                kind is not None
+                and structural_type is not None
+                and substrate_map is None
+                and classification_rules.kind_drives_title(
+                    structural_type, classification or {}
+                )
+            ):
+                expected_prefix = classification_rules.title_prefix_by_value(
+                    classification or {}
+                ).get(kind)
+                if isinstance(expected_prefix, str) and not title.startswith(
+                    f"[{expected_prefix}] "
+                ):
+                    findings.append(
+                        Finding(
+                            SEVERITY_WARNING
+                            if phase == PHASE_TRANSITION
+                            else SEVERITY_HARD_REJECT,
+                            "title.kind-prefix-mismatch",
+                            f"title prefix does not match the issue's kind: "
+                            f"kind {kind!r} (its type:* label) takes "
+                            f"`[{expected_prefix}]` per classification.yaml "
+                            "title_prefix_by_value. Retitle the issue, or change "
+                            "its kind (set-field --kind rewrites both together).",
+                        )
+                    )
     elif type_carriage == "adopter-label":
         # --- Present map, `type` bound to an adopter LABEL remap. ---
         # The adopter's own type labels are the substrate; require one present
@@ -761,13 +811,17 @@ def _validate_issue(
 def _expected_type_prefixes(
     issue_types: dict,
     substrate_map: "axis_labels.SubstrateMap | None" = None,
+    classification: dict | None = None,
 ) -> list[str]:
     """The bracketed type prefixes a title is expected to carry, for the error text.
 
-    Greenfield ⇒ the kit's own rendered prefixes; a ``title-prefix``-bound ``type``
-    ⇒ the adopter's declared prefixes (already bracketed, e.g. ``[Task]``). Kept
-    in step with :func:`_infer_structural_type` so the ``title.format`` message
-    names the SAME vocabulary the inference actually validated against.
+    Greenfield ⇒ the kit's own rendered structural prefixes, followed by the
+    kind-driven Task prefixes from ``classification`` (``title_prefix_by_value``)
+    when one is supplied; a ``title-prefix``-bound ``type`` ⇒ the adopter's
+    declared prefixes (already bracketed, e.g. ``[Task]``). Kept in step with
+    :func:`infer_structural_type` (called with the same arguments) so the
+    ``title.format`` message names the SAME vocabulary the inference actually
+    validated against.
     """
     if substrate_map is not None:
         remap = axis_labels.axis_title_prefix_remap("type", substrate_map)
@@ -782,6 +836,12 @@ def _expected_type_prefixes(
         rendered = str(prefix).upper() if case == "upper" else str(prefix)
         if rendered:
             prefixes.append(f"[{rendered}]")
+    for kind_prefix in classification_rules.title_prefix_by_value(
+        classification or {}
+    ).values():
+        bracketed = f"[{kind_prefix}]"
+        if isinstance(kind_prefix, str) and kind_prefix and bracketed not in prefixes:
+            prefixes.append(bracketed)
     return prefixes
 
 

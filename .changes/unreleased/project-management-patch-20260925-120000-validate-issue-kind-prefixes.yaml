@@ -1,0 +1,12 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+  pr: "898"
+body: >
+  `validate-issue` now accepts a Task titled with a kind-driven prefix —
+  `[Bug]`, `[Docs]`, `[Test]`, `[Refactor]`, `[Chore]` — instead of
+  hard-rejecting it on `title.format`; the error lists every accepted prefix.
+  It also reports a new `title.kind-prefix-mismatch` finding when a Task's
+  prefix disagrees with its `type:*` label: a hard reject at `--phase create`,
+  a warning at `--phase transition` (#895).

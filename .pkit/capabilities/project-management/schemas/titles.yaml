@@ -106,7 +106,11 @@ formats:
       kind=docs, `[Test]` for kind=test, `[Refactor]` for
       kind=refactor, `[Chore]` for kind=maintenance. The kind label
       and the title prefix are kept in sync by the agent at filing
-      time; mismatch is hard-reject at validate.
+      time. A mismatch is phase-split like the kind/structural mismatch
+      (#410): hard-reject at `validate-issue --phase create`, where the
+      drift is made; warning at `--phase transition` (the default), where a
+      pre-existing drift does not affect the move in flight — the closing
+      PR's conv-type reads the kind label, not the prefix.
     examples_good:
       - "[Task] Install the Claude Code CLI inside the sandbox image"
       - "[Bug] Fix pkit install capability self-host destroys source tree"
@@ -126,7 +130,7 @@ formats:
     validations:
       - rule: "Title starts with one of the kind-driven prefixes (`[Task]`, `[Bug]`, `[Docs]`, `[Test]`, `[Refactor]`, `[Chore]`) with a single space after the bracket."
         severity: "[validation-severity:hard-reject]"
-      - rule: "Title prefix matches the issue's kind label per classification.yaml's `title_prefix_by_value` map."
+      - rule: "Title prefix matches the issue's kind label per classification.yaml's `title_prefix_by_value` map. The severity below applies at create; at transition the same finding is a warning (phase-split, see description)."
         severity: "[validation-severity:hard-reject]"
       - rule: "Title contains no `<word>:` scope prefix after the bracket."
         severity: "[validation-severity:hard-reject]"
