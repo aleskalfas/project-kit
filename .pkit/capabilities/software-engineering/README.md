@@ -21,7 +21,7 @@ The panel ([software-engineering:DEC-002-code-review-panel]) closes bug #715: be
 | Agent | Remit | Blocks (CHANGES_REQUESTED) on | Advises (APPROVED-with-comments) on |
 |---|---|---|---|
 | `code-reviewer` | Generalist headline: correctness/logic (core), general code quality, API-surface / interface design. The "review this PR" an operator reaches for. | Objective correctness bugs; a break to an existing caller; a violation of an explicit `<project-conventions>` rule. | Style, naming nits, subjective structure, optional refactors. |
-| `security-reviewer` | Auth, **secrets-in-argv**, **`shell=True` / command injection**, crypto misuse, dependency hygiene. (The first two are #715's demonstrated harm.) | Real, exploitable vulnerabilities — the #715 classes are blocks whenever present. | Hardening suggestions, defense-in-depth, theoretical risk with no reachable path. |
+| `security-reviewer` | Auth, **secrets-in-argv**, **`shell=True` / command injection**, crypto misuse, dependency hygiene. (The first two are #715's demonstrated harm.) | Real, exploitable vulnerabilities the change owns — the #715 classes are blocks whenever the change introduces, exposes, moves, copies or widens them, or asserts them away. | Hardening suggestions, defense-in-depth, theoretical risk with no reachable path. |
 | `docs-reviewer` | Documentation completeness (new public surface documented), docs-match-behaviour, understandability. Leans on [project-management:DEC-015]'s doc obligations. | Missing docs for new public surface (absent a `## Doc impact` justification); a doc the diff makes contradict the code. | Clarity, wording, suggested examples, thin-but-not-wrong docs. |
 
 **Activation** (declared in `review-contributions.yaml`, resolved by pm per [project-management:DEC-032]):
@@ -33,7 +33,7 @@ The panel ([software-engineering:DEC-002-code-review-panel]) closes bug #715: be
 
 So `code-reviewer` alone is *basic* review; the specialists alongside it make *complex* review, composable per install ([project-management:DEC-032]).
 
-**Block-threshold discipline.** Each agent withholds `APPROVED` **only on objective failures in its remit**; everything softer is an advisory comment posted under an `APPROVED` verdict ([software-engineering:DEC-002] D3). This keeps the binary all-must-approve gate from becoming a subjective merge-blocking veto that trains the `--bypass` reflex.
+**Block-threshold discipline.** Each agent withholds `APPROVED` **only on objective failures of the change, in its remit**; everything softer, and every defect the change merely sits beside, is an advisory comment posted under an `APPROVED` verdict ([software-engineering:DEC-002] D3). A pre-existing defect blocks only when the change asserts it away — its PR title or body claims to fix or guard against the behaviour, or text the diff adds or edits says the case is handled — and the defect survives; the remedy is to fix it or retract the claim. This keeps the binary all-must-approve gate from becoming a subjective merge-blocking veto that trains the `--bypass` reflex.
 
 **Knowledge split.** Each agent body carries only *universal* review knowledge; project-specific rules are read from the overlay-resolved `<project-conventions>` corpus — the same corpus `software-engineer` produces against ([software-engineering:DEC-002] D4). An empty or absent corpus is tolerated: the agent reviews as a careful generalist and says so.
 
