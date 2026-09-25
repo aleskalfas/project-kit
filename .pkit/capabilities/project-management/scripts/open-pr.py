@@ -59,6 +59,7 @@ from _lib import (  # noqa: E402
     provenance,
     session_guard,
 )
+from _lib import lifecycle_inference as infer  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib.hooks import fire_hooks  # noqa: E402
 from _lib.membership import (  # noqa: E402
@@ -123,8 +124,9 @@ def main() -> int:
         "--base",
         default=None,
         help=(
-            "Base branch (default: the adopter's `default_branch` in "
-            "project/config.yaml, falling back to `main`)."
+            "Base branch (default: the closing issue's DEC-013 integration "
+            "branch when its body carries an `Integration:` marker, else the "
+            "adopter's `default_branch` in project/config.yaml)."
         ),
     )
     parser.add_argument(
@@ -197,7 +199,6 @@ def main() -> int:
     classification = _read_yaml(
         capability_root / "schemas" / "classification.yaml", yaml_loader
     )
-    config = _read_yaml(capability_root / "project" / "config.yaml", yaml_loader)
 
     branch = _current_branch()
     if branch is None:
@@ -307,8 +308,11 @@ def main() -> int:
                 file=sys.stderr,
             )
 
-    # Determine base branch.
-    base = args.base or str(config.get("default_branch") or "main")
+    # Base branch (DEC-013, #903): --base, else the closing issue's integration
+    # marker, else default_branch — the resolution start-work cut the branch by.
+    base = infer.resolve_base_branch(
+        config, str(issue.get("body") or ""), explicit=args.base
+    )
 
     print("open-pr: plan")
     print(f"  branch:  {branch}")
@@ -469,7 +473,7 @@ def _current_branch() -> str | None:
 
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
-    return gh_get_issue(issue_number, config, fields="title,labels,state")
+    return gh_get_issue(issue_number, config, fields="title,labels,state,body")
 
 
 def _post_force_audit(pr_number: int, findings: list, config: dict) -> None:

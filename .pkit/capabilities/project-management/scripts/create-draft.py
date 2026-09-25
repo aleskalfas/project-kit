@@ -17,7 +17,8 @@ review. Per DEC-026:
 Gates per DEC-026:
   - Membership check (open-mode degrades to no-op).
   - A branch exists per `<type>/<N>-<slug>` (created by start-work).
-  - At least one commit on the branch not on `main`.
+  - At least one commit on the branch not on the base branch (DEC-013:
+    `--base`, else the issue's integration marker, else `default_branch`).
 
 Side-effects:
   - `gh pr create --draft`.
@@ -45,6 +46,7 @@ from ruamel.yaml import YAML
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import bootstrap_gate  # noqa: E402
+from _lib import lifecycle_inference as infer  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib import session_guard  # noqa: E402
 from _lib.membership import (  # noqa: E402
@@ -71,7 +73,14 @@ def main() -> int:
         "--body", default=None,
         help="PR body (default: `Closes #<N>` + auto-derived content).",
     )
-    parser.add_argument("--base", default="main")
+    parser.add_argument(
+        "--base", default=None,
+        help=(
+            "Base branch (default: the issue's DEC-013 integration branch when "
+            "its body carries an `Integration:` marker, else the adopter's "
+            "`default_branch`)."
+        ),
+    )
     parser.add_argument(
         "--capability-root", type=Path, default=None,
         help=f"Default: <repo-root>/.pkit/capabilities/{CAPABILITY_NAME}/.",
@@ -115,10 +124,38 @@ def main() -> int:
         )
         return 2
 
-    # Gate: at least one commit not on main.
-    if not _branch_has_commits_beyond(branch, args.base):
+    # Fetch issue for base resolution + title derivation.
+    issue = _gh_get_issue(args.issue_number, config)
+    if issue is None:
+        return 2
+    # Base branch (DEC-013, #903): --base, else the issue's integration marker,
+    # else default_branch — the resolution start-work cut the branch by.
+    base = infer.resolve_base_branch(
+        config, str(issue.get("body") or ""), explicit=args.base
+    )
+
+    # Gate: at least one commit not on the base branch. A base that cannot be
+    # found is reported as that, never as "no commits" -- the two need
+    # different fixes.
+    base_ref = _resolve_base_ref(base)
+    if base_ref is None:
         print(
-            f"error: branch {branch!r} has no commits beyond {args.base!r}. "
+            f"error: base branch {base!r} is not in this clone (neither "
+            f"{base!r} nor 'origin/{base}'). Run `git fetch origin {base}` "
+            "and re-run.",
+            file=sys.stderr,
+        )
+        return 2
+    ahead = _commits_beyond(branch, base_ref)
+    if ahead is None:
+        print(
+            f"error: could not count commits on {branch!r} beyond {base_ref!r}.",
+            file=sys.stderr,
+        )
+        return 2
+    if ahead == 0:
+        print(
+            f"error: branch {branch!r} has no commits beyond {base!r}. "
             "Commit your work-in-progress before opening a draft PR.",
             file=sys.stderr,
         )
@@ -140,16 +177,12 @@ def main() -> int:
             )
         return 0
 
-    # Fetch issue for title derivation.
-    issue = _gh_get_issue(args.issue_number, config)
-    if issue is None:
-        return 2
     title = args.title or _derive_pr_title(issue, branch)
     body = args.body or f"Closes #{args.issue_number}\n\nDraft PR for work-in-progress."
 
     print(f"create-draft: #{args.issue_number}")
     print(f"  branch: {branch}")
-    print(f"  base:   {args.base}")
+    print(f"  base:   {base}")
     print(f"  title:  {title}")
 
     if args.dry_run:
@@ -162,7 +195,7 @@ def main() -> int:
             print("aborted.", file=sys.stderr)
             return 0
 
-    url = _gh_pr_create_draft(branch, args.base, title, body, config)
+    url = _gh_pr_create_draft(branch, base, title, body, config)
     if url is None:
         return 3
 
@@ -192,18 +225,37 @@ def _find_issue_branch(issue_number: int) -> str | None:
     return None
 
 
-def _branch_has_commits_beyond(branch: str, base: str) -> bool:
-    """True if `branch` has commits not in `base`."""
+def _resolve_base_ref(base: str) -> str | None:
+    """The ref `base` names in this clone, or None when it resolves nowhere.
+
+    An integration base (`integration/<slug>`) is usually present only as the
+    remote-tracking `origin/<base>`: start-work fetches it and cuts the branch
+    from `origin/<base>` without creating a local branch, and git never expands
+    a short name to `refs/remotes/origin/…`. So try the name as given, then
+    `origin/<base>`.
+    """
+    for ref in (base, f"origin/{base}"):
+        proc = subprocess.run(
+            ["git", "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"],
+            capture_output=True, text=True, check=False,
+        )
+        if proc.returncode == 0:
+            return ref
+    return None
+
+
+def _commits_beyond(branch: str, base_ref: str) -> int | None:
+    """Commits on `branch` not in `base_ref`, or None when git cannot count."""
     proc = subprocess.run(
-        ["git", "rev-list", "--count", f"{base}..{branch}"],
+        ["git", "rev-list", "--count", f"{base_ref}..{branch}"],
         capture_output=True, text=True, check=False,
     )
     if proc.returncode != 0:
-        return False
+        return None
     try:
-        return int(proc.stdout.strip()) > 0
+        return int(proc.stdout.strip())
     except ValueError:
-        return False
+        return None
 
 
 def _find_pr_for_branch(branch: str, config: dict) -> dict | None:
@@ -226,7 +278,7 @@ def _find_pr_for_branch(branch: str, config: dict) -> dict | None:
 
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
-    return gh_get_issue(issue_number, config, fields="title")
+    return gh_get_issue(issue_number, config, fields="title,body")
 
 
 def _derive_pr_title(issue: dict, branch: str) -> str:
