@@ -1,0 +1,16 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+  pr: ""
+body: >
+  A retried `move-issue --bypass` no longer posts a second audit comment.
+  The comment is still posted before the label write, so the justification
+  survives a failed move. It now ends with a hidden idempotency key
+  (`<!-- pkit-audit-key: move-issue:<digest> -->`), hashed from the
+  transition, the reason and the issue's engine-journal length, and a retry
+  that finds its own key posts nothing. A different reason still posts, and so
+  does the same transition made again after the move landed. Wrappers that
+  compose over `move-issue`, such as `promote-issue`, inherit this. The
+  capability README now describes how each audit comment behaves on a retry
+  (#901).

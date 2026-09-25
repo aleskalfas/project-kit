@@ -244,8 +244,9 @@ def main() -> int:
     if rc != 0:
         applied = "milestone" if milestone_title is not None else "(nothing)"
         print(
-            f"[warn] {applied} applied; move-issue exited {rc} (no audit comment or "
-            "transition). Re-run this wrapper or run `move-issue --to backlog` to complete.",
+            f"[warn] {applied} applied; move-issue exited {rc} (no transition; its audit "
+            "comment may already be posted, and a retry does not post it again). Re-run "
+            "this wrapper or run `move-issue --to backlog` to complete.",
             file=sys.stderr,
         )
         return rc
