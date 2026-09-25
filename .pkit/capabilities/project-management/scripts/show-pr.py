@@ -14,6 +14,8 @@ DEC-028 reviewer verdict(s) — `--field review` renders each reviewer's
 verdict token AND the reasons, read via the same governed `gh` path the
 rest of the view uses (issue #544; the operator's only allowed path to the
 verdict body, since raw `gh pr view --comments` is denied).
+`--field review-history` renders EVERY verdict each reviewer posted, in
+posting order — earlier rounds a later verdict superseded included (#905).
 
 Membership gate per DEC-021 runs at startup.
 
@@ -46,7 +48,9 @@ sys.path.insert(0, str(_HERE))
 from _lib import bootstrap_gate  # noqa: E402
 from _lib.agent_verdicts import (  # noqa: E402
     PATH_LOCAL,
+    all_verdicts,
     latest_verdicts_per_reviewer,
+    reduce_latest_per_reviewer,
 )
 from _lib.gh import gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import (  # noqa: E402
@@ -67,7 +71,9 @@ def main() -> int:
         description=(
             "Show the methodology-relevant view of a GitHub PR: title, "
             "Conventional Commits parse, state, branches, closing issues, "
-            "reviewers, doc-impact presence."
+            "reviewers, doc-impact presence, the latest reviewer verdicts "
+            "(--field review) and every verdict posted, in posting order "
+            "(--field review-history)."
         ),
     )
     parser.add_argument(
@@ -165,7 +171,9 @@ def _summarise(pr: dict) -> dict:
     closing_issues = _extract_closing_issues(body)
     has_doc_impact = "## Doc impact" in body
     latest_commit_ts = _latest_commit_timestamp(pr.get("commits") or [])
-    review = _summarise_review(pr.get("comments") or [], latest_commit_ts)
+    comments = pr.get("comments") or []
+    review = _summarise_review(comments, latest_commit_ts)
+    review_history = _summarise_review_history(comments, latest_commit_ts)
 
     return {
         "title": title,
@@ -181,6 +189,7 @@ def _summarise(pr: dict) -> dict:
         "has_doc_impact_section": has_doc_impact,
         "review": review,
         "body": body,
+        "review_history": review_history,
     }
 
 
@@ -223,6 +232,43 @@ def _summarise_review(
     ]
 
 
+def _summarise_review_history(
+    comments: list, latest_commit_ts: str = ""
+) -> list[dict]:
+    """Every DEC-028 verdict per reviewer, in posting order (#905).
+
+    The full sequence behind `_summarise_review`'s latest-per-reviewer view,
+    for reading earlier review rounds (an audit of a PR reviewed several
+    times). Built on the same shared recogniser (`_lib.agent_verdicts`) with
+    the same permissive read-surface scope as `review` — no freshness, marker
+    or membership filter — so the verdicts shown here are exactly the ones
+    `review` reduces, never a differently-parsed set.
+
+    One entry per reviewer, ordered as `review` orders them, each carrying the
+    reviewer, the path, and `verdicts`: every verdict that reviewer posted,
+    oldest first. Each verdict carries the token, the comment's timestamp and
+    url, the full body, `current` (it is the verdict `review` shows for this
+    reviewer — every other one was superseded by a later round), and `stale`
+    (same rule as `review`: at/before the latest commit's timestamp).
+    """
+    history = all_verdicts(comments)
+    current = {id(v) for v in reduce_latest_per_reviewer(history)}
+    by_reviewer: dict[tuple[str, str], list[dict]] = {}
+    for v in history:
+        by_reviewer.setdefault((v.path, v.reviewer), []).append({
+            "verdict": v.token,
+            "timestamp": v.timestamp,
+            "url": v.url,
+            "current": id(v) in current,
+            "stale": bool(latest_commit_ts) and v.timestamp <= latest_commit_ts,
+            "body": v.body,
+        })
+    return [
+        {"reviewer": reviewer, "path": path, "verdicts": verdicts}
+        for (path, reviewer), verdicts in sorted(by_reviewer.items())
+    ]
+
+
 def _latest_commit_timestamp(commits: list) -> str:
     """The latest commit's timestamp, the gate's verdict-freshness anchor.
 
@@ -255,6 +301,7 @@ PR_FIELD_NAMES = (
     "closes",
     "reviewers",
     "review",
+    "review-history",
     "doc-impact",
     "body",
     "url",
@@ -322,6 +369,46 @@ def _review_lines(review: list) -> list[str]:
     return lines
 
 
+# Qualifiers on a `--field review-history` verdict header.
+CURRENT_MARKER = " (current)"
+HISTORY_STALE_MARKER = " (stale)"
+
+
+def _review_history_lines(history: list) -> list[str]:
+    """Render every verdict per reviewer, in posting order (#905).
+
+    Each reviewer is a header line (`<reviewer> (<path>) — <n> verdict(s)`)
+    followed by its verdicts oldest first: a numbered line
+    (`[<i>] <verdict> — <timestamp>`, qualified `(current)` for the one
+    `--field review` shows and `(stale)` for one predating the latest commit),
+    then the comment body indented beneath it. Reviewers are separated by a
+    blank line. No verdicts yields the same clear message as `--field review`.
+    """
+    if not history:
+        return [NO_VERDICT_MESSAGE]
+    lines: list[str] = []
+    for i, entry in enumerate(history):
+        if i > 0:
+            lines.append("")
+        reviewer = entry.get("reviewer") or "<unknown>"
+        path = entry.get("path")
+        qualifier = f" ({path})" if path else ""
+        verdicts = entry.get("verdicts") or []
+        noun = "verdict" if len(verdicts) == 1 else "verdicts"
+        lines.append(f"{reviewer}{qualifier} — {len(verdicts)} {noun}")
+        for n, v in enumerate(verdicts, start=1):
+            flags = (CURRENT_MARKER if v.get("current") else "") + (
+                HISTORY_STALE_MARKER if v.get("stale") else ""
+            )
+            verdict = v.get("verdict") or "<unknown>"
+            timestamp = v.get("timestamp") or "<no timestamp>"
+            lines.append(f"  [{n}] {verdict} — {timestamp}{flags}")
+            body = str(v.get("body") or "").strip()
+            for body_line in body.splitlines():
+                lines.append(f"      {body_line}" if body_line else "")
+    return lines
+
+
 def _field_lines_for(s: dict) -> dict[str, list[str]]:
     """Project the summary into the addressable `--field` vocabulary.
 
@@ -351,6 +438,7 @@ def _field_lines_for(s: dict) -> dict[str, list[str]]:
         "closes": closes,
         "reviewers": list(s.get("reviewers") or []),
         "review": _review_lines(s.get("review") or []),
+        "review-history": _review_history_lines(s.get("review_history") or []),
         "doc-impact": _bool(s.get("has_doc_impact_section")),
         "body": _scalar(s.get("body")),
         "url": _scalar(s.get("url")),

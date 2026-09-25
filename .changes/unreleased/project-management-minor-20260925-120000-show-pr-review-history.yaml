@@ -1,0 +1,16 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+  pr: "907"
+body: >
+  `show-pr` gains a `review-history` field (#905): every reviewer verdict posted
+  on the PR, per reviewer, in posting order — including verdicts a later review
+  round superseded and ones marked stale. Each verdict carries its token,
+  timestamp, full body, and whether it is the reviewer's current verdict (the one
+  `--field review` shows). Available as `--field review-history` and as a new
+  `review_history` key in `--json`; existing fields and keys are unchanged. It is
+  built on the same shared verdict recogniser as `review` and the merge gate
+  (a new `all_verdicts` primitive that the latest-per-reviewer selection now
+  reduces), so what counts as a verdict is identical, and the gate's behaviour is
+  unchanged.

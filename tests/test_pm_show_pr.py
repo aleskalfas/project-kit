@@ -424,3 +424,91 @@ def test_review_read_surface_is_superset_of_gate_set(sp) -> None:
     assert set(by_name) == {"critic", "passer-by"}
     assert by_name["critic"]["stale"] is True
     assert by_name["passer-by"]["stale"] is False
+
+
+# --- review-history field (every verdict, posting order, #905) ----------
+
+
+def _three_round_pr(sp):
+    # docs-reviewer blocks twice, then approves; critic approves once. The
+    # array is shuffled so the test pins posting order, not gh's order.
+    return sp._summarise({
+        "title": "feat: x",
+        "body": "body",
+        "state": "MERGED",
+        "comments": [
+            _local_verdict_comment("docs-reviewer", "APPROVED",
+                                   ts="2026-06-06T00:00:00Z",
+                                   reasons="round three: all good"),
+            _local_verdict_comment("docs-reviewer", "CHANGES_REQUESTED",
+                                   ts="2026-06-02T00:00:00Z",
+                                   reasons="round one: README missing"),
+            _local_verdict_comment("critic", "APPROVED",
+                                   ts="2026-06-02T00:00:00Z"),
+            _local_verdict_comment("docs-reviewer", "CHANGES_REQUESTED",
+                                   ts="2026-06-04T00:00:00Z",
+                                   reasons="round two: help text stale"),
+        ],
+        "commits": [_commit("2026-06-05T00:00:00Z")],
+    })
+
+
+def test_review_history_field_in_valid_fields_list(sp) -> None:
+    assert "review-history" in sp.PR_FIELD_NAMES
+
+
+def test_review_history_json_key_added_without_changing_review(sp) -> None:
+    s = _three_round_pr(sp)
+    assert "review_history" in s
+    # `review` is still the latest-per-reviewer view, unchanged.
+    by_name = {e["reviewer"]: e["verdict"] for e in s["review"]}
+    assert by_name == {"critic": "APPROVED", "docs-reviewer": "APPROVED"}
+
+
+def test_review_history_shows_every_round_in_posting_order(sp) -> None:
+    history = {e["reviewer"]: e for e in _three_round_pr(sp)["review_history"]}
+    assert set(history) == {"critic", "docs-reviewer"}
+    docs = history["docs-reviewer"]
+    assert docs["path"] == "local"
+    rounds = [
+        (v["verdict"], v["timestamp"], v["current"], v["stale"])
+        for v in docs["verdicts"]
+    ]
+    assert rounds == [
+        ("CHANGES_REQUESTED", "2026-06-02T00:00:00Z", False, True),
+        ("CHANGES_REQUESTED", "2026-06-04T00:00:00Z", False, True),
+        ("APPROVED", "2026-06-06T00:00:00Z", True, False),
+    ]
+    assert "round one: README missing" in docs["verdicts"][0]["body"]
+    assert [v["current"] for v in history["critic"]["verdicts"]] == [True]
+
+
+def test_review_history_current_matches_review(sp) -> None:
+    s = _three_round_pr(sp)
+    current = {
+        (e["reviewer"], v["verdict"], v["body"])
+        for e in s["review_history"] for v in e["verdicts"] if v["current"]
+    }
+    latest = {(e["reviewer"], e["verdict"], e["body"]) for e in s["review"]}
+    assert current == latest
+
+
+def test_review_history_text_lists_all_rounds(sp) -> None:
+    lines = sp._field_lines_for(_three_round_pr(sp))["review-history"]
+    blob = "\n".join(lines)
+    assert "docs-reviewer (local) — 3 verdicts" in blob
+    assert "critic (local) — 1 verdict" in blob
+    assert "  [1] CHANGES_REQUESTED — 2026-06-02T00:00:00Z (stale)" in lines
+    assert "  [3] APPROVED — 2026-06-06T00:00:00Z (current)" in lines
+    for reasons in ("round one", "round two", "round three"):
+        assert reasons in blob
+    # Posting order in the rendered text too.
+    assert blob.index("round one") < blob.index("round two") < blob.index(
+        "round three"
+    )
+
+
+def test_review_history_absent_shows_clear_message(sp) -> None:
+    s = sp._summarise({"title": "x", "body": "y", "state": "MERGED"})
+    assert s["review_history"] == []
+    assert sp._field_lines_for(s)["review-history"] == [sp.NO_VERDICT_MESSAGE]

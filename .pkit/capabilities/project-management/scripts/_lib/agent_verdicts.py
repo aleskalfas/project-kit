@@ -25,7 +25,8 @@ one parser, not two):
     APPROVED.
   * `show-pr --field review` surfaces the latest verdict *token and body* per
     reviewer so an operator can read the reasons through the governed pm
-    surface (issue #544).
+    surface (issue #544); `show-pr --field review-history` surfaces the full
+    sequence behind that reduction (`all_verdicts`, issue #905).
 
 The gate needs only the token; the read surface needs the body too. So the
 shared record (`Verdict`) carries the token, the full comment body, the
@@ -133,7 +134,7 @@ def parse_verdict_line(first_line: str) -> tuple[str | None, str, str | None]:
     return None, "", None
 
 
-def latest_verdicts_per_reviewer(
+def all_verdicts(
     comments: list,
     *,
     remote_reviewer_ok: Callable[[str], bool] = lambda _login: True,
@@ -141,43 +142,26 @@ def latest_verdicts_per_reviewer(
     min_timestamp: str | None = None,
     require_marker: bool = False,
 ) -> list[Verdict]:
-    """Collapse a PR's comments to the latest verdict per reviewer (DEC-028).
+    """Every recognised DEC-028 verdict on a PR, in posting order.
 
-    This is the permissive *read-surface* primitive: `show-pr --field review`
-    calls it directly to show every posted verdict (latest per reviewer). Its
-    defaults are deliberately permissive — no freshness anchor, allow-all
-    membership — because a read surface shows whatever verdicts exist. Those
-    defaults are NOT safe for the merge gate: a caller that wants gate
-    semantics must go through `gate_verdicts` (below), whose freshness and
-    membership filters are required, non-defaulted arguments. Do not call this
-    primitive from a gate path — the permissive default would silently count
-    every verdict from anyone at any age (self-approval included).
+    The full sequence behind `latest_verdicts_per_reviewer`'s reduction: the
+    same recognition (`parse_verdict_line` on the comment's first line) and the
+    same injected filters (marker, freshness, reviewer predicates — see
+    `latest_verdicts_per_reviewer` for their semantics), but nothing is
+    collapsed — a verdict a later round superseded is still returned. This is
+    what `show-pr --field review-history` reads to show earlier review rounds
+    (issue #905).
 
-    Walks `comments` (the `gh pr view --json comments` array), recognises the
-    DEC-028 verdict shapes, and returns the latest verdict *per reviewer*,
-    selected by timestamp (DEC-028 step 5) — a later CHANGES_REQUESTED
-    correctly supersedes an earlier APPROVED and vice versa, regardless of
-    how `gh` ordered the array.
+    Its defaults are the same permissive read-surface defaults as
+    `latest_verdicts_per_reviewer`, and NOT safe for the merge gate; a gate
+    path goes through `gate_verdicts`.
 
-    The two consumers share this selection but scope it differently, so the
-    filters are injected rather than baked in:
-
-      * `remote_reviewer_ok` / `local_reviewer_ok` — predicates on the
-        reviewer identity. The gate (via `gate_verdicts`) passes
-        membership-in-the-required-set predicates (and its remote predicate
-        also excludes the PR author, per DEC-028 step 3); `show-pr` accepts
-        every reviewer (it shows whatever verdicts exist).
-      * `min_timestamp` — when set, only comments strictly after it are
-        considered (the gate's freshness anchor: the latest commit
-        timestamp). `show-pr` leaves it `None` — a stale verdict is still the
-        reviewer's current verdict to *display*; freshness is a gate concern,
-        not a read-surface one.
-
-    A reviewer is keyed by `(path, reviewer)` so a remote and a local verdict
-    from names that happen to collide never overwrite each other. The returned
-    list is ordered by reviewer identity for deterministic output.
+    Posting order is by `createdAt` (ISO-8601 UTC, string-comparable). The sort
+    is stable, so verdicts with an identical timestamp keep `gh`'s array order —
+    which is what lets `reduce_latest_per_reviewer` keep the first-seen verdict
+    on an exact tie, as the latest-per-reviewer selection always has.
     """
-    latest: dict[tuple[str, str], Verdict] = {}
+    verdicts: list[Verdict] = []
     for comment in comments:
         if not isinstance(comment, dict):
             continue
@@ -205,12 +189,8 @@ def latest_verdicts_per_reviewer(
             if not local_reviewer_ok(reviewer):
                 continue
 
-        key = (path, reviewer)
-        prior = latest.get(key)
-        # ISO-8601 (UTC `Z`) timestamps compare correctly as strings. Strict
-        # `>` keeps the first-seen verdict on an exact tie (deterministic).
-        if prior is None or timestamp > prior.timestamp:
-            latest[key] = Verdict(
+        verdicts.append(
+            Verdict(
                 reviewer=reviewer,
                 token=token,
                 path=path,
@@ -218,8 +198,86 @@ def latest_verdicts_per_reviewer(
                 timestamp=timestamp,
                 url=str(comment.get("url") or ""),
             )
+        )
 
+    return sorted(verdicts, key=lambda v: v.timestamp)
+
+
+def reduce_latest_per_reviewer(verdicts: list[Verdict]) -> list[Verdict]:
+    """Collapse a verdict sequence to the latest verdict per reviewer.
+
+    The "latest by timestamp" rule (DEC-028 step 5), stated once. A reviewer is
+    keyed by `(path, reviewer)` so a remote and a local verdict from names that
+    happen to collide never overwrite each other. Strict `>` keeps the
+    first-seen verdict on an exact tie (deterministic). Returns the input's own
+    `Verdict` objects (no copies), so a caller holding the full sequence can
+    tell by identity which entry is each reviewer's current verdict. Ordered by
+    reviewer identity for deterministic output.
+    """
+    latest: dict[tuple[str, str], Verdict] = {}
+    for verdict in verdicts:
+        key = (verdict.path, verdict.reviewer)
+        prior = latest.get(key)
+        # ISO-8601 (UTC `Z`) timestamps compare correctly as strings.
+        if prior is None or verdict.timestamp > prior.timestamp:
+            latest[key] = verdict
     return sorted(latest.values(), key=lambda v: (v.path, v.reviewer))
+
+
+def latest_verdicts_per_reviewer(
+    comments: list,
+    *,
+    remote_reviewer_ok: Callable[[str], bool] = lambda _login: True,
+    local_reviewer_ok: Callable[[str], bool] = lambda _name: True,
+    min_timestamp: str | None = None,
+    require_marker: bool = False,
+) -> list[Verdict]:
+    """Collapse a PR's comments to the latest verdict per reviewer (DEC-028).
+
+    This is the permissive *read-surface* primitive: `show-pr --field review`
+    calls it directly to show every posted verdict (latest per reviewer). Its
+    defaults are deliberately permissive — no freshness anchor, allow-all
+    membership — because a read surface shows whatever verdicts exist. Those
+    defaults are NOT safe for the merge gate: a caller that wants gate
+    semantics must go through `gate_verdicts` (below), whose freshness and
+    membership filters are required, non-defaulted arguments. Do not call this
+    primitive from a gate path — the permissive default would silently count
+    every verdict from anyone at any age (self-approval included).
+
+    Recognises the DEC-028 verdict shapes in `comments` (the
+    `gh pr view --json comments` array) via `all_verdicts`, then reduces them
+    with `reduce_latest_per_reviewer` to the latest verdict *per reviewer*,
+    selected by timestamp (DEC-028 step 5) — a later CHANGES_REQUESTED
+    correctly supersedes an earlier APPROVED and vice versa, regardless of
+    how `gh` ordered the array.
+
+    The two consumers share this selection but scope it differently, so the
+    filters are injected rather than baked in:
+
+      * `remote_reviewer_ok` / `local_reviewer_ok` — predicates on the
+        reviewer identity. The gate (via `gate_verdicts`) passes
+        membership-in-the-required-set predicates (and its remote predicate
+        also excludes the PR author, per DEC-028 step 3); `show-pr` accepts
+        every reviewer (it shows whatever verdicts exist).
+      * `min_timestamp` — when set, only comments strictly after it are
+        considered (the gate's freshness anchor: the latest commit
+        timestamp). `show-pr` leaves it `None` — a stale verdict is still the
+        reviewer's current verdict to *display*; freshness is a gate concern,
+        not a read-surface one.
+
+    A reviewer is keyed by `(path, reviewer)` so a remote and a local verdict
+    from names that happen to collide never overwrite each other. The returned
+    list is ordered by reviewer identity for deterministic output.
+    """
+    return reduce_latest_per_reviewer(
+        all_verdicts(
+            comments,
+            remote_reviewer_ok=remote_reviewer_ok,
+            local_reviewer_ok=local_reviewer_ok,
+            min_timestamp=min_timestamp,
+            require_marker=require_marker,
+        )
+    )
 
 
 def gate_verdicts(
