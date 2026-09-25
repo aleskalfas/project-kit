@@ -264,11 +264,22 @@ def test_committed_pkit_gitignore_ignores_pm_journal() -> None:
     )
 
 
-# --- visibility interaction of the rendered .pkit/.gitignore (ADR-009 Am.1 A2) -
+def test_committed_pkit_gitignore_matches_what_the_generator_renders() -> None:
+    # The tracked file is generated output; it must be byte-identical to what
+    # `pkit sync` would render from today's declarations. Catches a header or
+    # pattern change (or a new `runtime_ignore:` declaration) left un-rendered.
+    rendered = _REPO_ROOT / ".pkit" / ".gitignore"
+    assert rendered.read_text(encoding="utf-8") == vis.render_runtime_ignore_content(
+        _REPO_ROOT
+    ), "re-render .pkit/.gitignore (pkit sync) and commit it"
+
+
+# --- visibility interaction of the rendered .pkit/.gitignore (ADR-009 rule 7) ---
 #
 # T4 (EPIC #154): pin how the rendered `.pkit/.gitignore` (T2) interacts with the
-# share/hide visibility mechanism (v1). The invariants, per ADR-009 rule 7
-# A2 ("Why this honours v1's privacy rationale"):
+# share/hide visibility mechanism (v1). The invariants, per ADR-009's rationale
+# for rule 7 ("Why a committed `.pkit/.gitignore` honours that privacy
+# rationale"):
 #   - private routes the *entire* `.pkit/` tree into `info/exclude`, so the
 #     rendered `.pkit/.gitignore` is excluded along with it — inert, no committed
 #     trace;
