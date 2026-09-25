@@ -203,6 +203,20 @@ def test_remote_branch_delete_failure_is_a_warning(lib, monkeypatch, capsys) -> 
     assert "git push origin --delete fix/42-slug" in err
 
 
+def test_remote_branch_delete_with_gh_missing_is_a_warning(lib, monkeypatch, capsys) -> None:
+    """Best-effort in every failure mode (#920): `gh` absent from PATH warns
+    and returns normally rather than raising past the already-landed merge."""
+    def missing(*a, **k):
+        raise FileNotFoundError("gh")
+
+    monkeypatch.setattr(lib, "gh_run", missing)
+    assert lib.delete_remote_branch("fix/42-slug", {}, cross_repository=False) is None
+    err = capsys.readouterr().err
+    assert "[warn] could not delete remote branch fix/42-slug" in err
+    assert "`gh` not on PATH" in err
+    assert "git push origin --delete fix/42-slug" in err
+
+
 # --- cleanup_local ---------------------------------------------------------
 
 
