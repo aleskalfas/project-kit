@@ -2,7 +2,7 @@ component: project-management
 kind: patch
 custom:
   category: Fixed
-  pr: ""
+  pr: "937"
 body: >
   The `pm-reviewer` and `project-manager` agents now send code review to the
   installed code-review panel (when the software-engineering capability is
