@@ -1,0 +1,13 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+  pr: "937"
+body: >
+  The `pm-reviewer` and `project-manager` agents now send code review to the
+  installed code-review panel (when the software-engineering capability is
+  installed) or the project's own reviewers. Before, they sent it to
+  `software-engineer` / `qa-engineer`, which are producer agents that emit no
+  verdicts, and `qa-engineer` is not shipped at all. The panel is named as
+  optional, so project-management still does not depend on software-engineering
+  being installed (#900).
