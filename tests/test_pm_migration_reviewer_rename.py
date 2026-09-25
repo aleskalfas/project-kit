@@ -6,10 +6,14 @@ The config string `- name: reviewer` is byte-identical whether it registers the
 kit-shipped default or an adopter-authored agent that happens to share the name.
 Keying the rewrite on that string would corrupt a custom registration. The
 migration instead keys on the DEPLOYED agent's provenance — deploy-agents.sh
-stamps its copies with a `managed-by: project-kit` marker; an adopter file has
-none. These tests pin the disconfirming cases: a marker-carrying default is
-rewritten; a marker-less custom agent is left entirely alone; already-migrated
-and no-review-block states are clean no-ops.
+stamps its copies with a `managed-by: project-kit` marker in the header; an
+adopter file has none there — and an adopter `reviewer` source in the project
+agent namespace owns the name outright. These tests pin the disconfirming cases:
+a marker-carrying default is rewritten; a marker-less (or marker-below-header)
+custom agent is left entirely alone; already-migrated and no-review-block states
+are clean no-ops. They also pin every `local_registered` shape (rewritten, or
+reported for a manual edit, never silently skipped) and that each message the
+migration prints matches what it did (#912).
 
 They also pin the end state the rename exists to reach: the shipped canonical
 agent is `pm-reviewer.md` naming `pm-reviewer`, the project registers
@@ -59,6 +63,15 @@ CONFIG_INLINE_COMMENT = (
     "      - name: reviewer                 # matches `.claude/agents/reviewer.md` (default)\n"
 )
 CONFIG_QUOTED = CONFIG_DEFAULT.replace("- name: reviewer", '- name: "reviewer"')
+# An adopter's own agent that documents the deploy marker in its body. Only the
+# header (first 5 lines) is the adapter's provenance window; line 20 is not.
+ADOPTER_QUOTING_MARKER = (
+    "---\nname: reviewer\ndescription: my own reviewer\n---\n"
+    + "".join(f"line {i}\n" for i in range(5, 20))
+    + f"Kit-deployed agents carry `{MARKER}`; this one does not.\n"
+)
+assert ADOPTER_QUOTING_MARKER.splitlines()[19].startswith("Kit-deployed")
+
 CONFIG_FLOW = (
     "schema_version: 1\n"
     "review:\n"
@@ -85,8 +98,12 @@ def _install(
     root: Path,
     *,
     config: str | None = CONFIG_DEFAULT,
-    deployed: str | None = None,  # "kit-copy" | "adopter-copy" | "kit-symlink" | None
+    # deployed: "kit-copy" | "adopter-copy" | "adopter-quotes-marker" | "kit-symlink" | None
+    deployed: str | None = None,
     new_deployed: bool = False,  # also lay down .claude/agents/pm-reviewer.md
+    new_deployed_marker: bool = True,  # ...carrying the kit marker in its header
+    # project_agent: "flat" | "folder" | None — adopter source in .pkit/agents/project/
+    project_agent: str | None = None,
 ) -> Path:
     """Lay down an installed-adopter shape for the migration to act on."""
     cap = root / ".pkit" / "capabilities" / "project-management"
@@ -105,12 +122,27 @@ def _install(
         )
     elif deployed == "adopter-copy":
         deployed_reviewer.write_text("---\nname: reviewer\n---\nmy own agent\n", encoding="utf-8")
+    elif deployed == "adopter-quotes-marker":
+        deployed_reviewer.write_text(ADOPTER_QUOTING_MARKER, encoding="utf-8")
     elif deployed == "kit-symlink":
         deployed_reviewer.symlink_to(cap / "agents" / "reviewer.md")
 
     if new_deployed:
+        marker_line = f"{MARKER}\n" if new_deployed_marker else ""
         (claude_agents / "pm-reviewer.md").write_text(
-            f"---\n{MARKER}\nname: pm-reviewer\n---\nbody\n", encoding="utf-8"
+            f"---\n{marker_line}name: pm-reviewer\n---\nbody\n", encoding="utf-8"
+        )
+
+    project_agents = root / ".pkit" / "agents" / "project"
+    if project_agent == "flat":
+        project_agents.mkdir(parents=True)
+        (project_agents / "reviewer.md").write_text(
+            "---\nname: reviewer\n---\nmine\n", encoding="utf-8"
+        )
+    elif project_agent == "folder":
+        (project_agents / "reviewer").mkdir(parents=True)
+        (project_agents / "reviewer" / "reviewer.md").write_text(
+            "---\nname: reviewer\n---\nmine\n", encoding="utf-8"
         )
     return cap
 
@@ -279,3 +311,233 @@ def test_resolver_finds_pm_reviewer_after_deploy(agents_mod, tmp_path) -> None:
     (tmp_path / ".claude" / "agents" / "pm-reviewer.md").write_text("x", encoding="utf-8")
     assert agents_mod.agent_is_deployed(tmp_path, "pm-reviewer")
     assert not agents_mod.agent_is_deployed(tmp_path, "reviewer")
+
+
+# --- #912 defect 1: provenance uses the adapter's header window --------------
+
+
+def _config_text(cap: Path) -> str:
+    return (cap / "project" / "config.yaml").read_text(encoding="utf-8")
+
+
+def test_adopter_file_quoting_marker_below_header_is_untouched(tmp_path) -> None:
+    """deploy-agents.sh decides "ours" from the first 5 lines only. An adopter's
+    reviewer.md quoting the marker on line 20 is adopter content: neither the
+    file nor its config registration may be rewritten or removed."""
+    cap = _install(tmp_path, deployed="adopter-quotes-marker")
+    deployed = tmp_path / ".claude" / "agents" / "reviewer.md"
+    proc = _run(tmp_path)
+    assert proc.returncode == 0, proc.stderr
+    assert deployed.read_text(encoding="utf-8") == ADOPTER_QUOTING_MARKER
+    assert _config_text(cap) == CONFIG_DEFAULT
+    assert "no kit marker" in proc.stdout
+
+
+def test_pm_reviewer_without_marker_is_no_kit_signal(tmp_path) -> None:
+    """The post-sync signal is a KIT-deployed pm-reviewer.md: one without the
+    header marker is not proof the kit deployed it."""
+    cap = _install(tmp_path, deployed=None, new_deployed=True, new_deployed_marker=False)
+    proc = _run(tmp_path)
+    assert proc.returncode == 0, proc.stderr
+    assert _config_text(cap) == CONFIG_DEFAULT
+
+
+# --- #912 defect 2: every local_registered shape, scoped to that list ---------
+
+_HEAD = "schema_version: 1\nreview:\n  mode: agent\n  agents:\n"
+
+# (config before, config expected after) — the expected text pins that only the
+# token moves: quoting, comments, indentation and sibling entries survive.
+REWRITABLE_SHAPES = {
+    "dash-on-own-line": (
+        _HEAD + "    local_registered:\n      -\n        name: reviewer\n",
+        _HEAD + "    local_registered:\n      -\n        name: pm-reviewer\n",
+    ),
+    "name-not-first-key": (
+        _HEAD + "    local_registered:\n      - path: x\n        name: reviewer\n",
+        _HEAD + "    local_registered:\n      - path: x\n        name: pm-reviewer\n",
+    ),
+    "sequence-level-with-key": (
+        _HEAD + "    local_registered:\n    - name: reviewer\n",
+        _HEAD + "    local_registered:\n    - name: pm-reviewer\n",
+    ),
+    "flow-mapping-in-block-item": (
+        _HEAD + "    local_registered:\n      - {name: reviewer}\n",
+        _HEAD + "    local_registered:\n      - {name: pm-reviewer}\n",
+    ),
+    "multi-line-flow-sequence": (
+        _HEAD + "    local_registered: [\n      {name: code-reviewer},\n"
+        '      {"name": "reviewer"}\n    ]\n',
+        _HEAD + "    local_registered: [\n      {name: code-reviewer},\n"
+        '      {"name": "pm-reviewer"}\n    ]\n',
+    ),
+    "single-quoted-with-comment": (
+        _HEAD + "    local_registered:\n      - name: 'reviewer'   # the default\n",
+        _HEAD + "    local_registered:\n      - name: 'pm-reviewer'   # the default\n",
+    ),
+    "mixed-list": (
+        _HEAD + "    local_registered:\n      - name: pm-reviewer\n      - name: reviewer\n"
+        "      - name: code-reviewer\n",
+        _HEAD + "    local_registered:\n      - name: pm-reviewer\n      - name: pm-reviewer\n"
+        "      - name: code-reviewer\n",
+    ),
+    "crlf": (
+        (_HEAD + "    local_registered:\n      - name: reviewer\n").replace("\n", "\r\n"),
+        (_HEAD + "    local_registered:\n      - name: pm-reviewer\n").replace("\n", "\r\n"),
+    ),
+}
+
+
+@pytest.mark.parametrize("shape", sorted(REWRITABLE_SHAPES))
+def test_every_local_registered_shape_is_rewritten(tmp_path, shape) -> None:
+    before, after = REWRITABLE_SHAPES[shape]
+    cap = _install(tmp_path, config=before, deployed="kit-copy")
+    proc = _run(tmp_path)
+    assert proc.returncode == 0, proc.stderr
+    assert (cap / "project" / "config.yaml").read_bytes().decode("utf-8") == after
+    assert "[warn]" not in proc.stdout
+    # A re-run on the rewritten shape is a no-op.
+    proc = _run(tmp_path)
+    assert (cap / "project" / "config.yaml").read_bytes().decode("utf-8") == after
+    assert "nothing to reconcile" in proc.stdout
+
+
+def test_name_reviewer_outside_local_registered_is_never_touched(tmp_path) -> None:
+    """Only review.agents.local_registered is in scope: a `name: reviewer`
+    elsewhere, a commented-out entry, and a role named `reviewer` all survive."""
+    config = (
+        "schema_version: 1\n"
+        "extras:\n"
+        "  - name: reviewer\n"
+        "review:\n"
+        "  mode: agent\n"
+        "  human:\n"
+        "    reviewer_role: reviewer\n"
+        "  agents:\n"
+        "    local_registered:\n"
+        "      # - name: reviewer\n"
+        "      - name: reviewer\n"
+        "  other:\n"
+        "    - name: reviewer\n"
+    )
+    cap = _install(tmp_path, config=config, deployed="kit-copy")
+    proc = _run(tmp_path)
+    assert proc.returncode == 0, proc.stderr
+    expected = config.replace(
+        "      - name: reviewer\n  other:", "      - name: pm-reviewer\n  other:"
+    )
+    assert _config_text(cap) == expected
+
+
+MANUAL_SHAPES = {
+    "value-on-next-line": _HEAD + "    local_registered:\n      - name:\n          reviewer\n",
+    "anchored-value": _HEAD + "    local_registered:\n      - name: &default reviewer\n",
+    "tagged-value": _HEAD + "    local_registered:\n      - name: !!str reviewer\n",
+}
+
+
+@pytest.mark.parametrize("shape", sorted(MANUAL_SHAPES))
+def test_unrewritable_shape_is_reported_for_manual_edit(tmp_path, shape) -> None:
+    """A shape too exotic to rewrite safely is never left silently unmigrated:
+    the config is untouched and a warning names the file and line to edit."""
+    config = MANUAL_SHAPES[shape]
+    cap = _install(tmp_path, config=config, deployed="kit-copy")
+    proc = _run(tmp_path)
+    assert proc.returncode == 0, proc.stderr
+    assert _config_text(cap) == config
+    line = next(n for n, text in enumerate(config.splitlines(), 1) if "reviewer" in text)
+    assert f"line(s) {line}:" in proc.stdout
+    assert "Edit it by hand" in proc.stdout
+    assert "[ok]" not in proc.stdout
+    assert "[note]" not in proc.stdout
+
+
+def test_flow_style_parent_is_reported_not_edited(tmp_path) -> None:
+    """With local_registered inside a flow-style parent the list can't be
+    scoped, so the file is only inspected and the operator told what to edit."""
+    config = (
+        "schema_version: 1\nreview: {mode: agent, agents: {local_registered: [{name: reviewer}]}}\n"
+    )
+    cap = _install(tmp_path, config=config, deployed="kit-copy")
+    proc = _run(tmp_path)
+    assert proc.returncode == 0, proc.stderr
+    assert _config_text(cap) == config
+    assert "cannot scope" in proc.stdout
+    assert "line(s) 2" in proc.stdout
+    assert "manual config edit" in proc.stdout
+
+
+def test_unrewritable_shape_without_kit_signal_is_silent_skip(tmp_path) -> None:
+    """No kit signal ⇒ the registration is the adopter's; no manual-edit
+    warning is raised for it."""
+    config = MANUAL_SHAPES["value-on-next-line"]
+    cap = _install(tmp_path, config=config, deployed="adopter-copy")
+    proc = _run(tmp_path)
+    assert proc.returncode == 0, proc.stderr
+    assert _config_text(cap) == config
+    assert "[warn]" not in proc.stdout
+
+
+# --- #912 defect 3: messages reflect what happened ----------------------------
+
+
+_NOTE = "[note] any OPEN PR"
+_OK = "[ok] reviewer -> pm-reviewer rename reconciled"
+_NOOP = "[skip] reviewer -> pm-reviewer rename: nothing to reconcile"
+
+
+def test_messages_when_config_rewritten(tmp_path) -> None:
+    _install(tmp_path, deployed=None, new_deployed=True)
+    out = _run(tmp_path).stdout
+    assert "[rewrite]" in out and _NOTE in out and _OK in out
+    assert _NOOP not in out
+
+
+def test_messages_when_only_stale_file_removed(tmp_path) -> None:
+    """Config already migrated but a stale kit copy remains: removal is a real
+    action (so `[ok]`), but no config was rewritten (so no stale-verdict note)."""
+    _install(tmp_path, config=CONFIG_MIGRATED, deployed="kit-copy")
+    out = _run(tmp_path).stdout
+    assert "[remove]" in out and _OK in out
+    assert _NOTE not in out and "[rewrite]" not in out
+
+
+def test_messages_when_nothing_needed(tmp_path) -> None:
+    _install(tmp_path, config=CONFIG_MIGRATED, deployed=None, new_deployed=True)
+    out = _run(tmp_path).stdout
+    assert _NOOP in out
+    assert _OK not in out and _NOTE not in out
+
+
+def test_messages_when_adopter_content_skipped(tmp_path) -> None:
+    _install(tmp_path, deployed="adopter-copy")
+    out = _run(tmp_path).stdout
+    assert "left untouched" in out and _NOOP in out
+    assert _OK not in out and _NOTE not in out
+
+
+def test_messages_on_re_run_are_no_op(tmp_path) -> None:
+    _install(tmp_path, deployed="kit-copy")
+    first = _run(tmp_path).stdout
+    second = _run(tmp_path).stdout
+    assert _OK in first and _NOTE in first
+    assert _NOOP in second and _OK not in second and _NOTE not in second
+
+
+# --- #912 defect 4: an undeployed adopter-owned `reviewer` agent --------------
+
+
+@pytest.mark.parametrize("form", ["flat", "folder"])
+@pytest.mark.parametrize("deployed", [None, "kit-copy"])
+def test_project_namespace_reviewer_keeps_its_registration(tmp_path, form, deployed) -> None:
+    """An adopter's own `reviewer` agent source under .pkit/agents/project/
+    owns the registration — undeployed (pm-reviewer.md present, reviewer.md
+    absent) or deployed (project wins the name collision, so even a marker copy
+    is the adopter's). Config and files are left alone (DEC-028's amendment)."""
+    cap = _install(tmp_path, deployed=deployed, new_deployed=True, project_agent=form)
+    proc = _run(tmp_path)
+    assert proc.returncode == 0, proc.stderr
+    assert _config_text(cap) == CONFIG_DEFAULT
+    assert (tmp_path / ".claude" / "agents" / "reviewer.md").exists() == (deployed is not None)
+    assert "adopter-owned reviewer agent source" in proc.stdout
+    assert _NOOP in proc.stdout
