@@ -45,6 +45,7 @@ from ruamel.yaml.error import YAMLError
 # DEC-032 contribution collector itself (reused, not re-implemented).
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _lib import axis_carriage, axis_labels, bootstrap_gate  # noqa: E402
+from _lib.classification_rules import title_prefix_by_value  # noqa: E402
 from _lib.agents import agent_deploy_path, agent_is_deployed  # noqa: E402
 from _lib.gh import gh_project_run  # noqa: E402
 from _lib.review_contributions import collect_contributions  # noqa: E402
@@ -2014,9 +2015,9 @@ def _check_title_prefix_alignment(
     except (OSError, YAMLError):
         cls_data = {}
 
-    prefix_by_value = (
-        cls_data.get("axes", {}).get("type", {}).get("title_prefix_by_value", {})
-    )
+    # The guarded reader: a null or non-mapping value on the lookup path yields
+    # no kind prefixes rather than an exception (#917).
+    prefix_by_value = title_prefix_by_value(cls_data)
     for kind_prefix in prefix_by_value.values():
         if isinstance(kind_prefix, str) and kind_prefix:
             known_prefixes.add(kind_prefix)
