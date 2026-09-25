@@ -89,30 +89,30 @@ _CLASSIFICATION = {
 
 def test_branch_prefix_feature(sw) -> None:
     assert sw._derive_branch_prefix(
-        ["type:feature", "priority:Medium"], "[Task] add x", _CLASSIFICATION
+        ["type:feature", "priority:Medium"], "[Task] add x", _CLASSIFICATION, None
     ) == "feat"
 
 
 def test_branch_prefix_bug(sw) -> None:
-    assert sw._derive_branch_prefix(["type:bug"], "[Bug] fix x", _CLASSIFICATION) == "fix"
+    assert sw._derive_branch_prefix(["type:bug"], "[Bug] fix x", _CLASSIFICATION, None) == "fix"
 
 
 def test_branch_prefix_docs(sw) -> None:
     assert sw._derive_branch_prefix(
-        ["workstream:cli", "type:docs"], "[Docs] doc x", _CLASSIFICATION
+        ["workstream:cli", "type:docs"], "[Docs] doc x", _CLASSIFICATION, None
     ) == "docs"
 
 
 def test_branch_prefix_missing_returns_none(sw) -> None:
     # No type:* label AND no recognised [Prefix] title ⇒ underivable.
-    assert sw._derive_branch_prefix(["priority:High"], "no bracket prefix", _CLASSIFICATION) is None
-    assert sw._derive_branch_prefix([], "", _CLASSIFICATION) is None
+    assert sw._derive_branch_prefix(["priority:High"], "no bracket prefix", _CLASSIFICATION, None) is None
+    assert sw._derive_branch_prefix([], "", _CLASSIFICATION, None) is None
 
 
 def test_branch_prefix_picks_first_match(sw) -> None:
     """Defensive: if labels somehow have both type:bug and type:feature, take the first."""
     result = sw._derive_branch_prefix(
-        ["type:bug", "type:feature"], "[Bug] x", _CLASSIFICATION
+        ["type:bug", "type:feature"], "[Bug] x", _CLASSIFICATION, None
     )
     # Order-dependent — accept either as long as it's recognised
     assert result in ("fix", "feat")
@@ -124,14 +124,41 @@ def test_branch_prefix_picks_first_match(sw) -> None:
 def test_branch_prefix_brownfield_bug_title_no_label(sw) -> None:
     """A brownfield `[Bug]`-titled Task with NO type:* label resolves `fix` —
     the read routes through the title-prefix arm of the seam, not a raw label."""
-    assert sw._derive_branch_prefix([], "[Bug] hostname mismatch", _CLASSIFICATION) == "fix"
+    assert sw._derive_branch_prefix([], "[Bug] hostname mismatch", _CLASSIFICATION, None) == "fix"
 
 
 def test_branch_prefix_greenfield_label_still_wins(sw) -> None:
     """Greenfield stays byte-identical: `type:bug` label resolves `fix` even
     when the title carries a different (or no) bracket prefix."""
     assert sw._derive_branch_prefix(
-        ["type:bug"], "no bracket prefix at all", _CLASSIFICATION
+        ["type:bug"], "no bracket prefix at all", _CLASSIFICATION, None
+    ) == "fix"
+
+
+# ---- adopter label-remap arm (#910) ------------------------------------
+
+
+def _type_remap_map(module):
+    """A substrate map binding `type` to the adopter's own `kind/*` labels."""
+    return module.axis_labels.SubstrateMap(
+        axes={"type": {"label": {"remap": {"bug": "kind/bug", "docs": "kind/docs"}}}}
+    )
+
+
+def test_branch_prefix_reads_a_remapped_type_label(sw) -> None:
+    """The adopter's `kind/bug` label is their type substrate: it resolves `fix`
+    through the map, where the bare `type:` prefix scan found nothing (#910)."""
+    assert sw._derive_branch_prefix(
+        ["kind/bug"], "no bracket prefix", _CLASSIFICATION, _type_remap_map(sw)
+    ) == "fix"
+
+
+def test_branch_prefix_ignores_kit_type_label_under_a_remap(sw) -> None:
+    """Under a `type` label remap the kit's `type:*` labels are not the
+    substrate, so a leftover `type:docs` does not decide the prefix."""
+    assert sw._derive_branch_prefix(
+        ["type:docs", "kind/bug"], "no bracket prefix", _CLASSIFICATION,
+        _type_remap_map(sw),
     ) == "fix"
 
 
@@ -187,12 +214,12 @@ def test_every_shipped_type_value_resolves_a_branch_prefix(sw) -> None:
     for value, title_prefix in prefix_by_value.items():
         # Label arm: a greenfield type:<value> label resolves a prefix.
         via_label = sw._derive_branch_prefix(
-            [f"type:{value}"], f"[{title_prefix}] x", classification
+            [f"type:{value}"], f"[{title_prefix}] x", classification, None
         )
         assert via_label is not None, f"no branch prefix for label type:{value}"
         # Title arm: the same value resolves identically off the [Prefix] title
         # with no type:* label present (the brownfield path).
-        via_title = sw._derive_branch_prefix([], f"[{title_prefix}] x", classification)
+        via_title = sw._derive_branch_prefix([], f"[{title_prefix}] x", classification, None)
         assert via_title == via_label, (
             f"label vs title-prefix arm disagree for kind {value!r}: "
             f"{via_label!r} vs {via_title!r}"

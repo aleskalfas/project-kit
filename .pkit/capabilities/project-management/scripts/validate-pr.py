@@ -39,7 +39,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_labels, bootstrap_gate  # noqa: E402
+from _lib import axis_carriage, axis_labels, bootstrap_gate  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
@@ -129,7 +129,10 @@ def main() -> int:
     pr_body = str(pr.get("body") or "")
 
     closing_issues = _extract_closing_issues(pr_body)
-    closing_type_labels = _gather_closing_type_labels(closing_issues, config)
+    substrate_map = axis_labels.load_substrate_map(capability_root)
+    closing_type_labels = _gather_closing_type_labels(
+        closing_issues, config, substrate_map
+    )
 
     findings = _validate_pr(
         pr_title=pr_title,
@@ -161,16 +164,48 @@ def main() -> int:
     return 1 if blocking else 0
 
 
-def _gather_closing_type_labels(closing_issues: list[int], config: dict) -> list[str]:
+def _gather_closing_type_labels(
+    closing_issues: list[int],
+    config: dict,
+    substrate_map: axis_labels.SubstrateMap | None,
+) -> list[str]:
+    """The closing issues' type, as kit `type:<value>` labels, for the PR-title
+    cross-check in `pr_validation.validate_pr`.
+
+    Asks the one carriage accessor where `type` lives
+    ([project-management:DEC-051-axis-carriage-activation] decision point 4)
+    rather than scanning for the kit's `type:` prefix, which read a remapped
+    type as absent and silently skipped the cross-check (#910):
+
+    * `kit-label` (greenfield) — every kit `type:*` label on each issue, exactly
+      as before (the validator reports a multi-label mix as a warning).
+    * `adopter-label` — the adopter's remapped label, resolved back to the kit
+      value and expressed in the kit vocabulary the validator's
+      `pr_type_mapping` lookup reads.
+    * anything else (`title` / `derived` / `degrade`) — no label carries the
+      type, so nothing is gathered and the cross-check is skipped, as it always
+      was for an issue with no `type:*` label. `type` is never board-carried.
+    """
+    carried = axis_carriage.carriage("type", config, substrate_map)
     out: list[str] = []
     for n in closing_issues:
         issue = _gh_get_issue(n, config)
         if issue is None:
             continue
-        for lbl in issue.get("labels") or []:
-            name = lbl.get("name") if isinstance(lbl, dict) else str(lbl)
-            if isinstance(name, str) and axis_labels.is_axis_label(name, "type"):
-                out.append(name)
+        names = [
+            name
+            for name in (
+                lbl.get("name") if isinstance(lbl, dict) else str(lbl)
+                for lbl in issue.get("labels") or []
+            )
+            if isinstance(name, str)
+        ]
+        if carried == "kit-label":
+            out.extend(name for name in names if axis_labels.is_axis_label(name, "type"))
+        elif carried == "adopter-label":
+            kind = axis_labels.resolve_read("type", names, substrate_map)
+            if kind is not None:
+                out.append(axis_labels.label("type", kind))
     return out
 
 

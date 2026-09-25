@@ -60,24 +60,51 @@ _CLASSIFICATION = {
 
 
 def test_derive_branch_prefix_returns_expected(rw) -> None:
-    assert rw._derive_branch_prefix(["type:feature"], "[Task] x", _CLASSIFICATION) == "feat"
-    assert rw._derive_branch_prefix(["type:bug"], "[Bug] x", _CLASSIFICATION) == "fix"
-    assert rw._derive_branch_prefix(["type:docs"], "[Docs] x", _CLASSIFICATION) == "docs"
+    assert rw._derive_branch_prefix(["type:feature"], "[Task] x", _CLASSIFICATION, None) == "feat"
+    assert rw._derive_branch_prefix(["type:bug"], "[Bug] x", _CLASSIFICATION, None) == "fix"
+    assert rw._derive_branch_prefix(["type:docs"], "[Docs] x", _CLASSIFICATION, None) == "docs"
 
 
 def test_derive_branch_prefix_missing_returns_none(rw) -> None:
-    assert rw._derive_branch_prefix(["priority:High"], "no prefix", _CLASSIFICATION) is None
+    assert rw._derive_branch_prefix(["priority:High"], "no prefix", _CLASSIFICATION, None) is None
 
 
 def test_derive_branch_prefix_brownfield_bug_title_no_label(rw) -> None:
     """DEC-013 cross-check must resolve `fix` for a brownfield `[Bug]`-titled Task
     that carries NO type:* label — via the title-prefix arm of the seam."""
-    assert rw._derive_branch_prefix([], "[Bug] hostname mismatch", _CLASSIFICATION) == "fix"
+    assert rw._derive_branch_prefix([], "[Bug] hostname mismatch", _CLASSIFICATION, None) == "fix"
 
 
 def test_derive_branch_prefix_greenfield_label_still_wins(rw) -> None:
     """Greenfield stays byte-identical: the `type:bug` label resolves `fix`."""
-    assert rw._derive_branch_prefix(["type:bug"], "no bracket prefix", _CLASSIFICATION) == "fix"
+    assert rw._derive_branch_prefix(["type:bug"], "no bracket prefix", _CLASSIFICATION, None) == "fix"
+
+
+# ---- adopter label-remap arm (#910) ------------------------------------
+
+
+def _type_remap_map(module):
+    """A substrate map binding `type` to the adopter's own `kind/*` labels."""
+    return module.axis_labels.SubstrateMap(
+        axes={"type": {"label": {"remap": {"bug": "kind/bug", "docs": "kind/docs"}}}}
+    )
+
+
+def test_branch_prefix_reads_a_remapped_type_label(rw) -> None:
+    """The adopter's `kind/bug` label is their type substrate: it resolves `fix`
+    through the map, where the bare `type:` prefix scan found nothing (#910)."""
+    assert rw._derive_branch_prefix(
+        ["kind/bug"], "no bracket prefix", _CLASSIFICATION, _type_remap_map(rw)
+    ) == "fix"
+
+
+def test_branch_prefix_ignores_kit_type_label_under_a_remap(rw) -> None:
+    """Under a `type` label remap the kit's `type:*` labels are not the
+    substrate, so a leftover `type:docs` does not decide the prefix."""
+    assert rw._derive_branch_prefix(
+        ["type:docs", "kind/bug"], "no bracket prefix", _CLASSIFICATION,
+        _type_remap_map(rw),
+    ) == "fix"
 
 
 # ---- _derive_pr_title --------------------------------------------------

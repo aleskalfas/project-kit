@@ -9,8 +9,11 @@
 
 The pm-provided half of the report-context seam: resolve the **current
 workstream** from the current branch — `<type>/<N>-<slug>` → issue #N → its
-`workstream:*` label (via the ADR-026 axis-label read seam) — and print the
-**bare value** (e.g. `cli`) on stdout, or nothing when it cannot be derived.
+workstream value, read through the ADR-026 axis-label read seam (the kit's own
+`workstream:*` label in greenfield, the adopter's own label where the substrate
+map binds the axis to a label remap) — and print the **bare value** (e.g.
+`cli`, always the kit's methodology value) on stdout, or nothing when it cannot
+be derived.
 
 Invoked by the backbone's report compose **by subprocess through the
 capability-command dispatcher** (COR-021), which is exactly why this verb
@@ -18,9 +21,11 @@ exists: workstream is pm vocabulary, and the backbone never reads
 `workstreams.yaml` or issue labels itself (ADR-050's layering rule). The
 caller treats empty output as "omit workstream", so this script **exits 0 on
 every miss** and degrades to silence: branch not issue-shaped, capability root
-not found, `gh` unavailable/failing, issue unlabelled, or a board-substrate
-adopter with no `workstream:*` label. Diagnostics go to stderr only; stdout
-carries at most the one value.
+not found, `gh` unavailable/failing, issue unlabelled, a board-substrate
+adopter with no `workstream:*` label, or a substrate map that carries
+workstream on something other than a label (a `board:` / `title-prefix:`
+binding, or none) — none of those is readable from the issue's labels.
+Diagnostics go to stderr only; stdout carries at most the one value.
 
 One case is NOT a silent miss: an **un-bootstrapped project** is refused (exit
 2) by the prerequisite gate every non-exempt pm verb calls (#747). A workstream
@@ -113,7 +118,12 @@ def main() -> int:
         lbl.get("name", "") if isinstance(lbl, dict) else str(lbl)
         for lbl in (issue.get("labels") or [])
     ]
-    value = axis_labels.read("workstream", labels)
+    # Read THROUGH the substrate map (ADR-026 / DEC-051): a bare `workstream:`
+    # prefix scan returns nothing for an adopter whose map binds workstream to
+    # their own labels (#910). No map ⇒ the kit's own `workstream:*` read,
+    # byte-identical to before.
+    substrate_map = axis_labels.load_substrate_map(capability_root)
+    value = axis_labels.resolve_read("workstream", labels, substrate_map)
     if value:
         print(value)
     return 0

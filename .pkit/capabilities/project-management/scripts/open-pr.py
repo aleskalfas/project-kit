@@ -237,7 +237,10 @@ def main() -> int:
     ]
 
     # Determine the PR's Conventional Commits <type>.
-    conv_type = args.type or _conv_type_from_issue_labels(issue_labels, classification)
+    substrate_map = axis_labels.load_substrate_map(capability_root)
+    conv_type = args.type or _conv_type_from_issue_labels(
+        issue_labels, classification, substrate_map
+    )
     if conv_type is None:
         print(
             f"error: could not determine Conventional Commits <type> for "
@@ -377,14 +380,20 @@ def _extract_issue_number(branch: str) -> int | None:
     return int(m.group(1))
 
 
-def _conv_type_from_issue_labels(labels: list[str], classification: dict) -> str | None:
-    """Map the issue's type:* label to the PR's Conventional Commits <type>.
+def _conv_type_from_issue_labels(
+    labels: list[str],
+    classification: dict,
+    substrate_map: axis_labels.SubstrateMap | None,
+) -> str | None:
+    """Map the issue's type label to the PR's Conventional Commits <type>.
 
-    Reads the kit type value off the `type:*` label through the ADR-026 seam,
-    then maps it via classification.yaml's `pr_type_mapping` through the shared
+    Reads the kit type value off the issue's labels THROUGH the substrate map
+    (the ADR-026 seam): the kit's `type:*` label in greenfield, the adopter's
+    remapped label where the map binds `type` to a label remap (#910). Then maps
+    it via classification.yaml's `pr_type_mapping` through the shared
     `classification_rules` reader — the one place that table is parsed, shared
     with start-work / review-work's branch-prefix derivation (COR-007)."""
-    issue_label_value = axis_labels.read("type", labels)
+    issue_label_value = axis_labels.resolve_read("type", labels, substrate_map)
     if issue_label_value is None:
         return None
     return classification_rules.conv_type_for_kind(issue_label_value, classification)

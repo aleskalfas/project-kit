@@ -91,30 +91,48 @@ def test_extract_issue_number_returns_none_for_unconforming(op) -> None:
 
 
 def test_conv_type_from_feature_label(op, classification) -> None:
-    assert op._conv_type_from_issue_labels(["type:feature"], classification) == "feat"
+    assert op._conv_type_from_issue_labels(["type:feature"], classification, None) == "feat"
 
 
 def test_conv_type_from_bug_label(op, classification) -> None:
-    assert op._conv_type_from_issue_labels(["type:bug"], classification) == "fix"
+    assert op._conv_type_from_issue_labels(["type:bug"], classification, None) == "fix"
 
 
 def test_conv_type_from_maintenance_label_picks_chore(op, classification) -> None:
     assert (
-        op._conv_type_from_issue_labels(["type:maintenance"], classification)
+        op._conv_type_from_issue_labels(["type:maintenance"], classification, None)
         == "chore"
     )
 
 
 def test_conv_type_returns_none_when_no_type_label(op, classification) -> None:
-    assert op._conv_type_from_issue_labels(["priority:Medium"], classification) is None
+    assert op._conv_type_from_issue_labels(["priority:Medium"], classification, None) is None
 
 
 def test_conv_type_uses_first_type_label_when_multiple(op, classification) -> None:
     # Multiple type labels is a validation error elsewhere; we don't
     # enforce here, but be deterministic.
     assert (
-        op._conv_type_from_issue_labels(["type:bug", "type:feature"], classification)
+        op._conv_type_from_issue_labels(["type:bug", "type:feature"], classification, None)
         == "fix"
+    )
+
+
+def test_conv_type_from_a_remapped_type_label(op, classification) -> None:
+    """An adopter whose substrate map binds `type` to their own `kind/*` labels
+    gets the conv-type their label maps to, where the bare `type:` prefix scan
+    found nothing and the verb refused with "pass --type" (#910)."""
+    substrate_map = op.axis_labels.SubstrateMap(
+        axes={"type": {"label": {"remap": {"bug": "kind/bug"}}}}
+    )
+    assert (
+        op._conv_type_from_issue_labels(["kind/bug"], classification, substrate_map)
+        == "fix"
+    )
+    # A leftover kit label is not the substrate under the remap.
+    assert (
+        op._conv_type_from_issue_labels(["type:docs"], classification, substrate_map)
+        is None
     )
 
 

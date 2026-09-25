@@ -1,0 +1,15 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+  pr: ""
+body: >
+  Readers that scanned for the kit's own `<axis>:` label prefix now read through
+  the substrate map, so an adopter whose map binds an axis to their own labels
+  gets the value instead of silence. `context-workstream` reports a remapped
+  workstream; `start-work` and `review-work` derive the branch prefix, and
+  `open-pr` the PR type, from a remapped type label; and `validate-pr`'s
+  PR-title type cross-check now runs for a remapped type instead of being
+  skipped (it can now report a title/type mismatch it used to miss). Under a map
+  that rebinds an axis, a leftover kit `<axis>:*` label no longer decides the
+  value. Projects with no substrate map are unchanged (#910).

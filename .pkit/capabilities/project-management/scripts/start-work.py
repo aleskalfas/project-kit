@@ -132,7 +132,8 @@ def main() -> int:
         lbl.get("name", "") if isinstance(lbl, dict) else str(lbl)
         for lbl in (issue.get("labels") or [])
     ]
-    prefix = _derive_branch_prefix(labels, title, classification)
+    substrate_map = axis_labels.load_substrate_map(capability_root)
+    prefix = _derive_branch_prefix(labels, title, classification, substrate_map)
     if prefix is None:
         print(
             f"error: could not derive a branch prefix for issue #{args.issue_number}: "
@@ -228,7 +229,10 @@ def _resolve_base_branch(config: dict, body: str) -> str:
 
 
 def _derive_branch_prefix(
-    labels: list[str], title: str, classification: dict
+    labels: list[str],
+    title: str,
+    classification: dict,
+    substrate_map: axis_labels.SubstrateMap | None,
 ) -> str | None:
     """The conventional-commit branch prefix for an issue's type axis.
 
@@ -236,15 +240,17 @@ def _derive_branch_prefix(
     the conv-type via classification.yaml's `pr_type_mapping` (the same table
     open-pr's PR-title derivation reads — one source, per COR-007):
 
-    * greenfield / label substrate ⇒ the value off the `type:*` label
-      (`axis_labels.read("type", labels)`);
+    * label substrate ⇒ the value off the issue's labels, read THROUGH the map
+      (`axis_labels.resolve_read("type", labels, substrate_map)`): the kit's own
+      `type:*` label in greenfield, the adopter's remapped label where the map
+      binds `type` to a label remap (#910);
     * brownfield `title-prefix` substrate ⇒ the value off the `[Prefix]` title
       (`classification_rules.kind_from_title`), where no `type:*` label exists.
 
     The label arm is tried first so greenfield stays byte-identical; the title
     arm is the fallback that fixes the brownfield break. `None` when neither arm
     resolves a value the mapping recognises (caller reports the error)."""
-    kind = axis_labels.read("type", labels)
+    kind = axis_labels.resolve_read("type", labels, substrate_map)
     if kind is None:
         kind = classification_rules.kind_from_title(title, classification)
     if kind is None:
