@@ -1018,9 +1018,10 @@ def test_declared_default_stays_silent_where_explicit_would_shout(bf, axis_label
 # The asymmetry above, carried to the exit code. When NO `--set` value resolved,
 # the command already refused. When SOME did, the report was printed and the
 # exit was 0 — so a script or CI job driving the repair saw success while one of
-# the axes it named was silently not written. The honoured values still plan
-# (or, on `--apply`, write); the exit says the request was not met in full, and
-# stderr names the values that were not applied.
+# the axes it named was silently not written. The report still shows the
+# honoured values; `--apply` / `--emit-script` refuse the whole run before the
+# confirmation gate, so nothing is written. The exit is 2 either way, and stderr
+# names the values that were not applied.
 
 # `priority` resolves `High` but not `Bogus`; `type` resolves `task`.
 TWO_AXIS_MAP = """\
