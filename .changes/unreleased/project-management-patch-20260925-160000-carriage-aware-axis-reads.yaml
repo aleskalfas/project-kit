@@ -2,7 +2,7 @@ component: project-management
 kind: patch
 custom:
   category: Fixed
-  pr: ""
+  pr: "925"
 body: >
   Readers that scanned for the kit's own `<axis>:` label prefix now read through
   the substrate map, so an adopter whose map binds an axis to their own labels
