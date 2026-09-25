@@ -849,3 +849,123 @@ def test_render_provenance_comment_no_version(mi, monkeypatch) -> None:
     out = mi._render_provenance_comment(SimpleNamespace(github_login="a", email=None), None, "done")
     assert "a moved done (governed by pkit)" in out
     assert "pkit " not in out  # no dangling version stamp
+
+
+# ---- transition audit retry is idempotent (#901) --------------------
+#
+# A bypassed transition posts its audit comment BEFORE the label write, so the
+# justification survives a failed mutation (DEC-049). A retry of that failed
+# attempt must not post a second one (one audit comment per audited mutation),
+# while a different reason, or the same transition after the move has landed
+# and been journaled, still posts.
+
+import json as _json  # noqa: E402
+
+
+class _FakeIssueComments:
+    """A stand-in for `gh_run` that keeps the issue's comments in memory."""
+
+    def __init__(self) -> None:
+        self.bodies: list[str] = []
+        self.posts = 0
+
+    def __call__(self, cmd, config, check=False):
+        if cmd[:3] == ["gh", "issue", "view"]:
+            payload = {"comments": [{"body": b} for b in self.bodies]}
+            return SimpleNamespace(returncode=0, stdout=_json.dumps(payload), stderr="")
+        if cmd[:3] == ["gh", "issue", "comment"]:
+            self.bodies.append(cmd[cmd.index("--body") + 1])
+            self.posts += 1
+            return SimpleNamespace(returncode=0, stdout="", stderr="")
+        raise AssertionError(f"unexpected gh call: {cmd}")
+
+
+def _post(mi, from_state, to_state, reason, journal_length):
+    invoker = SimpleNamespace(github_login="alice", email="alice@x.io")
+    key = mi._transition_audit_key(from_state, to_state, reason, journal_length)
+    body = mi._render_audit_comment(_CAP_ROOT, invoker, reason) + "\n\n" + key
+    return mi._post_transition_audit_once(42, body, key, {})
+
+
+def test_retried_bypass_posts_no_second_audit_comment(mi, monkeypatch) -> None:
+    gh = _FakeIssueComments()
+    monkeypatch.setattr(mi, "gh_run", gh)
+    assert _post(mi, "todo", "backlog", "verbal PM approval", 3)
+    # The label write failed, so the journal did not grow; the retry reproduces
+    # the transition, the reason and the journal length exactly.
+    assert _post(mi, "todo", "backlog", "  verbal PM approval ", 3)
+    assert gh.posts == 1
+
+
+def test_bypass_with_a_different_reason_still_posts(mi, monkeypatch) -> None:
+    gh = _FakeIssueComments()
+    monkeypatch.setattr(mi, "gh_run", gh)
+    assert _post(mi, "todo", "backlog", "verbal PM approval", 3)
+    assert _post(mi, "todo", "backlog", "sprint planning decision", 3)
+    assert gh.posts == 2
+
+
+def test_same_bypass_after_the_move_landed_posts_again(mi, monkeypatch) -> None:
+    """A later, genuinely new mutation — the issue went back and is re-promoted
+    for the same reason — has a longer journal, so it gets its own comment."""
+    gh = _FakeIssueComments()
+    monkeypatch.setattr(mi, "gh_run", gh)
+    assert _post(mi, "todo", "backlog", "verbal PM approval", 3)
+    assert _post(mi, "todo", "backlog", "verbal PM approval", 5)
+    assert gh.posts == 2
+
+
+def test_unreadable_comments_post_rather_than_skip(mi, monkeypatch) -> None:
+    posted: list[list[str]] = []
+
+    def gh(cmd, config, check=False):
+        if cmd[:3] == ["gh", "issue", "view"]:
+            return SimpleNamespace(returncode=1, stdout="", stderr="boom")
+        posted.append(cmd)
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(mi, "gh_run", gh)
+    assert _post(mi, "todo", "backlog", "reason", 0)
+    assert len(posted) == 1
+
+
+def test_failed_post_is_reported_so_the_move_aborts(mi, monkeypatch) -> None:
+    def gh(cmd, config, check=False):
+        if cmd[:3] == ["gh", "issue", "view"]:
+            return SimpleNamespace(returncode=0, stdout='{"comments": []}', stderr="")
+        return SimpleNamespace(returncode=1, stdout="", stderr="denied")
+
+    monkeypatch.setattr(mi, "gh_run", gh)
+    assert _post(mi, "todo", "backlog", "reason", 0) is False
+
+
+def test_transition_audit_key_components(mi) -> None:
+    key = mi._transition_audit_key("todo", "backlog", "why", 2)
+    assert key.startswith(mi.TRANSITION_AUDIT_KEY_PREFIX) and key.endswith(" -->")
+    assert key == mi._transition_audit_key("todo", "backlog", " why ", 2)
+    assert key != mi._transition_audit_key("todo", "in-progress", "why", 2)
+    assert key != mi._transition_audit_key("backlog", "backlog", "why", 2)
+    assert key != mi._transition_audit_key("todo", "backlog", "why", 3)
+    assert key != mi._transition_audit_key("todo", "backlog", "why", None)
+    # A reason that tries to close the HTML comment cannot: it is hashed.
+    assert "-->" not in mi._transition_audit_key("todo", "backlog", "x --> y", 2)[:-4]
+
+
+def test_journal_length_and_position_read_one_status(mi) -> None:
+    status = {"position": {"state": "todo"}, "journal": [{}, {}]}
+    assert mi._position_from_status(status) == "todo"
+    assert mi._journal_length_from_status(status) == 2
+    assert mi._journal_length_from_status({"position": {"state": "todo"}}) is None
+    assert mi._journal_length_from_status(None) is None
+    assert mi._position_from_status(None) is None
+    assert mi._position_from_status({"position": {"indeterminate": True}}) is None
+
+
+def test_audit_comment_is_posted_before_the_label_write() -> None:
+    """The pre-mutation order DEC-049 requires: the audit post precedes the
+    label edit in `main`, so a failed edit leaves the justification behind."""
+    src = SCRIPT_PATH.read_text(encoding="utf-8")
+    main_src = src[src.index("def main("):src.index("def _bypass_reason_missing(")]
+    assert main_src.index("_post_transition_audit_once(") < main_src.index(
+        "_gh_apply_state_label(args.issue_number, plan, config)\n        if not ok"
+    )

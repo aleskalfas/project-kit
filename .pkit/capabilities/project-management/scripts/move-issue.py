@@ -59,6 +59,7 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import subprocess
@@ -107,6 +108,12 @@ _AUDIT_TEMPLATE_FALLBACK = _audit.AUDIT_TEMPLATE_FALLBACK
 _load_audit_template = _audit.load_audit_template
 _render_audit_comment = _audit.render_audit_comment
 _audit_projection = _audit.audit_projection
+
+# The idempotency key that closes a TRANSITION audit comment (#901). It is a key,
+# not a kind marker: the comment's kind is still the template's `<!-- pkit-audit -->`
+# on its first line, and this trailing line only lets a retry recognise the
+# comment it already posted. Built by `_transition_audit_key`.
+TRANSITION_AUDIT_KEY_PREFIX = "<!-- pkit-audit-key: move-issue:"
 
 
 def _pkit_version() -> str:
@@ -310,7 +317,8 @@ def main() -> int:
     # local inference only when the engine is unreachable (e.g. `pkit` not on
     # PATH), so a move is never blocked. The fallback is threaded the same map so
     # it agrees with the engine under a present derive binding.
-    current_state = _engine_position(args.issue_number)
+    engine_status = _engine_status(args.issue_number)
+    current_state = _position_from_status(engine_status)
     if current_state is None:
         current_state = _infer_current_state(
             state=state, milestone=milestone, labels=labels, substrate_map=substrate_map
@@ -500,9 +508,22 @@ def main() -> int:
         # move-issue is the sole writer of the TRANSITION audit comment (DEC-049): it renders the
         # one canonical comment from the schema template; wrappers pass the reason
         # through rather than posting their own (killing the #672 double-post).
+        #
+        # Posted BEFORE the mutation so the justification survives a failed
+        # label write (DEC-049's `audit` floor), and posted at most once per
+        # mutation: a retry of that failed attempt finds its own comment by the
+        # idempotency key and skips (#901).
         reason = (args.bypass_reason or "").strip()
-        audit_comment = _render_audit_comment(capability_root, invoker, reason)
-        if not _gh_comment(args.issue_number, audit_comment, config):
+        key = _transition_audit_key(
+            current_state, args.to, reason,
+            _journal_length_from_status(engine_status),
+        )
+        audit_comment = (
+            _render_audit_comment(capability_root, invoker, reason) + "\n\n" + key
+        )
+        if not _post_transition_audit_once(
+            args.issue_number, audit_comment, key, config
+        ):
             return 3
 
     # Execute.
@@ -721,6 +742,36 @@ def _severity_from_token(token: str) -> str:
     return m.group(1)
 
 
+def _transition_audit_key(
+    from_state: str, to_state: str, reason: str, journal_length: int | None
+) -> str:
+    """The idempotency key for one audited transition (#901).
+
+    A retry must reproduce it exactly, and a genuinely new audited mutation must
+    not. The components are what a retry repeats — the transition, the stripped
+    reason — plus the issue's engine-journal length, which stays put across a
+    failed attempt (the journal is written only after the label write succeeds)
+    and has grown by the time the issue could make the same transition again.
+    Without it, an issue moved back and re-promoted for the same reason would
+    lose its second audit comment, breaking DEC-049's one comment per audited
+    mutation from the other side. An unreachable engine contributes an empty
+    component: the key is then (transition, reason) alone, and differs from any
+    key minted while the engine was reachable, so a retry across that boundary
+    posts again — the safe direction for an audit trail.
+
+    Hashed rather than interpolated so the reason cannot close the HTML comment
+    early; the readable reason is in the comment's canonical line above it.
+    """
+    parts = (
+        from_state or "",
+        to_state,
+        reason.strip(),
+        "" if journal_length is None else str(journal_length),
+    )
+    digest = hashlib.sha256("\x00".join(parts).encode("utf-8")).hexdigest()[:16]
+    return f"{TRANSITION_AUDIT_KEY_PREFIX}{digest} -->"
+
+
 def _bypass_reason_missing(bypass: bool, bypass_reason: str | None) -> bool:
     """True when a `--bypass` override lacks the required non-empty reason.
 
@@ -801,13 +852,13 @@ def _walk_parent_chain(body: str) -> list[int]:
 PROCESS_ADDRESS = "project-management:issue-lifecycle"
 
 
-def _engine_position(issue_number: int) -> str | None:
-    """Read the issue's position from the engine (`pkit process status --json`).
+def _engine_status(issue_number: int) -> dict | None:
+    """The issue's engine status payload (`pkit process status --json`), or None
+    when the engine cannot be reached or answers with something unparseable.
 
-    Returns the resolved state id, or None when the engine cannot be reached or
-    returns no/indeterminate position — callers then fall back to the local
-    inference (which uses the same precedence), so a missing `pkit` on PATH
-    never blocks a move.
+    One read serves two consumers: `_position_from_status` (where the issue is)
+    and `_journal_length_from_status` (how many governed moves it has had, which
+    keys the transition audit's retry detection).
     """
     try:
         proc = subprocess.run(
@@ -832,11 +883,32 @@ def _engine_position(issue_number: int) -> str | None:
         payload = json.loads(proc.stdout)
     except (json.JSONDecodeError, ValueError):
         return None
-    position = payload.get("position") if isinstance(payload, dict) else None
+    return payload if isinstance(payload, dict) else None
+
+
+def _position_from_status(status: dict | None) -> str | None:
+    """The resolved state id from an engine status payload.
+
+    None when there is no payload or the position is missing/indeterminate —
+    callers then fall back to the local inference (which uses the same
+    precedence), so a missing `pkit` on PATH never blocks a move.
+    """
+    position = status.get("position") if isinstance(status, dict) else None
     if not isinstance(position, dict) or position.get("indeterminate"):
         return None
     state = position.get("state")
     return state if isinstance(state, str) else None
+
+
+def _journal_length_from_status(status: dict | None) -> int | None:
+    """How many entries the issue's engine journal holds, or None when unknown.
+
+    The journal gains an entry only after a move's label write succeeds, so the
+    count is unchanged across a failed attempt and its retry, and has grown by
+    the time the issue could make the same transition again.
+    """
+    journal = status.get("journal") if isinstance(status, dict) else None
+    return len(journal) if isinstance(journal, list) else None
 
 
 def _journal_move(
@@ -942,6 +1014,49 @@ def _gh_comment(issue_number: int, body: str, config: dict) -> bool:
         )
         return False
     return True
+
+
+def _gh_issue_comment_bodies(issue_number: int, config: dict) -> list[str]:
+    """The bodies of the issue's comments, or `[]` when they cannot be read.
+
+    An unreadable list is deliberately indistinguishable from an empty one: the
+    only consumer is the retry scan, and finding nothing makes it post — the safe
+    direction for an audit trail.
+    """
+    try:
+        proc = gh_run(
+            ["gh", "issue", "view", str(issue_number), "--json", "comments"],
+            config,
+            check=False,
+        )
+    except FileNotFoundError:
+        return []
+    if proc.returncode != 0:
+        return []
+    try:
+        data = json.loads(proc.stdout)
+    except (json.JSONDecodeError, ValueError):
+        return []
+    comments = data.get("comments") if isinstance(data, dict) else None
+    if not isinstance(comments, list):
+        return []
+    return [
+        str(c.get("body") or "") for c in comments if isinstance(c, dict)
+    ]
+
+
+def _post_transition_audit_once(
+    issue_number: int, body: str, key: str, config: dict
+) -> bool:
+    """Post the transition audit comment unless one with `key` is already there.
+
+    True when the comment is posted or already present; False only when a post
+    was needed and failed (the caller then aborts before mutating).
+    """
+    if any(key in existing for existing in _gh_issue_comment_bodies(issue_number, config)):
+        print("  transition audit comment already present; idempotent skip")
+        return True
+    return _gh_comment(issue_number, body, config)
 
 
 def _cascade_forward_target(child_target: str) -> str:
