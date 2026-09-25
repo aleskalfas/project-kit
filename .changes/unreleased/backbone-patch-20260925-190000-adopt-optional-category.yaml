@@ -1,0 +1,10 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+  pr: ""
+body: >
+  `pkit agents adopt` no longer refuses an agent whose only unmet category is
+  an optional read with no conventional default (such as
+  `project-conventions`): it leaves the category undefined, names it as
+  optional, and deploys the agent (#916).

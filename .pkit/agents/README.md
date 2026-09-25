@@ -227,7 +227,7 @@ Four rules apply to a write-carrying category:
   - **Undefined in a hard channel** (`owns` / `needs` / `answers` / `reads.paths` / `reads.records`) — the agent is **skipped at deploy time** (loud, non-fatal — the rest still deploy).
   - **Undefined and referenced *only* through `reads.patterns`** — this is an **optional read**: the item is simply dropped from the resolved list and the agent **deploys anyway** (as a generalist, working without that corpus). A category referenced both optionally and hard is treated as hard — the hard reference wins.
 
-  A *bare* key (`category:` with no value) counts as undefined; an explicit empty list (`category: []`) does not — it resolves to zero entries.
+  A *bare* key (`category:` with no value) counts as undefined; an explicit empty list (`category: []`) does not — it resolves to zero entries. A bare *optional* key still deploys the agent, but the deploy reports it as a warning — it is usually a stub uncommented and never filled.
 - A write-carrying category whose entry resolves into sync-managed content is **refused at deploy time**, naming the offending path; that agent is skipped and the rest still deploy.
 - Override entries for non-existent default categories produce a warning (likely typo / dead config).
 - Override entries for non-existent agents produce a warning.
@@ -240,7 +240,7 @@ Four rules apply to a write-carrying category:
   2. Writes the category into the overlay *uncommented* with the conventional path — never clobbering an adopter-set value.
   3. Runs the adapter's deploy step so the agent lands in `.claude/agents/` immediately.
 
-  Idempotent: re-running on an already-adopted agent makes no changes and re-deploys. Errors clearly when the agent is unknown, references no overlay categories, or still needs a category with no registered conventional default (use `reconcile` for those). For a **write-carrying** category the refusal is structural and says so: core cannot enumerate your paths, so there is nothing for `adopt` to create.
+  Idempotent: re-running on an already-adopted agent makes no changes and re-deploys. Errors clearly when the agent is unknown, references no overlay categories, or still needs a category with no registered conventional default (use `reconcile` for those). An *optional* category with no conventional default is not a prerequisite: `adopt` leaves it undefined, names it as optional, and deploys the agent. For a **write-carrying** category the refusal is structural and says so: core cannot enumerate your paths, so there is nothing for `adopt` to create.
 - `pkit agents reconcile [--write]` surfaces every referenced-but-undefined category into `overlay.yaml`. The command uses **detect-then-fill** logic — six states per missing category:
   1. **Missing + write-carrying**: the category is written *uncommented* as `<category>: []` — the explicit empty list. The agent then deploys **inert** (owning nothing) rather than being skipped, which is what a fresh install gets from the seed. You nominate real paths when ready.
   2. **Missing + conventional default directory exists**: the category is written *uncommented* with the conventional path, ready for `pkit sync` to deploy the agent immediately with no manual step. Example: `architecture-docs` is auto-filled with `docs/architecture/` when that directory is present; `adr-records` with `docs/architecture/decisions/`.

@@ -193,6 +193,9 @@ def agents_adopt(agent_name: str) -> None:
     2. Writes the category into the overlay uncommented with the conventional path.
        An adopter-set value is never overwritten.
 
+    An optional category (read only through `reads.patterns`) with no conventional
+    default is left undefined and reported; the agent deploys without it.
+
     Then runs the adapter's deploy step so the agent ends up in `.claude/agents/`.
 
     Idempotent: re-running on an already-adopted agent reports no changes and
@@ -225,9 +228,19 @@ def agents_adopt(agent_name: str) -> None:
             f"{len(result.categories_already_set)} categor(ies) already defined (unchanged):"))
         for cat in result.categories_already_set:
             lines.append(f"  {cat}")
+    if result.categories_optional_unset:
+        lines.append(cli_render.style("strong",
+            f"{len(result.categories_optional_unset)} optional categor(ies) left undefined "
+            f"(the agent deploys without them):"))
+        for cat in result.categories_optional_unset:
+            lines.append(f"  {cat}")
+        lines.append("  to give the agent your corpus: `pkit agents reconcile --write`, "
+                     "set real paths in overlay.yaml, then `pkit sync`.")
     if not result.dirs_created and not result.categories_wired:
         lines.append(cli_render.style("strong",
-            f"agent {agent_name!r}: overlay already complete — no changes."))
+            f"agent {agent_name!r}: no overlay changes needed."
+            if result.categories_optional_unset
+            else f"agent {agent_name!r}: overlay already complete — no changes."))
     if result.deployed:
         lines.append("")
         lines.append(cli_render.style("strong", f"agent {agent_name!r} deployed."))

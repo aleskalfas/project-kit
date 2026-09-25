@@ -678,6 +678,33 @@ def test_optional_drop_parity_with_adapter_resolver(tmp_path):
     assert (fm.get("reads") or {}).get("patterns", []) == []
 
 
+def test_optional_bare_key_deploys_but_is_reported(tmp_path):
+    """A bare optional key (`cat:` with no value) deploys the agent — an optional
+    read never blocks (ADR-052) — but the resolver reports it on stderr as a
+    `warning:` line instead of dropping it silently (#916)."""
+    proj = _project(tmp_path, overlay="project-conventions:\n")
+    overlay = proj / ".pkit" / "agents" / "project" / "overlay.yaml"
+    src = _agent(proj / ".pkit" / "agents" / "core", "producer",
+                 reads_patterns=["<project-conventions>"])
+
+    code, fm, stderr = _resolve_via_adapter(src, "producer", overlay)
+    assert code == 0, stderr
+    assert (fm.get("reads") or {}).get("patterns", []) == []
+    assert "warning: " in stderr and "<project-conventions>" in stderr
+
+
+def test_optional_absent_key_is_not_reported(tmp_path):
+    """An absent optional key is the normal early state: dropped with no warning."""
+    proj = _project(tmp_path, overlay="")
+    overlay = proj / ".pkit" / "agents" / "project" / "overlay.yaml"
+    src = _agent(proj / ".pkit" / "agents" / "core", "producer",
+                 reads_patterns=["<project-conventions>"])
+
+    code, _fm, stderr = _resolve_via_adapter(src, "producer", overlay)
+    assert code == 0, stderr
+    assert "warning: " not in stderr
+
+
 # --- adopt (issue #47) -------------------------------------------------------
 
 def _deploy_ok(target_root: Path, agent_name: str) -> bool:  # noqa: ARG001
@@ -713,6 +740,51 @@ def test_adopt_deploys_when_write_carrying_category_already_set(tmp_path):
     assert result.categories_wired == ()
     assert result.categories_already_set == (_WRITE_CARRYING,)
     assert result.deployed is True
+
+
+def test_adopt_deploys_agent_whose_optional_category_is_undefined(tmp_path):
+    """An optional read with no conventional default is not a prerequisite
+    (ADR-052): adopt deploys the agent, leaves the overlay alone, and reports the
+    category as optional-unset instead of refusing (#916)."""
+    overlay_text = "workflow-docs:\n  - README.md\n"
+    proj = _project(tmp_path, overlay=overlay_text)
+    _agent(proj / ".pkit" / "agents" / "core", "producer",
+           reads_patterns=["<project-conventions>"])
+    overlay = proj / ".pkit" / "agents" / "project" / "overlay.yaml"
+
+    result = ao.adopt_agent(proj, "producer", deploy_fn=_deploy_ok)
+    assert result.deployed is True
+    assert result.categories_optional_unset == ("project-conventions",)
+    assert result.categories_wired == ()
+    assert overlay.read_text() == overlay_text
+
+
+def test_adopt_wires_hard_category_and_sets_optional_aside(tmp_path):
+    """Mixed agent: the hard category is wired to its conventional default, the
+    optional one is set aside — neither blocks the other."""
+    proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
+    _agent(proj / ".pkit" / "agents" / "core", "mixed",
+           owns=["<architecture-docs>"], reads_patterns=["<project-conventions>"])
+
+    result = ao.adopt_agent(proj, "mixed", deploy_fn=_deploy_ok)
+    assert result.categories_wired == ("architecture-docs",)
+    assert result.categories_optional_unset == ("project-conventions",)
+    assert result.deployed is True
+
+
+def test_adopt_cli_reports_optional_category_left_undefined(tmp_path, monkeypatch):
+    """CLI: the optional category is named as optional, not as a blocker."""
+    proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
+    _agent(proj / ".pkit" / "agents" / "core", "producer",
+           reads_patterns=["<project-conventions>"])
+    monkeypatch.chdir(proj)
+    monkeypatch.setattr(ao, "_deploy_agent", lambda *a, **k: True)
+
+    result = CliRunner().invoke(main, ["agents", "adopt", "producer"])
+    assert result.exit_code == 0, result.output
+    assert "optional" in result.output and "project-conventions" in result.output
+    assert "overlay already complete" not in result.output
+    assert "deployed" in result.output
 
 
 def test_adopt_fresh_creates_dirs_and_wires_overlay(tmp_path):

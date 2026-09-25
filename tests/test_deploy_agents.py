@@ -385,6 +385,23 @@ def test_deploy_missing_ownership_module_fails_loudly(mock_kit: Path) -> None:
     assert not (mock_kit / ".claude" / "agents" / "process-author.md").exists()
 
 
+def test_deploy_reports_bare_optional_key_and_still_deploys(mock_kit: Path) -> None:
+    """A bare optional key deploys the agent (ADR-052) and the run says so (#916)."""
+    _write_agent(
+        mock_kit, "core", "producer",
+        "---\nname: producer\ndescription: Test.\n"
+        "reads:\n  patterns:\n    - <project-conventions>\n---\n\n# Producer\n",
+    )
+    _overlay(mock_kit, "project-conventions:\n")
+
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    assert "warning" in result.stdout and "producer" in result.stdout
+    assert "<project-conventions>" in result.stdout
+    assert "skipped" not in result.stdout
+    assert (mock_kit / ".claude" / "agents" / "producer.md").is_file()
+
+
 def test_deploy_idempotent_reports_exists(mock_kit: Path) -> None:
     """Re-running deploy on already-deployed content reports 'exists', not 'updated'."""
     _write_agent(

@@ -19,7 +19,8 @@ not define *through a hard channel* (any list key or `reads.paths` /
 content (the no-shared-files invariant at the agent surface, per ADR-051).
 A category referenced *only* through `reads.patterns` is an **optional
 read** (ADR-052): undefined, its item is dropped and the resolver still
-exits 0 so the agent deploys as a generalist.
+exits 0 so the agent deploys as a generalist. A *bare* optional key (present,
+no value) is dropped the same way but reported on stderr as a `warning:` line.
 
 This script *applies* that last check but does not *define* it. The
 sync-managed predicate and the write-carrying category registry live
@@ -62,6 +63,11 @@ TARGET_ROOT = Path(__file__).resolve().parents[3]
 RESOLVABLE_LIST_KEYS = ("owns", "needs", "answers")
 HARD_READS_KEYS = ("paths", "records")
 OPTIONAL_READS_KEYS = ("patterns",)
+
+# Prefix of a stderr line that reports a problem without failing the resolve.
+# `deploy-agents.sh` prints these lines for an agent that still deploys; any
+# other stderr from a successful run (e.g. from `uv`) stays hidden.
+WARNING_PREFIX = "warning: "
 
 
 def load_ownership():
@@ -112,6 +118,14 @@ def main(argv: list[str]) -> int:
         if category in defaults:
             return defaults[category]
         return None
+
+    def is_bare(category: str) -> bool:
+        """The key is present but carries no value (``cat:`` alone).
+
+        ``resolve`` returns None for both a bare and an absent key; only a bare
+        one is a half-finished edit by the adopter, worth telling them about.
+        """
+        return (category in agent_overrides or category in defaults) and resolve(category) is None
 
     content = Path(source_file).read_text(encoding="utf-8")
     match = re.match(r"^---\n(.*?\n)---\n(.*)$", content, re.DOTALL)
@@ -166,6 +180,11 @@ def main(argv: list[str]) -> int:
                 sys.exit(1)
         return ownership_cache[0]
 
+    def warn(message: str):
+        # The `warning:` prefix is the contract with `deploy-agents.sh`, which
+        # surfaces only prefixed stderr lines from a resolver run that succeeded.
+        print(f"{WARNING_PREFIX}{message}", file=sys.stderr)
+
     def fail(reason_lines: list[str]):
         print("\n".join([f"{agent_name}: {reason_lines[0]}", *reason_lines[1:]]), file=sys.stderr)
         sys.exit(1)
@@ -183,6 +202,16 @@ def main(argv: list[str]) -> int:
                     # and let the agent deploy — the empty-is-normal read channel
                     # (ADR-052 Decision 3). Any hard reference still fails loudly.
                     if optional and cat not in hard_cats:
+                        # A *bare* optional key still deploys (an optional read
+                        # never blocks), but it is reported: the adopter started
+                        # to configure the category and left it empty, so dropping
+                        # it silently would hide the half-finished edit.
+                        if is_bare(cat):
+                            warn(
+                                f"optional category <{cat}> is set with no value in "
+                                f"{overlay_file} — deployed without it. Set its paths, "
+                                f"or comment the key out."
+                            )
                         continue
                     # Undefined (absent key) or bare (`cat:` with no value) —
                     # both unresolvable, both skip the agent. The remediation

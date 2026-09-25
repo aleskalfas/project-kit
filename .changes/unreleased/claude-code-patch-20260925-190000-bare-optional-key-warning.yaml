@@ -1,0 +1,9 @@
+component: claude-code
+kind: patch
+custom:
+  category: Fixed
+  pr: ""
+body: >
+  An optional overlay category set with no value (a bare `project-conventions:`
+  key) is now reported as a warning when agents deploy, instead of being
+  dropped silently; the agent still deploys without it (#916).
