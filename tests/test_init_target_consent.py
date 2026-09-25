@@ -516,6 +516,27 @@ def test_init_yes_in_subfolder_refuses_off_cwd_install(
     assert spy_install == []
 
 
+def test_init_yes_refusal_remedy_works_for_a_path_with_spaces(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spy_install, set_tty
+) -> None:
+    """The --yes refusal's suggested `--root` command is shell-quoted, so it
+    still installs when the target path contains a space (#913)."""
+    root = tmp_path / "my project"
+    root.mkdir()
+    _git_init(root)
+    sub = root / "sub"
+    sub.mkdir()
+    monkeypatch.chdir(sub)
+    set_tty(False)
+    refused = CliRunner().invoke(main, ["init", "--yes"])
+    assert refused.exit_code != 0
+    remedies = _named_init_remedies(refused.output)
+    assert remedies == [["--root", str(root.resolve())]]
+    accepted = CliRunner().invoke(main, ["init", *remedies[0]])
+    assert accepted.exit_code == 0, accepted.output
+    assert spy_install == [(root.resolve(), False)]
+
+
 def test_init_root_installs_at_explicit_target_non_interactively(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spy_install, set_tty
 ) -> None:

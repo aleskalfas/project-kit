@@ -850,7 +850,7 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
             f"       project-kit will not install a shadowed .pkit/ inside a repository "
             f"it cannot confirm.\n"
             f"       Fix the ownership (e.g. `git config --global --add safe.directory "
-            f"{target}`) and\n"
+            f"{shlex.quote(str(target))}`) and\n"
             f"       re-run, or install there anyway with `pkit init --root "
             f"{shlex.quote(str(target))}`."
         )
@@ -957,7 +957,7 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
                 f"directory.\n"
                 f"       This guards against a non-interactive run installing somewhere "
                 f"you are not standing.\n"
-                f"       Re-run with `pkit init --root {target}` to install there "
+                f"       Re-run with `pkit init --root {shlex.quote(str(target))}` to install there "
                 f"explicitly, or cd into it first."
             )
         # Only a git subfolder reaches here (every other off-cwd reason is refused
