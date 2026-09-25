@@ -283,3 +283,74 @@ def test_read_surface_shows_unmarked_verdict(av) -> None:
         [_local("reviewer", "APPROVED", marked=False)]
     )
     assert [(v.reviewer, v.token) for v in got] == [("reviewer", av.APPROVED)]
+
+
+# --- all_verdicts: the full sequence behind the reduction (#905) --------
+
+
+def test_all_verdicts_keeps_every_round_in_posting_order(av) -> None:
+    # Array order is deliberately not posting order: all_verdicts sorts by
+    # timestamp, so superseded rounds come back oldest first.
+    comments = [
+        _local("docs-reviewer", "APPROVED", ts="2026-06-04T00:00:00Z"),
+        _local("docs-reviewer", "CHANGES_REQUESTED", ts="2026-06-02T00:00:00Z"),
+        _local("docs-reviewer", "CHANGES_REQUESTED", ts="2026-06-03T00:00:00Z"),
+    ]
+    got = av.all_verdicts(comments)
+    assert [(v.token, v.timestamp) for v in got] == [
+        (av.CHANGES_REQUESTED, "2026-06-02T00:00:00Z"),
+        (av.CHANGES_REQUESTED, "2026-06-03T00:00:00Z"),
+        (av.APPROVED, "2026-06-04T00:00:00Z"),
+    ]
+
+
+def test_all_verdicts_applies_the_same_filters(av) -> None:
+    # Marker, freshness and reviewer predicates drop exactly what they drop
+    # from the latest-per-reviewer selection.
+    comments = [
+        _local("a", "APPROVED", ts="2026-06-01T00:00:00Z"),
+        _local("a", "APPROVED", ts="2026-06-03T00:00:00Z", marked=False),
+        _local("b", "APPROVED", ts="2026-06-03T00:00:00Z"),
+        _local("c", "APPROVED", ts="2026-06-04T00:00:00Z"),
+        {"author": {"login": "x"}, "body": "not a verdict",
+         "createdAt": "2026-06-05T00:00:00Z"},
+    ]
+    got = av.all_verdicts(
+        comments,
+        min_timestamp="2026-06-02T00:00:00Z",
+        local_reviewer_ok=lambda n: n != "c",
+        require_marker=True,
+    )
+    assert [v.reviewer for v in got] == ["b"]
+
+
+def test_latest_is_the_reduction_of_all_verdicts(av) -> None:
+    comments = [
+        _local("critic", "CHANGES_REQUESTED", ts="2026-06-02T00:00:00Z"),
+        _local("critic", "APPROVED", ts="2026-06-03T00:00:00Z"),
+        _remote("CHANGES_REQUESTED", author="bot", ts="2026-06-01T00:00:00Z"),
+        _local("bot", "APPROVED", ts="2026-06-01T00:00:00Z"),
+    ]
+    assert av.latest_verdicts_per_reviewer(comments) == (
+        av.reduce_latest_per_reviewer(av.all_verdicts(comments))
+    )
+
+
+def test_reduction_keeps_first_seen_on_exact_tie(av) -> None:
+    # The stable sort in all_verdicts preserves array order on a tie, so the
+    # reduction keeps the first-seen verdict — unchanged from before #905.
+    comments = [
+        _local("critic", "CHANGES_REQUESTED", reasons="first"),
+        _local("critic", "APPROVED", reasons="second"),
+    ]
+    got = av.latest_verdicts_per_reviewer(comments)
+    assert [v.token for v in got] == [av.CHANGES_REQUESTED]
+
+
+def test_reduction_returns_the_input_objects(av) -> None:
+    history = av.all_verdicts([
+        _local("critic", "CHANGES_REQUESTED", ts="2026-06-02T00:00:00Z"),
+        _local("critic", "APPROVED", ts="2026-06-03T00:00:00Z"),
+    ])
+    (latest,) = av.reduce_latest_per_reviewer(history)
+    assert latest is history[-1]
