@@ -197,7 +197,16 @@ def _git_verdict(candidate: Path) -> _GitVerdict:
             capture_output=True,
             text=True,
             check=False,
-            env={**os.environ, "LC_ALL": "C"},
+            # GIT_CEILING_DIRECTORIES stops git's upward search at the
+            # candidate: a `.git` git cannot open must not be answered by an
+            # enclosing repository (healthy → a false ACCEPTED; dubious → an
+            # ownership remedy naming the wrong path). A valid candidate is
+            # always found at the candidate itself, so ACCEPTED is unaffected.
+            env={
+                **os.environ,
+                "LC_ALL": "C",
+                "GIT_CEILING_DIRECTORIES": str(candidate.parent),
+            },
         )
     except FileNotFoundError:
         return _GitVerdict.ABSENT

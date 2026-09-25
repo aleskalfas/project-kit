@@ -10,6 +10,7 @@ the rest of new).
 from __future__ import annotations
 
 import os
+import shlex
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -788,13 +789,13 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
                 f"(dubious ownership / safe.directory).\n"
                 f"       Proceeding because --root is explicit. If you trust its owner, "
                 f"let git use it with:\n"
-                f"       git config --global --add safe.directory '{target}'"
+                f"       git config --global --add safe.directory {shlex.quote(str(target))}"
             )
         elif root_reason == InitTargetReason.BROKEN_GIT:
             click.echo(
                 f"⚠ WARNING: {target} has a .git that git cannot open (a broken or "
                 f"partial repository).\n"
-                f"       Proceeding because --root is explicit. Run `git -C '{target}' "
+                f"       Proceeding because --root is explicit. Run `git -C {shlex.quote(str(target))} "
                 f"status` to see why."
             )
         click.echo(f"pkit init -> {target}  (explicit target, --root)")
@@ -831,7 +832,7 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
             f"repository.\n"
             f"       project-kit will not install inside a repository it cannot "
             f"confirm.\n"
-            f"       Run `git -C '{target}' status` to see why, then repair or remove "
+            f"       Run `git -C {shlex.quote(str(target))} status` to see why, then repair or remove "
             f"that .git and\n"
             f"       re-run, or name an explicit target with `pkit init --root <path>`."
         )

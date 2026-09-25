@@ -778,6 +778,21 @@ def test_git_verdict_real_broken_repo_is_broken(
     assert _git_verdict(tmp_path) == _GitVerdict.BROKEN
 
 
+def test_git_verdict_broken_repo_inside_healthy_repo_is_broken(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A broken `.git` nested in a healthy repository is judged on its own:
+    the probe stops git's upward search at the candidate, so the enclosing
+    repository cannot answer for it with a false ACCEPTED. No test-side
+    ceiling here -- the probe must set it itself."""
+    monkeypatch.delenv("GIT_CEILING_DIRECTORIES", raising=False)
+    _git_init(tmp_path)
+    candidate = tmp_path / "workspace"
+    candidate.mkdir()
+    _real_broken_git(candidate)
+    assert _git_verdict(candidate) == _GitVerdict.BROKEN
+
+
 def test_git_verdict_real_repo_is_accepted(tmp_path: Path) -> None:
     _git_init(tmp_path)
     assert _git_verdict(tmp_path) == _GitVerdict.ACCEPTED
@@ -809,6 +824,7 @@ def test_git_verdict_ownership_refusal_is_dubious(
     assert _git_verdict(tmp_path) == _GitVerdict.DUBIOUS
     cmd, kwargs = calls[0]
     assert kwargs["env"]["LC_ALL"] == "C"
+    assert kwargs["env"]["GIT_CEILING_DIRECTORIES"] == str(tmp_path.parent)
     assert not any("safe.directory" in part for part in cmd)
 
 
