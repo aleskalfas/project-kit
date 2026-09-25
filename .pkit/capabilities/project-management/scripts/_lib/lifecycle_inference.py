@@ -236,13 +236,33 @@ def malformed_integration_marker(body: str) -> str | None:
 def integration_slug(body: str) -> str | None:
     """The `<slug>` from a DEC-013 `Integration: integration/<slug>` marker on the
     body's first content line, or None when absent (or malformed). Consumers derive
-    the owning integration branch as `integration/<slug>` — e.g. start-work cuts a
-    marked issue's branch off `integration/<slug>` rather than the default base."""
+    the owning integration branch as `integration/<slug>` — through
+    `resolve_base_branch`, which every branch- and PR-opening verb shares."""
     first = _first_content_line(body)
     if first is None:
         return None
     m = INTEGRATION_MARKER_RE.match(first)
     return m.group(1) if m else None
+
+
+def resolve_base_branch(
+    config: dict, body: str, *, explicit: str | None = None
+) -> str:
+    """The base branch for an issue's work (DEC-013 `base-branch`) — the ONE
+    resolution shared by start-work (branch start-point) and every PR-opening
+    verb (open-pr, create-draft, review-work), so the branch and its PR agree.
+
+    Precedence: an `explicit` caller choice (a verb's `--base`) wins; else the
+    closing issue's `Integration: integration/<slug>` marker names the base;
+    else the adopter's `default_branch` (`main` only when the config declares
+    none). A malformed marker is not a branch and falls through to the default.
+    Takes no HEAD input, so the checked-out branch can never leak in (#835)."""
+    if explicit:
+        return explicit
+    slug = integration_slug(body)
+    if slug:
+        return f"integration/{slug}"
+    return str(config.get("default_branch") or "main")
 
 
 def parent_ref(child_body: str) -> int | None:

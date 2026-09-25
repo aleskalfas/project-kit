@@ -51,6 +51,7 @@ from _lib import (  # noqa: E402
     pr_validation,
     session_guard,
 )
+from _lib import lifecycle_inference as infer  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
@@ -86,7 +87,14 @@ def main() -> int:
             "algorithm; this flag is a v1 forward-compat placeholder.)"
         ),
     )
-    parser.add_argument("--base", default="main")
+    parser.add_argument(
+        "--base", default=None,
+        help=(
+            "Base branch for a newly opened PR (default: the issue's DEC-013 "
+            "integration branch when its body carries an `Integration:` marker, "
+            "else the adopter's `default_branch`). Not applied to an existing PR."
+        ),
+    )
     parser.add_argument(
         "--capability-root", type=Path, default=None,
         help=f"Default: <repo-root>/.pkit/capabilities/{CAPABILITY_NAME}/.",
@@ -164,8 +172,15 @@ def main() -> int:
         )
         return 2
 
+    # Base branch (DEC-013, #903): --base, else the issue's integration marker,
+    # else default_branch — the resolution start-work cut the branch by.
+    base = infer.resolve_base_branch(
+        config, str(issue.get("body") or ""), explicit=args.base
+    )
+
     print(f"review-work: #{args.issue_number}")
     print(f"  branch: {branch}")
+    print(f"  base:   {base}")
 
     if args.dry_run:
         print("(dry-run: would open/flip-ready PR, assign reviewers, call move-issue.)")
@@ -190,7 +205,7 @@ def main() -> int:
         body = f"Closes #{args.issue_number}"
         if not _ready_body_ok(body, classification, capability_root, args.force):
             return 1
-        url = _gh_pr_create_ready(branch, args.base, title, body, config)
+        url = _gh_pr_create_ready(branch, base, title, body, config)
         if url is None:
             return 3
         m = re.search(r"/pull/(\d+)", url)
@@ -314,7 +329,7 @@ def _derive_pr_title(issue: dict, branch: str) -> str:
 
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
-    return gh_get_issue(issue_number, config, fields="title,labels")
+    return gh_get_issue(issue_number, config, fields="title,labels,body")
 
 
 def _find_pr_for_branch(branch: str, config: dict) -> dict | None:

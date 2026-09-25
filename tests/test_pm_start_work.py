@@ -226,20 +226,24 @@ def test_every_shipped_type_value_resolves_a_branch_prefix(sw) -> None:
         )
 
 
-# ---- _resolve_base_branch (#835) ---------------------------------------
+# ---- resolve_base_branch (#835, #903) ----------------------------------
+#
+# The shared resolver in `_lib/lifecycle_inference`; start-work and the
+# PR-opening verbs all call it. End-to-end wiring per verb lives in
+# test_pm_pr_base_branch.py.
 
 
 def test_base_defaults_to_config_default_branch(sw) -> None:
-    assert sw._resolve_base_branch({"default_branch": "trunk"}, "EPIC: #1\n\n## What\nx") == "trunk"
+    assert sw.infer.resolve_base_branch({"default_branch": "trunk"}, "EPIC: #1\n\n## What\nx") == "trunk"
 
 
 def test_base_defaults_to_main_when_unconfigured(sw) -> None:
-    assert sw._resolve_base_branch({}, "EPIC: #1\n\n## What\nx") == "main"
+    assert sw.infer.resolve_base_branch({}, "EPIC: #1\n\n## What\nx") == "main"
 
 
 def test_base_is_integration_branch_when_marked(sw) -> None:
     body = "Integration: integration/508-multi-instance-ownership\nFeature: #510\n\n## What\nx"
-    assert sw._resolve_base_branch({"default_branch": "main"}, body) == (
+    assert sw.infer.resolve_base_branch({"default_branch": "main"}, body) == (
         "integration/508-multi-instance-ownership"
     )
 
@@ -247,13 +251,20 @@ def test_base_is_integration_branch_when_marked(sw) -> None:
 def test_base_ignores_a_malformed_marker(sw) -> None:
     # A malformed marker is not a valid integration branch — fall back to default.
     body = "Integration: integration/Bad_Slug!!\nFeature: #510\n\n## What\nx"
-    assert sw._resolve_base_branch({"default_branch": "main"}, body) == "main"
+    assert sw.infer.resolve_base_branch({"default_branch": "main"}, body) == "main"
+
+
+def test_explicit_base_wins_over_marker_and_default(sw) -> None:
+    body = "Integration: integration/508-multi-instance-ownership\nFeature: #510\n"
+    assert sw.infer.resolve_base_branch(
+        {"default_branch": "trunk"}, body, explicit="release/2"
+    ) == "release/2"
 
 
 def test_base_never_reflects_the_checked_out_branch(sw) -> None:
-    # The resolver takes only (config, body) — there is no HEAD input, so the
-    # currently-checked-out branch can never leak into the base (the #835 bug).
+    # The resolver takes only (config, body, explicit) — there is no HEAD input,
+    # so the currently-checked-out branch can never leak into the base (#835).
     import inspect
 
-    sig = inspect.signature(sw._resolve_base_branch)
-    assert list(sig.parameters) == ["config", "body"]
+    sig = inspect.signature(sw.infer.resolve_base_branch)
+    assert list(sig.parameters) == ["config", "body", "explicit"]

@@ -1,0 +1,16 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+  pr: ""
+body: >
+  The PR-opening verbs now target the base branch DEC-013 specifies for the
+  closing issue (#903). `open-pr` ignored the issue's `Integration:` marker, and
+  `create-draft` and `review-work` hardcoded `main` as their `--base` default, so
+  a PR for integration-branch work targeted `main` even though `start-work` had
+  cut its branch off `integration/<slug>` (the #835 symptom through another
+  door). All four verbs now resolve the base through one shared resolver: an
+  explicit `--base` wins; else the closing issue's `Integration:` marker names
+  `integration/<slug>`; else the adopter's `default_branch`. `create-draft`'s
+  "commits beyond base" gate measures against the same resolved base, and
+  `review-work` prints the base it will use.

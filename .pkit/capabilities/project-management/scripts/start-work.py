@@ -163,8 +163,9 @@ def main() -> int:
             return 2
 
     # Branch base (#835): the default branch, or a DEC-013 integration branch when
-    # the issue is marked — never the incidental HEAD.
-    base = _resolve_base_branch(config, str(issue.get("body") or ""))
+    # the issue is marked — never the incidental HEAD. Shared with the PR-opening
+    # verbs so the PR targets the branch this one was cut from (#903).
+    base = infer.resolve_base_branch(config, str(issue.get("body") or ""))
 
     print(f"start-work: #{args.issue_number}")
     print(f"  branch:    {branch_name}")
@@ -215,17 +216,6 @@ def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
     return gh_get_issue(
         issue_number, config, fields="title,labels,assignees,state,body"
     )
-
-
-def _resolve_base_branch(config: dict, body: str) -> str:
-    """The branch start-point (#835). When the issue body carries a DEC-013
-    `Integration: integration/<slug>` marker the base is that integration branch;
-    otherwise it is the adopter's `default_branch` (default `main`). Never the
-    incidental `HEAD` that happens to be checked out."""
-    slug = infer.integration_slug(body)
-    if slug:
-        return f"integration/{slug}"
-    return str(config.get("default_branch") or "main")
 
 
 def _derive_branch_prefix(
