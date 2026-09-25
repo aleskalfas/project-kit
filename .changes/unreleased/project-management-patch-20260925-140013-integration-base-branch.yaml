@@ -2,7 +2,7 @@ component: project-management
 kind: patch
 custom:
   category: Fixed
-  pr: ""
+  pr: "929"
 body: >
   The PR-opening verbs now target the base branch DEC-013 specifies for the
   closing issue (#903). `open-pr` ignored the issue's `Integration:` marker, and
