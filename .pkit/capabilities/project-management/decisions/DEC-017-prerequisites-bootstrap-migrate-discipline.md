@@ -26,7 +26,7 @@ The capability ships **three programmatic scripts** under `scripts/`, each with 
 
 ### `scripts/pre-check.py` — read-only diagnostic
 
-**Discipline.** Read-only. Compares the adopter's GitHub state and project-side configuration against the capability's schemas and reports gaps. Exits non-zero on any failure; zero when every check passes or is legitimately skipped.
+**Discipline.** Read-only. Compares the adopter's GitHub state and project-side configuration against the capability's schemas and reports gaps. Exits non-zero on any failure; zero when no check fails — every check passed, was legitimately skipped, or reported a non-blocking warning.
 
 **Hard-gate role.** The pm composite skill's dispatcher makes "Step 0: run pre-check" the first step of every operation. The operation refuses to proceed on any failure. The gate is **programmatic**, not the agent's interpretation of the output — the script's exit code is the contract.
 
