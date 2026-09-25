@@ -295,7 +295,8 @@ class OverlayValues:
         Precedence mirrors ``_resolve_agent.py``: the agent's own override wins,
         then the top-level default. ``None`` means *undefined* — which covers
         both an absent key and a bare key (``category:`` with no value), exactly
-        as the adapter treats them (the agent is skipped at deploy).
+        as the adapter treats them (a hard reference skips the agent at deploy;
+        an optional one is dropped, with a warning when the key is bare).
         """
         agent_overrides = self.overrides.get(agent_name) or {}
         if category in agent_overrides:
@@ -506,7 +507,7 @@ def render_status(target_root: Path) -> str:
 def reconcile_overlay(target_root: Path, *, write: bool) -> tuple[list[str], str]:
     """Surface referenced-but-undefined categories into the overlay.
 
-    Five states per referenced category:
+    Six states per referenced category:
 
     - **missing + write-carrying** (ADR-051): the category grants write
       authority over paths only the adopter can enumerate, so it has no
@@ -519,6 +520,10 @@ def reconcile_overlay(target_root: Path, *, write: bool) -> tuple[list[str], str
       exists under the project root → write the category **uncommented** with
       that path, ready for ``pkit sync`` to deploy the agent with no manual
       editing.
+    - **missing + optional** (ADR-052): the category is absent, has no
+      conventional dir to auto-fill, and every agent reads it only through
+      ``reads.patterns`` → add a commented stub framed as an enrichment; the
+      agent already deploys without it.
     - **missing + conventional dir absent**: the category is absent AND there is
       no conventional default to auto-fill → add a commented stub; the adopter
       fills in real paths before ``pkit sync``.
@@ -774,6 +779,9 @@ class AdoptResult:
     categories_wired: tuple[str, ...]  # categories written to overlay (uncommented)
     categories_already_set: tuple[str, ...]  # categories that were already defined
     deployed: bool   # whether the deploy step ran
+    # Optional reads (ADR-052) left undefined because they have no conventional
+    # default: the agent deploys without them, so adopt neither refuses nor wires.
+    categories_optional_unset: tuple[str, ...] = ()
 
 
 def adopt_agent(
@@ -790,7 +798,9 @@ def adopt_agent(
     1. Ensure the conventional default dir exists — create it (with a seed README)
        if absent.  Uses :data:`CONVENTIONAL_CATEGORY_DEFAULTS` to resolve the path.
        Categories without a conventional default raise :class:`click.ClickException`
-       because there is no canonical path to create.
+       because there is no canonical path to create — unless the agent reads the
+       category only optionally (ADR-052): then it is left undefined, reported in
+       *categories_optional_unset*, and the agent deploys without it.
     2. Write the category into the overlay **uncommented** with the conventional
        path.  An adopter-set value (already uncommented) is never overwritten.
 
@@ -837,8 +847,17 @@ def adopt_agent(
     def _is_defined(cat: str) -> bool:
         return bool(re.search(rf"(?m)^\s*{re.escape(cat)}\s*:", existing))
 
-    # Determine which categories need action.
-    undefined = [c for c in sorted(referenced) if not _is_defined(c)]
+    # Determine which categories need action. An optional read (ADR-052) with no
+    # conventional default is not a prerequisite — the agent deploys without it —
+    # so it is set aside rather than refused; one *with* a default is wired as usual.
+    _hard, optional = agent_category_roles(src)
+    optional_unset = [
+        c for c in sorted(optional)
+        if not _is_defined(c) and c not in CONVENTIONAL_CATEGORY_DEFAULTS
+    ]
+    undefined = [
+        c for c in sorted(referenced) if not _is_defined(c) and c not in optional_unset
+    ]
     already_set = [c for c in sorted(referenced) if _is_defined(c)]
 
     # --- Check the categories still needing action for a conventional default ---
@@ -906,6 +925,7 @@ def adopt_agent(
         categories_wired=tuple(categories_wired),
         categories_already_set=tuple(already_set),
         deployed=deployed,
+        categories_optional_unset=tuple(optional_unset),
     )
 
 

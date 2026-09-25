@@ -201,6 +201,13 @@ deploy_one() {
         unresolved=$((unresolved + 1))
         return 0
     fi
+    # The agent resolved, but the resolver may still have something to report —
+    # e.g. an optional category set with no value, which deploys without it.
+    # Only `warning:`-prefixed lines are the resolver's; other stderr stays hidden.
+    local warning
+    while IFS= read -r warning; do
+        status "warning" "$name — ${warning#warning: }"
+    done < <(grep '^warning: ' "$tmperr" || true)
     rm -f "$tmperr"
 
     # Insert the marker as line 2, right after the opening `---`. Frontmatter
