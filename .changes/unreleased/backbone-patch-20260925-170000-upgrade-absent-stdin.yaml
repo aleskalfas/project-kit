@@ -2,7 +2,7 @@ component: backbone
 kind: patch
 custom:
   category: Fixed
-  pr: ""
+  pr: "928"
 body: >
   `pkit upgrade` no longer crashes when started with no stdin or a closed one
   (as under some process supervisors); it treats that as non-interactive and
