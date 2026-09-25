@@ -1,5 +1,8 @@
 [build-system]
-requires = ["hatchling"]
+# `pathspec` is imported directly by `hatch_build.py` to apply the sdist's
+# `withhold` globs. Hatchling depends on it today, but that is hatchling's
+# business; a direct import is a direct dependency.
+requires = ["hatchling", "pathspec"]
 build-backend = "hatchling.build"
 
 [project]
@@ -34,10 +37,23 @@ path = ".pkit/VERSION"
 pattern = "^(?P<version>[0-9]+\\.[0-9]+\\.[0-9]+)$"
 
 [tool.hatch.build.targets.sdist]
-# The sdist has no force-include to override, so `exclude` works here — unlike
-# the wheel, where force-include is the higher-priority mechanism and the
-# filtering has to happen in `hatch_build.py`. Same rule, two mechanisms,
-# because the two targets assemble differently.
+# `.pkit/` is excluded from the sdist's own walk and force-included by
+# `hatch_build.py` instead, from TRACKED files (#909). Hatchling's walk takes
+# every file the root `.gitignore` does not match, so an untracked file in a
+# local checkout shipped in the sdist — and, since `uv build` builds the wheel
+# FROM the sdist, in the wheel too. The rest of the sdist (src/, tests/, docs)
+# is still the walk.
+exclude = ["/.pkit"]
+
+# What the hook withholds from the sdist's `.pkit/`. These are gitignore-style
+# globs applied with the same `pathspec` engine hatchling uses for `exclude`,
+# so the sdist keeps a filter of its own — globs, where the wheel calls the
+# ownership predicate — for `tests/test_packaging_boundary.py`'s cross-artifact
+# check. Globs by CHOICE: the hook could call the predicate for the sdist too,
+# and deliberately does not, so do not "simplify" this away. The two targets
+# are independent in filter, shared in enumeration (both list `.pkit/` through
+# the hook's `git ls-files` path); `test_untracked_file_ships_in_no_artifact`
+# is the external check on enumeration.
 #
 # Without this the sdist carried project-kit's own project-side state including
 # 36 git-ignored journals, so it had the same non-reproducibility as the wheel:
@@ -45,8 +61,8 @@ pattern = "^(?P<version>[0-9]+\\.[0-9]+\\.[0-9]+)$"
 # Rule-shaped rather than enumerated: any `project/` directory anywhere under
 # `.pkit/` is the adopter tier, at every depth — which is the same positional
 # rule `ownership.is_adopter_owned_by_tier` applies. The wheel asks that
-# predicate directly; config globs cannot, so this mirrors it in the one form
-# hatchling accepts here.
+# predicate directly; the sdist deliberately does not, so this mirrors the rule
+# as globs.
 #
 # That covers the `project/` globs only. EVERY OTHER LINE BELOW IS A HAND-COPY
 # of a specific case in `.pkit/lifecycle/ownership.py`, and hand-copies drift —
@@ -58,7 +74,9 @@ pattern = "^(?P<version>[0-9]+\\.[0-9]+\\.[0-9]+)$"
 # sdist ships what the wheel withholds. `_ADOPTER_OWNED_KIT_FILES`' remaining
 # entry, `version-pin`, needs no line today only because no `.pkit/version-pin`
 # is tracked — so the sdist test passes vacuously on it.
-exclude = [
+[tool.hatch.build.targets.sdist.hooks.custom]
+path = "hatch_build.py"
+withhold = [
   ".pkit/**/project",
   ".pkit/project",
   ".pkit/rules/project.md",
@@ -125,11 +143,13 @@ exclude = ["**/__pycache__", "**/*.pyc"]
 #   - .gitignore           rendered runtime artifact, regenerated per-adopter
 #   - __pycache__          build cache (also excluded above)
 # These are achieved by enumerating the included paths rather than the whole
-# tree: `decisions/` lists `core` + `README.md` only; `scratchpad/` lists its
-# `README.md` only.
-# ELEVEN `.pkit/` trees are deliberately absent from the list below —
-# `capabilities`, `agents`, `permissions`, `adapters`, `skills`, `rules`,
-# `schemas`, `cli`, `process`, `lifecycle`, `migrations`. Do not "helpfully"
+# tree: `decisions/` ships `core` (hook-filtered, below) + `README.md` only;
+# `scratchpad/` lists its `README.md` only.
+# TWELVE `.pkit/` trees are deliberately absent from the list below —
+# `decisions/core`, `capabilities`, `agents`, `permissions`, `adapters`,
+# `skills`, `rules`, `schemas`, `cli`, `process`, `lifecycle`, `migrations`.
+# Only single tracked files remain here: a static DIRECTORY entry ships
+# whatever sits in it, untracked files included (#909). Do not "helpfully"
 # restore any of them: they are force-included by `hatch_build.py`, file by
 # file, with every adopter-owned path withheld — with one deliberate carve-out:
 # four EMPTY `.gitkeep` markers do ship at adopter-owned paths, listed in that
@@ -153,7 +173,6 @@ path = "hatch_build.py"
 
 [tool.hatch.build.targets.wheel.force-include]
 ".pkit/VERSION" = "project_kit/_kit/VERSION"
-".pkit/decisions/core" = "project_kit/_kit/decisions/core"
 ".pkit/decisions/README.md" = "project_kit/_kit/decisions/README.md"
 ".pkit/scratchpad/README.md" = "project_kit/_kit/scratchpad/README.md"
 

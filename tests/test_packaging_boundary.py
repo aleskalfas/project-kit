@@ -201,8 +201,9 @@ def test_kit_owned_content_still_ships(built_wheel: Path) -> None:
         "process": "process/README.md",
         "lifecycle": "lifecycle/ownership.py",
         "migrations": "migrations/backbone/README.md",
-        # Statically force-included, not hook-filtered — covered so a change to
-        # the static list is caught here too.
+        # `decisions/core` is hook-filtered since #909 (a static directory
+        # entry shipped untracked files); `VERSION` is a static single-file
+        # entry — covered so a change to the static list is caught here too.
         "decisions": "decisions/core/COR-001-content-mechanisms.md",
         "VERSION": "VERSION",
     }
@@ -312,9 +313,10 @@ def _sdist_kit_entries(sdist: Path) -> set[str]:
 
 
 def test_no_adopter_owned_path_ships_in_the_sdist(ownership, built_sdist: Path) -> None:
-    """The wheel and the sdist filter by different mechanisms — a build hook and
-    a config glob — because the two targets assemble differently. Both must
-    reach the same answer, and only the wheel had artifact coverage before."""
+    """The wheel and the sdist filter by different mechanisms — the ownership
+    predicate and the `withhold` globs — kept apart by choice so each checks
+    the other. Both must reach the same answer, and only the wheel had artifact
+    coverage before."""
     offenders = sorted(
         rel for rel in _sdist_kit_entries(built_sdist)
         if ownership.is_adopter_owned_by_tier(rel)
@@ -328,7 +330,14 @@ def test_wheel_and_sdist_agree_on_kit_content(built_wheel: Path, built_sdist: Pa
     `test_no_adopter_owned_content_ships` checks each artifact against the same
     predicate, so a HOLE in that predicate is invisible to it — both artifacts
     would agree with the rule and with each other's error. Comparing the two
-    artifacts uses each mechanism as an independent oracle for the other.
+    artifacts uses each FILTER as an independent oracle for the other.
+
+    Independent in filter, shared in enumeration. Since #909 both targets list
+    `.pkit/` through the same hook code (`_tracked_paths` / `_shippable_files`),
+    so an enumeration defect — a file wrongly included or dropped before any
+    filter runs — lands in both artifacts identically and this comparison
+    cannot see it. `test_untracked_file_ships_in_no_artifact` is the external
+    check on enumeration.
 
     That is not hypothetical: the predicate originally matched `project/` only
     at depths 1 and 2, missing `adapters/<harness>/settings/project/`, so the
@@ -508,3 +517,240 @@ def test_declared_marker_set_matches_the_source_tree() -> None:
         "adopter tiers present in the source tree but not declared, so the "
         f"bundle will not carry them and install.py will not stub them: {undeclared}"
     )
+
+
+# --- tracked state, not the filesystem (#909) --------------------------------
+#
+# A tier filter says nothing about files git does not know. The walk took every
+# file it found, so an untracked, non-ignored file in a local checkout — an
+# editor backup, a `.DS_Store` — shipped in both artifacts, and the default
+# `uv build` path (wheel built FROM the sdist) carried it through. These pin the
+# two enumeration paths the hook now has: `git ls-files` in a work tree, and
+# the tree as found when there is no `.git` (an unpacked sdist).
+
+
+def _load_hook_module():
+    """Import `hatch_build.py` by path, stubbing hatchling when it is absent.
+
+    Hatchling lives only in the isolated build environment, not the dev venv.
+    The functions under test do not touch it; only the hook class's base does,
+    so a stand-in base class is enough to import the module.
+    """
+    import sys
+    import types
+
+    try:
+        import hatchling.builders.hooks.plugin.interface  # noqa: F401
+    except ImportError:
+        stub = types.ModuleType("hatchling.builders.hooks.plugin.interface")
+
+        class BuildHookInterface:  # pragma: no cover - never instantiated here
+            pass
+
+        stub.BuildHookInterface = BuildHookInterface  # type: ignore[attr-defined]
+        names = ["hatchling", "hatchling.builders", "hatchling.builders.hooks",
+                 "hatchling.builders.hooks.plugin"]
+        for name in names:
+            sys.modules.setdefault(name, types.ModuleType(name))
+        sys.modules[stub.__name__] = stub
+    spec = importlib.util.spec_from_file_location(
+        "_hatch_build_under_test", REPO_ROOT / "hatch_build.py"
+    )
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.fixture(scope="module")
+def hook():
+    return _load_hook_module()
+
+
+def _git(cwd: Path, *args: str) -> None:
+    import subprocess
+
+    subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True)
+
+
+def _seed_kit(root: Path) -> None:
+    """A tracked file, an untracked stray, an ignored file and a build cache."""
+    rules = root / ".pkit" / "rules"
+    (rules / "__pycache__").mkdir(parents=True)
+    (rules / "core.md").write_text("tracked\n")
+    (rules / "core.md~").write_text("editor backup\n")
+    (rules / "scratch.log").write_text("ignored\n")
+    (rules / "__pycache__" / "x.cpython-311.pyc").write_bytes(b"")
+    (root / ".gitignore").write_text("*.log\n")
+
+
+def test_work_tree_enumerates_tracked_files_only(hook, tmp_path: Path) -> None:
+    _seed_kit(tmp_path)
+    _git(tmp_path, "init", "-q")
+    _git(tmp_path, "add", ".gitignore", ".pkit/rules/core.md")
+
+    tracked = hook._tracked_paths(tmp_path)
+    assert tracked == {".pkit/rules/core.md"}
+    shipped = [
+        p.relative_to(tmp_path).as_posix()
+        for p in hook._shippable_files(tmp_path / ".pkit", root=tmp_path, tracked=tracked)
+    ]
+    # Neither the untracked backup nor the ignored log nor the cache.
+    assert shipped == [".pkit/rules/core.md"]
+
+
+def test_no_git_dir_walks_the_tree_as_found(hook, tmp_path: Path) -> None:
+    """The unpacked-sdist path: no `.git`, so the tree IS the snapshot.
+
+    Sound only because the sdist was assembled from tracked files — which
+    `test_untracked_file_ships_in_no_artifact` asserts end to end.
+    """
+    _seed_kit(tmp_path)
+    assert hook._tracked_paths(tmp_path) is None
+    shipped = sorted(
+        p.relative_to(tmp_path).as_posix()
+        for p in hook._shippable_files(tmp_path / ".pkit", root=tmp_path, tracked=None)
+    )
+    assert shipped == [".pkit/rules/core.md", ".pkit/rules/core.md~", ".pkit/rules/scratch.log"]
+
+
+def test_an_ancestor_repository_is_not_consulted(hook, tmp_path: Path) -> None:
+    """An sdist unpacked inside some other repository must not be filtered
+    against that repository's index — which tracks none of its files, so the
+    build would ship an empty bundle."""
+    _git(tmp_path, "init", "-q")
+    unpacked = tmp_path / "project_kit-0.0.0"
+    _seed_kit(unpacked)
+    assert hook._tracked_paths(unpacked) is None
+
+
+def test_git_dir_without_git_fails_loudly(hook, tmp_path: Path, monkeypatch) -> None:
+    """Falling back to the walk would silently restore the defect in exactly
+    the place — a local checkout — where untracked files are likely."""
+    _seed_kit(tmp_path)
+    _git(tmp_path, "init", "-q")
+    empty = tmp_path / "empty-path"
+    empty.mkdir()
+    monkeypatch.setenv("PATH", str(empty))
+    with pytest.raises(RuntimeError, match="not on PATH"):
+        hook._tracked_paths(tmp_path)
+
+
+def test_git_failure_fails_loudly(hook, tmp_path: Path) -> None:
+    _seed_kit(tmp_path)
+    (tmp_path / ".git").write_text("gitdir: /nonexistent\n")
+    with pytest.raises(RuntimeError, match="git ls-files"):
+        hook._tracked_paths(tmp_path)
+
+
+def test_dubious_ownership_names_the_remedy(hook, tmp_path: Path, monkeypatch) -> None:
+    """A checkout owned by another uid (CI container, Docker volume mount,
+    `sudo pip install`) makes git refuse with exit 128. Still fatal, but the
+    message must say why and give the `safe.directory` remedy."""
+    import subprocess
+
+    (tmp_path / ".git").mkdir()
+    stderr = (
+        f"fatal: detected dubious ownership in repository at '{tmp_path}'\n"
+        "To add an exception for this directory, call:\n"
+    ).encode()
+
+    def refuse(args, **_kwargs):
+        return subprocess.CompletedProcess(args, 128, stdout=b"", stderr=stderr)
+
+    monkeypatch.setattr(hook.subprocess, "run", refuse)
+    with pytest.raises(RuntimeError) as excinfo:
+        hook._tracked_paths(tmp_path)
+    message = str(excinfo.value)
+    assert "different user" in message
+    assert f"git config --global --add safe.directory {tmp_path}" in message
+
+
+def test_tree_without_git_or_sdist_metadata_warns(hook, tmp_path: Path) -> None:
+    """A Docker context that dropped `.git`, a vendored copy, a `cp -r`: the walk
+    may ship untracked files, so the build says so — but builds, since a
+    `git archive` tarball looks the same and is legitimate."""
+    _seed_kit(tmp_path)
+    warning = hook._untracked_source_warning(tmp_path)
+    assert warning is not None
+    assert "Untracked files" in warning
+    assert "git work tree or an sdist" in warning
+
+
+def test_unpacked_sdist_and_work_tree_build_quietly(hook, tmp_path: Path) -> None:
+    sdist = tmp_path / "sdist"
+    _seed_kit(sdist)
+    (sdist / "PKG-INFO").write_text("Metadata-Version: 2.4\n")
+    assert hook._untracked_source_warning(sdist) is None
+
+    work_tree = tmp_path / "work-tree"
+    _seed_kit(work_tree)
+    _git(work_tree, "init", "-q")
+    assert hook._untracked_source_warning(work_tree) is None
+
+
+@pytest.fixture(scope="module")
+def stray_builds(tmp_path_factory) -> dict[str, Path]:
+    """Build every artifact from a copy of this tree carrying an untracked file.
+
+    Hermetic: the tracked files (with their working-tree content, so the code
+    under test is what builds) are copied into a fresh repository and staged,
+    and the stray is added there — never in the real checkout. Two builds:
+    `uv build`, which makes the sdist and then the wheel FROM it (the default
+    path, and the one with no `.git`), and `uv build --wheel` straight from the
+    work tree.
+    """
+    import shutil
+    import subprocess
+
+    uv = shutil.which("uv")
+    if uv is None:
+        pytest.skip("uv not available to build")
+    listing = subprocess.run(
+        ["git", "ls-files", "-z"], cwd=REPO_ROOT, capture_output=True, check=True
+    ).stdout.decode()
+    copy = tmp_path_factory.mktemp("stray-src") / "project-kit"
+    for rel in filter(None, listing.split("\0")):
+        src = REPO_ROOT / rel
+        if not src.is_file():  # deleted in the work tree but still indexed
+            continue
+        dest = copy / rel
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dest, follow_symlinks=False)
+    _git(copy, "init", "-q")
+    _git(copy, "add", "-A")
+    (copy / STRAY).write_text("an editor backup git never saw\n")
+
+    out: dict[str, Path] = {}
+    for label, args in (("via-sdist", []), ("direct", ["--wheel"])):
+        dest = tmp_path_factory.mktemp(label)
+        proc = subprocess.run(
+            [uv, "build", *args, "--out-dir", str(dest)],
+            cwd=copy, capture_output=True, text=True, timeout=600,
+        )
+        if proc.returncode != 0:
+            pytest.fail(f"{label} build failed:\n{proc.stdout}\n{proc.stderr}")
+        out[f"{label}-wheel"] = next(dest.glob("*.whl"))
+        if label == "via-sdist":
+            out["sdist"] = next(dest.glob("*.tar.gz"))
+    return out
+
+
+STRAY = ".pkit/rules/core.md.orig"
+
+
+def test_untracked_file_ships_in_no_artifact(stray_builds: dict[str, Path]) -> None:
+    stray = STRAY.removeprefix(".pkit/")
+    assert stray not in _sdist_kit_entries(stray_builds["sdist"])
+    for label in ("via-sdist-wheel", "direct-wheel"):
+        assert stray not in _kit_entries(stray_builds[label]), f"stray in {label}"
+
+
+def test_both_wheel_build_paths_ship_the_same_kit_tree(
+    stray_builds: dict[str, Path], built_wheel: Path
+) -> None:
+    """Direct from the work tree, via the sdist, and from this checkout (which
+    may itself carry untracked files) — one tracked tree, one bundle."""
+    direct = sorted(_kit_entries(stray_builds["direct-wheel"]))
+    assert direct == sorted(_kit_entries(stray_builds["via-sdist-wheel"]))
+    assert direct == sorted(_kit_entries(built_wheel))

@@ -1,0 +1,28 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+  pr: "926"
+body: >
+  The bundled methodology tree is built from tracked files, so a local checkout's
+  untracked files no longer ship (#909). The build walked the filesystem, so an
+  untracked, non-ignored file under `.pkit/` (an editor backup, a `.DS_Store`)
+  went into the source distribution and, because the default build makes the
+  wheel from the source distribution, into the wheel as well. That broke the
+  claim that two builds of one commit carry the same content. Both artifacts now
+  list `.pkit/` content with `git ls-files` whenever the source tree has its own
+  `.git`. A wheel built from a source distribution walks the unpacked tree, which
+  is sound because that tree was assembled from tracked files. If a `.git` is
+  present but git cannot answer, the build fails with a message rather than
+  falling back to the walk. That includes git refusing a checkout owned by a
+  different user, as in CI containers and Docker volume mounts; the message
+  gives the `git config --global --add safe.directory` remedy. The editable
+  install (`uv sync`) runs the same build step, so in such a container `uv sync`
+  now fails the same way until the checkout is marked safe. A build from a tree
+  with neither a `.git` nor source-distribution metadata (a Docker context
+  without `.git`, a copied tree) still succeeds but warns that untracked files
+  may ship. Installs from the git URL build from a clean
+  checkout, so their file set is unchanged; verified by comparing kit file lists
+  before and after, which differ only by the stray file. The Python package and
+  the non-`.pkit/` parts of the source distribution still come from the build
+  backend's own walk.
