@@ -2,7 +2,7 @@ component: project-management
 kind: patch
 custom:
   category: Fixed
-  pr: ""
+  pr: "924"
 body: >
   A retried `move-issue --bypass` no longer posts a second audit comment.
   The comment is still posted before the label write, so the justification
