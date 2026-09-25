@@ -21,6 +21,13 @@ on merge. This module realises that outcome in three steps a verb composes:
 A verb runs its own irreversible-merge follow-up (done-work's issue
 transition, merge-pr's after-merge hooks) between 1 and 2, so no best-effort
 step stands between the merge and the thing that must not be skipped.
+
+The backbone's `pkit release merge` (`src/project_kit/release.py`,
+`_gh_pr_merge` / `_gh_delete_remote_branch` / `_git_cleanup_local`) carries a
+deliberate duplicate of this mechanic (#897): the backbone must not depend on
+a capability, and these scripts run as standalone `uv run --script`s that do
+not import `project_kit`. Keep the two in step — a fix to either (the fork-PR
+guard, the already-deleted answer) belongs in both.
 """
 
 from __future__ import annotations
