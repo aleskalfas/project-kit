@@ -1,0 +1,9 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit release merge` no longer reports a failure after the release PR has
+  already merged when run from a worktree or a detached HEAD; it deletes the
+  head branch through the GitHub API, treats local cleanup as best-effort
+  warnings, and never deletes a branch named by a fork's head (#897).

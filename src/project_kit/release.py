@@ -859,6 +859,8 @@ class ReleasePrState:
     title: str
     state: str  # OPEN / MERGED / CLOSED (normalised upper-case)
     head_ref: str  # the PR's head branch (headRefName)
+    base_ref: str  # the branch the PR merges into (baseRefName)
+    cross_repository: bool  # head lives in a fork (isCrossRepository)
     url: str
     mergeable: str  # MERGEABLE / CONFLICTING / UNKNOWN (normalised upper-case)
     checks_passing: bool
@@ -954,6 +956,10 @@ def parse_release_pr(raw: dict) -> ReleasePrState:
         title=str(raw.get("title", "")),
         state=str(raw.get("state", "")).upper(),
         head_ref=str(raw.get("headRefName", "")),
+        base_ref=str(raw.get("baseRefName", "")),
+        # Absent reads as a fork: the unsafe default for the delete guard is
+        # "same repository", so a missing field must not grant it.
+        cross_repository=bool(raw.get("isCrossRepository", True)),
         url=str(raw.get("url", "")),
         mergeable=str(raw.get("mergeable", "")).upper(),
         checks_passing=passing,
@@ -1022,8 +1028,10 @@ def merge_release_pr(repo_root: Path, pr_number: int, *, dry_run: bool = False) 
     """Merge a release PR through the sanctioned path — returns a status line.
 
     Fetches the PR (repo derived from the ambient `gh` context — no hardcoded
-    owner/repo), evaluates the gate, and squash-merges + deletes the branch when
-    it passes. Does **not** tag: the flow's post-merge tag step cuts the backbone
+    owner/repo), evaluates the gate, and when it passes squash-merges it, then
+    deletes the head branch through the API and cleans up locally — both
+    best-effort, so a detached-HEAD or worktree run still completes once the
+    merge has landed (#897). Does **not** tag: the flow's post-merge tag step cuts the backbone
     tag on the resulting push to `main` (VERSION-driven). Raises
     `click.ClickException` on a refusal; reports cleanly for an already
     merged/closed PR.
@@ -1041,16 +1049,29 @@ def merge_release_pr(repo_root: Path, pr_number: int, *, dry_run: bool = False) 
             f"branch {pr.head_ref!r}; nothing merged."
         )
     _gh_pr_merge(pr.number, pr.title, repo_root)
-    return (
-        f"Merged release PR #{pr.number} ({pr.url}); deleted branch {pr.head_ref!r}.\n"
+    notes = [
+        _gh_delete_remote_branch(
+            pr.head_ref, repo_root, cross_repository=pr.cross_repository
+        ),
+        *_git_cleanup_local(
+            pr.head_ref, pr.base_ref or "main", repo_root,
+            cross_repository=pr.cross_repository,
+        ),
+    ]
+    return "\n".join([
+        f"Merged release PR #{pr.number} ({pr.url}).",
+        *(f"  {note}" for note in notes if note),
         "  Not tagged here: the post-merge tag step cuts the backbone tag on the push "
-        "to main (VERSION-driven)."
-    )
+        "to main (VERSION-driven).",
+    ])
 
 
 def _gh_pr_view(pr_number: int, repo_root: Path) -> dict:
     """`gh pr view <n> --json …` from `repo_root`, parsed to a dict."""
-    fields = "number,title,state,headRefName,mergeable,url,statusCheckRollup"
+    fields = (
+        "number,title,state,headRefName,baseRefName,isCrossRepository,"
+        "mergeable,url,statusCheckRollup"
+    )
     try:
         result = subprocess.run(
             ["gh", "pr", "view", str(pr_number), "--json", fields],
@@ -1070,18 +1091,33 @@ def _gh_pr_view(pr_number: int, repo_root: Path) -> dict:
     return json.loads(result.stdout)
 
 
+# The merge mechanic below deliberately duplicates the project-management
+# capability's `scripts/_lib/pr_merge.py` (squash_merge / delete_remote_branch /
+# cleanup_local). The backbone must not depend on a capability, and the
+# capability's scripts run as standalone `uv run --script`s that do not import
+# `project_kit`, so neither side can import the other. Keep the two in step:
+# a fix to either (the fork-PR guard, the already-deleted answer) belongs in
+# both.
+
+_REF_ALREADY_DELETED_MARKER = "Reference does not exist"
+
+
 def _gh_pr_merge(pr_number: int, subject: str, repo_root: Path) -> None:
-    """Squash-merge PR `pr_number` and delete its branch, from `repo_root`.
+    """Squash-merge PR `pr_number` from `repo_root` — the remote half only.
 
     Forces the squash-commit subject to the PR title (`--subject`) so a
     single-commit release PR still lands under the `chore(release):` title
     rather than the commit message — the same discipline the issue-PR merge
-    applies.
+    applies. Deliberately WITHOUT `--delete-branch`: that flag also checks out
+    the base branch locally and deletes the local head, and gh exits non-zero
+    when the working tree cannot do so (a detached HEAD; the base branch
+    checked out in another worktree) — AFTER the remote merge has landed
+    (#897, #878). Branch deletion is `_gh_delete_remote_branch` +
+    `_git_cleanup_local`, both best-effort.
     """
     try:
         result = subprocess.run(
-            ["gh", "pr", "merge", str(pr_number), "--squash", "--delete-branch",
-             "--subject", subject],
+            ["gh", "pr", "merge", str(pr_number), "--squash", "--subject", subject],
             capture_output=True,
             text=True,
             cwd=repo_root,
@@ -1095,6 +1131,108 @@ def _gh_pr_merge(pr_number: int, subject: str, repo_root: Path) -> None:
         raise click.ClickException(
             f"`gh pr merge {pr_number}` failed: {result.stderr.strip()}"
         )
+
+
+def _warn(message: str) -> None:
+    click.echo(f"[warn] {message}", err=True)
+
+
+def _gh_delete_remote_branch(
+    branch: str, repo_root: Path, *, cross_repository: bool
+) -> str:
+    """Delete the PR's remote head ref through the API — best-effort.
+
+    Returns a status line for the report ("" after a warning). Mirrors the
+    project-management capability's `_lib/pr_merge.delete_remote_branch` (see
+    the note above `_gh_pr_merge`).
+
+    `cross_repository` is required and has no default: the ref is deleted in
+    the BASE repository (`{owner}/{repo}` resolves there), so for a PR whose
+    head lives in a fork the head-branch name is chosen by the fork's author
+    and may name an unrelated base-repo branch. Such a head is never deleted
+    here. The `release/*` head guard does not cover this — a fork can name its
+    branch `release/…` too.
+
+    The API call needs nothing from the working tree. A ref that is already
+    gone (a repository that auto-deletes head branches on merge) is reported,
+    not warned about.
+    """
+    if cross_repository:
+        return (
+            f"head branch {branch!r} lives in a fork; not deleting a "
+            "base-repository ref of that name."
+        )
+    try:
+        result = subprocess.run(
+            ["gh", "api", "-X", "DELETE",
+             f"repos/{{owner}}/{{repo}}/git/refs/heads/{branch}"],
+            capture_output=True,
+            text=True,
+            cwd=repo_root,
+            check=False,
+        )
+    except FileNotFoundError:
+        _warn(f"`gh` not on PATH; delete remote branch {branch} by hand.")
+        return ""
+    if result.returncode == 0:
+        return f"deleted remote branch {branch!r}."
+    stderr = result.stderr.strip()
+    if _REF_ALREADY_DELETED_MARKER in stderr:
+        return f"remote branch {branch!r} already deleted."
+    _warn(
+        f"could not delete remote branch {branch}: {stderr}. The merge is "
+        f"durable; delete it by hand (`git push origin --delete {branch}`)."
+    )
+    return ""
+
+
+def _git_cleanup_local(
+    branch: str, base_branch: str, repo_root: Path, *, cross_repository: bool
+) -> list[str]:
+    """Switch to the base branch, fast-forward it, delete the local head — best-effort.
+
+    Returns status lines for the report; every failing step warns with git's
+    reason and continues, so none can fail the run. Mirrors the
+    project-management capability's `_lib/pr_merge.cleanup_local` (see the
+    note above `_gh_pr_merge`), except the branch returned to is the PR's own
+    base (`baseRefName`) — the backbone reads no capability config.
+
+    When the checkout cannot happen (detached HEAD, the base branch checked out
+    in another worktree) the pull is skipped — pulling into whatever IS checked
+    out would be wrong — but the branch delete is still attempted. A head with
+    no local copy (a release PR opened by CI) is skipped silently rather than
+    warned about. `-D` (not `-d`) because a squash-merged branch is never an
+    ancestor of the base.
+
+    `cross_repository` is required and has no default: for a fork PR the local
+    delete is skipped — a local branch sharing the fork branch's name is not
+    that PR's head, and `-D` would discard its unpushed work.
+    """
+    def _git(*argv: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            ["git", *argv], capture_output=True, text=True, cwd=repo_root, check=False,
+        )
+
+    notes: list[str] = []
+    result = _git("checkout", base_branch)
+    if result.returncode != 0:
+        _warn(f"git checkout {base_branch} failed: {result.stderr.strip()}")
+    else:
+        result = _git("pull", "--ff-only")
+        if result.returncode != 0:
+            _warn(f"git pull failed: {result.stderr.strip()}")
+        else:
+            notes.append(f"updated local {base_branch!r}.")
+    if cross_repository:
+        return notes
+    if _git("rev-parse", "--verify", "--quiet", f"refs/heads/{branch}").returncode != 0:
+        return notes  # no local copy (the usual case: CI opened the release PR)
+    result = _git("branch", "-D", branch)
+    if result.returncode != 0:
+        _warn(f"git branch -D {branch} failed: {result.stderr.strip()}")
+    else:
+        notes.append(f"deleted local branch {branch!r}.")
+    return notes
 
 
 # --- The shareability check (#494) ---------------------------------------

@@ -184,7 +184,7 @@ PR** a human merges — it is *not* auto-run on every merge.
 |---|---|---|
 | `pkit release plan` | no | Preview the computed release (which tiers move, to what, and the notes). |
 | `pkit release apply` | yes | Consume changesets → compute each tier from current `main` → write versions → broaden `requires_backbone` → update `CHANGELOG.md` → delete consumed changesets. Confirms first (`--yes` for CI). Tagging is a separate step (below); `--tag`/`--push` opt in. |
-| `pkit release merge <pr>` | yes (merges) | Merge a release PR (the sanctioned path — below). Guarded to `release/*` heads; merges only an open, mergeable, green PR; squash + delete-branch. Does not tag. `--dry-run` reports without merging. |
+| `pkit release merge <pr>` | yes (merges) | Merge a release PR (the sanctioned path — below). Guarded to `release/*` heads; merges only an open, mergeable, green PR as one squash commit whose subject is the PR title, head branch deleted on merge. Does not tag. `--dry-run` reports without merging. |
 | `pkit release publish-notes <version>` | no (publishes) | Publish a **notes-only** GitHub Release for tag `v<version>`, body = that version's `CHANGELOG.md` section (below). Idempotent (updates if it exists); **no artifact**. `--dry-run` prints the notes without calling `gh`. |
 | `pkit release check` | no | The CI guard (below). |
 | `pkit release check-shareable <component>` | no | Pre-sharing lint: is a capability ready to be consumed externally-sourced (COR-041)? (below). |
@@ -228,7 +228,7 @@ release commit, which does not exist yet when `apply` runs. The sequence:
 
     pkit release apply                 # on the release branch: write versions + changelog
     # commit the release; open the release PR to main
-    pkit release merge <pr>            # merge the release PR (checked; squash + delete branch)
+    pkit release merge <pr>            # merge the release PR (checked; one squash commit, head branch deleted)
     # release-tag.yml cuts v<new-backbone> on the push to main — or, fully manual:
     pkit version tag --push            # on main: cut v<new-backbone> (PRJ-004)
 
@@ -257,7 +257,13 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
 - **Checks preconditions.** The PR must be open, mergeable, and have all
   required checks green; a conflicting, red, or still-running PR is refused with
   a clear reason.
-- **Merges** by squash + delete-branch (the project's merge convention). No
+- **Merges** per the project's merge convention: one squash commit on the
+  base branch whose subject is the PR title, head branch deleted on merge. The
+  head is deleted through the API rather than gh's local checkout, and local
+  cleanup (switch to the base, fast-forward, delete the local head) is
+  best-effort, so a run from a worktree or a detached HEAD completes once the
+  merge lands. A head that lives in a fork is never deleted — its name is the
+  fork author's choice and could name an unrelated branch here. No
   `Closes #N` requirement — a release PR has none.
 - **Does not tag.** `release-tag.yml` cuts the backbone tag on the resulting
   push to `main` (VERSION-driven, PRJ-004); the merge and the tag stay split.

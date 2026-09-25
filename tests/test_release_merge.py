@@ -3,11 +3,15 @@
 The gate is split into pure logic (`summarize_checks`, `parse_release_pr`,
 `evaluate_release_pr`) and thin `gh` wrappers (`_gh_pr_view` / `_gh_pr_merge`).
 The pure logic is tested directly; `merge_release_pr` is tested with the `gh`
-wrappers monkeypatched — no real merge, no network, no hardcoded repo.
+wrappers monkeypatched — no real merge, no network, no hardcoded repo. The
+post-merge branch deletion (`_gh_delete_remote_branch` / `_git_cleanup_local`,
+#897) is tested with `subprocess.run` stubbed.
 """
 
 from __future__ import annotations
 
+import inspect
+import subprocess
 from pathlib import Path
 
 import click
@@ -136,6 +140,8 @@ def _raw(**overrides: object) -> dict:
         "title": "chore(release): v1.141.0",
         "state": "OPEN",
         "headRefName": "release/v1.141.0",
+        "baseRefName": "main",
+        "isCrossRepository": False,
         "url": "https://github.com/owner/repo/pull/42",
         "mergeable": "MERGEABLE",
         "statusCheckRollup": [
@@ -151,6 +157,20 @@ def test_parse_release_pr_normalises_case() -> None:
     assert pr.state == "OPEN"
     assert pr.mergeable == "MERGEABLE"
     assert pr.checks_passing is True
+
+
+def test_parse_release_pr_reads_base_and_fork_fields() -> None:
+    pr = release.parse_release_pr(_raw(baseRefName="develop", isCrossRepository=True))
+    assert pr.base_ref == "develop"
+    assert pr.cross_repository is True
+
+
+def test_parse_release_pr_missing_fork_field_reads_as_a_fork() -> None:
+    """Fail safe: without `isCrossRepository` the head is treated as a fork's,
+    so nothing in the base repo is deleted on an unknown answer."""
+    raw = _raw()
+    del raw["isCrossRepository"]
+    assert release.parse_release_pr(raw).cross_repository is True
 
 
 # --- the gate decision -----------------------------------------------
@@ -224,6 +244,43 @@ def test_evaluate_refuses_red_checks() -> None:
 # --- the orchestrator (gh wrappers monkeypatched) --------------------
 
 
+def _fake_run(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    api_stderr: str = "",
+    checkout_stderr: str = "",
+    pull_stderr: str = "",
+    branch_d_stderr: str = "",
+    local_branch_exists: bool = True,
+) -> list[list[str]]:
+    """Stub `subprocess.run` for the post-merge steps; a non-empty stderr makes
+    that step fail. Returns the argvs seen."""
+    seen: list[list[str]] = []
+
+    def fake(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        seen.append(list(argv))
+        failing = (
+            (argv[:3] == ["gh", "api", "-X"] and api_stderr)
+            or (argv[:2] == ["git", "checkout"] and checkout_stderr)
+            or (argv[:2] == ["git", "pull"] and pull_stderr)
+            or (argv[:3] == ["git", "branch", "-D"] and branch_d_stderr)
+        )
+        if failing:
+            return subprocess.CompletedProcess(argv, 1, stdout="", stderr=failing)
+        if argv[:2] == ["git", "rev-parse"] and not local_branch_exists:
+            return subprocess.CompletedProcess(argv, 1, stdout="", stderr="")
+        return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(release.subprocess, "run", fake)
+    return seen
+
+
+def _merge_green(monkeypatch: pytest.MonkeyPatch, **raw: object) -> str:
+    monkeypatch.setattr(release, "_gh_pr_view", lambda n, r: _raw(number=n, **raw))
+    monkeypatch.setattr(release, "_gh_pr_merge", lambda *a, **k: None)
+    return release.merge_release_pr(Path("/repo"), 42)
+
+
 def test_merge_release_pr_squash_merges_a_green_pr(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: dict[str, object] = {}
 
@@ -236,6 +293,7 @@ def test_merge_release_pr_squash_merges_a_green_pr(monkeypatch: pytest.MonkeyPat
 
     monkeypatch.setattr(release, "_gh_pr_view", fake_view)
     monkeypatch.setattr(release, "_gh_pr_merge", fake_merge)
+    _fake_run(monkeypatch)
 
     message = release.merge_release_pr(Path("/repo"), 42)
 
@@ -303,3 +361,119 @@ def test_merge_release_pr_refuses_red_checks(monkeypatch: pytest.MonkeyPatch) ->
     with pytest.raises(click.ClickException) as exc:
         release.merge_release_pr(Path("/repo"), 42)
     assert "not all green" in str(exc.value)
+
+
+# --- post-merge branch deletion (#897) -------------------------------
+
+
+def test_squash_merge_has_no_delete_branch_half(monkeypatch: pytest.MonkeyPatch) -> None:
+    """gh's `--delete-branch` also checks out the base locally and fails a
+    worktree / detached-HEAD run AFTER the merge lands — so it is not passed."""
+    seen = _fake_run(monkeypatch)
+    release._gh_pr_merge(42, "chore(release): v1.141.0", Path("/repo"))
+    assert seen == [[
+        "gh", "pr", "merge", "42", "--squash", "--subject", "chore(release): v1.141.0",
+    ]]
+
+
+def test_merge_deletes_remote_head_via_api_then_cleans_up_locally(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    seen = _fake_run(monkeypatch)
+    message = _merge_green(monkeypatch, baseRefName="develop")
+    assert seen == [
+        ["gh", "api", "-X", "DELETE",
+         "repos/{owner}/{repo}/git/refs/heads/release/v1.141.0"],
+        ["git", "checkout", "develop"],  # the PR's own base, not a hardcoded main
+        ["git", "pull", "--ff-only"],
+        ["git", "rev-parse", "--verify", "--quiet", "refs/heads/release/v1.141.0"],
+        ["git", "branch", "-D", "release/v1.141.0"],
+    ]
+    assert "deleted remote branch 'release/v1.141.0'" in message
+    assert "deleted local branch 'release/v1.141.0'" in message
+    assert "[warn]" not in capsys.readouterr().err
+
+
+def test_merge_when_base_checkout_fails_completes_with_a_warning(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """When the base branch cannot be checked out here (it is checked out in
+    another worktree), the merge and
+    the remote delete still report success, the pull is skipped, and the local
+    delete is still attempted."""
+    err_text = "fatal: 'main' is already checked out at '/repo'"
+    seen = _fake_run(monkeypatch, checkout_stderr=err_text)
+    message = _merge_green(monkeypatch)
+    assert "Merged release PR #42" in message
+    assert "deleted remote branch" in message
+    assert ["git", "pull", "--ff-only"] not in seen
+    assert ["git", "branch", "-D", "release/v1.141.0"] in seen
+    assert f"[warn] git checkout main failed: {err_text}" in capsys.readouterr().err
+
+
+def test_merge_with_base_branch_held_by_another_worktree_completes(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The base branch checked out elsewhere, and the head held here: both
+    local steps warn, and the run still returns the merged report."""
+    checkout_err = "fatal: 'main' is already used by worktree at '/repo/wt-main'"
+    branch_err = "error: cannot delete branch 'release/v1.141.0' used by worktree at '/repo/wt'"
+    _fake_run(monkeypatch, checkout_stderr=checkout_err, branch_d_stderr=branch_err)
+    message = _merge_green(monkeypatch)
+    assert "Merged release PR #42" in message
+    err = capsys.readouterr().err
+    assert f"[warn] git checkout main failed: {checkout_err}" in err
+    assert f"[warn] git branch -D release/v1.141.0 failed: {branch_err}" in err
+
+
+def test_merge_without_a_local_head_copy_skips_the_local_delete_quietly(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A release PR opened by CI has no local branch; that is not a warning."""
+    seen = _fake_run(monkeypatch, local_branch_exists=False)
+    _merge_green(monkeypatch)
+    assert ["git", "branch", "-D", "release/v1.141.0"] not in seen
+    assert "[warn]" not in capsys.readouterr().err
+
+
+def test_remote_head_already_gone_is_not_a_warning(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _fake_run(monkeypatch, api_stderr="gh: Reference does not exist (HTTP 422)")
+    message = _merge_green(monkeypatch)
+    assert "remote branch 'release/v1.141.0' already deleted" in message
+    assert "[warn]" not in capsys.readouterr().err
+
+
+def test_remote_head_delete_failure_is_a_warning(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _fake_run(monkeypatch, api_stderr="gh: boom (HTTP 500)")
+    message = _merge_green(monkeypatch)
+    assert "Merged release PR #42" in message
+    err = capsys.readouterr().err
+    assert "[warn] could not delete remote branch release/v1.141.0: gh: boom (HTTP 500)" in err
+    assert "git push origin --delete release/v1.141.0" in err
+
+
+def test_fork_release_pr_never_deletes_a_base_repo_or_local_branch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Security (PR #896 review): the API delete targets the BASE repo, and a
+    fork author chooses the head name — `release/*` included, so the head
+    guard does not cover it. No ref delete, no local `branch -D`."""
+    seen = _fake_run(monkeypatch)
+    message = _merge_green(monkeypatch, isCrossRepository=True)
+    assert not any(argv[:2] == ["gh", "api"] for argv in seen)
+    assert not any(argv[:3] == ["git", "branch", "-D"] for argv in seen)
+    assert seen[0] == ["git", "checkout", "main"]
+    assert "lives in a fork" in message
+
+
+def test_cross_repository_is_a_required_keyword() -> None:
+    """No default: every caller must state whether the PR is cross-repository,
+    so a later caller cannot silently reintroduce the fork-PR deletion hole."""
+    for fn in (release._gh_delete_remote_branch, release._git_cleanup_local):
+        p = inspect.signature(fn).parameters["cross_repository"]
+        assert p.kind is inspect.Parameter.KEYWORD_ONLY
+        assert p.default is inspect.Parameter.empty

@@ -552,8 +552,9 @@ def release_merge(pr: int, dry_run: bool) -> None:
     project-management merge-pr`) legitimately refuses it. This verb is the
     release flow's own merge: it is guarded to `release/*` heads (a non-release
     PR is refused, pointing at the issue-PR gate), merges only when the PR is
-    open, mergeable, and its required checks are green, and squash-merges +
-    deletes the branch. It does **not** tag — `release-tag.yml` cuts the
+    open, mergeable, and its required checks are green, and lands it as one
+    squash commit whose subject is the PR title, deleting the head branch
+    (best-effort; never a fork's head). It does **not** tag — `release-tag.yml` cuts the
     backbone tag on the resulting push to `main` (PRJ-004). Human-gated: a human
     decides to run it; nothing auto-merges.
     """
