@@ -8,7 +8,7 @@
 
 You've probably done this: you write your conventions into `CLAUDE.md`, have Claude generate a couple of agent files, and it works — until it **rots**. Nobody improves it, a fix you make in project A never reaches project B, and there's no safe way to pull updates. You end up owning a pile you now have to maintain by hand.
 
-**project-kit is the missing piece: the maintained, versioned, *safe-to-update* home for your project's methodology** — the rules, decisions, agents, and disciplines your AI reads at the start of every session. It installs like a dependency and upgrades like one. And it **never touches the files you write** — every file has exactly one owner (the kit's, or yours), so an update structurally *cannot* clobber your work.
+**project-kit is the missing piece: the maintained, versioned, *safe-to-update* home for your project's methodology** — the rules, decisions, agents, and disciplines your AI reads at the start of every session. It installs like a dependency and upgrades like one. And it **never touches the files you write**, except two it merges into rather than overwrites, on every `init`, `sync` and `upgrade`: `CLAUDE.md` (it adds two `@.pkit/rules/…` include lines if they're missing) and `.claude/settings.json` (it adds the kit's settings and keeps yours, though a kit deny rule you removed is put back; `init` backs the file up first, to `.claude/settings.json.pre-pkit`). Every other file has exactly one owner (the kit's, or yours), so an update structurally *cannot* clobber your work.
 
 That's the honest pitch, including its limit:
 
@@ -66,7 +66,7 @@ Think of pkit as a **package manager for your project's methodology**. Four idea
 
 1. **The tool vs. the install.** `pkit` (the CLI) manages `.pkit/` (the methodology in your repo) — exactly like a package manager and the packages it installs.
 2. **Capabilities are packages.** A small always-there **backbone**, plus **opt-in capabilities** — disciplines you install only if you want them (issue-tracking, code-review, citations). Add what you need, ignore the rest.
-3. **Two owners, never shared.** Every file belongs to *either* the kit (synced — don't edit) *or* you (yours — never touched). That's *why* updates can't conflict, and why you keep everything you write.
+3. **Two owners, never shared.** Every file belongs to *either* the kit (synced — don't edit) *or* you (yours — never touched, apart from the two merges above). That's *why* updates can't conflict, and why you keep everything you write.
 4. **Versioned, upgrades cleanly.** `pkit upgrade` pulls new versions and runs any migrations automatically — like upgrading a dependency; a project can even pin itself to a fixed version if you want.
 
 The shape of `.pkit/`:
