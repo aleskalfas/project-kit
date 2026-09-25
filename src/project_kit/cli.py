@@ -645,6 +645,7 @@ _INIT_REASON_PHRASE: dict[InitTargetReason, str] = {
     InitTargetReason.GIT_ROOT: "git repository root — your current directory",
     InitTargetReason.GIT_SUBFOLDER: "git repository root — you are in a subfolder",
     InitTargetReason.DUBIOUS_OWNERSHIP: "a git repository git could not verify (dubious ownership)",
+    InitTargetReason.BROKEN_GIT: "a git repository git cannot open (broken .git)",
     InitTargetReason.PKIT_INSTALL: "an existing project-kit install above your current directory",
     InitTargetReason.NONE: "your current directory — no git repository found above it",
 }
@@ -698,7 +699,8 @@ def _announce_init_target(
     help=(
         "Install into the current directory instead of a resolved parent. Refused "
         "when the current directory is a subfolder of a git worktree — a .pkit/ "
-        "there is unreachable, as every command resolves to the git root."
+        "there is unreachable, as every command resolves to the git root — or is "
+        "inside an existing project-kit project."
     ),
 )
 @click.option(
@@ -719,7 +721,9 @@ def _announce_init_target(
     help=(
         "Install at this explicit path, non-interactively. The sanctioned way to "
         "install at a resolved parent (e.g. a git repository root) in CI, where a "
-        "bare --yes is refused as a footgun. Mutually exclusive with --here."
+        "bare --yes is refused as a footgun. Refused when the path is a subfolder "
+        "of a git worktree or inside an existing project-kit project. Mutually "
+        "exclusive with --here."
     ),
 )
 def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
@@ -741,9 +745,10 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
 
     # An explicit --root is the operator naming the target unambiguously — the
     # sanctioned non-interactive install-at-a-parent path (#787). It bypasses the
-    # resolution-driven confirm/guard machinery (which exists to stop a *silent*
-    # install at a resolved parent), but still honours the already-adopted
-    # redirect and install_kit's own refusals.
+    # resolution-driven confirm and the cwd-to-target split-brain scan (which exist
+    # to stop a *silent* install at a resolved parent), but not the checks on the
+    # target itself: the already-adopted redirect, the shadowed-target refusal,
+    # and install_kit's own refusals.
     if root is not None:
         target = root.resolve()
         if router.looks_like_pkit_install(target / ".pkit"):
@@ -751,24 +756,46 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
                 f"{target} is already a project-kit project.\n"
                 f"       Run `pkit sync` to refresh it."
             )
-        # A --root naming a strict subfolder of a valid git worktree would create
-        # the exact unreachable .pkit/ the guided flow refuses — every steady-state
-        # command resolves to the git root, not the subfolder. We do NOT refuse it:
-        # the explicit --root is the operator's consent, and a hard refusal would
-        # foreclose the deferred monorepo-support path (ADR-001's known limitation).
-        # Warn loudly and proceed. Reuses the validated resolver (a GIT_SUBFOLDER
-        # reason means "below a valid worktree root") rather than a hand-rolled walk.
-        worktree_root, root_reason = resolve_init_target(target)
-        if root_reason == InitTargetReason.GIT_SUBFOLDER:
+        # Resolve from the target as a steady-state command run there would. If
+        # that lands anywhere but the target, a .pkit/ there is shadowed: below a
+        # git worktree root (dubious or broken included) it is unreachable, and
+        # below an install-marked ancestor it is a second, nested install. ADR-001
+        # refuses both; explicit consent does not make the install usable (#914).
+        enclosing_root, root_reason = resolve_init_target(target)
+        if enclosing_root != target:
+            if root_reason == InitTargetReason.PKIT_INSTALL:
+                raise click.ClickException(
+                    f"--root refused: {target} is inside the project-kit project at "
+                    f"{enclosing_root}.\n"
+                    f"       A second, nested install is not supported. Run `pkit sync` "
+                    f"to refresh that project."
+                )
+            raise click.ClickException(
+                f"--root refused: {target} is a subfolder of the git repository rooted "
+                f"at {enclosing_root}.\n"
+                f"       A .pkit/ created there would be unreachable — every pkit command "
+                f"resolves to the\n"
+                f"       git root, not this subfolder. Install at {enclosing_root}, or make "
+                f"this folder\n"
+                f"       its own git repository first."
+            )
+        # The target is itself a repository git will not vouch for. --root is the
+        # escape the guided flow's refusal names, so install — but say what git
+        # said, so a CI run does not install into an unverified tree unannounced.
+        if root_reason == InitTargetReason.DUBIOUS_OWNERSHIP:
             click.echo(
-                f"⚠ WARNING: {target} is a subfolder of the git worktree rooted at "
-                f"{worktree_root}.\n"
-                f"       Installing here creates a nested .pkit/ that steady-state pkit "
-                f"commands cannot\n"
-                f"       resolve — they resolve to the git root, not this subfolder — "
-                f"until the deferred\n"
-                f"       monorepo-support decision lands. Proceeding because --root is "
-                f"explicit."
+                f"⚠ WARNING: {target} is a git repository git refused to verify "
+                f"(dubious ownership / safe.directory).\n"
+                f"       Proceeding because --root is explicit. If you trust its owner, "
+                f"let git use it with:\n"
+                f"       git config --global --add safe.directory '{target}'"
+            )
+        elif root_reason == InitTargetReason.BROKEN_GIT:
+            click.echo(
+                f"⚠ WARNING: {target} has a .git that git cannot open (a broken or "
+                f"partial repository).\n"
+                f"       Proceeding because --root is explicit. Run `git -C '{target}' "
+                f"status` to see why."
             )
         click.echo(f"pkit init -> {target}  (explicit target, --root)")
         install_kit(target, dry_run=dry_run)
@@ -792,11 +819,28 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
             f"       re-run, or name an explicit target with `pkit init --root <path>`."
         )
 
-    # --here is refused only when CWD is a strict subfolder of a git worktree —
-    # the one topology where a .pkit/ at CWD is unreachable, because every command
-    # resolves to the git root, not the subfolder. In git-root/none/pkit-install
-    # cases there is no git-root-wins precedence overriding CWD, so --here is
-    # honored there (an explicit standalone install at cwd).
+    # A structurally-real repository git cannot open for a reason other than
+    # ownership (a corrupt HEAD, a dangling worktree pointer). The safe.directory
+    # remedy would fix nothing, so name the actual problem (#914). Refused like the
+    # dubious case: installing inside a repository nobody can confirm is the same
+    # shadowing footgun, and --here does not override it.
+    if reason == InitTargetReason.BROKEN_GIT:
+        _announce_init_target(target, reason, [], here=here)
+        raise click.ClickException(
+            f"{target} has a .git that git cannot open — a broken or partial "
+            f"repository.\n"
+            f"       project-kit will not install inside a repository it cannot "
+            f"confirm.\n"
+            f"       Run `git -C '{target}' status` to see why, then repair or remove "
+            f"that .git and\n"
+            f"       re-run, or name an explicit target with `pkit init --root <path>`."
+        )
+
+    # --here is refused when CWD is a strict subfolder of a git worktree — the
+    # topology where a .pkit/ at CWD is unreachable, because every command resolves
+    # to the git root, not the subfolder — and when CWD is inside an existing
+    # install (a nested second install, ADR-001). At a git root or in a fresh
+    # non-git folder it is honored (an explicit install at cwd).
     if here:
         if reason == InitTargetReason.GIT_SUBFOLDER:
             raise click.ClickException(
@@ -807,6 +851,17 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
                 f"       git root, not this subfolder. Run `pkit init` from {target}, or "
                 f"split this\n"
                 f"       folder into its own git repository first."
+            )
+        # The same ancestor-install check the default path runs: an install between
+        # cwd and the resolved target (a PKIT_INSTALL ancestor) means a .pkit/ here
+        # would be a second, nested install — refused per ADR-001 (#914).
+        enclosing = [d for d in scan_pkit_installs(cwd, target) if d.resolve() != cwd.resolve()]
+        if enclosing:
+            raise click.ClickException(
+                f"--here refused: the current directory is inside the project-kit "
+                f"project at {enclosing[0]}.\n"
+                f"       A second, nested install is not supported. Run `pkit sync` to "
+                f"refresh that project."
             )
         target = cwd
 

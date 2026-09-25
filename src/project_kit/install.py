@@ -9,6 +9,7 @@ flow. `--dry-run` support per COR-004.
 from __future__ import annotations
 
 import atexit
+import os
 import shutil
 import stat
 import subprocess
@@ -150,17 +151,45 @@ def _git_toplevel(cwd: Path) -> Path | None:
     return None
 
 
-def _git_accepts(candidate: Path) -> bool | None:
-    """Whether git will vouch for `candidate` as a work tree — `True` when `git -C
-    candidate rev-parse` succeeds, `False` when git refuses it (a valid repository
-    git declines on ownership grounds — safe.directory / dubious ownership, exit
-    128), `None` when the git binary is absent.
+class _GitVerdict(StrEnum):
+    """What git says about a structurally-real repository candidate (ADR-001).
 
-    The valid-vs-refused distinction is drawn on exit status alone, never on
-    parsed stderr prose, which is locale- and version-fragile (ADR-001). Callers
-    reach this only for a candidate that already passed the subprocess-free
-    structural check, so a non-zero exit here means "real repo, git refused", not
-    "not a repo".
+    `ACCEPTED` — git vouches for it. `DUBIOUS` — git refuses it on ownership
+    grounds (safe.directory). `BROKEN` — git fails on it for any other reason (a
+    corrupt `HEAD`, a dangling `gitdir:` pointer, an unreadable config), so no
+    `safe.directory` remedy applies. `ABSENT` — no git binary to ask.
+    """
+
+    ACCEPTED = "accepted"
+    DUBIOUS = "dubious"
+    BROKEN = "broken"
+    ABSENT = "absent"
+
+
+# The phrases git prints when it refuses a repository on ownership grounds:
+# "detected dubious ownership in repository at ..." (current releases) and
+# "unsafe repository ('...' is owned by someone else)" (git 2.35.2, the first
+# release with the check). Read under the C locale so a translated message cannot hide it.
+_GIT_OWNERSHIP_REFUSAL_MARKERS = ("dubious ownership", "unsafe repository")
+_GIT_FATAL_EXIT = 128
+
+
+def _git_verdict(candidate: Path) -> _GitVerdict:
+    """Ask git whether it will vouch for `candidate` as a work tree, and if not,
+    why (ADR-001; issue #914).
+
+    Callers reach this only for a candidate that already passed the
+    subprocess-free structural check (`_looks_like_git_repo`), so a failure here
+    is a real-looking repository git will not open. Git exits 128 for both an
+    ownership refusal and a broken repository, so exit status alone cannot tell
+    them apart; the diagnosis reads git's message, pinned to the C locale.
+
+    The message only chooses the *diagnosis*, never the outcome: `init` refuses a
+    `DUBIOUS` and a `BROKEN` candidate alike, so a git release that rewords its
+    ownership refusal degrades to a less specific remedy, not to an install in
+    the wrong place. The probe never overrides `safe.directory` (no `-c` or
+    `GIT_CONFIG*` bypass): a repository git refuses on ownership grounds must not
+    have its config read on the operator's behalf.
     """
     try:
         result = subprocess.run(
@@ -168,10 +197,18 @@ def _git_accepts(candidate: Path) -> bool | None:
             capture_output=True,
             text=True,
             check=False,
+            env={**os.environ, "LC_ALL": "C"},
         )
     except FileNotFoundError:
-        return None
-    return result.returncode == 0
+        return _GitVerdict.ABSENT
+    if result.returncode == 0:
+        return _GitVerdict.ACCEPTED
+    stderr = result.stderr.lower()
+    if result.returncode == _GIT_FATAL_EXIT and any(
+        marker in stderr for marker in _GIT_OWNERSHIP_REFUSAL_MARKERS
+    ):
+        return _GitVerdict.DUBIOUS
+    return _GitVerdict.BROKEN
 
 
 def _looks_like_git_repo(git_entry: Path) -> bool:
@@ -217,6 +254,7 @@ class _RootResolution:
 
     root: Path | None  # resolved project root, or None if nothing valid was found
     dubious: bool = False  # root is a real repo git refused (dubious ownership)
+    broken: bool = False  # root is a real-looking repo git cannot open (not ownership)
     is_pkit_install: bool = False  # resolved via an install-marked .pkit, no valid git
 
 
@@ -232,7 +270,8 @@ def _resolve_root(cwd: Path) -> _RootResolution:
 
     - a structurally-real `.git` (per `_looks_like_git_repo`) resolves the root;
       when git is present it arbitrates valid (accepted) vs `dubious` (refused on
-      ownership grounds), and when absent structure alone is authoritative;
+      ownership grounds) vs `broken` (git cannot open it for another reason), and
+      when absent structure alone is authoritative;
     - an install-marked `.pkit/` with no valid git resolves it as a pkit install;
     - a broken/vestigial `.git` is skipped and the walk continues upward;
     - nothing valid anywhere → `root=None`.
@@ -247,10 +286,14 @@ def _resolve_root(cwd: Path) -> _RootResolution:
     while True:
         if _looks_like_git_repo(cur / ".git"):
             # Structurally a repo. Git, when present, arbitrates whether it is one
-            # git will vouch for (valid) or one it refuses on ownership grounds
-            # (dubious); with the binary absent, structure is authoritative.
-            if _git_accepts(cur) is False:
+            # git will vouch for (valid), one it refuses on ownership grounds
+            # (dubious), or one it cannot open at all (broken); with the binary
+            # absent, structure is authoritative.
+            verdict = _git_verdict(cur)
+            if verdict == _GitVerdict.DUBIOUS:
                 return _RootResolution(root=cur, dubious=True)
+            if verdict == _GitVerdict.BROKEN:
+                return _RootResolution(root=cur, broken=True)
             return _RootResolution(root=cur)
         if looks_like_pkit_install(cur / ".pkit"):
             return _RootResolution(root=cur, is_pkit_install=True)
@@ -268,8 +311,10 @@ def find_target_root(start: Path | None = None) -> Path | None:
     `upgrade` / the authoring commands) want a dumb root-or-none answer and must
     not carry init's consent policy. A structurally-real repository git merely
     *refused* (dubious ownership) still resolves — it is a real root git declined
-    to confirm, not a broken one. A broken/vestigial `.git` no longer resolves
-    (the #787 floor fix); an install-marked `.pkit/` still resolves a no-git
+    to confirm, not a broken one. A structurally-real repository git cannot open
+    for another reason resolves the same way, as it did before #914 split its
+    diagnosis from dubious ownership. A structurally broken/vestigial `.git` no
+    longer resolves (the #787 floor fix); an install-marked `.pkit/` still resolves a no-git
     project (#656 — a bare/foreign `.pkit` is skipped).
 
     Note: the pre-`click` router (`router._enclosing_project`) still matches a
@@ -297,6 +342,7 @@ class InitTargetReason(StrEnum):
     GIT_ROOT = "git-root"  # cwd is itself the git worktree root — install here
     GIT_SUBFOLDER = "git-subfolder"  # cwd is inside a valid worktree, below its root
     DUBIOUS_OWNERSHIP = "dubious-ownership"  # a real repo git refused (safe.directory) — guide
+    BROKEN_GIT = "broken-git"  # a real-looking repo git cannot open (not ownership) — guide
     PKIT_INSTALL = "pkit-install"  # an ancestor is an install-marked .pkit — redirect to sync
     NONE = "none"  # no repo and no install-marked ancestor — target is cwd
 
@@ -315,6 +361,8 @@ def resolve_init_target(start: Path | None = None) -> tuple[Path, InitTargetReas
       (target is the repo root; `--here` is refused as a split-brain).
     - `DUBIOUS_OWNERSHIP` — a structurally-real repo git refused (dubious
       ownership); the CLI guides rather than dropping a shadowed `.pkit/`.
+    - `BROKEN_GIT` — a structurally-real repo git cannot open for a reason other
+      than ownership; the CLI guides to repairing it, not to `safe.directory`.
     - `PKIT_INSTALL` — an already-adopted ancestor; the CLI refuses and redirects
       to `pkit sync` (init is one-shot / one-root per COR-004).
     - `NONE` — target is cwd (a fresh non-git folder).
@@ -327,6 +375,8 @@ def resolve_init_target(start: Path | None = None) -> tuple[Path, InitTargetReas
         return cwd_resolved, InitTargetReason.NONE
     if resolution.dubious:
         return resolution.root, InitTargetReason.DUBIOUS_OWNERSHIP
+    if resolution.broken:
+        return resolution.root, InitTargetReason.BROKEN_GIT
     if resolution.is_pkit_install:
         return resolution.root, InitTargetReason.PKIT_INSTALL
     if resolution.root == cwd_resolved:

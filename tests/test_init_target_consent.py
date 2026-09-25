@@ -21,7 +21,13 @@ The pure resolver (`resolve_init_target` / `find_target_root` /
 test — the install itself is covered by `test_install.py`) and `_stdin_is_tty`
 monkeypatched for the interactive paths. The dubious-ownership branch cannot be
 provoked with real file ownership in a unit test, so it is driven by stubbing
-`install._git_toplevel` / `install._git_accepts` to git's refusal signature.
+`install._git_toplevel` / `install._git_verdict` to git's refusal signature.
+
+#914 makes every root-choosing flag run the same checks: `--here` refuses a
+nested install under an existing one, `--root` refuses a shadowed target (a git
+subfolder or a nested install) and warns when the target is a repository git
+will not vouch for, and a structurally-real `.git` git cannot open for a reason
+other than ownership is diagnosed as broken, not as dubious ownership.
 """
 
 from __future__ import annotations
@@ -36,6 +42,8 @@ from project_kit import cli, install
 from project_kit.cli import main
 from project_kit.install import (
     InitTargetReason,
+    _git_verdict,
+    _GitVerdict,
     find_target_root,
     resolve_init_target,
     scan_pkit_installs,
@@ -196,7 +204,7 @@ def test_resolve_dubious_ownership(tmp_path: Path, monkeypatch: pytest.MonkeyPat
     signature is stubbed."""
     _git_init(tmp_path)  # a structurally-real .git
     monkeypatch.setattr(install, "_git_toplevel", lambda cwd: None)  # git declines from cwd
-    monkeypatch.setattr(install, "_git_accepts", lambda cand: False)  # and refuses the candidate
+    monkeypatch.setattr(install, "_git_verdict", lambda cand: _GitVerdict.DUBIOUS)  # refuses it
     target, reason = resolve_init_target(tmp_path)
     assert reason == InitTargetReason.DUBIOUS_OWNERSHIP
     assert target == tmp_path.resolve()
@@ -440,14 +448,13 @@ def test_init_here_in_non_git_dir_targets_cwd(
     assert spy_install == [(tmp_path.resolve(), False)]  # target is CWD, no prompt
 
 
-def test_init_here_in_pkit_install_ancestor_targets_cwd(
+def test_init_here_in_pkit_install_ancestor_refuses_nested_install(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spy_install
 ) -> None:
-    """--here is an explicit operator instruction, so it is honored even under a
-    PKIT_INSTALL ancestor (no git repo, an install-marked ancestor above CWD): with
-    no git-root-wins precedence, a .pkit/ at CWD is reachable, so --here installs a
-    standalone at CWD. The refuse-and-redirect for PKIT_INSTALL governs the *default*
-    guided flow, not this explicit --here (#787)."""
+    """--here runs the same ancestor-install check as the default path: under an
+    install-marked ancestor (no git repo), a .pkit/ at CWD would be a second,
+    nested install, which ADR-001 refuses. It names the enclosing project and
+    points at `pkit sync` (#914; previously --here installed silently)."""
     _mark_install(tmp_path)  # install-marked ancestor, no .git
     nested = tmp_path / "deep"
     nested.mkdir()
@@ -457,9 +464,23 @@ def test_init_here_in_pkit_install_ancestor_targets_cwd(
     _, reason = resolve_init_target(nested)
     assert reason == InitTargetReason.PKIT_INSTALL
     result = CliRunner().invoke(main, ["init", "--here"])
+    assert result.exit_code != 0
+    assert "--here refused" in result.output
+    assert f"project-kit project at {tmp_path.resolve()}" in result.output
+    assert "pkit sync" in result.output
+    assert spy_install == []
+
+
+def test_init_here_at_git_root_installs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spy_install
+) -> None:
+    """The ancestor-install check does not over-refuse: --here at a git root with
+    no install anywhere on the path installs at CWD (#914)."""
+    _git_init(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    result = CliRunner().invoke(main, ["init", "--here"])
     assert result.exit_code == 0, result.output
-    assert "--here refused" not in result.output
-    assert spy_install == [(nested.resolve(), False)]  # standalone install at CWD
+    assert spy_install == [(tmp_path.resolve(), False)]
 
 
 # ---- CLI gate: --yes / --dry-run overrides (#7) -----------------------------
@@ -552,23 +573,95 @@ def test_init_root_nonexistent_path_refused_no_tree_created(
     assert spy_install == []
 
 
-def test_init_root_subfolder_of_worktree_warns_and_installs(
+def test_init_root_subfolder_of_worktree_refuses(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spy_install
 ) -> None:
-    """A --root naming a strict subfolder of a valid git worktree warns loudly
-    (the nested .pkit/ would be unreachable — steady-state commands resolve to the
-    git root) but still installs: the explicit --root is the operator's consent,
-    not a refusal, so the deferred monorepo-support path stays open (#791)."""
+    """A --root naming a strict subfolder of a valid git worktree is refused, as
+    ADR-001 states for a shadowed subfolder install: the nested .pkit/ would be
+    unreachable, since steady-state commands resolve to the git root. Explicit
+    consent does not make the install usable (#914; previously it warned and
+    installed)."""
     _git_init(tmp_path)
     sub = tmp_path / "pkg"
     sub.mkdir()
     monkeypatch.chdir(tmp_path)
     result = CliRunner().invoke(main, ["init", "--root", str(sub)])
+    assert result.exit_code != 0
+    assert "--root refused" in result.output
+    assert f"rooted at {tmp_path.resolve()}" in result.output  # names the worktree root
+    assert spy_install == []
+
+
+def test_init_root_inside_pkit_install_ancestor_refuses(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spy_install
+) -> None:
+    """--root runs the ancestor-install check on its target: a path inside an
+    already-adopted (no-git) project would be a second, nested install — refused,
+    naming the enclosing project and `pkit sync` (#914)."""
+    _mark_install(tmp_path)
+    sub = tmp_path / "sub"
+    sub.mkdir()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("PATH", "/nonexistent")  # no git: the install marker governs
+    result = CliRunner().invoke(main, ["init", "--root", str(sub)])
+    assert result.exit_code != 0
+    assert "--root refused" in result.output
+    assert f"project-kit project at {tmp_path.resolve()}" in result.output
+    assert "pkit sync" in result.output
+    assert spy_install == []
+
+
+def test_init_root_at_dubious_repo_warns_and_installs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spy_install
+) -> None:
+    """--root at a repository git refused to verify is the escape the guided
+    refusal names, so it installs — but warns, naming dubious ownership and the
+    safe.directory remedy, as the CLI README states (#914). Git's refusal is
+    stubbed (real ownership refusal is not reproducible in a unit test)."""
+    _git_init(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(install, "_git_toplevel", lambda cwd: None)
+    monkeypatch.setattr(install, "_git_verdict", lambda cand: _GitVerdict.DUBIOUS)
+    result = CliRunner().invoke(main, ["init", "--root", str(tmp_path)])
     assert result.exit_code == 0, result.output
     assert "WARNING" in result.output
-    assert "subfolder" in result.output
-    assert str(tmp_path.resolve()) in result.output  # names the worktree root
-    assert spy_install == [(sub.resolve(), False)]  # still installs, at the subfolder
+    assert "dubious ownership" in result.output
+    assert "safe.directory" in result.output
+    assert spy_install == [(tmp_path.resolve(), False)]
+
+
+def test_init_root_at_broken_repo_warns_and_installs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spy_install
+) -> None:
+    """--root at a repository git cannot open warns that it is broken — not that
+    it is dubious — and installs (#914). Real git, real broken repo."""
+    _real_broken_git(tmp_path)
+    monkeypatch.setenv("GIT_CEILING_DIRECTORIES", str(tmp_path.parent))
+    monkeypatch.chdir(tmp_path)
+    result = CliRunner().invoke(main, ["init", "--root", str(tmp_path)])
+    assert result.exit_code == 0, result.output
+    assert "WARNING" in result.output
+    assert "cannot open" in result.output
+    assert "safe.directory" not in result.output
+    assert spy_install == [(tmp_path.resolve(), False)]
+
+
+def test_init_root_subfolder_of_dubious_repo_refuses(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spy_install
+) -> None:
+    """A --root below a repository git refused is shadowed the same way a git
+    subfolder is — steady-state resolution lands on the dubious root — so it is
+    refused rather than warned (#914)."""
+    _git_init(tmp_path)
+    sub = tmp_path / "pkg"
+    sub.mkdir()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(install, "_git_toplevel", lambda cwd: None)
+    monkeypatch.setattr(install, "_git_verdict", lambda cand: _GitVerdict.DUBIOUS)
+    result = CliRunner().invoke(main, ["init", "--root", str(sub)])
+    assert result.exit_code != 0
+    assert "--root refused" in result.output
+    assert spy_install == []
 
 
 def test_init_dry_run_skips_confirm_even_when_non_tty(
@@ -639,10 +732,165 @@ def test_init_dubious_ownership_guides_without_installing(
     _git_init(tmp_path)
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(install, "_git_toplevel", lambda cwd: None)
-    monkeypatch.setattr(install, "_git_accepts", lambda cand: False)
+    monkeypatch.setattr(install, "_git_verdict", lambda cand: _GitVerdict.DUBIOUS)
     set_tty(True)
     result = CliRunner().invoke(main, ["init"], input="y\n")
     assert result.exit_code != 0
     assert "safe.directory" in result.output
     assert "--root" in result.output
+    assert spy_install == []
+
+
+# ---- #914: broken-vs-dubious diagnosis ---------------------------------------
+
+
+def _real_broken_git(path: Path) -> None:
+    """Give `path` a `.git/` that passes the structural check (`objects/` and
+    `refs/` present) but that git cannot open — no `HEAD`. A real repository in
+    shape, broken in fact: the case #914 must not diagnose as dubious ownership."""
+    (path / ".git" / "objects").mkdir(parents=True)
+    (path / ".git" / "refs").mkdir()
+
+
+class _Completed:
+    def __init__(self, returncode: int, stderr: str) -> None:
+        self.returncode = returncode
+        self.stdout = ""
+        self.stderr = stderr
+
+
+def _stub_git_run(monkeypatch: pytest.MonkeyPatch, returncode: int, stderr: str) -> list:
+    calls: list = []
+
+    def _run(cmd, **kwargs):
+        calls.append((cmd, kwargs))
+        return _Completed(returncode, stderr)
+
+    monkeypatch.setattr(install.subprocess, "run", _run)
+    return calls
+
+
+def test_git_verdict_real_broken_repo_is_broken(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _real_broken_git(tmp_path)
+    monkeypatch.setenv("GIT_CEILING_DIRECTORIES", str(tmp_path.parent))
+    assert _git_verdict(tmp_path) == _GitVerdict.BROKEN
+
+
+def test_git_verdict_real_repo_is_accepted(tmp_path: Path) -> None:
+    _git_init(tmp_path)
+    assert _git_verdict(tmp_path) == _GitVerdict.ACCEPTED
+
+
+def test_git_verdict_no_git_binary_is_absent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _git_init(tmp_path)
+    monkeypatch.setenv("PATH", "/nonexistent")
+    assert _git_verdict(tmp_path) == _GitVerdict.ABSENT
+
+
+@pytest.mark.parametrize(
+    "stderr",
+    [
+        "fatal: detected dubious ownership in repository at '/x'\n"
+        "To add an exception for this directory, call:\n",
+        "fatal: unsafe repository ('/x' is owned by someone else)\n",
+    ],
+)
+def test_git_verdict_ownership_refusal_is_dubious(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, stderr: str
+) -> None:
+    """Exit 128 plus git's ownership-refusal message (either wording) is dubious
+    ownership. The probe runs git under the C locale so the message is not
+    translated, and never passes a safe.directory override."""
+    calls = _stub_git_run(monkeypatch, 128, stderr)
+    assert _git_verdict(tmp_path) == _GitVerdict.DUBIOUS
+    cmd, kwargs = calls[0]
+    assert kwargs["env"]["LC_ALL"] == "C"
+    assert not any("safe.directory" in part for part in cmd)
+
+
+@pytest.mark.parametrize(
+    ("returncode", "stderr"),
+    [
+        (128, "fatal: not a git repository (or any of the parent directories): .git\n"),
+        (128, "fatal: bad config line 1 in file .git/config\n"),
+        (1, "error: something else mentioning dubious ownership\n"),  # not git's fatal exit
+    ],
+)
+def test_git_verdict_other_failure_is_broken(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, returncode: int, stderr: str
+) -> None:
+    _stub_git_run(monkeypatch, returncode, stderr)
+    assert _git_verdict(tmp_path) == _GitVerdict.BROKEN
+
+
+def test_resolve_real_broken_git_is_broken_not_dubious(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A structurally-real `.git` git cannot open classifies as BROKEN_GIT — not
+    DUBIOUS_OWNERSHIP, whose safe.directory remedy would fix nothing (#914)."""
+    _real_broken_git(tmp_path)
+    monkeypatch.setenv("GIT_CEILING_DIRECTORIES", str(tmp_path.parent))
+    target, reason = resolve_init_target(tmp_path)
+    assert reason == InitTargetReason.BROKEN_GIT
+    assert target == tmp_path.resolve()
+
+
+def test_resolve_dangling_worktree_pointer_is_broken(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A `.git` file whose `gitdir:` target does not exist passes the structural
+    check but git cannot open it: broken, not dubious (#914, the stale-worktree
+    case from the #791 review)."""
+    (tmp_path / ".git").write_text(
+        f"gitdir: {tmp_path / 'gone' / '.git' / 'worktrees' / 'x'}\n", encoding="utf-8"
+    )
+    monkeypatch.setenv("GIT_CEILING_DIRECTORIES", str(tmp_path.parent))
+    _, reason = resolve_init_target(tmp_path)
+    assert reason == InitTargetReason.BROKEN_GIT
+
+
+def test_find_target_root_still_resolves_real_broken_git(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Read-only callers are unchanged by the split: a structurally-real `.git`
+    git cannot open still resolves as the root, as it did when it was (mis)read
+    as dubious ownership. Only init's diagnosis changed (#914)."""
+    _real_broken_git(tmp_path)
+    monkeypatch.setenv("GIT_CEILING_DIRECTORIES", str(tmp_path.parent))
+    assert find_target_root(tmp_path) == tmp_path.resolve()
+
+
+def test_init_broken_git_reports_broken_not_dubious(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spy_install, set_tty
+) -> None:
+    """init refuses a repository git cannot open and says it is broken, with a
+    remedy that can work — never the safe.directory remedy (#914)."""
+    _real_broken_git(tmp_path)
+    monkeypatch.setenv("GIT_CEILING_DIRECTORIES", str(tmp_path.parent))
+    monkeypatch.chdir(tmp_path)
+    set_tty(True)
+    result = CliRunner().invoke(main, ["init"], input="y\n")
+    assert result.exit_code != 0
+    assert "cannot open" in result.output
+    assert "safe.directory" not in result.output
+    assert "dubious" not in result.output
+    assert "--root" in result.output
+    assert spy_install == []
+
+
+def test_init_here_does_not_override_broken_git(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spy_install
+) -> None:
+    """--here does not bypass the broken-repository refusal, matching the
+    dubious-ownership guard it sits beside (#914)."""
+    _real_broken_git(tmp_path)
+    monkeypatch.setenv("GIT_CEILING_DIRECTORIES", str(tmp_path.parent))
+    monkeypatch.chdir(tmp_path)
+    result = CliRunner().invoke(main, ["init", "--here"])
+    assert result.exit_code != 0
+    assert "cannot open" in result.output
     assert spy_install == []
