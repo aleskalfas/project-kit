@@ -2,7 +2,7 @@ component: backbone
 kind: patch
 custom:
   category: Fixed
-  pr: ""
+  pr: "939"
 body: >
   `pkit new capability`, `pkit capabilities install` and `pkit capabilities
   register` now refuse a capability named `core`. That name is reserved
