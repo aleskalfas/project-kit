@@ -16,7 +16,10 @@ body: >
   points you at `pkit sync` to refresh it; a leftover `.pkit` there that is not
   an install is refused too, naming what is wrong and asking you to move it
   aside — both before any prompt. Every refusal's suggested remedy is one the
-  same command accepts. A new `--here` installs into the current directory
+  same command accepts, run from where you stand: a redirect to `pkit sync` reads
+  `cd <project> && pkit sync` when you are outside that project (for example
+  after `--root` named it), and an already-adopted repository git will not
+  verify or open is pointed at the git fix, then `pkit sync`. A new `--here` installs into the current directory
   (refused when it is a subfolder of a git worktree, where a `.pkit/` there
   would be unreachable, or sits inside an existing project-kit project, where it
   would nest a second install), and `--yes` accepts the offer to install in a

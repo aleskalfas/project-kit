@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import atexit
 import os
+import shlex
 import shutil
 import stat
 import subprocess
@@ -596,7 +597,23 @@ def _stamp_backbone_manifest(ctx: InstallContext) -> None:
     click.echo(f"  {'stamped':<12} .pkit/manifest.yaml (backbone v{backbone_version}{suffix})")
 
 
-def refuse_if_pkit_present(target_root: Path) -> None:
+def sync_remedy(project_root: Path, cwd: Path | None = None) -> str:
+    """The backticked `pkit sync` command that refreshes `project_root` when run
+    from `cwd` (default: the current directory).
+
+    `pkit sync` has no `--root`: it refreshes whichever project `find_target_root`
+    resolves from where it runs. From a directory that resolves to `project_root`
+    the bare command is the remedy; from anywhere else it would refresh another
+    project or fail with "not in a project tree", so the remedy names the
+    project's location, shell-quoted: `cd <root> && pkit sync` (#913).
+    """
+    here = cwd if cwd is not None else Path.cwd()
+    if find_target_root(here) == project_root.resolve():
+        return "`pkit sync`"
+    return f"`cd {shlex.quote(str(project_root))} && pkit sync`"
+
+
+def refuse_if_pkit_present(target_root: Path, cwd: Path | None = None) -> None:
     """Raise a `ClickException` if `target_root` already has a `.pkit` entry.
 
     `init` never installs over an existing `.pkit` — the fresh copy would collide
@@ -609,13 +626,15 @@ def refuse_if_pkit_present(target_root: Path) -> None:
 
     Public so the `init` command runs it *before* its confirm prompt: the
     operator is never asked to confirm an install that would then be refused.
-    `install_kit` runs it again as its own guard for direct callers.
+    `install_kit` runs it again as its own guard for direct callers. The sync
+    redirect is phrased for `cwd` (default: the current directory) — see
+    `sync_remedy` — so it still works when `--root` named a project elsewhere.
     """
     pkit_dir = target_root / ".pkit"
     if looks_like_pkit_install(pkit_dir):
         raise click.ClickException(
             f"{target_root} is already a project-kit project.\n"
-            f"       Run `pkit sync` to refresh it."
+            f"       Run {sync_remedy(target_root, cwd)} to refresh it."
         )
     if pkit_dir.is_dir():
         raise click.ClickException(

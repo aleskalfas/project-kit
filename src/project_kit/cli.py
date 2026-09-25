@@ -33,6 +33,7 @@ from project_kit.install import (
     source_checkout_root,
     resolve_init_target,
     scan_pkit_installs,
+    sync_remedy,
 )
 from project_kit.merge import run_merge
 from project_kit.scaffolds import (
@@ -788,8 +789,8 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
                 raise click.ClickException(
                     f"--root refused: {target} is inside the project-kit project at "
                     f"{enclosing_root}.\n"
-                    f"       A second, nested install is not supported. Run `pkit sync` "
-                    f"to refresh that project."
+                    f"       A second, nested install is not supported. Run "
+                    f"{sync_remedy(enclosing_root, cwd)} to refresh that project."
                 )
             if router.looks_like_pkit_install(enclosing_root / ".pkit"):
                 raise click.ClickException(
@@ -797,8 +798,8 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
                     f"rooted at {enclosing_root},\n"
                     f"       which is already a project-kit project. A .pkit/ here would "
                     f"be unreachable — every\n"
-                    f"       pkit command resolves to the git root. Run `pkit sync` to "
-                    f"refresh that project."
+                    f"       pkit command resolves to the git root. Run "
+                    f"{sync_remedy(enclosing_root, cwd)} to refresh that project."
                 )
             raise click.ClickException(
                 f"--root refused: {target} is a subfolder of the git repository rooted "
@@ -812,8 +813,9 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
         # A .pkit entry at the target itself: a real install redirects to sync, a
         # stray one is named and must be moved aside (#913). Checked after the
         # shadow refusal, whose remedy is the right one for a shadowed target (a
-        # shadowed install's `pkit sync` would resolve to the enclosing root).
-        refuse_if_pkit_present(target)
+        # shadowed install's `pkit sync` would resolve to the enclosing root). The
+        # sync redirect names the target's location when cwd is outside it.
+        refuse_if_pkit_present(target, cwd)
         # The target is itself a repository git will not vouch for. --root is the
         # escape the guided flow's refusal names, so install — but say what git
         # said, so a CI run does not install into an unverified tree unannounced.
@@ -844,6 +846,20 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
     # of --here: installing at cwd here is exactly the shadowing footgun.
     if reason == InitTargetReason.DUBIOUS_OWNERSHIP:
         _announce_init_target(target, reason, [], here=here)
+        # Already adopted (a Docker / CI checkout owned by another user): `--root`
+        # would only refuse as already installed, so the remedy is the ownership
+        # fix, then `pkit sync`. A stray non-install .pkit keeps the `--root`
+        # remedy — that run names the stray entry and how to clear it (#913).
+        if router.looks_like_pkit_install(target / ".pkit"):
+            raise click.ClickException(
+                f"{target} is already a project-kit project, but git refused to verify "
+                f"its repository\n"
+                f"       (dubious ownership / safe.directory). If you trust its owner, let "
+                f"git use it with\n"
+                f"       `git config --global --add safe.directory "
+                f"{shlex.quote(str(target))}`, then run {sync_remedy(target, cwd)}\n"
+                f"       to refresh the project."
+            )
         raise click.ClickException(
             f"{target} looks like a git repository, but git refused to verify it "
             f"(dubious ownership / safe.directory).\n"
@@ -862,6 +878,18 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
     # shadowing footgun, and --here does not override it.
     if reason == InitTargetReason.BROKEN_GIT:
         _announce_init_target(target, reason, [], here=here)
+        # Already adopted: as for dubious ownership, `--root` would refuse as
+        # already installed, so the remedy is repairing the .git, then `pkit sync`
+        # (#913). Removing the .git is not offered — it holds the project's history.
+        if router.looks_like_pkit_install(target / ".pkit"):
+            raise click.ClickException(
+                f"{target} is already a project-kit project, but git cannot open its "
+                f".git — a broken or\n"
+                f"       partial repository. Run `git -C {shlex.quote(str(target))} status` "
+                f"to see why and repair\n"
+                f"       that .git, then run {sync_remedy(target, cwd)} to refresh the "
+                f"project."
+            )
         raise click.ClickException(
             f"{target} has a .git that git cannot open — a broken or partial "
             f"repository.\n"
@@ -887,8 +915,8 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
                 f"worktree rooted at {target},\n"
                 f"       which is already a project-kit project. A .pkit/ here would be "
                 f"unreachable — every\n"
-                f"       pkit command resolves to the git root. Run `pkit sync` to "
-                f"refresh that project."
+                f"       pkit command resolves to the git root. Run "
+                f"{sync_remedy(target, cwd)} to refresh that project."
             )
         if reason == InitTargetReason.GIT_SUBFOLDER:
             raise click.ClickException(
@@ -908,8 +936,8 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
             raise click.ClickException(
                 f"--here refused: the current directory is inside the project-kit "
                 f"project at {enclosing[0]}.\n"
-                f"       A second, nested install is not supported. Run `pkit sync` to "
-                f"refresh that project."
+                f"       A second, nested install is not supported. Run "
+                f"{sync_remedy(enclosing[0], cwd)} to refresh that project."
             )
         target = cwd
 
@@ -926,7 +954,7 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
     # here too, with what is wrong and how to clear it (#913). Fires before the
     # confirm so the operator is never prompted-then-refused for an install that
     # could not proceed anyway (#780).
-    refuse_if_pkit_present(target)
+    refuse_if_pkit_present(target, cwd)
 
     # An install sits between CWD and the target, but the target has none:
     # installing there would leave two installs straddling CWD (split-brain).
