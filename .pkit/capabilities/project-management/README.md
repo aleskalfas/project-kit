@@ -369,12 +369,17 @@ pkit pm show-pr 320 --field review-history     # -> every verdict per reviewer, 
 #### Report-context read verb — `context-workstream` (per pkit ADR-050)
 
 `pkit pm context-workstream` prints the **current workstream** — resolved
-from the current branch (`<type>/<N>-<slug>` → issue #N → its `workstream:*`
-label, through the ADR-026 axis-label read seam) — as one bare value on
+from the current branch (`<type>/<N>-<slug>` → issue #N → its workstream
+label, read through the ADR-026 axis-label read seam: the kit's `workstream:*`
+label, or the adopter's own label where the substrate map remaps the axis) —
+as one bare value on
 stdout, or **nothing** when it cannot be derived (branch not issue-shaped,
-`gh` unavailable, issue unlabelled, board-substrate adopter). It **always
-exits 0**: the caller treats empty output as "omit workstream", so context
-enrichment never becomes a gate. This is the pm-provided half of the report
+`gh` unavailable, issue unlabelled, board-substrate adopter). Every such miss
+**exits 0**: the caller treats empty output as "omit workstream", so context
+enrichment never becomes a gate. The one refusal is an un-bootstrapped project
+(exit 2, the prerequisite gate every non-exempt pm verb calls): a workstream
+read off assumed kit labels there could be confidently wrong, and the caller
+treats a non-zero exit as "no workstream" too. This is the pm-provided half of the report
 context seam — the backbone's `pkit report` compose invokes it by subprocess
 through the capability dispatcher (COR-021) rather than reading
 `workstreams.yaml` or issue labels itself, keeping workstream vocabulary

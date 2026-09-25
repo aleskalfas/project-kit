@@ -95,6 +95,80 @@ def test_prints_workstream_on_happy_path(
     assert captured["fields"] == "labels"
 
 
+# --- the substrate-map read path (#910) ------------------------------
+#
+# The verb must read workstream THROUGH the map, not by a bare `workstream:`
+# prefix scan: an adopter whose map binds workstream to their own labels got
+# silence for a plainly-set value. The map is written to the capability root the
+# verb resolves, so the real `load_substrate_map` path is what is exercised.
+
+_REMAPPED_WORKSTREAM_MAP = (
+    "axes:\n"
+    "  workstream:\n"
+    "    label:\n"
+    "      remap:\n"
+    "        cli: area/command-line\n"
+    "        docs: area/documentation\n"
+)
+
+
+def _with_map(tmp_path: Path, map_yaml: str) -> Path:
+    (tmp_path / "project").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "project" / "substrate-map.yaml").write_text(
+        map_yaml, encoding="utf-8"
+    )
+    return tmp_path
+
+
+def _drive_with_labels(cw, monkeypatch, capsys, root: Path, labels: list[str]):
+    monkeypatch.setattr(cw, "_current_branch", lambda: "feat/644-context")
+    monkeypatch.setattr(cw, "resolve_capability_root", lambda explicit: root)
+    monkeypatch.setattr(cw, "load_adopter_config", lambda root: {})
+    monkeypatch.setattr(
+        cw, "gh_get_issue",
+        lambda *a, **k: {"labels": [{"name": n} for n in labels]},
+    )
+    return _run_main(cw, monkeypatch, capsys)
+
+
+def test_prints_kit_value_for_a_remapped_workstream_label(
+    cw, monkeypatch, capsys, tmp_path: Path
+) -> None:
+    """The #910 defect: the adopter's own `area/command-line` label is their
+    workstream substrate, so the verb reports the kit value it maps to."""
+    root = _with_map(tmp_path, _REMAPPED_WORKSTREAM_MAP)
+    code, out, _err = _drive_with_labels(
+        cw, monkeypatch, capsys, root, ["kind/bug", "area/command-line"]
+    )
+    assert code == 0
+    assert out == "cli\n"
+
+
+def test_kit_label_is_not_the_substrate_under_a_remapping_map(
+    cw, monkeypatch, capsys, tmp_path: Path
+) -> None:
+    """Under a map that binds workstream to the adopter's labels, a leftover kit
+    `workstream:*` label is not this project's substrate and must not be
+    reported — the map, not the kit prefix, decides where the axis lives."""
+    root = _with_map(tmp_path, _REMAPPED_WORKSTREAM_MAP)
+    code, out, _err = _drive_with_labels(
+        cw, monkeypatch, capsys, root, ["workstream:docs"]
+    )
+    assert code == 0 and out == ""
+
+
+def test_silent_when_the_map_does_not_carry_workstream_on_a_label(
+    cw, monkeypatch, capsys, tmp_path: Path
+) -> None:
+    """A map that marks workstream unsupported names no label substrate, so
+    there is nothing to read from the labels — silence, not a kit-prefix guess."""
+    root = _with_map(tmp_path, "axes:\n  workstream:\n    unsupported: true\n")
+    code, out, _err = _drive_with_labels(
+        cw, monkeypatch, capsys, root, ["workstream:cli"]
+    )
+    assert code == 0 and out == ""
+
+
 def test_silent_on_non_issue_branch(cw, monkeypatch, capsys) -> None:
     monkeypatch.setattr(cw, "_current_branch", lambda: "main")
 

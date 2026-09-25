@@ -150,7 +150,10 @@ def main() -> int:
         lbl.get("name", "") if isinstance(lbl, dict) else str(lbl)
         for lbl in (issue.get("labels") or [])
     ]
-    expected_prefix = _derive_branch_prefix(labels, title, classification)
+    substrate_map = axis_labels.load_substrate_map(capability_root)
+    expected_prefix = _derive_branch_prefix(
+        labels, title, classification, substrate_map
+    )
     branch_prefix_match = re.match(r"^([a-z]+)/", branch)
     branch_prefix = branch_prefix_match.group(1) if branch_prefix_match else None
     if expected_prefix and branch_prefix and expected_prefix != branch_prefix:
@@ -275,7 +278,10 @@ def _find_issue_branch(issue_number: int) -> str | None:
 
 
 def _derive_branch_prefix(
-    labels: list[str], title: str, classification: dict
+    labels: list[str],
+    title: str,
+    classification: dict,
+    substrate_map: axis_labels.SubstrateMap | None,
 ) -> str | None:
     """The conventional-commit prefix the branch is validated against (DEC-013).
 
@@ -283,14 +289,16 @@ def _derive_branch_prefix(
     the conv-type via classification.yaml's `pr_type_mapping` — identical to
     start-work's derivation (both read the one shared table, per COR-007):
 
-    * greenfield / label substrate ⇒ `axis_labels.read("type", labels)`;
+    * label substrate ⇒ `axis_labels.resolve_read("type", labels, substrate_map)`
+      — the kit's `type:*` label in greenfield, the adopter's remapped label
+      under a `label` binding (#910);
     * brownfield `title-prefix` substrate ⇒ `classification_rules.kind_from_title`,
       where no `type:*` label exists to read.
 
     The label arm is tried first so greenfield stays byte-identical. `None` when
     neither arm resolves a recognised value — the caller then skips the
     prefix/branch cross-check rather than failing on an underivable type."""
-    kind = axis_labels.read("type", labels)
+    kind = axis_labels.resolve_read("type", labels, substrate_map)
     if kind is None:
         kind = classification_rules.kind_from_title(title, classification)
     if kind is None:

@@ -21,7 +21,7 @@ This guard closes that hole structurally, so a third copy cannot silently
 reappear: no script under the capability's ``scripts/`` tree may contain a **dict
 literal keyed on ``type:*`` (or any ``<axis>:``) string literals**. That shape is
 the signature of a raw-label read-map; the value must be read through the seam
-(``axis_labels.read("type", labels)`` on the label arm,
+(``axis_labels.resolve_read("type", labels, substrate_map)`` on the label arm,
 ``classification_rules.kind_from_title`` on the title-prefix arm) and mapped
 through ``classification_rules.conv_type_for_kind`` (the single ``pr_type_mapping``
 reader) instead.
@@ -117,7 +117,7 @@ def _violations(path: Path) -> list[str]:
                 out.append(
                     f"{path.name}:{node.lineno}: dict keyed on `{prefix}` axis-label "
                     "literals is a raw-label read-map that bypasses the ADR-026 read "
-                    "seam (read the value via axis_labels.read / "
+                    "seam (read the value via axis_labels.resolve_read / "
                     "classification_rules.kind_from_title, then map it through "
                     "classification_rules.conv_type_for_kind)"
                 )

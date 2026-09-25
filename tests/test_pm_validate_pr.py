@@ -434,10 +434,61 @@ def test_gather_closing_type_labels_threads_config(vp, monkeypatch) -> None:
     monkeypatch.setattr(vp, "_gh_get_issue", fake_get_issue)
 
     cfg = {"gh": {"host": "example.com"}}
-    result = vp._gather_closing_type_labels([7], cfg)
+    result = vp._gather_closing_type_labels([7], cfg, None)
 
     assert result == ["type:feature"]
     assert seen["config"] is cfg  # threaded through, not an undefined name
+
+
+# --- the substrate-map read path (#910) --------------------------------
+
+
+def _issue_with(labels: list[str]):
+    return lambda n, config: {"labels": [{"name": name} for name in labels]}
+
+
+def test_gather_reads_a_remapped_type_label_in_kit_vocabulary(vp, monkeypatch) -> None:
+    """An adopter whose map binds `type` to their own `kind/*` labels: the bare
+    `type:` prefix scan gathered nothing and silently skipped the PR-title
+    cross-check. Through carriage the remapped label resolves to the kit value
+    the validator's `pr_type_mapping` lookup reads."""
+    substrate_map = vp.axis_labels.SubstrateMap(
+        axes={"type": {"label": {"remap": {"bug": "kind/bug"}}}}
+    )
+    monkeypatch.setattr(vp, "_gh_get_issue", _issue_with(["kind/bug", "type:docs"]))
+    assert vp._gather_closing_type_labels([7], {}, substrate_map) == ["type:bug"]
+
+
+def test_gather_skips_a_type_no_label_carries(vp, monkeypatch) -> None:
+    """A `title-prefix`-bound type is carried by no label, so a leftover kit
+    `type:*` label is not gathered — the map, not the kit prefix, decides."""
+    substrate_map = vp.axis_labels.SubstrateMap(
+        axes={"type": {"title-prefix": {"remap": {"bug": "[Bug]"}}}}
+    )
+    monkeypatch.setattr(vp, "_gh_get_issue", _issue_with(["type:docs"]))
+    assert vp._gather_closing_type_labels([7], {}, substrate_map) == []
+
+
+def test_remapped_type_cross_checks_the_pr_title(
+    vp, monkeypatch, titles, classification, git_conv
+) -> None:
+    """End to end over the gather + validator: a `feat:` PR closing an issue the
+    adopter labelled `kind/bug` is now the same title-type mismatch it is in
+    greenfield, rather than passing unchecked."""
+    substrate_map = vp.axis_labels.SubstrateMap(
+        axes={"type": {"label": {"remap": {"bug": "kind/bug"}}}}
+    )
+    monkeypatch.setattr(vp, "_gh_get_issue", _issue_with(["kind/bug"]))
+    gathered = vp._gather_closing_type_labels([7], {}, substrate_map)
+    findings = vp._validate_pr(
+        pr_title="feat: add the thing",
+        pr_body="Closes #7\n\n## Doc impact\n\nNone.\n",
+        titles=titles,
+        classification=classification,
+        git_conv=git_conv,
+        closing_type_labels=gathered,
+    )
+    assert "title.type-mismatch" in {f.label for f in findings}
 
 
 # --- validate-at-ready (#569): the skeleton trap -----------------------

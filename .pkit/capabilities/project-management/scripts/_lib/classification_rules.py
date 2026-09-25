@@ -26,7 +26,7 @@ value* reverse read (:func:`kind_from_title` over ``title_prefix_by_value``):
 ``open-pr`` derives the PR title's Conventional-Commits ``<type>`` and
 ``start-work`` / ``review-work`` derive the branch prefix (DEC-013) through these
 readers rather than each carrying a private ``type:*`` → prefix dict. Feeding the
-kit *value* (resolved via ``axis_labels.read`` on the label arm, or
+kit *value* (resolved via ``axis_labels.resolve_read`` on the label arm, or
 :func:`kind_from_title` on the title-prefix arm) into one lookup is what makes the
 conv-type resolve identically greenfield and brownfield (the ADR-026 read-path
 seam applied to the branch-prefix derivation).
@@ -143,7 +143,7 @@ def kind_from_title(title: str, classification: dict) -> str | None:
     ``"[Bug] hostname mismatch"`` and the classification's
     ``title_prefix_by_value`` map (``{bug: Bug, ...}``), recover the kit's own
     kind value (``bug``). This is the read side of the ``type`` axis's
-    ``title-prefix`` substrate — the arm ``axis_labels.read("type", labels)``
+    ``title-prefix`` substrate — the arm ``axis_labels.resolve_read("type", ...)``
     cannot serve, because a brownfield adopter carries the kind in the bracket
     prefix and no ``type:*`` label exists to read. Mirrors how
     ``move-issue._structural_type_from_title`` reads the prefix (``title``
@@ -174,8 +174,9 @@ def conv_type_for_kind(kind: str, classification: dict) -> str | None:
 
     ``kind`` is the kit's own value (``bug`` / ``feature`` / ...), NOT a raw
     ``type:*`` label — callers resolve the value first, through
-    ``axis_labels.read("type", labels)`` (label arm) or :func:`kind_from_title`
-    (title-prefix arm), so greenfield and brownfield feed the same lookup. Empty /
+    ``axis_labels.resolve_read("type", labels, substrate_map)`` (label arm) or
+    :func:`kind_from_title` (title-prefix arm), so greenfield and brownfield feed
+    the same lookup. Empty /
     absent mapping, or a ``kind`` with no entry ⇒ ``None`` (the caller decides
     whether that is an error or a default).
     """
