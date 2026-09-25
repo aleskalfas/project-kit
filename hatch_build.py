@@ -39,13 +39,30 @@ withholding the contents alone silently killed that scaffolding. The markers
 restore the shape while keeping the contents out: kit-owned layout rather than
 adopter data, asserted byte-empty by the same test module, and never copied to
 an adopter. ADR-033 D1 records the exception.
+
+**Tracked state, not the filesystem (#909).** Filtering by tier was not enough
+for the reproducibility claim: the walk still took every file it FOUND, so an
+untracked, non-ignored file in a local checkout — an editor backup, a stray
+`.DS_Store` — shipped. In a git work tree the hook therefore enumerates what git
+TRACKS (`git ls-files`, i.e. the index), and it does so for the sdist too, which
+until then walked the tree the same way. A wheel built FROM an sdist has no
+`.git` and walks the unpacked tree — correct only because the sdist it walks was
+itself assembled from tracked files. That is why the sdist is covered here
+rather than left to its `exclude` glob: the default `uv build` / `python -m
+build` path builds the wheel from the sdist, so an sdist that carried a stray
+would hand it to the wheel. A `.git` without a working `git` fails the build
+rather than falling back to the walk; see `_tracked_paths`. A tree with neither
+a `.git` nor an sdist's `PKG-INFO` builds, with a warning; see
+`_untracked_source_warning`.
 """
 
 from __future__ import annotations
 
 import importlib.util
+import subprocess
 import sys
 import tempfile
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -67,7 +84,13 @@ DEST_ROOT = "project_kit/_kit"
 # A WHOLESALE tree left in the static list ships unfiltered — that is the bug.
 # Note the criterion is not "has a `project/` subdirectory": `rules` has none
 # and is a member because of `rules/project.md`.
+#
+# `decisions/core` is the one member below the top level. It is bundled
+# wholesale, so it is the same case: as a static directory force-include it
+# shipped whatever file sat in it, tracked or not (#909). The static list now
+# names single tracked files only.
 FILTERED_TREES: tuple[str, ...] = (
+    "decisions/core",
     "capabilities",
     "agents",
     "permissions",
@@ -109,6 +132,123 @@ ADOPTER_TIER_MARKERS: tuple[str, ...] = (
 EXCLUDED_PARTS: frozenset[str] = frozenset({"__pycache__", ".pytest_cache"})
 EXCLUDED_SUFFIXES: tuple[str, ...] = (".pyc", ".pyo")
 
+# The sdist's `.pkit/` entries, like the wheel's kit trees, are force-included
+# by this hook — `pyproject.toml` excludes `/.pkit` from the sdist's own walk
+# and declares what to withhold under this hook-config key.
+SDIST_WITHHOLD_KEY = "withhold"
+
+# Written at the root of every sdist by the build backend, so its presence is
+# how a `.git`-less tree is recognised as an unpacked sdist.
+SDIST_METADATA_FILE = "PKG-INFO"
+
+# git's refusal when the repository's owner uid differs from the caller's
+# (CVE-2022-24765). Matched on stderr because the exit code, 128, is git's
+# generic fatal status.
+GIT_DUBIOUS_OWNERSHIP = "dubious ownership"
+
+
+def _tracked_paths(root: Path) -> frozenset[str] | None:
+    """Root-relative POSIX paths git tracks under `.pkit/`, or `None` outside a work tree.
+
+    `None` means "no tracked state to consult": `root` has no `.git` of its own,
+    which is the case when building a wheel from an unpacked sdist. The caller
+    then walks the tree as found — sound because the sdist was assembled from
+    tracked files by this same hook. Only `root/.git` counts, never an
+    ancestor's: an sdist unpacked somewhere inside another repository must not
+    be filtered against that repository's index. `.git` may be a file (a linked
+    worktree or a submodule); `exists()` covers both.
+
+    A `.git` whose `git` cannot answer FAILS the build. Falling back to the walk
+    would silently restore the defect this function exists to close, in exactly
+    the situation — a local checkout — where untracked files are likely. That
+    holds for git's "dubious ownership" refusal too, which gets its own message
+    because its cause (a checkout owned by another uid: a CI container, a Docker
+    volume mount, `sudo pip install`) and its remedy are not guessable from
+    git's text alone. There is deliberately no environment variable to skip the
+    check; the remedy is git's own `safe.directory`.
+    """
+    if not (root / ".git").exists():
+        return None
+    try:
+        proc = subprocess.run(
+            ["git", "-C", str(root), "ls-files", "-z", "--", ".pkit"],
+            capture_output=True,
+            check=False,
+        )
+    except FileNotFoundError as exc:
+        raise RuntimeError(
+            f"hatch_build: {root} is a git work tree but `git` is not on PATH. The "
+            "bundle is built from tracked files only, and walking the tree instead "
+            "would ship untracked ones; install git or build from an sdist."
+        ) from exc
+    if proc.returncode != 0:
+        stderr = proc.stderr.decode(errors="replace").strip()
+        if GIT_DUBIOUS_OWNERSHIP in stderr:
+            raise RuntimeError(
+                f"hatch_build: git refuses to read {root}: the checkout is owned by "
+                "a different user than the one building (common in CI containers, "
+                "Docker volume mounts and `sudo pip install`). The bundle is built "
+                "from tracked files only, so the build cannot proceed without git. "
+                "Mark the checkout safe and rebuild: "
+                f"git config --global --add safe.directory {root}\n"
+                f"git said: {stderr}"
+            )
+        raise RuntimeError(
+            f"hatch_build: `git ls-files` failed in {root} (exit {proc.returncode}): "
+            f"{stderr}"
+        )
+    return frozenset(p for p in proc.stdout.decode("utf-8").split("\0") if p)
+
+
+def _untracked_source_warning(root: Path) -> str | None:
+    """The warning for a build whose tree is neither a work tree nor an sdist.
+
+    With no `root/.git`, `_tracked_paths` has no index to consult and the tree
+    is walked as found. That is sound only for a tree assembled from tracked
+    files: an unpacked sdist, or a `git archive` / "Download ZIP" tarball. It
+    is silently unsound for a Docker context whose `.dockerignore` drops
+    `.git`, a vendored copy, or a `cp -r` that left `.git` behind — each can
+    carry untracked files into the bundle.
+
+    Every sdist carries a `PKG-INFO` at its root, so that case stays quiet. The
+    rest cannot be told apart (a `git archive` tarball has neither marker), so
+    this warns rather than fails: git-archive builds are legitimate.
+    """
+    if (root / ".git").exists() or (root / SDIST_METADATA_FILE).is_file():
+        return None
+    return (
+        f"pkit packaging boundary: {root} has no `.git` and no `{SDIST_METADATA_FILE}`, "
+        "so `.pkit/` is bundled from the tree as found rather than from tracked "
+        "files. Untracked files present in it may ship. Build from a git work "
+        "tree or an sdist to rule that out."
+    )
+
+
+def _shippable_files(
+    base: Path, *, root: Path, tracked: frozenset[str] | None
+) -> Iterator[Path]:
+    """Every file under `base` a build may carry, in sorted order.
+
+    Tracked files only when `tracked` is given, else the tree as found; build
+    caches never. Membership is tested on the walked path rather than by
+    iterating `tracked`, so a file deleted from the work tree but still in the
+    index is skipped instead of failing the build.
+    """
+    for path in sorted(base.rglob("*")):
+        if not path.is_file():
+            continue
+        rel = path.relative_to(root)
+        # Scoped to the project root: matching `path.parts` would also test
+        # directories ABOVE it, so a checkout under a directory named
+        # `__pycache__` would silently bundle nothing.
+        if EXCLUDED_PARTS & set(rel.parts):
+            continue
+        if path.suffix in EXCLUDED_SUFFIXES:
+            continue
+        if tracked is not None and rel.as_posix() not in tracked:
+            continue
+        yield path
+
 
 def _load_ownership():
     """Import `.pkit/lifecycle/ownership.py` by path.
@@ -132,15 +272,76 @@ def _load_ownership():
 class CapabilityBoundaryHook(BuildHookInterface):
     """Force-include every wholesale-bundled `.pkit/` tree, minus adopter-owned paths.
 
-    Scope is `FILTERED_TREES` above — eleven trees, not capabilities alone. The
-    sole thing shipped at an adopter-owned path is an empty structural marker
-    per `ADOPTER_TIER_MARKERS` entry, so the installer can still read the
-    bundle's shape.
+    Wheel scope is `FILTERED_TREES` above, not capabilities alone. The sole
+    thing shipped at an adopter-owned path is an empty structural marker per
+    `ADOPTER_TIER_MARKERS` entry, so the installer can still read the bundle's
+    shape. Registered on the sdist target too, where it force-includes the
+    `.pkit/` tree from tracked files (#909); see `_initialize_sdist`.
     """
 
     PLUGIN_NAME = "pkit-capability-boundary"
 
     def initialize(self, version: str, build_data: dict[str, Any]) -> None:
+        tracked = _tracked_paths(ROOT)
+        warning = _untracked_source_warning(ROOT)
+        if warning is not None:
+            self.app.display_warning(warning)
+        if self.target_name == "sdist":
+            self._initialize_sdist(tracked, build_data)
+        else:
+            self._initialize_wheel(tracked, build_data)
+
+    def _initialize_sdist(
+        self, tracked: frozenset[str] | None, build_data: dict[str, Any]
+    ) -> None:
+        """Force-include `.pkit/` into the sdist from tracked files, minus `withhold`.
+
+        The sdist's own walk cannot do this: hatchling takes every file it finds
+        that the root `.gitignore` does not match, so an untracked file shipped,
+        and a wheel built from that sdist then shipped it too. So
+        `pyproject.toml` excludes `/.pkit` from the walk and this re-adds the
+        tree. The withhold globs stay in `pyproject.toml`, applied here with the
+        same `pathspec` engine hatchling uses for `exclude`.
+
+        Globs by CHOICE, not necessity: this hook could call
+        `is_adopter_owned_by_tier` here exactly as the wheel does. It does not,
+        so that the sdist keeps a filter of its own — the independent oracle
+        `tests/test_packaging_boundary.py` compares the wheel against. Do not
+        "simplify" this into the predicate; that would delete the check which
+        caught a hole in the predicate. What the two targets now SHARE is the
+        enumeration (`_tracked_paths` / `_shippable_files`), so the comparison
+        cannot see an enumeration defect —
+        `test_untracked_file_ships_in_no_artifact` is the external check there.
+        """
+        import pathspec  # declared in `[build-system] requires`
+
+        globs = self.config.get(SDIST_WITHHOLD_KEY, [])
+        if not isinstance(globs, list) or not all(isinstance(g, str) for g in globs):
+            raise TypeError(
+                f"hatch_build: sdist hook option `{SDIST_WITHHOLD_KEY}` must be a "
+                "list of strings"
+            )
+        withhold = pathspec.GitIgnoreSpec.from_lines(globs)
+
+        include: dict[str, str] = {}
+        withheld = 0
+        for path in _shippable_files(KIT, root=ROOT, tracked=tracked):
+            rel = path.relative_to(ROOT).as_posix()
+            if withhold.match_file(rel):
+                withheld += 1
+                continue
+            include[str(path)] = rel
+
+        build_data.setdefault("force_include", {}).update(include)
+        source = "tracked files" if tracked is not None else "the unpacked tree"
+        self.app.display_info(
+            f"pkit packaging boundary (sdist): {len(include)} .pkit file(s) from "
+            f"{source}, {withheld} withheld"
+        )
+
+    def _initialize_wheel(
+        self, tracked: frozenset[str] | None, build_data: dict[str, Any]
+    ) -> None:
         ownership = _load_ownership()
         is_adopter_owned = ownership.is_adopter_owned_by_tier
 
@@ -159,17 +360,7 @@ class CapabilityBoundaryHook(BuildHookInterface):
                     "tuple) or the checkout is incomplete; shipping a wheel "
                     "missing that tree silently is not an option."
                 )
-            for path in sorted(base.rglob("*")):
-                if not path.is_file():
-                    continue
-                rel_parts = path.relative_to(KIT).parts
-                # Scoped to the kit tree: matching `path.parts` would also test
-                # directories ABOVE the repo root, so a checkout under a
-                # directory named `__pycache__` would silently bundle nothing.
-                if EXCLUDED_PARTS & set(rel_parts):
-                    continue
-                if path.suffix in EXCLUDED_SUFFIXES:
-                    continue
+            for path in _shippable_files(base, root=ROOT, tracked=tracked):
                 rel_to_kit = path.relative_to(KIT).as_posix()
                 if is_adopter_owned(rel_to_kit):
                     withheld += 1
