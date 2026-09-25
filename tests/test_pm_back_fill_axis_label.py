@@ -1013,6 +1013,106 @@ def test_declared_default_stays_silent_where_explicit_would_shout(bf, axis_label
     assert len(loud) == 1
 
 
+# --- a `--set` honoured only in part ----------------------------------------
+#
+# The asymmetry above, carried to the exit code. When NO `--set` value resolved,
+# the command already refused. When SOME did, the report was printed and the
+# exit was 0 — so a script or CI job driving the repair saw success while one of
+# the axes it named was silently not written. The report still shows the
+# honoured values; `--apply` / `--emit-script` refuse the whole run before the
+# confirmation gate, so nothing is written. The exit is 2 either way, and stderr
+# names the values that were not applied.
+
+# `priority` resolves `High` but not `Bogus`; `type` resolves `task`.
+TWO_AXIS_MAP = """\
+schema_version: 1
+axes:
+  priority:
+    label:
+      remap:
+        High: P0
+  type:
+    label:
+      remap:
+        task: Chore
+"""
+
+
+def _run_main_with_set(bf, tmp_path, monkeypatch, *argv: str) -> int:
+    cap = _cap_root(tmp_path, map_yaml=TWO_AXIS_MAP)
+
+    def fake_gh_run(args, config=None, **kwargs):
+        if args[:3] == ["gh", "repo", "view"]:
+            return subprocess.CompletedProcess(
+                args, 0, json.dumps({"nameWithOwner": TARGET_REPO}), "")
+        if args[:3] == ["gh", "issue", "list"]:
+            return subprocess.CompletedProcess(args, 0, json.dumps([_issue(1)]), "")
+        return subprocess.CompletedProcess(args, 0, "{}", "")
+
+    monkeypatch.setattr(bf, "gh_run", fake_gh_run)
+    monkeypatch.setattr(bf, "load_adopter_config", lambda _r: dict(NO_BOARD_CONFIG))
+    _patch_gate_checks(bf, monkeypatch)
+    monkeypatch.setattr(
+        sys, "argv", ["back-fill.py", "--capability-root", str(cap), *argv]
+    )
+    return bf.main()
+
+
+def test_partial_set_exits_non_zero_and_names_what_was_not_applied(
+    bf, tmp_path, monkeypatch, capsys
+) -> None:
+    code = _run_main_with_set(
+        bf, tmp_path, monkeypatch, "--set", "type=task", "--set", "priority=Bogus"
+    )
+    out = capsys.readouterr()
+    assert code == 2
+    # The value that could be honoured is still in the report...
+    assert "Chore" in out.out
+    # ...and the one that could not is named, in the summary line on stderr.
+    [summary] = [l for l in out.err.splitlines() if l.startswith("error: --set")]
+    assert "1 of 2" in summary
+    assert "priority=Bogus" in summary
+    assert "type=task" not in summary
+
+
+def test_partial_set_on_json_keeps_stdout_a_plan(
+    bf, tmp_path, monkeypatch, capsys
+) -> None:
+    """The machine consumer still parses a plan; the exit code carries the miss."""
+    code = _run_main_with_set(
+        bf, tmp_path, monkeypatch,
+        "--json", "--set", "type=task", "--set", "prioirty=High",
+    )
+    out = capsys.readouterr()
+    assert code == 2
+    plan = json.loads(out.out)
+    assert [i["axis"] for i in plan["intents"]] == ["type"]
+    assert "prioirty=High" in out.err
+
+
+def test_the_losing_half_of_a_conflicting_repeat_is_named(
+    bf, tmp_path, monkeypatch, capsys
+) -> None:
+    code = _run_main_with_set(
+        bf, tmp_path, monkeypatch,
+        "--json", "--set", "priority=High", "--set", "priority=Low",
+    )
+    err = capsys.readouterr().err
+    assert code == 2
+    [summary] = [l for l in err.splitlines() if l.startswith("error: --set")]
+    assert "priority=Low" in summary and "priority=High" not in summary
+
+
+def test_a_fully_honoured_set_still_exits_zero(
+    bf, tmp_path, monkeypatch, capsys
+) -> None:
+    code = _run_main_with_set(
+        bf, tmp_path, monkeypatch, "--set", "type=task", "--set", "priority=High"
+    )
+    assert code == 0
+    assert "error: --set" not in capsys.readouterr().err
+
+
 # --- generated-shell injection ----------------------------------------------
 #
 # The emitted script is bash a HUMAN runs, and the whole point of emitting it
@@ -1254,3 +1354,21 @@ def test_plan_parsing_refuses_a_non_numeric_issue_number(apply_mod):
         ],
     }
     assert apply_mod.planned_changes_from_plan(plan) == []
+
+
+def test_partial_set_refuses_the_whole_apply_before_any_write(
+    bf, tmp_path, monkeypatch, capsys
+) -> None:
+    """On --apply a --set value that cannot be applied refuses the run before
+    the confirmation gate: exit 2 still means nothing was written."""
+    ran = []
+    monkeypatch.setattr(bf, "_run_apply_or_emit", lambda *a, **k: ran.append(a) or 0)
+    code = _run_main_with_set(
+        bf, tmp_path, monkeypatch,
+        "--apply", "--yes", "--set", "type=task", "--set", "priority=Bogus",
+    )
+    err = capsys.readouterr().err
+    assert code == 2
+    assert ran == []
+    assert "Refusing to apply: NOTHING was written" in err
+    assert "priority=Bogus" in err

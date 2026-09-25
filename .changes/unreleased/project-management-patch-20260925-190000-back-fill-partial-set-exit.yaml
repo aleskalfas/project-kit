@@ -1,0 +1,16 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+  pr: "941"
+body: >
+  `back-fill --set` now exits non-zero when it could apply only some of the
+  requested values (#915). Before, a run in which one `--set` resolved and
+  another did not (an unknown axis, a value your `remap` has no entry for, an
+  axis carried by a board, or the losing half of a conflicting repeat) printed
+  the report and exited 0, so a script driving the repair saw success while an
+  axis it named was never written. The report (human and `--json`) still shows
+  the values that could be applied; `--apply` and `--emit-script` refuse the
+  whole run before the confirmation prompt, so nothing is written until every
+  `--set` value can be applied. The ones that could not are named on stderr in
+  a closing `error: --set could not apply …` line, and the exit is 2.

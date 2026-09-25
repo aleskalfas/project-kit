@@ -199,6 +199,10 @@ Exit codes:
      the residual pre-check gate refused (auth / repo-access / map-parse /
      declared-field-intent-but-board-unresolvable); or apply was declined at the
      confirmation gate. No write runs in any of these cases.
+     Also: a ``--set`` value could not be applied. The report phases still show
+     the values that could; ``--apply`` and ``--emit-script`` refuse before the
+     confirmation gate, so nothing at all is written. The values that could not
+     be applied are named on stderr.
 """
 
 from __future__ import annotations
@@ -482,12 +486,17 @@ def main() -> int:
         # mutating phases report them too — silence here is the failure this
         # change-set exists to end.
         _print_no_intents(args, intent_errors)
-        # An explicit `--set` that could not be honoured is a refusal, not a
-        # no-op: the operator named that axis, so the exit code says so.
-        return 2 if (args.set_axis and intent_errors) else 0
+        return _with_set_outcome(0, args.set_axis, plan)
 
     if apply_mode:
-        return _run_apply_or_emit(args, config, plan, capability_root)
+        # A --set value that cannot be applied refuses the whole apply/emit
+        # BEFORE the confirmation gate: exit 2 keeps meaning "nothing was
+        # written", and a typo in a deliberate --set is fixed and re-run rather
+        # than half-applied.
+        if _unhonoured_set_requests(args.set_axis, plan):
+            return _with_set_outcome(2, args.set_axis, plan, refused_apply=True)
+        code = _run_apply_or_emit(args, config, plan, capability_root)
+        return _with_set_outcome(code, args.set_axis, plan)
 
     # report phase (default).
     if args.json:
@@ -496,7 +505,65 @@ def main() -> int:
         if plan["truncated"]:
             _print_truncation_warning(args.limit)
         _print_report_from_plan(plan)
-    return 0
+    return _with_set_outcome(0, args.set_axis, plan)
+
+
+def _unhonoured_set_requests(
+    raw: list[str] | None, plan: dict[str, Any] | None
+) -> list[str]:
+    """The ``--set`` items that did not become an intent in ``plan``, in order.
+
+    An item is honoured iff the plan carries a ``set-axis-label`` intent for that
+    exact axis and value. Anything else — malformed, an unknown axis, the losing
+    half of a conflicting repeat, an axis not carried by a label, a value the
+    remap has no entry for — was dropped, and each drop already has its reason in
+    the intent errors. Asking the plan, rather than re-deriving which error came
+    from which item, keeps this in step with every drop arm present and future.
+    """
+    intents = (plan or {}).get("intents") or []
+    honoured = {
+        (i.get("axis"), i.get("axis_value"))
+        for i in intents
+        if isinstance(i, dict) and i.get("kind") == SET_AXIS_LABEL_KIND
+    }
+    unhonoured: list[str] = []
+    for item in raw or []:
+        axis, _sep, value = item.partition("=")
+        if (axis.strip(), value.strip()) not in honoured:
+            unhonoured.append(item)
+    return unhonoured
+
+
+def _with_set_outcome(
+    code: int,
+    raw: list[str] | None,
+    plan: dict[str, Any] | None,
+    *,
+    refused_apply: bool = False,
+) -> int:
+    """Fold the ``--set`` outcome into the phase's exit code.
+
+    An axis named with ``--set`` was named on purpose, so a request honoured only
+    in part is a refusal, not a success: the values that could not be honoured
+    are named on stderr and the exit is 2. In the report phases the honoured
+    values are still shown; ``--apply`` / ``--emit-script`` refuse outright
+    before the confirmation gate (``refused_apply``), so nothing is written.
+    Otherwise the phase's own code stands.
+    """
+    unhonoured = _unhonoured_set_requests(raw, plan)
+    if not unhonoured:
+        return code
+    tail = (
+        "Refusing to apply: NOTHING was written. Fix or drop these and re-run."
+        if refused_apply
+        else "NOTHING would be written for these; the reason for each is listed above."
+    )
+    print(
+        f"error: --set could not apply {len(unhonoured)} of {len(raw or [])} "
+        f"requested value(s): {', '.join(unhonoured)}. {tail}",
+        file=sys.stderr,
+    )
+    return 2
 
 
 # ----- plan derivation (shared by report + fresh apply/emit) ----------
@@ -507,15 +574,17 @@ def _derive_plan(
 ) -> tuple[dict[str, Any] | None, bool, list[str]]:
     """Run the gate, resolve intents, enumerate, and build the live plan document.
 
-    Returns ``(plan, gate_failed, intent_errors)``. The errors ride out
-    separately because they must survive the no-plan case: an intent that could
-    not be resolved is exactly what the caller has to say out loud, and on the
-    mutating phases there is no report to carry it.
+    Returns ``(plan, gate_failed, intent_errors)``:
 
-    Returns ``(plan, gate_failed)``. ``gate_failed`` True means the residual gate
-    refused (the refusal has already been printed); the caller returns 2. A
-    ``None`` plan with ``gate_failed`` False means no intents are declared (nothing
-    to propose) — the caller prints the phase-appropriate "nothing" message.
+      * ``gate_failed`` True means the residual gate refused (the refusal has
+        already been printed); ``plan`` is ``None`` and the caller returns 2.
+      * a ``None`` plan with ``gate_failed`` False means no intent resolved —
+        none declared, or every one dropped with a reason. The caller prints the
+        phase-appropriate "nothing" message.
+      * ``intent_errors`` are the declarations that could not become intents.
+        They ride out separately because they must survive the no-plan case: an
+        intent that could not be resolved is exactly what the caller has to say
+        out loud, and on the mutating phases there is no report to carry it.
 
     The plan is the SAME machine-stable document the report half emits (T2a) —
     apply / emit-script consume it in-process exactly as if it had been saved and
