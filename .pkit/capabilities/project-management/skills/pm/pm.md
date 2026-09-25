@@ -62,7 +62,7 @@ Before dispatching to any of the three operations below, **invoke the capability
 .pkit/capabilities/project-management/scripts/pre-check.py
 ```
 
-The script is read-only and self-contained (PEP 723; runs via `uv run --script`). Exit code is the contract — zero means every check passed or was legitimately skipped; non-zero means at least one prerequisite is missing. **The project-manager's behaviour on non-zero exit: refuse the requested operation, surface the pre-check's report verbatim to the user, and end.** Don't paraphrase the report; the script's output is already in the right shape.
+The script is read-only and self-contained (PEP 723; runs via `uv run --script`). Exit code is the contract — zero means no check failed (every check passed, was legitimately skipped, or reported a non-blocking `warn`); non-zero means at least one prerequisite is missing. **The project-manager's behaviour on non-zero exit: refuse the requested operation, surface the pre-check's report verbatim to the user, and end.** Don't paraphrase the report; the script's output is already in the right shape.
 
 If pre-check reports missing initial state (no `type:*` labels, no adopter config, etc.), the remediation is to run the **bootstrap** script:
 

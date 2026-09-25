@@ -377,6 +377,31 @@ def test_title_prefix_excludes_report_channel_issues(
     assert "2 report-channel issue(s) excluded" in ok[0].detail
 
 
+def test_title_prefix_ok_line_counts_prefixless_issues(
+    pc, axis_labels, monkeypatch
+) -> None:
+    """A sample with a prefix-less issue must not be summarised as "all N have
+    recognised prefixes": the `ok` line states recognised-of-sampled and what
+    was set aside, with the no-prefix issue still reported separately (#904)."""
+    _stub_issue_list(pc, monkeypatch, [
+        {"number": 12, "title": "[Task] real work item", "labels": []},
+        _NO_PREFIX_ISSUE,
+        {"number": 797, "title": "[CR] widen", "labels": [{"name": "report:change-request"}]},
+    ])
+    results = pc._check_title_prefix_alignment(_LIVE_CAP_ROOT, None)
+    ok = [r for r in results if r.status == "ok"]
+    assert len(ok) == 1
+    assert ok[0].detail == (
+        "1 of 2 sampled open issue(s) have recognised prefixes "
+        "(1 without a `[Prefix] ` title, reported separately) "
+        "(1 report-channel issue(s) excluded)"
+    )
+    assert any(
+        r.status == "warn" and "without bracket prefix" in r.label and "#2" in r.detail
+        for r in results
+    )
+
+
 def test_title_prefix_all_report_channel_skips(pc, axis_labels, monkeypatch) -> None:
     """When every sampled issue is report-channel there is nothing to validate;
     the check says so as a `skip` rather than claiming "all 0 sampled ... ok"."""

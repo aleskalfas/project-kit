@@ -19,7 +19,8 @@ Self-contained via PEP 723 inline metadata: run via
   uv run --script .pkit/capabilities/project-management/scripts/pre-check.py
 
 Exit codes:
-  0  every check passed or was legitimately skipped
+  0  no check failed — every check passed, was legitimately skipped, or
+     reported a non-blocking warning
   1  one or more checks failed
   2  usage error (script invoked outside an adopter; capability not
      installed at the expected path; config file unparseable in a way
@@ -76,7 +77,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Verify project-management capability prerequisites are in place. "
-            "Exit 0 if every check passes or is legitimately skipped; "
+            "Exit 0 if no check fails (passed, skipped, or warned); "
             "non-zero on any failure."
         ),
     )
@@ -2142,10 +2143,20 @@ def _check_title_prefix_alignment(
                 ),
             ))
     else:
+        # No mismatches, but no-prefix issues are not "recognised" either: claim
+        # "all" only when every sampled issue carries a recognised prefix.
+        recognised = sampled - len(no_prefix)
+        recognised_summary = (
+            f"all {sampled} sampled open issue(s) have recognised prefixes"
+            if not no_prefix
+            else f"{recognised} of {sampled} sampled open issue(s) have recognised "
+            f"prefixes ({len(no_prefix)} without a `[Prefix] ` title, reported "
+            f"separately)"
+        )
         results.append(CheckResult(
             "title-prefix alignment",
             "ok",
-            f"all {sampled} sampled open issue(s) have recognised prefixes"
+            recognised_summary
             + (" (validated against adopter substrate-map prefixes)" if advisory else "")
             + excluded_note,
         ))

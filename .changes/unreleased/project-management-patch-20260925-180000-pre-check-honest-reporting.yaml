@@ -1,0 +1,12 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+  pr: ""
+body: >
+  `pre-check`'s title-prefix alignment line no longer claims "all" sampled
+  issues have recognised prefixes when some carry no prefix; it now states how
+  many were recognised out of how many were sampled, and how many were set
+  aside as prefix-less. The documented exit contract now says what the script
+  always did: exit zero means no check failed — passed, skipped, or warned
+  (#904).
