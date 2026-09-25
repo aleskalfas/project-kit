@@ -756,22 +756,13 @@ def _check_substrate_capability_matrix(
     degraded; pre-check renders it, it does not re-derive it.
 
     The `board: true` arm ([project-management:DEC-051] decision point 2) is
-    rendered by its own branch, ahead of the disposition read, for two reasons —
-    neither of which is a second disposition rule:
-
-    * The served arm names its binding KIND from a fixed tuple that does not
-      include `board`, so a board-armed axis would render `bound via ?`.
-    * Where the seam has not yet been taught the arm, `axis_disposition` falls
-      through to its fail-closed branch and answers `unsupported` — which would
-      print "explicitly `unsupported`" over an axis whose map says exactly the
-      opposite. That is the mis-description this change exists to remove, and
-      printing it here would reintroduce it at the one place an adopter reads.
-
-    The branch is therefore a RENDERING fix and is stable either way: the seam's
-    answer is untouched, no consumer behaviour moves with it, and the line says
-    the same true thing before and after the carriage accessor (decision point 4)
-    teaches `axis_disposition` the arm. Fold it into the served arm once that
-    landed and the kind tuple knows `board`.
+    rendered by its own branch, ahead of the disposition read. That is a
+    RENDERING choice, not a second disposition rule: the seam answers `served`
+    for a board-armed axis, and the branch agrees with it. It stays separate
+    because the served arm names its binding KIND from a fixed tuple that does
+    not include `board`, so a board-armed axis would render `bound via ?`, and
+    because the board line has more to say than "bound via" — where the field's
+    identity is declared, and how the arm differs from `unsupported: true`.
     """
     results: list[CheckResult] = [
         CheckResult(
@@ -825,17 +816,19 @@ def _check_substrate_capability_matrix(
 
 # ----- cross-substrate conflict (writer/reader disagreement, #708) ----
 
-# The axes `has_projects_v2_board: true` claims for the BOARD — i.e. the axes
-# every writer stops writing a label for once the flag is set. This mirrors the
-# behaviour already encoded elsewhere: `_check_labels` skips the `priority:*` /
-# `workstream:*` kit-label checks under a board, `_check_state_labels` runs only
-# in label-fallback mode, `set-field` refuses priority/workstream, and
-# `move-issue._compute_plan` returns an empty (no-label) plan for `state`.
+# The axes `has_projects_v2_board: true` can claim for the BOARD. The flag claims
+# one only where the map is silent about it (absent, or `unsupported: true`); a
+# map binding governs the axis it names and the flag is not consulted for it
+# ([project-management:DEC-051] decision points 1 and 3). Every writer, reader
+# and check asks `_lib/axis_carriage` which substrate that yields, so this tuple
+# decides nothing on its own: here it only scopes the conflict check below to
+# the axes where a `label:` binding takes the axis away from a configured board.
+# It is the carriage accessor's own set, not a copy, so the two cannot drift.
 #
-# `type` is deliberately absent: classification.yaml makes it always-a-label
-# regardless of board substrate (see set-field's `_plan_kind`), so the board
-# never claims it and a `label` binding on `type` is not a conflict.
-BOARD_CLAIMED_AXES: tuple[str, ...] = ("priority", "workstream", "state")
+# `type` is absent because the board never claims it — PR-title alignment reads
+# it, and a board field is invisible from a PR — so a `label` binding on `type`
+# is not a conflict.
+BOARD_CLAIMED_AXES: tuple[str, ...] = axis_carriage.BOARD_CLAIMABLE_AXES
 
 # The axes on which the map may DECLARE board carriage — the `board: true` arm's
 # admissibility set, per [project-management:DEC-051] decision point 2 and the
@@ -927,10 +920,9 @@ def _check_substrate_board_conflict(
     reason; until the arm existed it said `unsupported: true`, which told adopters
     to declare the opposite of what they meant.
 
-    Binding shape is read only through the seam, per ADR-026 — except the
-    `board:` arm, which has no seam predicate yet (it arrives with the carriage
-    accessor of [project-management:DEC-051] decision point 4); see
-    :func:`_axis_declares_board`.
+    Binding shape is read only through the seam, per ADR-026 — the `board:` arm
+    included: its predicate is :func:`axis_labels.axis_is_board_carried`, which
+    :func:`_axis_declares_board` wraps for the "did the map declare it?" question.
     """
     if not (config and config.get("has_projects_v2_board")):
         return [CheckResult(
