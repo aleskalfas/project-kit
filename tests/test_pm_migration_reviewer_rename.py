@@ -452,6 +452,24 @@ def test_unrewritable_shape_is_reported_for_manual_edit(tmp_path, shape) -> None
     assert "[note]" not in proc.stdout
 
 
+@pytest.mark.parametrize("shape", sorted(MANUAL_SHAPES))
+def test_manual_edit_warning_survives_a_re_run_before_sync(tmp_path, shape) -> None:
+    """While a manual edit is pending the stale kit reviewer.md is kept: it is
+    the kit signal that makes a re-run (before sync lays down pm-reviewer.md)
+    repeat the warning instead of going quiet."""
+    config = MANUAL_SHAPES[shape]
+    cap = _install(tmp_path, config=config, deployed="kit-copy")
+    deployed_old = tmp_path / ".claude" / "agents" / "reviewer.md"
+    first = _run(tmp_path)
+    assert first.returncode == 0, first.stderr
+    assert deployed_old.exists()
+    assert "[keep]" in first.stdout
+    second = _run(tmp_path)
+    assert second.returncode == 0, second.stderr
+    assert "Edit it by hand" in second.stdout
+    assert _config_text(cap) == config
+
+
 def test_flow_style_parent_is_reported_not_edited(tmp_path) -> None:
     """With local_registered inside a flow-style parent the list can't be
     scoped, so the file is only inspected and the operator told what to edit."""

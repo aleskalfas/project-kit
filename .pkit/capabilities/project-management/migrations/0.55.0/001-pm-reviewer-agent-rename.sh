@@ -74,9 +74,10 @@
 # only inspected, never edited. In both cases, with a kit signal, the migration
 # prints a `[warn]` naming the config file and line(s) and telling the operator
 # to change `reviewer` to `pm-reviewer` by hand; it never leaves one silently
-# unmigrated.
+# unmigrated. While that edit is pending the stale kit reviewer.md is kept, so
+# a re-run before sync still finds the kit signal and repeats the warning.
 #
-# Output reflects what happened: `[rewrite]` / `[remove]` per action; the
+# Output reflects what happened: `[rewrite]` / `[remove]` / `[keep]` per action; the
 # stale-verdict `[note]` only when the config was actually rewritten; a final
 # `[ok] … reconciled` only when something was rewritten or removed, a `[warn]`
 # when a manual edit remains, and a `[skip] … nothing to reconcile` otherwise.
@@ -288,6 +289,11 @@ fi
 # --- Remove the stale kit-deployed reviewer.md -------------------------------
 if [ "$kit_default" != true ]; then
     :   # adopter content or no kit signal — never remove
+elif [ "$manual_pending" = true ] && { [ -L "$DEPLOYED_OLD" ] || [ -f "$DEPLOYED_OLD" ]; }; then
+    # Keep it: the stale file is the kit signal that makes a re-run repeat the
+    # manual-edit warning. Removing it now would let a re-run before sync find
+    # no signal and go quiet while the config still registers `reviewer`.
+    echo "  [keep] $DEPLOYED_OLD until the manual config edit is made (it keeps a re-run warning)"
 elif [ -L "$DEPLOYED_OLD" ]; then
     echo "  [remove] $DEPLOYED_OLD (stale kit symlink; pm-reviewer.md deploys on next sync)"
     rm -f "$DEPLOYED_OLD"
