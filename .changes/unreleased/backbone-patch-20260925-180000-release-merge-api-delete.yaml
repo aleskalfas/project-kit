@@ -2,6 +2,7 @@ component: backbone
 kind: patch
 custom:
   category: Fixed
+  pr: "936"
 body: >
   `pkit release merge` no longer reports a failure after the release PR has
   already merged when run from a worktree or a detached HEAD; it deletes the
