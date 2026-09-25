@@ -134,8 +134,26 @@ def main() -> int:
         config, str(issue.get("body") or ""), explicit=args.base
     )
 
-    # Gate: at least one commit not on the base branch.
-    if not _branch_has_commits_beyond(branch, base):
+    # Gate: at least one commit not on the base branch. A base that cannot be
+    # found is reported as that, never as "no commits" -- the two need
+    # different fixes.
+    base_ref = _resolve_base_ref(base)
+    if base_ref is None:
+        print(
+            f"error: base branch {base!r} is not in this clone (neither "
+            f"{base!r} nor 'origin/{base}'). Run `git fetch origin {base}` "
+            "and re-run.",
+            file=sys.stderr,
+        )
+        return 2
+    ahead = _commits_beyond(branch, base_ref)
+    if ahead is None:
+        print(
+            f"error: could not count commits on {branch!r} beyond {base_ref!r}.",
+            file=sys.stderr,
+        )
+        return 2
+    if ahead == 0:
         print(
             f"error: branch {branch!r} has no commits beyond {base!r}. "
             "Commit your work-in-progress before opening a draft PR.",
@@ -207,18 +225,37 @@ def _find_issue_branch(issue_number: int) -> str | None:
     return None
 
 
-def _branch_has_commits_beyond(branch: str, base: str) -> bool:
-    """True if `branch` has commits not in `base`."""
+def _resolve_base_ref(base: str) -> str | None:
+    """The ref `base` names in this clone, or None when it resolves nowhere.
+
+    An integration base (`integration/<slug>`) is usually present only as the
+    remote-tracking `origin/<base>`: start-work fetches it and cuts the branch
+    from `origin/<base>` without creating a local branch, and git never expands
+    a short name to `refs/remotes/origin/…`. So try the name as given, then
+    `origin/<base>`.
+    """
+    for ref in (base, f"origin/{base}"):
+        proc = subprocess.run(
+            ["git", "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"],
+            capture_output=True, text=True, check=False,
+        )
+        if proc.returncode == 0:
+            return ref
+    return None
+
+
+def _commits_beyond(branch: str, base_ref: str) -> int | None:
+    """Commits on `branch` not in `base_ref`, or None when git cannot count."""
     proc = subprocess.run(
-        ["git", "rev-list", "--count", f"{base}..{branch}"],
+        ["git", "rev-list", "--count", f"{base_ref}..{branch}"],
         capture_output=True, text=True, check=False,
     )
     if proc.returncode != 0:
-        return False
+        return None
     try:
-        return int(proc.stdout.strip()) > 0
+        return int(proc.stdout.strip())
     except ValueError:
-        return False
+        return None
 
 
 def _find_pr_for_branch(branch: str, config: dict) -> dict | None:

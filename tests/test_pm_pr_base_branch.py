@@ -138,15 +138,19 @@ def test_create_draft_targets_the_resolved_base(
     monkeypatch.setattr(mod, "_find_pr_for_branch", lambda *a: None)
     captured = {}
 
-    def fake_commits_beyond(branch, base):
+    def fake_resolve_base_ref(base):
         captured["gate_base"] = base
-        return True
+        return base
+
+    def fake_commits_beyond(branch, base_ref):
+        return 1
 
     def fake_create_draft(branch, base, title, body, config):
         captured["base"] = base
         return None
 
-    monkeypatch.setattr(mod, "_branch_has_commits_beyond", fake_commits_beyond)
+    monkeypatch.setattr(mod, "_resolve_base_ref", fake_resolve_base_ref)
+    monkeypatch.setattr(mod, "_commits_beyond", fake_commits_beyond)
     monkeypatch.setattr(mod, "_gh_pr_create_draft", fake_create_draft)
     assert mod.main() == 3
     # The commits-ahead gate measures against the same base the PR targets.
@@ -171,3 +175,58 @@ def test_review_work_opens_its_pr_against_the_resolved_base(
     monkeypatch.setattr(mod, "_gh_pr_create_ready", fake_create_ready)
     assert mod.main() == 3
     assert captured["base"] == expected
+
+
+# --- create-draft's commits-beyond-base gate against real git (#903 review) ---
+
+
+def _git(cwd: Path, *args: str) -> str:
+    import subprocess
+
+    return subprocess.run(
+        ["git", *args], cwd=cwd, check=True, capture_output=True, text=True,
+        env={"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t",
+             "GIT_COMMITTER_EMAIL": "t@t", "HOME": str(cwd), "PATH": __import__("os").environ["PATH"]},
+    ).stdout.strip()
+
+
+@pytest.fixture
+def integration_clone(tmp_path, monkeypatch):
+    """A clone where the integration base exists only as origin/<base>, as
+    start-work leaves it: no local integration branch, feature branch cut from
+    the remote-tracking ref, one commit ahead."""
+    _git(tmp_path, "init", "-q", "-b", "main")
+    _git(tmp_path, "commit", "-q", "--allow-empty", "-m", "root")
+    sha = _git(tmp_path, "rev-parse", "HEAD")
+    _git(tmp_path, "update-ref", "refs/remotes/origin/integration/foo", sha)
+    _git(tmp_path, "checkout", "-q", "-b", BRANCH, "origin/integration/foo")
+    monkeypatch.chdir(tmp_path)
+    return tmp_path
+
+
+def test_an_integration_base_present_only_on_origin_is_found(verbs, integration_clone) -> None:
+    mod = verbs["create-draft"]
+    assert mod._resolve_base_ref("integration/foo") == "origin/integration/foo"
+    assert mod._commits_beyond(BRANCH, "origin/integration/foo") == 0
+    _git(integration_clone, "commit", "-q", "--allow-empty", "-m", "work")
+    assert mod._commits_beyond(BRANCH, "origin/integration/foo") == 1
+
+
+def test_a_missing_base_is_not_reported_as_no_commits(verbs, integration_clone) -> None:
+    mod = verbs["create-draft"]
+    assert mod._resolve_base_ref("integration/absent") is None
+
+
+def test_create_draft_names_a_missing_base_instead_of_claiming_no_commits(
+    verbs, monkeypatch, capsys
+) -> None:
+    mod = verbs["create-draft"]
+    body = MARKED_BODY
+    _stub_gates(monkeypatch, mod, _issue(body), ["create-draft", "42", "--yes"])
+    monkeypatch.setattr(mod, "_find_issue_branch", lambda _n: BRANCH)
+    monkeypatch.setattr(mod, "_resolve_base_ref", lambda _b: None)
+    assert mod.main() == 2
+    err = capsys.readouterr().err
+    assert "not in this clone" in err
+    assert f"git fetch origin {INTEGRATION}" in err
+    assert "no commits beyond" not in err
