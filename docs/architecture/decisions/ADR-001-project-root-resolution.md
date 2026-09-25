@@ -20,7 +20,7 @@ The contract:
 
 - **Input** — the current working directory, and nothing else.
 - **Output** — exactly one project root, or none.
-- **No side channels** — no environment variables, config files, or flags feed the resolution. (`init`'s `--root` is not an exception: it *replaces* the resolution with an explicit target rather than feeding a signal into it.)
+- **No side channels** — no environment variables, config files, or flags feed the resolution. (`init`'s `--root` is not an exception: it *replaces* the resolution with an explicit target rather than feeding a signal into it. The explicit target is still checked against the resolution — refused when resolving from it lands elsewhere, because it is a shadowed subfolder of a repository or sits inside an existing install; and installed with a warning when it is a repository version control won't vouch for.)
 - **Deterministic** — the same directory and filesystem state always resolve the same way.
 
 ### How the root is found
@@ -43,6 +43,7 @@ The same resolution is surfaced at two levels, and the difference is *consent*:
   - nothing found → offer to install in the current directory;
   - the current directory is *inside* a repository → the repository root is the target, and installing in a subfolder is refused (a project placed below the root would be shadowed by it and never resolved);
   - the directory looks like a real repository that version control declines to vouch for (an ownership restriction, say) → **guide the user to resolve it** rather than silently installing in the wrong place;
+  - the directory looks like a real repository that version control cannot open for another reason (a corrupt or partial repository) → **report it as broken, with repair guidance** rather than an ownership fix that would change nothing;
   - the current directory is already inside an adopted project → **refuse, and point the user at refresh** — install is a one-time bootstrap of a single root ([COR-004](../../../.pkit/decisions/core/COR-004-cli-surface.md)); a second, nested install is out of scope and deferred to the monorepo-support decision.
 
 Only install carries this richer reading. The steady-state answer stays policy-free, so no ordinary command inherits install's consent rules.
@@ -74,7 +75,7 @@ Only install carries this richer reading. The steady-state answer stays policy-f
 - **Reimplement the repository search instead of asking git.** Rejected — linked worktrees and submodules are edge cases git already resolves; reimplementing them invites bugs for no gain.
 - **Drop the fallback once version control has been consulted.** Rejected — this conflates a *broken* marker (the case validation fixes) with a *real* repository that version control merely declined to vouch for; the latter would end up installed in the wrong place, worse than the problem being fixed. Validate, don't delete.
 - **Put install's guided classification into the shared resolver.** Rejected — leaks install's consent policy into read-only commands. The classification belongs to install alone.
-- **Decide the broken-versus-declined case from version control's error text.** Rejected — error text is fragile across locales and tool versions; the distinction is available more robustly from the repository's own shape and whether the tool succeeded.
+- **Decide the broken-versus-declined case from version control's error text.** Rejected — error text is fragile across locales and tool versions, so no outcome rests on it: where a command resolves, and whether install proceeds, follow from the repository's own shape and whether the tool succeeded. Once a real-looking repository has been declined, the message — read in a fixed locale — only selects which diagnosis and remedy install shows; both kinds of decline get the same outcome, so a reworded message costs a less specific remedy, never a wrong install. The distinction is never drawn by overriding version control's ownership check, which would turn a safe refusal into running an untrusted repository's configuration.
 - **Run the genuine-marker validation in the lightweight pre-dispatch router too.** Rejected — the router must stay fast and dependency-free; unifying the resolvers is deferred with the monorepo-support decision.
 - **A language-specific marker (e.g. a Python project file).** Rejected — adopters are not all Python projects; a language-specific marker would exclude others.
 - **A dedicated root-marker file.** Rejected — adds a third marker for a job the existing two already do.
@@ -86,4 +87,4 @@ Only install carries this richer reading. The steady-state answer stays policy-f
 - **Read-only commands get a plain root; install gets the guided reading.** Steady-state commands receive a root-or-none and phrase their own "not in a project" message; install consumes the richer classification so it can offer to install here and guide the subfolder, un-vouchable, and already-adopted cases — without that policy leaking into the shared answer.
 - **An override can be added later** — a flag, an environment variable, or a marker file — as a non-breaking extension ahead of the implicit default; `init` already carries such an override today (`--root <path>`, scoped to that one command). The implicit-from-cwd contract is the floor.
 - **Symlinked project trees resolve to their target directory**, because version control resolves symlinks to their real location. Acceptable; not encountered in practice.
-- **A scenario matrix is the test suite.** The behaviour is pinned by the set of situations it must handle — install-here, inside-a-subfolder, the un-vouchable repository, the already-adopted ancestor, a project with no version control, and the broken-marker case the validation rejects — exercised against both resolvers.
+- **A scenario matrix is the test suite.** The behaviour is pinned by the set of situations it must handle — install-here, inside-a-subfolder, the un-vouchable repository (declined on ownership, or broken), the already-adopted ancestor, the explicit target in each of those positions, a project with no version control, and the broken-marker case the validation rejects — exercised against both resolvers.

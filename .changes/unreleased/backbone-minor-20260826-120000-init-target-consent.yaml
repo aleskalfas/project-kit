@@ -13,5 +13,6 @@ body: >
   did not expect. If the target already has a project-kit install, init refuses
   (non-zero) and points you at `pkit sync` to refresh it. A new `--here` installs
   into the current directory (refused when it is a subfolder of a git worktree,
-  where a `.pkit/` there would be unreachable), and `--yes` accepts the resolved
+  where a `.pkit/` there would be unreachable, or sits inside an existing
+  project-kit project, where it would nest a second install), and `--yes` accepts the resolved
   target non-interactively; `--dry-run` still previews without prompting.

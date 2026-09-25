@@ -5,10 +5,11 @@ custom:
   pr: "791"
 body: >
   `pkit init` now validates the target it resolves instead of trusting a bare
-  `.git` on sight (#787). A workspace folder carrying a broken or vestigial
-  `.git` (one git itself will not open) is no longer offered as an install root
-  and never mislabelled a "git repository" — init falls through to offering an
-  install in your current directory. A structurally-real repository that git
+  `.git` on sight (#787). A workspace folder carrying a vestigial `.git`
+  (a structurally hollow one) is no longer offered as an install root and never
+  mislabelled a "git repository" — init falls through to offering an install in
+  your current directory; a real-looking repository git cannot open is refused
+  as broken, with repair guidance rather than an ownership fix. A structurally-real repository that git
   refuses to verify (dubious ownership / safe.directory, routine in Docker/CI/
   sudo trees) is now detected and guided — init refuses, names the
   `safe.directory` remedy and the explicit-target escape rather than dropping a
@@ -19,8 +20,8 @@ body: >
   installs anywhere other than your current directory, so an unattended run can
   never install somewhere you are not standing. `--root` must point at an
   existing directory — a typo fails cleanly at the CLI boundary instead of
-  materialising a tree — and warns loudly when it names a subfolder of a git
-  worktree, where the nested `.pkit/` would be unreachable until monorepo
-  support lands. The shared root resolver
-  (`find_target_root`) likewise rejects a broken `.git`, and still resolves a
+  materialising a tree — and refuses a target that is a subfolder of a git
+  worktree or sits inside an existing install, where the nested `.pkit/` would
+  be unreachable; at a root git will not vouch for, it warns and installs. The shared root resolver
+  (`find_target_root`) likewise skips a vestigial `.git`, and still resolves a
   `.pkit/`-marked project with no git at all.
