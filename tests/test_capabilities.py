@@ -391,6 +391,49 @@ def test_install_refuses_when_already_installed(
         caps.install_capability(kit_target, source)
 
 
+# --- reserved names (#919) -----------------------------------------
+#
+# `core` routes schemas to the core schemas area, so a capability named
+# `core` would have its schemas silently unreachable. Every path that brings
+# a capability into a project refuses it, naming the reservation.
+
+
+def test_install_refuses_reserved_name_core(kit_target: Path, kit_source: Path) -> None:
+    _stage_capability_in_source(kit_source, "core")
+    source = caps.find_capability_in_source(kit_source, "core")
+    assert source is not None
+    with pytest.raises(click.ClickException, match="'core' is reserved"):
+        caps.install_capability(kit_target, source)
+    assert not caps.is_installed(kit_target, "core")
+    assert not (kit_target / ".pkit" / "capabilities" / "core").exists()
+
+
+def test_register_incubated_refuses_reserved_name_core(kit_target: Path) -> None:
+    _stage_capability_in_repo(kit_target, "core")
+    source = caps.find_capability_in_repo(kit_target, "core")
+    assert source is not None
+    with pytest.raises(click.ClickException, match="'core' is reserved"):
+        caps.register_incubated_capability(kit_target, source)
+    assert not caps.is_installed(kit_target, "core")
+
+
+@pytest.mark.parametrize("verb", ["install", "register"])
+def test_cli_refuses_reserved_name_core(
+    kit_target: Path, kit_source: Path, monkeypatch, verb: str
+) -> None:
+    """The CLI names the reservation rather than reporting the capability as missing."""
+    _stage_capability_in_source(kit_source, "core")
+    _stage_capability_in_repo(kit_target, "core")
+    from project_kit import cli as cli_mod
+
+    monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
+    result = CliRunner().invoke(main, ["capabilities", verb, "core"])
+    assert result.exit_code != 0
+    assert "capability name 'core' is reserved" in result.output
+    assert "core schemas area" in result.output
+    assert not caps.is_installed(kit_target, "core")
+
+
 def test_install_dry_run_writes_nothing(kit_target: Path, kit_source: Path) -> None:
     _stage_capability_in_source(kit_source, "evidence")
     source = caps.find_capability_in_source(kit_source, "evidence")

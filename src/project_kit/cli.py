@@ -3705,6 +3705,10 @@ def install_capability_cmd(name: str, dry_run: bool) -> None:
             f"{target_root}/.pkit/ does not exist. Run 'pkit init' first."
         )
 
+    # A reserved name is refused before lookup, so the refusal names the
+    # reservation rather than reporting the capability as missing.
+    caps.refuse_reserved_capability_name(name)
+
     source_kit = find_source_kit()
     capability_source = caps.find_capability_in_source(source_kit, name)
     if capability_source is None:
@@ -3835,6 +3839,9 @@ def register_capability_cmd(name: str, dry_run: bool) -> None:
         raise click.ClickException(
             f"{target_root}/.pkit/ does not exist. Run 'pkit init' first."
         )
+
+    # A reserved name is refused before resolution, as in `install`.
+    caps.refuse_reserved_capability_name(name)
 
     # Resolve the capability, preferring the in-repo (incubated) source.
     # Consulting both trees lets us surface the COR-031 boundary case where

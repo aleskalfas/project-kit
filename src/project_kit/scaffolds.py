@@ -26,6 +26,7 @@ from typing import Literal
 
 import click
 
+from project_kit.capabilities import refuse_reserved_capability_name
 from project_kit.manifest import (
     ComponentRegistryEntry,
     read_backbone_manifest,
@@ -244,10 +245,12 @@ def stamp_capability(target_root: Path, name: str) -> CapabilityScaffoldResult:
       subdir taxonomy plus the COR-010 migration directory for version
       bumps).
 
-    Refuses if `name` is not kebab-case or a capability with that name
-    already exists.
+    Refuses if `name` is not kebab-case, is reserved
+    (`capabilities.RESERVED_CAPABILITY_NAMES`), or a capability with that
+    name already exists.
     """
     _validate_kebab_case(name, "capability name")
+    refuse_reserved_capability_name(name)
 
     pkit_dir = _require_pkit_dir(target_root)
     caps_dir = pkit_dir / "capabilities"

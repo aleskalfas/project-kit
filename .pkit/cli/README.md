@@ -65,7 +65,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # or: brew install uv
 | `capabilities list` | list capabilities known to this project — kit-source-available plus anything installed — with an `origin` column marking each installed one `kit-shipped` or `incubated` (per COR-031) | no | yes (read-only) |
 | `new area <name>` | scaffold a new area (per COR-011) | yes | no — refuses if area already exists |
 | `new adapter <name>` | scaffold a new adapter (per COR-005) | yes | no — refuses if adapter already exists |
-| `new capability <name>` | scaffold a new capability (per COR-017) | yes | no — refuses if capability already exists |
+| `new capability <name>` | scaffold a new capability (per COR-017); refuses the reserved name `core`, which names the core schemas area (`install` and `register` refuse it too) | yes | no — refuses if capability already exists |
 | `new migration [...]` | scaffold a migration script in the right `<major>.<minor>.0/` directory | yes | no — emits a fresh, numbered file each call |
 | `new decision <namespace> <slug>` | scaffold a new decision record stub (frontmatter + four sections + next number in namespace) | yes | no — refuses if a record with that slug already exists |
 | `new scratchpad <slug>` | stamp a new active-state scratchpad note (per COR-012) | yes | no — refuses if the slug is already in use across any state |
