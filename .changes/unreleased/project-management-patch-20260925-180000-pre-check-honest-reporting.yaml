@@ -2,7 +2,7 @@ component: project-management
 kind: patch
 custom:
   category: Fixed
-  pr: ""
+  pr: "935"
 body: >
   `pre-check`'s title-prefix alignment line no longer claims "all" sampled
   issues have recognised prefixes when some carry no prefix; it now states how
