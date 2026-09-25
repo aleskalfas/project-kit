@@ -217,6 +217,18 @@ def test_remote_branch_delete_with_gh_missing_is_a_warning(lib, monkeypatch, cap
     assert "git push origin --delete fix/42-slug" in err
 
 
+def test_remote_branch_delete_with_unrunnable_gh_is_a_warning(lib, monkeypatch, capsys) -> None:
+    """A `gh` on PATH that cannot be run (not executable, wrong binary) warns
+    too -- the helper's contract is that it never raises (#920)."""
+    def unrunnable(*a, **k):
+        raise PermissionError(13, "Permission denied")
+
+    monkeypatch.setattr(lib, "gh_run", unrunnable)
+    assert lib.delete_remote_branch("fix/42-slug", {}, cross_repository=False) is None
+    err = capsys.readouterr().err
+    assert "`gh` could not be run" in err
+    assert "git push origin --delete fix/42-slug" in err
+
 # --- cleanup_local ---------------------------------------------------------
 
 
@@ -317,3 +329,4 @@ def test_cross_repository_is_a_required_keyword(lib):
         p = inspect.signature(fn).parameters["cross_repository"]
         assert p.kind is inspect.Parameter.KEYWORD_ONLY
         assert p.default is inspect.Parameter.empty
+

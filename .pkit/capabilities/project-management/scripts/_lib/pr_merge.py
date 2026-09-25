@@ -103,6 +103,8 @@ def delete_remote_branch(
         )
     except FileNotFoundError:
         reason = "`gh` not on PATH"
+    except OSError as exc:  # on PATH but not runnable: permissions, bad binary
+        reason = f"`gh` could not be run ({exc})"
     else:
         if proc.returncode == 0:
             print(f"  deleted remote branch {branch}")
