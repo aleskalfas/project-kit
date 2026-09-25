@@ -28,11 +28,21 @@ nested install under an existing one, `--root` refuses a shadowed target (a git
 subfolder or a nested install) and warns when the target is a repository git
 will not vouch for, and a structurally-real `.git` git cannot open for a reason
 other than ownership is diagnosed as broken, not as dubious ownership.
+
+#913 makes the refusals and the prompt honest: every remedy a refusal names is
+one the same invocation accepts (tests run the named remedy), a declined confirm
+exits non-zero, an absent or closed stdin reads as non-interactive rather than
+crashing, and a `.pkit` at the target that is not an install is refused before
+the prompt, naming what is wrong and what to do.
 """
 
 from __future__ import annotations
 
+import io
+import re
+import shlex
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -310,8 +320,9 @@ def test_init_git_subfolder_confirm_decline(
     monkeypatch.chdir(sub)
     set_tty(True)
     result = CliRunner().invoke(main, ["init"], input="n\n")
-    assert result.exit_code == 0, result.output
-    assert "Aborted." in result.output
+    # A decline exits non-zero so a chained `pkit init && next-step` stops (#913).
+    assert result.exit_code == 1, result.output
+    assert "Aborted!" in result.output
     assert spy_install == []
 
 
@@ -319,8 +330,9 @@ def test_init_git_subfolder_non_tty_refuses_even_with_piped_yes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spy_install, set_tty
 ) -> None:
     """A piped `yes | pkit init` must NOT auto-confirm an off-CWD target. The
-    refusal now points at --root (the sanctioned non-interactive install-at-parent
-    path) and --here, not at --yes (which no longer installs off-cwd, #787)."""
+    refusal points at --root (the sanctioned non-interactive install-at-parent
+    path), not at --yes (which no longer installs off-cwd, #787) nor at --here
+    (which a subfolder refuses, #913)."""
     _git_init(tmp_path)
     sub = tmp_path / "sub"
     sub.mkdir()
@@ -328,7 +340,7 @@ def test_init_git_subfolder_non_tty_refuses_even_with_piped_yes(
     set_tty(False)  # piped / non-interactive stdin
     result = CliRunner().invoke(main, ["init"], input="y\n")
     assert result.exit_code != 0
-    assert "--root" in result.output and "--here" in result.output
+    assert "--root" in result.output and "--here" not in result.output
     assert spy_install == []
 
 
@@ -502,6 +514,27 @@ def test_init_yes_in_subfolder_refuses_off_cwd_install(
     assert "--yes will not install" in result.output
     assert "--root" in result.output
     assert spy_install == []
+
+
+def test_init_yes_refusal_remedy_works_for_a_path_with_spaces(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spy_install, set_tty
+) -> None:
+    """The --yes refusal's suggested `--root` command is shell-quoted, so it
+    still installs when the target path contains a space (#913)."""
+    root = tmp_path / "my project"
+    root.mkdir()
+    _git_init(root)
+    sub = root / "sub"
+    sub.mkdir()
+    monkeypatch.chdir(sub)
+    set_tty(False)
+    refused = CliRunner().invoke(main, ["init", "--yes"])
+    assert refused.exit_code != 0
+    remedies = _named_init_remedies(refused.output)
+    assert remedies == [["--root", str(root.resolve())]]
+    accepted = CliRunner().invoke(main, ["init", *remedies[0]])
+    assert accepted.exit_code == 0, accepted.output
+    assert spy_install == [(root.resolve(), False)]
 
 
 def test_init_root_installs_at_explicit_target_non_interactively(
@@ -910,3 +943,400 @@ def test_init_here_does_not_override_broken_git(
     assert result.exit_code != 0
     assert "cannot open" in result.output
     assert spy_install == []
+
+
+# ---- #913: remedies are accepted, declines fail, stdin, stray .pkit ----------
+
+
+def _named_init_remedies(output: str) -> list[list[str]]:
+    """Every backticked `pkit init <args>` a refusal suggests, as argv for `main`.
+
+    A bare `pkit init` mention carries no flags to check, so it is not collected;
+    tests that care about a "run `pkit init` from <dir>" remedy run it directly.
+    """
+    return [shlex.split(m)[2:] for m in re.findall(r"`(pkit init [^`]+)`", output)]
+
+
+def _named_sync_remedies(output: str) -> list[Path | None]:
+    """Every backticked `pkit sync` remedy a refusal suggests, as the directory it
+    must run from: the `cd` target of a `cd <dir> && pkit sync`, or `None` for a
+    bare `pkit sync` (run from where you stand)."""
+    return [
+        Path(shlex.split(cd)[0]) if cd else None
+        for cd in re.findall(r"`(?:cd ([^`]+?) && )?pkit sync`", output)
+    ]
+
+
+def _run_sync_remedy(monkeypatch: pytest.MonkeyPatch, remedy: Path | None) -> list[Path]:
+    """Run a named `pkit sync` remedy — `cd` into its directory, if it names one,
+    then invoke `sync` — and return the project roots sync would refresh.
+    `run_sync` is stubbed: the unit under test is the root sync resolves."""
+    refreshed: list[Path] = []
+    monkeypatch.setattr(
+        cli, "run_sync", lambda root, dry_run=False, force=False: refreshed.append(root)
+    )
+    if remedy is not None:
+        monkeypatch.chdir(remedy)
+    result = CliRunner().invoke(main, ["sync"])
+    assert result.exit_code == 0, result.output
+    return refreshed
+
+
+def test_init_git_subfolder_non_tty_refusal_never_suggests_here(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spy_install, set_tty
+) -> None:
+    """The non-interactive refusal from a git subfolder used to suggest `--here`,
+    which that same subfolder refuses. Its remedies now name the git root, and
+    each one it names installs when run (#913)."""
+    _git_init(tmp_path)
+    sub = tmp_path / "sub"
+    sub.mkdir()
+    monkeypatch.chdir(sub)
+    set_tty(False)
+    refused = CliRunner().invoke(main, ["init"])
+    assert refused.exit_code != 0
+    assert "--here" not in refused.output
+    remedies = _named_init_remedies(refused.output)
+    assert remedies == [["--root", str(tmp_path.resolve())]]
+    accepted = CliRunner().invoke(main, ["init", *remedies[0]])
+    assert accepted.exit_code == 0, accepted.output
+    # The other named remedy: a plain `pkit init` run from the root.
+    monkeypatch.chdir(tmp_path)
+    from_root = CliRunner().invoke(main, ["init"])
+    assert from_root.exit_code == 0, from_root.output
+    assert spy_install == [(tmp_path.resolve(), False)] * 2
+
+
+def test_init_split_brain_refusal_names_only_remedies_that_work(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spy_install
+) -> None:
+    """The split-brain refusal used to suggest `pkit init` from the found install
+    and `pkit sync` — both resolve to the git root, so neither reaches that
+    install. It now says the install is shadowed and names only `--root` (#913)."""
+    _git_init(tmp_path)
+    mid = tmp_path / "mid"
+    deep = mid / "deep"
+    deep.mkdir(parents=True)
+    _mark_install(mid)
+    monkeypatch.chdir(deep)
+    refused = CliRunner().invoke(main, ["init"])
+    assert refused.exit_code != 0
+    assert "shadowed" in refused.output
+    assert f"Run `pkit init` from {mid.resolve()}" not in refused.output
+    remedies = _named_init_remedies(refused.output)
+    assert remedies == [["--root", str(tmp_path.resolve())]]
+    accepted = CliRunner().invoke(main, ["init", *remedies[0]])
+    assert accepted.exit_code == 0, accepted.output
+    assert spy_install == [(tmp_path.resolve(), False)]
+
+
+@pytest.mark.parametrize("verdict", [_GitVerdict.DUBIOUS, _GitVerdict.BROKEN])
+def test_init_unverifiable_repo_refusal_names_a_root_that_installs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spy_install, verdict
+) -> None:
+    """From a subfolder of a repository git will not vouch for, the refusal used
+    to name a generic `--root <path>` — which a subfolder path is refused for. It
+    now names the repository root, and that remedy installs (#913)."""
+    _git_init(tmp_path)
+    sub = tmp_path / "sub"
+    sub.mkdir()
+    monkeypatch.chdir(sub)
+    monkeypatch.setattr(install, "_git_toplevel", lambda cwd: None)
+    monkeypatch.setattr(install, "_git_verdict", lambda cand: verdict)
+    refused = CliRunner().invoke(main, ["init"])
+    assert refused.exit_code != 0
+    remedies = _named_init_remedies(refused.output)
+    assert remedies == [["--root", str(tmp_path.resolve())]]
+    accepted = CliRunner().invoke(main, ["init", *remedies[0]])
+    assert accepted.exit_code == 0, accepted.output
+    assert spy_install == [(tmp_path.resolve(), False)]
+
+
+def test_init_here_in_subfolder_of_adopted_repo_redirects_to_sync(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spy_install
+) -> None:
+    """`--here` from a subfolder of an adopted git root used to say "run `pkit
+    init` from the root", which then refuses as already installed. It now names
+    the project and `pkit sync` (#913)."""
+    _git_init(tmp_path)
+    _mark_install(tmp_path)
+    sub = tmp_path / "sub"
+    sub.mkdir()
+    monkeypatch.chdir(sub)
+    result = CliRunner().invoke(main, ["init", "--here"])
+    assert result.exit_code != 0
+    assert "already a project-kit project" in result.output
+    assert "pkit sync" in result.output
+    assert _named_init_remedies(result.output) == []
+    assert spy_install == []
+
+
+def test_init_root_subfolder_of_adopted_repo_redirects_to_sync(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spy_install
+) -> None:
+    """`--root <subfolder>` of an adopted git root redirects to `pkit sync` rather
+    than naming a `--root <git root>` that would refuse as already installed
+    (#913)."""
+    _git_init(tmp_path)
+    _mark_install(tmp_path)
+    sub = tmp_path / "sub"
+    sub.mkdir()
+    monkeypatch.chdir(tmp_path)
+    result = CliRunner().invoke(main, ["init", "--root", str(sub)])
+    assert result.exit_code != 0
+    assert "already a project-kit project" in result.output
+    assert "pkit sync" in result.output
+    assert _named_init_remedies(result.output) == []
+    assert spy_install == []
+
+
+def test_init_root_subfolder_of_worktree_names_a_remedy_that_installs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spy_install
+) -> None:
+    """`--root <subfolder>` of an unadopted worktree names `--root <git root>`,
+    and that remedy installs (#913)."""
+    _git_init(tmp_path)
+    sub = tmp_path / "pkg"
+    sub.mkdir()
+    monkeypatch.chdir(tmp_path)
+    refused = CliRunner().invoke(main, ["init", "--root", str(sub)])
+    assert refused.exit_code != 0
+    remedies = _named_init_remedies(refused.output)
+    assert remedies == [["--root", str(tmp_path.resolve())]]
+    accepted = CliRunner().invoke(main, ["init", *remedies[0]])
+    assert accepted.exit_code == 0, accepted.output
+    assert spy_install == [(tmp_path.resolve(), False)]
+
+
+@pytest.mark.parametrize("verdict", [_GitVerdict.DUBIOUS, _GitVerdict.BROKEN])
+def test_init_unverifiable_adopted_repo_names_the_git_fix_then_sync(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spy_install, verdict
+) -> None:
+    """An adopted repository git will not vouch for (a Docker / CI checkout owned
+    by another user) used to get the `--root <root>` remedy, which then refused
+    as already installed. It now names the git fix and `pkit sync`, and once git
+    is fixed that sync refreshes the project (#913)."""
+    _git_init(tmp_path)
+    _mark_install(tmp_path)
+    sub = tmp_path / "sub"
+    sub.mkdir()
+    monkeypatch.chdir(sub)
+    real_toplevel, real_verdict = install._git_toplevel, install._git_verdict
+    monkeypatch.setattr(install, "_git_toplevel", lambda cwd: None)
+    monkeypatch.setattr(install, "_git_verdict", lambda cand: verdict)
+    refused = CliRunner().invoke(main, ["init"])
+    assert refused.exit_code != 0
+    assert "already a project-kit project" in refused.output
+    assert _named_init_remedies(refused.output) == []
+    git_fix = (
+        f"`git config --global --add safe.directory {shlex.quote(str(tmp_path.resolve()))}`"
+        if verdict == _GitVerdict.DUBIOUS
+        else f"`git -C {shlex.quote(str(tmp_path.resolve()))} status`"
+    )
+    assert git_fix in refused.output
+    remedies = _named_sync_remedies(refused.output)
+    assert len(remedies) == 1
+    # The git fix applied: git vouches for the repository again.
+    monkeypatch.setattr(install, "_git_toplevel", real_toplevel)
+    monkeypatch.setattr(install, "_git_verdict", real_verdict)
+    assert _run_sync_remedy(monkeypatch, remedies[0]) == [tmp_path.resolve()]
+    assert spy_install == []
+
+
+@pytest.mark.parametrize("verdict", [_GitVerdict.DUBIOUS, _GitVerdict.BROKEN])
+def test_init_unverifiable_repo_with_stray_pkit_keeps_the_root_remedy(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spy_install, verdict
+) -> None:
+    """A stray, non-install `.pkit/` does not make the repository adopted: the
+    refusal still names `--root <root>`, whose run then names the stray entry
+    and how to clear it (#913)."""
+    _git_init(tmp_path)
+    (tmp_path / ".pkit").mkdir()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(install, "_git_toplevel", lambda cwd: None)
+    monkeypatch.setattr(install, "_git_verdict", lambda cand: verdict)
+    refused = CliRunner().invoke(main, ["init"])
+    assert refused.exit_code != 0
+    assert _named_init_remedies(refused.output) == [["--root", str(tmp_path.resolve())]]
+    assert _named_sync_remedies(refused.output) == []
+    assert spy_install == []
+
+
+def _adopted_git_root_with_subfolder(
+    base: Path, monkeypatch: pytest.MonkeyPatch
+) -> tuple[Path, Path]:
+    project = base / "my project"
+    (project / "sub").mkdir(parents=True)
+    _git_init(project)
+    _mark_install(project)
+    return project, project / "sub"
+
+
+def _adopted_git_root(base: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[Path, Path]:
+    project = base / "my project"
+    project.mkdir()
+    _git_init(project)
+    _mark_install(project)
+    return project, project
+
+
+def _path_inside_adopted_no_git_project(
+    base: Path, monkeypatch: pytest.MonkeyPatch
+) -> tuple[Path, Path]:
+    project = base / "my project"
+    (project / "sub").mkdir(parents=True)
+    _mark_install(project)
+    monkeypatch.setenv("PATH", "/nonexistent")  # no git: the install marker governs
+    return project, project / "sub"
+
+
+@pytest.mark.parametrize(
+    "make_project",
+    [_adopted_git_root_with_subfolder, _adopted_git_root, _path_inside_adopted_no_git_project],
+)
+@pytest.mark.parametrize("from_inside", [False, True], ids=["from-outside", "from-inside"])
+def test_init_root_sync_redirect_works_from_where_you_stand(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spy_install, make_project, from_inside
+) -> None:
+    """`pkit sync` has no `--root` — it refreshes the project it resolves from the
+    current directory. So a `--root` refusal that redirects to sync used to say
+    "Run `pkit sync`", which from outside the project refreshed another one or
+    failed. From outside it now names `cd <project> && pkit sync`; from inside it
+    stays a bare `pkit sync`. Either way, running it refreshes the project
+    (#913)."""
+    project, root_arg = make_project(tmp_path, monkeypatch)
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.chdir(project if from_inside else elsewhere)
+    refused = CliRunner().invoke(main, ["init", "--root", str(root_arg)])
+    assert refused.exit_code != 0
+    assert _named_init_remedies(refused.output) == []
+    remedies = _named_sync_remedies(refused.output)
+    assert remedies == ([None] if from_inside else [project.resolve()])
+    assert _run_sync_remedy(monkeypatch, remedies[0]) == [project.resolve()]
+    assert spy_install == []
+
+
+def test_init_non_git_folder_decline_exits_non_zero(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spy_install, set_tty
+) -> None:
+    """The fresh-folder prompt's decline exits non-zero too, like the off-cwd
+    prompt's (#913)."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("PATH", "/nonexistent")
+    set_tty(True)
+    result = CliRunner().invoke(main, ["init"], input="n\n")
+    assert result.exit_code == 1, result.output
+    assert "Aborted!" in result.output
+    assert spy_install == []
+
+
+def test_stdin_is_tty_absent_stdin_is_non_interactive(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`sys.stdin` is None when the process starts with fd 0 closed (#913)."""
+    monkeypatch.setattr(sys, "stdin", None)
+    assert cli._stdin_is_tty() is False
+
+
+def test_stdin_is_tty_closed_stdin_is_non_interactive(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A closed stream raises ValueError from isatty(); read it as non-interactive."""
+    closed = io.StringIO()
+    closed.close()
+    monkeypatch.setattr(sys, "stdin", closed)
+    assert cli._stdin_is_tty() is False
+
+
+@pytest.mark.parametrize("stdin_setup", ["sys.stdin = None", "sys.stdin.close()"])
+def test_init_absent_or_closed_stdin_refuses_instead_of_crashing(
+    tmp_path: Path, stdin_setup: str
+) -> None:
+    """End to end in a real process: with no usable stdin, init from a git
+    subfolder gets the non-interactive refusal, not a traceback (#913)."""
+    _git_init(tmp_path)
+    sub = tmp_path / "sub"
+    sub.mkdir()
+    script = f"import sys; {stdin_setup}; from project_kit.cli import main; main(['init'])"
+    proc = subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=sub,
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        text=True,
+    )
+    assert proc.returncode == 1, proc.stderr
+    assert "stdin is not a terminal" in proc.stderr
+    assert "Traceback" not in proc.stderr
+    assert not (tmp_path / ".pkit").exists()
+
+
+def _stray_pkit_dir(path: Path) -> None:
+    """A `.pkit/` that is not an install: neither manifest.yaml nor decisions/."""
+    (path / ".pkit").mkdir()
+    (path / ".pkit" / "junk.txt").write_text("left over\n", encoding="utf-8")
+
+
+def _stray_pkit_file(path: Path) -> None:
+    (path / ".pkit").write_text("not a directory\n", encoding="utf-8")
+
+
+@pytest.mark.parametrize("make_stray", [_stray_pkit_dir, _stray_pkit_file])
+def test_init_stray_pkit_refused_before_the_prompt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spy_install, set_tty, make_stray
+) -> None:
+    """A `.pkit` at the target that is not an install used to be prompted for and
+    only then refused ("future refresh commands"). It is now refused before the
+    prompt, naming what is wrong and what to do (#913)."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("PATH", "/nonexistent")  # a fresh non-git folder: prompts
+    make_stray(tmp_path)
+    set_tty(True)
+    result = CliRunner().invoke(main, ["init"], input="y\n")
+    assert result.exit_code != 0
+    assert "Install project-kit into" not in result.output  # never prompted
+    assert "not a project-kit install" in result.output or "not a directory" in result.output
+    assert "Move it aside" in result.output
+    assert "future refresh" not in result.output
+    assert spy_install == []
+
+
+def test_init_stray_pkit_at_git_root_refused_before_prompt_from_subfolder(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spy_install, set_tty
+) -> None:
+    """The off-cwd prompt path refuses a stray `.pkit/` at the git root first."""
+    _git_init(tmp_path)
+    _stray_pkit_dir(tmp_path)
+    sub = tmp_path / "sub"
+    sub.mkdir()
+    monkeypatch.chdir(sub)
+    set_tty(True)
+    result = CliRunner().invoke(main, ["init"], input="y\n")
+    assert result.exit_code != 0
+    assert "Install project-kit into" not in result.output
+    assert "not a project-kit install" in result.output
+    assert spy_install == []
+
+
+def test_init_root_at_stray_pkit_refused(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spy_install
+) -> None:
+    """--root names the stray `.pkit/` too, rather than reaching install_kit."""
+    _stray_pkit_dir(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    result = CliRunner().invoke(main, ["init", "--root", str(tmp_path)])
+    assert result.exit_code != 0
+    assert "not a project-kit install" in result.output
+    assert spy_install == []
+
+
+def test_init_stray_pkit_removed_then_same_command_installs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spy_install
+) -> None:
+    """The stray-.pkit remedy ("move it aside, then re-run the same command") is
+    accepted by that same command."""
+    _stray_pkit_dir(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    refused = CliRunner().invoke(main, ["init", "--root", str(tmp_path)])
+    assert refused.exit_code != 0
+    (tmp_path / ".pkit").rename(tmp_path / "pkit-moved-aside")
+    accepted = CliRunner().invoke(main, ["init", "--root", str(tmp_path)])
+    assert accepted.exit_code == 0, accepted.output
+    assert spy_install == [(tmp_path.resolve(), False)]

@@ -29,9 +29,11 @@ from project_kit.install import (
     find_source_kit,
     find_target_root,
     install_kit,
+    refuse_if_pkit_present,
     source_checkout_root,
     resolve_init_target,
     scan_pkit_installs,
+    sync_remedy,
 )
 from project_kit.merge import run_merge
 from project_kit.scaffolds import (
@@ -657,9 +659,30 @@ def _stdin_is_tty() -> bool:
 
     Isolated so `pkit init`'s confirm gate is unit-testable: a piped
     `yes | pkit init` has a non-tty stdin and must be refused, not
-    auto-confirmed (issue #780).
+    auto-confirmed (issue #780). An absent stdin (`sys.stdin` is None, as when
+    the process is started with fd 0 closed) or a closed stream is not a
+    terminal either — treated as non-interactive, not a crash (#913).
     """
-    return sys.stdin.isatty()
+    stdin = sys.stdin
+    if stdin is None:
+        return False
+    try:
+        return stdin.isatty()
+    except (ValueError, OSError):  # ValueError: I/O operation on a closed file
+        return False
+
+
+def _confirm_install(target: Path, non_interactive_refusal: str) -> None:
+    """Ask before installing into `target`; refuse when no one can answer.
+
+    On a non-interactive stdin the prompt is never shown — the caller's refusal
+    message is raised instead, so a piped `yes |` cannot auto-confirm (#780). A
+    declined prompt aborts non-zero (`click.Abort`), so a chained next step does
+    not run as if the install had happened (#913).
+    """
+    if not _stdin_is_tty():
+        raise click.ClickException(non_interactive_refusal)
+    click.confirm(f"Install project-kit into {target}?", default=False, abort=True)
 
 
 def _announce_init_target(
@@ -691,7 +714,10 @@ def _announce_init_target(
     "--dry-run",
     is_flag=True,
     default=False,
-    help="Show what would be installed without writing any files (per COR-004).",
+    help=(
+        "Show what would be installed without writing any files or prompting (per "
+        "COR-004). Every refusal still applies."
+    ),
 )
 @click.option(
     "--here",
@@ -748,15 +774,10 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
     # sanctioned non-interactive install-at-a-parent path (#787). It bypasses the
     # resolution-driven confirm and the cwd-to-target split-brain scan (which exist
     # to stop a *silent* install at a resolved parent), but not the checks on the
-    # target itself: the already-adopted redirect, the shadowed-target refusal,
-    # and install_kit's own refusals.
+    # target itself: the shadowed-target refusal, the existing-.pkit refusal (an
+    # already-adopted redirect or a stray .pkit, #913), and install_kit's own.
     if root is not None:
         target = root.resolve()
-        if router.looks_like_pkit_install(target / ".pkit"):
-            raise click.ClickException(
-                f"{target} is already a project-kit project.\n"
-                f"       Run `pkit sync` to refresh it."
-            )
         # Resolve from the target as a steady-state command run there would. If
         # that lands anywhere but the target, a .pkit/ there is shadowed: below a
         # git worktree root (dubious or broken included) it is unreachable, and
@@ -768,18 +789,33 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
                 raise click.ClickException(
                     f"--root refused: {target} is inside the project-kit project at "
                     f"{enclosing_root}.\n"
-                    f"       A second, nested install is not supported. Run `pkit sync` "
-                    f"to refresh that project."
+                    f"       A second, nested install is not supported. Run "
+                    f"{sync_remedy(enclosing_root, cwd)} to refresh that project."
+                )
+            if router.looks_like_pkit_install(enclosing_root / ".pkit"):
+                raise click.ClickException(
+                    f"--root refused: {target} is a subfolder of the git repository "
+                    f"rooted at {enclosing_root},\n"
+                    f"       which is already a project-kit project. A .pkit/ here would "
+                    f"be unreachable — every\n"
+                    f"       pkit command resolves to the git root. Run "
+                    f"{sync_remedy(enclosing_root, cwd)} to refresh that project."
                 )
             raise click.ClickException(
                 f"--root refused: {target} is a subfolder of the git repository rooted "
                 f"at {enclosing_root}.\n"
                 f"       A .pkit/ created there would be unreachable — every pkit command "
                 f"resolves to the\n"
-                f"       git root, not this subfolder. Install at {enclosing_root}, or make "
-                f"this folder\n"
-                f"       its own git repository first."
+                f"       git root, not this subfolder. Run `pkit init --root "
+                f"{shlex.quote(str(enclosing_root))}` to install\n"
+                f"       there, or make this folder its own git repository first."
             )
+        # A .pkit entry at the target itself: a real install redirects to sync, a
+        # stray one is named and must be moved aside (#913). Checked after the
+        # shadow refusal, whose remedy is the right one for a shadowed target (a
+        # shadowed install's `pkit sync` would resolve to the enclosing root). The
+        # sync redirect names the target's location when cwd is outside it.
+        refuse_if_pkit_present(target, cwd)
         # The target is itself a repository git will not vouch for. --root is the
         # escape the guided flow's refusal names, so install — but say what git
         # said, so a CI run does not install into an unverified tree unannounced.
@@ -810,14 +846,29 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
     # of --here: installing at cwd here is exactly the shadowing footgun.
     if reason == InitTargetReason.DUBIOUS_OWNERSHIP:
         _announce_init_target(target, reason, [], here=here)
+        # Already adopted (a Docker / CI checkout owned by another user): `--root`
+        # would only refuse as already installed, so the remedy is the ownership
+        # fix, then `pkit sync`. A stray non-install .pkit keeps the `--root`
+        # remedy — that run names the stray entry and how to clear it (#913).
+        if router.looks_like_pkit_install(target / ".pkit"):
+            raise click.ClickException(
+                f"{target} is already a project-kit project, but git refused to verify "
+                f"its repository\n"
+                f"       (dubious ownership / safe.directory). If you trust its owner, let "
+                f"git use it with\n"
+                f"       `git config --global --add safe.directory "
+                f"{shlex.quote(str(target))}`, then run {sync_remedy(target, cwd)}\n"
+                f"       to refresh the project."
+            )
         raise click.ClickException(
             f"{target} looks like a git repository, but git refused to verify it "
             f"(dubious ownership / safe.directory).\n"
             f"       project-kit will not install a shadowed .pkit/ inside a repository "
             f"it cannot confirm.\n"
             f"       Fix the ownership (e.g. `git config --global --add safe.directory "
-            f"{target}`) and\n"
-            f"       re-run, or name an explicit target with `pkit init --root <path>`."
+            f"{shlex.quote(str(target))}`) and\n"
+            f"       re-run, or install there anyway with `pkit init --root "
+            f"{shlex.quote(str(target))}`."
         )
 
     # A structurally-real repository git cannot open for a reason other than
@@ -827,6 +878,18 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
     # shadowing footgun, and --here does not override it.
     if reason == InitTargetReason.BROKEN_GIT:
         _announce_init_target(target, reason, [], here=here)
+        # Already adopted: as for dubious ownership, `--root` would refuse as
+        # already installed, so the remedy is repairing the .git, then `pkit sync`
+        # (#913). Removing the .git is not offered — it holds the project's history.
+        if router.looks_like_pkit_install(target / ".pkit"):
+            raise click.ClickException(
+                f"{target} is already a project-kit project, but git cannot open its "
+                f".git — a broken or\n"
+                f"       partial repository. Run `git -C {shlex.quote(str(target))} status` "
+                f"to see why and repair\n"
+                f"       that .git, then run {sync_remedy(target, cwd)} to refresh the "
+                f"project."
+            )
         raise click.ClickException(
             f"{target} has a .git that git cannot open — a broken or partial "
             f"repository.\n"
@@ -834,7 +897,8 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
             f"confirm.\n"
             f"       Run `git -C {shlex.quote(str(target))} status` to see why, then repair or remove "
             f"that .git and\n"
-            f"       re-run, or name an explicit target with `pkit init --root <path>`."
+            f"       re-run, or install there anyway with `pkit init --root "
+            f"{shlex.quote(str(target))}`."
         )
 
     # --here is refused when CWD is a strict subfolder of a git worktree — the
@@ -843,6 +907,17 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
     # install (a nested second install, ADR-001). At a git root or in a fresh
     # non-git folder it is honored (an explicit install at cwd).
     if here:
+        if reason == InitTargetReason.GIT_SUBFOLDER and router.looks_like_pkit_install(
+            target / ".pkit"
+        ):
+            raise click.ClickException(
+                f"--here refused: the current directory is a subfolder of the git "
+                f"worktree rooted at {target},\n"
+                f"       which is already a project-kit project. A .pkit/ here would be "
+                f"unreachable — every\n"
+                f"       pkit command resolves to the git root. Run "
+                f"{sync_remedy(target, cwd)} to refresh that project."
+            )
         if reason == InitTargetReason.GIT_SUBFOLDER:
             raise click.ClickException(
                 f"--here refused: the current directory is a subfolder of the git "
@@ -861,13 +936,12 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
             raise click.ClickException(
                 f"--here refused: the current directory is inside the project-kit "
                 f"project at {enclosing[0]}.\n"
-                f"       A second, nested install is not supported. Run `pkit sync` to "
-                f"refresh that project."
+                f"       A second, nested install is not supported. Run "
+                f"{sync_remedy(enclosing[0], cwd)} to refresh that project."
             )
         target = cwd
 
     installs = scan_pkit_installs(cwd, target)
-    target_has_install = router.looks_like_pkit_install(target / ".pkit")
     off_target = [d for d in installs if d.resolve() != target.resolve()]
 
     _announce_init_target(target, reason, installs, here=here)
@@ -876,13 +950,11 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
     # idempotent (COR-004): re-running would resurface seeded content or silently
     # skip already-seeded paths. Recovery flows through `pkit sync`. This is also
     # the PKIT_INSTALL-ancestor redirect (#787): the ancestor is the target and it
-    # carries a real install. Fires before the confirm so the operator is never
-    # prompted-then-refused for an install that could not proceed anyway (#780).
-    if target_has_install:
-        raise click.ClickException(
-            f"{target} is already a project-kit project.\n"
-            f"       Run `pkit sync` to refresh it."
-        )
+    # carries a real install. A stray `.pkit` that is not an install is refused
+    # here too, with what is wrong and how to clear it (#913). Fires before the
+    # confirm so the operator is never prompted-then-refused for an install that
+    # could not proceed anyway (#780).
+    refuse_if_pkit_present(target, cwd)
 
     # An install sits between CWD and the target, but the target has none:
     # installing there would leave two installs straddling CWD (split-brain).
@@ -895,8 +967,11 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
             f"       Found an existing install at {found}/.pkit,\n"
             f"       but the resolved target {target} has none — installing there would\n"
             f"       leave two installs straddling your current directory (a split-brain).\n"
-            f"       Run `pkit init` from {found}, `pkit sync` to refresh it, or\n"
-            f"       `pkit init --root {target}` to install at {target} anyway."
+            f"       That install is shadowed: every pkit command here resolves to the "
+            f"git root, so\n"
+            f"       neither `pkit sync` nor `pkit init` reaches it. Run "
+            f"`pkit init --root {shlex.quote(str(target))}`\n"
+            f"       to install at {target} anyway."
         )
 
     # A target above cwd (a git repository root you are inside): install into it
@@ -910,21 +985,21 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
                 f"directory.\n"
                 f"       This guards against a non-interactive run installing somewhere "
                 f"you are not standing.\n"
-                f"       Re-run with `pkit init --root {target}` to install there "
+                f"       Re-run with `pkit init --root {shlex.quote(str(target))}` to install there "
                 f"explicitly, or cd into it first."
             )
+        # Only a git subfolder reaches here (every other off-cwd reason is refused
+        # above), and `--here` is refused in a subfolder — so the remedies name
+        # the root, never `--here` (#913).
         if not dry_run:
-            if not _stdin_is_tty():
-                raise click.ClickException(
-                    f"the install target {target} is not your current directory, and "
-                    f"stdin is not a terminal.\n"
-                    f"       Re-run with `pkit init --root {target}` to install there, or "
-                    f"`pkit init --here`\n"
-                    f"       to install in the current directory."
-                )
-            if not click.confirm(f"Install project-kit into {target}?", default=False):
-                click.echo("Aborted.")
-                return
+            _confirm_install(
+                target,
+                f"the install target {target} is not your current directory, and "
+                f"stdin is not a terminal.\n"
+                f"       Re-run with `pkit init --root {shlex.quote(str(target))}` to "
+                f"install there, or run `pkit init`\n"
+                f"       from {target}.",
+            )
         install_kit(target, dry_run=dry_run)
         return
 
@@ -933,14 +1008,11 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
     # --yes / --here accept it, --dry-run previews. GIT_ROOT / --here install
     # straight (installing where you stand is never a footgun).
     if reason == InitTargetReason.NONE and not yes and not here and not dry_run:
-        if not _stdin_is_tty():
-            raise click.ClickException(
-                f"no git repository found and stdin is not a terminal.\n"
-                f"       Re-run with --yes to install project-kit into {target}."
-            )
-        if not click.confirm(f"Install project-kit into {target}?", default=False):
-            click.echo("Aborted.")
-            return
+        _confirm_install(
+            target,
+            f"no git repository found and stdin is not a terminal.\n"
+            f"       Re-run with --yes to install project-kit into {target}.",
+        )
 
     install_kit(target, dry_run=dry_run)
 

@@ -143,8 +143,27 @@ def test_install_kit_seeds_adapter_project_settings(tmp_target: Path) -> None:
 
 @pytest.mark.usefixtures("stub_adapter_primitives")
 def test_install_kit_refuses_when_pkit_dir_already_exists(tmp_target: Path) -> None:
+    """A bare `.pkit/` (no install markers) is named as not an install (#913)."""
     (tmp_target / ".pkit").mkdir()
-    with pytest.raises(click.ClickException, match=r"\.pkit/ already exists"):
+    with pytest.raises(
+        click.ClickException, match=r"\.pkit/ exists but is not a project-kit install"
+    ):
+        install.install_kit(tmp_target)
+
+
+@pytest.mark.usefixtures("stub_adapter_primitives")
+def test_install_kit_refuses_existing_install_pointing_to_sync(tmp_target: Path) -> None:
+    (tmp_target / ".pkit").mkdir()
+    (tmp_target / ".pkit" / "manifest.yaml").write_text("backbone_version: 1.0.0\n")
+    with pytest.raises(click.ClickException, match=r"already a project-kit project"):
+        install.install_kit(tmp_target)
+
+
+@pytest.mark.usefixtures("stub_adapter_primitives")
+def test_install_kit_refuses_pkit_file_cleanly(tmp_target: Path) -> None:
+    """A `.pkit` that is a file used to crash later in `mkdir`; now refused (#913)."""
+    (tmp_target / ".pkit").write_text("not a directory\n")
+    with pytest.raises(click.ClickException, match=r"not a directory"):
         install.install_kit(tmp_target)
 
 
