@@ -76,6 +76,13 @@ def test_stamp_capability_refuses_invalid_slug(kit_target: Path) -> None:
         stamp_capability(kit_target, name="Bad_Name")
 
 
+def test_stamp_capability_refuses_reserved_name_core(kit_target: Path) -> None:
+    """`core` names the core schemas area, so it is refused and nothing is written (#919)."""
+    with pytest.raises(click.ClickException, match="'core' is reserved"):
+        stamp_capability(kit_target, name="core")
+    assert not (kit_target / ".pkit" / "capabilities" / "core").exists()
+
+
 def test_stamp_capability_refuses_when_pkit_missing(tmp_path: Path) -> None:
     with pytest.raises(click.ClickException, match="does not exist"):
         stamp_capability(tmp_path, name="x")

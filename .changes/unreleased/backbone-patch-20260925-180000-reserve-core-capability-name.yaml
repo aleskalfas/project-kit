@@ -1,0 +1,10 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+  pr: "939"
+body: >
+  `pkit new capability`, `pkit capabilities install` and `pkit capabilities
+  register` now refuse a capability named `core`. That name is reserved
+  because it names the core schemas area, so a capability called `core`
+  would have had its schemas silently unreachable (#919).

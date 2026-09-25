@@ -51,10 +51,23 @@ from project_kit.migrations import (
     pending_migration_scripts,
     report_pending_migrations,
 )
+from project_kit.schemas_validate import CORE_SCHEMAS_OWNER
 
 
 _NAME_RE = re.compile(r"^[a-z][a-z0-9-]*[a-z0-9]$|^[a-z]$")
 _yaml = YAML(typ="safe")
+
+# Names a capability may not take because another subsystem already gives
+# them a meaning, each mapped to the reason shown in the refusal. `core` is
+# the schemas-home owner name for the core schemas area
+# (`schemas_validate.schemas_home`), so a capability named `core` would have
+# its `schemas/` silently unreachable (#919).
+RESERVED_CAPABILITY_NAMES: dict[str, str] = {
+    CORE_SCHEMAS_OWNER: (
+        "it names the core schemas area, so a capability's schemas under "
+        "that name would be unreachable"
+    ),
+}
 
 # A capability's top-level `project/` subtree is adopter-owned (the
 # no-shared-files invariant, COR-001): never overwritten or removed on
@@ -114,6 +127,21 @@ def _resolve_capability_dir(cap_dir: Path, name: str) -> CapabilitySource | None
     if package is None or package.name != name:
         return None
     return CapabilitySource(name=name, path=cap_dir, package=package)
+
+
+def refuse_reserved_capability_name(name: str) -> None:
+    """Refuse a capability name in `RESERVED_CAPABILITY_NAMES`.
+
+    Called by every path that brings a capability into a project — create
+    (`pkit new capability`), install, and register — so a reserved name is
+    refused before any file is written or any registry entry is made.
+    """
+    reason = RESERVED_CAPABILITY_NAMES.get(name)
+    if reason is not None:
+        raise click.ClickException(
+            f"capability name {name!r} is reserved: {reason}. "
+            f"Choose another name."
+        )
 
 
 def find_capability_in_source(source_kit: Path, name: str) -> CapabilitySource | None:
@@ -481,8 +509,10 @@ def install_capability(
     Returns the installed path: `<target_root>/.pkit/capabilities/<name>/`.
 
     Refuses to install if the capability is already installed in the
-    adopter — caller must check first via `is_installed`.
+    adopter — caller must check first via `is_installed` — or if its name
+    is reserved (`refuse_reserved_capability_name`).
     """
+    refuse_reserved_capability_name(capability_source.name)
     if is_installed(target_root, capability_source.name):
         raise click.ClickException(
             f"capability {capability_source.name!r} is already installed. "
@@ -540,7 +570,8 @@ def register_incubated_capability(
     own tree (the adopter authored them), so there is nothing to copy and
     nothing to selectively omit.
 
-    Refuses if the capability is already registered. Guards that the
+    Refuses if the capability is already registered or its name is
+    reserved (`refuse_reserved_capability_name`). Guards that the
     resolved source genuinely lives at the in-repo destination — the copy
     primitive (`refresh_owned_tree`) is *not* safe for source == dest, and
     this path must never reach it; the guard makes that structural rather
@@ -549,6 +580,7 @@ def register_incubated_capability(
     Returns the in-place path: ``<target_root>/.pkit/capabilities/<name>/``.
     """
     name = capability_source.name
+    refuse_reserved_capability_name(name)
     if is_installed(target_root, name):
         raise click.ClickException(
             f"capability {name!r} is already installed. "

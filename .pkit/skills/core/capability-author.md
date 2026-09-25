@@ -66,6 +66,8 @@ Use a kebab-case noun that names the *discipline*, not the implementation. Examp
 
 The name becomes the directory name, the value of `component.name` in `package.yaml`, and the prefix in citations: `[<capability-name>:DEC-NNN-<slug>]`.
 
+**Reserved name: `core`.** `core` names the core schemas area (`.pkit/schemas/`) wherever a schemas verb takes an owner, so a capability named `core` would have its `schemas/` silently unreachable. `pkit new capability`, `pkit capabilities install`, and `pkit capabilities register` all refuse it.
+
 ### 2. Read the contract
 
 Read `.pkit/decisions/core/COR-017-capability-pattern.md`. Every capability ships:
@@ -91,7 +93,7 @@ The command:
 
 Unlike bundles and adapters, the capability is **not** registered in the backbone manifest by the scaffolding step. Capabilities are kit-shipped from the source-of-edit's perspective; adopters register them per-project via `pkit capabilities install <name>`.
 
-The command refuses if a capability with that name already exists or if the slug isn't kebab-case.
+The command refuses if a capability with that name already exists, if the slug isn't kebab-case, or if the name is reserved (`core`, see step 1).
 
 ### 4. Fill in the README
 
