@@ -93,7 +93,8 @@ def delete_remote_branch(
     The API call needs nothing from the working tree, so a detached HEAD or a
     default branch held by another worktree cannot fail it. A ref that is
     already gone (a repository that auto-deletes head branches on merge) is
-    reported, not warned about.
+    reported, not warned about. Every other failure, `gh` missing from PATH
+    included, is a warning; this never raises.
     """
     if cross_repository:
         print(
@@ -101,20 +102,26 @@ def delete_remote_branch(
             f"base-repository ref of that name"
         )
         return
-    proc = gh_run(
-        ["gh", "api", "-X", "DELETE",
-         f"repos/{{owner}}/{{repo}}/git/refs/heads/{branch}"],
-        config, check=False,
-    )
-    if proc.returncode == 0:
-        print(f"  deleted remote branch {branch}")
-        return
-    stderr = proc.stderr.strip()
-    if _ALREADY_DELETED_MARKER in stderr:
-        print(f"  remote branch {branch} already deleted")
-        return
+    try:
+        proc = gh_run(
+            ["gh", "api", "-X", "DELETE",
+             f"repos/{{owner}}/{{repo}}/git/refs/heads/{branch}"],
+            config, check=False,
+        )
+    except FileNotFoundError:
+        reason = "`gh` not on PATH"
+    except OSError as exc:  # on PATH but not runnable: permissions, bad binary
+        reason = f"`gh` could not be run ({exc})"
+    else:
+        if proc.returncode == 0:
+            print(f"  deleted remote branch {branch}")
+            return
+        reason = proc.stderr.strip()
+        if _ALREADY_DELETED_MARKER in reason:
+            print(f"  remote branch {branch} already deleted")
+            return
     print(
-        f"[warn] could not delete remote branch {branch}: {stderr}. The merge "
+        f"[warn] could not delete remote branch {branch}: {reason}. The merge "
         f"is durable; delete it by hand (`git push origin --delete {branch}`).",
         file=sys.stderr,
     )
