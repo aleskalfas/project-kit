@@ -1,10 +1,11 @@
 """`pkit sync` — re-run propagation per COR-001.
 
 Pulls the kit-shipped (canonical) content from source and refreshes the
-adopter's kit-owned paths. **Never** touches project-owned content
-(`.pkit/<area>/project/`, fixed-path adopter files like
-`.claude/settings.json`). Idempotent: re-running with no source change
-is a clean no-op.
+adopter's kit-owned paths. **Never** overwrites project-owned content
+(`.pkit/<area>/project/`). The two fixed-path adopter files the harness
+expects -- `.claude/settings.json` and `CLAUDE.md` -- are *merged into* by
+the adapter's merge primitives on every sync, not replaced (COR-002).
+Idempotent: re-running with no source change is a clean no-op.
 
 Sync re-uses the install module's area / adapter copy primitives in
 *overwrite* mode. The bash dispatcher does not have a sync command —
