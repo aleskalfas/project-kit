@@ -44,7 +44,10 @@ from __future__ import annotations
 from typing import Any
 
 from _lib import axis_labels
-from _lib.classification_rules import allowed_structural_types_per_kind
+from _lib.classification_rules import (
+    allowed_structural_types_per_kind,
+    title_prefix_by_value,
+)
 
 
 def structural_type_from_kind_label(
@@ -98,9 +101,13 @@ def infer_structural_type(
     for type_name, entry in types.items():
         if not isinstance(entry, dict):
             continue
-        prefix = entry.get("title_prefix", "")
+        prefix = entry.get("title_prefix")
+        # An empty or non-string prefix names no vocabulary: rendering it
+        # would claim `[] …` (or `[None] …`) titles for this type.
+        if not isinstance(prefix, str) or not prefix:
+            continue
         case = entry.get("title_case", "title")
-        rendered = str(prefix)
+        rendered = prefix
         if case == "upper":
             rendered = rendered.upper()
         if title.startswith(f"[{rendered}] "):
@@ -108,13 +115,12 @@ def infer_structural_type(
 
     # 3. Kind-driven prefixes — task-only by construction.
     if classification:
-        prefix_by_value = (
-            classification.get("axes", {})
-            .get("type", {})
-            .get("title_prefix_by_value", {})
-        )
-        for _kind_value, kind_prefix in prefix_by_value.items():
-            if isinstance(kind_prefix, str) and title.startswith(f"[{kind_prefix}] "):
+        for kind_prefix in title_prefix_by_value(classification).values():
+            if (
+                isinstance(kind_prefix, str)
+                and kind_prefix
+                and title.startswith(f"[{kind_prefix}] ")
+            ):
                 return "task"
 
     # 4. Fallback: recover from the `type:*` kind label when the prefix is gone.

@@ -167,3 +167,57 @@ def test_substrate_map_binding_type_elsewhere_yields_nothing(issue_types) -> Non
         assert infer_structural_type("[EPIC] x", issue_types, substrate_map=_Map()) is None
     finally:
         axis_labels.axis_title_prefix_remap = original
+
+
+# ---- robustness to unexpected schema values (#917) -------------------------
+
+
+@pytest.mark.parametrize("prefix", ["", None])
+def test_empty_title_prefix_matches_no_title(prefix) -> None:
+    """An empty prefix names no vocabulary, so it must not render `[] ` and
+    claim a `[] …` title — nor, when null, render `[None] `."""
+    issue_types = {"types": {"blank": {"title_prefix": prefix}}}
+    assert infer_structural_type("[] Something", issue_types) is None
+    assert infer_structural_type("[None] Something", issue_types) is None
+
+
+def test_empty_title_prefix_does_not_shadow_later_types() -> None:
+    issue_types = {
+        "types": {"blank": {"title_prefix": ""}, "task": {"title_prefix": "Task"}}
+    }
+    assert infer_structural_type("[Task] x", issue_types) == "task"
+
+
+def test_empty_kind_prefix_matches_no_title(issue_types) -> None:
+    classification = {"axes": {"type": {"title_prefix_by_value": {"bug": ""}}}}
+    assert (
+        infer_structural_type("[] x", issue_types, classification=classification)
+        is None
+    )
+
+
+@pytest.mark.parametrize(
+    "classification",
+    [
+        {"axes": None},
+        {"axes": "not-a-mapping"},
+        {"axes": {"type": None}},
+        {"axes": {"type": ["not", "a", "mapping"]}},
+        {"axes": {"type": {"title_prefix_by_value": None}}},
+        {"axes": {"type": {"title_prefix_by_value": ["Bug"]}}},
+    ],
+)
+def test_malformed_classification_lookup_path_yields_no_kind_match(
+    classification, issue_types
+) -> None:
+    """A null or non-mapping value anywhere on `axes.type.title_prefix_by_value`
+    yields no kind-prefix match rather than an exception."""
+    assert (
+        infer_structural_type("[Bug] x", issue_types, classification=classification)
+        is None
+    )
+    # The structural prefixes still resolve past a malformed classification.
+    assert (
+        infer_structural_type("[Task] x", issue_types, classification=classification)
+        == "task"
+    )
