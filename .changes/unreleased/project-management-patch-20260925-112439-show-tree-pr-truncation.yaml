@@ -2,7 +2,7 @@ component: project-management
 kind: patch
 custom:
   category: Fixed
-  pr: ""
+  pr: "923"
 body: >
   `show-tree` now marks its render partial when the PR fetch strikes `--limit`,
   not only the issue fetch (#906). A tracker with more PRs than the limit
