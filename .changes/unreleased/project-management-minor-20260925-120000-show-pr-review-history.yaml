@@ -2,7 +2,7 @@ component: project-management
 kind: minor
 custom:
   category: Added
-  pr: ""
+  pr: "907"
 body: >
   `show-pr` gains a `review-history` field (#905): every reviewer verdict posted
   on the PR, per reviewer, in posting order — including verdicts a later review
