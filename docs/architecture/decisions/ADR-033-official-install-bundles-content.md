@@ -192,7 +192,7 @@ this is the durable foundation, not a throwaway step.
   it meets the precondition.
   **Open gap: the property stops at the methodology bundle.** `src/project_kit` and the
   non-`.pkit` sdist content are still hatchling's own walk, so an untracked file there —
-  executable code included — ships in the artifact.
+  executable code included — ships in the artifact. Closing it is #930.
 - **Wheel size** grows (all methodology content + capability source ship in `site-packages`),
   acceptable at current scale; revisit if a future capability bundles large binary assets.
 - **Surface change** → version bump per PRJ-002, and the migration-coverage check runs against
