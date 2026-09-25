@@ -1229,3 +1229,18 @@ def test_upgrade_dry_run_pinned_does_not_write_pin(
     upgrade.run_upgrade(installed_target, dry_run=True)
 
     assert router.read_version_pin(installed_target) == "0.1.0"  # unchanged
+
+
+@pytest.mark.parametrize("stdin", [None, "closed"])
+def test_self_update_not_allowed_without_a_usable_stdin(monkeypatch, stdin) -> None:
+    """An absent or closed stdin is non-interactive, not a crash (#913)."""
+    import io
+
+    monkeypatch.delenv(upgrade._SELF_UPDATED_ENV, raising=False)
+    if stdin == "closed":
+        stream = io.StringIO()
+        stream.close()
+        monkeypatch.setattr(upgrade.sys, "stdin", stream)
+    else:
+        monkeypatch.setattr(upgrade.sys, "stdin", None)
+    assert upgrade._self_update_allowed() is False

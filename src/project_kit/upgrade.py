@@ -621,7 +621,19 @@ def _self_update_allowed() -> bool:
     instruct so a network install is never forced under automation."""
     if os.environ.get(_SELF_UPDATED_ENV) == "1":
         return False
-    return sys.stdin.isatty() and sys.stdout.isatty()
+    return _is_tty(sys.stdin) and _is_tty(sys.stdout)
+
+
+def _is_tty(stream: object) -> bool:
+    """A stream is interactive only if it exists, is open, and is a terminal.
+    An absent (`None`, fd closed at start) or closed stream is non-interactive,
+    not a crash -- the same guard `pkit init` uses (#913)."""
+    if stream is None:
+        return False
+    try:
+        return bool(stream.isatty())  # type: ignore[attr-defined]
+    except (ValueError, OSError):
+        return False
 
 
 def _self_update_tool(latest: Version) -> bool:

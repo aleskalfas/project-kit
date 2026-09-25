@@ -596,14 +596,47 @@ def _stamp_backbone_manifest(ctx: InstallContext) -> None:
     click.echo(f"  {'stamped':<12} .pkit/manifest.yaml (backbone v{backbone_version}{suffix})")
 
 
-def _refuse_if_already_initialised(ctx: InstallContext) -> None:
-    if (ctx.target_root / ".pkit").is_dir():
+def refuse_if_pkit_present(target_root: Path) -> None:
+    """Raise a `ClickException` if `target_root` already has a `.pkit` entry.
+
+    `init` never installs over an existing `.pkit` — the fresh copy would collide
+    with it — so any entry at that path blocks the install. The two cases get
+    different remedies: a real install (`looks_like_pkit_install`) is already a
+    project-kit project and refreshes through `pkit sync`; anything else (a stray
+    or partial `.pkit/` with neither `manifest.yaml` nor `decisions/`, or a
+    non-directory at that path) is not a project-kit install at all, so `sync`
+    cannot adopt it and the operator must move it aside (#913).
+
+    Public so the `init` command runs it *before* its confirm prompt: the
+    operator is never asked to confirm an install that would then be refused.
+    `install_kit` runs it again as its own guard for direct callers.
+    """
+    pkit_dir = target_root / ".pkit"
+    if looks_like_pkit_install(pkit_dir):
         raise click.ClickException(
-            f"{ctx.target_root}/.pkit/ already exists.\n"
-            f"       pkit init refuses to re-run on a project that already has the kit\n"
-            f"       installed. Remove .pkit/ first to reinstall, or use future refresh\n"
-            f"       commands when those land."
+            f"{target_root} is already a project-kit project.\n"
+            f"       Run `pkit sync` to refresh it."
         )
+    if pkit_dir.is_dir():
+        raise click.ClickException(
+            f"{pkit_dir}/ exists but is not a project-kit install — it has neither "
+            f"manifest.yaml nor decisions/.\n"
+            f"       pkit init will not install over it. Move it aside (or delete it, if "
+            f"it holds nothing\n"
+            f"       you need), then re-run the same command."
+        )
+    if pkit_dir.exists() or pkit_dir.is_symlink():
+        raise click.ClickException(
+            f"{pkit_dir} exists but is not a directory, so it cannot be a project-kit "
+            f"install.\n"
+            f"       pkit init will not install over it. Move it aside (or delete it, if "
+            f"it holds nothing\n"
+            f"       you need), then re-run the same command."
+        )
+
+
+def _refuse_if_already_initialised(ctx: InstallContext) -> None:
+    refuse_if_pkit_present(ctx.target_root)
 
 
 def refuse_if_source_kit_incomplete(source_kit: Path) -> None:
