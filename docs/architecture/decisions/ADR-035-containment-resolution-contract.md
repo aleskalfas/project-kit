@@ -159,8 +159,8 @@ Feature (EPIC #343), citing DEC-039. The sites:
 2. **`show-tree`** — the parent → children tree renderer. **Converged — resolves
    *and* acquires through the seam;** it asks `fetch_issue_corpus` at the operator's
    `--limit` (default 500) and `--state` — the view controls the seam admits for a
-   renderer — and the verdict on *that ask* is one of the two facts the render
-   reports: a tree built from a struck limit is marked `[partial]` in text (on
+   renderer — and the verdict on *that ask* is one of the two containment facts the
+   render reports: a tree built from a struck limit is marked `[partial]` in text (on
    stdout *and* stderr, so a redirected render keeps the caveat), as a
    `> **Partial view**` note in markdown, and as `"complete": false` with an
    `incomplete_reason` beside it in JSON, while a complete render carries no mark
@@ -174,7 +174,10 @@ Feature (EPIC #343), citing DEC-039. The sites:
    since a bounded corpus reaches the seam as an unvouched one and every parent then
    reports incomplete as a *consequence*, so naming the consequence would tell the
    operator the corpus had been read in full — and asserts nothing when neither is
-   established.
+   established. A third cause sits outside containment: a PR list that strikes the
+   same `--limit` also marks the render partial, its reason appended to either
+   containment reason with "; " rather than ranked against it, because the PR list
+   is independent of the tree.
 3. **The DEC-034 closure-fold child-walk** (`_lib/lifecycle_predicates.py`) — the
    cascade membership read. **Converged — resolves *and* acquires through the seam;**
    `cascade_members` asks `resolve_children` with no corpus of its own and maps an

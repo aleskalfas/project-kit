@@ -1,0 +1,14 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+  pr: "923"
+body: >
+  `show-tree` now marks its render partial when the PR fetch strikes `--limit`,
+  not only the issue fetch (#906). A tracker with more PRs than the limit
+  previously rendered as complete while PR-to-issue links and orphan-PR
+  detection silently missed PRs. The `[partial]` label (text), the
+  `**Partial view**` note (markdown) and `complete` / `incomplete_reason`
+  (JSON) now name the PR half; when an issue-side cause also holds, both
+  reasons are reported. `--refresh-children-views` is not blocked by a
+  truncated PR list, since it writes from issues alone.

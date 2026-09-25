@@ -319,15 +319,24 @@ def test_closed_issues_not_counted_as_orphans(st, issue_types, monkeypatch) -> N
 # --- a bounded render says it is bounded (#863) -------------------------------
 
 
-def _run_show_tree(st, monkeypatch, capsys, *, total: int, limit: int, fmt: str = "text"):
-    """Render a tracker of `total` issues through a `--limit` of `limit`.
+def _run_show_tree(
+    st, monkeypatch, capsys, *, total: int, limit: int, fmt: str = "text", total_prs: int = 0
+):
+    """Render a tracker of `total` issues and `total_prs` PRs through a `--limit`
+    of `limit`.
 
-    The `gh` stub honours `--limit` the way the real command does; without that
-    the corpus would never be short and the label could never fire.
+    The `gh` stub honours `--limit` the way the real command does, for issues and
+    PRs alike; without that neither list would ever be short and the label could
+    never fire.
     """
     def fake_gh(args, config, **kwargs):
         if "pr" in args:
-            return subprocess.CompletedProcess(args, 0, stdout="[]", stderr="")
+            n = int(args[args.index("--limit") + 1])
+            prs = [
+                {"number": 1000 + i, "title": f"p{i}", "body": "", "state": "OPEN"}
+                for i in range(1, total_prs + 1)
+            ]
+            return subprocess.CompletedProcess(args, 0, stdout=json.dumps(prs[:n]), stderr="")
         if "issue" in args and "list" in args:
             n = int(args[args.index("--limit") + 1])
             rows = [
@@ -504,3 +513,112 @@ def test_refresh_refuses_a_filtered_corpus(st, monkeypatch, capsys) -> None:
     assert rc == 1
     assert "--state all" in captured.err, "the refusal must name the remedy that works"
     assert not any("comment" in " ".join(map(str, c)) for c in wrote)
+
+
+# --- a bounded PR list labels the render too (#906) ---------------------------
+
+
+@pytest.mark.parametrize("fmt", ["text", "markdown", "json"])
+def test_a_truncated_pr_list_marks_the_render_partial(st, monkeypatch, capsys, fmt) -> None:
+    """The issue corpus is whole, but the PR list struck `--limit`: orphan-PR
+    detection and the issue-to-PR links may be missing PRs, so the render must
+    not pass as complete — and the reason must name the PR half, since the issue
+    note would send the reader looking for missing children."""
+    captured = _run_show_tree(
+        st, monkeypatch, capsys, total=4, limit=10, fmt=fmt, total_prs=40
+    )
+    if fmt == "json":
+        out = json.loads(captured.out)
+        assert out["complete"] is False
+        reason = out["incomplete_reason"]
+    elif fmt == "markdown":
+        assert "**Partial view**" in captured.out
+        reason = captured.out
+    else:
+        assert "[partial]" in captured.out
+        assert "[partial]" in captured.err
+        reason = captured.out
+    assert "first 10 pull requests" in reason
+    assert "first 10 issues" not in reason
+
+
+@pytest.mark.parametrize("fmt", ["text", "markdown", "json"])
+def test_a_complete_pr_list_adds_no_marker(st, monkeypatch, capsys, fmt) -> None:
+    """PRs present but under the limit: nothing to hedge."""
+    captured = _run_show_tree(
+        st, monkeypatch, capsys, total=4, limit=10, fmt=fmt, total_prs=3
+    )
+    if fmt == "json":
+        out = json.loads(captured.out)
+        assert out["complete"] is True
+        assert out["incomplete_reason"] is None
+    else:
+        assert "[partial]" not in captured.out
+        assert "[partial]" not in captured.err
+        assert "Partial view" not in captured.out
+
+
+def test_both_halves_truncated_names_both(st, monkeypatch, capsys) -> None:
+    """Independent causes are both reported; neither hides the other."""
+    captured = _run_show_tree(
+        st, monkeypatch, capsys, total=40, limit=10, fmt="json", total_prs=40
+    )
+    reason = json.loads(captured.out)["incomplete_reason"]
+    assert "first 10 issues" in reason
+    assert "first 10 pull requests" in reason
+
+
+def test_partial_note_appends_the_pr_reason_to_either_issue_reason(st) -> None:
+    only_prs = st._partial_note(
+        limit=5, truncated=False, incomplete_parents=[], prs_truncated=True
+    )
+    assert "first 5 pull requests" in only_prs
+    assert "first 5 issues" not in only_prs
+
+    with_unvouched = st._partial_note(
+        limit=5, truncated=False, incomplete_parents=[7], prs_truncated=True
+    )
+    assert "#7" in with_unvouched
+    assert "first 5 pull requests" in with_unvouched
+
+
+def test_refresh_is_not_blocked_by_a_truncated_pr_list(st, monkeypatch, capsys) -> None:
+    """The refresh writes children comments from issues alone, so a bounded PR
+    list cannot drop a child from any of them — refusing would block a safe
+    write for a fact it never reads."""
+    refreshed: list = []
+
+    def fake_gh(args, config, **kwargs):
+        if "pr" in args:
+            n = int(args[args.index("--limit") + 1])
+            prs = [
+                {"number": 1000 + i, "title": f"p{i}", "body": "", "state": "OPEN"}
+                for i in range(1, 41)
+            ]
+            return subprocess.CompletedProcess(args, 0, stdout=json.dumps(prs[:n]), stderr="")
+        if "issue" in args and "list" in args:
+            rows = [
+                {"number": 1, "title": "t1", "body": "## What", "state": "OPEN",
+                 "labels": [], "milestone": None},
+            ]
+            return subprocess.CompletedProcess(args, 0, stdout=json.dumps(rows), stderr="")
+        return subprocess.CompletedProcess(args, 0, stdout="[]", stderr="")
+
+    monkeypatch.setattr(st, "gh_run", fake_gh)
+    monkeypatch.setattr(st.containment, "_gh_call", fake_gh)
+    monkeypatch.setattr(st.session_guard, "enforce", lambda **_kw: True)
+    monkeypatch.setattr(
+        st, "_refresh_children_views", lambda *a, **kw: refreshed.append(a)
+    )
+    monkeypatch.setattr(
+        sys, "argv",
+        ["show-tree", "--state", "all", "--limit", "10", "--refresh-children-views"],
+    )
+    rc = st.main()
+    captured = capsys.readouterr()
+
+    assert rc == 0
+    assert "[refused]" not in captured.err
+    assert refreshed, "the refresh must run"
+    # The render itself still carries the PR caveat.
+    assert "[partial]" in captured.out

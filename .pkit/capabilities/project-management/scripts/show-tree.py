@@ -123,9 +123,11 @@ def main() -> int:
         type=int,
         default=500,
         help=(
-            "Max issues to fetch from gh (default: 500). A render that strikes "
-            "this limit is marked partial, and --refresh-children-views refuses "
-            "rather than writing from a bounded view. Increase for large repos."
+            "Max issues, and separately max PRs, to fetch from gh (default: "
+            "500). A render where either fetch strikes this limit is marked "
+            "partial; --refresh-children-views refuses rather than writing from "
+            "a bounded issue view (it reads no PRs, so a bounded PR list does not "
+            "stop it). Increase for large repos."
         ),
     )
     parser.add_argument(
@@ -201,6 +203,10 @@ def main() -> int:
     prs_raw = _gh_list_prs(state=args.state, limit=args.limit, config=config)
     if prs_raw is None:
         return 2
+    # Same rule as the issue corpus (`len >= limit` may be truncated), so the two
+    # halves of the render are judged alike — including the false partial at
+    # exactly `limit`, which is the price of not issuing a second query.
+    prs_truncated = len(prs_raw) >= args.limit
 
     issues = _parse_issues(issues_raw, issue_types, classification)
     prs = _parse_prs(prs_raw)
@@ -214,7 +220,22 @@ def main() -> int:
     # (an unreadable native panel). Either one makes "no other children" and
     # "I could not see them" indistinguishable, which is what the label exists
     # to prevent.
-    partial = corpus_truncated or bool(incomplete_parents)
+    tree_partial = corpus_truncated or bool(incomplete_parents)
+    # A third, independent reason: the PR list was bounded, so orphan-PR
+    # detection and the issue-to-PR links may miss PRs. It labels the render but
+    # does not touch the tree's child sets — which is why the children-view
+    # refresh below gates on `tree_partial` alone.
+    partial = tree_partial or prs_truncated
+    partial_note = (
+        _partial_note(
+            limit=args.limit,
+            truncated=corpus_truncated,
+            incomplete_parents=incomplete_parents,
+            prs_truncated=prs_truncated,
+        )
+        if partial
+        else None
+    )
 
     orphans = _detect_orphans(issues, prs)
     tree = _build_tree(issues)
@@ -243,11 +264,13 @@ def main() -> int:
                 file=sys.stderr,
             )
             return 1
-        if partial:
+        if tree_partial:
             # Refuse rather than overwrite. Each comment is replaced wholesale,
             # so rendering from a bounded corpus would drop real children from a
             # view that carries no hedge — and unlike a bounded tree render, the
-            # damage persists after the command exits.
+            # damage persists after the command exits. The PR half is left out
+            # deliberately: the refresh writes from issues alone, so a bounded
+            # PR list cannot drop a child from any comment.
             print(
                 "[refused] children views not refreshed: "
                 f"{_partial_note(limit=args.limit, truncated=corpus_truncated, incomplete_parents=incomplete_parents)}",
@@ -271,28 +294,20 @@ def main() -> int:
             # including WHY, since a bare False sends them back to inferring the
             # cause, which is the habit the seam pays an extra call to avoid.
             "complete": not partial,
-            "incomplete_reason": (
-                _partial_note(
-                    limit=args.limit,
-                    truncated=corpus_truncated,
-                    incomplete_parents=incomplete_parents,
-                )
-                if partial
-                else None
-            ),
+            "incomplete_reason": partial_note,
         }
         print(json.dumps(out, indent=2))
     elif args.format == "markdown":
         _print_markdown(issues, prs, orphans, tree)
         if partial:
-            print(f"\n> **Partial view** — {_partial_note(limit=args.limit, truncated=corpus_truncated, incomplete_parents=incomplete_parents)}")
+            print(f"\n> **Partial view** — {partial_note}")
     else:
         _print_text(issues, prs, orphans, tree)
         if partial:
             # stdout, so a redirected or piped render keeps the caveat — losing it
             # there is precisely the case this label exists for. Repeated on
             # stderr so it is also visible when stdout is being consumed.
-            note = f"\n[partial] {_partial_note(limit=args.limit, truncated=corpus_truncated, incomplete_parents=incomplete_parents)}"
+            note = f"\n[partial] {partial_note}"
             print(note)
             print(note, file=sys.stderr)
 
@@ -681,8 +696,19 @@ _PARTIAL_UNVOUCHED = (
 )
 
 
+_PARTIAL_PRS_TRUNCATED = (
+    "only the first {limit} pull requests were read, so PRs closing an issue and "
+    "PRs with no closing issue may be missing — re-run with a higher --limit for "
+    "a complete view"
+)
+
+
 def _partial_note(
-    *, limit: int, truncated: bool, incomplete_parents: list[int]
+    *,
+    limit: int,
+    truncated: bool,
+    incomplete_parents: list[int],
+    prs_truncated: bool = False,
 ) -> str:
     """Name the fact that made the view partial, not merely that it is partial.
 
@@ -695,14 +721,25 @@ def _partial_note(
     bounded corpus is passed to the seam as an unvouched one, so every parent
     then reports incomplete as a consequence. Naming the consequence would tell
     the operator the corpus was read in full when it plainly was not.
+
+    A bounded PR list is a separate fact, not a consequence of either issue-side
+    cause, so it is appended rather than ranked: suppressing it would hide a
+    short PR list behind an issue note, and vice versa.
     """
+    reasons: list[str] = []
     if truncated:
-        return _PARTIAL_TRUNCATED.format(limit=limit)
-    if incomplete_parents:
+        reasons.append(_PARTIAL_TRUNCATED.format(limit=limit))
+    elif incomplete_parents:
         shown = ", ".join(f"#{n}" for n in incomplete_parents[:5])
         if len(incomplete_parents) > 5:
             shown += ", …"
-        return _PARTIAL_UNVOUCHED.format(count=len(incomplete_parents), parents=shown)
+        reasons.append(
+            _PARTIAL_UNVOUCHED.format(count=len(incomplete_parents), parents=shown)
+        )
+    if prs_truncated:
+        reasons.append(_PARTIAL_PRS_TRUNCATED.format(limit=limit))
+    if reasons:
+        return "; ".join(reasons)
     # Unreachable while the caller only asks when something is partial — but a
     # fallback that invents a cause is exactly what this function exists to
     # prevent, so it says only what is known.
