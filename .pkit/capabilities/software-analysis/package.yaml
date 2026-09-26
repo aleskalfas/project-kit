@@ -1,0 +1,7 @@
+schema_version: 1
+component:
+  kind: capability
+  name: software-analysis
+  version: 0.1.0
+description: Analysis discipline — decide what is needed before building it; first artifact is use-case validation (walk numbered use cases through a multi-seam design before filing its work).
+requires_backbone: ">=1.149.0,<2.0.0"
