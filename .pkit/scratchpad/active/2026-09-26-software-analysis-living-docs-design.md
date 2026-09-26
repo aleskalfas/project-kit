@@ -42,7 +42,9 @@ Tracked by #951 (Milestone 5; EPICs #885 and #234). Retires as produced by the t
 | use case | an actor's goal, main path, variants, done-criteria; anchored; revalidated |
 | glossary entry | a domain term and its meaning |
 | change | a proposed alteration of behaviour |
-| walk | a validation pass of a change's use cases; records gaps |
+| walkthrough | an event: checking use cases or journeys against a version of the system (proposed design or actual code); its report is a walkthrough record |
+| journey | an end-to-end path an actor takes across several use cases |
+| user story | a need in one sentence (who / wants / so that): the actor's `needs` entry, a use case's Goal |
 | anchor | what makes a statement true: code, a decision, a source (for docs: also a use case) |
 | friction | an anchor changed; a dependant was not revalidated since |
 | space | a documentation space with its own audience, entry point and definition |
@@ -88,6 +90,17 @@ Order follows dependency: where things live → how rules are written → how ca
       └── <package>/UC-NNN-….md   optional functional-area packages when the model grows
   ```
   **Use case** front matter: `id` (UC-NNN, global — moving between packages never changes it), `status` (`active` | `withdrawn`: file kept, number never reused), `actor`, `anchors`, `revalidated`; body: goal, starts-when, main path, variants, done-when. **Actor** entry: `needs`, `anchors`, `revalidated`; body section per actor. **Glossary** entry: stable id separate from display term, `replaces:` for old names (a rename flags pages still using the old word), `anchors`, `revalidated`. Folders appear only when something goes into them (CMN-002). Carried over from the first draft: append-only numbering, withdrawal over deletion, seams-crossed as the guidance for when a change needs a walk; the per-design gap log moves into the walk record (Q8). Rejected: flat `analysis/` (actors and glossary lost among many use cases, no place for packages or modules); one file per artefact everywhere; one collection file for use cases. Decided by Aleš Kalfas.
+- **2026-09-26 — Terms and layout refined: walkthrough, journeys, grouping rule.** (1) The activity formerly called *walk* is a **walkthrough** (IEEE 1028 review type; "use-case walkthrough"), its report a **walkthrough record**. (2) **User story vs use case vs walkthrough:** a user story is a *need* in one sentence (who / wants / so that) — in this model the actor's `needs` entry and a use case's Goal line; a use case is how the system fulfils it (durable, anchored); a walkthrough is an *event* checking use cases or journeys against a version of the system — test requirement / test specification / test run. (3) **Journeys** join the use-case model: an end-to-end path an actor takes across several use cases (#949's I5 user paths). One file per journey, `JRN-NNN-<slug>`, global append-only ids, `actor`, ordered `steps` (use-case ids), anchors (its use cases + the code at the seams between them), `revalidated`, starts / done-when / seams to watch. A changed use case flags the journeys through it, in truth-chain order. (4) **Grouping rule:** a kind with many files gets its own folder; a singleton kind is a file. Layout:
+  ```
+  analysis/
+  ├── glossary.md
+  ├── use-case-model/
+  │   ├── actors.md
+  │   ├── use-cases/UC-NNN-<slug>.md  (+ optional <package>/ subfolders)
+  │   └── journeys/JRN-NNN-<slug>.md
+  └── walkthroughs/<date>-<slug>.md
+  ```
+  Decided by Aleš Kalfas.
 ## Reference adopter — Mockingbird (read-only observation, 2026-09-26)
 
 - `docs/` mixes two spaces: user-facing (`guides/`, `EVALUATION.md`, `CLUSTER_ONBOARDING.md`, `INSTALL_ENV_CACHE.md`, `assets/`) and technical (`architecture/decisions/ADR-001…009`, `ARCHITECTURE.md`, `CONTRIBUTING.md`, `RELEASING.md`, `BUILDING_IMAGES.md` — the last possibly serving operators too: a human call).
@@ -104,4 +117,4 @@ Order follows dependency: where things live → how rules are written → how ca
 
 ## Status
 
-Active. Q1–Q7 decided. Next: Q8 — the walk record.
+Active. Q1–Q7 decided; walkthrough/journeys/grouping refined. Next: Q8 — where walkthrough records live (option A offered: a file only when planned or when gaps/regressions are found; routine clean revalidation = the `revalidated` bump in its commit).
