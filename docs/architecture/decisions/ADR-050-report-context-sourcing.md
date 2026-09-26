@@ -21,6 +21,10 @@ Reports gain a visible project + workstream context line + parseable marker (EPI
 2. **Workstream: the backbone asks pm.** The pm capability ships a small **read verb** (context-workstream: resolve the current branch → issue → workstream, print one value or nothing); the backbone report compose invokes it **by subprocess through the existing capability-command dispatcher** (COR-021's pattern — the same mechanic every pm verb already uses), and treats it as optional: pm not installed, the verb absent, the branch not issue-shaped, or the issue unlabelled ⇒ workstream omitted. `--workstream <value>` on the report verbs overrides. The backbone never parses `workstreams.yaml`, never reads issue labels itself, and carries no knowledge of pm's schema.
 3. **Both values are body content, not target-repo labels.** They render as the human context line + the `key=value` report marker (the #639 marker format, extended with `project=` / `workstream=`), and stamp into a reported scratchpad note's frontmatter at send time ([COR-043](../../../.pkit/decisions/core/COR-043-scratchpad-reported-state.md)). The upstream repo's label vocabulary is never touched.
 
+### The project config file is defined by COR-048 (refinement per COR-048)
+
+The adopter's project config file that carries `name` is the project's backbone configuration defined by [COR-048](../../../.pkit/decisions/core/COR-048-backbone-configuration.md). COR-048 owns the `name` key from here on, validates the whole file against a schema, and sets the consent rule for writing it. The prompt-once write in point 1 is one of those consent forms. Point 1's decision is unchanged.
+
 ## Rationale
 
 - **Declared-over-derived for identity** is the redaction discipline extended from "strip paths" to "never *source* from paths": a value that never originates in a path cannot leak one. The prompt-once flow makes the declaration cheap; the repo-name fallback keeps zero-config reports useful.
