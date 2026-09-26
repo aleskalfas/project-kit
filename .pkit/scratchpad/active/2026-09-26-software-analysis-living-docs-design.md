@@ -65,7 +65,17 @@ Order follows dependency: where things live → how rules are written → how ca
 
 ## Decision log
 
-*(Append one entry per resolved question: date, question, answer, alternatives rejected, who decided.)*
+- **2026-09-26 — Q1 carrier: the backbone project config holds two documentation roots (option B).** `.pkit/project/config.yaml` gains a `docs` block (`internal:`, `user:`); the overlay's doc categories (`architecture-docs`, `adr-records`, …) default from the internal root and stay overridable; commands, capabilities, CI and agents all derive from one source. Rejected: two new overlay categories (A) — the overlay is an agent-body substitution mechanism, and every non-agent reader would have to learn its resolution. Needs a core record (two documentation roots by audience) with refinement notes on COR-013 (overlay defaults) and COR-025 (ADR location default); a schema for `.pkit/project/config.yaml` (cf. #689). Decided by Aleš Kalfas.
+- **2026-09-26 — Activation model.** The `docs` block is a backbone concept, independent of any capability: optional to declare, absent ⇒ conventional defaults; read always by the backbone (overlay defaults, ADR stamp location, `pkit status` shows resolved roots and their source); read by software-analysis / living-docs when installed. A capability never writes the block silently — on install / first run it shows the resolved roots and offers to record them; uninstall never removes it. Decided by Aleš Kalfas.
+- **2026-09-26 — Existing projects: record, don't move.** The upgrade migration only makes the current layout explicit (writes the `docs` block reflecting what exists, creating `.pkit/project/config.yaml` if absent); nothing moves, every existing path keeps working. Moving ADRs (and other docs) into the internal root happens as part of living-docs onboarding, proposed per file with its reason, link rewrites and unrewritable references, human-confirmed, landed as one reviewable PR in the adopter's own session. Rejected: an automatic move on upgrade — acts on project-owned content, breaks links outside the repo, and cannot judge ambiguous files. Decided by Aleš Kalfas.
+- **2026-09-26 — Brownfield onboarding is transformation, driven by friction detection.** Onboarding is not a separate process: it is friction detection on a project where nothing is anchored yet — every statement is friction on day one. An agent transforms rather than moves: derives actors / use cases / glossary from the code and existing docs (brownfield reverses the planned order: code → analysis first), anchors or challenges each statement (true → anchor; stale → fix; unanchorable → human question), and rewrites pages for their readers into their spaces. Tooling is deterministic (detection, bookkeeping, validation); interpretation is agentic; judgments ("analysis stale or code regressed", "which space") are human-confirmed. Onboarding is complete when friction reaches zero, and the same mechanism keeps it there. Carry-over from EPIC #234's spike: propose with cited evidence, never auto-apply. Decided by Aleš Kalfas.
+
+## Reference adopter — Mockingbird (read-only observation, 2026-09-26)
+
+- `docs/` mixes two spaces: user-facing (`guides/`, `EVALUATION.md`, `CLUSTER_ONBOARDING.md`, `INSTALL_ENV_CACHE.md`, `assets/`) and technical (`architecture/decisions/ADR-001…009`, `ARCHITECTURE.md`, `CONTRIBUTING.md`, `RELEASING.md`, `BUILDING_IMAGES.md` — the last possibly serving operators too: a human call).
+- `tech-docs/.meta/` holds the hand-built method (CMN rules, two space definitions); `tech-docs/` data is nearly empty.
+- Overlay: `adr-records: docs/architecture/decisions/`, `architecture-docs: README.md`; no `.pkit/project/config.yaml` yet — created by the record-only upgrade migration.
+- Target: `docs.internal: tech-docs/`, `docs.user: docs/`; onboarding proposes the split and the transformation.
 
 ## Records this should produce (draft)
 
@@ -76,4 +86,4 @@ Order follows dependency: where things live → how rules are written → how ca
 
 ## Status
 
-Active. Next: question 1 — the internal-docs root.
+Active. Q1 carrier decided; next: the default paths for the two roots (rest of Q1), then Q2.
