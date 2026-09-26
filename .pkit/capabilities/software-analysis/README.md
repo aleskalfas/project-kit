@@ -52,15 +52,15 @@ title: <the design this set validates>
 - **Exercises:** <the commands, records, checks and roles the design uses to get there>
 - **Last walked against:** <design state, commit, or release — and date>
 
+### 2. …
+
 ### 3. ~~<short name>~~ — withdrawn <date>: <why>
 
-<!-- A withdrawn use case keeps its number and its text struck through; it is never deleted or reused. -->
-
-### 2. …
+<!-- Use cases are listed in number order. A withdrawn one keeps its number and its text, struck through; it is never deleted or reused. -->
 
 ## Gap log
 
-Append at every walk; never delete entries. Write "No gaps found" if a walk finds none.
+Append at every walk; never delete entries. Before the first walk, write "Not yet walked". Write "No gaps found" if a walk finds none.
 
 - <date> — use case <n>: <what the walk found missing or contradictory> → <what changed in response>
 ```
