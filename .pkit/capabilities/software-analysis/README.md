@@ -1,80 +1,78 @@
 # software-analysis capability
 
-Analysis discipline: the artifacts a project uses to decide **what** is needed before building it. Install it when your designs routinely span several parts of the system — a command, a guard in another command, a CI check, an agent's behaviour — and you want a durable way to check that a design is complete before its work is filed, and to re-check it when that work lands.
+Keep a written, checkable account of **what your software must do**, and keep it true as the software changes. The account covers who uses it (actors), what they're trying to achieve and how (use cases), the end-to-end paths across several use cases (journeys), and what the words mean (glossary).
 
-Its first discipline is **use-case validation** ([software-analysis:DEC-001-use-case-validation]): when getting from a situation to an outcome crosses more than one part of the system, walk numbered use cases through the design *before* filing its work, keep them, cite them from the work's success criteria, and re-walk them when the work closes. Walks find what reviews miss — the command that doesn't exist, the state two rules disagree about — because reviews judge the parts and a walk runs them.
+Install it when your project is past the point where one person holds the whole picture. That's when newcomers and agents need to learn the system from something more reliable than the code alone, and when you want to know if a change makes the description false. The rule is in [software-analysis:DEC-001-software-analysis-discipline].
 
-Named as future scope, not yet shipped: **requirements**, **user stories** (who uses the system and what they're trying to achieve — a use case's actor will cite one), and **traceability** between them.
+## How it stays true
 
-## What this capability ships
+Each artefact declares what makes it true and when it was last rechecked. The core friction check (COR-050) flags it when that changes. A **revalidation** then checks it, and ends as *holds*, *analysis was stale*, *code regressed* or *gap found*. A record is kept only when there's something to report. The full rule is in the decision.
 
-- `decisions/DEC-001-use-case-validation.md` — the use-case artifact and the walk-before-filing rule.
-- The use-case template and location convention (below).
-- *Coming with the next increments:* a command that stamps a numbered use-case set, a validate command for the check gate, a paired authoring skill, and use-case citation resolution.
+## Where things live
 
-## Adopter setup
-
-Install from kit source:
+Under your project's internal documentation root (COR-049; `docs/` by default):
 
 ```
-pkit capabilities install software-analysis
+analysis/
+├── glossary.md                      collection: one entry per term
+├── use-case-model/
+│   ├── actors.md                    collection: one entry per actor
+│   ├── use-cases/
+│   │   ├── UC-001-<slug>.md
+│   │   └── <area>/UC-014-<slug>.md  optional grouping by functional area
+│   └── journeys/
+│       └── JRN-001-<slug>.md
+└── revalidations/
+    └── <date>-<subject>.md
 ```
 
-No configuration is required to start. Use-case sets are your project's own design documents: they live **outside** this capability, default `docs/use-cases/`, so neither sync nor uninstalling the capability touches them. Choosing a different location becomes a configuration setting when the stamp command ships.
+A kind with many files gets a folder, and a kind with one file is a file. Folders appear only when something goes into them. These files belong to your project: uninstalling the capability leaves them in place.
 
-## Use-case sets at a glance
+## Templates
 
-- Files: `docs/use-cases/UC-NNN-<slug>.md`, numbered `UC-001`, `UC-002`, … within the project.
-- Inside a set, use cases are numbered `1, 2, …` — **append-only**: add, revise, or mark withdrawn; never renumber.
-- Cite a set as `UC-003`, one use case in it as `UC-003/5`. Only your project's content cites use cases; capability-shipped content never does.
-- **When you need one, and the rule:** see [software-analysis:DEC-001-use-case-validation] — the *seams crossed* test (point 2) and walk-before-filing / re-walk-on-close (point 3).
-
-## The use-case set template
+**Use case** (`UC-NNN-<slug>.md`):
 
 ```markdown
 ---
-id: UC-NNN
-title: <the design this set validates>
+id: UC-003
+status: active                  # or: withdrawn (file kept, id never reused)
+actor: ACT-test-author
+anchors:
+  artefact: [ACT-test-author]
+  path: [src/cli/run.py, src/sandbox/**]
+  record: [ADR-006]
+revalidated: 2026-10-02T09:40:12Z
 ---
 
-# <title>
+# UC-003 — Run a test suite against a sandbox
 
-<One paragraph: which design this validates, and where that design is recorded.>
-
-## Use cases
-
-### 1. <short name>
-
-- **Actor:** <a named role>
-- **Situation:** <the state the actor is in>
-- **Does:** <what the actor does, step by step>
-- **Observable:** <what must be true / visible afterwards>
-- **Exercises:** <the commands, records, checks and roles the design uses to get there>
-- **Last walked against:** <design state, commit, or release — and date>
-
-### 2. …
-
-### 3. ~~<short name>~~ — withdrawn <date>: <why>
-
-<!-- Use cases are listed in number order. A withdrawn one keeps its number and its text, struck through; it is never deleted or reused. -->
-
-## Gap log
-
-Append at every walk; never delete entries. Before the first walk, write "Not yet walked". Write "No gaps found" if a walk finds none.
-
-- <date> — use case <n>: <what the walk found missing or contradictory> → <what changed in response>
+**Goal:** …   **Starts when:** …
+**Main path:** 1. … 2. … 3. …
+**Variants:** 2a. … 3a. …
+**Done when:** …
 ```
 
-## Walking a set — the steps
+**Journey** (`JRN-NNN-<slug>.md`): the same front matter, with an ordered `steps: [UC-001, UC-002, …]`. Its use-case anchors are written into `anchors` from `steps` by the stamp and check commands; you add the code at the seams. The body gives *Starts*, *Done when*, the ordered steps, and the *seams to watch*.
 
-1. Stamp a set, fill one use case per situation the design must serve, and walk each one against the design. Write every stall into the gap log with what you changed.
-2. Merge the set before filing the design's work. Each work item names the use cases it satisfies.
-3. When an item closes, re-walk its use cases against the real system, update *Last walked against*, and append to the gap log.
+**Actors / glossary** (collection files): front matter maps each id to its data, and the body has one `## <id>` section per entry. Actor ids start `ACT-` and actors carry `needs`. An artefact deliberately left unanchored carries `unanchored_reason:`. Term ids start `TERM-`; a term carries a display name, `replaces:` for former names, and a definition.
+
+**Revalidation record** (`<date>-<subject>.md`): front matter with `change` (a work item, a pull request, or commits), `trigger` (`planned` | `drift` | `scheduled` | `close` | `onboarding`), the date performed, who did it (and who confirmed), and the ids of the artefacts covered. The body has one outcome per artefact, then the gaps and what resolved each.
+
+Anchor and marker field names follow the core anchors-and-friction schema. The examples above are illustrative until that schema ships.
+
+## Slots
+
+- **Declares** `software-analysis:revalidation-evidence`: executed results per artefact and commit, supplied by a capability or a project file. Policy `union`, advisory. Evidence informs a revalidation; it doesn't replace one.
+- **Will fill** `living-docs:readers` with actors and their needs, once that slot's record is accepted. It is inert when living-docs is not installed.
+
+## What's shipped now, what's next
+
+This increment ships the decision and this README. Next come: commands to stamp and check artefacts, an authoring skill that guides revalidation, and the declarations of places, surface and slots. Named for later: planned-revalidation and onboarding lifecycles, a supplementary specification (constraints and quality), architecture views, and executable use cases.
 
 ## Citing this capability's decisions
 
-Cite decisions by filename stem: `[software-analysis:DEC-001-use-case-validation]`. Other capabilities and adopter content use the same form.
+`[software-analysis:DEC-001-software-analysis-discipline]`.
 
 ## Dependencies
 
-None. A component that files work (for example the project-management capability) may adopt the walk-before-filing rule when this capability is installed; that adoption is recorded on its side.
+None. It works without any work-tracking, documentation or testing capability, and each of them can enrich it.

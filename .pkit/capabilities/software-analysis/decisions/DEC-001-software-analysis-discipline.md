@@ -1,0 +1,120 @@
+---
+id: DEC-001
+title: Software analysis keeps actors, use cases, journeys and terms true as the software changes
+status: accepted
+date: 2026-09-27
+author: Aleš Kalfas <kalfas.ales@gmail.com>
+---
+
+## Context
+
+A project needs a written account of *what its software must do*: who uses it, what they are trying to achieve, how they get there, and what the words mean. Without one, every new person and every agent reconstructs it from code, and every design is judged against a picture that exists only in someone's head.
+
+Such an account decays silently. Code changes, the account does not, and nobody notices until a reader is misled or a design is built on something no longer true. This capability's membership test follows from that: **an artefact belongs here if a change to the software can make it false, and we want to find out when it does.**
+
+The core layer supplies the machinery this needs:
+- where a project's technical documentation lives (COR-049);
+- anchors and friction, which detect when what an artefact rests on has changed (COR-050);
+- slots, through which components exchange knowledge without depending on each other (COR-052).
+
+This record decides what the capability keeps, where, and how it stays true.
+
+## Decision
+
+**The capability keeps four kinds of product knowledge (actors, use cases, journeys and glossary terms) as anchored artefacts, and keeps them true through revalidation: planned before code changes, and triggered by friction after.**
+
+1. **What it keeps.**
+   - **Actors:** named roles that use the system, each with the needs it brings.
+   - **Use cases:** one actor's goal and how the system fulfils it: when it starts, the main path, variants, and when it is done.
+   - **Journeys:** an end-to-end path an actor takes across several use cases, including the seams between them where the path can break.
+   - **Glossary terms:** the domain words, each with a stable id separate from its display name and a record of names it replaces, so that renaming a term does not break what cites it.
+
+   A user story, in the sense of a need stated in one sentence, is an actor's need and a use case's goal, not a separate artefact.
+
+2. **Where it keeps them.** Everything lives under the project's internal documentation root (COR-049), in an `analysis` area laid out after a use-case model:
+   - the glossary is one collection file, serving everything;
+   - the use-case model holds a collection file of actors, a folder of use cases (optionally grouped by functional area), and a folder of journeys;
+   - revalidation records are kept in a folder of their own.
+
+   **A kind with many files gets its own folder; a kind with one file is a file.** Folders appear only when something goes into them.
+   - **Location.** The `analysis` sub-path is declared in the capability's package metadata. Its location is recorded on first use in the capability's own project configuration, as the documentation-roots record requires (COR-049). A later change of root therefore never moves an existing analysis.
+   - **Places.** The capability declares the glossary, actors, use cases and journeys as places holding anchored artefacts (COR-050). Revalidation records are events, not anchored artefacts, so they are not a declared place.
+   - **Surface.** The capability declares no surface by default, since it cannot know a project's code. The project declares which paths its analysis ought to cover, in the friction key of its backbone configuration (COR-050).
+   - **Ownership.** The artefacts live outside the capability's own subtree, so uninstalling the capability never removes them.
+
+   The exact layout and templates are in the capability's README. Field names for anchors and markers follow the core schema (COR-050).
+
+3. **Identifiers.** Use cases and journeys are numbered within the project (`UC-NNN`, `JRN-NNN`), independent of any grouping. Moving a use case between areas never changes its id. Actors and terms are keyed by stable ids inside their collection files, with distinct prefixes (`ACT-` for actors, `TERM-` for terms), so that no two artefacts in the analysis share an id.
+   - **Append-only.** An artefact is withdrawn, never deleted, and its id is never reused. Inside a use case, steps are numbered and variants are lettered after the step they branch from. Both are append-only too, because journeys and evidence cite them.
+   - **Parallel work.** When two lines of work number a new artefact the same, the first to reach the default branch keeps the number. Validation reports the collision, and the other renumbers before merging.
+
+4. **Every artefact says what makes it true.** Each carries anchors and a recheck marker in the sense of the anchors-and-friction record (COR-050). Anchors run in one direction only, so they never form a cycle:
+   - Actors and terms anchor to where the software or a decision embodies them. An actor with no such anchor is reported as unanchored, which is not an error.
+   - Use cases anchor to their actor, as an artefact anchor, and to the code they exercise and the decisions they rely on.
+   - Journeys anchor to the use cases they pass through, and to the code at the seams between them. A journey's ordered list of steps is the source. Its use-case anchors are written into its anchor field from that list by the capability's stamp and check, and validation requires the two to match, so the friction check sees them and the two cannot drift apart.
+
+   A changed actor flags its use cases, and a changed use case flags the journeys through it. Friction is reported in that order. Revalidation is this capability's way of rechecking an artefact; updating the marker records that a revalidation happened.
+
+5. **Revalidation.** A **revalidation** is one check of some artefacts against one version of the system: a proposed design, or the actual code. It is an event, repeated whenever something triggers it:
+   - **planned**: a change is proposed, before code;
+   - **drift**: friction on a pull request;
+   - **scheduled**: friction found by a sweep;
+   - **close**: a pull request that changes artefacts, or their anchors, lands;
+   - **onboarding**.
+
+   It ends, for each artefact, in one of these outcomes:
+   - it **holds**;
+   - **the analysis was stale**: the change was intended, so the artefact is updated;
+   - **the code regressed**: the artefact still describes what is wanted, so a defect is reported rather than the analysis rewritten to match;
+   - **a gap was found**: behaviour exists that nothing describes, or a description has no behaviour.
+
+   Whoever performs the revalidation (a person, or an agent) updates the markers of the artefacts it covered. An agent proposes the outcomes. Where "stale" versus "regressed" is ambiguous, a person decides before any marker changes. The analysis is never silently rewritten to match broken code.
+
+6. **Records only when there is something to say.** A revalidation that is planned, or that finds a gap or a regression, leaves a record in the revalidations folder. The record names the change that carried it (a tracked work item, a pull request, or a range of commits), the trigger, the artefacts covered with their outcomes, and the gaps with what resolved each. Records cite artefacts by id, including withdrawn ones, and are named by date and subject rather than numbered, so parallel work cannot collide. A routine revalidation that finds everything still holds writes no record: updating the artefact's recheck marker is the record, and the commit carries the outcome.
+
+7. **Revalidation is not testing.** Revalidation asks whether *the description* is still true of the software, and usually fixes the description. Testing asks whether *the software* still does what the description says, and fixes the software. The capability owns revalidation. It does not run the software.
+
+   It declares a slot, `software-analysis:revalidation-evidence`, for executed results that confirm or refute an artefact at a commit:
+   - its schema is a companion schema the capability ships, named after the slot (COR-052). At version 1 it has one entry per artefact and commit, keyed by the pair, holding the result and what was run;
+   - its policy is `union`;
+   - no default takes part;
+   - its inert policy is `fallback`, because the evidence advises and does not gate.
+
+   The slots record (COR-052) allows three kinds of filler: a project file, a capability, and the consumer's default. Here, a capability fills it (a later testing capability, or one that reads the project's own test results), or a project file records results, and no default takes part. Evidence **informs** a revalidation: a passing result is support for "holds", and a failing one is a regression with proof attached. It never replaces the revalidation. Only an updated marker clears friction (COR-050).
+
+8. **What it provides to others.** The capability intends to fill the documentation discipline's `living-docs:readers` slot by mapping its actors and their needs onto that slot's shape. The fill is declared once that slot's defining record is accepted. It is inert whenever that consumer is not installed, and the capability never requires it.
+
+9. **Brownfield onboarding.** A project with no analysis starts with nothing anchored, so friction reads zero. The signal is uncovered surface: the paths the project declares its analysis should cover (point 2), against what the artefacts anchor to (COR-050). An agent derives candidate actors, use cases and terms from the code, the existing documents and the project's decisions. On a brownfield project these are the ground truth, so the usual order is reversed. A person confirms the candidates. Onboarding needs a non-empty declared surface, and it is complete when that surface is covered. Every artefact must be either anchored, or explicitly accepted as unanchored with a reason recorded on the artefact, such as an actor that no code embodies.
+
+10. **Independent.** The capability works with no work-tracking component and no testing component installed. When a work-tracking component is present, it may cite revalidation records from its work items, as an enrichment.
+
+11. **Scope boundary.** Lifecycles on the process substrate (a planned revalidation; onboarding), further analysis artefacts (constraints and quality requirements, architecture views) and executable use cases are outside this record. Each needs its own decision when a real need arrives.
+
+## Rationale
+
+**Why product knowledge, not per-design documents.** A use case is true of the product for as long as the product supports it. What belongs to one design is the *revalidation* of the use cases it touches. Keeping the two apart means the knowledge persists after the design ships, and each design's validation is recorded where it happened.
+
+**Why a use-case model layout.** Grouping actors with the use cases they take part in, and keeping the glossary apart because it serves everything, follows an established requirements practice that analysts and newcomers already recognise. Global ids with optional grouping get the benefit of functional areas without the cost of renumbering.
+
+**Why revalidation owns both planned and drift-triggered checks.** Checking before code and checking after an unplanned change are the same act with different triggers. One record shape, and one set of outcomes, serve both.
+
+**Why records only with findings.** Most revalidations find that everything holds. Writing a file each time would bury the few that matter. Git already records the routine ones through the marker change.
+
+**Why keep testing out.** Revalidation judges a description by reading; testing judges software by running it. Merging them would make this capability depend on executing arbitrary software, and would blur whose fix a failure demands. The evidence slot lets executed results inform revalidation without that coupling.
+
+**Why a person decides stale versus regressed.** The distinction is intent: was the change meant? An agent can propose it from the change's context, but when intent is unclear, only a person knows. Getting it wrong either rewrites the truth to match a bug, or reports a defect for an intended change.
+
+### Alternatives considered
+
+- **Use-case sets per design, validated once.** Rejected. The knowledge would be scattered across designs and would stop being maintained after each one shipped.
+- **A flat analysis folder.** Rejected. Actors and terms get lost among many use cases, and there is no natural place for grouping or later modules.
+- **A record for every revalidation.** Rejected. Routine records would bury the ones with findings.
+- **Storing each artefact's current-or-stale state.** Rejected. It would duplicate what anchors and git already answer (COR-050).
+- **Including executed testing in this capability.** Rejected. See Rationale; the evidence slot covers the useful part.
+- **Requiring a documentation or work-tracking capability.** Rejected. The capability must be useful on its own.
+
+## Implications
+
+- **The capability ships** the templates and layout for its artefacts, the declaration of its places and slots, commands to stamp artefacts and check their shape (friction itself is the core check), and an authoring skill that guides revalidation.
+- **Projects** keep their analysis under their internal documentation root and wire the core friction check into their continuous integration if they want it enforced.
+- **Documentation disciplines** can read actors and their needs through the readers slot, without any dependency.
