@@ -97,7 +97,7 @@ Reviewer assignment is governed by **review-mode resolution** per [project-manag
 Each authorisation-bearing transition writes a parseable-prefix comment that is posted once per distinct act (re-running a command after a partial failure skips re-posting only when an unedited comment by the posting account already carries the exact same body, whose trailing key hashes the act; a different act, or a comment anyone else posted, never suppresses it -- see the capability README's audit-comment idempotence section):
 
 - `promote-issue` → `Promoted Todo → Backlog by PM on user's in-session request: <reason>`
-- `done-work --bypass` → `Approved by bypass: <reason>`
+- `done-work --bypass` → `Approved by bypass: <reason>` (with the short PR head it waived)
 - `handoff-issue` → `Handoff: @<from> → @<to> (YYYY-MM-DD, reason: <text>)`
 
 `start-work` and `review-work` write no comment because the action itself is the audit trail (branch creation + assignee for start; PR creation for review). The `Promoted`, `Approved`, `Handoff` prefixes mirror example-brownfield's `<verb>: <details>` convention; future tooling may parse them as state-machine signals.
@@ -110,7 +110,7 @@ For `done-work`: the squash-merge is *not* rolled back on a subsequent failure (
 
 ### Idempotence
 
-All seven commands are idempotent at the level of *observable state* (issue state, PR state, branch existence). Invoking when state already matches the target is a no-op; invoking when transition is needed performs it. Re-running after a partial failure recovers without duplicating the audit comment, without re-creating the branch, without re-opening the PR, without re-flipping draft↔ready. The implementing scripts adopt DEC-024's template-stamp idempotence discipline for any comment-posting step.
+All seven commands are idempotent at the level of *observable state* (issue state, PR state, branch existence). Invoking when state already matches the target is a no-op; invoking when transition is needed performs it. Re-running after a partial failure recovers without duplicating the audit comment, without re-creating the branch, without re-opening the PR, without re-flipping draft↔ready. Audit comments are posted once per distinct act: a retry skips re-posting only when an unedited comment by the posting account already carries the exact same body, whose trailing key hashes the act (see the capability README's audit-comment idempotence section).
 
 ### Open-mode degradation
 
