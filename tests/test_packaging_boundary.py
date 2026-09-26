@@ -590,7 +590,9 @@ def test_work_tree_enumerates_tracked_files_only(hook, tmp_path: Path) -> None:
     _git(tmp_path, "add", ".gitignore", ".pkit/rules/core.md")
 
     tracked = hook._tracked_paths(tmp_path)
-    assert tracked == {".pkit/rules/core.md"}
+    # Every tracked path, not only `.pkit/`'s: the package and the whole sdist
+    # are enumerated from this set too (#930).
+    assert tracked == {".gitignore", ".pkit/rules/core.md"}
     shipped = [
         p.relative_to(tmp_path).as_posix()
         for p in hook._shippable_files(tmp_path / ".pkit", root=tmp_path, tracked=tracked)
@@ -612,6 +614,23 @@ def test_no_git_dir_walks_the_tree_as_found(hook, tmp_path: Path) -> None:
         for p in hook._shippable_files(tmp_path / ".pkit", root=tmp_path, tracked=None)
     )
     assert shipped == [".pkit/rules/core.md", ".pkit/rules/core.md~", ".pkit/rules/scratch.log"]
+
+
+def test_walk_skips_what_hatchlings_own_walk_never_shipped(hook, tmp_path: Path) -> None:
+    """The hook now enumerates the whole sdist, not only `.pkit/` (#930), so in
+    a `.git`-less tree its walk meets what hatchling's walk used to discard: a
+    virtual environment, tool caches, a `.DS_Store`."""
+    (tmp_path / "src" / "pkg").mkdir(parents=True)
+    (tmp_path / "src" / "pkg" / "mod.py").write_text("")
+    (tmp_path / "src" / "pkg" / ".DS_Store").write_bytes(b"")
+    for cache in (".venv/lib", ".ruff_cache", ".mypy_cache", ".tox"):
+        (tmp_path / cache).mkdir(parents=True)
+        (tmp_path / cache / "junk.txt").write_text("")
+    shipped = [
+        p.relative_to(tmp_path).as_posix()
+        for p in hook._shippable_files(tmp_path, root=tmp_path, tracked=None)
+    ]
+    assert shipped == ["src/pkg/mod.py"]
 
 
 def test_an_ancestor_repository_is_not_consulted(hook, tmp_path: Path) -> None:
@@ -689,13 +708,24 @@ def test_unpacked_sdist_and_work_tree_build_quietly(hook, tmp_path: Path) -> Non
     assert hook._untracked_source_warning(work_tree) is None
 
 
+def test_unknown_wheel_version_fails_loudly(hook) -> None:
+    """Only `standard` gets the package's files and `editable` a `.pth`; a third
+    wheel mode would get neither and build with no package, reporting success.
+    Called unbound with a bare `self`: the refusal comes before anything that
+    touches the hook instance or the tree."""
+    with pytest.raises(RuntimeError, match="unknown wheel build version 'frozen'"):
+        hook.CapabilityBoundaryHook._initialize_wheel(object(), "frozen", None, {})
+    for version in ("standard", "editable"):
+        hook._check_wheel_version(version)
+
+
 @pytest.fixture(scope="module")
 def stray_builds(tmp_path_factory) -> dict[str, Path]:
     """Build every artifact from a copy of this tree carrying an untracked file.
 
     Hermetic: the tracked files (with their working-tree content, so the code
     under test is what builds) are copied into a fresh repository and staged,
-    and the stray is added there — never in the real checkout. Two builds:
+    and the strays are added there — never in the real checkout. Two builds:
     `uv build`, which makes the sdist and then the wheel FROM it (the default
     path, and the one with no `.git`), and `uv build --wheel` straight from the
     work tree.
@@ -719,9 +749,10 @@ def stray_builds(tmp_path_factory) -> dict[str, Path]:
         shutil.copy2(src, dest, follow_symlinks=False)
     _git(copy, "init", "-q")
     _git(copy, "add", "-A")
-    (copy / STRAY).write_text("an editor backup git never saw\n")
+    for stray in STRAYS:
+        (copy / stray).write_text("an untracked file the index never saw\n")
 
-    out: dict[str, Path] = {}
+    out: dict[str, Path] = {"source": copy}
     for label, args in (("via-sdist", []), ("direct", ["--wheel"])):
         dest = tmp_path_factory.mktemp(label)
         proc = subprocess.run(
@@ -736,21 +767,127 @@ def stray_builds(tmp_path_factory) -> dict[str, Path]:
     return out
 
 
-STRAY = ".pkit/rules/core.md.orig"
+# Untracked files the hermetic copy carries. Not only under `.pkit/` (#909): an
+# untracked module in the package shipped as importable code, and anything else
+# untracked shipped in the sdist, until both left hatchling's walk (#930). Each
+# is non-ignored, so only the tracked-state enumeration keeps it out — except
+# `LICENSE.orig`, which hatchling's default licence globs would pick up for the
+# sdist and the wheel's `.dist-info` unless `license-files` is declared.
+STRAYS: tuple[str, ...] = (
+    ".pkit/rules/core.md.orig",
+    "src/project_kit/stray_930.py",
+    "docs/stray_930.md",
+    "LICENSE.orig",
+)
+WHEEL_PACKAGE_ROOT = "src/"
+WHEEL_METADATA_SUFFIX = ".dist-info"
+
+
+def _sdist_entries(sdist: Path) -> set[str]:
+    """Every file (or symlink) the sdist carries, relative to its top directory."""
+    with tarfile.open(sdist) as archive:
+        return {
+            member.name.split("/", 1)[1]
+            for member in archive.getmembers()
+            if member.isfile() or member.issym()
+        }
+
+
+def _package_entries(wheel: Path) -> set[str]:
+    """Every wheel entry outside its `.dist-info` metadata directory."""
+    with zipfile.ZipFile(wheel) as archive:
+        return {
+            name
+            for name in archive.namelist()
+            if not name.endswith("/")
+            and not name.split("/", 1)[0].endswith(WHEEL_METADATA_SUFFIX)
+        }
+
+
+def _metadata_entries(wheel: Path) -> set[str]:
+    """Every wheel entry inside its `.dist-info` metadata directory."""
+    with zipfile.ZipFile(wheel) as archive:
+        return {
+            name
+            for name in archive.namelist()
+            if not name.endswith("/")
+            and name.split("/", 1)[0].endswith(WHEEL_METADATA_SUFFIX)
+        }
+
+
+def _tracked(root: Path) -> set[str]:
+    import subprocess
+
+    listing = subprocess.run(
+        ["git", "ls-files", "-z"], cwd=root, capture_output=True, check=True
+    ).stdout.decode()
+    return set(filter(None, listing.split("\0")))
 
 
 def test_untracked_file_ships_in_no_artifact(stray_builds: dict[str, Path]) -> None:
-    stray = STRAY.removeprefix(".pkit/")
-    assert stray not in _sdist_kit_entries(stray_builds["sdist"])
+    sdist = _sdist_entries(stray_builds["sdist"])
+    for stray in STRAYS:
+        assert stray not in sdist, f"{stray} in the sdist"
+    wheel_paths = {
+        stray.removeprefix(WHEEL_PACKAGE_ROOT).replace(".pkit/", "project_kit/_kit/", 1)
+        for stray in STRAYS
+    }
     for label in ("via-sdist-wheel", "direct-wheel"):
-        assert stray not in _kit_entries(stray_builds[label]), f"stray in {label}"
+        shipped = _package_entries(stray_builds[label])
+        assert not wheel_paths & shipped, f"stray in {label}: {wheel_paths & shipped}"
+        # Licence files land under `.dist-info/licenses/<path>`, outside the
+        # package entries above.
+        metadata = _metadata_entries(stray_builds[label])
+        leaked = {m for m in metadata for stray in STRAYS if m.endswith(f"/{stray}")}
+        assert not leaked, f"stray in {label}'s metadata: {leaked}"
 
 
-def test_both_wheel_build_paths_ship_the_same_kit_tree(
+def test_the_declared_licence_ships_and_says_mit(stray_builds: dict[str, Path]) -> None:
+    """Declaring `license-files` must not drop the tracked `LICENSE` itself, nor
+    the MIT licence from the metadata."""
+    wheel = stray_builds["direct-wheel"]
+    metadata = _metadata_entries(wheel)
+    licences = {m.split("/licenses/", 1)[1] for m in metadata if "/licenses/" in m}
+    assert licences == {"LICENSE"}
+    with zipfile.ZipFile(wheel) as archive:
+        (meta,) = (m for m in metadata if m.endswith("/METADATA"))
+        text = archive.read(meta).decode()
+    assert "License-Expression: MIT" in text
+    assert "LICENSE" in _sdist_entries(stray_builds["sdist"])
+
+
+def test_sdist_is_the_tracked_tree(stray_builds: dict[str, Path]) -> None:
+    """Outside `.pkit/`, whose withholding the tests above cover, the sdist is
+    exactly the tracked files plus the `PKG-INFO` the backend writes — nothing
+    untracked added, and nothing tracked lost to the walk being switched off."""
+    tracked = {p for p in _tracked(stray_builds["source"]) if not p.startswith(".pkit/")}
+    shipped = {p for p in _sdist_entries(stray_builds["sdist"]) if not p.startswith(".pkit/")}
+    assert shipped == tracked | {"PKG-INFO"}
+
+
+def test_wheel_package_is_the_tracked_package(stray_builds: dict[str, Path]) -> None:
+    """The package half of the wheel is the tracked `src/project_kit`, file for
+    file. The hook force-includes it, so a hole in that enumeration would ship
+    a wheel missing a module rather than one carrying a stray."""
+    tracked = {
+        p.removeprefix(WHEEL_PACKAGE_ROOT)
+        for p in _tracked(stray_builds["source"])
+        if p.startswith(f"{WHEEL_PACKAGE_ROOT}project_kit/")
+    }
+    shipped = {
+        p
+        for p in _package_entries(stray_builds["direct-wheel"])
+        if not p.startswith("project_kit/_kit/")
+    }
+    assert shipped == tracked
+
+
+def test_both_wheel_build_paths_ship_the_same_package(
     stray_builds: dict[str, Path], built_wheel: Path
 ) -> None:
     """Direct from the work tree, via the sdist, and from this checkout (which
-    may itself carry untracked files) — one tracked tree, one bundle."""
-    direct = sorted(_kit_entries(stray_builds["direct-wheel"]))
-    assert direct == sorted(_kit_entries(stray_builds["via-sdist-wheel"]))
-    assert direct == sorted(_kit_entries(built_wheel))
+    may itself carry untracked files) — one tracked tree, one package, the
+    methodology bundle included."""
+    direct = _package_entries(stray_builds["direct-wheel"])
+    assert direct == _package_entries(stray_builds["via-sdist-wheel"])
+    assert direct == _package_entries(built_wheel)

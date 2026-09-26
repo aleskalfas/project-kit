@@ -164,35 +164,47 @@ this is the durable foundation, not a throwaway step.
   to differ. The live recurrence is narrower: a newly added tree that lands in none of them
   silently never ships, and that is currently caught by a test rather than prevented by
   construction. Recorded as the sharpened follow-on.
-- **The methodology bundle's contents are a function of tracked state.** The methodology
-  bundle is `_kit/` in the wheel and `.pkit/` in the sdist. A property of D1's rule worth
-  pinning here, because it was silently absent before: with the bundle derived from a predicate
-  over the tracked tree, two *clean* checkouts of one commit build the same methodology file
-  set. "Tracked" means membership in the git index, minus files deleted from the working tree;
+- **The artifacts' contents are a function of tracked state.** Two *clean* checkouts of one
+  commit build the same file set, in the wheel and the sdist alike. The property is pinned here
+  because it began as a property of D1's rule, and was silently absent there before: with the
+  methodology bundle (`_kit/` in the wheel, `.pkit/` in the sdist) derived from a predicate
+  over the tracked tree, two clean checkouts build the same methodology file set. "Tracked" means membership in the git index, minus files deleted from the working tree;
   the bytes shipped are the working tree's. So the property is about the file *set*, not the
   bytes: an uncommitted edit to a tracked file ships as edited. Under the original wholesale
   include the set was not stable — some adopter-owned state that rode along is git-ignored, so
   the artifact depended on the build machine's untracked files (the released 1.149.0 wheel
   carried 14 per-issue journals; a wheel built from a working tree carried 36). A future change
-  to the methodology bundle's definition must preserve this. D1's directory-marker carve-out is
+  to what either artifact carries must preserve this. D1's directory-marker carve-out is
   the first thing that had to clear this bar and nearly failed it: discovering the marker set
   from withheld files read git-ignored state and emitted a marker no clean clone would produce
   (419 `_kit` entries against 418 for the same commit). *Declaring* the set is what preserves
   the property — the declaration is load-bearing for this obligation, not a stylistic choice.
   A predicate over the tree is not yet a predicate over the *tracked* tree: a filesystem walk
   ships an untracked, non-ignored file in a local checkout (an editor backup, a `.DS_Store`).
-  So the build enumerates tracked files (`git ls-files`, #909) wherever the source has its own
-  `.git`, for the sdist's `.pkit/` as well as the wheel's bundle, and fails rather than walk the
-  tree when git cannot answer. Otherwise it walks the tree, and the walk is sound only under one
+  So the build enumerates tracked files (`git ls-files`; #909 for `.pkit/`, #930 for the rest)
+  wherever the source has its own `.git`, for every file the hook ships — the whole sdist, and
+  the wheel's package as well as its bundle — and fails rather than walk the tree when git
+  cannot answer. Otherwise it walks the tree, and the walk is sound only under one
   precondition: a build from a git work tree, or from an artifact assembled from one (an sdist,
   or a git archive). A wheel built from an sdist is the common case — no `.git`, but the
   unpacked tree carries only tracked files because the sdist was assembled from them. When the
   hook sees neither a `.git` nor a `PKG-INFO` it warns, since it cannot tell such a tree from an
   arbitrary one; a git archive carries neither marker, so it builds with that warning even though
   it meets the precondition.
-  **Open gap: the property stops at the methodology bundle.** `src/project_kit` and the
-  non-`.pkit` sdist content are still hatchling's own walk, so an untracked file there —
-  executable code included — ships in the artifact. Closing it is #930.
+  **The property covers every file in both artifacts.** The Python package and the sdist's
+  non-`.pkit` content are enumerated the same way as the bundle: hatchling's own walk is
+  switched off for both, and the build hook force-includes them from the tracked set instead,
+  because the walk can only be narrowed by static configuration and the tracked set changes
+  with every commit. Two things sit outside, both bounded. The editable wheel's *package* is
+  outside by construction: it ships a path to `src/`, not files, so whatever sits there imports
+  — which is what an editable install is for. Its bundle is force-included like the standard
+  wheel's, so that part stays inside. And hatchling adds a few root files to the sdist itself
+  — `pyproject.toml`, the build hook, the root `.gitignore`, the README, the licence files —
+  outside the hook's enumeration. Configuration names every one of them, so they cannot be
+  strays. That includes the licence file, which `pyproject.toml` declares explicitly in
+  `license-files`: left undeclared, hatchling finds licence files by glob (`LICEN[CS]E*`,
+  `COPYING*`, `NOTICE*`, `AUTHORS*`), so an untracked `LICENSE.orig` at the root would ship in
+  the sdist and in the wheel's `.dist-info`. Declaring it closes that residual too.
 - **Wheel size** grows (all methodology content + capability source ship in `site-packages`),
   acceptable at current scale; revisit if a future capability bundles large binary assets.
 - **Surface change** → version bump per PRJ-002, and the migration-coverage check runs against
