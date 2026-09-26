@@ -1,7 +1,7 @@
 ---
 id: COR-048
 title: A project keeps its backbone declarations in one schema-checked file
-status: proposed
+status: accepted
 date: 2026-09-26
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
