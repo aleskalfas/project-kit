@@ -1,7 +1,7 @@
 component: backbone
 kind: none
 body: >
-  Design-ahead: COR-049 (proposed) — a project declares an internal and a user
+  Design-ahead: COR-049 (accepted) — a project declares an internal and a user
   documentation root in its backbone configuration, and whatever fills in, stamps
   or places a documentation location derives it from them unless an explicit
   location is set. No adopter-observable change until the key, the derivation
