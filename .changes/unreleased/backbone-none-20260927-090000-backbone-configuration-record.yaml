@@ -1,0 +1,7 @@
+component: backbone
+kind: none
+body: >
+  Design-ahead: COR-048 (proposed) defines the project's backbone configuration —
+  one project-owned, schema-checked file of backbone declarations, with every key
+  owned by a record. No adopter-observable change until the schema and validation
+  land.
