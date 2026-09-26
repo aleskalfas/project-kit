@@ -1,7 +1,7 @@
 ---
 id: COR-049
 title: A project declares where its documentation lives, by audience
-status: proposed
+status: accepted
 date: 2026-09-27
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
