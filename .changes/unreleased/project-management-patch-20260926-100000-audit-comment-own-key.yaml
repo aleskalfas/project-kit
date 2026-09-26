@@ -2,7 +2,7 @@ component: project-management
 kind: patch
 custom:
   category: Fixed
-  pr: ""
+  pr: "953"
 body: >
   Every bypass `done-work` and `merge-pr` perform, and every `handoff-issue`,
   now leaves its own audit comment, and no comment another actor posts can
