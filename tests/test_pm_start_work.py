@@ -268,3 +268,123 @@ def test_base_never_reflects_the_checked_out_branch(sw) -> None:
 
     sig = inspect.signature(sw.infer.resolve_base_branch)
     assert list(sig.parameters) == ["config", "body", "explicit"]
+
+
+# ---- transition gate + late failure (#942) -----------------------------
+#
+# Drive the real `main()` with its gates and gh/git seams stubbed, against the
+# shipped workflow.yaml / issue-types.yaml, and record every mutation.
+
+CAP_ROOT = SCRIPT.parent.parent
+
+
+def _task(labels: list[str], *, assignees: list[dict] | None = None) -> dict:
+    return {
+        "title": "[Task] do the thing",
+        "labels": labels,
+        "assignees": assignees or [],
+        "state": "OPEN",
+        "body": "Feature: #1\n\n## What\nx",
+        "milestone": None,
+    }
+
+
+@pytest.fixture
+def run_main(sw, monkeypatch):
+    """Returns `run(issue, move_rc=0) -> (rc, mutations)` over stubbed seams."""
+    from types import SimpleNamespace
+
+    def run(issue: dict, move_rc: int = 0):
+        mutations: list[tuple] = []
+        monkeypatch.setattr(sys, "argv", ["start-work", "42", "--yes"])
+        monkeypatch.setattr(sw, "resolve_capability_root", lambda _e: CAP_ROOT)
+        monkeypatch.setattr(sw.bootstrap_gate, "enforce", lambda *a, **k: True)
+        monkeypatch.setattr(sw.session_guard, "enforce", lambda **k: True)
+        monkeypatch.setattr(sw, "load_adopter_config", lambda _r: {"default_branch": "main"})
+        monkeypatch.setattr(sw, "_read_members", lambda *a: [])
+        monkeypatch.setattr(
+            sw, "resolve_invoker_identity", lambda **k: SimpleNamespace(github_login="me")
+        )
+        monkeypatch.setattr(sw, "check_membership", lambda *a: SimpleNamespace(allowed=True))
+        monkeypatch.setattr(sw.axis_labels, "load_substrate_map", lambda _r: None)
+        monkeypatch.setattr(sw, "_gh_get_issue", lambda _n, _c: issue)
+        monkeypatch.setattr(sw, "_existing_branch_for_issue", lambda _n: None)
+
+        def create_branch(name, base):
+            mutations.append(("branch", name))
+            return True
+
+        def set_assignee(n, login, config):
+            mutations.append(("assignee", login))
+            return True
+
+        def move_issue(n, target, root, allow):
+            mutations.append(("move", target))
+            return move_rc
+
+        monkeypatch.setattr(sw, "_create_branch", create_branch)
+        monkeypatch.setattr(sw, "_set_assignee", set_assignee)
+        monkeypatch.setattr(sw, "_invoke_move_issue", move_issue)
+        return sw.main(), mutations
+
+    return run
+
+
+def test_refuses_from_todo_before_any_mutation(run_main, capsys) -> None:
+    rc, mutations = run_main(_task(["type:bug", "state:todo"]))
+    assert rc == 2
+    assert mutations == []  # no branch, no assignee, no move
+    err = capsys.readouterr().err
+    assert "'todo'" in err
+    assert "move-issue 42 --to backlog" in err
+
+
+def test_refuses_from_todo_inferred_without_a_state_label(run_main, capsys) -> None:
+    # No state:* label and no milestone resolves Todo through the shared reader.
+    rc, mutations = run_main(_task(["type:bug"]))
+    assert rc == 2
+    assert mutations == []
+    assert "move-issue 42 --to backlog" in capsys.readouterr().err
+
+
+def test_proceeds_from_backlog(run_main) -> None:
+    rc, mutations = run_main(_task(["type:bug", "state:backlog"]))
+    assert rc == 0
+    assert mutations == [
+        ("branch", "fix/42-do-the-thing"), ("assignee", "me"), ("move", "in-progress"),
+    ]
+
+
+def test_proceeds_when_already_in_progress(run_main) -> None:
+    # move-issue treats in-progress → in-progress as an idempotent no-op.
+    rc, mutations = run_main(_task(["type:bug", "state:in-progress"]))
+    assert rc == 0
+    assert ("move", "in-progress") in mutations
+
+
+def test_refusal_without_a_stepping_stone_lists_legal_targets(run_main, capsys) -> None:
+    rc, mutations = run_main(_task(["type:bug", "state:review"]))
+    assert rc == 2
+    assert mutations == []
+    assert "legal targets from 'review'" in capsys.readouterr().err
+
+
+def test_late_move_failure_names_branch_and_assignee(run_main, capsys) -> None:
+    rc, mutations = run_main(_task(["type:bug", "state:backlog"]), move_rc=3)
+    assert rc == 3  # move-issue's exit code passes through
+    assert [m[0] for m in mutations] == ["branch", "assignee", "move"]
+    err = capsys.readouterr().err
+    last_block = err[err.rindex("[failed]"):]
+    assert "the issue did not move" in last_block
+    assert "fix/42-do-the-thing" in last_block
+    assert "@me" in last_block
+
+
+def test_late_move_failure_omits_an_assignee_it_did_not_write(run_main, capsys) -> None:
+    issue = _task(["type:bug", "state:backlog"], assignees=[{"login": "me"}])
+    rc, mutations = run_main(issue, move_rc=3)
+    assert rc == 3
+    assert ("assignee", "me") not in mutations
+    err = capsys.readouterr().err
+    assert "fix/42-do-the-thing" in err
+    assert "@me" not in err

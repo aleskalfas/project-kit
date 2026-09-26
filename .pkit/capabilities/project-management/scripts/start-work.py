@@ -15,18 +15,24 @@ branch + setting the assignee. Per DEC-026:
 Gates per DEC-026:
   - Current user is a team member (DEC-021); open-mode degrades to no-op.
   - Issue not assigned to someone else (hard refusal points at handoff-issue).
+  - Issue's current state can move to In Progress per workflow.yaml (or is
+    already there). Checked before any mutation, so a refused move leaves no
+    branch or assignee behind (#942). From Todo, move to Backlog first.
   - If a branch exists, matches `<type>/<N>-<slug>` (idempotent).
 
 Side-effects:
   - Creates branch `<type>/<N>-<kebab-slug>` (type from issue's type:*
     label; slug from the issue title).
   - Sets assignee to the current invoker.
-  - Composes over `move-issue.py --to in-progress`.
+  - Composes over `move-issue.py --to in-progress`. If that move still fails
+    after the branch / assignee were written (e.g. a network error), the run
+    ends on a failure naming what it left behind.
 
 Exit codes:
   0  in-progress
   1  membership refusal
-  2  usage error / gate failure / gh failure
+  2  usage error / gate failure / illegal transition / gh failure
+  *  a failed composed move-issue passes its exit code through
 """
 
 from __future__ import annotations
@@ -56,6 +62,9 @@ from _lib.membership import (  # noqa: E402
     resolve_capability_root,
     resolve_invoker_identity,
 )
+from _lib.structural_type import infer_structural_type  # noqa: E402
+
+TARGET_STATE = "in-progress"
 
 
 def main() -> int:
@@ -89,6 +98,8 @@ def main() -> int:
     yaml_loader = YAML(typ="safe")
     config = load_adopter_config(capability_root)
     classification = _read_classification(capability_root, yaml_loader)
+    workflow = _read_schema(capability_root, "workflow.yaml", yaml_loader)
+    issue_types = _read_schema(capability_root, "issue-types.yaml", yaml_loader)
     members = _read_members(capability_root, yaml_loader)
     invoker = resolve_invoker_identity(config=config)
     membership = check_membership(members, invoker)
@@ -124,15 +135,32 @@ def main() -> int:
         )
         return 2
 
-    # Derive branch name from issue title + type axis. The type value resolves
-    # through the ADR-026 read seam — a greenfield `type:*` label OR a brownfield
-    # `[Prefix]` title — so the branch prefix is correct on both substrates.
     title = str(issue.get("title", ""))
     labels = [
         lbl.get("name", "") if isinstance(lbl, dict) else str(lbl)
         for lbl in (issue.get("labels") or [])
     ]
     substrate_map = axis_labels.load_substrate_map(capability_root)
+
+    # Gate: the move to In Progress is legal from where the issue is (#942).
+    # Asked before the branch create / assignee write, so a refusal changes
+    # nothing. Same position read and transition table move-issue consults.
+    refusal = _transition_refusal(
+        args.issue_number,
+        issue,
+        labels,
+        workflow=workflow,
+        issue_types=issue_types,
+        classification=classification,
+        substrate_map=substrate_map,
+    )
+    if refusal is not None:
+        print(refusal, file=sys.stderr)
+        return 2
+
+    # Derive branch name from issue title + type axis. The type value resolves
+    # through the ADR-026 read seam — a greenfield `type:*` label OR a brownfield
+    # `[Prefix]` title — so the branch prefix is correct on both substrates.
     prefix = _derive_branch_prefix(labels, title, classification, substrate_map)
     if prefix is None:
         print(
@@ -184,25 +212,46 @@ def main() -> int:
 
     # Create branch (idempotent — git checkout -b on existing branch fails;
     # we check existence first).
+    branch_created = False
     if existing is None:
         if not _create_branch(branch_name, base):
             return 2
+        branch_created = True
     else:
         print(f"  branch {branch_name!r} already in repo; skipping creation")
 
-    # Set assignee.
-    if invoker.github_login and not _set_assignee(args.issue_number, invoker.github_login, config):
-        print(
-            "[warn] branch created but failed to set assignee. "
-            "Run `gh issue edit --add-assignee` manually and re-run move-issue.",
-            file=sys.stderr,
-        )
+    # Set assignee. "Written" means this run added it: an invoker who was
+    # already assigned is not something this run left behind.
+    already_assigned = any(
+        isinstance(a, dict) and a.get("login") == invoker.github_login
+        for a in assignees
+    )
+    assignee_written = False
+    if invoker.github_login and not already_assigned:
+        if _set_assignee(args.issue_number, invoker.github_login, config):
+            assignee_written = True
+        else:
+            print(
+                "[warn] branch created but failed to set assignee. "
+                "Run `gh issue edit --add-assignee` manually and re-run move-issue.",
+                file=sys.stderr,
+            )
 
     # Compose over move-issue.
     rc = _invoke_move_issue(
-        args.issue_number, "in-progress", args.capability_root, args.allow_foreign_repo
+        args.issue_number, TARGET_STATE, args.capability_root, args.allow_foreign_repo
     )
     if rc != 0:
+        print(
+            _late_failure_message(
+                args.issue_number,
+                rc,
+                branch_name=branch_name if branch_created else None,
+                base=base,
+                assignee=invoker.github_login if assignee_written else None,
+            ),
+            file=sys.stderr,
+        )
         return rc
 
     print(f"\n[ok] started work on #{args.issue_number} (branch: {branch_name})")
@@ -214,8 +263,111 @@ def main() -> int:
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
     return gh_get_issue(
-        issue_number, config, fields="title,labels,assignees,state,body"
+        issue_number, config, fields="title,labels,assignees,state,body,milestone"
     )
+
+
+def _transition_refusal(
+    issue_number: int,
+    issue: dict,
+    labels: list[str],
+    *,
+    workflow: dict,
+    issue_types: dict,
+    classification: dict,
+    substrate_map: axis_labels.SubstrateMap | None,
+) -> str | None:
+    """Why the composed `move-issue --to in-progress` would refuse, or None.
+
+    Reads the issue's position through `lifecycle_inference.infer_current_state`
+    and its structural type through `infer_structural_type` (the readers
+    move-issue uses), and the legal moves through
+    `lifecycle_inference.legal_targets` (the table move-issue refuses on). An
+    issue already In Progress passes: move-issue treats that as an idempotent
+    no-op, so re-running start-work still works. When one intermediate move
+    leads on to In Progress (Todo → Backlog), the refusal names it."""
+    title = str(issue.get("title", ""))
+    structural_type = infer_structural_type(
+        title, issue_types, classification=classification, labels=labels
+    )
+    if structural_type is None:
+        return (
+            f"error: cannot determine structural type for issue #{issue_number}: "
+            f"title {title!r} matches no known [Type] prefix and no `type:*` "
+            "kind label is present. Nothing was changed.\n"
+            "  → Restore the issue's title prefix (e.g. [Task]) and re-run."
+        )
+    current = infer.infer_current_state(
+        state=str(issue.get("state", "")).lower(),
+        milestone=issue.get("milestone") or {},
+        labels=labels,
+        substrate_map=substrate_map,
+    )
+    if current == TARGET_STATE:
+        return None
+    targets = infer.legal_targets(workflow, current, structural_type)
+    if TARGET_STATE in targets:
+        return None
+    lines = [
+        f"[refused] start-work #{issue_number}: the issue is in {current!r}, and "
+        f"workflow.yaml declares no move {current!r} → {TARGET_STATE!r} for "
+        f"{structural_type!r}. Nothing was changed (no branch, no assignee).",
+    ]
+    stepping_stones = [
+        s for s in targets
+        if TARGET_STATE in infer.legal_targets(workflow, s, structural_type)
+    ]
+    if stepping_stones:
+        lines.append(
+            f"  → move it first: `move-issue {issue_number} --to {stepping_stones[0]}`, "
+            f"then re-run `start-work {issue_number}`."
+        )
+    else:
+        lines.append(
+            f"  legal targets from {current!r}: "
+            f"{', '.join(targets) if targets else '<none>'}"
+        )
+    return "\n".join(lines)
+
+
+def _late_failure_message(
+    issue_number: int,
+    rc: int,
+    *,
+    branch_name: str | None,
+    base: str,
+    assignee: str | None,
+) -> str:
+    """The closing failure when the composed move-issue fails after mutating.
+
+    Names each thing this run left behind (the branch it created, the assignee
+    it wrote) so the caller can retry or undo. The output must not end on the
+    branch-creation line as if the run had succeeded (#942)."""
+    lines = [
+        f"\n[failed] start-work #{issue_number}: move-issue --to {TARGET_STATE} "
+        f"failed (exit {rc}); the issue did not move.",
+    ]
+    left = []
+    if branch_name is not None:
+        left.append(
+            f"  - branch {branch_name!r} (created and checked out). Undo: "
+            f"`git checkout {base} && git branch -D {branch_name}`"
+        )
+    if assignee is not None:
+        left.append(
+            f"  - assignee @{assignee}. Undo: "
+            f"`gh issue edit {issue_number} --remove-assignee {assignee}`"
+        )
+    if left:
+        lines.append("  Left behind by this run:")
+        lines.extend(left)
+    else:
+        lines.append("  This run created no branch and wrote no assignee.")
+    lines.append(
+        f"  Fix the cause above and re-run `start-work {issue_number}` "
+        "(it reuses the branch)."
+    )
+    return "\n".join(lines)
 
 
 def _derive_branch_prefix(
@@ -372,7 +524,14 @@ def _read_classification(capability_root: Path, yaml_loader: YAML) -> dict:
     title-prefix reverse read the branch-prefix derivation goes through. A thin
     or missing schema degrades to {} — `_derive_branch_prefix` then resolves no
     prefix and the caller reports the derivation failure."""
-    path = capability_root / "schemas" / "classification.yaml"
+    return _read_schema(capability_root, "classification.yaml", yaml_loader)
+
+
+def _read_schema(capability_root: Path, name: str, yaml_loader: YAML) -> dict:
+    """A parsed capability schema (`schemas/<name>`), or {} when absent or
+    unparseable. A missing workflow.yaml therefore declares no legal moves and
+    the transition gate refuses, as move-issue would."""
+    path = capability_root / "schemas" / name
     if not path.is_file():
         return {}
     try:

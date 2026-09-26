@@ -95,7 +95,10 @@ def test_start_work_cuts_the_branch_off_the_resolved_base(
     verbs, monkeypatch, body, expected
 ) -> None:
     mod = verbs["start-work"]
-    _stub_gates(monkeypatch, mod, _issue(body), ["start-work", "42", "--yes"])
+    # A Backlog Task: start-work refuses any other position before cutting a
+    # branch (#942).
+    issue = {**_issue(body), "title": "[Task] do thing", "labels": ["state:backlog"]}
+    _stub_gates(monkeypatch, mod, issue, ["start-work", "42", "--yes"])
     monkeypatch.setattr(mod, "_derive_branch_prefix", lambda *a: "fix")
     monkeypatch.setattr(mod, "_existing_branch_for_issue", lambda _n: None)
     captured = {}

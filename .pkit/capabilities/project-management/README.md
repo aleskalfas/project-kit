@@ -252,7 +252,7 @@ For the standard development flow, seven verb-subject commands compose over `mov
 | Command | Issue transition | Side-effects |
 |---|---|---|
 | `promote-issue <N> [--milestone "<M>"] --reason "<R>"` | Todo → Backlog | Audit comment; milestone attach only when `--milestone` is given (omit to promote on `--reason` alone — per DEC-026 #61 amendment) |
-| `start-work <N>` | Backlog → In Progress | Branch `<type>/<N>-<slug>` + assignee |
+| `start-work <N>` | Backlog → In Progress | Branch `<type>/<N>-<slug>` + assignee. **Precondition:** the issue's current state must be able to move to In Progress under `workflow.yaml` (or already be there). Otherwise it refuses before creating a branch or writing an assignee, and names the move to make first. From Todo, that is `move-issue <N> --to backlog` (`promote-issue` carries the audit). If the composed `move-issue` still fails after the branch is cut, the run ends on a failure naming the branch and any assignee it left behind (#942). |
 | `create-draft <N>` | (none — issue stays In Progress) | Opens draft PR via `gh pr create --draft` |
 | `review-work <N> [--reviewer @<u>]` | In Progress → Review | Opens ready PR or flips draft→ready; assigns reviewers |
 | `back-to-draft <N>` | (none — issue stays in Review) | Flips PR to draft; dismisses prior APPROVED reviews |
