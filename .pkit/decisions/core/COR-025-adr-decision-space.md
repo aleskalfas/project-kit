@@ -90,6 +90,10 @@ The conventional resolution `docs/architecture/decisions/` matches the well-know
 
 Rationale for the project-side location (rather than `.pkit/decisions/adr/`): ADRs describe the *adopter's project*, not the methodology that the kit installs. The methodology's namespace (`.pkit/`) is methodology-shaped state; the adopter's architecture lives in the adopter's own documentation tree. Pinning ADRs under `docs/` keeps them with the rest of the project's documentation.
 
+#### The conventional location derives from the internal documentation root (refinement per COR-049)
+
+Where `<adr-records>` has to be chosen, its conventional location is the project's internal documentation root ([COR-049](COR-049-documentation-roots.md)) plus `architecture/decisions/`. With the default root that is the `docs/architecture/decisions/` above. An explicit overlay value always wins.
+
 ### Propagation isolation — kit ADRs never leak to adopters
 
 The location choice (outside `.pkit/`) automatically secures a critical property: **ADRs authored in project-kit's own source tree never propagate to adopters who install the methodology**.

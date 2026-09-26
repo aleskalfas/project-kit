@@ -136,6 +136,10 @@ A deploy primitive — `deploy-agents.sh` for the Claude-Code adapter, with sibl
 
 Per-agent overrides *replace* the default value for that category (no merge); copying base entries into the override is the explicit way to extend rather than replace. Merge semantics are deferred per COR-007.
 
+#### Documentation locations are chosen from the project's documentation roots (refinement per COR-049)
+
+When a command fills a missing documentation category in the overlay, it computes the conventional location from the project's internal documentation root ([COR-049](COR-049-documentation-roots.md)) and records it explicitly. Deploy-time resolution is unchanged: placeholders resolve only from values the overlay explicitly contains.
+
 ### 6. Backbone — what ships in core vs project
 
 The core / project split for agents follows the universal-applicability principle (the same test that distinguishes COR records from PRJ records in `.pkit/decisions/README.md`; see the project's tracking work for lifting this test into a cross-artifact principle).
