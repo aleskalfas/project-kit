@@ -1,0 +1,10 @@
+component: software-analysis
+kind: none
+body: >
+  Design-ahead: the opt-in software-analysis capability is added with its founding
+  decision ([software-analysis:DEC-001-software-analysis-discipline], accepted) —
+  actors, use cases, journeys and glossary kept as anchored artefacts under the
+  internal documentation root, kept true by revalidation (planned before code,
+  triggered by friction after), with records only when a revalidation finds
+  something. No adopter-usable surface yet; the stamp and check commands carry the
+  changeset that announces the capability.
