@@ -18,7 +18,7 @@ Several parts of a project need this: descriptions of what the system must do, t
 
 **Any artefact may declare its anchors (what makes it true) and when it was last rechecked against them. The backbone reports *friction* whenever an anchor has changed since that recheck.**
 
-1. **Artefacts.** An artefact is either a document with front matter, or one keyed entry in a collection file whose front matter maps entries by id. Each artefact carries its own anchors and its own marker. The backbone looks for artefacts only in the **places declared to hold anchored artefacts**, so unrelated front matter elsewhere is never misread. Components declare their places in their own package metadata, relative to the document locations they resolve under COR-049; a project declares its own in the backbone configuration.
+1. **Artefacts.** An artefact is either a document with front matter, or one keyed entry in a collection file whose front matter maps entries by id. Each artefact carries its own anchors and its own marker. A collection entry's content is its data entry together with the body section headed by its id, if there is one, so that editing an entry's prose is a change to it. The backbone looks for artefacts only in the **places declared to hold anchored artefacts**, so unrelated front matter elsewhere is never misread. Components declare their places in their own package metadata, relative to the document locations they resolve under COR-049; a project declares its own in the backbone configuration.
 
 2. **Anchors.** An artefact lists its anchors in its front matter. The backbone resolves three kinds:
    - a **path**: a file or glob, relative to the repository root, where `**` matches across folders;
