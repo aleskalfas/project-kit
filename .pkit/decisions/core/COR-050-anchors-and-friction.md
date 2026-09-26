@@ -1,7 +1,7 @@
 ---
 id: COR-050
 title: Artefacts declare what makes them true, and drift is detected as friction
-status: proposed
+status: accepted
 date: 2026-09-27
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---

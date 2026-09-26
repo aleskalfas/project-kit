@@ -1,7 +1,7 @@
 component: backbone
 kind: none
 body: >
-  Design-ahead: COR-050 — artefacts may declare their anchors (paths, records, other
+  Design-ahead: COR-050 (accepted) — artefacts may declare their anchors (paths, records, other
   artefacts) and a recheck marker, and the backbone reports friction when an anchor
   changed since the last recheck, plus unanchored artefacts and uncovered surface.
   No adopter-observable change until the friction check and its schema land.
