@@ -1,8 +1,10 @@
 [build-system]
 # `pathspec` is imported directly by `hatch_build.py` to apply the sdist's
 # `withhold` globs. Hatchling depends on it today, but that is hatchling's
-# business; a direct import is a direct dependency.
-requires = ["hatchling", "pathspec"]
+# business; a direct import is a direct dependency. The hatchling floor is the
+# version the tracked-state hook and the SPDX `license` / `license-files` form
+# below were verified against (#930).
+requires = ["hatchling>=1.32.4", "pathspec"]
 build-backend = "hatchling.build"
 
 [project]
@@ -11,7 +13,11 @@ description = "Methodology framework for AI-assisted software projects"
 requires-python = ">=3.11"
 dynamic = ["version"]
 authors = [{ name = "Ales Kalfas", email = "kalfas.ales@gmail.com" }]
-license = { text = "MIT" }
+license = "MIT"
+# Declared, not left to hatchling's default globs (`LICEN[CS]E*`, `COPYING*`,
+# ...): those match whatever sits at the root, so an untracked `LICENSE.orig`
+# shipped in the sdist and in the wheel's `.dist-info/licenses/` (#930).
+license-files = ["LICENSE"]
 dependencies = [
     "click>=8.1",
     "ruamel.yaml>=0.18",
@@ -37,13 +43,19 @@ path = ".pkit/VERSION"
 pattern = "^(?P<version>[0-9]+\\.[0-9]+\\.[0-9]+)$"
 
 [tool.hatch.build.targets.sdist]
-# `.pkit/` is excluded from the sdist's own walk and force-included by
-# `hatch_build.py` instead, from TRACKED files (#909). Hatchling's walk takes
-# every file the root `.gitignore` does not match, so an untracked file in a
-# local checkout shipped in the sdist — and, since `uv build` builds the wheel
-# FROM the sdist, in the wheel too. The rest of the sdist (src/, tests/, docs)
-# is still the walk.
-exclude = ["/.pkit"]
+# EVERYTHING is excluded from the sdist's own walk and force-included by
+# `hatch_build.py` instead, from TRACKED files (#909 for `.pkit/`, #930 for the
+# rest). Hatchling's walk takes every file the root `.gitignore` does not match,
+# so an untracked file in a local checkout shipped in the sdist — and, since
+# `uv build` builds the wheel FROM the sdist, in the wheel too. The walk cannot
+# be narrowed to tracked files (its options are static; the tracked set is not),
+# so it is switched off: `*` excludes every path, and `skip-excluded-dirs` stops
+# it descending into `.git` or a `.venv` only to discard what it finds. Do not
+# "restore" a narrower exclude here — whatever the walk takes, it takes
+# untracked. Hatchling still adds its own defaults (`pyproject.toml`, this
+# hook, the README, the declared `license-files`, `.gitignore`) and `PKG-INFO`.
+exclude = ["*"]
+skip-excluded-dirs = true
 
 # What the hook withholds from the sdist's `.pkit/`. These are gitignore-style
 # globs applied with the same `pathspec` engine hatchling uses for `exclude`,
@@ -51,9 +63,12 @@ exclude = ["/.pkit"]
 # ownership predicate — for `tests/test_packaging_boundary.py`'s cross-artifact
 # check. Globs by CHOICE: the hook could call the predicate for the sdist too,
 # and deliberately does not, so do not "simplify" this away. The two targets
-# are independent in filter, shared in enumeration (both list `.pkit/` through
-# the hook's `git ls-files` path); `test_untracked_file_ships_in_no_artifact`
-# is the external check on enumeration.
+# are independent in filter, shared in enumeration — across the whole artifact,
+# not only `.pkit/`: both list every file through the hook's `git ls-files`
+# path. So the cross-artifact check cannot see an enumeration defect; the
+# external checks against `git ls-files` are `test_sdist_is_the_tracked_tree`,
+# `test_wheel_package_is_the_tracked_package` and
+# `test_untracked_file_ships_in_no_artifact`.
 #
 # Without this the sdist carried project-kit's own project-side state including
 # 36 git-ignored journals, so it had the same non-reproducibility as the wheel:
@@ -91,13 +106,15 @@ withhold = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/project_kit"]
-# Never sweep build caches into the bundled methodology tree. (NB: hatchling's
-# `exclude` does not filter force-included paths — force-include is the
-# higher-priority mechanism — so it can only prune what the standard package
-# walk picks up. That is exactly why the tree filtering lives in
-# `hatch_build.py`, which reapplies these same patterns itself; missing that
-# once shipped 87 `.pyc` files.
+# The package is named here, which keeps hatchling's own package detection off,
+# and then EXCLUDED from hatchling's walk: `hatch_build.py` force-includes it
+# file by file from TRACKED files (#930), since the walk shipped whatever it
+# found — an untracked `.py` included, as importable code. With the walk empty,
+# build caches are kept out by the hook, which applies its own exclusions to
+# every force-include. (NB: hatchling's `exclude` does not filter force-included
+# paths — force-include is the higher-priority mechanism — so it can only prune
+# what the walk picks up. That is exactly why the filtering lives in
+# `hatch_build.py`; missing that once shipped 87 `.pyc` files.)
 #
 # One stale per-capability `manifest.yaml` still travels — project-kit's own
 # self-host install-state receipt, functionally inert since a capability install
@@ -106,8 +123,13 @@ packages = ["src/project_kit"]
 # sitting in a kit-owned directory, so the predicate cannot see it. Its former
 # removal plan — ADR-033's single-declaration follow-on — was retired by that
 # record's #813 amendment, so it needs a home of its own rather than a pointer
-# to a retired goal.)
-exclude = ["**/__pycache__", "**/*.pyc"]
+# to a retired goal.
+packages = ["src/project_kit"]
+exclude = ["/src/project_kit"]
+# The editable wheel exposes `src/` through a `.pth` rather than shipping the
+# package. Named explicitly because hatchling's default finds the directory to
+# expose by walking the package — which the `exclude` above now empties.
+dev-mode-dirs = ["src"]
 
 # Bundle the methodology content into the wheel as package data under
 # `project_kit/_kit/` (ADR-033), plus capability source (a distribution medium

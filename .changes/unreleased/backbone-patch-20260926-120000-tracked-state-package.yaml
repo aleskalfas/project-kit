@@ -1,0 +1,21 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+  pr: "946"
+body: >
+  Every file in the wheel and the source distribution now comes from tracked
+  files, not only the bundled `.pkit/` tree (#930). The Python package in the
+  wheel and the rest of the source distribution (tests, docs, scripts) were
+  taken from the build backend's own walk, so an untracked module under
+  `src/project_kit` shipped as importable code; both are now enumerated from
+  tracked files like `.pkit/`. The licence file is declared explicitly
+  (`license = "MIT"` with `license-files = ["LICENSE"]`), so an untracked
+  `LICENSE.orig` or similar at the root no longer ships in the source
+  distribution or the wheel's metadata; the package metadata now states the
+  licence as the SPDX expression `MIT`. A build from a clean checkout ships the
+  same files as before. The editable install is unchanged in effect: it still
+  points at `src/` through a `.pth` file, now named `_project_kit.pth`. A wheel
+  build mode other than the standard or editable wheel now fails the build
+  rather than producing a wheel with no package. The build requires hatchling
+  1.32.4 or later.

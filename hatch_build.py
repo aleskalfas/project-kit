@@ -54,11 +54,23 @@ would hand it to the wheel. A `.git` without a working `git` fails the build
 rather than falling back to the walk; see `_tracked_paths`. A tree with neither
 a `.git` nor an sdist's `PKG-INFO` builds, with a warning; see
 `_untracked_source_warning`.
+
+**Every file, not only `.pkit/` (#930).** The same held for the Python package
+and the rest of the sdist, which hatchling still walked: an untracked `.py`
+under `src/project_kit` shipped as importable code. So `pyproject.toml` now
+excludes both from hatchling's walk entirely, and this hook force-includes them
+through the same enumeration: the wheel's package (`PACKAGE_SOURCE`) and every
+file of the sdist. The walk cannot be *narrowed* to tracked files instead — its
+`only-include` is static configuration, and the tracked set changes with every
+commit — so it is switched off and replaced. The editable wheel needs no
+replacement: it ships a `.pth` pointing at `src/` (`dev-mode-dirs`), not the
+package's files, so the hook adds the package to the standard wheel only.
 """
 
 from __future__ import annotations
 
 import importlib.util
+import os
 import subprocess
 import sys
 import tempfile
@@ -70,7 +82,23 @@ from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 
 ROOT = Path(__file__).parent
 KIT = ROOT / ".pkit"
-DEST_ROOT = "project_kit/_kit"
+
+# The Python package, force-included into the standard wheel by this hook
+# (#930). `pyproject.toml` still names it in `packages`, which keeps hatchling's
+# own package detection off, but excludes it from hatchling's walk.
+PACKAGE_SOURCE = "src/project_kit"
+PACKAGE_DEST = "project_kit"
+DEST_ROOT = f"{PACKAGE_DEST}/_kit"
+
+# The wheel target's hook `version` for a regular wheel. The other, `editable`,
+# carries a `.pth` pointing at the source tree instead of the package's files;
+# force-including them there would put a copy of the package in site-packages
+# that shadows the source tree the editable install exists to expose. Any other
+# value fails the build: the walk no longer ships the package, so a wheel mode
+# this hook does not know would build with no package and report success.
+WHEEL_STANDARD = "standard"
+WHEEL_EDITABLE = "editable"
+WHEEL_VERSIONS = (WHEEL_STANDARD, WHEEL_EDITABLE)
 
 # The `.pkit/` subtrees this hook force-includes, replacing the static entries in
 # `pyproject.toml`. Membership is about HOW a tree is bundled, not about what it
@@ -129,17 +157,44 @@ ADOPTER_TIER_MARKERS: tuple[str, ...] = (
 # the whole reason this hook exists — so a per-file force-include has to apply
 # the same patterns itself. Missing this shipped 87 `.pyc` files on the first
 # attempt, trading 41 unwanted files for 87 different ones.
-EXCLUDED_PARTS: frozenset[str] = frozenset({"__pycache__", ".pytest_cache"})
+#
+# Since #930 this hook, not hatchling's walk, enumerates the whole sdist and the
+# package, so the set also carries the directories and files hatchling's walk
+# never ships (its `EXCLUDED_DIRECTORIES` / `EXCLUDED_FILES`). Tracked state
+# rarely holds any of them; a `.git`-less tree walked as found — a Docker context
+# with a `.venv`, say — can.
+EXCLUDED_PARTS: frozenset[str] = frozenset(
+    {
+        "__pycache__",
+        ".pytest_cache",
+        ".git",
+        ".hg",
+        ".venv",
+        ".hatch",
+        ".tox",
+        ".nox",
+        ".ruff_cache",
+        ".mypy_cache",
+        ".pixi",
+    }
+)
+EXCLUDED_NAMES: frozenset[str] = frozenset({".DS_Store"})
 EXCLUDED_SUFFIXES: tuple[str, ...] = (".pyc", ".pyo")
 
-# The sdist's `.pkit/` entries, like the wheel's kit trees, are force-included
-# by this hook — `pyproject.toml` excludes `/.pkit` from the sdist's own walk
-# and declares what to withhold under this hook-config key.
+# The sdist's entries, like the wheel's kit trees, are force-included by this
+# hook — `pyproject.toml` excludes everything from the sdist's own walk and
+# declares what to withhold from `.pkit/` under this hook-config key.
 SDIST_WITHHOLD_KEY = "withhold"
 
 # Written at the root of every sdist by the build backend, so its presence is
 # how a `.git`-less tree is recognised as an unpacked sdist.
 SDIST_METADATA_FILE = "PKG-INFO"
+
+# Root entries the sdist never takes from the tree, as hatchling's walk never
+# did: the backend writes a fresh `PKG-INFO` itself (so an unpacked sdist's old
+# one would be a duplicate), and `dist/` is its default output directory, where
+# a previous build's artifacts sit.
+SDIST_ROOT_SKIPPED: frozenset[str] = frozenset({SDIST_METADATA_FILE, "dist"})
 
 # git's refusal when the repository's owner uid differs from the caller's
 # (CVE-2022-24765). Matched on stderr because the exit code, 128, is git's
@@ -148,7 +203,10 @@ GIT_DUBIOUS_OWNERSHIP = "dubious ownership"
 
 
 def _tracked_paths(root: Path) -> frozenset[str] | None:
-    """Root-relative POSIX paths git tracks under `.pkit/`, or `None` outside a work tree.
+    """Root-relative POSIX paths git tracks, or `None` outside a work tree.
+
+    Every tracked path, not only `.pkit/`'s: the package and the whole sdist are
+    enumerated from this set too (#930).
 
     `None` means "no tracked state to consult": `root` has no `.git` of its own,
     which is the case when building a wheel from an unpacked sdist. The caller
@@ -171,7 +229,7 @@ def _tracked_paths(root: Path) -> frozenset[str] | None:
         return None
     try:
         proc = subprocess.run(
-            ["git", "-C", str(root), "ls-files", "-z", "--", ".pkit"],
+            ["git", "-C", str(root), "ls-files", "-z"],
             capture_output=True,
             check=False,
         )
@@ -218,7 +276,7 @@ def _untracked_source_warning(root: Path) -> str | None:
         return None
     return (
         f"pkit packaging boundary: {root} has no `.git` and no `{SDIST_METADATA_FILE}`, "
-        "so `.pkit/` is bundled from the tree as found rather than from tracked "
+        "so the distribution is built from the tree as found rather than from tracked "
         "files. Untracked files present in it may ship. Build from a git work "
         "tree or an sdist to rule that out."
     )
@@ -230,11 +288,28 @@ def _shippable_files(
     """Every file under `base` a build may carry, in sorted order.
 
     Tracked files only when `tracked` is given, else the tree as found; build
-    caches never. Membership is tested on the walked path rather than by
-    iterating `tracked`, so a file deleted from the work tree but still in the
-    index is skipped instead of failing the build.
+    caches never. A tracked path is shipped only if it is a file in the work
+    tree, so a file deleted from the work tree but still in the index is skipped
+    instead of failing the build — and a submodule, which the index lists as a
+    single path, is skipped rather than walked.
+
+    With `tracked` the candidates come from the index, not a walk: `base` may
+    be the project root (the sdist), and walking that would descend `.git` and
+    any virtual environment only to discard them.
     """
-    for path in sorted(base.rglob("*")):
+    if tracked is not None:
+        prefix = base.relative_to(root).as_posix()
+        candidates = [
+            root / rel
+            for rel in tracked
+            if prefix == "." or rel == prefix or rel.startswith(f"{prefix}/")
+        ]
+    else:
+        candidates = []
+        for dirpath, dirnames, filenames in os.walk(base):
+            dirnames[:] = [d for d in dirnames if d not in EXCLUDED_PARTS]
+            candidates.extend(Path(dirpath, name) for name in filenames)
+    for path in sorted(candidates):
         if not path.is_file():
             continue
         rel = path.relative_to(root)
@@ -243,9 +318,7 @@ def _shippable_files(
         # `__pycache__` would silently bundle nothing.
         if EXCLUDED_PARTS & set(rel.parts):
             continue
-        if path.suffix in EXCLUDED_SUFFIXES:
-            continue
-        if tracked is not None and rel.as_posix() not in tracked:
+        if path.name in EXCLUDED_NAMES or path.suffix in EXCLUDED_SUFFIXES:
             continue
         yield path
 
@@ -269,14 +342,52 @@ def _load_ownership():
     return module
 
 
-class CapabilityBoundaryHook(BuildHookInterface):
-    """Force-include every wholesale-bundled `.pkit/` tree, minus adopter-owned paths.
+def _package_files(tracked: frozenset[str] | None) -> dict[str, str]:
+    """The Python package's force-include map: source path to wheel path.
 
-    Wheel scope is `FILTERED_TREES` above, not capabilities alone. The sole
-    thing shipped at an adopter-owned path is an empty structural marker per
-    `ADOPTER_TIER_MARKERS` entry, so the installer can still read the bundle's
-    shape. Registered on the sdist target too, where it force-includes the
-    `.pkit/` tree from tracked files (#909); see `_initialize_sdist`.
+    `pyproject.toml` excludes the package from hatchling's walk, so this is the
+    only way any of it reaches the wheel (#930). A missing source directory
+    fails the build for the same reason a missing `FILTERED_TREES` entry does: a
+    wheel with no package would otherwise build and report success.
+    """
+    base = ROOT / PACKAGE_SOURCE
+    if not base.is_dir():
+        raise RuntimeError(
+            f"hatch_build: {PACKAGE_SOURCE} is not a directory, so the wheel would "
+            "ship no package. Update PACKAGE_SOURCE if the package moved."
+        )
+    return {
+        str(path): f"{PACKAGE_DEST}/{path.relative_to(base).as_posix()}"
+        for path in _shippable_files(base, root=ROOT, tracked=tracked)
+    }
+
+
+def _check_wheel_version(version: str) -> None:
+    """Refuse a wheel mode other than `standard` or `editable`.
+
+    Only `standard` gets the package's files (`editable` exposes `src/` through
+    a `.pth` instead). A third mode would get neither, and the wheel would build
+    with no package while the build reported success.
+    """
+    if version not in WHEEL_VERSIONS:
+        raise RuntimeError(
+            f"hatch_build: unknown wheel build version {version!r}; this hook "
+            f"handles {', '.join(repr(v) for v in WHEEL_VERSIONS)}. Decide whether "
+            "that mode ships the package's files and add it to WHEEL_VERSIONS; "
+            "building it as-is would ship a wheel with no package."
+        )
+
+
+class CapabilityBoundaryHook(BuildHookInterface):
+    """Force-include the distribution's files from tracked state.
+
+    For the wheel: every wholesale-bundled `.pkit/` tree minus adopter-owned
+    paths (scope is `FILTERED_TREES` above, not capabilities alone), and the
+    Python package (#930). The sole thing shipped at an adopter-owned path is
+    an empty structural marker per `ADOPTER_TIER_MARKERS` entry, so the
+    installer can still read the bundle's shape. Registered on the sdist target
+    too, where it force-includes every file of the sdist from tracked files
+    (#909, #930); see `_initialize_sdist`.
     """
 
     PLUGIN_NAME = "pkit-capability-boundary"
@@ -289,19 +400,23 @@ class CapabilityBoundaryHook(BuildHookInterface):
         if self.target_name == "sdist":
             self._initialize_sdist(tracked, build_data)
         else:
-            self._initialize_wheel(tracked, build_data)
+            self._initialize_wheel(version, tracked, build_data)
 
     def _initialize_sdist(
         self, tracked: frozenset[str] | None, build_data: dict[str, Any]
     ) -> None:
-        """Force-include `.pkit/` into the sdist from tracked files, minus `withhold`.
+        """Force-include the sdist from tracked files, minus `.pkit/`'s `withhold`.
 
         The sdist's own walk cannot do this: hatchling takes every file it finds
         that the root `.gitignore` does not match, so an untracked file shipped,
         and a wheel built from that sdist then shipped it too. So
-        `pyproject.toml` excludes `/.pkit` from the walk and this re-adds the
-        tree. The withhold globs stay in `pyproject.toml`, applied here with the
-        same `pathspec` engine hatchling uses for `exclude`.
+        `pyproject.toml` excludes everything from the walk and this re-adds the
+        tree — all of it, not only `.pkit/`: the package and the tests are as
+        exposed as the methodology tree (#930). Files hatchling force-includes
+        by default (`pyproject.toml`, the README, the licence, `.gitignore`,
+        this file) are left to it rather than added twice. The withhold globs
+        stay in `pyproject.toml`, applied here with the same `pathspec` engine
+        hatchling uses for `exclude`.
 
         Globs by CHOICE, not necessity: this hook could call
         `is_adopter_owned_by_tier` here exactly as the wheel does. It does not,
@@ -323,25 +438,31 @@ class CapabilityBoundaryHook(BuildHookInterface):
             )
         withhold = pathspec.GitIgnoreSpec.from_lines(globs)
 
+        force_include = build_data.setdefault("force_include", {})
+        backend_defaults = set(force_include.values())
         include: dict[str, str] = {}
         withheld = 0
-        for path in _shippable_files(KIT, root=ROOT, tracked=tracked):
-            rel = path.relative_to(ROOT).as_posix()
+        for path in _shippable_files(ROOT, root=ROOT, tracked=tracked):
+            rel_path = path.relative_to(ROOT)
+            rel = rel_path.as_posix()
+            if rel_path.parts[0] in SDIST_ROOT_SKIPPED or rel in backend_defaults:
+                continue
             if withhold.match_file(rel):
                 withheld += 1
                 continue
             include[str(path)] = rel
 
-        build_data.setdefault("force_include", {}).update(include)
+        force_include.update(include)
         source = "tracked files" if tracked is not None else "the unpacked tree"
         self.app.display_info(
-            f"pkit packaging boundary (sdist): {len(include)} .pkit file(s) from "
-            f"{source}, {withheld} withheld"
+            f"pkit packaging boundary (sdist): {len(include)} file(s) from "
+            f"{source}, {withheld} .pkit file(s) withheld"
         )
 
     def _initialize_wheel(
-        self, tracked: frozenset[str] | None, build_data: dict[str, Any]
+        self, version: str, tracked: frozenset[str] | None, build_data: dict[str, Any]
     ) -> None:
+        _check_wheel_version(version)
         ownership = _load_ownership()
         is_adopter_owned = ownership.is_adopter_owned_by_tier
 
@@ -421,3 +542,10 @@ class CapabilityBoundaryHook(BuildHookInterface):
             f"pkit packaging boundary: {len(include)} file(s) bundled from "
             f"{len(FILTERED_TREES)} tree(s), {withheld} adopter-owned path(s) withheld"
         )
+
+        if version == WHEEL_STANDARD:
+            package = _package_files(tracked)
+            build_data["force_include"].update(package)
+            self.app.display_info(
+                f"pkit packaging boundary: {len(package)} {PACKAGE_DEST} package file(s)"
+            )

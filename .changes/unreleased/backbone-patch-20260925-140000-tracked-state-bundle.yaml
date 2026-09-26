@@ -23,6 +23,4 @@ body: >
   without `.git`, a copied tree) still succeeds but warns that untracked files
   may ship. Installs from the git URL build from a clean
   checkout, so their file set is unchanged; verified by comparing kit file lists
-  before and after, which differ only by the stray file. The Python package and
-  the non-`.pkit/` parts of the source distribution still come from the build
-  backend's own walk.
+  before and after, which differ only by the stray file.
