@@ -30,6 +30,14 @@ A capability's **DEC** records are numbered **per capability** — each capabili
 
 `pkit decisions validate` enforces uniqueness within each id-space (core, project, ADR, and per-capability DEC) and is wired into the project's check gate — it catches two records hand-authored with the same id before they land.
 
+### Rule sets — a separate family with the same guarantees
+
+Rules are not decision records, but they share their guarantees ([COR-051](core/COR-051-rule-sets.md)). A **rule set** is one file holding many one-paragraph rules: the data sits in front matter, and each rule's statement sits in the body. Rules form their own identifier family, **`RS-<SET>-NNN`**. Ids are permanent and never reused, and every accepted rule carries a recorded origin.
+
+- **Statuses.** Rules use `proposed` (the default, binding nothing), `accepted` and `superseded`, like records. They add **`withdrawn`**, for a rule retired without a successor, which only rules have.
+- **The acceptance gate** applies per rule, wherever the rule set lives. That includes project-owned rule sets outside this folder, typically under the project's internal documentation root. A proposed rule binds nothing, and accepting one is a reviewed change.
+- **Uniqueness and origins** will be checked by validation once the rule-set schema and checks ship (COR-051, Implications). Until then they are a convention, and nothing enforces them, nor the per-rule gate above.
+
 ## The no-shared-files invariant
 
 Every file has exactly one owner — kit or project — and they never share a path.
