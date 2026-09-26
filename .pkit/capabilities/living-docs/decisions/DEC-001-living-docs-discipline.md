@@ -1,0 +1,107 @@
+---
+id: DEC-001
+title: Living documentation keeps each documentation space true for its readers
+status: accepted
+date: 2026-09-27
+author: Aleš Kalfas <kalfas.ales@gmail.com>
+---
+
+## Context
+
+A project that lets an agent write and maintain its documentation gets fluent text quickly. Without rules, it also gets fluent text that is wrong, repeated, aimed at nobody in particular, and quietly out of date after the next change. Documentation earns trust only if a reader can rely on it. That means it is true against something checkable. It says each fact once. It is written for a reader it actually serves. And it keeps the paths that reader takes unbroken.
+
+Documentation serves two audiences who should not meet each other's material:
+- **Users** need to know *what* the system does and *how* to use it.
+- **Maintainers**, and the agents that write and check the documentation, need to know *why*, *from where*, and *by which rules*.
+
+Mixing the two either buries users in internals or leaves maintainers without the grounds for what the user-facing pages say.
+
+The core layer supplies the machinery:
+- documentation roots by audience (COR-049);
+- anchors and friction, which detect when what a page rests on has changed (COR-050);
+- rule sets (COR-051);
+- slots, through which components exchange knowledge without depending on each other (COR-052).
+
+This record decides how this capability uses them.
+
+## Decision
+
+**Documentation is kept in spaces, each serving one audience. Every page is anchored to what makes it true and written for a declared reader. Drift is detected as friction and fixed by proposals a person reviews, never applied blind.**
+
+1. **Spaces.** A *documentation space* is a body of documentation with its own audience, its own entry point, and its own definition.
+   - Every project has at least a **user space** and a **technical space**, and may add others, such as an interface reference.
+   - **Where new pages go.** New pages of the user space go under the user documentation root, and new pages of the technical space under the internal root (COR-049). A space the project adds declares its own location, under whichever root serves its audience.
+   - **What belongs to a space.** A space's pages are found in the places declared for it (COR-050), which may include files outside its root, such as a repository's top-level README. The capability declares the roots as default places. The project declares any other places, and its surface, in the friction key of its backbone configuration, which the anchors-and-friction record owns (COR-050). The capability's own project configuration holds only what the backbone does not need: each space's audience, entry point and definition path. Trees that sync manages are never places, so a sync never shows up as friction in the project's own history.
+   - **Separation.** This capability's rule is that the two spaces are **separate**: user-facing navigation and search never lead into technical material, and neither root lies inside the other. When a project adopts the capability with both roots still the same folder, as they are by default, that is reported as a finding for onboarding (point 8) to clear, not as a validation failure.
+
+2. **Definitions, kept apart from content.** Each space has a *definition*: the rules its pages follow, and how its pages are made. Definitions are written down so that people and agents follow the same method.
+   - Rules live in rule sets (COR-051). The capability ships a **shared method rule set**, and each space's definition inherits it and adds its own.
+   - A space's definition, including the user space's, lives in the technical space, under a sub-path the capability declares and records on first use (COR-049). Templates and rules are the writers' tools, not reading material, so a space's readers never meet its definition.
+   - The capability's method names nothing project-specific, so the same method serves every project that adopts it.
+
+3. **What the shared rules require.** The shared rule set turns these properties into checkable rules:
+   - a page's **anchors ground every statement** it makes: code, decisions and rules, captured sources, analysis artefacts. Inline citations are optional where a page mixes sources;
+   - each fact is **stated once**, and other pages link to it;
+   - each page **names its reader** and says only what that reader needs;
+   - pages of a kind follow **one format**, with a template per kind;
+   - an index-like file is a **signpost** to what a folder holds, never a summary of its contents;
+   - nothing is created ahead of the need for it.
+
+   The user space adds one more: the **reader paths stay unbroken**.
+
+   The shared set is named `LDOC`, and its origins record this capability's own reasons. The rules about how rules themselves are named, grounded and inherited are not in it, because the rule-set record (COR-051) provides them. The rules about where artefacts come from are carried by anchors: each page names what it rests on, and the anchor graph is the index of why each page exists. A project that already has documentation rules of its own keeps them as a project rule set that inherits `LDOC`. It withdraws any that duplicate what the core provides.
+
+4. **Pages are anchored and rechecked.** Every page is an artefact in the sense of the anchors-and-friction record (COR-050), in the places declared for its space. A page anchors to the code it describes, the decisions and rules it applies, the sources it quotes, and the analysis artefacts it builds on. Its front matter also names its **reader** and its **page kind**, in fields whose schema this capability ships. Sources need an anchor kind that some capability registers. Without one, a source anchor is reported as an unresolved kind, never silently accepted. Because core anchors and registered kinds cover every kind of ground a page rests on, the capability needs no separate slot for anchors. Friction flags a page when any of those changed and the page was not rechecked. Deciding what the change means for the page is judgment, which is what the capability's agent does next.
+
+5. **Fixes are proposed, never applied blind.** The capability's agent resolves friction by *proposing* the change to the page, citing the change that caused it and the anchors it rests on. A person reviews the proposal through the project's approval path. The same holds for any rewrite the agent suggests. A statement the page's anchors do not ground is either grounded by a new anchor, taken out, or raised with a person as a question. It is never left standing as if it were true.
+
+6. **Reader-review.** A *reader-review* reads a page as its declared reader, taken from the readers slot (point 7). It asks whether the page answers that reader's questions, only those, and in a way they can follow. Findings cite the rule a page breaks. A reader-review leaves a record only when it finds something.
+
+   Reader-review judges whether the documentation serves its reader. It is distinct from reviewing a change for missing or contradicted documentation, which belongs to code review: a change review looks at the diff, and reader-review looks at the page. Executed checks, in which a simulated reader follows the documentation and runs the system, are not performed here. Their results arrive through the reading-evidence slot.
+
+7. **Slots.** The capability declares two slots (COR-052):
+   - **`living-docs:readers`**: who reads the documentation and what they need.
+     - **Schema:** a companion schema named after the slot, at version 1. Each entry carries an id, the reader's needs and the paths they take.
+     - **Policy:** `union`.
+     - **Default:** always included, with one entry per mandatory space, a `user` and a `maintainer`. A fresh project therefore has readers on day one. A project file can add or override them, and a capability that keeps knowledge about the software's users may fill it too.
+     - **Inert policy:** `fail`, because validation checks that each page's declared reader resolves. The consequence is intended: if a capability filler falls out of version step, the whole slot is unresolved and page reader checks fail until it catches up.
+     - Reader ids are distinct from the ids an analysis capability gives its actors, so a capability's readers are added alongside the defaults. The project file can override or suppress the defaults by their ids.
+   - **`living-docs:reading-evidence`**: results of executed checks that follow the documentation. Its companion schema, at version 1, has one entry per page or path and commit, keyed by the pair. Policy `union`, no default takes part, inert policy `fallback`, because the evidence advises.
+
+   The capability intends to fill a work-tracking component's documentation-check slot, contributing friction on pages, uncovered surface, and a proposed documentation statement for a change, once that slot's defining record is accepted. The fill is inert when that component is not installed, and never required.
+
+8. **Brownfield onboarding is transformation.** On a project that adopts the capability with existing documentation, nothing is anchored yet. Onboarding is friction work on that starting point. The capability's agent proposes:
+   - which space each existing page belongs to;
+   - how pages should be split, merged or rewritten for their readers;
+   - which anchors each statement should carry;
+   - which existing mappings from code to documentation, if the project keeps any, become page anchors. Retiring such mappings is a separate change for whoever owns them.
+
+   Every proposal cites its evidence and passes a person's review, and moves land as ordinary reviewable changes. Onboarding is complete when the declared surface is covered and no page is left unanchored without an accepted reason.
+
+9. **Independent.** The capability works without any analysis, work-tracking or testing component, and each of them can enrich it through slots.
+
+## Rationale
+
+**Why spaces by audience.** A user who meets maintainers' material in navigation is lost. A maintainer who cannot find the grounds for a user page cannot keep it true. Separating by audience, and keeping each space's method in the technical space, gives both readers what they need. It also gives the writing agent a checkable boundary in place of a judgment call.
+
+**Why the method is kept apart from content.** A method written once, and inherited, can be reused across projects and changed in one place. A method mixed into content cannot be separated again.
+
+**Why every statement must be grounded by the page's anchors.** A statement nothing grounds cannot be judged true or false, and that is what makes fluent, unfounded text look reliable. Anchoring the page, not each sentence, keeps the cost bearable. The agent's and the reviewer's judgment connects each statement to the anchors. Anchors turn "is this still true?" into a question a tool can raise and a reviewer can answer.
+
+**Why propose and never apply.** An agent that rewrites pages directly will eventually rewrite them wrongly: it will misjudge an ambiguous file's audience, or "fix" a page to match a regression. Proposals that cite their evidence, reviewed by a person, keep speed without giving up judgment.
+
+**Why reader-review is separate from change review.** Change review asks whether a change left documentation missing or contradicted. Reader-review asks whether the documentation serves its reader at all. They catch different failures, and merging them would blur both.
+
+### Alternatives considered
+
+- **One documentation tree, with an internal section.** Rejected. Readers meet internal material in navigation and search, and the writing agent loses a checkable boundary.
+- **Each space written without a shared method.** Rejected. Rules would be re-derived per space and per project, and would drift.
+- **Agents applying fixes directly.** Rejected. See Rationale.
+- **A documentation registry maintained by hand.** Rejected. A registry needs maintaining as much as the pages do. Anchors and friction give the same currency signal from the pages themselves.
+- **Running the product inside this capability to test the docs.** Rejected. That is testing; its results arrive as reading evidence instead.
+
+## Implications
+
+- **The capability ships** its shared method rule set, templates per page kind, the declaration of its places, surface and slots, an agent that proposes friction fixes and performs reader-review, and an onboarding guide.
+- **Projects** declare their spaces' locations through the documentation roots, keep each space's definition in the technical space, and wire the core friction check into their continuous integration if they want it enforced.
+- **Analysis components** can supply readers through the readers slot. The capability keeps no glossary of its own; if it needs one, it takes it through a slot from whatever component keeps one. **Work-tracking components** can use the capability's contribution to their documentation checks once that slot exists.
