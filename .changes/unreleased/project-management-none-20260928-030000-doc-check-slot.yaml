@@ -1,0 +1,9 @@
+component: project-management
+kind: none
+body: >
+  Design-ahead: DEC-053 (accepted) — documentation obligations for a pull request
+  are collected through an additive project-management:doc-check slot whose
+  default filler is the existing code-to-doc mapping; a documentation capability
+  may add friction and undocumented-code obligations, each source with its own
+  enforcement setting. Mapping obligations are met exactly as today. No behaviour
+  change until the slot is implemented.
