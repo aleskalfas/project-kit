@@ -1,0 +1,9 @@
+component: living-docs
+kind: none
+body: >
+  Design-ahead: the opt-in living-docs capability is added with its founding
+  decision ([living-docs:DEC-001-living-docs-discipline], accepted) — documentation
+  spaces by audience kept separate, every page anchored to what makes it true and
+  written for a declared reader, drift detected as friction and fixed by reviewed
+  proposals, reader-review, and readers / reading-evidence slots. No adopter-usable
+  surface yet.

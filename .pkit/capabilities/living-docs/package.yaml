@@ -1,0 +1,7 @@
+schema_version: 1
+component:
+  kind: capability
+  name: living-docs
+  version: 0.1.0
+description: Living documentation — documentation spaces by audience, every page anchored to what makes it true, drift detected as friction and fixed by reviewed proposals.
+requires_backbone: ">=1.149.0,<2.0.0"
