@@ -42,7 +42,7 @@ Tracked by #951 (Milestone 5; EPICs #885 and #234). Retires as produced by the t
 | use case | an actor's goal, main path, variants, done-criteria; anchored; revalidated |
 | glossary entry | a domain term and its meaning |
 | change | a proposed alteration of behaviour |
-| walkthrough | an event: checking use cases or journeys against a version of the system (proposed design or actual code); its report is a walkthrough record |
+| revalidation | an event: checking use cases or journeys against one version of the system (proposed design or actual code); its report is a revalidation record (formerly "walk" / "walkthrough") |
 | journey | an end-to-end path an actor takes across several use cases |
 | user story | a need in one sentence (who / wants / so that): the actor's `needs` entry, a use case's Goal |
 | anchor | what makes a statement true: code, a decision, a source (for docs: also a use case) |
@@ -98,9 +98,10 @@ Order follows dependency: where things live → how rules are written → how ca
   │   ├── actors.md
   │   ├── use-cases/UC-NNN-<slug>.md  (+ optional <package>/ subfolders)
   │   └── journeys/JRN-NNN-<slug>.md
-  └── walkthroughs/<date>-<slug>.md
+  └── walkthroughs/<date>-<slug>.md   (renamed revalidations/ — see next entry)
   ```
   Decided by Aleš Kalfas.
+- **2026-09-26 — Revalidation vs testing; terms settled; the evidence slot (option A).** (1) **The "class" is the use case / journey** (the runnable spec); an **instance** is one check of it against one version of the system; its report is a record. Records never sit beside templates. (2) The event is a **revalidation** (supersedes "walkthrough" in this design): one word family with the `revalidated:` marker; records are **revalidation records** in `analysis/revalidations/<date>-<slug>.md`. "Validation" avoided — pkit already uses *validate* for schema/body checks. (3) **Revalidation ≠ testing.** Both compare description and software, in opposite directions: revalidation asks "is our description still true?" (checked by reading; usually fixes the description — "analysis stale"); testing asks "does the software still do what the description says?" (checked by executing; fixes the software — "code regressed"). **software-analysis owns revalidation** (judgment-based, its records, friction) and *reports* a regression it spots; **executed testing is a future software-testing capability**. Rejected: revalidation inside a testing capability (software-analysis could not keep itself true alone — a dependency); one combined capability (different owners, different fixes). (4) **Slots between them follow the consumer-declares rule:** software-analysis declares **`software-analysis:revalidation-evidence`** now — executed results that confirm or refute a use case / journey at a commit; a passing check revalidates deterministically, a failing one is a regression with proof, and fresh passing evidence at the new commit clears friction. Fillable today by the project's CI (tests tagged with the use case they exercise), Mockingbird's persona × task runs, or by hand; a future software-testing capability is one more filler. `software-testing:test-basis` (testing reading use cases) is declared by that capability when it exists — not pre-declared here (COR-007). Decided by Aleš Kalfas.
 ## Reference adopter — Mockingbird (read-only observation, 2026-09-26)
 
 - `docs/` mixes two spaces: user-facing (`guides/`, `EVALUATION.md`, `CLUSTER_ONBOARDING.md`, `INSTALL_ENV_CACHE.md`, `assets/`) and technical (`architecture/decisions/ADR-001…009`, `ARCHITECTURE.md`, `CONTRIBUTING.md`, `RELEASING.md`, `BUILDING_IMAGES.md` — the last possibly serving operators too: a human call).
@@ -117,4 +118,4 @@ Order follows dependency: where things live → how rules are written → how ca
 
 ## Status
 
-Active. Q1–Q7 decided; walkthrough/journeys/grouping refined. Next: Q8 — where walkthrough records live (option A offered: a file only when planned or when gaps/regressions are found; routine clean revalidation = the `revalidated` bump in its commit).
+Active. Q1–Q7 decided; terms settled (revalidation, journeys, grouping rule); evidence slot declared. Next: Q8 — where revalidation records live (option A offered: a file only for planned revalidations and those finding gaps/regressions; routine clean ones = the `revalidated` bump in the commit).
