@@ -71,54 +71,83 @@ def test_reassign_propagates_failure(hi, monkeypatch, capsys) -> None:
     assert "not a collaborator" in capsys.readouterr().err
 
 
-def test_audit_comment_idempotent_skips_when_stamp_exists(hi, monkeypatch) -> None:
-    calls = []
-
-    def fake_gh_run(args, config, **kwargs):
-        import subprocess
-        calls.append(args)
-        if "view" in args:
-            return subprocess.CompletedProcess(
-                args=args, returncode=0,
-                stdout=json.dumps({
-                    "comments": [
-                        {"body": "Other"},
-                        {"body": "<!-- pkit-hook: handoff-issue:alice->bob --> ..."},
-                    ]
-                }),
-                stderr="",
-            )
-        return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
-
-    monkeypatch.setattr(hi, "gh_run", fake_gh_run)
-    result = hi._post_audit_comment_idempotent(
-        42, "<!-- pkit-hook: handoff-issue:alice->bob -->", "body", {},
+def _completed(args, stdout="", returncode=0, stderr=""):
+    import subprocess
+    return subprocess.CompletedProcess(
+        args=args, returncode=returncode, stdout=stdout, stderr=stderr,
     )
-    assert result is True
-    # No `gh issue comment` call should have happened.
-    assert not any(args[1:3] == ["issue", "comment"] for args in calls)
 
 
-def test_audit_comment_posts_when_absent(hi, monkeypatch) -> None:
-    calls = []
+def test_audit_key_includes_the_reason(hi) -> None:
+    """The key names the specific handoff: from, to, the stripped reason and the
+    assignment-event count (#902) — not just from→to, as the old stamp did."""
+    key = hi._handoff_audit_key("alice", "bob", "vacation", 3)
+    assert key.startswith("<!-- pkit-audit-key: handoff-issue:")
+    assert key == hi._handoff_audit_key("alice", "bob", "  vacation ", 3)
+    assert key != hi._handoff_audit_key("alice", "bob", "reorg", 3)
+    assert key != hi._handoff_audit_key("bob", "alice", "vacation", 3)
+    assert key != hi._handoff_audit_key("alice", "bob", "vacation", 5)
+
+
+def test_audit_body_shape(hi) -> None:
+    key = hi._handoff_audit_key("alice", "bob", "vacation", 3)
+    body = hi._handoff_audit_body("alice", "bob", " vacation ", "2026-09-26", key)
+    lines = body.splitlines()
+    assert lines[0] == hi.HANDOFF_AUDIT_MARKER
+    assert "Handoff: @alice → @bob (2026-09-26, reason: vacation)" in lines
+    assert lines[-1] == key
+
+
+def test_assignment_event_count_reads_the_timeline_total(hi, monkeypatch) -> None:
+    captured = {}
 
     def fake_gh_run(args, config, **kwargs):
-        import subprocess
-        calls.append(args)
-        if "view" in args:
-            return subprocess.CompletedProcess(
-                args=args, returncode=0,
-                stdout=json.dumps({"comments": []}), stderr="",
-            )
-        return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
+        captured["args"] = list(args)
+        return _completed(args, json.dumps({"data": {"repository": {"issue": {
+            "timelineItems": {"totalCount": 4}}}}}))
 
     monkeypatch.setattr(hi, "gh_run", fake_gh_run)
-    result = hi._post_audit_comment_idempotent(42, "stamp", "body", {})
-    assert result is True
-    assert any(args[1:3] == ["issue", "comment"] for args in calls)
+    assert hi._assignment_event_count(42, {}) == 4
+    args = captured["args"]
+    assert args[:3] == ["gh", "api", "graphql"]
+    assert "number=42" in args
+    assert "owner={owner}" in args and "name={repo}" in args
 
 
-def test_audit_comment_stamp_includes_from_to(hi) -> None:
-    """The stamp marker discriminates by from→to so successive handoffs each get their own."""
-    # Just verify the prefix shape; main() composes the full stamp.
-    assert hi.AUDIT_STAMP_PREFIX == "<!-- pkit-hook: handoff-issue:"
+@pytest.mark.parametrize(
+    "result",
+    [
+        pytest.param({"returncode": 1, "stderr": "boom"}, id="gh-failure"),
+        pytest.param({"stdout": "not json"}, id="not-json"),
+        pytest.param({"stdout": json.dumps({"data": {"repository": None}})}, id="no-issue"),
+        pytest.param(
+            {"stdout": json.dumps({"data": {"repository": {"issue": {
+                "timelineItems": {"totalCount": "4"}}}}})},
+            id="non-integer",
+        ),
+    ],
+)
+def test_assignment_event_count_is_none_when_unreadable(hi, monkeypatch, result) -> None:
+    monkeypatch.setattr(hi, "gh_run", lambda args, config, **kw: _completed(args, **result))
+    assert hi._assignment_event_count(42, {}) is None
+
+
+def test_audit_posts_when_only_someone_elses_legacy_stamp_exists(hi, monkeypatch) -> None:
+    """The old from→to stamp, in anyone's comment, used to suppress the record."""
+    posts = []
+
+    def fake_gh_run(args, config, **kwargs):
+        if args[:3] == ["gh", "api", "graphql"]:
+            return _completed(args, json.dumps({"data": {"repository": {"issue": {
+                "timelineItems": {"totalCount": 0}}}}}))
+        if "view" in args:
+            return _completed(args, json.dumps({"comments": [{
+                "body": "<!-- pkit-hook: handoff-issue:alice->bob --> ...",
+                "viewerDidAuthor": False, "includesCreatedEdit": False,
+            }]}))
+        posts.append(args)
+        return _completed(args)
+
+    monkeypatch.setattr(hi, "gh_run", fake_gh_run)
+    assert hi._post_handoff_audit(42, "alice", "bob", "vacation", {}) is True
+    assert len(posts) == 1 and posts[0][1:3] == ["issue", "comment"]

@@ -67,10 +67,24 @@ was redundant) on all three, never `satisfied-by-override`.
 Before merging it posts one audit comment per overridden reviewer: the canonical
 DEC-049 audit line (the schema's `audit_comment_template`, `<!-- pkit-audit -->`
 marker) plus additive prose recording who/which/why, the reviewer's state at
-override time, and what the override did to the rest of the gate. Stamped per
+override time, and what the override did to the rest of the gate. Keyed per
 (reviewer, reason, HEAD) for idempotency, so a re-run after new commits
 re-audits against the current state (DEC-050 Decision 3) rather than reusing a
 stale record.
+
+Audit-comment idempotence (#902). Every audit comment this script posts closes
+with a hidden `<!-- pkit-audit-key: <writer>:<digest> -->` line hashed from what
+identifies the specific act — the reason and the PR head commit for `--bypass`
+and `--bypass-ci`; the reviewer, the reason and HEAD for `--bypass-reviewer` —
+so two distinct acts render two distinct bodies. A re-run skips a post only
+when a comment on the subject has EXACTLY the body it is about to post AND was
+posted, unedited, by the account `gh` posts as (GitHub's `viewerDidAuthor`) —
+`_lib.comment.post_audit_once`, over `_lib.audit.own_audit_posted`. So a retry
+of the same act posts nothing new, a distinct act posts its own record, and
+neither a comment anyone else writes nor a same-account comment that merely
+contains the key can suppress one. Every doubt resolves toward posting again.
+For a gate override the comment is the only record: the engine journal has no
+entry for it.
 
 Phase D (DEC-027 mode resolution) wires the per-PR mode lookup that
 chooses between this human-mode gate and DEC-028's agent-verdict gate.
@@ -78,6 +92,14 @@ v1 ships with the human-mode gate as the default.
 
 Side-effects, in order (#878; the merge mechanic itself lives once in
 `_lib.pr_merge`, shared with `merge-pr`):
+  - Audit comments, all BEFORE the merge, so each justification survives a
+    failed merge (DEC-014's bypassable-with-audit). In order: "Approved by
+    bypass: <reason>" on the issue if `--bypass` is used; one
+    per-reviewer-override comment per overridden reviewer on the PR if
+    `--bypass-reviewer` is used (prose, verdict-grammar-distinct, DEC-050);
+    the CI-bypass comment on the PR if `--bypass-ci` overrode a non-green CI
+    gate. Each is keyed and posted at most once per act (above). A post that
+    fails aborts the run before the merge (exit 2).
   - `gh pr merge --squash --subject <PR title>` — WITHOUT `--delete-branch`:
     that flag makes gh check out the default branch locally and delete the
     local head, and the whole `gh pr merge` exits non-zero when the working
@@ -91,11 +113,6 @@ Side-effects, in order (#878; the merge mechanic itself lives once in
     local-checkout dependency), then `git checkout <default_branch>`, `git
     pull --ff-only`, `git branch -D <branch>`. Each step warns with its reason
     and continues; none can fail the run.
-  - Audit comment "Approved by bypass: <reason>" if --bypass is used
-    (stamped + idempotent per DEC-024).
-  - Per-reviewer-override audit comment(s) on the PR if --bypass-reviewer is
-    used (prose, verdict-grammar-distinct, stamped per (reviewer, reason, HEAD)
-    + idempotent per DEC-050).
   - `done-work` does NOT roll back the merge if a downstream step
     fails — merge irreversibility is the architectural constraint per
     DEC-026 failure semantics.
@@ -109,7 +126,6 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import re
 import subprocess
@@ -160,7 +176,15 @@ from _lib.agent_verdicts import (  # noqa: E402
 )
 # DEC-049's canonical audit-comment format + projection knob — the ONE
 # definition (`_lib.audit`), shared with `move-issue`'s transition audit.
-from _lib.audit import render_audit_comment  # noqa: E402
+from _lib.audit import (  # noqa: E402
+    audit_key,
+    bypass_audit_key,
+    render_audit_comment,
+    render_ci_bypass_audit_body,
+    short_sha,
+)
+# The one fetch / scan / post-once wiring every audit writer shares (#902).
+from _lib.comment import fetch_comments, post_audit_once  # noqa: E402
 from _lib.review_contributions import collect_contributions  # noqa: E402
 from _lib.review_mode import resolve_mode  # noqa: E402
 from _lib.required_reviewers import (  # noqa: E402
@@ -177,26 +201,37 @@ def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
     return gh_get_issue(issue_number, config, fields="labels,body")
 
 
-BYPASS_AUDIT_STAMP = "<!-- pkit-hook: done-work-bypass -->"
-CI_BYPASS_AUDIT_STAMP = "<!-- pkit-hook: done-work-ci-bypass -->"
-# Per-reviewer-override audit stamp (DEC-050). Distinct from the single
-# whole-gate BYPASS_AUDIT_STAMP: keyed by the reviewer, the reason AND the HEAD
-# the override was evaluated against, so a different reviewer, a different
-# reason, or the same override after new commits each posts its own audit, while
-# re-running the identical override on an unchanged HEAD is a no-op. Built by
-# `_reviewer_override_stamp`.
-REVIEWER_OVERRIDE_STAMP_PREFIX = "<!-- pkit-hook: done-work-reviewer-override"
+# The whole-gate and CI-bypass audit comments' first-line kind markers. They
+# say WHAT the comment is; they are NOT what makes a post idempotent — a fixed
+# string recognised in anyone's comment let a second, distinct bypass find the
+# first and record nothing, and let any commenter suppress the record (#902).
+BYPASS_AUDIT_MARKER = "<!-- pkit-hook: done-work-bypass -->"
+CI_BYPASS_AUDIT_MARKER = "<!-- pkit-hook: done-work-ci-bypass -->"
+
+# The `_lib.audit.audit_key` writer names. Each audit comment closes with a key
+# hashed from what identifies the specific act, so distinct acts render distinct
+# bodies, and a re-run skips only when the exact body is already there, posted
+# unedited by the account `gh` posts as (`_lib.comment.post_audit_once`):
+#   * whole-gate bypass — the reason and the PR head commit;
+#   * CI bypass         — the reason and the PR head commit;
+#   * reviewer override — the reviewer, the reason and HEAD (DEC-050 D3/D4), so
+#     a different reviewer, a different reason, or the same override after new
+#     commits each posts its own audit, while re-running the identical override
+#     on an unchanged HEAD is a no-op.
+BYPASS_AUDIT_WRITER = "done-work-bypass"
+CI_BYPASS_AUDIT_WRITER = "done-work-ci-bypass"
+REVIEWER_OVERRIDE_AUDIT_WRITER = "done-work-reviewer-override"
 
 # The first-class satisfaction state DEC-050 adds beside a fresh APPROVED. One
 # spelling, used by every surface that reports a slot's status.
 STATE_SATISFIED_BY_OVERRIDE = "satisfied-by-override"
 
 
-def _reviewer_override_stamp(reviewer: str, reason: str, head: str) -> str:
-    """The per-(reviewer, reason, HEAD) idempotency stamp for an override audit.
+def _reviewer_override_key(reviewer: str, reason: str, head: str) -> str:
+    """The per-(reviewer, reason, HEAD) idempotency key for an override audit.
 
-    The three key components are hashed into one digest rather than interpolated,
-    for two reasons:
+    The three key components are hashed into one digest (`_lib.audit.audit_key`)
+    rather than interpolated, for two reasons:
 
       * **Well-formedness.** A hex digest cannot contain `-->`, so the marker
         stays a single HTML comment whatever the inputs are. The reviewer name
@@ -204,7 +239,7 @@ def _reviewer_override_stamp(reviewer: str, reason: str, head: str) -> str:
         containing `-->` would otherwise close the comment early and break every
         later idempotency match against it.
       * **Scope (DEC-050 Decision 3).** The override is evaluated against the
-        currently-resolved set and *current HEAD*. Keying the stamp to HEAD too
+        currently-resolved set and *current HEAD*. Keying it to HEAD too
         means a re-run after new commits posts a FRESH audit carrying the
         freshly-computed state, instead of reusing a record made against a HEAD
         that no longer exists — which could leave the merge with an audit denying
@@ -213,11 +248,20 @@ def _reviewer_override_stamp(reviewer: str, reason: str, head: str) -> str:
 
     The name and reason are stripped first, so cosmetic whitespace does not
     defeat the no-op. The digest is opaque by design: the reviewer, the reason
-    and the state are all in the comment's readable prose below the marker.
+    and the state are all in the comment's readable prose below the marker. It
+    is predictable, so it does not by itself stop suppression: what does is that
+    only an own, unedited comment with the exact body counts
+    (`_lib.audit.own_audit_posted`, #902).
     """
-    key = "\x00".join((reviewer.strip(), reason.strip(), head))
-    digest = hashlib.sha256(key.encode("utf-8")).hexdigest()[:16]
-    return f"{REVIEWER_OVERRIDE_STAMP_PREFIX} key={digest} -->"
+    return audit_key(
+        REVIEWER_OVERRIDE_AUDIT_WRITER, reviewer.strip(), reason.strip(), head
+    )
+
+
+def _bypass_audit_key(writer: str, reason: str, head: str) -> str:
+    """The idempotency key for a whole-gate or CI bypass (#902) — the shared
+    `_lib.audit.bypass_audit_key`: the stripped reason and the PR head commit."""
+    return bypass_audit_key(writer, reason, head)
 
 
 def _head_key(commits: list) -> str:
@@ -601,10 +645,15 @@ def main() -> int:
             print("aborted.", file=sys.stderr)
             return 0
 
+    # The head commit the whole-gate and CI bypasses are keyed on (#902): the
+    # same bypass re-run on an unchanged head is a retry, after new commits it
+    # is a new act that gets its own record.
+    pr_head = str(pr.get("headRefOid") or "")
+
     # Post bypass audit comment if applicable.
     if args.bypass:
         if not _post_bypass_audit_idempotent(
-            args.issue_number, args.bypass, config
+            args.issue_number, args.bypass, config, head=pr_head
         ):
             print(
                 "[warn] could not post bypass audit comment; aborting before merge.",
@@ -613,15 +662,15 @@ def main() -> int:
             return 2
 
     # Post per-reviewer-override audit comment(s) before the merge (DEC-050).
-    # Prose, verdict-grammar-distinct, stamped per (reviewer, reason, HEAD) so a
+    # Prose, verdict-grammar-distinct, keyed per (reviewer, reason, HEAD) so a
     # re-run of the same override on an unchanged HEAD is a no-op while a
     # different reviewer / reason / HEAD posts anew. The trail lands before the
     # merge so it survives a partial failure (mirroring the CI-bypass audit).
     if gate_result.override_audits:
-        # One comment fetch for all of them: each audit scans for its own
-        # distinct stamp, so a list read before the first post is still correct
+        # One comment fetch for all of them: each audit looks for its own
+        # distinct body, so a list read before the first post is still correct
         # for the last.
-        pr_comments = _fetch_subject_comments("pr", pr_number, config)
+        pr_comments = fetch_comments("pr", pr_number, config, run=gh_run)
         for audit in gate_result.override_audits:
             if not _post_reviewer_override_audit(
                 pr_number, audit, override_reason, invoker, config,
@@ -639,7 +688,8 @@ def main() -> int:
     # the trail survives a partial failure).
     if args.bypass_ci and not ci_gate.passing:
         if not _post_ci_bypass_audit(
-            pr_number, args.bypass_ci.strip(), invoker, ci_gate.failing_checks, config
+            pr_number, args.bypass_ci.strip(), invoker, ci_gate.failing_checks,
+            config, head=pr_head,
         ):
             print(
                 "[warn] could not post CI-bypass audit comment; aborting "
@@ -774,7 +824,7 @@ class _OverrideAudit:
     reviewer), a human-readable description of the reviewer's *state at
     override time* (`none` / a fresh `CHANGES_REQUESTED` / a stale `APPROVED`,
     per the DEC), a link to the block comment when one exists, and the HEAD the
-    override was evaluated against (DEC-050 Decision 3 — it keys the stamp).
+    override was evaluated against (DEC-050 Decision 3 — it is in the key).
 
     It also carries what the comment needs to describe the override's SCOPE
     truthfully — whether this override was redundant, and which other required
@@ -1656,83 +1706,26 @@ def _describe_override_state(
 # ---- side-effects ----------------------------------------------------
 
 
-def _fetch_subject_comments(subject: str, number: int, config: dict) -> list:
-    """The issue's or PR's comment list, or `[]` when it cannot be read.
-
-    An unreadable list is deliberately indistinguishable from an empty one HERE:
-    the only consumer is the idempotency scan below, and finding no prior stamp
-    makes it post again — the safe direction for an audit trail.
-    """
-    proc = gh_run(
-        ["gh", subject, "view", str(number), "--json", "comments"],
-        config, check=False,
+def _bypass_audit_body(reason: str, head: str, key: str) -> str:
+    """The whole-gate bypass audit comment: kind marker, reason, the short PR head
+    the bypass was made against (two bypasses with the same reason either side
+    of a force-push would otherwise read identically), idempotency key."""
+    return (
+        f"{BYPASS_AUDIT_MARKER}\n\n"
+        f"Approved by bypass: {reason.strip()}\n\n"
+        f"Approval gate bypassed at PR head {short_sha(head)}.\n\n"
+        f"{key}"
     )
-    if proc.returncode != 0:
-        return []
-    try:
-        data = json.loads(proc.stdout)
-    except (ValueError, json.JSONDecodeError):
-        return []
-    comments = data.get("comments") if isinstance(data, dict) else None
-    return comments if isinstance(comments, list) else []
-
-
-def _post_audit_comment_once(
-    *,
-    subject: str,
-    number: int | None,
-    stamp: str,
-    body: str,
-    config: dict,
-    present_note: str,
-    posted_note: str = "",
-    comments: list | None = None,
-) -> bool:
-    """Post an audit comment unless its stamp is already on the subject.
-
-    The fetch-comments / scan-for-stamp / post-if-absent shape is what makes
-    every audit comment in this script idempotent (DEC-024). It had been
-    open-coded once per writer; this is the one copy (COR-007). The same shape
-    recurs in other pm scripts — consolidating those is a separate change.
-
-    `subject` is `"issue"` or `"pr"` (the two `gh … comment` surfaces).
-    `comments` lets a caller thread an ALREADY-FETCHED list in, so N audits on
-    one mutation cost one fetch rather than N; that is sound precisely because
-    each writer scans for its OWN distinct stamp, so a list fetched before the
-    first post is still correct for the last.
-    """
-    if number is None:
-        return False
-    if comments is None:
-        comments = _fetch_subject_comments(subject, number, config)
-    for comment in comments:
-        if isinstance(comment, dict) and stamp in (comment.get("body") or ""):
-            print(f"  {present_note}")
-            return True
-    proc = gh_run(
-        ["gh", subject, "comment", str(number), "--body", body],
-        config, check=False,
-    )
-    if proc.returncode != 0:
-        print(
-            f"error: gh {subject} comment failed: {proc.stderr.strip()}",
-            file=sys.stderr,
-        )
-        return False
-    if posted_note:
-        print(f"  {posted_note}")
-    return True
 
 
 def _post_bypass_audit_idempotent(
-    issue_number: int, reason: str, config: dict
+    issue_number: int, reason: str, config: dict, *, head: str = ""
 ) -> bool:
-    return _post_audit_comment_once(
-        subject="issue",
-        number=issue_number,
-        stamp=BYPASS_AUDIT_STAMP,
-        body=f"{BYPASS_AUDIT_STAMP}\n\nApproved by bypass: {reason.strip()}",
-        config=config,
+    """Post the whole-gate bypass audit to the issue, once per (reason, head)."""
+    key = _bypass_audit_key(BYPASS_AUDIT_WRITER, reason, head)
+    return post_audit_once(
+        "issue", issue_number, key, _bypass_audit_body(reason, head, key), config,
+        run=gh_run,
         present_note="bypass audit comment already present; idempotent skip",
     )
 
@@ -1761,21 +1754,16 @@ def _gh_get_status_rollup(pr_number: int | None, config: dict) -> list[dict] | N
 
 
 def _ci_bypass_audit_body(
-    invoker: Identity, reason: str, failing_checks: tuple[str, ...]
+    invoker: Identity,
+    reason: str,
+    failing_checks: tuple[str, ...],
+    key: str,
+    head: str = "",
 ) -> str:
-    """Render the CI-bypass audit comment (validation-severity.yaml template).
-
-    Follows the schema's `audit_comment_template`
-    (`Bypassed by <name> <<email>>: <reason>`), naming the overridden checks
-    and stamped for idempotency.
-    """
-    name = invoker.github_login or invoker.email or "<unresolved>"
-    email = invoker.email or "<unknown>"
-    checks = ", ".join(failing_checks) or "(none named)"
-    return (
-        f"{CI_BYPASS_AUDIT_STAMP}\n\n"
-        f"Bypassed by {name} <{email}>: {reason}\n\n"
-        f"CI-status gate overridden; non-passing checks: {checks}."
+    """Render the CI-bypass audit comment — the shape shared with `merge-pr`
+    (`_lib.audit.render_ci_bypass_audit_body`) under this script's kind marker."""
+    return render_ci_bypass_audit_body(
+        CI_BYPASS_AUDIT_MARKER, invoker, reason, failing_checks, head, key,
     )
 
 
@@ -1785,14 +1773,15 @@ def _post_ci_bypass_audit(
     invoker: Identity,
     failing_checks: tuple[str, ...],
     config: dict,
+    *,
+    head: str = "",
 ) -> bool:
-    """Post the CI-bypass audit comment to the PR, idempotently."""
-    return _post_audit_comment_once(
-        subject="pr",
-        number=pr_number,
-        stamp=CI_BYPASS_AUDIT_STAMP,
-        body=_ci_bypass_audit_body(invoker, reason, failing_checks),
-        config=config,
+    """Post the CI-bypass audit comment to the PR, once per (reason, head)."""
+    key = _bypass_audit_key(CI_BYPASS_AUDIT_WRITER, reason, head)
+    return post_audit_once(
+        "pr", pr_number, key,
+        _ci_bypass_audit_body(invoker, reason, failing_checks, key, head), config,
+        run=gh_run,
         present_note="ci-bypass audit comment already present; idempotent skip",
         posted_note="ci-bypass audit comment posted",
     )
@@ -1852,7 +1841,7 @@ def _reviewer_override_audit_body(
     requires (which reviewer, its provenance, its state at override time, the
     block link, and what the override did to the rest of the gate) is additive
     prose BELOW that line: the template carries actor + reason and has no fields
-    for the rest. The DEC-050 idempotency stamp closes the comment.
+    for the rest. The DEC-050 idempotency key closes the comment.
 
     PROSE and verdict-grammar-distinct by construction: the first line is the
     `<!-- pkit-audit -->` marker (an HTML comment), no line matches the DEC-028
@@ -1864,6 +1853,7 @@ def _reviewer_override_audit_body(
         f"required by capability `{audit.capability}`"
         if audit.capability else "baseline reviewer"
     )
+    reason = reason.strip()
     lines = [
         render_audit_comment(capability_root, invoker, reason),
         "",
@@ -1874,7 +1864,7 @@ def _reviewer_override_audit_body(
         lines.append(f"Block comment: {audit.block_comment_url}")
     lines.append(_override_scope_sentence(audit))
     lines.append("")
-    lines.append(_reviewer_override_stamp(audit.reviewer, reason, audit.head))
+    lines.append(_reviewer_override_key(audit.reviewer, reason, audit.head))
     return "\n".join(lines)
 
 
@@ -1890,11 +1880,12 @@ def _post_reviewer_override_audit(
 ) -> bool:
     """Post one per-reviewer-override audit comment to the PR, idempotently.
 
-    Idempotency is keyed by the per-(reviewer, reason, HEAD) stamp (DEC-050): a
+    Idempotency is keyed by the per-(reviewer, reason, HEAD) key (DEC-050): a
     re-run of the identical override on an unchanged HEAD is a no-op, while
     overriding a DIFFERENT reviewer, the same reviewer for a DIFFERENT reason, or
-    the same override after NEW COMMITS carries a distinct stamp and posts its own
-    audit against the freshly-computed state.
+    the same override after NEW COMMITS carries a distinct key and posts its own
+    audit against the freshly-computed state. Only an own, unedited comment
+    with the exact body counts, so no other commenter can suppress it (#902).
 
     This comment is posted regardless of the DEC-049 `audit.projection` level.
     That knob controls how much of the *engine journal* is projected onto GitHub,
@@ -1905,14 +1896,13 @@ def _post_reviewer_override_audit(
     here needs the journal to carry the event first — a DEC-049 question, not a
     call this writer can make.
     """
-    return _post_audit_comment_once(
-        subject="pr",
-        number=pr_number,
-        stamp=_reviewer_override_stamp(audit.reviewer, reason, audit.head),
-        body=_reviewer_override_audit_body(
-            audit, reason, invoker, capability_root
-        ),
-        config=config,
+    return post_audit_once(
+        "pr",
+        pr_number,
+        _reviewer_override_key(audit.reviewer, reason, audit.head),
+        _reviewer_override_audit_body(audit, reason, invoker, capability_root),
+        config,
+        run=gh_run,
         comments=comments,
         present_note=(
             f"reviewer-override audit for `{audit.reviewer}` already present; "
@@ -2011,7 +2001,7 @@ def _find_issue_branch(issue_number: int) -> str | None:
 def _find_pr_for_branch(branch: str, config: dict) -> dict | None:
     proc = gh_run(
         ["gh", "pr", "list", "--head", branch, "--state", "open",
-         "--json", "number,isDraft,headRefName,title,isCrossRepository"],
+         "--json", "number,isDraft,headRefName,headRefOid,title,isCrossRepository"],
         config, check=False,
     )
     if proc.returncode != 0:

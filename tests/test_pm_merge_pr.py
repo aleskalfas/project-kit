@@ -181,11 +181,13 @@ def _identity(mp):
 
 def test_ci_bypass_audit_body_follows_schema_template(mp) -> None:
     """Audit body matches validation-severity.yaml's `Bypassed by <name> <<email>>: <reason>`."""
+    key = mp._ci_bypass_audit_key("advisory changeset guard", "sha1")
     body = mp._ci_bypass_audit_body(
         _identity(mp), "advisory changeset guard on a decision-only PR",
-        ("changeset-guard (FAILURE)",),
+        ("changeset-guard (FAILURE)",), key,
     )
-    assert mp.CI_BYPASS_AUDIT_STAMP in body
+    assert body.startswith(mp.CI_BYPASS_AUDIT_MARKER)
+    assert body.splitlines()[-1] == key
     assert "Bypassed by octocat <octo@example.com>: " in body
     assert "advisory changeset guard on a decision-only PR" in body
     assert "changeset-guard (FAILURE)" in body
@@ -220,15 +222,24 @@ def test_post_ci_bypass_audit_posts_comment(mp, monkeypatch) -> None:
 
 
 def test_post_ci_bypass_audit_idempotent_skip(mp, monkeypatch) -> None:
-    """An already-present audit comment (by stamp) is not re-posted."""
+    """The own, unedited audit comment for the same bypass (exact body) is not
+    re-posted."""
+    import json
     import subprocess
 
     captured: list[list[str]] = []
+    key = mp._ci_bypass_audit_key("override", "sha1")
+    prior = mp._ci_bypass_audit_body(
+        _identity(mp), "override", ("x (FAILURE)",), key, "sha1",
+    )
 
     def fake_gh_run(args, config, **kwargs):
         captured.append(list(args))
         if "view" in args:
-            existing = f'{{"comments": [{{"body": "{mp.CI_BYPASS_AUDIT_STAMP}\\n\\nprior"}}]}}'
+            existing = json.dumps({"comments": [{
+                "body": prior,
+                "viewerDidAuthor": True, "includesCreatedEdit": False,
+            }]})
             return subprocess.CompletedProcess(
                 args=args, returncode=0, stdout=existing, stderr="",
             )
@@ -236,11 +247,11 @@ def test_post_ci_bypass_audit_idempotent_skip(mp, monkeypatch) -> None:
 
     monkeypatch.setattr(mp, "gh_run", fake_gh_run)
     ok = mp._post_ci_bypass_audit(
-        496, "override", _identity(mp), ("x (FAILURE)",), {},
+        496, "override", _identity(mp), ("x (FAILURE)",), {}, head="sha1",
     )
     assert ok is True
     assert not [c for c in captured if "comment" in c], (
-        "must not re-post when the stamped audit comment already exists"
+        "must not re-post when the exact own audit comment already exists"
     )
 
 
@@ -307,6 +318,7 @@ def _wire_merge_seams(mp, monkeypatch, *, rollup, head_branch="fix/42-slug", cro
         lambda pr_number, config: {
             "title": "fix: a thing", "body": "Closes #42\n## Test plan\n- [x] ok",
             "state": "open", "url": "http://pr/99", "headRefName": head_branch,
+            "headRefOid": "sha-head",
             "statusCheckRollup": rollup, "isCrossRepository": cross_repository,
         },
     )
@@ -315,8 +327,9 @@ def _wire_merge_seams(mp, monkeypatch, *, rollup, head_branch="fix/42-slug", cro
         lambda pr_number, pr_body, closing, config: {},
     )
 
-    def _stub_ci_audit(pr_number, reason, invoker, checks, config):
+    def _stub_ci_audit(pr_number, reason, invoker, checks, config, *, head=""):
         calls["ci_audit"] = True
+        calls["ci_audit_head"] = head
         return True
 
     def _stub_merge(pr_number, *, pr_title, admin, config):
@@ -370,6 +383,7 @@ def test_merge_bypass_ci_clears_red_ci_and_posts_audit(mp, monkeypatch):
     rc = _run_merge_main(mp, monkeypatch, ["99", "--bypass-ci", "advisory", "--yes"])
     assert rc == 0
     assert calls["ci_audit"] is True
+    assert calls["ci_audit_head"] == "sha-head", "keyed on the PR head (#902)"
     assert calls["merged"] is True
 
 

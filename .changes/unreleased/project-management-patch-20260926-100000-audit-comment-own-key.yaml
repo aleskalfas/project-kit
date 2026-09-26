@@ -1,0 +1,32 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+  pr: "953"
+body: >
+  Every bypass `done-work` and `merge-pr` perform, and every `handoff-issue`,
+  now leaves its own audit comment, and no comment another actor posts can
+  stop one being written. Before, `--bypass`, `--bypass-ci` and
+  `handoff-issue` skipped posting when any comment on the issue or PR
+  contained a fixed stamp string. So a second, honest act (a different reason,
+  new commits, or a handoff back and forth) recorded nothing. Anyone who
+  posted the stamp also suppressed the record, and for a gate override that
+  comment is the only record. Each audit comment from `done-work`, `merge-pr`,
+  `move-issue` and `handoff-issue` now ends with a hidden key,
+  `<!-- pkit-audit-key: <writer>:<digest> -->`, hashed from what identifies
+  the act. For `--bypass` and `--bypass-ci` that is the reason and the PR head
+  commit. For `handoff-issue` it is from, to, the reason and the issue's count
+  of assignment events. A retry skips only when a comment with exactly the
+  body it would post (line endings and trailing whitespace aside) was posted,
+  unedited, by the account `gh` posts as. That account also covers other
+  workflows on the same CI token and comments the operator typed by hand, so a
+  comment that merely quotes a key, such as a multi-line bypass reason, does
+  not count. The per-reviewer override and `move-issue`'s transition audit get
+  the same guard, and the per-reviewer override's stamp moves to the new key
+  form. The whole-gate and CI bypass comments now name the short PR head
+  commit, so two bypasses either side of a force-push read differently. Any
+  doubt resolves toward posting again. The first retry of an act audited
+  under the old stamps therefore posts one fresh comment. `done-work`'s
+  documented side-effect order now states that its audit comments post before
+  the merge. The capability README says what makes an audit comment unique and
+  what stops suppression (#902).

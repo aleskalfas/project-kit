@@ -12,8 +12,9 @@ fresh APPROVED — while every other required reviewer still gates. These cover:
     but still proceeds.
   * **verdict-distinctness** — the audit comment is NOT counted by the gate's
     verdict reader (`gate_verdicts`).
-  * **idempotency** — the per-reviewer(+reason) stamp makes a re-run a no-op,
-    while a different reviewer / reason posts anew.
+  * **idempotency** — the per-(reviewer, reason, HEAD) key makes a re-run a
+    no-op, while a different reviewer / reason / HEAD posts anew, and only
+    pkit's own unedited comment carrying the key counts (#902).
   * **ephemeral** — the override does not persist: a later run WITHOUT the flag
     re-resolves and refuses.
   * **one honest answer per slot** — the three surfaces that report the gate's
@@ -612,7 +613,7 @@ def test_threaded_comment_list_costs_no_extra_fetch(dw, monkeypatch) -> None:
 
     monkeypatch.setattr(dw, "gh_run", fake_gh_run)
     invoker = dw.Identity(github_login="alice", email="alice@example.test")
-    comments = dw._fetch_subject_comments("pr", 7, {})
+    comments = dw.fetch_comments("pr", 7, {}, run=dw.gh_run)
     assert len(fetches) == 1
     for name in ("a-reviewer", "b-reviewer", "c-reviewer"):
         audit = dw._OverrideAudit(
@@ -888,18 +889,24 @@ def test_no_override_builds_no_audits_and_reparses_nothing(dw) -> None:
     assert reparsed == [], "no override supplied → the comments are never walked"
 
 
-# ---- per-reviewer(+reason) idempotency stamp -------------------------
+# ---- per-(reviewer, reason, HEAD) idempotency key --------------------
+
+
+def _own(body: str) -> dict:
+    """A comment as GitHub reports it when the gh-authenticated identity posted
+    it and nobody edited it — what pkit's own audit post looks like (#902)."""
+    return {"body": body, "viewerDidAuthor": True, "includesCreatedEdit": False}
 
 
 def test_stamp_differs_by_reviewer(dw) -> None:
-    a = dw._reviewer_override_stamp("design-reviewer", "reason", "head1")
-    b = dw._reviewer_override_stamp("backend-reviewer", "reason", "head1")
+    a = dw._reviewer_override_key("design-reviewer", "reason", "head1")
+    b = dw._reviewer_override_key("backend-reviewer", "reason", "head1")
     assert a != b
 
 
 def test_stamp_differs_by_reason(dw) -> None:
-    a = dw._reviewer_override_stamp("design-reviewer", "reason one", "head1")
-    b = dw._reviewer_override_stamp("design-reviewer", "reason two", "head1")
+    a = dw._reviewer_override_key("design-reviewer", "reason one", "head1")
+    b = dw._reviewer_override_key("design-reviewer", "reason two", "head1")
     assert a != b
 
 
@@ -910,14 +917,14 @@ def test_stamp_differs_by_head(dw) -> None:
     keying only on name+reason let a run recording "none" be reused after the
     reviewer had posted a CHANGES_REQUESTED — an audit denying the block it
     waived, with no link to it."""
-    a = dw._reviewer_override_stamp("design-reviewer", "reason", "sha-old")
-    b = dw._reviewer_override_stamp("design-reviewer", "reason", "sha-new")
+    a = dw._reviewer_override_key("design-reviewer", "reason", "sha-old")
+    b = dw._reviewer_override_key("design-reviewer", "reason", "sha-new")
     assert a != b
 
 
 def test_stamp_stable_for_same_reviewer_reason_and_head(dw) -> None:
-    a = dw._reviewer_override_stamp("design-reviewer", "  reason  ", "head1")
-    b = dw._reviewer_override_stamp(" design-reviewer ", "reason", "head1")
+    a = dw._reviewer_override_key("design-reviewer", "  reason  ", "head1")
+    b = dw._reviewer_override_key(" design-reviewer ", "reason", "head1")
     # Name and reason are stripped before hashing, so surrounding whitespace is
     # a no-op — a re-run with cosmetically-different text still no-ops.
     assert a == b
@@ -931,12 +938,12 @@ def test_stamp_survives_a_comment_closer_in_the_reviewer_name(dw) -> None:
     every re-run reposted. Hashing the name makes the marker well-formed by
     construction — and still distinguishes the two names."""
     evil = "design-reviewer --> <!-- injected"
-    stamp = dw._reviewer_override_stamp(evil, "reason", "head1")
+    stamp = dw._reviewer_override_key(evil, "reason", "head1")
     assert stamp.startswith("<!--")
     assert stamp.endswith("-->")
     # Exactly one comment closer: the marker's own.
     assert stamp.count("-->") == 1
-    assert stamp != dw._reviewer_override_stamp("design-reviewer", "reason", "head1")
+    assert stamp != dw._reviewer_override_key("design-reviewer", "reason", "head1")
 
 
 def test_stamp_scan_matches_a_posted_evil_name_stamp(dw, monkeypatch) -> None:
@@ -955,7 +962,7 @@ def test_stamp_scan_matches_a_posted_evil_name_stamp(dw, monkeypatch) -> None:
             return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
         return subprocess.CompletedProcess(
             args=args, returncode=0,
-            stdout=json.dumps({"comments": [{"body": b} for b in posted]}),
+            stdout=json.dumps({"comments": [_own(b) for b in posted]}),
             stderr="",
         )
 
@@ -968,30 +975,30 @@ def test_stamp_scan_matches_a_posted_evil_name_stamp(dw, monkeypatch) -> None:
     assert len(posted) == 1
 
 
-def test_audit_idempotent_skip_when_stamp_present(dw, monkeypatch) -> None:
-    """Re-running the identical override is a no-op: the stamp is already on the
-    PR, so no new comment is posted."""
+def test_audit_idempotent_skip_when_own_key_present(dw, monkeypatch) -> None:
+    """Re-running the identical override is a no-op: the exact own, unedited
+    audit comment is already on the PR, so no new comment is posted."""
     audit = dw._OverrideAudit(
         reviewer="design-reviewer", capability=None,
         state="none (no verdict the gate counts)", block_comment_url=None,
         head="head1",
     )
-    stamp = dw._reviewer_override_stamp("design-reviewer", "same reason", "head1")
+    invoker = dw.Identity(github_login="alice", email="alice@example.test")
+    prior = dw._reviewer_override_audit_body(audit, "same reason", invoker)
     posted: list = []
 
     def fake_gh_run(args, config, **kwargs):
         if "comment" in args and "--body" in args:
             posted.append(args)
             return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
-        # gh pr view --json comments → the stamp is already present.
+        # gh pr view --json comments → the exact own comment is already present.
         return subprocess.CompletedProcess(
             args=args, returncode=0,
-            stdout=json.dumps({"comments": [{"body": f"{stamp}\n\nold audit"}]}),
+            stdout=json.dumps({"comments": [_own(prior)]}),
             stderr="",
         )
 
     monkeypatch.setattr(dw, "gh_run", fake_gh_run)
-    invoker = dw.Identity(github_login="alice", email="alice@example.test")
     ok = dw._post_reviewer_override_audit(7, audit, "same reason", invoker, {})
     assert ok is True
     assert posted == []  # no new comment.
@@ -1005,7 +1012,7 @@ def test_audit_posts_when_reason_differs(dw, monkeypatch) -> None:
         state="none (no verdict the gate counts)", block_comment_url=None,
         head="head1",
     )
-    old_stamp = dw._reviewer_override_stamp("design-reviewer", "old reason", "head1")
+    old_key = dw._reviewer_override_key("design-reviewer", "old reason", "head1")
     posted: list = []
 
     def fake_gh_run(args, config, **kwargs):
@@ -1014,7 +1021,7 @@ def test_audit_posts_when_reason_differs(dw, monkeypatch) -> None:
             return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
         return subprocess.CompletedProcess(
             args=args, returncode=0,
-            stdout=json.dumps({"comments": [{"body": f"{old_stamp}\n\nold audit"}]}),
+            stdout=json.dumps({"comments": [_own(f"old audit\n\n{old_key}")]}),
             stderr="",
         )
 
@@ -1053,7 +1060,7 @@ def test_audit_reposts_after_new_commits(dw, monkeypatch) -> None:
             return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
         return subprocess.CompletedProcess(
             args=args, returncode=0,
-            stdout=json.dumps({"comments": [{"body": prior_body}]}), stderr="",
+            stdout=json.dumps({"comments": [_own(prior_body)]}), stderr="",
         )
 
     monkeypatch.setattr(dw, "gh_run", fake_gh_run)

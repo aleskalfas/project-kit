@@ -59,7 +59,6 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import re
 import subprocess
@@ -79,6 +78,8 @@ from _lib import bootstrap_gate  # noqa: E402
 from _lib import classification_rules  # noqa: E402
 from _lib import lifecycle_inference as infer  # noqa: E402
 from _lib import session_guard  # noqa: E402
+# The one fetch / scan / post-once wiring every audit writer shares (#902).
+from _lib.comment import post_audit_once  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib.hooks import fire_hooks  # noqa: E402
 from _lib.membership import (  # noqa: E402
@@ -112,8 +113,12 @@ _audit_projection = _audit.audit_projection
 # The idempotency key that closes a TRANSITION audit comment (#901). It is a key,
 # not a kind marker: the comment's kind is still the template's `<!-- pkit-audit -->`
 # on its first line, and this trailing line only lets a retry recognise the
-# comment it already posted. Built by `_transition_audit_key`.
-TRANSITION_AUDIT_KEY_PREFIX = "<!-- pkit-audit-key: move-issue:"
+# comment it already posted. Built by `_transition_audit_key` through the shared
+# `_lib.audit.audit_key`; a retry skips only when a comment with the exact body
+# was posted, unedited, by the account `gh` posts as (`_lib.comment.
+# post_audit_once`, #902).
+TRANSITION_AUDIT_WRITER = "move-issue"
+TRANSITION_AUDIT_KEY_PREFIX = f"{_audit.AUDIT_KEY_PREFIX}{TRANSITION_AUDIT_WRITER}:"
 
 
 def _pkit_version() -> str:
@@ -749,17 +754,17 @@ def _transition_audit_key(
     key minted while the engine was reachable, so a retry across that boundary
     posts again — the safe direction for an audit trail.
 
-    Hashed rather than interpolated so the reason cannot close the HTML comment
-    early; the readable reason is in the comment's canonical line above it.
+    Hashed rather than interpolated (by `_lib.audit.audit_key`) so the reason
+    cannot close the HTML comment early; the readable reason is in the comment's
+    canonical line above it.
     """
-    parts = (
+    return _audit.audit_key(
+        TRANSITION_AUDIT_WRITER,
         from_state or "",
         to_state,
         reason.strip(),
         "" if journal_length is None else str(journal_length),
     )
-    digest = hashlib.sha256("\x00".join(parts).encode("utf-8")).hexdigest()[:16]
-    return f"{TRANSITION_AUDIT_KEY_PREFIX}{digest} -->"
 
 
 def _bypass_reason_missing(bypass: bool, bypass_reason: str | None) -> bool:
@@ -1006,47 +1011,24 @@ def _gh_comment(issue_number: int, body: str, config: dict) -> bool:
     return True
 
 
-def _gh_issue_comment_bodies(issue_number: int, config: dict) -> list[str]:
-    """The bodies of the issue's comments, or `[]` when they cannot be read.
-
-    An unreadable list is deliberately indistinguishable from an empty one: the
-    only consumer is the retry scan, and finding nothing makes it post — the safe
-    direction for an audit trail.
-    """
-    try:
-        proc = gh_run(
-            ["gh", "issue", "view", str(issue_number), "--json", "comments"],
-            config,
-            check=False,
-        )
-    except FileNotFoundError:
-        return []
-    if proc.returncode != 0:
-        return []
-    try:
-        data = json.loads(proc.stdout)
-    except (json.JSONDecodeError, ValueError):
-        return []
-    comments = data.get("comments") if isinstance(data, dict) else None
-    if not isinstance(comments, list):
-        return []
-    return [
-        str(c.get("body") or "") for c in comments if isinstance(c, dict)
-    ]
-
-
 def _post_transition_audit_once(
     issue_number: int, body: str, key: str, config: dict
 ) -> bool:
-    """Post the transition audit comment unless one with `key` is already there.
+    """Post the transition audit comment unless that exact comment is already there.
+
+    The shared `_lib.comment.post_audit_once` (#902): only a comment with exactly
+    this body, posted unedited by the account `gh` posts as, counts — so neither a
+    comment anyone else writes nor a same-account comment that merely contains
+    `key` can suppress the record.
 
     True when the comment is posted or already present; False only when a post
     was needed and failed (the caller then aborts before mutating).
     """
-    if any(key in existing for existing in _gh_issue_comment_bodies(issue_number, config)):
-        print("  transition audit comment already present; idempotent skip")
-        return True
-    return _gh_comment(issue_number, body, config)
+    return post_audit_once(
+        "issue", issue_number, key, body, config,
+        run=gh_run,
+        present_note="transition audit comment already present; idempotent skip",
+    )
 
 
 def _cascade_forward_target(child_target: str) -> str:

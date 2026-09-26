@@ -9,12 +9,21 @@ it carries no validation-severity finding; the only failure is an empty body.
 
 Both `scripts/comment-issue.py` and `scripts/comment-pr.py` are thin wrappers
 that call :func:`run_comment_verb` with their subject.
+
+It is also the one home of the issue/PR comment `gh` wiring the audit writers
+share: :func:`post_comment`, :func:`fetch_comments`, and :func:`post_audit_once`
+— the fetch / scan / post-if-absent shape every audit comment (`done-work`,
+`merge-pr`, `move-issue`, `handoff-issue`) goes through so it is posted at most
+once per act (#902). The recognition rule itself is `_lib.audit.own_audit_posted`
+(pure, no `gh`); this module only wires it to `gh`.
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
 from ruamel.yaml import YAML
@@ -25,6 +34,7 @@ from ruamel.yaml.error import YAMLError
 # (scripts/_lib/ on sys.path) — mirrors `_lib/pr_validation.py`'s idiom.
 try:
     from agent_verdicts import parse_verdict_line  # type: ignore[import-not-found]
+    from audit import own_audit_posted  # type: ignore[import-not-found]
     from gh import gh_run, load_adopter_config  # type: ignore[import-not-found]
     import session_guard  # type: ignore[import-not-found]
     from membership import (  # type: ignore[import-not-found]
@@ -35,6 +45,7 @@ try:
     )
 except ImportError:  # pragma: no cover
     from _lib.agent_verdicts import parse_verdict_line  # type: ignore[no-redef]
+    from _lib.audit import own_audit_posted  # type: ignore[no-redef]
     from _lib.gh import gh_run, load_adopter_config  # type: ignore[no-redef]
     from _lib import session_guard  # type: ignore[no-redef]
     from _lib.membership import (  # type: ignore[no-redef]
@@ -61,15 +72,28 @@ def stamp_freeform(body: str) -> str:
     return f"{body.rstrip()}\n\n{FREEFORM_MARKER}\n"
 
 
-def post_comment(subject: str, number: int, body: str, config: dict) -> bool:
-    """Post a freeform comment on an issue or PR via `gh <subject> comment`.
+#: A `gh` runner: `gh_run`'s signature. Audit writers pass their own module's
+#: `gh_run` so a test that fakes a script's `gh` layer fakes these calls too.
+GhRunner = Callable[..., object]
 
-    Mirrors the canonical comment-post used by the transition verbs' audit
-    comments. Returns True on success; prints gh's stderr and returns False on
-    any failure.
+
+def post_comment(
+    subject: str,
+    number: int,
+    body: str,
+    config: dict,
+    *,
+    run: GhRunner | None = None,
+) -> bool:
+    """Post a comment on an issue or PR via `gh <subject> comment`.
+
+    The one comment-post the freeform verbs and every audit writer share. `run`
+    is the `gh` runner (default `gh_run`). Returns True on success; prints gh's
+    stderr and returns False on any failure.
     """
+    runner = run or gh_run
     try:
-        proc = gh_run(
+        proc = runner(
             ["gh", subject, "comment", str(number), "--body", body],
             config,
             check=False,
@@ -84,6 +108,87 @@ def post_comment(subject: str, number: int, body: str, config: dict) -> bool:
             file=sys.stderr,
         )
         return False
+    return True
+
+
+def fetch_comments(
+    subject: str, number: int, config: dict, *, run: GhRunner | None = None
+) -> list[dict]:
+    """The issue's or PR's comments as `gh <subject> view --json comments`
+    returns them (whole entries, authorship fields included), or `[]` when they
+    cannot be read.
+
+    An unreadable list is deliberately indistinguishable from an empty one: the
+    only consumer is the audit retry scan, and finding nothing makes it post
+    again — the safe direction for an audit trail.
+    """
+    runner = run or gh_run
+    try:
+        proc = runner(
+            ["gh", subject, "view", str(number), "--json", "comments"],
+            config,
+            check=False,
+        )
+    except FileNotFoundError:
+        return []
+    if proc.returncode != 0:
+        return []
+    try:
+        data = json.loads(proc.stdout)
+    except (TypeError, ValueError):
+        return []
+    comments = data.get("comments") if isinstance(data, dict) else None
+    if not isinstance(comments, list):
+        return []
+    return [c for c in comments if isinstance(c, dict)]
+
+
+def post_audit_once(
+    subject: str,
+    number: int | None,
+    key: str,
+    body: str,
+    config: dict,
+    *,
+    run: GhRunner | None = None,
+    comments: list | None = None,
+    present_note: str = "audit comment already present; idempotent skip",
+    posted_note: str = "",
+) -> bool:
+    """Post the audit comment `body` unless that exact comment is already there.
+
+    The one fetch / scan / post-if-absent shape behind every audit comment
+    (#902). It skips only when `_lib.audit.own_audit_posted` finds a comment,
+    posted unedited by the account `gh` posts as, whose body equals `body`
+    (line endings and trailing whitespace aside). So a retry of the same act
+    skips, a distinct act posts, nobody else's comment can suppress the record,
+    and neither can a same-account comment that merely contains the key.
+
+    `key` is the act's `_lib.audit.audit_key`; `body` must carry it as a line —
+    it is what makes two distinct acts render two distinct bodies, so a body
+    without it is a writer bug and raises `ValueError` before any `gh` call.
+
+    `subject` is `"issue"` or `"pr"`. `run` is the `gh` runner (default
+    `gh_run`). `comments` lets a caller thread an already-fetched list in, so N
+    audits on one mutation cost one fetch; that is sound because each audit
+    looks for its own distinct body.
+
+    True when the comment is posted or already present; False when `number` is
+    unknown or a needed post failed (the caller then aborts before mutating).
+    """
+    if key not in body.splitlines():
+        raise ValueError(f"audit comment body does not carry its key {key!r}")
+    if number is None:
+        return False
+    if comments is None:
+        comments = fetch_comments(subject, number, config, run=run)
+    if own_audit_posted(comments, body):
+        print(f"  {present_note}")
+        return True
+    if not post_comment(subject, number, body, config, run=run):
+        return False
+    if posted_note:
+        print(f"  {posted_note}")
     return True
 
 
