@@ -11,3 +11,7 @@ components:
     name: software-engineering
     manifest: .pkit/capabilities/software-engineering/manifest.yaml
     origin: incubated-in-repo
+  - kind: capability
+    name: software-analysis
+    manifest: .pkit/capabilities/software-analysis/manifest.yaml
+    origin: incubated-in-repo

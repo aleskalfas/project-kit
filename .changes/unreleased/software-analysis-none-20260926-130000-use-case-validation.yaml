@@ -1,0 +1,9 @@
+component: software-analysis
+kind: none
+body: >
+  Design-ahead: the opt-in `software-analysis` capability is added with its first
+  decision, use-case validation ([software-analysis:DEC-001-use-case-validation]) — walk
+  numbered use cases through a design that crosses more than one part of the
+  system before filing its work, keep them, and re-walk them on close. No
+  adopter-usable surface yet; the stamp and validate commands (#887) carry the
+  changeset that announces the capability.
