@@ -17,9 +17,19 @@ Gates per DEC-026:
     operation as self-service ownership transfer.
   - Issue currently in `In Progress` or `Review`.
 
-Side-effects:
-  - Posts audit comment: `Handoff: @<from> → @<to> (YYYY-MM-DD, reason: <text>)`
-    (idempotent via DEC-024 template-stamp).
+Side-effects, in order:
+  - Posts audit comment: `Handoff: @<from> → @<to> (YYYY-MM-DD, reason: <text>)`,
+    BEFORE the reassignment so the justification survives a failed edit. It
+    closes with a hidden `<!-- pkit-audit-key: handoff-issue:<digest> -->`
+    hashed from the from/to pair, the stripped reason, and the issue's count of
+    assignment events (assigned + unassigned) read just before posting. A
+    successful handoff adds at least one such event and a failed one adds
+    none, so a retry of a failed attempt reproduces the comment exactly and
+    posts nothing new, while a later handoff identical in from, to and reason
+    (A→B, B→A, A→B again) renders a different comment and is recorded. The
+    post-once rule is the shared `_lib.comment.post_audit_once` (#902): only a
+    comment with exactly that body, posted unedited by the account `gh` posts
+    as, counts.
   - `gh issue edit --add-assignee <to> --remove-assignee <from>`.
   - No `move-issue` call (no state transition).
 
@@ -42,6 +52,9 @@ from ruamel.yaml import YAML
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import bootstrap_gate  # noqa: E402
+from _lib.audit import audit_key  # noqa: E402
+# The one fetch / scan / post-once wiring every audit writer shares (#902).
+from _lib.comment import post_audit_once  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib import session_guard  # noqa: E402
 from _lib.membership import (  # noqa: E402
@@ -52,7 +65,25 @@ from _lib.membership import (  # noqa: E402
 )
 
 
-AUDIT_STAMP_PREFIX = "<!-- pkit-hook: handoff-issue:"
+# The handoff audit comment's first-line kind marker. It says WHAT the comment
+# is; it is not what makes the post idempotent — the stamp this replaced
+# (`<!-- pkit-hook: handoff-issue:<from>-><to> -->`, matched as a substring in
+# anyone's comment) let any commenter suppress the record and let a later
+# handoff identical in from/to find the first and record nothing (#902).
+HANDOFF_AUDIT_MARKER = "<!-- pkit-hook: handoff-issue -->"
+# The `_lib.audit.audit_key` writer name for the handoff audit.
+HANDOFF_AUDIT_WRITER = "handoff-issue"
+
+# One GraphQL round-trip for the issue's assignment-event count (a totalCount,
+# so no pagination). `{owner}` / `{repo}` are `gh api` placeholders resolved from
+# the current repository, the same repository `gh issue view` reads.
+_ASSIGNMENT_EVENTS_QUERY = (
+    "query($owner: String!, $name: String!, $number: Int!) {"
+    " repository(owner: $owner, name: $name) {"
+    " issue(number: $number) {"
+    " timelineItems(itemTypes: [ASSIGNED_EVENT, UNASSIGNED_EVENT]) { totalCount }"
+    " } } }"
+)
 
 
 def main() -> int:
@@ -162,15 +193,9 @@ def main() -> int:
             print("aborted.", file=sys.stderr)
             return 0
 
-    # Audit comment (idempotent — stamp includes from/to so re-runs are no-op).
-    today = dt.date.today().isoformat()
-    audit_stamp = f"{AUDIT_STAMP_PREFIX}{from_assignee}->{new_assignee} -->"
-    audit_body = (
-        f"{audit_stamp}\n\n"
-        f"Handoff: @{from_assignee} → @{new_assignee} ({today}, reason: {reason})"
-    )
-    if not _post_audit_comment_idempotent(
-        args.issue_number, audit_stamp, audit_body, config
+    # Audit comment, BEFORE the reassignment, posted at most once per handoff.
+    if not _post_handoff_audit(
+        args.issue_number, from_assignee, new_assignee, reason, config
     ):
         return 2
 
@@ -192,33 +217,95 @@ def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
     )
 
 
-def _post_audit_comment_idempotent(
-    issue_number: int, stamp_marker: str, body: str, config: dict
-) -> bool:
-    proc = gh_run(
-        ["gh", "issue", "view", str(issue_number), "--json", "comments"],
-        config, check=False,
-    )
-    if proc.returncode == 0:
-        try:
-            data = json.loads(proc.stdout)
-            for c in data.get("comments", []):
-                if stamp_marker in (c.get("body") or ""):
-                    print("  handoff audit comment already present; idempotent skip")
-                    return True
-        except (ValueError, KeyError, TypeError):
-            pass
-    proc = gh_run(
-        ["gh", "issue", "comment", str(issue_number), "--body", body],
-        config, check=False,
-    )
-    if proc.returncode != 0:
-        print(
-            f"error: gh issue comment failed: {proc.stderr.strip()}",
-            file=sys.stderr,
+def _assignment_event_count(issue_number: int, config: dict) -> int | None:
+    """How many assigned + unassigned events the issue's timeline holds, or None
+    when that cannot be read.
+
+    It is the handoff audit key's "has a handoff landed since?" component: a
+    successful `gh issue edit --add-assignee/--remove-assignee` adds at least one
+    event, a failed one adds none. Assignments made outside pkit also add events,
+    which only ever makes a later handoff post again. An unreadable count
+    contributes an empty key component, which differs from every key minted with
+    a readable one, so a retry across that boundary posts again.
+    """
+    try:
+        proc = gh_run(
+            [
+                "gh", "api", "graphql",
+                "-F", "owner={owner}",
+                "-F", "name={repo}",
+                "-F", f"number={issue_number}",
+                "-f", f"query={_ASSIGNMENT_EVENTS_QUERY}",
+            ],
+            config, check=False,
         )
-        return False
-    return True
+    except FileNotFoundError:
+        return None
+    if proc.returncode != 0:
+        return None
+    try:
+        data = json.loads(proc.stdout)
+        count = data["data"]["repository"]["issue"]["timelineItems"]["totalCount"]
+    except (TypeError, ValueError, KeyError):
+        return None
+    return count if isinstance(count, int) and not isinstance(count, bool) else None
+
+
+def _post_handoff_audit(
+    issue_number: int,
+    from_assignee: str,
+    to_assignee: str,
+    reason: str,
+    config: dict,
+) -> bool:
+    """Post the handoff audit comment unless that exact comment is already there.
+
+    Reads the assignment-event count, renders the keyed body, and posts it
+    through the shared `_lib.comment.post_audit_once` (#902). The count grows
+    only when a handoff lands, so a retry of a failed attempt reproduces the
+    comment exactly and skips, while a later handoff identical in from, to and
+    reason posts its own. True when posted or already present; False when a
+    needed post failed (the caller then aborts before reassigning).
+    """
+    key = _handoff_audit_key(
+        from_assignee, to_assignee, reason,
+        _assignment_event_count(issue_number, config),
+    )
+    body = _handoff_audit_body(
+        from_assignee, to_assignee, reason, dt.date.today().isoformat(), key,
+    )
+    return post_audit_once(
+        "issue", issue_number, key, body, config,
+        run=gh_run,
+        present_note="handoff audit comment already present; idempotent skip",
+    )
+
+
+def _handoff_audit_key(
+    from_assignee: str, to_assignee: str, reason: str, assignment_events: int | None
+) -> str:
+    """The idempotency key for one handoff (#902): from, to, the stripped reason,
+    and the assignment-event count read before posting (see
+    `_assignment_event_count`)."""
+    return audit_key(
+        HANDOFF_AUDIT_WRITER,
+        from_assignee,
+        to_assignee,
+        reason.strip(),
+        "" if assignment_events is None else str(assignment_events),
+    )
+
+
+def _handoff_audit_body(
+    from_assignee: str, to_assignee: str, reason: str, today: str, key: str
+) -> str:
+    """The handoff audit comment: kind marker, the handoff line, idempotency key."""
+    return (
+        f"{HANDOFF_AUDIT_MARKER}\n\n"
+        f"Handoff: @{from_assignee} → @{to_assignee} "
+        f"({today}, reason: {reason.strip()})\n\n"
+        f"{key}"
+    )
 
 
 def _reassign(

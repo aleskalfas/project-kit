@@ -465,34 +465,41 @@ def test_ci_gate_refuses_failing_and_pending(dw) -> None:
 def test_done_work_ci_bypass_audit_body_follows_template(dw) -> None:
     """done-work's CI-bypass audit follows the schema template + its own stamp."""
     identity = dw.Identity(github_login="octocat", email="octo@example.com")
+    key = dw._bypass_audit_key(dw.CI_BYPASS_AUDIT_WRITER, "advisory guard", "sha1")
     body = dw._ci_bypass_audit_body(
-        identity, "advisory guard on a decision-only PR", ("guard (FAILURE)",)
+        identity, "advisory guard on a decision-only PR", ("guard (FAILURE)",), key,
     )
-    assert dw.CI_BYPASS_AUDIT_STAMP in body
+    assert body.startswith(dw.CI_BYPASS_AUDIT_MARKER)
+    assert body.splitlines()[-1] == key
     assert "Bypassed by octocat <octo@example.com>: " in body
     assert "guard (FAILURE)" in body
 
 
 def test_done_work_post_ci_bypass_audit_idempotent(dw, monkeypatch) -> None:
-    """An already-present CI-bypass comment is not re-posted (idempotent)."""
+    """The own, unedited CI-bypass comment for the same bypass is not re-posted."""
     import subprocess
 
     captured: list[list[str]] = []
+    key = dw._bypass_audit_key(dw.CI_BYPASS_AUDIT_WRITER, "override", "sha1")
+    identity = dw.Identity(github_login="octocat", email="octo@example.com")
+    prior = dw._ci_bypass_audit_body(identity, "override", ("x (FAILURE)",), key, "sha1")
 
     def fake_gh_run(args, config, **kwargs):
         captured.append(list(args))
         if "view" in args:
-            existing = json.dumps(
-                {"comments": [{"body": f"{dw.CI_BYPASS_AUDIT_STAMP}\n\nprior"}]}
-            )
+            existing = json.dumps({"comments": [{
+                "body": prior,
+                "viewerDidAuthor": True, "includesCreatedEdit": False,
+            }]})
             return subprocess.CompletedProcess(
                 args=args, returncode=0, stdout=existing, stderr="",
             )
         return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
 
     monkeypatch.setattr(dw, "gh_run", fake_gh_run)
-    identity = dw.Identity(github_login="octocat", email="octo@example.com")
-    ok = dw._post_ci_bypass_audit(496, "override", identity, ("x (FAILURE)",), {})
+    ok = dw._post_ci_bypass_audit(
+        496, "override", identity, ("x (FAILURE)",), {}, head="sha1",
+    )
     assert ok is True
     assert not [c for c in captured if "comment" in c]
 
@@ -562,7 +569,10 @@ def _wire_main_seams(
     monkeypatch.setattr(dw, "_find_issue_branch", lambda n: "fix/42-slug")
     monkeypatch.setattr(
         dw, "_find_pr_for_branch",
-        lambda branch, config: {"number": 496, "title": "fix: x", "isDraft": False},
+        lambda branch, config: {
+            "number": 496, "title": "fix: x", "isDraft": False,
+            "headRefOid": "sha-head",
+        },
     )
     resolved_issue = (
         {"labels": [], "body": ""} if issue is _UNSET_ISSUE else issue
@@ -604,12 +614,14 @@ def _wire_main_seams(
     )
     monkeypatch.setattr(dw, "_gh_get_status_rollup", lambda pr_number, config: rollup)
 
-    def _stub_ci_audit(pr_number, reason, invoker, checks, config):
+    def _stub_ci_audit(pr_number, reason, invoker, checks, config, *, head=""):
         calls["ci_audit"] = True
+        calls["ci_audit_head"] = head
         return True
 
-    def _stub_approval_audit(issue_number, reason, config):
+    def _stub_approval_audit(issue_number, reason, config, *, head=""):
         calls["approval_audit"] = True
+        calls["approval_audit_head"] = head
         return True
 
     def _stub_merge(pr_number, *, pr_title, admin, config):
@@ -694,6 +706,9 @@ def test_both_gates_blocked_needs_both_flags(dw, monkeypatch, capsys):
     assert calls["approval_audit"] is True
     assert calls["ci_audit"] is True
     assert calls["merged"] is True
+    # Both bypasses are keyed on the PR's head commit (#902).
+    assert calls["approval_audit_head"] == "sha-head"
+    assert calls["ci_audit_head"] == "sha-head"
 
 
 def test_bypass_ci_empty_reason_refused(dw, monkeypatch, capsys):

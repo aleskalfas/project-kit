@@ -871,7 +871,12 @@ class _FakeIssueComments:
 
     def __call__(self, cmd, config, check=False):
         if cmd[:3] == ["gh", "issue", "view"]:
-            payload = {"comments": [{"body": b} for b in self.bodies]}
+            # What GitHub reports for comments the gh-authenticated identity
+            # posted and never edited — pkit's own posts.
+            payload = {"comments": [
+                {"body": b, "viewerDidAuthor": True, "includesCreatedEdit": False}
+                for b in self.bodies
+            ]}
             return SimpleNamespace(returncode=0, stdout=_json.dumps(payload), stderr="")
         if cmd[:3] == ["gh", "issue", "comment"]:
             self.bodies.append(cmd[cmd.index("--body") + 1])
@@ -881,6 +886,8 @@ class _FakeIssueComments:
 
 
 def _post(mi, from_state, to_state, reason, journal_length):
+    # `main` strips the reason before rendering and keying; mirror it.
+    reason = reason.strip()
     invoker = SimpleNamespace(github_login="alice", email="alice@x.io")
     key = mi._transition_audit_key(from_state, to_state, reason, journal_length)
     body = mi._render_audit_comment(_CAP_ROOT, invoker, reason) + "\n\n" + key

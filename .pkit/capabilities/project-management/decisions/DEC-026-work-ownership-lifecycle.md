@@ -94,7 +94,7 @@ Reviewer assignment is governed by **review-mode resolution** per [project-manag
 
 ### Audit-trail comments
 
-Each authorisation-bearing transition writes a parseable-prefix comment using DEC-024's template-stamp idempotence discipline (re-running a command checks for an existing comment with the same template stamp and skips re-posting):
+Each authorisation-bearing transition writes a parseable-prefix comment that is posted once per distinct act (re-running a command after a partial failure skips re-posting only when an unedited comment by the posting account already carries the exact same body, whose trailing key hashes the act; a different act, or a comment anyone else posted, never suppresses it -- see the capability README's audit-comment idempotence section):
 
 - `promote-issue` → `Promoted Todo → Backlog by PM on user's in-session request: <reason>`
 - `done-work --bypass` → `Approved by bypass: <reason>`

@@ -29,6 +29,14 @@ merge:
 
 Side-effects, in order (the merge mechanic lives once in `_lib.pr_merge`,
 shared with `done-work`; #882):
+  - The CI-bypass audit comment on the PR, BEFORE the merge, if `--bypass-ci`
+    overrode a non-green CI gate. It names the short PR head and closes with a
+    hidden `<!-- pkit-audit-key: merge-pr-ci-bypass:<digest> -->` hashed from
+    the reason and the PR head commit, and a re-run skips only when a comment
+    with exactly that body was posted, unedited, by the account `gh` posts as
+    (`_lib.comment.post_audit_once`, #902) — a retry posts nothing new, a
+    different reason or new commits post their own record, and nobody else's
+    comment can suppress it. A failed post aborts before the merge (exit 3).
   - `gh pr merge --squash --subject <PR title>` — WITHOUT `--delete-branch`:
     that flag makes gh check out the default branch locally and delete the
     local head, and the whole command exits non-zero when the working tree
@@ -74,6 +82,8 @@ from _lib.ci_checks import evaluate_ci_gate  # noqa: E402
 # DEC-007's checkbox close-gate — the ONE implementation (`_lib.checkbox_gate`),
 # shared with close-issue, done-work and the engine predicate.
 from _lib.checkbox_gate import unticked_boxes as _unticked_boxes  # noqa: E402
+from _lib.audit import bypass_audit_key, render_ci_bypass_audit_body  # noqa: E402
+from _lib.comment import post_audit_once  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib.hooks import fire_hooks  # noqa: E402
 from _lib import session_guard  # noqa: E402
@@ -90,10 +100,13 @@ CLOSING_KEYWORD_RE = re.compile(
     r"\b(?:closes|fixes|resolves)\s+#(\d+)", re.IGNORECASE
 )
 
-# Idempotency stamp for the CI-bypass audit comment (mirrors done-work's
-# BYPASS_AUDIT_STAMP shape; a distinct marker so a re-run recognises its own
-# prior comment rather than confusing it with an approval-gate bypass).
-CI_BYPASS_AUDIT_STAMP = "<!-- pkit-hook: merge-pr-ci-bypass -->"
+# The CI-bypass audit comment's first-line kind marker. It says WHAT the comment
+# is; it is not what makes the post idempotent — a fixed string recognised in
+# anyone's comment let a second, distinct bypass record nothing and let any
+# commenter suppress the record (#902). The `_lib.audit.audit_key` writer name
+# below keys the specific bypass instead.
+CI_BYPASS_AUDIT_MARKER = "<!-- pkit-hook: merge-pr-ci-bypass -->"
+CI_BYPASS_AUDIT_WRITER = "merge-pr-ci-bypass"
 
 
 def main() -> int:
@@ -302,7 +315,8 @@ def main() -> int:
     # first per validation-severity.yaml).
     if not ci_gate.passing and args.bypass_ci:
         if not _post_ci_bypass_audit(
-            args.pr_number, args.bypass_ci.strip(), invoker, ci_gate.failing_checks, config
+            args.pr_number, args.bypass_ci.strip(), invoker, ci_gate.failing_checks,
+            config, head=str(pr.get("headRefOid") or ""),
         ):
             print(
                 "[warn] could not post CI-bypass audit comment; aborting "
@@ -409,23 +423,23 @@ def _pr_title_pattern(titles: dict) -> str | None:
 # ---- CI-bypass audit -------------------------------------------------
 
 
-def _ci_bypass_audit_body(
-    invoker: Identity, reason: str, failing_checks: tuple[str, ...]
-) -> str:
-    """Render the bypassable-with-audit comment body (validation-severity.yaml).
+def _ci_bypass_audit_key(reason: str, head: str) -> str:
+    """The CI-bypass idempotency key (#902) — the shared
+    `_lib.audit.bypass_audit_key`: the stripped reason and the PR head commit."""
+    return bypass_audit_key(CI_BYPASS_AUDIT_WRITER, reason, head)
 
-    Follows the schema's `audit_comment_template`
-    (`Bypassed by <name> <<email>>: <reason>`), naming the checks the bypass
-    overrode so the trail records *what* was skipped. Prefixed with the
-    idempotency stamp so a re-run recognises its own prior comment.
-    """
-    name = invoker.github_login or invoker.email or "<unresolved>"
-    email = invoker.email or "<unknown>"
-    checks = ", ".join(failing_checks) or "(none named)"
-    return (
-        f"{CI_BYPASS_AUDIT_STAMP}\n\n"
-        f"Bypassed by {name} <{email}>: {reason}\n\n"
-        f"CI-status gate overridden; non-passing checks: {checks}."
+
+def _ci_bypass_audit_body(
+    invoker: Identity,
+    reason: str,
+    failing_checks: tuple[str, ...],
+    key: str,
+    head: str = "",
+) -> str:
+    """Render the CI-bypass audit comment — the shape shared with `done-work`
+    (`_lib.audit.render_ci_bypass_audit_body`) under this script's kind marker."""
+    return render_ci_bypass_audit_body(
+        CI_BYPASS_AUDIT_MARKER, invoker, reason, failing_checks, head, key,
     )
 
 
@@ -435,38 +449,23 @@ def _post_ci_bypass_audit(
     invoker: Identity,
     failing_checks: tuple[str, ...],
     config: dict,
+    *,
+    head: str = "",
 ) -> bool:
-    """Post the CI-bypass audit comment to the PR, idempotently.
+    """Post the CI-bypass audit comment to the PR, once per (reason, head).
 
-    Returns True on success (or when an identical audit comment is already
-    present — the stamp makes the post idempotent), False on gh failure.
+    Returns True on success (or when this exact comment is already present),
+    False on gh failure. The post-once rule is the shared
+    `_lib.comment.post_audit_once` (#902).
     """
-    body = _ci_bypass_audit_body(invoker, reason, failing_checks)
-    proc = gh_run(
-        ["gh", "pr", "view", str(pr_number), "--json", "comments"],
-        config, check=False,
+    key = _ci_bypass_audit_key(reason, head)
+    return post_audit_once(
+        "pr", pr_number, key,
+        _ci_bypass_audit_body(invoker, reason, failing_checks, key, head), config,
+        run=gh_run,
+        present_note="ci-bypass audit comment already present; idempotent skip",
+        posted_note="ci-bypass audit comment posted",
     )
-    if proc.returncode == 0:
-        try:
-            data = json.loads(proc.stdout)
-            for c in data.get("comments", []):
-                if CI_BYPASS_AUDIT_STAMP in (c.get("body") or ""):
-                    print("  ci-bypass audit comment already present; idempotent skip")
-                    return True
-        except (ValueError, KeyError, TypeError):
-            pass
-    proc = gh_run(
-        ["gh", "pr", "comment", str(pr_number), "--body", body],
-        config, check=False,
-    )
-    if proc.returncode != 0:
-        print(
-            f"error: gh pr comment failed: {proc.stderr.strip()}",
-            file=sys.stderr,
-        )
-        return False
-    print("  ci-bypass audit comment posted")
-    return True
 
 
 # ---- gh wrappers ----------------------------------------------------
@@ -481,7 +480,7 @@ def _gh_get_pr(pr_number: int, config: dict) -> dict | None:
                 "view",
                 str(pr_number),
                 "--json",
-                "title,body,state,url,headRefName,baseRefName,statusCheckRollup,isCrossRepository",
+                "title,body,state,url,headRefName,headRefOid,baseRefName,statusCheckRollup,isCrossRepository",
             ],
             config,
             check=False,
