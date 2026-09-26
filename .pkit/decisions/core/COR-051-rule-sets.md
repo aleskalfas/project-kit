@@ -1,7 +1,7 @@
 ---
 id: COR-051
 title: Rules live in rule sets, each rule named, grounded and gated
-status: proposed
+status: accepted
 date: 2026-09-27
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---

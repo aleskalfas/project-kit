@@ -1,7 +1,7 @@
 component: backbone
 kind: none
 body: >
-  Design-ahead: COR-051 — rules live in rule-set files (data in front matter, prose
+  Design-ahead: COR-051 (accepted) — rules live in rule-set files (data in front matter, prose
   in the body), identified RS-<SET>-NNN, proposed until accepted, each with a
   recorded origin that validation requires; each rule is an artefact, so a changed
   rule shows as friction; projects extend shipped rule sets, pinning their major
