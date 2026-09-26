@@ -36,7 +36,7 @@ Rules are not decision records, but they share their guarantees ([COR-051](core/
 
 - **Statuses.** Rules use `proposed` (the default, binding nothing), `accepted` and `superseded`, like records. They add **`withdrawn`**, for a rule retired without a successor, which only rules have.
 - **The acceptance gate** applies per rule, wherever the rule set lives. That includes project-owned rule sets outside this folder, typically under the project's internal documentation root. A proposed rule binds nothing, and accepting one is a reviewed change.
-- **Uniqueness and origins** are checked by validation, alongside the decision-id checks above.
+- **Uniqueness and origins** will be checked by validation once the rule-set schema and checks ship (COR-051, Implications). Until then they are a convention, and nothing enforces them, nor the per-rule gate above.
 
 ## The no-shared-files invariant
 
