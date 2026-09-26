@@ -1,0 +1,90 @@
+---
+id: COR-052
+title: Components exchange knowledge through slots, without depending on each other
+status: accepted
+date: 2026-09-27
+author: Aleš Kalfas <kalfas.ales@gmail.com>
+---
+
+## Context
+
+Components often need knowledge that another component, or the project itself, is better placed to provide. A documentation discipline needs to know who the readers are. A merge gate needs to know what documentation a change owes. Some other component may know the answer, but the consumer must also work when that component is absent, and the provider must not need the consumer installed either.
+
+Capability dependencies (COR-030) make one capability require another, which is right when it cannot work without it. It is wrong when the second capability merely makes the first *better*: users who want only one of them would be forced to install both. Meanwhile the same "consumer defines an interface, providers contribute to it" pattern has been built several times for single purposes, each with its own rules for precedence, collisions and failure.
+
+## Decision
+
+**A component that needs an input declares a *slot*. Project files, installed capabilities and the component's own default fill it. The backbone resolves and validates what fills it, with no dependency in either direction.**
+
+1. **The slot belongs to its consumer.**
+   - A capability declares a slot in its package metadata.
+   - The slot is named `<consumer>:<slot>`, so slot names cannot collide.
+   - The declaration gives a versioned schema for the slot's data, a combination policy (point 3), how the consumer's default takes part, and an inert policy (point 6).
+   - The consumer owns the interface: what the data means, and what shape it has.
+
+2. **Three kinds of filler.**
+   - **A project file.** Its location is derived under the internal documentation root (COR-049), from a sub-path the backbone owns for slot files, keyed by the slot's name.
+     - It holds the slot's entries in the slot's shape, inside an envelope the backbone defines. The envelope carries the schema version the file targets, plus any suppressions or removal overrides, each with its reason.
+     - The project owns the file and writes it through its own reviewed changes.
+     - A malformed file, or one targeting the wrong version, is a validation error whatever the slot's inert policy, because the project can fix it.
+   - **An installed capability** that declares it fills the slot. It maps its own knowledge onto the slot's shape, keeping whatever richer model it has internally.
+   - **The consumer's default**, if it has one. The slot declares whether the default is **always included**, in which case it contributes like any other filler, or **used only when no other filler is declared**.
+
+   A filler for a slot whose consumer is not installed is inert. It is not an error, and nobody depends on anybody.
+
+3. **Combination policy, declared per slot.**
+   - **`single`**: one filler answers alone.
+   - **`union`**: entries from all fillers are merged by id. The project may override an entry, or suppress one explicitly.
+   - **`additive`**: entries are merged, and any collision is an error, including a collision with the project. Removing an entry needs a removal override recorded with its reason. This policy is for slots whose entries carry requirements, where silently dropping one would defeat its purpose.
+
+4. **Precedence and collisions.**
+   - **Precedence**, in `single` and `union` slots: a project file beats a capability, which beats the default.
+   - **Whole entries:** an override replaces a whole entry, never individual fields.
+   - **Two capabilities, same id, `union` slot:** an error naming both, which the project resolves by overriding that id.
+   - **Two capabilities filling one `single` slot:** an error until the project selects one.
+   - **The selection key.** The selection lives in a key this record owns in the backbone configuration (COR-048). It maps a slot name to a capability name.
+     - Its default is empty.
+     - Its writers are the backbone's configuration commands and the command that reports the ambiguity, which offers to write the selection. Both act under COR-048's consent rule.
+     - Validation checks that each entry names a declared `single` slot, and a capability that is installed and fills it.
+     - Uninstalling a capability offers, with consent, to clear its entries; otherwise validation reports the stale entry with the fix.
+     - Install order never decides.
+
+5. **Schemas and versions.** A slot's schema is a companion schema of the consumer (COR-018), named after the slot and bound in the usual way (COR-022). Its schema version is the integer that companion schemas already carry. For slots, that integer increases only on a change that breaks existing fillers; additive changes leave it alone. A capability filler states the version it targets and is accepted when the version matches. When the consumer increases the version, capability fillers still targeting the old one go inert until they catch up. That is intended.
+
+6. **Command fillers, and failure.**
+   - **Command fillers.** A capability may supply its data through a command registered in its package metadata (COR-021). The command runs under the same limits as anchor resolvers (COR-050): a bounded time, no network access, and deterministic output for the same inputs. It fails closed: an abnormal exit, a timeout, or output that does not validate against the slot's schema counts as *no answer*, never as an empty answer.
+   - **The inert policy.** Each slot declares what happens when a filler that was meant to answer cannot: its version does not match, its command failed, or its output is invalid.
+     - `fallback`: the slot resolves from the remaining fillers, with a warning naming the one that failed. If none remain, it is unresolved with a warning.
+     - `fail`: the **whole** slot is unresolved, whatever its combination policy, so a gate never passes on the entries that happened to survive.
+   - **Enforcing uses fail closed.** A consumer whose slot feeds a gate, a check or validation declares `fail`. That is the consumer's responsibility, since the backbone cannot tell how a slot is read. Where one slot serves both advisory and enforcing readers, the stricter use decides.
+   - **A broken filler never promotes the default.** A default used only when no other filler is declared does not answer because a declared filler broke.
+
+7. **Visible.** The status report shows, for each declared slot, how it resolved and why. That includes any filler that went inert, with the reason. The health check flags whatever would make a slot's answer wrong or missing.
+
+## Rationale
+
+**Why the consumer owns the slot.** The consumer knows what it needs and what the data means. If providers defined the interface, each consumer would have to understand every provider's model. With the consumer defining it, each provider maps its own model once.
+
+**Why no dependency in either direction.** A capability that merely improves another should not force its installation, and a consumer should keep working with project files alone. Inert fillers and consumer defaults make every combination of installed components valid.
+
+**Why three policies.** Some inputs are answers, where one source should decide. Some are data merged from several sources. Some are requirements that no source may quietly remove. A single policy would get one of these wrong. The requirement case is the one where letting the project win silently would defeat the point.
+
+**Why fail closed where enforcement happens.** If a filler goes inert and its consumer quietly falls back to a weaker default, a gate can pass on less than it was meant to check, and look as if it passed. For advisory uses a warning is enough. For gates and checks, an unresolved slot must say so.
+
+**Why reuse the schema and command machinery.** Companion schemas, their versions, and fail-closed commands registered by capabilities already exist. Slot commands and anchor resolvers run under one set of limits, so there is one way of running a capability's data command, not two.
+
+**Why core.** Several components need to exchange knowledge without depending on each other, and nothing here names a discipline. The pattern has already been built several times as single-purpose contribution mechanisms, so extracting it follows the usual recurrence test (COR-007).
+
+### Alternatives considered
+
+- **Capability dependencies for every exchange.** Rejected. It forces installing components that are optional improvements.
+- **Consumers reading providers' data directly, through shared data references.** Rejected. It forces every provider to store its data in the consumer's format, which couples their models.
+- **A bespoke mechanism per pair of components.** Rejected. It adds a new copy of the same rules each time.
+- **Silently falling back to the default everywhere.** Rejected. Gates would fail open while looking as if they passed.
+- **Letting install order decide between competing fillers.** Rejected. The answer would change without anyone choosing.
+
+## Implications
+
+- **The backbone ships** slot resolution and validation, the project-filler envelope, the status and health lines, and the selection key in the backbone configuration.
+- **Components** declare their slots and their fills in their own package metadata.
+- **Existing single-purpose contribution mechanisms** can move onto slots when convenient. Where a mechanism's entries carry a safety meaning, its separate failure rules stay; moving it would change how it fails, and would need a migration.

@@ -1,0 +1,10 @@
+component: backbone
+kind: none
+body: >
+  Design-ahead: COR-052 (accepted) — components exchange knowledge through slots: a
+  consumer declares a slot with a versioned schema and a combination policy
+  (single, union, additive); project files, capabilities and the consumer's default
+  fill it; enforcing slots fail closed; a selection key in the backbone
+  configuration resolves competing single fillers. COR-050 resolvers gain the same
+  command limits (bounded time, offline, deterministic). No adopter-observable change
+  until slot resolution lands.
