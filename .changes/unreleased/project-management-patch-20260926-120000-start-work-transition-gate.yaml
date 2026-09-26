@@ -2,7 +2,7 @@ component: project-management
 kind: patch
 custom:
   category: Fixed
-  pr: ""
+  pr: "948"
 body: >
   `start-work` now checks that the issue can move to In Progress before it
   changes anything (#942). Before, it created and checked out the branch and
