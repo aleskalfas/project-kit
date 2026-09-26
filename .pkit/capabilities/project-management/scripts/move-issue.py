@@ -708,21 +708,11 @@ def _find_transition(
 def _legal_targets(
     workflow: dict, current_state: str, structural_type: str
 ) -> list[str]:
-    """Enumerate legal target states for diagnostic output."""
-    transitions = infer.workflow_process(workflow).get("transitions") or []
-    type_token = f"[issue-types:{structural_type}]"
-    out: list[str] = []
-    for t in transitions:
-        if not isinstance(t, dict):
-            continue
-        if t.get("from") != current_state:
-            continue
-        if type_token not in (t.get("applies_to") or []):
-            continue
-        target = t.get("to")
-        if isinstance(target, str):
-            out.append(target)
-    return out
+    """Enumerate legal target states for diagnostic output.
+
+    Delegates to `lifecycle_inference.legal_targets`, shared with start-work's
+    pre-mutation check (#942)."""
+    return infer.legal_targets(workflow, current_state, structural_type)
 
 
 def _is_forward(workflow: dict, current: str, target: str) -> bool:

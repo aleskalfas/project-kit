@@ -78,6 +78,34 @@ def workflow_process(workflow: dict | None) -> dict:
     return workflow
 
 
+def legal_targets(
+    workflow: dict | None, current_state: str, structural_type: str
+) -> list[str]:
+    """The states workflow.yaml lets an issue of `structural_type` move to
+    from `current_state`, in declaration order.
+
+    The one reading of the transition table's legality: move-issue refuses a
+    move whose target is not in this list, and the composing verbs (start-work)
+    ask the same question before they mutate anything (#942), so a pre-check
+    and the move it guards cannot disagree. A transition counts only when its
+    `applies_to` names `[issue-types:<structural_type>]`.
+    """
+    transitions = workflow_process(workflow).get("transitions") or []
+    type_token = f"[issue-types:{structural_type}]"
+    out: list[str] = []
+    for t in transitions:
+        if not isinstance(t, dict):
+            continue
+        if t.get("from") != current_state:
+            continue
+        if type_token not in (t.get("applies_to") or []):
+            continue
+        target = t.get("to")
+        if isinstance(target, str):
+            out.append(target)
+    return out
+
+
 def infer_current_state(
     *,
     state: str,

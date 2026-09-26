@@ -1,0 +1,19 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+  pr: "948"
+body: >
+  `start-work` now checks that the issue can move to In Progress before it
+  changes anything (#942). Before, it created and checked out the branch and
+  set the assignee, and only then called `move-issue --to in-progress`. On an
+  issue in Todo, where that move is not legal, the run left the branch and
+  assignee in place, the issue stayed where it was, and the output ended on the
+  branch-creation line. It now refuses with exit 2, names the state it found and
+  the move to make first (from Todo, `move-issue <N> --to backlog`), and creates
+  no branch and writes no assignee. The check reads the same state and the same
+  `workflow.yaml` transitions `move-issue` does, so an issue already In Progress
+  still re-runs cleanly. If `move-issue` still fails after the branch is cut
+  (a network error, for example), the run now ends on a `[failed]` block that
+  names the branch and any assignee it left behind, with the commands to undo
+  them, and passes `move-issue`'s exit code through as before.
