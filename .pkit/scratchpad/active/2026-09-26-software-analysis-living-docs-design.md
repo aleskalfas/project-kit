@@ -161,6 +161,14 @@ Decided by Aleš Kalfas, step by step, after the core records were accepted. The
   2. When only one branch revalidates, the other branch's anchor changes are reachable but not from that point, so they are flagged: nothing new is needed.
   3. **Friction results are valid only against the up-to-date base.** Projects that enforce friction require up-to-date branches or a merge queue, and the check reports "checked against an outdated base".
 
+- **Refinements later in part 1 (2026-09-28):**
+  - **Outcome names:** `updated` and `unchanged`, with the justification field `unchanged-because`. That replaces "explained" and "holds-because", and a bare `reason` was rejected as meaningless inside `revalidated`. The text says why the content did not need to change, which is the only safeguard against a blind marker bump.
+  - **A tool-written `status` block, first in the front matter, above `revalidated` and `deferred`** (the maintainer's requirement: a visible status of the last check). It holds `state` (current / stale / deferred), `as-of` (the commit checked against) and `since` (where any staleness came from).
+    - Only the tool writes it, and it is never read for friction; the check always recomputes.
+    - It is dated with its commit, so it is never read as "true now".
+    - It is written only when it changes, by the after-merge job, through one small reviewed PR. Ordinary PR checks write nothing, so there is no churn and no conflicts in people's branches.
+    - It **replaces** recording stale debt as synthetic `deferred` entries. `deferred` is purely for deliberate postponement, and stale debt shows as `state: stale` with its origin in `since`.
+
 **Still to walk through:** part 2 (backbone configuration), part 3 (capability package metadata), part 4 (schemas), commands in detail, ADR-055 open question 3 (the enforcement model: the brainstorm leaned towards "updated, explained or deferred-with-reason", with an optional CI agent as accelerator).
 
 ## Reference adopter — Mockingbird (read-only observation, 2026-09-26)
