@@ -384,7 +384,8 @@ Decided by Aleš Kalfas, step by step, after the core records were accepted. The
     - everything lands in the diff;
     - `--plan` previews subscriber effects, and `--no-events` runs a command alone;
     - non-interactive runs behave the same.
-  - Still open for events: cascading events (a loop guard); edits made by hand emit no events, which friction covers.
+  - **Cascading events** (maintainer, 2026-09-28): allowed; an event already handled for the same subject within one command's chain is not delivered again and is reported as a loop; a depth limit (about 8 hops) backstops it; the whole chain is reported at the end of the command.
+  - Edits made by hand emit no events; friction covers them.
 - **Records affected (to plan once the concept is designed):**
   - the new connection-points record;
   - COR-052 refined: slots become one kind of connection point, and "the consumer owns the slot" becomes "the declaring side owns the point", named by role;
