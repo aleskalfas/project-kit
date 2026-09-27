@@ -350,6 +350,16 @@ Decided by Aleš Kalfas, step by step, after the core records were accepted. The
   - Validation fails when two installed capabilities' places overlap, naming the overlap.
   - When a capability is uninstalled, its files become orphaned and are reported. No other capability silently takes them over.
   - Rejected: overlap allowed, with ownership read from each file's `pkit.<role>` block (B). A file with no front matter in a shared area got two conflicting reports; a copied artefact could be claimed outside its folder; and uninstalling one capability made another quietly claim its files.
+- **Part 4: schemas** (maintainer, 2026-09-28: "everything looks ok").
+  - **The set:** backbone configuration; capability package metadata; the artefact `pkit` block; connection-point data schemas; process interfaces; rule sets; capability-specific artefacts; revalidation records. Each has deterministic checks against the repository alongside its schema.
+  - **Where they live:** core schemas in `.pkit/schemas/`, with shared definitions in `_defs/`; capability schemas in each capability's `schemas/`.
+  - **Binding:** artefacts are found through declared friction places and capability locations. Their `pkit` block is validated against the core schema, and their own fields against the capability's schema.
+- **`pkit validate` becomes the one umbrella command** (maintainer, 2026-09-28).
+  - The command already exists (COR-004: "check project state against invariants"). Today it covers manifests and decision front matter, and its own docstring anticipates per-area validation hooks.
+  - Each functionality **registers its validator**: the backbone for config, packages, artefacts, rule sets, connections and versions; each capability for its own artefacts, registered in package metadata like its commands.
+  - The existing separate validators (schemas, data, decisions, refs, process) become registered validators run by `pkit validate`. They stay available individually for focused use.
+  - The check gate calls `pkit validate` once, so nothing registered can be forgotten there.
+  - Output is grouped by functionality.
 - **Records affected (to plan once the concept is designed):**
   - the new connection-points record;
   - COR-052 refined: slots become one kind of connection point, and "the consumer owns the slot" becomes "the declaring side owns the point", named by role;
