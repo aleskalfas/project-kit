@@ -2,6 +2,19 @@
 authors:
   - Aleš Kalfas <kalfas.ales@gmail.com>
 started: 2026-09-26
+retired: 2026-09-28
+produced:
+  - COR-048
+  - COR-049
+  - COR-050
+  - COR-051
+  - COR-052
+  - COR-053
+  - .pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md
+  - .pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md
+  - .pkit/capabilities/project-management/decisions/DEC-053-doc-check-slot.md
+  - docs/architecture/decisions/ADR-055-first-adopter-analysis-and-living-docs.md
+  - https://github.com/aleskalfas/project-kit/milestone/6
 ---
 
 # Software analysis and living documentation — capability design
@@ -443,4 +456,14 @@ Not produced here: #954 (journal opt-in).
 
 ## Status
 
-Active. All ten questions and the review round decided; all eight records accepted (COR-048..052, software-analysis DEC-001, living-docs DEC-001, pm DEC-053, ADR-055 — merged via PR #971 after critic, architect and methodology review; it also lists four findings against living-docs to fold into the #972 refinements: place precedence, place→space assignment, a "synced copy" predicate for the never-a-place rule, and user READMEs linking into the record corpus). Walk-through of the mechanics complete; record refinements tracked in #972; #890 (first use cases) is unblocked once the ADR relocation PR lands.
+Retired as produced. All records accepted: COR-048 backbone configuration, COR-049 documentation roots, COR-050 anchors and friction (refined with the walk-through), COR-051 rule sets, COR-052 slots, COR-053 connection points; software-analysis DEC-001, living-docs DEC-001, project-management DEC-053; ADR-055 (project-kit first adopter). The implementation plan was reviewed by critic and architect and approved by the maintainer on 2026-09-28, and filed in Milestone 5:
+
+- **EPIC #974** anchors, friction and rule sets → Feature **#978** friction engine: #988 friction block schema, #989 rule-set schema, #990 change check (paired with #1008), #991 whole-repository check, #992 writers, #993 debt/explain; #1013 retires this note.
+- **EPIC #804** modularity (existing) → Feature **#975** validation first: #980 fixture, #981 config schema (from #689), #982 package schema (permissive), #983 resolver as validator + version checks, #984 container decision + schema + instance-schema home, #985 package-metadata reference, #986 `pkit validate` umbrella; Feature **#976** configuration and roots: #987; Feature **#977** connection points: #994 data kind (+ filler parameter decision), #995 process kind, #996 `::` in the citation grammar (COR-019 refinement), #997 graph and status, #998 discovery, #999 package strictness flip, #1000 pm work-tracking role and doc-check point.
+- **EPIC #885** software-analysis (now on the Milestone): #887 and #888 re-scoped, #1001 connections split out, #889 unchanged, #890 re-blocked on #1007/#988/#887.
+- **EPIC #234** living-docs: #1002 decision refinement (place precedence, out-of-root assignment), #1003 places + LDOC + templates, #1004 points + doc-check contribution, #1005 agent.
+- **Umbrella #979** project-kit adopts (ADR-055): #1006 relocate ADRs, #1007 roots and places, #1008 friction gate live, #1009 whole-repository step on main, #1010 mapping conversion and first pages, #1011 merge queue (later), #1012 pm enforcement of contributed obligations.
+
+**First increment** (Backlog): #980, #981, #982, #984, #988, #990, #1006, #1007, #1008. Everything else stays Todo until its dependency lands.
+
+**Deferred, recorded, not filed:** events as a built kind (COR-053 — when the first subscriber exists), engine-emitted events / process hooks (own record), project-published roles, role-addressed embedding, the after-merge status job for project-kit (ADR-055).
