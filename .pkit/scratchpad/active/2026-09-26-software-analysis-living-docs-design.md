@@ -437,4 +437,4 @@ Not produced here: #954 (journal opt-in).
 
 ## Status
 
-Active. All ten questions and the review round decided; seven of eight records accepted (COR-048..052, software-analysis DEC-001, living-docs DEC-001, pm DEC-053); ADR-055 proposed with all three questions decided (PR #971). Walk-through of the mechanics complete; record refinements tracked in #972.
+Active. All ten questions and the review round decided; all eight records accepted (COR-048..052, software-analysis DEC-001, living-docs DEC-001, pm DEC-053, ADR-055 — merged via PR #971 after critic, architect and methodology review; it also lists four findings against living-docs to fold into the #972 refinements: place precedence, place→space assignment, a "synced copy" predicate for the never-a-place rule, and user READMEs linking into the record corpus). Walk-through of the mechanics complete; record refinements tracked in #972; #890 (first use cases) is unblocked once the ADR relocation PR lands.
