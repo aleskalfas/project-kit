@@ -257,6 +257,15 @@ Decided by Aleš Kalfas, step by step, after the core records were accepted. The
   - Plans are computed by the same resolver that builds the live wiring, so a plan predicts exactly what happens.
   - Suggestions draw only on the catalogs the project already uses: kit-shipped capabilities, plus configured external sources.
 - **Part 2 updated:** the per-slot selection key becomes **`providers:`**, which selects one capability per role in the backbone configuration and covers all of that role's points. It carries COR-048's duties: empty by default, written with consent by configuration commands or when a conflict is reported, validated against what is installed, and cleared on uninstall with consent.
+- **Validation first** (maintainer, 2026-09-28: "we want to be able to validate all from the very beginning").
+  - **The first implementation step** is the backbone configuration's schema (a core companion schema bound to its fixed path, COR-018/022/023) and its **full deterministic validation**, wired into the check gate. That closes #689 for this file.
+  - Validation covers structure (only known keys, with the nearest known key suggested; types; the reserved `project` block) and checks against the repository:
+    - each `providers` entry names an installed capability that provides that role;
+    - a role with two providers must have a selection;
+    - `docs` roots resolve inside the repository and outside the methodology tree after following links, with a warning if a root is missing;
+    - `friction` patterns stay inside the repository, with a warning if a pattern matches nothing.
+  - "Deterministic" means the same repository state always gives the same answer.
+  - **The rule for every later step:** each new kind of file ships with its schema and its deterministic checks **in the same increment**, never "validation later". That covers artefact front matter, rule sets, slot data, capability surfaces and revalidation records.
 - **Records affected (to plan once the concept is designed):**
   - the new connection-points record;
   - COR-052 refined: slots become one kind of connection point, and "the consumer owns the slot" becomes "the declaring side owns the point", named by role;
