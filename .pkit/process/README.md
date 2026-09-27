@@ -274,7 +274,7 @@ states:
         relation: informational | gates-on-readiness | triggered-by | constrained-with   # core   CLOSED set
         mode:     pull | push        # core      pull = read on the reader's turn  |  push = mediated OUTSIDE the engine
         why:      <prose>            # core      REQUIRED reason the render surfaces
-        handoff:                     # core (optional, COR-042)  OPT-IN evaluable hand-off contract — read by `health` only (a sibling `mandatory` mark is read by the capability lifecycle, per COR-053)
+        handoff:                     # core (optional, COR-042)  OPT-IN evaluable hand-off contract — read by `health` only (COR-053, design-ahead: a sibling `mandatory` mark, not yet in this schema, will be read by the capability lifecycle)
           trigger:    <state>        # core      upstream state meaning "ready to hand off" (declare a STABLE state; an ephemeral trigger is an authoring smell — subjects that transit it leave the report, picked up or not)
           candidates: <predicate>    # core      binding-supplied source of upstream candidate ids (registered command; a source that can silently return nothing against a wrong root is the sibling authoring smell)
           resolve:    <predicate>    # core      binding-supplied: upstream id → downstream id(s) | explicit absence; error = indeterminate (fail-closed)

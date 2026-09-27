@@ -10,9 +10,9 @@ Keep your documentation **true for the people who read it**, even when an agent 
 - **Proposals, never blind edits.** The agent proposes each fix with its evidence, and a person reviews it.
 - **Reader-review.** The agent reads a page as its declared reader and reports what that reader would miss or wouldn't need.
 
-## Connections
+## Connections (design-ahead)
 
-The capability provides the `pkit::documentation` role (COR-053). `pkit::` is the methodology's publisher qualifier, written `<methodology>::` in the decision records.
+Declared in the decision; the package metadata gains them with the first implementation increment. The capability provides the `pkit::documentation` role (COR-053). `pkit::` is the methodology's publisher qualifier, written `<methodology>::` in the decision records.
 
 - **Accepts** `pkit::documentation:readers`: who reads and what they need. It starts with a built-in `user` and `maintainer`. You can add or override readers in a project file, and an analysis capability, such as software-analysis, can supply them too.
 - **Accepts** `pkit::documentation:reading-evidence`: results of executed checks that follow the docs, such as a simulated user running a guide. Advisory.

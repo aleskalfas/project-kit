@@ -65,9 +65,9 @@ pkit:                           # the methodology's container (COR-053); everyth
 
 The friction block (anchors and revalidation) follows the core anchors-and-friction schema, inside the `pkit:` container in each artefact's front matter. The examples above are illustrative until that schema ships.
 
-## Connections
+## Connections (design-ahead)
 
-The capability provides the `pkit::analysis` role (COR-053). `pkit::` is the methodology's publisher qualifier, written `<methodology>::` in the decision records; `pkit:` is likewise the methodology's front-matter container.
+Declared in the decision; the package metadata gains them with the first implementation increment. The capability provides the `pkit::analysis` role (COR-053). `pkit::` is the methodology's publisher qualifier, written `<methodology>::` in the decision records; `pkit:` is likewise the methodology's front-matter container.
 
 - **Accepts** `pkit::analysis:revalidation-evidence`: executed results per artefact and commit, supplied by a capability or a project file. Policy `union`, advisory. Evidence informs a revalidation; it doesn't replace one.
 - **Contributes** to `pkit::documentation:readers` with actors and their needs. Inert when no documentation capability is installed.
