@@ -16,9 +16,9 @@ Capability dependencies (COR-030) make one capability require another, which is 
 
 **A component that needs an input declares a *slot*. Project files, installed capabilities and the component's own default fill it. The backbone resolves and validates what fills it, with no dependency in either direction.**
 
-1. **The slot belongs to its consumer.**
+1. **The slot belongs to its consumer** — read, since slots became the data kind of connection point, as *the provider of the role defines the point* (refinement per [COR-053](COR-053-connection-points.md)).
    - A capability declares a slot in its package metadata.
-   - The slot is named `<consumer>:<slot>`, so slot names cannot collide.
+   - The slot is named by its role-qualified point address, `<publisher>::<role>:<point>`, so slot names cannot collide (refinement per [COR-053](COR-053-connection-points.md)).
    - The declaration gives a versioned schema for the slot's data, a combination policy (point 3), how the consumer's default takes part, and an inert policy (point 6).
    - The consumer owns the interface: what the data means, and what shape it has.
 
@@ -42,7 +42,7 @@ Capability dependencies (COR-030) make one capability require another, which is 
    - **Whole entries:** an override replaces a whole entry, never individual fields.
    - **Two capabilities, same id, `union` slot:** an error naming both, which the project resolves by overriding that id.
    - **Two capabilities filling one `single` slot:** an error until the project selects one.
-   - **The selection key.** The selection lives in a key this record owns in the backbone configuration (COR-048). It maps a slot name to a capability name.
+   - **The selection key.** The selection lives in a key this record owns in the backbone configuration (COR-048). It maps a slot name to a capability name — the contributor-selection key, beside the provider-selection key that picks one capability per role (refinement per [COR-053](COR-053-connection-points.md)).
      - Its default is empty.
      - Its writers are the backbone's configuration commands and the command that reports the ambiguity, which offers to write the selection. Both act under COR-048's consent rule.
      - Validation checks that each entry names a declared `single` slot, and a capability that is installed and fills it.

@@ -25,7 +25,7 @@ Composition is the slot that most stretches the substrate's "position is inferre
 
 **In plain terms:** a parent process may contain a step that *is* another process; when that inner process finishes at a named outcome, the parent reads "inner reached outcome X" — resolved live from the inner process's own state — and moves on accordingly. The engine resolves **one** inner process at a time and never reaches across a crowd of them.
 
-A process may declare a public **interface** = `{ inputs, outcomes }`: the `inputs` it needs to start, and its `outcomes` — its named terminal states (a `terminal: true` state is an outcome). A parent embeds an inner process through a **`subprocess` state** that `runs: <capability>:<process-id>`, supplies the inner process's `inputs` on entry, and wires the inner process's `outcomes` to its own outgoing transitions ("inner reached outcome X" is the fact a parent gate reads to leave the subprocess state).
+A process may declare a public **interface** = `{ inputs, outcomes }` — carrying, as a connection point, an integer version that changes only when this public contract breaks, distinct from the definition's own version (refinement per [COR-053](COR-053-connection-points.md)): the `inputs` it needs to start, and its `outcomes` — its named terminal states (a `terminal: true` state is an outcome). A parent embeds an inner process through a **`subprocess` state** that `runs: <capability>:<process-id>`, supplies the inner process's `inputs` on entry, and wires the inner process's `outcomes` to its own outgoing transitions ("inner reached outcome X" is the fact a parent gate reads to leave the subprocess state).
 
 Five rules bound it:
 
