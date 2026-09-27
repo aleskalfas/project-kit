@@ -169,6 +169,37 @@ Decided by Aleš Kalfas, step by step, after the core records were accepted. The
     - It is written only when it changes, by the after-merge job, through one small reviewed PR. Ordinary PR checks write nothing, so there is no churn and no conflicts in people's branches.
     - It **replaces** recording stale debt as synthetic `deferred` entries. `deferred` is purely for deliberate postponement, and stale debt shows as `state: stale` with its origin in `since`.
 
+- **Front-matter ownership convention (maintainer, 2026-09-28).**
+  - An artefact's front matter has **one top-level key per functionality** that works with it, and everything that functionality owns lives under its key.
+  - The functionality that *defines* the artefact keeps its own fields at the top level (for a use case: `id`, `status`, `actor`).
+  - No functionality writes inside another's key.
+  - **A functionality's key is the same name as its command group.**
+  - For friction detection that key is **`friction`**, and `pkit friction …` is the command group. `friction-detection` was rejected: longer, and it would not match the command group.
+- **Shape under `friction`: siblings grouped by who writes them (option A).**
+  - `last-check` is written by the tool: `state`, `as-of` and `since`.
+  - `anchors`, `revalidated` and its nested `deferred` are written by people.
+  - Tool-written and person-written data sit on different lines, so the after-merge status PR and people's branches merge cleanly.
+  - Rejected: organising per anchor (B), because the tool and people would write on the same lines; and a strict writer split with a `declared` sub-block (C), an extra level that adds no meaning.
+  - A `deferred.anchor` that matches no anchor is a validation error.
+  - The tool-written block is `last-check`, because `status` is already the defining capability's lifecycle field.
+- **`deferred` is nested under `revalidated`.** It means "postponed since this revalidation", so a new revalidation replaces the block and settles its deferrals. Adding a deferral does not move `at`, so it is not a revalidation.
+  - An artefact never yet revalidated carries `revalidated` with `deferred` and no `at`.
+  - A deferral that survives a parallel revalidation is flagged by the check.
+- **Part 1, final shape:**
+  ```yaml
+  id: UC-003
+  status: active
+  actor: ACT-test-author
+  friction:
+    last-check:  { state: stale|current|deferred, as-of: <commit>, since: "<origin>" }
+    anchors:     { path: [...], record: [...], artefact: [...] }
+    revalidated:
+      at: <UTC timestamp>
+      outcome: updated|unchanged
+      unchanged-because: "<required when unchanged>"
+      deferred: [ { anchor: <anchor>, reason: "<reason>" } ]
+  ```
+
 **Still to walk through:** part 2 (backbone configuration), part 3 (capability package metadata), part 4 (schemas), commands in detail, ADR-055 open question 3 (the enforcement model: the brainstorm leaned towards "updated, explained or deferred-with-reason", with an optional CI agent as accelerator).
 
 ## Reference adopter — Mockingbird (read-only observation, 2026-09-26)
