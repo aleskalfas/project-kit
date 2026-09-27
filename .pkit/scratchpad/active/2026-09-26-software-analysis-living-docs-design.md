@@ -332,6 +332,19 @@ Decided by Aleš Kalfas, step by step, after the core records were accepted. The
   - Validation compares it with the source. A stale copy fails with "out of date: run refresh", and the process definition always wins.
   - It keeps the list visible in the package without silent drift, like the tool-written `last-check` on artefacts.
   - Rejected: hand-written (drifts silently); derived for display only (not visible in the file).
+- **Package metadata is nested by functionality; the connection-points functionality is named `connections`** (maintainer, 2026-09-28).
+  - With fresh eyes, top-level `locations` and `anchored-places` said nothing about what they serve. Every block now sits under the functionality it belongs to:
+    - identity (`component`, `description`, `requires_backbone`);
+    - `connections:` holding `roles`, `extension-points` and `extensions` (with `depends-on` generated);
+    - `docs:` holding `locations` (COR-049);
+    - `friction:` holding `places` and `surface` (COR-050);
+    - `commands:` (COR-021).
+  - **The same name means the same functionality in every place it appears:**
+    - `docs` in the backbone configuration and in package metadata;
+    - `friction` in the backbone configuration, package metadata, artefacts (`pkit: {friction: …}`) and commands (`pkit friction …`);
+    - `connections` in the backbone configuration, package metadata, artefacts (`pkit: {<role>: …}`) and commands (`pkit connections …`, the wiring graph).
+  - The backbone configuration's `providers:` moves under `connections:` (`connections: { providers: { "pkit::documentation": living-docs } }`).
+  - **Open:** whether friction places may overlap between capabilities. Leaning towards disjoint, with overlap reported.
 - **Records affected (to plan once the concept is designed):**
   - the new connection-points record;
   - COR-052 refined: slots become one kind of connection point, and "the consumer owns the slot" becomes "the declaring side owns the point", named by role;
