@@ -22,7 +22,7 @@ project-kit's documentation does not sit in one place. Its user-facing material 
 2. **Spaces.**
    - The **technical space** is `tech-docs/`, plus declared places: `CONTRIBUTING.md`, `CLAUDE.md`, the core decision corpus, and the architecture decisions until they are relocated.
    - The **user space** is `docs/`, plus declared places: the top-level `README.md` and the adopter-facing area READMEs under `.pkit/`.
-   - Because project-kit *authors* `.pkit/`, it treats those READMEs as its own pages. This is a self-hosting exception to "sync-managed trees are never places", recorded here and never shipped to adopters. **Open question 2** is whether the scratchpad joins the technical space or stays outside documentation altogether, since it is exploratory and its notes retire.
+   - Because project-kit *authors* `.pkit/`, it treats those READMEs as its own pages. This is a self-hosting exception to "sync-managed trees are never places", recorded here and never shipped to adopters. The **scratchpad stays outside documentation** (maintainer decision, 2026-09-28). Its notes are non-normative working drafts that retire once their question resolves, so they are neither anchored nor friction-checked. The records and documents they produce are.
 3. **Analysis.** project-kit's analysis lives at `tech-docs/analysis/` (the default sub-path under the internal root). Its first artefacts are the multi-clone coordination use cases that validate EPIC #943 (#890).
 4. **Continuous integration.** The core friction check runs on every pull request in **warning** mode. Sweeps run with full history. A source moves to enforcing only after a period of clean warnings, by a later decision. The code-to-doc mapping stays active until onboarding converts it to anchors (project-management DEC-053).
 
@@ -45,5 +45,5 @@ Splitting the roots now gives project-kit the layout the living-docs separation 
 ## Open questions for the maintainer
 
 1. ~~User root~~: decided 2026-09-28, user `docs/`, internal `tech-docs/`.
-2. **Scratchpad.** Should it be part of the technical space (anchored, friction-checked), or stay outside documentation?
+2. ~~Scratchpad~~: decided 2026-09-28, it stays outside documentation.
 3. **Enforcement horizon.** How long a clean warning period before friction is enforced in continuous integration?
