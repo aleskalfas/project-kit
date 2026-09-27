@@ -231,6 +231,21 @@ Decided by Aleš Kalfas, step by step, after the core records were accepted. The
   - A role's points are never split across several active capabilities, so it is always clear who answers `documentation:*`.
   - A capability may play more than one role.
   - Rejected: a registered list of roles (friction for third parties); no roles at all (names collide, and nothing groups a capability's points).
+- **A role's public surface, and how it is declared** (maintainer, 2026-09-28).
+  - A role's surface is the **data slots it accepts** (others may fill them) and the **processes it offers** (others may depend on or embed them, through their interface, COR-036). Each is addressed `<role>:<name>` and versioned, and a process interface gets a version like a slot schema.
+  - Whatever a capability does not list in its surface is internal and can change freely. That is the line that makes refactoring safe.
+  - Package-metadata vocabulary:
+    - **`provides: [<role>]`**, the term Debian and RPM virtual packages use for exactly this: interchangeable providers of a role, one installed at a time. It replaces `plays`; `roles` and `implements` were rejected.
+    - **`surface:`**, one list of points, each with `kind: data | process`, `point`, `version`, and kind-specific fields: `policy` and `inert` for data, `interface` for process. One list, because both are kinds of connection point, and a later kind (for example events) is a new `kind` value.
+    - **`fills:`**, the points of other roles this capability plugs into, at a version.
+  - Process connections name roles, never capabilities: `depends_on: [{ upstream: analysis:planned-revalidation, … }]`.
+- **Not everything is a process** (brainstorm, settled).
+  - The process substrate is content-free by design: a process carries *position*, and domain data lives elsewhere (COR-033's `domain_ref`).
+  - Data slots are that "elsewhere", made shareable between capabilities. Readers do not progress through states, and doc-check obligations are data a gate reads.
+  - The two kinds meet when a process gate reads a slot.
+  - The mechanisms are shared, not duplicated: one command runner, one addressing scheme, one versioning rule, one compatibility check, one wiring graph, one status view.
+  - Slots as process inputs was rejected: a process input is passed by an embedding parent per run, while a slot is standing knowledge read by many, often outside any process.
+- **Visibility:** the resolved wiring is shown in `pkit status` and in a dedicated graph command.
 - **Records affected (to plan once the concept is designed):**
   - the new connection-points record;
   - COR-052 refined: slots become one kind of connection point, and "the consumer owns the slot" becomes "the declaring side owns the point", named by role;
