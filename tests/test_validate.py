@@ -2,27 +2,19 @@
 
 from __future__ import annotations
 
-import subprocess
 from pathlib import Path
 
 import click
 import pytest
 
-from project_kit import install, manifest, validate
+from project_kit import manifest, validate
+from tests.adopter_repo import MakeAdopterRepo
 
 
 @pytest.fixture
-def installed_target(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+def installed_target(make_adopter_repo: MakeAdopterRepo) -> Path:
     """A git repo with the kit installed; ready for validation."""
-    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
-    monkeypatch.chdir(tmp_path)
-
-    def _noop(_script: Path, _ctx: install.InstallContext) -> None:
-        return None
-
-    monkeypatch.setattr(install, "_run_adapter_primitive", _noop)
-    install.install_kit(tmp_path)
-    return tmp_path
+    return make_adopter_repo().root
 
 
 def test_validate_refuses_when_pkit_missing(tmp_path: Path) -> None:

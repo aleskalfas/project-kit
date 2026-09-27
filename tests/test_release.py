@@ -13,16 +13,14 @@ import pytest
 
 from project_kit import changesets, release, versioning
 from project_kit.manifest import read_backbone_manifest
+from tests.adopter_repo import GitRepo
 
 
 def _make_kit(tmp_path: Path, backbone: str = "1.5.0") -> Path:
     """A source kit in a git repo (so `tag_version` has a HEAD to tag)."""
-    repo = tmp_path
-    subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
-    subprocess.run(["git", "config", "user.email", "t@example.com"], cwd=repo, check=True)
-    subprocess.run(["git", "config", "user.name", "T"], cwd=repo, check=True)
+    repo = GitRepo.init(tmp_path)
 
-    source_kit = repo / ".pkit"
+    source_kit = tmp_path / ".pkit"
     source_kit.mkdir()
     (source_kit / "VERSION").write_text(f"{backbone}\n", encoding="utf-8")
 
@@ -37,8 +35,7 @@ def _make_kit(tmp_path: Path, backbone: str = "1.5.0") -> Path:
         'requires_backbone: ">=0.1.0,<1.6.0"\n',
         encoding="utf-8",
     )
-    subprocess.run(["git", "add", "."], cwd=repo, check=True)
-    subprocess.run(["git", "commit", "-q", "-m", "seed"], cwd=repo, check=True)
+    repo.commit("seed")
     return source_kit
 
 
