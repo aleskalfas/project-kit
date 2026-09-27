@@ -224,6 +224,13 @@ Decided by Aleš Kalfas, step by step, after the core records were accepted. The
   - Process connections name the other side **by implementation** (`<capability>:<process-id>`), which is the replacement problem role-naming fixes.
   - **Decision:** a new core record defines **connection points** in general: declared by the dependent side, addressed by role, optional, reported by health, drawn in **one wiring graph** for the project. Data slots (COR-052) and process connections (COR-036/038/042) become its two kinds, and process addresses gain role-addressing as an additive refinement.
   - Rejected: aligning slots only and leaving processes as a recorded gap (B); keeping the two separate (C).
+- **Roles are open names claimed by capabilities; one active capability per role** (maintainer, 2026-09-28).
+  - A capability declares the role or roles it plays in its package metadata (`plays: documentation`) and declares points under that role.
+  - There is no central registry; pkit documents the role names its own capabilities use, as recommendations only.
+  - Two installed capabilities claiming the same role is an error until the project selects one.
+  - A role's points are never split across several active capabilities, so it is always clear who answers `documentation:*`.
+  - A capability may play more than one role.
+  - Rejected: a registered list of roles (friction for third parties); no roles at all (names collide, and nothing groups a capability's points).
 - **Records affected (to plan once the concept is designed):**
   - the new connection-points record;
   - COR-052 refined: slots become one kind of connection point, and "the consumer owns the slot" becomes "the declaring side owns the point", named by role;
