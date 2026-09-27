@@ -360,6 +360,25 @@ Decided by Aleš Kalfas, step by step, after the core records were accepted. The
   - The existing separate validators (schemas, data, decisions, refs, process) become registered validators run by `pkit validate`. They stay available individually for focused use.
   - The check gate calls `pkit validate` once, so nothing registered can be forgotten there.
   - Output is grouped by functionality.
+- **Commands in detail: surface shown** (maintainer reviewed, 2026-09-28).
+  - `pkit validate`: the umbrella.
+  - `pkit friction`: `check`, `check --all`, `debt`, `explain`, `revalidate`, `defer`, `record-status`.
+  - `pkit connections`: `graph`, and `providers set`.
+  - `pkit capabilities`: `show`, `install --plan`, `uninstall --plan`, `refresh`.
+  - `pkit status`, extended.
+  - Reading commands never write. Writing commands name what they write, and write only with consent.
+- **Flows across connected capabilities** (brainstorm, maintainer, 2026-09-28: "yes events"). A capability's command must never call another capability by name, so the flow is carried by connections:
+  1. **Friction stays the foundation.** A change to an artefact propagates to everything anchored to it, with no orchestration. It cannot see that something *new* exists.
+  2. **Suggested next steps, always.** Every writing command ends by asking connected capabilities, through their connections, for next steps, and prints them. Nobody has to know the flow.
+  3. **Events as the third kind of connection point** (`kind: event`).
+     - A capability *offers* an event (for example `pkit::analysis:artefact-created`), with a versioned payload schema.
+     - Another *subscribes* to it through `extensions.subscribes`, with a command.
+     - pkit runs the subscribers after the producing command finishes. The producer never names a subscriber, and any provider of the subscribing role gets it.
+     - Subscribers are bounded, offline, deterministic and fail closed.
+     - A subscriber that writes needs consent.
+     - A failing subscriber never undoes the producer; it is reported.
+  4. **Agents** may compose flows on top of 2 and 3; nothing depends on them.
+  - Open design points for events: consent for writing subscribers; events cascading into further events (loop guard); edits made by hand emit no events (friction covers them).
 - **Records affected (to plan once the concept is designed):**
   - the new connection-points record;
   - COR-052 refined: slots become one kind of connection point, and "the consumer owns the slot" becomes "the declaring side owns the point", named by role;
