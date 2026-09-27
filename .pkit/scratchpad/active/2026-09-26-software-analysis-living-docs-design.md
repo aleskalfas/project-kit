@@ -302,6 +302,24 @@ Decided by Aleš Kalfas, step by step, after the core records were accepted. The
   - Validation rejects a mandatory declaration without a reason. Install plans show it, and suggestions help fill it.
   - Nothing is mandatory for software-analysis or living-docs today.
 - **Descriptions:** every extension point *requires* a `description` (what it means, and what one may rely on); every extension may carry one (what this capability supplies). It is prose for people, shown by `show`, the graph and plans, and nothing parses it.
+- **Role names are qualified by the publisher of their definition: `<publisher>::<role>`** (maintainer, 2026-09-28).
+  - Role names are not reserved globally. Different combinations of compatible capabilities may each have their own `documentation` role with a very different meaning.
+  - The qualifier names the **origin of the definition**, never the installed implementation. That keeps replacement working, the same way a fully qualified interface name keeps its name whichever class implements it. For example:
+    - `pkit::documentation` is pkit's definition of the role;
+    - super-living-docs also provides `pkit::documentation`, so it is interchangeable;
+    - `super-docs::documentation` is a different role that happens to share the word, and both can be active at once.
+  - Point references carry the qualified role (`pkit::documentation:readers`), so a contribution says in plain words which ecosystem it targets. A capability supporting two ecosystems lists one contribution per qualified point.
+  - The publisher is a namespace: `pkit::` for roles pkit defines, a third party's own name for theirs, and the project's name for a project-defined role.
+  - The earlier "one active provider per role" now reads "one active provider per qualified role".
+  - A schema **fingerprint** is kept only as an integrity check, so that two providers of the same qualified point and version define the same shape. It is no longer the identity.
+  - Rejected: qualifying by the implementing capability (breaks replacement); fingerprints as the identity (unreadable).
+- **Versions are per point, and roles are unversioned.**
+  - `pkit::documentation:readers@1` and `pkit::documentation:page-review@3` evolve independently, because compatibility is decided per connection.
+  - A version is an integer, increased only on a breaking change. In metadata it is a field; in displays it is written compactly as `@N`.
+  - Interchangeability between providers is **computed** by comparing points, and plans list the differences.
+  - A fundamental redefinition of a whole role is a new role name.
+  - Rejected: one version per role (a change to one point would break contributors to unchanged points); both levels (two numbers to keep consistent).
+- **Mandatory roles** reference qualified roles: `requires-roles: [{role: pkit::work-tracking, reason}]`.
 - **Records affected (to plan once the concept is designed):**
   - the new connection-points record;
   - COR-052 refined: slots become one kind of connection point, and "the consumer owns the slot" becomes "the declaring side owns the point", named by role;
