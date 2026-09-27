@@ -344,7 +344,12 @@ Decided by Aleš Kalfas, step by step, after the core records were accepted. The
     - `friction` in the backbone configuration, package metadata, artefacts (`pkit: {friction: …}`) and commands (`pkit friction …`);
     - `connections` in the backbone configuration, package metadata, artefacts (`pkit: {<role>: …}`) and commands (`pkit connections …`, the wiring graph).
   - The backbone configuration's `providers:` moves under `connections:` (`connections: { providers: { "pkit::documentation": living-docs } }`).
-  - **Open:** whether friction places may overlap between capabilities. Leaning towards disjoint, with overlap reported.
+- **Friction places are disjoint between capabilities (option A)** (maintainer, 2026-09-28).
+  - Each file in a declared place has exactly one owning capability, answerable from the declarations alone.
+  - A capability either names its places precisely, or declares broad places that exclude those other installed capabilities own.
+  - Validation fails when two installed capabilities' places overlap, naming the overlap.
+  - When a capability is uninstalled, its files become orphaned and are reported. No other capability silently takes them over.
+  - Rejected: overlap allowed, with ownership read from each file's `pkit.<role>` block (B). A file with no front matter in a shared area got two conflicting reports; a copied artefact could be claimed outside its folder; and uninstalling one capability made another quietly claim its files.
 - **Records affected (to plan once the concept is designed):**
   - the new connection-points record;
   - COR-052 refined: slots become one kind of connection point, and "the consumer owns the slot" becomes "the declaring side owns the point", named by role;
