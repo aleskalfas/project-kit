@@ -246,6 +246,17 @@ Decided by Aleš Kalfas, step by step, after the core records were accepted. The
   - The mechanisms are shared, not duplicated: one command runner, one addressing scheme, one versioning rule, one compatibility check, one wiring graph, one status view.
   - Slots as process inputs was rejected: a process input is passed by an embedding parent per run, while a slot is standing knowledge read by many, often outside any process.
 - **Visibility:** the resolved wiring is shown in `pkit status` and in a dedicated graph command.
+- **Discovery and the installation decision** (maintainer, 2026-09-28). Every project has a different set of capabilities, so pkit answers the user's question at each of four moments:
+  1. **Exploring:** `pkit capabilities show <cap>` works whether or not the capability is installed. It lists what the capability provides, its surface and its fills, and what it would connect to in this project.
+  2. **Deciding:** `install --plan` lists the connections it would make, any role conflicts (with the selection command to resolve them), and what else it needs.
+  3. **Noticing gaps:** status and the graph show unfilled points and **suggest** available capabilities that would fill them. A suggestion is never an action; nothing installs itself.
+  4. **Removing:** `uninstall --plan` lists the fillers lost, process connections left without a provider, and project-owned artefacts whose `pkit.<role>` blocks become orphaned.
+
+  How it works:
+  - Every capability's surface is readable from its package metadata without installing it.
+  - Plans are computed by the same resolver that builds the live wiring, so a plan predicts exactly what happens.
+  - Suggestions draw only on the catalogs the project already uses: kit-shipped capabilities, plus configured external sources.
+- **Part 2 updated:** the per-slot selection key becomes **`providers:`**, which selects one capability per role in the backbone configuration and covers all of that role's points. It carries COR-048's duties: empty by default, written with consent by configuration commands or when a conflict is reported, validated against what is installed, and cleared on uninstall with consent.
 - **Records affected (to plan once the concept is designed):**
   - the new connection-points record;
   - COR-052 refined: slots become one kind of connection point, and "the consumer owns the slot" becomes "the declaring side owns the point", named by role;
