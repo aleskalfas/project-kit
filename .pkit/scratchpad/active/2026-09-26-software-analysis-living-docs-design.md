@@ -281,6 +281,27 @@ Decided by Aleš Kalfas, step by step, after the core records were accepted. The
     - pinned rule-set inheritance against the installed set (COR-051);
     - the config file's shape against what the installed backbone expects.
   - `fills` is a new name for an existing concept. COR-052 said fillers "declare" but named no field, and three bespoke precursors do the same job: review contributions (pm DEC-032), privilege fragments (ADR-021) and label contributions.
+- **Package-metadata structure: extension points and extensions, each split by direction** (maintainer, 2026-09-28; supersedes `provides` / `surface` / `fills`).
+  - The structure combines two classic vocabularies:
+    - Eclipse-style *extension points* versus *extensions* answers **whose point is it**;
+    - UML *provided* versus *required* answers **which way it flows**.
+  - That gives a 2×2 grid:
+    - `extension-points.accepts`: data coming in, defined here, others may contribute;
+    - `extension-points.offers`: processes going out, defined here, others may depend on them;
+    - `extensions.contributes`: data this capability supplies to another role's point;
+    - `extensions.depends-on`: another role's process this capability relies on. This list is **derived** from process definitions' `depends_on` and validated to match, so there is one source.
+  - **Why these words:**
+    - `requires` / `provides` for points was rejected because "requires" sounds mandatory and collides with COR-030's `requires_capabilities`;
+    - the role key becomes **`roles`**, which frees `provides`;
+    - the definer of any point is the capability providing the role in its name, so no marker is needed;
+    - interchangeability means matching a role's `extension-points`.
+  - Rejected alternatives: plain UML (it hides the definer and double-uses `provides`); plain Eclipse (it does not show direction); exports / imports (reads backwards for data slots).
+- **Mandatory connections: opt-in, always with a reason.** Optional is the default everywhere, and self-contained capabilities remain the norm.
+  - **Mandatory role:** `requires-roles: [{role, reason}]`. Installation refuses unless some capability provides the role, and uninstalling the last provider refuses while it is still required. This is role-based, so it avoids COR-030's capability lock-in; `requires_capabilities` stays for the rare case of one specific implementation.
+  - **Mandatory point:** `must-be-filled: {reason}` on an accepted point. Validation fails while no filler other than the default exists. This is distinct from `inert`, which covers a filler that exists but broke.
+  - Validation rejects a mandatory declaration without a reason. Install plans show it, and suggestions help fill it.
+  - Nothing is mandatory for software-analysis or living-docs today.
+- **Descriptions:** every extension point *requires* a `description` (what it means, and what one may rely on); every extension may carry one (what this capability supplies). It is prose for people, shown by `show`, the graph and plans, and nothing parses it.
 - **Records affected (to plan once the concept is designed):**
   - the new connection-points record;
   - COR-052 refined: slots become one kind of connection point, and "the consumer owns the slot" becomes "the declaring side owns the point", named by role;
