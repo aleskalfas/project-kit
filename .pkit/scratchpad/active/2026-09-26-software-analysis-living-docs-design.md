@@ -378,7 +378,13 @@ Decided by Aleš Kalfas, step by step, after the core records were accepted. The
      - A subscriber that writes needs consent.
      - A failing subscriber never undoes the producer; it is reported.
   4. **Agents** may compose flows on top of 2 and 3; nothing depends on them.
-  - Open design points for events: consent for writing subscribers; events cascading into further events (loop guard); edits made by hand emit no events (friction covers them).
+  - **No consent model for events** (maintainer, 2026-09-28). Consent already exists twice: the project installed the subscribing capability, and the user ran the producing command. What matters is predictability, handled by visibility:
+    - `install --plan` shows what a capability subscribes to and what it writes;
+    - every run lists the subscriber effects it caused;
+    - everything lands in the diff;
+    - `--plan` previews subscriber effects, and `--no-events` runs a command alone;
+    - non-interactive runs behave the same.
+  - Still open for events: cascading events (a loop guard); edits made by hand emit no events, which friction covers.
 - **Records affected (to plan once the concept is designed):**
   - the new connection-points record;
   - COR-052 refined: slots become one kind of connection point, and "the consumer owns the slot" becomes "the declaring side owns the point", named by role;
