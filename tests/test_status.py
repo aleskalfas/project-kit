@@ -9,8 +9,8 @@ import click
 import pytest
 from click.testing import CliRunner
 
-from project_kit import install
 from project_kit.cli import status
+from tests.adopter_repo import MakeAdopterRepo
 
 
 @pytest.fixture
@@ -23,18 +23,10 @@ def empty_target(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 @pytest.fixture
-def installed_target(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+def installed_target(make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch) -> Path:
     """A git repo with the kit installed — status should report installed."""
-    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
-    monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("PKIT_SOURCE_BIN", "/fake/pkit")
-
-    def _noop(_script: Path, _ctx: install.InstallContext) -> None:
-        return None
-
-    monkeypatch.setattr(install, "_run_adapter_primitive", _noop)
-    install.install_kit(tmp_path)
-    return tmp_path
+    return make_adopter_repo().root
 
 
 def test_status_outside_a_project_raises(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

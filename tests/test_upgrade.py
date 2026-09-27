@@ -11,20 +11,13 @@ import pytest
 from packaging.version import Version
 
 from project_kit import install, manifest, router, upgrade
+from tests.adopter_repo import MakeAdopterRepo
 
 
 @pytest.fixture
-def installed_target(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+def installed_target(make_adopter_repo: MakeAdopterRepo) -> Path:
     """A git repo with the kit installed; ready for upgrade."""
-    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
-    monkeypatch.chdir(tmp_path)
-
-    def _noop(_script: Path, _ctx: install.InstallContext) -> None:
-        return None
-
-    monkeypatch.setattr(install, "_run_adapter_primitive", _noop)
-    install.install_kit(tmp_path)
-    return tmp_path
+    return make_adopter_repo().root
 
 
 class _RecordingRun:

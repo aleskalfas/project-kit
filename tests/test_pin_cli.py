@@ -17,9 +17,10 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from project_kit import install, router, upgrade
+from project_kit import router, upgrade
 from project_kit.cli import main
 from project_kit.sync import run_sync
+from tests.adopter_repo import build_adopter_repo
 
 
 def _git_repo(tmp_path: Path) -> Path:
@@ -319,14 +320,7 @@ def test_pin_newer_in_routed_context_reconciles_content_not_just_flips_pin(
 
 def _install(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Install the kit into a fresh repo, stubbing adapter primitives (no harness)."""
-    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
-    monkeypatch.chdir(tmp_path)
-
-    def _noop(_script: Path, _ctx: install.InstallContext) -> None:
-        return None
-
-    monkeypatch.setattr(install, "_run_adapter_primitive", _noop)
-    install.install_kit(tmp_path)
+    build_adopter_repo(tmp_path, monkeypatch=monkeypatch)
 
 
 def test_init_does_not_create_a_version_pin(

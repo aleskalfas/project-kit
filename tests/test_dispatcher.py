@@ -10,33 +10,24 @@ from __future__ import annotations
 
 import os
 import stat
-import subprocess
 from pathlib import Path
 
 import pytest
 from click.testing import CliRunner
 
-from project_kit import install as install_mod
 from project_kit.cli import main
 from project_kit.manifest import ComponentRegistryEntry, read_backbone_manifest, write_backbone_manifest
+from tests.adopter_repo import MakeAdopterRepo
 
 
 # --- fixtures ---------------------------------------------------------
 
 
 @pytest.fixture
-def kit_target(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+def kit_target(make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch) -> Path:
     """A minimal adopter project with `.pkit/` initialised."""
-    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
-    monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("PKIT_SOURCE_BIN", "/fake/pkit")
-
-    def _noop(_script: Path, _ctx: install_mod.InstallContext) -> None:
-        return None
-
-    monkeypatch.setattr(install_mod, "_run_adapter_primitive", _noop)
-    install_mod.install_kit(tmp_path)
-    return tmp_path
+    return make_adopter_repo().root
 
 
 def _install_synthetic_capability(
