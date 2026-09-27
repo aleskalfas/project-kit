@@ -200,6 +200,19 @@ Decided by Aleš Kalfas, step by step, after the core records were accepted. The
       deferred: [ { anchor: <anchor>, reason: "<reason>" } ]
   ```
 
+- **Functionality blocks in artefacts sit in a `pkit:` container (option B).**
+  - The top level holds the entity's own properties; everything under `pkit:` is a contract with a functionality. That keeps entity data and contracts distinguishable for future refactors.
+  - `pkit` is a reserved key. The precedent is COR-022's top-level `pkit_schema:` field.
+  - pkit's own files, such as the backbone configuration, need no container: their top level is already pkit's.
+  - Inside the container, core functionalities are bare (`friction`). Provider paths in keys (`<capability>@<functionality>`) were rejected: every artefact would depend on where a functionality happens to live, and friction has already moved once.
+- **Contracts are named after roles, not implementations (COR-046 applied)** — maintainer, 2026-09-28.
+  - Slots and artefact blocks use the role: `documentation:readers`, `documentation:reading-evidence`, `analysis:revalidation-evidence`, `work-tracking:doc-check`, and `pkit: { documentation: … }`.
+  - A capability declares which role it plays, and only one implementation per role is active; two installed means an explicit project selection.
+  - Fillers target roles, so software-analysis never needs to know which documentation implementation is installed.
+  - Motivating case: replacing living-docs with another documentation implementation must be invisible to everything else.
+  - Refines COR-052 slot naming, both capability decisions, pm DEC-053, and the front-matter convention above.
+  - **Open:** who owns a role's contract when there can be several implementations.
+
 **Still to walk through:** part 2 (backbone configuration), part 3 (capability package metadata), part 4 (schemas), commands in detail, ADR-055 open question 3 (the enforcement model: the brainstorm leaned towards "updated, explained or deferred-with-reason", with an optional CI agent as accelerator).
 
 ## Reference adopter — Mockingbird (read-only observation, 2026-09-26)
