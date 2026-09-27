@@ -211,7 +211,12 @@ Decided by Aleš Kalfas, step by step, after the core records were accepted. The
   - Fillers target roles, so software-analysis never needs to know which documentation implementation is installed.
   - Motivating case: replacing living-docs with another documentation implementation must be invisible to everything else.
   - Refines COR-052 slot naming, both capability decisions, pm DEC-053, and the front-matter convention above.
-  - **Open:** who owns a role's contract when there can be several implementations.
+  - **Who owns a role's contract: a separate contract package per role, from the start** (maintainer chose B over "first implementation defines it" and "core ships it"): "it will be our primary contract interface".
+  - **The component is called a *contract*.** It is a role's interface: its slots and artefact blocks, plus the obligations an implementation takes on, written in prose. It carries no behaviour.
+    - "Interface" was rejected: it collides with a process definition's `interface:` field (COR-036), and it undersells the obligations.
+    - A capability *implements* a contract; another *fills* its slots.
+    - A contract is versioned by role, not by any capability's version.
+  - **Next:** where contracts live, how they are installed and removed, who may author them, and how COR-052's "the consumer owns the slot" changes to "the contract owns the slot".
 
 **Still to walk through:** part 2 (backbone configuration), part 3 (capability package metadata), part 4 (schemas), commands in detail, ADR-055 open question 3 (the enforcement model: the brainstorm leaned towards "updated, explained or deferred-with-reason", with an optional CI agent as accelerator).
 
