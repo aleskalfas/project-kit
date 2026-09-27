@@ -1,0 +1,5 @@
+component: backbone
+kind: none
+body: >
+  COR-053 (proposed) decides role-named connection points as one mechanism behind
+  data slots, process connections and events; design-ahead, no tooling change yet.
