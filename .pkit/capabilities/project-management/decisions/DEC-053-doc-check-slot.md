@@ -14,10 +14,10 @@ The mapping is a coarse guess written from the code's side, so broad rules fire 
 
 ## Decision
 
-**What a change owes to its documentation is collected through a slot, `project-management:doc-check`. This capability's own checks are always one of its fillers, and a documentation capability may add to them.**
+**What a change owes to its documentation is collected through a slot — a data point under the work-tracking role this capability provides, `<methodology>::work-tracking:doc-check` (refinement per COR-053). This capability's own checks are always one of its fillers, and a documentation capability may add to them.**
 
 1. **The slot** (COR-052), resolved for a pull request against its diff:
-   - **Its entries are documentation obligations.** Each names the document or path concerned, the reason (a mapped path changed, an anchored page went stale, new code is undocumented), and its source. Obligations from different sources are keyed so that they never collide or replace one another. A mapping obligation is keyed by its mapping rule, as today. Other obligations are keyed by document and source. The shape is a companion schema named after the slot, at version 1.
+   - **Its entries are documentation obligations.** Each names the document or path concerned, the reason (a mapped path changed, an anchored page went stale, new code is undocumented), and its source. Obligations from different sources are keyed so that they never collide or replace one another. A mapping obligation is keyed by its mapping rule, as today. Other obligations are keyed by document and source. The shape is a companion schema named after the point, at version 1.
    - **Policy:** `additive`. Obligations are requirements, so none may be dropped silently. A project removes one only through a removal override that records its reason, the audited escape the slots record provides. Keys include the source, so the policy's collision rule never fires between sources.
    - **Default:** always included. This capability's code-to-doc mapping is the default filler.
    - **Inert policy:** `fail`, because the slot feeds the merge gate. A documentation filler that goes out of step makes the check report "unresolved", naming the filler and the fix: update it, pin it, or uninstall it. It never reports a weaker pass.
@@ -26,8 +26,8 @@ The mapping is a coarse guess written from the code's side, so broad rules fire 
 
 2. **How obligations are met.**
    - **Mapping obligations are met exactly as today.** The diff touches one of the rule's documents, or the `## Doc impact` section names the changed code path or the rule's pattern. A project without a documentation capability sees no change.
-   - **Obligations from other sources** are met per document. A line listing an update to a document meets every such obligation on it, provided the diff contains that update. A line naming the document with a reason ("`<document>`: no change needed, because …") meets them with a justification.
-   - A section-wide "No doc impact" justification meets only obligations whose source is advisory.
+   - **Obligations from other sources** are met by the artefact, not by the section (refinement per COR-050): a friction obligation on an anchored page is met when the page carries one of the core record's three answers in the diff — updated, unchanged with its justification, or deferred with its reason. The `## Doc impact` section may *render* those answers, and a documentation capability's agent may pre-fill it from them, but a line in the section meets nothing on its own, because the check must hold for a pull request from any tool and with no description at all. An obligation for undocumented new code is met when a page anchoring that code appears in the diff, or is deferred on the page that ought to describe it.
+   - A section-wide "No doc impact" justification meets only mapping obligations whose rule is advisory.
 
    An obligation left unaddressed is reported.
 
@@ -38,7 +38,7 @@ The mapping is a coarse guess written from the code's side, so broad rules fire 
 
    As before, a warning at pull-request time is only a speed-bump. Real enforcement is the project wiring the documentation check as a required status in its continuous integration.
 
-4. **What a documentation capability contributes.** When one fills the slot, it contributes obligations of two kinds: friction on anchored pages, and new code that nothing describes. It may also propose a `## Doc impact` section through its own agent, for the author to confirm or edit. That proposal is not slot data, because the slot carries obligations only. An anchored page's friction is itself cleared by rechecking the page (COR-050), which the core friction check verifies separately.
+4. **What a documentation capability contributes.** When one fills the slot, it contributes obligations of two kinds: friction on anchored pages, and new code that nothing describes. It may also propose a `## Doc impact` section through its own agent, for the author to confirm or edit. That proposal is not slot data, because the slot carries obligations only. An anchored page's friction is cleared on the page itself — a revalidation or a deferral (COR-050) — and the core change check verifies that; this capability's check reads the same machine-readable result rather than re-deriving it.
 
 5. **Retiring the mapping.** Once a project's pages are anchored, the mapping duplicates what anchors say more precisely. A documentation capability's onboarding may convert mapping rules into page anchors and propose emptying the mapping, as the living-docs decision's onboarding describes. The project makes that a reviewed change. Until then, both sources contribute, and a line that updates a document named by both meets both.
 
@@ -63,6 +63,6 @@ The mapping is a coarse guess written from the code's side, so broad rules fire 
 
 ## Implications
 
-- **This capability** declares the slot, ships its obligation schema and the per-source enforcement settings, and routes its existing mapping check through the slot as the default filler. Its documentation check reads the resolved slot. The mapping stays where it is configured today, as the default filler's input, so no migration is needed. Behaviour for projects without a documentation capability is unchanged.
+- **This capability** provides the work-tracking role, declares the point under it, ships its obligation schema and the per-source enforcement settings, and routes its existing mapping check through the slot as the default filler. Its documentation check reads the resolved slot. The mapping stays where it is configured today, as the default filler's input, so no migration is needed. Behaviour for projects without a documentation capability is unchanged.
 - **[project-management:DEC-015-doc-update-obligations]** points at this record for how its checks are collected.
-- **A documentation capability** may declare its fill of this slot.
+- **A documentation capability** may declare its contribution to this point, addressing the role.

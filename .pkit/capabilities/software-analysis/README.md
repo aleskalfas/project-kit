@@ -6,7 +6,7 @@ Install it when your project is past the point where one person holds the whole 
 
 ## How it stays true
 
-Each artefact declares what makes it true and when it was last rechecked. The core friction check (COR-050) flags it when that changes. A **revalidation** then checks it, and ends as *holds*, *analysis was stale*, *code regressed* or *gap found*. A record is kept only when there's something to report. The full rule is in the decision.
+Each artefact declares what makes it true and when it was last revalidated. The core friction check (COR-050) flags it when that changes. A **revalidation** then checks it, and ends as *holds*, *analysis was stale*, *code regressed* or *gap found*. A record is kept only when there's something to report. The full rule is in the decision.
 
 ## Where things live
 
@@ -58,16 +58,18 @@ revalidated: 2026-10-02T09:40:12Z
 
 **Revalidation record** (`<date>-<subject>.md`): front matter with `change` (a work item, a pull request, or commits), `trigger` (`planned` | `drift` | `scheduled` | `close` | `onboarding`), the date performed, who did it (and who confirmed), and the ids of the artefacts covered. The body has one outcome per artefact, then the gaps and what resolved each.
 
-Anchor and marker field names follow the core anchors-and-friction schema. The examples above are illustrative until that schema ships.
+The friction block (anchors and revalidation) follows the core anchors-and-friction schema, inside the `pkit:` container in each artefact's front matter. The examples above are illustrative until that schema ships.
 
-## Slots
+## Connections
 
-- **Declares** `software-analysis:revalidation-evidence`: executed results per artefact and commit, supplied by a capability or a project file. Policy `union`, advisory. Evidence informs a revalidation; it doesn't replace one.
-- **Will fill** `living-docs:readers` with actors and their needs, once that slot's record is accepted. It is inert when living-docs is not installed.
+The capability provides the `pkit::analysis` role (COR-053).
+
+- **Accepts** `pkit::analysis:revalidation-evidence`: executed results per artefact and commit, supplied by a capability or a project file. Policy `union`, advisory. Evidence informs a revalidation; it doesn't replace one.
+- **Contributes** to `pkit::documentation:readers` with actors and their needs. Inert when no documentation capability is installed.
 
 ## What's shipped now, what's next
 
-This increment ships the decision and this README. Next come: commands to stamp and check artefacts, an authoring skill that guides revalidation, and the declarations of places, surface and slots. Named for later: planned-revalidation and onboarding lifecycles, a supplementary specification (constraints and quality), architecture views, and executable use cases.
+This increment ships the decision and this README. Next come: commands to stamp and check artefacts, an authoring skill that guides revalidation, and the declarations of places, surface and connections. Named for later: planned-revalidation and onboarding lifecycles, a supplementary specification (constraints and quality), architecture views, and executable use cases.
 
 ## Citing this capability's decisions
 
