@@ -33,7 +33,7 @@ Rules are also layered. A component ships the rules its discipline needs, and ea
      - the rule set's name and version;
      - what it inherits (point 7);
      - which artefacts its rules apply to (its *scope*, given as places; a consuming component may narrow it);
-     - a map from each rule's id to that rule's machine fields: status, origin, the extension points it **offers**, the extension points it **fills**, its successor, and the anchor and recheck-marker fields every artefact carries (COR-050).
+     - a map from each rule's id to that rule's machine fields: status, origin, the extension points it **offers**, the extension points it **fills**, its successor, and, inside the entry's methodology container, the friction block — anchors and revalidation — every artefact carries (COR-050).
    - **Its body holds the prose:** one section per rule, headed by the rule's id and title, containing the statement.
    - A schema fixes the data's shape. Validation checks the schema, and also that every rule in the body has data and every data entry has a rule in the body.
    - **Discovery:** rule sets are found where artefacts are found, in the places a component or the project declares to hold them (COR-050).
