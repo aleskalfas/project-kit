@@ -393,7 +393,9 @@ Decided by Aleš Kalfas, step by step, after the core records were accepted. The
   - COR-050 refined: the part-1 mechanics and the front-matter convention (`pkit:` container, role-named keys);
   - software-analysis DEC-001, living-docs DEC-001 and pm DEC-053: role-named points.
 
-**Still to walk through:** part 2 (backbone configuration), part 3 (capability package metadata), part 4 (schemas), commands in detail, ADR-055 open question 3 (the enforcement model: the brainstorm leaned towards "updated, explained or deferred-with-reason", with an optional CI agent as accelerator).
+- **2026-09-27 — project-kit runs the friction check in enforcing mode from the first day** (maintainer). No warning period: project-kit is authored end to end by pkit's own tooling and agents, so a false flag is a defect in our anchors or our check — to be failed loudly and fixed at once, not tolerated. The check is a required status in CI; the code-to-doc mapping stays active until onboarding converts it to anchors (pm DEC-053). Recorded in ADR-055 point 4 (PR #971); this closes the ADR's last open question. Adopters keep the warning-first path COR-050 describes — this is the self-hosting adopter's choice, not a change to the core record.
+
+**Still to walk through:** nothing in the mechanics walk-through; parts 1–4, connection points, commands, events and cascades are settled, and ADR-055's three questions are decided. Next: turn the walk-through into record refinements (#972), then the implementation filing plan.
 
 ## Reference adopter — Mockingbird (read-only observation, 2026-09-26)
 
@@ -427,7 +429,7 @@ All planned now (see the 2026-09-27 scope entry). Each goes critic → architect
 4. **COR — slots** (core). Per the 2026-09-27 slot-semantics entry: `single` / `union` / `additive`; precedence and suppression; explicit selection for competing `single` fillers; schemas on the existing machinery with semver-major versions; command fillers on the evaluable seam; `on-inert: fallback | fail` with fail-closed for enforcing uses; status/health visibility; precedent mapping with ADR-021 as the stated exception.
 5. **software-analysis DEC-001** — actors, use cases, journeys, glossary (RUP-inspired layout, grouping rule, formats); revalidation (triggers, two outcomes, records only with findings); planned-revalidation and onboarding as process-substrate lifecycles; brownfield onboarding; fills `living-docs:readers`; declares `software-analysis:revalidation-evidence`; independent of project-management and testing. Rewrites the draft on PR #945.
 6. **living-docs DEC-001** — spaces by audience and the separation rule; one definition per space; anchors on pages; reader-review (distinct from software-engineering's `docs-reviewer`); `readers`, `anchors`, `reading-evidence` slots; the CMN set as its shared rule set; propose-never-apply; onboarding as transformation; fills `project-management:doc-check` (a `union` slot, pm's default always included: friction, uncovered surface, pre-filled doc statement); converts pm's mapping rules into page anchors at onboarding.
-7. **project-kit ADR (first adopter)** — roots, CI wiring (warning first), seed use cases, fate of the use-case ids drafted on PR #945.
+7. **project-kit ADR (first adopter)** — roots (`docs/` + `tech-docs/`), CI wiring (enforcing from day one), seed use cases, fate of the use-case ids drafted on PR #945.
 
 Follow-up, pm side: a record amending DEC-015 — declares the `project-management:doc-check` slot with its current behaviour as the default filler.
 
@@ -435,4 +437,4 @@ Not produced here: #954 (journal opt-in).
 
 ## Status
 
-Active. All ten questions and the review round decided; seven of eight records accepted (COR-048..052, software-analysis DEC-001, living-docs DEC-001, pm DEC-053); ADR-055 proposed. Walk-through of the mechanics in progress (part 1 done, refinements tracked in #972).
+Active. All ten questions and the review round decided; seven of eight records accepted (COR-048..052, software-analysis DEC-001, living-docs DEC-001, pm DEC-053); ADR-055 proposed with all three questions decided (PR #971). Walk-through of the mechanics complete; record refinements tracked in #972.
