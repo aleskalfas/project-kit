@@ -116,6 +116,53 @@ Order follows dependency: where things live → how rules are written → how ca
 - **2026-09-27 — Slot semantics (after critic + architect consult).** (1) **Policy per slot:** `single` (one filler answers), `union` (merged by id; project may override or suppress), **`additive`** (merged; any collision, the project's included, is an error; removal only by an explicit logged override — for slots carrying requirements, preserving pm DEC-032's "drop nothing"). (2) **Precedence:** project file > capability filler > consumer default; overrides replace a whole entry (no field merge); `union` has an explicit suppress list; each slot states whether its default is always included or used only when no filler exists. (3) **Two capabilities on one `single` slot = error naming both**; the project selects explicitly in `.pkit/project/config.yaml` (`slots: { <slot>: <capability> }`); install order never decides. (4) **Schemas use the existing machinery** (COR-018 companion, COR-022 binding, slot name as namespace); **semver-major** version, filler accepted when the major matches. (5) **Command fillers reuse the evaluable seam** (package-metadata registration, timeout, offline, deterministic, fail-closed: bad exit or bad output = no answer, never an empty answer); only the payload is new, validated against the slot schema. (6) **Fail closed where enforced:** each slot declares `on-inert: fallback | fail`; advisory uses fall back with a warning; enforcing uses (gate, CI, validate) report "slot unresolved"; the consumer default answers only when **no** filler exists, never as a stand-in for a broken one. (7) **`pkit status` / `health`:** one line per slot — policy, answering filler, versions, inert fillers with reasons; health flags inert and ambiguous resolutions. (8) **Precedents:** reviewer and label contributions can converge later; privilege fragments (ADR-021) are a stated exception (scoped ids, guardrail ban — converging would change failure behaviour and need a migration). Decided by Aleš Kalfas.
 - **2026-09-27 — `project-management:doc-check` is a `union` slot with pm's default always included.** (Refines the DEC-015 relation entry.) With living-docs installed, pm's checks and living-docs' checks merge: pm's `## Doc impact` gate keeps working, **pre-filled by living-docs**; living-docs adds friction on anchored pages and uncovered surface. No double noise: at living-docs onboarding pm's code→doc mapping rules are converted into page anchors and the mapping is emptied, so the drift check that fires is friction only. Nothing pm guarantees is lost if living-docs misses a case, and neither capability re-implements the other. Rejected: `single` (replacement would force living-docs to re-implement pm's gate or silently lose it — a hidden dependency the other way). Decided by Aleš Kalfas.
 - **2026-09-27 — Rule ids: `RS-<SET>-NNN`; extension points with `#`; ownership across the method/project line.** Rules form the **`RS` id family**, like every other pkit family (`COR`, `PRJ`, `DEC`, `ADR`, `UC`, `JRN`): `RS-CMN-003`, `RS-DOC-001`. Collisions with other families are impossible by construction; the only uniqueness check left is set names among rule sets. Hyphen, not colon — the colon is the namespace separator in citations (`[living-docs:RS-CMN-003]`) and COR-019's optional scope segment would make `RS:` ambiguous. **Extension points** use `#`: `RS-CMN-003#cause-location` (a colon would clash inside a citation the same way). **Citation:** method rule sets cited with the capability name (`[living-docs:RS-CMN-003]`), project rule sets bare (`RS-DOC-001`). **Ownership:** method rule sets live in the capability (kit-owned, versioned, synced); project rule sets under the internal docs root (project-owned; never touched by sync or uninstall); projects extend, never edit, method rule sets. **Inheritance pins the major version** (`inherits: living-docs:CMN@1`); a capability upgrade shipping a new major flags the project rule set in status, and fails closed where enforced (same principle as slots). The decision system's *guarantees* (permanent ids, origins, statuses with `proposed` default, supersession, the acceptance gate) apply identically in both locations. Importing Mockingbird's rules renames `CMN-001…008` → `RS-CMN-001…008` (one-time, internal to its `tech-docs/.meta`). Decided by Aleš Kalfas.
+## Walk-through of the mechanics (2026-09-28), part 1: the fields on an anchored artefact
+
+Decided by Aleš Kalfas, step by step, after the core records were accepted. These refine COR-050 and its dependents (tracked in #972).
+
+- **The answer to friction lives in the artefact, never in a pull-request description.** `## Doc impact` is project-management's format. A PR may come from another tool, or have no description at all, and the check must also run locally. The check therefore compares the diff with the diff. pm's `## Doc impact` becomes an optional **rendering** built from the artefacts, never what the check reads.
+- **Three answers, judged from the diff:**
+  - *updated*: content changed and the marker changed;
+  - *explained*: only the marker changed, with a justification;
+  - *deferred*: a deferral entry.
+
+  A marker bump with none of those is reported as "bumped, nothing behind it".
+- **Naming: the revalidate family everywhere** (the maintainer chose A over "recheck"). The field is `revalidated`, the event a *revalidation*. COR-050's "recheck" wording is refined in place.
+- **The `revalidated` block:**
+  ```yaml
+  revalidated:
+    at: 2026-10-02T09:40:12Z        # the marker; its precise point is the commit where `at` last changed
+    outcome: explained              # updated | explained — a record of the last revalidation, validated against the diff, never read for staleness
+    holds-because: "…"              # required only when outcome is explained; the one piece of judgment the tool cannot supply
+  ```
+  - **Why an outcome is stored even though it is derivable:** it is a presentation layer, visible in files and in git history. It is not memory and is never used to compute staleness.
+  - **Why only `updated` and `explained`:** `deferred` has its own list, and `stale` cannot be written at revalidation time.
+  - `holds-because` replaced "recheck-note", because it says what the field is.
+- **Deferrals are a list, one entry per anchor:** `deferred: [{anchor, reason}]`.
+  - Each entry defers friction from one anchor up to the moment it was written. A later change to that anchor is new friction.
+  - Only the reason is stored. Each entry's origin (author, date, PR) comes from git.
+  - Several reasons coexist. Entries are kept sorted by anchor, so parallel branches deferring different anchors merge cleanly.
+- **When a deferral disappears:**
+  1. a proper revalidation removes all entries;
+  2. removing one entry without a revalidation brings that anchor's friction back;
+  3. removing the anchor from the artefact means removing its entry too, and a dangling entry is an error;
+  4. withdrawing the artefact removes its entries.
+
+  A revalidation that leaves entries behind is flagged. There is no automatic expiry; age is shown.
+- **Debt is derived from git, not stored in a ledger.**
+  - *Deferred* debt originates in the commit that added the entry.
+  - *Stale* debt originates in the first commit that changed an anchor after the revalidation point.
+  - `pkit friction debt` lists both, with author, date and PR.
+  - A stored ledger (one file, or one file per entry) was rejected: it would duplicate git and drift.
+- **Recording stale debt on the artefact (maintainer's idea):** an explicit `pkit friction record-debt` writes stale debt as `deferred` entries ("found stale; origin PR/commit") through a reviewed PR, so that *all* debt is visible in the file and in git history. The project configures when it runs: after every merge to the default branch, on demand, on a clock, before a release, or never.
+- **Commands:** `pkit friction check` checks the change; `pkit friction check --all` checks the whole repository. The latter was formerly called "sweep", and "clean" was rejected because in other tools it means deletion. Writing is always separate and explicit (`revalidate`, `defer`, `record-debt`).
+- **Parallel changes:**
+  1. A conflict on `revalidated` or its reason is resolved by **revalidating the combined state**. There is no automatic merge driver, because one would claim a revalidation that never happened.
+  2. When only one branch revalidates, the other branch's anchor changes are reachable but not from that point, so they are flagged: nothing new is needed.
+  3. **Friction results are valid only against the up-to-date base.** Projects that enforce friction require up-to-date branches or a merge queue, and the check reports "checked against an outdated base".
+
+**Still to walk through:** part 2 (backbone configuration), part 3 (capability package metadata), part 4 (schemas), commands in detail, ADR-055 open question 3 (the enforcement model: the brainstorm leaned towards "updated, explained or deferred-with-reason", with an optional CI agent as accelerator).
+
 ## Reference adopter — Mockingbird (read-only observation, 2026-09-26)
 
 - `docs/` mixes two spaces: user-facing (`guides/`, `EVALUATION.md`, `CLUSTER_ONBOARDING.md`, `INSTALL_ENV_CACHE.md`, `assets/`) and technical (`architecture/decisions/ADR-001…009`, `ARCHITECTURE.md`, `CONTRIBUTING.md`, `RELEASING.md`, `BUILDING_IMAGES.md` — the last possibly serving operators too: a human call).
@@ -156,4 +203,4 @@ Not produced here: #954 (journal opt-in).
 
 ## Status
 
-Active. Ten questions and the review round decided. Remaining week-one details (anchor-proposing tooling, when a page may have no anchors, PR-check severity for artefacts outside the diff, fate of the PR #945 ids) are carried into the records. Next: final methodology pass on the note, then author record 1 (documentation roots).
+Active. All ten questions and the review round decided; seven of eight records accepted (COR-048..052, software-analysis DEC-001, living-docs DEC-001, pm DEC-053); ADR-055 proposed. Walk-through of the mechanics in progress (part 1 done, refinements tracked in #972).
