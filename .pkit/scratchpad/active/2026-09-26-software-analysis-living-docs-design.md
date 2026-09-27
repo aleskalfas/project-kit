@@ -266,6 +266,21 @@ Decided by Aleš Kalfas, step by step, after the core records were accepted. The
     - `friction` patterns stay inside the repository, with a warning if a pattern matches nothing.
   - "Deterministic" means the same repository state always gives the same answer.
   - **The rule for every later step:** each new kind of file ships with its schema and its deterministic checks **in the same increment**, never "validation later". That covers artefact front matter, rule sets, slot data, capability surfaces and revalidation records.
+- **The first increment also validates capability package metadata and every version relation** (maintainer, 2026-09-28).
+  - Today `package.yaml` has no JSON Schema: unknown keys are silently ignored, and only a hand-written self-consistency check runs, at install or register time.
+  - The first increment adds:
+    - a core shared schema for package metadata, covering existing fields and the new `provides` / `surface` / `fills` / `locations` / `anchored-places`, with unknown keys as errors;
+    - deterministic repository checks: points under a provided role; a companion schema per data point; filler commands and scripts exist; locations under a valid root; places inside those locations; roles with two providers have a selection;
+    - all of it run in the check gate on every change, for every installed capability. The install-time check becomes one caller of the same validator.
+  - **Version checks:**
+    - `requires_backbone` against the installed backbone;
+    - capability dependency ranges against installed versions (COR-030);
+    - `fills` against the declared point version;
+    - process connections against the offered interface version;
+    - project slot files against the point's schema version;
+    - pinned rule-set inheritance against the installed set (COR-051);
+    - the config file's shape against what the installed backbone expects.
+  - `fills` is a new name for an existing concept. COR-052 said fillers "declare" but named no field, and three bespoke precursors do the same job: review contributions (pm DEC-032), privilege fragments (ADR-021) and label contributions.
 - **Records affected (to plan once the concept is designed):**
   - the new connection-points record;
   - COR-052 refined: slots become one kind of connection point, and "the consumer owns the slot" becomes "the declaring side owns the point", named by role;
