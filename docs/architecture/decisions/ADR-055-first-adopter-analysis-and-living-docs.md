@@ -16,30 +16,34 @@ project-kit's documentation does not sit in one place. Its user-facing material 
 
 *Proposed — the specifics below were not settled in the design discussion and await the maintainer.*
 
-1. **Roots.** Internal root `docs/`, which matches today's layout, so architecture decisions stay where they are. User root: **open question 1**.
+1. **Roots.** User root `docs/`, internal root `tech-docs/`. This is decided by the maintainer on 2026-09-28, following the split planned in the design.
+   - Today `docs/` holds only technical material: the architecture decisions. Their location is already an explicit overlay value, so changing the internal root moves nothing (COR-049).
+   - Their relocation to `tech-docs/` is proposed during onboarding, as a reviewed change that rewrites references. Until then, the misplacement is reported as an onboarding finding.
 2. **Spaces.**
-   - The **technical space** is `docs/` plus declared places `CONTRIBUTING.md`, `CLAUDE.md` and the core decision corpus.
-   - The **user space** is the top-level `README.md` plus the adopter-facing area READMEs under `.pkit/`, as declared places.
+   - The **technical space** is `tech-docs/`, plus declared places: `CONTRIBUTING.md`, `CLAUDE.md`, the core decision corpus, and the architecture decisions until they are relocated.
+   - The **user space** is `docs/`, plus declared places: the top-level `README.md` and the adopter-facing area READMEs under `.pkit/`.
    - Because project-kit *authors* `.pkit/`, it treats those READMEs as its own pages. This is a self-hosting exception to "sync-managed trees are never places", recorded here and never shipped to adopters. **Open question 2** is whether the scratchpad joins the technical space or stays outside documentation altogether, since it is exploratory and its notes retire.
-3. **Analysis.** project-kit's analysis lives at `docs/analysis/` (the default sub-path under the internal root). Its first artefacts are the multi-clone coordination use cases that validate EPIC #943 (#890).
+3. **Analysis.** project-kit's analysis lives at `tech-docs/analysis/` (the default sub-path under the internal root). Its first artefacts are the multi-clone coordination use cases that validate EPIC #943 (#890).
 4. **Continuous integration.** The core friction check runs on every pull request in **warning** mode. Sweeps run with full history. A source moves to enforcing only after a period of clean warnings, by a later decision. The code-to-doc mapping stays active until onboarding converts it to anchors (project-management DEC-053).
 
 ## Rationale
 
-Keeping `docs/` as the internal root changes nothing that exists. Declaring the scattered files as places, instead of moving them, follows the "record, never move" principle of the documentation-roots record. Warning mode first follows the adoption path the anchors-and-friction record describes: the check becomes binding only when the project chooses to make it so.
+Splitting the roots now gives project-kit the layout the living-docs separation rule asks for, and the same layout as the downstream adopter that motivated the capabilities. Nothing moves on the split, because existing locations are explicit. Declaring the scattered files as places, instead of moving them, follows the "record, never move" principle of the documentation-roots record. Warning mode first follows the adoption path the anchors-and-friction record describes: the check becomes binding only when the project chooses to make it so.
 
 ### Alternatives considered
 
-- **Move all user-facing material into a new user root.** Deferred to open question 1. It would move adopter-facing READMEs out of the areas they describe.
+- **Keep both roots at `docs/` for now.** Rejected by the maintainer: the split is the intended layout, and doing it first avoids a second transition later.
+- **Move the adopter-facing READMEs into the user root.** Rejected. They stay beside the areas they describe, as declared places.
 - **Exclude `.pkit/` READMEs from documentation.** Rejected. They are project-kit's primary user-facing documentation.
 
 ## Implications
 
 - Adopting the capabilities here means onboarding project-kit's documentation: anchoring pages, converting the mapping, and proposing splits, all through reviewed changes.
-- The first use cases are written into `docs/analysis/use-case-model/`.
+- The first use cases are written into `tech-docs/analysis/use-case-model/`.
+- The backbone configuration gains the documentation block (`user: docs/`, `internal: tech-docs/`) when the documentation-roots key is implemented.
 
 ## Open questions for the maintainer
 
-1. **User root.** Keep it equal to `docs/` for now, with the split reported as an onboarding finding, or create a separate user root now? If separate, what should it be called?
+1. ~~User root~~: decided 2026-09-28, user `docs/`, internal `tech-docs/`.
 2. **Scratchpad.** Should it be part of the technical space (anchored, friction-checked), or stay outside documentation?
 3. **Enforcement horizon.** How long a clean warning period before friction is enforced in continuous integration?
