@@ -14,7 +14,7 @@ project-kit's documentation does not sit in one place. Its user-facing material 
 
 ## Decision
 
-*Proposed — the specifics below were not settled in the design discussion and await the maintainer.*
+*All three open questions were decided by the maintainer on 2026-09-28.*
 
 1. **Roots.** User root `docs/`, internal root `tech-docs/`. This is decided by the maintainer on 2026-09-28, following the split planned in the design.
    - Today `docs/` holds only technical material: the architecture decisions. Their location is already an explicit overlay value, so changing the internal root moves nothing (COR-049).
@@ -24,11 +24,11 @@ project-kit's documentation does not sit in one place. Its user-facing material 
    - The **user space** is `docs/`, plus declared places: the top-level `README.md` and the adopter-facing area READMEs under `.pkit/`.
    - Because project-kit *authors* `.pkit/`, it treats those READMEs as its own pages. This is a self-hosting exception to "sync-managed trees are never places", recorded here and never shipped to adopters. The **scratchpad stays outside documentation** (maintainer decision, 2026-09-28). Its notes are non-normative working drafts that retire once their question resolves, so they are neither anchored nor friction-checked. The records and documents they produce are.
 3. **Analysis.** project-kit's analysis lives at `tech-docs/analysis/` (the default sub-path under the internal root). Its first artefacts are the multi-clone coordination use cases that validate EPIC #943 (#890).
-4. **Continuous integration.** The core friction check runs on every pull request in **warning** mode. Sweeps run with full history. A source moves to enforcing only after a period of clean warnings, by a later decision. The code-to-doc mapping stays active until onboarding converts it to anchors (project-management DEC-053).
+4. **Continuous integration.** The core friction check runs on every pull request in **enforcing** mode from the first day, wired as a required status check; whole-repository checks run with full history. project-kit is authored end to end by pkit's own tooling and agents, so a false flag is a bug in our anchors or our check, to be failed loudly and fixed at once rather than tolerated in a warning period. The code-to-doc mapping stays active until onboarding converts it to anchors (project-management DEC-053).
 
 ## Rationale
 
-Splitting the roots now gives project-kit the layout the living-docs separation rule asks for, and the same layout as the downstream adopter that motivated the capabilities. Nothing moves on the split, because existing locations are explicit. Declaring the scattered files as places, instead of moving them, follows the "record, never move" principle of the documentation-roots record. Warning mode first follows the adoption path the anchors-and-friction record describes: the check becomes binding only when the project chooses to make it so.
+Splitting the roots now gives project-kit the layout the living-docs separation rule asks for, and the same layout as the downstream adopter that motivated the capabilities. Nothing moves on the split, because existing locations are explicit. Declaring the scattered files as places, instead of moving them, follows the "record, never move" principle of the documentation-roots record. Enforcing from the start is the self-hosting adopter's privilege and duty: every artefact and anchor here is produced by the tooling under test, so nothing is gained by tolerating noise, and every false flag found is a defect fixed before other adopters meet it.
 
 ### Alternatives considered
 
@@ -46,4 +46,4 @@ Splitting the roots now gives project-kit the layout the living-docs separation 
 
 1. ~~User root~~: decided 2026-09-28, user `docs/`, internal `tech-docs/`.
 2. ~~Scratchpad~~: decided 2026-09-28, it stays outside documentation.
-3. **Enforcement horizon.** How long a clean warning period before friction is enforced in continuous integration?
+3. ~~Enforcement horizon~~: decided 2026-09-28, enforcing from the first day.
