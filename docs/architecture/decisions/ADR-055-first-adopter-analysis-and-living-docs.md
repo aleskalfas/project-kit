@@ -1,7 +1,7 @@
 ---
 id: ADR-055
 title: project-kit is the first adopter of software-analysis and living-docs
-status: proposed
+status: accepted
 date: 2026-09-27
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
