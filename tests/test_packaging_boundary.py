@@ -750,6 +750,7 @@ def stray_builds(tmp_path_factory) -> dict[str, Path]:
     _git(copy, "init", "-q")
     _git(copy, "add", "-A")
     for stray in STRAYS:
+        (copy / stray).parent.mkdir(parents=True, exist_ok=True)
         (copy / stray).write_text("an untracked file the index never saw\n")
 
     out: dict[str, Path] = {"source": copy}
