@@ -1,6 +1,6 @@
 """The non-label substrate-write sole-constructor seam — ADR-031, both halves.
 
-[ADR-031](../docs/architecture/decisions/ADR-031-substrate-write-path-contract.md)
+[ADR-031](../tech-docs/architecture/decisions/ADR-031-substrate-write-path-contract.md)
 makes "no script string-builds a covered non-label substrate write inline"
 structural by requiring that ``_lib/substrate_writes`` be the **sole
 constructor** of each covered write: the Projects-v2 single-select/text

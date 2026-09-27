@@ -1,6 +1,6 @@
 """The sole-constructor guard — ADR-026 part (b), the structural half.
 
-[ADR-026](../docs/architecture/decisions/ADR-026-substrate-map-read-path-contract.md)
+[ADR-026](../tech-docs/architecture/decisions/ADR-026-substrate-map-read-path-contract.md)
 makes "never write an unmanaged label" structural by requiring that the
 ``_lib/axis_labels`` seam be the **sole constructor** of any methodology
 axis-label (``type:`` / ``priority:`` / ``workstream:`` / ``state:``). A script

@@ -9,7 +9,7 @@
 
 The one-time brownfield corpus back-fill, per
 [project-management:DEC-037-adoption-ceremony] §2 and its write-path contract
-[ADR-031](../../../../docs/architecture/decisions/ADR-031-substrate-write-path-contract.md).
+[ADR-031](../../../../tech-docs/architecture/decisions/ADR-031-substrate-write-path-contract.md).
 A brownfield adopter wants a non-label substrate value seeded across every
 existing issue — the AUJ grounding case: each issue's Projects-v2 `workstream`
 field set to `Spyre`, and a time-based milestone assigned. That is a bulk

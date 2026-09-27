@@ -12,11 +12,11 @@ author: Ales Kalfas <kalfas.ales@gmail.com>
 
 Project-kit-the-project — the methodology framework's source tree — has architectural decisions that don't fit cleanly as CORs (universal methodology principles, project-neutral by discipline). PRJs already cover project-side decisions of any kind per [COR-025](../core/COR-025-adr-decision-space.md), including architecture-flavoured choices that touch tooling. The question for project-kit is whether to *also* use the ADR carve-out for architecturally-significant decisions whose rationale needs to be findable by someone orienting in the codebase, not only by people already working on it.
 
-The overlay at `.pkit/agents/project/overlay.yaml` declares `adr-records: [docs/architecture/decisions/]` and `architecture-docs:` already pointing at CONTRIBUTING.md / `.pkit/decisions/core/`. The infrastructure is in place; what remains is the decision to use it.
+The overlay at `.pkit/agents/project/overlay.yaml` declares `adr-records: [tech-docs/architecture/decisions/]` (relocated from `docs/architecture/decisions/` when project-kit split its documentation roots, ADR-055) and `architecture-docs:` already pointing at CONTRIBUTING.md / `.pkit/decisions/core/`. The infrastructure is in place; what remains is the decision to use it.
 
 ## Decision
 
-Project-kit adopts the ADR namespace defined in [COR-025](../core/COR-025-adr-decision-space.md). ADRs land at the overlay-resolved path `docs/architecture/decisions/`.
+Project-kit adopts the ADR namespace defined in [COR-025](../core/COR-025-adr-decision-space.md). ADRs land at the overlay-resolved path `tech-docs/architecture/decisions/` — the architecture sub-path of project-kit's internal documentation root (COR-049, ADR-055).
 
 The classifier between PRJ and ADR, for project-kit:
 
@@ -49,7 +49,7 @@ Project-kit has candidates already surfaced in `CLAUDE.md` and area READMEs (the
 
 ## Implications
 
-- A `docs/architecture/decisions/` tree appears in project-kit's source repo, project-owned and outside `.pkit/` (never propagated to adopters who install the methodology — per COR-025's propagation-isolation property).
+- A `tech-docs/architecture/decisions/` tree appears in project-kit's source repo, project-owned and outside `.pkit/` (never propagated to adopters who install the methodology — per COR-025's propagation-isolation property).
 - The architect agent — already operating read-only on `<architecture-docs>` (CONTRIBUTING.md, `.pkit/decisions/core/`) per COR-024 — gains write authority over the new ADR corpus as it grows.
 - Future architectural decisions about project-kit-as-product land as ADRs; future workflow / convention / kit-internal-tooling decisions land as PRJs. The classifier above carries the boundary; edge cases default to author judgement leaning PRJ for kit-internal mechanism choices.
 - COR-025's affordance is now exercised in the source repo. The first ADR (dispatcher CWD-resolution model) follows immediately as a separate record.

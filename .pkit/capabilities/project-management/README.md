@@ -610,7 +610,7 @@ Rationale for the opt-in default: PM-as-default is a substantial behavioural shi
 
 ### 7. (For capability authors) Contribute a required label
 
-Per [project-management:DEC-042-label-contributions] + [ADR-038](../../../docs/architecture/decisions/ADR-038-contribution-collector.md), another installed capability can declare a **custom label it needs** — e.g. a design capability's `needs-design` marker on UI Features — and pm **provisions it at bootstrap** and **advises at pre-check** if it is missing. This is the label-tier sibling of the reviewer contribution ([project-management:DEC-032-conditional-reviewer-requirements]): the same orphan-safe manifest-walked collection shape, one tier down (labels, not reviewers) and **softer** (advise, not hard-gate).
+Per [project-management:DEC-042-label-contributions] + [ADR-038](../../../tech-docs/architecture/decisions/ADR-038-contribution-collector.md), another installed capability can declare a **custom label it needs** — e.g. a design capability's `needs-design` marker on UI Features — and pm **provisions it at bootstrap** and **advises at pre-check** if it is missing. This is the label-tier sibling of the reviewer contribution ([project-management:DEC-032-conditional-reviewer-requirements]): the same orphan-safe manifest-walked collection shape, one tier down (labels, not reviewers) and **softer** (advise, not hard-gate).
 
 **Declaration shape.** The contributing capability ships a `label-contributions.yaml` at its own root (`.pkit/capabilities/<cap>/label-contributions.yaml`), carrying a top-level `schema_version` and a `labels:` list of `{id, default_name, color, description}` entries (validated by `schemas/label-contributions.schema.json`):
 

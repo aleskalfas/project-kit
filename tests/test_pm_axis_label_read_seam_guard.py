@@ -1,6 +1,6 @@
 """The read-side seam guard — the complement to the sole-constructor guard.
 
-[ADR-026](../docs/architecture/decisions/ADR-026-substrate-map-read-path-contract.md)
+[ADR-026](../tech-docs/architecture/decisions/ADR-026-substrate-map-read-path-contract.md)
 makes ``_lib/axis_labels`` (and the classification-table readers layered on it)
 the seam through which methodology axes are *read* as well as written. The
 sole-constructor guard (`test_pm_axis_label_seam_guard`) polices the WRITE side —
