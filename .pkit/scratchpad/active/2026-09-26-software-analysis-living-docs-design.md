@@ -211,12 +211,25 @@ Decided by Aleš Kalfas, step by step, after the core records were accepted. The
   - Fillers target roles, so software-analysis never needs to know which documentation implementation is installed.
   - Motivating case: replacing living-docs with another documentation implementation must be invisible to everything else.
   - Refines COR-052 slot naming, both capability decisions, pm DEC-053, and the front-matter convention above.
-  - **Who owns a role's contract: a separate contract package per role, from the start** (maintainer chose B over "first implementation defines it" and "core ships it"): "it will be our primary contract interface".
-  - **The component is called a *contract*.** It is a role's interface: its slots and artefact blocks, plus the obligations an implementation takes on, written in prose. It carries no behaviour.
-    - "Interface" was rejected: it collides with a process definition's `interface:` field (COR-036), and it undersells the obligations.
-    - A capability *implements* a contract; another *fills* its slots.
-    - A contract is versioned by role, not by any capability's version.
-  - **Next:** where contracts live, how they are installed and removed, who may author them, and how COR-052's "the consumer owns the slot" changes to "the contract owns the slot".
+  - ~~A separate contract package per role~~ — **withdrawn the same day** (maintainer). "Contract" proved too strong: requiring a capability to *implement* another's contract creates loops (docs needs analysis, and analysis needs docs), and a separate component was more machinery than the idea needs.
+- **The model instead: connection points declared by the side that needs something** (maintainer, 2026-09-28).
+  - A connection point is declared by whoever needs an input, named after the **role**, and versioned: for example `documentation:readers`@1.
+  - Anyone may **optionally** plug in by declaring that it fills that point at that version.
+  - Every connection is one-directional and has one owner, and nothing is ever required of the other side, so mutual connections never form a lock.
+  - The user installs whatever is compatible.
+  - An **alternative implementation** declares the same points, which makes it interchangeable. Only one declarer of a point is active; two installed means an explicit project selection.
+  - A breaking change to a point's shape is a new version, i.e. a new point.
+- **This is the same paradigm as the process substrate's connections, so it becomes one foundation (option A).**
+  - Process connections already have the dependent side declare them (`depends_on`, COR-038). They are optional, and missed ones are reported rather than enforced (COR-042).
+  - Process connections name the other side **by implementation** (`<capability>:<process-id>`), which is the replacement problem role-naming fixes.
+  - **Decision:** a new core record defines **connection points** in general: declared by the dependent side, addressed by role, optional, reported by health, drawn in **one wiring graph** for the project. Data slots (COR-052) and process connections (COR-036/038/042) become its two kinds, and process addresses gain role-addressing as an additive refinement.
+  - Rejected: aligning slots only and leaving processes as a recorded gap (B); keeping the two separate (C).
+- **Records affected (to plan once the concept is designed):**
+  - the new connection-points record;
+  - COR-052 refined: slots become one kind of connection point, and "the consumer owns the slot" becomes "the declaring side owns the point", named by role;
+  - COR-036, COR-038 and COR-042 refined: role-addressing;
+  - COR-050 refined: the part-1 mechanics and the front-matter convention (`pkit:` container, role-named keys);
+  - software-analysis DEC-001, living-docs DEC-001 and pm DEC-053: role-named points.
 
 **Still to walk through:** part 2 (backbone configuration), part 3 (capability package metadata), part 4 (schemas), commands in detail, ADR-055 open question 3 (the enforcement model: the brainstorm leaned towards "updated, explained or deferred-with-reason", with an optional CI agent as accelerator).
 
