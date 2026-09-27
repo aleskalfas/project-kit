@@ -37,11 +37,16 @@ A kind with many files gets a folder, and a kind with one file is a file. Folder
 id: UC-003
 status: active                  # or: withdrawn (file kept, id never reused)
 actor: ACT-test-author
-anchors:
-  artefact: [ACT-test-author]
-  path: [src/cli/run.py, src/sandbox/**]
-  record: [ADR-006]
-revalidated: 2026-10-02T09:40:12Z
+pkit:                           # the methodology's container (COR-053); everything above it is the use case's own
+  friction:                     # the core friction block (COR-050)
+    anchors:
+      artefact: [ACT-test-author]
+      path: [src/cli/run.py, src/sandbox/**]
+      record: [ADR-006]
+    revalidated:
+      at: 2026-10-02T09:40:12Z
+      outcome: unchanged
+      unchanged-because: "only the result writer's internals changed"
 ---
 
 # UC-003 — Run a test suite against a sandbox
@@ -62,7 +67,7 @@ The friction block (anchors and revalidation) follows the core anchors-and-frict
 
 ## Connections
 
-The capability provides the `pkit::analysis` role (COR-053).
+The capability provides the `pkit::analysis` role (COR-053). `pkit::` is the methodology's publisher qualifier, written `<methodology>::` in the decision records; `pkit:` is likewise the methodology's front-matter container.
 
 - **Accepts** `pkit::analysis:revalidation-evidence`: executed results per artefact and commit, supplied by a capability or a project file. Policy `union`, advisory. Evidence informs a revalidation; it doesn't replace one.
 - **Contributes** to `pkit::documentation:readers` with actors and their needs. Inert when no documentation capability is installed.

@@ -12,7 +12,7 @@ Keep your documentation **true for the people who read it**, even when an agent 
 
 ## Connections
 
-The capability provides the `pkit::documentation` role (COR-053).
+The capability provides the `pkit::documentation` role (COR-053). `pkit::` is the methodology's publisher qualifier, written `<methodology>::` in the decision records.
 
 - **Accepts** `pkit::documentation:readers`: who reads and what they need. It starts with a built-in `user` and `maintainer`. You can add or override readers in a project file, and an analysis capability, such as software-analysis, can supply them too.
 - **Accepts** `pkit::documentation:reading-evidence`: results of executed checks that follow the docs, such as a simulated user running a guide. Advisory.

@@ -26,8 +26,8 @@ The mapping is a coarse guess written from the code's side, so broad rules fire 
 
 2. **How obligations are met.**
    - **Mapping obligations are met exactly as today.** The diff touches one of the rule's documents, or the `## Doc impact` section names the changed code path or the rule's pattern. A project without a documentation capability sees no change.
-   - **Obligations from other sources** are met by the artefact, not by the section (refinement per COR-050): a friction obligation on an anchored page is met when the page carries one of the core record's three answers in the diff — updated, unchanged with its justification, or deferred with its reason. The `## Doc impact` section may *render* those answers, and a documentation capability's agent may pre-fill it from them, but a line in the section meets nothing on its own, because the check must hold for a pull request from any tool and with no description at all. An obligation for undocumented new code is met when a page anchoring that code appears in the diff, or is deferred on the page that ought to describe it.
-   - A section-wide "No doc impact" justification meets only mapping obligations whose rule is advisory.
+   - **Obligations from other sources** are met by the artefact, not by the section (refinement per COR-050): a friction obligation on an anchored page is met when the page carries one of the core record's three answers in the diff — updated, unchanged with its justification, or deferred with its reason. The `## Doc impact` section may *render* those answers, and a documentation capability's agent may pre-fill it from them, but a line in the section meets nothing on its own, because the check must hold for a pull request from any tool and with no description at all. An obligation for undocumented new code is met when a page anchoring that code appears in the diff; the audited escape is the removal override of point 1.
+   - A section-wide "No doc impact" justification meets only mapping obligations, and only while the mapping's setting is advisory.
 
    An obligation left unaddressed is reported.
 
@@ -38,9 +38,9 @@ The mapping is a coarse guess written from the code's side, so broad rules fire 
 
    As before, a warning at pull-request time is only a speed-bump. Real enforcement is the project wiring the documentation check as a required status in its continuous integration.
 
-4. **What a documentation capability contributes.** When one fills the slot, it contributes obligations of two kinds: friction on anchored pages, and new code that nothing describes. It may also propose a `## Doc impact` section through its own agent, for the author to confirm or edit. That proposal is not slot data, because the slot carries obligations only. An anchored page's friction is cleared on the page itself — a revalidation or a deferral (COR-050) — and the core change check verifies that; this capability's check reads the same machine-readable result rather than re-deriving it.
+4. **What a documentation capability contributes.** When one contributes to the point, it contributes obligations of two kinds: friction on anchored pages, and uncovered surface — new code that nothing describes (COR-050 point 8). It may also propose a `## Doc impact` section through its own agent, for the author to confirm or edit. That proposal is not slot data, because the slot carries obligations only. An anchored page's friction is cleared on the page itself — a revalidation or a deferral (COR-050) — and the core change check verifies that; this capability's check reads the same machine-readable result rather than re-deriving it.
 
-5. **Retiring the mapping.** Once a project's pages are anchored, the mapping duplicates what anchors say more precisely. A documentation capability's onboarding may convert mapping rules into page anchors and propose emptying the mapping, as the living-docs decision's onboarding describes. The project makes that a reviewed change. Until then, both sources contribute, and a line that updates a document named by both meets both.
+5. **Retiring the mapping.** Once a project's pages are anchored, the mapping duplicates what anchors say more precisely. A documentation capability's onboarding may convert mapping rules into page anchors and propose emptying the mapping, as the living-docs decision's onboarding describes. The project makes that a reviewed change. Until then, both sources contribute, and an update to a document named by both — present in the diff, with the page's answer — meets both.
 
 ## Rationale
 
