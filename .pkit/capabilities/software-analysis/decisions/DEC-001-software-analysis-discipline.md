@@ -109,7 +109,7 @@ This record decides what the capability keeps, where, and how it stays true.
 - **Use-case sets per design, validated once.** Rejected. The knowledge would be scattered across designs and would stop being maintained after each one shipped.
 - **A flat analysis folder.** Rejected. Actors and terms get lost among many use cases, and there is no natural place for grouping or later modules.
 - **A record for every revalidation.** Rejected. Routine records would bury the ones with findings.
-- **Storing each artefact's current-or-stale state.** Rejected. It would duplicate what anchors and git already answer (COR-050).
+- **Storing each artefact's current-or-stale state as truth.** Rejected. It would duplicate what anchors and git already answer; the core's tool-written status is a dated snapshot for visibility, never read for friction (COR-050).
 - **Including executed testing in this capability.** Rejected. See Rationale; the evidence slot covers the useful part.
 - **Requiring a documentation or work-tracking capability.** Rejected. The capability must be useful on its own.
 
