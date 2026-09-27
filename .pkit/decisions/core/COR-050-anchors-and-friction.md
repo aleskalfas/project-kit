@@ -10,73 +10,99 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 A document describing a system is true only *against* something: the code it explains, a decision it applies, a source it quotes, or another description it builds on. When that something changes and the description does not, the description goes stale. Nobody notices until a reader is misled. People forget to update what depends on what they changed.
 
-Reviews do not catch this reliably. A review looks at the change in front of it, and the stale description is usually somewhere else. What catches it is a recorded link from the description to what makes it true, plus a check that fires when the target of that link changes and the description is not rechecked.
+Reviews do not catch this reliably. A review looks at the change in front of it, and the stale description is usually somewhere else. What catches it is a recorded link from the description to what makes it true, plus a check that fires when the target of that link changes and the description is not revalidated.
 
 Several parts of a project need this: descriptions of what the system must do, the project's documentation, and the checks that ask whether a change needs documentation work. They are served by different components that must not depend on one another, so the mechanism has to be shared.
 
 ## Decision
 
-**Any artefact may declare its anchors (what makes it true) and when it was last rechecked against them. The backbone reports *friction* whenever an anchor has changed since that recheck.**
+**Any artefact may declare its anchors (what makes it true) and when it was last revalidated against them. The backbone reports *friction* whenever an anchor has changed since that revalidation. The answer to friction lives in the artefact itself — never in a pull-request description.**
 
-1. **Artefacts.** An artefact is either a document with front matter, or one keyed entry in a collection file whose front matter maps entries by id. Each artefact carries its own anchors and its own marker. A collection entry's content is its data entry together with the body section headed by its id, if there is one, so that editing an entry's prose is a change to it. The backbone looks for artefacts only in the **places declared to hold anchored artefacts**, so unrelated front matter elsewhere is never misread. Components declare their places in their own package metadata, relative to the document locations they resolve under COR-049; a project declares its own in the backbone configuration.
+1. **Artefacts.** An artefact is either a document with front matter, or one keyed entry in a collection file whose front matter maps entries by id. Each artefact carries its own anchors and its own revalidation. A collection entry's content is its data entry together with the body section headed by its id, if there is one, so that editing an entry's prose is a change to it. The backbone looks for artefacts only in the **places declared to hold anchored artefacts**, so unrelated front matter elsewhere is never misread. Components declare their places in their own package metadata, relative to the document locations they resolve under COR-049; a project declares its own in the backbone configuration.
 
-2. **Anchors.** An artefact lists its anchors in its front matter. The backbone resolves three kinds:
+   Everything this record owns in an artefact sits in **one functionality block, named `friction`**, inside the methodology's front-matter container (COR-053 point 10). The artefact's own fields — its id, status, whatever defines it — stay at the top level and belong to the component that defines the artefact. The functionality's key is the same word as its command group, so a reader sees one name in the file, in the command and in the configuration.
+
+2. **Anchors.** An artefact lists its anchors in its block, grouped by kind. The backbone resolves three kinds:
    - a **path**: a file or glob, relative to the repository root, where `**` matches across folders;
    - an identified **record**, such as a decision;
    - **another artefact**, by its id.
 
    Capabilities may register further kinds, each with a resolver: a command registered in the capability's package metadata. A resolver runs with a bounded time, no network access, and deterministic output for the same inputs. It fails closed: if it exits abnormally, times out, or returns output the backbone cannot read, the anchor is reported as unresolved, never as resolved. An artefact without anchors is *unanchored*: a state the backbone reports, not an error.
 
-   The anchor and marker fields are owned by this record. Their shape, for single documents and for collection entries, is fixed by a schema the backbone ships and validation applies strictly. The friction check never skips an artefact it cannot parse. In a declared place, an unparsable or malformed anchor list is reported the same way as a dead anchor.
+   The block's fields are owned by this record. Their shape, for single documents and for collection entries, is fixed by a schema the backbone ships and validation applies strictly. The friction check never skips an artefact it cannot parse. In a declared place, an unparsable or malformed block is reported the same way as a dead anchor.
 
-3. **The recheck marker.** An artefact carries a recheck marker holding a UTC timestamp.
-   - The timestamp is for people. Its **recheck point** is the last commit, following file renames, in which the artefact's *parsed* marker value changed. Reformatting, reordering or moving the front matter is not a recheck.
-   - The timestamp changes on every recheck.
-   - When two lines of work both recheck the same artefact and conflict, either timestamp may be kept, and the merge becomes the new recheck point.
+3. **The revalidation.** An artefact records its last revalidation in a `revalidated` block written by people:
+   - **`at`** — a UTC timestamp, the marker. The timestamp is for people; its **revalidation point** is the last commit, following file renames, in which the parsed value of `at` changed. Reformatting, reordering or moving the front matter is not a revalidation. `at` changes on every revalidation.
+   - **`outcome`** — `updated` (the content changed with the revalidation) or `unchanged` (the content did not need to change). With `unchanged`, **`unchanged-because`** is required: the sentence saying why the content still holds against what changed. It is the one piece of judgment the tool cannot supply, and the only safeguard against a blind marker bump.
+   - The outcome is a record of what happened, validated against the diff at the time (point 5); it is never read to compute staleness, which is always recomputed from git.
+   - When two lines of work both revalidate the same artefact and conflict, the conflict is resolved by **revalidating the combined state**. There is no automatic merge, because one would claim a revalidation that never happened.
 
-4. **When an anchor has changed.**
-   - **A path anchor** has changed when a commit after the recheck point modified any file it matches: one reachable from the current history and not from the recheck point.
+4. **Deferrals.** Inside `revalidated`, a **`deferred`** list holds one entry per anchor whose friction is deliberately postponed: `{anchor, reason}`.
+   - An entry defers the friction of one anchor up to the moment the entry was written. A later change to that anchor is new friction.
+   - Only the reason is stored; the entry's origin — author, date, change — comes from git. Entries are kept sorted by anchor, so parallel branches deferring different anchors merge cleanly.
+   - Adding a deferral does not change `at`: it is not a revalidation. An artefact never yet revalidated may carry `deferred` without `at`.
+   - A revalidation replaces the block and settles its deferrals; a revalidation that leaves entries behind is flagged. Removing an entry without revalidating brings that anchor's friction back. Removing an anchor removes its entry; a dangling entry, one naming no anchor of the artefact, is a validation error. Withdrawing the artefact removes its entries. Deferrals never expire on their own; their age is shown.
+
+5. **When an anchor has changed, and what answers it.**
+   - **A path anchor** has changed when a commit after the revalidation point modified any file it matches: one reachable from the current history and not from the revalidation point.
    - **A record anchor** has changed when the record's file changed in the same way.
-   - **An artefact anchor** has changed when that artefact's content changed, meaning anything other than its own marker. An upstream correction is exactly what dependants must see.
-   - **Cycles** between artefacts are errors, because a cycle has no order in which it could be rechecked.
+   - **An artefact anchor** has changed when that artefact's content changed, meaning anything other than its own block. An upstream correction is exactly what dependants must see.
+   - **Cycles** between artefacts are errors, because a cycle has no order in which they could be revalidated.
+   - **Three answers**, judged from the diff, clear friction: the artefact's content changed and `at` changed (*updated*); only `at` changed, with `unchanged-because` (*unchanged*); or a deferral covers the anchor (*deferred*). A change to `at` with none of these behind it is reported as a bump with nothing behind it.
 
-5. **Friction, in three modes.**
-   - **Pull request:** every artefact with an anchor that changed in the pull request must have its marker changed in the pull request too. An artefact anchored to another artefact is included when that artefact's content changed in the pull request (point 4). The cascade continues only where a recheck itself changes content. An artefact new in the pull request counts as rechecked. Changing an artefact's own anchor list also requires a marker change, because the artefact now claims different grounds. Deleting an artefact turns its dependants' anchors dead (point 6).
-   - **Sweep:** checks every artefact against the current history with the rule in point 4.
-   - **Local:** runs either on demand.
+6. **Friction, in two checks.**
+   - **The change check** compares the diff with the diff: every artefact with an anchor that changed in the pull request must carry one of the three answers in the same pull request. An artefact anchored to another artefact is included when that artefact's content changed in the pull request. The cascade continues only where a revalidation itself changes content. An artefact new in the pull request counts as revalidated. Changing an artefact's own anchor list also requires a revalidation, because the artefact now claims different grounds. Deleting an artefact turns its dependants' anchors dead (point 7).
+   - **The whole-repository check** checks every artefact against the current history with the rule in point 5.
+   - Either runs locally on demand. Because a pull-request result depends on the base it is compared against, **friction results are valid only against an up-to-date base**: the check reports when it ran against an outdated one, and a project that enforces friction requires branches to be up to date, or merges through a queue.
 
-   Clearing friction means rechecking and updating the marker. *How* to recheck belongs to the component that owns the artefact.
+   Clearing friction means revalidating. *How* to revalidate belongs to the component that owns the artefact. A pull-request description may *render* the artefacts' answers — a work-tracking component may build its own documentation-impact section from them — but the check reads the artefacts, never the description, so it works for a pull request from any tool, with no description at all, and locally.
 
-6. **Dead anchors are errors, never silence.** A path that matches nothing (or only excluded paths), or an identifier that does not resolve, is an error. When no installed component resolves a kind, that is reported separately from an identifier that does not resolve. Dead anchors are reported by the friction check in every mode, and by validation. Excluded paths, such as generated or vendored code, are ignored for anchoring and for the measures in point 7. An anchor broad enough to match most changes is warned about, because it would make every change a recheck and teach people to update markers blindly.
+7. **Dead anchors are errors, never silence.** A path that matches nothing (or only excluded paths), or an identifier that does not resolve, is an error. When no installed component resolves a kind, that is reported separately from an identifier that does not resolve. Dead anchors are reported by both checks and by validation. Excluded paths, such as generated or vendored code, are ignored for anchoring and for the measures in point 8. An anchor broad enough to match most changes is warned about, because it would make every change a revalidation and teach people to update markers blindly.
 
-7. **Two measures, not failures.**
+8. **Two measures, not failures.**
    - **Unanchored artefacts**, within the declared places.
    - **Uncovered surface:** paths within the *declared surface* that no artefact anchors to. The declared surface is what a component (in its package metadata) or the project (in the backbone configuration) says ought to be described.
 
    Both are reported and neither fails a check. Friction alone reads zero where nothing is anchored yet; these two measures show what remains.
 
-8. **Truth-chain order.** Friction is reported upstream first, following the anchors between artefacts, so that what others depend on is rechecked first.
+9. **Debt is derived from git, never kept in a ledger.** *Deferred* debt originates in the commit that added the deferral entry; *stale* debt originates in the first commit that changed an anchor after the revalidation point. A debt listing shows both with their author, date and change, oldest first.
 
-9. **Warning or enforcing.** The check is read-only.
-   - In **warning mode** it reports and passes.
-   - In **enforcing mode** the pull-request check fails on friction or dead anchors in that pull request.
-   - A sweep reports; it does not fail other work on friction that was already there.
+10. **A tool-written status, on separate lines.** The block may carry a **`last-check`** sub-block that only the tool writes: the `state` found (`current`, `stale` or `deferred`), the commit it was checked against, and where any staleness came from. It exists so that the debt is visible in the file and in git history, dated with its commit so it is never read as "true now". It is never read for friction — the check always recomputes. It is written only when it changes, by a job the project runs after merges to its default branch, through one small reviewed change; the change check writes nothing, so branches see neither churn nor conflicts. Tool-written and people-written data sit on different lines for the same reason. The project configures when the job runs, including never.
 
-   The check only becomes binding when the project makes it a required status in its continuous integration. That is the project's choice. An invalid mode value is a validation error, so enforcement is never switched off silently.
+11. **Truth-chain order.** Friction is reported upstream first, following the anchors between artefacts, so that what others depend on is revalidated first.
 
-10. **Project settings.** This record owns one key in the backbone configuration (COR-048). It holds the friction mode (default: warning), the project's own anchored places, its declared surface, and its excluded paths (all default: none). The key is written by the project's own edits, or by backbone configuration commands under COR-048's consent rule. Validation checks that every path in it stays inside the repository.
+12. **Warning or enforcing.** The checks are read-only.
+    - In **warning mode** the change check reports and passes.
+    - In **enforcing mode** the change check fails on friction or dead anchors in that pull request.
+    - The whole-repository check reports; it does not fail other work on friction that was already there.
 
-11. **Dormant until used.** Where no artefact declares anchors, the check finds nothing and demands nothing.
+    The check only becomes binding when the project makes it a required status in its continuous integration. That is the project's choice. An invalid mode value is a validation error, so enforcement is never switched off silently.
+
+13. **Commands.** Everything this functionality does is reached through one command group named for it. Reading commands — the two checks, the debt listing, an explanation of one artefact's friction — never write. Writing is always a separate, explicit command that names what it writes: revalidate, defer, record the status. No writing happens as a side effect of checking.
+
+14. **Project settings.** This record owns one key in the backbone configuration (COR-048), named for the functionality. It holds the friction mode (default: warning), when the status job runs (default: never), the project's own anchored places, its declared surface, and its excluded paths (all default: none). The key is written by the project's own edits, or by backbone configuration commands under COR-048's consent rule. Validation checks that every path in it stays inside the repository.
+
+15. **Dormant until used.** Where no artefact declares anchors, the check finds nothing and demands nothing.
 
 ## Rationale
 
 **Why declared anchors, not inferred ones.** Inferring what a description is about, from filenames or text similarity, is guesswork that fails silently in both directions. A declared anchor is a claim someone made and can be checked. Where declarations are missing, the unanchored measure says so honestly.
 
-**Why a timestamp whose point comes from git.** A commit identifier cannot be written into the commit it identifies. It also disappears from the main history on a squash merge or rebase. A content hash of the anchored inputs conflicts on every parallel change under a glob, and nobody can read it. A timestamp is readable and changes on every recheck, while the commit that last changed it is exactly the point git can answer questions about.
+**Why a timestamp whose point comes from git.** A commit identifier cannot be written into the commit it identifies. It also disappears from the main history on a squash merge or rebase. A content hash of the anchored inputs conflicts on every parallel change under a glob, and nobody can read it. A timestamp is readable and changes on every revalidation, while the commit that last changed it is exactly the point git can answer questions about.
 
-**Why the pull-request rule is local to the pull request.** "An anchor changed here, so the marker changes here" explains itself to the author at the moment the fix is cheapest. The sweep uses the same notion of "changed since the recheck point", so the two agree after merging.
+**Why the answer lives in the artefact.** A pull-request description is one tool's format: another tool, a hand-made pull request, or a local run has none. Comparing the diff with the diff needs nothing but the repository, and it puts the justification next to the thing it justifies, where the next reader finds it.
 
-**Why the recheck point follows the parsed value.** If formatting or file moves could advance the point, friction could be cleared without anyone rechecking. The point must move only when someone deliberately rechecks.
+**Why an outcome is stored even though it is derivable.** It is a presentation layer: a reader of the file, or of its history, sees what the last revalidation found without running anything. It is not memory; staleness is always recomputed, so a wrong outcome misleads nobody about the state of the artefact.
+
+**Why deferrals are per anchor and settle on revalidation.** A deferral is a judgment about one anchor's change; a later change to the same anchor is a new question. Several reasons coexist and merge cleanly because each has its own line. Nesting them under the revalidation says what they are — postponements *since* that revalidation — and gives them a natural end.
+
+**Why debt comes from git, not a ledger.** A ledger duplicates what git already answers and drifts from it whenever a change bypasses the check. The tool-written status is not a ledger: it is a dated snapshot for visibility, recomputed rather than trusted.
+
+**Why the pull-request rule is local to the pull request.** "An anchor changed here, so the answer is here" explains itself to the author at the moment the fix is cheapest. The whole-repository check uses the same notion of "changed since the revalidation point", so the two agree after merging.
+
+**Why the revalidation point follows the parsed value.** If formatting or file moves could advance the point, friction could be cleared without anyone revalidating. The point must move only when someone deliberately revalidates.
+
+**Why one block, named for the functionality.** An artefact is touched by several functionalities over its life; giving each its own key, matching its command group, keeps them from writing into one another's fields and lets a reader connect the file to the command that acts on it.
 
 **Why uncovered surface is declared, not everything.** Counting every file in the repository as needing description would make the measure pure noise on day one. The measure means something only against a surface someone has said ought to be described.
 
@@ -86,17 +112,23 @@ Several parts of a project need this: descriptions of what the system must do, t
 
 ### Alternatives considered
 
-- **Anchors on every statement inside a document.** Rejected. Precise, but the maintenance cost makes people stop, which recreates the drift. Precision comes instead from whoever rechecks the flagged artefact against the actual change.
+- **Anchors on every statement inside a document.** Rejected. Precise, but the maintenance cost makes people stop, which recreates the drift. Precision comes instead from whoever revalidates the flagged artefact against the actual change.
 - **Anchors per section, via markers inside the prose.** Rejected. It adds a second convention, parsed out of prose.
-- **Storing each artefact's current-or-stale state.** Rejected. Stored state duplicates what git already answers, and it drifts from git whenever a change bypasses the check.
+- **Storing each artefact's current-or-stale state as truth.** Rejected. Stored state duplicates what git already answers, and it drifts from git whenever a change bypasses the check. The tool-written status is a dated snapshot, not truth.
 - **A commit identifier or a content hash as the marker.** Rejected; see Rationale.
+- **Reading the answer from the pull-request description.** Rejected; see Rationale.
+- **A debt ledger, in one file or one file per entry.** Rejected. It duplicates git and drifts.
+- **Recording stale debt as synthetic deferral entries.** Rejected. Deferral is deliberate postponement; stale debt is shown by the tool-written status instead, so the two are never confused.
+- **An automatic merge of conflicting revalidations.** Rejected. It would claim a revalidation nobody made.
+- **Organising the block per anchor, or splitting it strictly by writer.** Rejected. The first puts the tool and people on the same lines; the second adds a level that carries no meaning.
 - **One copy per component.** Rejected. Separate engines drift apart, and the components would disagree about what is stale.
 
 ## Implications
 
-- **The backbone ships the friction check,** with pull-request, sweep and local modes, reading anchors and markers in the declared places. Its output includes a machine-readable form, so that other components can consume friction and uncovered surface.
-- **The backbone ships the schema** for the anchor and marker fields. It is a surface change adopters can see, and existing documents are unaffected.
-- **Components that keep anchored artefacts** declare their places and surface in their own package metadata. They register their own anchor kinds and resolvers, and define how their artefacts are rechecked. They may also decide what to do when a recheck finds that the description was right and the change was wrong.
-- **Continuous integration** needs enough history to reach the oldest recheck point for sweeps. Pull-request checks need only the diff.
-- **The backbone configuration** gains the key from point 10.
+- **The backbone ships the friction checks** — the change check and the whole-repository check, each runnable locally — reading the blocks in the declared places. Its output includes a machine-readable form, so that other components can consume friction, uncovered surface and the artefacts' answers.
+- **The backbone ships the schema** for the block, for single documents and collection entries. It is a surface change adopters can see, and existing documents are unaffected.
+- **The backbone ships the writing commands** for revalidating, deferring and recording the status, and the after-merge status job a project may wire in.
+- **Components that keep anchored artefacts** declare their places and surface in their own package metadata. They register their own anchor kinds and resolvers, and define how their artefacts are revalidated. They may also decide what to do when a revalidation finds that the description was right and the change was wrong. A work-tracking component may render the artefacts' answers into its pull-request format; it reads the machine-readable output for that.
+- **Continuous integration** needs enough history to reach the oldest revalidation point for the whole-repository check. The change check needs only the diff and an up-to-date base.
+- **The backbone configuration** gains the key from point 14.
 - **The status report** can show friction, unanchored artefacts and uncovered surface.
