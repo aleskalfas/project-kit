@@ -20,7 +20,7 @@ The core layer supplies the machinery:
 - documentation roots by audience (COR-049);
 - anchors and friction, which detect when what a page rests on has changed (COR-050);
 - rule sets (COR-051);
-- slots, through which components exchange knowledge without depending on each other (COR-052).
+- connection points, through which components exchange knowledge and signals without depending on each other: data slots (COR-052) as one kind, addressed by role (COR-053).
 
 This record decides how this capability uses them.
 
@@ -31,7 +31,7 @@ This record decides how this capability uses them.
 1. **Spaces.** A *documentation space* is a body of documentation with its own audience, its own entry point, and its own definition.
    - Every project has at least a **user space** and a **technical space**, and may add others, such as an interface reference.
    - **Where new pages go.** New pages of the user space go under the user documentation root, and new pages of the technical space under the internal root (COR-049). A space the project adds declares its own location, under whichever root serves its audience.
-   - **What belongs to a space.** A space's pages are found in the places declared for it (COR-050), which may include files outside its root, such as a repository's top-level README. The capability declares the roots as default places. The project declares any other places, and its surface, in the friction key of its backbone configuration, which the anchors-and-friction record owns (COR-050). The capability's own project configuration holds only what the backbone does not need: each space's audience, entry point and definition path. Trees that sync manages are never places, so a sync never shows up as friction in the project's own history.
+   - **What belongs to a space.** A space's pages are found in the places declared for it (COR-050), which may include files outside its root, such as a repository's top-level README. The capability declares the roots as default places. The project declares any other places, and its surface, in the friction key of its backbone configuration, which the anchors-and-friction record owns (COR-050). The capability's own project configuration holds only what the backbone does not need: each space's audience, entry point and definition path. Trees that arrive as a synced copy are never places, so a sync never shows up as friction in the project's own history; the capability's validation keys on the manifest's origin (COR-031), not on the path, so a repository in which those trees are authored source may declare them.
    - **Separation.** This capability's rule is that the two spaces are **separate**: user-facing navigation and search never lead into technical material, and neither root lies inside the other. When a project adopts the capability with both roots still the same folder, as they are by default, that is reported as a finding for onboarding (point 8) to clear, not as a validation failure.
 
 2. **Definitions, kept apart from content.** Each space has a *definition*: the rules its pages follow, and how its pages are made. Definitions are written down so that people and agents follow the same method.
@@ -51,24 +51,24 @@ This record decides how this capability uses them.
 
    The shared set is named `LDOC`, and its origins record this capability's own reasons. The rules about how rules themselves are named, grounded and inherited are not in it, because the rule-set record (COR-051) provides them. The rules about where artefacts come from are carried by anchors: each page names what it rests on, and the anchor graph is the index of why each page exists. A project that already has documentation rules of its own keeps them as a project rule set that inherits `LDOC`. It withdraws any that duplicate what the core provides.
 
-4. **Pages are anchored and rechecked.** Every page is an artefact in the sense of the anchors-and-friction record (COR-050), in the places declared for its space. A page anchors to the code it describes, the decisions and rules it applies, the sources it quotes, and the analysis artefacts it builds on. Its front matter also names its **reader** and its **page kind**, in fields whose schema this capability ships. Sources need an anchor kind that some capability registers. Without one, a source anchor is reported as an unresolved kind, never silently accepted. Because core anchors and registered kinds cover every kind of ground a page rests on, the capability needs no separate slot for anchors. Friction flags a page when any of those changed and the page was not rechecked. Deciding what the change means for the page is judgment, which is what the capability's agent does next.
+4. **Pages are anchored and revalidated.** Every page is an artefact in the sense of the anchors-and-friction record (COR-050), in the places declared for its space. A page anchors to the code it describes, the decisions and rules it applies, the sources it quotes, and the analysis artefacts it builds on. Its front matter also names its **reader** and its **page kind**, in fields whose schema this capability ships. Sources need an anchor kind that some capability registers. Without one, a source anchor is reported as an unresolved kind, never silently accepted. Because core anchors and registered kinds cover every kind of ground a page rests on, the capability needs no separate slot for anchors. Friction flags a page when any of those changed and the page was not revalidated. A page's reader and kind fields are the page's own; its friction block is the core's, in the methodology's container (COR-050, COR-053). Deciding what the change means for the page is judgment, which is what the capability's agent does next.
 
 5. **Fixes are proposed, never applied blind.** The capability's agent resolves friction by *proposing* the change to the page, citing the change that caused it and the anchors it rests on. A person reviews the proposal through the project's approval path. The same holds for any rewrite the agent suggests. A statement the page's anchors do not ground is either grounded by a new anchor, taken out, or raised with a person as a question. It is never left standing as if it were true.
 
-6. **Reader-review.** A *reader-review* reads a page as its declared reader, taken from the readers slot (point 7). It asks whether the page answers that reader's questions, only those, and in a way they can follow. Findings cite the rule a page breaks. A reader-review leaves a record only when it finds something.
+6. **Reader-review.** A *reader-review* reads a page as its declared reader, taken from the readers point (point 7). It asks whether the page answers that reader's questions, only those, and in a way they can follow. Findings cite the rule a page breaks. A reader-review leaves a record only when it finds something.
 
-   Reader-review judges whether the documentation serves its reader. It is distinct from reviewing a change for missing or contradicted documentation, which belongs to code review: a change review looks at the diff, and reader-review looks at the page. Executed checks, in which a simulated reader follows the documentation and runs the system, are not performed here. Their results arrive through the reading-evidence slot.
+   Reader-review judges whether the documentation serves its reader. It is distinct from reviewing a change for missing or contradicted documentation, which belongs to code review: a change review looks at the diff, and reader-review looks at the page. Executed checks, in which a simulated reader follows the documentation and runs the system, are not performed here. Their results arrive through the reading-evidence point.
 
-7. **Slots.** The capability declares two slots (COR-052):
-   - **`living-docs:readers`**: who reads the documentation and what they need.
-     - **Schema:** a companion schema named after the slot, at version 1. Each entry carries an id, the reader's needs and the paths they take.
+7. **Connections.** The capability provides the **documentation role** and, under it, accepts two data points (refinement per COR-053) — slots in the sense of COR-052, addressed by role so that another provider of the role is interchangeable:
+   - **`<methodology>::documentation:readers`**: who reads the documentation and what they need.
+     - **Schema:** a companion schema named after the point, at version 1. Each entry carries an id, the reader's needs and the paths they take.
      - **Policy:** `union`.
      - **Default:** always included, with one entry per mandatory space, a `user` and a `maintainer`. A fresh project therefore has readers on day one. A project file can add or override them, and a capability that keeps knowledge about the software's users may fill it too.
-     - **Inert policy:** `fail`, because validation checks that each page's declared reader resolves. The consequence is intended: if a capability filler falls out of version step, the whole slot is unresolved and page reader checks fail until it catches up.
+     - **Inert policy:** `fail`, because validation checks that each page's declared reader resolves. The consequence is intended: if a capability filler falls out of version step, the whole point is unresolved and page reader checks fail until it catches up.
      - Reader ids are distinct from the ids an analysis capability gives its actors, so a capability's readers are added alongside the defaults. The project file can override or suppress the defaults by their ids.
-   - **`living-docs:reading-evidence`**: results of executed checks that follow the documentation. Its companion schema, at version 1, has one entry per page or path and commit, keyed by the pair. Policy `union`, no default takes part, inert policy `fallback`, because the evidence advises.
+   - **`<methodology>::documentation:reading-evidence`**: results of executed checks that follow the documentation. Its companion schema, at version 1, has one entry per page or path and commit, keyed by the pair. Policy `union`, no default takes part, inert policy `fallback`, because the evidence advises.
 
-   The capability intends to fill a work-tracking component's documentation-check slot, contributing friction on pages, uncovered surface, and a proposed documentation statement for a change, once that slot's defining record is accepted. The fill is inert when that component is not installed, and never required.
+   The capability contributes to the work-tracking role's documentation-check point, `<methodology>::work-tracking:doc-check`, with friction on anchored pages and uncovered surface — new code that nothing describes (refinement per COR-053). The contribution is inert when no provider of that role is installed, and never required.
 
 8. **Brownfield onboarding is transformation.** On a project that adopts the capability with existing documentation, nothing is anchored yet. Onboarding is friction work on that starting point. The capability's agent proposes:
    - which space each existing page belongs to;
@@ -78,7 +78,7 @@ This record decides how this capability uses them.
 
    Every proposal cites its evidence and passes a person's review, and moves land as ordinary reviewable changes. Onboarding is complete when the declared surface is covered and no page is left unanchored without an accepted reason.
 
-9. **Independent.** The capability works without any analysis, work-tracking or testing component, and each of them can enrich it through slots.
+9. **Independent.** The capability works without any analysis, work-tracking or testing component, and each of them can enrich it through its connection points.
 
 ## Rationale
 
@@ -102,6 +102,8 @@ This record decides how this capability uses them.
 
 ## Implications
 
-- **The capability ships** its shared method rule set, templates per page kind, the declaration of its places, surface and slots, an agent that proposes friction fixes and performs reader-review, and an onboarding guide.
+- **The capability ships** its shared method rule set, templates per page kind, the declaration of its places, surface and connections, an agent that proposes friction fixes and performs reader-review, and an onboarding guide.
 - **Projects** declare their spaces' locations through the documentation roots, keep each space's definition in the technical space, and wire the core friction check into their continuous integration if they want it enforced.
-- **Analysis components** can supply readers through the readers slot. The capability keeps no glossary of its own; if it needs one, it takes it through a slot from whatever component keeps one. **Work-tracking components** can use the capability's contribution to their documentation checks once that slot exists.
+- **Analysis components** can supply readers through the readers point. The capability keeps no glossary of its own; if it needs one, it takes it through a point from whatever component keeps one. **Work-tracking components** receive the capability's contribution to their documentation checks through their own point.
+
+**Left to a later decision:** precedence between an enclosing default place and a nested declared one; how an out-of-root place is assigned to a space.

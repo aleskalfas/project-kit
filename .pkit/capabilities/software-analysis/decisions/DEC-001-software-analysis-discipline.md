@@ -15,7 +15,7 @@ Such an account decays silently. Code changes, the account does not, and nobody 
 The core layer supplies the machinery this needs:
 - where a project's technical documentation lives (COR-049);
 - anchors and friction, which detect when what an artefact rests on has changed (COR-050);
-- slots, through which components exchange knowledge without depending on each other (COR-052).
+- connection points, through which components exchange knowledge and signals without depending on each other: data slots (COR-052) as one kind, addressed by role (COR-053).
 
 This record decides what the capability keeps, where, and how it stays true.
 
@@ -38,27 +38,27 @@ This record decides what the capability keeps, where, and how it stays true.
 
    **A kind with many files gets its own folder; a kind with one file is a file.** Folders appear only when something goes into them.
    - **Location.** The `analysis` sub-path is declared in the capability's package metadata. Its location is recorded on first use in the capability's own project configuration, as the documentation-roots record requires (COR-049). A later change of root therefore never moves an existing analysis.
-   - **Places.** The capability declares the glossary, actors, use cases and journeys as places holding anchored artefacts (COR-050). Revalidation records are events, not anchored artefacts, so they are not a declared place.
+   - **Places.** The capability declares the glossary, actors, use cases and journeys as places holding anchored artefacts (COR-050). Revalidation records describe an act, and are not anchored artefacts, so they are not a declared place.
    - **Surface.** The capability declares no surface by default, since it cannot know a project's code. The project declares which paths its analysis ought to cover, in the friction key of its backbone configuration (COR-050).
    - **Ownership.** The artefacts live outside the capability's own subtree, so uninstalling the capability never removes them.
 
-   The exact layout and templates are in the capability's README. Field names for anchors and markers follow the core schema (COR-050).
+   The exact layout and templates are in the capability's README. The friction block — anchors and revalidation — follows the core schema, inside the methodology's container in each artefact (COR-050, COR-053).
 
 3. **Identifiers.** Use cases and journeys are numbered within the project (`UC-NNN`, `JRN-NNN`), independent of any grouping. Moving a use case between areas never changes its id. Actors and terms are keyed by stable ids inside their collection files, with distinct prefixes (`ACT-` for actors, `TERM-` for terms), so that no two artefacts in the analysis share an id.
    - **Append-only.** An artefact is withdrawn, never deleted, and its id is never reused. Inside a use case, steps are numbered and variants are lettered after the step they branch from. Both are append-only too, because journeys and evidence cite them.
    - **Parallel work.** When two lines of work number a new artefact the same, the first to reach the default branch keeps the number. Validation reports the collision, and the other renumbers before merging.
 
-4. **Every artefact says what makes it true.** Each carries anchors and a recheck marker in the sense of the anchors-and-friction record (COR-050). Anchors run in one direction only, so they never form a cycle:
+4. **Every artefact says what makes it true.** Each carries anchors and a revalidation in the sense of the anchors-and-friction record (COR-050). Anchors run in one direction only, so they never form a cycle:
    - Actors and terms anchor to where the software or a decision embodies them. An actor with no such anchor is reported as unanchored, which is not an error.
    - Use cases anchor to their actor, as an artefact anchor, and to the code they exercise and the decisions they rely on.
    - Journeys anchor to the use cases they pass through, and to the code at the seams between them. A journey's ordered list of steps is the source. Its use-case anchors are written into its anchor field from that list by the capability's stamp and check, and validation requires the two to match, so the friction check sees them and the two cannot drift apart.
 
-   A changed actor flags its use cases, and a changed use case flags the journeys through it. Friction is reported in that order. Revalidation is this capability's way of rechecking an artefact; updating the marker records that a revalidation happened.
+   A changed actor flags its use cases, and a changed use case flags the journeys through it. Friction is reported in that order. Revalidation is this capability's name for the act the core record calls by the same name; recording it on the artefact — its `at`, its outcome and any deferrals — is what clears friction (COR-050).
 
-5. **Revalidation.** A **revalidation** is one check of some artefacts against one version of the system: a proposed design, or the actual code. It is an event, repeated whenever something triggers it:
+5. **Revalidation.** A **revalidation** is one check of some artefacts against one version of the system: a proposed design, or the actual code. It is an act, repeated whenever something triggers it:
    - **planned**: a change is proposed, before code;
    - **drift**: friction on a pull request;
-   - **scheduled**: friction found by a sweep;
+   - **scheduled**: friction found by the whole-repository check;
    - **close**: a pull request that changes artefacts, or their anchors, lands;
    - **onboarding**.
 
@@ -68,21 +68,21 @@ This record decides what the capability keeps, where, and how it stays true.
    - **the code regressed**: the artefact still describes what is wanted, so a defect is reported rather than the analysis rewritten to match;
    - **a gap was found**: behaviour exists that nothing describes, or a description has no behaviour.
 
-   Whoever performs the revalidation (a person, or an agent) updates the markers of the artefacts it covered. An agent proposes the outcomes. Where "stale" versus "regressed" is ambiguous, a person decides before any marker changes. The analysis is never silently rewritten to match broken code.
+   These four outcomes map onto the core record's two (refinement per COR-050): *holds* and *the code regressed* are recorded as `unchanged`, with the justification saying why the description stands — for a regression, naming the defect reported; *the analysis was stale* ends in `updated`; *a gap was found* ends in `updated` where the artefact itself changed, and in `unchanged` — the justification naming the gap and the artefact that fills it — where the gap is closed by a new artefact. Friction an agent or person chooses not to resolve yet is a core deferral, with its reason, not an outcome. Whoever performs the revalidation (a person, or an agent) records it on the artefacts it covered. An agent proposes the outcomes. Where "stale" versus "regressed" is ambiguous, a person decides before any revalidation is recorded. The analysis is never silently rewritten to match broken code.
 
-6. **Records only when there is something to say.** A revalidation that is planned, or that finds a gap or a regression, leaves a record in the revalidations folder. The record names the change that carried it (a tracked work item, a pull request, or a range of commits), the trigger, the artefacts covered with their outcomes, and the gaps with what resolved each. Records cite artefacts by id, including withdrawn ones, and are named by date and subject rather than numbered, so parallel work cannot collide. A routine revalidation that finds everything still holds writes no record: updating the artefact's recheck marker is the record, and the commit carries the outcome.
+6. **Records only when there is something to say.** A revalidation that is planned, or that finds a gap or a regression, leaves a record in the revalidations folder. The record names the change that carried it (a tracked work item, a pull request, or a range of commits), the trigger, the artefacts covered with their outcomes, and the gaps with what resolved each. Records cite artefacts by id, including withdrawn ones, and are named by date and subject rather than numbered, so parallel work cannot collide. A routine revalidation that finds everything still holds writes no record: the artefact's own revalidation block, with its outcome and justification, is the record.
 
 7. **Revalidation is not testing.** Revalidation asks whether *the description* is still true of the software, and usually fixes the description. Testing asks whether *the software* still does what the description says, and fixes the software. The capability owns revalidation. It does not run the software.
 
-   It declares a slot, `software-analysis:revalidation-evidence`, for executed results that confirm or refute an artefact at a commit:
-   - its schema is a companion schema the capability ships, named after the slot (COR-052). At version 1 it has one entry per artefact and commit, keyed by the pair, holding the result and what was run;
+   The capability provides the **analysis role** and, under it, accepts a data point, `<methodology>::analysis:revalidation-evidence` (refinement per COR-053), for executed results that confirm or refute an artefact at a commit:
+   - its schema is a companion schema the capability ships, named after the point (COR-052). At version 1 it has one entry per artefact and commit, keyed by the pair, holding the result and what was run;
    - its policy is `union`;
    - no default takes part;
    - its inert policy is `fallback`, because the evidence advises and does not gate.
 
-   The slots record (COR-052) allows three kinds of filler: a project file, a capability, and the consumer's default. Here, a capability fills it (a later testing capability, or one that reads the project's own test results), or a project file records results, and no default takes part. Evidence **informs** a revalidation: a passing result is support for "holds", and a failing one is a regression with proof attached. It never replaces the revalidation. Only an updated marker clears friction (COR-050).
+   The slots record (COR-052) allows three kinds of filler: a project file, a capability, and the provider's default. Here, a capability fills it (a later testing capability, or one that reads the project's own test results), or a project file records results, and no default takes part. Evidence **informs** a revalidation: a passing result is support for "holds", and a failing one is a regression with proof attached. It never replaces the revalidation. Only a revalidation or a deferral recorded on the artefact clears friction (COR-050).
 
-8. **What it provides to others.** The capability intends to fill the documentation discipline's `living-docs:readers` slot by mapping its actors and their needs onto that slot's shape. The fill is declared once that slot's defining record is accepted. It is inert whenever that consumer is not installed, and the capability never requires it.
+8. **What it contributes to others.** The capability contributes to the documentation role's readers point, `<methodology>::documentation:readers`, by mapping its actors and their needs onto that point's shape (refinement per COR-053). It addresses the role, not a capability, so any provider of the documentation role receives it. The contribution is inert whenever no provider is installed, and the capability never requires one.
 
 9. **Brownfield onboarding.** A project with no analysis starts with nothing anchored, so friction reads zero. The signal is uncovered surface: the paths the project declares its analysis should cover (point 2), against what the artefacts anchor to (COR-050). An agent derives candidate actors, use cases and terms from the code, the existing documents and the project's decisions. On a brownfield project these are the ground truth, so the usual order is reversed. A person confirms the candidates. Onboarding needs a non-empty declared surface, and it is complete when that surface is covered. Every artefact must be either anchored, or explicitly accepted as unanchored with a reason recorded on the artefact, such as an actor that no code embodies.
 
@@ -98,7 +98,7 @@ This record decides what the capability keeps, where, and how it stays true.
 
 **Why revalidation owns both planned and drift-triggered checks.** Checking before code and checking after an unplanned change are the same act with different triggers. One record shape, and one set of outcomes, serve both.
 
-**Why records only with findings.** Most revalidations find that everything holds. Writing a file each time would bury the few that matter. Git already records the routine ones through the marker change.
+**Why records only with findings.** Most revalidations find that everything holds. Writing a file each time would bury the few that matter. Git already records the routine ones through the revalidation recorded on the artefact.
 
 **Why keep testing out.** Revalidation judges a description by reading; testing judges software by running it. Merging them would make this capability depend on executing arbitrary software, and would blur whose fix a failure demands. The evidence slot lets executed results inform revalidation without that coupling.
 
@@ -109,12 +109,12 @@ This record decides what the capability keeps, where, and how it stays true.
 - **Use-case sets per design, validated once.** Rejected. The knowledge would be scattered across designs and would stop being maintained after each one shipped.
 - **A flat analysis folder.** Rejected. Actors and terms get lost among many use cases, and there is no natural place for grouping or later modules.
 - **A record for every revalidation.** Rejected. Routine records would bury the ones with findings.
-- **Storing each artefact's current-or-stale state.** Rejected. It would duplicate what anchors and git already answer (COR-050).
+- **Storing each artefact's current-or-stale state as truth.** Rejected. It would duplicate what anchors and git already answer; the core's tool-written status is a dated snapshot for visibility, never read for friction (COR-050).
 - **Including executed testing in this capability.** Rejected. See Rationale; the evidence slot covers the useful part.
 - **Requiring a documentation or work-tracking capability.** Rejected. The capability must be useful on its own.
 
 ## Implications
 
-- **The capability ships** the templates and layout for its artefacts, the declaration of its places and slots, commands to stamp artefacts and check their shape (friction itself is the core check), and an authoring skill that guides revalidation.
+- **The capability ships** the templates and layout for its artefacts, the declaration of its places and connections, commands to stamp artefacts and check their shape (friction itself is the core check), and an authoring skill that guides revalidation.
 - **Projects** keep their analysis under their internal documentation root and wire the core friction check into their continuous integration if they want it enforced.
-- **Documentation disciplines** can read actors and their needs through the readers slot, without any dependency.
+- **Documentation disciplines** can read actors and their needs through the readers point, without any dependency.

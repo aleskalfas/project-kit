@@ -116,6 +116,293 @@ Order follows dependency: where things live → how rules are written → how ca
 - **2026-09-27 — Slot semantics (after critic + architect consult).** (1) **Policy per slot:** `single` (one filler answers), `union` (merged by id; project may override or suppress), **`additive`** (merged; any collision, the project's included, is an error; removal only by an explicit logged override — for slots carrying requirements, preserving pm DEC-032's "drop nothing"). (2) **Precedence:** project file > capability filler > consumer default; overrides replace a whole entry (no field merge); `union` has an explicit suppress list; each slot states whether its default is always included or used only when no filler exists. (3) **Two capabilities on one `single` slot = error naming both**; the project selects explicitly in `.pkit/project/config.yaml` (`slots: { <slot>: <capability> }`); install order never decides. (4) **Schemas use the existing machinery** (COR-018 companion, COR-022 binding, slot name as namespace); **semver-major** version, filler accepted when the major matches. (5) **Command fillers reuse the evaluable seam** (package-metadata registration, timeout, offline, deterministic, fail-closed: bad exit or bad output = no answer, never an empty answer); only the payload is new, validated against the slot schema. (6) **Fail closed where enforced:** each slot declares `on-inert: fallback | fail`; advisory uses fall back with a warning; enforcing uses (gate, CI, validate) report "slot unresolved"; the consumer default answers only when **no** filler exists, never as a stand-in for a broken one. (7) **`pkit status` / `health`:** one line per slot — policy, answering filler, versions, inert fillers with reasons; health flags inert and ambiguous resolutions. (8) **Precedents:** reviewer and label contributions can converge later; privilege fragments (ADR-021) are a stated exception (scoped ids, guardrail ban — converging would change failure behaviour and need a migration). Decided by Aleš Kalfas.
 - **2026-09-27 — `project-management:doc-check` is a `union` slot with pm's default always included.** (Refines the DEC-015 relation entry.) With living-docs installed, pm's checks and living-docs' checks merge: pm's `## Doc impact` gate keeps working, **pre-filled by living-docs**; living-docs adds friction on anchored pages and uncovered surface. No double noise: at living-docs onboarding pm's code→doc mapping rules are converted into page anchors and the mapping is emptied, so the drift check that fires is friction only. Nothing pm guarantees is lost if living-docs misses a case, and neither capability re-implements the other. Rejected: `single` (replacement would force living-docs to re-implement pm's gate or silently lose it — a hidden dependency the other way). Decided by Aleš Kalfas.
 - **2026-09-27 — Rule ids: `RS-<SET>-NNN`; extension points with `#`; ownership across the method/project line.** Rules form the **`RS` id family**, like every other pkit family (`COR`, `PRJ`, `DEC`, `ADR`, `UC`, `JRN`): `RS-CMN-003`, `RS-DOC-001`. Collisions with other families are impossible by construction; the only uniqueness check left is set names among rule sets. Hyphen, not colon — the colon is the namespace separator in citations (`[living-docs:RS-CMN-003]`) and COR-019's optional scope segment would make `RS:` ambiguous. **Extension points** use `#`: `RS-CMN-003#cause-location` (a colon would clash inside a citation the same way). **Citation:** method rule sets cited with the capability name (`[living-docs:RS-CMN-003]`), project rule sets bare (`RS-DOC-001`). **Ownership:** method rule sets live in the capability (kit-owned, versioned, synced); project rule sets under the internal docs root (project-owned; never touched by sync or uninstall); projects extend, never edit, method rule sets. **Inheritance pins the major version** (`inherits: living-docs:CMN@1`); a capability upgrade shipping a new major flags the project rule set in status, and fails closed where enforced (same principle as slots). The decision system's *guarantees* (permanent ids, origins, statuses with `proposed` default, supersession, the acceptance gate) apply identically in both locations. Importing Mockingbird's rules renames `CMN-001…008` → `RS-CMN-001…008` (one-time, internal to its `tech-docs/.meta`). Decided by Aleš Kalfas.
+## Walk-through of the mechanics (2026-09-28), part 1: the fields on an anchored artefact
+
+Decided by Aleš Kalfas, step by step, after the core records were accepted. These refine COR-050 and its dependents (tracked in #972).
+
+- **The answer to friction lives in the artefact, never in a pull-request description.** `## Doc impact` is project-management's format. A PR may come from another tool, or have no description at all, and the check must also run locally. The check therefore compares the diff with the diff. pm's `## Doc impact` becomes an optional **rendering** built from the artefacts, never what the check reads.
+- **Three answers, judged from the diff:**
+  - *updated*: content changed and the marker changed;
+  - *explained*: only the marker changed, with a justification;
+  - *deferred*: a deferral entry.
+
+  A marker bump with none of those is reported as "bumped, nothing behind it".
+- **Naming: the revalidate family everywhere** (the maintainer chose A over "recheck"). The field is `revalidated`, the event a *revalidation*. COR-050's "recheck" wording is refined in place.
+- **The `revalidated` block:**
+  ```yaml
+  revalidated:
+    at: 2026-10-02T09:40:12Z        # the marker; its precise point is the commit where `at` last changed
+    outcome: explained              # updated | explained — a record of the last revalidation, validated against the diff, never read for staleness
+    holds-because: "…"              # required only when outcome is explained; the one piece of judgment the tool cannot supply
+  ```
+  - **Why an outcome is stored even though it is derivable:** it is a presentation layer, visible in files and in git history. It is not memory and is never used to compute staleness.
+  - **Why only `updated` and `explained`:** `deferred` has its own list, and `stale` cannot be written at revalidation time.
+  - `holds-because` replaced "recheck-note", because it says what the field is.
+- **Deferrals are a list, one entry per anchor:** `deferred: [{anchor, reason}]`.
+  - Each entry defers friction from one anchor up to the moment it was written. A later change to that anchor is new friction.
+  - Only the reason is stored. Each entry's origin (author, date, PR) comes from git.
+  - Several reasons coexist. Entries are kept sorted by anchor, so parallel branches deferring different anchors merge cleanly.
+- **When a deferral disappears:**
+  1. a proper revalidation removes all entries;
+  2. removing one entry without a revalidation brings that anchor's friction back;
+  3. removing the anchor from the artefact means removing its entry too, and a dangling entry is an error;
+  4. withdrawing the artefact removes its entries.
+
+  A revalidation that leaves entries behind is flagged. There is no automatic expiry; age is shown.
+- **Debt is derived from git, not stored in a ledger.**
+  - *Deferred* debt originates in the commit that added the entry.
+  - *Stale* debt originates in the first commit that changed an anchor after the revalidation point.
+  - `pkit friction debt` lists both, with author, date and PR.
+  - A stored ledger (one file, or one file per entry) was rejected: it would duplicate git and drift.
+- **Recording stale debt on the artefact (maintainer's idea):** an explicit `pkit friction record-debt` writes stale debt as `deferred` entries ("found stale; origin PR/commit") through a reviewed PR, so that *all* debt is visible in the file and in git history. The project configures when it runs: after every merge to the default branch, on demand, on a clock, before a release, or never.
+- **Commands:** `pkit friction check` checks the change; `pkit friction check --all` checks the whole repository. The latter was formerly called "sweep", and "clean" was rejected because in other tools it means deletion. Writing is always separate and explicit (`revalidate`, `defer`, `record-debt`).
+- **Parallel changes:**
+  1. A conflict on `revalidated` or its reason is resolved by **revalidating the combined state**. There is no automatic merge driver, because one would claim a revalidation that never happened.
+  2. When only one branch revalidates, the other branch's anchor changes are reachable but not from that point, so they are flagged: nothing new is needed.
+  3. **Friction results are valid only against the up-to-date base.** Projects that enforce friction require up-to-date branches or a merge queue, and the check reports "checked against an outdated base".
+
+- **Refinements later in part 1 (2026-09-28):**
+  - **Outcome names:** `updated` and `unchanged`, with the justification field `unchanged-because`. That replaces "explained" and "holds-because", and a bare `reason` was rejected as meaningless inside `revalidated`. The text says why the content did not need to change, which is the only safeguard against a blind marker bump.
+  - **A tool-written `status` block, first in the front matter, above `revalidated` and `deferred`** (the maintainer's requirement: a visible status of the last check). It holds `state` (current / stale / deferred), `as-of` (the commit checked against) and `since` (where any staleness came from).
+    - Only the tool writes it, and it is never read for friction; the check always recomputes.
+    - It is dated with its commit, so it is never read as "true now".
+    - It is written only when it changes, by the after-merge job, through one small reviewed PR. Ordinary PR checks write nothing, so there is no churn and no conflicts in people's branches.
+    - It **replaces** recording stale debt as synthetic `deferred` entries. `deferred` is purely for deliberate postponement, and stale debt shows as `state: stale` with its origin in `since`.
+
+- **Front-matter ownership convention (maintainer, 2026-09-28).**
+  - An artefact's front matter has **one top-level key per functionality** that works with it, and everything that functionality owns lives under its key.
+  - The functionality that *defines* the artefact keeps its own fields at the top level (for a use case: `id`, `status`, `actor`).
+  - No functionality writes inside another's key.
+  - **A functionality's key is the same name as its command group.**
+  - For friction detection that key is **`friction`**, and `pkit friction …` is the command group. `friction-detection` was rejected: longer, and it would not match the command group.
+- **Shape under `friction`: siblings grouped by who writes them (option A).**
+  - `last-check` is written by the tool: `state`, `as-of` and `since`.
+  - `anchors`, `revalidated` and its nested `deferred` are written by people.
+  - Tool-written and person-written data sit on different lines, so the after-merge status PR and people's branches merge cleanly.
+  - Rejected: organising per anchor (B), because the tool and people would write on the same lines; and a strict writer split with a `declared` sub-block (C), an extra level that adds no meaning.
+  - A `deferred.anchor` that matches no anchor is a validation error.
+  - The tool-written block is `last-check`, because `status` is already the defining capability's lifecycle field.
+- **`deferred` is nested under `revalidated`.** It means "postponed since this revalidation", so a new revalidation replaces the block and settles its deferrals. Adding a deferral does not move `at`, so it is not a revalidation.
+  - An artefact never yet revalidated carries `revalidated` with `deferred` and no `at`.
+  - A deferral that survives a parallel revalidation is flagged by the check.
+- **Part 1, final shape:**
+  ```yaml
+  id: UC-003
+  status: active
+  actor: ACT-test-author
+  friction:
+    last-check:  { state: stale|current|deferred, as-of: <commit>, since: "<origin>" }
+    anchors:     { path: [...], record: [...], artefact: [...] }
+    revalidated:
+      at: <UTC timestamp>
+      outcome: updated|unchanged
+      unchanged-because: "<required when unchanged>"
+      deferred: [ { anchor: <anchor>, reason: "<reason>" } ]
+  ```
+
+- **Functionality blocks in artefacts sit in a `pkit:` container (option B).**
+  - The top level holds the entity's own properties; everything under `pkit:` is a contract with a functionality. That keeps entity data and contracts distinguishable for future refactors.
+  - `pkit` is a reserved key. The precedent is COR-022's top-level `pkit_schema:` field.
+  - pkit's own files, such as the backbone configuration, need no container: their top level is already pkit's.
+  - Inside the container, core functionalities are bare (`friction`). Provider paths in keys (`<capability>@<functionality>`) were rejected: every artefact would depend on where a functionality happens to live, and friction has already moved once.
+- **Contracts are named after roles, not implementations (COR-046 applied)** — maintainer, 2026-09-28.
+  - Slots and artefact blocks use the role: `documentation:readers`, `documentation:reading-evidence`, `analysis:revalidation-evidence`, `work-tracking:doc-check`, and `pkit: { documentation: … }`.
+  - A capability declares which role it plays, and only one implementation per role is active; two installed means an explicit project selection.
+  - Fillers target roles, so software-analysis never needs to know which documentation implementation is installed.
+  - Motivating case: replacing living-docs with another documentation implementation must be invisible to everything else.
+  - Refines COR-052 slot naming, both capability decisions, pm DEC-053, and the front-matter convention above.
+  - ~~A separate contract package per role~~ — **withdrawn the same day** (maintainer). "Contract" proved too strong: requiring a capability to *implement* another's contract creates loops (docs needs analysis, and analysis needs docs), and a separate component was more machinery than the idea needs.
+- **The model instead: connection points declared by the side that needs something** (maintainer, 2026-09-28).
+  - A connection point is declared by whoever needs an input, named after the **role**, and versioned: for example `documentation:readers`@1.
+  - Anyone may **optionally** plug in by declaring that it fills that point at that version.
+  - Every connection is one-directional and has one owner, and nothing is ever required of the other side, so mutual connections never form a lock.
+  - The user installs whatever is compatible.
+  - An **alternative implementation** declares the same points, which makes it interchangeable. Only one declarer of a point is active; two installed means an explicit project selection.
+  - A breaking change to a point's shape is a new version, i.e. a new point.
+- **This is the same paradigm as the process substrate's connections, so it becomes one foundation (option A).**
+  - Process connections already have the dependent side declare them (`depends_on`, COR-038). They are optional, and missed ones are reported rather than enforced (COR-042).
+  - Process connections name the other side **by implementation** (`<capability>:<process-id>`), which is the replacement problem role-naming fixes.
+  - **Decision:** a new core record defines **connection points** in general: declared by the dependent side, addressed by role, optional, reported by health, drawn in **one wiring graph** for the project. Data slots (COR-052) and process connections (COR-036/038/042) become its two kinds, and process addresses gain role-addressing as an additive refinement.
+  - Rejected: aligning slots only and leaving processes as a recorded gap (B); keeping the two separate (C).
+- **Roles are open names claimed by capabilities; one active capability per role** (maintainer, 2026-09-28).
+  - A capability declares the role or roles it plays in its package metadata (`plays: documentation`) and declares points under that role.
+  - There is no central registry; pkit documents the role names its own capabilities use, as recommendations only.
+  - Two installed capabilities claiming the same role is an error until the project selects one.
+  - A role's points are never split across several active capabilities, so it is always clear who answers `documentation:*`.
+  - A capability may play more than one role.
+  - Rejected: a registered list of roles (friction for third parties); no roles at all (names collide, and nothing groups a capability's points).
+- **A role's public surface, and how it is declared** (maintainer, 2026-09-28).
+  - A role's surface is the **data slots it accepts** (others may fill them) and the **processes it offers** (others may depend on or embed them, through their interface, COR-036). Each is addressed `<role>:<name>` and versioned, and a process interface gets a version like a slot schema.
+  - Whatever a capability does not list in its surface is internal and can change freely. That is the line that makes refactoring safe.
+  - Package-metadata vocabulary:
+    - **`provides: [<role>]`**, the term Debian and RPM virtual packages use for exactly this: interchangeable providers of a role, one installed at a time. It replaces `plays`; `roles` and `implements` were rejected.
+    - **`surface:`**, one list of points, each with `kind: data | process`, `point`, `version`, and kind-specific fields: `policy` and `inert` for data, `interface` for process. One list, because both are kinds of connection point, and a later kind (for example events) is a new `kind` value.
+    - **`fills:`**, the points of other roles this capability plugs into, at a version.
+  - Process connections name roles, never capabilities: `depends_on: [{ upstream: analysis:planned-revalidation, … }]`.
+- **Not everything is a process** (brainstorm, settled).
+  - The process substrate is content-free by design: a process carries *position*, and domain data lives elsewhere (COR-033's `domain_ref`).
+  - Data slots are that "elsewhere", made shareable between capabilities. Readers do not progress through states, and doc-check obligations are data a gate reads.
+  - The two kinds meet when a process gate reads a slot.
+  - The mechanisms are shared, not duplicated: one command runner, one addressing scheme, one versioning rule, one compatibility check, one wiring graph, one status view.
+  - Slots as process inputs was rejected: a process input is passed by an embedding parent per run, while a slot is standing knowledge read by many, often outside any process.
+- **Visibility:** the resolved wiring is shown in `pkit status` and in a dedicated graph command.
+- **Discovery and the installation decision** (maintainer, 2026-09-28). Every project has a different set of capabilities, so pkit answers the user's question at each of four moments:
+  1. **Exploring:** `pkit capabilities show <cap>` works whether or not the capability is installed. It lists what the capability provides, its surface and its fills, and what it would connect to in this project.
+  2. **Deciding:** `install --plan` lists the connections it would make, any role conflicts (with the selection command to resolve them), and what else it needs.
+  3. **Noticing gaps:** status and the graph show unfilled points and **suggest** available capabilities that would fill them. A suggestion is never an action; nothing installs itself.
+  4. **Removing:** `uninstall --plan` lists the fillers lost, process connections left without a provider, and project-owned artefacts whose `pkit.<role>` blocks become orphaned.
+
+  How it works:
+  - Every capability's surface is readable from its package metadata without installing it.
+  - Plans are computed by the same resolver that builds the live wiring, so a plan predicts exactly what happens.
+  - Suggestions draw only on the catalogs the project already uses: kit-shipped capabilities, plus configured external sources.
+- **Part 2 updated:** the per-slot selection key becomes **`providers:`**, which selects one capability per role in the backbone configuration and covers all of that role's points. It carries COR-048's duties: empty by default, written with consent by configuration commands or when a conflict is reported, validated against what is installed, and cleared on uninstall with consent.
+- **Validation first** (maintainer, 2026-09-28: "we want to be able to validate all from the very beginning").
+  - **The first implementation step** is the backbone configuration's schema (a core companion schema bound to its fixed path, COR-018/022/023) and its **full deterministic validation**, wired into the check gate. That closes #689 for this file.
+  - Validation covers structure (only known keys, with the nearest known key suggested; types; the reserved `project` block) and checks against the repository:
+    - each `providers` entry names an installed capability that provides that role;
+    - a role with two providers must have a selection;
+    - `docs` roots resolve inside the repository and outside the methodology tree after following links, with a warning if a root is missing;
+    - `friction` patterns stay inside the repository, with a warning if a pattern matches nothing.
+  - "Deterministic" means the same repository state always gives the same answer.
+  - **The rule for every later step:** each new kind of file ships with its schema and its deterministic checks **in the same increment**, never "validation later". That covers artefact front matter, rule sets, slot data, capability surfaces and revalidation records.
+- **The first increment also validates capability package metadata and every version relation** (maintainer, 2026-09-28).
+  - Today `package.yaml` has no JSON Schema: unknown keys are silently ignored, and only a hand-written self-consistency check runs, at install or register time.
+  - The first increment adds:
+    - a core shared schema for package metadata, covering existing fields and the new `provides` / `surface` / `fills` / `locations` / `anchored-places`, with unknown keys as errors;
+    - deterministic repository checks: points under a provided role; a companion schema per data point; filler commands and scripts exist; locations under a valid root; places inside those locations; roles with two providers have a selection;
+    - all of it run in the check gate on every change, for every installed capability. The install-time check becomes one caller of the same validator.
+  - **Version checks:**
+    - `requires_backbone` against the installed backbone;
+    - capability dependency ranges against installed versions (COR-030);
+    - `fills` against the declared point version;
+    - process connections against the offered interface version;
+    - project slot files against the point's schema version;
+    - pinned rule-set inheritance against the installed set (COR-051);
+    - the config file's shape against what the installed backbone expects.
+  - `fills` is a new name for an existing concept. COR-052 said fillers "declare" but named no field, and three bespoke precursors do the same job: review contributions (pm DEC-032), privilege fragments (ADR-021) and label contributions.
+- **Package-metadata structure: extension points and extensions, each split by direction** (maintainer, 2026-09-28; supersedes `provides` / `surface` / `fills`).
+  - The structure combines two classic vocabularies:
+    - Eclipse-style *extension points* versus *extensions* answers **whose point is it**;
+    - UML *provided* versus *required* answers **which way it flows**.
+  - That gives a 2×2 grid:
+    - `extension-points.accepts`: data coming in, defined here, others may contribute;
+    - `extension-points.offers`: processes going out, defined here, others may depend on them;
+    - `extensions.contributes`: data this capability supplies to another role's point;
+    - `extensions.depends-on`: another role's process this capability relies on. This list is **derived** from process definitions' `depends_on` and validated to match, so there is one source.
+  - **Why these words:**
+    - `requires` / `provides` for points was rejected because "requires" sounds mandatory and collides with COR-030's `requires_capabilities`;
+    - the role key becomes **`roles`**, which frees `provides`;
+    - the definer of any point is the capability providing the role in its name, so no marker is needed;
+    - interchangeability means matching a role's `extension-points`.
+  - Rejected alternatives: plain UML (it hides the definer and double-uses `provides`); plain Eclipse (it does not show direction); exports / imports (reads backwards for data slots).
+- **Mandatory connections: opt-in, always with a reason.** Optional is the default everywhere, and self-contained capabilities remain the norm.
+  - **Mandatory role:** `requires-roles: [{role, reason}]`. Installation refuses unless some capability provides the role, and uninstalling the last provider refuses while it is still required. This is role-based, so it avoids COR-030's capability lock-in; `requires_capabilities` stays for the rare case of one specific implementation.
+  - **Mandatory point:** `must-be-filled: {reason}` on an accepted point. Validation fails while no filler other than the default exists. This is distinct from `inert`, which covers a filler that exists but broke.
+  - Validation rejects a mandatory declaration without a reason. Install plans show it, and suggestions help fill it.
+  - Nothing is mandatory for software-analysis or living-docs today.
+- **Descriptions:** every extension point *requires* a `description` (what it means, and what one may rely on); every extension may carry one (what this capability supplies). It is prose for people, shown by `show`, the graph and plans, and nothing parses it.
+- **Role names are qualified by the publisher of their definition: `<publisher>::<role>`** (maintainer, 2026-09-28).
+  - Role names are not reserved globally. Different combinations of compatible capabilities may each have their own `documentation` role with a very different meaning.
+  - The qualifier names the **origin of the definition**, never the installed implementation. That keeps replacement working, the same way a fully qualified interface name keeps its name whichever class implements it. For example:
+    - `pkit::documentation` is pkit's definition of the role;
+    - super-living-docs also provides `pkit::documentation`, so it is interchangeable;
+    - `super-docs::documentation` is a different role that happens to share the word, and both can be active at once.
+  - Point references carry the qualified role (`pkit::documentation:readers`), so a contribution says in plain words which ecosystem it targets. A capability supporting two ecosystems lists one contribution per qualified point.
+  - The publisher is a namespace: `pkit::` for roles pkit defines, a third party's own name for theirs, and the project's name for a project-defined role.
+  - The earlier "one active provider per role" now reads "one active provider per qualified role".
+  - A schema **fingerprint** is kept only as an integrity check, so that two providers of the same qualified point and version define the same shape. It is no longer the identity.
+  - Rejected: qualifying by the implementing capability (breaks replacement); fingerprints as the identity (unreadable).
+- **Versions are per point, and roles are unversioned.**
+  - `pkit::documentation:readers@1` and `pkit::documentation:page-review@3` evolve independently, because compatibility is decided per connection.
+  - A version is an integer, increased only on a breaking change. In metadata it is a field; in displays it is written compactly as `@N`.
+  - Interchangeability between providers is **computed** by comparing points, and plans list the differences.
+  - A fundamental redefinition of a whole role is a new role name.
+  - Rejected: one version per role (a change to one point would break contributors to unchanged points); both levels (two numbers to keep consistent).
+- **Mandatory roles** reference qualified roles: `requires-roles: [{role: pkit::work-tracking, reason}]`.
+- **`requires-roles` dropped; `mandatory` is marked on individual connections** (maintainer, 2026-09-28).
+  - A mandatory role only restated connections already listed, so the mark moved onto the connection itself: `mandatory: {reason}`.
+    - On an `accepts` entry, the point must actually be filled; the default is not enough. Validation fails otherwise.
+    - On a `contributes` entry, the target point must exist at a compatible version. Installation refuses otherwise, and so does uninstalling its provider.
+    - On a `depends-on` entry (marked at its source, the process definition's `depends_on`), the offered process must exist. Same enforcement.
+  - This is more precise (it names *which* connection) and lives in one place, and it replaces both `requires-roles` and `must-be-filled`.
+  - Optional stays the default, and a `reason` is required.
+- **`extensions.depends-on` is generated, lock-file style.**
+  - It is generated from process definitions' `depends_on` by a refresh command (for example `pkit capabilities refresh <capability>`), marked as generated, and never edited by hand.
+  - Validation compares it with the source. A stale copy fails with "out of date: run refresh", and the process definition always wins.
+  - It keeps the list visible in the package without silent drift, like the tool-written `last-check` on artefacts.
+  - Rejected: hand-written (drifts silently); derived for display only (not visible in the file).
+- **Package metadata is nested by functionality; the connection-points functionality is named `connections`** (maintainer, 2026-09-28).
+  - With fresh eyes, top-level `locations` and `anchored-places` said nothing about what they serve. Every block now sits under the functionality it belongs to:
+    - identity (`component`, `description`, `requires_backbone`);
+    - `connections:` holding `roles`, `extension-points` and `extensions` (with `depends-on` generated);
+    - `docs:` holding `locations` (COR-049);
+    - `friction:` holding `places` and `surface` (COR-050);
+    - `commands:` (COR-021).
+  - **The same name means the same functionality in every place it appears:**
+    - `docs` in the backbone configuration and in package metadata;
+    - `friction` in the backbone configuration, package metadata, artefacts (`pkit: {friction: …}`) and commands (`pkit friction …`);
+    - `connections` in the backbone configuration, package metadata, artefacts (`pkit: {<role>: …}`) and commands (`pkit connections …`, the wiring graph).
+  - The backbone configuration's `providers:` moves under `connections:` (`connections: { providers: { "pkit::documentation": living-docs } }`).
+- **Friction places are disjoint between capabilities (option A)** (maintainer, 2026-09-28).
+  - Each file in a declared place has exactly one owning capability, answerable from the declarations alone.
+  - A capability either names its places precisely, or declares broad places that exclude those other installed capabilities own.
+  - Validation fails when two installed capabilities' places overlap, naming the overlap.
+  - When a capability is uninstalled, its files become orphaned and are reported. No other capability silently takes them over.
+  - Rejected: overlap allowed, with ownership read from each file's `pkit.<role>` block (B). A file with no front matter in a shared area got two conflicting reports; a copied artefact could be claimed outside its folder; and uninstalling one capability made another quietly claim its files.
+- **Part 4: schemas** (maintainer, 2026-09-28: "everything looks ok").
+  - **The set:** backbone configuration; capability package metadata; the artefact `pkit` block; connection-point data schemas; process interfaces; rule sets; capability-specific artefacts; revalidation records. Each has deterministic checks against the repository alongside its schema.
+  - **Where they live:** core schemas in `.pkit/schemas/`, with shared definitions in `_defs/`; capability schemas in each capability's `schemas/`.
+  - **Binding:** artefacts are found through declared friction places and capability locations. Their `pkit` block is validated against the core schema, and their own fields against the capability's schema.
+- **`pkit validate` becomes the one umbrella command** (maintainer, 2026-09-28).
+  - The command already exists (COR-004: "check project state against invariants"). Today it covers manifests and decision front matter, and its own docstring anticipates per-area validation hooks.
+  - Each functionality **registers its validator**: the backbone for config, packages, artefacts, rule sets, connections and versions; each capability for its own artefacts, registered in package metadata like its commands.
+  - The existing separate validators (schemas, data, decisions, refs, process) become registered validators run by `pkit validate`. They stay available individually for focused use.
+  - The check gate calls `pkit validate` once, so nothing registered can be forgotten there.
+  - Output is grouped by functionality.
+- **Commands in detail: surface shown** (maintainer reviewed, 2026-09-28).
+  - `pkit validate`: the umbrella.
+  - `pkit friction`: `check`, `check --all`, `debt`, `explain`, `revalidate`, `defer`, `record-status`.
+  - `pkit connections`: `graph`, and `providers set`.
+  - `pkit capabilities`: `show`, `install --plan`, `uninstall --plan`, `refresh`.
+  - `pkit status`, extended.
+  - Reading commands never write. Writing commands name what they write, and write only with consent.
+- **Flows across connected capabilities** (brainstorm, maintainer, 2026-09-28: "yes events"). A capability's command must never call another capability by name, so the flow is carried by connections:
+  1. **Friction stays the foundation.** A change to an artefact propagates to everything anchored to it, with no orchestration. It cannot see that something *new* exists.
+  2. **Suggested next steps, always.** Every writing command ends by asking connected capabilities, through their connections, for next steps, and prints them. Nobody has to know the flow.
+  3. **Events as the third kind of connection point** (`kind: event`).
+     - A capability *offers* an event (for example `pkit::analysis:artefact-created`), with a versioned payload schema.
+     - Another *subscribes* to it through `extensions.subscribes`, with a command.
+     - pkit runs the subscribers after the producing command finishes. The producer never names a subscriber, and any provider of the subscribing role gets it.
+     - Subscribers are bounded, offline, deterministic and fail closed.
+     - A subscriber that writes needs consent.
+     - A failing subscriber never undoes the producer; it is reported.
+  4. **Agents** may compose flows on top of 2 and 3; nothing depends on them.
+  - **No consent model for events** (maintainer, 2026-09-28). Consent already exists twice: the project installed the subscribing capability, and the user ran the producing command. What matters is predictability, handled by visibility:
+    - `install --plan` shows what a capability subscribes to and what it writes;
+    - every run lists the subscriber effects it caused;
+    - everything lands in the diff;
+    - `--plan` previews subscriber effects, and `--no-events` runs a command alone;
+    - non-interactive runs behave the same.
+  - **Cascading events** (maintainer, 2026-09-28): allowed; an event already handled for the same subject within one command's chain is not delivered again and is reported as a loop; a depth limit (about 8 hops) backstops it; the whole chain is reported at the end of the command.
+  - Edits made by hand emit no events; friction covers them.
+- **Records affected (to plan once the concept is designed):**
+  - the new connection-points record;
+  - COR-052 refined: slots become one kind of connection point, and "the consumer owns the slot" becomes "the declaring side owns the point", named by role;
+  - COR-036, COR-038 and COR-042 refined: role-addressing;
+  - COR-050 refined: the part-1 mechanics and the front-matter convention (`pkit:` container, role-named keys);
+  - software-analysis DEC-001, living-docs DEC-001 and pm DEC-053: role-named points.
+
+- **2026-09-27 — project-kit runs the friction check in enforcing mode from the first day** (maintainer). No warning period: project-kit is authored end to end by pkit's own tooling and agents, so a false flag is a defect in our anchors or our check — to be failed loudly and fixed at once, not tolerated. The check is a required status in CI; the code-to-doc mapping stays active until onboarding converts it to anchors (pm DEC-053). Recorded in ADR-055 point 4 (PR #971); this closes the ADR's last open question. Adopters keep the warning-first path COR-050 describes — this is the self-hosting adopter's choice, not a change to the core record.
+
+- **2026-09-27 — COR-053 connection points drafted; choices the critic forced that were not discussed** (for the maintainer's veto): (1) two selection keys, `connections.providers` (one provider per qualified role) and `connections.selections` (one contributor per `single` data point) — the two conflicts differ; (2) an installed but unselected provider's connections are inert, its own commands still run; (3) events fire only from **writing** commands; (4) a network-needing reaction (posting to a tracker) is not an event subscriber but a suggested next step or an agent; (5) mandatory on a process connection is recorded as one added, narrow lifecycle reader of `depends_on` (existence of the upstream definition only), taken at COR-042's supersession weight with amendment notes on COR-038/042; (6) mandatory cycles rejected by validation; disposition per COR-030 (refuse the dependent, warn + force the target); (7) orphaned role blocks are preserved and reported, never errors; a later provider adopts them; (8) role-block key under the container is the bare role word, qualifier resolved from the active provider, qualified string key when two active roles share a word; role blocks state the point version; (9) process interfaces gain an integer version; (10) project-published roles deferred; (11) the record writes the qualifier as `<methodology>::` and leaves the literal `pkit::` / `pkit:` to the reference (CORs avoid the kit's name). After architect + methodology review, further undiscussed choices: (12) role addressing is scoped to `depends_on`; role-addressed embedding (`subprocess`/`cascade` `runs:`) is deferred to its own decision because it would make the engine consult the wiring resolver; (13) the position engine emits no events, hooks stay deferred, and an event is not the carrier of a `push`/trigger edge; (14) static wiring facts (unmet mandatory, role conflicts, stale generated list, inert counterparts) are **validation** findings, not health, so `depends_on` gains exactly one reader (the lifecycle, reading the mark from the generated list), with COR-042's replacement ruling written verbatim and in-place edits on COR-036/038/042/050/052 plus the process README and schema descriptions; (15) `refresh` is authoring-time (source repo / incubated capabilities); in adopting projects validation only checks; (16) an event is emitted only when declared under `offers` naming the command; the payload schema designates the subject field; (17) the wiring graph subsumes `pkit process graph`; (18) the artefact container (`pkit:`) is defined in COR-053 point 10 and COR-050's refinement will point at it; (19) a key rewrite in artefacts when a second role sharing a word is installed is listed in the plan and written with consent; (20) connections block additive, no package schema bump or migration (COR-030 precedent).
+
+- **2026-09-27 — COR-050 refined in place with part 1; three sub-rules reversed** (disclosed in the commit): conflicting revalidations are resolved by revalidating the combined state (not "keep either timestamp"); a bare `at` bump is no longer an answer — `unchanged-because` must change each time; a tool-written snapshot (`last-check`) is allowed while stored state as truth stays rejected. Review-forced additions: glossary (revalidation point, deferral point = commit that introduced the entry, content excludes the whole container, "the diff"); moving an artefact revalidates; kept deferrals are re-stated and keep their point; finding ownership split — change check fails on friction / dead anchors / bump-with-nothing, reports outdated base; validation owns malformed block, dangling deferral, cycle, mode, paths. COR-051, ADR-055 and the changeset aligned. **Capability DECs refined**: points role-qualified (`<methodology>::analysis|documentation|work-tracking`), SA's four outcomes mapped onto `updated`/`unchanged`; **pm DEC-053 point 2 reversed** — an obligation from a documentation source is met by the page's answer in the diff, the `## Doc impact` line only renders; living-docs records the synced-copy predicate and owes the two first-adopter findings (place precedence, place→space) to its next refinement.
+
+- **2026-09-28 — ADR-055 follow-ups decided** (maintainer): up-to-date base — **C now, B later**: no gating on an outdated base today (the whole-repository check on `main` catches what slips through); a **merge queue** is the end state and arrives as its own Task since `done-work` must enqueue; strict "require branches up to date" rejected for multi-clone churn. After-merge status job — **A**: project-kit leaves it at *never*; debt via the debt listing and status report; revisit after onboarding, scoped to non-shipped places if ever, which would argue for a *where* scope on COR-050's key.
+
+**Still to walk through:** nothing in the mechanics walk-through; parts 1–4, connection points, commands, events and cascades are settled, and ADR-055's three questions are decided. Next: turn the walk-through into record refinements (#972), then the implementation filing plan.
+
 ## Reference adopter — Mockingbird (read-only observation, 2026-09-26)
 
 - `docs/` mixes two spaces: user-facing (`guides/`, `EVALUATION.md`, `CLUSTER_ONBOARDING.md`, `INSTALL_ENV_CACHE.md`, `assets/`) and technical (`architecture/decisions/ADR-001…009`, `ARCHITECTURE.md`, `CONTRIBUTING.md`, `RELEASING.md`, `BUILDING_IMAGES.md` — the last possibly serving operators too: a human call).
@@ -148,7 +435,7 @@ All planned now (see the 2026-09-27 scope entry). Each goes critic → architect
 4. **COR — slots** (core). Per the 2026-09-27 slot-semantics entry: `single` / `union` / `additive`; precedence and suppression; explicit selection for competing `single` fillers; schemas on the existing machinery with semver-major versions; command fillers on the evaluable seam; `on-inert: fallback | fail` with fail-closed for enforcing uses; status/health visibility; precedent mapping with ADR-021 as the stated exception.
 5. **software-analysis DEC-001** — actors, use cases, journeys, glossary (RUP-inspired layout, grouping rule, formats); revalidation (triggers, two outcomes, records only with findings); planned-revalidation and onboarding as process-substrate lifecycles; brownfield onboarding; fills `living-docs:readers`; declares `software-analysis:revalidation-evidence`; independent of project-management and testing. Rewrites the draft on PR #945.
 6. **living-docs DEC-001** — spaces by audience and the separation rule; one definition per space; anchors on pages; reader-review (distinct from software-engineering's `docs-reviewer`); `readers`, `anchors`, `reading-evidence` slots; the CMN set as its shared rule set; propose-never-apply; onboarding as transformation; fills `project-management:doc-check` (a `union` slot, pm's default always included: friction, uncovered surface, pre-filled doc statement); converts pm's mapping rules into page anchors at onboarding.
-7. **project-kit ADR (first adopter)** — roots, CI wiring (warning first), seed use cases, fate of the use-case ids drafted on PR #945.
+7. **project-kit ADR (first adopter)** — roots (`docs/` + `tech-docs/`), CI wiring (enforcing from day one), seed use cases, fate of the use-case ids drafted on PR #945.
 
 Follow-up, pm side: a record amending DEC-015 — declares the `project-management:doc-check` slot with its current behaviour as the default filler.
 
@@ -156,4 +443,4 @@ Not produced here: #954 (journal opt-in).
 
 ## Status
 
-Active. Ten questions and the review round decided. Remaining week-one details (anchor-proposing tooling, when a page may have no anchors, PR-check severity for artefacts outside the diff, fate of the PR #945 ids) are carried into the records. Next: final methodology pass on the note, then author record 1 (documentation roots).
+Active. All ten questions and the review round decided; all eight records accepted (COR-048..052, software-analysis DEC-001, living-docs DEC-001, pm DEC-053, ADR-055 — merged via PR #971 after critic, architect and methodology review; it also lists four findings against living-docs to fold into the #972 refinements: place precedence, place→space assignment, a "synced copy" predicate for the never-a-place rule, and user READMEs linking into the record corpus). Walk-through of the mechanics complete; record refinements tracked in #972; #890 (first use cases) is unblocked once the ADR relocation PR lands.

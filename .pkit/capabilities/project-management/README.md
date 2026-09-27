@@ -631,6 +631,12 @@ pm collects a declaration purely on its presence in a **manifest-registered** co
 
 **The resolution seam.** A consuming capability resolves a label's name through pm's `resolve_contributed_label(id)` accessor rather than hard-coding the text (DEC-042 D5). It ships **inert** in v1 (returns the declared `default_name`); introducing the seam before any consumer can bypass it means a future adopter override (keyed by the contribution `id`) can relocate the name without touching the contributor. Uninstalling the contributing capability stops the pre-check warning (its declaration leaves the manifest walk); the label itself is not deleted (additive).
 
+## Connections
+
+The capability provides the `pkit::work-tracking` role (COR-053; `pkit::` is the methodology's publisher qualifier, written `<methodology>::` in the decision records).
+
+- **Accepts** `pkit::work-tracking:doc-check`: the documentation obligations a pull request owes, per [project-management:DEC-053-doc-check-slot]. This capability's code-to-doc mapping is the always-included default filler; a documentation capability may contribute friction on anchored pages and uncovered surface. Design-ahead until the slot is implemented.
+
 ## Permissions
 
 The project-management capability ships a **capability-contributed permission grant** (per ADR-016) at `.pkit/capabilities/project-management/permissions/grants.yaml`. This fragment is automatically composed into the effective permission model whenever this capability is a registered component — no manual copy required.
