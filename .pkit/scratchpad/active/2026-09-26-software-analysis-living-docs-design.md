@@ -320,6 +320,18 @@ Decided by Aleš Kalfas, step by step, after the core records were accepted. The
   - A fundamental redefinition of a whole role is a new role name.
   - Rejected: one version per role (a change to one point would break contributors to unchanged points); both levels (two numbers to keep consistent).
 - **Mandatory roles** reference qualified roles: `requires-roles: [{role: pkit::work-tracking, reason}]`.
+- **`requires-roles` dropped; `mandatory` is marked on individual connections** (maintainer, 2026-09-28).
+  - A mandatory role only restated connections already listed, so the mark moved onto the connection itself: `mandatory: {reason}`.
+    - On an `accepts` entry, the point must actually be filled; the default is not enough. Validation fails otherwise.
+    - On a `contributes` entry, the target point must exist at a compatible version. Installation refuses otherwise, and so does uninstalling its provider.
+    - On a `depends-on` entry (marked at its source, the process definition's `depends_on`), the offered process must exist. Same enforcement.
+  - This is more precise (it names *which* connection) and lives in one place, and it replaces both `requires-roles` and `must-be-filled`.
+  - Optional stays the default, and a `reason` is required.
+- **`extensions.depends-on` is generated, lock-file style.**
+  - It is generated from process definitions' `depends_on` by a refresh command (for example `pkit capabilities refresh <capability>`), marked as generated, and never edited by hand.
+  - Validation compares it with the source. A stale copy fails with "out of date: run refresh", and the process definition always wins.
+  - It keeps the list visible in the package without silent drift, like the tool-written `last-check` on artefacts.
+  - Rejected: hand-written (drifts silently); derived for display only (not visible in the file).
 - **Records affected (to plan once the concept is designed):**
   - the new connection-points record;
   - COR-052 refined: slots become one kind of connection point, and "the consumer owns the slot" becomes "the declaring side owns the point", named by role;
