@@ -19,7 +19,7 @@ Today, moving a project to a newer pkit is **two manual steps**: `uv tool instal
 
 ## What is already built (the reframe — most machinery exists)
 
-pkit ships a **version router** ([ADR-039](../../../docs/architecture/decisions/ADR-039-pkit-entry-point-router.md), `src/project_kit/router.py`): when the enclosing project pins a version different from the running binary, the entry point **re-execs `uvx project-kit@<version>`** from a compiled-in distribution URL (`_DISTRIBUTION_GIT_URL`, the PRJ-004 canonical git URL). So pkit **already fetches and runs a specific released version of itself over the network, on its own** — the hard part. What's missing for *self-service-latest* is only:
+pkit ships a **version router** ([ADR-039](../../../tech-docs/architecture/decisions/ADR-039-pkit-entry-point-router.md), `src/project_kit/router.py`): when the enclosing project pins a version different from the running binary, the entry point **re-execs `uvx project-kit@<version>`** from a compiled-in distribution URL (`_DISTRIBUTION_GIT_URL`, the PRJ-004 canonical git URL). So pkit **already fetches and runs a specific released version of itself over the network, on its own** — the hard part. What's missing for *self-service-latest* is only:
 
 1. **Discover the latest released tag** — a `git ls-remote --tags <url>` query. The router only ever runs the version a project *pins*, never "the newest available."
 2. **A flow that repoints to it** — raise the project (and/or reinstall the tool) to that tag.

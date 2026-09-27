@@ -1,0 +1,6 @@
+component: backbone
+kind: patch
+body: >
+  The project-kit architecture decisions moved from docs/architecture/decisions/ to
+  tech-docs/architecture/decisions/ (ADR-055); relative links in shipped READMEs,
+  records and scripts now point at the new location. Adopter defaults are unchanged.

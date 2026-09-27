@@ -1,6 +1,6 @@
 """The instance-ownership marker seam — ADR-041, both halves.
 
-[ADR-041](../docs/architecture/decisions/ADR-041-instance-ownership-substrate-contract.md)
+[ADR-041](../tech-docs/architecture/decisions/ADR-041-instance-ownership-substrate-contract.md)
 makes ownership resolution a single fold seam and each ownership write a single
 construction point, over two selectable substrates (DEC-043). This file pins:
 

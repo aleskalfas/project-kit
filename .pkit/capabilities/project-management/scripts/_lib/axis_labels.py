@@ -8,7 +8,7 @@ labels used to be string-formatted inline at ~26 write-path sites scattered
 across the mutating scripts; Task A pulled every such construction (and the
 matching read) behind this one seam.
 
-Why a seam, per [ADR-026](../../../../docs/architecture/decisions/ADR-026-substrate-map-read-path-contract.md):
+Why a seam, per [ADR-026](../../../../../tech-docs/architecture/decisions/ADR-026-substrate-map-read-path-contract.md):
 the load-bearing brownfield-adoption invariant (DEC-036, EPIC #217 constraint 1)
 is *never write an unmanaged label*. That invariant only bites if the seam is
 the **sole constructor** of any axis-label on a write path — a writer that

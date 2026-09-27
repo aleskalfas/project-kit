@@ -13,7 +13,7 @@ produced:
   - .pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md
   - .pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md
   - .pkit/capabilities/project-management/decisions/DEC-053-doc-check-slot.md
-  - docs/architecture/decisions/ADR-055-first-adopter-analysis-and-living-docs.md
+  - tech-docs/architecture/decisions/ADR-055-first-adopter-analysis-and-living-docs.md
   - https://github.com/aleskalfas/project-kit/milestone/6
 ---
 

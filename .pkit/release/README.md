@@ -210,7 +210,7 @@ target version, never narrows a range that is already wider:
   tested against. Releasing a capability under backbone X asserts compatibility
   with X, so its declared range comes to include X. This is #494's author-side
   auto-broaden, closing the gap [COR-041](../decisions/core/COR-041-external-source-distribution.md)
-  and [ADR-040](../../docs/architecture/decisions/ADR-040-external-source-write-path.md)
+  and [ADR-040](../../tech-docs/architecture/decisions/ADR-040-external-source-write-path.md)
   flagged: the author owns an externally-sourced capability's compatibility
   claim, and this keeps it current on release rather than by hand.
 
@@ -510,7 +510,7 @@ A **pre-sharing lint**: before a capability is shared to be consumed
 verify it is ready. A consumer pulls the capability **whole at a pin**, reads its
 manifest, and gates compatibility on the declared `requires_backbone` range
 against the consumer's own backbone
-([ADR-040](../../docs/architecture/decisions/ADR-040-external-source-write-path.md)
+([ADR-040](../../tech-docs/architecture/decisions/ADR-040-external-source-write-path.md)
 point 4). For that to work the capability must declare the pieces the consumer's
 gate reads — this checks that objective subset and reports **pass or the
 specific gaps**:

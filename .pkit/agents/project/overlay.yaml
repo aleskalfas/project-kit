@@ -13,7 +13,7 @@ project-root-docs:
 # Architecture documentation roots (per COR-024). project-kit's
 # architectural surface is distributed across CONTRIBUTING.md,
 # and the COR records. Adopters with conventional doc layouts will
-# point these at docs/architecture/ and docs/architecture/decisions/.
+# point these at tech-docs/architecture/ and tech-docs/architecture/decisions/.
 architecture-docs:
   - CONTRIBUTING.md
   - .pkit/decisions/core/
@@ -21,7 +21,7 @@ architecture-docs:
 # ADR records (per COR-024 + COR-025). Project-kit has adopted ADRs for
 # its architectural decisions per PRJ-005; records land here.
 adr-records:
-  - docs/architecture/decisions/
+  - tech-docs/architecture/decisions/
 
 # Process-authoring targets (per ADR-051) — the `process-author` agent's write
 # authority. Empty is the correct value *here*: project-kit ships the process

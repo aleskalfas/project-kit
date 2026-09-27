@@ -108,7 +108,7 @@ Proposed mid-session as "defense-in-depth" (flag honoured → fire-once works; f
 
 ## ⛔ BLOCKING FINDING — collides with accepted ADR-032
 
-[ADR-032](../../../docs/architecture/decisions/ADR-032-per-machine-activation-routing-axis.md) (`status: accepted`) already governs *where a harness settings key lives*, and mechanism (B) violates its **Rule B, defer branch** head-on:
+[ADR-032](../../../tech-docs/architecture/decisions/ADR-032-per-machine-activation-routing-axis.md) (`status: accepted`) already governs *where a harness settings key lives*, and mechanism (B) violates its **Rule B, defer branch** head-on:
 
 > **Harness-co-owned key (the defer branch) → the harness's own local file; pkit defers.** When the harness already owns and writes a per-machine key, the entry lands where the harness writes it, and **pkit never authors a parallel key**. This is the split-brain fix: pkit writing its own copy of a harness-owned toggle is exactly what produced the believed-off-but-actually-on disable bug.
 

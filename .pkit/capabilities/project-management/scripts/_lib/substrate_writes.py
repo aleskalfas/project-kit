@@ -11,7 +11,7 @@ board-membership write. This module pulls every covered construction behind one
 seam.
 
 Why a seam, per
-[ADR-031](../../../../docs/architecture/decisions/ADR-031-substrate-write-path-contract.md):
+[ADR-031](../../../../../tech-docs/architecture/decisions/ADR-031-substrate-write-path-contract.md):
 this is the non-label, write-side twin of ADR-026's label sole-constructor.
 Each covered substrate has **exactly one construction point** — a mutating
 script obtains the write *only by asking this module*, never by string-building

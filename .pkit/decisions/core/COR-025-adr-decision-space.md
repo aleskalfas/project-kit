@@ -102,7 +102,7 @@ The mechanism:
 
 1. `pkit sync` operates only on the kit-shipped surface under `.pkit/`. Files outside that tree are never read or written by sync (per [`.pkit/decisions/README.md`](../README.md) "The no-shared-files invariant").
 2. ADR records live at the adopter's `docs/architecture/decisions/` (or wherever the overlay resolves), which is **outside `.pkit/`** by design.
-3. Therefore: project-kit-the-project's own ADRs (if it authors any, in its own `docs/architecture/decisions/`) are project-kit-the-project's state — never in the sync propagation surface; never copied to an adopter; never overwritten when an adopter re-syncs.
+3. Therefore: project-kit-the-project's own ADRs (if it authors any, under its own internal documentation root) are project-kit-the-project's state — never in the sync propagation surface; never copied to an adopter; never overwritten when an adopter re-syncs.
 
 This is the same isolation property PRJ records enjoy (they live under `.pkit/decisions/project/`, which sync treats as project-owned), realised through a different mechanism: PRJ is inside `.pkit/` but in a project-owned subtree; ADRs are entirely outside `.pkit/`. Both paths get the no-leakage guarantee.
 
