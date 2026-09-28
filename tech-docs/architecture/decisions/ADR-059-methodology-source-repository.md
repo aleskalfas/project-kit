@@ -1,7 +1,7 @@
 ---
 id: ADR-059
 title: The methodology's source repository is the one whose `.pkit/` is the methodology's own tree
-status: proposed
+status: accepted
 date: 2026-09-28
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
@@ -35,7 +35,7 @@ Nothing recorded what the two answers recognise, or why they agree. They agree o
 
 **Why not one function for all six.** The tool and the propagated tree are the boundary. The ownership predicate cannot import the tool. The router could load the tree-side predicate from its own bundled copy, but it would first have to find that copy. That means a second locator for the source tree on the router's stdlib-only hot path, to save a check of two files. Loading the target's own copy would run whatever version that tree holds before routing, and a tree older than the predicate has none; the router needs its own copy regardless. Nor can sync's test move into either of them, because it has to know which code is running. The router decides that, and the predicate never learns it. So each test has one function, and the marker test exists in two copies held equal by a test.
 
-**The gap, and why the markers do not close it.** Where the running code is not the repository's own, sync's test misses the source and sync breaks the invariant. Two paths reach it: an operator's `PKIT_NO_ROUTE=1`, and `pkit pin` to a release newer than a checkout's recorded content, which runs that release's `upgrade` with routing bypassed ([ADR-049](ADR-049-per-project-version-pin.md)) and propagates it over the checkout. Keying sync on the markers would not close it. Sync would skip propagation, but it would also run foreign code as though it were the checkout's own. The honest answer there is a refusal, which carries out this record rather than revising it. The refusal is filed as #1070.
+**The gap, and why the markers do not close it.** Where the running code is not the repository's own, sync's test misses the source and sync breaks the invariant. Three paths reach it: an operator's `PKIT_NO_ROUTE=1`; `pkit pin` to a release newer than a checkout's recorded content, which runs that release's `upgrade` with routing bypassed ([ADR-049](ADR-049-per-project-version-pin.md)) and propagates it over the checkout; and a dispatcher that is present but not executable, where route 1 falls back to the installed tool and its warning advises the sync that then copies over the checkout. Keying sync on the markers would not close it. Sync would skip propagation, but it would also run foreign code as though it were the checkout's own. The honest answer there is a refusal, which carries out this record rather than revising it. The refusal is filed as #1070.
 
 ### Alternatives considered
 
