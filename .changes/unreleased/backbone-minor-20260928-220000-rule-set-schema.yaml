@@ -1,0 +1,29 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  Rule-set files are validated (COR-051). A Markdown file in a `rule-sets/` folder is a
+  rule-set file, bound by where it is: the backbone's `.pkit/rule-sets/`, an installed
+  capability's `.pkit/capabilities/<name>/rule-sets/`, `rule-sets/` under the internal
+  documentation root (`docs/rule-sets/` by default), or a declared place whose path has a
+  `rule-sets` segment; a `README.md` there is a signpost, not a rule set. The new
+  `.pkit/schemas/backbone/rule-set.schema.json` fixes its front matter — `rule-set`, `version`,
+  `inherits` (`<SET>@<major>`, with `<component>:` in front for a method rule set), `scope`,
+  and a `rules` map from each `RS-<SET>-NNN` id to its `status`, `origin`, `offers`, `fills`,
+  `successor` and container — and refuses unknown keys, naming the nearest known one.
+  `pkit validate` gains a `rule-sets` pass (`project_kit.rule_sets`): the schema; the join
+  between the data and the body's id-headed sections; well-formed ids that carry their set's
+  name and are written once; unique set names; the container inside each rule; a complete
+  origin on every accepted rule, whose cited decision record exists and is accepted; successors
+  in the same set or one inheriting it; and inheritance — a pinned set that exists at the
+  pinned major (the finding names the new one), no redefined inherited id, fills only of
+  offered points and at most once along a chain, a method set never inheriting a project one,
+  and a capability's set inheriting another capability's only when that dependency is
+  declared. A rule without a status is proposed. An unresolved source kind and an orphaned fill
+  are reported, never failed. Rules are friction artefacts: the friction pass walks the
+  rule-set places too, reading each rule as one entry, and leaves a rule-set file's own findings
+  to the new pass. `RS-<SET>-NNN`, `RS-<SET>-NNN#<point>` and `[<component>:RS-<SET>-NNN]` are
+  citation tokens: `pkit refs validate` resolves them in agent and skill bodies, `pkit refs
+  lookup` prints where a rule lives, and `pkit decisions validate` reports a rule id claimed
+  twice across the rule sets.

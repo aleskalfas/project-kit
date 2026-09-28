@@ -20,6 +20,12 @@ The id-spaces (numbering is independent per space):
   collision; only same-capability duplicates count. Each capability is its
   own id-space, labelled `capability:<cap>`.
 
+Rules are a separate identifier family with the same guarantee (COR-051
+point 3): a rule id `RS-<SET>-NNN` is unique across every rule set the
+location rule finds, so the check also reports a rule id claimed twice — by
+two rule sets, or twice within one (`rule_sets.rule_id_collisions`), labelled
+`rules`.
+
 Each record's id is read from the YAML frontmatter `id:` field. As a cheap
 secondary check, the frontmatter id is compared against the number encoded
 in the filename (`<PREFIX>-NNN-<slug>.md`); a mismatch is reported as an
@@ -40,7 +46,7 @@ from pathlib import Path
 
 import click
 
-from project_kit import cli_render
+from project_kit import cli_render, rule_sets
 from project_kit.decisions import resolve_adr_records_dir
 
 
@@ -76,6 +82,7 @@ class DecisionValidationReport:
 
     records_checked: int = 0
     issues: tuple[DecisionIssue, ...] = field(default_factory=tuple)
+    rules_checked: int = 0  # rules across the rule sets, checked as their own id-space
 
     @property
     def is_clean(self) -> bool:
@@ -89,7 +96,8 @@ def validate_decision_ids(target_root: Path) -> DecisionValidationReport:
     flags any id claimed by more than one file *within the same id-space*
     (cross-id-space duplicates — same number in two capabilities, or a
     `COR-001` alongside a `PRJ-001` — are not collisions). Also flags any
-    record whose frontmatter id disagrees with its filename number.
+    record whose frontmatter id disagrees with its filename number, and any
+    rule id claimed more than once across the rule sets.
     """
     records = discover_decision_records(target_root)
     issues: list[DecisionIssue] = []
@@ -119,9 +127,38 @@ def validate_decision_ids(target_root: Path) -> DecisionValidationReport:
             )
         )
 
+    # 3. Rule ids, unique across every rule set (COR-051 point 3).
+    discovery = rule_sets.discover_rule_sets(target_root)
+    issues.extend(_rule_id_issues(discovery))
+
     return DecisionValidationReport(
-        records_checked=len(records), issues=tuple(issues)
+        records_checked=len(records),
+        issues=tuple(issues),
+        rules_checked=len(discovery.rules),
     )
+
+
+def _rule_id_issues(discovery: rule_sets.RuleSetDiscovery) -> list[DecisionIssue]:
+    """A rule id claimed more than once in the rule-set space, one issue per id."""
+    issues: list[DecisionIssue] = []
+    for collision in rule_sets.rule_id_collisions(discovery):
+        claims: dict[str, int] = {}
+        for path in collision.paths:
+            claims[path] = claims.get(path, 0) + 1
+        where = ", ".join(
+            path if count == 1 else f"{path} ({count} times)" for path, count in claims.items()
+        )
+        issues.append(
+            DecisionIssue(
+                location=f"rules :: {collision.rule_id}",
+                message=(
+                    f"rule id {collision.rule_id!r} is claimed {len(collision.paths)} times "
+                    f"across the rule sets: {where}; a rule id names one rule, in the set its "
+                    f"id names (COR-051 point 3)."
+                ),
+            )
+        )
+    return issues
 
 
 def discover_decision_records(target_root: Path) -> list[DecisionRecord]:
@@ -157,15 +194,16 @@ def discover_decision_records(target_root: Path) -> list[DecisionRecord]:
 
 def print_report(report: DecisionValidationReport) -> None:
     """Render the report to stdout, mirroring `pkit schemas validate`'s style."""
+    rules = f" and {report.rules_checked} rule(s)" if report.rules_checked else ""
     if report.is_clean:
-        if report.records_checked == 0:
+        if report.records_checked == 0 and report.rules_checked == 0:
             click.echo("  No decision records found to validate.")
         else:
             click.echo(
                 "  "
                 + cli_render.style(
                     "strong",
-                    f"Validated {report.records_checked} decision record(s). "
+                    f"Validated {report.records_checked} decision record(s){rules}. "
                     "No id collisions found.",
                 )
             )
@@ -176,7 +214,7 @@ def print_report(report: DecisionValidationReport) -> None:
         + cli_render.style(
             "strong",
             f"{len(report.issues)} issue(s) found across "
-            f"{report.records_checked} decision record(s):",
+            f"{report.records_checked} decision record(s){rules}:",
         )
     )
     for issue in report.issues:
