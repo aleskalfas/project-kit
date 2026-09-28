@@ -87,6 +87,25 @@ def test_empty_file_is_clean(make_adopter_repo: MakeAdopterRepo) -> None:
 
 def test_valid_file_with_every_key_is_clean(make_adopter_repo: MakeAdopterRepo) -> None:
     repo = make_adopter_repo(capabilities=("project-management",))
+    # The connection entries are checked for real (#983): the named capability
+    # must provide the role, and the selected point must be `single` with the
+    # named capability among its contributors.
+    package = repo.pkit / "capabilities" / "project-management" / "package.yaml"
+    package.write_text(
+        package.read_text(encoding="utf-8")
+        + "connections:\n"
+        "  roles: [pkit::work-tracking]\n"
+        "  extension-points:\n"
+        "    accepts:\n"
+        "      pkit::work-tracking:issue-kinds:\n"
+        "        {schema_version: 1, schema: issue-kinds.schema.json, "
+        "description: The kinds., combination: single}\n"
+        "  extensions:\n"
+        "    contributes:\n"
+        "      - {point: pkit::work-tracking:issue-kinds, schema_version: 1}\n",
+        encoding="utf-8",
+    )
+    (package.parent / "schemas" / "issue-kinds.schema.json").write_text("{}", encoding="utf-8")
     (repo.root / "docs").mkdir()
     (repo.root / "docs" / "guide.md").write_text("# Guide\n", encoding="utf-8")
     _write_config(
@@ -113,15 +132,7 @@ project:
 """,
     )
     report = _run(repo)
-    assert report.errors == ()
-    assert _messages(report, cv.Severity.WARNING) == []
-    # The connection entries cannot be verified beyond installation yet: information only.
-    infos = report.by_severity(cv.Severity.INFO)
-    assert [f.path for f in infos] == [
-        "/connections/providers/pkit::work-tracking",
-        "/connections/selections/pkit::work-tracking:issue-kinds",
-    ]
-    assert all("cannot verify" in f.message for f in infos)
+    assert report.findings == ()  # the connection entries are verified, and hold
 
 
 def test_name_only_file_is_clean(make_adopter_repo: MakeAdopterRepo) -> None:
@@ -327,17 +338,17 @@ def test_provider_naming_uninstalled_capability_is_an_error(
     assert report.by_severity(cv.Severity.INFO) == ()
 
 
-def test_provider_naming_installed_capability_is_information_only(
+def test_provider_naming_installed_capability_that_does_not_provide_the_role_is_an_error(
     make_adopter_repo: MakeAdopterRepo,
 ) -> None:
+    """The check is real now (#983): the shipped capability declares no roles."""
     repo = make_adopter_repo(capabilities=("project-management",))
     _write_config(repo, "connections:\n  providers:\n    pkit::work-tracking: project-management\n")
     report = _run(repo)
-    assert report.errors == ()
-    infos = report.by_severity(cv.Severity.INFO)
-    assert len(infos) == 1
-    assert "cannot verify" in infos[0].message
-    assert "provides role 'pkit::work-tracking'" in infos[0].message
+    assert _paths(report, cv.Severity.ERROR) == ["/connections/providers/pkit::work-tracking"]
+    assert "does not provide role 'pkit::work-tracking'" in report.errors[0].message
+    assert "no installed capability provides the role" in report.errors[0].message
+    assert report.by_severity(cv.Severity.INFO) == ()
 
 
 # --- determinism and the tree's schema ---------------------------------------

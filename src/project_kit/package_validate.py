@@ -24,9 +24,14 @@ passes, in order, each producing findings located by JSON Pointer:
    locations are relative sub-paths, friction places lie inside a declared
    location or the project. All ERRORs.
 
-Checks that need the wiring resolver — two providers of one role, point
-version compatibility, a stale generated `depends-on` — are Task #983's;
-`resolve_active_roles` and `check_wiring` are the hooks it fills.
+The checks across packages — roles and their providers, counterparts against
+point versions, mandatory marks and cycles, fingerprints, the version
+relations — are the wiring resolver's (`connections`, COR-053 point 7).
+`check_wiring` hands the pass the resolved `Wiring`, whose errors join the
+issue list and which `pkit validate` shows under its "connections" and
+"versions" headings; `resolve_active_roles` answers which qualified roles have
+an active provider. A stale generated `depends-on` is the refresh command's
+check (#995).
 
 Two callers: `pkit validate` runs `validate_installed_packages` over every
 component the backbone manifest registers (the "packages" pass), and the
@@ -41,7 +46,7 @@ from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path, PurePosixPath, PureWindowsPath
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import click
 from jsonschema import Draft202012Validator
@@ -59,6 +64,9 @@ from project_kit.backbone_schemas import (
 )
 from project_kit.manifest import read_backbone_manifest
 from project_kit.validate import Issue
+
+if TYPE_CHECKING:
+    from project_kit.connections import Wiring
 
 # The kind under which the schema is read from the tree (`load_backbone_schema`).
 SCHEMA_KIND = "package"
@@ -111,24 +119,26 @@ class PackageReport:
         return not self.errors
 
 
-# --- hooks for the wiring resolver (Task #983) -------------------------
+# --- the wiring resolver (COR-053 point 7) -------------------------------
 
 
-def resolve_active_roles(target_root: Path) -> frozenset[str] | None:
-    """Hook: the qualified roles with one active provider in this project.
+def resolve_active_roles(target_root: Path) -> frozenset[str]:
+    """The qualified roles with one active provider in this project: one installed
+    provider, or the one the provider-selection key names (COR-053 point 1)."""
+    from project_kit import connections  # the resolver imports this module's types
 
-    Needs the wiring resolver (COR-053 point 7): which installed capability
-    answers each role once the provider-selection key is read. Returns None
-    while the resolver does not exist; nothing here depends on the answer yet.
-    """
-    return None
+    return connections.resolve_wiring(target_root).active_roles()
 
 
-def check_wiring(target_root: Path, reports: Iterable[PackageReport]) -> list[PackageFinding]:
-    """Hook: the cross-package checks — two providers of one qualified role,
-    counterpart version compatibility, a stale generated `depends-on`
-    (COR-053 points 1, 4 and 5). Empty until the resolver lands."""
-    return []
+def check_wiring(target_root: Path) -> Wiring:
+    """The cross-package checks, as the resolved wiring: role conflicts, counterpart
+    version compatibility, unmet mandatory marks and cycles, fingerprint
+    disagreements, version relations (COR-053 points 1, 5 and 6; COR-030). Its
+    findings are located in the package files (or the configuration file, when
+    the fix is a selection entry)."""
+    from project_kit import connections
+
+    return connections.resolve_wiring(target_root)
 
 
 # --- one package file --------------------------------------------------
@@ -456,7 +466,7 @@ def _connection_findings(
                 continue
             for address, point in declared.items():
                 path = f"/connections/extension-points/{group}/{_token(address)}"
-                role = _role_of(str(address))
+                role = role_of(str(address))
                 if role is not None and role not in roles:
                     provided = (
                         f" (connections.roles: {sorted(roles)})."
@@ -491,9 +501,10 @@ def _connection_findings(
     return findings
 
 
-def _role_of(address: str) -> str | None:
-    """The qualified role of a point address, or None when the address is not one
-    (the shape pass reports that)."""
+def role_of(address: str) -> str | None:
+    """The qualified role of a point address `<publisher>::<role>:<point>`, or None
+    when the address is not one (the shape pass reports that). Shared with the
+    wiring resolver (`connections`), so one parser reads every address."""
     role, sep, point = address.rpartition(POINT_SEPARATOR)
     if not sep or not point or ROLE_QUALIFIER not in role or role.endswith(POINT_SEPARATOR):
         return None
@@ -553,10 +564,17 @@ def relative_path_problem(value: str) -> str | None:
 @dataclass(frozen=True)
 class PackagesPass:
     """The "packages" pass of `pkit validate`: one report per registered component
-    whose `package.yaml` is present, plus the note when the tree ships no schema."""
+    whose `package.yaml` is present, the note when the tree ships no schema, and
+    the resolved wiring across them (`connections.print_pass` renders its two
+    headings).
+
+    `errors` / `warnings` count the per-file findings; the wiring's own counts are
+    on `wiring`. `as_issues` carries both kinds of error into the issue list.
+    """
 
     reports: tuple[PackageReport, ...]
     schema_note: str | None = None  # "no schema present, skipped" (ADR-056 point 1)
+    wiring: Wiring | None = None
 
     @property
     def errors(self) -> int:
@@ -568,11 +586,16 @@ class PackagesPass:
 
     def as_issues(self, target_root: Path) -> list[Issue]:
         """The errors as `pkit validate` issues; warnings are printed, never issues."""
-        return [
+        from project_kit import connections
+
+        issues = [
             Issue(location=_locate(target_root, report.file, finding), diagnosis=finding.message)
             for report in self.reports
             for finding in report.errors
         ]
+        if self.wiring is not None:
+            issues.extend(connections.as_issues(target_root, self.wiring))
+        return issues
 
 
 def installed_package_files(target_root: Path) -> list[tuple[str, Path, Path]]:
@@ -611,11 +634,7 @@ def validate_installed_packages(target_root: Path) -> PackagesPass:
         validate_package_file(package, schema, component_dir=component_dir, expected_name=name)
         for name, component_dir, package in installed_package_files(target_root)
     ]
-    wiring = check_wiring(target_root, reports)
-    if wiring:
-        manifest = target_root / ".pkit" / "manifest.yaml"
-        reports.append(PackageReport(file=manifest, findings=tuple(wiring)))
-    return PackagesPass(reports=tuple(reports), schema_note=note)
+    return PackagesPass(reports=tuple(reports), schema_note=note, wiring=check_wiring(target_root))
 
 
 def print_pass(target_root: Path, result: PackagesPass) -> None:
