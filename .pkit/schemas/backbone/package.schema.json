@@ -414,7 +414,7 @@
           "$ref": "#/$defs/point-version"
         },
         "command": {
-          "description": "The command filler that supplies the data (COR-052 point 6); must exist in `commands:` (checked in Python).",
+          "description": "The command filler that supplies the data (COR-052 point 6); must exist in `commands:` and declare `query-contract: true` (checked in Python). It takes no parameter: run with `--json` alone, offline-marked and bounded, it prints the filler envelope `{schema_version, value}`.",
           "$ref": "#/$defs/command-reference"
         },
         "value": {

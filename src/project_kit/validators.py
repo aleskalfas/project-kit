@@ -373,11 +373,12 @@ def run_query(target_root: Path, script: Path, *, location: str, reference: str)
     run = run_command(script, [QUERY_FLAG], cwd=target_root, extra_env=OFFLINE_MARKER)
     if run.ending is Ending.ANSWERED:
         return _answer_of(run.document, location=location, command=reference)
-    return _no_answer(location, _why_no_answer(run, reference))
+    return _no_answer(location, why_no_answer(run, reference))
 
 
-def _why_no_answer(run: CommandRun, reference: str) -> str:
-    """The message of the no-answer finding for a run that did not answer."""
+def why_no_answer(run: CommandRun, reference: str) -> str:
+    """Why a query run did not answer: the message of a validator's no-answer
+    finding, and the reason a command filler is inert (`data_points`)."""
     if run.ending is Ending.NOT_STARTED:
         return f"command {reference!r} could not start: {run.detail}"
     if run.ending is Ending.TIMED_OUT:

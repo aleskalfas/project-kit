@@ -15,6 +15,7 @@ from click.testing import CliRunner
 from ruamel.yaml import YAML
 
 from project_kit import backbone_schemas as bs
+from project_kit import command_runner
 from project_kit import connections as cx
 from project_kit import data_points as dp
 from project_kit import package_validate as pv
@@ -539,13 +540,10 @@ def test_a_contribution_naming_command_and_value_is_a_package_error(repo: Adopte
         {"extensions": {"contributes": [{"point": READERS, "schema_version": 1, "command": "noop", "value": []}]}},
     )
     report = pv.validate_installed_packages(repo.root)
-    errors = [(f.path, f.message) for r in report.reports for f in r.errors]
-    assert errors == [
-        (
-            "/connections/extensions/contributes/0/value",
-            "a contribution supplies its data through `command` or `value`, not both (COR-052 point 2).",
-        )
-    ]
+    errors = {f.path: f.message for r in report.reports for f in r.errors}
+    assert errors["/connections/extensions/contributes/0/value"] == (
+        "a contribution supplies its data through `command` or `value`, not both (COR-052 point 2)."
+    )
 
 
 # --- `pkit validate` ----------------------------------------------------------------------
@@ -582,3 +580,168 @@ def test_validate_resolves_the_wiring_and_the_data_points_once(
     monkeypatch.setattr(dp, "resolve_data_points", counting_data)
     result = CliRunner().invoke(main, ["validate", "--no-refs"])
     assert sorted(calls) == ["data", "wiring"], result.output
+
+
+# --- command fillers (COR-052 point 6; the query policy) ------------------------------
+
+ANSWER = {"schema_version": 1, "value": ["developer"]}
+
+
+def _log(repo: AdopterRepo) -> Path:
+    """Where the synthetic filler commands record each run (git never lists `.git/`)."""
+    return repo.root / ".git" / "filler-runs.log"
+
+
+def _command_contributor(
+    repo: AdopterRepo,
+    name: str,
+    body: str,
+    *,
+    contract: bool = True,
+    address: str = READERS,
+) -> None:
+    """A capability contributing through the command `export`, whose script records
+    its arguments and the offline marker in the run log, then runs `body`."""
+    leaf: dict[str, Any] = {"script": "scripts/export.py", "help": "Export the readers."}
+    if contract:
+        leaf["query-contract"] = True
+    entry = {"point": address, "schema_version": 1, "command": "export"}
+    _stage(
+        repo,
+        name,
+        {"extensions": {"contributes": [entry]}},
+        commands={"noop": {"script": "scripts/noop.py", "help": "Nothing."}, "export": leaf},
+    )
+    script = repo.pkit / "capabilities" / name / "scripts" / "export.py"
+    script.write_text(
+        "#!/usr/bin/env python3\n"
+        "import json, os, sys, time\n"
+        f"with open({str(_log(repo))!r}, 'a') as log:\n"
+        "    log.write(json.dumps([sys.argv[1:], os.environ.get('PKIT_OFFLINE'),"
+        " os.environ.get('UV_OFFLINE')]) + '\\n')\n" + body,
+        encoding="utf-8",
+    )
+    script.chmod(0o755)
+
+
+def _runs(repo: AdopterRepo) -> list[Any]:
+    log = _log(repo)
+    return [json.loads(line) for line in log.read_text().splitlines()] if log.exists() else []
+
+
+def _printing(document: Any) -> str:
+    return f"print(json.dumps({document!r}))\n"
+
+
+def test_a_command_filler_answers_with_json_alone_offline_marked(repo: AdopterRepo) -> None:
+    _provider(repo)
+    _command_contributor(repo, "evidence", _printing(ANSWER))
+    point = _point(repo)
+    assert point.resolved and point.value == ["developer"]
+    (filler,) = point.fillers
+    assert (filler.supplies, filler.state, filler.query_contract) == (
+        "command 'export'",
+        dp.FillerState.TAKEN,
+        True,
+    )
+    # No parameter: `--json` alone; the offline marker set (ADR-057 point 3).
+    assert _runs(repo) == [[["--json"], "1", "1"]]
+
+
+@pytest.mark.parametrize(
+    ("body", "reason"),
+    [
+        ("time.sleep(60)\n", "command 'export' did not answer within 1 s"),
+        (
+            "print('not json')\n",
+            "command 'export' did not print a JSON document on its standard output",
+        ),
+        ("sys.exit(3)\n", "command 'export' exited 3"),
+        (
+            _printing({"value": ["x"]}),
+            "printed no filler envelope: 'schema_version' is a required property",
+        ),
+        (
+            _printing({"schema_version": 2, "value": ["x"]}),
+            "answered for version 2; the point is at version 1",
+        ),
+        (
+            _printing({"schema_version": 1, "value": ["x"], "remove": [{"id": "a", "reason": "r"}]}),
+            "answered with `remove`: removal overrides are the project's alone",
+        ),
+        (
+            _printing({"schema_version": 1, "value": ["ok", {"id": 5}]}),
+            "its value does not fit the point at /1",
+        ),
+    ],
+    ids=["timeout", "no-document", "abnormal-exit", "no-envelope", "other-version", "removals", "partial"],
+)
+def test_a_command_filler_without_an_answer_is_inert_never_a_partial_value(
+    repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch, body: str, reason: str
+) -> None:
+    monkeypatch.setattr(command_runner, "COMMAND_TIMEOUT_SECONDS", 1)
+    _provider(repo, inert="fallback", default={"value": ["guest"], "participation": "alone"})
+    _command_contributor(repo, "evidence", body)
+    resolution = _resolve(repo)
+    point = resolution.point(READERS)
+    assert point is not None and not point.resolved and point.value is None
+    state, why = _states(point)["evidence"]
+    assert state == "inert" and reason in why, why
+    # The broken filler does not promote the `alone` default.
+    assert _states(point)["docs-a"] == ("passed over", "not promoted: a declared filler is inert")
+    (warning,) = resolution.findings
+    assert warning.severity is W
+    assert warning.location == (
+        ".pkit/capabilities/evidence/package.yaml:/connections/extensions/contributes/0"
+    )
+    assert "no filler remains, so the point is unresolved" in warning.message
+
+
+def test_a_failing_command_filler_under_fail_is_an_error(repo: AdopterRepo) -> None:
+    _provider(repo, inert="fail")
+    _contributor(repo, "notes", ["operator"])
+    _command_contributor(repo, "evidence", "sys.exit(1)\n")
+    resolution = _resolve(repo)
+    (error,) = resolution.findings
+    assert error.severity is E and "inert policy is `fail`, so it is unresolved" in error.message
+    point = resolution.point(READERS)
+    assert point is not None and not point.resolved and point.value is None
+
+
+def test_a_command_without_the_declaration_is_never_run_and_is_reported(
+    repo: AdopterRepo,
+) -> None:
+    _provider(repo)
+    _command_contributor(repo, "evidence", _printing(ANSWER), contract=False)
+    point = _point(repo)
+    assert not point.resolved
+    (filler,) = point.fillers
+    assert filler.query_contract is False
+    assert filler.reason.startswith("its command 'export' does not declare the query contract")
+    assert _runs(repo) == []  # the runner's backstop: never started
+    # The packages member reports it where the author can fix it (the reporting rule).
+    report = pv.validate_installed_packages(repo.root)
+    (error,) = [f for r in report.reports for f in r.errors]
+    assert error.path == "/connections/extensions/contributes/0/command"
+    assert "names command 'export' as its filler, which does not declare the query contract" in (
+        error.message
+    )
+
+
+def test_a_single_point_runs_no_command_once_a_filler_before_it_answers(
+    repo: AdopterRepo,
+) -> None:
+    _provider(repo, TOOL, combination="single")
+    tool = {"schema_version": 1, "value": {"name": "e"}}
+    _command_contributor(repo, "evidence", _printing(tool), address=TOOL)
+    _filler(repo, {"schema_version": 1, "value": {"name": "p"}}, path=TOOL_FILE)
+    assert _point(repo, TOOL).origin == dp.PROJECT
+    assert _runs(repo) == []
+
+
+def test_validate_runs_each_command_filler_once(repo: AdopterRepo) -> None:
+    _provider(repo)
+    _command_contributor(repo, "evidence", _printing(ANSWER))
+    result = CliRunner().invoke(main, ["validate", "--no-refs"])
+    assert result.exit_code == 0, result.output
+    assert len(_runs(repo)) == 1

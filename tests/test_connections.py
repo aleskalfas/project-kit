@@ -47,7 +47,10 @@ def _package(name: str, version: str = "0.1.0", **overrides: Any) -> dict[str, A
         "component": {"kind": "capability", "name": name, "version": version},
         "description": f"Synthetic {name}.",
         "requires_backbone": ANY_BACKBONE,
-        "commands": {"publish": {"script": "scripts/publish.py", "help": "Publish."}},
+        # `publish` is every synthetic contribution's filler: a query command.
+        "commands": {
+            "publish": {"script": "scripts/publish.py", "help": "Publish.", "query-contract": True}
+        },
     }
     raw.update(overrides)
     return raw

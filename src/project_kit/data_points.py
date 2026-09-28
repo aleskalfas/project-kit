@@ -8,7 +8,8 @@ defines, combines the point's fillers into one value by its declaration:
 - **The fillers**, in precedence order (COR-052 point 4): the project's filler
   file, at the path the point's address maps to under the internal
   documentation root; each capability's contribution (`extensions.contributes`),
-  its data written as `value`; the definer's `default`, which takes part
+  its data written as `value` or printed by a command filler; the definer's
+  `default`, which takes part
   `always` — like any other filler, at the lowest precedence — or only `alone`,
   when no other filler is declared (point 2).
 - **The policy** (point 3). `single`: the first filler in precedence order
@@ -22,8 +23,19 @@ defines, combines the point's fillers into one value by its declaration:
   `single` (`connections.Point.policy`).
 - **Removal overrides.** `remove` in the project's envelope — each entry an id
   and its reason — drops that id from every other filler before they merge.
+- **Command fillers** (point 6). A contribution's `command` is a query: it
+  takes no parameter. Its `commands:` leaf must declare the query contract
+  (`query-contract: true`), or it is not run; it is run through the shared
+  runner under the query policy — from the project root with `--json` alone,
+  the offline marker set, in its own process group, bounded — and prints one
+  filler envelope, `{schema_version, value}`, at the point's version. An
+  abnormal exit, a timeout, output that is not that envelope, or a value that
+  does not fit is no answer — never an empty one. The declaration is trusted,
+  not enforced: nothing here holds the command to no network (ADR-057 point
+  4), so each command filler carries whether it declares it, for the report.
 - **The inert policy** (point 6). A filler meant to answer that cannot — its
-  version differs, its value does not fit the point's schema — is inert.
+  version differs, its command gives no answer, its value does not fit the
+  point's schema — is inert.
   `fallback` resolves from the fillers that remain, with a warning naming it;
   `fail` leaves the whole point unresolved, with an error. An `alone` default
   is never promoted because a declared filler broke, and a point never
@@ -58,6 +70,14 @@ from referencing.exceptions import Unresolvable
 from project_kit import backbone_schemas as bs
 from project_kit import connections as cx
 from project_kit import validators
+from project_kit.command_runner import (
+    COMMANDS_KEY,
+    Ending,
+    RegisteredCommand,
+    commands_of,
+    resolve_command,
+    run_command,
+)
 from project_kit.package_validate import role_of
 
 # How a point's default takes part (COR-052 point 2), and its inert policy (point 6).
@@ -115,6 +135,10 @@ class Filler:
     supplies: str
     state: FillerState
     reason: str = ""  # why it is inert or passed over
+    # A command filler: whether its command declares the query contract — among
+    # its limits, needing no network. Declared and trusted, never enforced
+    # (ADR-057 point 4). None for any other filler.
+    query_contract: bool | None = None
 
     @property
     def label(self) -> str:
@@ -197,8 +221,9 @@ def resolve_data_points(target_root: Path) -> DataResolution:
         schemas=cx.container_wiring(target_root).points,
         fillers={f.address: f for f in files if f.address is not None},
         prefix=cx.fillers_prefix(target_root).as_posix(),
+        envelope=schema,
     )
-    run.check_envelopes(files, schema)
+    run.check_envelopes(files)
     points = tuple(
         _Point(run, p).resolve() for p in wiring.points if p.point.kind is cx.PointKind.DATA
     )
@@ -247,6 +272,7 @@ class _Candidate:
     evaluate: Callable[[], _Answer]
     location: str  # where a finding about it points
     who: str  # how a finding's message names it
+    query_contract: bool | None = None  # a command filler: its command declares the contract
     answer: _Answer | None = None
 
     def ask(self) -> _Answer:
@@ -263,7 +289,7 @@ class _Candidate:
         return self.name
 
     def filler(self, state: FillerState, reason: str = "") -> Filler:
-        return Filler(self.source, self.name, self.supplies, state, reason)
+        return Filler(self.source, self.name, self.supplies, state, reason, self.query_contract)
 
 
 @dataclass
@@ -275,6 +301,7 @@ class _Run:
     schemas: Mapping[str, bs.ActivePoint]
     fillers: Mapping[str, cx.FillerFile]
     prefix: str
+    envelope: Mapping[str, Any] | None  # the filler envelope's schema; None when the tree has none
     findings: list[validators.Finding] = field(default_factory=list[validators.Finding])
     unsound: dict[str, str] = field(default_factory=dict[str, str])  # address → why it is not read
 
@@ -293,11 +320,10 @@ class _Run:
         sub = bs.filler_subpath(address)
         return f"{self.prefix}/{sub.as_posix()}" if sub is not None else self.prefix
 
-    def check_envelopes(
-        self, files: Iterable[cx.FillerFile], schema: Mapping[str, Any] | None
-    ) -> None:
+    def check_envelopes(self, files: Iterable[cx.FillerFile]) -> None:
         """Every file under the prefix: a stray is warned, a malformed envelope is an
         error, a filler whose point no active provider defines is inert."""
+        schema = self.envelope
         for file in files:
             if file.address is None:
                 self.add(
@@ -433,14 +459,29 @@ class _Point:
     def _contribution(self, b: cx.Binding) -> _Candidate:
         c = b.counterpart
         entry = _declared(self.run.wiring.declarations, c.capability, c.pointer)
+        command = None if VALUE_KEY in entry else self._command(c)
         return _Candidate(
             FillerSource.CONTRIBUTION,
             c.capability,
             _supplies(entry, c),
-            lambda: self._contribution_answer(b, entry),
+            lambda: self._contribution_answer(b, entry, command),
             location=self.run.package_location(c.capability, c.pointer),
             who=f"the contribution of {c.capability!r}",
+            query_contract=(
+                command.entry.get(validators.QUERY_CONTRACT_KEY) is True
+                if command is not None
+                else None
+            ),
         )
+
+    def _command(self, c: cx.Counterpart) -> RegisteredCommand | None:
+        """The `commands:` leaf a contribution names as its filler, when it names one
+        that exists (the packages member reports one that does not)."""
+        component = self.run.wiring.declarations.by_name(c.capability)
+        if c.command is None or component is None:
+            return None
+        commands = commands_of(component.component_dir, component.package.get(COMMANDS_KEY))
+        return resolve_command(commands, c.command)
 
     def _default_candidate(self) -> _Candidate | None:
         if self.default is None:
@@ -498,7 +539,9 @@ class _Point:
             removals=tuple((r[ID_KEY], r[REASON_KEY], i) for i, r in enumerate(removals)),
         )
 
-    def _contribution_answer(self, b: cx.Binding, entry: Mapping[str, Any]) -> _Answer:
+    def _contribution_answer(
+        self, b: cx.Binding, entry: Mapping[str, Any], command: RegisteredCommand | None
+    ) -> _Answer:
         c = b.counterpart
         if b.status is cx.BindingStatus.INERT_VERSION:
             return _no_answer(
@@ -508,7 +551,69 @@ class _Point:
             )
         if VALUE_KEY in entry:
             return self._value_answer(entry[VALUE_KEY])
+        if c.command is not None:
+            return self._command_answer(c.command, command)
         return _no_answer("it supplies no data: it declares neither `value` nor `command`")
+
+    def _command_answer(self, reference: str, command: RegisteredCommand | None) -> _Answer:
+        """Run a command filler under the query policy and read its envelope
+        (COR-052 point 6; the lifecycle README, "How a registered command is
+        run"). It takes no parameter: `--json` alone. Anything but a whole,
+        fitting envelope is no answer. The first three defects are the packages
+        member's errors as well, so under `fallback` they earn no second finding."""
+        if command is None:
+            return _no_answer(
+                f"its command {reference!r} is not declared in `commands:`", reported=True
+            )
+        if command.entry.get(validators.QUERY_CONTRACT_KEY) is not True:
+            return _no_answer(
+                f"its command {reference!r} does not declare the query contract "
+                f"(`{validators.QUERY_CONTRACT_KEY}: true`), so it is not run",
+                reported=True,
+            )
+        if not command.script.is_file():
+            return _no_answer(
+                f"its command {reference!r} names a script that does not exist", reported=True
+            )
+        run = run_command(
+            command.script,
+            [validators.QUERY_FLAG],
+            cwd=self.run.root,
+            extra_env=validators.OFFLINE_MARKER,
+        )
+        if run.ending is not Ending.ANSWERED:
+            return _no_answer(validators.why_no_answer(run, reference).rstrip("."))
+        return self._envelope_answer(reference, run.document)
+
+    def _envelope_answer(self, reference: str, document: Any) -> _Answer:
+        """A command filler's answer: exactly the envelope — `schema_version` at the
+        point's version and `value` — with a value that fits the point."""
+        problems = (
+            bs.envelope_findings(document, self.run.envelope)
+            if self.run.envelope is not None
+            else []
+        )
+        if not isinstance(document, Mapping) or VALUE_KEY not in document:
+            problems = problems or [("", "expected the filler envelope `{schema_version, value}`")]
+        if problems:
+            pointer, message = problems[0]
+            where = f" at {pointer}" if pointer else ""
+            return _no_answer(
+                f"command {reference!r} printed no filler envelope{where}: {message.rstrip('.')}"
+            )
+        envelope = cast("Mapping[str, Any]", document)
+        if REMOVE_KEY in envelope:
+            return _no_answer(
+                f"command {reference!r} answered with `{REMOVE_KEY}`: removal overrides are "
+                f"the project's alone"
+            )
+        version = envelope.get(bs.POINT_VERSION_FIELD)
+        if version != self.binding.point.version:
+            return _no_answer(
+                f"command {reference!r} answered for version {version}; the point is at "
+                f"version {self.binding.point.version}"
+            )
+        return self._value_answer(envelope[VALUE_KEY])
 
     def _value_answer(self, value: Any) -> _Answer:
         problems = self._value_problems(value)
@@ -929,7 +1034,7 @@ def _supplies(entry: Mapping[str, Any], counterpart: cx.Counterpart) -> str:
         return VALUE_KEY
     if counterpart.command is not None:
         return f"command {counterpart.command!r}"
-    return "nothing"
+    return "nothing"  # the answer says so: neither `value` nor `command`
 
 
 # --- wording ----------------------------------------------------------------
