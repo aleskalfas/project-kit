@@ -745,3 +745,74 @@ def test_validate_runs_each_command_filler_once(repo: AdopterRepo) -> None:
     result = CliRunner().invoke(main, ["validate", "--no-refs"])
     assert result.exit_code == 0, result.output
     assert len(_runs(repo)) == 1
+
+
+# --- the status report (COR-052 point 7) ------------------------------------------------
+
+
+def _data_points_section(output: str) -> str:
+    return output.split("\n  Data points\n")[1].split("\n\n")[0]
+
+
+def test_status_shows_how_each_point_resolved_and_why(repo: AdopterRepo) -> None:
+    _provider(repo, default={"value": ["visitor", "guest"], "participation": "always"})
+    _contributor(repo, "evidence", ["operator", "guest"])
+    _command_contributor(repo, "notes", _printing({"schema_version": 1, "value": ["maintainer"]}))
+    _filler(
+        repo,
+        {
+            "schema_version": 1,
+            "value": ["developer"],
+            "remove": [{"id": "guest", "reason": "No anonymous readers."}],
+        },
+    )
+    result = CliRunner().invoke(main, ["status"])
+    assert result.exit_code == 0, result.output
+    indent = " " * 25
+    assert _data_points_section(result.output).splitlines() == [
+        f"    fillers            {FILLERS}/   (1 file(s))",
+        "    points             1 defined: 1 resolved, 0 unresolved",
+        f"    {READERS}",
+        f"{indent}union · inert fallback · default always — resolved",
+        f"{indent}entry    developer — project filler",
+        f"{indent}entry    maintainer — notes",
+        f"{indent}entry    operator — evidence",
+        f"{indent}entry    visitor — the default",
+        f"{indent}removed  guest — No anonymous readers. (from evidence, the default)",
+        f"{indent}filler   project filler {READERS_FILE}: taken",
+        f"{indent}filler   evidence (value): taken",
+        f"{indent}filler   notes (command 'export'; query contract declared: no network, "
+        "trusted, not enforced): taken",
+        f"{indent}filler   default of docs-a (always): taken",
+    ]
+
+
+def test_status_shows_an_unresolved_point_and_a_command_that_is_not_run(
+    repo: AdopterRepo,
+) -> None:
+    default = {"value": {"name": "d"}, "participation": "alone"}
+    _provider(repo, TOOL, combination="single", inert="fail", default=default)
+    answer = _printing({"schema_version": 1, "value": {"name": "e"}})
+    _command_contributor(repo, "evidence", answer, contract=False, address=TOOL)
+    result = CliRunner().invoke(main, ["status"])
+    assert result.exit_code == 0, result.output
+    indent = " " * 25
+    lines = _data_points_section(result.output).splitlines()
+    assert lines[2:] == [
+        f"    {TOOL}",
+        f"{indent}single · inert fail · default alone — unresolved: a filler meant to answer is "
+        "inert, and the point's inert policy is `fail`",
+        f"{indent}filler   evidence (command 'export'; no query-contract declaration): inert — "
+        "its command 'export' does not declare the query contract (`query-contract: true`), "
+        "so it is not run",
+        f"{indent}filler   default of docs-a (alone): passed over — not promoted: a declared "
+        "filler is inert",
+    ]
+
+
+def test_status_on_a_fresh_install_defines_no_point(repo: AdopterRepo) -> None:
+    result = CliRunner().invoke(main, ["status"])
+    assert _data_points_section(result.output).splitlines() == [
+        f"    fillers            {FILLERS}/   (0 file(s))",
+        "    points             none defined",
+    ]
