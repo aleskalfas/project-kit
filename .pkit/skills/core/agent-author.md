@@ -94,7 +94,7 @@ pkit new agent project <name> --with-storyboard
 The flat stamp produces `.pkit/agents/<namespace>/<name>.md`. The `--with-storyboard` stamp produces `.pkit/agents/<namespace>/<name>/<name>.md` plus a sibling `.pkit/agents/<namespace>/<name>/storyboard.md` scaffold. Both contain:
 
 - Frontmatter scaffolding (`name`, placeholder `description`, default `tools`, empty `reads` / `owns` / `needs`).
-- Body headers: `## When to invoke this agent`, `## Files you own`, `## Key documents to read`, `## How you work`.
+- Body headers: `## When to invoke this agent`, `## Files you own`, `## Key documents to read`, `## How you work`, and a finished `## Intermediate files` section.
 
 Refuses if the name already exists in either namespace (project > core resolution means a colliding name would silently mask the core version).
 
@@ -107,6 +107,7 @@ For each section:
 - **`## Files you own`** — the paths this agent has write authority over. Per the bidirectional reference-graph rule (COR-013), every path here must also appear in frontmatter `owns:`. Use `<category-name>` placeholders for adopter-specific paths; declare each in `reads.patterns` so the deploy-time substitution covers them.
 - **`## Key documents to read`** — paths, record IDs (`COR-NNN`, `PRJ-NNN`), and hook contracts the agent consults at task time. Every entry here must also appear in `reads.{paths,records}` in frontmatter; the validator walks both directions. For scripted-scenario agents (per COR-016), the agent's storyboards belong here too — declared in frontmatter `storyboards:` and load-bearing on the body.
 - **`## How you work`** — the agent's procedure or principles. For *judgment-driven* agents (no storyboards), numbered steps if the role follows a fixed sequence; principles + examples if the role is more judgement-bearing. For *scripted-scenario* agents (with `storyboards:` declared), the body is much thinner: it states that the agent's scripted behavior is documented in its declared storyboards, instructs the runtime to load them at session start via the `Read` tool, and may summarize at a high level what scenarios the agent drives — but does **not** restate or sketch the scenarios. The storyboard is the source; the agent body's job is to point at it. Cite authority by record ID rather than restating it (`per COR-005` not "per the skill/command pairing rule").
+- **`## Intermediate files`** — stamped finished: the one sentence every shipped agent carries, sending its intermediate files to the agent workspace (`.agent-workspace/`, the core rules' workspace rule), written with the file tools. Leave the wording as stamped, identical across agents.
 
 ### 7. Declare hooks (if any)
 

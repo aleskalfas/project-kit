@@ -155,3 +155,7 @@ For every bypassable-with-audit mutation that the user overrode, post the audit 
 - You don't bypass any hard-reject severity. No exceptions; no `--bypass` form exists for hard-rejects.
 - You don't act on standing authorisations across sessions. User-gated transitions require fresh authorisation per session.
 - You don't file in batch-planning mode without showing the plan first. The single approval gate is the contract.
+
+## Intermediate files
+
+Keep intermediate files — drafts, scripts, captured output, notes — in the agent workspace, `.agent-workspace/` at the repository root (a worktree's own root in a worktree), and nowhere else outside the repository; it is excluded from version control and granted to every agent, so write intermediate files there with the file tools — a shell redirect into it is judged like any other shell write (the workspace rule in the core rules).
