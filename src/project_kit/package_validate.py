@@ -48,7 +48,6 @@ from enum import Enum
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import TYPE_CHECKING, Any
 
-import click
 from jsonschema import Draft202012Validator
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
 from packaging.version import InvalidVersion, Version
@@ -56,14 +55,14 @@ from referencing import Registry, Resource
 from referencing.jsonschema import DRAFT202012
 from ruamel.yaml import YAML
 
-from project_kit import cli_render
+from project_kit import validators
 from project_kit.backbone_schemas import (
     BackboneSchemaMissing,
     load_backbone_schema,
     render_unknown_key,
 )
 from project_kit.manifest import read_backbone_manifest
-from project_kit.validate import Issue
+from project_kit.validators import VALIDATORS_KEY
 
 if TYPE_CHECKING:
     from project_kit.connections import Wiring
@@ -380,6 +379,21 @@ def _repository_findings(
                 f"exist under {component_dir.name}/.",
             )
 
+    registered = raw.get(VALIDATORS_KEY)
+    if isinstance(registered, Mapping):
+        for name, spec in registered.items():
+            if not isinstance(spec, Mapping):
+                continue
+            script = spec.get("script")
+            path = f"/{VALIDATORS_KEY}/{_token(name)}/script"
+            relative = _check_relative(findings, path, script, "a path relative to the component root")
+            if relative and not (component_dir / str(script)).is_file():
+                _error(
+                    path,
+                    f"validator {name!r} names script {script!r}, which does not "
+                    f"exist under {component_dir.name}/.",
+                )
+
     connections = raw.get("connections")
     if isinstance(connections, Mapping):
         findings.extend(_connection_findings(connections, component_dir, command_leaves))
@@ -563,18 +577,14 @@ def relative_path_problem(value: str) -> str | None:
 
 @dataclass(frozen=True)
 class PackagesPass:
-    """The "packages" pass of `pkit validate`: one report per registered component
-    whose `package.yaml` is present, the note when the tree ships no schema, and
-    the resolved wiring across them (`connections.print_pass` renders its two
-    headings).
-
-    `errors` / `warnings` count the per-file findings; the wiring's own counts are
-    on `wiring`. `as_issues` carries both kinds of error into the issue list.
+    """The `packages` member of `pkit validate`: one report per registered component
+    whose `package.yaml` is present, and the note when the tree ships no schema.
+    The checks *across* packages are the wiring resolver's — the `connections`
+    and `versions` members (`connections.connections_outcome`, `versions_outcome`).
     """
 
     reports: tuple[PackageReport, ...]
     schema_note: str | None = None  # "no schema present, skipped" (ADR-056 point 1)
-    wiring: Wiring | None = None
 
     @property
     def errors(self) -> int:
@@ -583,19 +593,6 @@ class PackagesPass:
     @property
     def warnings(self) -> int:
         return sum(len(r.warnings) for r in self.reports)
-
-    def as_issues(self, target_root: Path) -> list[Issue]:
-        """The errors as `pkit validate` issues; warnings are printed, never issues."""
-        from project_kit import connections
-
-        issues = [
-            Issue(location=_locate(target_root, report.file, finding), diagnosis=finding.message)
-            for report in self.reports
-            for finding in report.errors
-        ]
-        if self.wiring is not None:
-            issues.extend(connections.as_issues(target_root, self.wiring))
-        return issues
 
 
 def installed_package_files(target_root: Path) -> list[tuple[str, Path, Path]]:
@@ -628,30 +625,40 @@ def load_package_schema(target_root: Path) -> tuple[Mapping[str, Any] | None, st
 
 
 def validate_installed_packages(target_root: Path) -> PackagesPass:
-    """Validate every registered component's package file (the "packages" pass)."""
+    """Validate every registered component's package file (the `packages` member)."""
     schema, note = load_package_schema(target_root)
     reports = [
         validate_package_file(package, schema, component_dir=component_dir, expected_name=name)
         for name, component_dir, package in installed_package_files(target_root)
     ]
-    return PackagesPass(reports=tuple(reports), schema_note=note, wiring=check_wiring(target_root))
+    return PackagesPass(reports=tuple(reports), schema_note=note)
 
 
-def print_pass(target_root: Path, result: PackagesPass) -> None:
-    """The "packages" heading of `pkit validate`: a count line, the note, and the
-    warnings. Errors are in the main issue list already."""
-    click.echo("  " + cli_render.style("heading", "packages"))
-    click.echo(
-        f"    {len(result.reports)} package file(s) checked; "
+UMBRELLA_SEVERITY = {
+    Severity.ERROR: validators.Severity.ERROR,
+    Severity.WARNING: validators.Severity.WARNING,
+}
+
+
+def outcome(target_root: Path) -> validators.Outcome:
+    """The `packages` member of `pkit validate`: a count line, the note, every finding."""
+    result = validate_installed_packages(target_root)
+    summary = [
+        f"{len(result.reports)} package file(s) checked; "
         f"{result.errors} error(s), {result.warnings} warning(s)."
-    )
+    ]
     if result.schema_note:
-        click.echo(f"    {result.schema_note}")
-    for report in result.reports:
-        for finding in report.warnings:
-            click.echo(f"    {_locate(target_root, report.file, finding)}")
-            click.echo(f"      → warning: {finding.message}")
-    click.echo()
+        summary.append(result.schema_note)
+    findings = tuple(
+        validators.Finding(
+            _locate(target_root, report.file, finding),
+            finding.message,
+            UMBRELLA_SEVERITY[finding.severity],
+        )
+        for report in result.reports
+        for finding in report.findings
+    )
+    return validators.Outcome(tuple(summary), findings)
 
 
 # --- rendering helpers ------------------------------------------------

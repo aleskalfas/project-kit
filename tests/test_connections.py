@@ -948,7 +948,7 @@ def test_shipped_capabilities_wire_clean(make_adopter_repo: MakeAdopterRepo) -> 
 # --- `pkit validate` -----------------------------------------------------------------
 
 
-def test_packages_pass_carries_wiring_errors_into_the_issue_list(
+def test_connections_member_carries_the_wiring_errors_the_packages_member_does_not(
     make_adopter_repo: MakeAdopterRepo,
 ) -> None:
     repo = make_adopter_repo()
@@ -956,9 +956,10 @@ def test_packages_pass_carries_wiring_errors_into_the_issue_list(
     _stage(repo, "docs-b", _provider("docs-b", accepts=_accepts()), schemas=COMPANIONS)
     packages = pv.validate_installed_packages(repo.root)
     assert packages.errors == 0  # every file is well-formed
-    assert packages.wiring is not None and len(packages.wiring.errors()) == 1
-    issues = packages.as_issues(repo.root)
-    assert [i.location for i in issues] == [".pkit/project/config.yaml:/connections/providers"]
+    outcome = cx.connections_outcome(repo.root)
+    assert [f.location for f in outcome.errors] == [
+        ".pkit/project/config.yaml:/connections/providers"
+    ]
 
 
 def test_pkit_validate_prints_the_connections_heading_and_fails_on_a_wiring_error(

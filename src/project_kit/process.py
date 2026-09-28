@@ -175,6 +175,7 @@ from jsonschema import Draft202012Validator
 from ruamel.yaml import YAML
 
 from project_kit import cli_render
+from project_kit.validators import Finding, Outcome
 from project_kit.install import find_target_root
 
 _yaml = YAML(typ="safe")
@@ -2185,6 +2186,31 @@ def load_definition(repo_root: Path, address: str) -> ProcessDefinition:
         f"{by_convention.relative_to(repo_root)} exists nor does any schema in "
         f"{schemas_dir.relative_to(repo_root)} declare process.id {process_id!r}"
     )
+
+
+def definitions_outcome(repo_root: Path) -> Outcome:
+    """The `process` member of `pkit validate`: every process definition the
+    installed capabilities declare resolves — exactly one file per address,
+    whose `process.id` matches (the loader every `pkit process` command uses).
+
+    A subject's invariants are `pkit process validate <address>`'s: a runtime
+    check with a subject and its predicates, which the umbrella does not run.
+    """
+    from project_kit.process_graph import discover_process_addresses
+
+    addresses = discover_process_addresses(repo_root)
+    findings: list[Finding] = []
+    for address in addresses:
+        try:
+            load_definition(repo_root, address)
+        except ProcessError as exc:
+            capability = address.partition(":")[0]
+            findings.append(Finding(f".pkit/capabilities/{capability}/schemas", str(exc)))
+    if not addresses:
+        summary = "no process definitions declared."
+    else:
+        summary = f"{len(addresses)} process definition(s) resolved; {len(findings)} error(s)."
+    return Outcome((summary,), tuple(findings))
 
 
 def _read_process_block(path: Path, repo_root: Path) -> dict[str, Any]:

@@ -1,0 +1,26 @@
+component: backbone
+kind: minor
+custom:
+  category: Changed
+body: >
+  The `pkit validate` command is the one umbrella over every check of the tree's state (ADR-058). A
+  validator registry (`project_kit.validators`) replaces the hand-wired passes: each
+  functionality registers a name, an order and a callable answering summary lines and
+  findings, each finding with a severity — `error` fails the command, `warning`, `info` and
+  `report` print. The backbone's twelve members run in dependence order — `manifests`,
+  `schemas`, `configuration`, `packages`, `connections`, `versions`, `friction`, `rule-sets`,
+  `decisions`, `refs`, `process`, `data` — and the five focused commands (`schemas validate`,
+  `decisions validate`, `refs validate`, `data validate <path>`, `process validate <address>`)
+  stay as they are. A capability registers its own validators in package metadata
+  (`validators:` — `script`, `help`, optional `order`), addressed `<capability>:<name>`, run from
+  the project root as a bounded query answering one JSON findings document; no answer is an
+  error finding. One renderer prints every member under its heading, every unknown-key message
+  comes from the shared renderer (the schemas and data members included), and one summary
+  closes the report. `--only NAME` and `--skip NAME` address members; `--no-refs` stays as
+  `--skip refs`. The `refs` member reports drift between an artifact's front matter and its
+  body as a warning and everything that does not resolve as an error, and reads a bracketed
+  `reads.patterns` declaration the way the deploy does; `pkit refs validate` keeps failing on
+  any finding. The `data` member checks every file in the repository that a `pkit_schema:` field
+  or a `binds_to:` glob claims; the `process` member checks that every declared definition
+  resolves. The check aggregator calls `pkit validate` once in place of `schemas validate` and
+  `decisions validate`; the diff-scoped checks stay their own lines.

@@ -61,7 +61,7 @@ from ruamel.yaml.nodes import MappingNode, Node, ScalarNode, SequenceNode
 
 from project_kit import backbone_schemas as bs
 from project_kit import capabilities as caps
-from project_kit import cli_render
+from project_kit import validators
 from project_kit import friction_discovery as fd
 from project_kit.decisions import resolve_adr_records_dir
 
@@ -715,7 +715,8 @@ def _render_schema_error(rule_set: RuleSet, error: ValidationError) -> list[Rule
             )
         ]
     location, pointer = _locate(rule_set, path)
-    if error.validator == "additionalProperties" and isinstance(error.instance, Mapping):
+    unknown = bs.unknown_keys(error)
+    if unknown:
         known = tuple((error.schema.get("properties") or {}).keys())
         return [
             _error(
@@ -724,7 +725,7 @@ def _render_schema_error(rule_set: RuleSet, error: ValidationError) -> list[Rule
                 RuleSetFindingKind.UNKNOWN_KEY,
                 bs.render_unknown_key(key, known),
             )
-            for key in sorted(str(k) for k in error.instance if k not in known)
+            for key in unknown
         ]
     # The status/successor coupling reads better said than as the schema's message.
     message = error.message
@@ -1534,10 +1535,8 @@ def _front_matter_status(path: Path) -> str | None:
 
 
 def summary_lines(result: RuleSetValidation) -> list[str]:
-    """The lines `pkit validate` prints under its `rule-sets` heading.
-
-    Errors are handed to the command's issue list; reports print here only.
-    """
+    """The count line `pkit validate` prints under its `rule-sets` heading; the
+    findings follow as the member's findings."""
     d = result.discovery
     if result.is_dormant:
         return ["no rule sets found."]
@@ -1550,15 +1549,28 @@ def summary_lines(result: RuleSetValidation) -> list[str]:
         f"{len(d.rule_sets)} rule set(s){unreadable}, {len(rules)} rule(s){breakdown}; "
         f"{len(result.errors)} error(s), {len(result.reports)} report(s)."
     )
-    return [counts, *(f"{finding.where}: {finding.message}" for finding in result.reports)]
+    return [counts]
 
 
-def print_section(result: RuleSetValidation) -> None:
-    """The `rule-sets` heading of `pkit validate`, after the friction one."""
-    click.echo("  " + cli_render.style("heading", "rule-sets"))
-    for line in summary_lines(result):
-        click.echo(f"    {line}")
-    click.echo()
+UMBRELLA_SEVERITY = {
+    Severity.ERROR: validators.Severity.ERROR,
+    Severity.REPORT: validators.Severity.REPORT,
+}
+
+
+def outcome(target_root: Path) -> validators.Outcome:
+    """The `rule-sets` member of `pkit validate`: the counts, then every finding —
+    errors fail, reports print (COR-051)."""
+    result = validate_rule_sets(target_root)
+    findings = tuple(
+        validators.Finding(
+            f"{f.location}:{f.pointer}" if f.pointer else f.location,
+            f.message,
+            UMBRELLA_SEVERITY[f.severity],
+        )
+        for f in result.findings
+    )
+    return validators.Outcome(tuple(summary_lines(result)), findings)
 
 
 # --- helpers ---------------------------------------------------------------------

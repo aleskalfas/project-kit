@@ -50,11 +50,12 @@ it: the side carrying a mandatory mark, or the dependent of a version range,
 carries the error with the fix named; the side it targets is warned, with the
 counterpart named.
 
-`pkit validate` shows the resolver under two headings, each finding under the
-functionality it concerns (`print_pass`): `connections` — the resolved wiring
-and its findings — and `versions` — how many of each relation were checked and
-each version finding labelled with its relation. The errors join the issue
-list through the packages pass (`package_validate.check_wiring`). The
+`pkit validate` runs the resolver as two members, each finding under the
+functionality it concerns (`connections_outcome`, `versions_outcome`):
+`connections` — the resolved wiring and its findings — and `versions` — how
+many of each relation were checked and each version finding labelled with its
+relation. `package_validate.check_wiring` is the same resolution for the
+register pre-flight and the plans. The
 configuration pass reads the same declarations (`load_declarations`) to check
 the two selection keys against what is installed; it also owns the last
 relation, the configuration file's shape against the schema the installed
@@ -77,12 +78,11 @@ from enum import Enum
 from pathlib import Path, PurePosixPath
 from typing import Any, cast
 
-import click
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
 from packaging.version import InvalidVersion, Version
 from ruamel.yaml import YAML
 
-from project_kit import cli_render, rule_sets
+from project_kit import rule_sets, validators
 from project_kit.manifest import read_backbone_manifest, read_component_manifest
 from project_kit.package_validate import (
     POINT_SEPARATOR,
@@ -93,7 +93,6 @@ from project_kit.package_validate import (
     role_of,
 )
 from project_kit.project_config import PROJECT_CONFIG_RELPATH, project_config_path, read_config
-from project_kit.validate import Issue
 
 _yaml = YAML(typ="safe")
 
@@ -1235,60 +1234,74 @@ def _version_of_record(
 # --- `pkit validate` ------------------------------------------------------------
 
 
-def as_issues(target_root: Path, wiring: Wiring) -> list[Issue]:
-    """The errors as `pkit validate` issues; warnings are printed, never issues."""
-    return [Issue(location=_locate(target_root, f), diagnosis=f.message) for f in wiring.errors()]
+UMBRELLA_SEVERITY = {
+    Severity.ERROR: validators.Severity.ERROR,
+    Severity.WARNING: validators.Severity.WARNING,
+}
 
 
-def print_pass(target_root: Path, wiring: Wiring) -> None:
-    """The resolver's two headings of `pkit validate`: `connections` (the resolved
-    wiring and its findings) and `versions` (each relation's count and findings).
-    Errors are in the main issue list already; they sit here with the warnings so
-    each functionality is read in one place."""
-    _print_connections(target_root, wiring)
-    _print_versions(target_root, wiring)
-
-
-def _print_connections(target_root: Path, wiring: Wiring) -> None:
-    click.echo("  " + cli_render.style("heading", "connections"))
+def connections_outcome(target_root: Path) -> validators.Outcome:
+    """The `connections` member of `pkit validate`: the wiring as resolved — roles,
+    points, counterparts — then the connection findings (roles, points, marks,
+    cycles, fingerprints), each at its own severity."""
+    wiring = resolve_wiring(target_root)
     findings = wiring.connection_findings()
-    if not wiring.roles and not wiring.bindings:
-        click.echo("    no connection points declared by installed components.")
-    else:
-        declaring = sum(
-            1
-            for i in wiring.declarations.installed
-            if isinstance(i.package.get(CONNECTIONS_KEY), Mapping)
-        )
-        bound = sum(1 for b in wiring.bindings if b.status is BindingStatus.BOUND)
-        click.echo(
-            f"    {declaring} component(s) declare connections; {len(wiring.roles)} role(s), "
-            f"{len(wiring.active_roles())} active; {len(wiring.points)} point(s); "
-            f"{len(wiring.bindings)} counterpart(s), {bound} bound; "
-            f"{_counts(findings)}."
-        )
-        for role in wiring.roles:
-            click.echo(f"    {role.role} → {_role_state(role)}")
-        for point in wiring.points:
-            click.echo(f"      {_point_line(point)}")
-        shown = {id(b) for p in wiring.points for b in p.bindings}
-        for binding in wiring.bindings:
-            if id(binding) not in shown:
-                c = binding.counterpart
-                click.echo(
-                    f"      {c.capability} {c.kind.value} {c.target!r}: {binding.status.value}"
-                )
-    _print_findings(target_root, findings, labelled=False)
-    click.echo()
+    return validators.Outcome(
+        tuple(_connections_summary(wiring, findings)), _as_findings(target_root, findings)
+    )
 
 
-def _print_versions(target_root: Path, wiring: Wiring) -> None:
-    click.echo("  " + cli_render.style("heading", "versions"))
+def versions_outcome(target_root: Path) -> validators.Outcome:
+    """The `versions` member of `pkit validate`: how many of each relation were
+    checked, then each version finding labelled with its relation."""
+    wiring = resolve_wiring(target_root)
     findings = wiring.version_findings()
     checked = ", ".join(f"{n} {relation.value}(s)" for relation, n in wiring.checked.items())
-    click.echo(f"    checked: {checked}; {_counts(findings)}.")
-    _print_findings(target_root, findings, labelled=True)
-    click.echo()
+    return validators.Outcome(
+        (f"checked: {checked}; {_counts(findings)}.",),
+        _as_findings(target_root, findings, labelled=True),
+    )
+
+
+def _connections_summary(wiring: Wiring, findings: tuple[Finding, ...]) -> list[str]:
+    if not wiring.roles and not wiring.bindings:
+        return ["no connection points declared by installed components."]
+    declaring = sum(
+        1
+        for i in wiring.declarations.installed
+        if isinstance(i.package.get(CONNECTIONS_KEY), Mapping)
+    )
+    bound = sum(1 for b in wiring.bindings if b.status is BindingStatus.BOUND)
+    lines = [
+        f"{declaring} component(s) declare connections; {len(wiring.roles)} role(s), "
+        f"{len(wiring.active_roles())} active; {len(wiring.points)} point(s); "
+        f"{len(wiring.bindings)} counterpart(s), {bound} bound; "
+        f"{_counts(findings)}."
+    ]
+    for role in wiring.roles:
+        lines.append(f"{role.role} → {_role_state(role)}")
+    for point in wiring.points:
+        lines.append(f"  {_point_line(point)}")
+    shown = {id(b) for p in wiring.points for b in p.bindings}
+    for binding in wiring.bindings:
+        if id(binding) not in shown:
+            c = binding.counterpart
+            lines.append(f"  {c.capability} {c.kind.value} {c.target!r}: {binding.status.value}")
+    return lines
+
+
+def _as_findings(
+    target_root: Path, findings: Iterable[Finding], *, labelled: bool = False
+) -> tuple[validators.Finding, ...]:
+    return tuple(
+        validators.Finding(
+            _locate(target_root, f),
+            f.message,
+            UMBRELLA_SEVERITY[f.severity],
+            label=f.relation.value if labelled and f.relation else "",
+        )
+        for f in findings
+    )
 
 
 def _role_state(role: RoleBinding) -> str:
@@ -1315,13 +1328,6 @@ def _point_line(point: PointBinding) -> str:
     mark = " [mandatory]" if p.mandatory else ""
     tail = "; ".join(parts) if parts else "no counterpart"
     return f"{p.address} ({p.kind.value} v{p.version}, {p.provider}){mark} ← {tail}"
-
-
-def _print_findings(target_root: Path, findings: Iterable[Finding], *, labelled: bool) -> None:
-    for finding in findings:
-        label = f"  [{finding.relation.value}]" if labelled and finding.relation else ""
-        click.echo(f"    {finding.severity.value:<8}{_locate(target_root, finding)}{label}")
-        click.echo(f"      → {finding.message}")
 
 
 def _counts(findings: Iterable[Finding]) -> str:

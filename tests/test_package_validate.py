@@ -563,7 +563,8 @@ def test_pkit_validate_prints_the_packages_pass_and_warnings_do_not_fail(
     assert "packages" in result.output
     assert "1 warning(s)" in result.output
     assert ".pkit/capabilities/evidence/package.yaml:/foootprint" in result.output
-    assert "warning: unknown key 'foootprint'; did you mean 'footprint'?" in result.output
+    assert "warning " in result.output
+    assert "→ unknown key 'foootprint'; did you mean 'footprint'?" in result.output
 
 
 def test_pkit_validate_fails_on_a_package_error(make_adopter_repo: MakeAdopterRepo) -> None:

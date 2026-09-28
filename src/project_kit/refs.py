@@ -35,13 +35,14 @@ import itertools
 import os
 import re
 from collections.abc import Collection
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path, PurePosixPath
 from typing import Any, Literal
 
 from ruamel.yaml import YAML
 
 from project_kit import agents_overlay, rule_sets
+from project_kit.validators import Finding, Outcome, Severity, counts_line
 
 Kind = Literal["agent", "skill"]
 Namespace = Literal["core", "project"]
@@ -109,12 +110,26 @@ class Provider:
     implementation: str  # `/skill-name` or shell command (for package.yaml providers)
 
 
+# The kinds of finding `validate_corpus` tags, so `pkit validate` can tell
+# hygiene from breakage (`outcome`): `drift` is the bidirectional rule —
+# the front matter and the body disagree about a reference; the rest name
+# something that does not resolve or is claimed twice.
+DRIFT = "drift"
+OWNERSHIP = "ownership"
+HOOK_CLOSURE = "hook-closure"
+COLLISION = "collision"
+STORYBOARD = "storyboard"
+CITATION = "citation"
+COMPOSES = "composes"
+
+
 @dataclass(frozen=True)
 class Issue:
-    """A validation finding. Mirrors `validate.Issue` for compatibility."""
+    """A validation finding. Mirrors `validate.Issue`, plus the kind of check that raised it."""
 
     location: str
     diagnosis: str
+    kind: str = "reference"
 
 
 # ---------------------------------------------------------------- public API
@@ -206,16 +221,55 @@ def validate_corpus(target_root: Path) -> list[Issue]:
     """Run bidirectional consistency + hook closure + same-tier collision + exactly-one-owner + storyboard + capability-citation + composes checks."""
     artifacts = load_artifacts(target_root)
     providers = load_hook_providers(target_root)
+    return check_corpus(artifacts, providers, target_root)
+
+
+def check_corpus(artifacts: list[Artifact], providers: list[Provider], target_root: Path) -> list[Issue]:
+    """Every check over an already-loaded corpus, each finding tagged with its kind."""
     issues: list[Issue] = []
-    issues.extend(_validate_bidirectional(artifacts, target_root))
-    issues.extend(_validate_ownership(artifacts, target_root))
-    issues.extend(_validate_hook_closure(artifacts, providers))
-    issues.extend(_validate_same_tier_collisions(providers))
-    issues.extend(_validate_storyboards(artifacts, target_root))
-    issues.extend(_validate_capability_citations(artifacts, target_root))
-    issues.extend(_validate_rule_citations(artifacts, target_root))
-    issues.extend(_validate_composes(artifacts, target_root))
+    issues.extend(_kind(_validate_bidirectional(artifacts, target_root), DRIFT))
+    issues.extend(_kind(_validate_ownership(artifacts, target_root), OWNERSHIP))
+    issues.extend(_kind(_validate_hook_closure(artifacts, providers), HOOK_CLOSURE))
+    issues.extend(_kind(_validate_same_tier_collisions(providers), COLLISION))
+    issues.extend(_kind(_validate_storyboards(artifacts, target_root), STORYBOARD))
+    issues.extend(_kind(_validate_capability_citations(artifacts, target_root), CITATION))
+    issues.extend(_kind(_validate_rule_citations(artifacts, target_root), CITATION))
+    issues.extend(_kind(_validate_composes(artifacts, target_root), COMPOSES))
     return issues
+
+
+def _kind(issues: list[Issue], kind: str) -> list[Issue]:
+    return [replace(issue, kind=kind) for issue in issues]
+
+
+def outcome(target_root: Path) -> Outcome:
+    """The `refs` member of `pkit validate`.
+
+    Drift between an artifact's front matter and its body — a declared
+    reference the body never cites, a body citation the front matter does not
+    declare — is a **warning**: the artifact deploys and resolves regardless,
+    and the body parser is a heuristic (a dotted configuration key reads as a
+    hook). Every other finding — a path owned twice or by nobody, a hook no
+    provider answers, two providers at one tier, a missing storyboard, a
+    citation that does not resolve, a sub-procedure that does not exist — is
+    an **error**. `pkit refs validate`, the focused surface, keeps its stricter
+    exit: it fails on any finding.
+    """
+    artifacts = load_artifacts(target_root)
+    providers = load_hook_providers(target_root)
+    findings = tuple(
+        Finding(
+            issue.location,
+            issue.diagnosis,
+            Severity.WARNING if issue.kind == DRIFT else Severity.ERROR,
+        )
+        for issue in check_corpus(artifacts, providers, target_root)
+    )
+    summary = (
+        f"{len(artifacts)} artifact(s), {len(providers)} hook provider(s) checked; "
+        f"{counts_line(findings, Severity.ERROR, Severity.WARNING)}.",
+    )
+    return Outcome(summary, findings)
 
 
 def resolve_rule_citation(target_root: Path, citation: str) -> rule_sets.CitationResolution:
@@ -1049,7 +1103,12 @@ def _validate_bidirectional(artifacts: list[Artifact], target_root: Path) -> lis
                 )
         # Pattern tokens may live in `reads.patterns` or as `<...>` entries
         # in `owns:` and other path-buckets. Walk the union.
-        pattern_names: set[str] = set(art.declared.reads_patterns)
+        # `reads.patterns` names a category either bare (`code-paths`) or as
+        # the placeholder the deploy reads (`<project-conventions>`,
+        # `agents_overlay.placeholder_category`); the placeholder must appear
+        # in the file — a bare name in the body, a bracketed declaration
+        # already does, like an `owns:` placeholder.
+        pattern_names: set[str] = {p.strip("<>") for p in art.declared.reads_patterns}
         for p in art.declared.reads_paths | art.declared.owns:
             if p.startswith("<") and p.endswith(">"):
                 pattern_names.add(p.strip("<>"))

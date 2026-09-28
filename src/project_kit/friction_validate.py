@@ -42,10 +42,9 @@ from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 
-import click
 
 from project_kit import backbone_schemas as bs
-from project_kit import cli_render
+from project_kit import validators
 from project_kit.friction_discovery import (
     FRICTION_KEY,
     Artefact,
@@ -301,15 +300,14 @@ def _cycle_finding(members: list[Artefact]) -> FrictionFinding:
     )
 
 
-# --- rendering for `pkit validate` --------------------------------------
+# --- the `friction` member of `pkit validate` -----------------------------
 
 
 def summary_lines(result: FrictionValidation) -> list[str]:
-    """The lines `pkit validate` prints under its `friction` heading.
+    """The count line `pkit validate` prints under its `friction` heading.
 
-    Dormant: the counts alone (COR-050 point 15). Awake: the counts, then any
-    reports (which do not fail validation). Errors are handed to the command's
-    issue list, so they print with every other pass's issues.
+    Dormant: the counts alone (COR-050 point 15). Awake: the counts, errors and
+    reports included; the findings themselves follow as the member's findings.
     """
     d = result.discovery
     places, artefacts, carrying = len(d.places), len(d.artefacts), len(d.with_container)
@@ -328,15 +326,25 @@ def summary_lines(result: FrictionValidation) -> list[str]:
             f"`{bs.CONTAINER_KEY}` container{unreadable}; mode {d.settings.mode_or_default}; "
             f"{len(result.errors)} error(s), {len(result.reports)} report(s)."
         )
-    lines = [counts]
-    lines.extend(f"{finding.where}: {finding.message}" for finding in result.reports)
-    return lines
+    return [counts]
 
 
-def print_section(result: FrictionValidation) -> None:
-    """The "friction" heading of `pkit validate`, printed after the issue list like
-    the configuration and packages sections. Errors are in the issue list already."""
-    click.echo("  " + cli_render.style("heading", "friction"))
-    for line in summary_lines(result):
-        click.echo(f"    {line}")
-    click.echo()
+UMBRELLA_SEVERITY = {
+    Severity.ERROR: validators.Severity.ERROR,
+    Severity.REPORT: validators.Severity.REPORT,
+}
+
+
+def outcome(target_root: Path) -> validators.Outcome:
+    """The `friction` member of `pkit validate`: the counts, then every finding —
+    errors fail, reports print (COR-050 point 12)."""
+    result = validate_friction(target_root)
+    findings = tuple(
+        validators.Finding(
+            f"{f.location}:{f.pointer}" if f.pointer else f.location,
+            f.message,
+            UMBRELLA_SEVERITY[f.severity],
+        )
+        for f in result.findings
+    )
+    return validators.Outcome(tuple(summary_lines(result)), findings)

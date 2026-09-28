@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import fnmatch
 import json
+import os
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -39,7 +40,9 @@ from referencing.exceptions import Unresolvable
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
+from project_kit import backbone_schemas
 from project_kit.manifest import read_backbone_manifest
+from project_kit import validators
 from project_kit.schemas_validate import (
     _ID_COLLECTION_ANNOTATION,
     _TOKEN_PATTERN,
@@ -89,10 +92,12 @@ class ResolvedBinding:
 
 @dataclass(frozen=True)
 class BindingError:
-    """A failed binding resolution."""
+    """A failed binding resolution. `unbound` marks the one failure that is not a
+    defect — nothing claims the file — which the repository scope skips."""
 
     data_path: Path
     message: str
+    unbound: bool = False
 
 
 @dataclass(frozen=True)
@@ -252,6 +257,7 @@ def resolve_binding(
     # 3. Nothing resolved.
     return BindingError(
         data_path=data_path,
+        unbound=True,
         message=(
             f"no schema binding found for this file. Add a top-level "
             f"`{PKIT_SCHEMA_FIELD}: <capability>:<schema>` field, or declare a "
@@ -425,6 +431,7 @@ def validate_data_file(
     target_root: Path,
     *,
     capability_bindings: list[CapabilityBindings] | None = None,
+    binding: ResolvedBinding | BindingError | None = None,
 ) -> list[DataValidationIssue]:
     """Resolve binding + run shape validation for one adopter data file.
 
@@ -436,11 +443,14 @@ def validate_data_file(
       companion, just like `pkit schemas validate` does for capability
       schema pairs.
 
-    Returns the findings (empty = clean).
+    `binding`, when given, is the file's already-resolved binding (the
+    caller resolved it to decide whether to validate at all). Returns the
+    findings (empty = clean).
     """
-    binding = resolve_binding(
-        data_path, target_root, capability_bindings=capability_bindings
-    )
+    if binding is None:
+        binding = resolve_binding(
+            data_path, target_root, capability_bindings=capability_bindings
+        )
     rel = _rel(data_path, target_root)
     if isinstance(binding, BindingError):
         return [DataValidationIssue(location=rel, message=binding.message)]
@@ -511,17 +521,11 @@ def validate_data_file(
         )
         shape_errors = []
     for error in sorted(shape_errors, key=lambda e: list(e.absolute_path)):
-        pointer = (
-            "/" + "/".join(str(p) for p in error.absolute_path)
-            if error.absolute_path
-            else ""
-        )
-        issues.append(
-            DataValidationIssue(
-                location=f"{rel}{pointer}",
-                message=error.message,
-            )
-        )
+        # An unknown key is one finding per key, phrased by the shared renderer
+        # (ADR-056 point 4); any other violation keeps the validator's message.
+        for path, message in backbone_schemas.expand_schema_error(error):
+            pointer = "/" + "/".join(path) if path else ""
+            issues.append(DataValidationIssue(location=f"{rel}{pointer}", message=message))
     return issues
 
 
@@ -914,35 +918,98 @@ def validate_path(
     False (the CLI's `--shape-only`) — the scope-subtree cross-file
     reference pass over every file whose binding resolved. The validation
     scope is exactly `path`: the id pool a reference resolves against is the
-    union of in-scope files bound to its namespace (per COR-029).
+    union of in-scope files bound to its namespace (per COR-029). A file
+    nothing binds is a finding here — the caller named it.
     """
-    files = discover_data_files(path)
+    return validate_files(
+        discover_data_files(path), target_root, resolve_references=resolve_references
+    )
+
+
+def discover_repository_data_files(target_root: Path) -> list[Path]:
+    """Every `*.yaml` under the repository outside `.pkit/` and outside any
+    dot-directory (`.git`, a virtual environment, the changesets, a harness's
+    own folder): what the repository scope offers to the binding resolver."""
+    out: list[Path] = []
+    for dirpath, dirnames, filenames in os.walk(target_root):
+        dirnames[:] = sorted(d for d in dirnames if not d.startswith("."))
+        out.extend(Path(dirpath) / name for name in sorted(filenames) if name.endswith(".yaml"))
+    return out
+
+
+def validate_bound(target_root: Path, *, resolve_references: bool = True) -> DataValidationReport:
+    """The repository scope, for the `data` member of `pkit validate`: every data
+    file a `pkit_schema:` field or an installed capability's `binds_to:` glob
+    claims (`discover_repository_data_files`). A file nothing claims is not
+    adopter data and is not a finding; a claim that does not resolve — an
+    unknown capability or schema in the field, an ambiguous glob match — is.
+    The reference pool is every bound file in the repository."""
+    return validate_files(
+        discover_repository_data_files(target_root),
+        target_root,
+        resolve_references=resolve_references,
+        bound_only=True,
+    )
+
+
+def validate_files(
+    files: list[Path],
+    target_root: Path,
+    *,
+    resolve_references: bool = True,
+    bound_only: bool = False,
+) -> DataValidationReport:
+    """Validate the given files: the shape pass per file, then the cross-file
+    reference pass over the ones whose binding resolved. With `bound_only`, a
+    file nothing binds is skipped and not counted."""
     if not files:
         return DataValidationReport(files_checked=0, issues=())
     # Load capability bindings once for the whole run.
     cap_bindings = load_all_capability_bindings(target_root)
     all_issues: list[DataValidationIssue] = []
     instances: list[tuple[ResolvedBinding, Any]] = []
+    checked = 0
     for data_path in files:
+        binding = resolve_binding(data_path, target_root, capability_bindings=cap_bindings)
+        if bound_only and isinstance(binding, BindingError) and binding.unbound:
+            continue
+        checked += 1
         all_issues.extend(
             validate_data_file(
-                data_path, target_root, capability_bindings=cap_bindings
+                data_path, target_root, capability_bindings=cap_bindings, binding=binding
             )
         )
-        if resolve_references:
-            binding = resolve_binding(
-                data_path, target_root, capability_bindings=cap_bindings
-            )
-            if isinstance(binding, ResolvedBinding):
-                try:
-                    data = _yaml.load(data_path.read_text(encoding="utf-8"))
-                except (YAMLError, OSError):
-                    data = None
-                if data is not None:
-                    instances.append((binding, data))
+        if resolve_references and isinstance(binding, ResolvedBinding):
+            try:
+                data = _yaml.load(data_path.read_text(encoding="utf-8"))
+            except (YAMLError, OSError):
+                data = None
+            if data is not None:
+                instances.append((binding, data))
     if resolve_references and instances:
         all_issues.extend(_resolve_references_in_scope(instances, target_root))
-    return DataValidationReport(files_checked=len(files), issues=tuple(all_issues))
+    return DataValidationReport(files_checked=checked, issues=tuple(all_issues))
+
+
+def outcome(target_root: Path) -> validators.Outcome:
+    """The `data` member of `pkit validate`: `validate_bound`, both passes."""
+    report = validate_bound(target_root)
+    if report.files_checked == 0:
+        summary = "no adopter data file is bound to a capability schema."
+    else:
+        summary = (
+            f"{report.files_checked} bound data file(s) checked; "
+            f"{len(report.errors)} error(s), {len(report.warnings)} warning(s)."
+        )
+    findings = tuple(
+        validators.Finding(
+            issue.location,
+            issue.message,
+            validators.Severity.ERROR if issue.severity == "error" else validators.Severity.WARNING,
+        )
+        for issue in report.issues
+    )
+    return validators.Outcome((summary,), findings)
 
 
 def print_report(report: DataValidationReport) -> None:

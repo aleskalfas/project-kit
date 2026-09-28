@@ -47,6 +47,16 @@
         "$ref": "#/$defs/component-name"
       }
     },
+    "validators": {
+      "description": "Validators this component registers with `pkit validate` (ADR-058): a mapping from a validator name (a word) to its entry. The umbrella addresses it `<component>:<name>`, runs its `script` from the project root with no arguments, bounded like a predicate, and reads one JSON document from its standard output — `{\"summary\": [\"...\"], \"findings\": [{\"severity\": \"error\"|\"warning\"|\"info\"|\"report\", \"location\": \"...\", \"message\": \"...\"}]}`; only `error` fails the umbrella. An abnormal exit, a timeout or an answer that is not that document is an error finding, never a clean pass. `order` sorts the validator among the members (the backbone's run first; default 1000). No shipped component uses it yet.",
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/validator"
+      }
+    },
     "provides": {
       "description": "Hook implementations this component answers, `{hook-name: implementation}` (COR-013). Reserved; no shipped file uses it.",
       "type": "object",
@@ -159,6 +169,29 @@
         "help": {
           "description": "One-line user-facing description.",
           "$ref": "#/$defs/non-empty-string"
+        }
+      }
+    },
+    "validator": {
+      "title": "One registered validator",
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "script",
+        "help"
+      ],
+      "properties": {
+        "script": {
+          "description": "Path of the script relative to the component root; must exist (checked in Python).",
+          "$ref": "#/$defs/relative-path"
+        },
+        "help": {
+          "description": "One line: what the validator checks.",
+          "$ref": "#/$defs/non-empty-string"
+        },
+        "order": {
+          "description": "Where it sorts among the members; the backbone's members take the orders below 1000.",
+          "type": "integer"
         }
       }
     },

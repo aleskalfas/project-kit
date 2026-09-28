@@ -17,7 +17,10 @@ is where that class is loaded and where its shared rendering lives:
   walk never sees these files; this is their only structural check.
 - `render_unknown_key` — the one renderer every unknown-key finding of the
   class comes from (ADR-056 point 4): the offending key, the nearest known key
-  by edit distance, and any reminder the owning record adds.
+  by edit distance, and any reminder the owning record adds. `unknown_keys`
+  and `expand_schema_error` route a JSON Schema validator's
+  `additionalProperties` violation through it, one finding per key, so every
+  pass that validates against a schema phrases the finding the same way.
 - `validate_container` — the container's discrimination rule (COR-053 point
   10) applied on top of the JSON Schema shape: functionality blocks by name,
   role blocks by their versioned point blocks, anything else an unknown key;
@@ -31,6 +34,7 @@ which does not exist. `resolve_point_compatibility` is the hook it will fill.
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Collection, Iterable, Mapping
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
@@ -39,7 +43,7 @@ from pathlib import Path
 from typing import Any
 
 from jsonschema import Draft202012Validator
-from jsonschema.exceptions import SchemaError
+from jsonschema.exceptions import SchemaError, ValidationError
 from referencing import Registry, Resource
 from referencing.jsonschema import DRAFT202012
 
@@ -215,6 +219,36 @@ def render_unknown_key(key: str, known: Iterable[str], *, reminder: str | None =
     if reminder:
         message += f" Note: {reminder}"
     return message
+
+
+def unknown_keys(error: ValidationError) -> list[str]:
+    """The keys an `additionalProperties` violation is about — every key of the
+    instance mapping that neither `properties` nor `patternProperties` admits —
+    sorted, so one finding per key is deterministic. Empty for any other error.
+    """
+    if error.validator != "additionalProperties" or not isinstance(error.instance, Mapping):
+        return []
+    known = set((error.schema.get("properties") or {}).keys())
+    patterns = list((error.schema.get("patternProperties") or {}).keys())
+    return sorted(
+        str(key)
+        for key in error.instance
+        if key not in known and not any(re.search(pattern, str(key)) for pattern in patterns)
+    )
+
+
+def expand_schema_error(error: ValidationError) -> list[tuple[tuple[str, ...], str]]:
+    """One `(path segments, message)` per violation, an `additionalProperties`
+    error over a mapping expanded to one per unknown key and rendered by
+    `render_unknown_key` from the schema's known keys (ADR-056 point 4). Any
+    other error keeps the validator's own message.
+    """
+    path = tuple(str(segment) for segment in error.absolute_path)
+    keys = unknown_keys(error)
+    if not keys:
+        return [(path, error.message)]
+    known = tuple((error.schema.get("properties") or {}).keys())
+    return [((*path, key), render_unknown_key(key, known)) for key in keys]
 
 
 # --- the container ----------------------------------------------------

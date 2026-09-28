@@ -1,27 +1,21 @@
-"""`pkit validate` — read-only state check per COR-004.
+"""The `manifests` and `decisions` front-matter checks of `pkit validate` (COR-004).
 
-Verifies:
+Two of the umbrella's members (`project_kit.validators`, ADR-058) live here:
 
-- **Backbone manifest** is present, parseable, and at schema_version 1.
-- **Component registry** — each component listed in `.pkit/manifest.yaml`
-  has its per-component manifest at the declared path, with a matching
-  schema_version.
-- **Per-component manifests** — each has the required fields (kind,
-  name, version, installed_at, requires_backbone).
-- **Decision records** — each `.pkit/decisions/{core,project}/*.md`
-  carries valid frontmatter (id, title, status, date, author).
+- **`manifests`** — the backbone manifest is present, parseable and at
+  schema_version 1; each component listed in `.pkit/manifest.yaml` has its
+  per-component manifest at the declared path, with the required fields
+  (kind, name, version, installed_at, requires_backbone) and a matching name
+  and kind.
+- **`decisions`**, the front-matter half — each `.pkit/decisions/{core,project}/*.md`
+  carries valid front matter (id, title, status, date, author). The id-space
+  half is `decisions_validate`, which composes both into the member.
 
-Reports issues with locations + diagnosis. Makes no changes. Exits
-non-zero if any issue is found, so CI can gate on it.
+Every finding is an error; the checks read only.
 
-What's NOT checked yet (scope deferred to future PRs):
-
-- The full no-shared-files invariant — checking every kit-owned path is
-  unmodified relative to source needs source-vs-target diff machinery
-  (could surface here or land in a separate `pkit diff` later).
-- Per-area schema rules (per area README's own contract) — each area
-  needs to surface its validation hook; today only decisions and
-  manifests are checked.
+Not checked here: the full no-shared-files invariant — whether every kit-owned
+path is unmodified relative to the source — needs source-vs-target diff
+machinery (a later `pkit diff`, or a member of its own).
 """
 
 from __future__ import annotations
@@ -32,7 +26,7 @@ from pathlib import Path
 
 import click
 
-from project_kit import cli_render
+from project_kit.validators import Finding, Outcome
 from project_kit.manifest import (
     BackboneManifest,
     ComponentManifest,
@@ -54,36 +48,41 @@ VALID_DECISION_STATUSES = ("proposed", "accepted", "superseded")
 
 
 def run_validate(target_root: Path) -> list[Issue]:
-    """Walk the kit's state, return all issues found. Empty list = clean."""
+    """The manifests and decision front-matter checks together; empty = clean.
+    `pkit validate` runs them as the `manifests` and `decisions` members."""
     if not (target_root / ".pkit").is_dir():
         raise click.ClickException(f"{target_root}/.pkit/ does not exist. Run 'pkit init' first.")
+    return [*manifest_issues(target_root), *decision_frontmatter_issues(target_root)]
 
-    issues: list[Issue] = []
+
+def manifest_issues(target_root: Path) -> list[Issue]:
+    """The backbone manifest and the component registry it lists."""
     backbone = read_backbone_manifest(target_root)
-
-    issues.extend(_validate_backbone_manifest(target_root, backbone))
+    issues = _validate_backbone_manifest(target_root, backbone)
     if backbone is not None:
         issues.extend(_validate_component_registry(target_root, backbone))
-    issues.extend(_validate_decisions(target_root))
-
     return issues
 
 
-def print_validate_report(target_root: Path, issues: list[Issue]) -> None:
-    """Pretty-print validate findings. Mirrors the spec in `.pkit/cli/README.md`."""
-    click.echo()
-    click.echo(cli_render.style("title", f"Validating {target_root}"))
-    click.echo()
-    if not issues:
-        click.echo("  " + cli_render.style("strong", "All checks passed."))
-        click.echo()
-        return
+def decision_frontmatter_issues(target_root: Path) -> list[Issue]:
+    """Every decision record's front matter, under `.pkit/decisions/{core,project}/`."""
+    return _validate_decisions(target_root)
 
-    click.echo("  " + cli_render.style("strong", f"{len(issues)} issue(s) found:"))
-    for issue in issues:
-        click.echo(f"    {issue.location}")
-        click.echo(f"      → {issue.diagnosis}")
-    click.echo()
+
+def manifests_outcome(target_root: Path) -> Outcome:
+    """The `manifests` member of `pkit validate`."""
+    backbone = read_backbone_manifest(target_root)
+    issues = manifest_issues(target_root)
+    if backbone is None:
+        state = "no backbone manifest"
+    else:
+        version = backbone.backbone_version or "(unversioned)"
+        state = (
+            f"backbone {version}, schema_version {backbone.schema_version}; "
+            f"{len(backbone.components)} component(s) registered"
+        )
+    findings = tuple(Finding(issue.location, issue.diagnosis) for issue in issues)
+    return Outcome((f"{state}; {len(findings)} error(s).",), findings)
 
 
 def _validate_backbone_manifest(
