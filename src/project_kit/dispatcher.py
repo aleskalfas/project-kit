@@ -9,21 +9,36 @@ Per the COR, the dispatcher is **stateless across invocations** — no
 cache; every CLI call rediscovers the surface from disk so capability
 install / uninstall surfaces immediately without a refresh step.
 
+The `commands:` tree is read through the backbone's one command lookup
+(`command_runner`, ADR-057 point 5) — the walk package validation, the
+validator registry and the process engine's predicate runner read too — so
+`pkit <capability> <tokens…>` runs the leaf every other reader resolves.
+
 Scripts named in command leaves are proxied via subprocess. Arguments
 after the resolved subcommand pass through verbatim; the script's exit
-code becomes the CLI's exit code; standard streams are inherited.
+code becomes the CLI's exit code; standard streams are inherited. The
+proxy is a person's focused surface, so it takes the lookup and not the
+bounded run: nothing here is timed out or captured.
 """
 
 from __future__ import annotations
 
 import subprocess
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
 import click
 from ruamel.yaml import YAML
 
+from project_kit.command_runner import (
+    HELP_KEY,
+    RegisteredCommand,
+    commands_of,
+    registered_commands,
+    resolve_command,
+)
 from project_kit.install import find_target_root
 from project_kit.manifest import read_backbone_manifest
 
@@ -122,8 +137,9 @@ def _discover_capability_commands() -> dict[str, click.Group]:
 def resolve_capability_script(
     target_root: Path, capability: str, command: str
 ) -> Path | None:
-    """Resolve an installed capability's top-level command leaf to its script
-    path — the same package.yaml `commands:` resolution the dispatch group
+    """Resolve an installed capability's command leaf to its script path —
+    `command` is a reference, a path through the `commands:` tree (tokens
+    separated by spaces), resolved by the same lookup the dispatch group
     uses, exposed for backbone code that invokes a capability verb by
     subprocess (per COR-021; first consumer: ADR-050's `context-workstream`
     read on report compose).
@@ -140,19 +156,10 @@ def resolve_capability_script(
         if component.kind != "capability" or component.name != capability:
             continue
         cap_dir = target_root / ".pkit" / "capabilities" / capability
-        package_yaml = cap_dir / "package.yaml"
-        if not package_yaml.is_file():
+        leaf = resolve_command(registered_commands(cap_dir), command)
+        if leaf is None or not leaf.script.is_file():
             return None
-        commands_tree, _description, _aliases = (
-            _read_commands_description_and_aliases(package_yaml)
-        )
-        if not isinstance(commands_tree, dict):
-            return None
-        entry = commands_tree.get(command)
-        if not isinstance(entry, dict) or "script" not in entry:
-            return None
-        script = cap_dir / str(entry["script"])
-        return script if script.is_file() else None
+        return leaf.script
     return None
 
 
@@ -214,23 +221,32 @@ def _add_commands_to_group(
     commands_tree: dict[str, Any],
     cap_dir: Path,
 ) -> None:
-    """Walk a commands tree and add leaves + sub-groups to `group`."""
-    for key, value in commands_tree.items():
-        if not isinstance(value, dict):
+    """Add the tree's leaves and sub-groups to `group`. Which node is a leaf,
+    and the script it runs, is the one lookup's answer (`commands_of`); the
+    walk here only lays out the groups, each with its own `help`."""
+    _add_level(group, commands_tree, (), commands_of(cap_dir, commands_tree))
+
+
+def _add_level(
+    group: click.Group,
+    node: Mapping[Any, Any],
+    prefix: tuple[str, ...],
+    commands: Mapping[tuple[str, ...], RegisteredCommand],
+) -> None:
+    for key, value in node.items():
+        if not isinstance(value, Mapping):
             continue
-        if "script" in value:
-            cmd = _make_proxy_command(
-                name=str(key),
-                script_path=cap_dir / str(value["script"]),
-                help_text=str(value.get("help", "")),
+        tokens = (*prefix, str(key))
+        command = commands.get(tokens)
+        if command is not None:
+            group.add_command(
+                _make_proxy_command(
+                    name=command.name, script_path=command.script, help_text=command.help
+                )
             )
-            group.add_command(cmd)
         else:
-            sub = _make_sub_group(
-                name=str(key),
-                help_text=str(value.get("help", "")),
-            )
-            _add_commands_to_group(sub, value, cap_dir)
+            sub = _make_sub_group(name=str(key), help_text=str(value.get(HELP_KEY, "")))
+            _add_level(sub, value, tokens, commands)
             group.add_command(sub)
 
 

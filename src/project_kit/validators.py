@@ -36,24 +36,21 @@ aggregator (`scripts/check.sh`, the enforcement boundary of ADR-019).
 leaf of the capability's `commands:` tree, so the same script is a focused
 surface (`pkit <capability> <command>`) and a member of the umbrella, and the
 leaf carries the declaration of the query contract, `query-contract: true`.
-The registry runs the leaf's script from the project root with the one
+The registry runs the leaf's script under the *query policy* over the one
+runner the backbone uses for every command it runs on a component's behalf
+(`command_runner`, ADR-057 point 5): from the project root with the one
 argument `--json`, the offline marker set in its environment, in its own
-process group, bounded by the same constant the predicate runner uses, and
-reads one JSON document — and nothing else — from its standard output:
+process group, bounded by the backbone's one command bound and killed as a
+group when it overruns, reading one JSON document — and nothing else — from
+its standard output:
 `{"summary": [...], "findings": [{"severity", "location", "message"}, ...]}`;
 diagnostics go to standard error. No answer — a leaf without the declaration,
 an abnormal exit, a timeout, output that is not exactly that document — is an
-*error finding*, never a clean pass: the umbrella fails closed. This runner is
-the third start-bound-capture-parse beside the dispatcher's and the predicate
-runner's; #1035 extracts the one primitive they share (ADR-057 point 5).
+*error finding*, never a clean pass: the umbrella fails closed.
 """
 
 from __future__ import annotations
 
-import json
-import os
-import signal
-import subprocess
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from enum import Enum
@@ -63,6 +60,15 @@ from typing import Any
 from ruamel.yaml import YAML
 
 from project_kit import cli_render
+from project_kit.command_runner import (
+    COMMANDS_KEY,
+    CommandRun,
+    Ending,
+    commands_of,
+    parse_document,
+    resolve_command,
+    run_command,
+)
 
 # The owner of the backbone's own members; a capability's members are owned
 # by the capability and addressed `<capability>:<name>`.
@@ -96,10 +102,6 @@ OFFLINE_MARKER: Mapping[str, str] = {"PKIT_OFFLINE": "1", "UV_OFFLINE": "1"}
 # Where a capability's validators sort when their entries name no `order`:
 # after every backbone member, in capability order.
 CAPABILITY_ORDER_DEFAULT = 1000
-
-# The time bound on a capability's validator command — the same thirty seconds
-# the process engine gives a predicate (ADR-057 point 3).
-QUERY_TIMEOUT_SECONDS = 30
 
 _yaml = YAML(typ="safe")
 
@@ -310,26 +312,27 @@ def capability_validators(target_root: Path) -> tuple[Validator, ...]:
     3): the umbrella fails closed on it rather than skipping it silently.
     `order` is taken when it is an integer, else the capability default.
     """
-    from project_kit.package_validate import command_leaves, installed_package_files
+    from project_kit.package_validate import installed_package_files
 
     out: list[Validator] = []
     for owner, component_dir, package in installed_package_files(target_root):
         raw = _load_mapping(package)
-        commands = raw.get("commands")
-        leaves = command_leaves(commands) if isinstance(commands, Mapping) else {}
+        commands = commands_of(component_dir, raw.get(COMMANDS_KEY))
         block = raw.get(VALIDATORS_KEY)
         if not isinstance(block, Mapping):
             continue
         for raw_name, spec in block.items():
             name = str(raw_name)
             reference = spec.get(COMMAND_KEY) if isinstance(spec, Mapping) else None
-            leaf = leaves.get(tuple(reference.split())) if isinstance(reference, str) else None
-            if not isinstance(reference, str) or leaf is None:
+            if not isinstance(reference, str):
+                continue
+            command = resolve_command(commands, reference)
+            if command is None:
                 continue
             query = QueryCommand(
-                script=component_dir / str(leaf.get("script")),
+                script=command.script,
                 reference=reference,
-                declares_contract=leaf.get(QUERY_CONTRACT_KEY) is True,
+                declares_contract=command.entry.get(QUERY_CONTRACT_KEY) is True,
                 location=f"{_rel(package, target_root)}:/{VALIDATORS_KEY}/{name}/{COMMAND_KEY}",
             )
             order = spec.get("order")
@@ -340,7 +343,7 @@ def capability_validators(target_root: Path) -> tuple[Validator, ...]:
                     order=order if isinstance(order, int) and not isinstance(order, bool)
                     else CAPABILITY_ORDER_DEFAULT,
                     owner=owner,
-                    help=str(leaf.get("help") or ""),
+                    help=command.help,
                 )
             )
     return tuple(out)
@@ -355,64 +358,38 @@ def _load_mapping(package: Path) -> Mapping[Any, Any]:
 
 
 def run_query(target_root: Path, script: Path, *, location: str, reference: str) -> Outcome:
-    """Run one validator command as a query and read its answer (the contract in
-    the module docstring): from the project root, with `--json`, the offline
-    marker set, in its own process group, bounded by `QUERY_TIMEOUT_SECONDS`.
-    No answer is an error finding at `location` — the validator's own entry in
-    the package file — so the umbrella fails closed."""
+    """Run one validator command under the query policy and read its answer (the
+    contract in the module docstring): with `--json` and the offline marker set,
+    through the shared runner — from the project root, in its own process group,
+    bounded by `command_runner.COMMAND_TIMEOUT_SECONDS`. No answer is an error
+    finding at `location` — the validator's own entry in the package file — so
+    the umbrella fails closed."""
     if not script.is_file():
         return _no_answer(
             location,
             f"command {reference!r} names script {_rel(script, target_root)!r}, which does not exist.",
         )
-    try:
-        process = subprocess.Popen(
-            [str(script), QUERY_FLAG],
-            cwd=str(target_root),
-            env={**os.environ, **OFFLINE_MARKER},
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            start_new_session=True,
-        )
-    except OSError as exc:
-        return _no_answer(location, f"command {reference!r} could not start: {exc}")
-    try:
-        stdout, stderr = process.communicate(timeout=QUERY_TIMEOUT_SECONDS)
-    except subprocess.TimeoutExpired:
-        _kill_process_group(process)
-        return _no_answer(
-            location, f"command {reference!r} did not answer within {QUERY_TIMEOUT_SECONDS} s."
-        )
-    if process.returncode != 0:
-        detail = _decode(stderr).strip().splitlines()
+    run = run_command(script, [QUERY_FLAG], cwd=target_root, extra_env=OFFLINE_MARKER)
+    if run.ending is Ending.ANSWERED:
+        return _answer_of(run.document, location=location, command=reference)
+    return _no_answer(location, _why_no_answer(run, reference))
+
+
+def _why_no_answer(run: CommandRun, reference: str) -> str:
+    """The message of the no-answer finding for a run that did not answer."""
+    if run.ending is Ending.NOT_STARTED:
+        return f"command {reference!r} could not start: {run.detail}"
+    if run.ending is Ending.TIMED_OUT:
+        return f"command {reference!r} did not answer within {run.bound_seconds} s."
+    if run.ending is Ending.ABNORMAL_EXIT:
+        detail = run.stderr.strip().splitlines()
         tail = f": {detail[-1]}" if detail else "."
-        return _no_answer(location, f"command {reference!r} exited {process.returncode}{tail}")
-    return parse_answer(_decode(stdout), location=location, command=reference)
+        return f"command {reference!r} exited {run.returncode}{tail}"
+    return _not_a_document(reference)
 
 
-def _kill_process_group(process: subprocess.Popen[bytes]) -> None:
-    """End the command and everything it started. `start_new_session` made it
-    the leader of its own group, so one signal reaches the grandchild a `uv run
-    --script` shebang starts — which `Popen.kill` alone leaves running, holding
-    the pipes open, and a second `communicate` would then wait on. The pipes
-    are closed unread: nothing printed after the bound is an answer."""
-    if hasattr(os, "killpg"):
-        try:
-            os.killpg(process.pid, signal.SIGKILL)
-        except ProcessLookupError:
-            pass
-    else:  # pragma: no cover — no process groups on this platform
-        process.kill()
-    process.wait()
-    for stream in (process.stdout, process.stderr):
-        if stream is not None:
-            stream.close()
-
-
-def _decode(data: bytes | None) -> str:
-    """A command's output as text; a byte the encoding cannot read is replaced,
-    never a crash — it becomes part of a no-answer finding."""
-    return (data or b"").decode("utf-8", errors="replace")
+def _not_a_document(command: str) -> str:
+    return f"command {command!r} did not print a JSON document on its standard output."
 
 
 def parse_answer(text: str, *, location: str, command: str) -> Outcome:
@@ -422,11 +399,15 @@ def parse_answer(text: str, *, location: str, command: str) -> Outcome:
     finding — is an error finding: the umbrella fails closed on a half-formed
     answer as on none."""
     try:
-        document = json.loads(text)
+        document = parse_document(text)
     except ValueError:
-        return _no_answer(
-            location, f"command {command!r} did not print a JSON document on its standard output."
-        )
+        return _no_answer(location, _not_a_document(command))
+    return _answer_of(document, location=location, command=command)
+
+
+def _answer_of(document: Any, *, location: str, command: str) -> Outcome:
+    """The parsed document as an Outcome, validated against the findings
+    document's shape (`parse_answer`)."""
     if not isinstance(document, Mapping):
         return _no_answer(
             location, f"command {command!r} printed {_kind(document)}, not a findings document."
