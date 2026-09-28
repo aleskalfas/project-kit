@@ -308,7 +308,7 @@ def test_status_shows_both_roots_with_their_source(
     assert _status_lines(monkeypatch)[1] == "internal root      tech-docs/   (explicit)"
 
 
-def test_status_lists_every_recorded_location_outside_the_internal_root(
+def test_status_lists_every_recorded_location_inside_then_outside_the_internal_root(
     make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     repo = make_adopter_repo(capabilities=("project-management",))
@@ -321,6 +321,9 @@ def test_status_lists_every_recorded_location_outside_the_internal_root(
     dr.record_location(repo.root, "project-management", "notes", "elsewhere/notes")
     lines = _status_lines(monkeypatch)
     assert lines[2:] == [
+        "inside root        2 recorded location(s) inside the internal root:",
+        "architecture-docs -> docs/architecture",
+        "guides (project-management) -> docs/guides",
         "outside root       3 recorded location(s) outside the internal root:",
         "adr-records -> decisions/adr",
         "architecture-docs -> CONTRIBUTING.md",
@@ -329,8 +332,61 @@ def test_status_lists_every_recorded_location_outside_the_internal_root(
     # Deterministic: the same state renders the same lines.
     assert _status_lines(monkeypatch) == lines
 
+    # A root change moves nothing recorded; only which side of the root each lies on.
     _set_internal_root(repo, "decisions")
     lines = _status_lines(monkeypatch)
-    assert "adr-records -> decisions/adr" not in lines
-    assert "architecture-docs -> docs/architecture" in lines
-    assert "guides (project-management) -> docs/guides" in lines
+    assert lines[2:4] == [
+        "inside root        1 recorded location(s) inside the internal root:",
+        "adr-records -> decisions/adr",
+    ]
+    assert lines[4] == "outside root       4 recorded location(s) outside the internal root:"
+    assert "architecture-docs -> docs/architecture" in lines[5:]
+    assert "guides (project-management) -> docs/guides" in lines[5:]
+
+
+def _friction_lines(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    monkeypatch.setenv("PKIT_SOURCE_BIN", "/fake/pkit")
+    result = CliRunner().invoke(main, ["--color", "never", "status"])
+    assert result.exit_code == 0, result.output
+    lines = result.output.splitlines()
+    start = lines.index("  Friction")
+    end = next(i for i in range(start + 1, len(lines)) if not lines[i].strip())
+    return [line.strip() for line in lines[start + 1 : end]]
+
+
+def test_status_says_the_friction_check_is_dormant_without_places(
+    make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    make_adopter_repo()
+    assert _friction_lines(monkeypatch) == [
+        "mode               warning   (default)",
+        "places             none declared — the friction check is dormant",
+    ]
+
+
+def test_status_lists_the_declared_places_surface_and_exclusions(
+    make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = make_adopter_repo(capabilities=("project-management",))
+    _write_config(
+        repo,
+        "docs:\n  internal: tech-docs\n"
+        "friction:\n  mode: enforcing\n"
+        "  places: [README.md, guides/**/*.md]\n"
+        "  exclude: [generated/]\n",
+    )
+    package = repo.pkit / "capabilities" / "project-management" / "package.yaml"
+    package.write_text(
+        package.read_text(encoding="utf-8") + "friction:\n  places: [boards]\n",
+        encoding="utf-8",
+    )
+    assert _friction_lines(monkeypatch) == [
+        "mode               enforcing   (explicit)",
+        "places             3 declared:",
+        "README.md",
+        "guides/**/*.md",
+        # A capability's place resolves under the internal root, tagged with its owner.
+        "tech-docs/boards (project-management)",
+        "exclude            1 declared:",
+        "generated/",
+    ]

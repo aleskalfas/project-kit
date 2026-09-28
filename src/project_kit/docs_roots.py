@@ -346,6 +346,13 @@ def outside_root(target_root: Path, roots: Roots | None = None) -> list[Recorded
     return [r for r in recorded_locations(target_root) if not is_within(r.path, roots.internal)]
 
 
+def inside_root(target_root: Path, roots: Roots | None = None) -> list[RecordedLocation]:
+    """The recorded locations lying inside the internal root — the complement of
+    `outside_root`, so the two together show every recorded location (COR-049 point 7)."""
+    roots = roots if roots is not None else resolve_roots(target_root)
+    return [r for r in recorded_locations(target_root) if is_within(r.path, roots.internal)]
+
+
 def _entries(value: Any) -> list[str]:
     if isinstance(value, str):
         return [value] if value.strip() else []
