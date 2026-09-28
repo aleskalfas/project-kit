@@ -405,10 +405,12 @@ def test_a_source_is_reported_as_an_unresolved_kind_never_passed(adopter: Adopte
     assert report.severity is rs.Severity.REPORT
     assert report.where == f"{PROJECT_SETS}/cmn.md#RS-CMN-001 /origin/source"
     assert "'transcript' is unresolved" in report.message
+    # The registry's own verdict, word for word the one an anchor of the kind gets.
+    assert fd.unresolved_kind_reason("transcript", {}) in report.message
     assert rs.fd.registered_anchor_kinds(adopter.root) == {}
 
 
-def test_a_source_of_a_core_anchor_kind_is_reported_too_until_a_capability_resolves_it(adopter: AdopterRepo) -> None:
+def test_a_source_of_a_core_anchor_kind_is_no_source_kind(adopter: AdopterRepo) -> None:
     front = cmn()
     front["rules"]["RS-CMN-001"]["origin"]["source"] = {"kind": "path", "value": "t-12"}
     write_set(adopter, f"{PROJECT_SETS}/cmn.md", front)
@@ -419,7 +421,57 @@ def test_a_source_of_a_core_anchor_kind_is_reported_too_until_a_capability_resol
     assert report.severity is rs.Severity.REPORT
     assert report.where == f"{PROJECT_SETS}/cmn.md#RS-CMN-001 /origin/source"
     assert "'path' is unresolved" in report.message
+    assert "resolves it as an anchor, never as a source" in report.message
     assert rs.fd.registered_anchor_kinds(adopter.root) == {}
+
+
+def test_a_source_is_judged_through_the_resolver_its_kind_registers(
+    adopter: AdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The pass reads the one anchor-kind registry the friction checks read and takes
+    its verdict on the kind (COR-051 point 5; ADR-057 point 2). No package metadata
+    declares an anchor kind yet, so the synthetic resolver is registered at the
+    registry itself — the function every engine calls."""
+    front = cmn()
+    front["rules"]["RS-CMN-001"]["origin"]["source"] = {"kind": "transcript", "value": "t-12"}
+    front["rules"]["RS-CMN-005"]["origin"]["source"] = {"kind": "transcript", "value": "t-13"}
+    write_set(adopter, f"{PROJECT_SETS}/cmn.md", front)
+    declared = fd.ResolverCommand("transcript", "sources", "resolve transcript", query_contract=True)
+    reads: list[Path] = []
+
+    def register(resolver: fd.ResolverCommand) -> None:
+        def registry(root: Path) -> dict[str, fd.ResolverCommand]:
+            reads.append(root)
+            return {resolver.kind: resolver}
+
+        monkeypatch.setattr(fd, "registered_anchor_kinds", registry)
+
+    # Registered with the query contract: judged by that resolver, which fails closed
+    # while registered resolvers are not run — never as a kind nothing registers.
+    register(declared)
+    result = validate(adopter)
+    assert [f.kind for f in result.findings] == [Kind.UNRESOLVED_SOURCE_KIND] * 2
+    assert reads == [adopter.root]  # the registry is read once per pass
+    message = result.findings[0].message
+    assert "the resolver `resolve transcript` that sources registers for it is not run yet" in message
+    assert fd.unresolved_kind_reason("transcript", {}) not in message
+
+    # Registered without it: refused, as the friction checks refuse it.
+    register(fd.ResolverCommand("transcript", "sources", "resolve transcript"))
+    refused = validate(adopter).findings[0].message
+    assert "does not declare the query contract" in refused
+
+    # Once the registry resolves the kind, a source of it resolves through it: no report.
+    register(declared)
+    verdicts: list[tuple[str, fd.ResolverCommand]] = []
+
+    def resolving(kind: str, registry: Mapping[str, fd.ResolverCommand]) -> str | None:
+        verdicts.append((kind, registry[kind]))
+        return None
+
+    monkeypatch.setattr(fd, "unresolved_kind_reason", resolving)
+    assert validate(adopter).findings == ()
+    assert verdicts == [("transcript", declared)] * 2
 
 
 # --- successors ---------------------------------------------------------------------

@@ -968,23 +968,13 @@ def _decision_findings(
 def _source_findings(
     rule: Rule, origin: Mapping[str, Any], catalogue: _Catalogue
 ) -> Iterable[RuleSetFinding]:
-    """A cited source resolves through the one anchor-kind registry (ADR-057 point 2)."""
+    """A cited source resolves through the anchor kind a capability registers for it
+    (COR-051 point 5), judged by the one anchor-kind registry (ADR-057 point 2)."""
     source = origin.get("source")
     kind = source.get("kind") if isinstance(source, Mapping) else None
     if not isinstance(kind, str) or not kind:
         return  # absent, or malformed: the shape pass reports it
-    # A source resolves only through a kind a capability registered (COR-051
-    # point 5): the core anchor kinds are not source kinds, and this validator
-    # resolves no source itself, so every source is gated on the registry and
-    # never silently passed.
-    registry = fd.registered_anchor_kinds(catalogue.target_root)
-    resolver = registry.get(kind)
-    reason = (
-        "no installed capability registers a resolver for it"
-        if resolver is None
-        else fd.refuse_resolver_without_query_contract(resolver)
-        or f"the resolver `{resolver.command}` that {resolver.capability} registers for it is not run yet"
-    )
+    reason = _source_kind_problem(kind, catalogue.anchor_kinds)
     if reason is not None:
         yield _report(
             rule.location,
@@ -993,6 +983,26 @@ def _source_findings(
             f"source kind {kind!r} is unresolved: {reason}, so the source is not checked "
             f"(COR-051 point 5; COR-050 point 2).",
         )
+
+
+def _source_kind_problem(kind: str, registry: Mapping[str, fd.ResolverCommand]) -> str | None:
+    """Why a source of `kind` is unresolved, or None when the registry resolves it.
+
+    A source is of a kind some capability resolves as an anchor kind (COR-051
+    point 5), so the kinds the backbone resolves itself are not source kinds.
+    Every other kind takes the verdict the friction checks give an anchor of
+    that kind (`unresolved_kind_reason`): unregistered, refused without the
+    query contract, or failing closed until registered resolvers run
+    (COR-050 point 2). This validator runs no resolver of its own, so a source
+    resolves exactly when the registry resolves its kind, and is never
+    silently passed.
+    """
+    if kind in fd.CORE_ANCHOR_KINDS:
+        return (
+            "the backbone resolves it as an anchor, never as a source — a source is of a kind "
+            "an installed capability registers a resolver for"
+        )
+    return fd.unresolved_kind_reason(kind, registry)
 
 
 # --- per file: successors ------------------------------------------------------
@@ -1192,7 +1202,8 @@ class _Catalogue:
     """The rule sets of one repository state, indexed for the cross-file checks.
 
     Every answer is computed once and kept: ancestors, the fills along a
-    chain, a record's status, a capability's declared dependencies.
+    chain, a record's status, a capability's declared dependencies, the
+    registered anchor kinds.
     """
 
     def __init__(self, target_root: Path, discovery: RuleSetDiscovery) -> None:
@@ -1329,6 +1340,12 @@ class _Catalogue:
                     yield _Fill(rule_set, rule, index, reference.point_key)
 
     # -- the repository
+
+    @cached_property
+    def anchor_kinds(self) -> dict[str, fd.ResolverCommand]:
+        """The anchor kinds installed capabilities register, from the one registry
+        the friction checks read (`registered_anchor_kinds`; ADR-057 point 2)."""
+        return fd.registered_anchor_kinds(self.target_root)
 
     def decision(self, record: str) -> tuple[Path | None, str | None]:
         """(the record's file, its status) for a cited decision id, or (None, None)."""
