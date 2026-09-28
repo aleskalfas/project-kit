@@ -14,6 +14,7 @@ reads:
     - CONTRIBUTING.md
     - .pkit/decisions/README.md
     - .pkit/cli/README.md
+    - .pkit/agents/project/overlay.yaml
 ---
 
 # Authoring a decision record

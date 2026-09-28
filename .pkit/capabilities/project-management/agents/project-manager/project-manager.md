@@ -13,6 +13,7 @@ reads:
     - COR-018
     - COR-019
     - COR-026
+    - COR-047
   paths:
     - .pkit/capabilities/project-management/README.md
     - .pkit/capabilities/project-management/skills/pm/pm.md
