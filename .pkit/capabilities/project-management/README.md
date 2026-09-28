@@ -381,8 +381,15 @@ Setting the id touches no issue — the per-issue ownership *marker* is written 
 
 | Command | What it does |
 |---|---|
-| `open-pr [--closes <N> ...] [--type T] [--scope S] [--summary "<s>"] [--body-file F] [--draft]` | Opens the PR for the current branch. The closing issue comes from the branch name (`<type>/<N>-<slug>`) unless `--closes` names it; **`--closes` repeats**, so one PR that lands several Tasks closes each of them on merge. The first closing issue is the primary one: it supplies the title's Conventional-Commits type, the default summary and the base branch. The body carries a `Closes #N` line for every closing issue — the template gets one each, and a `--body-file` gains any it does not already name. |
+| `open-pr [<N>] [--closes <N> ...] [--type T] [--scope S] [--summary "<s>"] [--body-file F] [--draft]` | Opens the PR for the current branch. The closing issue is the positional `<N>`, as `review-work` and `done-work` take it, or `--closes <N>`, its explicit form; without either it comes from the branch name (`<type>/<N>-<slug>`). **`--closes` repeats**, so one PR that lands several Tasks closes each of them on merge. The first closing issue is the primary one: it supplies the title's Conventional-Commits type, the default summary and the base branch. The body carries a `Closes #N` line for every closing issue — the template gets one each, and a `--body-file` gains any it does not already name. |
 | `edit-pr <PR> [--title T] [--body B \| --body-file F \| --append A] [--closes <N> ...]` | Title / body edit, validated against the PR rules. `--closes` (repeatable) adds a `Closes #N` line beside the existing ones for each named issue the body does not already close. |
+
+**The PR title is composed, not given whole:** `<type>(<scope>): <summary>`. `--type` overrides the type derived from the primary issue's `type:*` label, `--scope` adds the scope (the title has none without it), and `--summary` is only the description part after the colon, defaulting to the issue title without its `[Type]` prefix, lowercased:
+
+```
+pkit pm open-pr 1017 --scope pm --summary "take the issue number positionally" --body-file body.md
+# → fix(pm): take the issue number positionally   (closes #1017; fix from its type:bug label)
+```
 
 `validate-pr` reads every closing reference: a PR closing several issues is valid, and its title type is cross-checked against each closing issue's type (a mix of types is a warning). `done-work <N>` gates the checkboxes of issue `N` only, so tick the other closing issues' boxes before the merge, and run `close-issue <M> --mode=pr-merge` on each afterwards to reconcile its state label.
 
