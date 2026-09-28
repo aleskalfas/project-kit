@@ -21,7 +21,29 @@ Signature (batch-capable — set several fields in one call):
   - --priority    one of the adopter's classification priority values.
   - --workstream  one of the adopter's declared workstream slugs.
   - --parent      a parent issue number; rewrites the body's first parent-ref
-                  line to the issue type's `parent_ref_form`.
+                  line to the issue type's `parent_ref_form` AND moves the
+                  native sub-issue link to the same parent (see below).
+
+Parent: the first line and the native link move together (#1040)
+------------------------------------------------------------------
+[project-management:DEC-005-linking-and-containment] keeps an issue's parent in
+two records — the first-line parent-ref and GitHub's native sub-issue link — and
+`create-issue` / `link-parent` make them agree. A `--parent` that rewrote only
+the first line would make them disagree again, so under `native` containment
+(the default) `--parent` also moves the native link, through the containment
+seam (`_lib.containment.move_sub_issue`; never a raw `gh` call here):
+
+  * The issue's current native parent is read during validation, so the plan
+    says whether the link is added, moved or already in place — and a read that
+    fails refuses the call before anything is written (exit 1).
+  * The native write comes FIRST, the first-line rewrite straight after it. A
+    move GitHub refuses stops the call before any write, naming the parent the
+    issue stays under (exit 3) — so the two records never end up naming
+    different parents because of this verb. On an instance without native
+    sub-issues the link is skipped and the first line stays the record.
+  * A parent-ref that names a milestone is not a sub-issue relationship, and
+    `textual` containment writes no native links at all; in both cases only
+    the first line changes.
 
 It does NOT reinvent classification rules — kind/priority/workstream resolve
 through the SAME seam create-issue uses (`axis_labels.resolve_write`, honouring
@@ -101,7 +123,8 @@ Or via the dispatcher (per COR-021):
 
 Exit codes:
   0  applied (or no-op idempotent success; or dry-run reported)
-  1  refusal — membership; up-front validation (nothing mutated); or a requested
+  1  refusal — membership; up-front validation (nothing mutated), including a
+     `--parent` whose issue's native parent could not be read; or a requested
      axis could not be set on its substrate: the board case cannot be resolved
      (no card, no such field, no such option, unsupported field type, or the board
      read failed), or the board and substrate-map disagree about who owns the axis
@@ -113,8 +136,9 @@ Exit codes:
      non-zero exit, since all of them are knowable without writing.
   2  usage error (issue not found; no field given; unknown value)
   3  gh write failure (a label/title/body edit, or a board field-value write,
-     failed at the point of writing). Re-running is safe: application is
-     idempotent.
+     failed at the point of writing), or the native parent link could not be
+     added or moved (nothing else is written then). Re-running is safe:
+     application is idempotent.
 """
 
 from __future__ import annotations
@@ -135,7 +159,9 @@ from _lib import bootstrap_gate  # noqa: E402
 from _lib import axis_carriage  # noqa: E402
 from _lib import axis_labels  # noqa: E402
 from _lib import board_fields  # noqa: E402
+from _lib import body_parent_ref  # noqa: E402
 from _lib import classification_rules  # noqa: E402
+from _lib import containment  # noqa: E402
 from _lib import provenance  # noqa: E402
 from _lib import session_guard  # noqa: E402
 from _lib import substrate_writes  # noqa: E402
@@ -316,6 +342,8 @@ def main() -> int:
     if args.parent is not None:
         if args.parent < 1:
             errors.append(f"parent must be a positive issue number; got {args.parent}")
+        elif args.parent == args.issue_number:
+            errors.append(f"cannot set --parent: #{args.issue_number} cannot be its own parent")
         else:
             structural_type = infer_structural_type(title, issue_types, classification=classification)
             if structural_type is None:
@@ -331,6 +359,28 @@ def main() -> int:
                         f"issue type {structural_type!r} declares no parent_ref_form; "
                         "cannot set a parent-ref"
                     )
+
+    # The native link follows the first line (DEC-005, #1040). Where the issue
+    # sits natively now is read here, as part of validation: a read that fails
+    # refuses before anything is written, and the plan can say whether the link
+    # is added, moved or already in place.
+    native_parent: FieldResult | None = None
+    native_holder: containment.NativeParent | None = None
+    if (
+        not errors
+        and parent_ref_line is not None
+        and _links_natively(parent_ref_line, capability_root)
+    ):
+        state = containment.read_link_state(config, issue_number=args.issue_number)
+        if state is None:
+            errors.append(
+                f"cannot set --parent: #{args.issue_number}'s native parent could not "
+                "be read, so its native link could not be kept in agreement with the "
+                "first line"
+            )
+        else:
+            native_holder = state.parent
+            native_parent = _plan_native_parent(native_holder, args.parent)
 
     if errors:
         for e in errors:
@@ -399,6 +449,8 @@ def main() -> int:
     if parent_ref_line is not None:
         new_body, parent_result = _plan_parent(body, parent_ref_line)
         results.append(parent_result)
+    if native_parent is not None:
+        results.append(native_parent)
 
     for r in results:
         marker = "ok" if r.ok else "refused"
@@ -406,10 +458,12 @@ def main() -> int:
 
     body_changed = new_body is not None and new_body != body
     title_changed = new_title is not None and new_title != title
+    native_changed = native_parent is not None and native_parent.changed
     any_change = (
         bool(label_add or label_remove)
         or body_changed
         or title_changed
+        or native_changed
         or bool(board_writes)
     )
 
@@ -455,17 +509,30 @@ def main() -> int:
             print("aborted.", file=sys.stderr)
             return 0
 
-    if label_add or label_remove:
-        if not _gh_edit_labels(args.issue_number, label_add, label_remove, config):
-            return 3
-    if title_changed:
-        if not _gh_write_title(args.issue_number, new_title or "", config):
-            return 3
+    # The parent's two records are written back to back, the native link first:
+    # a link that cannot be made stops the call before the first line changes,
+    # so the two never name different parents because of this call.
+    if native_changed and not _write_native_parent(
+        args.issue_number, args.parent, config, had_parent=native_holder is not None
+    ):
+        return 3
     if body_changed:
         stamped = provenance.stamp(
             new_body or "", provenance.read_versions(capability_root)
         )
         if not _gh_write_body(args.issue_number, stamped, config):
+            if native_changed:
+                print(
+                    f"\n[failed] #{args.issue_number}: the native link is now under "
+                    f"#{args.parent}, but the first line was NOT rewritten; re-run "
+                    "the same set-field to bring the first line along."
+                )
+            return 3
+    if label_add or label_remove:
+        if not _gh_edit_labels(args.issue_number, label_add, label_remove, config):
+            return 3
+    if title_changed:
+        if not _gh_write_title(args.issue_number, new_title or "", config):
             return 3
     for write in board_writes:
         if not _write_board_field(write, config):
@@ -1133,6 +1200,46 @@ def _plan_parent(body: str, parent_ref_line: str) -> tuple[str, FieldResult]:
     )
 
 
+def _links_natively(parent_ref_line: str, capability_root: Path) -> bool:
+    """True when setting this parent-ref also sets a native sub-issue link.
+
+    It does when the line names an issue parent — a milestone is not a
+    sub-issue relationship — and containment is `native` (DEC-039: `textual`
+    writes no native links).
+    """
+    label = parent_ref_line.split(":", 1)[0].strip()
+    return (
+        label != body_parent_ref.MILESTONE_LABEL
+        and axis_labels.containment_mode(capability_root) == axis_labels.CONTAINMENT_NATIVE
+    )
+
+
+def _plan_native_parent(
+    holder: containment.NativeParent | None, parent: int
+) -> FieldResult:
+    """The native half of `--parent`: add the link, move it, or leave it."""
+    if holder is not None and holder.is_issue(parent):
+        return FieldResult(
+            field="parent",
+            ok=True,
+            changed=False,
+            message=f"parent: native link already under #{parent} (no-op)",
+        )
+    if holder is not None:
+        return FieldResult(
+            field="parent",
+            ok=True,
+            changed=True,
+            message=f"parent: native link moves from {holder.ref} to #{parent}",
+        )
+    return FieldResult(
+        field="parent",
+        ok=True,
+        changed=True,
+        message=f"parent: native link added under #{parent}",
+    )
+
+
 _PARENT_REF_RES = (
     re.compile(r"^Milestone:\s+\[#(\d+)\]\(\.\./milestone/\1\)\s*$"),
     re.compile(r"^Milestone:\s+#\d+\s*$"),
@@ -1214,6 +1321,36 @@ def _gh_edit_labels(
         )
         return False
     return True
+
+
+def _write_native_parent(
+    issue_number: int, parent: int, config: dict, *, had_parent: bool
+) -> bool:
+    """Put the issue natively under `parent` through the containment seam.
+
+    True when the caller may go on to rewrite the first line: the link is in
+    place (added, moved, or found already there), or the instance has no native
+    sub-issues and the issue had no native parent — then the first line is the
+    only record, as in `create-issue`. False, with the reason printed, when the
+    link could not be put in place: a move GitHub refused (the issue stays
+    under the parent it has), an "unsupported" answer for an issue that does
+    have a native parent, or a failed write. Nothing else has been written at
+    that point.
+    """
+    result = containment.move_sub_issue(
+        config, parent_number=parent, child_number=issue_number
+    )
+    if result.ok:
+        print(f"  [ok] {result.detail}")
+        return True
+    if result.outcome is containment.LinkOutcome.UNSUPPORTED and not had_parent:
+        print(f"  [warn] {result.detail}")
+        return True
+    print(
+        f"\n[failed] #{issue_number}: parent NOT set — {result.detail}. Nothing "
+        "was written: the first line and the native link are as they were."
+    )
+    return False
 
 
 def _write_board_field(write: BoardWrite, config: dict) -> bool:
