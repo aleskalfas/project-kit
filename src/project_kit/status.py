@@ -60,6 +60,7 @@ def report_status() -> None:
     _report_capabilities(target_root, source_kit)
     _report_documentation(target_root)
     _report_friction(target_root)
+    _report_rule_sets(target_root)
     _report_decisions(target_root)
     _report_skills_inventory(target_root)
     _report_agents_inventory(target_root)
@@ -269,6 +270,50 @@ def _report_friction(target_root: Path) -> None:
         for entry in declared:
             owner = "" if entry.source == "project" else f" ({entry.source.split(':', 1)[-1]})"
             click.echo(f"{_LIST_INDENT}{entry.resolved}{owner}")
+
+
+def _report_rule_sets(target_root: Path) -> None:
+    """The rule sets found, then each inheritance pin whose inherited set has moved
+    to another major, with the edit that re-pins it (COR-051 point 7).
+
+    The pins are the ones `pkit validate` fails under `versions`, from the same
+    computation (`rule_sets.pin_checks`), so the two never disagree; status
+    shows each beside that failure with its fix. Reads forgivingly: a rule set
+    that cannot be read is validate's finding.
+    """
+    from project_kit import rule_sets
+
+    click.echo()
+    click.echo("  " + cli_render.style("heading", "Rule sets"))
+    try:
+        discovery = rule_sets.discover_rule_sets(target_root)
+        checks = rule_sets.pin_checks(discovery)
+    except Exception:  # noqa: BLE001 — soft probe; a broken rule set is validate's finding
+        return
+    if not discovery.rule_sets and not discovery.unreadable:
+        click.echo(f"    {'found':<18} none")
+        return
+    unreadable = f", {len(discovery.unreadable)} unreadable" if discovery.unreadable else ""
+    click.echo(
+        f"    {'found':<18} {len(discovery.rule_sets)} rule set(s){unreadable}, "
+        f"{len(discovery.rules)} rule(s)"
+    )
+    behind = [check for check in checks if check.repinned is not None]
+    if not checks:
+        click.echo(f"    {'pins':<18} none")
+    elif not behind:
+        click.echo(f"    {'pins':<18} {len(checks)} checked, all current")
+    else:
+        click.echo(
+            f"    {'pins':<18} {len(checks)} checked, {len(behind)} behind the inherited "
+            f"set's major:"
+        )
+        for check in behind:
+            click.echo(
+                f"{_LIST_INDENT}{check.rule_set.citation} pins {check.pin}; "
+                f"{check.inherited.citation} is at {check.inherited.version}"
+            )
+            click.echo(f"{_LIST_INDENT}  fix: {check.fix}")
 
 
 def _report_decisions(target_root: Path) -> None:

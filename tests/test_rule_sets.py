@@ -85,6 +85,11 @@ def rules(*ids: str, **entry: Any) -> dict[str, Any]:
     return {rule_id: {"status": "accepted", "origin": dict(QUOTE), **entry} for rule_id in ids}
 
 
+def anchored_to(*artefacts: str) -> dict[str, Any]:
+    """A rule entry's container anchoring it to `artefacts` by id."""
+    return {"pkit": {"friction": {"anchors": {"artefact": list(artefacts)}}}}
+
+
 @pytest.fixture
 def adopter(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
     return make_adopter_repo()
@@ -400,10 +405,12 @@ def test_a_source_is_reported_as_an_unresolved_kind_never_passed(adopter: Adopte
     assert report.severity is rs.Severity.REPORT
     assert report.where == f"{PROJECT_SETS}/cmn.md#RS-CMN-001 /origin/source"
     assert "'transcript' is unresolved" in report.message
+    # The registry's own verdict, word for word the one an anchor of the kind gets.
+    assert fd.unresolved_kind_reason("transcript", {}) in report.message
     assert rs.fd.registered_anchor_kinds(adopter.root) == {}
 
 
-def test_a_source_of_a_core_anchor_kind_is_reported_too_until_a_capability_resolves_it(adopter: AdopterRepo) -> None:
+def test_a_source_of_a_core_anchor_kind_is_no_source_kind(adopter: AdopterRepo) -> None:
     front = cmn()
     front["rules"]["RS-CMN-001"]["origin"]["source"] = {"kind": "path", "value": "t-12"}
     write_set(adopter, f"{PROJECT_SETS}/cmn.md", front)
@@ -414,7 +421,57 @@ def test_a_source_of_a_core_anchor_kind_is_reported_too_until_a_capability_resol
     assert report.severity is rs.Severity.REPORT
     assert report.where == f"{PROJECT_SETS}/cmn.md#RS-CMN-001 /origin/source"
     assert "'path' is unresolved" in report.message
+    assert "resolves it as an anchor, never as a source" in report.message
     assert rs.fd.registered_anchor_kinds(adopter.root) == {}
+
+
+def test_a_source_is_judged_through_the_resolver_its_kind_registers(
+    adopter: AdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The pass reads the one anchor-kind registry the friction checks read and takes
+    its verdict on the kind (COR-051 point 5; ADR-057 point 2). No package metadata
+    declares an anchor kind yet, so the synthetic resolver is registered at the
+    registry itself — the function every engine calls."""
+    front = cmn()
+    front["rules"]["RS-CMN-001"]["origin"]["source"] = {"kind": "transcript", "value": "t-12"}
+    front["rules"]["RS-CMN-005"]["origin"]["source"] = {"kind": "transcript", "value": "t-13"}
+    write_set(adopter, f"{PROJECT_SETS}/cmn.md", front)
+    declared = fd.ResolverCommand("transcript", "sources", "resolve transcript", query_contract=True)
+    reads: list[Path] = []
+
+    def register(resolver: fd.ResolverCommand) -> None:
+        def registry(root: Path) -> dict[str, fd.ResolverCommand]:
+            reads.append(root)
+            return {resolver.kind: resolver}
+
+        monkeypatch.setattr(fd, "registered_anchor_kinds", registry)
+
+    # Registered with the query contract: judged by that resolver, which fails closed
+    # while registered resolvers are not run — never as a kind nothing registers.
+    register(declared)
+    result = validate(adopter)
+    assert [f.kind for f in result.findings] == [Kind.UNRESOLVED_SOURCE_KIND] * 2
+    assert reads == [adopter.root]  # the registry is read once per pass
+    message = result.findings[0].message
+    assert "the resolver `resolve transcript` that sources registers for it is not run yet" in message
+    assert fd.unresolved_kind_reason("transcript", {}) not in message
+
+    # Registered without it: refused, as the friction checks refuse it.
+    register(fd.ResolverCommand("transcript", "sources", "resolve transcript"))
+    refused = validate(adopter).findings[0].message
+    assert "does not declare the query contract" in refused
+
+    # Once the registry resolves the kind, a source of it resolves through it: no report.
+    register(declared)
+    verdicts: list[tuple[str, fd.ResolverCommand]] = []
+
+    def resolving(kind: str, registry: Mapping[str, fd.ResolverCommand]) -> str | None:
+        verdicts.append((kind, registry[kind]))
+        return None
+
+    monkeypatch.setattr(fd, "unresolved_kind_reason", resolving)
+    assert validate(adopter).findings == ()
+    assert verdicts == [("transcript", declared)] * 2
 
 
 # --- successors ---------------------------------------------------------------------
@@ -568,8 +625,13 @@ def test_a_fill_of_a_retired_rule_is_orphaned_and_a_retired_fill_counts_for_noth
     front["rules"]["RS-CMN-006"]["offers"] = ["reader"]
     write_set(adopter, f"{PROJECT_SETS}/cmn.md", front)
     old = {"status": "withdrawn", "origin": dict(QUOTE), "fills": ["RS-CMN-001#cause-location"]}
-    new = {"status": "accepted", "origin": dict(QUOTE), "fills": ["RS-CMN-001#cause-location"]}
-    orphan = {"fills": ["RS-CMN-006#reader"]}
+    new = {
+        "status": "accepted",
+        "origin": dict(QUOTE),
+        "fills": ["RS-CMN-001#cause-location"],
+        **anchored_to("RS-CMN-001"),
+    }
+    orphan = {"fills": ["RS-CMN-006#reader"]}  # orphaned: no anchor is asked of it
     write_set(
         adopter,
         f"{PROJECT_SETS}/doc.md",
@@ -582,6 +644,72 @@ def test_a_fill_of_a_retired_rule_is_orphaned_and_a_retired_fill_counts_for_noth
     assert report.severity is rs.Severity.REPORT
     assert report.where == f"{PROJECT_SETS}/doc.md#RS-DOC-004 /fills/0"
     assert "RS-CMN-006 is withdrawn" in report.message
+
+
+def test_a_fill_whose_rule_does_not_anchor_to_the_rule_it_fills(adopter: AdopterRepo) -> None:
+    front = cmn()
+    front["rules"]["RS-CMN-005"]["offers"] = ["reader", "writer"]
+    write_set(adopter, f"{PROJECT_SETS}/cmn.md", front)
+    fill = {"fills": ["RS-CMN-001#cause-location"]}
+    entries = {
+        "RS-DOC-002": {**fill, **anchored_to("RS-CMN-001")},  # anchored: clean
+        "RS-DOC-003": {"fills": ["RS-CMN-005#reader"]},  # no anchor at all
+        # Anchored elsewhere: to another rule, through a point, and to a path.
+        "RS-DOC-004": {
+            "fills": ["RS-CMN-005#writer"],
+            "pkit": {
+                "friction": {
+                    "anchors": {"artefact": ["RS-CMN-001", "RS-CMN-005#writer"], "path": ["docs/**"]}
+                }
+            },
+        },
+    }
+    write_set(adopter, f"{PROJECT_SETS}/doc.md", doc("CMN@1", **entries))
+    result = validate(adopter)
+
+    unanchored = [f for f in result.errors if f.kind is Kind.UNANCHORED_FILL]
+    assert [f.where for f in unanchored] == [
+        f"{PROJECT_SETS}/doc.md#RS-DOC-003 /fills/0",
+        f"{PROJECT_SETS}/doc.md#RS-DOC-004 /fills/0",
+    ]
+    assert kinds(result) == [Kind.UNANCHORED_FILL, Kind.UNANCHORED_FILL]
+    assert (
+        "fills RS-CMN-005#reader, but RS-DOC-003 does not anchor to RS-CMN-005" in unanchored[0].message
+    )
+    assert "add RS-CMN-005 to `pkit.friction.anchors.artefact`" in unanchored[0].message
+
+
+def test_a_fill_of_a_method_rule_anchors_to_it_bare_or_as_cited(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    adopter = make_adopter_repo(capabilities=("evidence",))
+    write_set(
+        adopter,
+        ".pkit/capabilities/evidence/rule-sets/ev.md",
+        {"rule-set": "EV", "version": "1.0.0", "rules": {"RS-EV-001": {"offers": ["a", "b", "c"]}}},
+    )
+    entries = {
+        "RS-DOC-002": {"fills": ["evidence:RS-EV-001#a"], **anchored_to("evidence:RS-EV-001")},
+        "RS-DOC-003": {"fills": ["RS-EV-001#b"], **anchored_to("RS-EV-001")},
+        # A component that does not own the set names no rule, so it anchors nothing.
+        "RS-DOC-004": {"fills": ["evidence:RS-EV-001#c"], **anchored_to("living-docs:RS-EV-001")},
+    }
+    write_set(adopter, f"{PROJECT_SETS}/doc.md", doc("evidence:EV@1", **entries))
+    result = validate(adopter)
+
+    (finding,) = result.errors
+    assert (finding.kind, finding.where) == (
+        Kind.UNANCHORED_FILL,
+        f"{PROJECT_SETS}/doc.md#RS-DOC-004 /fills/0",
+    )
+    assert "add evidence:RS-EV-001 to" in finding.message
+
+    # The anchor the pass accepts is one the friction pass resolves to the same rule.
+    discovery = fd.discover_artefacts(adopter.root)
+    filling = next(a for a in discovery.artefacts if a.id == "RS-DOC-002")
+    (anchor,) = filling.anchors_of_kind("artefact")
+    found = discovery.find(anchor)
+    assert found is not None and found.location.endswith("ev.md#RS-EV-001")
 
 
 def test_a_bare_pin_of_a_method_set_names_the_qualified_form(
