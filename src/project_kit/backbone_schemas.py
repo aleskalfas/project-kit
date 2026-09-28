@@ -363,9 +363,10 @@ def validate_container(
     shape pass reports it. Date and datetime values a YAML parser produced, and
     keys it did not read as text (`2026:`, `2026-10-02:`), are rendered back to
     their written form first (a UTC datetime as `...Z`), so the schema's string
-    patterns and the rule judge what the person wrote.
+    patterns and the rule judge what the person wrote. `as_written` is public
+    so the front-matter reader hands every consumer the same rendering.
     """
-    carrier = _as_written(carrier)
+    carrier = as_written(carrier)
     if CONTAINER_KEY not in carrier:
         return ContainerReport(
             findings=(), functionality_blocks=(), role_blocks=(), orphaned_roles=()
@@ -484,7 +485,7 @@ def _shape_findings_by_container_key(
     return grouped
 
 
-def _as_written(obj: Any) -> Any:
+def as_written(obj: Any) -> Any:
     """Render parsed values — and mapping keys — back to the form written in the file.
 
     YAML's `2026-10-02T09:40:12Z` parses to an aware datetime; the schema's
@@ -502,9 +503,9 @@ def _as_written(obj: Any) -> Any:
     suggestion — is therefore a string.
     """
     if isinstance(obj, Mapping):
-        return {_key_as_written(k): _as_written(v) for k, v in obj.items()}
+        return {_key_as_written(k): as_written(v) for k, v in obj.items()}
     if isinstance(obj, list):
-        return [_as_written(x) for x in obj]
+        return [as_written(x) for x in obj]
     if isinstance(obj, datetime):
         if obj.tzinfo is not None and obj.utcoffset() == timedelta(0):
             seconds = obj.strftime("%Y-%m-%dT%H:%M:%S")
@@ -518,7 +519,7 @@ def _as_written(obj: Any) -> Any:
 
 def _key_as_written(key: Any) -> str:
     """A mapping key as text: unchanged when already text, else its written form."""
-    return key if isinstance(key, str) else str(_as_written(key))
+    return key if isinstance(key, str) else str(as_written(key))
 
 
 def _pointer_token(segment: Any) -> str:

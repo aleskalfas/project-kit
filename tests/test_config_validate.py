@@ -265,6 +265,20 @@ def test_friction_pattern_outside_repository_is_an_error(
     assert all("leaves the repository" in m for m in _messages(report))
 
 
+def test_friction_pattern_resolving_outside_through_a_link_is_an_error(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    repo = make_adopter_repo()
+    outside = repo.root.parent / f"{repo.root.name}-outside"  # beside the repository, not in it
+    outside.mkdir()
+    (repo.root / "docs").mkdir()
+    (repo.root / "docs" / "linked").symlink_to(outside, target_is_directory=True)
+    _write_config(repo, "friction:\n  places: ['docs/linked/**', 'docs/linked/sub/**']\n")
+    report = cv.run_configuration_pass(repo.root)
+    assert _paths(report, cv.Severity.ERROR) == ["/friction/places/0", "/friction/places/1"]
+    assert all("through a link" in m for m in _messages(report))
+
+
 def test_friction_pattern_matching_nothing_is_a_warning(
     make_adopter_repo: MakeAdopterRepo,
 ) -> None:

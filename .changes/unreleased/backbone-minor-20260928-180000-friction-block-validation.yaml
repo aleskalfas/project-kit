@@ -1,0 +1,23 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit validate` now runs a `friction` pass (COR-050 point 12). It discovers
+  artefacts only in the declared places — the `friction.places` of
+  `.pkit/project/config.yaml` and, for each installed capability, the
+  string-shaped `friction.places` of its `package.yaml` under the internal
+  documentation root (object-shaped capability places follow in #1025) — reading a Markdown document's front
+  matter or each keyed entry of a collection file, and never front matter
+  elsewhere or a plain YAML file, and never a file that resolves outside the
+  repository. It fails validation on front matter in a place that does not
+  parse, a malformed `friction` block (the container schema's errors, surfaced
+  against the artefact), a dangling deferral naming no anchor of the artefact,
+  and a cycle between artefacts through `anchors.artefact` (the cycle's path is
+  shown); an invalid `friction.mode` and a settings path outside the repository
+  are the configuration pass's findings, which now also follow links. With no
+  places declared, or no artefact carrying the container and no unparsable
+  file, the pass prints only its counts. The discovery model lives in
+  `project_kit.friction_discovery` and the findings in
+  `project_kit.friction_validate`; the friction checks themselves (the change
+  check and the whole-repository check) arrive with their own Tasks.
