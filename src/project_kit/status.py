@@ -25,6 +25,9 @@ from project_kit import cli_render
 from project_kit.install import find_source_kit, find_target_root
 from project_kit.manifest import read_backbone_manifest, read_kit_version
 
+# The indent of an entry listed under a status line's label.
+_LIST_INDENT = " " * 25
+
 
 def report_status() -> None:
     """Walk the project tree and print the status report."""
@@ -56,6 +59,7 @@ def report_status() -> None:
     _report_claude_adapter(target_root)
     _report_capabilities(target_root, source_kit)
     _report_documentation(target_root)
+    _report_friction(target_root)
     _report_decisions(target_root)
     _report_skills_inventory(target_root)
     _report_agents_inventory(target_root)
@@ -195,10 +199,11 @@ def _report_capabilities(target_root: Path, source_kit: Path) -> None:
 
 
 def _report_documentation(target_root: Path) -> None:
-    """The two documentation roots with their source, and every recorded
-    location lying outside the internal root (COR-049 points 6 and 7).
+    """The two documentation roots with their source, then every recorded
+    location — those inside the internal root, then those outside it
+    (COR-049 points 6 and 7).
 
-    One line per root, one per outside-root location, in a fixed order, so the
+    One line per root, one per recorded location, in a fixed order, so the
     same repository state always renders the same lines. Reads forgivingly:
     an unreadable configuration shows the defaults.
     """
@@ -211,16 +216,59 @@ def _report_documentation(target_root: Path) -> None:
         path, source = roots.for_audience(audience)
         click.echo(f"    {label:<18} {path.as_posix()}/   ({source.value})")
     try:
+        inside = docs_roots.inside_root(target_root, roots)
         outside = docs_roots.outside_root(target_root, roots)
     except Exception:  # noqa: BLE001 — soft probe; a broken overlay is validate's finding
-        outside = []
-    if outside:
+        inside, outside = [], []
+    for label, where, recorded in (
+        ("inside root", "inside", inside),
+        ("outside root", "outside", outside),
+    ):
+        if not recorded:
+            continue
         click.echo(
-            f"    {'outside root':<18} {len(outside)} recorded location(s) outside the internal root:"
+            f"    {label:<18} {len(recorded)} recorded location(s) {where} the internal root:"
         )
-        for rec in outside:
+        for rec in recorded:
             owner = "" if rec.component == docs_roots.BACKBONE else f" ({rec.component})"
-            click.echo(f"                         {rec.name}{owner} -> {rec.path.as_posix()}")
+            click.echo(f"{_LIST_INDENT}{rec.name}{owner} -> {rec.path.as_posix()}")
+
+
+def _report_friction(target_root: Path) -> None:
+    """The friction settings discovery reads (COR-050 point 14): the mode, then
+    each declared place, surface and excluded path — the project's in written
+    order, then each capability's, tagged with the capability.
+
+    Places are always shown, so a project sees at a glance that it declares
+    none; surface and exclude only when declared. Rule-set folders are places
+    by the location rule, not by declaration, and are not listed. Reads
+    forgivingly, as discovery does; `pkit validate` reports a malformed
+    setting.
+    """
+    from project_kit.friction_discovery import read_friction_settings
+
+    click.echo()
+    click.echo("  " + cli_render.style("heading", "Friction"))
+    try:
+        settings = read_friction_settings(target_root)
+    except Exception:  # noqa: BLE001 — soft probe; a broken configuration is validate's finding
+        return
+    # A value the reader does not recognise falls back to the default, and says so.
+    mode_source = "explicit" if settings.mode == settings.mode_or_default else "default"
+    click.echo(f"    {'mode':<18} {settings.mode_or_default}   ({mode_source})")
+    if not settings.places:
+        click.echo(f"    {'places':<18} none declared")
+    for label, declared in (
+        ("places", settings.places),
+        ("surface", settings.surface),
+        ("exclude", settings.exclude),
+    ):
+        if not declared:
+            continue
+        click.echo(f"    {label:<18} {len(declared)} declared:")
+        for entry in declared:
+            owner = "" if entry.source == "project" else f" ({entry.source.split(':', 1)[-1]})"
+            click.echo(f"{_LIST_INDENT}{entry.resolved}{owner}")
 
 
 def _report_decisions(target_root: Path) -> None:

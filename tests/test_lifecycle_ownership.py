@@ -461,3 +461,79 @@ def test_the_two_predicates_agree_on_paths_this_repo_does_not_have() -> None:
     for rel in adopter_owned:
         assert own.is_adopter_owned_by_tier(rel) is True, rel
         assert own.is_sync_managed(REPO, f".pkit/{rel}") is False, rel
+
+
+# --- synced copies (living-docs DEC-001 point 1, ADR-055 point 3) -------------
+#
+# Place eligibility asks whether a path arrives as a synced copy: sync-managed,
+# in a repository a sync copies into. Keyed on origin and on the repository
+# being the methodology's source, never on the path.
+
+def _source_repository(root: Path) -> Path:
+    """Give *root* the two markers of the methodology's source repository."""
+    (root / "src" / "project_kit").mkdir(parents=True)
+    (root / "src" / "project_kit" / "__init__.py").write_text("", encoding="utf-8")
+    (root / ".pkit" / "cli").mkdir(parents=True, exist_ok=True)
+    (root / ".pkit" / "cli" / "pkit").write_text("", encoding="utf-8")
+    return root
+
+
+@pytest.mark.parametrize("path", [
+    ".pkit/decisions/README.md",
+    ".pkit/cli/README.md",
+    ".pkit/adapters/claude-code/README.md",
+    ".pkit/capabilities/shipped/README.md",
+])
+def test_kit_trees_in_an_adopter_are_synced_copies(tmp_path: Path, path: str) -> None:
+    root = _project(tmp_path, capabilities={"shipped": "kit-shipped"})
+    assert own.is_methodology_source(root) is False
+    assert own.is_synced_copy(root, path) is True
+
+
+@pytest.mark.parametrize("path", [
+    "README.md",
+    "CONTRIBUTING.md",
+    "docs/guide.md",
+    ".pkit/capabilities/mine/README.md",        # incubated: the adopter's own source
+    ".pkit/capabilities/fresh/README.md",       # unregistered: nothing copies it
+    ".pkit/capabilities/shipped/project/notes.md",  # the project tier of a shipped one
+    ".pkit/decisions/project/PRJ-001-x.md",
+])
+def test_what_no_sync_copies_is_never_a_synced_copy(tmp_path: Path, path: str) -> None:
+    root = _project(tmp_path, capabilities={"shipped": "kit-shipped", "mine": "incubated-in-repo"})
+    assert own.is_synced_copy(root, path) is False
+
+
+def test_nothing_in_the_methodology_source_is_a_synced_copy(tmp_path: Path) -> None:
+    """The source is what a sync copies from, so the kit's trees there are originals.
+
+    They stay the kit's to manage — write authority does not move — which is
+    exactly why this is a question of its own rather than `is_sync_managed`.
+    """
+    root = _source_repository(_project(tmp_path, capabilities={"shipped": "kit-shipped"}))
+    assert own.is_methodology_source(root) is True
+    for path in (".pkit/decisions/README.md", ".pkit/capabilities/shipped/README.md"):
+        assert own.is_sync_managed(root, path) is True, path
+        assert own.is_synced_copy(root, path) is False, path
+
+
+def test_one_marker_alone_is_not_the_source(tmp_path: Path) -> None:
+    """An adopter has the in-tree dispatcher; only the source has the package beside it."""
+    root = _project(tmp_path)
+    (root / ".pkit" / "cli").mkdir(parents=True)
+    (root / ".pkit" / "cli" / "pkit").write_text("", encoding="utf-8")
+    assert own.is_methodology_source(root) is False
+
+
+def test_the_source_discriminator_is_the_routers(tmp_path: Path) -> None:
+    """One idea of "the methodology's source", held by two modules that cannot share code.
+
+    The router is on the stdlib-only hot path of the installed binary; this module
+    is loaded by path where `project_kit` is not importable. They must agree.
+    """
+    from project_kit.router import is_source_checkout
+
+    adopter = _project(tmp_path)
+    source = _source_repository(_project(tmp_path / "src-repo"))
+    for root in (adopter, source, REPO):
+        assert own.is_methodology_source(root) is is_source_checkout(root), root

@@ -1,0 +1,16 @@
+component: backbone
+kind: minor
+custom:
+  category: Changed
+body: >
+  Container validation now reads the active wiring (#1030). `pkit validate` resolves the
+  project's wiring once per run and shares it across the `connections`, `versions`, `friction`
+  and `rule-sets` members; the container check inside an artefact or a rule reads from it which
+  roles have an active provider and at which version each of their data points stands. A role
+  block whose role has an active provider is no longer reported as orphaned — only a role no
+  installed capability answers is. A point block whose `schema_version` differs from the active
+  provider's point, or which names no data point that provider defines, is reported as inert
+  and its body left unvalidated. A compatible point block's body is now validated by the
+  provider's point schema, and its errors fail `pkit validate` like any malformed block; a
+  point schema that cannot be applied is reported. A bare role word that two active roles
+  share is an error until the key is written in its qualified form.

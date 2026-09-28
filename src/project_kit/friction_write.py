@@ -951,7 +951,10 @@ def _read_back(
     written = [a for a in reread if a.kind is artefact.kind and a.id == artefact.id]
     schema = _container_schema(target_root)
     errors = [
-        f for a in written for f in block_findings(a, schema) if f.severity is bs.Severity.ERROR
+        f
+        for a in written
+        for f in block_findings(a, schema, target_root)
+        if f.severity is bs.Severity.ERROR
     ]
     if len(written) != 1 or errors:
         detail = "; ".join(f"{f.pointer or '(block)'}: {f.message}" for f in errors)

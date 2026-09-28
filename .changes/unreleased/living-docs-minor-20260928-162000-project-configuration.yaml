@@ -1,0 +1,12 @@
+component: living-docs
+kind: minor
+custom:
+  category: Added
+body: >
+  The capability's project configuration has a schema: in
+  `.pkit/capabilities/living-docs/project/config.yaml`, `spaces` names each
+  documentation space's `entry-point`, and `places` assigns each place to exactly
+  one space, keyed by the place as `friction.places` in the backbone configuration
+  writes it. A place inside a documentation root belongs to that root's space
+  unless assigned; a place outside every root is assigned here (DEC-001 point 1).
+  `pkit validate` checks the file's shape.
