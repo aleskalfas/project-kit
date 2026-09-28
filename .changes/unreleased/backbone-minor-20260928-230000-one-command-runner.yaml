@@ -1,0 +1,20 @@
+component: backbone
+kind: minor
+custom:
+  category: Changed
+body: >
+  The commands a component registers are looked up and run through one runner,
+  `project_kit.command_runner` (ADR-057 point 5): one walk of the `commands:` tree that the
+  dispatcher, package validation, the validator registry and the process engine's predicate
+  runner all read, and one bounded run with a policy per kind — the predicate policy (the
+  subject and `--json`, the environment unchanged, anything but an answered JSON object
+  indeterminate) and the query policy of `pkit validate`'s capability validators (the
+  declaration required, the offline marker set, the answer validated as a findings document).
+  The time bound is one named backbone constant, thirty seconds, now documented with the runner
+  contract in the lifecycle README ("How a registered command is run"). Predicates now run in
+  their own process group, and a predicate that overruns has its whole group killed — the
+  interpreter a `uv run --script` shebang starts as a grandchild used to keep running past the
+  bound; an interrupt of `pkit` kills the group too, for predicates and validators alike, and
+  a predicate whose output cannot be decoded as UTF-8 is indeterminate instead of a crash.
+  `dispatcher.resolve_capability_script` resolves a command reference by its path through the
+  tree, so a nested leaf (`"create page"`) resolves as well as a top-level one.
