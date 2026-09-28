@@ -1,11 +1,16 @@
 # Permission profile: read-only (per ADR-005). Agents may read the repo and
-# nothing else — strict posture denies anything unmodeled. The most restrictive
-# shipped tier; read-only ⊂ non-destructive ⊂ autonomous.
+# nothing else — strict posture denies anything unmodeled — except keep their
+# intermediate files in the agent workspace, the excluded folder every shipped
+# profile grants (rules/core.md, the workspace rule; #1043), which holds nothing
+# a commit can carry. The most restrictive shipped tier;
+# read-only ⊂ non-destructive ⊂ autonomous.
 schema_version: 1
 
-description: Read the repo only — strict; everything unmodeled is denied.
+description: Read the repo only, plus the agent workspace — strict; everything unmodeled is denied.
 posture: strict
 grants:
   - subject: all
-    privilege: "[privilege-catalog:repo-read]"
+    privilege:
+      - "[privilege-catalog:repo-read]"
+      - "[privilege-catalog:workspace]"
     effect: allow

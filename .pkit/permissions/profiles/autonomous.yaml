@@ -17,6 +17,7 @@ grants:
       - "[privilege-catalog:issue-tracker]"
       - "[privilege-catalog:kit]"
       - "[privilege-catalog:repo-read]"
+      - "[privilege-catalog:workspace]"
       - "[privilege-catalog:docker]"
       - "[privilege-catalog:web-fetch]"
     effect: allow

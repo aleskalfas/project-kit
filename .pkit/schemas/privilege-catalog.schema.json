@@ -74,8 +74,34 @@
           "type": "object",
           "additionalProperties": false,
           "minProperties": 1,
-          "description": "How a request is identified as this privilege. At least one of `bash` / `tool`.",
+          "description": "How a request is identified as this privilege. At least one of `bash` / `tool` / `path`.",
           "properties": {
+            "path": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["folders"],
+              "description": "Confines the privilege to folders: it is recognized only for a request whose target lies inside one of them, never for the tool or command alone — so a grant of it neither reaches nor denies anything elsewhere. A file tool listed in `tools` is recognized by the path its payload names; a shell command, when its only effect is a file inside (a text emitter — `cat`, `echo`, `printf` — whose every output redirect lands inside, optionally fed a literal here-document, or `rm` whose every operand does). Enforced by the hook, which sees the target; never realized as a session-wide rule. The agent workspace (#1043) is the shipped instance.",
+              "properties": {
+                "folders": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "^(?!/)(?!~)(?!.*(^|/)\\.\\.(/|$))\\S+$"
+                  },
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "description": "Folders relative to the root of a checkout of the project — the project root, or a linked worktree of its repository, each with its own copy of the folder. No leading `/` or `~`, no `..`."
+                },
+                "tools": {
+                  "type": "array",
+                  "items": { "type": "string", "minLength": 1 },
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "description": "File tools recognized when the path they name lies inside a folder (e.g. `Read`, `Write`, `Edit`). Absent = shell writes only."
+                }
+              }
+            },
             "bash": {
               "type": "array",
               "items": { "$ref": "#/$defs/bash_matcher" },

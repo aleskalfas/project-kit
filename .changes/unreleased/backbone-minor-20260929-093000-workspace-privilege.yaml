@@ -1,0 +1,20 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  The permission catalog gains a `workspace` privilege, granted to every agent
+  by all three shipped profiles: creating, reading, editing and deleting files
+  in the agent workspace (`.agent-workspace/` of the project root or of a
+  linked worktree of the same repository) no longer prompts once enforcement
+  is on. It is path-confined — the new `recognize.path` recognizer matches a
+  request only when its target lies inside the folder: a file tool's path, or
+  a shell command whose only effect is a file there (an `echo`, `printf` or
+  `cat` redirected into it, optionally fed a literal here-document, or `rm` of
+  files in it). Outside the folder it has no opinion, a redirect never grants
+  the command in front of it, and the recursive-deletion guardrail still
+  wins. Behind a leading `cd`, a redirect or here-document into the workspace
+  no longer fails closed as an untrusted construct. The grant is hook-enforced
+  and never realized as a session-wide rule; `pkit permissions catalog` and
+  `overview` show the folder, and `pkit permissions diagnose report` lists a
+  prompt for the workspace first, as a defect.

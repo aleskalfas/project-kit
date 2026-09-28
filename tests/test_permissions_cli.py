@@ -2529,9 +2529,15 @@ def test_decide_verdict_path_byte_identical_to_main():
     #   _privilege_ids        → (+ _TOKEN)
     #   _strip_leading_cd     → (+ _CD_SEP, _BARE_CD)
     #   _scope_ok             → _extract_host
+    #
+    # Deliberate, reviewed verdict change (#1043, the agent workspace): the
+    # entry points `decide` and `hook_decide` gained the path-confined privilege
+    # (recognized by a request's target — a file tool's path, a shell write's
+    # redirect target) and a leading-cd remainder whose only untrusted construct
+    # is a write into its folder. They leave the frozen set; every helper below,
+    # `recognized_privileges` included, stays byte-identical — the new
+    # recognizer lives in its own functions beside them.
     frozen = (
-        # entry points
-        "decide", "hook_decide",
         # pure helpers on the verdict path
         "segments", "_strip_leading_cd", "_matches_bash",
         "recognized_privileges", "_privilege_ids", "_scope_ok",

@@ -251,6 +251,13 @@ def explain(target_root: Path, agent: str | None) -> str:
 
 # ---- catalog ---------------------------------------------------------------
 
+def _confined_folders(spec: dict) -> list[str]:
+    """The folders a path-confined privilege (the agent workspace) is recognized
+    inside, or [] for any other privilege."""
+    path = spec.get("recognize", {}).get("path")
+    return list(path.get("folders") or []) if isinstance(path, dict) else []
+
+
 def catalog(target_root: Path) -> str:
     cat = _load_catalog(target_root)
     privileges = cat.get("privileges", {})
@@ -260,7 +267,9 @@ def catalog(target_root: Path) -> str:
     for pid in sorted(privileges):
         spec = privileges[pid]
         scope = f"  [scope: {spec['scope_type']}]" if spec.get("scope_type") else ""
-        lines.append(f"  {pid:22} {spec.get('description', '')}{scope}")
+        folders = _confined_folders(spec)
+        inside = f"  [inside: {', '.join(f + '/' for f in folders)}]" if folders else ""
+        lines.append(f"  {pid:22} {spec.get('description', '')}{scope}{inside}")
     return "\n".join(lines) + "\n"
 
 
@@ -309,7 +318,10 @@ def overview(target_root: Path) -> str:
     enablers = sorted(p for p, s in privileges.items() if not s.get("guardrail"))
 
     def _scope(spec: dict) -> str:
-        return f"[{spec['scope_type']}-scope]" if spec.get("scope_type") else ""
+        if spec.get("scope_type"):
+            return f"[{spec['scope_type']}-scope]"
+        folders = _confined_folders(spec)
+        return f"[inside {', '.join(f + '/' for f in folders)}]" if folders else ""
 
     # Compute column widths across ALL rows so the two sections align together.
     id_w = max((len(p) for p in privileges), default=0)
@@ -461,6 +473,8 @@ def overview(target_root: Path) -> str:
         "                     settings — so it holds even if the hook is off/faulting",
         "  granted to: —      no agent has this enabler yet",
         "  [directory|domain-scope]  the grant can be limited to paths or hosts via --scope",
+        "  [inside <folder>/]  recognized only for a target in that folder (the agent",
+        "                     workspace) — never a session-wide rule; the hook enforces it",
         f"  backbone           {cap_note}",
         "",
         cli_render.style("heading", "Commands"),
@@ -4873,11 +4887,23 @@ def diagnose_status(target_root: Path) -> str:
 # classifier is ADVISORY for ranking only (PRJ-006 sub-decision 3): it groups raw
 # command text to ORDER and EXPLAIN the report; it never authorizes a change.
 #
+#   defect        a prompt the model says never happens — report it, don't tune
+#                 the allowlist around it
 #   recommend     a remediation we recommend the operator apply (the MVP applies
 #                 NOTHING — recommend-only; the auto-fix arc is deferred)
 #   judgement     a real trade-off only the operator can settle
 #   document      unfixable — document + route around
 _DIAGNOSE_GROUPS: list[dict[str, Any]] = [
+    # A deferral whose target is the agent workspace (#1043), as the capture
+    # half's `workspace` flag records it — the decision core's own recognizer.
+    # Every shipped profile grants the workspace to every agent, so a prompt
+    # there is a defect of the wiring or of the recognizer, never a gap to
+    # allowlist.
+    {"id": "workspace", "band": "defect",
+     "remediation": "the agent workspace is granted to every agent — check that a "
+                    "shipped profile is active and enforcement is on "
+                    "(`pkit permissions overview`); if both hold, report the "
+                    "command shape as a defect (`pkit report bug`)"},
     {"id": "interpreter", "band": "judgement",
      "heads": {"python", "python3", "node", "ruby", "perl", "sed", "awk"},
      "remediation": "allowlist the interpreter (broad) OR route via a dedicated "
@@ -5065,7 +5091,11 @@ def _diagnose_classify(record: dict[str, Any]) -> str:
     """Assign a record to a group id. Advisory only (PRJ-006 sub-decision 3):
     re-derives the group from raw command text since the deferral reason carries
     no group signal. The worst case of a misclassification here is a wrong RANK,
-    never a wrong change — the MVP applies nothing."""
+    never a wrong change — the MVP applies nothing. A deferral the capture half
+    flagged as targeting the agent workspace is a defect first, whatever its
+    shape."""
+    if record.get("workspace") is True:
+        return "workspace"
     command = str(record.get("command", ""))
     if any(marker in command for marker in _DIAGNOSE_SHELL_SHAPE):
         return "shell-shape"
@@ -5079,8 +5109,9 @@ def _diagnose_classify(record: dict[str, Any]) -> str:
     return "allowlist-gap"
 
 
-_DIAGNOSE_BAND_ORDER = ["recommend", "judgement", "document"]
+_DIAGNOSE_BAND_ORDER = ["defect", "recommend", "judgement", "document"]
 _DIAGNOSE_BAND_HEADING = {
+    "defect": "DEFECTS — prompts the model says never happen; report them, don't allowlist around them",
     "recommend": "RECOMMENDED — remediations pkit recommends (MVP applies NOTHING; recommend-only)",
     "judgement": "NEEDS YOUR JUDGEMENT — real trade-offs only you can settle",
     "document": "CAN'T FIX — document & route around",
