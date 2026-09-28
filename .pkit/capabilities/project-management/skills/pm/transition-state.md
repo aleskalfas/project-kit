@@ -64,6 +64,7 @@ pkit project-management edit-issue <N> --milestone <number|title> | --clear-mile
 ```
 pkit project-management check-criterion <N> <index> [expected-text] [<index> [expected-text]] ...
 pkit project-management uncheck-criterion <N> <index> [expected-text] ...
+pkit project-management check-criterion <N> --section doc-impact <index> ...   # `## Doc impact` boxes (show-issue --field doc-impact)
 ```
 
 **Set classification field(s)** (DEC-038 — declarative, batch, idempotent; reuses create-issue's classification resolution rather than hand-editing labels):

@@ -37,9 +37,18 @@ def unticked_boxes(body: str | None) -> list[str]:
     A missing body (`None`, as `gh`'s JSON gives for an empty one) carries no
     boxes rather than raising.
     """
+    return [text for _line_no, text in unticked_box_lines(body)]
+
+
+def unticked_box_lines(body: str | None) -> list[tuple[int, str]]:
+    """Every unticked checkbox as ``(line number, stripped line)``, in order.
+
+    The line number (0-based, into ``body.splitlines()``) is what lets a caller
+    say where each box lives — which verb ticks it (#1015).
+    """
     return [
-        line.strip()
-        for line in (body or "").splitlines()
+        (line_no, line.strip())
+        for line_no, line in enumerate((body or "").splitlines())
         if _UNTICKED_RE.match(line)
     ]
 
@@ -54,17 +63,28 @@ def all_boxes_ticked(body: str | None) -> bool:
     return not unticked_boxes(body)
 
 
-def refusal_message(unticked: list[str], *, remedy: str, scope: str = "") -> str:
+def refusal_message(
+    unticked: list[str],
+    *,
+    remedy: str,
+    scope: str = "",
+    hints: list[str] | None = None,
+) -> str:
     """Render the gate's refusal: header, one line per unticked box, remedy.
 
     *scope* qualifies the header when a path needs to name which gate refused
     (e.g. the cascade-eligibility variant); *remedy* is the path's own "what to
-    do next" sentence.
+    do next" sentence. *hints*, when given, runs parallel to *unticked*: each
+    non-empty hint is shown under its box — the command that ticks it (#1015).
     """
     header = "[refused] DEC-007 checkbox close-gate"
     if scope:
         header = f"{header} ({scope})"
     lines = [f"{header}:"]
-    lines += [f"  - {box}" for box in unticked]
+    for i, box in enumerate(unticked):
+        lines.append(f"  - {box}")
+        hint = hints[i] if hints is not None and i < len(hints) else ""
+        if hint:
+            lines.append(f"      → {hint}")
     lines += ["", f"  → {remedy}"]
     return "\n".join(lines)
