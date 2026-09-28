@@ -22,6 +22,12 @@ read** (ADR-052): undefined, its item is dropped and the resolver still
 exits 0 so the agent deploys as a generalist. A *bare* optional key (present,
 no value) is dropped the same way but reported on stderr as a `warning:` line.
 
+It also carries the agent's execution policy (#1047): `model:` and `effort:`
+from the front matter, each overridable per agent under the overlay's
+`overrides.<agent>` block. Absent or `inherit` writes no key, so the harness
+default applies; a value the harness does not accept is not written either —
+the agent deploys, inherits, and a `warning:` line names the value.
+
 This script *applies* that last check but does not *define* it. The
 sync-managed predicate and the write-carrying category registry live
 once, in the lifecycle layer's propagated `.pkit/lifecycle/ownership.py`,
@@ -64,6 +70,29 @@ RESOLVABLE_LIST_KEYS = ("owns", "needs", "answers")
 HARD_READS_KEYS = ("paths", "records")
 OPTIONAL_READS_KEYS = ("patterns",)
 
+# The agent's execution policy (#1047): the front-matter keys carried into the
+# deployed definition, and the values the harness accepts for them. The backbone
+# (`agent_policy.py`) holds the same constants under the same names, and a parity
+# test pins them — so `pkit agents` reports exactly what this resolver writes.
+#
+#   - Precedence: the overlay's `overrides.<agent>.<key>` > the front matter >
+#     inherit. Inside an override block these keys set the policy; they are not
+#     overlay categories.
+#   - `inherit`, absent, or bare writes no key: the harness default applies.
+#   - A value outside the vocabulary is not written: the agent deploys, inherits,
+#     and a `warning:` line names the value.
+#
+# The harness also accepts an integer effort; the vocabulary here is the named
+# levels, the same list `review-pr --effort` accepts.
+POLICY_KEYS = ("model", "effort")
+INHERIT = "inherit"
+MODEL_ALIASES = (
+    "sonnet", "opus", "haiku", "fable", "best", "opusplan",
+    "sonnet[1m]", "opus[1m]", "fable[1m]",
+)
+FULL_MODEL_NAME_PATTERN = r"^(?:[A-Za-z0-9-]+\.)*claude-\S+$"
+EFFORT_LEVELS = ("low", "medium", "high", "xhigh", "max")
+
 # Prefix of a stderr line that reports a problem without failing the resolve.
 # `deploy-agents.sh` prints these lines for an agent that still deploys; any
 # other stderr from a successful run (e.g. from `uv`) stays hidden.
@@ -86,6 +115,53 @@ def load_ownership():
     import ownership  # noqa: PLC0415 — deliberately lazy; see above.
 
     return ownership
+
+
+def policy_hint(key: str, value: object) -> str | None:
+    """What to write instead when *value* is not accepted for policy *key*; None if it is."""
+    if key == "model":
+        if isinstance(value, str) and (
+            value == INHERIT
+            or value in MODEL_ALIASES
+            or re.match(FULL_MODEL_NAME_PATTERN, value)
+        ):
+            return None
+        return (
+            f"use {INHERIT}, an alias ({', '.join(MODEL_ALIASES)}) "
+            f"or a full model name (claude-…)"
+        )
+    if isinstance(value, str) and (value == INHERIT or value in EFFORT_LEVELS):
+        return None
+    return f"use {INHERIT} or one of {', '.join(EFFORT_LEVELS)}"
+
+
+def carry_policy(fm_data: dict, overrides: dict, where_overridden: str, warn) -> None:
+    """Write each policy key's effective value into *fm_data*, or drop the key.
+
+    *overrides* holds the policy keys of the agent's overlay override block. The
+    override wins over the front matter; `inherit`, absent and bare write
+    nothing; a value the harness does not accept is dropped with a warning, so
+    the agent still deploys and inherits.
+    """
+    for key in POLICY_KEYS:
+        if overrides.get(key) is not None:
+            value, where = overrides[key], f"{where_overridden}.{key}"
+        elif fm_data.get(key) is not None:
+            value, where = fm_data[key], "the front matter"
+        else:
+            fm_data.pop(key, None)
+            continue
+        hint = policy_hint(key, value)
+        if hint is not None:
+            warn(
+                f"{key} {value!r} from {where} is not one the harness accepts — "
+                f"not carried, the agent inherits; {hint}."
+            )
+            fm_data.pop(key, None)
+        elif value == INHERIT:
+            fm_data.pop(key, None)
+        else:
+            fm_data[key] = value
 
 
 def main(argv: list[str]) -> int:
@@ -111,6 +187,11 @@ def main(argv: list[str]) -> int:
         overrides = data.pop("overrides", {}) or {}
         agent_overrides = overrides.get(agent_name, {}) or {}
         defaults = data
+    # The policy keys of the override block set the agent's model and effort;
+    # they are not categories, so they leave the category lookup below.
+    policy_overrides = {
+        key: agent_overrides.pop(key) for key in POLICY_KEYS if key in agent_overrides
+    }
 
     def resolve(category: str):
         if category in agent_overrides:
@@ -243,6 +324,8 @@ def main(argv: list[str]) -> int:
         for k in OPTIONAL_READS_KEYS:
             if k in fm_data["reads"] and isinstance(fm_data["reads"][k], list):
                 fm_data["reads"][k] = expand_list(fm_data["reads"][k], optional=True)
+
+    carry_policy(fm_data, policy_overrides, f"overrides.{agent_name}", warn)
 
     out = io.StringIO()
     yaml.dump(fm_data, out)

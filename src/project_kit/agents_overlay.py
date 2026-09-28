@@ -30,6 +30,11 @@ override-then-default-then-undefined rules the adapter resolver applies, exposed
 so every backbone consumer (the reference-graph's exactly-one-owner check, per
 COR-013 rule 5) resolves placeholders one way instead of re-deriving them. A
 parity test pins it to the adapter resolver's actual behaviour.
+
+The overlay's per-agent block carries one more thing than categories: the
+agent's model and effort (#1047). :func:`load_overlay_values` sets those keys
+apart, and ``pkit agents`` reports each agent's effective setting, resolved by
+:mod:`project_kit.agent_policy`.
 """
 from __future__ import annotations
 
@@ -38,14 +43,14 @@ import io
 import re
 import subprocess
 from collections.abc import Callable, Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 import click
 from ruamel.yaml import YAML
 
-from project_kit import cli_render, docs_roots
+from project_kit import agent_policy, cli_render, docs_roots
 
 # Conventional default paths for well-known overlay categories, relative to
 # the project root, **under the default documentation root** — the fallback
@@ -137,6 +142,8 @@ class AgentOverlayStatus:
     referenced: tuple[str, ...]  # overlay categories the agent references
     missing: tuple[str, ...]  # referenced but undefined (overrides considered)
     optional: tuple[str, ...]  # of `referenced`, those this agent reads optionally
+    # Effective model and effort, in `agent_policy.POLICY_KEYS` order (#1047).
+    policy: tuple[agent_policy.Setting, ...] = ()
 
     @property
     def deployable(self) -> bool:
@@ -225,15 +232,18 @@ def _placeholders(items: object) -> set[str]:
     return out
 
 
+def agent_front_matter(source: Path) -> dict[str, Any]:
+    """An agent file's parsed front matter; empty when it has none or it is not a mapping."""
+    m = _FRONTMATTER_RE.match(source.read_text(encoding="utf-8"))
+    if not m:
+        return {}
+    fm = _yaml.load(io.StringIO(m.group(1))) or {}
+    return fm if isinstance(fm, dict) else {}
+
+
 def agent_referenced_categories(source: Path) -> set[str]:
     """Categories an agent references — `<cat>` items under the resolvable keys."""
-    text = source.read_text(encoding="utf-8")
-    m = _FRONTMATTER_RE.match(text)
-    if not m:
-        return set()
-    fm = _yaml.load(io.StringIO(m.group(1))) or {}
-    if not isinstance(fm, dict):
-        return set()
+    fm = agent_front_matter(source)
     cats: set[str] = set()
     for key in RESOLVABLE_LIST_KEYS:
         cats |= _placeholders(fm.get(key))
@@ -256,13 +266,7 @@ def agent_category_roles(source: Path) -> tuple[set[str], set[str]]:
     ``hard`` and ``optional`` are disjoint and together equal
     :func:`agent_referenced_categories`.
     """
-    text = source.read_text(encoding="utf-8")
-    m = _FRONTMATTER_RE.match(text)
-    if not m:
-        return set(), set()
-    fm = _yaml.load(io.StringIO(m.group(1))) or {}
-    if not isinstance(fm, dict):
-        return set(), set()
+    fm = agent_front_matter(source)
     hard: set[str] = set()
     for key in RESOLVABLE_LIST_KEYS:
         hard |= _placeholders(fm.get(key))
@@ -279,8 +283,12 @@ def agent_category_roles(source: Path) -> tuple[set[str], set[str]]:
 
 # --- overlay ----------------------------------------------------------------
 
+# The adopter overlay, relative to the project root.
+OVERLAY_PATH = Path(".pkit") / "agents" / "project" / "overlay.yaml"
+
+
 def _overlay_path(target_root: Path) -> Path:
-    return target_root / ".pkit" / "agents" / "project" / "overlay.yaml"
+    return target_root / OVERLAY_PATH
 
 
 @dataclass(frozen=True)
@@ -289,11 +297,14 @@ class OverlayValues:
 
     Mirrors what the adapter resolver reads: every top-level key except the
     reserved ``overrides`` is a default category; ``overrides.<agent>`` holds
-    per-agent categories that *replace* (never merge with) the default.
+    per-agent categories that *replace* (never merge with) the default. The
+    policy keys of that block (``model``, ``effort`` — #1047) are not
+    categories: they sit apart in ``policy``, keyed by agent the same way.
     """
 
     defaults: dict[str, Any]
     overrides: dict[str, dict[str, Any]]
+    policy: dict[str, dict[str, Any]] = field(default_factory=dict)
 
     def resolve(self, agent_name: str, category: str) -> Any | None:
         """The value a category resolves to for one agent, or None if undefined.
@@ -335,20 +346,18 @@ def load_overlay_values(target_root: Path) -> OverlayValues:
         return OverlayValues(defaults={}, overrides={})
     overrides_raw = data.get("overrides") or {}
     overrides: dict[str, dict[str, Any]] = {}
+    policy: dict[str, dict[str, Any]] = {}
     if isinstance(overrides_raw, dict):
-        for agent, cats in overrides_raw.items():
-            if isinstance(cats, dict):
-                overrides[str(agent)] = dict(cats)
+        for agent, block in overrides_raw.items():
+            if isinstance(block, dict):
+                overrides[str(agent)] = {
+                    str(k): v for k, v in block.items() if k not in agent_policy.POLICY_KEYS
+                }
+                policy[str(agent)] = {
+                    str(k): v for k, v in block.items() if k in agent_policy.POLICY_KEYS
+                }
     defaults = {str(k): v for k, v in data.items() if k != "overrides"}
-    return OverlayValues(defaults=defaults, overrides=overrides)
-
-
-def load_overlay(target_root: Path) -> tuple[set[str], dict[str, set[str]]]:
-    """Return (default category names, {agent: override category names})."""
-    values = load_overlay_values(target_root)
-    return set(values.defaults), {
-        agent: set(cats) for agent, cats in values.overrides.items()
-    }
+    return OverlayValues(defaults=defaults, overrides=overrides, policy=policy)
 
 
 def expand_placeholders(
@@ -391,20 +400,35 @@ def expand_placeholders(
 # --- status + reconcile ------------------------------------------------------
 
 def agent_overlay_statuses(target_root: Path) -> list[AgentOverlayStatus]:
-    defaults, overrides = load_overlay(target_root)
+    values = load_overlay_values(target_root)
+    defaults = set(values.defaults)
     out: list[AgentOverlayStatus] = []
     for name, (ns, src) in sorted(discover_kit_agents(target_root).items()):
         referenced = agent_referenced_categories(src)
         _hard, optional = agent_category_roles(src)
-        defined = defaults | overrides.get(name, set())
+        defined = defaults | set(values.overrides.get(name, {}))
         missing = referenced - defined
         out.append(AgentOverlayStatus(
             name=name, namespace=ns, source=src,
             referenced=tuple(sorted(referenced)),
             missing=tuple(sorted(missing)),
             optional=tuple(sorted(optional)),
+            policy=agent_policy.effective_policy(
+                agent_front_matter(src), values.policy.get(name, {})
+            ),
         ))
     return out
+
+
+def _policy_cell(setting: agent_policy.Setting) -> str:
+    """One `pkit agents` cell: ``model inherit``, ``effort high (overlay)``, or
+    the refused value when the deploy drops it."""
+    cell = f"{setting.key} {setting.value}"
+    if setting.problem is not None:
+        return f"{cell} ({setting.source} value {setting.written!r} refused)"
+    if setting.source == agent_policy.SOURCE_OVERLAY:
+        return f"{cell} (overlay)"
+    return cell
 
 
 def missing_categories(target_root: Path) -> list[str]:
@@ -443,13 +467,14 @@ def render_status(target_root: Path) -> str:
             "name": s.name,
             "namespace": s.namespace,
             "status": "deployable" if s.deployable else "SKIPPED",
+            **{setting.key: _policy_cell(setting) for setting in s.policy},
             "missing": ", ".join(s.missing),
         }
         for s in statuses
     ]
     gloss = "deploy via `pkit sync`; configure paths in .pkit/agents/project/overlay.yaml"
     sections = [cli_render.section(
-        rows=rows, columns=["name", "namespace", "status", "missing"],
+        rows=rows, columns=["name", "namespace", "status", *agent_policy.POLICY_KEYS, "missing"],
         header="AGENTS", gloss="kit-shipped; resolved against the project overlay",
         empty="(no kit-shipped agents found)",
     )]
