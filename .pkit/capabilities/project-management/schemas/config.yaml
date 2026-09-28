@@ -84,6 +84,7 @@ has_projects_v2_board: false
 # review:                             # per DEC-027 + DEC-028
 #   mode: agent
 #   agents:
+#     effort: medium                  # one uniform reviewer effort; absent = harness default (#1046)
 #     local_registered:
 #       - name: pm-reviewer
 #
