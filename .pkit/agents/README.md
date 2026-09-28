@@ -82,6 +82,7 @@ Body prose cites the same references the frontmatter declares. The validator ext
 - **Markdown link targets** count: `[link text](.pkit/foo.md)`.
 - **Record IDs** as bare tokens count: `COR-005`, `PRJ-002` (regex `^(COR|PRJ)-\d+\b`).
 - **Rule ids** count too (COR-051): `RS-CMN-003`, an extension point `RS-CMN-003#cause-location`, and a method rule set's rule with its component in brackets, `[living-docs:RS-LDOC-003]`. They are not declared in frontmatter; each must resolve to a rule of an installed rule set, and `pkit refs validate` reports one that does not.
+- **Role and point addresses** count in brackets (COR-019, COR-053): `[pkit::documentation]`, `[pkit::documentation:readers]`. They are not declared in frontmatter; each must name a role or point an installed capability declares, and `pkit refs validate` reports one that does not — and reports a bracketed token carrying `::` that is not an address as malformed.
 - **Hook names** count when they appear: `project-management.create-issue` (regex `^[a-z][a-z0-9-]*(\.[a-z][a-z0-9-]*){1,2}$`).
 - **Not counted**: anything inside fenced code blocks, HTML comments, or strikethrough.
 
