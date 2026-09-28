@@ -24,10 +24,13 @@ checks the owning records ask for:
   friction pass reads the settings and reports only on the artefacts.
 - **Connections** (COR-053 point 7, COR-052 point 4): each provider or
   contributor selection names an installed capability, read from the
-  backbone manifest — otherwise an error naming the fix. Whether that
-  capability *provides the role* or *fills the point* cannot be checked until
-  package metadata declares connections; until then that is reported as
-  information, never an error.
+  backbone manifest — otherwise an error naming the fix. A provider selection
+  must name a capability that *provides the role*; a contributor selection
+  must name a `single` data point some installed provider defines and a
+  capability that *contributes to it* — each read from the package metadata
+  through the wiring resolver's declarations (`connections.load_declarations`),
+  each an error naming the fix. A role with two installed providers and no
+  selection is the resolver's own finding (the `connections` heading).
 
 Findings are structured records (a JSON Pointer into the file, a severity,
 a message) in a deterministic order: shape findings by position, then the
@@ -54,6 +57,7 @@ from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
 from project_kit import backbone_schemas, cli_render
+from project_kit import connections as wiring
 from project_kit.friction_discovery import is_inside_repository
 from project_kit.manifest import read_backbone_manifest
 from project_kit.project_config import PROJECT_CONFIG_RELPATH, project_config_path
@@ -362,11 +366,9 @@ def _connections_findings(
     if not isinstance(connections, Mapping):
         return []
     installed = _installed_capabilities(target_root)
+    declarations = wiring.load_declarations(target_root)
     findings: list[ConfigFinding] = []
-    for key, unverifiable in (
-        (PROVIDERS_KEY, "provides role {address!r}"),
-        (SELECTIONS_KEY, "fills point {address!r} and that it is a `single` point"),
-    ):
+    for key in (PROVIDERS_KEY, SELECTIONS_KEY):
         entries = connections.get(key)
         if not isinstance(entries, Mapping):
             continue
@@ -385,14 +387,12 @@ def _connections_findings(
                     )
                 )
                 continue
-            findings.append(
-                ConfigFinding(
-                    pointer,
-                    Severity.INFO,
-                    f"cannot verify that {capability!r} {unverifiable.format(address=address)} "
-                    f"until package metadata declares connections; the capability is installed.",
-                )
-            )
+            if key == PROVIDERS_KEY:
+                problem = _provider_problem(declarations, str(address), capability)
+            else:
+                problem = _selection_problem(declarations, str(address), capability)
+            if problem is not None:
+                findings.append(ConfigFinding(pointer, Severity.ERROR, problem))
     return findings
 
 
@@ -401,6 +401,67 @@ def _installed_capabilities(target_root: Path) -> frozenset[str]:
     if manifest is None:
         return frozenset()
     return frozenset(entry.name for entry in manifest.components if entry.kind == "capability")
+
+
+def _provider_problem(declarations: wiring.Declarations, role: str, capability: str) -> str | None:
+    """The provider-selection key names a capability that provides the role (COR-053 point 7)."""
+    providers = declarations.providers_of(role)
+    if capability in providers:
+        return None
+    roles = declarations.roles_of(capability)
+    provides = f"it provides {_names(roles)}" if roles else "it provides no role"
+    choice = (
+        f"the installed providers of the role are {_names(providers)}; select one of them"
+        if providers
+        else "no installed capability provides the role; install one"
+    )
+    return (
+        f"{capability!r} does not provide role {role!r} ({provides}); {choice}, or remove "
+        f"the entry (COR-053 point 7)."
+    )
+
+
+def _selection_problem(
+    declarations: wiring.Declarations, address: str, capability: str
+) -> str | None:
+    """The contributor-selection key names a `single` data point and one of its
+    installed contributors (COR-052 point 4)."""
+    points = [
+        p for p in declarations.points if p.address == address and p.kind is wiring.PointKind.DATA
+    ]
+    if not points:
+        return (
+            f"no installed capability defines a data point {address!r}; correct the address "
+            f"or remove the entry (COR-052 point 4)."
+        )
+    if not any(p.combination == "single" for p in points):
+        declared = ", ".join(sorted({p.combination or "no combination" for p in points}))
+        return (
+            f"point {address!r} is not a `single` point (declared: {declared}); a contributor "
+            f"selection applies only to `single` points — remove the entry (COR-052 point 4)."
+        )
+    contributors = sorted(
+        {
+            c.capability
+            for c in declarations.counterparts
+            if c.kind is wiring.CounterpartKind.CONTRIBUTION and c.target == address
+        }
+    )
+    if capability in contributors:
+        return None
+    known = (
+        f"its installed contributors are {_names(contributors)}; select one of them"
+        if contributors
+        else "no installed capability contributes to it"
+    )
+    return (
+        f"{capability!r} declares no contribution to {address!r}; {known}, or remove the "
+        f"entry (COR-052 point 4)."
+    )
+
+
+def _names(names: Iterable[str]) -> str:
+    return ", ".join(repr(n) for n in names)
 
 
 # --- rendering ---------------------------------------------------------------
