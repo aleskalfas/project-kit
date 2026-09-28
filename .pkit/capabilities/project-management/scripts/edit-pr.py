@@ -11,6 +11,11 @@ Edits a PR's body or title. Validates the new state against
 titles.yaml's `pr` pattern + git-conventions.yaml's `pr-body` rules
 before writing. Membership gate per DEC-021 runs at startup.
 
+`--closes <N>` (repeatable) adds a closing reference: the body gains a
+`Closes #N` line for each named issue it does not already close, so a PR
+that lands a second Task closes it on merge too (#1049). A reference the
+body already carries is left alone.
+
 Self-contained via PEP 723; runs via
   uv run --script .pkit/capabilities/project-management/scripts/edit-pr.py 99 --append "Additional notes..."
 
@@ -41,7 +46,8 @@ from ruamel.yaml.error import YAMLError
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import bootstrap_gate  # noqa: E402
-from _lib.gh import gh_run, load_adopter_config  # noqa: E402
+from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
+from _lib import pr_validation  # noqa: E402
 from _lib import provenance  # noqa: E402
 from _lib import session_guard  # noqa: E402
 from _lib.membership import (  # noqa: E402
@@ -97,6 +103,18 @@ def main() -> int:
         help="Replace the PR title.",
     )
     parser.add_argument(
+        "--closes",
+        type=int,
+        action="append",
+        default=None,
+        metavar="N",
+        help=(
+            "Add a closing reference: the body gains a `Closes #N` line unless "
+            "it already closes #N. Repeatable; combines with the body flags "
+            "(applied to the resulting body)."
+        ),
+    )
+    parser.add_argument(
         "--force",
         action="store_true",
         help="Accept hard-reject validation findings (audit-comment recorded).",
@@ -123,10 +141,16 @@ def main() -> int:
     session_guard.add_override_argument(parser)
     args = parser.parse_args()
 
-    if args.body is None and args.body_file is None and args.append is None and args.title is None:
+    if (
+        args.body is None
+        and args.body_file is None
+        and args.append is None
+        and args.title is None
+        and not args.closes
+    ):
         print(
             "error: nothing to edit. Pass --body, --body-file, --append, "
-            "or --title.",
+            "--title or --closes.",
             file=sys.stderr,
         )
         return 2
@@ -173,11 +197,37 @@ def main() -> int:
     if new_body is None:
         return 2
 
+    added_closes: list[int] = []
+    if args.closes:
+        # Each named issue must exist: a typo would otherwise ride into the
+        # body as a `Closes #N` that closes the wrong issue on merge.
+        for n in dict.fromkeys(args.closes):
+            if _gh_get_issue(n, config) is None:
+                return 2
+        already = set(pr_validation.extract_closing_issues(new_body))
+        added_closes = [n for n in dict.fromkeys(args.closes) if n not in already]
+        new_body = pr_validation.with_closing_references(new_body, args.closes)
+
     print(f"edit-pr: #{args.pr_number}")
     print(f"  current title: {current_title}")
     if args.title is not None:
         print(f"  new title:     {new_title}")
     print(f"  body change:   {len(current_body)} → {len(new_body)} chars")
+    if args.closes:
+        print(
+            "  closes:        "
+            + (", ".join(f"+#{n}" for n in added_closes) or "(already closes every one)")
+        )
+
+    closes_only = (
+        args.body is None
+        and args.body_file is None
+        and args.append is None
+        and args.title is None
+    )
+    if args.closes and closes_only and not added_closes:
+        print(f"\n[noop] PR #{args.pr_number} already closes every named issue.")
+        return 0
 
     findings = _validate(
         title=new_title,
@@ -210,7 +260,7 @@ def main() -> int:
         for f in findings:
             if f.severity == SEVERITY_HARD_REJECT:
                 audit_lines.append(f"  - {f.label}: {f.detail}")
-        if not _gh_pr_comment(args.pr_number, "\n".join(audit_lines)):
+        if not _gh_pr_comment(args.pr_number, "\n".join(audit_lines), config):
             return 3
 
     if not _gh_apply_edit(
@@ -323,6 +373,10 @@ def _gh_get_pr(pr_number: int, config: dict) -> dict | None:
         return json.loads(proc.stdout)
     except json.JSONDecodeError:
         return None
+
+
+def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
+    return gh_get_issue(issue_number, config, fields="number,state")
 
 
 def _gh_apply_edit(

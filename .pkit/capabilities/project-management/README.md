@@ -360,7 +360,31 @@ All three accept `--dry-run` (validate + show the plan, write nothing) and `--ye
 
 Setting the id touches no issue — the per-issue ownership *marker* is written by the lifecycle commands (`create-issue` / `start-work` / `handoff-issue`), which read this id. That marker's substrate is selectable (`comment` default, or `label`) per [project-management:DEC-043-ownership-substrate-selection]; the identity here is orthogonal to that choice.
 
-**`close-issue`** is *not* in the seven-command palette — it handles closure outside forward-progress flow: won't-do / abandonment (`--mode=wont-do`), the post-PR-merge cascade hook (`--mode=pr-merge`), and **cascade-eligibility closure** of a container (epic/feature/umbrella) once all its children are closed and its own checkboxes are ticked (`--mode=cascade-eligibility-close`, a non-skippable DEC-007 gate).
+#### Closing, reopening and editing an issue — `close-issue` / `reopen-issue` / `edit-issue`
+
+**`close-issue`** is *not* in the seven-command palette — it handles closure outside forward-progress flow. **`reopen-issue`** undoes a closure, and **`edit-issue`** changes an issue's title, body or milestone without moving it in the lifecycle.
+
+| Command | What it does |
+|---|---|
+| `close-issue <N> --reason "<R>"` | Won't-do / abandonment (`--mode=wont-do`, the default): the DEC-007 checkbox close-gate, a closing comment with the reason, closed as not planned. |
+| `close-issue <N> --mode=pr-merge` | The post-merge hook after GitHub's own `Closes #N` close: reconciles the state label to done and runs the closure cascade. It closes nothing itself. |
+| `close-issue <N> --mode=pr-merge --pr <M>` | Closes an open **leaf** whose work landed in merged PR `M` without the PR naming it — a Task done through another Task's PR. PR `M` is verified merged, the checkbox close-gate runs, the reference is posted as a comment (once: a retry does not repeat it), the issue closes as completed, and the closure cascade runs. A container, an unmerged PR and an unticked box are refused. |
+| `close-issue <N> --mode=cascade-eligibility-close` | Closes a container (epic/feature/umbrella) once all its children are closed and its own checkboxes are ticked (a non-skippable DEC-007 gate). |
+| `reopen-issue <N> [--reason "<R>"]` | Reopens a closed issue and puts it back into the lifecycle: its state label is removed, so it reads as `backlog` when it has a milestone and `todo` otherwise, and `start-work` (or `promote-issue`) takes it on from there. An open issue still labelled done is repaired the same way. |
+| `edit-issue <N> [--title T] [--body B \| --body-file F \| --append A] [--milestone <M> \| --clear-milestone]` | Title / body edit, validated against the title and body rules for the fields edited (see above). `--milestone` moves the issue to an OPEN milestone — its number or exact title, validated as `create-issue --milestone` validates it; `--clear-milestone` detaches it. |
+
+**Why a reopen removes the state label instead of transitioning out of done.** `done` is the workflow's terminal state (`schemas/workflow.yaml`), and the closure cascade folds children against it; a transition out of it would make it an end state that is not one. A reopened issue re-enters the lifecycle where any open issue without a state label sits — the detectors read `backlog` with a milestone and `todo` without — which is where a freshly filed or freshly scheduled issue sits too. No state label is *added*, so the reset does not show as an ungoverned state change (`history --check-drift` counts added state labels). Where the state is derived from open/closed, nothing is removed; where it lives on a Projects-v2 board, reset the board's Status by hand, as for `move-issue`.
+
+**A milestone edit is not a state change.** The native Milestone field is written through the substrate-write seam, and a first body line naming the old milestone as the parent (`Milestone: [#<N>](../milestone/<N>)`, or the older plain form) is rewritten to the new one, so the textual record and the native field keep agreeing — `close-milestone` counts a milestone's children by both. An issue with no state label has its position read from its milestone, so a milestone edit that would move it is refused: attaching one to a Todo issue is the Todo → Backlog transition (`promote-issue --milestone`), and the workflow has no way from Backlog back to Todo. Clearing the milestone an issue's first line names as its required parent is refused as well — re-parent it first with `set-field <N> --parent <P>`; on an EPIC, whose parent-ref is optional, the line is removed instead.
+
+#### Opening and editing a PR — `open-pr` / `edit-pr`
+
+| Command | What it does |
+|---|---|
+| `open-pr [--closes <N> ...] [--type T] [--scope S] [--summary "<s>"] [--body-file F] [--draft]` | Opens the PR for the current branch. The closing issue comes from the branch name (`<type>/<N>-<slug>`) unless `--closes` names it; **`--closes` repeats**, so one PR that lands several Tasks closes each of them on merge. The first closing issue is the primary one: it supplies the title's Conventional-Commits type, the default summary and the base branch. The body carries a `Closes #N` line for every closing issue — the template gets one each, and a `--body-file` gains any it does not already name. |
+| `edit-pr <PR> [--title T] [--body B \| --body-file F \| --append A] [--closes <N> ...]` | Title / body edit, validated against the PR rules. `--closes` (repeatable) adds a `Closes #N` line beside the existing ones for each named issue the body does not already close. |
+
+`validate-pr` reads every closing reference: a PR closing several issues is valid, and its title type is cross-checked against each closing issue's type (a mix of types is a warning). `done-work <N>` gates the checkboxes of issue `N` only, so tick the other closing issues' boxes before the merge, and run `close-issue <M> --mode=pr-merge` on each afterwards to reconcile its state label.
 
 #### Milestone lifecycle — `create-milestone` / `close-milestone` (per [project-management:DEC-016-time-bound-containers])
 

@@ -73,13 +73,13 @@ commands:
     help: Transition an issue through the lifecycle state machine (per DEC-006). Reads workflow.yaml; cascades parents upward on forward moves.
   close-issue:
     script: scripts/close-issue.py
-    help: Close an issue per DEC-006's closure paths. Default mode is wont-do (reason + checkbox close-gate per DEC-007); pr-merge mode runs the post-close cascade.
+    help: Close an issue per DEC-006's closure paths. Default mode is wont-do (reason + checkbox close-gate per DEC-007); pr-merge mode runs the post-close cascade, and with --pr <M> closes an open leaf as completed through merged PR M (verified merged, checkbox-gated, reference commented).
   reopen-issue:
     script: scripts/reopen-issue.py
-    help: Reopen a closed issue; optionally records an audit reason as a comment.
+    help: Reopen a closed issue and put it back into the lifecycle — its state label is removed, so it reads as backlog (milestone set) or todo; optionally records an audit reason as a comment. Also repairs an open issue still labelled done.
   edit-issue:
     script: scripts/edit-issue.py
-    help: Methodology-aware body / title edit. Validates the new state against body-format.yaml + titles.yaml before writing; refuses on hard-reject unless --force.
+    help: Methodology-aware body / title / milestone edit. Validates the new state against body-format.yaml + titles.yaml before writing; refuses on hard-reject unless --force. --milestone <number|title> moves the issue to an OPEN milestone (the first-line milestone ref follows) and --clear-milestone detaches it; a milestone edit that would move the issue in the lifecycle is refused.
   check-criterion:
     script: scripts/check-criterion.py
     help: "Tick one or more acceptance-criterion checkboxes on an issue — or, with --section doc-impact, `## Doc impact` checkboxes — addressed by 1-based index with an optional expected-text guard (per DEC-038). Batch-capable; validates the whole batch up front and refuses before any mutation on a hard inconsistency (out-of-range / text-mismatch / ambiguous guard); idempotent on re-run."
@@ -91,7 +91,7 @@ commands:
     help: "Declaratively set an issue's kind / priority / workstream / parent classification field(s) in one batch call (per DEC-038). Reuses create-issue's classification resolution (substrate-map-aware); --kind applies to kind-driven (Task) issues — swaps the type:* label and realigns the title prefix — and refuses a non-feature kind on epic/feature/umbrella (DEC-011); validates up front and refuses before any mutation on an unknown value; idempotent on re-run."
   open-pr:
     script: scripts/open-pr.py
-    help: Open a GitHub PR per the methodology's branch + title conventions. Derives the closing issue from the branch name; the Conventional Commits <type> from the issue's type:* label.
+    help: Open a GitHub PR per the methodology's branch + title conventions. Derives the closing issue from the branch name unless --closes names it (repeatable — one PR can close several issues, each with its own Closes #N line); the Conventional Commits <type> from the primary issue's type:* label.
   merge-pr:
     script: scripts/merge-pr.py
     help: Merge a PR per git-conventions.yaml's merge convention — one squash commit titled after the PR, head branch deleted on merge (remote ref via the API; local cleanup best-effort). Enforces the DEC-007 checkbox close-gate on every closing issue + the PR body.
@@ -106,7 +106,7 @@ commands:
     help: Validate a PR's title (Conventional Commits + type alignment with closing issues) and body (Closes #N, Doc impact section) per titles.yaml + git-conventions.yaml.
   edit-pr:
     script: scripts/edit-pr.py
-    help: Methodology-aware edit of a PR's body or title. Validates new state before writing; refuses on hard-reject unless --force.
+    help: Methodology-aware edit of a PR's body or title. Validates new state before writing; refuses on hard-reject unless --force. --closes <N> (repeatable) adds a Closes #N line for each named issue the body does not already close.
   show-pr:
     script: scripts/show-pr.py
     help: Read-only view of a GitHub PR — title parse, state, branches, closing issues, reviewers, doc-impact section presence, and the latest DEC-028 reviewer verdict(s) (--field review surfaces the verdict token + reasons through the governed read path).
