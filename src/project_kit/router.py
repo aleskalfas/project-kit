@@ -177,6 +177,14 @@ def is_source_checkout(root: Path) -> bool:
     fires only inside a real checkout, never in an adopter repo where execing
     the dispatcher (which `uv run`s a project-kit package that isn't there)
     would fail.
+
+    These marker files stand in for the definition of the methodology's source
+    repository, sync's self-host condition (`install.is_self_host`, ADR-059).
+    Route 1 is what keeps the two equal: execing the checkout's dispatcher runs
+    the checkout's own package, which makes the checkout the source it resolves.
+    The markers are this distribution's literals, listed in the lifecycle
+    README's "The methodology's literals"; the ownership predicate
+    `is_methodology_source` carries the same two, and a test holds them equal.
     """
     return (
         (root / "src" / "project_kit" / "__init__.py").is_file()
