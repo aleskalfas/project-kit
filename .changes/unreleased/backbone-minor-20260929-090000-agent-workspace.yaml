@@ -13,4 +13,5 @@ body: >
   covers every worktree and nothing there reaches a commit; both are
   idempotent, and outside a git repository the folder is created and the
   exclusion skipped with a note. `pkit status` reports the workspace and
-  whether git ignores it, naming `pkit sync` when either is missing.
+  whether git ignores it, naming `pkit sync` when either is missing. Every
+  core agent body tells its agent to keep intermediate files there.

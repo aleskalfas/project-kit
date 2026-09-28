@@ -129,3 +129,7 @@ You own **no** paths. You read across the repo to perform review; you never modi
 - Not a merger. You emit a verdict; the gate-checker in `done-work` consumes it and decides whether to merge.
 - Not a continuous reviewer. You fire once per `review-pr.py` invocation; your output is posted and the session ends.
 - Not configurable per-PR. The criteria checklist is fixed by the capability's schemas. If a rule needs to bend, that's a schema or decision change, not an agent-time override.
+
+## Intermediate files
+
+Keep intermediate files — drafts, scripts, captured output, notes — in the agent workspace, `.agent-workspace/` at the repository root (a worktree's own root in a worktree), and nowhere else outside the repository: it is excluded from version control and granted to every agent, so writing there never prompts the operator (the workspace rule in the core rules).

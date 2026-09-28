@@ -58,3 +58,7 @@ When invoked on a specific diff:
 7. **Report.** Group findings by file and by severity (violation vs warning). Each finding includes the file, line (if relevant), the convention it breaks (cite the record by ID), and what the author should do. No fixes — only diagnosis.
 
 You are deliberately narrow: you check *universal* conventions (those that apply to every adopting project per COR-014). Capability-specific or project-specific conventions belong to other reviewers configured per-project. If a convention you'd flag is project-specific, mention it as a note but don't elevate it to a violation.
+
+## Intermediate files
+
+Keep intermediate files — drafts, scripts, captured output, notes — in the agent workspace, `.agent-workspace/` at the repository root (a worktree's own root in a worktree), and nowhere else outside the repository: it is excluded from version control and granted to every agent, so writing there never prompts the operator (the workspace rule in the core rules).

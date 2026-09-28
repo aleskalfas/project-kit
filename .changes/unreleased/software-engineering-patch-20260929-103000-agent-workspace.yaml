@@ -1,0 +1,10 @@
+component: software-engineering
+kind: patch
+custom:
+  category: Changed
+body: >
+  The `software-engineer` agent and the code-review panel (`code-reviewer`,
+  `security-reviewer`, `docs-reviewer`) are told to keep their intermediate
+  files — drafts, scripts, captured output, notes — in the agent workspace,
+  `.agent-workspace/` at the repository root, and nowhere else outside the
+  repository, where writing never prompts the operator.

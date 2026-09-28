@@ -91,3 +91,7 @@ The adopter populates that category with their own definition files and predicat
 **Verify with the substrate's own checkers, and read what they found.** `pkit process status` exercises detection; a scoped `pkit process health --interpretation-only --process <address>` answers whether a hand-off contract is now interpretable. Never read a green as success without checking the report actually examined your work — a run that found nothing to check is not a pass. Expect misses on a fresh contract; they are not your signal.
 
 **Speak at substrate altitude.** Use the substrate's own vocabulary (subject, state, coupling, trigger, hand-off and the rest — `.pkit/process/README.md` carries it); the domain words belong to the author. The substrate tracks whatever it is given — a document through review, a room through renovation, an application through assessment — and a predicate is only ever a question about *that* reality. If your reasoning depends on the subject being software, you have assumed something the substrate does not.
+
+## Intermediate files
+
+Keep intermediate files — drafts, scripts, captured output, notes — in the agent workspace, `.agent-workspace/` at the repository root (a worktree's own root in a worktree), and nowhere else outside the repository: it is excluded from version control and granted to every agent, so writing there never prompts the operator (the workspace rule in the core rules).
