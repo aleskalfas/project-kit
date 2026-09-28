@@ -210,6 +210,36 @@ def extract_closing_issues(pr_body: str) -> list[int]:
     return out
 
 
+# A line that is nothing but one closing reference — where added ones go.
+_CLOSING_LINE_RE = re.compile(r"^\s*(?:closes|fixes|resolves)\s+#\d+\s*$", re.IGNORECASE)
+
+
+def with_closing_references(pr_body: str, issue_numbers: list[int]) -> str:
+    """``pr_body`` carrying a closing reference for every issue in ``issue_numbers``.
+
+    One PR can land several Tasks (#1049); GitHub closes each on merge only if
+    the body names it. An issue the body already closes, under any closing
+    keyword, is left as it is. Each missing one gets a ``Closes #N`` line, in
+    the order given: after the body's last line that is a closing reference, or
+    at the top — with a blank line after — when there is none.
+    """
+    present = set(extract_closing_issues(pr_body))
+    missing = [n for n in dict.fromkeys(issue_numbers) if n not in present]
+    if not missing:
+        return pr_body
+    added = [f"Closes #{n}" for n in missing]
+    lines = pr_body.split("\n")
+    last = max(
+        (i for i, line in enumerate(lines) if _CLOSING_LINE_RE.match(line)),
+        default=None,
+    )
+    if last is None:
+        head = "\n".join(added)
+        return f"{head}\n\n{pr_body}" if pr_body.strip() else f"{head}\n"
+    lines[last + 1:last + 1] = added
+    return "\n".join(lines)
+
+
 def _expected_conv_types(type_labels: list[str], classification: dict) -> list[str]:
     """Map each `type:*` label to its expected pr_conv_type (+ alternates)."""
     mapping = classification.get("pr_type_mapping") or []

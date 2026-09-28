@@ -258,3 +258,35 @@ def test_gh_project_run_non_ghes_path_unchanged(gh, monkeypatch) -> None:
 
     assert captured["kwargs"]["env"]["GH_HOST"] == "github.com"
     assert captured["args"][captured["args"].index("--owner") + 1] == "a-user"
+
+
+# --- gh_get_pr (gh_get_issue's twin, #1049) ------------------------------
+
+
+def test_gh_get_pr_reads_the_requested_fields_through_the_seam(gh, monkeypatch) -> None:
+    captured: dict = {}
+
+    def fake_run(args, **kwargs):
+        captured["args"] = args
+        captured["env"] = kwargs["env"]
+        return subprocess.CompletedProcess(
+            args=args, returncode=0, stdout='{"state": "MERGED"}', stderr=""
+        )
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    pr = gh.gh_get_pr(7, {"gh": {"host": "ghe.example"}}, fields="state")
+
+    assert pr == {"state": "MERGED"}
+    assert captured["args"] == ["gh", "pr", "view", "7", "--json", "state"]
+    assert captured["env"]["GH_HOST"] == "ghe.example"
+
+
+def test_gh_get_pr_returns_none_on_failure(gh, monkeypatch, capsys) -> None:
+    def fake_run(args, **kwargs):
+        return subprocess.CompletedProcess(
+            args=args, returncode=1, stdout="", stderr="no pull requests found"
+        )
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    assert gh.gh_get_pr(7, {}, fields="state") is None
+    assert "no pull requests found" in capsys.readouterr().err

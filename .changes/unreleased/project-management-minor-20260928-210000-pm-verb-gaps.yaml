@@ -1,0 +1,21 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+body: >
+  Four gaps in the issue and PR verbs are closed (#1049). `close-issue
+  --mode=pr-merge --pr <M>` closes an open Task whose work landed in merged PR
+  M without the PR naming it: the PR is verified merged, the checkbox
+  close-gate runs, the reference is posted as a comment once, the issue closes
+  as completed and the closure cascade runs; without `--pr` the mode is
+  unchanged. `edit-issue --milestone <number|title>` moves an issue to an open
+  milestone, validated as `create-issue --milestone` is, and
+  `--clear-milestone` detaches it; a first line naming the old milestone as the
+  parent follows the move, and an edit that would move the issue in the
+  lifecycle is refused. `open-pr --closes` and the new `edit-pr --closes`
+  repeat, so one PR can close several issues, each with its own `Closes #N`
+  line; `open-pr --body-file` gains a line for any closing issue the file does
+  not name. `reopen-issue` now removes the state label, so a reopened issue
+  reads as backlog (milestone set) or todo instead of staying at done, and it
+  repairs an open issue still labelled done. `edit-pr --force` no longer
+  fails before posting its audit comment.

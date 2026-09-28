@@ -157,6 +157,28 @@ def test_milestone_edit_args_constructs_the_post_hoc_write(substrate_writes) -> 
     ]
 
 
+def test_milestone_clear_args_constructs_the_removal(substrate_writes) -> None:
+    """Detaching an issue from its milestone is the same substrate, so its argv
+    is constructed here too (edit-issue --clear-milestone, #1049)."""
+    assert substrate_writes.milestone_clear_args(issue_number=42) == [
+        "gh", "issue", "edit", "42", "--remove-milestone",
+    ]
+
+
+def test_clear_milestone_executes_and_carries_failure(substrate_writes, monkeypatch) -> None:
+    calls: list = []
+
+    def fake_gh(args, config):
+        calls.append(args)
+        return subprocess.CompletedProcess(args, 1, stdout="", stderr="nope")
+
+    monkeypatch.setattr(substrate_writes, "_gh_call", fake_gh)
+    result = substrate_writes.clear_milestone({}, issue_number=7)
+    assert calls == [["gh", "issue", "edit", "7", "--remove-milestone"]]
+    assert result.ok is False
+    assert result.error == "nope"
+
+
 def test_milestone_create_args_constructs_the_at_create_fragment(substrate_writes) -> None:
     """The at-create form yields only the `--milestone` argv fragment — the create
     call (title/body/labels/assignee) is assembled and run by the caller; the
@@ -286,7 +308,8 @@ def test_create_issue_milestone_routes_through_the_primitive() -> None:
 #                               substrate, ADR-031). None exists in the tree
 #                               today; the detector covers a future #122 reach.
 #   * milestone:                `gh issue {edit,create}` carrying a `--milestone`
-#                               flag — the `gh issue …--milestone` write.
+#                               (or `--remove-milestone`) flag — the
+#                               `gh issue …--milestone` write.
 #
 # Recognising the OPERATION (subcommand + value flag in the right structural
 # relationship), not bare token membership, is what (a) leaves `item-add`
@@ -304,6 +327,8 @@ GRAPHQL_FIELD_MUTATION = "updateProjectV2ItemFieldValue"
 MILESTONE_VERB = "issue"
 MILESTONE_SUBCOMMANDS = ("edit", "create")
 MILESTONE_FLAG = "--milestone"
+# Detaching is a write of the same substrate (#1049), so it is policed too.
+MILESTONE_FLAGS = (MILESTONE_FLAG, "--remove-milestone")
 
 
 def _all_scanned_scripts() -> list[Path]:
@@ -646,7 +671,7 @@ def _is_milestone_write(elements: list[str | None]) -> bool:
     match (resolves the over-broad first cut).
     """
     literals = _literals(elements)
-    if MILESTONE_FLAG not in literals:
+    if not any(flag in literals for flag in MILESTONE_FLAGS):
         return False
     return any(
         _has_subsequence(literals, (GH, MILESTONE_VERB, sub))
