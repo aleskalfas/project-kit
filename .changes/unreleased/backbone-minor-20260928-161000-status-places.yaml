@@ -1,0 +1,12 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit status` shows every recorded documentation location, not only those
+  outside the internal root: an `inside root` list comes before the `outside
+  root` one (COR-049 point 7). A new `Friction` section shows the friction mode
+  with its source and each declared place, surface entry and excluded path — the
+  project's in written order, then each capability's, resolved under the internal
+  root and tagged with the capability — and says so when no place is declared
+  (COR-050 point 14).

@@ -17,7 +17,9 @@ the ADR-051 write-authority guard. The name invited the other reading and cost
 a misfiled report (#823), so read the question, not the identifier. The two are
 deliberately distinct: the first additionally depends on capability
 *registration* and treats everything outside `.pkit/` as not-its, so a caller
-asking about tier must not read it off it. Each
+asking about tier must not read it off it. A third, *does this path arrive
+here as a synced copy?* (:func:`is_synced_copy`), is the one documentation
+places ask; it builds on the first. Each
 answer has exactly one definition here; what matters is that no consumer
 re-derives either, not that there is only one question. It lives here (in-tree,
 propagated) rather than in `src/project_kit/`
@@ -352,6 +354,50 @@ def sync_managed_offences(
     if category not in WRITE_CARRYING_CATEGORIES:
         return []
     return [v for v in values if is_sync_managed(target_root, v)]
+
+
+# --- synced copies -----------------------------------------------------------
+#
+# A third question, beside the two above: *does this path arrive here as a
+# copy a sync makes from the methodology's source?* Documentation places ask it
+# (living-docs DEC-001 point 1): a synced copy is never a place, so that a sync
+# never shows up as friction in the project's own history. It is not the
+# write-authority question — in the methodology's own source repository the
+# kit's trees stay the kit's to manage (ADR-051), yet nothing there is a copy,
+# because the tree *is* the source a sync would copy from (ADR-055 point 3).
+
+# The methodology's source repository, told apart the way the entry-point router
+# tells it (`project_kit.router.is_source_checkout`): the package source beside
+# the in-tree dispatcher. An adopter has the dispatcher, never the package
+# source. A test keeps the two in step; this module cannot import the router.
+_SOURCE_MARKERS: tuple[tuple[str, ...], ...] = (
+    ("src", "project_kit", "__init__.py"),
+    (".pkit", "cli", "pkit"),
+)
+
+
+def is_methodology_source(target_root: Path | str) -> bool:
+    """True when *target_root* is the methodology's own source repository.
+
+    There sync propagates nothing — its self-host path re-runs the deploy
+    primitives only — so no tree in it is a synced copy, whatever its origin.
+    """
+    root = Path(target_root)
+    return all(root.joinpath(*marker).is_file() for marker in _SOURCE_MARKERS)
+
+
+def is_synced_copy(target_root: Path | str, raw_path: str) -> bool:
+    """True when *raw_path* arrives in this repository as a synced copy.
+
+    Keyed on origin, never on the path: a path is a synced copy when it is
+    sync-managed — a backbone tree, or a registered `kit-shipped` capability's
+    subtree outside its `project/` tier (`is_sync_managed`) — *and* this
+    repository is not the methodology's source (`is_methodology_source`),
+    where nothing is copied. An `incubated-in-repo` or unregistered capability
+    is never a copy (COR-031 D1). *raw_path* is a path as an overlay entry or a
+    configuration value writes it, not a glob.
+    """
+    return is_sync_managed(target_root, raw_path) and not is_methodology_source(target_root)
 
 
 # --- messages ----------------------------------------------------------------

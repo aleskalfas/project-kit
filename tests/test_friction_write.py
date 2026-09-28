@@ -800,3 +800,26 @@ def test_written_blocks_read_back_identically_and_validate(repo: AdopterRepo) ->
                     reason=last["reason"],
                 )
                 assert not repeat.changes, context
+
+
+# --- the read-back reads the container against the wiring (#1058) ------------
+
+
+def test_the_read_back_reads_a_role_block_against_the_wiring(repo: AdopterRepo) -> None:
+    """A block beside a role block: the read-back resolves the tree's wiring, as
+    validation does. A role with no active provider is an orphan — a report,
+    never a refusal — and the role block's bytes are left exactly as they were.
+    (#1054 made the wiring a required input of the container check; #1055's
+    read-back met it without one.)"""
+    role_block = (
+        "  documentation:\n"
+        "    reading-evidence:\n"
+        "      schema_version: 1\n"
+        "      last-run: never\n"
+    )
+    _put(repo, HEAD + REVALIDATED + role_block + TAIL)
+    plan = fw.plan_defer(repo.root, "guide", anchor="path:src/cli/**", reason="the redesign")
+    fw.write(plan)
+    text = _read(repo)
+    assert role_block in text
+    assert "reason: the redesign" in text
