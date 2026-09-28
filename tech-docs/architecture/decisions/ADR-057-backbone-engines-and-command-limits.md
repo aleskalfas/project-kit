@@ -63,7 +63,7 @@ What this distribution can do about network access is limited, and the limit sha
 ## Implications
 
 - The friction checks, the wiring resolver and the rule-set validator are modules of the binary; each computation is to have one home, and the duplicates named in point 2 are debt.
-- #1034 consolidates the duplicates named in point 2; #1035 extracts the command primitive the runners share (point 5).
+- #1034 consolidates the duplicates named in point 2; the command primitive the runners share is built (point 5).
 - The package-metadata reference gains the declaration's literal and the offline marker with ADR-058, whose validators are the first query commands; the package schema requires the declaration on the command a validator names, and will on every registered query command. The resolver's answer shape arrives with the first resolver.
 - The CLI reference's resolver-limits paragraph states the gap as point 4 does, including macOS, and cites this record.
 - **Raised for a core decision (#1036).** COR-050 point 2, COR-052 point 6 and COR-053 point 9 require the commands a capability supplies — queries and subscribers alike — to run with no network access. No distribution can hold a single command to that portably. Reading the requirement as a declaration that is required, reported and trusted is a universal reading, not project-kit's alone; this record adopts it for project-kit provisionally, and the maintainer decides in #1036 — before the first query command runs — whether the core records say so.

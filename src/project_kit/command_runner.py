@@ -211,7 +211,17 @@ def run_command(
     except BaseException:
         _kill_process_group(process)
         raise
-    stdout, stderr = _decode(raw_stdout), _decode(raw_stderr)
+    stderr = _decode(raw_stderr)
+    try:
+        stdout = (raw_stdout or b"").decode("utf-8")
+    except UnicodeDecodeError as exc:
+        # Standard output is the answer; a byte the encoding cannot read is no
+        # answer, never a repaired one (a replacement inside a JSON string would
+        # still parse and open a gate). Diagnostics on stderr are only shown.
+        return CommandRun(
+            Ending.UNPARSABLE, bound, returncode=process.returncode,
+            stdout=_decode(raw_stdout), stderr=stderr, detail=f"standard output is not UTF-8: {exc}",
+        )
     if process.returncode != 0:
         return CommandRun(
             Ending.ABNORMAL_EXIT, bound, returncode=process.returncode, stdout=stdout, stderr=stderr
@@ -249,7 +259,7 @@ def _kill_process_group(process: subprocess.Popen[bytes]) -> None:
 
 
 def _decode(data: bytes | None) -> str:
-    """A command's output as text; a byte the encoding cannot read is replaced,
-    never a crash — the output then fails to parse, and the policy says what
-    that means."""
+    """Diagnostic output as text; a byte the encoding cannot read is replaced,
+    never a crash. Standard output — the answer — is decoded strictly in
+    `run_command`, where an undecodable byte ends the run as UNPARSABLE."""
     return (data or b"").decode("utf-8", errors="replace")
