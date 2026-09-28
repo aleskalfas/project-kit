@@ -5200,12 +5200,8 @@ def refresh_capability_cmd(name: str, dry_run: bool) -> None:
     where = result.package_file.relative_to(target_root)
     count = f"{len(result.entries)} entry(ies)"
     if not result.changed:
-        click.echo(
-            "\n  "
-            + cli_render.style(
-                "strong", f"`{deps.DEPENDS_ON_KEY}` in {where} is fresh ({count}); nothing to write."
-            )
-        )
+        fresh = f"`{deps.DEPENDS_ON_KEY}` in {where} is fresh ({count}); nothing to write."
+        click.echo("\n  " + cli_render.style("strong", fresh))
         return
     verb = "Would refresh" if dry_run else "Refreshed"
     click.echo(
