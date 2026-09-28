@@ -1,0 +1,20 @@
+component: backbone
+kind: minor
+custom:
+  category: Changed
+body: >
+  Package metadata is strict on unknown keys. A key the package schema does not know,
+  anywhere in a component's package.yaml, is now an error rather than a warning: it fails
+  the packages pass of pkit validate and refuses pkit capabilities register, located at the
+  key and naming the nearest known key ("unknown key 'foootprint'; did you mean
+  'footprint'?"). The fields COR-017 lists, schema_version, description and
+  requires_backbone, are required of every component, adapters included, and every part of
+  a role name or point address in the connections block must be a word, [a-z][a-z0-9-]*,
+  the pattern the configuration file's selection keys already use. Every kit-shipped package
+  complies and arrives with the schema in the same sync, so a project with only kit-shipped
+  components sees no change. A package you wrote yourself, such as an incubated capability,
+  that carries a misspelt or extra key now fails: rename the key to the one suggested or
+  delete it, and add any required field it lacks. A tree not yet synced keeps its own
+  permissive schema, where an unknown key still only warns. The package file's
+  schema_version is unchanged and no migration runs. The lifecycle README records the
+  decision, under "Strict on unknown keys".

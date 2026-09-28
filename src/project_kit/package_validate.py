@@ -8,14 +8,19 @@ records add — `connections` (COR-053 point 3), `docs.locations` (COR-049 point
 4), `friction.places` / `friction.surface` (COR-050 points 1 and 8). Three
 passes, in order, each producing findings located by JSON Pointer:
 
-1. **Shape** — the JSON Schema pass. Known keys are strictly typed; a
-   violation is an ERROR.
-2. **Unknown keys** — the schema is permissive (`additionalProperties` open)
-   so an unknown key is not a schema error. This pass walks the instance
+1. **Shape** — the JSON Schema pass. Known keys are strictly typed, and the
+   schema closes every object it declares (`additionalProperties: false`),
+   so an unknown key is refused here too: `backbone_schemas.expand_schema_error`
+   turns the refusal into one ERROR per key, located at the key and carrying
+   the nearest known key, through the one renderer of the class
+   (`render_unknown_key`, ADR-056 point 4). Every violation is an ERROR.
+2. **Unknown keys under an open schema** — a tree whose package schema
+   predates the strict flip leaves `additionalProperties` open, and its schema
+   is the one applied (ADR-056 point 1). This pass walks the instance
    alongside the schema and reports each key that no `properties` entry names
-   as a WARNING carrying the nearest known key, through the one renderer of
-   the class (`backbone_schemas.render_unknown_key`). Refusing unknown keys is
-   Task #999's flip; until then warnings never fail a check.
+   where the schema leaves the object open, as a WARNING through the same
+   renderer; under the strict schema it finds nothing. The decision is the
+   lifecycle README's ("Validation: the package schema").
 3. **Repository checks** — what needs the tree, not just the file: the
    component's name matches its directory, versions and ranges parse, every
    command script exists, a declared point sits under a provided role, an
@@ -63,6 +68,7 @@ from ruamel.yaml import YAML
 from project_kit import process_dependencies, validators
 from project_kit.backbone_schemas import (
     BackboneSchemaMissing,
+    expand_schema_error,
     load_backbone_schema,
     render_unknown_key,
 )
@@ -88,7 +94,8 @@ _yaml = YAML(typ="safe")
 
 
 class Severity(Enum):
-    """Whether a finding fails the check. Warnings never do (the permissive posture)."""
+    """Whether a finding fails the check. Warnings never do; the one source of them
+    is an unknown key under a schema that leaves its object open (pass 2)."""
 
     ERROR = "error"
     WARNING = "warning"
@@ -192,7 +199,8 @@ def validate_package(
     component_dir: Path,
     expected_name: str | None = None,
 ) -> list[PackageFinding]:
-    """Validate a parsed package mapping: shape, unknown keys, repository checks.
+    """Validate a parsed package mapping: shape (unknown keys included), unknown
+    keys under an open schema, repository checks.
 
     `schema` is the loaded package schema (`load_backbone_schema(root,
     "package")`), or None when the tree ships none — then only the repository
@@ -218,9 +226,14 @@ def validate_package(
         _add_pass(
             findings,
             (
-                PackageFinding(_pointer(error.absolute_path), Severity.ERROR, error.message)
-                for error in sorted(
-                    validator.iter_errors(raw), key=lambda e: _sort_key(e.absolute_path)
+                PackageFinding(_pointer(path), Severity.ERROR, message)
+                for path, message in sorted(
+                    (
+                        expanded
+                        for error in validator.iter_errors(raw)
+                        for expanded in expand_schema_error(error)
+                    ),
+                    key=lambda expanded: _sort_key(expanded[0]),
                 )
             ),
         )
@@ -236,11 +249,12 @@ def _add_pass(findings: list[PackageFinding], new: Iterable[PackageFinding]) -> 
     findings.extend(f for f in new if f.path not in located)
 
 
-# --- pass 2: unknown keys ---------------------------------------------
+# --- pass 2: unknown keys under an open schema ------------------------
 
 
 class _UnknownKeyWalker:
-    """Walk an instance alongside its schema; warn on each key no `properties` entry names.
+    """Walk an instance alongside its schema; warn on each key no `properties` entry
+    names where the schema leaves the object open.
 
     Only the keywords the package schema uses are followed: `$ref`, `allOf`,
     `if`/`then`/`else`, `properties`, `additionalProperties`, `items`. An
@@ -248,10 +262,11 @@ class _UnknownKeyWalker:
     address, say) has no known set to judge against and yields nothing; an
     object whose `additionalProperties` is itself a schema has its extra keys
     validated by that schema, not judged here; `additionalProperties: false`
-    is the shape pass's business. The shape pass's validator is kept so an
-    `if` condition is evaluated through it, against the resolver in hand — a
-    `$ref` inside an `if` resolves from the same base as everywhere else, not
-    from the condition treated as a root.
+    — every object of the strict schema — is the shape pass's business, so
+    under that schema the walk yields nothing. The shape pass's validator is
+    kept so an `if` condition is evaluated through it, against the resolver in
+    hand — a `$ref` inside an `if` resolves from the same base as everywhere
+    else, not from the condition treated as a root.
     """
 
     def __init__(self, validator: Draft202012Validator) -> None:

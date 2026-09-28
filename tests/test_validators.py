@@ -412,7 +412,7 @@ def test_the_packages_member_reports_a_validator_naming_no_command(adopter: Adop
     )
 
 
-def test_an_unknown_key_inside_a_validator_entry_warns_with_the_nearest_known(
+def test_an_unknown_key_inside_a_validator_entry_is_an_error_naming_the_nearest_known(
     adopter: AdopterRepo,
 ) -> None:
     _register(
@@ -422,8 +422,8 @@ def test_an_unknown_key_inside_a_validator_entry_warns_with_the_nearest_known(
         script_body=_answering(CLEAN_ANSWER),
     )
     result = CliRunner().invoke(main, ["validate", "--only", "packages"])
-    assert result.exit_code == 0, result.output
-    assert "warning  .pkit/capabilities/cap/package.yaml:/validators/thing/ordre" in result.output
+    assert result.exit_code == 1, result.output
+    assert "error    .pkit/capabilities/cap/package.yaml:/validators/thing/ordre" in result.output
     assert "unknown key 'ordre'; did you mean 'order'?" in result.output
 
 
