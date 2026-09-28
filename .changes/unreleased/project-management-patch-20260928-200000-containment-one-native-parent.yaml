@@ -2,6 +2,7 @@ component: project-management
 kind: patch
 custom:
   category: Fixed
+  pr: "1061"
 body: >
   The native containment link now respects that an issue has one native
   parent (#1040). Linking a child that is already natively under a different
