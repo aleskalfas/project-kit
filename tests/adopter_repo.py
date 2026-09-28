@@ -73,6 +73,13 @@ class GitRepo:
         repo.git("config", "user.name", DEFAULT_AUTHOR.name)
         repo.git("config", "user.email", DEFAULT_AUTHOR.email)
         repo.git("config", "commit.gpgsign", "false")
+        # No automatic maintenance: a commit would otherwise detach `gc --auto`,
+        # whose writes under .git (info/refs, objects/info/packs, the multi-pack
+        # index) land at any later moment and break a byte-for-byte reading of
+        # the repository (#1065). Set from the first commit, so nothing is ever
+        # in flight.
+        repo.git("config", "gc.auto", "0")
+        repo.git("config", "maintenance.auto", "false")
         return repo
 
     def git(
