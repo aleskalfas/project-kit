@@ -32,6 +32,12 @@ from ruamel.yaml.error import YAMLError
 #: Holds project-level declarations (today: the report-context `name` key).
 PROJECT_CONFIG_RELPATH = Path(".pkit") / "project" / "config.yaml"
 
+#: The editor directive stamped at the top of a config file this module
+#: creates, pointing at the backbone-shipped schema relative to the file
+#: (`.pkit/schemas/backbone/config.schema.json`, ADR-056 point 1). The
+#: validate pass (`config_validate`) is the strict reader; this is for editors.
+EDITOR_DIRECTIVE = "# yaml-language-server: $schema=../schemas/backbone/config.schema.json"
+
 
 def project_config_path(target_root: Path) -> Path:
     return target_root / PROJECT_CONFIG_RELPATH
@@ -57,11 +63,15 @@ def read_project_name(target_root: Path) -> str | None:
 
 def write_project_name(target_root: Path, name: str) -> Path:
     """Persist `name` into the project config (the prompt-once write-back).
-    Creates the file/directory when absent; preserves any other keys."""
+    Creates the file/directory when absent; preserves any other keys. A file
+    created here opens with the editor directive naming the backbone-shipped
+    config schema (ADR-056 Implications: writers that create the file stamp
+    it); an existing file is left with whatever header it has."""
     path = project_config_path(target_root)
     yaml = YAML()  # round-trip: keep an existing file's other keys + comments
     data: dict = {}
-    if path.is_file():
+    fresh = not path.is_file()
+    if not fresh:
         try:
             loaded = yaml.load(path.read_text(encoding="utf-8"))
         except (OSError, YAMLError):
@@ -71,6 +81,8 @@ def write_project_name(target_root: Path, name: str) -> Path:
     data["name"] = name
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as stream:
+        if fresh:
+            stream.write(EDITOR_DIRECTIVE + "\n")
         yaml.dump(data, stream)
     return path
 

@@ -1,0 +1,24 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  The backbone configuration file (`.pkit/project/config.yaml`) now has a schema
+  and `pkit validate` checks it (COR-048 point 4, ADR-056). The second backbone
+  file schema, `.pkit/schemas/backbone/config.schema.json`, fixes the keys the
+  core records own — `name`, `docs` (the `user` and `internal` roots, COR-049),
+  `friction` (`mode`, `status-job`, `places`, `surface`, `exclude`, COR-050) and
+  `connections` (`providers`, `selections`, COR-053 and COR-052) — plus the
+  reserved `project` block, which is accepted as any mapping. An unknown key at
+  any backbone-owned level is refused with the nearest known key suggested; a
+  wrong type or an invalid enum value is refused; the file carries no version key.
+  `pkit validate` gains a configuration pass reported under a "configuration"
+  heading: schema findings, then repository checks — a documentation root must
+  resolve inside the repository and outside `.pkit/` (an absent root warns), a
+  friction pattern must stay inside the repository (one matching nothing warns),
+  and each connection entry must name an installed capability (whether it
+  provides the role is reported as unverifiable until package metadata declares
+  connections). Only errors fail the command; an absent or empty file means
+  defaults apply. A configuration file created by the backbone now opens with the
+  editor directive pointing at the shipped schema. Documented in the CLI
+  reference's new "Configuration file" section.
