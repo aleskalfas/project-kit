@@ -400,7 +400,7 @@ def test_a_source_is_reported_as_an_unresolved_kind_never_passed(adopter: Adopte
     assert report.severity is rs.Severity.REPORT
     assert report.where == f"{PROJECT_SETS}/cmn.md#RS-CMN-001 /origin/source"
     assert "'transcript' is unresolved" in report.message
-    assert rs.resolve_source_kind("transcript") is None
+    assert rs.fd.registered_anchor_kinds(adopter.root) == {}
 
 
 # --- successors ---------------------------------------------------------------------

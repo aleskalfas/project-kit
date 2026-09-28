@@ -79,14 +79,19 @@ import click
 from project_kit import cli_render, refs
 from project_kit.backbone_schemas import CONTAINER_KEY
 from project_kit.friction_discovery import (
+    CORE_ANCHOR_KINDS,  # noqa: F401 — re-exported: the check's public surface
     Anchor,
     Artefact,
     ArtefactKind,
     Discovery,
     FrictionSettings,
     RepositoryTree,
+    ResolverCommand,
     discover_artefacts,
     pattern_matcher,
+    refuse_resolver_without_query_contract,  # noqa: F401 — re-exported, as above
+    registered_anchor_kinds,
+    unresolved_kind_reason,
 )
 
 #: The base the diff is taken against when none is named (COR-050 point 6),
@@ -97,9 +102,6 @@ BASE_ENV = "PKIT_CHECK_BASE"
 
 #: The mode in which the change check fails (COR-050 point 12).
 ENFORCING = "enforcing"
-
-#: The anchor kinds the backbone resolves itself (COR-050 point 2).
-CORE_ANCHOR_KINDS: tuple[str, ...] = ("path", "record", "artefact")
 
 # A capability decision named as a record anchor: `<capability>:DEC-NNN`, with
 # or without its slug (the citation form of COR-017).
@@ -460,72 +462,6 @@ def uncommitted_paths(root: Path) -> int:
 
 
 # --- anchor kinds and their resolvers ----------------------------------------
-
-
-@dataclass(frozen=True)
-class ResolverCommand:
-    """A command a capability registers to resolve an anchor kind (COR-050 point 2).
-
-    `query_contract` is whether the command's registry entry declares the
-    query contract (ADR-057 point 3): bounded, deterministic, read-only and
-    needing no network. The declaration grants nothing; it is a claim the
-    backbone requires and trusts.
-    """
-
-    kind: str
-    capability: str
-    command: str
-    query_contract: bool = False
-
-
-def refuse_resolver_without_query_contract(resolver: ResolverCommand) -> str | None:
-    """Why `resolver` may not run, or `None` when it may.
-
-    A resolver is a query: bounded, deterministic, read-only, needing no network
-    (COR-050 point 2). The backbone admits one only when its command declares
-    that contract (ADR-057 point 3). The declaration is trusted, not enforced:
-    nothing here confines the process it would start — the residual gap the CLI
-    reference states.
-    """
-    if resolver.query_contract:
-        return None
-    return (
-        f"the resolver `{resolver.command}` that {resolver.capability} registers for it "
-        f"does not declare the query contract (bounded, deterministic, read-only, "
-        f"needing no network); a resolver runs only when it declares it"
-    )
-
-
-def registered_anchor_kinds(target_root: Path) -> dict[str, ResolverCommand]:
-    """The anchor kinds installed capabilities register, by kind.
-
-    Where registered kinds are looked up. No package metadata declares an
-    anchor kind yet — the kind registry arrives with its own change — so this
-    is empty and every kind outside `CORE_ANCHOR_KINDS` is unresolved.
-    """
-    del target_root  # read from each capability's package metadata once kinds are declared
-    return {}
-
-
-def unresolved_kind_reason(kind: str, registry: Mapping[str, ResolverCommand]) -> str | None:
-    """`None` when the backbone resolves `kind`; otherwise why nothing does.
-
-    A registered kind passes `refuse_resolver_without_query_contract` before its
-    resolver could run; one that passes is still unresolved, since registered
-    resolvers are not run yet — failing closed (COR-050 point 2).
-    """
-    if kind in CORE_ANCHOR_KINDS:
-        return None
-    resolver = registry.get(kind)
-    if resolver is None:
-        return "no installed component registers a resolver for it"
-    refusal = refuse_resolver_without_query_contract(resolver)
-    if refusal is not None:
-        return refusal
-    return (
-        f"the resolver `{resolver.command}` that {resolver.capability} registers for it "
-        f"is not run yet"
-    )
 
 
 # --- one side of the diff -----------------------------------------------------

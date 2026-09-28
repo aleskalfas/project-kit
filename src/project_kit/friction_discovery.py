@@ -620,9 +620,7 @@ class RuleSetPlace:
         return self.place.pattern
 
 
-def rule_set_places(
-    target_root: Path, settings: FrictionSettings, tree: RepositoryTree | None = None
-) -> tuple[RuleSetPlace, ...]:
+def rule_set_places(target_root: Path, settings: FrictionSettings) -> tuple[RuleSetPlace, ...]:
     """The places declared to hold rule sets, in claim order (the location rule).
 
     Method rule sets first: the backbone's `.pkit/rule-sets/`, then each
@@ -636,21 +634,13 @@ def rule_set_places(
     """
     places: list[RuleSetPlace] = []
 
-    listing = tree.files() if tree is not None else None
-
-    def exists(rel: str) -> bool:
-        if listing is None:
-            return (target_root / rel).is_dir()
-        prefix = rel.rstrip("/") + "/"
-        return any(f.startswith(prefix) for f in listing)
-
     def folder(rel: str, component: str | None, source: str) -> None:
-        if is_inside_repository(target_root, rel) and exists(rel):
+        if is_inside_repository(target_root, rel) and (target_root / rel).is_dir():
             declaration = SettingsPath(value=rel, resolved=rel, file=rel, pointer="", source=source)
             places.append(RuleSetPlace(Place(pattern=rel, declaration=declaration), component))
 
     folder(BACKBONE_RULE_SETS_DIR.as_posix(), BACKBONE_COMPONENT, BACKBONE_COMPONENT)
-    for name in installed_capability_names(target_root, tree):
+    for name in installed_capability_names(target_root):
         rel = (CAPABILITIES_DIR / name / RULE_SETS_SEGMENT).as_posix()
         folder(rel, name, f"capability:{name}")
     folder(_join_posix(settings.internal_root, RULE_SETS_SEGMENT), None, "project")
@@ -685,6 +675,79 @@ def rule_set_files(target_root: Path, places: Sequence[RuleSetPlace]) -> dict[Pa
             if path.name != RULE_SETS_SIGNPOST:
                 claimed.setdefault(path, rule_set_place)
     return claimed
+
+
+
+# --- anchor kinds and their resolvers (ADR-057 point 3) ------------------
+
+#: The anchor kinds the backbone resolves itself (COR-050 point 2).
+CORE_ANCHOR_KINDS: tuple[str, ...] = ("path", "record", "artefact")
+
+
+@dataclass(frozen=True)
+class ResolverCommand:
+    """A command a capability registers to resolve an anchor kind (COR-050 point 2).
+
+    `query_contract` is whether the command's registry entry declares the
+    query contract (ADR-057 point 3): bounded, deterministic, read-only and
+    needing no network. The declaration grants nothing; it is a claim the
+    backbone requires and trusts.
+    """
+
+    kind: str
+    capability: str
+    command: str
+    query_contract: bool = False
+
+
+def refuse_resolver_without_query_contract(resolver: ResolverCommand) -> str | None:
+    """Why `resolver` may not run, or `None` when it may.
+
+    A resolver is a query: bounded, deterministic and needing no network
+    (COR-050 point 2), and read-only (ADR-057 point 3 adds it). The backbone
+    admits one only when its command declares that contract (ADR-057 point 3). The declaration is trusted, not enforced:
+    nothing here confines the process it would start — the residual gap the CLI
+    reference states.
+    """
+    if resolver.query_contract:
+        return None
+    return (
+        f"the resolver `{resolver.command}` that {resolver.capability} registers for it "
+        f"does not declare the query contract (bounded, deterministic, read-only, "
+        f"needing no network); a resolver runs only when it declares it"
+    )
+
+
+def registered_anchor_kinds(target_root: Path) -> dict[str, ResolverCommand]:
+    """The anchor kinds installed capabilities register, by kind.
+
+    Where registered kinds are looked up. No package metadata declares an
+    anchor kind yet — the kind registry arrives with its own change — so this
+    is empty and every kind outside `CORE_ANCHOR_KINDS` is unresolved.
+    """
+    del target_root  # read from each capability's package metadata once kinds are declared
+    return {}
+
+
+def unresolved_kind_reason(kind: str, registry: Mapping[str, ResolverCommand]) -> str | None:
+    """`None` when the backbone resolves `kind`; otherwise why nothing does.
+
+    A registered kind passes `refuse_resolver_without_query_contract` before its
+    resolver could run; one that passes is still unresolved, since registered
+    resolvers are not run yet — failing closed (COR-050 point 2).
+    """
+    if kind in CORE_ANCHOR_KINDS:
+        return None
+    resolver = registry.get(kind)
+    if resolver is None:
+        return "no installed component registers a resolver for it"
+    refusal = refuse_resolver_without_query_contract(resolver)
+    if refusal is not None:
+        return refusal
+    return (
+        f"the resolver `{resolver.command}` that {resolver.capability} registers for it "
+        f"is not run yet"
+    )
 
 
 # --- artefacts ----------------------------------------------------------
@@ -866,7 +929,12 @@ def discover_artefacts(
     never read.
     """
     settings = settings if settings is not None else read_friction_settings(target_root, tree)
-    rule_set_places_found = rule_set_places(target_root, settings, tree)
+    # Which rule-set folders are places is read from the working tree even when
+    # `tree` names another state: a folder that exists only at that state (one
+    # the change deleted outright) is not walked there. The folders are
+    # existence-gated so that a project without rule sets stays dormant
+    # without a repository being demanded.
+    rule_set_places_found = rule_set_places(target_root, settings)
     places = declared_places(settings)
     places += tuple(r.place for r in rule_set_places_found if r.place not in places)
     claimed: dict[str, RuleSetPlace] = {}

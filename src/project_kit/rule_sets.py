@@ -869,17 +869,6 @@ def _container_findings(rule_set: RuleSet, schema: Mapping[str, Any]) -> Iterabl
 # --- per file: origins ---------------------------------------------------------
 
 
-def resolve_source_kind(kind: str) -> Any | None:
-    """Hook: the resolver an installed capability registers for an anchor kind.
-
-    COR-050 point 2 lets capabilities register anchor kinds with resolvers; no
-    registry exists yet, so every kind is unresolved and every cited source is
-    reported as an unresolved kind — never silently passed (COR-051 point 5).
-    When the registry lands this is the one function to fill.
-    """
-    return None
-
-
 def _origin_findings(rule_set: RuleSet, catalogue: _Catalogue) -> Iterable[RuleSetFinding]:
     """Origins, checked deterministically (COR-051 point 5)."""
     for rule in rule_set.rules:
@@ -898,7 +887,7 @@ def _origin_findings(rule_set: RuleSet, catalogue: _Catalogue) -> Iterable[RuleS
             continue  # not a mapping: the shape pass reports it
         yield from _origin_form_findings(rule, origin)
         yield from _decision_findings(rule, origin, catalogue)
-        yield from _source_findings(rule, origin)
+        yield from _source_findings(rule, origin, catalogue)
 
 
 def _origin_form_findings(rule: Rule, origin: Mapping[str, Any]) -> Iterable[RuleSetFinding]:
@@ -947,18 +936,22 @@ def _decision_findings(
         )
 
 
-def _source_findings(rule: Rule, origin: Mapping[str, Any]) -> Iterable[RuleSetFinding]:
+def _source_findings(
+    rule: Rule, origin: Mapping[str, Any], catalogue: _Catalogue
+) -> Iterable[RuleSetFinding]:
+    """A cited source resolves through the one anchor-kind registry (ADR-057 point 2)."""
     source = origin.get("source")
     kind = source.get("kind") if isinstance(source, Mapping) else None
     if not isinstance(kind, str) or not kind:
         return  # absent, or malformed: the shape pass reports it
-    if resolve_source_kind(kind) is None:
+    reason = fd.unresolved_kind_reason(kind, fd.registered_anchor_kinds(catalogue.target_root))
+    if reason is not None:
         yield _report(
             rule.location,
             "/origin/source",
             RuleSetFindingKind.UNRESOLVED_SOURCE_KIND,
-            f"source kind {kind!r} is unresolved: no installed capability registers a resolver "
-            f"for it, so the source is not checked (COR-051 point 5; COR-050 point 2).",
+            f"source kind {kind!r} is unresolved: {reason}, so the source is not checked "
+            f"(COR-051 point 5; COR-050 point 2).",
         )
 
 
