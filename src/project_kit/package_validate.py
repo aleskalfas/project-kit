@@ -25,7 +25,10 @@ passes, in order, each producing findings located by JSON Pointer:
    (`query-contract: true`, ADR-057 point 3 and ADR-058), a contribution
    names `command` or `value` but not both, documentation locations are
    relative sub-paths, friction places lie inside a declared location or the
-   project. All ERRORs.
+   project, and the generated `depends-on` list says what the component's
+   process definitions generate (`process_dependencies.staleness`, COR-053
+   point 4) — a stale copy names `pkit capabilities refresh <name>` as the
+   fix. All ERRORs.
 
 The checks across packages — roles and their providers, counterparts against
 point versions, mandatory marks and cycles, fingerprints, the version
@@ -33,8 +36,7 @@ relations — are the wiring resolver's (`connections`, COR-053 point 7).
 `check_wiring` hands the pass the resolved `Wiring`, whose errors join the
 issue list and which `pkit validate` shows under its "connections" and
 "versions" headings; `resolve_active_roles` answers which qualified roles have
-an active provider. A stale generated `depends-on` is the refresh command's
-check (#995).
+an active provider.
 
 Two callers: `pkit validate` runs `validate_installed_packages` over every
 component the backbone manifest registers (the "packages" pass), and the
@@ -58,7 +60,7 @@ from referencing import Registry, Resource
 from referencing.jsonschema import DRAFT202012
 from ruamel.yaml import YAML
 
-from project_kit import validators
+from project_kit import process_dependencies, validators
 from project_kit.backbone_schemas import (
     BackboneSchemaMissing,
     load_backbone_schema,
@@ -406,6 +408,13 @@ def _repository_findings(
     if isinstance(connections, Mapping):
         findings.extend(_connection_findings(connections, component_dir, leaves))
 
+    # The generated `depends-on` list against the process definitions it is
+    # generated from (COR-053 point 4): whether or not the package declares a
+    # `connections` block, since a definition's `depends_on` needs one.
+    stale = process_dependencies.staleness(raw, component_dir)
+    if stale is not None:
+        _error(stale.pointer, stale.message(_component_name(raw, expected_name, component_dir)))
+
     location_names: set[str] = set()
     docs = raw.get("docs")
     if isinstance(docs, Mapping) and isinstance(docs.get("locations"), Mapping):
@@ -536,6 +545,16 @@ def _connection_findings(
                     )
 
     return findings
+
+
+def _component_name(raw: Mapping[Any, Any], expected: str | None, component_dir: Path) -> str:
+    """The component's name for a message: as the package declares it, else the
+    name its directory gives it."""
+    component = raw.get("component")
+    name = component.get("name") if isinstance(component, Mapping) else None
+    if isinstance(name, str) and name:
+        return name
+    return expected if expected is not None else component_dir.name
 
 
 def role_of(address: str) -> str | None:

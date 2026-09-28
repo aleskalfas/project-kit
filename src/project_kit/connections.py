@@ -78,8 +78,12 @@ against the active provider's point and its contributors (`Wiring.data_point`,
 `PointBinding.contributors`). It also owns the last relation, the configuration
 file's shape against the schema the installed backbone ships.
 
-A stale generated `depends-on` is the refresh command's check (#995):
-detecting it means reading the process definitions this module never opens.
+A stale generated `depends-on` is the packages pass's finding
+(`process_dependencies.staleness`): detecting it means reading the process
+definitions this module never opens. What it offers the other readers of
+`depends_on` is the resolved wiring itself: health finds the implementation of
+a role-addressed upstream through `Wiring.offered_process`, and the capability
+lifecycle refuses or warns on `Wiring.unmet_marks` (COR-053 point 6).
 """
 
 from __future__ import annotations
@@ -426,6 +430,33 @@ class Wiring:
                 if p.point.address == address and p.point.kind is PointKind.DATA
             ),
             None,
+        )
+
+    def offered_process(self, address: str) -> Point | None:
+        """The process offered at the role address `address` as the active provider
+        of its role defines it — the implementation a role-addressed `depends_on`
+        entry reaches (COR-053 point 2); None when no active provider offers a
+        process there. Health reads it to find the upstream of a role-addressed
+        hand-off contract rather than resolving roles of its own."""
+        return next(
+            (
+                p.point
+                for p in self.points
+                if p.point.address == address and p.point.kind is PointKind.PROCESS
+            ),
+            None,
+        )
+
+    def unmet_marks(self, kind: CounterpartKind | None = None) -> tuple[Binding, ...]:
+        """The counterparts, of `kind` or of every kind, whose mandatory mark this
+        wiring leaves unmet — each an error on the side carrying it (COR-053 point
+        6). A mark aimed at a role whose providers conflict is not among them: the
+        conflict is the finding, and selecting a provider decides the mark. The
+        capability lifecycle reads the `depends-on` ones to refuse or warn."""
+        return tuple(
+            b
+            for b in self.bindings
+            if (kind is None or b.counterpart.kind is kind) and _mark_unmet(b, self.declarations)
         )
 
     def errors(self) -> tuple[Finding, ...]:
@@ -899,6 +930,24 @@ def _version_status(counterpart: Counterpart, point: Point) -> BindingStatus:
     if counterpart.version is None or counterpart.version == point.version:
         return BindingStatus.BOUND
     return BindingStatus.INERT_VERSION
+
+
+# The statuses under which a mandatory mark is unmet whatever else holds; a
+# role without an active provider is unmet only when nothing provides it.
+_UNMET = (BindingStatus.INERT_VERSION, BindingStatus.NO_SUCH_POINT, BindingStatus.NOT_INSTALLED)
+
+
+def _mark_unmet(binding: Binding, declarations: Declarations) -> bool:
+    """A mandatory counterpart the wiring leaves without a compatible target —
+    exactly the marks `_binding_findings` reports as errors."""
+    counterpart = binding.counterpart
+    if counterpart.mandatory is None:
+        return False
+    if binding.status in _UNMET:
+        return True
+    if binding.status is BindingStatus.NO_ACTIVE_PROVIDER:
+        return not declarations.providers_of(counterpart.role or "")
+    return False
 
 
 def _count_versioned(bindings: Iterable[Binding], *, dependency: bool) -> int:
