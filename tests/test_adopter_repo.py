@@ -159,6 +159,23 @@ def test_commit_returns_sha_and_honours_author_and_date(adopter_repo: AdopterRep
     ]
 
 
+def test_merge_has_two_parents_and_honours_the_date(adopter_repo: AdopterRepo) -> None:
+    h = adopter_repo.history
+    assert h is not None
+    when = datetime(2026, 3, 4, 5, 6, 7, tzinfo=UTC)
+    adopter_repo.checkout("feature", create=True)
+    side = adopter_repo.commit("feature: add delta", {"docs/delta.md": "---\ntitle: Delta\n---\n"})
+    adopter_repo.checkout("main")
+    merged = adopter_repo.merge("feature", date=when)
+    assert merged == adopter_repo.head()
+    parents = adopter_repo.git("rev-list", "--parents", "-n", "1", merged).stdout.split()
+    assert parents == [merged, h.squash_merge, side]
+    # No fast-forward: the side commit is on main only through the merge.
+    assert adopter_repo.shas() == [merged, side, h.squash_merge, h.rename, h.initial]
+    committed = adopter_repo.git("log", "-1", "--format=%cI", merged).stdout.strip()
+    assert datetime.fromisoformat(committed) == when
+
+
 def test_commit_with_none_deletes(adopter_repo: AdopterRepo) -> None:
     h = adopter_repo.history
     assert h is not None
