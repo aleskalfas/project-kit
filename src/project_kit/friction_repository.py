@@ -50,7 +50,7 @@ from __future__ import annotations
 import bisect
 import json
 import subprocess
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import Enum
@@ -936,6 +936,164 @@ def _uncovered_surface(head: Side, discovery: Discovery) -> tuple[int, tuple[str
     return len(surface), tuple(sorted(surface - anchored))
 
 
+# --- one artefact, with the commits behind each finding ------------------------------
+#
+# `pkit friction explain` judges one artefact exactly as the check does — through
+# `_check_artefact`, on a judge built as `run_repository_check` builds it — and adds,
+# per finding, the commits behind it, read from the same history by the same rules.
+
+
+@dataclass(frozen=True)
+class TracedFinding:
+    """A finding of the whole-repository check about one artefact, and the commits behind it.
+
+    `commits` are oldest first. Stale on an anchor: every commit outside what
+    the points cover that changed the anchor, the finding's origin among them;
+    stale by a move: the rename. Deferred: the changes the deferral postpones —
+    after the revalidation point, up to the deferral point. Any other finding,
+    or an artefact whose points lie beyond a shallow clone: none.
+    """
+
+    finding: RepositoryFinding
+    commits: tuple[Commit, ...]
+
+
+@dataclass(frozen=True)
+class ArtefactCheck:
+    """One artefact at HEAD, judged as the whole-repository check judges it.
+
+    `report` is `None` when there is nothing to judge — no `friction` block, or
+    neither anchors nor deferrals, the artefacts the check passes over — and
+    `findings` are then empty. Otherwise both are the check's own for this
+    artefact, the findings in its order.
+    """
+
+    head: HeadState
+    shallow: bool
+    artefact: Artefact  # as it stands at HEAD
+    report: ArtefactReport | None
+    findings: tuple[TracedFinding, ...]
+
+
+def run_artefact_check(
+    target_root: Path,
+    select: Callable[[Discovery], Artefact],
+    *,
+    registry: Mapping[str, ResolverCommand] | None = None,
+) -> ArtefactCheck | None:
+    """The whole-repository check of the one artefact `select` picks from HEAD's artefacts.
+
+    `None` while dormant: no place is declared at HEAD. Raises
+    `FrictionCheckError` when the check cannot run, as `run_repository_check`
+    does, and whatever `select` raises when it names no artefact. Writes
+    nothing (COR-050 point 13).
+    """
+    try:
+        head_sha = commit_of(target_root, "HEAD")
+    except FrictionCheckError:
+        head_sha = None
+    if head_sha is None:
+        if not read_friction_settings(target_root).places:
+            return None
+        raise FrictionCheckError(
+            "HEAD names no commit (or this is not a git repository); the whole-repository check "
+            "reads history, so commit first."
+        )
+    tree = CommitTree(target_root, head_sha)
+    discovery = discover_artefacts(target_root, tree=tree)
+    if not discovery.places:
+        return None
+    artefact = select(discovery)
+    head = HeadState(head_sha, uncommitted_paths(target_root))
+    if not (artefact.has_friction_block and (anchors_of(artefact) or artefact.deferrals)):
+        return ArtefactCheck(head, bool(_shallow_commits(target_root)), artefact, None, ())
+    registry = registered_anchor_kinds(target_root) if registry is None else registry
+    history = read_history(target_root, head_sha)
+    blobs = BlobReader(target_root)
+    try:
+        side = Side(target_root, tree, discovery)
+        judge = _Judge(side, history, _Walker(history, blobs), registry)
+        report, findings = _check_artefact(artefact, judge)
+        traced = _traced(artefact, judge, findings)
+    finally:
+        blobs.close()
+    return ArtefactCheck(head, bool(history.shallow), artefact, report, traced)
+
+
+def _traced(
+    artefact: Artefact, judge: _Judge, findings: Sequence[RepositoryFinding]
+) -> tuple[TracedFinding, ...]:
+    """Each finding with the commits behind it (see `TracedFinding`)."""
+    history = judge.history
+    points = judge.walker.points(artefact)  # the check's walk again: its blobs are cached
+    if points.unreachable is not None or points.revalidation is None:
+        return tuple(TracedFinding(f, ()) for f in findings)
+    position = {commit.sha: index for index, commit in enumerate(history.commits)}
+    reached = history.ancestors(points.revalidation)
+    deferral_points = {anchor: point for anchor, point in points.deferrals if point is not None}
+    traced: list[TracedFinding] = []
+    for finding in findings:
+        anchor = finding.anchor
+        behind: set[int] = set()
+        if finding.kind is RepositoryFindingKind.STALE and finding.origin is not None:
+            behind.add(position[finding.origin.sha])
+            if anchor is not None:
+                covered = reached
+                if anchor in deferral_points:
+                    covered = covered | history.ancestors(deferral_points[anchor])
+                behind.update(_changes(judge, anchor, covered, points.own_paths))
+        elif (
+            finding.kind is RepositoryFindingKind.DEFERRED
+            and anchor in deferral_points
+            and judge.problem(anchor) is None
+        ):
+            postponed = history.ancestors(deferral_points[anchor])
+            behind.update(
+                index
+                for index in _changes(judge, anchor, reached, points.own_paths)
+                if index in postponed
+            )
+        commits = tuple(history.commits[index] for index in sorted(behind, reverse=True))
+        traced.append(TracedFinding(finding, commits))
+    return tuple(traced)
+
+
+def _changes(
+    judge: _Judge, anchor: Anchor, covered: frozenset[int], own: frozenset[str]
+) -> set[int]:
+    """Every commit outside `covered` that changed a live anchor's target (COR-050 point 5).
+
+    A path or a record: `_Judge.change` names the first such commit, and asked
+    again with each answer covered it names the next, so the rule is the
+    check's own. An artefact: each commit at which the target's content
+    differs from its content at the commit's first parent — the check asks
+    only whether the content at HEAD differs from the content the point saw.
+    """
+    if anchor.kind == "artefact":
+        target = judge.head.find(anchor.value)
+        if target is None:
+            return set()
+        walker = judge.walker
+        return {
+            version.index
+            for version in judge.history.versions(target.path)
+            if version.index not in covered
+            and _content_of(walker.same_at(version, target))
+            != _content_of(walker.same_before(version, target))
+        }
+    found: set[int] = set()
+    while True:
+        change = judge.change(anchor, covered, own)
+        if change is None or change.origin in covered:
+            return found
+        found.add(change.origin)
+        covered = covered | {change.origin}
+
+
+def _content_of(artefact: Artefact | None) -> tuple[str, dict[str, Any]] | None:
+    return None if artefact is None else content(artefact)
+
+
 # --- output --------------------------------------------------------------------------
 
 
@@ -1141,6 +1299,7 @@ def _result_line(result: RepositoryCheck) -> str:
 
 __all__ = [
     "OVER_BROAD_SHARE",
+    "ArtefactCheck",
     "ArtefactReport",
     "ArtefactState",
     "BlobReader",
@@ -1149,9 +1308,11 @@ __all__ = [
     "RepositoryCheck",
     "RepositoryFinding",
     "RepositoryFindingKind",
+    "TracedFinding",
     "Version",
     "read_history",
     "render_human",
     "render_json",
+    "run_artefact_check",
     "run_repository_check",
 ]

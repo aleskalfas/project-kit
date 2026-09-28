@@ -1,0 +1,18 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  Two reading commands join the `friction` command group, both views of the
+  whole-repository check that write nothing. `pkit friction debt [--json]`
+  lists the stale and deferred debt oldest first, each with its kind,
+  artefact, anchor and origin — commit, author, date and change — and a
+  deferral's reason; its entries are exactly the stale and deferred findings
+  `pkit friction check --all` reports, and artefacts a shallow clone cannot
+  judge are named apart. `pkit friction explain <artefact> [--json]` shows one
+  artefact's anchors, its revalidation and deferral points, what changed since
+  each — every changed anchor with the commits behind it — and, for each
+  finding, what clears it: the exact `pkit friction revalidate … --outcome …`
+  or `pkit friction defer … --anchor … --reason …` command, or the edit it
+  needs where no writer answers it. The artefact is named as the writers name
+  one, by location or id, and looked up at HEAD.

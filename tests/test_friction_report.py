@@ -1,0 +1,586 @@
+"""Tests for the debt listing and the per-artefact explanation (Task #993, COR-050 points 9 and 13).
+
+`pkit friction debt` and `pkit friction explain` are views of the
+whole-repository check, so every test holds them to it: the debt is exactly
+the check's stale and deferred findings, oldest first; an explanation's
+findings are exactly the check's for that artefact, each with the commits
+behind it and what clears it. Every test stands up a real adopter repository
+and lays down dated history (`Timeline`); the read-only test compares every
+byte of the repository, `.git` included, before and after each command.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import shlex
+from datetime import timedelta
+from pathlib import Path
+from typing import Any
+
+import pytest
+from click.testing import CliRunner, Result
+
+from project_kit import friction_report as frep
+from project_kit import friction_repository as fr
+from project_kit.cli import main
+from project_kit.friction_discovery import Anchor
+from tests.adopter_repo import HISTORY_EPOCH, Author, GitRepo, MakeAdopterRepo
+from tests.friction_documents import (
+    CONFIG,
+    T1,
+    T2,
+    Timeline,
+    document,
+    friction_config,
+    guide,
+)
+
+ALICE = Author("Alice", "alice@example.com")
+BOB = Author("Bob", "bob@example.com")
+CAROL = Author("Carol", "carol@example.com")
+
+# A fixed "now" for ages in the human view, well after every scripted commit.
+NOW = HISTORY_EPOCH + timedelta(days=100)
+
+CLI = Anchor("path", "src/cli/**")
+CORE = Anchor("path", "src/core/**")
+
+
+@pytest.fixture
+def timeline(make_adopter_repo: MakeAdopterRepo) -> Timeline:
+    return Timeline(make_adopter_repo())
+
+
+def _cli(*args: str) -> Result:
+    return CliRunner().invoke(main, ["friction", *args])
+
+
+def _notes(**overrides: Any) -> str:
+    """`notes`, anchored to the engine, revalidated at T1."""
+    values: dict[str, Any] = {"anchors": {"path": ["src/core/**"]}, "at": T1, "outcome": "updated"}
+    values.update(overrides)
+    return document("notes", **values)
+
+
+def _debt_history(timeline: Timeline) -> dict[str, str]:
+    """`a-notes` deferred late, `b-guide` stale early: the check lists them the other way round."""
+    timeline.start({"docs/a-notes.md": _notes(), "docs/b-guide.md": guide()})
+    changed = timeline.commit("change the CLI", {"src/cli/main.py": "print('2')\n"}, author=ALICE)
+    timeline.commit("change the engine", {"src/core/engine.py": "ENGINE = 2\n"}, author=BOB)
+    deferred = timeline.commit(
+        "defer the notes",
+        {"docs/a-notes.md": _notes(deferred=[("path", "src/core/**", "after the engine settles")])},
+        author=CAROL,
+    )
+    timeline.commit("change the CLI again", {"src/cli/main.py": "print('3')\n"})
+    return {"changed": changed, "deferred": deferred}
+
+
+def _debt_key(kind: str, location: str, anchor: Any, origin: Any) -> tuple[str, str, str, str]:
+    return (kind, location, json.dumps(anchor, sort_keys=True), origin["commit"])
+
+
+# --- the debt listing ------------------------------------------------------------------
+
+
+def test_debt_lists_both_kinds_oldest_first_with_their_origins(timeline: Timeline) -> None:
+    shas = _debt_history(timeline)
+    root = timeline.adopter.root
+
+    listing = frep.run_debt(root)
+    assert [
+        (
+            e.finding.kind.value,
+            e.finding.location,
+            e.finding.anchor,
+            e.origin.sha,
+            e.origin.author,
+            e.origin.date,
+            e.origin.subject,
+            e.reason,
+        )
+        for e in listing.entries
+    ] == [
+        (
+            "stale",
+            "docs/b-guide.md",
+            CLI,
+            shas["changed"],
+            "Alice",
+            HISTORY_EPOCH + timedelta(days=2),
+            "change the CLI",
+            None,
+        ),
+        (
+            "deferred",
+            "docs/a-notes.md",
+            CORE,
+            shas["deferred"],
+            "Carol",
+            HISTORY_EPOCH + timedelta(days=4),
+            "defer the notes",
+            "after the engine settles",
+        ),
+    ]
+    # The check reports them in walk order; the listing is by the age of the debt.
+    check = fr.run_repository_check(root)
+    assert [(f.kind.value, f.location) for f in check.findings] == [
+        ("deferred", "docs/a-notes.md"),
+        ("stale", "docs/b-guide.md"),
+    ]
+
+
+def test_debt_matches_the_whole_repository_check(timeline: Timeline) -> None:
+    timeline.start(
+        {
+            "notes/moved.md": document("moved", anchors={"path": ["src/core/**"]}, at=T1),
+            "docs/guide.md": guide(anchors={"path": ["src/cli/**", "src/gone/**", "."]}),
+            "docs/notes.md": _notes(),
+        },
+        friction_config(places=("docs", "notes")),
+    )
+    timeline.commit("change the CLI", {"src/cli/main.py": "print('2')\n"}, author=ALICE)
+    timeline.commit(
+        "defer the notes",
+        {"docs/notes.md": _notes(deferred=[("path", "src/core/**", "later")])},
+        author=BOB,
+    )
+    timeline.commit("change the engine", {"src/core/engine.py": "ENGINE = 2\n"})
+    timeline.rename("notes/moved.md", "docs/moved.md")
+
+    check = _cli("check", "--all", "--json")
+    debt = _cli("debt", "--json")
+    assert check.exit_code == 0 and debt.exit_code == 0, check.output + debt.output
+    reported = json.loads(check.output)["findings"]
+    listed = json.loads(debt.output)["debt"]
+    assert {f["kind"] for f in reported} > {"stale", "deferred"}  # dead and over-broad too
+    assert sorted(
+        _debt_key(f["kind"], f["location"], f["anchor"], f["origin"])
+        for f in reported
+        if f["kind"] in ("stale", "deferred")
+    ) == sorted(_debt_key(d["kind"], d["location"], d["anchor"], d["origin"]) for d in listed)
+    assert {d["message"] for d in listed} == {
+        f["message"] for f in reported if f["kind"] in ("stale", "deferred")
+    }
+    # Oldest first; the two debts of one commit keep the check's order.
+    assert [
+        (d["kind"], d["location"], d["anchor"] and d["anchor"]["value"], d["origin"]["change"])
+        for d in listed
+    ] == [
+        ("stale", "docs/guide.md", "src/cli/**", "change the CLI"),
+        ("stale", "docs/guide.md", ".", "change the CLI"),
+        ("deferred", "docs/notes.md", "src/core/**", "defer the notes"),
+        ("stale", "docs/moved.md", "src/core/**", "change the engine"),
+        ("stale", "docs/notes.md", "src/core/**", "change the engine"),
+        ("stale", "docs/moved.md", None, "rename notes/moved.md -> docs/moved.md"),
+    ]
+
+
+def test_debt_json_document_shape(timeline: Timeline) -> None:
+    shas = _debt_history(timeline)
+    result = _cli("debt", "--json")
+    assert result.exit_code == 0, result.output
+    doc = json.loads(result.output)
+    assert sorted(doc) == ["counts", "debt", "dormant", "head", "history", "report", "unreachable"]
+    assert (doc["report"], doc["dormant"], doc["history"]) == ("debt", False, {"shallow": False})
+    assert doc["counts"] == {"deferred": 1, "stale": 1, "unreachable": 0}
+    assert doc["unreachable"] == []
+    stale, deferred = doc["debt"]
+    assert stale == {
+        "kind": "stale",
+        "artefact": "guide",
+        "location": "docs/b-guide.md",
+        "anchor": {"kind": "path", "value": "src/cli/**"},
+        "origin": {
+            "commit": shas["changed"],
+            "author": "Alice",
+            "date": (HISTORY_EPOCH + timedelta(days=2)).isoformat(),
+            "change": "change the CLI",
+        },
+        "reason": None,
+        "message": stale["message"],
+    }
+    assert (deferred["kind"], deferred["reason"]) == ("deferred", "after the engine settles")
+
+
+def test_debt_human_view(timeline: Timeline) -> None:
+    shas = _debt_history(timeline)
+    human = frep.render_debt_human(frep.run_debt(timeline.adopter.root), now=NOW)
+    assert human.startswith("Friction debt — 1 stale, 1 deferred")
+    lines = human.splitlines()
+    stale = next(line for line in lines if shas["changed"][:12] in line)
+    deferred = next(line for line in lines if shas["deferred"][:12] in line)
+    assert lines.index(stale) < lines.index(deferred)
+    for text in ("2026-01-03", "stale", "docs/b-guide.md", "path src/cli/**", "Alice"):
+        assert text in stale
+    assert stale.endswith('"change the CLI"   98 days ago')
+    assert deferred.endswith("96 days ago — after the engine settles")
+    assert "Legend" in human and "pkit friction explain <artefact>" in human
+
+
+def test_debt_when_there_is_none_and_while_dormant(timeline: Timeline) -> None:
+    timeline.start({"docs/guide.md": guide()})
+    result = _cli("debt")
+    assert result.exit_code == 0, result.output
+    assert "nothing stale or deferred" in result.output
+
+    timeline.commit("drop the places", {CONFIG: json.dumps({"friction": {}}) + "\n"})
+    dormant = _cli("debt")
+    assert dormant.exit_code == 0, dormant.output
+    assert "no places declared; dormant." in dormant.output
+    assert json.loads(_cli("debt", "--json").output)["dormant"] is True
+
+
+def test_debt_names_the_artefacts_a_shallow_clone_cannot_judge(
+    timeline: Timeline, tmp_path: Path
+) -> None:
+    repo = timeline.adopter
+    timeline.start({"docs/guide.md": guide()})
+    for version in (2, 3, 4):
+        timeline.commit(f"cli {version}", {"src/cli/main.py": f"print('cli {version}')\n"})
+    shallow = tmp_path / "shallow"
+    repo.git("clone", "-q", "--depth", "2", f"file://{repo.root}", str(shallow))
+
+    listing = frep.run_debt(shallow)
+    assert (listing.shallow, listing.entries) == (True, ())
+    assert [r.location for r in listing.unreachable] == ["docs/guide.md"]
+    human = frep.render_debt_human(listing, now=NOW)
+    assert "NOT JUDGED" in human and "git fetch --unshallow" in human
+
+
+# --- the explanation ---------------------------------------------------------------------
+
+
+def test_explain_names_each_changed_anchor_with_the_commits_behind_it(timeline: Timeline) -> None:
+    timeline.start({"docs/guide.md": guide(anchors={"path": ["src/cli/**", "src/core/**"]})})
+    first = timeline.commit("change the CLI", {"src/cli/main.py": "print('2')\n"}, author=ALICE)
+    timeline.commit("unrelated", {"README.txt": "Hello.\n"})
+    second = timeline.commit(
+        "change the CLI again", {"src/cli/main.py": "print('3')\n"}, author=BOB
+    )
+
+    explanation = frep.run_explain(timeline.adopter.root, "guide")
+    assert explanation.state == "stale"
+    assert [(a.anchor, a.state, a.changes) for a in explanation.anchors] == [
+        (CLI, "stale", 2),
+        (CORE, "current", 0),
+    ]
+    (stale,) = explanation.findings
+    assert stale.finding.origin is not None and stale.finding.origin.sha == first
+    assert [c.sha for c in stale.commits] == [first, second]
+    assert [(a.answer, a.command) for a in stale.answers] == [
+        ("updated", "pkit friction revalidate docs/guide.md --outcome updated"),
+        (
+            "unchanged",
+            "pkit friction revalidate docs/guide.md --outcome unchanged "
+            "--because '<why the content still holds>'",
+        ),
+        (
+            "deferred",
+            "pkit friction defer docs/guide.md --anchor 'path:src/cli/**' "
+            "--reason '<why it can wait>'",
+        ),
+    ]
+    human = frep.render_explain_human(explanation, now=NOW)
+    assert f"{first[:12]}  2026-01-03  Alice  change the CLI" in human
+    assert f"{second[:12]}  2026-01-05  Bob    change the CLI again" in human
+    assert "changed in 2 commits since its point" in human
+    assert "unchanged since the revalidation point" in human
+
+
+@pytest.mark.parametrize("answer", ["unchanged", "deferred"])
+def test_the_commands_named_clear_the_finding(timeline: Timeline, answer: str) -> None:
+    timeline.start({"docs/guide.md": guide()})
+    timeline.commit("change the CLI", {"src/cli/main.py": "print('2')\n"})
+    (stale,) = frep.run_explain(timeline.adopter.root, "docs/guide.md").findings
+    (command,) = [a.command for a in stale.answers if a.answer == answer]
+
+    words = shlex.split(command)
+    words = [{frep.BECAUSE: "still true", frep.REASON: "next sprint"}.get(w, w) for w in words]
+    assert words[:2] == ["pkit", "friction"]
+    written = CliRunner().invoke(main, [*words[1:], "--yes"])
+    assert written.exit_code == 0, written.output
+    timeline.commit("answer the friction", None)
+
+    assert [e.finding.kind.value for e in frep.run_debt(timeline.adopter.root).entries] == (
+        [] if answer == "unchanged" else ["deferred"]
+    )
+
+
+def test_explain_findings_are_the_whole_repository_checks(timeline: Timeline) -> None:
+    anchors = {"path": ["src/cli/**", "src/core/**", "src/gone/**", "."], "use-case": ["UC-1"]}
+    timeline.start({"docs/guide.md": guide(anchors=anchors), "docs/other.md": _notes()})
+    timeline.commit("change the CLI", {"src/cli/main.py": "print('2')\n"})
+    timeline.commit(
+        "defer the engine",
+        {"docs/guide.md": guide(anchors=anchors, deferred=[("path", "src/core/**", "later")])},
+    )
+    root = timeline.adopter.root
+
+    def summary(findings: Any) -> list[tuple[str, Any, Any, str]]:
+        return [
+            (f.kind.value, f.anchor, None if f.origin is None else f.origin.sha, f.message)
+            for f in findings
+        ]
+
+    reported = [f for f in fr.run_repository_check(root).findings if f.location == "docs/guide.md"]
+    explanation = frep.run_explain(root, "guide")
+    assert summary(f.finding for f in explanation.findings) == summary(reported)
+    assert [(f.finding.kind.value, f.finding.anchor) for f in explanation.findings] == [
+        ("stale", CLI),
+        ("stale", Anchor("path", ".")),
+        ("deferred", CORE),
+        ("dead-anchor", Anchor("path", "src/gone/**")),
+        ("unresolved-kind", Anchor("use-case", "UC-1")),
+        ("over-broad", Anchor("path", ".")),
+    ]
+    assert [(a.anchor.value, a.state, a.over_broad) for a in explanation.anchors] == [
+        ("src/cli/**", "stale", False),
+        ("src/core/**", "deferred", False),
+        ("src/gone/**", "dead-anchor", False),
+        (".", "stale", True),
+        ("UC-1", "unresolved-kind", False),
+    ]
+    by_kind = {f.finding.kind.value: f for f in explanation.findings}
+    for kind in ("dead-anchor", "unresolved-kind", "over-broad"):
+        assert by_kind[kind].answers == () and by_kind[kind].commits == ()
+    assert "the writers do not edit anchors" in by_kind["dead-anchor"].clears
+    assert "resolves `use-case` anchors" in by_kind["unresolved-kind"].clears
+    assert by_kind["over-broad"].clears.startswith("narrow path:.")
+
+
+def test_explain_a_deferral_what_it_postpones_and_what_came_after(timeline: Timeline) -> None:
+    timeline.start({"docs/guide.md": guide()})
+    before = timeline.commit("change the CLI", {"src/cli/main.py": "print('2')\n"})
+    deferred = timeline.commit(
+        "defer the guide",
+        {"docs/guide.md": guide(deferred=[("path", "src/cli/**", "waiting")])},
+        author=BOB,
+    )
+    after = timeline.commit("change the CLI again", {"src/cli/main.py": "print('3')\n"})
+
+    explanation = frep.run_explain(timeline.adopter.root, "docs/guide.md")
+    stale, postponed = explanation.findings
+    assert (stale.finding.kind.value, [c.sha for c in stale.commits]) == ("stale", [after])
+    assert (postponed.finding.kind.value, [c.sha for c in postponed.commits]) == (
+        "deferred",
+        [before],
+    )
+    assert (
+        postponed.clears
+        == "a revalidation that does not keep it (`--keep path:src/cli/**` keeps it)"
+    )
+    assert [a.answer for a in postponed.answers] == ["updated", "unchanged"]
+    assert explanation.report is not None
+    assert [(a, p and p.sha) for a, p in explanation.report.deferral_points] == [(CLI, deferred)]
+    human = frep.render_explain_human(explanation, now=NOW)
+    assert "    postpones, oldest first:" in human and "    changed in, oldest first:" in human
+    assert f"deferral      {deferred[:12]}  2026-01-04" in human
+    assert "name each one kept with --keep (path:src/cli/**)" in human
+    assert "waiting; since" in human and "97 days ago" in human
+
+
+def test_explain_an_artefact_anchor_lists_each_change_of_the_targets_content(
+    timeline: Timeline,
+) -> None:
+    def engine(at: str, body: str) -> str:
+        return document(
+            "engine-notes", anchors={"path": ["src/core/**"]}, at=at, outcome="updated", body=body
+        )
+
+    overview = document(
+        "overview", anchors={"artefact": ["engine-notes"]}, at=T1, outcome="updated"
+    )
+    timeline.start({"docs/a-engine.md": engine(T1, "One."), "docs/b-overview.md": overview})
+    first = timeline.commit("engine notes: two", {"docs/a-engine.md": engine(T1, "Two.")})
+    timeline.commit("engine notes: revalidated only", {"docs/a-engine.md": engine(T2, "Two.")})
+    third = timeline.commit("engine notes: three", {"docs/a-engine.md": engine(T2, "Three.")})
+
+    explanation = frep.run_explain(timeline.adopter.root, "overview")
+    (stale,) = explanation.findings
+    assert stale.finding.anchor == Anchor("artefact", "engine-notes")
+    assert stale.finding.origin is not None and stale.finding.origin.sha == first
+    # The middle commit changed only the container: not content, so nothing behind the change.
+    assert [c.sha for c in stale.commits] == [first, third]
+
+
+def test_explain_a_move(timeline: Timeline) -> None:
+    timeline.start({"notes/guide.md": guide()}, friction_config(places=("docs", "notes")))
+    moved = timeline.rename("notes/guide.md", "docs/guide.md")
+
+    explanation = frep.run_explain(timeline.adopter.root, "guide")
+    (stale,) = explanation.findings
+    assert (stale.finding.anchor, [c.sha for c in stale.commits]) == (None, [moved])
+    assert stale.clears == "revalidate the artefact: a move cannot be deferred"
+    assert [a.answer for a in stale.answers] == ["updated", "unchanged"]
+    assert "    moved in:" in frep.render_explain_human(explanation, now=NOW)
+
+
+def test_explain_names_the_artefact_as_the_writers_do(timeline: Timeline) -> None:
+    rules = {
+        entry: {"pkit": {"friction": {"anchors": {"path": ["src/core/**"]}}}}
+        for entry in ("RS-1", "RS-2")
+    }
+    timeline.start(
+        {
+            "docs/guide.md": guide(),
+            "docs/rules.md": f"---\n{json.dumps(rules)}\n---\n\n## RS-1 — One\n\nOne.\n",
+            "docs/twin-a.md": document("twin", anchors={"path": ["src/cli/**"]}),
+            "docs/twin-b.md": document("twin", anchors={"path": ["src/cli/**"]}),
+        }
+    )
+    root = timeline.adopter.root
+    for reference in ("guide", "docs/guide.md"):
+        assert frep.run_explain(root, reference).artefact.location == "docs/guide.md"
+    for reference in ("docs/rules.md#RS-2", "RS-2"):
+        assert frep.run_explain(root, reference).artefact.location == "docs/rules.md#RS-2"
+    assert frep.run_explain(root, "docs/twin-b.md").artefact.location == "docs/twin-b.md"
+
+    with pytest.raises(frep.FrictionReportError, match=r"names 2 artefacts at HEAD"):
+        frep.run_explain(root, "twin")
+    with pytest.raises(frep.FrictionReportError, match=r"The file holds docs/rules.md#RS-1"):
+        frep.run_explain(root, "docs/rules.md#RS-9")
+
+    timeline.adopter.write({"docs/new.md": document("new", anchors={"path": ["src/cli/**"]})})
+    result = _cli("explain", "new")
+    assert result.exit_code == 1
+    assert "no artefact at HEAD is named 'new'" in result.output
+    assert "commit a new artefact first" in result.output
+
+
+def test_explain_an_unanchored_artefact(timeline: Timeline) -> None:
+    timeline.start({"docs/guide.md": guide(), "docs/plain.md": "---\nid: plain\n---\n\nText.\n"})
+    explanation = frep.run_explain(timeline.adopter.root, "plain")
+    assert (explanation.state, explanation.report, explanation.findings) == (
+        "unanchored",
+        None,
+        (),
+    )
+    result = _cli("explain", "plain")
+    assert result.exit_code == 0, result.output
+    assert "State: unanchored" in result.output and "FINDINGS" not in result.output
+
+
+def test_explain_refuses_without_places_and_before_the_first_commit(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    adopter = make_adopter_repo()
+    adopter.write({CONFIG: friction_config(), "docs/guide.md": guide()})
+    with pytest.raises(fr.FrictionCheckError, match="commit first"):
+        frep.run_explain(adopter.root, "guide")
+
+    adopter.commit("no places", {CONFIG: json.dumps({"friction": {}}) + "\n"})
+    result = _cli("explain", "guide")
+    assert result.exit_code == 1
+    assert "no places are declared at HEAD" in result.output
+
+
+def test_explain_in_a_shallow_clone(timeline: Timeline, tmp_path: Path) -> None:
+    repo = timeline.adopter
+    timeline.start({"docs/guide.md": guide()})
+    for version in (2, 3, 4):
+        timeline.commit(f"cli {version}", {"src/cli/main.py": f"print('cli {version}')\n"})
+    shallow = tmp_path / "shallow"
+    repo.git("clone", "-q", "--depth", "2", f"file://{repo.root}", str(shallow))
+
+    explanation = frep.run_explain(shallow, "guide")
+    assert (explanation.state, explanation.shallow) == ("unreachable", True)
+    assert [a.state for a in explanation.anchors] == ["unreachable"]
+    (finding,) = explanation.findings
+    assert finding.finding.kind is fr.RepositoryFindingKind.UNREACHABLE
+    assert finding.clears == "fetch the full history (`git fetch --unshallow`) and run again"
+
+
+def test_explain_json_document_shape(timeline: Timeline) -> None:
+    base = timeline.start({"docs/guide.md": guide()})
+    changed = timeline.commit("change the CLI", {"src/cli/main.py": "print('2')\n"}, author=ALICE)
+    result = _cli("explain", "guide", "--json")
+    assert result.exit_code == 0, result.output
+    doc = json.loads(result.output)
+    assert sorted(doc) == [
+        "anchors",
+        "artefact",
+        "deferral_points",
+        "findings",
+        "head",
+        "history",
+        "location",
+        "report",
+        "revalidation_point",
+        "state",
+    ]
+    assert (doc["report"], doc["artefact"], doc["location"], doc["state"]) == (
+        "explain",
+        "guide",
+        "docs/guide.md",
+        "stale",
+    )
+    assert doc["revalidation_point"]["commit"] == base and doc["deferral_points"] == []
+    assert doc["anchors"] == [
+        {"kind": "path", "value": "src/cli/**", "state": "stale", "changes": 1, "over_broad": False}
+    ]
+    (finding,) = doc["findings"]
+    assert sorted(finding) == [
+        "anchor",
+        "answers",
+        "clears",
+        "commits",
+        "kind",
+        "message",
+        "origin",
+    ]
+    assert [c["commit"] for c in finding["commits"]] == [changed]
+    assert finding["origin"]["commit"] == changed
+    assert [a["answer"] for a in finding["answers"]] == ["updated", "unchanged", "deferred"]
+
+
+# --- read-only, deterministic --------------------------------------------------------------
+
+
+def _snapshot(root: Path) -> dict[str, tuple[int, bytes]]:
+    """Every file, link and directory under `root`, `.git` included: its mode and bytes."""
+    found: dict[str, tuple[int, bytes]] = {}
+    for path in sorted(root.rglob("*")):
+        mode = path.lstat().st_mode
+        if path.is_symlink():
+            data = os.readlink(path).encode()
+        elif path.is_file():
+            data = path.read_bytes()
+        else:
+            data = b""
+        found[path.relative_to(root).as_posix()] = (mode, data)
+    return found
+
+
+def test_neither_command_writes(timeline: Timeline) -> None:
+    _debt_history(timeline)
+    timeline.adopter.write({"src/cli/main.py": "print('uncommitted')\n"})  # a dirty tree, too
+    root = timeline.adopter.root
+    before = _snapshot(root)
+    for args in (
+        ("debt",),
+        ("debt", "--json"),
+        ("explain", "guide"),
+        ("explain", "docs/a-notes.md", "--json"),
+        ("explain", "nothing-by-this-name"),
+    ):
+        _cli(*args)
+        assert _snapshot(root) == before, args
+
+
+def test_output_is_deterministic(timeline: Timeline) -> None:
+    _debt_history(timeline)
+    root = timeline.adopter.root
+    GitRepo(root).git("commit", "-q", "--allow-empty", "-m", "an empty commit")
+    first_debt, second_debt = frep.run_debt(root), frep.run_debt(root)
+    assert frep.render_debt_json(first_debt) == frep.render_debt_json(second_debt)
+    assert frep.render_debt_human(first_debt, now=NOW) == frep.render_debt_human(
+        second_debt, now=NOW
+    )
+    for reference in ("guide", "notes"):
+        first, second = frep.run_explain(root, reference), frep.run_explain(root, reference)
+        assert frep.render_explain_json(first) == frep.render_explain_json(second)
+        assert frep.render_explain_human(first, now=NOW) == frep.render_explain_human(
+            second, now=NOW
+        )
