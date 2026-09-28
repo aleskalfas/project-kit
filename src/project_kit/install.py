@@ -80,11 +80,15 @@ adr-records:
 # that resolves into sync-managed content is refused at deploy time.
 process-authoring-targets: []
 
-# Per-agent overrides (optional): replace categories for a specific agent.
+# Per-agent overrides (optional): replace categories for a specific agent,
+# and set the model / effort it runs at (absent = inherit from the caller).
 # overrides:
 #   product-manager:
 #     workflow-docs:
 #       - docs/roadmap.md
+#   critic:
+#     model: sonnet        # inherit, an alias (sonnet, opus, haiku, …) or claude-…
+#     effort: medium       # inherit, low, medium, high, xhigh or max
 """
 
 

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import stat
+import time
 import urllib.parse
 from pathlib import Path
 
@@ -1286,6 +1288,35 @@ def test_cli_workstream_derived_via_pm_verb(monkeypatch) -> None:
     res = CliRunner().invoke(main, ["report", "bug", "--title", "t", "--body", "b"])
     assert res.exit_code == 0, res.output
     assert urllib.parse.quote_plus("Project: alpha · Workstream: derived-ws") in res.output
+
+
+def test_cli_a_hung_workstream_verb_does_not_hang_the_report(
+    tmp_path: Path, monkeypatch
+) -> None:
+    # The verb runs through the bounded command runner (#1053): one that never
+    # answers is stopped at the bound, the report says so and goes on without
+    # the workstream.
+    from project_kit import command_runner, dispatcher
+
+    (tmp_path / ".pkit").mkdir()
+    verb = tmp_path / "context-workstream.py"
+    verb.write_text("#!/usr/bin/env python3\nimport time\ntime.sleep(60)\n", encoding="utf-8")
+    verb.chmod(verb.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+    monkeypatch.setattr(cli_mod, "find_target_root", lambda: tmp_path)
+    monkeypatch.setattr(cli_mod, "_resolve_report_context", _REAL_RESOLVE_CONTEXT)
+    monkeypatch.setattr(rc_mod, "read_project_name", lambda root: "alpha")
+    monkeypatch.setattr(dispatcher, "resolve_capability_script", lambda root, cap, cmd: verb)
+    monkeypatch.setattr(command_runner, "COMMAND_TIMEOUT_SECONDS", 1)
+
+    started = time.monotonic()
+    res = CliRunner().invoke(main, ["report", "bug", "--title", "t", "--body", "b"])
+    assert time.monotonic() - started < 15  # not the verb's sixty seconds
+    assert res.exit_code == 0, res.output
+    assert "workstream omitted" in res.output
+    assert "did not answer within 1 s" in res.output
+    # ...and the report is composed all the same, its context line without it.
+    assert urllib.parse.quote_plus("Project: alpha") in res.output
+    assert urllib.parse.quote_plus("Workstream:") not in res.output
 
 
 def test_cli_draft_path_uses_remote_fallback_without_prompt(
