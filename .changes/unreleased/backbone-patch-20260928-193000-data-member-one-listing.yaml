@@ -1,0 +1,11 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The `data` member of `pkit validate` now lists the repository through the
+  working tree's one listing, the one friction discovery reads (#1034, ADR-057
+  point 2), instead of walking the filesystem on its own: a YAML file git
+  ignores, or one beneath a nested repository, is no longer taken for the
+  repository's data. Outside a git work tree every file is listed, as before.
+  The focused `pkit data validate <path>` still checks whatever path it is given.

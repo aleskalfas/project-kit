@@ -493,6 +493,44 @@ def test_the_data_member_skips_what_nothing_binds_and_checks_what_something_does
     assert "error    notes/deeper/evidence.yaml\n      → YAML parse error" in third.output
 
 
+def test_the_data_member_lists_the_repository_through_the_working_trees_one_listing(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """The files git sees, as friction discovery lists them (ADR-057 point 2): a file git
+    ignores and a file beneath a nested repository are not the repository's; the order
+    is a walk's — a folder's files before its sub-folders, each by name."""
+    import subprocess
+
+    from project_kit import data_validate
+
+    adopter = make_adopter_repo()
+    root = adopter.root
+    adopter.write(
+        {
+            ".gitignore": "build/\n",
+            "build/out.yaml": "a: 1\n",
+            "b.yaml": "a: 1\n",
+            "a/z.yaml": "a: 1\n",
+            "a/sub/y.yaml": "a: 1\n",
+            ".pkit/project/extra.yaml": "a: 1\n",
+        }
+    )
+    nested = root / "vendored"
+    nested.mkdir()
+    subprocess.run(["git", "init", "-q"], cwd=nested, check=True)
+    (nested / "inside.yaml").write_text("a: 1\n", encoding="utf-8")
+    listed = [
+        p.relative_to(root).as_posix() for p in data_validate.discover_repository_data_files(root)
+    ]
+    assert [p for p in listed if not p.startswith(".pkit/")] == [
+        "b.yaml",
+        "a/z.yaml",
+        "a/sub/y.yaml",
+    ]
+    assert ".pkit/project/extra.yaml" in listed
+    assert listed.index(".pkit/project/extra.yaml") < listed.index("a/z.yaml")
+
+
 # --- the refs member: drift warns, breakage fails, patterns read both ways ----
 
 
