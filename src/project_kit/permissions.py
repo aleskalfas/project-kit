@@ -251,8 +251,8 @@ def explain(target_root: Path, agent: str | None) -> str:
 
 # ---- catalog ---------------------------------------------------------------
 
-def _confined_folders(spec: dict) -> list[str]:
-    """The folders a path-confined privilege (the agent workspace) is recognized
+def _path_scoped_folders(spec: dict) -> list[str]:
+    """The folders a path-scoped allow (the agent workspace) is recognized
     inside, or [] for any other privilege."""
     path = spec.get("recognize", {}).get("path")
     return list(path.get("folders") or []) if isinstance(path, dict) else []
@@ -267,7 +267,7 @@ def catalog(target_root: Path) -> str:
     for pid in sorted(privileges):
         spec = privileges[pid]
         scope = f"  [scope: {spec['scope_type']}]" if spec.get("scope_type") else ""
-        folders = _confined_folders(spec)
+        folders = _path_scoped_folders(spec)
         inside = f"  [inside: {', '.join(f + '/' for f in folders)}]" if folders else ""
         lines.append(f"  {pid:22} {spec.get('description', '')}{scope}{inside}")
     return "\n".join(lines) + "\n"
@@ -320,7 +320,7 @@ def overview(target_root: Path) -> str:
     def _scope(spec: dict) -> str:
         if spec.get("scope_type"):
             return f"[{spec['scope_type']}-scope]"
-        folders = _confined_folders(spec)
+        folders = _path_scoped_folders(spec)
         return f"[inside {', '.join(f + '/' for f in folders)}]" if folders else ""
 
     # Compute column widths across ALL rows so the two sections align together.
@@ -473,8 +473,9 @@ def overview(target_root: Path) -> str:
         "                     settings — so it holds even if the hook is off/faulting",
         "  granted to: —      no agent has this enabler yet",
         "  [directory|domain-scope]  the grant can be limited to paths or hosts via --scope",
-        "  [inside <folder>/]  recognized only for a target in that folder (the agent",
-        "                     workspace) — never a session-wide rule; the hook enforces it",
+        "  [inside <folder>/]  a path-scoped allow: recognized only for a file tool whose",
+        "                     target is in that folder (the agent workspace) — never a",
+        "                     session-wide rule; the hook enforces it",
         f"  backbone           {cap_note}",
         "",
         cli_render.style("heading", "Commands"),
