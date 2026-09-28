@@ -80,7 +80,6 @@ from project_kit.upgrade import (
 )
 from project_kit.validate import (
     Issue as ValidateIssue,
-    Section as ValidateSection,
     print_validate_report,
     run_validate,
 )
@@ -2521,19 +2520,18 @@ def validate(include_refs: bool) -> None:
 
     packages = package_validate.validate_installed_packages(target_root)
     issues.extend(packages.as_issues(target_root))
-    sections: list[ValidateSection] = []
     # --- friction (COR-050 point 12) — one pass, one section ---------------
+    # Errors join the issue list; the section (counts, reports) prints after
+    # it, in the same order as the configuration and packages sections.
     friction_result = friction_validate.validate_friction(target_root)
     issues.extend(
         ValidateIssue(location=f.where, diagnosis=f.message) for f in friction_result.errors
     )
-    sections.append(
-        ValidateSection("friction", tuple(friction_validate.summary_lines(friction_result)))
-    )
     # ------------------------------------------------------------------------
-    print_validate_report(target_root, issues, sections)
+    print_validate_report(target_root, issues)
     config_validate.print_configuration_section(config_report)
     package_validate.print_pass(target_root, packages)
+    friction_validate.print_section(friction_result)
     if issues:
         raise SystemExit(1)
 

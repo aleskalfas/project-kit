@@ -3,28 +3,32 @@
 Over the artefacts `friction_discovery` finds in the declared places, and the
 settings that declare them, this pass reports:
 
+- **unparsable front matter** in a declared place — reported whenever places
+  are declared, dormant or not, because the check never skips an artefact it
+  cannot parse: the broken file may be the one carrying the container;
 - **a malformed block** — the container fails its schema or the container's
   rule; delegated to `backbone_schemas.validate_container`, whose errors are
-  surfaced against the artefact (COR-050 point 2, COR-053 point 10). Front
-  matter in a declared place that does not parse is reported too, because the
-  check never skips an artefact it cannot parse;
+  surfaced against the artefact (COR-050 point 2, COR-053 point 10);
 - **a dangling deferral** — a `deferred[].anchor` naming, by kind and value,
   no anchor of the artefact (COR-050 point 4);
 - **a cycle between artefacts** through `anchors.artefact`, with the cycle's
   path — a cycle has no order in which its members could be revalidated
-  (COR-050 point 5);
-- **an invalid friction mode** in the configuration (COR-050 points 12, 14);
-- **a settings path outside the repository** — a place, surface or exclude
-  entry of the project, or a capability's place or surface (COR-050 point 14).
+  (COR-050 point 5).
 
-These fail validation in either mode, because the project can fix them. What
-this pass does not do: compute friction, resolve path anchors against git, or
-report dead anchors — those are the two checks' findings (COR-050 points 6
-and 7), later Tasks. Orphaned role blocks the container validator reports are
-carried through as reports (never errors) so `pkit validate` can show them.
+These fail validation in either mode, because the project can fix them. The
+settings themselves — an invalid `friction.mode`, a place, surface or exclude
+path outside the repository — are the configuration pass's findings
+(`config_validate`, which owns the file) and a capability's are the packages
+pass's; this pass only reads the settings, and never walks a place that leaves
+the repository. What it does not do either: compute friction, resolve path
+anchors against git, or report dead anchors — those are the two checks'
+findings (COR-050 points 6 and 7), later Tasks. Orphaned role blocks the
+container validator reports are carried through as reports (never errors) so
+`pkit validate` can show them.
 
-Dormant until used (COR-050 point 15): with no places declared, or no
-artefact carrying the container, the pass reports nothing but its counts.
+Dormant until used (COR-050 point 15): with no places declared, or nothing in
+them to judge — no artefact carrying the container and no file it failed to
+parse — the pass reports nothing but its counts.
 """
 
 from __future__ import annotations
@@ -34,15 +38,15 @@ from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 
+import click
+
 from project_kit import backbone_schemas as bs
+from project_kit import cli_render
 from project_kit.friction_discovery import (
     FRICTION_KEY,
-    FRICTION_MODES,
     Artefact,
     Discovery,
-    FrictionSettings,
     discover_artefacts,
-    is_inside_repository,
     read_friction_settings,
 )
 
@@ -54,8 +58,6 @@ class FrictionFindingKind(Enum):
     UNPARSABLE_FRONT_MATTER = "unparsable-front-matter"
     DANGLING_DEFERRAL = "dangling-deferral"
     CYCLE = "cycle"
-    INVALID_MODE = "invalid-mode"
-    PATH_OUTSIDE_REPOSITORY = "path-outside-repository"
     CONTAINER_REPORT = "container-report"  # an orphaned role block, an inert point block
     SCHEMA_UNAVAILABLE = "schema-unavailable"  # the tree ships no readable container schema
 
@@ -64,7 +66,7 @@ class FrictionFindingKind(Enum):
 class FrictionFinding:
     """One finding, located by file (`path`, `path#id` for an entry) and pointer."""
 
-    location: str  # the artefact's or settings file's location, relative to the root
+    location: str  # the artefact's location, relative to the root
     pointer: str  # JSON Pointer inside it, or "" when the finding is about the whole
     severity: Severity
     kind: FrictionFindingKind
@@ -98,81 +100,41 @@ class FrictionValidation:
 def validate_friction(target_root: Path) -> FrictionValidation:
     """Run the pass over the project at `target_root`.
 
-    The settings findings (mode, paths) are checked whenever a `friction` key
-    is present anywhere, dormant or not: an invalid mode must never switch
-    enforcement off silently (COR-050 point 12). The artefact findings run only
-    when the pass is awake.
+    Unparsable front matter is reported whenever places are declared: a file
+    that fails to parse also keeps the pass awake (`Discovery.is_dormant`), so
+    a YAML typo in the only container-carrying file is an error, not silence.
+    The container, deferral and cycle findings run only when the pass is awake.
     """
     settings = read_friction_settings(target_root)
     discovery = discover_artefacts(target_root, settings)
     findings: list[FrictionFinding] = []
-    findings.extend(_settings_findings(target_root, settings))
+    findings.extend(_unreadable_findings(discovery))
     if not discovery.is_dormant:
         findings.extend(_artefact_findings(target_root, discovery))
     return FrictionValidation(discovery=discovery, findings=tuple(findings))
 
 
-# --- settings -----------------------------------------------------------
-
-
-def _settings_findings(target_root: Path, settings: FrictionSettings) -> list[FrictionFinding]:
-    findings: list[FrictionFinding] = []
-    if settings.mode is not None and settings.mode not in FRICTION_MODES:
-        allowed = ", ".join(repr(m) for m in FRICTION_MODES)
-        findings.append(
-            FrictionFinding(
-                location=settings.config_file,
-                pointer=settings.mode_location,
-                severity=Severity.ERROR,
-                kind=FrictionFindingKind.INVALID_MODE,
-                message=(
-                    f"{FRICTION_KEY}.mode {settings.mode!r} is not one of {allowed}; "
-                    f"set it to one of those (the default, when absent, is 'warning')."
-                ),
-            )
-        )
-    for declared in settings.all_paths:
-        if is_inside_repository(target_root, declared.resolved):
-            continue
-        resolved = ""
-        if declared.resolved != declared.value:
-            resolved = f" (resolved: {declared.resolved!r})"
-        findings.append(
-            FrictionFinding(
-                location=declared.file,
-                pointer=declared.pointer,
-                severity=Severity.ERROR,
-                kind=FrictionFindingKind.PATH_OUTSIDE_REPOSITORY,
-                message=(
-                    f"path {declared.value!r}{resolved} lies outside the repository; "
-                    f"every friction path is relative to the repository root and must stay "
-                    f"inside it (COR-050 point 14)."
-                ),
-            )
-        )
-    return findings
-
-
 # --- artefacts ----------------------------------------------------------
+
+
+def _unreadable_findings(discovery: Discovery) -> Iterable[FrictionFinding]:
+    """A Markdown file in a declared place whose front matter does not parse."""
+    for unreadable in discovery.unreadable:
+        yield FrictionFinding(
+            location=unreadable.path,
+            pointer="",
+            severity=Severity.ERROR,
+            kind=FrictionFindingKind.UNPARSABLE_FRONT_MATTER,
+            message=(
+                f"front matter does not parse ({unreadable.reason}); the file is in the "
+                f"declared place {unreadable.place.pattern!r}, so its block cannot be "
+                f"skipped — fix the YAML or move the file out of the place."
+            ),
+        )
 
 
 def _artefact_findings(target_root: Path, discovery: Discovery) -> list[FrictionFinding]:
     findings: list[FrictionFinding] = []
-    for unreadable in discovery.unreadable:
-        findings.append(
-            FrictionFinding(
-                location=unreadable.path,
-                pointer="",
-                severity=Severity.ERROR,
-                kind=FrictionFindingKind.UNPARSABLE_FRONT_MATTER,
-                message=(
-                    f"front matter does not parse ({unreadable.reason}); the file is in the "
-                    f"declared place {unreadable.place.pattern!r}, so its block cannot be "
-                    f"skipped — fix the YAML or move the file out of the place."
-                ),
-            )
-        )
-
     schema, schema_finding = _container_schema(target_root)
     if schema_finding is not None:
         findings.append(schema_finding)
@@ -222,21 +184,28 @@ def _container_findings(artefact: Artefact, schema: dict) -> Iterable[FrictionFi
 
 
 def _dangling_deferrals(artefact: Artefact) -> Iterable[FrictionFinding]:
-    """A `deferred[].anchor` that names no anchor of the artefact, by kind and value."""
-    for index, deferral in enumerate(artefact.deferrals):
-        if deferral.value in artefact.anchors_of_kind(deferral.kind):
+    """A `deferred[].anchor` that names no anchor of the artefact, by kind and value.
+
+    The pointer carries the entry's index as written (`Deferral.index`), so it
+    names the right entry even when a malformed one precedes it.
+    """
+    for deferral in artefact.deferrals:
+        anchor = deferral.anchor
+        declared = artefact.anchors_of_kind(anchor.kind)
+        if anchor.value in declared:
             continue
-        declared = artefact.anchors_of_kind(deferral.kind)
         known = ""
         if declared:
-            known = f" (its {deferral.kind} anchors: {', '.join(map(repr, declared))})"
+            known = f" (its {anchor.kind} anchors: {', '.join(map(repr, declared))})"
         yield FrictionFinding(
             location=artefact.location,
-            pointer=f"/{bs.CONTAINER_KEY}/{FRICTION_KEY}/revalidated/deferred/{index}/anchor",
+            pointer=(
+                f"/{bs.CONTAINER_KEY}/{FRICTION_KEY}/revalidated/deferred/{deferral.index}/anchor"
+            ),
             severity=Severity.ERROR,
             kind=FrictionFindingKind.DANGLING_DEFERRAL,
             message=(
-                f"deferral names {deferral.kind} anchor {deferral.value!r}, which the artefact "
+                f"deferral names {anchor.kind} anchor {anchor.value!r}, which the artefact "
                 f"does not declare{known}; remove the entry, or add the anchor it postpones "
                 f"(COR-050 point 4)."
             ),
@@ -333,17 +302,27 @@ def summary_lines(result: FrictionValidation) -> list[str]:
     places, artefacts, carrying = len(d.places), len(d.artefacts), len(d.with_container)
     if not d.places:
         counts = "no places declared; dormant."
-    elif not carrying:
+    elif d.is_dormant:
         counts = (
             f"{places} place(s), {artefacts} artefact(s), none carrying the "
             f"`{bs.CONTAINER_KEY}` container; dormant."
         )
     else:
+        unreadable = f", {len(d.unreadable)} with unparsable front matter" if d.unreadable else ""
         counts = (
             f"{places} place(s), {artefacts} artefact(s), {carrying} carrying the "
-            f"`{bs.CONTAINER_KEY}` container; mode {d.settings.mode_or_default}; "
+            f"`{bs.CONTAINER_KEY}` container{unreadable}; mode {d.settings.mode_or_default}; "
             f"{len(result.errors)} error(s), {len(result.reports)} report(s)."
         )
     lines = [counts]
     lines.extend(f"{finding.where}: {finding.message}" for finding in result.reports)
     return lines
+
+
+def print_section(result: FrictionValidation) -> None:
+    """The "friction" heading of `pkit validate`, printed after the issue list like
+    the configuration and packages sections. Errors are in the issue list already."""
+    click.echo("  " + cli_render.style("heading", "friction"))
+    for line in summary_lines(result):
+        click.echo(f"    {line}")
+    click.echo()

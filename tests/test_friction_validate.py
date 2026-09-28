@@ -109,7 +109,9 @@ def test_document_with_valid_block_is_discovered_and_clean(adopter: AdopterRepo)
     assert artefact.anchors == {"path": ("src/cli/**",), "record": ("COR-050",)}
     assert artefact.revalidated is not None
     assert artefact.revalidated["at"] == "2026-10-02T09:40:12Z"  # as written, not a datetime
-    assert artefact.deferrals == (fd.Anchor(kind="path", value="src/cli/**"),)
+    assert artefact.deferrals == (
+        fd.Deferral(index=0, anchor=fd.Anchor(kind="path", value="src/cli/**")),
+    )
     assert artefact.body == "The body.\n"
     assert artefact.place.source == "project"
 
@@ -181,6 +183,22 @@ def test_glob_places_and_duplicate_matches_read_each_file_once(adopter: AdopterR
     assert all(a.place.pattern == "docs/**/*.md" for a in result.discovery.artefacts)
 
 
+def test_a_place_ending_in_double_star_means_every_markdown_file_beneath(
+    adopter: AdopterRepo,
+) -> None:
+    adopter.write(
+        {
+            CONFIG: _config(["docs/**"]),
+            "docs/guide.md": VALID_DOCUMENT,
+            "docs/deep/other.md": _document("other", anchors={"path": ["src/**"]}),
+            "docs/deep/data.yaml": "pkit: {}\n",
+        }
+    )
+    result = fv.validate_friction(adopter.root)
+    assert [a.path for a in result.discovery.artefacts] == ["docs/deep/other.md", "docs/guide.md"]
+    assert result.errors == ()
+
+
 def test_capability_places_resolve_under_its_locations_and_the_internal_root(
     make_adopter_repo: MakeAdopterRepo,
 ) -> None:
@@ -220,6 +238,7 @@ def test_dangling_deferral_is_an_error_naming_the_anchor(adopter: AdopterRepo) -
                 anchors={"path": ["src/**"]},
                 revalidated={
                     "deferred": [
+                        {"reason": "no anchor at all"},  # malformed: the block check reports it
                         {"anchor": {"kind": "path", "value": "lib/**"}, "reason": "later"},
                         {"anchor": {"kind": "record", "value": "COR-050"}, "reason": "later"},
                         {"anchor": {"kind": "path", "value": "src/**"}, "reason": "kept"},
@@ -230,11 +249,13 @@ def test_dangling_deferral_is_an_error_naming_the_anchor(adopter: AdopterRepo) -
     )
     result = fv.validate_friction(adopter.root)
 
-    assert _kinds(result) == [fv.FrictionFindingKind.DANGLING_DEFERRAL] * 2
-    first, second = result.errors
-    assert first.pointer == "/pkit/friction/revalidated/deferred/0/anchor"
+    dangling = [f for f in result.errors if f.kind is fv.FrictionFindingKind.DANGLING_DEFERRAL]
+    assert len(dangling) == 2
+    first, second = dangling
+    # The pointer keeps the index as written: the malformed entry at 0 still counts.
+    assert first.pointer == "/pkit/friction/revalidated/deferred/1/anchor"
     assert "path anchor 'lib/**'" in first.message and "'src/**'" in first.message
-    assert second.pointer == "/pkit/friction/revalidated/deferred/1/anchor"
+    assert second.pointer == "/pkit/friction/revalidated/deferred/2/anchor"
     assert "record anchor 'COR-050'" in second.message
 
 
@@ -276,16 +297,16 @@ def test_artefact_anchor_may_name_a_document_by_path_or_an_entry_by_id(
     assert "A -> RS-CMN-001 -> A" in cycles[0].message
 
 
-def test_invalid_mode_is_an_error_even_when_dormant(adopter: AdopterRepo) -> None:
-    adopter.write({CONFIG: _config(mode="enforce")})
+def test_invalid_mode_is_the_configuration_pass_s_finding_and_reads_as_the_default(
+    adopter: AdopterRepo,
+) -> None:
+    adopter.write({CONFIG: _config(["docs"], mode="enforce"), "docs/guide.md": VALID_DOCUMENT})
     result = fv.validate_friction(adopter.root)
 
-    assert result.is_dormant
-    (finding,) = result.errors
-    assert finding.kind is fv.FrictionFindingKind.INVALID_MODE
-    assert (finding.location, finding.pointer) == (CONFIG, "/friction/mode")
-    assert "'enforce'" in finding.message and "'enforcing'" in finding.message
+    assert result.errors == ()  # the configuration pass owns the file and reports the enum
+    assert result.discovery.settings.mode == "enforce"
     assert result.discovery.settings.mode_or_default == "warning"
+    assert "mode warning" in fv.summary_lines(result)[0]
 
 
 @pytest.mark.parametrize("mode", ["warning", "enforcing"])
@@ -296,31 +317,36 @@ def test_valid_modes_pass(adopter: AdopterRepo, mode: str) -> None:
     assert result.discovery.settings.mode_or_default == mode
 
 
-def test_settings_paths_outside_the_repository_are_errors(adopter: AdopterRepo) -> None:
-    outside = adopter.root.parent / "elsewhere"
-    outside.mkdir()
+def test_nothing_outside_the_repository_is_walked_or_read(adopter: AdopterRepo) -> None:
+    """Places leaving the repository, and matches that resolve outside it through a
+    link, are never read; the configuration pass reports the pattern, not this one."""
+    outside = adopter.root.parent / f"{adopter.root.name}-outside"  # beside the repository
+    (outside / "sub").mkdir(parents=True)
+    (outside / "stray.md").write_text(_document("stray", anchors={"path": ["a"]}))
+    (outside / "sub" / "deep.md").write_text(_document("deep", anchors={"path": ["a"]}))
     (adopter.root / "docs").mkdir()
     (adopter.root / "docs" / "linked").symlink_to(outside, target_is_directory=True)
+    (adopter.root / "docs" / "alias.md").symlink_to(outside / "stray.md")
     adopter.write(
         {
             CONFIG: _config(
-                ["docs", "../sibling", str(outside / "**"), "docs/linked/**"],
-                surface=["src/**", "/abs/src"],
-                exclude=["vendor/**", "docs/../../out"],
+                [
+                    "docs/**/*.md",  # walks through docs/linked on 3.11/3.12: matches dropped
+                    "../sibling",
+                    str(outside / "**"),
+                    "docs/linked/**",
+                    "docs/linked/sub/**",  # the nearest existing ancestor is the link
+                ],
+                surface=["/abs/src"],
+                exclude=["docs/../../out"],
             ),
+            "docs/guide.md": VALID_DOCUMENT,
         }
     )
     result = fv.validate_friction(adopter.root)
 
-    assert all(f.kind is fv.FrictionFindingKind.PATH_OUTSIDE_REPOSITORY for f in result.errors)
-    assert [f.pointer for f in result.errors] == [
-        "/friction/places/1",
-        "/friction/places/2",
-        "/friction/places/3",  # a link out of the repository, judged after resolving
-        "/friction/surface/1",
-        "/friction/exclude/1",
-    ]
-    assert all(f.location == CONFIG for f in result.errors)
+    assert [a.path for a in result.discovery.artefacts] == ["docs/guide.md"]
+    assert result.errors == ()
 
 
 def test_unparsable_front_matter_in_a_place_is_an_error(adopter: AdopterRepo) -> None:
@@ -336,6 +362,34 @@ def test_unparsable_front_matter_in_a_place_is_an_error(adopter: AdopterRepo) ->
     assert finding.kind is fv.FrictionFindingKind.UNPARSABLE_FRONT_MATTER
     assert finding.location == "docs/broken.md"
     assert "'docs'" in finding.message
+    assert "1 with unparsable front matter" in fv.summary_lines(result)[0]
+
+
+def test_unparsable_front_matter_as_the_only_file_in_a_place_keeps_the_pass_awake(
+    adopter: AdopterRepo,
+) -> None:
+    """A YAML typo in the only container-carrying file must not switch the check off."""
+    adopter.write(
+        {
+            CONFIG: _config(["docs"]),
+            "docs/broken.md": VALID_DOCUMENT.replace("anchors:", "anchors: ["),
+        }
+    )
+    result = fv.validate_friction(adopter.root)
+
+    assert not result.is_dormant
+    assert result.discovery.artefacts == ()
+    (finding,) = result.errors
+    assert finding.kind is fv.FrictionFindingKind.UNPARSABLE_FRONT_MATTER
+    assert finding.location == "docs/broken.md"
+    assert fv.summary_lines(result)[0].startswith(
+        "1 place(s), 0 artefact(s), 0 carrying the `pkit` container, 1 with unparsable "
+        "front matter; mode warning; 1 error(s)"
+    )
+
+    cli = CliRunner().invoke(main, ["validate", "--no-refs"])
+    assert cli.exit_code == 1, cli.output
+    assert "docs/broken.md" in cli.output and "dormant" not in cli.output
 
 
 # --- dormancy and determinism ------------------------------------------------
@@ -408,19 +462,34 @@ def test_results_are_deterministic_across_runs(adopter: AdopterRepo) -> None:
 def test_validate_command_prints_the_friction_section_and_fails_on_errors(
     adopter: AdopterRepo,
 ) -> None:
+    adopter.write({CONFIG: _config(["docs"]), "docs/rules.md": COLLECTION})
+    result = CliRunner().invoke(main, ["validate", "--no-refs"])
+
+    assert result.exit_code == 1, result.output
+    assert "1 place(s), 2 artefact(s), 2 carrying the `pkit` container" in result.output
+    assert "docs/rules.md#RS-CMN-002 /pkit/friction" in result.output
+    # The section prints after the issue list, in the order of the three passes.
+    out = result.output
+    assert out.index("issue(s) found") < out.index("configuration") < out.index("packages")
+    assert out.index("packages") < out.index("\n  friction\n")
+
+
+def test_validate_command_reports_settings_findings_once_under_configuration(
+    adopter: AdopterRepo,
+) -> None:
     adopter.write(
         {
-            CONFIG: _config(["docs"], mode="loud"),
+            CONFIG: _config(["docs", "../sibling"], mode="loud"),
             "docs/guide.md": VALID_DOCUMENT,
         }
     )
     result = CliRunner().invoke(main, ["validate", "--no-refs"])
 
     assert result.exit_code == 1, result.output
-    assert "friction" in result.output
-    assert "1 place(s), 1 artefact(s), 1 carrying the `pkit` container" in result.output
-    assert f"{CONFIG} /friction/mode" in result.output
-    assert "friction.mode 'loud'" in result.output
+    issues = result.output.split("issue(s) found:")[1].split("\n  configuration")[0]
+    assert issues.count("/friction/mode") == 1
+    assert issues.count("/friction/places/1") == 1
+    assert fv.validate_friction(adopter.root).errors == ()
 
 
 def test_validate_command_is_dormant_and_passes_on_a_fresh_install(adopter: AdopterRepo) -> None:
@@ -457,9 +526,22 @@ def test_entry_section_runs_to_the_next_heading_of_equal_or_higher_level() -> No
 
 
 def test_is_inside_repository(tmp_path: Path) -> None:
-    assert fd.is_inside_repository(tmp_path, "docs/**/*.md")
-    assert fd.is_inside_repository(tmp_path, "docs/../src")
-    assert not fd.is_inside_repository(tmp_path, "../docs")
-    assert not fd.is_inside_repository(tmp_path, "docs/../../src")
-    assert not fd.is_inside_repository(tmp_path, "/etc/**")
-    assert not fd.is_inside_repository(tmp_path, "")
+    root = tmp_path / "repo"
+    root.mkdir()
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (root / "docs").mkdir()
+    (root / "docs" / "linked").symlink_to(outside, target_is_directory=True)
+    (root / "docs" / "inner").symlink_to(root / "docs", target_is_directory=True)
+
+    assert fd.is_inside_repository(root, "docs/**/*.md")
+    assert fd.is_inside_repository(root, "docs/../src")
+    assert fd.is_inside_repository(root, "docs/inner/**")  # a link staying inside
+    assert fd.is_inside_repository(root, "not/yet/created/**")
+    assert not fd.is_inside_repository(root, "../docs")
+    assert not fd.is_inside_repository(root, "docs/../../src")
+    assert not fd.is_inside_repository(root, "/etc/**")
+    assert not fd.is_inside_repository(root, "")
+    assert not fd.is_inside_repository(root, "docs/linked/**")
+    # `sub` does not exist: the nearest existing ancestor is the link out.
+    assert not fd.is_inside_repository(root, "docs/linked/sub/**")

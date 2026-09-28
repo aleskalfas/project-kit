@@ -104,16 +104,15 @@ class SettingsPath:
 class FrictionSettings:
     """The `friction` settings discovery reads (COR-050 points 1 and 14).
 
-    `mode` is the raw value as written — `None` when absent — so validation
-    can judge it; `mode_or_default` is what a reader uses.
+    `mode` is the raw value as written — `None` when absent; the configuration
+    pass judges it against the schema — and `mode_or_default` is what a reader
+    uses, falling back to the default for anything it does not recognise.
     """
 
     mode: Any
-    mode_location: str  # JSON Pointer to the mode in the configuration file
     places: tuple[SettingsPath, ...]
     surface: tuple[SettingsPath, ...]
     exclude: tuple[SettingsPath, ...]
-    config_file: str  # the configuration file relative to the root
     internal_root: str  # the documentation root capability places resolve under
 
     @property
@@ -121,10 +120,6 @@ class FrictionSettings:
         if isinstance(self.mode, str) and self.mode in FRICTION_MODES:
             return self.mode
         return DEFAULT_FRICTION_MODE
-
-    @property
-    def all_paths(self) -> tuple[SettingsPath, ...]:
-        return self.places + self.surface + self.exclude
 
 
 def read_friction_settings(target_root: Path) -> FrictionSettings:
@@ -179,11 +174,9 @@ def read_friction_settings(target_root: Path) -> FrictionSettings:
 
     return FrictionSettings(
         mode=mode,
-        mode_location=f"/{FRICTION_KEY}/mode",
         places=tuple(places),
         surface=tuple(surface),
         exclude=tuple(exclude),
-        config_file=config_rel,
         internal_root=internal_root,
     )
 
@@ -281,8 +274,10 @@ def is_inside_repository(target_root: Path, pattern: str) -> bool:
 
     Judged on the text first — an absolute path, or one whose normalised form
     climbs above the root, is outside — and then, for the literal prefix
-    before any glob character, on the resolved location after following
-    links (COR-049 point 1), when that prefix exists.
+    before any glob character, on where it resolves after following links
+    (COR-049 point 1). The resolution is of the nearest existing ancestor:
+    `docs/linked/sub/**` with `docs/linked` a link out of the repository is
+    outside even while `sub` does not exist yet.
     """
     if not pattern or PurePosixPath(pattern).is_absolute() or os.path.isabs(pattern):
         return False
@@ -291,11 +286,19 @@ def is_inside_repository(target_root: Path, pattern: str) -> bool:
         return False
     prefix = _literal_prefix(normalised)
     candidate = target_root / prefix if prefix else target_root
-    if not candidate.exists():
-        return True
+    return _resolves_inside(target_root, candidate)
+
+
+def _resolves_inside(target_root: Path, candidate: Path) -> bool:
+    """Whether `candidate` lies under the root once links are followed.
+
+    A non-strict `resolve` follows links through the components that exist
+    and keeps the rest as written, which is exactly the nearest-existing-
+    ancestor judgment a not-yet-created path needs.
+    """
     try:
         candidate.resolve().relative_to(target_root.resolve())
-    except ValueError:
+    except (OSError, RuntimeError, ValueError):
         return False
     return True
 
@@ -313,11 +316,15 @@ def _literal_prefix(pattern: str) -> str:
 def files_in_place(target_root: Path, place: Place) -> list[Path]:
     """The Markdown files a place matches, sorted by repository-relative path.
 
-    A glob matches files; a path naming a directory means every Markdown file
-    beneath it; a path naming a file means that file. Anything that is not a
-    Markdown file — plain YAML, say — is not a document and is left alone
-    (ADR-056 point 2). A pattern outside the repository matches nothing here;
-    validation reports it.
+    A glob matches files; a glob ending in `**` means every Markdown file
+    beneath what precedes it (`Path.glob` yields only directories for a
+    trailing `**` before Python 3.13, so the suffix is spelled out); a path
+    naming a directory means every Markdown file beneath it; a path naming a
+    file means that file. Anything that is not a Markdown file — plain YAML,
+    say — is not a document and is left alone (ADR-056 point 2). A pattern
+    outside the repository matches nothing here, and neither does a match that
+    resolves outside it through a link — the walk never reads a file the
+    repository does not hold. The configuration pass reports the pattern.
     """
     if not is_inside_repository(target_root, place.pattern):
         return []
@@ -325,6 +332,8 @@ def files_in_place(target_root: Path, place: Place) -> list[Path]:
     if pattern == ".":
         candidates: Iterator[Path] = target_root.rglob(f"*{DOCUMENT_SUFFIX}")
     elif any(ch in _GLOB_CHARS for ch in pattern):
+        if PurePosixPath(pattern).name == "**":
+            pattern = f"{pattern}/*{DOCUMENT_SUFFIX}"
         candidates = target_root.glob(pattern)
     else:
         literal = target_root / pattern
@@ -340,6 +349,7 @@ def files_in_place(target_root: Path, place: Place) -> list[Path]:
         if path.is_file()
         and path.suffix == DOCUMENT_SUFFIX
         and not _under_skipped(path.relative_to(target_root))
+        and _resolves_inside(target_root, path)
     }
     return sorted(matched, key=lambda p: p.relative_to(target_root).as_posix())
 
@@ -362,6 +372,18 @@ class Anchor:
 
     kind: str
     value: str
+
+
+@dataclass(frozen=True)
+class Deferral:
+    """One well-formed `deferred[]` entry: the anchor it postpones and where it was written.
+
+    `index` is the entry's position in the list as written — malformed
+    entries before it count — so a finding's JSON Pointer names the right one.
+    """
+
+    index: int
+    anchor: Anchor
 
 
 @dataclass(frozen=True)
@@ -417,21 +439,21 @@ class Artefact:
         return frozenset(names)
 
     @property
-    def deferrals(self) -> tuple[Anchor, ...]:
-        """The well-formed `deferred[].anchor` references, in written order."""
+    def deferrals(self) -> tuple[Deferral, ...]:
+        """The well-formed `deferred[]` entries, in written order, each with its written index."""
         if not isinstance(self.revalidated, Mapping):
             return ()
         deferred = self.revalidated.get("deferred")
         if not isinstance(deferred, Sequence) or isinstance(deferred, str):
             return ()
-        found: list[Anchor] = []
-        for entry in deferred:
+        found: list[Deferral] = []
+        for index, entry in enumerate(deferred):
             anchor = entry.get("anchor") if isinstance(entry, Mapping) else None
             if not isinstance(anchor, Mapping):
                 continue
             kind, value = anchor.get("kind"), anchor.get("value")
             if isinstance(kind, str) and isinstance(value, str):
-                found.append(Anchor(kind=kind, value=value))
+                found.append(Deferral(index=index, anchor=Anchor(kind=kind, value=value)))
         return tuple(found)
 
     def anchors_of_kind(self, kind: str) -> tuple[str, ...]:
@@ -462,8 +484,13 @@ class Discovery:
 
     @property
     def is_dormant(self) -> bool:
-        """No places declared, or no artefact carries the container (COR-050 point 15)."""
-        return not self.places or not self.with_container
+        """No places declared, or nothing in them to judge (COR-050 point 15).
+
+        A place holding a file whose front matter does not parse keeps the pass
+        awake: that file may be the one carrying the container, and a typo must
+        never switch the check off silently.
+        """
+        return not self.places or (not self.with_container and not self.unreadable)
 
     def find(self, reference: str) -> Artefact | None:
         """The artefact an `anchors.artefact` value names, or None; first in walk order wins."""
@@ -502,9 +529,7 @@ def discover_artefacts(target_root: Path, settings: FrictionSettings | None = No
             try:
                 data = _yaml.load(io.StringIO(front_matter))
             except YAMLError as exc:
-                unreadable.append(
-                    UnreadableFile(path=rel, place=place, reason=_yaml_reason(exc))
-                )
+                unreadable.append(UnreadableFile(path=rel, place=place, reason=_yaml_reason(exc)))
                 continue
             if not isinstance(data, Mapping):
                 continue  # front matter that is not a mapping carries nothing
@@ -626,9 +651,7 @@ def entry_section(body: str, entry_id: str) -> str:
     headings = list(_HEADING.finditer(body))
     for index, match in enumerate(headings):
         title = match.group(2).strip()
-        if title == entry_id or (
-            title.startswith(entry_id) and not title[len(entry_id)].isalnum()
-        ):
+        if title == entry_id or (title.startswith(entry_id) and not title[len(entry_id)].isalnum()):
             level = len(match.group(1))
             end = len(body)
             for later in headings[index + 1 :]:

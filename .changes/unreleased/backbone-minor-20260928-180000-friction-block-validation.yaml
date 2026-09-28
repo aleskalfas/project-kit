@@ -9,13 +9,15 @@ body: >
   `friction.places` of its `package.yaml` resolved under its `docs.locations`
   and the internal documentation root — reading a Markdown document's front
   matter or each keyed entry of a collection file, and never front matter
-  elsewhere or a plain YAML file. It fails validation on a malformed `friction`
-  block (the container schema's errors, surfaced against the artefact), a
-  dangling deferral naming no anchor of the artefact, a cycle between artefacts
-  through `anchors.artefact` (the cycle's path is shown), an invalid
-  `friction.mode`, and a place, surface or exclude path outside the repository.
-  With no places declared, or no artefact carrying the container, the pass
-  prints only its counts. The discovery model lives in
+  elsewhere or a plain YAML file, and never a file that resolves outside the
+  repository. It fails validation on front matter in a place that does not
+  parse, a malformed `friction` block (the container schema's errors, surfaced
+  against the artefact), a dangling deferral naming no anchor of the artefact,
+  and a cycle between artefacts through `anchors.artefact` (the cycle's path is
+  shown); an invalid `friction.mode` and a settings path outside the repository
+  are the configuration pass's findings, which now also follow links. With no
+  places declared, or no artefact carrying the container and no unparsable
+  file, the pass prints only its counts. The discovery model lives in
   `project_kit.friction_discovery` and the findings in
   `project_kit.friction_validate`; the friction checks themselves (the change
   check and the whole-repository check) arrive with their own Tasks.

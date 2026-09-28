@@ -412,17 +412,18 @@ pkit:                                     RS-CMN-001:
 
 Unknown keys anywhere in the block are refused. The block carries no version; it is migrated when it changes, preserving the parsed value of `at`.
 
-**Where artefacts are looked for.** Only in the **declared places**: the project's `friction.places` in `.pkit/project/config.yaml` (repository-relative paths or globs; a directory means every Markdown file beneath it), and each installed capability's `friction.places` in its `package.yaml`, resolved under the capability's `docs.locations` beneath the internal documentation root (`docs.internal` in the configuration, default `docs/`). Front matter outside the places is never read, and a plain YAML file in a place is not a document. The same reader takes the rest of the `friction` key — `mode`, `surface`, `exclude` — so the configuration is read once.
+**Where artefacts are looked for.** Only in the **declared places**: the project's `friction.places` in `.pkit/project/config.yaml` (repository-relative paths or globs; a directory, or a glob ending in `**`, means every Markdown file beneath it), and each installed capability's `friction.places` in its `package.yaml`, resolved under the capability's `docs.locations` beneath the internal documentation root (`docs.internal` in the configuration, default `docs/`). Front matter outside the places is never read, a plain YAML file in a place is not a document, and a match that resolves outside the repository through a link is dropped — the walk never reads a file the repository does not hold. The same reader takes the rest of the `friction` key — `mode`, `surface`, `exclude` — so the configuration is read once.
 
 **Validation findings** (COR-050 point 12) — each fails `pkit validate`, in either mode, and names the fix:
 
-- *a malformed block* — the container schema's or the container rule's errors, against `path` (a document) or `path#id` (an entry) and a JSON Pointer into the block; front matter in a place that does not parse is reported the same way, since the check never skips an artefact it cannot parse;
-- *a dangling deferral* — a `deferred[].anchor` matching, by kind and value, no anchor of the artefact;
-- *a cycle between artefacts* through `anchors.artefact`, reported once with its path (`A -> B -> A`; a self-anchor is `A -> A`);
-- *an invalid `friction.mode`* — anything but `warning` or `enforcing`; checked even when the pass is otherwise dormant, so enforcement is never switched off silently;
-- *a settings path outside the repository* — a place, surface or exclude entry that is absolute, climbs above the root, or resolves (after following links) outside it.
+- *unparsable front matter* in a place — reported whenever places are declared, and it keeps the pass awake, since the check never skips an artefact it cannot parse: a YAML typo in the only container-carrying file is an error, not silence;
+- *a malformed block* — the container schema's or the container rule's errors, against `path` (a document) or `path#id` (an entry) and a JSON Pointer into the block;
+- *a dangling deferral* — a `deferred[].anchor` matching, by kind and value, no anchor of the artefact; the pointer carries the entry's index as written;
+- *a cycle between artefacts* through `anchors.artefact`, reported once with its path (`A -> B -> A`; a self-anchor is `A -> A`).
 
-Orphaned role blocks in the same container are carried through as reports, never errors. The pass is **dormant** — it prints only its counts — when no places are declared or no artefact carries the container.
+The settings themselves are the **configuration pass's** findings, since it owns the file (the CLI reference, "Configuration file"): an invalid `friction.mode` (the schema's enum — never switched off silently) and a place, surface or exclude path outside the repository (absolute, climbing above the root, or resolving outside it through a link); a capability's `friction` entries are the packages pass's. The friction pass reads those settings and never walks a place that leaves the repository.
+
+Orphaned role blocks in the same container are carried through as reports, never errors. The pass is **dormant** — it prints only its counts — when no places are declared, or when nothing in them needs judging: no artefact carries the container and no file failed to parse.
 
 **Not here.** Friction itself — the change check and the whole-repository check, dead anchors, over-broad anchors, the two measures — arrives with Tasks #990 and #991; this pass never touches git.
 
