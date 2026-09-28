@@ -2430,3 +2430,196 @@ def test_build_labels_label_bound_type_still_writes_its_label(ci) -> None:
     )
     assert "kind/feature" in labels
     assert resolved["type"] == "kind/feature"
+
+
+# --- the native link from the body's first line (#1033) ----------------------
+# A body filed from a file linked natively only when --parent was also passed;
+# the parent written on its first line was recorded as text but never linked.
+# Without --parent, create-issue now links the issue parent the first line names,
+# under the same containment-mode gate as --parent. These drive the REAL main()
+# against the REAL shipped schemas, filing under a milestone (the flag that lets
+# a Task be filed without --parent) with the containment seam stubbed offline.
+
+
+_MILESTONE_ROWS = [{"number": 5, "title": "Milestone 5: the release"}]
+
+
+def _dispatcher_with_milestone(create_url: str):
+    """fake subprocess.run: `issue create` → the URL; the open-milestones read →
+    milestone #5; everything else a benign empty success."""
+
+    def fake_run(cmd, *args, **kwargs):
+        class _Proc:
+            returncode = 0
+            stdout = ""
+            stderr = ""
+
+        proc = _Proc()
+        joined = " ".join(str(c) for c in cmd)
+        if "issue" in cmd and "create" in cmd:
+            proc.stdout = create_url + "\n"
+        elif "milestones" in joined:
+            proc.stdout = json.dumps(_MILESTONE_ROWS)
+        elif "repo" in cmd and "view" in cmd:
+            proc.stdout = "acme/repo"
+        elif "api" in cmd and "user" in joined:
+            proc.stdout = "filer-login"
+        return proc
+
+    return fake_run
+
+
+def _file_from_body(
+    ci,
+    tmp_path,
+    monkeypatch,
+    *,
+    body: str,
+    extra: list[str],
+    issue_type: str = "task",
+    root: Path | None = None,
+):
+    """Run create-issue with a prepared body; return (rc, link calls, created)."""
+    root = root or _stage_real_schema_tree(tmp_path)
+    body_file = tmp_path / "body.md"
+    body_file.write_text(body, encoding="utf-8")
+    monkeypatch.setattr(
+        ci.subprocess,
+        "run",
+        _dispatcher_with_milestone("https://github.com/acme/repo/issues/400"),
+    )
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+
+    link_calls: list[dict] = []
+
+    def fake_link(config, *, parent_number, child_number):
+        link_calls.append({"parent": parent_number, "child": child_number})
+        return _FakeLink(f"linked #{child_number} under #{parent_number}", ok=True)
+
+    monkeypatch.setattr(ci, "link_sub_issue", fake_link)
+    created: dict = {}
+    real_create = ci._gh_create_issue
+
+    def capturing_create(**kwargs):
+        created.update(kwargs)
+        return real_create(**kwargs)
+
+    monkeypatch.setattr(ci, "_gh_create_issue", capturing_create)
+    monkeypatch.setattr(
+        ci.sys,
+        "argv",
+        [
+            "create-issue.py",
+            "--type", issue_type,
+            "--title", "a prepared body filed here",
+            "--workstream", "spyre",
+            "--body-file", str(body_file),
+            "--capability-root", str(root),
+            "--yes",
+            *extra,
+        ],
+    )
+    return ci.main(), link_calls, created
+
+
+@pytest.mark.parametrize(
+    ("issue_type", "first_line", "parent"),
+    [
+        ("task", "Feature: #77", 77),
+        ("task", "EPIC: #78", 78),
+        ("task", "Umbrella: #79", 79),
+        ("feature", "EPIC: #80", 80),
+        ("umbrella", "Umbrella: #81", 81),
+    ],
+)
+def test_body_first_line_issue_parent_is_linked_without_parent_flag(
+    ci, tmp_path, monkeypatch, capsys, issue_type, first_line, parent
+) -> None:
+    """No --parent, and the first line names an EPIC / Feature / Umbrella: the
+    new issue is linked natively under it, exactly as --parent would link it."""
+    rc, link_calls, created = _file_from_body(
+        ci,
+        tmp_path,
+        monkeypatch,
+        body=f"{first_line}\n\n## What\n\nthe work\n",
+        extra=["--milestone", "5"],
+        issue_type=issue_type,
+    )
+    assert rc == 0
+    assert link_calls == [{"parent": parent, "child": 400}]
+    # The body is still used verbatim — the textual record is unchanged.
+    assert created["body"].lstrip().split("\n", 1)[0] == first_line
+    # The pre-flight says where the parent came from.
+    assert f"#{parent}  (from the body's first line)" in capsys.readouterr().out
+
+
+def test_body_first_line_milestone_parent_links_nothing(ci, tmp_path, monkeypatch) -> None:
+    """A `Milestone:` first line names no issue: nothing is linked natively (a
+    milestone scopes issues through its own Milestone field)."""
+    rc, link_calls, _created = _file_from_body(
+        ci,
+        tmp_path,
+        monkeypatch,
+        body="Milestone: [#5](../milestone/5)\n\n## What\n\nthe work\n",
+        extra=["--milestone", "5"],
+    )
+    assert rc == 0
+    assert link_calls == []
+
+
+def test_parent_flag_disagreeing_with_first_line_is_refused_before_filing(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    """--parent and a first line naming a different issue would leave the native
+    link and the textual record disagreeing from the start: refused, nothing filed."""
+    rc, link_calls, created = _file_from_body(
+        ci,
+        tmp_path,
+        monkeypatch,
+        body="Feature: #78\n\n## What\n\nthe work\n",
+        extra=["--parent", "77"],
+    )
+    assert rc == 2
+    assert created == {}, "nothing may be filed"
+    assert link_calls == []
+    err = capsys.readouterr().err
+    assert "#77" in err and "#78" in err
+
+
+def test_parent_flag_agreeing_with_first_line_links_once(ci, tmp_path, monkeypatch) -> None:
+    """The same issue on both is no conflict: one link, under that parent."""
+    rc, link_calls, _created = _file_from_body(
+        ci,
+        tmp_path,
+        monkeypatch,
+        body="Feature: #77\n\n## What\n\nthe work\n",
+        extra=["--parent", "77"],
+    )
+    assert rc == 0
+    assert link_calls == [{"parent": 77, "child": 400}]
+
+
+def test_body_first_line_parent_in_textual_mode_skips_link_and_refreshes_view(
+    ci, tmp_path, monkeypatch
+) -> None:
+    """`containment: textual` gates the derived link exactly as it gates --parent:
+    no native link, and the named parent's children view is refreshed."""
+    root = _stage_real_schema_tree(tmp_path)
+    _write_substrate_map(root, "textual")
+    refreshed: list[dict] = []
+
+    def fake_refresh(config, *, parent_number, containment_mode):
+        refreshed.append({"parent": parent_number, "mode": containment_mode})
+
+    monkeypatch.setattr(ci, "_refresh_parent_children_view", fake_refresh)
+    rc, link_calls, _created = _file_from_body(
+        ci,
+        tmp_path,
+        monkeypatch,
+        body="Feature: #77\n\n## What\n\nthe work\n",
+        extra=["--milestone", "5"],
+        root=root,
+    )
+    assert rc == 0
+    assert link_calls == [], "native link must not fire under containment: textual"
+    assert refreshed == [{"parent": 77, "mode": "textual"}]
