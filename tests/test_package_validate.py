@@ -359,6 +359,12 @@ def test_mandatory_mark_without_a_reason_is_an_error(
 def test_depends_on_must_carry_the_generated_mark(
     schema: dict[str, Any], component_dir: Path
 ) -> None:
+    # The definition the list is generated from, so only the mark is at issue.
+    (component_dir / "schemas" / "flow.yaml").write_text(
+        "process:\n  id: flow\n  states:\n    - id: open\n      depends_on:\n"
+        "        - upstream: project-management:issue-lifecycle\n",
+        encoding="utf-8",
+    )
     connections = _connections(
         extensions={"depends-on": {"entries": [{"process": "project-management:issue-lifecycle"}]}}
     )

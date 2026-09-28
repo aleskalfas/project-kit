@@ -1,0 +1,18 @@
+component: backbone
+kind: minor
+body: >
+  Process connections by role (COR-053 points 2, 4, 5 and 6). A process definition's
+  depends_on entry may name its upstream by role, <publisher>::<role>:<point>, reaching the
+  process the role's active provider offers; it may state the upstream interface version it
+  targets and carry a mandatory mark with a reason, and a process interface may carry an
+  integer version. All four are additive: every existing definition validates unchanged.
+  The capability's depends-on list in package metadata is generated from those entries by the
+  new pkit capabilities refresh <name>, marked generated: true; pkit validate fails a stale
+  copy and names the refresh as the fix, and refresh refuses a kit-shipped capability in an
+  adopting project. Installing, registering or upgrading a capability whose mandatory upstream
+  is missing or at another interface version is refused, the mark's reason shown; upgrading or
+  uninstalling the capability such a mark depends on warns, naming each counterpart, and
+  proceeds only under --force. pkit process health evaluates a hand-off contract on a
+  role-addressed entry by reading the active provider from the wiring resolver, and reports
+  an address no provider offers as indeterminate. The runtime engine and every gate still
+  never read depends_on, and a test pins it.

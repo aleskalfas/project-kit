@@ -11,7 +11,12 @@ Validates a `process` definition fragment against the shape contract
 - rejection of every malformed shape: bad `upstream` address, `relation` outside
   the closed set, bad `mode`, missing / empty `why`, an extra property;
 - the additive guarantee: a definition carrying NO `depends_on` validates
-  byte-unchanged (no `depends_on` key needed).
+  byte-unchanged (no `depends_on` key needed);
+- COR-053's additive fields: a role-addressed `upstream`
+  (`<publisher>::<role>:<point>`), the `mandatory` mark (only with a reason),
+  the targeted interface `version`, and an `interface.version` -- with every
+  process definition the corpus ships validating unchanged against the widened
+  contract.
 
 The connection metadata is INERT -- the engine never reads it (asserted in
 test_process_depends_on_engine.py). Here we pin only its SHAPE, the static
@@ -25,10 +30,13 @@ from pathlib import Path
 from typing import Any
 
 from jsonschema import Draft202012Validator
+from referencing import Registry, Resource
+from referencing.jsonschema import DRAFT202012
+from ruamel.yaml import YAML
 
-_SCHEMA_PATH = (
-    Path(__file__).resolve().parents[1] / ".pkit" / "schemas" / "_defs" / "process.schema.json"
-)
+_REPO = Path(__file__).resolve().parents[1]
+_SCHEMA_PATH = _REPO / ".pkit" / "schemas" / "_defs" / "process.schema.json"
+_yaml = YAML(typ="safe")
 
 # The exact closed relation set COR-038 declares -- enforced visible in the
 # schema enum, asserted whole below.
@@ -223,3 +231,100 @@ def test_extra_property_rejected() -> None:
     entry = _entry()
     entry["enforce"] = True
     assert _errors(_with_entry(entry)), "an entry forbids additional properties"
+
+
+# --- connections by role (COR-053, additive) ---------------------------------
+
+
+def test_role_addressed_upstream_accepted() -> None:
+    # COR-053 point 2: `<publisher>::<role>:<point>` names a process offered under
+    # a role, whichever capability provides it.
+    entry = _entry()
+    entry["upstream"] = "pkit::work-tracking:issue-lifecycle"
+    assert _errors(_with_entry(entry)) == []
+
+
+def test_malformed_role_addresses_rejected() -> None:
+    for upstream in (
+        "pkit::work-tracking",  # a role, not a point
+        "pkit::work-tracking:issue:extra",  # one point too many
+        "pkit:::issue",  # empty role
+        "Pkit::work-tracking:issue",  # not a word
+        "::work-tracking:issue",  # no publisher
+    ):
+        entry = _entry()
+        entry["upstream"] = upstream
+        assert _errors(_with_entry(entry)), f"{upstream!r} must be rejected"
+
+
+def test_mandatory_mark_with_a_reason_accepted() -> None:
+    entry = _entry()
+    entry["mandatory"] = {"reason": "Delivery cannot start without an approved design."}
+    assert _errors(_with_entry(entry)) == []
+
+
+def test_mandatory_mark_without_a_reason_rejected() -> None:
+    # COR-053 point 6: optional is the norm; the mark is valid only with a reason.
+    for mark in ({}, {"reason": ""}, True, "yes", {"reason": "why", "strict": True}):
+        entry = _entry()
+        entry["mandatory"] = mark
+        assert _errors(_with_entry(entry)), f"mandatory {mark!r} must be rejected"
+
+
+def test_targeted_interface_version_accepted_as_a_positive_integer() -> None:
+    entry = _entry()
+    entry["version"] = 2
+    assert _errors(_with_entry(entry)) == []
+    for bad in (0, -1, "2", 1.5, True):
+        entry["version"] = bad
+        assert _errors(_with_entry(entry)), f"version {bad!r} must be rejected"
+
+
+def test_interface_version_accepted_as_a_positive_integer() -> None:
+    # COR-036 as refined by COR-053 point 5: the interface carries its own integer,
+    # distinct from the definition's `version`.
+    d = _base_definition()
+    d["states"][0]["terminal"] = True
+    d["interface"] = {"version": 3, "outcomes": [{"name": "open"}]}
+    assert _errors(d) == []
+    for bad in (0, "3", True):
+        d["interface"]["version"] = bad
+        assert _errors(d), f"interface version {bad!r} must be rejected"
+
+
+def test_every_shipped_definition_validates_unchanged() -> None:
+    # The additive guarantee, on the real corpus: every process definition a
+    # capability ships validates against the widened shape contract as it is.
+    definitions = _shipped_definitions()
+    assert definitions, "the corpus ships at least one process definition"
+    validator = _registry_validator()
+    for path, process in definitions:
+        errors = [e.message for e in validator.iter_errors(process)]
+        assert errors == [], f"{path.relative_to(_REPO)}: {errors}"
+
+
+def _shipped_definitions() -> list[tuple[Path, Any]]:
+    """Every capability schema file carrying a top-level `process:` block."""
+    out: list[tuple[Path, Any]] = []
+    for path in sorted((_REPO / ".pkit" / "capabilities").glob("*/schemas/*.yaml")):
+        document = _yaml.load(path.read_text(encoding="utf-8"))
+        if isinstance(document, dict) and isinstance(document.get("process"), dict):
+            out.append((path, document["process"]))
+    return out
+
+
+def _registry_validator() -> Draft202012Validator:
+    """The `process` $def with every shared `_defs` schema registered, so the
+    cross-file references a real definition exercises (a transition's severity
+    token) resolve."""
+    registry: Registry = Registry()
+    for path in sorted(_SCHEMA_PATH.parent.glob("*.schema.json")):
+        document = json.loads(path.read_text(encoding="utf-8"))
+        registry = registry.with_resource(
+            uri=document.get("$id", path.name),
+            resource=Resource.from_contents(document, default_specification=DRAFT202012),
+        )
+    full = json.loads(_SCHEMA_PATH.read_text(encoding="utf-8"))
+    return Draft202012Validator(
+        {"$ref": f"{full['$id']}#/$defs/process"}, registry=registry
+    )

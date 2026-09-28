@@ -8,9 +8,16 @@ subject may move.
 
 This pins that by running the SAME process twice -- once plain, once with a
 `depends_on` block on the current state (and even a deliberately self-referential
-upstream the engine would choke on if it ever tried to RESOLVE the address) --
-and asserting identical position, identical legal-move prechecks, and identical
-move outcomes. The block makes no observable difference.
+upstream the engine would choke on if it ever tried to RESOLVE the address, and a
+role-addressed upstream nobody provides, marked mandatory, at an interface version
+nothing offers) -- and asserting identical position, identical legal-move
+prechecks, and identical move outcomes. The block makes no observable difference.
+
+COR-053 point 6 adds one reader of the mandatory mark -- the capability
+lifecycle -- and restates the boundary: the runtime operations and every gate
+never read `depends_on`. A structural pin holds it: the engine module names
+neither the field, its generated copy nor the mark, and imports none of the
+modules that read them.
 
 Built on its own tiny fixture capability (mirroring test_process_engine.py) so
 the engine has real reality to resolve against.
@@ -18,6 +25,7 @@ the engine has real reality to resolve against.
 
 from __future__ import annotations
 
+import ast
 import shutil
 import stat
 from pathlib import Path
@@ -76,6 +84,13 @@ _DEPENDS_ON_BLOCK = """\
           relation: triggered-by
           mode: push
           why: A connector kicks this off; engine-invisible, recorded for the render.
+        - upstream: nobody::no-such-role:ghost
+          version: 7
+          relation: gates-on-readiness
+          mode: pull
+          why: A role nobody provides, marked mandatory -- the lifecycle's mark, never the engine's.
+          mandatory:
+            reason: If the engine ever read the mark, this upstream could never be met.
 """
 
 
@@ -231,3 +246,36 @@ def test_legal_moves_identical_with_and_without_depends_on(
     p_moves = [(c.to, c.allowed) for c in plain.precheck_transitions(p_pos.state_id, "agent")]
     a_moves = [(c.to, c.allowed) for c in annotated.precheck_transitions(a_pos.state_id, "agent")]
     assert a_moves == p_moves
+
+
+# --- the structural pin (COR-053 point 6) ------------------------------------
+
+# The modules that read `depends_on` or its generated copy, each for its one
+# bounded purpose: the wiring resolver and the lifecycle (the mandatory mark),
+# health (hand-off contracts), the generated list itself.
+_READERS = (
+    "project_kit.connections",
+    "project_kit.capabilities",
+    "project_kit.capability_plans",
+    "project_kit.process_dependencies",
+    "project_kit.process_health",
+)
+
+
+def test_the_engine_module_never_reads_depends_on() -> None:
+    """The runtime position operations and every gate live in the engine module;
+    it names neither `depends_on`, its generated `depends-on` copy, nor the mark,
+    and imports none of the modules that read them. So the one reader COR-053
+    point 6 adds -- the lifecycle -- stays outside the engine by construction."""
+    engine = Path(__file__).resolve().parents[1] / "src" / "project_kit" / "process.py"
+    source = engine.read_text(encoding="utf-8")
+    for token in ("depends_on", "depends-on", "mandatory"):
+        assert token not in source, f"the engine module mentions {token!r}"
+    imported: set[str] = set()
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, ast.Import):
+            imported.update(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imported.add(node.module)
+            imported.update(f"{node.module}.{alias.name}" for alias in node.names)
+    assert not imported & set(_READERS), f"the engine imports {sorted(imported & set(_READERS))}"

@@ -16,6 +16,16 @@ Capability dependencies (COR-030): a capability may declare
 dependency capability's installed version must satisfy. The install
 pre-flight, both upgrade entry points, and the uninstall gate enforce
 this contract. See ``check_capability_dependencies``.
+
+Mandatory process connections (COR-053 point 6): an entry of a capability's
+generated ``depends-on`` list may carry a mandatory mark — its upstream process
+definition must exist, at a compatible interface version when the entry names
+one. The lifecycle is that mark's one reader, with COR-030's direction split:
+install, register and the single-capability upgrade refuse the capability
+carrying an unmet mark (``unmet_mandatory_upstreams``); upgrading or
+uninstalling the capability it targets warns, naming each counterpart, and
+proceeds only under ``--force`` (``mandatory_counterparts_left_unmet``). Both
+judge through the wiring resolver, never by reading process definitions.
 """
 
 from __future__ import annotations
@@ -26,7 +36,7 @@ import re
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path, PurePath
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import click
 from ruamel.yaml import YAML
@@ -50,6 +60,11 @@ from project_kit.migrations import (
     report_pending_migrations,
 )
 from project_kit.schemas_validate import CORE_SCHEMAS_OWNER
+
+if TYPE_CHECKING:
+    # The wiring resolver imports this module (through rule sets); its types are
+    # read here for annotations only, and the module itself inside the gates.
+    from project_kit.connections import Binding, Installed, Wiring
 
 
 _NAME_RE = re.compile(r"^[a-z][a-z0-9-]*[a-z0-9]$|^[a-z]$")
@@ -475,6 +490,125 @@ def find_declared_dependents(target_root: Path, dep_name: str) -> list[str]:
 
     dependents.sort()
     return dependents
+
+
+@dataclass(frozen=True)
+class MandatoryUpstream:
+    """A mandatory process connection a wiring leaves unmet (COR-053 point 6).
+
+    `capability` carries the mark: one of its generated `depends-on` entries names
+    `process` as mandatory, for `reason`; `problem` says why the upstream is not
+    met in the wiring the operation would leave — missing, or at another
+    interface version.
+    """
+
+    capability: str
+    process: str
+    reason: str
+    problem: str
+
+
+def unmet_mandatory_upstreams(
+    target_root: Path, capability_source: CapabilitySource
+) -> list[MandatoryUpstream]:
+    """The mandatory upstreams the capability would find missing or incompatible
+    once installed, registered or upgraded to `capability_source` — the side
+    carrying the mark, which the lifecycle refuses (COR-053 point 6).
+
+    Read from the capability's generated `depends-on` list in its package
+    metadata, never from its process definitions (validation keeps the list
+    fresh), and judged by the one wiring resolver over the installed set with
+    the capability in place of any installed copy — the wiring the operation
+    would leave, as its plan computes it. An interface version is compatible
+    when it is equal (COR-053 point 5); the capability ranges of COR-030 stay
+    `check_capability_dependencies`'s.
+    """
+    from project_kit import connections as cx
+
+    candidate = _as_candidate(target_root, capability_source)
+    if candidate is None:
+        return []  # a package that does not read is the self-consistency check's
+    after = cx.resolve_wiring_with(target_root, add=[candidate], remove=[candidate.name])
+    return [
+        _mandatory_upstream(binding, after)
+        for binding in after.unmet_marks(cx.CounterpartKind.DEPENDENCY)
+        if binding.counterpart.capability == candidate.name
+    ]
+
+
+def mandatory_counterparts_left_unmet(
+    target_root: Path,
+    name: str,
+    *,
+    replacement: CapabilitySource | None = None,
+) -> list[MandatoryUpstream]:
+    """The other capabilities' mandatory process connections that uninstalling
+    `name` — or, with `replacement`, upgrading it to that source — would leave
+    unmet: met, or at least not unmet, in the live wiring and unmet after. The
+    side targeted by the marks, which the lifecycle warns about and lets
+    through only under force (COR-053 point 6, COR-030's direction split).
+    """
+    from project_kit import connections as cx
+
+    added = [_as_candidate(target_root, replacement)] if replacement is not None else []
+    before = cx.resolve_wiring(target_root)
+    after = cx.resolve_wiring_with(
+        target_root, add=[c for c in added if c is not None], remove=[name]
+    )
+    unmet_before = {_mark_key(b) for b in before.unmet_marks(cx.CounterpartKind.DEPENDENCY)}
+    return [
+        _mandatory_upstream(binding, after)
+        for binding in after.unmet_marks(cx.CounterpartKind.DEPENDENCY)
+        if binding.counterpart.capability != name and _mark_key(binding) not in unmet_before
+    ]
+
+
+def _as_candidate(target_root: Path, source: CapabilitySource) -> Installed | None:
+    """`source` as the wiring resolver reads a component once installed: its package
+    file where the operation puts it, its companions and definitions read where
+    they are now (`capability_plans.as_installed`)."""
+    from project_kit import capability_plans as plans
+
+    candidate = plans.candidate_of(source, KIT_SHIPPED, installed=False)
+    return plans.as_installed(target_root, candidate) if candidate is not None else None
+
+
+def _mark_key(binding: Binding) -> tuple[str, str]:
+    """One mark across two wirings: the capability carrying it and where."""
+    return (binding.counterpart.capability, binding.counterpart.pointer)
+
+
+def _mandatory_upstream(binding: Binding, wiring: Wiring) -> MandatoryUpstream:
+    """An unmet mandatory `depends-on` binding, with why its upstream is not met."""
+    from project_kit import connections as cx
+
+    counterpart = binding.counterpart
+    status = binding.status
+    capability, _, process_id = counterpart.target.partition(":")
+    if status is cx.BindingStatus.NOT_INSTALLED:
+        problem = f"its capability {capability!r} is not installed"
+    elif status is cx.BindingStatus.NO_ACTIVE_PROVIDER:
+        problem = f"no installed capability provides role {counterpart.role!r}"
+    elif status is cx.BindingStatus.INERT_VERSION and binding.point is not None:
+        problem = (
+            f"{binding.point.provider!r} offers it at interface version "
+            f"{binding.point.version}, and the entry targets version {counterpart.version}"
+        )
+    elif counterpart.role_form:
+        role = wiring.role(counterpart.role or "")
+        provider = role.active if role is not None else None
+        problem = (
+            f"{provider!r}, the active provider of role {counterpart.role!r}, offers no "
+            f"process at that address"
+        )
+    else:
+        problem = f"{capability!r} neither offers nor defines process {process_id!r}"
+    return MandatoryUpstream(
+        capability=counterpart.capability,
+        process=counterpart.target,
+        reason=counterpart.mandatory or "",
+        problem=problem,
+    )
 
 
 @dataclass(frozen=True)

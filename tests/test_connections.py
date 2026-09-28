@@ -542,6 +542,79 @@ def test_depends_on_upstream_exists_through_an_offered_point_or_a_definition_fil
     assert wiring.checked[cx.Relation.INTERFACE_VERSION] == 3  # entries 0-2 carry a version
 
 
+def test_the_unmet_marks_are_exactly_the_marks_validation_reports(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """`Wiring.unmet_marks` — what the lifecycle refuses and warns on (COR-053
+    point 6) — names the same marks `pkit validate` reports as unmet, no more."""
+    offers = {
+        REVIEW: {
+            "kind": "process",
+            "schema_version": 3,
+            "description": "The review process.",
+            "process": "page-review",
+        }
+    }
+    repo = make_adopter_repo()
+    _stage(repo, "docs-a", _provider(offers=offers), definitions=("triage",))
+    mark = {"mandatory": {"reason": "needed"}}
+    _stage(
+        repo,
+        "flow",
+        _package("flow")
+        | _depends_on(
+            {"process": REVIEW, "schema_version": 3, **mark},  # bound
+            {"process": REVIEW, "schema_version": 2, **mark},  # another interface version
+            {"process": "docs-a:triage", **mark},  # a definition file: bound
+            {"process": "docs-a:nowhere", **mark},  # no such process
+            {"process": "tracker:issue-lifecycle", **mark},  # not installed
+            {"process": "pkit::analysis:review", **mark},  # a role nobody provides
+            {"process": "tracker:other"},  # optional: never unmet
+        ),
+    )
+    wiring = cx.resolve_wiring(repo.root)
+    unmet = wiring.unmet_marks(cx.CounterpartKind.DEPENDENCY)
+    assert [b.counterpart.pointer.rsplit("/", 1)[1] for b in unmet] == ["1", "3", "4", "5"]
+    reported = {
+        f.path
+        for f in wiring.connection_findings()
+        if f.severity is Severity.ERROR and "the mark is unmet" in f.message
+    }
+    assert reported == {b.counterpart.pointer for b in unmet}
+    assert wiring.unmet_marks(cx.CounterpartKind.CONTRIBUTION) == ()
+
+
+def test_a_role_address_reaches_the_process_the_active_provider_offers(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    def offers(process: str) -> dict[str, Any]:
+        return {
+            REVIEW: {
+                "kind": "process",
+                "schema_version": 1,
+                "description": "The review process.",
+                "process": process,
+            }
+        }
+
+    repo = make_adopter_repo()
+    _stage(repo, "docs-a", _provider("docs-a", offers=offers("page-review")))
+    assert cx.resolve_wiring(repo.root).offered_process(REVIEW) == next(
+        p for p in cx.resolve_wiring(repo.root).declarations.points if p.provider == "docs-a"
+    )
+    # A second provider: nobody answers until one is selected.
+    _stage(repo, "docs-b", _provider("docs-b", offers=offers("peer-review")))
+    assert cx.resolve_wiring(repo.root).offered_process(REVIEW) is None
+    _config(repo, f"connections:\n  providers:\n    {DOCS}: docs-b\n")
+    offered = cx.resolve_wiring(repo.root).offered_process(REVIEW)
+    assert offered is not None and (offered.provider, offered.process_id) == (
+        "docs-b",
+        "peer-review",
+    )
+    # A data point at an address is not an offered process.
+    assert cx.resolve_wiring(repo.root).offered_process(READING) is None
+
+
 def test_mandatory_cycle_is_an_error_on_every_mark_in_it(
     make_adopter_repo: MakeAdopterRepo,
 ) -> None:

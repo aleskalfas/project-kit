@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 import click
 
 if TYPE_CHECKING:
-    from project_kit.capabilities import CapabilitySource
+    from project_kit.capabilities import CapabilitySource, MandatoryUpstream
 
 from project_kit import __version__
 from project_kit import cli_render
@@ -2800,7 +2800,8 @@ def visibility_untrack(dry_run: bool) -> None:
     is_flag=True,
     default=False,
     help="Proceed even when upgrading this capability would desync an installed "
-    "dependent's declared version range (COR-030). Mirrors the uninstall "
+    "dependent's declared version range (COR-030) or leave another capability's "
+    "mandatory process connection unmet (COR-053 point 6). Mirrors the uninstall "
     "--force shape; use when cascade-upgrading dependents manually.",
 )
 @click.option(
@@ -2892,6 +2893,9 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
             f"unsatisfied dependencies:\n" + "\n".join(lines) + "\n"
             "Install or upgrade the required capabilities first, then retry."
         )
+    # The same direction for its mandatory process connections (COR-053 point 6):
+    # the new version's generated `depends-on` against the wiring it would leave.
+    _refuse_unmet_mandatory_upstreams(target_root, capability_source)
 
     # Direction 2 — this capability is a *dependency*: upgrading it to the new
     # source version may push it outside the declared range of installed
@@ -2933,6 +2937,16 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
             "  Proceeding under --force; upgrade dependent capabilities "
             "to restore consistency."
         )
+    # The same direction for mandatory process connections aimed at this
+    # capability (COR-053 point 6): warn, naming each, and proceed under --force.
+    _warn_mandatory_counterparts(
+        target_root,
+        name,
+        action=f"upgrading {name!r} to v{new_version}",
+        verb="upgrade",
+        force=force,
+        replacement=capability_source,
+    )
 
     # --- Collision detection ---
 
@@ -4409,6 +4423,10 @@ def install_capability_cmd(name: str, dry_run: bool, plan: bool, as_json: bool) 
             "Install or upgrade the required capabilities first."
         )
 
+    # Pre-flight: mandatory process connections (COR-053 point 6). Refuse when an
+    # upstream the capability marks mandatory is missing or incompatible.
+    _refuse_unmet_mandatory_upstreams(target_root, capability_source)
+
     # Pre-flight: collision detection.
     collisions = caps.detect_collisions(target_root, capability_source)
     skipped: list[tuple[str, str]] = []
@@ -4594,6 +4612,9 @@ def register_capability_cmd(name: str, dry_run: bool) -> None:
             "Install or upgrade the required capabilities first."
         )
 
+    # Pre-flight: mandatory process connections (COR-053 point 6), as install.
+    _refuse_unmet_mandatory_upstreams(target_root, capability_source)
+
     if adopt_in_place:
         # Adopt in place: the capability is already registered and its subtree
         # already installed, so we do not re-copy or re-deploy — the only change
@@ -4734,6 +4755,79 @@ def _check_backbone_satisfied(
         )
 
 
+def _refuse_unmet_mandatory_upstreams(
+    target_root: Path, capability_source: CapabilitySource
+) -> None:
+    """Refuse the capability carrying a mandatory process connection its upstream
+    would not meet — missing, or at another interface version (COR-053 point 6).
+
+    The carrier's side of COR-030's direction split, shared by `install`,
+    `register` and `upgrade`: the operator chooses which version of the carrier to
+    install, so there is no deadlock, and no `--force`. The mark is read from the
+    capability's generated `depends-on` list, the reason shown as the mark gives it.
+    """
+    from project_kit import capabilities as caps
+
+    unmet = caps.unmet_mandatory_upstreams(target_root, capability_source)
+    if not unmet:
+        return
+    raise click.ClickException(
+        f"capability {capability_source.name!r} v{capability_source.package.version} has "
+        f"{len(unmet)} unmet mandatory process connection(s):\n"
+        + "\n".join(_mandatory_line(u, carrier=False) for u in unmet)
+        + "\nInstall or upgrade the upstream first, then retry (COR-053 point 6)."
+    )
+
+
+def _warn_mandatory_counterparts(
+    target_root: Path,
+    name: str,
+    *,
+    action: str,
+    verb: str,
+    force: bool,
+    replacement: CapabilitySource | None = None,
+) -> None:
+    """Warn, naming each counterpart, when uninstalling `name` — or upgrading it to
+    `replacement` — would leave another capability's mandatory process connection
+    unmet; proceed only under `--force` (COR-053 point 6).
+
+    The targeted side of COR-030's direction split: never a hard block, since a
+    hard block could deadlock. `action` names the operation in the warning
+    (`uninstalling 'x'`), `verb` in the refusal (`uninstall`).
+    """
+    from project_kit import capabilities as caps
+
+    broken = caps.mandatory_counterparts_left_unmet(target_root, name, replacement=replacement)
+    if not broken:
+        return
+    header = (
+        f"Warning (--force): {action} leaves" if force else f"Warning: {action} would leave"
+    )
+    click.echo(
+        "\n  "
+        + cli_render.style(
+            "strong", f"{header} {len(broken)} mandatory process connection(s) unmet:"
+        )
+    )
+    for counterpart in broken:
+        click.echo(_mandatory_line(counterpart, carrier=True))
+    if not force:
+        raise click.ClickException(
+            f"refusing to {verb}: another capability's mandatory process connection "
+            "would be left unmet.\nUninstall or upgrade the dependent capabilities first, "
+            "or pass --force to proceed anyway (the deadlock-free override, COR-053 point 6)."
+        )
+    click.echo("  Proceeding under --force; the dependents' marks stay unmet until resolved.")
+
+
+def _mandatory_line(unmet: MandatoryUpstream, *, carrier: bool) -> str:
+    """One unmet mark: the upstream, why it is not met, and the mark's reason —
+    prefixed by the capability carrying it when that is not the one operated on."""
+    who = f"{unmet.capability!r} depends on " if carrier else ""
+    return f"    - {who}{unmet.process!r}: {unmet.problem} (mandatory: {unmet.reason})"
+
+
 def _find_desynced_dependents(
     target_root: Path, dep_name: str, new_dep_version: str
 ) -> list[tuple[str, str]]:
@@ -4832,8 +4926,9 @@ def _show_unified_diff(existing: Path, incoming: Path) -> None:
     "--force",
     is_flag=True,
     default=False,
-    help="Override the safety checks; remove even if references exist or "
-    "other installed capabilities declare a dependency on this one (COR-030).",
+    help="Override the safety checks; remove even if references exist, other "
+    "installed capabilities declare a dependency on this one (COR-030), or a "
+    "mandatory process connection would be left unmet (COR-053 point 6).",
 )
 @click.option(
     "--purge",
@@ -4925,6 +5020,13 @@ def uninstall_capability_cmd(
                 "Uninstall or upgrade the dependent capabilities first, "
                 "or pass --force to override."
             )
+
+    # Mandatory process connections aimed at it (COR-053 point 6): warn, naming
+    # each counterpart the removal leaves unmet; refused unless --force, and still
+    # reported under --force.
+    _warn_mandatory_counterparts(
+        target_root, name, action=f"uninstalling {name!r}", verb="uninstall", force=force
+    )
 
     # Reference safety check.
     if not force:
@@ -5043,6 +5145,75 @@ def list_capabilities_cmd() -> None:
             ("pkit capabilities register <name>", "register an in-repo (incubated) one"),
         ],
     ), nl=False)
+
+
+@capabilities.command("refresh")
+@click.argument("name")
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Show what the generated list would hold without writing the package file.",
+)
+def refresh_capability_cmd(name: str, dry_run: bool) -> None:
+    """Regenerate a capability's generated package metadata (COR-053 point 4).
+
+    Rewrites `connections.extensions.depends-on` in
+    `.pkit/capabilities/<name>/package.yaml` from the `depends_on` its process
+    definitions declare, marked `generated: true`; the rest of the file is kept
+    as written. Run it where the capability is authored — after coupling a
+    process, or when `pkit validate` reports the list stale. A kit-shipped
+    capability installed in an adopting project is refused: its package file is
+    core-owned and sync would overwrite the edit.
+    """
+    from project_kit import capabilities as caps
+    from project_kit import install as install_mod
+    from project_kit import process_dependencies as deps
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    caps.refuse_reserved_capability_name(name)
+    cap_dir = target_root / ".pkit" / "capabilities" / name
+    if not (cap_dir / "package.yaml").is_file():
+        raise click.ClickException(
+            f"no capability named {name!r} is authored in this repository at "
+            f".pkit/capabilities/{name}/package.yaml."
+        )
+    kit_shipped = (
+        caps.is_installed(target_root, name)
+        and caps.read_capability_origin(target_root, name) == caps.KIT_SHIPPED
+    )
+    if kit_shipped and not install_mod.is_self_host(target_root, find_source_kit()):
+        raise click.ClickException(
+            f"capability {name!r} is kit-shipped: its package.yaml is core-owned and "
+            "`pkit sync` overwrites it (the no-shared-files invariant). A stale "
+            "`depends-on` list there is the capability author's to regenerate — report "
+            "it upstream."
+        )
+
+    try:
+        result = deps.refresh(cap_dir, dry_run=dry_run)
+    except deps.RefreshError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    where = result.package_file.relative_to(target_root)
+    count = f"{len(result.entries)} entry(ies)"
+    if not result.changed:
+        fresh = f"`{deps.DEPENDS_ON_KEY}` in {where} is fresh ({count}); nothing to write."
+        click.echo("\n  " + cli_render.style("strong", fresh))
+        return
+    verb = "Would refresh" if dry_run else "Refreshed"
+    click.echo(
+        "\n  "
+        + cli_render.style(
+            "strong",
+            f"{verb} `{'.'.join(deps.BLOCK_PATH)}` in {where}: {count} generated from the "
+            "process definitions' `depends_on`.",
+        )
+    )
+    for entry in result.entries:
+        click.echo(f"    - {entry.text()}")
 
 
 # --- New artifacts (decisions, agents, etc.) ------------------------------
