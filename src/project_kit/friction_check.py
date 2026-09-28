@@ -992,7 +992,7 @@ _LEGEND: dict[FindingKind, str] = {
 }
 
 _MODE_GLOSS = {
-    ENFORCING: "fails on friction, dead anchors and bumps; an outdated base only reports",
+    ENFORCING: "fails on friction, dead anchors, unresolved kinds and bumps; an outdated base only reports",
     "warning": "reports and passes",
 }
 

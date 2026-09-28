@@ -944,7 +944,18 @@ def _source_findings(
     kind = source.get("kind") if isinstance(source, Mapping) else None
     if not isinstance(kind, str) or not kind:
         return  # absent, or malformed: the shape pass reports it
-    reason = fd.unresolved_kind_reason(kind, fd.registered_anchor_kinds(catalogue.target_root))
+    # A source resolves only through a kind a capability registered (COR-051
+    # point 5): the core anchor kinds are not source kinds, and this validator
+    # resolves no source itself, so every source is gated on the registry and
+    # never silently passed.
+    registry = fd.registered_anchor_kinds(catalogue.target_root)
+    resolver = registry.get(kind)
+    reason = (
+        "no installed capability registers a resolver for it"
+        if resolver is None
+        else fd.refuse_resolver_without_query_contract(resolver)
+        or f"the resolver `{resolver.command}` that {resolver.capability} registers for it is not run yet"
+    )
     if reason is not None:
         yield _report(
             rule.location,

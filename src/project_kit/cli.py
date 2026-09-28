@@ -360,8 +360,8 @@ def friction_check_command(base_ref: str, as_json: bool) -> None:
     Reads git only and writes nothing: the working tree (uncommitted changes
     included) against the merge-base of REF. Reports friction, dead anchors of
     the change, bumps with nothing behind them and an outdated base. Exit 1
-    only in enforcing mode (`friction.mode`), on friction, dead anchors or
-    bumps; an outdated base never fails.
+    in enforcing mode on friction, a dead anchor, an unresolved kind or a
+    bump; an outdated base never fails.
     """
     target_root = find_target_root()
     if target_root is None:

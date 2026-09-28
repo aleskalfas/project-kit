@@ -403,6 +403,20 @@ def test_a_source_is_reported_as_an_unresolved_kind_never_passed(adopter: Adopte
     assert rs.fd.registered_anchor_kinds(adopter.root) == {}
 
 
+def test_a_source_of_a_core_anchor_kind_is_reported_too_until_a_capability_resolves_it(adopter: AdopterRepo) -> None:
+    front = cmn()
+    front["rules"]["RS-CMN-001"]["origin"]["source"] = {"kind": "path", "value": "t-12"}
+    write_set(adopter, f"{PROJECT_SETS}/cmn.md", front)
+    result = validate(adopter)
+
+    assert result.errors == ()
+    report = only(result, Kind.UNRESOLVED_SOURCE_KIND)
+    assert report.severity is rs.Severity.REPORT
+    assert report.where == f"{PROJECT_SETS}/cmn.md#RS-CMN-001 /origin/source"
+    assert "'path' is unresolved" in report.message
+    assert rs.fd.registered_anchor_kinds(adopter.root) == {}
+
+
 # --- successors ---------------------------------------------------------------------
 
 

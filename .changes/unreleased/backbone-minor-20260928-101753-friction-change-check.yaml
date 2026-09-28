@@ -20,7 +20,7 @@ body: >
   anchors, and `--json` emits a stable document (artefact, location, kind,
   anchor, answer, message per finding) for other components. `friction.mode`
   decides the exit: `warning` reports and passes; `enforcing` fails on
-  friction, dead anchors and bumps, never on an outdated base; with no place
+  friction, dead anchors, unresolved kinds and bumps, never on an outdated base; with no place
   declared or nothing carrying the container the check is dormant.
   Capability-registered anchor kinds are refused unless their resolver
   declares no network egress; none are registered yet. The record resolver
