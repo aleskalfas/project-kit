@@ -18,8 +18,10 @@ is the one reader of those declarations and the one walker of the places:
 - `declared_places` — the resolved places, project first (in declaration
   order) then capabilities by name. A capability's place is an object
   `{path, location?}` (the package schema's `friction-place`): with
-  `location`, inside that entry of the document locations it declares, under
-  a documentation root (COR-049 point 4; COR-050 point 1); without one,
+  `location`, inside that entry of the document locations it declares — where
+  `docs_roots.read_capability_locations`, the one reading of a capability's
+  locations, puts it: its recorded location, else its declared sub-path under
+  the root it names (COR-049 points 4 and 5; COR-050 point 1); without one,
   repository-relative.
 - `rule_set_places` / `rule_set_files` — the location rule for rule-set files
   (COR-051 point 2, ADR-056 point 2): the places declared to hold rule sets,
@@ -61,6 +63,7 @@ from typing import Any, Protocol
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
+from project_kit import docs_roots
 from project_kit.backbone_schemas import CONTAINER_KEY, as_written
 from project_kit.manifest import read_backbone_manifest
 from project_kit.report_context import project_config_path
@@ -70,23 +73,11 @@ from project_kit.report_context import project_config_path
 # group (COR-050 point 1, COR-053 point 10).
 FRICTION_KEY = "friction"
 
-# The documentation key of the backbone configuration (COR-049 point 1) and
-# the sub-keys naming its two roots. Both roots default to `docs/`.
-DOCS_KEY = "docs"
-INTERNAL_ROOT_KEY = "internal"
-USER_ROOT_KEY = "user"
-DEFAULT_INTERNAL_ROOT = "docs"
-DEFAULT_USER_ROOT = "docs"
-
-# A capability's document sub-paths under a documentation root (COR-049 point 4).
-LOCATIONS_KEY = "locations"
-
-# The package schema's shapes a capability place is read in: a place is
-# `{path, location?}`, and the `docs.locations` entry it names is
-# `{path, root?}`, with `root` one of the two roots and internal when absent.
+# The package schema's shape a capability place is read in: `{path, location?}`,
+# `location` naming an entry of the capability's `docs.locations`, which
+# `docs_roots.read_capability_locations` resolves.
 PATH_KEY = "path"
 LOCATION_KEY = "location"
-LOCATION_ROOT_KEY = "root"
 
 # The friction modes COR-050 point 12 names; `warning` is the default (point 14).
 FRICTION_MODES: tuple[str, ...] = ("warning", "enforcing")
@@ -227,18 +218,15 @@ def read_friction_settings(
     as absent. The schema passes of the configuration file and of package
     metadata refuse those; this reader only has to keep working next to them.
     A capability place is the exception: one it cannot resolve is kept in
-    `malformed_places` for the validation pass (`_capability_places`).
-    With a `tree`, the files are read from that state rather than from disk.
+    `malformed_places` for the validation pass (`_capability_places`). The
+    roots and each capability's locations are read by `docs_roots`, from the
+    same state. With a `tree`, the files are read from that state rather than
+    from disk.
     """
     load = _mapping_loader(target_root, tree)
     config_rel = project_config_path(target_root).relative_to(target_root).as_posix()
     config = load(config_rel)
-    docs = _mapping_or_empty(config.get(DOCS_KEY))
-    internal_root = _text_or_default(docs.get(INTERNAL_ROOT_KEY), DEFAULT_INTERNAL_ROOT)
-    roots = {
-        INTERNAL_ROOT_KEY: internal_root,
-        USER_ROOT_KEY: _text_or_default(docs.get(USER_ROOT_KEY), DEFAULT_USER_ROOT),
-    }
+    roots = docs_roots.roots_from(config.get(docs_roots.DOCS_KEY))
 
     friction = _mapping_or_empty(config.get(FRICTION_KEY))
     mode = friction.get("mode")
@@ -259,22 +247,24 @@ def read_friction_settings(
     surface = list(project_paths("surface"))
     exclude = list(project_paths("exclude"))
     malformed_places: list[MalformedPlace] = []
+    internal_root = roots.internal.as_posix()
 
     for name in installed_capability_names(target_root, tree):
-        package_rel = CAPABILITIES_DIR / name / "package.yaml"
-        package = load(package_rel.as_posix())
-        found, malformed = _capability_places(name, package, package_rel.as_posix(), roots)
+        package_rel = (CAPABILITIES_DIR / name / "package.yaml").as_posix()
+        package = load(package_rel)
+        recorded = load(docs_roots.capability_locations_relpath(name).as_posix())
+        locations = docs_roots.read_capability_locations(package, recorded, roots)
+        found, malformed = _capability_places(name, package, package_rel, locations)
         places.extend(found)
         malformed_places.extend(malformed)
         cap_friction = _mapping_or_empty(package.get(FRICTION_KEY))
-        locations = _capability_locations(package)
         for index, text in _texts(cap_friction.get("surface")):
-            for location in locations:
+            for location in _capability_locations(package):
                 surface.append(
                     SettingsPath(
                         value=text,
                         resolved=_join_posix(internal_root, location, text),
-                        file=str(package_rel),
+                        file=package_rel,
                         pointer=f"/{FRICTION_KEY}/surface/{index}",
                         source=f"capability:{name}",
                     )
@@ -321,17 +311,21 @@ class _Unresolved:
 
 
 def _capability_places(
-    name: str, package: Mapping[str, Any], package_file: str, roots: Mapping[str, str]
+    name: str,
+    package: Mapping[str, Any],
+    package_file: str,
+    locations: Mapping[str, docs_roots.Location | docs_roots.UnreadableLocation],
 ) -> tuple[list[SettingsPath], list[MalformedPlace]]:
     """A capability's `friction.places`, read in the package schema's shape (COR-050 point 1).
 
     Each place is an object `{path, location?}`. With `location`, `path` lies
-    inside that entry of the capability's `docs.locations` — itself
-    `{path, root?}`, under the internal documentation root unless `root: user`
-    names the user root (COR-049 point 4). Without one, `path` is
-    repository-relative. Only that shape is read: a place written as plain
-    text or in any other shape, or naming a location the capability does not
-    declare in its shape, gives the walk nothing it could follow, so it is
+    inside that entry of the capability's `docs.locations`, where `locations`
+    — the one reading, `docs_roots.read_capability_locations` — puts it: its
+    recorded location, else its declared `{path, root?}` under the root it
+    names (COR-049 points 4 and 5). Without one, `path` is repository-relative.
+    Only that shape is read: a place written as plain text or in any other
+    shape, or naming a location the capability does not declare or that the
+    reading cannot place, gives the walk nothing it could follow, so it is
     returned as malformed — never dropped — for the validation pass to report
     (COR-050 point 7). Both lists keep the written order.
     """
@@ -344,12 +338,11 @@ def _capability_places(
         reason = f"`friction.places` is {_shape(raw)}, not a list of places"
         whole = MalformedPlace(file=package_file, pointer=pointer, source=source, reason=reason)
         return [], [whole]
-    locations = _mapping_or_empty(_mapping_or_empty(package.get(DOCS_KEY)).get(LOCATIONS_KEY))
     places: list[SettingsPath] = []
     malformed: list[MalformedPlace] = []
     for index, entry in enumerate(raw):
         entry_pointer = f"{pointer}/{index}"
-        resolved = _resolve_capability_place(entry, locations, roots)
+        resolved = _resolve_capability_place(entry, locations)
         if isinstance(resolved, _Unresolved):
             malformed.append(
                 MalformedPlace(
@@ -371,7 +364,7 @@ def _capability_places(
 
 
 def _resolve_capability_place(
-    entry: Any, locations: Mapping[str, Any], roots: Mapping[str, str]
+    entry: Any, locations: Mapping[str, docs_roots.Location | docs_roots.UnreadableLocation]
 ) -> tuple[str, str] | _Unresolved:
     """`(path, pattern)` for a place in the schema's shape, else why it is not.
 
@@ -394,30 +387,18 @@ def _resolve_capability_place(
         return _Unresolved(
             f"the place's `location` is {_shape(location)}, not a name from `docs.locations`"
         )
-    if location not in locations:
+    where = locations.get(location)
+    if where is None:
         declared = f" (declared: {sorted(locations)})" if locations else ""
         return _Unresolved(
             f"the place names location {location!r}, which `docs.locations` does not "
             f"declare{declared}"
         )
-    directory = _location_directory(locations[location], roots)
-    if directory is None:
+    if isinstance(where, docs_roots.UnreadableLocation):
         return _Unresolved(
-            f"the place names location {location!r}, whose `docs.locations` entry is not "
-            f"`{{path, root?}}` with `root` one of {sorted(roots)}"
+            f"the place names location {location!r}, whose `docs.locations` entry {where.reason}"
         )
-    return path, _join_posix(directory, path)
-
-
-def _location_directory(declaration: Any, roots: Mapping[str, str]) -> str | None:
-    """Where a `docs.locations` entry lies, repository-relative; `None` unless `{path, root?}`."""
-    if not isinstance(declaration, Mapping):
-        return None
-    sub_path = _text_or_none(declaration.get(PATH_KEY))
-    root = declaration.get(LOCATION_ROOT_KEY, INTERNAL_ROOT_KEY)
-    if sub_path is None or not isinstance(root, str) or root not in roots:
-        return None
-    return _join_posix(roots[root], sub_path)
+    return path, _join_posix(where.path.as_posix(), path)
 
 
 def _shape(value: Any) -> str:
@@ -442,8 +423,8 @@ def _capability_locations(package: Mapping[str, Any]) -> tuple[str, ...]:
     no longer use it (`_capability_places`). A capability declaring no such
     locations has its surface resolved directly under the internal root.
     """
-    docs = _mapping_or_empty(package.get(DOCS_KEY))
-    raw = docs.get(LOCATIONS_KEY)
+    docs = _mapping_or_empty(package.get(docs_roots.PACKAGE_DOCS_KEY))
+    raw = docs.get(docs_roots.PACKAGE_LOCATIONS_KEY)
     if isinstance(raw, Mapping):
         raw = list(raw.values())
     texts = tuple(text for _index, text in _texts(raw))
@@ -512,10 +493,6 @@ def _mappings(items: list[Any]) -> Iterator[Mapping[str, Any]]:
 
 def _mapping_or_empty(value: Any) -> Mapping[str, Any]:
     return {str(k): v for k, v in value.items()} if isinstance(value, Mapping) else {}
-
-
-def _text_or_default(value: Any, default: str) -> str:
-    return value if isinstance(value, str) and value.strip() else default
 
 
 def _text_or_none(value: Any) -> str | None:

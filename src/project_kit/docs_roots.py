@@ -11,11 +11,18 @@ already exists (points 3 and 4):
 The backbone owns one list of conventional sub-paths for the overlay's
 folder-locating categories (`CONVENTIONAL_SUBPATHS`); a capability declares
 the sub-paths of its own documents in its package metadata (`docs.locations`),
-read here defensively. A location that was derived is **recorded as an explicit
-value the first time it is used** (point 5) — into the overlay for a backbone
-category, into the capability's project namespace for a capability's document
-— so a later root change moves nothing already chosen (point 6). Recording
-happens only where a location is chosen, never on read.
+each an object `{path, root?}` naming the root it lies under. A location that
+was derived is **recorded as an explicit value the first time it is used**
+(point 5) — into the overlay for a backbone category, into the capability's
+project namespace for a capability's document — so a later root change moves
+nothing already chosen (point 6). Recording happens only where a location is
+chosen, never on read.
+
+A capability's locations are read one way, by `read_capability_locations`:
+each name it declares lies at its recorded location when one exists, else at
+its declared sub-path under the root it names. That function is pure — it takes
+the parsed files — so this module's disk readers and friction discovery, which
+also reads other states of the repository, call the same reading.
 
 Reading is forgiving throughout (COR-048 point 4): an unreadable configuration
 yields the defaults; `pkit validate` reports the file separately.
@@ -57,9 +64,16 @@ CONVENTIONAL_SUBPATHS: dict[str, str] = {
 }
 
 #: Where a capability declares the sub-paths of its own documents, in its
-#: package metadata: `docs: {locations: {<name>: <sub-path>}}`.
+#: package metadata: `docs: {locations: {<name>: {path, root?}}}` — the package
+#: schema's `doc-location`, `root` naming one of the two roots and internal
+#: when absent.
 PACKAGE_DOCS_KEY = "docs"
 PACKAGE_LOCATIONS_KEY = "locations"
+LOCATION_PATH_KEY = "path"
+LOCATION_ROOT_KEY = "root"
+
+#: The two audiences a root serves, and so the values a location's `root` takes.
+AUDIENCES: tuple[str, ...] = (INTERNAL_KEY, USER_KEY)
 
 #: Where a capability's chosen locations are recorded (COR-049 point 5): a
 #: backbone-owned file in the capability's project namespace, kept apart from
@@ -69,6 +83,7 @@ CAPABILITY_LOCATIONS_FILENAME = "docs-locations.yaml"
 CAPABILITY_LOCATIONS_KEY = "locations"
 
 _OVERLAY_RELPATH = Path(".pkit") / "agents" / "project" / "overlay.yaml"
+_CAPABILITIES_RELPATH = PurePosixPath(".pkit") / "capabilities"
 
 
 class Source(StrEnum):
@@ -105,6 +120,22 @@ class Location:
 
 
 @dataclass(frozen=True)
+class DeclaredLocation:
+    """One `docs.locations` entry in the package schema's shape `{path, root?}`."""
+
+    path: str  # the sub-path as written, relative to the root
+    root: str  # the audience whose root it lies under: `internal` or `user`
+
+
+@dataclass(frozen=True)
+class UnreadableLocation:
+    """A declared location the reading cannot place, and why: a clause a finding
+    quotes after "whose `docs.locations` entry"."""
+
+    reason: str
+
+
+@dataclass(frozen=True)
 class RecordedLocation:
     """A location a component has recorded as explicit."""
 
@@ -122,7 +153,13 @@ def resolve_roots(target_root: Path) -> Roots:
     A value that is not a non-empty relative path string is treated as absent
     (forgiving read); validation reports it.
     """
-    docs = read_config(target_root).get(DOCS_KEY)
+    return roots_from(read_config(target_root).get(DOCS_KEY))
+
+
+def roots_from(docs: Any) -> Roots:
+    """Both roots from the configuration's parsed `docs` value, however it was
+    read — from disk (`resolve_roots`) or from another state of the repository
+    (friction discovery). Anything not a mapping reads as absent."""
     if not isinstance(docs, Mapping):
         docs = {}
     user, user_source = _root_from(docs.get(USER_KEY))
@@ -199,23 +236,6 @@ def _text(location: Location | None) -> str:
     return location.path.as_posix()
 
 
-def capability_subpaths(target_root: Path, capability: str) -> dict[str, str]:
-    """The sub-paths a capability declares for its documents in package metadata
-    (`docs.locations`), read defensively: anything not a mapping of text to
-    text yields nothing for that entry."""
-    package = target_root / ".pkit" / "capabilities" / capability / "package.yaml"
-    data = _load_yaml(package)
-    docs = data.get(PACKAGE_DOCS_KEY) if isinstance(data, Mapping) else None
-    locations = docs.get(PACKAGE_LOCATIONS_KEY) if isinstance(docs, Mapping) else None
-    if not isinstance(locations, Mapping):
-        return {}
-    return {
-        str(name): value
-        for name, value in locations.items()
-        if isinstance(value, str) and value.strip() and not PurePosixPath(value).is_absolute()
-    }
-
-
 # --- record on first use -----------------------------------------------------
 
 
@@ -262,9 +282,13 @@ def _record_overlay_category(target_root: Path, category: str, rel: str, *, by: 
     return overlay
 
 
+def capability_locations_relpath(capability: str) -> PurePosixPath:
+    """Where a capability's recorded locations live, relative to the repository root."""
+    return _CAPABILITIES_RELPATH / capability / "project" / CAPABILITY_LOCATIONS_FILENAME
+
+
 def capability_locations_path(target_root: Path, capability: str) -> Path:
-    project = target_root / ".pkit" / "capabilities" / capability / "project"
-    return project / CAPABILITY_LOCATIONS_FILENAME
+    return target_root / capability_locations_relpath(capability)
 
 
 def _record_capability_location(
@@ -295,28 +319,114 @@ def _record_capability_location(
     return path
 
 
-def recorded_capability_locations(target_root: Path, capability: str) -> dict[str, str]:
-    """A capability's recorded locations, forgivingly read."""
-    data = _load_yaml(capability_locations_path(target_root, capability))
-    locations = data.get(CAPABILITY_LOCATIONS_KEY) if isinstance(data, Mapping) else None
+# --- a capability's locations: the one reading -------------------------------
+
+
+def read_capability_locations(
+    package: Any, recorded: Any, roots: Roots
+) -> dict[str, Location | UnreadableLocation]:
+    """Where each documentation location a capability declares lies (COR-049
+    points 3 to 5) — the one reading every reader of a capability's locations
+    calls, so they cannot disagree.
+
+    `package` is the capability's parsed package metadata, `recorded` its parsed
+    `docs-locations.yaml`, and `roots` the project's roots. The result has one
+    entry per name `docs.locations` declares, in declaration order:
+
+    - a location **recorded** for the name wins, as an explicit value — a
+      location chosen once stays where it was chosen (point 5);
+    - otherwise the declaration, read in the package schema's shape
+      `{path, root?}`, lies at `path` under the root `root` names, the internal
+      root when absent — derived (point 4);
+    - otherwise the declaration is in another shape, and the entry says why;
+      the packages pass reports the declaration, and a place naming it is a
+      finding of the friction pass (COR-050 point 7).
+
+    A recorded name the capability does not declare is not one of its
+    locations. Only shape is judged here: whether a location stays inside the
+    repository is for the reader that walks it. Pure, so a reader of another
+    state of the repository — friction discovery reading a base commit — passes
+    that state's files.
+    """
+    chosen = _recorded_entries(recorded)
+    resolved: dict[str, Location | UnreadableLocation] = {}
+    for name, declaration in _declared_locations(package).items():
+        if name in chosen:
+            resolved[name] = Location(normalise(chosen[name]), Source.EXPLICIT)
+        elif isinstance(declaration, UnreadableLocation):
+            resolved[name] = declaration
+        else:
+            root, _source = roots.for_audience(declaration.root)
+            resolved[name] = Location(root / declaration.path, Source.DERIVED)
+    return resolved
+
+
+def _declared_locations(package: Any) -> dict[str, DeclaredLocation | UnreadableLocation]:
+    """Every entry of a parsed package metadata's `docs.locations`, read in the
+    package schema's shape `{path, root?}`; an entry in another shape says why.
+    A `docs.locations` that is not a mapping declares nothing."""
+    docs = package.get(PACKAGE_DOCS_KEY) if isinstance(package, Mapping) else None
+    locations = docs.get(PACKAGE_LOCATIONS_KEY) if isinstance(docs, Mapping) else None
+    if not isinstance(locations, Mapping):
+        return {}
+    return {str(name): _declared_location(value) for name, value in locations.items()}
+
+
+def _declared_location(value: Any) -> DeclaredLocation | UnreadableLocation:
+    if not isinstance(value, Mapping):
+        return UnreadableLocation("is not an object `{path, root?}`")
+    path = value.get(LOCATION_PATH_KEY)
+    if not isinstance(path, str) or not path.strip():
+        return UnreadableLocation("has no `path` naming a sub-path of its root")
+    root = value.get(LOCATION_ROOT_KEY, INTERNAL_KEY)
+    if root not in AUDIENCES:
+        return UnreadableLocation(f"names `root` {root!r}, not one of {sorted(AUDIENCES)}")
+    return DeclaredLocation(path=path.strip(), root=root)
+
+
+def _recorded_entries(recorded: Any) -> dict[str, str]:
+    """The locations a parsed `docs-locations.yaml` records, name to text; an
+    entry that is not a non-empty text is not a recorded location."""
+    locations = recorded.get(CAPABILITY_LOCATIONS_KEY) if isinstance(recorded, Mapping) else None
     if not isinstance(locations, Mapping):
         return {}
     return {str(k): v for k, v in locations.items() if isinstance(v, str) and v.strip()}
 
 
+def capability_subpaths(target_root: Path, capability: str) -> dict[str, DeclaredLocation]:
+    """The locations a capability declares in its package metadata that are in
+    the package schema's shape: each its sub-path and the root it lies under.
+    Where a location lies — its recorded value winning — is `capability_location`."""
+    return {
+        name: declaration
+        for name, declaration in _declared_locations(_load_package(target_root, capability)).items()
+        if isinstance(declaration, DeclaredLocation)
+    }
+
+
+def recorded_capability_locations(target_root: Path, capability: str) -> dict[str, str]:
+    """A capability's recorded locations, forgivingly read."""
+    return _recorded_entries(_load_yaml(capability_locations_path(target_root, capability)))
+
+
 def capability_location(
     target_root: Path, capability: str, name: str, *, roots: Roots | None = None
 ) -> Location | None:
-    """A capability's document location by precedence: recorded (explicit) >
-    derived from the internal root and the capability's declared sub-path."""
+    """Where a capability's document location lies, by the one reading
+    (`read_capability_locations`): recorded (explicit) > derived from its
+    declaration. `None` when the capability does not declare `name`, or
+    declares it in another shape with nothing recorded."""
     roots = roots if roots is not None else resolve_roots(target_root)
-    recorded = recorded_capability_locations(target_root, capability).get(name)
-    return derive_location(
-        roots.internal,
-        name,
-        explicit=recorded,
-        subpaths=capability_subpaths(target_root, capability),
-    )
+    resolved = read_capability_locations(
+        _load_package(target_root, capability),
+        _load_yaml(capability_locations_path(target_root, capability)),
+        roots,
+    ).get(name)
+    return resolved if isinstance(resolved, Location) else None
+
+
+def _load_package(target_root: Path, capability: str) -> Any:
+    return _load_yaml(target_root / _CAPABILITIES_RELPATH / capability / "package.yaml")
 
 
 # --- what is recorded (for the status report) -------------------------------

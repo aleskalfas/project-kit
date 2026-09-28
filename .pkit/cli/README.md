@@ -429,7 +429,7 @@ Read-only inventory of how project-kit is wired in this project — useful as a 
 - **Adapter status** (Claude Code today): whether `.claude/settings.json` is merged, whether a `.pre-pkit` backup exists, and a list of deployed skills split into kit-managed (symlinks into `.pkit/skills/`) vs user-managed (anything else under `.claude/skills/`).
 - **Capabilities** — which are available in `.pkit/capabilities/` and which are installed (per COR-017).
 - **Documentation** — the two documentation roots with their source (`explicit` / `default`), and every recorded documentation location, those inside the internal root and then those outside it, one line each (COR-049 points 6 and 7; see "Configuration file", the `docs` key).
-- **Friction** — the friction mode with its source, and each declared place, surface entry and excluded path: the project's in written order, then each capability's, resolved under the internal root and tagged `(<capability>)` (COR-050 point 14). With no place declared it says so. Rule-set folders, places by the location rule rather than by declaration, are not listed.
+- **Friction** — the friction mode with its source, and each declared place, surface entry and excluded path: the project's in written order, then each capability's, tagged `(<capability>)` — a capability place inside its documentation location, the recorded one when recorded (COR-050 point 14). With no place declared it says so. Rule-set folders, places by the location rule rather than by declaration, are not listed.
 - **Counts** for decisions (COR / PRJ records) and skills (core / project).
 
 Output is human-readable with tagged status lines. Makes no changes.

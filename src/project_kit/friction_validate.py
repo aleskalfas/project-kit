@@ -5,10 +5,11 @@ settings that declare them, this pass reports:
 
 - **a capability place the walk does not follow** — one discovery could not
   read in the package schema's shape `{path, location?}` (plain text, no
-  `path`, a location `docs.locations` does not declare in its shape), or one
-  that leaves the repository, through a link included; reported whenever it
-  is declared, dormant or not, because a place nothing is found under must
-  never look like a place with nothing in it (COR-050 point 7);
+  `path`, a location `docs.locations` does not declare, or declares in
+  another shape with nothing recorded), or one that leaves the repository,
+  through a link included; reported whenever it is declared, dormant or not,
+  because a place nothing is found under must never look like a place with
+  nothing in it (COR-050 point 7);
 - **unparsable front matter** in a declared place — reported whenever places
   are declared, dormant or not, because the check never skips an artefact it
   cannot parse: the broken file may be the one carrying the container;

@@ -129,20 +129,105 @@ def test_conventional_defaults_derive_from_an_explicit_internal_root(
     }
 
 
-def test_capability_subpaths_are_read_defensively(make_adopter_repo: MakeAdopterRepo) -> None:
+# --- a capability's locations: the one reading (#1051) -----------------------
+
+
+def _declare_locations(repo: AdopterRepo, capability: str, entries: str) -> None:
+    """Append a `docs.locations` block — `entries` are its YAML lines — to an
+    installed capability's package metadata."""
+    package = repo.pkit / "capabilities" / capability / "package.yaml"
+    package.write_text(
+        package.read_text(encoding="utf-8") + "docs:\n  locations:\n" + entries,
+        encoding="utf-8",
+    )
+
+
+def test_capability_locations_are_read_in_the_package_schema_shape(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """A `docs.locations` entry is `{path, root?}`: under the internal root by
+    default, under the user root with `root: user`. The old text shape, or any
+    other, places no location."""
     repo = make_adopter_repo(capabilities=("project-management",))
     # Today's package metadata declares none.
     assert dr.capability_subpaths(repo.root, "project-management") == {}
     assert dr.capability_subpaths(repo.root, "not-installed") == {}
-    package = repo.pkit / "capabilities" / "project-management" / "package.yaml"
-    package.write_text(
-        package.read_text(encoding="utf-8")
-        + "docs:\n  locations:\n    guides: guides\n    bad: /abs\n    worse: [x]\n",
-        encoding="utf-8",
+    _write_config(repo, "docs:\n  internal: tech-docs\n  user: handbook\n")
+    _declare_locations(
+        repo,
+        "project-management",
+        "    analysis: {path: analysis}\n"
+        "    pages: {path: pages/, root: user, description: The user pages.}\n"
+        "    legacy: guides\n"
+        "    bare: {root: user}\n"
+        "    shared: {path: shared, root: team}\n",
     )
-    assert dr.capability_subpaths(repo.root, "project-management") == {"guides": "guides"}
-    location = dr.capability_location(repo.root, "project-management", "guides")
-    assert location == dr.Location(Path("docs/guides"), dr.Source.DERIVED)
+    assert dr.capability_subpaths(repo.root, "project-management") == {
+        "analysis": dr.DeclaredLocation(path="analysis", root="internal"),
+        "pages": dr.DeclaredLocation(path="pages/", root="user"),
+    }
+
+    def location(name: str) -> dr.Location | None:
+        return dr.capability_location(repo.root, "project-management", name)
+
+    assert location("analysis") == dr.Location(Path("tech-docs/analysis"), dr.Source.DERIVED)
+    assert location("pages") == dr.Location(Path("handbook/pages"), dr.Source.DERIVED)
+    assert [location(n) for n in ("legacy", "bare", "shared", "undeclared")] == [None] * 4
+
+
+def test_the_one_reading_keeps_declaration_order_and_says_why_an_entry_is_not_read() -> None:
+    """`read_capability_locations` is pure: callers hand it the parsed files."""
+    roots = dr.roots_from({"internal": "tech-docs/", "user": "handbook"})
+    package = {
+        "docs": {
+            "locations": {
+                "runs": {"path": "runs"},
+                "legacy": "runs",
+                "bare": {"root": "user"},
+                "shared": {"path": "shared", "root": "team"},
+                "pages": {"path": "pages", "root": "user"},
+            }
+        }
+    }
+    resolved = dr.read_capability_locations(package, None, roots)
+    assert list(resolved) == ["runs", "legacy", "bare", "shared", "pages"]
+    assert resolved == {
+        "runs": dr.Location(Path("tech-docs/runs"), dr.Source.DERIVED),
+        "legacy": dr.UnreadableLocation("is not an object `{path, root?}`"),
+        "bare": dr.UnreadableLocation("has no `path` naming a sub-path of its root"),
+        "shared": dr.UnreadableLocation("names `root` 'team', not one of ['internal', 'user']"),
+        "pages": dr.Location(Path("handbook/pages"), dr.Source.DERIVED),
+    }
+    # No `docs.locations`, or one that is not a mapping, declares nothing.
+    assert dr.read_capability_locations({}, None, roots) == {}
+    assert dr.read_capability_locations({"docs": {"locations": ["runs"]}}, None, roots) == {}
+
+
+def test_a_recorded_location_wins_over_the_declared_one(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """COR-049 point 5: once recorded, a location is read from the record — a
+    later root change moves nothing, and a declaration the reading cannot place
+    no longer matters. A recorded name the capability does not declare is not
+    one of its locations."""
+    repo = make_adopter_repo(capabilities=("project-management",))
+    _declare_locations(
+        repo, "project-management", "    guides: {path: guides}\n    legacy: notes\n"
+    )
+
+    def location(name: str) -> dr.Location | None:
+        return dr.capability_location(repo.root, "project-management", name)
+
+    assert location("guides") == dr.Location(Path("docs/guides"), dr.Source.DERIVED)
+    assert location("legacy") is None
+    dr.record_location(repo.root, "project-management", "guides", "docs/guides")
+    dr.record_location(repo.root, "project-management", "legacy", "docs/notes")
+    dr.record_location(repo.root, "project-management", "orphan", "docs/orphan")
+    _set_internal_root(repo, "tech-docs")
+
+    assert location("guides") == dr.Location(Path("docs/guides"), dr.Source.EXPLICIT)
+    assert location("legacy") == dr.Location(Path("docs/notes"), dr.Source.EXPLICIT)
+    assert location("orphan") is None
 
 
 # --- reconcile / adopt derive at resolution time ----------------------------
@@ -221,6 +306,7 @@ def test_record_location_for_a_capability_lands_in_its_project_namespace(
     make_adopter_repo: MakeAdopterRepo,
 ) -> None:
     repo = make_adopter_repo(capabilities=("project-management",))
+    _declare_locations(repo, "project-management", "    guides: {path: guides}\n")
     written = dr.record_location(repo.root, "project-management", "guides", "docs/guides")
     assert written == dr.capability_locations_path(repo.root, "project-management")
     assert written.parent == repo.pkit / "capabilities" / "project-management" / "project"
@@ -395,4 +481,26 @@ def test_status_lists_the_declared_places_surface_and_exclusions(
         "tech-docs/boards/**/*.md (project-management)",
         "exclude            1 declared:",
         "generated/",
+    ]
+
+
+def test_status_shows_a_capability_place_under_its_recorded_location(
+    make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The lines show what discovery reads: the place inside the location the
+    project recorded, not the declared one."""
+    repo = make_adopter_repo(capabilities=("project-management",))
+    _write_config(repo, "docs:\n  internal: tech-docs\n")
+    package = repo.pkit / "capabilities" / "project-management" / "package.yaml"
+    package.write_text(
+        package.read_text(encoding="utf-8")
+        + "docs:\n  locations:\n    boards: {path: boards}\n"
+        + "friction:\n  places:\n    - {location: boards, path: '**/*.md'}\n",
+        encoding="utf-8",
+    )
+    dr.record_location(repo.root, "project-management", "boards", "planning/boards")
+    assert _friction_lines(monkeypatch) == [
+        "mode               warning   (default)",
+        "places             1 declared:",
+        "planning/boards/**/*.md (project-management)",
     ]
