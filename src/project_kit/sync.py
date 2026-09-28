@@ -55,7 +55,9 @@ def run_sync(target_root: Path, dry_run: bool = False, force: bool = False) -> N
     # maintainer just edited. This is the self-host equivalent of sync:
     # "re-wire me to my own source." Propagation, capability refresh, and the
     # recorded-version stamp are skipped — the source is already the state.
-    if target_root.resolve() == source_kit.parent.resolve():
+    # This condition is the definition of the methodology's source repository
+    # (ADR-059); the marker files other consumers check stand in for it.
+    if install.is_self_host(target_root, source_kit):
         ctx = install.InstallContext(
             target_root=target_root,
             source_kit=source_kit,

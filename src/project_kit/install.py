@@ -503,6 +503,23 @@ def find_source_kit() -> Path:
     return _bundled_source_kit()
 
 
+def is_self_host(target_root: Path, source_kit: Path) -> bool:
+    """True when *target_root* is the methodology's source repository (ADR-059).
+
+    The definition: the target is the repository whose `.pkit/` is
+    *source_kit*, the tree this process copies from (`find_source_kit`), so a
+    sync has nothing to copy into it. A bundled tree never has a project as its
+    parent, so under an installed distribution this is never true. Sync's
+    self-host path, upgrade's self-host branch and init's refusal ask it here.
+
+    Code that cannot evaluate it — the entry-point router, before any code is
+    chosen, and the propagated ownership predicate — recognises the source by
+    marker files instead (`router.is_source_checkout`); route 1 is what keeps
+    the two answers equal (ADR-059 point 3).
+    """
+    return target_root.resolve() == source_kit.parent.resolve()
+
+
 def install_kit(target_root: Path, dry_run: bool = False) -> None:
     """Run `pkit init` against `target_root`. Refuses to run if `.pkit/`
     already exists, if the source kit doesn't look like a real source
@@ -682,8 +699,7 @@ def _refuse_if_source_kit_missing(ctx: InstallContext) -> None:
 
 
 def _refuse_if_target_is_source(ctx: InstallContext) -> None:
-    source_repo = ctx.source_kit.parent.resolve()
-    if ctx.target_root.resolve() == source_repo:
+    if is_self_host(ctx.target_root, ctx.source_kit):
         raise click.ClickException(
             f"source and target are the same project ({ctx.target_root}).\n"
             f"       project-kit self-hosts directly; running pkit init on project-kit\n"

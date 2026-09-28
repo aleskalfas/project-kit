@@ -44,7 +44,7 @@ from pathlib import Path
 import click
 from packaging.version import InvalidVersion, Version
 
-from project_kit.install import find_source_kit, refuse_if_source_kit_incomplete
+from project_kit.install import find_source_kit, is_self_host, refuse_if_source_kit_incomplete
 from project_kit.manifest import (
     ComponentManifest,
     ComponentRegistryEntry,
@@ -111,8 +111,9 @@ def run_upgrade(
     # the deploy primitives so the harness picks up source edits. Skips the
     # version comparison (the recorded manifest version is moot on self-host)
     # and the migration steps (self-host authors migrations with the source
-    # change; it does not run them against itself).
-    if target_root.resolve() == source_kit.parent.resolve():
+    # change; it does not run them against itself). The test is sync's, the
+    # definition of the methodology's source repository (ADR-059).
+    if is_self_host(target_root, source_kit):
         click.echo("Self-host: source is the installed state; no backbone upgrade needed.")
         click.echo("Re-running deploy primitives via sync.")
         click.echo()
@@ -558,6 +559,10 @@ def _maybe_self_update_tool(
     - **D3 suppression.** On a source checkout / self-host, reinstalling a released
       tag over working-tree code is nonsensical — skip entirely (no lookup, no
       output). `target_root is None` (run outside a project) is never a checkout.
+      Reached only after the self-host branch has said no, so it asks the
+      router's marker test, which also recognises a checkout that other code
+      is operating on (ADR-059 point 2; the markers are in the lifecycle
+      README's "The methodology's literals").
     - **D1 degrade.** Any lookup failure (offline, no credentials, `git` absent,
       timeout) warns and returns; the caller proceeds unchanged.
     - **Act (amended).** When the tool is behind and self-update is allowed
