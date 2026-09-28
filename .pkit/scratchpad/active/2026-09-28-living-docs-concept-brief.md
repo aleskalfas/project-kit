@@ -50,7 +50,7 @@ Each idea: what it says, why it is this way, which part of the hand-off it answe
 
 - **The idea.** A *space* is a body of documentation with one audience, one entry point and one definition of how its pages are made. Every project has at least a **user space** (what the system does and how to use it) and a **technical space** (why, from where, by which rules — for maintainers and for the agents that write and check the docs). A project may add others, such as an interface reference.
 - **Separate, not secret.** User-facing navigation and search never lead into technical material. The technical space is in the same repository and visible to anyone; the separation is audience and entry point.
-- **Which space a page belongs to.** Each space has a root folder; files outside the roots (a top-level README, a contributing guide) are assigned to a space explicitly; where places nest, the most specific wins. Decision records and rule sets inside a space are what pages *rest on*, not pages themselves.
+- **Which space a page belongs to.** The user and technical spaces each have a root folder; files outside the roots (a top-level README, a contributing guide) are assigned to a space explicitly; where places nest, the most specific wins. Decision records and rule sets inside a space are what pages *rest on*, not pages themselves.
 - **Why.** A user who meets maintainers' material is lost; a maintainer who cannot find the grounds of a user page cannot keep it true; and the writing agent gets a checkable boundary instead of a judgement call.
 - **Answers:** hand-off §4 (two spaces), invariant I4, requirement R1, R3.
 - **In pkit:** two documentation roots declared once per project (user and internal, both `docs/` until a project splits them); every location the method or a capability chooses derives from the right root and is recorded the first time it is used, so a later change never moves existing files. *Shipped.* Place assignment and precedence are decided; applied by the living-docs capability (*planned*).
@@ -68,13 +68,13 @@ Each idea: what it says, why it is this way, which part of the hand-off it answe
 
 - **The idea.** When anything a page rests on changes, the page is flagged — this is *friction* — until someone revalidates it. The check runs on every change (a pull request, or locally before committing) and across the whole repository. It reports upstream first: what others depend on is rechecked before what depends on it.
 - **Why.** Only a check that fires at the moment of the change is reliable; it tells the author "you changed what this page rests on" when the fix is cheapest. The whole-repository check shows what was already stale.
-- **How strict is a project's choice.** In *warning* mode the check reports; in *enforcing* mode a change that leaves friction behind cannot merge. A project turns enforcement on when it trusts its anchors.
+- **How strict is a project's choice.** In *warning* mode the check reports; in *enforcing* mode a change that leaves friction behind fails its check, and cannot merge where the project requires that check. A project turns enforcement on when it trusts its anchors.
 - **Answers:** invariant I1 ("when an anchor changes, everything pointing at it is found and re-checked").
 - **In pkit:** the change check, a whole-repository check, warning and enforcing modes, wired into any CI as a required status. *Change check in review; whole-repository check planned.*
 
 ### 4. The answer lives in the page, not in the pull request
 
-- **The idea.** Friction is answered in the page itself, in one of three ways: **updated** — the page changed with the revalidation; **still true** — the page did not need to change, with one sentence saying why it holds against *this* change (a new sentence every time, so a blind "yes" is visible); or **deferred** — postponed for one anchor, with a reason, until the next revalidation; a later change to the same thing is new friction.
+- **The idea.** Friction is answered in the page itself, in one of three ways: **updated** — the page changed with the revalidation; **still true** — the page did not need to change, with one sentence saying why it holds against *this* change (a new sentence every time, so a blind "yes" is visible); or **deferred** — postponed for one anchor, with a reason; each revalidation either keeps the postponement deliberately or drops it, and a later change to the same thing is new friction.
 - **Why.** A pull-request description is one tool's format; a change made by another tool, by hand, or checked locally has none. An answer in the page works everywhere, and the next reader finds the justification next to the thing it justifies.
 - **Debt comes from history.** What is stale and what is deferred — with who, when and in which change — is derived from the repository's history, never kept in a separate ledger that would drift from it.
 - **Answers:** new since the hand-off; it closes the gap between "re-checked" and "recorded that it was re-checked".
@@ -91,7 +91,7 @@ Each idea: what it says, why it is this way, which part of the hand-off it answe
 ### 6. The method is written down as named, checkable rules
 
 - **The idea.** A *rule* is a statement every artefact in its scope must satisfy, caused by a decision, checkable by a tool, an agent or a reviewer. Rules have permanent identifiers, never renumbered or reused; each records its origin — when, by whom and why, in the decider's words, or a decision record that says it at length. A rule is **proposed** until accepted, and a proposed rule binds nothing; accepted rules bind; superseded and withdrawn rules stay in place with their ids.
-- **Extend, never relax.** A project inherits a shared rule set and adds its own rules, or fills the extension points a shared rule offers; it cannot contradict or quietly override an inherited rule. Inheriting someone else's rule set pins its major version, so a tightened rule never arrives unreviewed.
+- **Extend, never relax.** A project inherits a shared rule set and adds its own rules, or fills the extension points a shared rule offers; it cannot contradict or quietly override an inherited rule. Inheriting someone else's rule set pins its major version, so a tightened rule never arrives unreviewed. A page may anchor to a single rule, so changing, superseding or withdrawing that rule flags everything that relied on it.
 - **Light enough to use.** One file holds a whole rule set: the data per rule at the top, each rule's statement as a short section below — not one formal record per rule.
 - **The shared documentation method** (*LDOC*): a page's anchors ground every statement it makes; each fact is stated once and other pages link to it; each page names its reader and says only what that reader needs; pages of a kind follow one format, with a template per kind; an index-like file is a signpost to what a folder holds, never a summary; nothing is created ahead of the need for it; and in the user space, the reader paths stay unbroken.
 - **Answers:** rule T1; invariants I2, I3; rules CMN-001, CMN-006, CMN-008; hand-off §6 "a lightweight rule-list form".
@@ -162,9 +162,10 @@ Each idea: what it says, why it is this way, which part of the hand-off it answe
 | §10 statuses and supersession for light rules | proposed / accepted / superseded / withdrawn | COR-051 point 4 |
 | §10 evidence for rules vs for data | origins stay inline and may cite a captured source | design log (Q4); COR-051 point 5 |
 | §10 process substrate for doc steps | no — friction is a check over the anchors | design log, 2026-09-27 (Q9 reversed) |
-| §10 default internal root, dotfolder or not | an ordinary project folder outside the methodology's own tree | COR-049 point 1 |
+| §10 default internal root, dotfolder or not; §8 "inside `.pkit/` is fine" for agent-maintained projects | the project chooses its roots (both default to `docs/`), but a root never lies inside the methodology's own folder, whoever maintains it | COR-049 point 1 |
 | §10 reader-review: agent or product run | both: the agent reads, the product's runs arrive as evidence | design log (Q10); living-docs DEC-001 point 6 |
-| §9 Mockingbird's `tech-docs/.meta/` | becomes the shared method (LDOC) plus each space's definition under the internal root; `tech-docs/users/` becomes the analysis | [software-analysis DEC-001][sa001]; living-docs DEC-001 |
+| §7 layers: foundation = decisions · evidence · causality rules | the foundation is the shared core — decisions, documentation roots, anchors and friction, rule sets, connection points; evidence is an optional provider of source anchors | COR-048 to COR-053 |
+| §9 Mockingbird's `tech-docs/.meta/` | becomes the shared method (LDOC) plus each space's definition under the internal root; the planned `tech-docs/users/` becomes the product knowledge, under the internal root's analysis folder | [software-analysis DEC-001][sa001] point 2; living-docs DEC-001 point 2 |
 
 ## Why not build it in each project
 
@@ -208,12 +209,12 @@ So that no slide promises what the tool will not deliver, and so that pkit can c
 1. **"Every statement grounded" is judgement, not a check.** The tool sees pages and their anchors; a reviewer or agent connects each sentence to them. Say *every page*, not *every sentence*.
 2. **Duplicate detection** (I3, "duplicates detected, not discovered by readers") — a rule, applied by the agent and reader-review; no deterministic duplicate check is planned yet.
 3. **Format checks** (I2, "an automatic check on every docs change") — templates and a page-kind field are planned; checking a page's body against its template is not.
-4. **User paths unbroken** (I5) — a rule, plus executed runs as evidence; no deterministic path or link check is planned, and executed runs need something to perform them (the product itself, as Mockingbird can, or a future testing capability).
+4. **User paths unbroken** (I5, "a break fails loudly") — a rule, plus executed runs as evidence. The evidence is advisory: a broken path informs the review but fails nothing by itself. No deterministic path or link check is planned, and executed runs need something to perform them (the product itself, as Mockingbird can, or a future testing capability).
 5. **Sources as anchors** — need an anchor kind that some capability registers, most likely evidence; none does yet.
 6. **"Docs checked against the tool itself"** — commands, flags and examples actually run — arrives as executed evidence; nothing performs it yet.
 7. **A friction result is only as fresh as its base.** Two changes landing back to back can each pass while the second made the first's page stale; the whole-repository check catches it afterwards. project-kit does not gate on an up-to-date base yet; a merge queue is the planned end state.
-8. **Commands a capability supplies to the checks** are bounded in time and output, but "no network" is declared and reported, not enforced — confinement belongs to the permission layer.
-9. **The work tracker's "documentation impact" section** still meets its own mapping obligations directly until the documentation-check connection lands; afterwards it only renders the pages' answers.
+8. **Commands a capability supplies to the checks** (resolving a new anchor kind, answering a data connection) must run bounded in time, deterministic and without network access. The time bound and the output check are enforceable; how "no network" is realised is not yet decided — the backbone does not own confinement.
+9. **The work tracker's "documentation impact" section** keeps satisfying the tracker's own code-to-document mapping until a project converts that mapping into page anchors; obligations raised by the documentation capability are met only by the pages' answers, which the section may render.
 
 If the presentation work finds more — a concept pkit misses, or pkit behaviour that contradicts the concept — that is the "vice versa". Raise it back to project-kit as a change request from the Mockingbird side (the way #949 arrived), rather than editing project-kit from a Mockingbird session.
 
