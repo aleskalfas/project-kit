@@ -1,0 +1,13 @@
+component: claude-code
+kind: minor
+custom:
+  category: Added
+body: >
+  The agent deploy carries an agent's `model:` and `effort:` into the deployed
+  definition under `.claude/agents/`, the keys Claude Code reads from an agent
+  file's front matter. Each is taken from the overlay's
+  `overrides.<agent>.model` / `.effort` when set, else from the agent's front
+  matter; an absent or `inherit` value writes no key, so the harness default
+  applies and a shipped agent that sets neither deploys exactly as before. A
+  value outside the accepted set is not written: the agent still deploys and
+  inherits, and the run prints a `warning` line naming the value.

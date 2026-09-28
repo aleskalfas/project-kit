@@ -10,6 +10,8 @@ queries:
 - Exactly-one-owner: an agent's `owns:` entries are resolved through the
   adopter overlay (per COR-013 rule 5, the check operates on resolved
   paths, not placeholders) and cross-agent path overlaps are flagged.
+- Agent policy: every `model:` / `effort:` an agent's front matter declares,
+  or the overlay sets for one, is a value the harness accepts (#1047).
 - Read-only lookups: show outgoing refs, reverse lookup, record-ID
   resolution, hook resolution by precedence.
 
@@ -41,7 +43,7 @@ from typing import Any, Literal
 
 from ruamel.yaml import YAML
 
-from project_kit import agents_overlay, rule_sets
+from project_kit import agent_policy, agents_overlay, rule_sets
 from project_kit.validators import Finding, Outcome, Severity, counts_line
 
 Kind = Literal["agent", "skill"]
@@ -98,6 +100,9 @@ class Artifact:
     # are kit-shipped, not adopter-authored) but `capability` is the
     # authoritative discriminator for capability-owned content.
     capability: str | None = None
+    # The execution-policy keys the front matter sets (`model`, `effort` —
+    # #1047), as written. Not references: carried for the value check only.
+    policy: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -121,6 +126,7 @@ COLLISION = "collision"
 STORYBOARD = "storyboard"
 CITATION = "citation"
 COMPOSES = "composes"
+AGENT_POLICY = "agent-policy"
 
 
 @dataclass(frozen=True)
@@ -218,7 +224,7 @@ def load_hook_providers(target_root: Path) -> list[Provider]:
 
 
 def validate_corpus(target_root: Path) -> list[Issue]:
-    """Run bidirectional consistency + hook closure + same-tier collision + exactly-one-owner + storyboard + capability-citation + composes checks."""
+    """Run bidirectional consistency + hook closure + same-tier collision + exactly-one-owner + storyboard + capability-citation + composes + agent-policy checks."""
     artifacts = load_artifacts(target_root)
     providers = load_hook_providers(target_root)
     return check_corpus(artifacts, providers, target_root)
@@ -235,6 +241,7 @@ def check_corpus(artifacts: list[Artifact], providers: list[Provider], target_ro
     issues.extend(_kind(_validate_capability_citations(artifacts, target_root), CITATION))
     issues.extend(_kind(_validate_rule_citations(artifacts, target_root), CITATION))
     issues.extend(_kind(_validate_composes(artifacts, target_root), COMPOSES))
+    issues.extend(_kind(_validate_agent_policy(artifacts, target_root), AGENT_POLICY))
     return issues
 
 
@@ -251,9 +258,10 @@ def outcome(target_root: Path) -> Outcome:
     and the body parser is a heuristic (a dotted configuration key reads as a
     hook). Every other finding — a path owned twice or by nobody, a hook no
     provider answers, two providers at one tier, a missing storyboard, a
-    citation that does not resolve, a sub-procedure that does not exist — is
-    an **error**. `pkit refs validate`, the focused surface, keeps its stricter
-    exit: it fails on any finding.
+    citation that does not resolve, a sub-procedure that does not exist, a
+    model or effort the harness does not accept — is an **error**. `pkit refs
+    validate`, the focused surface, keeps its stricter exit: it fails on any
+    finding.
     """
     artifacts = load_artifacts(target_root)
     providers = load_hook_providers(target_root)
@@ -1012,6 +1020,9 @@ def _load_one(
         declared=declared,
         body_refs=body_refs,
         capability=capability,
+        policy={
+            key: fm[key] for key in agent_policy.POLICY_KEYS if fm.get(key) is not None
+        },
     )
 
 
@@ -1706,4 +1717,34 @@ def _validate_composes(artifacts: list[Artifact], target_root: Path) -> list[Iss
                     f"{folder.relative_to(target_root)}/{rel_path}",
                 )
             )
+    return issues
+
+
+def _validate_agent_policy(artifacts: list[Artifact], target_root: Path) -> list[Issue]:
+    """Every model and effort an agent's front matter declares, or the overlay
+    sets for one, is a value the harness accepts (#1047).
+
+    The deploy never writes a refused value — the agent inherits and the deploy
+    warns — so a finding here is the durable report of a setting that has no
+    effect. Absent, bare and `inherit` are all fine: they are the default.
+    """
+    issues: list[Issue] = []
+    for art in artifacts:
+        if art.kind != "agent":
+            continue
+        for key, value in art.policy.items():
+            problem = agent_policy.value_problem(key, value)
+            if problem is not None:
+                issues.append(Issue(location=_location(art, target_root), diagnosis=f"{problem}."))
+    overlay = agents_overlay.load_overlay_values(target_root)
+    for agent, block in sorted(overlay.policy.items()):
+        for key, value in block.items():
+            if value is None:
+                continue
+            problem = agent_policy.value_problem(key, value)
+            if problem is not None:
+                issues.append(Issue(
+                    location=str(agents_overlay.OVERLAY_PATH),
+                    diagnosis=f"`overrides.{agent}.{key}`: {problem}.",
+                ))
     return issues

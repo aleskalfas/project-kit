@@ -80,11 +80,15 @@ adr-records:
 # that resolves into sync-managed content is refused at deploy time.
 process-authoring-targets: []
 
-# Per-agent overrides (optional): replace categories for a specific agent.
+# Per-agent overrides (optional): replace categories for a specific agent,
+# and set the model / effort it runs at (absent = inherit from the caller).
 # overrides:
 #   product-manager:
 #     workflow-docs:
 #       - docs/roadmap.md
+#   critic:
+#     model: sonnet        # inherit, an alias (sonnet, opus, haiku, …) or claude-…
+#     effort: medium       # inherit, low, medium, high, xhigh or max
 """
 
 
@@ -503,6 +507,25 @@ def find_source_kit() -> Path:
     return _bundled_source_kit()
 
 
+def is_self_host(target_root: Path, source_kit: Path) -> bool:
+    """Sync's test for the methodology's source repository (ADR-059 point 2).
+
+    The source repository is the one whose `.pkit/` is the methodology's own
+    tree. This test recognises it as the parent of *source_kit*, the tree the
+    running code resolves (`find_source_kit`), and is exact whenever the
+    running code is that repository's own. A bundled tree never has a project
+    as its parent, so under an installed distribution this is never true.
+    Sync's self-host path, upgrade's self-host branch and init's refusal ask it
+    here.
+
+    Code that must answer without knowing which code runs — the entry-point
+    router, before any code is chosen, and the propagated ownership predicate —
+    recognises the source by marker files instead (`router.is_source_checkout`);
+    route 1 is what keeps the two answers equal (ADR-059 point 4).
+    """
+    return target_root.resolve() == source_kit.parent.resolve()
+
+
 def install_kit(target_root: Path, dry_run: bool = False) -> None:
     """Run `pkit init` against `target_root`. Refuses to run if `.pkit/`
     already exists, if the source kit doesn't look like a real source
@@ -682,8 +705,7 @@ def _refuse_if_source_kit_missing(ctx: InstallContext) -> None:
 
 
 def _refuse_if_target_is_source(ctx: InstallContext) -> None:
-    source_repo = ctx.source_kit.parent.resolve()
-    if ctx.target_root.resolve() == source_repo:
+    if is_self_host(ctx.target_root, ctx.source_kit):
         raise click.ClickException(
             f"source and target are the same project ({ctx.target_root}).\n"
             f"       project-kit self-hosts directly; running pkit init on project-kit\n"

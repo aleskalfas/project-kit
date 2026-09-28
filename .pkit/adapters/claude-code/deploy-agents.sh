@@ -28,6 +28,11 @@
 #   the rest deploy, the run exits 0 (an adopter-config gap, not fatal). A
 #   category referenced *only* via `reads.patterns` is an optional read
 #   (ADR-052): undefined, its item is dropped and the agent still deploys.
+# - The agent's `model:` / `effort:` (#1047) are carried into the resolved
+#   file — an overlay `overrides.<name>.model` / `.effort` wins over the front
+#   matter; absent or `inherit` writes no key (the harness default applies).
+#   A value the harness does not accept is not written: the agent deploys,
+#   inherits, and a `warning` status line names the value.
 # - A listed agent whose canonical source doesn't resolve (e.g. a folder
 #   mid-build with no <name>/<name>.md per COR-015) is likewise skipped
 #   loudly rather than aborting the run (#537).
