@@ -350,6 +350,8 @@ def read_history(root: Path, head: str) -> History:
 
     `--date-order` keeps every parent after all of its children, so the log
     order the walks rely on is a topological one even under skewed clocks.
+    `--root` lists the root commit's paths — and a shallow clone's boundary
+    commit's, which git shows as a root — whatever `log.showRoot` says.
     """
     raw = run_git(
         root,
@@ -359,6 +361,7 @@ def read_history(root: Path, head: str) -> History:
         "--no-decorate",
         "--no-show-signature",
         "--date-order",
+        "--root",
         _LOG_FORMAT,
         "--name-status",
         "-M",

@@ -21,7 +21,7 @@ from click.testing import CliRunner
 from project_kit import friction_repository as fr
 from project_kit.cli import main
 from project_kit.friction_discovery import Anchor
-from tests.adopter_repo import HISTORY_EPOCH, AdopterRepo, Author, MakeAdopterRepo
+from tests.adopter_repo import HISTORY_EPOCH, AdopterRepo, Author, GitRepo, MakeAdopterRepo
 from tests.friction_documents import CONFIG, SOURCE, T1, T2, document, friction_config, guide
 
 ALICE = Author("Alice", "alice@example.com")
@@ -688,3 +688,33 @@ def test_a_shallow_clone_that_cannot_reach_a_point_is_reported_not_guessed(
     deep_result = fr.run_repository_check(deep)
     assert deep_result.shallow is False
     assert _summary(deep_result)[0][0] == "stale"
+
+
+# --- the root commit, whatever log.showRoot says ----------------------------------------------
+
+
+def test_the_root_commit_is_read_whatever_log_showroot_says(
+    timeline: Timeline, tmp_path: Path
+) -> None:
+    repo = timeline.adopter
+    repo.git("config", "log.showRoot", "false")
+    base = timeline.start({"docs/guide.md": guide()})
+    timeline.commit("edit the body", {"docs/guide.md": guide(body="Edited.")})
+    changed = timeline.commit("change the CLI", {"src/cli/main.py": "print('cli v2')\n"})
+
+    # With `log.showRoot=false` the root commit lists no paths unless asked; unlisted, the
+    # file's history would end at the body edit and the point be guessed there.
+    result = _run(timeline)
+    assert _point(result) == base
+    assert _summary(result) == [("stale", "docs/guide.md", "path:src/cli/**", changed)]
+
+    # A shallow clone shows its boundary commit as a root: unlisted, the cut would go
+    # unseen and the point be guessed the same way; listed, the artefact is reported.
+    shallow = tmp_path / "shallow"
+    repo.git("clone", "-q", "--depth", "3", f"file://{repo.root}", str(shallow))
+    GitRepo(shallow).git("config", "log.showRoot", "false")
+    shallow_result = fr.run_repository_check(shallow)
+    assert shallow_result.shallow is True
+    assert _summary(shallow_result) == [("unreachable", "docs/guide.md", None, None)]
+    (finding,) = shallow_result.findings
+    assert "its revalidation point is not in this clone's history" in finding.message
