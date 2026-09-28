@@ -722,6 +722,35 @@ def test_a_rule_s_container_is_validated_once_by_the_rule_set_pass(adopter: Adop
     assert not friction_result.is_dormant
 
 
+def test_a_rule_s_role_blocks_are_read_against_the_active_wiring(
+    adopter: AdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The rule-set pass hands the container validator the resolver's wiring, as the
+    friction pass does: an active role's point block at another version is inert,
+    and only the role nobody provides is orphaned."""
+    front = cmn()
+    front["rules"]["RS-CMN-003"]["pkit"] = {
+        "documentation": {"reading-evidence": {"schema_version": 2}},
+        "analysis": {"glossary": {"schema_version": 1}},
+    }
+    write_set(adopter, f"{PROJECT_SETS}/cmn.md", front)
+    wiring = bs.ContainerWiring(
+        providers={"pkit::documentation": "docs-a"},
+        points={"pkit::documentation:reading-evidence": bs.ActivePoint(1)},
+    )
+    monkeypatch.setattr(cx, "container_wiring", lambda _root: wiring)
+
+    result = validate(adopter)
+    assert result.errors == ()
+    entry = f"{PROJECT_SETS}/cmn.md#RS-CMN-003"
+    assert [(f.where, f.kind) for f in result.reports] == [
+        (f"{entry} /pkit/documentation/reading-evidence", Kind.CONTAINER_REPORT),
+        (f"{entry} /pkit/analysis", Kind.CONTAINER_REPORT),
+    ]
+    assert "inert" in result.reports[0].message
+    assert "no active provider" in result.reports[1].message
+
+
 def test_rules_take_part_in_the_friction_cycle_check(adopter: AdopterRepo) -> None:
     front = cmn()
     front["rules"]["RS-CMN-002"] = {"pkit": {"friction": {"anchors": {"artefact": ["guide"]}}}}

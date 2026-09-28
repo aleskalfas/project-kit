@@ -55,9 +55,11 @@ functionality it concerns (`connections_outcome`, `versions_outcome`):
 `connections` — the resolved wiring and its findings — and `versions` — how
 many of each relation were checked and each version finding labelled with its
 relation. Within one run the wiring is resolved once (`shared_wiring`, ADR-057
-point 2) and every member that reads it reads that resolution.
-`package_validate.check_wiring` is the same resolution for the register
-pre-flight and the plans. The
+point 2): those two members read it, and so does container validation in the
+`friction` and `rule-sets` members, through `container_wiring` — the active
+roles and, for each data point their providers define, its version and its
+point schema (COR-053 point 10). `package_validate.check_wiring` is the same
+resolution for the register pre-flight and the plans. The
 configuration pass reads the same declarations (`load_declarations`) to check
 the two selection keys against what is installed; it also owns the last
 relation, the configuration file's shape against the schema the installed
@@ -80,10 +82,12 @@ from enum import Enum
 from pathlib import Path, PurePosixPath
 from typing import Any, cast
 
+from jsonschema import Draft202012Validator
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
 from packaging.version import InvalidVersion, Version
 from ruamel.yaml import YAML
 
+from project_kit import backbone_schemas as bs
 from project_kit import rule_sets, validators
 from project_kit.manifest import read_backbone_manifest, read_component_manifest
 from project_kit.package_validate import (
@@ -95,6 +99,7 @@ from project_kit.package_validate import (
     role_of,
 )
 from project_kit.project_config import PROJECT_CONFIG_RELPATH, project_config_path, read_config
+from project_kit.schemas_validate import _build_registry_for_paths, _kit_defs_schema_paths
 
 _yaml = YAML(typ="safe")
 
@@ -439,6 +444,58 @@ def shared_wiring(target_root: Path) -> Wiring:
     return validators.once_per_run(
         ("wiring", target_root.resolve()), lambda: resolve_wiring(target_root)
     )
+
+
+# --- what the container reads of the wiring (COR-053 point 10) -----------------
+
+
+def container_wiring(target_root: Path) -> bs.ContainerWiring:
+    """What container validation reads of the run's wiring: the provider of each
+    active role, and every data point those providers define with its version
+    and its point schema — loaded once per run, like the wiring it comes from.
+
+    Only data points: a point block is data a role's provider keeps about an
+    artefact, versioned as a project filler is (COR-052 points 2 and 5); a
+    process or an event point has no data to keep there.
+    """
+    return validators.once_per_run(
+        ("container-wiring", target_root.resolve()),
+        lambda: _container_wiring(shared_wiring(target_root), target_root),
+    )
+
+
+def _container_wiring(wiring: Wiring, target_root: Path) -> bs.ContainerWiring:
+    return bs.ContainerWiring(
+        providers={r.role: r.active for r in wiring.roles if r.active is not None},
+        points={
+            p.point.address: _active_point(wiring.declarations, p.point, target_root)
+            for p in wiring.points
+            if p.point.kind is PointKind.DATA
+        },
+    )
+
+
+def _active_point(declarations: Declarations, point: Point, target_root: Path) -> bs.ActivePoint:
+    """A data point with its point schema loaded: the companion under the
+    provider's `schemas/`, its `$ref`s resolved against its siblings and the
+    shared `_defs/` library, as capability data is (`data_validate`). A schema
+    that cannot be loaded leaves the point without a validator and says why;
+    the packages pass reports a missing companion."""
+    component = declarations.by_name(point.provider)
+    if component is None or point.schema is None or relative_path_problem(point.schema):
+        return bs.ActivePoint(point.version, unavailable="no readable companion is declared")
+    schemas_dir = component.component_dir / SCHEMAS_DIR
+    path = schemas_dir / point.schema
+    schema, reason = bs.load_schema_document(path)
+    if schema is None:
+        where = validators.location_of(path, target_root)
+        return bs.ActivePoint(point.version, unavailable=f"{where} is {(reason or '').rstrip('.')}")
+    registry, _unloadable = _build_registry_for_paths(
+        [*sorted(schemas_dir.glob("*.schema.json")), *_kit_defs_schema_paths(target_root)],
+        target_root,
+        already_reported=set(),
+    )
+    return bs.ActivePoint(point.version, validator=Draft202012Validator(schema, registry=registry))
 
 
 # --- relations read from other files: fillers (a hook) and rule-set pins -----
