@@ -558,3 +558,101 @@ def test_shipped_agent_survives_prune(mock_kit: Path) -> None:
     assert result.returncode == 0, result.stderr
     assert (mock_kit / ".claude" / "agents" / "keeper.md").exists()
     assert not (mock_kit / ".claude" / "agents" / "orphan.md").exists()
+
+
+# --- per-agent model and effort (#1047) ---------------------------------------
+
+
+def _deployed_front_matter(root: Path, name: str) -> dict:
+    """The deployed agent's front matter, parsed."""
+    from ruamel.yaml import YAML
+
+    text = (root / ".claude" / "agents" / f"{name}.md").read_text(encoding="utf-8")
+    return YAML(typ="safe").load(text.split("---\n")[1]) or {}
+
+
+def _policy_agent(root: Path, name: str, policy: str = "") -> None:
+    _write_agent(
+        root, "core", name,
+        f"---\nname: {name}\ndescription: Test.\n{policy}---\n\n# {name}\n",
+    )
+
+
+def test_deploy_carries_front_matter_model_and_effort(mock_kit: Path) -> None:
+    _policy_agent(mock_kit, "tuned", "model: sonnet\neffort: medium\n")
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    fm = _deployed_front_matter(mock_kit, "tuned")
+    assert fm["model"] == "sonnet"
+    assert fm["effort"] == "medium"
+
+
+def test_deploy_emits_nothing_when_no_policy_is_set(mock_kit: Path) -> None:
+    """Absent = inherit: the deployed file carries no key, so nothing changes."""
+    _policy_agent(mock_kit, "plain")
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    fm = _deployed_front_matter(mock_kit, "plain")
+    assert "model" not in fm and "effort" not in fm
+
+
+def test_deploy_overlay_override_wins_over_front_matter(mock_kit: Path) -> None:
+    _policy_agent(mock_kit, "tuned", "model: opus\neffort: low\n")
+    _overlay(mock_kit, "overrides:\n  tuned:\n    model: haiku\n    effort: high\n")
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    fm = _deployed_front_matter(mock_kit, "tuned")
+    assert (fm["model"], fm["effort"]) == ("haiku", "high")
+
+
+def test_deploy_override_sets_policy_on_an_agent_that_declares_none(mock_kit: Path) -> None:
+    _policy_agent(mock_kit, "plain")
+    _overlay(mock_kit, "overrides:\n  plain:\n    effort: xhigh\n")
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    fm = _deployed_front_matter(mock_kit, "plain")
+    assert fm["effort"] == "xhigh"
+    assert "model" not in fm
+
+
+def test_deploy_override_to_inherit_drops_a_shipped_value(mock_kit: Path) -> None:
+    _policy_agent(mock_kit, "tuned", "model: opus\neffort: max\n")
+    _overlay(mock_kit, "overrides:\n  tuned:\n    model: inherit\n    effort: inherit\n")
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    fm = _deployed_front_matter(mock_kit, "tuned")
+    assert "model" not in fm and "effort" not in fm
+
+
+def test_deploy_policy_override_is_not_an_overlay_category(mock_kit: Path) -> None:
+    """The policy keys sit beside category overrides in one block without
+    becoming categories: the category still resolves, the model still lands."""
+    _write_agent(
+        mock_kit, "core", "qa",
+        "---\nname: qa\ndescription: Test.\nowns:\n  - <code-paths>\n---\n\n# QA\n",
+    )
+    _overlay(
+        mock_kit,
+        "code-paths:\n  - src/\n"
+        "overrides:\n  qa:\n    model: sonnet\n    code-paths:\n      - tests/\n",
+    )
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    fm = _deployed_front_matter(mock_kit, "qa")
+    assert fm["owns"] == ["tests/"]
+    assert fm["model"] == "sonnet"
+
+
+def test_deploy_refuses_to_write_a_value_the_harness_rejects(mock_kit: Path) -> None:
+    """An invalid value never reaches the harness: the agent deploys, inherits,
+    and the run names the value."""
+    _policy_agent(mock_kit, "typo", "model: sonnet\neffort: extreme\n")
+    _overlay(mock_kit, "overrides:\n  typo:\n    model: sonet\n")
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    assert "skipped" not in result.stdout
+    fm = _deployed_front_matter(mock_kit, "typo")
+    assert "model" not in fm and "effort" not in fm
+    assert "warning" in result.stdout
+    assert "'sonet'" in result.stdout and "overrides.typo.model" in result.stdout
+    assert "'extreme'" in result.stdout
