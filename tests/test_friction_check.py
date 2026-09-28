@@ -537,6 +537,25 @@ def test_places_are_read_from_each_side(repo: AdopterRepo) -> None:
     assert _summary(_run(repo)) == [("answered", "notes/guide.md", None, "new")]
 
 
+def test_a_capability_place_in_the_package_schema_shape_is_checked(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """The place is read from each side's package metadata as `{path, location?}`."""
+    repo = make_adopter_repo(capabilities=("evidence",))
+    package = repo.root / ".pkit/capabilities/evidence/package.yaml"
+    package.write_text(
+        package.read_text(encoding="utf-8")
+        + "docs:\n  locations:\n    runs: {path: evidence}\n"
+        + "friction:\n  places:\n    - {location: runs, path: '**/*.md'}\n",
+        encoding="utf-8",
+    )
+    _start(repo, {"docs/evidence/guide.md": guide()}, config=friction_config(places=()))
+    repo.commit("change the CLI only", {"src/cli/main.py": "print('cli v6')\n"})
+    assert _summary(_run(repo)) == [
+        ("friction", "docs/evidence/guide.md", "path:src/cli/**", None)
+    ]
+
+
 # --- the base -----------------------------------------------------------------------------------
 
 
