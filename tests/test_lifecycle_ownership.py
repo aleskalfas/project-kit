@@ -537,3 +537,51 @@ def test_the_source_discriminator_is_the_routers(tmp_path: Path) -> None:
     source = _source_repository(_project(tmp_path / "src-repo"))
     for root in (adopter, source, REPO):
         assert own.is_methodology_source(root) is is_source_checkout(root), root
+
+
+def test_the_source_discriminator_agrees_with_syncs_own_decision(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The marker test and sync's test recognise the same repository (ADR-059).
+
+    Holding the predicate to the router's markers holds one copy of the marker
+    test to the other, not to sync's test: sync's could change and nothing would
+    notice. So this asks sync. Route 1 is what makes the two agree — where the markers hold, the
+    router execs that tree's dispatcher, which runs that tree's own package — so
+    each tree is synced by the code route 1 would run there: its own package
+    where the markers hold, and this test's checkout (the tool) everywhere else.
+    """
+    from project_kit import install, sync
+    from project_kit.router import is_source_checkout
+
+    class _Propagates(Exception):
+        """Sync passed its self-host branch: it would copy into the tree."""
+
+    def _propagates(*_args: object, **_kwargs: object) -> None:
+        raise _Propagates
+
+    # Nothing is written. The self-host branch's two steps are stubbed, and the
+    # first steps past it — the source guard, then propagation — stop the run.
+    monkeypatch.setattr(install, "run_installed_adapter_primitives", lambda _ctx: None)
+    monkeypatch.setattr(install, "_render_runtime_ignore", lambda _ctx: None)
+    monkeypatch.setattr(install, "refuse_if_source_kit_incomplete", _propagates)
+    monkeypatch.setattr(install, "_install_area", _propagates)
+
+    def sync_self_hosts(root: Path) -> bool:
+        with monkeypatch.context() as route:
+            if is_source_checkout(root):
+                # Route 1 without the exec: the package that runs is the tree's
+                # own, and `source_checkout_root` derives the checkout from the
+                # running package's location.
+                route.setattr(install, "__file__", str(root / "src" / "project_kit" / "install.py"))
+            try:
+                sync.run_sync(root)
+            except _Propagates:
+                return False
+            return True
+
+    adopter = _project(tmp_path)
+    source = _source_repository(_project(tmp_path / "src-repo"))
+    (source / ".pkit" / "decisions").mkdir()  # a source tree carries its decisions
+    for root in (adopter, source, REPO):
+        assert own.is_methodology_source(root) is sync_self_hosts(root), root
