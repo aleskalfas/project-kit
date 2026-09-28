@@ -429,7 +429,7 @@ The pass is **dormant** — it prints only its counts — when no places are dec
 
 A rule-set file is claimed by the rule-set rule before the container rule (ADR-056 point 2), so its unparsable front matter and the malformed container of one of its rules are the `rule-sets` pass's findings, reported once there; the friction pass still takes its rules into the deferral and cycle checks.
 
-**Not here.** Friction itself is the `friction` command group's: the change check — the three answers, bumps with nothing behind them, dead anchors of a change, an outdated base, the modes and the `--json` document — is `pkit friction check` (the CLI reference, "Friction checks"); the whole-repository check, over-broad anchors and the two measures arrive with Task #991. This pass never touches git.
+**Not here.** Friction itself is the `friction` command group's: the change check — the three answers, bumps with nothing behind them, dead anchors of a change, an outdated base, the modes and the `--json` document — is `pkit friction check`, and the whole-repository check — stale and deferred debt derived from git with their origins, every dead anchor, over-broad anchors and the two measures — is `pkit friction check --all` (both in the CLI reference, "Friction checks"). This pass never touches git.
 
 ### Rule-set files
 
