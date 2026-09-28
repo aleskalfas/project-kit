@@ -252,7 +252,7 @@ When the same sub-shape appears in multiple schemas — the envelope, entry-id c
 
 The kit settles two ownership rules for where the canonical definition lives:
 
-- **Kit-wide patterns** (recur across capabilities — the generic `reference_token`, the structured `source` envelope) live in `.pkit/schemas/_defs/refs.schema.json`. Consumers `$ref` `refs.schema.json#/$defs/<name>`.
+- **Kit-wide patterns** (recur across capabilities — the generic `reference_token`, the role-and-point `address_token` (`[<publisher>::<role>]`, `[<publisher>::<role>:<point>]`, COR-019 as refined by COR-053), the structured `source` envelope) live in `.pkit/schemas/_defs/refs.schema.json`. Consumers `$ref` `refs.schema.json#/$defs/<name>`.
 
 - **Namespace-narrowed patterns** (a typed token narrowed to one namespace — e.g., `issue_type_ref` for the issue-types namespace) live in the **namespace owner's own companion** as a published `$defs` entry. Consumers cross-file `$ref` the owner: `issue-types.schema.json#/$defs/issue_type_ref`. The owner is the source of truth for its own narrowed reference pattern.
 
