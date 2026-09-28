@@ -1,11 +1,14 @@
-"""Tests for the package-metadata schema and validator (#982): every shipped
-`package.yaml` validates clean, unknown keys warn with a suggestion, known keys
-are type-checked, the repository checks refuse what the Task lists, the
-install-time self-consistency check still refuses what it refused before, and
-`pkit validate` runs the "packages" pass with warnings that never fail it."""
+"""Tests for the package-metadata schema and validator (#982, strict since #999):
+every shipped `package.yaml` validates clean, an unknown key at any level is an
+error with a suggestion (a warning only under a tree's older, open schema), the
+fields COR-017 lists are required of every component, addresses are words,
+known keys are type-checked, the repository checks refuse what the Task lists,
+the install-time self-consistency check still refuses what it refused before,
+and `pkit validate` runs the "packages" pass."""
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -18,7 +21,7 @@ from referencing.jsonschema import DRAFT202012
 from project_kit import backbone_schemas as bs
 from project_kit import capabilities as caps
 from project_kit import package_validate as pv
-from project_kit import scaffolds
+from project_kit import refs, scaffolds
 from project_kit.cli import main
 from tests.adopter_repo import MakeAdopterRepo
 
@@ -140,42 +143,223 @@ def test_installed_packages_validate_clean_in_an_adopter_repo(
     ]
 
 
-# --- unknown keys warn; known keys are typed --------------------------------
+# --- unknown keys are errors; known keys are typed ---------------------------
 
 
-def test_unknown_key_warns_with_the_nearest_known_key(
+def _opened(schema: Any) -> Any:
+    """The schema as a tree synced before the strict flip carries it: every closed
+    object left open, so unknown keys are the walker's warnings."""
+    if isinstance(schema, dict):
+        return {
+            key: True if key == "additionalProperties" and value is False else _opened(value)
+            for key, value in schema.items()
+        }
+    if isinstance(schema, list):
+        return [_opened(item) for item in schema]
+    return schema
+
+
+def _closed_objects(node: Any, pointer: str = "") -> list[tuple[str, Any]]:
+    """`(schema pointer, additionalProperties)` for every schema object that declares
+    `properties` — each place a key could be unknown. An `if` is a condition that
+    only reads a key, never the shape of the object, so it is not walked."""
+    found: list[tuple[str, Any]] = []
+    if isinstance(node, dict):
+        if isinstance(node.get("properties"), dict):
+            found.append((pointer, node.get("additionalProperties", True)))
+        for key, value in node.items():
+            if key != "if":
+                found.extend(_closed_objects(value, f"{pointer}/{key}"))
+    elif isinstance(node, list):
+        for index, value in enumerate(node):
+            found.extend(_closed_objects(value, f"{pointer}/{index}"))
+    return found
+
+
+def test_the_schema_closes_every_object_it_declares(schema: dict[str, Any]) -> None:
+    """Strict at every level: no declared object leaves room for an unknown key."""
+    declared = _closed_objects(schema)
+    assert len(declared) >= 20
+    assert [pointer for pointer, additional in declared if additional is not False] == []
+
+
+def test_an_unknown_key_is_an_error_with_the_nearest_known_key_at_every_level(
     schema: dict[str, Any], component_dir: Path
 ) -> None:
-    raw = _package(foootprint=[".claude"])
-    raw["commands"]["publish"]["hlep"] = "typo"
-    raw["connections"] = _connections()
-    raw["connections"]["extension-points"]["accepts"]["pkit::documentation:reading-evidence"][
-        "descripton"
-    ] = "x"
+    commands = _package()["commands"]
+    commands["publish"]["hlep"] = "typo"
+    connections = _connections(
+        extensions={
+            "contributes": [
+                {
+                    "point": "pkit::analysis:glossary",
+                    "schema_version": 1,
+                    "value": [],
+                    "mandatroy": {"reason": "r"},
+                }
+            ],
+            "subscribes": [
+                {"point": "pkit::analysis:created", "schema_version": 1, "command": "publish"}
+            ],
+            "depends-on": {"generated": True, "entries": [], "generatd": True},
+        },
+        rolse=["pkit::documentation"],
+    )
+    point = connections["extension-points"]["accepts"]["pkit::documentation:reading-evidence"]
+    point["descripton"] = "x"
+    point["default"] = {"value": [], "participation": "alone", "participaton": "always"}
+    point["mandatory"] = {"reason": "r", "reasn": "r"}
+    connections["extensions"]["subscribes"][0]["comand"] = "publish"
+    raw = _package(
+        foootprint=[".claude"],
+        commands=commands,
+        connections=connections,
+        component={"kind": "capability", "name": "demo", "version": "0.1.0", "verison": "1"},
+        requires_capabilities=[{"name": "evidence", "version": ">=0.1", "nmae": "evidence"}],
+        validators={"cites": {"command": "publish", "ordr": 5}},
+        docs={"locations": {"pages": {"path": "pages", "roots": "user"}}, "location": {}},
+        friction={"places": [{"path": "**/*.md", "locaton": "pages"}], "surfaces": []},
+    )
     findings = _validate(raw, schema, component_dir)
-    warnings = _messages(findings, pv.Severity.WARNING)
-    assert warnings == {
-        "/foootprint": "unknown key 'foootprint'; did you mean 'footprint'?",
-        "/commands/publish/hlep": "unknown key 'hlep'; did you mean 'help'?",
-        "/connections/extension-points/accepts/pkit::documentation:reading-evidence/descripton": (
-            "unknown key 'descripton'; did you mean 'description'?"
-        ),
+    unknown = {
+        path: message
+        for path, message in _messages(findings, pv.Severity.ERROR).items()
+        if message.startswith("unknown key")
     }
-    assert _messages(findings, pv.Severity.ERROR) == {}
+    accepts = "/connections/extension-points/accepts/pkit::documentation:reading-evidence"
+    assert unknown == {
+        "/foootprint": "unknown key 'foootprint'; did you mean 'footprint'?",
+        "/component/verison": "unknown key 'verison'; did you mean 'version'?",
+        "/commands/publish/hlep": "unknown key 'hlep'; did you mean 'help'?",
+        "/requires_capabilities/0/nmae": "unknown key 'nmae'; did you mean 'name'?",
+        "/validators/cites/ordr": "unknown key 'ordr'; did you mean 'order'?",
+        "/connections/rolse": "unknown key 'rolse'; did you mean 'roles'?",
+        f"{accepts}/descripton": "unknown key 'descripton'; did you mean 'description'?",
+        f"{accepts}/default/participaton": (
+            "unknown key 'participaton'; did you mean 'participation'?"
+        ),
+        f"{accepts}/mandatory/reasn": "unknown key 'reasn'; did you mean 'reason'?",
+        "/connections/extensions/contributes/0/mandatroy": (
+            "unknown key 'mandatroy'; did you mean 'mandatory'?"
+        ),
+        "/connections/extensions/subscribes/0/comand": (
+            "unknown key 'comand'; did you mean 'command'?"
+        ),
+        "/connections/extensions/depends-on/generatd": (
+            "unknown key 'generatd'; did you mean 'generated'?"
+        ),
+        "/docs/location": "unknown key 'location'; did you mean 'locations'?",
+        "/docs/locations/pages/roots": "unknown key 'roots'; did you mean 'root'?",
+        "/friction/places/0/locaton": "unknown key 'locaton'; did you mean 'location'?",
+        "/friction/surfaces": "unknown key 'surfaces'; did you mean 'surface'?",
+    }
+    assert _messages(findings, pv.Severity.WARNING) == {}
 
 
-def test_unknown_keys_never_make_a_report_unclean(
+def test_an_unknown_key_makes_a_report_unclean(
     schema: dict[str, Any], component_dir: Path, tmp_path: Path
 ) -> None:
     package = tmp_path / "package.yaml"
     package.write_text(
         "schema_version: 1\ncomponent: {kind: capability, name: demo, version: 0.1.0}\n"
-        "descriptoin: typo\n",
+        "description: A demo.\nrequires_backbone: '>=1.0.0'\ndescriptoin: typo\n",
         encoding="utf-8",
     )
     report = pv.validate_package_file(package, schema, component_dir=component_dir)
-    assert report.is_clean
-    assert [f.severity for f in report.findings] == [pv.Severity.WARNING]
+    assert not report.is_clean
+    assert [(f.path, f.severity, f.message) for f in report.findings] == [
+        (
+            "/descriptoin",
+            pv.Severity.ERROR,
+            "unknown key 'descriptoin'; did you mean 'description'?",
+        )
+    ]
+
+
+def test_under_a_tree_s_open_schema_an_unknown_key_still_only_warns(
+    schema: dict[str, Any], component_dir: Path
+) -> None:
+    """A tree synced before the flip carries its open schema, and that is the one
+    applied (ADR-056 point 1): the same key, the same sentence, a warning."""
+    raw = _package(foootprint=[".claude"])
+    raw["commands"]["publish"]["hlep"] = "typo"
+    findings = _validate(raw, _opened(schema), component_dir)
+    assert _messages(findings, pv.Severity.ERROR) == {}
+    assert _messages(findings, pv.Severity.WARNING) == {
+        "/foootprint": "unknown key 'foootprint'; did you mean 'footprint'?",
+        "/commands/publish/hlep": "unknown key 'hlep'; did you mean 'help'?",
+    }
+
+
+@pytest.mark.parametrize("field", ["schema_version", "description", "requires_backbone"])
+@pytest.mark.parametrize("kind", ["capability", "adapter"])
+def test_every_component_requires_the_fields_cor_017_lists(
+    schema: dict[str, Any], component_dir: Path, field: str, kind: str
+) -> None:
+    raw = _package(component={"kind": kind, "name": "demo", "version": "0.1.0"})
+    del raw[field]
+    assert _messages(_validate(raw, schema, component_dir), pv.Severity.ERROR) == {
+        "": f"'{field}' is a required property"
+    }
+
+
+# The address grammar the package schema's patterns must spell: the word of the
+# citation grammar (`refs.ADDRESS_WORD_PATTERN`), which the configuration
+# schema's selection keys admit.
+_ROLE_PATTERN = f"^{refs.ADDRESS_WORD_PATTERN}::{refs.ADDRESS_WORD_PATTERN}$"
+_POINT_PATTERN = (
+    f"^{refs.ADDRESS_WORD_PATTERN}::{refs.ADDRESS_WORD_PATTERN}:{refs.ADDRESS_WORD_PATTERN}$"
+)
+
+
+def test_addresses_share_the_configuration_schema_s_word_pattern(schema: dict[str, Any]) -> None:
+    config = bs.load_backbone_schema(REPO, "config")
+    selections = config["$defs"]["connections"]["properties"]
+    assert set(selections["providers"]["patternProperties"]) == {_ROLE_PATTERN}
+    assert set(selections["selections"]["patternProperties"]) == {_POINT_PATTERN}
+    assert schema["$defs"]["qualified-role"]["pattern"] == _ROLE_PATTERN
+    assert schema["$defs"]["point-address"]["pattern"] == _POINT_PATTERN
+
+
+@pytest.mark.parametrize("role", ["Pkit::documentation", "pkit::docs_v2", "pkit::2docs"])
+def test_an_address_that_is_not_words_is_refused(
+    schema: dict[str, Any], component_dir: Path, role: str
+) -> None:
+    """Every place an address is written in `connections`: the patterns the shipped
+    loose form (`[^\\s:]+` per part) admitted are refused now."""
+    address = f"{role}:readers"
+    connections = _connections(
+        roles=[role],
+        **{
+            "extension-points": {
+                "accepts": {
+                    address: {
+                        "schema_version": 1,
+                        "schema": "reading-evidence.schema.json",
+                        "description": "d",
+                    }
+                }
+            }
+        },
+        extensions={
+            "contributes": [{"point": address, "schema_version": 1, "value": []}],
+            "depends-on": {"generated": True, "entries": [{"process": address}]},
+        },
+    )
+    errors = _messages(
+        _validate(_package(connections=connections), schema, component_dir), pv.Severity.ERROR
+    )
+    # A key's pattern failure (`propertyNames`) is located at the mapping holding it.
+    refused = {
+        "/connections/roles/0",
+        "/connections/extension-points/accepts",
+        "/connections/extensions/contributes/0/point",
+        "/connections/extensions/depends-on/entries/0/process",
+    }
+    assert refused <= set(errors), errors
+    assert f"{role!r} does not match" in errors["/connections/roles/0"]
+    for pointer in refused - {"/connections/roles/0"}:
+        assert f"{address!r} does not match" in errors[pointer]
 
 
 @pytest.mark.parametrize(
@@ -576,16 +760,31 @@ def test_install_time_check_refuses_the_new_repository_checks_too(
     assert any("companion schema 'x.schema.json' does not exist" in p for p in problems)
 
 
+_HOMEGROWN_WITH_A_TYPO = (
+    "schema_version: 1\ncomponent:\n  kind: capability\n  name: homegrown\n  version: 0.1.0\n"
+    "description: Grown at home.\nrequires_backbone: '>=1.0.0'\ndescriptoin: a typo\n"
+)
+
+
+def test_install_time_check_refuses_an_unknown_key(make_adopter_repo: MakeAdopterRepo) -> None:
+    adopter = make_adopter_repo()
+    source = _stage_incubated(adopter.root, "homegrown", _HOMEGROWN_WITH_A_TYPO)
+    assert caps.validate_capability_self_consistency(source) == [
+        "package.yaml/descriptoin: unknown key 'descriptoin'; did you mean 'description'?"
+    ]
+
+
 def test_install_time_check_does_not_refuse_on_a_warning(
     make_adopter_repo: MakeAdopterRepo,
 ) -> None:
+    """Under a tree's open schema the same key is a warning, and warnings never refuse."""
     adopter = make_adopter_repo()
-    source = _stage_incubated(
-        adopter.root,
-        "homegrown",
-        "schema_version: 1\ncomponent:\n  kind: capability\n  name: homegrown\n  version: 0.1.0\n"
-        "requires_backbone: '>=1.0.0'\ndescriptoin: a typo, only a warning\n",
+    schema_path = bs.backbone_schema_path(adopter.root, pv.SCHEMA_KIND)
+    schema_path.write_text(
+        json.dumps(_opened(json.loads(schema_path.read_text(encoding="utf-8")))),
+        encoding="utf-8",
     )
+    source = _stage_incubated(adopter.root, "homegrown", _HOMEGROWN_WITH_A_TYPO)
     assert caps.validate_capability_self_consistency(source) == []
 
 
@@ -596,7 +795,7 @@ def _installed_package(adopter_root: Path, name: str) -> Path:
     return adopter_root / ".pkit" / "capabilities" / name / "package.yaml"
 
 
-def test_pkit_validate_prints_the_packages_pass_and_warnings_do_not_fail(
+def test_pkit_validate_fails_on_an_unknown_key_naming_the_nearest_known_one(
     make_adopter_repo: MakeAdopterRepo,
 ) -> None:
     adopter = make_adopter_repo(capabilities=("evidence",))
@@ -604,11 +803,30 @@ def test_pkit_validate_prints_the_packages_pass_and_warnings_do_not_fail(
     package.write_text(package.read_text(encoding="utf-8") + "foootprint: [x]\n", encoding="utf-8")
 
     result = CliRunner().invoke(main, ["validate", "--no-refs"])
-    assert result.exit_code == 0, result.output
+    assert result.exit_code == 1, result.output
     assert "packages" in result.output
-    assert "1 warning(s)" in result.output
+    assert "1 error(s), 0 warning(s)" in result.output
     assert ".pkit/capabilities/evidence/package.yaml:/foootprint" in result.output
-    assert "warning " in result.output
+    assert "→ unknown key 'foootprint'; did you mean 'footprint'?" in result.output
+
+
+def test_pkit_validate_under_a_tree_s_open_schema_warns_and_passes(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """A tree synced before the flip: its own open schema applies, so the key only warns."""
+    adopter = make_adopter_repo(capabilities=("evidence",))
+    schema_path = bs.backbone_schema_path(adopter.root, pv.SCHEMA_KIND)
+    schema_path.write_text(
+        json.dumps(_opened(json.loads(schema_path.read_text(encoding="utf-8")))),
+        encoding="utf-8",
+    )
+    package = _installed_package(adopter.root, "evidence")
+    package.write_text(package.read_text(encoding="utf-8") + "foootprint: [x]\n", encoding="utf-8")
+
+    result = CliRunner().invoke(main, ["validate", "--no-refs"])
+    assert result.exit_code == 0, result.output
+    assert "0 error(s), 1 warning(s)" in result.output
+    assert "warning  .pkit/capabilities/evidence/package.yaml:/foootprint" in result.output
     assert "→ unknown key 'foootprint'; did you mean 'footprint'?" in result.output
 
 

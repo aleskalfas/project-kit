@@ -45,7 +45,7 @@ Use the harness's canonical kebab-case name: `claude-code`, `codex`, `cursor`, e
 
 Read `.pkit/decisions/core/COR-005-bundle-pattern.md` ("Adapter structure" and "Universal elements"). Every adapter must ship:
 
-- `package.yaml` — component metadata per COR-010 (`kind: adapter`, `name`, `version`, `requires_backbone`).
+- `package.yaml` — component metadata per COR-010 (`schema_version`, `kind: adapter`, `name`, `version`, `description`, `requires_backbone`, all required; the package schema refuses a key it does not know — see `.pkit/lifecycle/README.md`, "Package metadata").
 - `README.md` — what the adapter handles, what content it ships, how to deploy it.
 
 Beyond these, an adapter's content is heterogeneous — settings files in the harness's expected format, deploy scripts that produce symlinks, runtime artifacts. Read `.pkit/adapters/claude-code/` as a reference shape; your harness may need a different mix.
@@ -61,7 +61,7 @@ pkit new adapter <name>
 The command:
 
 - Creates `.pkit/adapters/<name>/`.
-- Stamps `package.yaml` with `kind: adapter`, `version: 0.1.0`, and `requires_backbone` pinned to a range matching the project's current backbone.
+- Stamps `package.yaml` with `kind: adapter`, `version: 0.1.0`, a placeholder `description` to replace with the one-line summary, and `requires_backbone` pinned to a range matching the project's current backbone.
 - Stamps `README.md` with a placeholder body.
 - Creates an empty `migrations/` directory.
 - Registers the adapter in the backbone manifest's `components` registry (so `pkit status` sees it immediately).

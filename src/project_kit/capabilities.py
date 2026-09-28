@@ -849,8 +849,9 @@ def validate_capability_self_consistency(
       name matches the directory, version and ranges parse, command scripts
       exist, connection points sit under provided roles with their companion
       schemas and commands present, documentation locations and friction
-      places are relative. Only its *errors* refuse; unknown-key warnings are
-      the `pkit validate` pass's to show (the permissive posture until #999).
+      places are relative. Only its *errors* refuse — an unknown key among
+      them, since the package schema refuses one; under a tree's older,
+      open schema an unknown key is a warning, `pkit validate`'s to show.
     - **README.md** is present (the capability's layout contract);
     - the capability's **own schema pairs** (under ``schemas/``) pass schema
       validation, reusing the same validator ``pkit schemas validate`` runs.
