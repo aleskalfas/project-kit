@@ -1,0 +1,9 @@
+component: backbone
+kind: patch
+body: >
+  Friction discovery now reads a capability's friction.places in the package schema's
+  shape, {path, location?}: with location, the path lies inside that docs.locations entry
+  under its documentation root (internal, or user with root: user); without one it is
+  repository-relative. A capability place in any other shape, plain text included, or one
+  leaving the repository (through a link included) is no longer skipped silently but is a
+  friction finding of pkit validate.
