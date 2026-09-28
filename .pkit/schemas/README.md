@@ -427,7 +427,7 @@ The settings themselves are the **configuration pass's** findings, since it owns
 
 The pass is **dormant** — it prints only its counts — when no places are declared, or when nothing in them needs judging: no artefact carries the container and no file failed to parse.
 
-**Not here.** Friction itself — the change check and the whole-repository check, dead anchors, over-broad anchors, the two measures — arrives with Tasks #990 and #991; this pass never touches git.
+**Not here.** Friction itself is the `friction` command group's: the change check — the three answers, bumps with nothing behind them, dead anchors of a change, an outdated base, the modes and the `--json` document — is `pkit friction check` (the CLI reference, "Friction checks"); the whole-repository check, over-broad anchors and the two measures arrive with Task #991. This pass never touches git.
 
 ## Tooling expectations
 
