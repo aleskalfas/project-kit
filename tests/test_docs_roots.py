@@ -380,7 +380,9 @@ def test_status_lists_the_declared_places_surface_and_exclusions(
     )
     package = repo.pkit / "capabilities" / "project-management" / "package.yaml"
     package.write_text(
-        package.read_text(encoding="utf-8") + "friction:\n  places: [boards]\n",
+        package.read_text(encoding="utf-8")
+        + "docs:\n  locations:\n    boards: {path: boards}\n"
+        + "friction:\n  places:\n    - {location: boards, path: '**/*.md'}\n",
         encoding="utf-8",
     )
     assert _friction_lines(monkeypatch) == [
@@ -388,8 +390,9 @@ def test_status_lists_the_declared_places_surface_and_exclusions(
         "places             3 declared:",
         "README.md",
         "guides/**/*.md",
-        # A capability's place resolves under the internal root, tagged with its owner.
-        "tech-docs/boards (project-management)",
+        # A capability's place resolves inside its location under the internal
+        # root, tagged with its owner.
+        "tech-docs/boards/**/*.md (project-management)",
         "exclude            1 declared:",
         "generated/",
     ]
