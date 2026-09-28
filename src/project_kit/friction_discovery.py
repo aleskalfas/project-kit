@@ -27,7 +27,9 @@ is the one reader of those declarations and the one walker of the places:
   an entry's content is its data plus the body section headed by its id).
   A rule-set file is the collection whose entries are the values of its
   `rules` map, one artefact per rule. A plain YAML file in a place is not a
-  document (ADR-056 point 2).
+  document (ADR-056 point 2). `parse_artefacts` is the reading of one file's
+  text this walk applies; the whole-repository check applies it to a file's
+  earlier versions too, so history is read by the same rule as the present.
 - `RepositoryTree` — the seam through which a caller discovers what another
   state of the repository held. The change check (COR-050 point 6) reads the
   working tree and its base commit side by side through it, so both sides are
@@ -963,20 +965,13 @@ def discover_artefacts(
                 UnreadableFile(path=rel, place=place, reason=text.reason, rule_set=rule_set)
             )
             continue
-        front_matter, body = split_front_matter(text)
-        if front_matter is None:
-            continue  # no front matter: not an artefact (COR-050 point 1)
-        try:
-            data = _yaml.load(io.StringIO(front_matter))
-        except YAMLError as exc:
+        found, reason = parse_artefacts(rel, place, text, rule_set=rule_set)
+        if reason is not None:
             unreadable.append(
-                UnreadableFile(path=rel, place=place, reason=_yaml_reason(exc), rule_set=rule_set)
+                UnreadableFile(path=rel, place=place, reason=reason, rule_set=rule_set)
             )
             continue
-        if not isinstance(data, Mapping):
-            continue  # front matter that is not a mapping carries nothing
-        carrier = as_written(data)
-        artefacts.extend(_artefacts_of_file(rel, place, carrier, body, rule_set=rule_set))
+        artefacts.extend(found)
     return Discovery(
         settings=settings,
         places=places,
@@ -1013,6 +1008,30 @@ def _document_texts(
         except UnicodeDecodeError as exc:
             texts[rel] = _ReadFailure(str(exc))
     return texts
+
+
+def parse_artefacts(
+    rel: str, place: Place, text: str, *, rule_set: RuleSetPlace | None = None
+) -> tuple[list[Artefact], str | None]:
+    """The artefacts one Markdown text holds, or why its front matter could not be read.
+
+    The one reading of a file's text as artefacts (COR-050 point 1), whichever
+    state of the repository the text comes from: the walk of the places above
+    and the history walk of the whole-repository check both call it. Returns
+    `(artefacts, None)` — empty when the text carries no front matter, or front
+    matter that is not a mapping, since neither makes an artefact — or
+    `([], reason)` when the front matter does not parse as YAML.
+    """
+    front_matter, body = split_front_matter(text)
+    if front_matter is None:
+        return [], None
+    try:
+        data = _yaml.load(io.StringIO(front_matter))
+    except YAMLError as exc:
+        return [], _yaml_reason(exc)
+    if not isinstance(data, Mapping):
+        return [], None
+    return _artefacts_of_file(rel, place, as_written(data), body, rule_set=rule_set), None
 
 
 def _artefacts_of_file(
