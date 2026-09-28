@@ -900,6 +900,57 @@ def test_a_plan_resolves_a_hypothetical_set_with_the_same_resolver(
     assert cx.resolve_wiring(repo.root).bindings == ()  # the live wiring is untouched
 
 
+# --- what container validation reads (COR-053 point 10) -----------------------------
+
+
+def test_container_wiring_carries_the_active_roles_and_their_data_points(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """Each active role with its provider; each data point with its version and a
+    validator built from its point schema — `$ref`s into a sibling companion
+    resolve; a companion that does not parse leaves the point without one, and
+    says why. An event point has no data to keep in an artefact."""
+    broken = f"{DOCS}:broken"
+    offers = {
+        PAGE_CREATED: {
+            "kind": "event",
+            "schema_version": 1,
+            "description": "A page was written.",
+            "command": "publish",
+            "schema": "page-created.schema.json",
+            "subject": "page",
+        }
+    }
+    repo = make_adopter_repo()
+    package = _stage(
+        repo,
+        "docs-a",
+        _provider(
+            accepts=_accepts(version=2) | _accepts(broken, schema="broken.schema.json"),
+            offers=offers,
+        ),
+        schemas={
+            "reading-evidence.schema.json": {"$ref": "page.schema.json"},
+            "page.schema.json": {"$id": "page.schema.json", **SCHEMA_A},
+            "page-created.schema.json": SCHEMA_A,
+        },
+    )
+    (package.parent / "schemas" / "broken.schema.json").write_text("{not json", encoding="utf-8")
+
+    wiring = cx.container_wiring(repo.root)
+
+    assert wiring.providers == {DOCS: "docs-a"}
+    assert sorted(wiring.points) == [broken, READING]
+    reading = wiring.points[READING]
+    assert reading.version == 2 and reading.validator is not None
+    assert not reading.validator.is_valid({"page": 5})  # through the sibling's `$ref`
+    assert reading.validator.is_valid({"page": "index"})
+    assert wiring.points[broken].validator is None
+    assert "capabilities/docs-a/schemas/broken.schema.json is not valid JSON" in (
+        wiring.points[broken].unavailable or ""
+    )
+
+
 # --- determinism and the shipped state -------------------------------------------
 
 
