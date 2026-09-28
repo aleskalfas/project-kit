@@ -101,11 +101,10 @@ privileges:
         - Glob
   workspace:
     description: >-
-      Create, read, edit and delete intermediate files in the agent workspace,
-      the git-excluded folder at the root of each checkout (rules/core.md, the
-      workspace rule). Recognized only for a request whose target lies inside
-      it: a file tool's path, or a shell command whose only effect is a file
-      there (an output redirect or here-document into it, rm of files in it).
+      Create, read and edit intermediate files in the agent workspace, the
+      git-excluded folder at the root of each checkout (rules/core.md, the
+      workspace rule), with the file tools. Recognized only for a file tool
+      whose target lies inside it; a shell command is judged like any other.
       Never realized as a session-wide rule; the hook enforces it.
     recognize:
       path:

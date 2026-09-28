@@ -2530,17 +2530,21 @@ def test_decide_verdict_path_byte_identical_to_main():
     #   _strip_leading_cd     → (+ _CD_SEP, _BARE_CD)
     #   _scope_ok             → _extract_host
     #
-    # Deliberate, reviewed verdict change (#1043, the agent workspace): the
-    # entry points `decide` and `hook_decide` gained the path-confined privilege
-    # (recognized by a request's target — a file tool's path, a shell write's
-    # redirect target) and a leading-cd remainder whose only untrusted construct
-    # is a write into its folder. They leave the frozen set; every helper below,
-    # `recognized_privileges` included, stays byte-identical — the new
-    # recognizer lives in its own functions beside them.
+    # Deliberate, reviewed verdict change (#1043, the agent workspace): a FILE
+    # TOOL whose target lies in the agent workspace is recognized as the
+    # path-scoped `workspace` privilege. It enters through the tool branches
+    # only — `recognized_privileges` adds the path-scoped hits to a tool
+    # request's, and `hook_decide` passes a file tool's target and the project
+    # root — so those two leave the frozen set. `decide` itself, and with it
+    # the whole shell judgment, stays byte-identical to main; that the shell
+    # verdicts are main's is also pinned behaviourally
+    # (tests/test_permission_workspace.py, `test_the_shell_judgment_is_mains`).
     frozen = (
+        # entry point
+        "decide",
         # pure helpers on the verdict path
         "segments", "_strip_leading_cd", "_matches_bash",
-        "recognized_privileges", "_privilege_ids", "_scope_ok",
+        "_privilege_ids", "_scope_ok",
         "_extract_host", "_effective_grants", "_read_default_agent",
         # module-level verdict regexes the above close over
         "_TOKEN", "_SEP", "_ENVVAR", "_CD_SEP", "_UNTRUSTED", "_BARE_CD",

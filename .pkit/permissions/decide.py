@@ -130,7 +130,11 @@ def _matches_bash(rule: dict[str, Any], toks: list[str]) -> bool:
 
 
 def recognized_privileges(catalog: dict[str, Any], request: dict[str, Any]) -> set[str]:
-    """Which privilege ids does this request match?"""
+    """Which privilege ids does this request match?
+
+    A file-tool request that names its target (`path`) and the project root
+    (`root`) also matches the path-scoped privileges whose folder holds that
+    target (the agent workspace); see `_path_scoped_privileges`."""
     privileges = catalog.get("privileges", {})
     hits: set[str] = set()
     if request.get("type") == "tool":
@@ -138,6 +142,7 @@ def recognized_privileges(catalog: dict[str, Any], request: dict[str, Any]) -> s
         for name, spec in privileges.items():
             if tool in spec.get("recognize", {}).get("tool", []):
                 hits.add(name)
+        hits |= _path_scoped_privileges(privileges, request)
     elif request.get("type") == "bash":
         segs = segments(request.get("command", ""))
         for name, spec in privileges.items():
@@ -148,114 +153,23 @@ def recognized_privileges(catalog: dict[str, Any], request: dict[str, Any]) -> s
     return hits
 
 
-# ---- path-confined privileges: the agent workspace (#1043) ------------------
+# ---- path-scoped allows: the agent workspace (#1043) ------------------------
 #
-# A privilege whose recognizer carries `path` is confined to folders, each
-# relative to the root of a checkout of the project: the project root, or a
-# linked worktree of the same repository (a subagent working in a worktree has
-# its workspace at that worktree's root). It is recognized only for a request
-# whose TARGET lies inside one of those folders — never merely for the tool or
-# command used — so a grant of it can neither reach nor deny a file elsewhere:
-#
-#   - a file tool listed in `path.tools`, by the path its payload names;
-#   - a shell command whose only effect is a file inside: a text emitter (`cat`
-#     reading a here-document or stdin, `echo`, `printf`) whose every output
-#     redirect lands inside, or `rm` whose every operand does.
-#
-# `recognized_privileges` reads only `tool` / `bash`, and so do the settings
-# projection and rule attribution; none of them can mistake a path-confined
-# privilege for a session-wide tool allow.
+# A privilege whose recognizer carries `path` is scoped to folders, each named
+# relative to the root of a checkout of the project: the project root, or
+# another working tree of the same repository (a subagent working in a linked
+# worktree keeps its workspace at that worktree's root). It is recognized only
+# for a FILE TOOL listed in `path.tools` whose target lies inside one of those
+# folders — never for the tool alone, and never for a shell command: a redirect
+# into the folder is judged like any other shell write (ADR-025, unchanged). So
+# a grant of it neither reaches nor denies a file anywhere else. It reduces
+# prompts on the allow side, keyed on the target path; it confines nothing —
+# reach is the OS sandbox's (`filesystem-confinement`).
 
-# The only commands whose output, redirected into a folder, is all they do.
-_EMITTERS = frozenset({"cat", "echo", "printf"})
-# One here-document operator: `<<` or `<<-`, then a delimiter, quoted or not.
-_HEREDOC = re.compile(r"""<<(-?)[ \t]*(?:'(\w+)'|"(\w+)"|(\w+))""")
-# An output redirect (`>`, `>>`, `>|`, optionally fd-numbered) and its target.
-_OUT_REDIRECT = re.compile(r"\d*(?:>>|>\||>)[ \t]*(\S*)")
-# What the shell-write reading refuses anywhere on the command line: anything
-# that could run a second command, join commands, or feed one from elsewhere.
-_WRITE_REFUSED = re.compile(r"[`|&;<\n]|\$\(")
-# A redirect target, and an `rm` operand (which may glob inside the folder).
-_TARGET = re.compile(r"^[A-Za-z0-9._/@%+=:,-]+$")
-_OPERAND = re.compile(r"^[A-Za-z0-9._/@%+=:,*?-]+$")
-
-
-def _heredoc_is_literal(match: re.Match[str], after: list[str]) -> bool:
-    """The here-document ends at its delimiter on the command's last line, and
-    its body cannot run anything: the delimiter is quoted, or the body holds no
-    command substitution."""
-    delimiter = match.group(2) or match.group(3) or match.group(4)
-    quoted = match.group(4) is None
-    strip_tabs = match.group(1) == "-"
-    for index, text in enumerate(after):
-        if (text.lstrip("\t") if strip_tabs else text) == delimiter:
-            body, trailing = after[:index], after[index + 1:]
-            break
-    else:
-        return False
-    if any(text.strip() for text in trailing):
-        return False
-    return quoted or not any("$(" in text or "`" in text for text in body)
-
-
-def _rm_operands(words: list[str]) -> list[str]:
-    """The operands of `rm <words>`: every word after `--`, and before it every
-    word that is not an option."""
-    operands: list[str] = []
-    options_done = False
-    for word in words:
-        if not options_done and word == "--":
-            options_done = True
-        elif options_done or not word.startswith("-") or word == "-":
-            operands.append(word)
-    return operands
-
-
-def _plain_operand(operand: str) -> bool:
-    """A plain `rm` operand that may glob in its last component only: a glob
-    earlier in the path expands before any `..` after it is applied, so it could
-    pass through a symlinked entry and out of the folder."""
-    head = operand.rpartition("/")[0]
-    return bool(_OPERAND.match(operand)) and not any(ch in head for ch in "*?")
-
-
-def _shell_write(command: str) -> tuple[str, list[str]] | None:
-    """Read `command` as a shell command whose only effect is writing or deleting
-    files: `(command_line, targets)`, or None for anything else.
-
-    Two shapes and nothing more: a text emitter (`cat` with no operand, `echo`,
-    `printf`) with one or more output redirects, optionally fed one literal
-    here-document; or `rm` with its operands. `command_line` is the command
-    without the here-document's body (data for the emitter, never run);
-    `targets` are the redirect targets or the `rm` operands as written. Refused
-    outright: a pipe, `;`, `&`, a `<` other than the one here-document, a
-    backtick, `$(`, a second line outside that here-document, and a target that
-    is not a plain path.
-    """
-    lines = command.strip().split("\n")
-    line = lines[0]
-    heredoc = _HEREDOC.search(line)
-    if heredoc is not None:
-        if line.count("<<") != 1 or not _heredoc_is_literal(heredoc, lines[1:]):
-            return None
-        line = line[: heredoc.start()] + line[heredoc.end():]
-    elif len(lines) > 1:
-        return None
-    if _WRITE_REFUSED.search(line):
-        return None
-    targets = [m.group(1) for m in _OUT_REDIRECT.finditer(line)]
-    words = _OUT_REDIRECT.sub(" ", line).split()
-    if targets:
-        if not all(_TARGET.match(t) for t in targets):
-            return None
-        if words and (words[0] not in _EMITTERS or (words[0] == "cat" and len(words) > 1)):
-            return None
-        return line.strip(), targets
-    if heredoc is None and words and words[0] == "rm":
-        operands = _rm_operands(words[1:])
-        if operands and all(_plain_operand(o) for o in operands):
-            return line.strip(), operands
-    return None
+def _target_path(tool_input: dict[str, Any]) -> Any:
+    """The path a file tool names: `file_path` (Read, Write, Edit, MultiEdit)
+    or `notebook_path` (NotebookEdit)."""
+    return tool_input.get("file_path") or tool_input.get("notebook_path")
 
 
 def _enclosing_checkout(start: str) -> str | None:
@@ -271,9 +185,9 @@ def _enclosing_checkout(start: str) -> str | None:
 
 
 def _common_git_dir(checkout: str) -> str | None:
-    """The git directory every worktree of `checkout`'s repository shares: its
-    `.git` directory, or — for a linked worktree, whose `.git` is a `gitdir:`
-    pointer — the directory that pointer's `commondir` names."""
+    """The git directory every working tree of `checkout`'s repository shares —
+    what `git rev-parse --git-common-dir` answers: its `.git` directory, or, for
+    a linked worktree, the directory its own git directory's `commondir` names."""
     marker = os.path.join(checkout, ".git")
     if os.path.isdir(marker):
         return os.path.realpath(marker)
@@ -294,7 +208,8 @@ def _common_git_dir(checkout: str) -> str | None:
 
 def _checkouts(path: str, root: str) -> list[str]:
     """The checkouts whose folders `path` may lie in: the project root, and the
-    linked worktree of the same repository that holds `path`, if any."""
+    working tree holding `path` when it shares the project's common git
+    directory. Another repository's never counts."""
     project = os.path.realpath(root)
     found = [project]
     holder = _enclosing_checkout(os.path.dirname(path))
@@ -305,18 +220,9 @@ def _checkouts(path: str, root: str) -> list[str]:
     return found
 
 
-def _inside(target: str, request: dict[str, Any], folders: list[str]) -> bool:
-    """Does `target` — absolute, or relative to the directory the request acts
-    in — resolve strictly inside one of `folders` of a checkout of the project?
-    False when the project root is unknown or the directory is unresolvable (a
-    `cd -` prefix)."""
-    root = request.get("root")
-    if not root or not folders:
-        return False
-    base = request["target_cwd"] if "target_cwd" in request else (request.get("cwd") or root)
-    if base is None:
-        return False
-    path = os.path.realpath(os.path.join(base, target))
+def _inside(path: str, root: str, folders: list[Any]) -> bool:
+    """Does the resolved `path` lie strictly inside one of `folders` of a
+    checkout of the project at `root`?"""
     for checkout in _checkouts(path, root):
         for folder in folders:
             top = os.path.realpath(os.path.join(checkout, folder))
@@ -325,81 +231,22 @@ def _inside(target: str, request: dict[str, Any], folders: list[str]) -> bool:
     return False
 
 
-def _confined_privileges(
-    catalog: dict[str, Any], request: dict[str, Any]
-) -> tuple[set[str], str | None]:
-    """The path-confined privileges `request` is recognized as, and — for a shell
-    write into their folders — the command line the other recognizers read in
-    place of the full command (a here-document's body is data, never run)."""
-    confined = {
-        pid: spec["recognize"]["path"]
-        for pid, spec in catalog.get("privileges", {}).items()
-        if isinstance(spec.get("recognize", {}).get("path"), dict)
-    }
-    if not confined:
-        return set(), None
-    if request.get("type") == "tool":
-        target = request.get("path")
-        if not isinstance(target, str) or not target:
-            return set(), None
-        hits = {
-            pid for pid, spec in confined.items()
-            if request.get("tool") in (spec.get("tools") or [])
-            and _inside(target, request, spec.get("folders") or [])
-        }
-        return hits, None
-    if request.get("type") == "bash":
-        write = _shell_write(request.get("command", ""))
-        if write is None:
-            return set(), None
-        line, targets = write
-        hits = {
-            pid for pid, spec in confined.items()
-            if all(_inside(t, request, spec.get("folders") or []) for t in targets)
-        }
-        return hits, (line if hits else None)
-    return set(), None
-
-
-def _cd_directory(request: dict[str, Any]) -> str | None:
-    """The directory a bare leading `cd <path>` moves to, resolved against the
-    directory the request acts in; None for `cd -`, whose target is unknowable."""
-    first = _CD_SEP.split(request.get("command", "").strip(), maxsplit=1)[0]
-    match = _BARE_CD.match(first.strip())
-    if match is None or match.group(1) == "-":
-        return None
-    base = request["target_cwd"] if "target_cwd" in request else (request.get("cwd") or request.get("root"))
-    if not base:
-        return None
-    return os.path.normpath(os.path.join(base, os.path.expanduser(match.group(1))))
-
-
-def _only_confined_writes_untrusted(catalog: dict[str, Any], request: dict[str, Any]) -> bool:
-    """In a cd-stripped remainder that carries an untrusted construct, is every
-    such construct a write into a path-confined folder?
-
-    True for a shell write the confined recognizer accepts — its reading refuses
-    anything that could run a second command, so a quote left in an emitter's
-    arguments is text — and for a command whose output redirects all land in
-    such a folder and which, with them set aside, carries nothing untrusted.
-    Nothing else about the untrusted-construct rule changes."""
-    if _confined_privileges(catalog, request)[0]:
-        return True
-    command = request.get("command", "")
-    if "\n" in command:
-        return False
-    targets = [m.group(1) for m in _OUT_REDIRECT.finditer(command)]
-    if not targets:
-        return False
-    folders = [
-        folder
-        for spec in catalog.get("privileges", {}).values()
-        if isinstance(spec.get("recognize", {}).get("path"), dict)
-        for folder in spec["recognize"]["path"].get("folders") or []
-    ]
-    if not all(_TARGET.match(t) and _inside(t, request, folders) for t in targets):
-        return False
-    return not _UNTRUSTED.search(_OUT_REDIRECT.sub(" ", command))
+def _path_scoped_privileges(privileges: dict[str, Any], request: dict[str, Any]) -> set[str]:
+    """The path-scoped privileges a file-tool request is recognized as: those
+    listing its tool whose folder holds its target, symlinks resolved — a link
+    out of the folder is outside it. Empty without a target or a project root."""
+    target, root = request.get("path"), request.get("root")
+    if not isinstance(target, str) or not target or not root:
+        return set()
+    path = os.path.realpath(os.path.join(request.get("cwd") or root, target))
+    hits: set[str] = set()
+    for name, spec in privileges.items():
+        scoped = spec.get("recognize", {}).get("path")
+        if not isinstance(scoped, dict) or request.get("tool") not in (scoped.get("tools") or []):
+            continue
+        if _inside(path, root, scoped.get("folders") or []):
+            hits.add(name)
+    return hits
 
 
 # ---- subjects, scope, decision ---------------------------------------------
@@ -508,13 +355,11 @@ def decide(
     {allow, deny, abstain}. `abstain` defers to the harness's normal flow
     (lenient); strict maps an unmodeled request to deny.
 
-    `request` = {type: "bash"|"tool", command|tool, cwd, subject[, url][, path]
-    [, root]}. The optional `url` field carries the request URL for
-    ``domain``-scoped privilege checks (web-fetch); `path` (a file tool's
-    target) and `root` (the project root) feed the path-confined privileges
-    (the agent workspace), which are recognized only for a target inside their
-    folders. Effective grants = baseline (`all`) ∪ the subject's own grants;
-    deny wins; a scoped allow denies the privilege outside its scope.
+    `request` = {type: "bash"|"tool", command|tool, cwd, subject[, url]}.
+    The optional `url` field carries the request URL for ``domain``-scoped
+    privilege checks (web-fetch).  Effective grants = baseline (`all`) ∪ the
+    subject's own grants; deny wins; a scoped allow denies the privilege
+    outside its scope.
 
     Scope semantics by privilege ``scope_type`` (from the catalog):
       - ``directory`` (default): grant scope globs are matched against ``cwd``.
@@ -534,31 +379,20 @@ def decide(
     #     allowed); and
     #   - if the remainder carries anything the dumb splitter can't be trusted on
     #     (a quote, `$()`, a backtick, a `<` / `>` redirection), it ABSTAINS
-    #     rather than auto-allowing (ADR-004 dp-4, fail-closed-on-uncertainty) —
-    #     unless every such construct is a write into a path-confined folder,
-    #     the agent workspace (#1043): a redirect or here-document into it is
-    #     not an untrusted construct, and nothing else about the rule changes.
+    #     rather than auto-allowing (ADR-004 dp-4, fail-closed-on-uncertainty).
     # The remainder is decided at the ORIGINAL cwd: stripping `cd` can never
-    # grant a directory-scoped privilege the un-stripped command lacked. Only a
-    # write target's relative path resolves against the `cd` directory — where
-    # the shell will actually write it.
+    # grant a directory-scoped privilege the un-stripped command lacked.
     if request.get("type") == "bash":
         remainder = _strip_leading_cd(request.get("command", ""))
         if remainder is not None:
-            inner = {**request, "command": remainder, "target_cwd": _cd_directory(request)}
-            if _UNTRUSTED.search(remainder) and not _only_confined_writes_untrusted(catalog, inner):
+            if _UNTRUSTED.search(remainder):
                 return "abstain", (
                     "leading-cd strip: remainder carries an untrusted construct "
                     "(quote / $() / backtick / redirection) — fail closed"
                 )
-            return decide(model, catalog, inner, posture)
+            return decide(model, catalog, {**request, "command": remainder}, posture)
 
-    # A request inside a path-confined privilege's folders is that privilege's;
-    # a shell write there is read by the other recognizers without its
-    # here-document body, which is data for the emitter and never run.
-    confined, command_line = _confined_privileges(catalog, request)
-    recognized = request if command_line is None else {**request, "command": command_line}
-    hits = recognized_privileges(catalog, recognized) | confined
+    hits = recognized_privileges(catalog, request)
     privileges_catalog = catalog.get("privileges", {})
     matched_allow = False
     for g in _effective_grants(model, subject):
@@ -640,10 +474,10 @@ def hook_decide(
       - ``agent_type`` absent + no configured default → ``operator``
 
     Pass ``project_root`` (the adopter tree root) from the hook entry-point so
-    main-session calls resolve to the configured agent, and so a path-confined
-    privilege (the agent workspace) can locate its folders.  The CLI
-    synthesizes payloads with explicit ``agent_type`` and does not need to pass
-    a root; without one, no path-confined privilege is recognized.
+    main-session calls resolve to the configured agent, and so a file tool's
+    target can be placed in the agent workspace (a path-scoped privilege);
+    without a root no path-scoped privilege is recognized. The CLI synthesizes
+    payloads with explicit ``agent_type`` and does not pass a root.
     """
     try:
         agent_type = payload.get("agent_type")
@@ -654,60 +488,53 @@ def hook_decide(
             subject = f"agent:{default_agent}" if default_agent else "operator"
         else:
             subject = "operator"
-        return decide(model, catalog, _payload_request(payload, subject, project_root))
+        tool = payload["tool_name"]
+        if tool == "Bash":
+            request = {
+                "type": "bash",
+                "command": payload["tool_input"]["command"],
+                "cwd": payload.get("cwd", ""),
+                "subject": subject,
+            }
+        else:
+            request = {
+                "type": "tool",
+                "tool": tool,
+                "cwd": payload.get("cwd", ""),
+                "subject": subject,
+                # Surface the URL for domain-scoped privilege checks (web-fetch).
+                # WebFetch and WebSearch both supply `url` in tool_input; absent
+                # for all other tools.  A missing key becomes None, which _scope_ok
+                # treats as an unparseable host → deny for domain-scoped grants.
+                "url": payload.get("tool_input", {}).get("url"),
+                # A file tool's target and the project root, for the path-scoped
+                # privileges (the agent workspace).
+                "path": _target_path(payload.get("tool_input", {})),
+                "root": project_root,
+            }
+        return decide(model, catalog, request)
     except Exception as exc:  # fail-open
         return "abstain", f"hook fault → fail-open: {exc!r}"
 
 
-def _payload_request(
-    payload: dict[str, Any], subject: str, project_root: str | None
-) -> dict[str, Any]:
-    """The decision request a PreToolUse payload describes."""
-    tool = payload["tool_name"]
-    if tool == "Bash":
-        return {
-            "type": "bash",
-            "command": payload["tool_input"]["command"],
-            "cwd": payload.get("cwd", ""),
-            "subject": subject,
-            "root": project_root,
-        }
-    tool_input = payload.get("tool_input", {})
-    return {
-        "type": "tool",
-        "tool": tool,
-        "cwd": payload.get("cwd", ""),
-        "subject": subject,
-        # Surface the URL for domain-scoped privilege checks (web-fetch).
-        # WebFetch and WebSearch both supply `url` in tool_input; absent
-        # for all other tools.  A missing key becomes None, which _scope_ok
-        # treats as an unparseable host → deny for domain-scoped grants.
-        "url": tool_input.get("url"),
-        # A file tool's target, for the path-confined privileges (the agent
-        # workspace): Read / Write / Edit name `file_path`, NotebookEdit
-        # `notebook_path`.
-        "path": tool_input.get("file_path") or tool_input.get("notebook_path"),
-        "root": project_root,
-    }
-
-
-def targets_confined_path(
+def targets_path_scoped(
     catalog: dict[str, Any], payload: dict[str, Any], project_root: str | None
 ) -> bool:
-    """Does a path-confined privilege — the agent workspace — recognize this
-    PreToolUse payload, a bare leading `cd` aside?
+    """Does a path-scoped privilege — the agent workspace — recognize this
+    PreToolUse payload? File tools only, like the recognizer itself.
 
-    The diagnostic loop's defect test (#1043): the workspace is granted to
-    every agent, so a prompt for a request it recognizes is a defect, not an
-    allowlist gap. Never raises; any fault reads as False."""
+    The diagnostic loop's defect test (#1043): every shipped profile grants the
+    workspace to every agent, so a prompt for a request it recognizes is a
+    defect, not an allowlist gap. Never raises; any fault reads as False."""
     try:
-        request = _payload_request(payload, "operator", project_root)
-        while request.get("type") == "bash":
-            remainder = _strip_leading_cd(request.get("command", ""))
-            if remainder is None:
-                break
-            request = {**request, "command": remainder, "target_cwd": _cd_directory(request)}
-        return bool(_confined_privileges(catalog, request)[0])
+        request = {
+            "type": "tool",
+            "tool": payload.get("tool_name"),
+            "cwd": payload.get("cwd", ""),
+            "path": _target_path(payload.get("tool_input") or {}),
+            "root": project_root,
+        }
+        return bool(_path_scoped_privileges(catalog.get("privileges", {}), request))
     except Exception:
         return False
 

@@ -201,7 +201,7 @@ def _decision_core():
     """The decision core beside this module: the one the hook already imported,
     else loaded by path (a caller that imported only this module)."""
     core = sys.modules.get("decide")
-    if core is not None and hasattr(core, "targets_confined_path"):
+    if core is not None and hasattr(core, "targets_path_scoped"):
         return core
     import importlib.util
 
@@ -223,7 +223,7 @@ def _targets_workspace(root: str, payload: dict) -> bool:
     what lies inside; any fault reads as False."""
     try:
         core = _decision_core()
-        return bool(core.targets_confined_path(core.load_catalog(root), payload, root))
+        return bool(core.targets_path_scoped(core.load_catalog(root), payload, root))
     except Exception:
         return False
 
