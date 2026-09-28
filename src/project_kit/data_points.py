@@ -211,7 +211,13 @@ def shared_resolution(target_root: Path) -> DataResolution:
 
 
 def resolve_data_points(target_root: Path) -> DataResolution:
-    """Resolve every data point an active provider defines (the module docstring)."""
+    """Resolve every data point an active provider defines (the module docstring),
+    as one run: the wiring, the point schemas and the filler files are each
+    computed once for it, whether or not `pkit validate` is running."""
+    return validators.as_one_run(lambda: _resolve(target_root))
+
+
+def _resolve(target_root: Path) -> DataResolution:
     wiring = cx.shared_wiring(target_root)
     files = cx.project_fillers(target_root)
     schema, notes = _filler_schema(target_root)

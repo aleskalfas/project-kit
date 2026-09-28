@@ -810,6 +810,26 @@ def test_status_shows_an_unresolved_point_and_a_command_that_is_not_run(
     ]
 
 
+def test_status_resolves_the_wiring_once_outside_a_validate_run(
+    repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The resolution is one run of its own when `pkit validate` is not running:
+    the wiring its point schemas are read from is the wiring it resolves over."""
+    _provider(repo)
+    _contributor(repo, "evidence", ["operator"])
+    calls: list[Path] = []
+    wiring = cx.resolve_wiring
+
+    def counting(root: Path) -> cx.Wiring:
+        calls.append(root)
+        return wiring(root)
+
+    monkeypatch.setattr(cx, "resolve_wiring", counting)
+    result = CliRunner().invoke(main, ["status"])
+    assert result.exit_code == 0, result.output
+    assert len(calls) == 1
+
+
 def test_status_on_a_fresh_install_defines_no_point(repo: AdopterRepo) -> None:
     result = CliRunner().invoke(main, ["status"])
     assert _data_points_section(result.output).splitlines() == [

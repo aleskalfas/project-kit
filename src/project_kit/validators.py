@@ -509,6 +509,19 @@ def once_per_run(key: Hashable, compute: Callable[[], _T]) -> _T:
     return values[key]
 
 
+def as_one_run(compute: Callable[[], _T]) -> _T:
+    """`compute()` as one run: inside `run_all` it already is one; outside — a
+    reading command such as `pkit status` — the computations it shares through
+    `once_per_run` are made once for it, as they would be under the umbrella."""
+    if _RUN_VALUES.get() is not None:
+        return compute()
+    token = _RUN_VALUES.set({})
+    try:
+        return compute()
+    finally:
+        _RUN_VALUES.reset(token)
+
+
 def run_all(target_root: Path, validators: Iterable[Validator]) -> list[Result]:
     """Run the members in order, as one run: a computation several members read
     (`once_per_run`) is computed once for all of them."""
