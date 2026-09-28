@@ -13,10 +13,15 @@ by 1-based index with an optional expected-text guard, per
 fetch-edit-resend that edit-issue forces for a single checkbox flip.
 
 Signature (batch-capable — tick N criteria in one call):
-  check-criterion <issue> <index> [expected-text] [<index> [expected-text]] ...
+  check-criterion <issue> [--section doc-impact] <index> [expected-text] ...
 
+  - --section        which checkbox section the indices address: `criteria`
+                     (the default) or `doc-impact` — the `## Doc impact`
+                     section, whose boxes the DEC-007 close-gate counts like
+                     any other (#1015).
   - <index>          1-based position in the acceptance-criteria list, matching
-                     `show-issue --field criteria`'s numbering.
+                     `show-issue --field criteria`'s numbering (or, with
+                     `--section doc-impact`, `show-issue --field doc-impact`'s).
   - [expected-text]  optional guard: the verb refuses to tick unless the line at
                      that index still equals this text (DEC-038 D1). Equality on
                      the checkbox-marker-stripped, trimmed text. An argument that

@@ -1,0 +1,12 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `check-criterion` and `uncheck-criterion` take `--section doc-impact` to tick
+  the checkboxes of a Task's `## Doc impact` section, addressed like the
+  acceptance criteria — a 1-based index with an optional expected-text guard,
+  numbered as the new `show-issue --field doc-impact` lists them (#1015).
+  `done-work`'s checkbox close-gate counted those boxes but no verb could tick
+  them, so closing such a Task forced a whole-body rewrite. Its refusal now
+  prints, under each unticked box, the command that ticks it.

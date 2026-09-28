@@ -82,10 +82,10 @@ commands:
     help: Methodology-aware body / title / milestone edit. Validates the new state against body-format.yaml + titles.yaml before writing; refuses on hard-reject unless --force. --milestone <number|title> moves the issue to an OPEN milestone (the first-line milestone ref follows) and --clear-milestone detaches it; a milestone edit that would move the issue in the lifecycle is refused.
   check-criterion:
     script: scripts/check-criterion.py
-    help: "Tick one or more acceptance-criterion checkboxes on an issue, addressed by 1-based index with an optional expected-text guard (per DEC-038). Batch-capable; validates the whole batch up front and refuses before any mutation on a hard inconsistency (out-of-range / text-mismatch / ambiguous guard); idempotent on re-run."
+    help: "Tick one or more acceptance-criterion checkboxes on an issue — or, with --section doc-impact, `## Doc impact` checkboxes — addressed by 1-based index with an optional expected-text guard (per DEC-038). Batch-capable; validates the whole batch up front and refuses before any mutation on a hard inconsistency (out-of-range / text-mismatch / ambiguous guard); idempotent on re-run."
   uncheck-criterion:
     script: scripts/uncheck-criterion.py
-    help: "Untick one or more acceptance-criterion checkboxes on an issue — the symmetric counterpart to check-criterion (per DEC-038). Same index + optional-text-guard addressing, validate-up-front whole-batch hard-reject, and idempotent recovery."
+    help: "Untick one or more acceptance-criterion checkboxes on an issue (or, with --section doc-impact, `## Doc impact` checkboxes) — the symmetric counterpart to check-criterion (per DEC-038). Same index + optional-text-guard addressing, validate-up-front whole-batch hard-reject, and idempotent recovery."
   set-field:
     script: scripts/set-field.py
     help: "Declaratively set an issue's kind / priority / workstream / parent classification field(s) in one batch call (per DEC-038). Reuses create-issue's classification resolution (substrate-map-aware); --kind applies to kind-driven (Task) issues — swaps the type:* label and realigns the title prefix — and refuses a non-feature kind on epic/feature/umbrella (DEC-011); validates up front and refuses before any mutation on an unknown value; idempotent on re-run."
