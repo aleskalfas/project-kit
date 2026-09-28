@@ -67,9 +67,9 @@ The friction block (anchors and revalidation) follows the core anchors-and-frict
 
 ## Connections (design-ahead)
 
-Declared in the decision; the package metadata gains them with the first implementation increment. The capability provides the `pkit::analysis` role (COR-053). `pkit::` is the methodology's publisher qualifier, written `<methodology>::` in the decision records; `pkit:` is likewise the methodology's front-matter container.
+Declared in the decision; the package metadata gains them with the first implementation increment. The capability provides the `pkit::analysis` role (COR-053); `pkit::` and `pkit:` are this distribution's literals for the methodology's publisher qualifier and front-matter container ([the lifecycle README, "The methodology's literals"](../../lifecycle/README.md#the-methodologys-literals)).
 
-- **Accepts** `pkit::analysis:revalidation-evidence`: executed results per artefact and commit, supplied by a capability or a project file. Policy `union`, advisory. Evidence informs a revalidation; it doesn't replace one.
+- **Accepts** `pkit::analysis:revalidation-evidence`: executed results per artefact and commit, supplied by a capability or a [project file](../../lifecycle/README.md#where-a-project-filler-file-lives-the-address-to-path-mapping). Policy `union`, advisory. Evidence informs a revalidation; it doesn't replace one.
 - **Contributes** to `pkit::documentation:readers` with actors and their needs. Inert when no documentation capability is installed.
 
 ## What's shipped now, what's next
