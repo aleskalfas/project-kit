@@ -22,7 +22,12 @@ from ruamel.yaml.error import YAMLError
 
 from _lib import provenance
 from _lib import session_guard
-from _lib.criteria import checkbox_headings
+from _lib.criteria import (
+    SECTION_CRITERIA,
+    SECTION_DOC_IMPACT,
+    SECTIONS,
+    section_headings,
+)
 from _lib.criterion_ops import Target, plan_batch
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config
 from _lib.membership import (
@@ -31,6 +36,13 @@ from _lib.membership import (
     resolve_capability_root,
     resolve_invoker_identity,
 )
+
+
+# How each addressable section names its items in the result lines.
+_ITEM_NOUNS = {
+    SECTION_CRITERIA: ("criterion", "criteria"),
+    SECTION_DOC_IMPACT: ("doc-impact box", "doc-impact boxes"),
+}
 
 
 def run_criterion_verb(*, verb: str, target_checked: bool) -> int:
@@ -83,18 +95,30 @@ def run_criterion_verb(*, verb: str, target_checked: bool) -> int:
 
     # Context header (standard pm-script scaffolding).
     action = "tick" if target_checked else "untick"
+    noun, plural = _ITEM_NOUNS[args.section]
     print(f"{verb}: #{args.issue_number}")
     print(f"  action:  {action} {len(targets)} "
-          f"{'criterion' if len(targets) == 1 else 'criteria'}")
+          f"{noun if len(targets) == 1 else plural}")
 
-    # Which `## <Name>` section carries the checkboxes is issue-type-dependent
-    # and owned by the body-format schema (`## Success criteria` on EPICs,
-    # `## Acceptance criteria` on Features/Tasks). Resolve the heading set from
-    # the schema — fail-open to the historical literal when it cannot be read —
-    # so indices stay in parity with `show-issue --field criteria`.
-    headings = checkbox_headings(_read_body_format(capability_root, yaml_loader))
+    # Which `## <Name>` section carries the criteria checkboxes is
+    # issue-type-dependent and owned by the body-format schema (`## Success
+    # criteria` on EPICs, `## Acceptance criteria` on Features/Tasks). Resolve
+    # the heading set from the schema — fail-open to the historical literal when
+    # it cannot be read — so indices stay in parity with `show-issue --field
+    # criteria`. `--section doc-impact` addresses the `## Doc impact` section
+    # instead, numbered as `show-issue --field doc-impact` numbers it (#1015).
+    headings = section_headings(
+        args.section, _read_body_format(capability_root, yaml_loader)
+    )
 
-    plan = plan_batch(body, targets, target_checked=target_checked, headings=headings)
+    plan = plan_batch(
+        body,
+        targets,
+        target_checked=target_checked,
+        headings=headings,
+        noun=noun,
+        plural=plural,
+    )
 
     for result in plan.results:
         marker = "ok" if result.ok else "refused"
@@ -142,7 +166,8 @@ def _build_parser(verb: str, target_checked: bool) -> argparse.ArgumentParser:
         prog=verb,
         description=(
             f"{action} one or more acceptance-criterion checkboxes on a GitHub "
-            "issue, addressed by 1-based index with an optional expected-text "
+            "issue — or, with --section doc-impact, `## Doc impact` checkboxes — "
+            "addressed by 1-based index with an optional expected-text "
             "guard (per DEC-038). Validates the whole batch up front and refuses "
             "before any mutation on a hard inconsistency; idempotent on re-run."
         ),
@@ -158,6 +183,17 @@ def _build_parser(verb: str, target_checked: bool) -> argparse.ArgumentParser:
             "refuses unless the line still matches). An integer argument starts "
             "a new target; a non-integer argument is the preceding index's "
             "guard. Example: `1 \"docs updated\" 3 5`."
+        ),
+    )
+    parser.add_argument(
+        "--section",
+        choices=SECTIONS,
+        default=SECTION_CRITERIA,
+        help=(
+            "Which checkbox section the indices address: `criteria` (default — "
+            "the acceptance / success criteria, numbered as `show-issue --field "
+            "criteria`) or `doc-impact` (the `## Doc impact` section, numbered "
+            "as `show-issue --field doc-impact`). Same index + guard grammar."
         ),
     )
     parser.add_argument(
