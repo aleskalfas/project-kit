@@ -47,6 +47,9 @@ commands:
   create-issue:
     script: scripts/create-issue.py
     help: File a new issue (per DEC-020). Composes title + body from the type's template, applies classification labels, optionally adds to the configured Projects v2 board. Refuses a non-feature --kind on an epic/feature/umbrella up front (the DEC-011 kind/structural hard-reject). --from-report <N> auto-links the new issue into feedback/CR #N's Tracked by via the backbone's `pkit report link` (per DEC-048; link failure warns + exits 4, never rolls back).
+  link-parent:
+    script: scripts/link-parent.py
+    help: "Link existing issues natively under the parent their body's first line names (per DEC-005 / DEC-039): one or more issue numbers, or --all-open. Reports per issue — would link, already linked, milestone parent, no parent line, parent not found or closed — and a summary. Idempotent (an existing link is never re-posted); --dry-run changes nothing; asks before linking unless --yes (a non-interactive run without --yes refuses). Textual containment mode links nothing and refreshes the named parents' children views instead."
   create-milestone:
     script: scripts/create-milestone.py
     help: File a new Milestone in a declared category (per DEC-016). Computes the next number from existing milestones; composes title from category's title_format; posts to GitHub with the `Close trigger:` body line.

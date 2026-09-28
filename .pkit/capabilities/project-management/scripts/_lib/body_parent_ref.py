@@ -8,9 +8,10 @@ for a milestone parent.
 
 `create-issue` acts on that line twice: it checks that a prepared body's first
 line is an allowed form, and, when no `--parent` is given, links the new issue
-natively under the parent the line names. Both read it here, so the line that
-passes the filing check is exactly the line that gets linked — one reading, not
-two that could drift.
+natively under the parent the line names. `link-parent` links issues that
+already exist from the same line. All of them read it here, so the line that
+passes the filing check is exactly the line that gets linked, at filing or in a
+later repair — one reading, not several that could drift.
 
 The *first line* is the first non-blank line after a leading DEC-013
 `Integration:` marker (which sits above the parent-ref) — the reading
