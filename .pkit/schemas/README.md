@@ -429,7 +429,7 @@ The pass is **dormant** — it prints only its counts — when no places are dec
 
 A rule-set file is claimed by the rule-set rule before the container rule (ADR-056 point 2), so its unparsable front matter and the malformed container of one of its rules are the `rule-sets` pass's findings, reported once there; the friction pass still takes its rules into the deferral and cycle checks.
 
-**Not here.** Friction itself — the change check and the whole-repository check, dead anchors, over-broad anchors, the two measures — arrives with Tasks #990 and #991; this pass never touches git.
+**Not here.** Friction itself is the `friction` command group's: the change check — the three answers, bumps with nothing behind them, dead anchors of a change, an outdated base, the modes and the `--json` document — is `pkit friction check` (the CLI reference, "Friction checks"); the whole-repository check, over-broad anchors and the two measures arrive with Task #991. This pass never touches git.
 
 ### Rule-set files
 
@@ -516,7 +516,7 @@ Unknown keys are refused at every level, each with the nearest known key. The sh
 
 A tree without the rule-set schema — one recorded before it landed — skips the kind and says so (ADR-056 point 1).
 
-**Not here.** Whether a quoted reason supports its rule, and whether an inheriting set contradicts or relaxes what it inherits beyond the mechanical checks, are judgment for agents and reviewers (COR-051 points 5 and 7). A filling rule anchors to the rule it fills (point 7); this pass does not check that anchor. Resolving a source through a registered anchor kind arrives with the kind registry, through the hook `project_kit.rule_sets.resolve_source_kind`.
+**Not here.** Whether a quoted reason supports its rule, and whether an inheriting set contradicts or relaxes what it inherits beyond the mechanical checks, are judgment for agents and reviewers (COR-051 points 5 and 7). A filling rule anchors to the rule it fills (point 7); this pass does not check that anchor. Resolving a source through a registered anchor kind arrives with the kind registry; sources go through the same registry and gate as anchors (`registered_anchor_kinds`, `unresolved_kind_reason` in `project_kit.friction_discovery`; ADR-057).
 
 ## Tooling expectations
 

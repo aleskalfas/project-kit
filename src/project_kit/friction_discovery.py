@@ -28,22 +28,28 @@ is the one reader of those declarations and the one walker of the places:
   A rule-set file is the collection whose entries are the values of its
   `rules` map, one artefact per rule. A plain YAML file in a place is not a
   document (ADR-056 point 2).
+- `RepositoryTree` — the seam through which a caller discovers what another
+  state of the repository held. The change check (COR-050 point 6) reads the
+  working tree and its base commit side by side through it, so both sides are
+  listed and matched by one rule (`compile_glob`, `pattern_matches`); without
+  a tree, discovery walks the filesystem as validation does.
 
-Nothing here computes friction or touches git: the change check and the
-whole-repository check (COR-050 point 6) are later Tasks that read the model
-this module produces.
+Nothing here computes friction or touches git: the checks (`friction_check`)
+read the model this module produces, and the git plumbing behind a tree lives
+with them.
 """
 
 from __future__ import annotations
 
+import functools
 import io
 import os
 import re
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path, PurePosixPath
-from typing import Any
+from typing import Any, Protocol
 
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
@@ -72,6 +78,10 @@ DEFAULT_FRICTION_MODE = "warning"
 
 # Where installed capabilities live, relative to the project root.
 CAPABILITIES_DIR = Path(".pkit") / "capabilities"
+
+# The backbone manifest, relative to the project root: the installed
+# capabilities are read from it (on disk through `manifest.read_backbone_manifest`).
+BACKBONE_MANIFEST = Path(".pkit") / "manifest.yaml"
 
 # Only Markdown files can be documents or collections (ADR-056 point 2).
 DOCUMENT_SUFFIX = ".md"
@@ -104,6 +114,27 @@ _FRONT_MATTER_FENCE = re.compile(r"^---[ \t]*$", re.MULTILINE)
 _HEADING = re.compile(r"^(#{1,6})[ \t]+(.*?)[ \t]*#*[ \t]*$", re.MULTILINE)
 
 _yaml = YAML(typ="safe")
+
+
+# --- repository trees ---------------------------------------------------
+
+
+class RepositoryTree(Protocol):
+    """A read-only view of the repository's files at one state.
+
+    The working tree and a commit are the two a caller needs side by side
+    (the change check, COR-050 point 6). Discovery through a tree lists the
+    tree's files and never follows a link: a link is a file the tree holds,
+    matched like any other, but never read as a document.
+    """
+
+    def files(self) -> Sequence[str]:
+        """Every file the state holds, links included: repository-relative POSIX paths, sorted."""
+        ...
+
+    def read_bytes(self, paths: Sequence[str]) -> Mapping[str, bytes | None]:
+        """Each path's content, read in one pass; `None` for a link or a path the state lacks."""
+        ...
 
 
 # --- settings -----------------------------------------------------------
@@ -148,16 +179,20 @@ class FrictionSettings:
         return DEFAULT_FRICTION_MODE
 
 
-def read_friction_settings(target_root: Path) -> FrictionSettings:
+def read_friction_settings(
+    target_root: Path, tree: RepositoryTree | None = None
+) -> FrictionSettings:
     """Read the project's and every installed capability's friction settings.
 
     Forgiving throughout (COR-048 point 4): an absent file, an unparsable
     file, a key of the wrong shape, or a list entry that is not text is read
     as absent. The schema passes of the configuration file and of package
     metadata refuse those; this reader only has to keep working next to them.
+    With a `tree`, the files are read from that state rather than from disk.
     """
-    config_rel = str(project_config_path(target_root).relative_to(target_root))
-    config = _load_mapping(project_config_path(target_root))
+    load = _mapping_loader(target_root, tree)
+    config_rel = project_config_path(target_root).relative_to(target_root).as_posix()
+    config = load(config_rel)
     docs = _mapping_or_empty(config.get(DOCS_KEY))
     internal_root = _text_or_default(docs.get(INTERNAL_ROOT_KEY), DEFAULT_INTERNAL_ROOT)
 
@@ -180,9 +215,9 @@ def read_friction_settings(target_root: Path) -> FrictionSettings:
     surface = list(project_paths("surface"))
     exclude = list(project_paths("exclude"))
 
-    for name in installed_capability_names(target_root):
+    for name in installed_capability_names(target_root, tree):
         package_rel = CAPABILITIES_DIR / name / "package.yaml"
-        package = _load_mapping(target_root / package_rel)
+        package = load(package_rel.as_posix())
         cap_friction = _mapping_or_empty(package.get(FRICTION_KEY))
         locations = _capability_locations(package)
         for key, sink in (("places", places), ("surface", surface)):
@@ -207,8 +242,23 @@ def read_friction_settings(target_root: Path) -> FrictionSettings:
     )
 
 
-def installed_capability_names(target_root: Path) -> list[str]:
-    """Installed capabilities by name, sorted, from the backbone manifest."""
+def installed_capability_names(target_root: Path, tree: RepositoryTree | None = None) -> list[str]:
+    """Installed capabilities by name, sorted, from the backbone manifest.
+
+    With a `tree`, the manifest that state holds is read, forgivingly: an
+    entry that is not a mapping with a text name is skipped.
+    """
+    if tree is not None:
+        manifest = _mapping_loader(target_root, tree)(BACKBONE_MANIFEST.as_posix())
+        components: Any = manifest.get("components")
+        if not isinstance(components, list):
+            return []
+        names: list[str] = []
+        for entry in _mappings(components):
+            name = entry.get("name")
+            if entry.get("kind") == "capability" and isinstance(name, str):
+                names.append(name)
+        return sorted(names)
     backbone = read_backbone_manifest(target_root)
     if backbone is None:
         return []
@@ -243,17 +293,51 @@ def _join_posix(*segments: str) -> str:
     return "/".join(parts) if parts else "."
 
 
+def _mapping_loader(
+    target_root: Path, tree: RepositoryTree | None
+) -> Callable[[str], dict[str, Any]]:
+    """A reader of repository-relative YAML files as mappings: from disk, or from `tree`."""
+    if tree is None:
+        return lambda rel: _load_mapping(target_root / rel)
+
+    def load(rel: str) -> dict[str, Any]:
+        raw = tree.read_bytes([rel]).get(rel)
+        if raw is None:
+            return {}
+        try:
+            return _parse_mapping(raw.decode("utf-8"))
+        except UnicodeDecodeError:
+            return {}
+
+    return load
+
+
 def _load_mapping(path: Path) -> dict[str, Any]:
     """A YAML file as a mapping with text keys; `{}` when absent, unparsable or not a mapping."""
     if not path.is_file():
         return {}
     try:
-        data = _yaml.load(path.read_text(encoding="utf-8"))
-    except (OSError, YAMLError):
+        return _parse_mapping(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError):
+        return {}
+
+
+def _parse_mapping(text: str) -> dict[str, Any]:
+    """YAML text as a mapping with text keys; `{}` when unparsable or not a mapping."""
+    try:
+        data = _yaml.load(text)
+    except YAMLError:
         return {}
     if not isinstance(data, Mapping):
         return {}
     return {str(k): v for k, v in data.items()}
+
+
+def _mappings(items: list[Any]) -> Iterator[Mapping[str, Any]]:
+    """The entries of a parsed YAML list that are mappings, with text keys."""
+    for item in items:
+        if isinstance(item, Mapping):
+            yield _mapping_or_empty(item)
 
 
 def _mapping_or_empty(value: Any) -> Mapping[str, Any]:
@@ -305,14 +389,21 @@ def is_inside_repository(target_root: Path, pattern: str) -> bool:
     `docs/linked/sub/**` with `docs/linked` a link out of the repository is
     outside even while `sub` does not exist yet.
     """
+    if not _textually_inside(pattern):
+        return False
+    prefix = _literal_prefix(os.path.normpath(pattern))
+    candidate = target_root / prefix if prefix else target_root
+    return _resolves_inside(target_root, candidate)
+
+
+def _textually_inside(pattern: str) -> bool:
+    """The text half of `is_inside_repository`: not absolute, not climbing above the root."""
     if not pattern or PurePosixPath(pattern).is_absolute() or os.path.isabs(pattern):
         return False
     normalised = os.path.normpath(pattern)
-    if normalised == ".." or normalised.startswith("../") or normalised.startswith(".." + os.sep):
-        return False
-    prefix = _literal_prefix(normalised)
-    candidate = target_root / prefix if prefix else target_root
-    return _resolves_inside(target_root, candidate)
+    return not (
+        normalised == ".." or normalised.startswith("../") or normalised.startswith(".." + os.sep)
+    )
 
 
 def _resolves_inside(target_root: Path, candidate: Path) -> bool:
@@ -389,8 +480,124 @@ def files_in_place(target_root: Path, place: Place) -> list[Path]:
     return sorted(matched.values(), key=lambda p: p.relative_to(target_root).as_posix())
 
 
-def _under_skipped(rel: Path) -> bool:
+def _under_skipped(rel: Path | PurePosixPath) -> bool:
     return bool(rel.parts) and rel.parts[0] in _SKIPPED_TOP_LEVEL
+
+
+def listed_files_in_place(place: Place, files: Sequence[str]) -> list[str]:
+    """`files_in_place` over a listing — a tree's files — instead of the filesystem.
+
+    The same reading, so the two agree on everything a listing holds: a glob
+    matches files, a glob ending in `**` means every Markdown file beneath, a
+    directory means every Markdown file beneath it, a file means that file,
+    and only Markdown files are documents. A pattern outside the repository
+    matches nothing. Globs follow pathlib's reading on Python 3.13
+    (`compile_glob`), where an older interpreter's `Path.glob` refuses a `**`
+    mixed into a segment and so matches nothing there.
+    """
+    if not _textually_inside(place.pattern):
+        return []
+    pattern = os.path.normpath(place.pattern).replace(os.sep, "/")
+    documents = [
+        f
+        for f in files
+        if PurePosixPath(f).suffix == DOCUMENT_SUFFIX and not _under_skipped(PurePosixPath(f))
+    ]
+    if pattern == ".":
+        matched = documents
+    elif any(ch in _GLOB_CHARS for ch in pattern):
+        if PurePosixPath(pattern).name == "**":
+            pattern = f"{pattern}/*{DOCUMENT_SUFFIX}"
+        regex = compile_glob(pattern)
+        matched = [f for f in documents if regex.fullmatch(f)]
+    else:
+        prefix = pattern + "/"
+        matched = [f for f in documents if f == pattern or f.startswith(prefix)]
+    return sorted(matched)
+
+
+def pattern_matches(pattern: str, path: str) -> bool:
+    """Whether a settings or anchor `pattern` covers the repository-relative file `path`."""
+    return pattern_matcher(pattern)(path)
+
+
+@functools.lru_cache(maxsize=1024)
+def pattern_matcher(pattern: str) -> Callable[[str], bool]:
+    """A predicate over repository-relative file paths for a settings or anchor `pattern`.
+
+    One reading for every path the friction functionality names (COR-050
+    points 2 and 14): a glob matches files as `compile_glob` reads it, `**`
+    spanning folders; a path without glob characters names a file, or a
+    directory and so every file beneath it; `.` is the whole repository.
+    """
+    normalised = os.path.normpath(pattern).replace(os.sep, "/")
+    if normalised == ".":
+        return lambda _path: True
+    if any(ch in _GLOB_CHARS for ch in normalised):
+        regex = compile_glob(normalised)
+        return lambda path: regex.fullmatch(path) is not None
+    prefix = normalised + "/"
+    return lambda path: path == normalised or path.startswith(prefix)
+
+
+@functools.lru_cache(maxsize=1024)
+def compile_glob(pattern: str) -> re.Pattern[str]:
+    """A repository-relative glob as a regular expression over POSIX file paths.
+
+    pathlib's reading (Python 3.13): `**` as a whole segment spans any number
+    of folders, none included; `*` matches within one segment, and so does a
+    `**` mixed into a segment; `?` is one character; `[...]` a class, `[!...]`
+    its negation. Dot-files are not special.
+    """
+    segments = pattern.split("/")
+    parts: list[str] = []
+    for index, segment in enumerate(segments):
+        last = index == len(segments) - 1
+        if segment == "**":
+            parts.append(".*" if last else "(?:[^/]+/)*")
+            continue
+        parts.append(_segment_regex(segment))
+        if not last:
+            parts.append("/")
+    return re.compile("".join(parts), re.DOTALL)
+
+
+def _segment_regex(segment: str) -> str:
+    """One path segment of a glob as a regular expression that never crosses a `/`."""
+    out: list[str] = []
+    index = 0
+    while index < len(segment):
+        char = segment[index]
+        if char == "*":
+            while index < len(segment) and segment[index] == "*":
+                index += 1
+            out.append("[^/]*")
+            continue
+        if char == "?":
+            out.append("[^/]")
+        elif char == "[":
+            end = index + 1
+            if end < len(segment) and segment[end] == "!":
+                end += 1
+            if end < len(segment) and segment[end] == "]":
+                end += 1
+            while end < len(segment) and segment[end] != "]":
+                end += 1
+            if end >= len(segment):
+                out.append(re.escape(char))  # no closing bracket: a literal `[`
+            else:
+                body = segment[index + 1 : end]
+                negated = body.startswith("!")
+                if negated:
+                    body = body[1:]
+                body = re.sub(r"([\\&~|\[\]^])", r"\\\1", body)
+                out.append(f"[^/{body}]" if negated else f"[{body}]")
+                index = end + 1
+                continue
+        else:
+            out.append(re.escape(char))
+        index += 1
+    return "".join(out)
 
 
 # --- rule-set places ----------------------------------------------------
@@ -447,6 +654,13 @@ def rule_set_places(target_root: Path, settings: FrictionSettings) -> tuple[Rule
     return tuple(unique.values())
 
 
+def _place_files(target_root: Path, place: Place, tree: RepositoryTree | None) -> list[str]:
+    """The repository-relative files a place matches, on disk or in a `tree`'s listing."""
+    if tree is None:
+        return [p.relative_to(target_root).as_posix() for p in files_in_place(target_root, place)]
+    return listed_files_in_place(place, tree.files())
+
+
 def rule_set_files(target_root: Path, places: Sequence[RuleSetPlace]) -> dict[Path, RuleSetPlace]:
     """Every rule-set file the places claim, with the place that claimed it.
 
@@ -461,6 +675,79 @@ def rule_set_files(target_root: Path, places: Sequence[RuleSetPlace]) -> dict[Pa
             if path.name != RULE_SETS_SIGNPOST:
                 claimed.setdefault(path, rule_set_place)
     return claimed
+
+
+
+# --- anchor kinds and their resolvers (ADR-057 point 3) ------------------
+
+#: The anchor kinds the backbone resolves itself (COR-050 point 2).
+CORE_ANCHOR_KINDS: tuple[str, ...] = ("path", "record", "artefact")
+
+
+@dataclass(frozen=True)
+class ResolverCommand:
+    """A command a capability registers to resolve an anchor kind (COR-050 point 2).
+
+    `query_contract` is whether the command's registry entry declares the
+    query contract (ADR-057 point 3): bounded, deterministic, read-only and
+    needing no network. The declaration grants nothing; it is a claim the
+    backbone requires and trusts.
+    """
+
+    kind: str
+    capability: str
+    command: str
+    query_contract: bool = False
+
+
+def refuse_resolver_without_query_contract(resolver: ResolverCommand) -> str | None:
+    """Why `resolver` may not run, or `None` when it may.
+
+    A resolver is a query: bounded, deterministic and needing no network
+    (COR-050 point 2), and read-only (ADR-057 point 3 adds it). The backbone
+    admits one only when its command declares that contract (ADR-057 point 3). The declaration is trusted, not enforced:
+    nothing here confines the process it would start — the residual gap the CLI
+    reference states.
+    """
+    if resolver.query_contract:
+        return None
+    return (
+        f"the resolver `{resolver.command}` that {resolver.capability} registers for it "
+        f"does not declare the query contract (bounded, deterministic, read-only, "
+        f"needing no network); a resolver runs only when it declares it"
+    )
+
+
+def registered_anchor_kinds(target_root: Path) -> dict[str, ResolverCommand]:
+    """The anchor kinds installed capabilities register, by kind.
+
+    Where registered kinds are looked up. No package metadata declares an
+    anchor kind yet — the kind registry arrives with its own change — so this
+    is empty and every kind outside `CORE_ANCHOR_KINDS` is unresolved.
+    """
+    del target_root  # read from each capability's package metadata once kinds are declared
+    return {}
+
+
+def unresolved_kind_reason(kind: str, registry: Mapping[str, ResolverCommand]) -> str | None:
+    """`None` when the backbone resolves `kind`; otherwise why nothing does.
+
+    A registered kind passes `refuse_resolver_without_query_contract` before its
+    resolver could run; one that passes is still unresolved, since registered
+    resolvers are not run yet — failing closed (COR-050 point 2).
+    """
+    if kind in CORE_ANCHOR_KINDS:
+        return None
+    resolver = registry.get(kind)
+    if resolver is None:
+        return "no installed component registers a resolver for it"
+    refusal = refuse_resolver_without_query_contract(resolver)
+    if refusal is not None:
+        return refusal
+    return (
+        f"the resolver `{resolver.command}` that {resolver.capability} registers for it "
+        f"is not run yet"
+    )
 
 
 # --- artefacts ----------------------------------------------------------
@@ -624,7 +911,11 @@ class Discovery:
         return None
 
 
-def discover_artefacts(target_root: Path, settings: FrictionSettings | None = None) -> Discovery:
+def discover_artefacts(
+    target_root: Path,
+    settings: FrictionSettings | None = None,
+    tree: RepositoryTree | None = None,
+) -> Discovery:
     """Walk the declared places and parse every artefact's container.
 
     The places are the declared ones followed by the rule-set places not
@@ -633,52 +924,95 @@ def discover_artefacts(target_root: Path, settings: FrictionSettings | None = No
     under the first place that matched it; whether it is a rule-set file
     depends only on the location rule, not on which place met it. Order:
     places in that order, files within a place by path, entries within a
-    collection in written order.
+    collection in written order. With a `tree`, the settings, the listing and
+    every file are that state's (`listed_files_in_place`); a link in a tree is
+    never read.
     """
-    settings = settings if settings is not None else read_friction_settings(target_root)
+    settings = settings if settings is not None else read_friction_settings(target_root, tree)
+    # Which rule-set folders are places is read from the working tree even when
+    # `tree` names another state: a folder that exists only at that state (one
+    # the change deleted outright) is not walked there. The folders are
+    # existence-gated so that a project without rule sets stays dormant
+    # without a repository being demanded.
     rule_set_places_found = rule_set_places(target_root, settings)
     places = declared_places(settings)
     places += tuple(r.place for r in rule_set_places_found if r.place not in places)
-    claimed = rule_set_files(target_root, rule_set_places_found)
+    claimed: dict[str, RuleSetPlace] = {}
+    for rule_set_place in rule_set_places_found:
+        for rel in _place_files(target_root, rule_set_place.place, tree):
+            if PurePosixPath(rel).name != RULE_SETS_SIGNPOST:
+                claimed.setdefault(rel, rule_set_place)
+    matched: list[tuple[Place, str]] = []
+    seen: set[str] = set()
+    for place in places:
+        for rel in _place_files(target_root, place, tree):
+            if rel not in seen:
+                seen.add(rel)
+                matched.append((place, rel))
+
     artefacts: list[Artefact] = []
     unreadable: list[UnreadableFile] = []
-    seen: set[Path] = set()
-    for place in places:
-        for path in files_in_place(target_root, place):
-            if path in seen:
-                continue
-            seen.add(path)
-            rel = path.relative_to(target_root).as_posix()
-            rule_set = claimed.get(path)
-            try:
-                text = path.read_text(encoding="utf-8")
-            except (OSError, UnicodeDecodeError) as exc:
-                unreadable.append(
-                    UnreadableFile(path=rel, place=place, reason=str(exc), rule_set=rule_set)
-                )
-                continue
-            front_matter, body = split_front_matter(text)
-            if front_matter is None:
-                continue  # no front matter: not an artefact (COR-050 point 1)
-            try:
-                data = _yaml.load(io.StringIO(front_matter))
-            except YAMLError as exc:
-                unreadable.append(
-                    UnreadableFile(
-                        path=rel, place=place, reason=_yaml_reason(exc), rule_set=rule_set
-                    )
-                )
-                continue
-            if not isinstance(data, Mapping):
-                continue  # front matter that is not a mapping carries nothing
-            carrier = as_written(data)
-            artefacts.extend(_artefacts_of_file(rel, place, carrier, body, rule_set=rule_set))
+    texts = _document_texts(target_root, tree, [rel for _place, rel in matched])
+    for place, rel in matched:
+        rule_set = claimed.get(rel)
+        text = texts[rel]
+        if text is None:
+            continue  # a link in a tree: never read as a document
+        if isinstance(text, _ReadFailure):
+            unreadable.append(
+                UnreadableFile(path=rel, place=place, reason=text.reason, rule_set=rule_set)
+            )
+            continue
+        front_matter, body = split_front_matter(text)
+        if front_matter is None:
+            continue  # no front matter: not an artefact (COR-050 point 1)
+        try:
+            data = _yaml.load(io.StringIO(front_matter))
+        except YAMLError as exc:
+            unreadable.append(
+                UnreadableFile(path=rel, place=place, reason=_yaml_reason(exc), rule_set=rule_set)
+            )
+            continue
+        if not isinstance(data, Mapping):
+            continue  # front matter that is not a mapping carries nothing
+        carrier = as_written(data)
+        artefacts.extend(_artefacts_of_file(rel, place, carrier, body, rule_set=rule_set))
     return Discovery(
         settings=settings,
         places=places,
         artefacts=tuple(artefacts),
         unreadable=tuple(unreadable),
     )
+
+
+@dataclass(frozen=True)
+class _ReadFailure:
+    reason: str
+
+
+def _document_texts(
+    target_root: Path, tree: RepositoryTree | None, rels: Sequence[str]
+) -> dict[str, str | _ReadFailure | None]:
+    """Each matched file's text, or why it could not be read; `None` for a link in a tree."""
+    texts: dict[str, str | _ReadFailure | None] = {}
+    if tree is None:
+        for rel in rels:
+            try:
+                texts[rel] = (target_root / rel).read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError) as exc:
+                texts[rel] = _ReadFailure(str(exc))
+        return texts
+    contents = tree.read_bytes(rels)
+    for rel in rels:
+        raw = contents.get(rel)
+        if raw is None:
+            texts[rel] = None
+            continue
+        try:
+            texts[rel] = raw.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            texts[rel] = _ReadFailure(str(exc))
+    return texts
 
 
 def _artefacts_of_file(

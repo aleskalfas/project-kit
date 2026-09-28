@@ -11,3 +11,5 @@
 # marker key, and the title parenthetical. Declared here precisely so it is
 # never derived from a filesystem path segment.
 name: project-kit
+friction:
+  mode: enforcing

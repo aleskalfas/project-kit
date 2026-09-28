@@ -48,7 +48,7 @@ from project_kit.scaffolds import (
 )
 from project_kit.agents import Namespace as AgentNamespace, stamp_new_agent
 from project_kit.storyboards import ArtifactKind, stamp_new_storyboard
-from project_kit import friction_validate
+from project_kit import friction_check, friction_validate
 from project_kit import refs as refs_mod
 from project_kit import router
 from project_kit import scratchpads
@@ -329,6 +329,50 @@ def config_set(key: str, value: str, yes: bool) -> None:
     click.echo(
         f"set {resolved.dotted} = {typed}  ({project_config.PROJECT_CONFIG_RELPATH.as_posix()})"
     )
+
+
+@main.group("friction")
+def friction() -> None:
+    """Anchors and friction (COR-050): the checks, which only read.
+
+    Reference: `.pkit/cli/README.md`, "Friction checks"; the block itself is
+    in `.pkit/schemas/README.md`, "The friction block".
+    """
+
+
+@friction.command("check")
+@click.option(
+    "--base",
+    "base_ref",
+    metavar="REF",
+    envvar=friction_check.BASE_ENV,
+    default=friction_check.DEFAULT_BASE,
+    show_default=True,
+    help=f"Compare against the merge-base of REF and HEAD (or ${friction_check.BASE_ENV}).",
+)
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
+)
+def friction_check_command(base_ref: str, as_json: bool) -> None:
+    """The change check (COR-050 point 6): every artefact whose anchor changed in the diff
+    carries an answer — updated, unchanged with why, or deferred.
+
+    Reads git only and writes nothing: the working tree (uncommitted changes
+    included) against the merge-base of REF. Reports friction, dead anchors of
+    the change, bumps with nothing behind them and an outdated base. Exit 1
+    in enforcing mode on friction, a dead anchor, an unresolved kind or a
+    bump; an outdated base never fails.
+    """
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    result = friction_check.run_change_check(target_root, base_ref)
+    if as_json:
+        click.echo(friction_check.render_json(result), nl=False)
+    else:
+        click.echo(friction_check.render_human(result), nl=False)
+    if result.exit_code:
+        raise SystemExit(result.exit_code)
 
 
 @main.group(invoke_without_command=True)

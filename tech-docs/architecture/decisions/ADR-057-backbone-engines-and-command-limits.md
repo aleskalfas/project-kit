@@ -1,0 +1,70 @@
+---
+id: ADR-057
+title: The engines that keep artefacts true ship in the binary, one home per computation; commands they run for a capability declare the query contract
+status: accepted
+date: 2026-09-28
+author: Aleš Kalfas <kalfas.ales@gmail.com>
+---
+
+## Summary
+
+**In plain terms:** the machinery that keeps analysis and documentation true — artefact discovery and the friction checks, the wiring resolver of connection points, and the rule-set validator — ships inside the `pkit` tool, and each computation it performs is to have exactly one home that every reader calls; the duplicates that predate this record are named as debt. Commands a capability supplies for the backbone to *query* — a resolver for a new anchor kind, a filler for a data point — must declare that they honour the query contract: the records' three limits (bounded in time, deterministic, needing no network) and a fourth this record adds, read-only. The engine enforces what it can — the time bound and the shape of the answer, failing closed — and states plainly what it cannot: no layer of this distribution stops a command from reaching the network, on any platform.
+
+## Context
+
+The core records of this milestone ask the backbone for engines: artefact discovery and friction ([COR-050](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md)), the resolver of connection points ([COR-053](../../../.pkit/decisions/core/COR-053-connection-points.md), whose Implications ask that its placement be recorded "in the project's architecture decisions, as for the other resolvers"), and rule-set validation ([COR-051](../../../.pkit/decisions/core/COR-051-rule-sets.md)). The validators of the backbone file schemas are already placed ([ADR-056](ADR-056-backbone-file-schemas-home.md)). The process engine set the test for such engines: code ships in the binary unless something below the tool layer must import it ([ADR-020](ADR-020-process-engine-code-home.md)); the permission core is the counter-example that propagates because the hook imports it ([ADR-003](ADR-003-permission-core-code-home.md)).
+
+The records also let capabilities supply commands the engines run: a resolver for an anchor kind (COR-050 point 2) and a command filler for a data point ([COR-052](../../../.pkit/decisions/core/COR-052-slots.md) point 6) are *queries*, to run "with a bounded time, no network access, and deterministic output", failing closed; a subscriber to an event (COR-053 point 9) is an *action* that writes. A runner of capability commands already exists: the process engine's predicate runner, which bounds and parses the predicates a capability registers — and those may reach the network, as the work tracker's gates reach its tracker.
+
+What this distribution can do about network access is limited, and the limit shapes the decision. Confinement is delegated to the harness's operating-system sandbox, which pkit manages but does not implement ([ADR-004](ADR-004-autonomy-intent-confinement.md)). Where that sandbox is on, it holds a whole session to one list of allowed hosts — every host any confinement toolkit opened — and is explicitly not a security boundary ([ADR-015](ADR-015-command-declared-network-egress.md)). On macOS the `pkit` and `uv` process tree runs outside the box, because `uv` cannot run inside it ([ADR-014](ADR-014-macos-sandbox-platform-stance.md), [ADR-027](ADR-027-required-sandbox-exclusion-auto-apply.md)). In a pipeline or a plain terminal there is no sandbox at all.
+
+## Decision
+
+1. **The engines ship in the binary.** Artefact discovery and its validation findings, the change check, the whole-repository check and the debt listing, the wiring resolver, and the rule-set validator are part of the `pkit` tool, alongside the validators ADR-056 places. Nothing below the tool layer imports them. Their consumers reach them as commands: people, agents, and the project's check aggregator and pipeline directly; capability scripts and migrations through the engines' machine-readable reading commands, never by importing the engine or re-walking the places themselves.
+
+2. **One home per computation.** Where artefacts are and what they declare, how the wiring resolves, and how a version relation compares are each to be computed in exactly one module that every reader calls — the plans COR-053 promises are exact only because they run the live resolver. Some are still computed twice: artefact discovery reads two file sources — validation the working tree, and the change check this change-set adds git's listing — with their differences documented; the configuration pass reads friction patterns and checks a contributor selection on its own; container validation does not yet ask the resolver which roles are active (#1030); and version ranges are compared in several older places besides the resolver. That is recorded debt, consolidated by #1034 and #1030. The anchor-kind registry already has one home, which the friction checks and the rule-set validator both call.
+
+3. **Query commands declare the query contract; the engine that runs one enforces what it can.** A command a capability registers as an anchor-kind resolver or a data-point filler carries, on its own entry in the capability's command registry, one constant declaration that it honours the query contract — the three limits COR-050 point 2 and COR-052 point 6 set (bounded, deterministic, needing no network) and read-only, which this record adds because the reading commands that start these queries never write (COR-050 points 12–13). The declaration grants nothing and writes nothing to the sandbox; egress stays on the confinement-toolkit path (ADR-015). Validation of package metadata reports a registered query command without it, when the author can still fix it; whichever engine runs one — the friction checks and rule-set validation for resolvers, data-point resolution (placed elsewhere) for fillers — refuses it, as the backstop. When it runs one:
+   - **time** is bounded by a fixed backbone constant, the same thirty seconds the predicate runner uses, and exceeding it kills the whole process group — a script with a `uv run --script` shebang starts its interpreter as a grandchild;
+   - **the answer** is parsed and validated against the shape of what was asked — for a resolver, the answer shape the backbone defines; for a filler, the point's schema its definer ships, inside the filler envelope ADR-056 places (COR-052 point 2); an abnormal exit, a timeout, or an unparsable or invalid answer is *no answer* — which is never an empty answer — and each caller applies its own record's rule to it: an anchor stays unresolved, a data point follows its inert policy;
+   - **the environment** is marked offline, so a well-behaved command can tell.
+
+   The literal of the declaration, the marker, the resolver's answer shape, and how a script's dependencies are made available before an offline run, belong to the reference and are specified with the first query command that runs; until then the refusal is a tested function and no capability command is run.
+
+4. **What is not enforced, stated.** No layer of this distribution holds a single command to "no network". A sandbox, where one applies, admits every host the session allowed; on macOS the commands the engine starts run outside it; in a pipeline or a terminal nothing confines them. Determinism and read-only are likewise declared and judged in review. The engine is an honest interlock — checked at validation, trusted at run time — not a boundary.
+
+5. **Predicates stay on their own runner.** The process engine's predicates are not queries in this sense: they may reach the network, and the gate that reads them decides what their output means. They keep their runner and its policy. The runners should share one command lookup and one start, bound, capture and parse primitive — one mechanism with a policy per kind: query, predicate, and later subscriber (COR-053 point 11). That extraction is #1035, since walking the command registry now happens in three places.
+
+6. **What this record places of COR-053, and what it leaves.** It places the resolver, and with it everything that reads the resolver: the graph, the status and validation lines, and the install and uninstall plans ship in the binary and call it (this record's points 1 and 2), and the wiring graph subsumes the process graph rather than sitting beside it (COR-053 point 7). The refresh of generated dependency lists and the event runner with its loop guard and chain report are placed by the Tasks that build them, in their own records, as are data-point resolution (combining fillers, precedence, the inert policy) and the source of each edge in the graph. Subscribers are actions, not queries: this record does not realise their limits; COR-053 point 9 sets them.
+
+## Rationale
+
+**Why the binary.** ADR-020's test is whether a consumer below the tool layer must import the code. None does: every reader of friction, wiring or rules is a `pkit` command, capability scripts already call `pkit` as a subprocess, and the project's check aggregator invokes the CLI. Shipping the engines in the tree would add a copy to version and a third version axis for nothing.
+
+**Why one home each.** The value of a plan, a graph or a status line is that it agrees with what validation and the checks conclude. Two computations drift, and the one people trust — the plan before an install — would be the one that lies. Naming the existing duplicates keeps the record honest the day it is accepted; the rule is met once #1034 lands.
+
+**Why a declaration of the whole contract, on the command.** The records ask three things of a query command and this record adds a fourth; stating only one of them would imply the others need no thought. A declaration on the command's own entry is literally per command, and a command used by two registrations is declared once. Reporting it at validation puts the requirement in front of the author; refusing at run time keeps a missed report from becoming a silent run.
+
+**Why not decide from egress.** Refusing the commands of a capability that "holds egress" was considered and cannot work: confinement toolkits are per tool, not per capability ([ADR-008](ADR-008-confinement-allowances.md) rule 1), and egress is session-wide (ADR-015), so a grant is neither necessary nor sufficient for a given command to reach the network.
+
+**Why the rest waits.** No capability registers a query command yet. The answer shapes, the dependency question and the event runner are best decided against the first real consumer, and the Tasks that bring those consumers are filed.
+
+**Why an ADR.** The core records fix the limits and leave where the engines live and how the limits are realised to the project; this is project-kit's realisation, at the altitude of ADR-020 and ADR-056 ([COR-025](../../../.pkit/decisions/core/COR-025-adr-decision-space.md)).
+
+### Alternatives considered
+
+- **Propagate the engines into the tree.** Rejected: no consumer below the tool layer; a third version axis for nothing (ADR-020).
+- **Refuse commands by their capability's egress.** Rejected: toolkits are per tool (ADR-008 rule 1) and egress is session-wide (ADR-015); a grant says nothing about a command.
+- **Start query commands under an operating-system sandbox from the engine.** Rejected: pkit manages but delegates confinement (ADR-004 points 2 and 3); a per-command confinement layer of its own would reopen that split and differ per platform. The harness's own box cannot host `uv` on macOS (ADR-014), which is why these commands run outside it.
+- **Declare only "no network".** Rejected: the records ask three things of a query command and this record adds a fourth; declaring one implies the rest need no thought.
+- **A configurable time bound.** Rejected for this record: a project setting would be a backbone configuration key, which only a core record may own (COR-048 point 2).
+- **Put subscribers under the query contract.** Rejected: subscribers write, so read-only and "no answer" cannot apply to effects. COR-053 point 9 still holds them to the same time bound, no network, determinism and fail-closed reporting, plus the effect report, the opt-out and the loop guard; their record realises these.
+
+## Implications
+
+- The friction checks, the wiring resolver and the rule-set validator are modules of the binary; each computation is to have one home, and the duplicates named in point 2 are debt.
+- #1034 consolidates the duplicates named in point 2; #1035 extracts the command primitive the runners share (point 5).
+- The package-metadata reference gains the declaration's literal, the offline marker and the resolver's answer shape when the first query command is specified; the package schema then requires the declaration on registered query commands.
+- The CLI reference's resolver-limits paragraph states the gap as point 4 does, including macOS, and cites this record.
+- **Raised for a core decision (#1036).** COR-050 point 2, COR-052 point 6 and COR-053 point 9 require the commands a capability supplies — queries and subscribers alike — to run with no network access. No distribution can hold a single command to that portably. Reading the requirement as a declaration that is required, reported and trusted is a universal reading, not project-kit's alone; this record adopts it for project-kit provisionally, and the maintainer decides in #1036 — before the first query command runs — whether the core records say so.
+- **Recorded trigger to revisit.** If a consumer below the tool layer ever needs one of these engines in-process, ADR-020's test is reopened for that engine.
