@@ -15,8 +15,8 @@
 set -uo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
-# Base ref for the migration-coverage diff. CI overrides via env for PRs;
-# locally it defaults to the tracked main.
+# Base ref for the diff-based checks (migration coverage, friction). CI
+# overrides via env for PRs; locally it defaults to the tracked main.
 BASE="${PKIT_CHECK_BASE:-origin/main}"
 
 fail=0
@@ -36,6 +36,7 @@ run "tests"              uv run pytest -q
 run "schemas validate"   uv run pkit schemas validate
 run "decisions validate" uv run pkit decisions validate
 run "migrations check"   uv run pkit migrations check-diff --base "${BASE}"
+run "friction check"     uv run pkit friction check --base "${BASE}"
 run "changelog lint"     uv run pkit release lint
 
 echo
