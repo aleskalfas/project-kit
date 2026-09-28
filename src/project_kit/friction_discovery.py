@@ -343,15 +343,24 @@ def files_in_place(target_root: Path, place: Place) -> list[Path]:
             candidates = iter([literal])
         else:
             candidates = iter([])
-    matched = {
-        path
-        for path in candidates
-        if path.is_file()
-        and path.suffix == DOCUMENT_SUFFIX
-        and not _under_skipped(path.relative_to(target_root))
-        and _resolves_inside(target_root, path)
-    }
-    return sorted(matched, key=lambda p: p.relative_to(target_root).as_posix())
+    # One entry per resolved file: an in-repository link to another matched
+    # file is read once, under the first name the walk meets.
+    matched: dict[Path, Path] = {}
+    try:
+        for path in candidates:
+            if (
+                path.is_file()
+                and path.suffix == DOCUMENT_SUFFIX
+                and not _under_skipped(path.relative_to(target_root))
+                and _resolves_inside(target_root, path)
+            ):
+                matched.setdefault(path.resolve(), path)
+    except (ValueError, NotImplementedError):
+        # `Path.glob` before 3.13 rejects `**` mixed into a segment
+        # (`docs/**.md`); the configuration pass reports the pattern as
+        # matching nothing, so here it simply matches nothing.
+        return []
+    return sorted(matched.values(), key=lambda p: p.relative_to(target_root).as_posix())
 
 
 def _under_skipped(rel: Path) -> bool:

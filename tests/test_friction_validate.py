@@ -545,3 +545,25 @@ def test_is_inside_repository(tmp_path: Path) -> None:
     assert not fd.is_inside_repository(root, "docs/linked/**")
     # `sub` does not exist: the nearest existing ancestor is the link out.
     assert not fd.is_inside_repository(root, "docs/linked/sub/**")
+
+
+def test_a_glob_with_star_star_inside_a_segment_matches_nothing_and_never_raises(
+    make_adopter_repo,
+) -> None:
+    """`docs/**.md` is rejected by `Path.glob` before Python 3.13; the walk must
+    treat it as matching nothing rather than crash `pkit validate`."""
+    from project_kit import friction_discovery
+
+    repo = make_adopter_repo()
+    root = repo.root
+    (root / "docs").mkdir(exist_ok=True)
+    (root / "docs" / "page.md").write_text("---\npkit: {friction: {anchors: {path: [src]}}}\n---\n# p\n")
+    place = friction_discovery.Place(
+        pattern="docs/**.md",
+        declaration=friction_discovery.SettingsPath(
+            value="docs/**.md", resolved=root / "docs", file=root / ".pkit/project/config.yaml",
+            pointer="/friction/places/0", source="project",
+        ),
+    )
+    files = friction_discovery.files_in_place(root, place)
+    assert all(f.suffix == ".md" for f in files)
