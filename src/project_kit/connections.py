@@ -85,6 +85,7 @@ from __future__ import annotations
 import dataclasses
 import hashlib
 import json
+import shlex
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
 from enum import Enum
@@ -117,6 +118,10 @@ _yaml = YAML(typ="safe")
 CONNECTIONS_KEY = "connections"
 PROVIDERS_KEY = "providers"
 SELECTIONS_KEY = "selections"
+
+# The configuration command that writes a provider selection: a role conflict
+# names it, once per provider, as the exact fix (`provider_set_command`).
+PROVIDERS_SET_COMMAND = "pkit connections providers set"
 
 # A component's companion schemas and, by convention, its process definitions
 # (`schemas/<process-id>.yaml`, the process area README; `pkit process new`
@@ -877,15 +882,18 @@ def _role_findings(
     findings: list[Finding] = []
     for role in roles:
         if role.conflict:
+            commands = " or ".join(
+                f"`{provider_set_command(role.role, name)}`" for name in role.providers
+            )
             findings.append(
                 Finding(
                     config_file,
                     f"/{CONNECTIONS_KEY}/{PROVIDERS_KEY}",
                     Severity.ERROR,
                     f"role {role.role!r} is provided by {_list(role.providers)} and no "
-                    f"provider is selected; select one with the `{CONNECTIONS_KEY}."
-                    f"{PROVIDERS_KEY}` entry `{role.role}: <one of them>`"
-                    f"{_config_set_hint(PROVIDERS_KEY, role.role)} (COR-053 point 1).",
+                    f"provider is selected; select one with {commands}, which writes the "
+                    f"`{CONNECTIONS_KEY}.{PROVIDERS_KEY}` entry `{role.role}: <one of them>` "
+                    f"(COR-053 point 1).",
                 )
             )
             continue
@@ -1581,6 +1589,12 @@ def _is_qualified_role(name: str) -> bool:
     """`<publisher>::<role>`, each side non-empty and free of `:`."""
     publisher, sep, role = name.partition(ROLE_QUALIFIER)
     return bool(sep and publisher and role) and POINT_SEPARATOR not in publisher + role
+
+
+def provider_set_command(role: str, capability: str) -> str:
+    """The exact command that selects `capability` as the provider of the qualified
+    `role` — the fix a role conflict names, in `pkit validate` and `pkit status`."""
+    return f"{PROVIDERS_SET_COMMAND} {shlex.quote(role)} {shlex.quote(capability)}"
 
 
 def _config_set_hint(key: str, entry: str) -> str:

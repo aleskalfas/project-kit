@@ -193,10 +193,12 @@ def test_two_providers_without_a_selection_is_a_role_conflict(
         (".pkit/project/config.yaml:/connections/providers", "error")
     ]
     message = wiring.findings[0].message
-    assert "select one with the `connections.providers` entry `pkit::documentation: <one of" in (
-        message
-    )
-    assert "`pkit config set connections.providers.pkit::documentation <capability>`" in message
+    # The exact command that resolves it, once per provider, and the entry it writes.
+    assert (
+        "select one with `pkit connections providers set pkit::documentation docs-a` or "
+        "`pkit connections providers set pkit::documentation docs-b`, which writes the "
+        "`connections.providers` entry `pkit::documentation: <one of them>`"
+    ) in message
 
 
 def test_a_provider_selection_resolves_the_conflict_and_the_other_provider_is_inert(

@@ -477,6 +477,58 @@ def connections_graph(
     )
 
 
+@connections_group.group("providers")
+def connections_providers() -> None:
+    """The provider selection (COR-053 point 7): which installed capability answers a
+    role several provide — the configuration's `connections.providers` key."""
+
+
+@connections_providers.command("set")
+@click.argument("role", metavar="ROLE")
+@click.argument("capability", metavar="CAPABILITY")
+@click.option(
+    "--yes",
+    is_flag=True,
+    default=False,
+    help="Consent to the write without a prompt (CI). Without it a terminal is asked, "
+    "after the diff; a non-interactive run refuses.",
+)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Show what would be written, as a diff, and write nothing.",
+)
+def connections_providers_set(role: str, capability: str, yes: bool, dry_run: bool) -> None:
+    """Select CAPABILITY as the provider of ROLE (`<publisher>::<role>`).
+
+    Writes the `connections.providers` entry of `.pkit/project/config.yaml`
+    through the consent-gated writer (COR-048 point 5), after checking that
+    CAPABILITY is installed and declares ROLE. The diff is shown first;
+    `--dry-run` stops there. A role conflict names this command as its fix.
+    """
+    from project_kit import connections_config
+
+    if yes and dry_run:
+        raise click.UsageError(
+            "--yes and --dry-run exclude each other: one writes, the other never does."
+        )
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    change = connections_config.plan(target_root, role, capability)
+    key = connections_config.key(role)
+    if not change.changes:
+        click.echo(f"{key} is already {capability}; nothing to write.")
+        return
+    click.echo(change.diff(), nl=False)
+    if dry_run:
+        click.echo(cli_render.style("strong", "Dry run: nothing written."))
+        return
+    path = connections_config.write(target_root, role, capability, yes=yes)
+    click.echo(f"set {key} = {capability}  ({path.relative_to(target_root).as_posix()})")
+
+
 @main.group("friction")
 def friction() -> None:
     """Anchors and friction (COR-050): the reading commands — the checks, the
