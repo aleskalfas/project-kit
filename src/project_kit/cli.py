@@ -92,6 +92,7 @@ from project_kit.versioning import (
 
 if TYPE_CHECKING:
     from project_kit.process import ProcessEngine
+    from project_kit.process_graph import Graph
 
 
 @click.group(cls=CapabilityDispatchGroup, invoke_without_command=True)
@@ -326,6 +327,153 @@ def config_set(key: str, value: str, yes: bool) -> None:
     )
     click.echo(
         f"set {resolved.dotted} = {typed}  ({project_config.PROJECT_CONFIG_RELPATH.as_posix()})"
+    )
+
+
+def _graph_format_options(command: Callable[..., None]) -> Callable[..., None]:
+    """The output options both graph commands share (`process graph`, `connections
+    graph`): the adjacency view by default, or one of three other formats."""
+    options = [
+        click.option(
+            "--flow",
+            "fmt_flow",
+            is_flag=True,
+            default=False,
+            help="ASCII downstream pipeline (work-flows-this-way) instead of the adjacency view.",
+        ),
+        click.option(
+            "--mermaid",
+            "fmt_mermaid",
+            is_flag=True,
+            default=False,
+            help="Emit a mermaid flowchart (derived = thick ==>, declared-pull = -->, "
+            "push = -.->, resolved = --o).",
+        ),
+        click.option(
+            "--json",
+            "fmt_json",
+            is_flag=True,
+            default=False,
+            help="Emit the byte-stable machine form {nodes, edges, skipped} (no styling; "
+            "deterministic order).",
+        ),
+        click.option(
+            "--verbose",
+            is_flag=True,
+            default=False,
+            help="Show each edge's `why` (default omits it).",
+        ),
+    ]
+    for option in reversed(options):
+        command = option(command)
+    return command
+
+
+def _refuse_several_formats(fmt_flow: bool, fmt_mermaid: bool, fmt_json: bool) -> None:
+    if sum([fmt_flow, fmt_mermaid, fmt_json]) > 1:
+        raise click.ClickException(
+            "choose at most one of --flow / --mermaid / --json (the default is the adjacency view)."
+        )
+
+
+def _echo_graph(
+    graph: Graph,
+    *,
+    fmt_flow: bool,
+    fmt_mermaid: bool,
+    fmt_json: bool,
+    verbose: bool,
+    title: str | None = None,
+    flow_title: str | None = None,
+    empty: str | None = None,
+) -> None:
+    """Render a graph in the chosen format, through the one set of renderers
+    (`process_graph`); the titles default to the process graph's."""
+    from project_kit import process_graph as pg
+
+    if fmt_json:
+        click.echo(pg.render_json(graph), nl=False)
+    elif fmt_mermaid:
+        click.echo(pg.render_mermaid(graph), nl=False)
+    elif fmt_flow:
+        click.echo(
+            pg.render_flow(graph, verbose=verbose, title=flow_title or pg.PROCESS_FLOW_TITLE),
+            nl=False,
+        )
+    else:
+        click.echo(
+            pg.render_adjacency(
+                graph,
+                verbose=verbose,
+                title=title or pg.PROCESS_TITLE,
+                empty=empty or pg.PROCESS_EMPTY,
+            ),
+            nl=False,
+        )
+
+
+@main.group("connections")
+def connections_group() -> None:
+    """Connection points (COR-053): the one wiring graph, and the provider selection.
+
+    The wiring the installed packages and the configuration resolve to is
+    reported by `pkit validate` (its `connections` member) and shown by `pkit
+    status` (its Connections section). Reference: `.pkit/cli/README.md`,
+    "Connections commands".
+    """
+
+
+@connections_group.command("graph")
+@_graph_format_options
+@click.option(
+    "--kind",
+    "kinds",
+    type=click.Choice(["data", "process", "event"]),
+    multiple=True,
+    help="Keep only edges of this kind (repeatable). `process` is exactly what "
+    "`pkit process graph` renders.",
+)
+def connections_graph(
+    fmt_flow: bool, fmt_mermaid: bool, fmt_json: bool, verbose: bool, kinds: tuple[str, ...]
+) -> None:
+    """Render the one wiring graph (COR-053 point 7), read-only.
+
+    \b
+    Every edge, in the process graph's format:
+      derived    subprocess / cascade blocks of the process definitions
+      annotated  their depends_on entries (either address form)
+      resolved   the wiring resolver: provider → point ← counterparts —
+                 accepts / emits / offers from the definer; contributes,
+                 subscribes, fills from a counterpart; the mode is how the
+                 edge stands (active, conflict, bound, inert (version), …)
+
+    `pkit process graph` is this graph filtered to its process edges, so the
+    two never disagree. It reads declarations only: no filler command runs, no
+    position resolves. The generated depends-on list of package metadata is not
+    drawn — the depends_on edges it copies are.
+    """
+    from project_kit import process as process_mod
+    from project_kit import process_graph as pg
+    from project_kit import wiring_graph as wg
+
+    _refuse_several_formats(fmt_flow, fmt_mermaid, fmt_json)
+    try:
+        graph = wg.build_wiring_graph(process_mod.resolve_repo_root())
+    except process_mod.ProcessError as exc:
+        raise click.ClickException(str(exc)) from exc
+    if kinds:
+        graph = wg.with_kinds(graph, kinds)
+    # Through the process graph's filter pass, unconstrained: a view shows the
+    # nodes its edges touch, exactly as `process graph` renders its own.
+    _echo_graph(
+        pg.apply_filters(graph, pg.FilterSpec()),
+        fmt_flow=fmt_flow,
+        fmt_mermaid=fmt_mermaid,
+        fmt_json=fmt_json,
+        verbose=verbose,
+        title=wg.TITLE,
+        flow_title=wg.FLOW_TITLE,
+        empty=wg.EMPTY,
     )
 
 
@@ -5965,23 +6113,12 @@ def process_handoff(
 
 
 @process.command("graph")
-@click.option(
-    "--flow", "fmt_flow", is_flag=True, default=False,
-    help="ASCII downstream pipeline (work-flows-this-way) instead of the adjacency view.",
-)
-@click.option(
-    "--mermaid", "fmt_mermaid", is_flag=True, default=False,
-    help="Emit a mermaid flowchart (derived = thick ==>, declared-pull = -->, push = -.->).",
-)
-@click.option(
-    "--json", "fmt_json", is_flag=True, default=False,
-    help="Emit the byte-stable machine form {nodes, edges} (no styling; deterministic order).",
-)
+@_graph_format_options
 @click.option("--capability", default=None, help="Atomic filter: keep edges touching this capability.")
 @click.option("--process", "focus_process", default=None, help="Atomic filter: focus on this <capability>:<process-id> (hops counted from it).")
 @click.option("--relation", "relations_csv", default=None, help="Atomic filter: keep only these relation kinds (csv).")
 @click.option("--mode", "mode", type=click.Choice(["pull", "push"]), default=None, help="Atomic filter: keep only edges of this mode.")
-@click.option("--source", "source", type=click.Choice(["derived", "annotated"]), default=None, help="Atomic filter: keep only edges of this source.")
+@click.option("--source", "source", type=click.Choice(["derived", "annotated", "resolved"]), default=None, help="Atomic filter: keep only edges of this source (`resolved`: the offered-process edges the wiring resolver adds).")
 @click.option("--depth", type=int, default=None, help="Atomic filter: hops from the focused --process (requires --process). Without --direction it is UNDIRECTED (the depth-bounded neighbourhood), distinct from the directed --upstream-of/--downstream-of closures.")
 @click.option("--direction", type=click.Choice(["in", "out"]), default=None, help="Atomic filter: with --process, keep only its out- or in-edges (requires --process).")
 @click.option("--enforced", is_flag=True, default=False, help="Preset = source:derived ∪ relation:gates-on-readiness (the edges that actually block).")
@@ -5993,7 +6130,6 @@ def process_handoff(
 @click.option("--cycles", is_flag=True, default=False, help="Preset = edges lying on a dependency cycle.")
 @click.option("--upstream-of", "upstream_of", default=None, help="Preset = transitive closure of what this <addr> depends on.")
 @click.option("--downstream-of", "downstream_of", default=None, help="Preset = transitive closure of what depends on this <addr>.")
-@click.option("--verbose", is_flag=True, default=False, help="Show each edge's `why` (default omits it).")
 def process_graph(
     fmt_flow: bool,
     fmt_mermaid: bool,
@@ -6022,9 +6158,12 @@ def process_graph(
     \b
     The render is DERIVED edges (from each definition's subprocess/cascade
     blocks) ∪ ANNOTATED edges (from each state's depends_on list) — no edge
-    expressible both ways (COR-038's derive-don't-annotate). It reads
-    DECLARATIONS only: it never resolves a live subject position, never runs a
-    predicate, never moves anything (that is the safety point).
+    expressible both ways (COR-038's derive-don't-annotate) — plus the
+    RESOLVED `offers` edges by which a role-addressed depends_on reaches the
+    process offering it. It is the one wiring graph (`pkit connections graph`,
+    COR-053 point 7) filtered to its process edges, so the two never disagree.
+    It reads DECLARATIONS only: it never resolves a live subject position, never
+    runs a predicate, never moves anything (that is the safety point).
 
     \b
     Presets are documented EXPANSIONS of the atomic filters (a preset is a named
@@ -6057,11 +6196,9 @@ def process_graph(
     """
     from project_kit import process as process_mod
     from project_kit import process_graph as pg
+    from project_kit import wiring_graph as wg
 
-    if sum([fmt_flow, fmt_mermaid, fmt_json]) > 1:
-        raise click.ClickException(
-            "choose at most one of --flow / --mermaid / --json (the default is the adjacency view)."
-        )
+    _refuse_several_formats(fmt_flow, fmt_mermaid, fmt_json)
     # --depth / --direction count hops FROM the focused --process, so they are
     # only meaningful with it. They are consumed inside the --process focus pass;
     # without --process they would be silently ignored (G3), so fail loudly.
@@ -6097,18 +6234,16 @@ def process_graph(
     )
     try:
         repo_root = process_mod.resolve_repo_root()
-        graph = pg.apply_filters(pg.build_graph(repo_root), spec)
+        view = wg.process_view(wg.build_wiring_graph(repo_root))
     except process_mod.ProcessError as exc:
         raise click.ClickException(str(exc)) from exc
-
-    if fmt_json:
-        click.echo(pg.render_json(graph), nl=False)
-    elif fmt_mermaid:
-        click.echo(pg.render_mermaid(graph), nl=False)
-    elif fmt_flow:
-        click.echo(pg.render_flow(graph, verbose=verbose), nl=False)
-    else:
-        click.echo(pg.render_adjacency(graph, verbose=verbose), nl=False)
+    _echo_graph(
+        pg.apply_filters(view, spec),
+        fmt_flow=fmt_flow,
+        fmt_mermaid=fmt_mermaid,
+        fmt_json=fmt_json,
+        verbose=verbose,
+    )
 
 
 if __name__ == "__main__":

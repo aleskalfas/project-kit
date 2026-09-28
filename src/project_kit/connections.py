@@ -220,6 +220,7 @@ class Point:
     schema: str | None = None  # companion schema, relative to the provider's schemas/
     process_id: str | None = None  # process: the offered definition's id
     fingerprint: str | None = None  # sha256 of the canonical companion schema, when readable
+    description: str | None = None  # the required prose, read by people in the graph
 
     @property
     def policy(self) -> str | None:
@@ -241,6 +242,7 @@ class Counterpart:
     pointer: str  # JSON Pointer to the entry in its package file
     mandatory: str | None = None  # the reason, when the mark is set
     command: str | None = None
+    description: str | None = None  # the optional prose, read by people in the graph
 
     @property
     def role_form(self) -> bool:
@@ -1351,6 +1353,7 @@ def _points_of(component: Installed) -> list[Point]:
                     schema=schema,
                     process_id=_optional_str(raw, "process"),
                     fingerprint=_fingerprint(component.component_dir, schema),
+                    description=_optional_str(raw, "description"),
                 )
             )
     return points
@@ -1397,6 +1400,7 @@ def _counterparts_of(component: Installed) -> list[Counterpart]:
                     pointer=f"{base}/{index}",
                     mandatory=_mandatory_reason(entry),
                     command=_optional_str(entry, "command"),
+                    description=_optional_str(entry, "description"),
                 )
             )
     return out
