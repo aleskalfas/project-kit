@@ -672,6 +672,17 @@ def test_dormant_without_places(repo: AdopterRepo) -> None:
     assert "no places declared; dormant." in result.output
 
 
+@pytest.mark.parametrize("places", [(), ("docs",)], ids=["dormant", "awake"])
+def test_a_mode_that_is_not_a_mode_reads_as_warning_and_says_so(
+    repo: AdopterRepo, places: tuple[str, ...]
+) -> None:
+    _start(repo, {"docs/guide.md": _guide()}, config=_config(mode="enforcin", places=places))
+    repo.commit("change the CLI only", {"src/cli/main.py": "print('m')\n"})
+    result = _run(repo)
+    assert (result.mode, result.exit_code) == ("warning", 0)
+    assert "friction.mode 'enforcin' is not a mode; read as warning" in fc.render_human(result)
+
+
 def test_dormant_demands_no_repository(tmp_path: Path) -> None:
     result = fc.run_change_check(tmp_path, "main")
     assert (result.dormant, result.base, result.head, result.exit_code) == (True, None, None, 0)

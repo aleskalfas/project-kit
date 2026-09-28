@@ -1132,11 +1132,7 @@ def _header_lines(result: ChangeCheck) -> list[str]:
         lines.append(f"  Head: {result.head.commit[:_SHORT]} {working}")
     gloss = _MODE_GLOSS.get(result.mode, "")
     lines.append(f"  Mode: {result.mode}" + cli_render.style("muted", f"   ({gloss})"))
-    if result.mode_as_written is not None and result.mode_as_written != result.mode:
-        lines.append(
-            f"  ⚠ friction.mode {result.mode_as_written!r} is not a mode; read as "
-            f"{result.mode} — `pkit validate` fails on it"
-        )
+    lines.extend(_mode_warning(result))
     for finding in result.findings:
         if finding.kind is FindingKind.OUTDATED_BASE:
             lines.append(f"  ⚠ outdated base: {finding.message}")
@@ -1154,7 +1150,18 @@ def _dormant_lines(result: ChangeCheck) -> list[str]:
     lines = [f"  {counts}"]
     if result.base is not None:
         lines.append(f"  Base: {result.base.ref} at {result.base.commit[:_SHORT]}")
+    lines.extend(_mode_warning(result))
     return lines
+
+
+def _mode_warning(result: ChangeCheck) -> list[str]:
+    """A line when `friction.mode` is not a mode: read as the default, never silently."""
+    if result.mode_as_written is None or result.mode_as_written == result.mode:
+        return []
+    return [
+        f"  ⚠ friction.mode {result.mode_as_written!r} is not a mode; read as {result.mode} "
+        f"— `pkit validate` fails on it"
+    ]
 
 
 def _failing_summary(result: ChangeCheck) -> str:
