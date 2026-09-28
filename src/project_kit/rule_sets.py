@@ -26,7 +26,8 @@ This module:
   origins; successors; inheritance (points 3, 5 and 7). Whether a pinned
   major is still the inherited set's is a version relation: `pin_checks`
   hands it to the wiring resolver, which reports every version relation
-  under `versions` (`connections.rule_set_pin_findings`);
+  under `versions` (`connections.rule_set_pin_findings`), and `pkit status`
+  shows each pin behind with the edit that re-pins it (`PinCheck.fix`);
 - resolves citations to rules (`resolve_citation`) and lists rule ids
   claimed more than once in the rule-set space (`rule_id_collisions`), for
   `pkit refs` and `pkit decisions validate`.
@@ -1403,7 +1404,8 @@ class PinCheck:
     Inheriting a set pins its major (COR-051 point 7); a newer major fails
     validation until the inheriting set's owner reviews it and updates the pin.
     `pkit validate` reports it with the other version relations, under
-    `versions` (`connections.rule_set_pin_findings`).
+    `versions` (`connections.rule_set_pin_findings`); `pkit status` shows
+    each such pin with its fix.
     """
 
     rule_set: RuleSet  # the inheriting set
@@ -1416,15 +1418,36 @@ class PinCheck:
         return f"/inherits/{self.index}"
 
     @property
-    def problem(self) -> str | None:
-        """Why the pin no longer holds, naming the new major; None while it does."""
+    def repinned(self) -> Pin | None:
+        """The pin the inherited set's major now calls for; None while the pin holds.
+
+        An unreadable inherited version is the inherited file's shape finding,
+        so it asks for no new pin.
+        """
         major = self.inherited.major
         if major is None or major == self.pin.major:
-            return None  # an unreadable version is the inherited file's shape finding
+            return None
+        return replace(self.pin, major=major)
+
+    @property
+    def fix(self) -> str | None:
+        """The edit that re-pins, once the inherited set has moved on; None while the pin holds."""
+        repinned = self.repinned
+        if repinned is None:
+            return None
+        return (
+            f"review what changed in {self.inherited.citation}, then update the pin to "
+            f"{repinned} in `inherits` of {self.rule_set.path}"
+        )
+
+    @property
+    def problem(self) -> str | None:
+        """Why the pin no longer holds, naming the new major and the fix; None while it does."""
+        if self.repinned is None:
+            return None
         return (
             f"pins {self.pin}, but {self.inherited.citation} is at version "
-            f"{self.inherited.version}, major {major}; review what changed in it, then update "
-            f"the pin to {self.inherited.citation}@{major} (COR-051 point 7)."
+            f"{self.inherited.version}, major {self.inherited.major}; {self.fix} (COR-051 point 7)."
         )
 
 
