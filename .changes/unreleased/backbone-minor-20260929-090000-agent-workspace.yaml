@@ -13,8 +13,10 @@ body: >
   covers every worktree and nothing there reaches a commit; both are
   idempotent, and outside a git repository the folder is created and the
   exclusion skipped with a note; a symlink where the folder belongs is
-  refused, never adopted. `pkit status` reports the workspace and whether git
-  ignores it, naming `pkit sync` when either is missing, and reports a
-  symlink in its place. Every
-  core agent body tells its agent to keep intermediate files there, and
-  `pkit new agent` stamps the same section into a new agent.
+  refused, never adopted. The exclude file covers one clone, so `pkit init`
+  also recommends adding `/.agent-workspace/` to the project's committed
+  `.gitignore`, which pkit never writes itself. `pkit status` reports the
+  workspace and whether git ignores it, naming `pkit sync` when either is
+  missing, and reports a symlink in its place. Every core agent body tells
+  its agent to keep intermediate files there, and `pkit new agent` stamps
+  the same section into a new agent.

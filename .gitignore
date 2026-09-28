@@ -26,3 +26,8 @@ build/
 # migration; a `git add -A` then committed it into #820 — a PR about not
 # shipping other projects' state — where it would have ridden into the sdist.
 .rvw*/
+
+# The agent workspace (#1043): intermediate files agents keep at each checkout's
+# root. `pkit sync` excludes it per clone through `.git/info/exclude`; this line
+# covers every clone, including one that never ran it.
+/.agent-workspace/

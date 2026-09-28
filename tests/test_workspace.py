@@ -4,17 +4,19 @@ local git exclusion idempotently, and `pkit status` reports both.
 
 from __future__ import annotations
 
+import importlib.util
 import subprocess
 from pathlib import Path
 
 import pytest
 from click.testing import CliRunner
 
-from project_kit import sync, workspace
+from project_kit import install, sync, workspace
 from project_kit.cli import status
 from tests.adopter_repo import GitRepo, MakeAdopterRepo
 
 WS = workspace.WORKSPACE_DIR
+DECIDE = Path(__file__).resolve().parent.parent / ".pkit" / "permissions" / "decide.py"
 
 
 def _entry_lines(exclude: Path) -> list[str]:
@@ -145,6 +147,54 @@ def test_a_symlinked_folder_is_refused_not_adopted(tmp_path: Path) -> None:
     assert (repo.root / WS).is_symlink()
     state = workspace.inspect(repo.root)
     assert state.symlinked and not state.present
+
+
+def test_init_recommends_the_committed_gitignore_line(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # The local exclude covers this clone only; the backbone never writes the
+    # adopter's .gitignore (ADR-009), so it recommends the line that covers
+    # every clone.
+    install._print_next_steps(install.InstallContext(tmp_path, tmp_path, dry_run=False))
+
+    out = capsys.readouterr().out
+    steps = out.split("Add to your .gitignore")[1]
+    assert workspace.EXCLUDE_ENTRY in steps.split("5.")[0]
+
+
+# --- the common git directory: git's answer and the decision core's agree --------
+
+
+@pytest.fixture(scope="module")
+def decide_core():
+    spec = importlib.util.spec_from_file_location("decide_for_workspace_conformance", DECIDE)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_the_decision_core_reads_the_common_git_dir_git_reports(decide_core, tmp_path: Path) -> None:
+    # `workspace` asks git (`rev-parse --git-common-dir`); the permission hook
+    # cannot run git in-box, so `decide` parses `.git` by hand. Both must name
+    # the same directory for the main checkout and for a linked worktree, or
+    # the exclusion and the grant would disagree about which folder is whose.
+    repo = GitRepo.init(tmp_path / "repo")
+    repo.commit("initial", {"README.md": "hi\n"})
+    worktree = tmp_path / "wt"
+    repo.git("worktree", "add", "-q", "-b", "topic", str(worktree))
+    checkouts = [repo.root, worktree]
+    # A worktree whose pointers are relative (git 2.48+), where supported.
+    relative = tmp_path / "wt-relative"
+    if repo.git(
+        "worktree", "add", "-q", "--relative-paths", "-b", "relative", str(relative), check=False
+    ).returncode == 0:
+        checkouts.append(relative)
+
+    for checkout in checkouts:
+        expected = workspace.common_git_dir(checkout)
+        assert expected is not None
+        assert Path(decide_core._common_git_dir(str(checkout))) == expected, checkout
 
 
 # --- pkit status -----------------------------------------------------------------

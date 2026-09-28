@@ -15,6 +15,11 @@ entry cover every worktree of the clone: the anchored pattern matches the folder
 at each worktree's own root, which is where an agent working in that worktree
 keeps its files.
 
+It covers this clone only. The project's committed `.gitignore` is the
+adopter's file, which the backbone never writes (ADR-009) — so `pkit init`
+recommends adding the same line there, which covers every clone, including one
+that never runs init or sync.
+
 The folder must be a real directory. A symlink named `.agent-workspace` is never
 the workspace — the permission model's grant would follow it to wherever it
 points — so init and sync refuse it rather than adopting it, and status reports
@@ -57,16 +62,26 @@ def _git(root: Path, *args: str) -> subprocess.CompletedProcess[str] | None:
         return None
 
 
-def exclude_file(root: Path) -> Path | None:
-    """The exclude file every worktree of `root`'s repository reads, or `None`
-    when git does not recognise `root` as inside a repository (or is absent)."""
+def common_git_dir(root: Path) -> Path | None:
+    """The git directory every worktree of `root`'s repository shares, resolved,
+    or `None` when git does not recognise `root` as inside a repository (or is
+    absent). The permission decision core reads the same directory by hand from
+    `.git` (`decide._common_git_dir`), where git cannot run; a conformance test
+    keeps the two in step."""
     result = _git(root, "rev-parse", "--git-common-dir")
     if result is None or result.returncode != 0 or not result.stdout.strip():
         return None
     common = Path(result.stdout.strip())
     if not common.is_absolute():
         common = root / common
-    return common.resolve() / "info" / "exclude"
+    return common.resolve()
+
+
+def exclude_file(root: Path) -> Path | None:
+    """The exclude file every worktree of `root`'s repository reads, or `None`
+    outside a repository."""
+    common = common_git_dir(root)
+    return None if common is None else common / "info" / "exclude"
 
 
 def _names_workspace(line: str) -> bool:
