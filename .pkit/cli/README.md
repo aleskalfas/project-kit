@@ -384,6 +384,8 @@ With `<path>`, runs the same passes scoped to the given file or directory — us
 
 The no-PATH gate also runs a **fragment-token-resolution lint** (ADR-021): for every installed capability's `permissions/grants.yaml`, each grant's privilege token must resolve to a privilege in the *merged* catalog, or the deny silently does not bind (the bare-vs-scoped fail-open hazard). The lint reuses the decision core's merge (`load_catalog`) and token normaliser (`_privilege_ids`) so it agrees with the runtime exactly; it covers hand-authored fragments, not just those `permissions scaffold` / `permissions grant` produce. An unresolved token fails the gate with a clear message naming the file, the offending token, and the likely fix (usually the missing `<cap>:` scope). This pass is project-scoped (it needs the manifest + merged catalog), so it runs only in `schemas validate` with no `<path>`, not in the path-scoped form.
 
+The no-PATH gate also **load-checks the backbone file schemas** — every `*.schema.json` under `.pkit/schemas/backbone/` (the methodology's front-matter container today; see the schemas README's "Backbone file schemas" section) must parse as a valid Draft 2020-12 schema. They are not enumerated as pairs. A malformed file fails the gate naming the file and the reason, and the summary line reports how many were checked.
+
 ### `data validate <path>`
 
 Read-only check on **adopter-side data files** against capability schemas (per COR-023, superseding COR-022). Resolves each file's binding in two steps:
