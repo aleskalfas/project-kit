@@ -1,0 +1,20 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  Data points now resolve to a value (#994). A project answers a data point with a filler
+  file at `<internal-root>/pkit/fillers/<publisher>/<role>/<point>.yaml`, in the new
+  `backbone/filler.schema.json` envelope — `schema_version`, `value`, and `remove` for removal
+  overrides, each with its reason. A data point may declare `combination: additive` beside
+  `single` (now the default when none is declared) and `union`, a `default` with its
+  participation (`always` or `alone`) and an `inert` policy (`fallback` or `fail`); a
+  contribution may write its data as `value` instead of naming a command filler. Precedence
+  runs project filler, then contributions, then the default; `union` merges by id with
+  whole-entry overrides, `additive` merges in precedence order and refuses any collision, and
+  an inert filler never promotes an `alone` default nor leaves a partial value. Command fillers
+  take no parameter: run with `--json` alone, offline-marked and bounded, they print the
+  filler envelope, and a command without `query-contract: true` is reported and never run.
+  `pkit validate` reports the resolution under `connections`, and `pkit status` gains a
+  "Data points" section showing how each point resolved and why. COR-052 point 6 now records
+  that a filler takes no parameter: a question with an argument is a process point.
