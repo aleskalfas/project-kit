@@ -17,6 +17,7 @@ import pytest
 from click.testing import CliRunner
 from ruamel.yaml import YAML
 
+from project_kit import agent_policy as ap
 from project_kit import agents_overlay as ao
 from project_kit.cli import main
 
@@ -42,6 +43,27 @@ def test_resolvable_keys_match_adapter_resolver():
     assert _named_tuple("RESOLVABLE_LIST_KEYS") == ao.RESOLVABLE_LIST_KEYS
     assert _named_tuple("HARD_READS_KEYS") == ao.HARD_READS_KEYS
     assert _named_tuple("OPTIONAL_READS_KEYS") == ao.OPTIONAL_READS_KEYS
+
+
+def test_policy_vocabulary_matches_adapter_resolver():
+    """`pkit agents` and `pkit validate` judge model and effort (#1047) by the
+    backbone's vocabulary; the deploy writes by the resolver's. Pin each named
+    constant against its twin so the two cannot disagree on what is accepted."""
+    resolver = (REPO / ".pkit" / "adapters" / "claude-code" / "_resolve_agent.py").read_text()
+
+    def _named(name: str) -> str:
+        m = re.search(rf'(?m)^{name}\s*=\s*(\([^)]*\)|r?"[^"]*")', resolver)
+        assert m, f"could not find {name} in _resolve_agent.py"
+        return m.group(1)
+
+    def _strings(literal: str) -> tuple[str, ...]:
+        return tuple(re.findall(r'"([^"]+)"', literal))
+
+    assert _strings(_named("POLICY_KEYS")) == ap.POLICY_KEYS
+    assert _strings(_named("MODEL_ALIASES")) == ap.MODEL_ALIASES
+    assert _strings(_named("EFFORT_LEVELS")) == ap.EFFORT_LEVELS
+    assert _strings(_named("INHERIT")) == (ap.INHERIT,)
+    assert _named("FULL_MODEL_NAME_PATTERN") == f'r"{ap.FULL_MODEL_NAME_PATTERN}"'
 
 
 # --- fixtures ----------------------------------------------------------------
@@ -120,6 +142,39 @@ def test_expand_placeholders_matches_adapter_resolver(tmp_path):
         )
         assert undefined == []
         assert [e.value for e in entries] == fm["owns"]
+
+
+@pytest.mark.parametrize(("declared", "override"), [
+    ({}, {}),
+    ({"model": "sonnet", "effort": "low"}, {}),
+    ({"model": "opus"}, {"model": "haiku", "effort": "high"}),
+    ({"model": "opus", "effort": "max"}, {"model": "inherit", "effort": "inherit"}),
+    ({"model": "sonet"}, {"effort": "extreme"}),
+])
+def test_effective_policy_matches_adapter_resolver(tmp_path, declared, override):
+    """What `pkit agents` reports as an agent's effective model and effort is
+    exactly what the deploy writes (#1047): a key for a real value, none for
+    inherit — whether it came from the default, the front matter or the overlay,
+    and whether or not the written value was refused."""
+    overlay_text = (
+        "overrides:\n  a:\n" + "".join(f"    {k}: {v}\n" for k, v in override.items())
+        if override else ""
+    )
+    proj = _project(tmp_path, overlay=overlay_text)
+    src = proj / ".pkit" / "agents" / "core" / "a.md"
+    src.write_text(
+        "---\nname: a\n" + "".join(f"{k}: {v}\n" for k, v in declared.items()) + "---\nbody\n",
+        encoding="utf-8",
+    )
+    code, fm, stderr = _resolve_via_adapter(
+        src, "a", proj / ".pkit" / "agents" / "project" / "overlay.yaml"
+    )
+    assert code == 0, stderr
+
+    status = {s.name: s for s in ao.agent_overlay_statuses(proj)}["a"]
+    reported = {s.key: s.value for s in status.policy if s.value != ap.INHERIT}
+    written = {k: fm[k] for k in ap.POLICY_KEYS if k in fm}
+    assert written == reported
 
 
 def test_expand_placeholders_reports_what_the_adapter_refuses(tmp_path):

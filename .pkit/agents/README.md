@@ -39,6 +39,8 @@ Agents and skills share the same frontmatter shape for fields that participate i
 name: backend-implementer
 description: Illustrative only — a project's own domain agent (implementation, debugging, review).
 tools: [Read, Edit, Bash, Glob, Grep, WebFetch, WebSearch]
+model: sonnet                         # optional; absent = inherit (see "Model and effort")
+effort: high                          # optional; absent = inherit
 reads:
   paths:                              # filesystem paths
     - .pkit/decisions/README.md
@@ -65,6 +67,7 @@ You are the **software engineer** for this project. …
 
 - `name`, `description` — agent identity; `description` is the one-line summary surfaced by tooling.
 - `tools` — the harness-recognised tool names this agent is granted (e.g. for Claude Code: `Read`, `Edit`, `Bash`, `Agent`, …). The adapter translates this to the harness's expected format at deploy time.
+- `model`, `effort` — optional: the model the agent runs on and the effort it reasons at. Absent means **inherit** — the deploy writes nothing and the harness default applies. An adopter overrides either per agent from the overlay. See "Model and effort" below. Agents only; the shipped agents set neither.
 - `reads` — references the agent consults at task time. Split into `paths` (filesystem locations), `records` (decision-record IDs like `COR-NNN` or `PRJ-NNN`), and `patterns` (overlay-resolved placeholders). The `paths`/`records`-vs-`patterns` split is a load-bearing authoring lever, not just a filing convention: a category referenced through `reads.paths` or `reads.records` is a **hard** (required) read — if the overlay leaves it undefined the agent is skipped at deploy — whereas a category referenced *only* through `reads.patterns` is an **optional** (corpus) read — undefined resolves to a dropped item and the agent still deploys as a generalist. So a required read goes in `reads.paths`; an optional/corpus read whose absence is a normal early state (a project-conventions corpus, say) goes in `reads.patterns`. The undefined-category behaviour of each channel is spelled out under "Validation" below; the semantics are fixed by the optional-read contract (ADR-052 D1).
 - `owns` — paths the agent has write authority over; entries may be literal paths or `<category>` placeholders the overlay resolves. Every kit-relevant path is meant to have exactly one owning agent; `pkit refs validate` enforces that by flagging cross-agent overlaps over *resolved* paths — see "Exactly-one-owner over `owns:`" below for what it does and does not check. When a *core* agent's `owns:` carries a placeholder the adopter populates, that category is **write-carrying** and picks up extra rules (see "Write-carrying categories"). Agents-only (skills don't own paths).
 - `needs` — hook names this agent invokes. See the "Hooks" section.
@@ -193,6 +196,9 @@ overrides:
     code-paths:
       - tests/integration/
       - tests/unit/
+  critic:
+    model: sonnet     # not a category: the agent's model / effort (see "Model and effort")
+    effort: medium
 ```
 
 The deploy primitive (see "Deploy mechanics" below) substitutes each `<category-name>` placeholder with the resolved value at deploy time. The resolved agent file is what every downstream tool reads.
@@ -200,7 +206,7 @@ The deploy primitive (see "Deploy mechanics" below) substitutes each `<category-
 **Resolution semantics:**
 
 1. Start with the top-level (default) categories.
-2. Apply each entry in `overrides.<agent-name>:` as a **full replacement** (not merge) for that category.
+2. Apply each entry in `overrides.<agent-name>:` as a **full replacement** (not merge) for that category. Two keys of that block are reserved and are not categories: `model` and `effort` set the agent's execution policy ("Model and effort" below).
 3. Substitute placeholders in the agent template; write the resolved file to the harness's expected location.
 
 Per-agent overrides replace; copying base entries into the override is the explicit way to extend. (Merge semantics are deferred per COR-007 until concrete needs surface.)
@@ -253,6 +259,31 @@ Four rules apply to a write-carrying category:
   This is the path for an adopter whose overlay predates a newly-shipped agent's categories — the repair is an explicit, idempotent gesture rather than an automatic sync mutation. Dry-run by default.
 
   Conventional defaults **derive from the project's internal documentation root** ([COR-049](../decisions/core/COR-049-documentation-roots.md) point 4): the backbone owns one list of conventional *sub-paths* in `src/project_kit/docs_roots.py` (`CONVENTIONAL_SUBPATHS` — `architecture-docs` → `architecture`, `adr-records` → `architecture/decisions`), and `reconcile` / `adopt` resolve each to `<docs.internal>/<sub-path>` at run time (`agents_overlay.conventional_category_defaults`). With the default root (`docs/`) that is exactly the historical `docs/architecture` and `docs/architecture/decisions`, which `agents_overlay.CONVENTIONAL_CATEGORY_DEFAULTS` still spells out as the fallback literals; a project that set `docs.internal: tech-docs` gets `tech-docs/architecture/…` instead. Adding a sub-path for a new category is the authoring step that enables auto-fill for adopters who follow the conventional layout and `adopt` for those who prefer the one-command path. When `reconcile --write` or `adopt` fills a category it is **recording a chosen location** (COR-049 point 5): the entry is written uncommented with a `recorded by` annotation, and — being explicit from then on — is never moved by a later change of the root. Write-carrying categories are declared separately, in `.pkit/lifecycle/ownership.py` (`WRITE_CARRYING_CATEGORIES`) — deliberately alongside the sync-managed predicate that guards them, because both the backbone and every adapter's resolver read them from there.
+
+## Model and effort
+
+Unless something says otherwise, an agent runs on whatever model and effort its caller has: dispatched from a session it inherits that session's; started headless it reads the operator's user settings. Two optional front-matter keys let an agent's author say otherwise, and the overlay lets the adopter say otherwise per agent.
+
+| Key | Accepted values | Absent |
+|---|---|---|
+| `model` | `inherit`; a harness alias — `sonnet`, `opus`, `haiku`, `fable`, `best`, `opusplan`, `sonnet[1m]`, `opus[1m]`, `fable[1m]`; or a full model name (`claude-…`, optionally provider-qualified, e.g. `us.anthropic.claude-…`) | inherit |
+| `effort` | `inherit`; `low`, `medium`, `high`, `xhigh`, `max` | inherit |
+
+The values are the harness's own — Claude Code's, the one adapter shipped today; the effort levels are the same list `review-pr --effort` accepts. The backbone holds the vocabulary in `src/project_kit/agent_policy.py`; the adapter's resolver carries the same constants, and a parity test pins the two.
+
+**Precedence**, for each key separately:
+
+1. the overlay's `overrides.<agent>.model` / `overrides.<agent>.effort` — adopter-owned, so it wins over the shipped value without editing a kit-owned file;
+2. the agent's front matter;
+3. inherit.
+
+`inherit` — like an absent or bare key — writes **no key** into the deployed definition, so the harness default applies; an override of `inherit` is how an adopter resets a shipped value. The shipped agents set neither key: this is the mechanism, not a policy, and nothing changes for an adopter who sets nothing.
+
+**A value outside the vocabulary is never written.** The deploy drops it, the agent still deploys and inherits, and the run prints a `warning` line naming the value. `pkit validate` (its `refs` member) reports the same value as an error — at the agent file for a front-matter value, at `overlay.yaml` for an override — so a typo cannot pass silently.
+
+**Reporting.** `pkit agents` shows each agent's effective setting on its row — `model inherit`, `model sonnet`, `effort high (overlay)` — and a refused value as refused.
+
+**Composition with `review-pr --effort`.** The project-management capability's `review-pr` has one run-time effort knob applied to every reviewer it starts (`--effort` flag > `PKIT_REVIEW_AGENT_EFFORT` > `review.agents.effort` in its config). When that knob resolves a value it **wins** over the reviewer's effective effort from its front matter or the overlay — a run-time knob over a declaration; `review-pr` passes it to the harness as the session's `--effort`. When the knob resolves nothing, `review-pr` passes nothing and the agent's effective effort applies (inherit, when that is unset too). The capability's README states the same precedence from its side. The knob is uniform across reviewers by design; per-agent effort belongs here.
 
 ## Deploy mechanics
 

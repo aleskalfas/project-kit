@@ -13,11 +13,13 @@ Two sourcing rules with architectural weight, both degrade-to-omission
   discipline: a value that never originates in a path cannot leak one).
 - **Workstream is pm-capability vocabulary; the backbone asks pm.** The
   pm capability ships the `context-workstream` read verb; this module
-  invokes it by subprocess through the capability-command dispatcher's
-  script resolution (COR-021 — the same mechanic every pm verb uses). The
-  backbone never parses `workstreams.yaml`, never reads issue labels, and
-  carries no knowledge of pm's schema; pm absent / verb absent / empty
-  output all mean "no workstream", silently.
+  resolves it through the capability-command dispatcher's lookup (COR-021 —
+  the same mechanic every pm verb uses) and runs it through the backbone's
+  bounded command runner (`command_runner`, the context-read policy), so a
+  hung tracker call cannot hang the report. The backbone never parses
+  `workstreams.yaml`, never reads issue labels, and carries no knowledge of
+  pm's schema; pm absent / verb absent / empty output all mean "no
+  workstream", silently — an overrun means it too, but says so.
 """
 
 from __future__ import annotations
@@ -25,6 +27,9 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
+import click
+
+from project_kit.command_runner import CommandRun, Ending, run_command
 from project_kit.project_config import (  # noqa: F401 — re-exported for existing readers
     EDITOR_DIRECTIVE,
     PROJECT_CONFIG_RELPATH,
@@ -106,9 +111,16 @@ _WORKSTREAM_VERB = "context-workstream"
 
 def pm_workstream(target_root: Path) -> str | None:
     """The current workstream, asked of the pm capability's
-    `context-workstream` read verb via the dispatcher's script resolution
-    (COR-021). Optional on every axis: capability not installed, verb not
-    declared, script failing, or empty output all yield None."""
+    `context-workstream` read verb: resolved through the dispatcher's lookup
+    (COR-021) and run through the backbone's command runner under the
+    context-read policy — from the project root, with no arguments and the
+    environment unchanged (the verb asks the tracker), bounded by
+    `command_runner.COMMAND_TIMEOUT_SECONDS`, the value read as text.
+
+    Optional on every axis: capability not installed, verb not declared,
+    script not starting or failing, output empty or not UTF-8 all yield None,
+    silently. An overrun yields None too, but says so on stderr: the report
+    waited the bound out, and goes on without the workstream."""
     from project_kit.dispatcher import resolve_capability_script
 
     script = resolve_capability_script(
@@ -116,13 +128,26 @@ def pm_workstream(target_root: Path) -> str | None:
     )
     if script is None:
         return None
-    try:
-        proc = subprocess.run(
-            [str(script)], cwd=target_root,
-            capture_output=True, text=True, check=False,
+    run = run_command(script, [], cwd=target_root)
+    if run.ending is Ending.TIMED_OUT:
+        click.echo(
+            f"warning: workstream omitted — {_WORKSTREAM_CAPABILITY} "
+            f"{_WORKSTREAM_VERB} did not answer within {run.bound_seconds} s "
+            "and was stopped; pass --workstream to name it.",
+            err=True,
         )
-    except OSError:
         return None
-    if proc.returncode != 0:
+    return _printed_value(run)
+
+
+def _printed_value(run: CommandRun) -> str | None:
+    """The value a run of the verb printed, or None. The verb prints its value
+    bare, not as a JSON document, so the runner's parse plays no part: a run
+    that exited 0 carries its standard output whether or not that text parsed
+    as JSON. Output that is not UTF-8 comes back with a `detail` saying so and
+    is no value — never a repaired one."""
+    if run.ending not in (Ending.ANSWERED, Ending.UNPARSABLE):
         return None
-    return proc.stdout.strip() or None
+    if run.returncode != 0 or run.detail:
+        return None
+    return run.stdout.strip() or None

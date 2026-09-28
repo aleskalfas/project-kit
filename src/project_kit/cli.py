@@ -145,8 +145,10 @@ def agents(ctx: click.Context) -> None:
     through a *hard* channel (`owns`/`needs`/`answers`/`reads.paths`/`reads.records`);
     a category referenced *only* via `reads.patterns` is an optional read (ADR-052)
     whose absence never skips — the agent deploys without it, and such undefined
-    categories are surfaced in an `Optional` footer state. Deployment itself
-    happens via `pkit sync`; configuration is `.pkit/agents/project/overlay.yaml`.
+    categories are surfaced in an `Optional` footer state. Each row also shows the
+    agent's effective model and effort: the overlay's `overrides.<agent>` value,
+    else the front matter's, else `inherit`. Deployment itself happens via
+    `pkit sync`; configuration is `.pkit/agents/project/overlay.yaml`.
     """
     if ctx.invoked_subcommand is not None:
         return
