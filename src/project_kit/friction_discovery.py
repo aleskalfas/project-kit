@@ -35,15 +35,19 @@ is the one reader of those declarations and the one walker of the places:
   document (ADR-056 point 2). `parse_artefacts` is the reading of one file's
   text this walk applies; the whole-repository check applies it to a file's
   earlier versions too, so history is read by the same rule as the present.
-- `RepositoryTree` — the seam through which a caller discovers what another
-  state of the repository held. The change check (COR-050 point 6) reads the
-  working tree and its base commit side by side through it, so both sides are
-  listed and matched by one rule (`compile_glob`, `pattern_matches`); without
-  a tree, discovery walks the filesystem as validation does.
+- `RepositoryTree` — the seam through which discovery lists and reads one
+  state of the repository, matching every listing by one rule
+  (`listed_files_in_place`, `compile_glob`, `pattern_matches`). Without a
+  tree, discovery reads the working tree's one listing (`working_tree`):
+  the files git sees, the same listing the change check (COR-050 point 6)
+  reads as its head beside its base commit — so validation, the writers and
+  the change check find the same artefacts in the same working tree
+  (ADR-057 point 2). A link is a file of any listing, never followed and never
+  read as a document.
 
-Nothing here computes friction or touches git: the checks (`friction_check`)
-read the model this module produces, and the git plumbing behind a tree lives
-with them.
+Nothing here computes friction: the checks (`friction_check`) read the model
+this module produces. The listing of the working tree has its home in
+`working_tree`; the git plumbing behind a commit lives with the checks.
 """
 
 from __future__ import annotations
@@ -64,6 +68,7 @@ from ruamel.yaml.error import YAMLError
 from project_kit.backbone_schemas import CONTAINER_KEY, as_written
 from project_kit.manifest import read_backbone_manifest
 from project_kit.report_context import project_config_path
+from project_kit.working_tree import WorkingTree, working_tree
 
 # The key this functionality owns in the backbone configuration and in a
 # capability's package metadata — the same word as the block and the command
@@ -605,54 +610,24 @@ def _literal_prefix(pattern: str) -> str:
     return "/".join(kept)
 
 
-def files_in_place(target_root: Path, place: Place) -> list[Path]:
-    """The Markdown files a place matches, sorted by repository-relative path.
+def files_in_place(
+    target_root: Path, place: Place, tree: WorkingTree | None = None
+) -> list[Path]:
+    """The Markdown files a place matches in the working tree, sorted by repository-relative path.
 
-    A glob matches files; a glob ending in `**` means every Markdown file
-    beneath what precedes it (`Path.glob` yields only directories for a
-    trailing `**` before Python 3.13, so the suffix is spelled out); a path
-    naming a directory means every Markdown file beneath it; a path naming a
-    file means that file. Anything that is not a Markdown file — plain YAML,
-    say — is not a document and is left alone (ADR-056 point 2). A pattern
-    outside the repository matches nothing here, and neither does a match that
-    resolves outside it through a link — the walk never reads a file the
-    repository does not hold. The configuration pass reports the pattern.
+    `listed_files_in_place` over the working tree's one listing (`tree`, by
+    default `working_tree`), so every reader of the working tree finds the
+    same files: the files git sees. A link is a file of the listing but is
+    never read as a document, so it is left out; nothing beneath a link to a
+    folder is listed at all. A pattern outside the repository matches nothing
+    here; the configuration pass reports it.
     """
-    if not is_inside_repository(target_root, place.pattern):
-        return []
-    pattern = os.path.normpath(place.pattern)
-    if pattern == ".":
-        candidates: Iterator[Path] = target_root.rglob(f"*{DOCUMENT_SUFFIX}")
-    elif any(ch in _GLOB_CHARS for ch in pattern):
-        if PurePosixPath(pattern).name == "**":
-            pattern = f"{pattern}/*{DOCUMENT_SUFFIX}"
-        candidates = target_root.glob(pattern)
-    else:
-        literal = target_root / pattern
-        if literal.is_dir():
-            candidates = literal.rglob(f"*{DOCUMENT_SUFFIX}")
-        elif literal.is_file():
-            candidates = iter([literal])
-        else:
-            candidates = iter([])
-    # One entry per resolved file: an in-repository link to another matched
-    # file is read once, under the first name the walk meets.
-    matched: dict[Path, Path] = {}
-    try:
-        for path in candidates:
-            if (
-                path.is_file()
-                and path.suffix == DOCUMENT_SUFFIX
-                and not _under_skipped(path.relative_to(target_root))
-                and _resolves_inside(target_root, path)
-            ):
-                matched.setdefault(path.resolve(), path)
-    except (ValueError, NotImplementedError):
-        # `Path.glob` before 3.13 rejects `**` mixed into a segment
-        # (`docs/**.md`); the configuration pass reports the pattern as
-        # matching nothing, so here it simply matches nothing.
-        return []
-    return sorted(matched.values(), key=lambda p: p.relative_to(target_root).as_posix())
+    listing = tree if tree is not None else working_tree(target_root)
+    return [
+        target_root / rel
+        for rel in listed_files_in_place(place, listing.files())
+        if not (target_root / rel).is_symlink()
+    ]
 
 
 def _under_skipped(rel: Path | PurePosixPath) -> bool:
@@ -660,15 +635,15 @@ def _under_skipped(rel: Path | PurePosixPath) -> bool:
 
 
 def listed_files_in_place(place: Place, files: Sequence[str]) -> list[str]:
-    """`files_in_place` over a listing — a tree's files — instead of the filesystem.
+    """The Markdown files of a listing — a tree's files — that a place matches, sorted.
 
-    The same reading, so the two agree on everything a listing holds: a glob
+    The one reading of a place, whichever state the listing is of: a glob
     matches files, a glob ending in `**` means every Markdown file beneath, a
     directory means every Markdown file beneath it, a file means that file,
-    and only Markdown files are documents. A pattern outside the repository
-    matches nothing. Globs follow pathlib's reading on Python 3.13
-    (`compile_glob`), where an older interpreter's `Path.glob` refuses a `**`
-    mixed into a segment and so matches nothing there.
+    and only Markdown files are documents (ADR-056 point 2) — plain YAML in a
+    place is left alone. A pattern outside the repository matches nothing.
+    Globs follow pathlib's reading on Python 3.13 (`compile_glob`) on every
+    interpreter.
     """
     if not _textually_inside(place.pattern):
         return []
@@ -829,24 +804,19 @@ def rule_set_places(target_root: Path, settings: FrictionSettings) -> tuple[Rule
     return tuple(unique.values())
 
 
-def _place_files(target_root: Path, place: Place, tree: RepositoryTree | None) -> list[str]:
-    """The repository-relative files a place matches, on disk or in a `tree`'s listing."""
-    if tree is None:
-        return [p.relative_to(target_root).as_posix() for p in files_in_place(target_root, place)]
-    return listed_files_in_place(place, tree.files())
-
-
 def rule_set_files(target_root: Path, places: Sequence[RuleSetPlace]) -> dict[Path, RuleSetPlace]:
     """Every rule-set file the places claim, with the place that claimed it.
 
     A Markdown file a rule-set place matches is a rule-set file, whatever it
     holds — except the folder's signpost, `README.md`. A file two places match
     is claimed by the first, so a method folder always wins over a project
-    place that happens to reach into it. Keyed by the path the walk yields.
+    place that happens to reach into it. Keyed by the path the walk yields;
+    found in the working tree's one listing, like every other artefact.
     """
     claimed: dict[Path, RuleSetPlace] = {}
+    tree = working_tree(target_root) if places else None
     for rule_set_place in places:
-        for path in files_in_place(target_root, rule_set_place.place):
+        for path in files_in_place(target_root, rule_set_place.place, tree):
             if path.name != RULE_SETS_SIGNPOST:
                 claimed.setdefault(path, rule_set_place)
     return claimed
@@ -1099,9 +1069,11 @@ def discover_artefacts(
     under the first place that matched it; whether it is a rule-set file
     depends only on the location rule, not on which place met it. Order:
     places in that order, files within a place by path, entries within a
-    collection in written order. With a `tree`, the settings, the listing and
-    every file are that state's (`listed_files_in_place`); a link in a tree is
-    never read.
+    collection in written order. The files are a listing's
+    (`listed_files_in_place`): with a `tree`, the settings, the listing and
+    every file are that state's; without one, the settings are read from disk
+    and the listing is the working tree's one listing (`working_tree`) — the
+    one the change check reads as its head. A link is never read as a document.
     """
     settings = settings if settings is not None else read_friction_settings(target_root, tree)
     # Which rule-set folders are places is read from the working tree even when
@@ -1112,27 +1084,31 @@ def discover_artefacts(
     rule_set_places_found = rule_set_places(target_root, settings)
     places = declared_places(settings)
     places += tuple(r.place for r in rule_set_places_found if r.place not in places)
+    if not places:
+        return Discovery(settings=settings, places=places, artefacts=(), unreadable=())
+    listing = tree if tree is not None else working_tree(target_root)
+    files = listing.files()
     claimed: dict[str, RuleSetPlace] = {}
     for rule_set_place in rule_set_places_found:
-        for rel in _place_files(target_root, rule_set_place.place, tree):
+        for rel in listed_files_in_place(rule_set_place.place, files):
             if PurePosixPath(rel).name != RULE_SETS_SIGNPOST:
                 claimed.setdefault(rel, rule_set_place)
     matched: list[tuple[Place, str]] = []
     seen: set[str] = set()
     for place in places:
-        for rel in _place_files(target_root, place, tree):
+        for rel in listed_files_in_place(place, files):
             if rel not in seen:
                 seen.add(rel)
                 matched.append((place, rel))
 
     artefacts: list[Artefact] = []
     unreadable: list[UnreadableFile] = []
-    texts = _document_texts(target_root, tree, [rel for _place, rel in matched])
+    texts = _document_texts(listing, [rel for _place, rel in matched])
     for place, rel in matched:
         rule_set = claimed.get(rel)
         text = texts[rel]
         if text is None:
-            continue  # a link in a tree: never read as a document
+            continue  # a link: never read as a document
         if isinstance(text, _ReadFailure):
             unreadable.append(
                 UnreadableFile(path=rel, place=place, reason=text.reason, rule_set=rule_set)
@@ -1159,28 +1135,36 @@ class _ReadFailure:
 
 
 def _document_texts(
-    target_root: Path, tree: RepositoryTree | None, rels: Sequence[str]
+    tree: RepositoryTree, rels: Sequence[str]
 ) -> dict[str, str | _ReadFailure | None]:
-    """Each matched file's text, or why it could not be read; `None` for a link in a tree."""
+    """Each matched file's text, or why it could not be read; `None` for a link.
+
+    The working tree is read file by file, so a file that will not open is
+    reported as unreadable, whichever reader asked; a commit is read in one pass.
+    """
+    contents: Mapping[str, bytes | None | _ReadFailure]
+    if isinstance(tree, WorkingTree):
+        contents = {rel: _read_working_file(tree, rel) for rel in rels}
+    else:
+        contents = tree.read_bytes(rels)
     texts: dict[str, str | _ReadFailure | None] = {}
-    if tree is None:
-        for rel in rels:
-            try:
-                texts[rel] = (target_root / rel).read_text(encoding="utf-8")
-            except (OSError, UnicodeDecodeError) as exc:
-                texts[rel] = _ReadFailure(str(exc))
-        return texts
-    contents = tree.read_bytes(rels)
     for rel in rels:
         raw = contents.get(rel)
-        if raw is None:
-            texts[rel] = None
+        if raw is None or isinstance(raw, _ReadFailure):
+            texts[rel] = raw
             continue
         try:
             texts[rel] = raw.decode("utf-8")
         except UnicodeDecodeError as exc:
             texts[rel] = _ReadFailure(str(exc))
     return texts
+
+
+def _read_working_file(tree: WorkingTree, rel: str) -> bytes | None | _ReadFailure:
+    try:
+        return tree.read_file(rel)
+    except OSError as exc:
+        return _ReadFailure(str(exc))
 
 
 def parse_artefacts(
@@ -1193,8 +1177,12 @@ def parse_artefacts(
     and the history walk of the whole-repository check both call it. Returns
     `(artefacts, None)` — empty when the text carries no front matter, or front
     matter that is not a mapping, since neither makes an artefact — or
-    `([], reason)` when the front matter does not parse as YAML.
+    `([], reason)` when the front matter does not parse as YAML. Line endings
+    are read universally (`\\r\\n` and `\\r` as `\\n`), as a text file is read,
+    whether the text came from disk or from git.
     """
+    if "\r" in text:
+        text = text.replace("\r\n", "\n").replace("\r", "\n")
     front_matter, body = split_front_matter(text)
     if front_matter is None:
         return [], None

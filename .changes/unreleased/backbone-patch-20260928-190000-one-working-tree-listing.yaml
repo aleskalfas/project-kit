@@ -1,0 +1,19 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit validate`, the friction writers and `pkit friction check` now find the
+  same artefacts in the same working tree (#1034, ADR-057 point 2). Validation
+  walked the filesystem while the change check read git's listing, and the two
+  disagreed: validation read files git ignores, documents beneath a nested
+  repository, and documents through a link (a linked file, or everything beneath
+  a linked folder), none of which the change check ever saw; it read globs by the
+  running interpreter's pathlib, so `docs/**.md` matched nothing before Python
+  3.13; the change check missed a document with Windows line endings, which
+  validation read; and an unreadable file in a place was a validation finding
+  but aborted the change check. Every reader now takes one listing of the
+  working tree — the files git sees, and outside a git work tree every file — in
+  which a link is listed but never followed or read as a document, globs read as
+  pathlib 3.13 reads them on every interpreter, line endings are read as a text
+  file is read, and an unreadable file is reported as unreadable.

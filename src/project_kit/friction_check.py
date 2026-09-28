@@ -13,7 +13,9 @@ so it works for any tool and locally before a commit.
 **Reading the repository — from git alone, never checking anything out.**
 
 - *Head* is the working tree as git sees it: tracked files plus untracked
-  ones git does not ignore (`WorkingTree`). *The base* is the merge-base of
+  ones git does not ignore (`WorkingTree`) — the one listing validation reads
+  too (`working_tree`, ADR-057 point 2), so both find the same artefacts in
+  the same working tree. *The base* is the merge-base of
   the base reference and HEAD, read from git objects (`CommitTree`: `git
   ls-tree`, then `git cat-file --batch`, the batch form of `git show
   <rev>:<path>`).
@@ -61,9 +63,7 @@ from __future__ import annotations
 
 import heapq
 import json
-import os
 import re
-import stat
 import subprocess
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -92,6 +92,10 @@ from project_kit.friction_discovery import (
     refuse_resolver_without_query_contract,  # noqa: F401 — re-exported, as above
     registered_anchor_kinds,
     unresolved_kind_reason,
+)
+from project_kit.working_tree import (
+    WorkingTree,  # re-exported: the head side's tree, now the one listing's home
+    nul_separated,
 )
 
 #: The base the diff is taken against when none is named (COR-050 point 6),
@@ -250,10 +254,6 @@ def run_git(
     return completed
 
 
-def nul_separated(raw: bytes) -> list[str]:
-    return [item.decode("utf-8", "surrogateescape") for item in raw.split(b"\0") if item]
-
-
 def commit_of(root: Path, name: str) -> str | None:
     """The commit `name` resolves to, or None."""
     completed = run_git(
@@ -261,48 +261,6 @@ def commit_of(root: Path, name: str) -> str | None:
     )
     commit = completed.stdout.decode().strip()
     return commit if completed.returncode == 0 and commit else None
-
-
-class WorkingTree:
-    """The working tree as git sees it: tracked files and untracked ones git does not ignore.
-
-    A file deleted from disk but still in the index is not held; an ignored
-    file is not either, so the two sides of the diff are listed alike.
-    """
-
-    def __init__(self, root: Path) -> None:
-        self._root = root
-
-    @cached_property
-    def _files(self) -> tuple[str, ...]:
-        listed = run_git(
-            self._root, "ls-files", "-z", "--cached", "--others", "--exclude-standard"
-        ).stdout
-        held: set[str] = set()
-        for rel in nul_separated(listed):
-            try:
-                mode = os.lstat(self._root / rel).st_mode
-            except OSError:
-                continue  # deleted in the working tree
-            if stat.S_ISREG(mode) or stat.S_ISLNK(mode):
-                held.add(rel)
-        return tuple(sorted(held))
-
-    def files(self) -> Sequence[str]:
-        return self._files
-
-    def read_bytes(self, paths: Sequence[str]) -> Mapping[str, bytes | None]:
-        contents: dict[str, bytes | None] = {}
-        for rel in paths:
-            path = self._root / rel
-            if path.is_symlink() or not path.is_file():
-                contents[rel] = None
-                continue
-            try:
-                contents[rel] = path.read_bytes()
-            except OSError as exc:
-                raise FrictionCheckError(f"cannot read {rel}: {exc}") from exc
-        return contents
 
 
 class CommitTree:
