@@ -28,7 +28,7 @@ checks the owning records ask for:
 
 Findings are structured records (a JSON Pointer into the file, a severity,
 a message) in a deterministic order: shape findings by position, then the
-repository checks in the file's key order. Only errors fail validation.
+repository checks in a fixed order — docs, friction, connections — each entry in written order. Only errors fail validation.
 """
 
 from __future__ import annotations

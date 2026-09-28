@@ -341,7 +341,7 @@ def test_same_input_yields_identical_output(make_adopter_repo: MakeAdopterRepo) 
     second = _run(repo)
     assert first == second
     # Shape findings first, by position; then the repository checks in the
-    # file's key order (docs, friction, connections), each in written order.
+    # file's key order (fixed: docs, friction, connections), each in written order.
     assert _paths(first) == [
         "/doc",
         "/friction/mod",

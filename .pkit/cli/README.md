@@ -267,7 +267,7 @@ project:
 | error | A connection entry naming a capability that is not installed, with the fix (`pkit capabilities install <name>`, or remove the entry). |
 | info | A connection entry naming an installed capability: whether it *provides the role* or *fills the point* cannot be verified until package metadata declares connections, so it is reported as unverifiable, never refused. |
 
-Only errors fail the command. The same repository state always yields the same findings in the same order: schema findings by position, then the repository checks in the file's key order. A tree recorded before the schema landed has no `config.schema.json`; the pass reports "no config schema present in this tree; skipped." rather than validating against a shape that tree never shipped (ADR-056 point 1).
+Only errors fail the command. The same repository state always yields the same findings in the same order: schema findings by position, then the repository checks in a fixed order — docs, friction, connections — each entry in written order. A tree recorded before the schema landed has no `config.schema.json`; the pass reports "no config schema present in this tree; skipped." rather than validating against a shape that tree never shipped (ADR-056 point 1).
 
 **Writing.** A key is written only by the writers its record names, with consent (COR-048 point 5): today that is the `name` write-back of `pkit report`; the configuration commands the records anticipate have not shipped. Editing the file by hand is the project's own edit, always allowed.
 
