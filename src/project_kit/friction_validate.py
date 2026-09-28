@@ -223,7 +223,9 @@ def _artefact_findings(target_root: Path, discovery: Discovery) -> list[Friction
     return findings
 
 
-def block_findings(artefact: Artefact, schema: dict | None) -> tuple[FrictionFinding, ...]:
+def block_findings(
+    artefact: Artefact, schema: dict | None, target_root: Path
+) -> tuple[FrictionFinding, ...]:
     """What this pass finds in one artefact's own block: its shape and dangling deferrals.
 
     The per-artefact judgments `validate_friction` applies — the container
@@ -235,7 +237,10 @@ def block_findings(artefact: Artefact, schema: dict | None) -> tuple[FrictionFin
     """
     findings: list[FrictionFinding] = []
     if schema is not None:
-        findings.extend(_container_findings(artefact, schema))
+        # the container is read against the tree's active wiring, as the pass
+        # reads it — an orphan or an inert block is the same finding either way
+        wiring = connections.container_wiring(target_root)
+        findings.extend(_container_findings(artefact, schema, wiring))
     findings.extend(_dangling_deferrals(artefact))
     return tuple(findings)
 
