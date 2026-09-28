@@ -3,10 +3,11 @@
 Two of the umbrella's members (`project_kit.validators`, ADR-058) live here:
 
 - **`manifests`** — the backbone manifest is present, parseable and at
-  schema_version 1; each component listed in `.pkit/manifest.yaml` has its
-  per-component manifest at the declared path, with the required fields
-  (kind, name, version, installed_at, requires_backbone) and a matching name
-  and kind.
+  schema_version 1; each component listed in `.pkit/manifest.yaml` whose
+  per-component manifest exists at the declared path has one that parses and
+  carries the required fields (kind, name, version, installed_at,
+  requires_backbone) and a matching name and kind. A missing manifest is
+  skipped: adapters and capabilities propagate through sync and stamp none.
 - **`decisions`**, the front-matter half — each `.pkit/decisions/{core,project}/*.md`
   carries valid front matter (id, title, status, date, author). The id-space
   half is `decisions_validate`, which composes both into the member.
@@ -118,7 +119,7 @@ def _validate_backbone_manifest(
 
 
 def _validate_component_registry(target_root: Path, backbone: BackboneManifest) -> list[Issue]:
-    """Check every registered component has its per-component manifest at the declared path."""
+    """Check each registered component's per-component manifest where one exists; skip a missing one."""
     issues: list[Issue] = []
     for entry in backbone.components:
         manifest_path = target_root / entry.manifest
