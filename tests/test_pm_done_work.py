@@ -778,6 +778,30 @@ def test_unticked_checkbox_refuses_before_the_merge(dw, monkeypatch, capsys):
     assert "stops wobbling" not in err
 
 
+def test_the_refusal_names_the_verb_that_ticks_each_box(dw, monkeypatch, capsys):
+    """#1015: each unticked box is followed by the command that ticks it —
+    `check-criterion` for a criterion and for a Doc impact box, a body edit
+    for a box no verb can address."""
+    body = (
+        "## What\n\nFix the widget.\n\n"
+        "## Acceptance criteria\n\n"
+        "- [x] The widget stops wobbling.\n"
+        "- [ ] The regression test covers the wobble.\n\n"
+        "## Doc impact\n\n"
+        "- [ ] The README documents the wobble.\n\n"
+        "## Notes\n\n"
+        "- [ ] Tell the widget team.\n"
+    )
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP, issue=_issue(body))
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+    assert rc == 1
+    assert calls["merged"] is False
+    err = capsys.readouterr().err
+    assert "→ pkit pm check-criterion 42 2" in err
+    assert "→ pkit pm check-criterion 42 --section doc-impact 1" in err
+    assert "pkit pm edit-issue 42 --body-file" in err
+
+
 def test_all_boxes_ticked_merges(dw, monkeypatch):
     """An issue with every box ticked merges exactly as before."""
     calls = _wire_main_seams(

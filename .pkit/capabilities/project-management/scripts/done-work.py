@@ -146,8 +146,9 @@ from _lib.ci_checks import evaluate_ci_gate  # noqa: E402
 # predicate.
 from _lib.checkbox_gate import (  # noqa: E402
     refusal_message as _checkbox_refusal,
-    unticked_boxes,
+    unticked_box_lines,
 )
+from _lib.criteria import checkbox_headings, tick_hints  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
@@ -583,7 +584,10 @@ def main() -> int:
     # merge, so a check afterwards gates nothing. Reads the body already
     # fetched above, so it costs no extra round-trip.
     checkbox_gate = _check_checkbox_gate(
-        args.issue_number, issue, skip=args.skip_checkbox_gate
+        args.issue_number,
+        issue,
+        skip=args.skip_checkbox_gate,
+        criteria_headings=_criteria_headings(capability_root, yaml_loader),
     )
     if not checkbox_gate.passed:
         print(checkbox_gate.refusal_message, file=sys.stderr)
@@ -929,7 +933,11 @@ def _check_approval_gate(
 
 
 def _check_checkbox_gate(
-    issue_number: int, issue: dict | None, *, skip: bool
+    issue_number: int,
+    issue: dict | None,
+    *,
+    skip: bool,
+    criteria_headings: frozenset[str] | None = None,
 ) -> _GateResult:
     """DEC-007's checkbox close-gate on the issue this merge closes.
 
@@ -967,19 +975,26 @@ def _check_checkbox_gate(
             ),
         )
 
-    unticked = unticked_boxes(str(issue.get("body") or ""))
-    if not unticked:
+    body = str(issue.get("body") or "")
+    located = unticked_box_lines(body)
+    if not located:
         return _GateResult(passed=True, passed_via="all checkboxes ticked")
 
+    # Name the verb that ticks each box (#1015): `check-criterion` for the
+    # criteria and the Doc impact section, a body edit for any other section.
+    hints = tick_hints(
+        issue_number, body, [line_no for line_no, _ in located], criteria_headings
+    )
     return _GateResult(
         passed=False,
         refusal_message=_checkbox_refusal(
-            unticked,
+            [text for _, text in located],
             scope=f"#{issue_number}, pre-merge",
+            hints=hints,
             remedy=(
-                "tick or remove each unticked checkbox before merging, or pass "
-                "--skip-checkbox-gate (discouraged). The merge auto-closes the "
-                "issue, so this cannot be fixed afterwards."
+                "tick each box with the command under it (or remove it) before "
+                "merging, or pass --skip-checkbox-gate (discouraged). The merge "
+                "auto-closes the issue, so this cannot be fixed afterwards."
             ),
         ),
     )
@@ -2039,6 +2054,18 @@ def _read_members(capability_root: Path, yaml_loader: YAML) -> list[dict]:
         return []
     members = data.get("members") if isinstance(data, dict) else None
     return members if isinstance(members, list) else []
+
+
+def _criteria_headings(capability_root: Path, yaml_loader: YAML) -> frozenset[str]:
+    """The criteria-section headings from `schemas/body-format.yaml`, so the
+    checkbox gate numbers boxes as `check-criterion` does. Fail-open to the
+    historical literal when the schema cannot be read (`checkbox_headings`)."""
+    path = capability_root / "schemas" / "body-format.yaml"
+    try:
+        data = yaml_loader.load(path.read_text(encoding="utf-8")) if path.is_file() else {}
+    except Exception:
+        data = {}
+    return checkbox_headings(data if isinstance(data, dict) else {})
 
 
 if __name__ == "__main__":
