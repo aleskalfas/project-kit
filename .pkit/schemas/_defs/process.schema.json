@@ -99,13 +99,13 @@
     },
     "depends_on": {
       "type": "object",
-      "description": "COR-038: ONE inert, schema-validated cross-process connection a state declares (the entries live in the `depends_on` LIST on a state). INERT by default -- the engine's runtime (`status`/`can-move`/`move`/`validate`-of-position) NEVER reads it: its readers are the SCHEMA (shape-validates it here), the render (out-of-engine, draws the topology), and -- for entries carrying the OPT-IN `handoff` contract -- the `health` surface (out-of-runtime, report-only, COR-042). So a malformed entry is a definition-authoring LINT error, never a fail-closed gate -- it cannot affect whether any subject may move. It annotates ONLY the edges the engine cannot already see; an enforced `composed-subprocess` / `aggregates` edge is fully declared by the `subprocess`/`cascade` block the engine owns, so the render DERIVES those (derive-don't-annotate, single-source-of-truth COR-006) and they are deliberately NOT relation values here.",
+      "description": "COR-038: ONE inert, schema-validated cross-process connection a state declares (the entries live in the `depends_on` LIST on a state). The runtime engine (`status`/`can-move`/`move`/`validate`-of-position) and every gate NEVER read it (COR-053 point 6's ruling). Its readers: the SCHEMA (shape-validates it here), the render (out-of-engine, draws the topology), the `health` surface (out-of-runtime, report-only, COR-042) for entries carrying the OPT-IN `handoff` contract and nothing else, and the capability lifecycle (install / upgrade / uninstall), which reads the `mandatory` mark alone -- from the generated `depends-on` copy in package metadata, never from this file -- only to check that the upstream definition exists. This list is the single source of that generated copy (COR-053 point 4). A malformed entry is a definition-authoring LINT error, never a fail-closed gate -- it cannot affect whether any subject may move. It annotates ONLY the edges the engine cannot already see; an enforced `composed-subprocess` / `aggregates` edge is fully declared by the `subprocess`/`cascade` block the engine owns, so the render DERIVES those (derive-don't-annotate, single-source-of-truth COR-006) and they are deliberately NOT relation values here.",
       "required": ["upstream", "relation", "mode", "why"],
       "additionalProperties": false,
       "properties": {
         "handoff": {
           "type": "object",
-          "description": "COR-042 (optional, additive): the OPT-IN evaluable hand-off contract -- read ONLY by the out-of-runtime `health` surface, never by the runtime engine or any gate (COR-053, design-ahead: a sibling `mandatory` mark, not yet in this schema, will be read by one further out-of-runtime reader, the capability lifecycle, to check the upstream exists). Declares the upstream trigger state plus the two binding-supplied resolution-seam predicates (ADR-048). Orthogonal to `relation`/`mode` (any edge's hand-off may be checkable). Entries WITHOUT this block keep COR-038's full inert contract. Shape lint here is LOCAL well-formedness only; whether the contract can be INTERPRETED (upstream address resolves, trigger is a real state of the upstream) is checked at health time, where failure is INDETERMINATE -- never silently green. Two authoring smells the reference documents: an EPHEMERAL trigger (a subject that transits it leaves the report, picked up or not -- declare a stable state) and a candidates source that can silently return nothing against a wrong root (a determinate empty answer that hides a real backlog).",
+          "description": "COR-042 (optional, additive): the OPT-IN evaluable hand-off contract -- read ONLY by the out-of-runtime `health` surface, never by the runtime engine or any gate. Declares the upstream trigger state plus the two binding-supplied resolution-seam predicates (ADR-048). Orthogonal to `relation`/`mode` (any edge's hand-off may be checkable). Entries WITHOUT this block keep COR-038's full inert contract. Shape lint here is LOCAL well-formedness only; whether the contract can be INTERPRETED (upstream address resolves -- a role address through the wiring resolver's active provider -- and the trigger is a real state of the upstream) is checked at health time, where failure is INDETERMINATE -- never silently green. Two authoring smells the reference documents: an EPHEMERAL trigger (a subject that transits it leaves the report, picked up or not -- declare a stable state) and a candidates source that can silently return nothing against a wrong root (a determinate empty answer that hides a real backlog).",
           "required": ["trigger", "candidates", "resolve"],
           "additionalProperties": false,
           "properties": {
@@ -126,8 +126,26 @@
         },
         "upstream": {
           "type": "string",
-          "pattern": "^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$",
-          "description": "The upstream process address `<capability>:<process-id>` (the same address grammar `subprocess`/`cascade` use). The render reads it to draw the edge; the engine never resolves it."
+          "pattern": "^[a-z][a-z0-9-]*(::[a-z][a-z0-9-]*)?:[a-z][a-z0-9-]*$",
+          "description": "The upstream process, in one of two forms. The implementation form `<capability>:<process-id>` names one capability's definition (the same address grammar `subprocess`/`cascade` use). The role form `<publisher>::<role>:<point>` (COR-053 point 2, additive) names a process OFFERED under a role, answered by whichever installed capability is the role's active provider -- so replacing that capability touches nothing here. The render reads it to draw the edge; the engine never resolves it."
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "COR-053 point 5 (optional, additive): the upstream interface version this connection targets. It connects only to an offered process whose interface version is equal; another version leaves the connection inert. Absent: the connection binds on the upstream's existence alone. Copied into the generated `depends-on` entry as its `schema_version`."
+        },
+        "mandatory": {
+          "type": "object",
+          "description": "COR-053 point 6 (optional, additive): the mandatory mark -- the upstream process definition must exist (and, with `version`, at a compatible interface version). Connections are optional by default; the mark is only valid WITH a reason. Read by the capability lifecycle alone, from the generated `depends-on` copy in package metadata: installing or upgrading the capability that carries it is refused while the upstream is missing or incompatible, and upgrading or uninstalling the upstream warns and proceeds only under force. Never read by the runtime engine or any gate.",
+          "required": ["reason"],
+          "additionalProperties": false,
+          "properties": {
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Why this connection cannot be optional -- shown in every refusal and warning the mark causes."
+            }
+          }
         },
         "relation": {
           "enum": ["informational", "gates-on-readiness", "triggered-by", "constrained-with"],
@@ -163,7 +181,7 @@
         },
         "depends_on": {
           "type": "array",
-          "description": "COR-038 (optional, additive): INERT cross-process connection metadata -- a list of declared connections to upstream processes that the RUNTIME engine never evaluates (the schema shape-validates them, the render draws them, and the out-of-runtime `health` surface evaluates ONLY the entries carrying an opt-in `handoff` contract, COR-042). Absent on every existing state -- those validate byte-unchanged. Carries ONLY the edges the engine cannot see; composition/aggregation edges are derived from `subprocess`/`cascade` instead (derive-don't-annotate).",
+          "description": "COR-038 (optional, additive): INERT cross-process connection metadata -- a list of declared connections to upstream processes that the RUNTIME engine and every gate never read (the schema shape-validates them, the render draws them, the out-of-runtime `health` surface evaluates ONLY the entries carrying an opt-in `handoff` contract, COR-042, and the capability lifecycle reads ONLY the `mandatory` mark, from the generated `depends-on` copy, COR-053 point 6). The capability's `depends-on` list in package metadata is generated from these entries by the refresh command (COR-053 point 4). Absent on every existing state -- those validate byte-unchanged. Carries ONLY the edges the engine cannot see; composition/aggregation edges are derived from `subprocess`/`cascade` instead (derive-don't-annotate).",
           "items": { "$ref": "#/$defs/depends_on" }
         },
         "entry": {
@@ -284,6 +302,11 @@
       "description": "COR-036: a process's PUBLIC contract for embedding -- the `inputs` it needs to start and its named `outcomes` (terminal states). A parent reads this to wire an inner process; the engine treats it as documentation of the embedding contract (it resolves outcomes from the inner's terminal states live, regardless of whether the inner declares `interface`). Optional and additive -- a process omitting it is unaffected. The child references nothing upward (coupling-in-parent): declaring an interface does not couple the child to any parent.",
       "additionalProperties": false,
       "properties": {
+        "version": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "COR-036 as refined by COR-053 point 5 (optional, additive): the interface version, the integer a connection point carries. It changes ONLY when this public contract breaks for existing counterparts; additive changes leave it alone. Distinct from the definition's own `version`, which tracks internal change under live subjects. Only validation reads it -- the engine resolves live as before. A capability offering this process under a role declares the same integer as the offered point's `schema_version` in its package metadata."
+        },
         "inputs": {
           "type": "array",
           "description": "Named inputs the inner process needs to start. Content-free: the engine carries them; the parent supplies values on entry to the `subprocess` state and the inner's binding consumes them.",
