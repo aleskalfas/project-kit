@@ -484,18 +484,19 @@ def test_status_lists_the_declared_places_surface_and_exclusions(
     ]
 
 
-def test_status_shows_a_capability_place_under_its_recorded_location(
+def test_status_shows_a_capability_place_under_its_recorded_location_and_its_surface_as_written(
     make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The lines show what discovery reads: the place inside the location the
-    project recorded, not the declared one."""
+    project recorded, not the declared one, and the surface repository-relative."""
     repo = make_adopter_repo(capabilities=("project-management",))
     _write_config(repo, "docs:\n  internal: tech-docs\n")
     package = repo.pkit / "capabilities" / "project-management" / "package.yaml"
     package.write_text(
         package.read_text(encoding="utf-8")
         + "docs:\n  locations:\n    boards: {path: boards}\n"
-        + "friction:\n  places:\n    - {location: boards, path: '**/*.md'}\n",
+        + "friction:\n  places:\n    - {location: boards, path: '**/*.md'}\n"
+        + "  surface: ['src/**']\n",
         encoding="utf-8",
     )
     dr.record_location(repo.root, "project-management", "boards", "planning/boards")
@@ -503,4 +504,6 @@ def test_status_shows_a_capability_place_under_its_recorded_location(
         "mode               warning   (default)",
         "places             1 declared:",
         "planning/boards/**/*.md (project-management)",
+        "surface            1 declared:",
+        "src/** (project-management)",
     ]

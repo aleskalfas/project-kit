@@ -1,0 +1,13 @@
+component: backbone
+kind: patch
+body: >
+  A capability's documentation locations are read one way everywhere, in the package
+  schema's shape: each docs.locations entry is {path, root?}, under the internal root, or
+  the user root with root: user, and a location recorded for it in
+  .pkit/capabilities/<name>/project/docs-locations.yaml wins over the declared one. The
+  documentation-roots readers (capability_location, capability_subpaths) and friction
+  discovery share that reading, so a capability place now lies inside its recorded
+  location when one is recorded, the change check's base commit included. A capability's
+  friction.surface is resolved repository-relative, as the package schema states, instead
+  of under its documentation locations; a surface that is not a list, or an entry that is
+  not a path, is a malformed-surface finding of pkit validate rather than skipped silently.
