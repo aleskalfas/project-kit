@@ -12,6 +12,7 @@ from __future__ import annotations
 import os
 import shlex
 import sys
+from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -48,7 +49,7 @@ from project_kit.scaffolds import (
 )
 from project_kit.agents import Namespace as AgentNamespace, stamp_new_agent
 from project_kit.storyboards import ArtifactKind, stamp_new_storyboard
-from project_kit import friction_check, friction_repository
+from project_kit import friction_check, friction_repository, friction_write
 from project_kit import refs as refs_mod
 from project_kit import router
 from project_kit import scratchpads
@@ -328,11 +329,157 @@ def config_set(key: str, value: str, yes: bool) -> None:
 
 @main.group("friction")
 def friction() -> None:
-    """Anchors and friction (COR-050): the checks, which only read.
+    """Anchors and friction (COR-050): the checks, which only read, and the
+    writers — revalidate, defer, record-status — which write one block, only
+    with consent.
 
     Reference: `.pkit/cli/README.md`, "Friction checks"; the block itself is
     in `.pkit/schemas/README.md`, "The friction block".
     """
+
+
+def _friction_consent_options(command: Callable[..., None]) -> Callable[..., None]:
+    """`--yes` / `--dry-run`: the consent every friction writer asks for (COR-050 point 13)."""
+    command = click.option(
+        "--dry-run",
+        is_flag=True,
+        default=False,
+        help="Show what would be written, as a diff, and write nothing.",
+    )(command)
+    return click.option(
+        "--yes",
+        is_flag=True,
+        default=False,
+        help="Consent to the write without a prompt (CI). Without it a terminal is asked, "
+        "after the diff; a non-interactive run refuses.",
+    )(command)
+
+
+def _friction_write(
+    plan_of: Callable[[Path, bool], friction_write.Plan],
+    yes: bool,
+    dry_run: bool,
+    rerun: list[str],
+) -> None:
+    """Build a writer's plan and apply it with the consent given (COR-050 point 13)."""
+    if yes and dry_run:
+        raise click.UsageError(
+            "--yes and --dry-run exclude each other: one writes, the other never does."
+        )
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    can_ask = not yes and not dry_run and friction_write.interactive()
+    plan = plan_of(target_root, can_ask)
+    friction_write.apply(plan, yes=yes, dry_run=dry_run, can_ask=can_ask, rerun=rerun)
+
+
+@friction.command("revalidate")
+@click.argument("artefact", metavar="ARTEFACT")
+@click.option(
+    "--outcome",
+    type=click.Choice(friction_write.OUTCOMES),
+    required=True,
+    help="`updated`: the content changed with this revalidation; `unchanged`: it did not "
+    "need to (then --because is required).",
+)
+@click.option(
+    "--because",
+    metavar="TEXT",
+    default=None,
+    help="With `unchanged`: why the content still holds against this change. Must differ "
+    "from the justification already written.",
+)
+@click.option(
+    "--keep",
+    "keep",
+    metavar="ANCHOR",
+    multiple=True,
+    help="Keep the deferral of ANCHOR (`kind:value`, or a value only one deferral has). "
+    "Repeatable. A deferral not kept is removed; a terminal is asked about each.",
+)
+@_friction_consent_options
+def friction_revalidate_command(
+    artefact: str,
+    outcome: str,
+    because: str | None,
+    keep: tuple[str, ...],
+    yes: bool,
+    dry_run: bool,
+) -> None:
+    """Write ARTEFACT's revalidation (COR-050 point 3): a fresh `at`, the outcome, and
+    for `unchanged` a new `unchanged-because`.
+
+    Rewrites the `revalidated` block and nothing else in the file. Re-states
+    the deferrals kept — each named with --keep or confirmed at the prompt —
+    and removes the rest (point 4). ARTEFACT is a location (`path`, or
+    `path#id` for a collection entry) or an id.
+    """
+    rerun = ["pkit", "friction", "revalidate", artefact, "--outcome", outcome]
+    if because is not None:
+        rerun += ["--because", because]
+    for anchor in keep:
+        rerun += ["--keep", anchor]
+
+    def plan_of(target_root: Path, can_ask: bool) -> friction_write.Plan:
+        return friction_write.plan_revalidate(
+            target_root,
+            artefact,
+            outcome=outcome,
+            because=because,
+            keep=keep,
+            confirm_keep=friction_write.ask_keep if can_ask else None,
+        )
+
+    _friction_write(plan_of, yes, dry_run, rerun)
+
+
+@friction.command("defer")
+@click.argument("artefact", metavar="ARTEFACT")
+@click.option(
+    "--anchor",
+    metavar="ANCHOR",
+    required=True,
+    help="The anchor whose friction is postponed: `kind:value`, or a value only one anchor "
+    "of the artefact has. It must be one the artefact carries.",
+)
+@click.option("--reason", metavar="TEXT", required=True, help="Why it is postponed.")
+@_friction_consent_options
+def friction_defer_command(
+    artefact: str, anchor: str, reason: str, yes: bool, dry_run: bool
+) -> None:
+    """Defer one anchor of ARTEFACT (COR-050 point 4): add its entry to `deferred`,
+    or reword the reason of the entry already there.
+
+    Writes the `deferred` list and nothing else — never `at`: a deferral is
+    not a revalidation. The entry covers the anchor's changes up to the
+    commit that introduces it; rewording its reason does not move that.
+    """
+    rerun = ["pkit", "friction", "defer", artefact, "--anchor", anchor, "--reason", reason]
+
+    def plan_of(target_root: Path, _can_ask: bool) -> friction_write.Plan:
+        return friction_write.plan_defer(target_root, artefact, anchor=anchor, reason=reason)
+
+    _friction_write(plan_of, yes, dry_run, rerun)
+
+
+@friction.command("record-status")
+@click.argument("artefact", metavar="ARTEFACT")
+@_friction_consent_options
+def friction_record_status_command(artefact: str, yes: bool, dry_run: bool) -> None:
+    """Record ARTEFACT's status in its tool-written `last-check` (COR-050 point 10).
+
+    Runs the whole-repository check at HEAD and writes `state` (current,
+    stale or deferred), `as-of` (HEAD) and, when stale, `since` — only when
+    the state or `since` changes; otherwise it writes nothing and exits 0.
+    The command an after-merge job would run; that job is not shipped.
+    """
+    rerun = ["pkit", "friction", "record-status", artefact]
+
+    def plan_of(target_root: Path, _can_ask: bool) -> friction_write.Plan:
+        return friction_write.plan_record_status(target_root, artefact)
+
+    _friction_write(plan_of, yes, dry_run, rerun)
 
 
 @friction.command("check")
