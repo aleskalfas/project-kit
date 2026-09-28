@@ -2502,6 +2502,16 @@ def validate(include_refs: bool) -> None:
 
         for ri in ref_issues:
             issues.append(ValidateIssue(location=ri.location, diagnosis=ri.diagnosis))
+    # --- backbone configuration pass (COR-048 point 4; #981) -------------------
+    # Errors join the issue list and fail the command; warnings and information
+    # print under the "configuration" heading only. Registry refactor is #986.
+    from project_kit import config_validate
+    from project_kit.validate import Issue as ValidateIssue
+
+    config_report = config_validate.run_configuration_pass(target_root)
+    for location, diagnosis in config_validate.as_issues(config_report):
+        issues.append(ValidateIssue(location=location, diagnosis=diagnosis))
+    # ---------------------------------------------------------------------------
     # The "packages" pass (ADR-056 point 5): every registered component's
     # package.yaml. Errors join the issue list; warnings only print.
     from project_kit import package_validate
@@ -2509,6 +2519,7 @@ def validate(include_refs: bool) -> None:
     packages = package_validate.validate_installed_packages(target_root)
     issues.extend(packages.as_issues(target_root))
     print_validate_report(target_root, issues)
+    config_validate.print_configuration_section(config_report)
     package_validate.print_pass(target_root, packages)
     if issues:
         raise SystemExit(1)
