@@ -1,0 +1,24 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  The documentation roots work as COR-049 decides. `docs.user` and
+  `docs.internal` resolve from `.pkit/project/config.yaml` (both default to
+  `docs/`, each reported with its source), and every location the methodology
+  has to choose derives from the internal root by precedence explicit > derived
+  > conventional default: `pkit agents reconcile` and `adopt` now resolve the
+  conventional `architecture-docs` / `adr-records` directories from the root
+  (`<internal>/architecture`, `<internal>/architecture/decisions` — unchanged
+  under the default root) and record the chosen location as an explicit overlay
+  value on first use, so a later root change moves nothing already chosen. A
+  capability's sub-paths are read from its package metadata (`docs.locations`)
+  and its chosen locations are recorded in
+  `.pkit/capabilities/<name>/project/docs-locations.yaml`. `pkit status` gains a
+  `Documentation` section listing both roots and every recorded location outside
+  the internal root. One consent-gated primitive now serves every writer of the
+  configuration file — it validates the result against the schema before
+  writing, keeps the file's header, and refuses a non-interactive run without
+  `--yes`, naming the command to run — and a new `pkit config set <key> <value>
+  [--yes]` command uses it for backbone-owned scalar keys. No migration: an
+  absent key means the defaults and existing overlay values stay authoritative.

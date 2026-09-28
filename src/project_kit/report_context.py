@@ -25,66 +25,41 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-from ruamel.yaml import YAML
-from ruamel.yaml.error import YAMLError
-
-#: The adopter-owned backbone project config, relative to the target root.
-#: Holds project-level declarations (today: the report-context `name` key).
-PROJECT_CONFIG_RELPATH = Path(".pkit") / "project" / "config.yaml"
-
-#: The editor directive stamped at the top of a config file this module
-#: creates, pointing at the backbone-shipped schema relative to the file
-#: (`.pkit/schemas/backbone/config.schema.json`, ADR-056 point 1). The
-#: validate pass (`config_validate`) is the strict reader; this is for editors.
-EDITOR_DIRECTIVE = "# yaml-language-server: $schema=../schemas/backbone/config.schema.json"
-
-
-def project_config_path(target_root: Path) -> Path:
-    return target_root / PROJECT_CONFIG_RELPATH
+from project_kit.project_config import (  # noqa: F401 — re-exported for existing readers
+    EDITOR_DIRECTIVE,
+    PROJECT_CONFIG_RELPATH,
+    Consent,
+    project_config_path,
+    read_config,
+    write_config,
+)
 
 
 def read_project_name(target_root: Path) -> str | None:
     """The declared `name` from the project config, or None when the file or
     key is absent / empty / unreadable (all normal zero-config states)."""
-    path = project_config_path(target_root)
-    if not path.is_file():
-        return None
-    try:
-        data = YAML(typ="safe").load(path.read_text(encoding="utf-8"))
-    except (OSError, YAMLError):
-        return None
-    if not isinstance(data, dict):
-        return None
-    name = data.get("name")
+    name = read_config(target_root).get("name")
     if isinstance(name, str) and name.strip():
         return name.strip()
     return None
 
 
-def write_project_name(target_root: Path, name: str) -> Path:
-    """Persist `name` into the project config (the prompt-once write-back).
-    Creates the file/directory when absent; preserves any other keys. A file
-    created here opens with the editor directive naming the backbone-shipped
-    config schema (ADR-056 Implications: writers that create the file stamp
-    it); an existing file is left with whatever header it has."""
-    path = project_config_path(target_root)
-    yaml = YAML()  # round-trip: keep an existing file's other keys + comments
-    data: dict = {}
-    fresh = not path.is_file()
-    if not fresh:
-        try:
-            loaded = yaml.load(path.read_text(encoding="utf-8"))
-        except (OSError, YAMLError):
-            loaded = None
-        if isinstance(loaded, dict):
-            data = loaded
-    data["name"] = name
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as stream:
-        if fresh:
-            stream.write(EDITOR_DIRECTIVE + "\n")
-        yaml.dump(data, stream)
-    return path
+def write_project_name(target_root: Path, name: str, *, consent: Consent | None = None) -> Path:
+    """Persist `name` into the project config (the prompt-once write-back),
+    through the one consent-gated writer (COR-048 point 5). `consent` defaults
+    to already-given: the caller has asked its own question ("save this
+    name?") before calling. Creates the file when absent; preserves any other
+    keys and the file's header."""
+
+    def _set_name(data: dict) -> None:
+        data["name"] = name
+
+    return write_config(
+        target_root,
+        _set_name,
+        consent=consent if consent is not None else Consent(yes=True),
+        description=f"Save name {name!r}",
+    )
 
 
 def git_remote_repo_name(cwd: Path) -> str | None:

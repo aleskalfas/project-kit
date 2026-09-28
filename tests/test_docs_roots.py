@@ -1,0 +1,336 @@
+"""Tests for the documentation roots (COR-049): resolution with source,
+derivation by precedence, record on first use, no migration, and the status
+lines. Every test stands up an adopter repository with the shared fixture."""
+
+from __future__ import annotations
+
+import re
+from pathlib import Path
+
+import pytest
+from click.testing import CliRunner
+
+from project_kit import agents_overlay as ao
+from project_kit import docs_roots as dr
+from project_kit import project_config as pc
+from project_kit.cli import main
+from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+
+OVERLAY = Path(".pkit") / "agents" / "project" / "overlay.yaml"
+YES = pc.Consent(yes=True)
+
+
+def _write_config(repo: AdopterRepo, text: str) -> None:
+    path = pc.project_config_path(repo.root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+
+
+def _set_internal_root(repo: AdopterRepo, root: str) -> None:
+    """Change the root the way a project would: through the configuration command."""
+
+    def mutate(data):
+        data.setdefault("docs", {})["internal"] = root
+
+    pc.write_config(repo.root, mutate, consent=YES)
+
+
+def _overlay(repo: AdopterRepo, text: str) -> Path:
+    path = repo.root / OVERLAY
+    path.write_text(text, encoding="utf-8")
+    return path
+
+
+def _core_agent(repo: AdopterRepo, name: str, *owns: str) -> None:
+    lines = ["---", "owns:", *[f"  - {o}" for o in owns], "---", "body", ""]
+    (repo.pkit / "agents" / "core" / f"{name}.md").write_text("\n".join(lines), encoding="utf-8")
+
+
+def _deploy_ok(_root: Path, _name: str) -> bool:
+    return True
+
+
+# --- resolution --------------------------------------------------------------
+
+
+def test_fresh_adopter_resolves_both_roots_to_docs_by_default(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    # No migration: an absent file means defaults (COR-049 point 1, COR-048 point 3).
+    repo = make_adopter_repo()
+    assert not pc.project_config_path(repo.root).exists()
+    roots = dr.resolve_roots(repo.root)
+    assert roots.user == Path("docs")
+    assert roots.internal == Path("docs")
+    assert roots.user_source is dr.Source.DEFAULT
+    assert roots.internal_source is dr.Source.DEFAULT
+
+
+def test_explicit_roots_carry_their_source(make_adopter_repo: MakeAdopterRepo) -> None:
+    repo = make_adopter_repo()
+    _write_config(repo, "docs:\n  internal: tech-docs/\n")
+    roots = dr.resolve_roots(repo.root)
+    assert (roots.internal, roots.internal_source) == (Path("tech-docs"), dr.Source.EXPLICIT)
+    assert (roots.user, roots.user_source) == (Path("docs"), dr.Source.DEFAULT)
+
+
+def test_unreadable_or_invalid_configuration_yields_defaults(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    # Forgiving read (COR-048 point 4): validation reports it, readers default.
+    repo = make_adopter_repo()
+    _write_config(repo, "docs: [not\n")
+    assert dr.resolve_roots(repo.root).internal_source is dr.Source.DEFAULT
+    _write_config(repo, "docs:\n  internal: /absolute\n  user: 42\n")
+    roots = dr.resolve_roots(repo.root)
+    assert roots.internal_source is dr.Source.DEFAULT
+    assert roots.user_source is dr.Source.DEFAULT
+
+
+# --- derivation --------------------------------------------------------------
+
+
+def test_derive_location_precedence_explicit_then_root_then_default() -> None:
+    explicit = dr.derive_location("tech-docs", "adr-records", explicit="decisions/adr")
+    assert explicit == dr.Location(Path("decisions/adr"), dr.Source.EXPLICIT)
+
+    derived = dr.derive_location("tech-docs", "adr-records")
+    assert derived == dr.Location(Path("tech-docs/architecture/decisions"), dr.Source.DERIVED)
+
+    default = dr.derive_location(None, "adr-records")
+    assert default == dr.Location(Path("docs/architecture/decisions"), dr.Source.DEFAULT)
+
+    # A kind with no conventional sub-path cannot be chosen here.
+    assert dr.derive_location("tech-docs", "project-root-docs") is None
+    # An explicit value wins even for such a kind.
+    assert dr.derive_location(None, "anything", explicit="x").source is dr.Source.EXPLICIT
+
+
+def test_conventional_defaults_equal_the_historical_literals_under_the_default_root(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    repo = make_adopter_repo()
+    literals = {
+        "architecture-docs": "docs/architecture",
+        "adr-records": "docs/architecture/decisions",
+    }
+    assert literals == ao.CONVENTIONAL_CATEGORY_DEFAULTS
+    assert literals == ao.conventional_category_defaults(repo.root)
+
+
+def test_conventional_defaults_derive_from_an_explicit_internal_root(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    repo = make_adopter_repo()
+    _write_config(repo, "docs:\n  internal: tech-docs\n")
+    assert ao.conventional_category_defaults(repo.root) == {
+        "architecture-docs": "tech-docs/architecture",
+        "adr-records": "tech-docs/architecture/decisions",
+    }
+
+
+def test_capability_subpaths_are_read_defensively(make_adopter_repo: MakeAdopterRepo) -> None:
+    repo = make_adopter_repo(capabilities=("project-management",))
+    # Today's package metadata declares none.
+    assert dr.capability_subpaths(repo.root, "project-management") == {}
+    assert dr.capability_subpaths(repo.root, "not-installed") == {}
+    package = repo.pkit / "capabilities" / "project-management" / "package.yaml"
+    package.write_text(
+        package.read_text(encoding="utf-8")
+        + "docs:\n  locations:\n    guides: guides\n    bad: /abs\n    worse: [x]\n",
+        encoding="utf-8",
+    )
+    assert dr.capability_subpaths(repo.root, "project-management") == {"guides": "guides"}
+    location = dr.capability_location(repo.root, "project-management", "guides")
+    assert location == dr.Location(Path("docs/guides"), dr.Source.DERIVED)
+
+
+# --- reconcile / adopt derive at resolution time ----------------------------
+
+
+def test_reconcile_auto_fills_from_the_derived_location(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    repo = make_adopter_repo()
+    _write_config(repo, "docs:\n  internal: tech-docs\n")
+    _overlay(repo, "workflow-docs:\n  - README.md\n")
+    _core_agent(repo, "a", "<adr-records>")
+    (repo.root / "tech-docs" / "architecture" / "decisions").mkdir(parents=True)
+    # The historical literal directory exists too, and must not be what wins.
+    (repo.root / "docs" / "architecture" / "decisions").mkdir(parents=True)
+
+    added, _report = ao.reconcile_overlay(repo.root, write=True)
+    assert "adr-records" in added
+    text = (repo.root / OVERLAY).read_text(encoding="utf-8")
+    assert re.search(r"(?m)^adr-records:\n  - tech-docs/architecture/decisions$", text)
+    assert "recorded by `pkit agents reconcile`" in text
+
+
+def test_adopt_creates_and_records_the_derived_directories(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    repo = make_adopter_repo()
+    _write_config(repo, "docs:\n  internal: tech-docs\n")
+    _overlay(repo, "workflow-docs:\n  - README.md\n")
+    _core_agent(repo, "a", "<adr-records>", "<architecture-docs>")
+
+    result = ao.adopt_agent(repo.root, "a", deploy_fn=_deploy_ok)
+    assert set(result.categories_wired) == {"adr-records", "architecture-docs"}
+    assert (repo.root / "tech-docs" / "architecture" / "decisions" / "README.md").is_file()
+    assert not (repo.root / "docs" / "architecture").exists()
+    text = (repo.root / OVERLAY).read_text(encoding="utf-8")
+    assert re.search(r"(?m)^adr-records:\n  - tech-docs/architecture/decisions$", text)
+    assert re.search(r"(?m)^architecture-docs:\n  - tech-docs/architecture$", text)
+
+
+# --- record on first use (COR-049 point 5) -----------------------------------
+
+
+def test_record_location_writes_once_and_never_overwrites(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    repo = make_adopter_repo()
+    _overlay(repo, "workflow-docs:\n  - README.md\n")
+    written = dr.record_location(
+        repo.root, dr.BACKBONE, "adr-records", "docs/architecture/decisions/"
+    )
+    assert written == repo.root / OVERLAY
+    text = written.read_text(encoding="utf-8")
+    assert re.search(r"(?m)^adr-records:\n  - docs/architecture/decisions$", text)
+
+    # A second recording — even of another path — changes nothing: explicit wins.
+    assert dr.record_location(repo.root, dr.BACKBONE, "adr-records", "elsewhere") is None
+    assert written.read_text(encoding="utf-8") == text
+
+
+def test_reading_never_records(make_adopter_repo: MakeAdopterRepo) -> None:
+    repo = make_adopter_repo()
+    overlay_before = (repo.root / OVERLAY).read_text(encoding="utf-8")
+    dr.resolve_roots(repo.root)
+    ao.conventional_category_defaults(repo.root)
+    dr.derive_location(dr.resolve_roots(repo.root).internal, "adr-records")
+    dr.recorded_locations(repo.root)
+    dr.outside_root(repo.root)
+    dr.capability_location(repo.root, "project-management", "guides")
+    assert (repo.root / OVERLAY).read_text(encoding="utf-8") == overlay_before
+    assert not pc.project_config_path(repo.root).exists()
+    assert not dr.capability_locations_path(repo.root, "project-management").exists()
+
+
+def test_record_location_for_a_capability_lands_in_its_project_namespace(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    repo = make_adopter_repo(capabilities=("project-management",))
+    written = dr.record_location(repo.root, "project-management", "guides", "docs/guides")
+    assert written == dr.capability_locations_path(repo.root, "project-management")
+    assert written.parent == repo.pkit / "capabilities" / "project-management" / "project"
+    assert dr.recorded_capability_locations(repo.root, "project-management") == {
+        "guides": "docs/guides"
+    }
+    # The capability's own config file is not touched (its schema is strict):
+    # the fixture install leaves it absent, and recording does not create it.
+    assert not (written.parent / "config.yaml").exists()
+
+    assert dr.record_location(repo.root, "project-management", "guides", "other") is None
+    assert dr.record_location(repo.root, "project-management", "notes", "docs/notes") == written
+    assert dr.recorded_capability_locations(repo.root, "project-management") == {
+        "guides": "docs/guides",
+        "notes": "docs/notes",
+    }
+    recorded = dr.capability_location(repo.root, "project-management", "guides")
+    assert recorded == dr.Location(Path("docs/guides"), dr.Source.EXPLICIT)
+
+
+def test_a_root_change_after_recording_moves_nothing(make_adopter_repo: MakeAdopterRepo) -> None:
+    # COR-049 point 6: recorded locations are explicit; changing a root later
+    # affects only locations chosen afterwards.
+    repo = make_adopter_repo()
+    _overlay(repo, "workflow-docs:\n  - README.md\n")
+    _core_agent(repo, "a", "<adr-records>")
+    ao.adopt_agent(repo.root, "a", deploy_fn=_deploy_ok)
+    recorded = dr.recorded_locations(repo.root)
+    assert recorded == [
+        dr.RecordedLocation(dr.BACKBONE, "adr-records", Path("docs/architecture/decisions"))
+    ]
+
+    _set_internal_root(repo, "tech-docs")
+    assert dr.resolve_roots(repo.root).internal == Path("tech-docs")
+    # The derived default moved; the recorded choice did not.
+    derived = ao.conventional_category_defaults(repo.root)["adr-records"]
+    assert derived == "tech-docs/architecture/decisions"
+    assert dr.recorded_locations(repo.root) == recorded
+    assert (repo.root / "docs" / "architecture" / "decisions").is_dir()
+    # It now shows as outside the internal root.
+    assert dr.outside_root(repo.root) == recorded
+    # And adopt leaves the explicit value alone.
+    again = ao.adopt_agent(repo.root, "a", deploy_fn=_deploy_ok)
+    assert again.categories_wired == () and again.categories_already_set == ("adr-records",)
+
+
+def test_existing_explicit_overlay_values_survive_introducing_the_roots(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    # No migration: the seeded overlay's explicit values stay authoritative.
+    repo = make_adopter_repo()
+    _overlay(repo, "adr-records:\n  - decisions/adr\n")
+    _set_internal_root(repo, "tech-docs")
+    assert dr.recorded_locations(repo.root) == [
+        dr.RecordedLocation(dr.BACKBONE, "adr-records", Path("decisions/adr"))
+    ]
+    assert dr.derive_location(
+        dr.resolve_roots(repo.root).internal, "adr-records", explicit="decisions/adr"
+    ) == dr.Location(Path("decisions/adr"), dr.Source.EXPLICIT)
+
+
+# --- status lines ------------------------------------------------------------
+
+
+def _status_lines(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    monkeypatch.setenv("PKIT_SOURCE_BIN", "/fake/pkit")
+    result = CliRunner().invoke(main, ["--color", "never", "status"])
+    assert result.exit_code == 0, result.output
+    lines = result.output.splitlines()
+    start = lines.index("  Documentation")
+    end = next(i for i in range(start + 1, len(lines)) if not lines[i].strip())
+    return [line.strip() for line in lines[start + 1 : end]]
+
+
+def test_status_shows_both_roots_with_their_source(
+    make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = make_adopter_repo()
+    _overlay(repo, "workflow-docs:\n  - README.md\n")
+    assert _status_lines(monkeypatch) == [
+        "user root          docs/   (default)",
+        "internal root      docs/   (default)",
+    ]
+    _write_config(repo, "docs:\n  internal: tech-docs\n")
+    assert _status_lines(monkeypatch)[1] == "internal root      tech-docs/   (explicit)"
+
+
+def test_status_lists_every_recorded_location_outside_the_internal_root(
+    make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = make_adopter_repo(capabilities=("project-management",))
+    _overlay(
+        repo,
+        "architecture-docs:\n  - CONTRIBUTING.md\n  - docs/architecture\n"
+        "adr-records:\n  - decisions/adr\n",
+    )
+    dr.record_location(repo.root, "project-management", "guides", "docs/guides")
+    dr.record_location(repo.root, "project-management", "notes", "elsewhere/notes")
+    lines = _status_lines(monkeypatch)
+    assert lines[2:] == [
+        "outside root       3 recorded location(s) outside the internal root:",
+        "adr-records -> decisions/adr",
+        "architecture-docs -> CONTRIBUTING.md",
+        "notes (project-management) -> elsewhere/notes",
+    ]
+    # Deterministic: the same state renders the same lines.
+    assert _status_lines(monkeypatch) == lines
+
+    _set_internal_root(repo, "decisions")
+    lines = _status_lines(monkeypatch)
+    assert "adr-records -> decisions/adr" not in lines
+    assert "architecture-docs -> docs/architecture" in lines
+    assert "guides (project-management) -> docs/guides" in lines

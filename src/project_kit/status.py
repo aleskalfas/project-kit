@@ -55,6 +55,7 @@ def report_status() -> None:
 
     _report_claude_adapter(target_root)
     _report_capabilities(target_root, source_kit)
+    _report_documentation(target_root)
     _report_decisions(target_root)
     _report_skills_inventory(target_root)
     _report_agents_inventory(target_root)
@@ -191,6 +192,35 @@ def _report_capabilities(target_root: Path, source_kit: Path) -> None:
     else:
         installed_value = "(none)"
     click.echo(f"    {'installed':<18} {installed_value}")
+
+
+def _report_documentation(target_root: Path) -> None:
+    """The two documentation roots with their source, and every recorded
+    location lying outside the internal root (COR-049 points 6 and 7).
+
+    One line per root, one per outside-root location, in a fixed order, so the
+    same repository state always renders the same lines. Reads forgivingly:
+    an unreadable configuration shows the defaults.
+    """
+    from project_kit import docs_roots
+
+    click.echo()
+    click.echo("  " + cli_render.style("heading", "Documentation"))
+    roots = docs_roots.resolve_roots(target_root)
+    for label, audience in (("user root", docs_roots.USER_KEY), ("internal root", docs_roots.INTERNAL_KEY)):
+        path, source = roots.for_audience(audience)
+        click.echo(f"    {label:<18} {path.as_posix()}/   ({source.value})")
+    try:
+        outside = docs_roots.outside_root(target_root, roots)
+    except Exception:  # noqa: BLE001 — soft probe; a broken overlay is validate's finding
+        outside = []
+    if outside:
+        click.echo(
+            f"    {'outside root':<18} {len(outside)} recorded location(s) outside the internal root:"
+        )
+        for rec in outside:
+            owner = "" if rec.component == docs_roots.BACKBONE else f" ({rec.component})"
+            click.echo(f"                         {rec.name}{owner} -> {rec.path.as_posix()}")
 
 
 def _report_decisions(target_root: Path) -> None:
