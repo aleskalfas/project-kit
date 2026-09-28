@@ -1,0 +1,13 @@
+component: backbone
+kind: minor
+body: >
+  Roles and points of a connection can be cited as typed tokens: [<publisher>::<role>]
+  names a role and [<publisher>::<role>:<point>] a point under it (COR-019, refined per
+  COR-053). pkit refs validate resolves every such token in an agent's or skill's body
+  against what installed capabilities declare, read from the run's one wiring, and reports
+  one naming no declared role or point like an unresolved record citation; a bracketed
+  token carrying :: that is not an address is reported as malformed, on its text alone.
+  pkit refs lookup accepts an address and prints where it is declared. The shared schema
+  library gains refs.schema.json#/$defs/address_token for the shape in data; the
+  reference_token fragment is unchanged. The decisions README gains a Citing section
+  listing each citation form.

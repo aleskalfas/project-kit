@@ -380,6 +380,12 @@ class Declarations:
             )
         )
 
+    def role_pointer(self, name: str, role: str) -> str | None:
+        """Where the component `name` declares that it provides `role`: a JSON
+        Pointer into its package file; None when no such component is installed."""
+        component = self.by_name(name)
+        return _roles_pointer(component, role) if component is not None else None
+
 
 @dataclass(frozen=True)
 class Selections:

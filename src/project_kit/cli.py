@@ -2934,13 +2934,24 @@ def refs_who_references(target: str) -> None:
 @refs.command("lookup")
 @click.argument("record_id")
 def refs_lookup(record_id: str) -> None:
-    """Resolve a record ID (`COR-005`, `PRJ-002`) to its file, or a rule (`RS-CMN-001`,
-    `RS-CMN-001#point`, `[living-docs:RS-LDOC-001]`) to its place in its rule set."""
+    """Resolve a record ID (`COR-005`, `PRJ-002`) to its file, a rule (`RS-CMN-001`,
+    `RS-CMN-001#point`, `[living-docs:RS-LDOC-001]`) to its place in its rule set,
+    or a role or point address (`[pkit::documentation]`, `[pkit::documentation:readers]`)
+    to where an installed capability declares it."""
     from project_kit import rule_sets as rule_sets_mod
 
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
+    if refs_mod.is_address_citation(record_id):
+        address = refs_mod.resolve_address(target_root, record_id)
+        if address.malformed:
+            raise click.ClickException(f"{record_id!r} is {address.problem}.")
+        if not address.resolved:
+            raise click.ClickException(f"{record_id!r} does not resolve: {address.problem}.")
+        for location in address.locations:
+            click.echo(location)
+        return
     if rule_sets_mod.is_rule_citation(record_id):
         resolution = refs_mod.resolve_rule_citation(target_root, record_id)
         if not resolution.resolved:
