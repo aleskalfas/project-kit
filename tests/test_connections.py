@@ -870,6 +870,32 @@ def test_configuration_pass_checks_a_contributor_selection_for_real(
     assert report.by_severity(cv.Severity.INFO) == ()
 
 
+def test_configuration_pass_findings_on_a_valid_selection_are_pinned(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """Two providers of the role, one selected; two contributors to its `single` point,
+    one at another version, one selected. The configuration pass finds nothing here, and
+    reading the selections through the resolved wiring (ADR-057 point 2) must keep it so."""
+    repo = make_adopter_repo()
+    single = _accepts(combination="single")
+    _stage(repo, "docs-a", _provider("docs-a", accepts=single), schemas=COMPANIONS)
+    _stage(repo, "docs-b", _provider("docs-b", accepts=single), schemas=COMPANIONS)
+    _stage(repo, "evidence", _contributor("evidence"))
+    _stage(repo, "notes", _contributor("notes", version=2))
+    _config(
+        repo,
+        f"connections:\n  providers:\n    {DOCS}: docs-a\n  selections:\n    {READING}: notes\n",
+    )
+    wiring = cx.resolve_wiring(repo.root)
+    assert _role(wiring, DOCS).active == "docs-a"
+    (point,) = wiring.points
+    assert {b.counterpart.capability: b.status for b in point.bindings} == {
+        "evidence": cx.BindingStatus.BOUND,
+        "notes": cx.BindingStatus.INERT_VERSION,
+    }
+    assert cv.run_configuration_pass(repo.root).findings == ()
+
+
 # --- the one resolver, for plans too (COR-053 point 8) --------------------------------
 
 

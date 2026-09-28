@@ -313,6 +313,54 @@ def test_friction_mode_value_is_checked(make_adopter_repo: MakeAdopterRepo) -> N
     assert _paths(report, cv.Severity.ERROR) == ["/friction/mode", "/friction/status-job"]
 
 
+def test_friction_findings_on_a_valid_configuration_are_pinned(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """Every pattern form the settings allow — a folder, a file, `*`, `**`, the whole
+    repository — judged on a valid configuration. The findings are pinned: reading the
+    patterns and matching them through discovery (ADR-057 point 2) must not move them."""
+    repo = make_adopter_repo()
+    repo.write(
+        {
+            "docs/guide.md": "# Guide\n",
+            "docs/sub/deep.md": "# Deep\n",
+            "notes/a.md": "# A\n",
+            "src/cli/main.py": "print('x')\n",
+        }
+    )
+    _write_config(
+        repo,
+        "name: example\n"
+        "docs:\n  user: docs/\n  internal: tech-docs\n"
+        "friction:\n"
+        "  mode: warning\n"
+        "  places: [docs, 'docs/**/*.md', 'notes/*.md', notes/a.md, 'nowhere/**']\n"
+        "  surface: ['src/**', ., src]\n"
+        "  exclude: [docs/sub, missing.md]\n",
+    )
+    report = _run(repo)
+    assert [(f.path, f.severity, f.message) for f in report.findings] == [
+        (
+            "/docs/internal",
+            cv.Severity.WARNING,
+            "documentation root 'tech-docs' does not exist yet; the default applies to "
+            "readers until it is created (COR-049 point 7).",
+        ),
+        (
+            "/friction/places/4",
+            cv.Severity.WARNING,
+            "friction pattern 'nowhere/**' matches nothing in the repository; a dead pattern "
+            "keeps silence looking like health (COR-050 point 12).",
+        ),
+        (
+            "/friction/exclude/1",
+            cv.Severity.WARNING,
+            "friction pattern 'missing.md' matches nothing in the repository; a dead pattern "
+            "keeps silence looking like health (COR-050 point 12).",
+        ),
+    ]
+
+
 # --- connections (COR-053, COR-052) ------------------------------------------
 
 
