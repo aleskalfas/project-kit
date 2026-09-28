@@ -372,7 +372,11 @@ def resolve_base(root: Path, ref: str) -> BaseState:
     found = _git(root, "merge-base", tip, head, accept=(0, 1))
     commit = found.stdout.decode().strip()
     if found.returncode != 0 or not commit:
-        raise FrictionCheckError(f"HEAD and the base {ref!r} share no history to compare.")
+        raise FrictionCheckError(
+            f"HEAD and the base {ref!r} share no history to compare; in a shallow clone, "
+            f"fetch the history back to where the branch left the base (e.g. `git fetch "
+            f"--unshallow`)."
+        )
     ancestor = _git(root, "merge-base", "--is-ancestor", tip, head, accept=(0, 1))
     return BaseState(ref=ref, tip=tip, commit=commit, outdated=ancestor.returncode != 0)
 

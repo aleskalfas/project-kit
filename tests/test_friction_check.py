@@ -619,6 +619,16 @@ def test_a_base_that_does_not_resolve_is_an_error(repo: AdopterRepo) -> None:
     _start(repo, {"docs/guide.md": _guide()})
     with pytest.raises(fc.FrictionCheckError, match="does not resolve"):
         fc.run_change_check(repo.root, "no-such-branch")
+    result = _cli("--base", "no-such-branch")
+    assert result.exit_code == 1 and "does not resolve" in result.output
+
+
+def test_a_base_sharing_no_history_is_an_error(repo: AdopterRepo) -> None:
+    _start(repo, {"docs/guide.md": _guide()})
+    repo.git("checkout", "-q", "--orphan", "unrelated")
+    repo.commit("an unrelated root", files=None)
+    with pytest.raises(fc.FrictionCheckError, match="share no history"):
+        fc.run_change_check(repo.root, "main")
 
 
 # --- modes, dormancy, output ---------------------------------------------------------------------
