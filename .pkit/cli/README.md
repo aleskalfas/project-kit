@@ -367,6 +367,7 @@ Read-only state check. Verifies:
 - The no-shared-files invariant — no project edits to core-owned paths.
 - The manifest — every declared path is present and well-formed.
 - Per-area schema rules — decision-record schema, link validity, naming conventions, and any rules each area documents in its own README.
+- The `friction` pass (COR-050 point 12) — discovers artefacts in the declared places (`friction.places` in the project configuration and in each installed capability's package metadata) and fails on a malformed `friction` block, a dangling deferral, a cycle between artefacts, an invalid `friction.mode`, or a settings path outside the repository. Dormant — a count line only — until a place is declared and an artefact carries the container. Reference: `.pkit/schemas/README.md`, "The friction block".
 
 Reports issues with their locations and a brief diagnosis. Makes no changes.
 
