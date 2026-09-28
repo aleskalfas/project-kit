@@ -85,6 +85,11 @@ def rules(*ids: str, **entry: Any) -> dict[str, Any]:
     return {rule_id: {"status": "accepted", "origin": dict(QUOTE), **entry} for rule_id in ids}
 
 
+def anchored_to(*artefacts: str) -> dict[str, Any]:
+    """A rule entry's container anchoring it to `artefacts` by id."""
+    return {"pkit": {"friction": {"anchors": {"artefact": list(artefacts)}}}}
+
+
 @pytest.fixture
 def adopter(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
     return make_adopter_repo()
@@ -568,8 +573,13 @@ def test_a_fill_of_a_retired_rule_is_orphaned_and_a_retired_fill_counts_for_noth
     front["rules"]["RS-CMN-006"]["offers"] = ["reader"]
     write_set(adopter, f"{PROJECT_SETS}/cmn.md", front)
     old = {"status": "withdrawn", "origin": dict(QUOTE), "fills": ["RS-CMN-001#cause-location"]}
-    new = {"status": "accepted", "origin": dict(QUOTE), "fills": ["RS-CMN-001#cause-location"]}
-    orphan = {"fills": ["RS-CMN-006#reader"]}
+    new = {
+        "status": "accepted",
+        "origin": dict(QUOTE),
+        "fills": ["RS-CMN-001#cause-location"],
+        **anchored_to("RS-CMN-001"),
+    }
+    orphan = {"fills": ["RS-CMN-006#reader"]}  # orphaned: no anchor is asked of it
     write_set(
         adopter,
         f"{PROJECT_SETS}/doc.md",
@@ -582,6 +592,72 @@ def test_a_fill_of_a_retired_rule_is_orphaned_and_a_retired_fill_counts_for_noth
     assert report.severity is rs.Severity.REPORT
     assert report.where == f"{PROJECT_SETS}/doc.md#RS-DOC-004 /fills/0"
     assert "RS-CMN-006 is withdrawn" in report.message
+
+
+def test_a_fill_whose_rule_does_not_anchor_to_the_rule_it_fills(adopter: AdopterRepo) -> None:
+    front = cmn()
+    front["rules"]["RS-CMN-005"]["offers"] = ["reader", "writer"]
+    write_set(adopter, f"{PROJECT_SETS}/cmn.md", front)
+    fill = {"fills": ["RS-CMN-001#cause-location"]}
+    entries = {
+        "RS-DOC-002": {**fill, **anchored_to("RS-CMN-001")},  # anchored: clean
+        "RS-DOC-003": {"fills": ["RS-CMN-005#reader"]},  # no anchor at all
+        # Anchored elsewhere: to another rule, through a point, and to a path.
+        "RS-DOC-004": {
+            "fills": ["RS-CMN-005#writer"],
+            "pkit": {
+                "friction": {
+                    "anchors": {"artefact": ["RS-CMN-001", "RS-CMN-005#writer"], "path": ["docs/**"]}
+                }
+            },
+        },
+    }
+    write_set(adopter, f"{PROJECT_SETS}/doc.md", doc("CMN@1", **entries))
+    result = validate(adopter)
+
+    unanchored = [f for f in result.errors if f.kind is Kind.UNANCHORED_FILL]
+    assert [f.where for f in unanchored] == [
+        f"{PROJECT_SETS}/doc.md#RS-DOC-003 /fills/0",
+        f"{PROJECT_SETS}/doc.md#RS-DOC-004 /fills/0",
+    ]
+    assert kinds(result) == [Kind.UNANCHORED_FILL, Kind.UNANCHORED_FILL]
+    assert (
+        "fills RS-CMN-005#reader, but RS-DOC-003 does not anchor to RS-CMN-005" in unanchored[0].message
+    )
+    assert "add RS-CMN-005 to `pkit.friction.anchors.artefact`" in unanchored[0].message
+
+
+def test_a_fill_of_a_method_rule_anchors_to_it_bare_or_as_cited(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    adopter = make_adopter_repo(capabilities=("evidence",))
+    write_set(
+        adopter,
+        ".pkit/capabilities/evidence/rule-sets/ev.md",
+        {"rule-set": "EV", "version": "1.0.0", "rules": {"RS-EV-001": {"offers": ["a", "b", "c"]}}},
+    )
+    entries = {
+        "RS-DOC-002": {"fills": ["evidence:RS-EV-001#a"], **anchored_to("evidence:RS-EV-001")},
+        "RS-DOC-003": {"fills": ["RS-EV-001#b"], **anchored_to("RS-EV-001")},
+        # A component that does not own the set names no rule, so it anchors nothing.
+        "RS-DOC-004": {"fills": ["evidence:RS-EV-001#c"], **anchored_to("living-docs:RS-EV-001")},
+    }
+    write_set(adopter, f"{PROJECT_SETS}/doc.md", doc("evidence:EV@1", **entries))
+    result = validate(adopter)
+
+    (finding,) = result.errors
+    assert (finding.kind, finding.where) == (
+        Kind.UNANCHORED_FILL,
+        f"{PROJECT_SETS}/doc.md#RS-DOC-004 /fills/0",
+    )
+    assert "add evidence:RS-EV-001 to" in finding.message
+
+    # The anchor the pass accepts is one the friction pass resolves to the same rule.
+    discovery = fd.discover_artefacts(adopter.root)
+    filling = next(a for a in discovery.artefacts if a.id == "RS-DOC-002")
+    (anchor,) = filling.anchors_of_kind("artefact")
+    found = discovery.find(anchor)
+    assert found is not None and found.location.endswith("ev.md#RS-EV-001")
 
 
 def test_a_bare_pin_of_a_method_set_names_the_qualified_form(

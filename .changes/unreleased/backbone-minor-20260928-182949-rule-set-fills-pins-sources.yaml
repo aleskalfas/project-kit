@@ -1,0 +1,10 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  A rule that fills an inherited extension point anchors to the rule it fills (COR-051
+  point 7): `pkit validate`'s `rule-sets` pass fails a fill whose rule carries no `artefact`
+  anchor naming that rule — bare, or as it is cited (`living-docs:RS-LDOC-003`) — so a change
+  to the inherited rule flags the fill as friction (`unanchored-fill`, naming the anchor to
+  add). An orphaned fill is still only reported, and asks for no anchor.
