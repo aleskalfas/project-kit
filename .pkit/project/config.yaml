@@ -1,5 +1,10 @@
+# yaml-language-server: $schema=../schemas/backbone/config.schema.json
 # Adopter-owned backbone project config (project namespace — never touched
 # by `pkit sync`). Holds project-level declarations the backbone reads.
+#
+# Schema: .pkit/schemas/backbone/config.schema.json (COR-048); every key is
+# owned by a core record and documented in .pkit/cli/README.md,
+# "Configuration file". `pkit validate` checks this file strictly.
 #
 # `name` — the declared project identity for report context (pkit ADR-050):
 # rendered on every `pkit report` as the body context line, the `project=`

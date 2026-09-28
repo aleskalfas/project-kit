@@ -2502,7 +2502,18 @@ def validate(include_refs: bool) -> None:
 
         for ri in ref_issues:
             issues.append(ValidateIssue(location=ri.location, diagnosis=ri.diagnosis))
+    # --- backbone configuration pass (COR-048 point 4; #981) -------------------
+    # Errors join the issue list and fail the command; warnings and information
+    # print under the "configuration" heading only. Registry refactor is #986.
+    from project_kit import config_validate
+    from project_kit.validate import Issue as ValidateIssue
+
+    config_report = config_validate.run_configuration_pass(target_root)
+    for location, diagnosis in config_validate.as_issues(config_report):
+        issues.append(ValidateIssue(location=location, diagnosis=diagnosis))
+    # ---------------------------------------------------------------------------
     print_validate_report(target_root, issues)
+    config_validate.print_configuration_section(config_report)
     if issues:
         raise SystemExit(1)
 
