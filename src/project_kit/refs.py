@@ -25,6 +25,12 @@ Body parser convention (per COR-013, documented in `.pkit/agents/README.md`):
   and in brackets with the owning component in front,
   `[<component>:RS-<SET>-NNN]`. Each must resolve to a rule of an installed
   rule set; unlike records they are not declared in frontmatter.
+- Role and point addresses as typed tokens (COR-019, refined per COR-053):
+  `[<publisher>::<role>]`, `[<publisher>::<role>:<point>]`. Each must resolve
+  to a role or point an installed capability declares, read from the run's
+  one wiring (`connections.shared_wiring`); a bracketed token carrying `::`
+  that is not an address is reported as malformed. Not declared in
+  frontmatter either.
 - Hook names: `<topic>.<operation>` or `<topic>.<provider>.<operation>`.
 - Skipped regions: fenced code blocks, HTML comments, strikethrough.
 """
@@ -43,8 +49,9 @@ from typing import Any, Literal
 
 from ruamel.yaml import YAML
 
-from project_kit import agent_policy, agents_overlay, rule_sets
-from project_kit.validators import Finding, Outcome, Severity, counts_line
+from project_kit import agent_policy, agents_overlay, connections, rule_sets
+from project_kit.package_validate import POINT_SEPARATOR, ROLE_QUALIFIER
+from project_kit.validators import Finding, Outcome, Severity, counts_line, location_of
 
 Kind = Literal["agent", "skill"]
 Namespace = Literal["core", "project"]
@@ -82,6 +89,10 @@ class BodyRefs:
     # Rule citations per COR-051 point 3, as written without brackets:
     # `RS-CMN-001`, `RS-CMN-001#point`, `living-docs:RS-LDOC-001`.
     rule_citations: frozenset[str] = field(default_factory=frozenset)
+    # Role and point address tokens (COR-019, COR-053), as written inside the
+    # brackets: `pkit::documentation`, `pkit::documentation:readers` — and a
+    # malformed one carrying `::`, which validation reports as such.
+    addresses: frozenset[str] = field(default_factory=frozenset)
 
 
 @dataclass(frozen=True)
@@ -224,7 +235,7 @@ def load_hook_providers(target_root: Path) -> list[Provider]:
 
 
 def validate_corpus(target_root: Path) -> list[Issue]:
-    """Run bidirectional consistency + hook closure + same-tier collision + exactly-one-owner + storyboard + capability-citation + composes + agent-policy checks."""
+    """Run bidirectional consistency + hook closure + same-tier collision + exactly-one-owner + storyboard + capability-, rule- and address-citation + composes + agent-policy checks."""
     artifacts = load_artifacts(target_root)
     providers = load_hook_providers(target_root)
     return check_corpus(artifacts, providers, target_root)
@@ -240,6 +251,7 @@ def check_corpus(artifacts: list[Artifact], providers: list[Provider], target_ro
     issues.extend(_kind(_validate_storyboards(artifacts, target_root), STORYBOARD))
     issues.extend(_kind(_validate_capability_citations(artifacts, target_root), CITATION))
     issues.extend(_kind(_validate_rule_citations(artifacts, target_root), CITATION))
+    issues.extend(_kind(_validate_address_citations(artifacts, target_root), CITATION))
     issues.extend(_kind(_validate_composes(artifacts, target_root), COMPOSES))
     issues.extend(_kind(_validate_agent_policy(artifacts, target_root), AGENT_POLICY))
     return issues
@@ -283,6 +295,134 @@ def outcome(target_root: Path) -> Outcome:
 def resolve_rule_citation(target_root: Path, citation: str) -> rule_sets.CitationResolution:
     """Resolve a rule citation (`RS-CMN-001`, `RS-CMN-001#point`, `[cap:RS-CMN-001]`)."""
     return rule_sets.resolve_citation(rule_sets.discover_rule_sets(target_root), citation)
+
+
+@dataclass(frozen=True)
+class Address:
+    """A role or point address, parsed (COR-053 points 1 and 2)."""
+
+    publisher: str
+    role_word: str
+    point: str | None = None  # None: the address names the role itself
+
+    @property
+    def role(self) -> str:
+        """The qualified role, `<publisher>::<role>`."""
+        return f"{self.publisher}{ROLE_QUALIFIER}{self.role_word}"
+
+    def __str__(self) -> str:
+        return self.role if self.point is None else f"{self.role}{POINT_SEPARATOR}{self.point}"
+
+
+@dataclass(frozen=True)
+class AddressResolution:
+    """What a role or point address resolves to, or why it does not.
+
+    A text that is not an address has no `address` (`malformed`): a grammar
+    error, told apart from a well-formed address naming nothing declared. A role
+    resolves to the capability providing it — the active one, or every installed
+    provider while none is active (a conflict, or a selection naming a
+    non-provider, is the `connections` pass's finding, not the citation's). A
+    point resolves to its declaration by the active provider of its role, or else
+    by every installed provider of the role declaring it.
+    """
+
+    citation: str
+    address: Address | None
+    providers: tuple[str, ...] = ()
+    points: tuple[connections.Point, ...] = ()
+    locations: tuple[str, ...] = ()  # `<package file>:<JSON Pointer>`, one per declaration
+    problem: str | None = None
+
+    @property
+    def resolved(self) -> bool:
+        return self.problem is None
+
+    @property
+    def malformed(self) -> bool:
+        return self.address is None
+
+
+def parse_address(text: str) -> Address | None:
+    """`<publisher>::<role>` or `<publisher>::<role>:<point>`, bracketed or not; None
+    when `text` is not one — a single colon, a part missing, a part that is not a
+    lowercase word."""
+    inner = _unbracket(text)
+    if not ADDRESS_RE.fullmatch(inner):
+        return None
+    publisher, _, rest = inner.partition(ROLE_QUALIFIER)
+    role, _, point = rest.partition(POINT_SEPARATOR)
+    return Address(publisher, role, point or None)
+
+
+def is_address_citation(text: str) -> bool:
+    """Whether `text`, bracketed or not, is written in the address form — it
+    carries the role qualifier `::` — well formed or not."""
+    return ROLE_QUALIFIER in _unbracket(text)
+
+
+def resolve_address(target_root: Path, citation: str) -> AddressResolution:
+    """Resolve a role or point address (`[pkit::documentation]`,
+    `pkit::documentation:readers`) against what installed capabilities declare,
+    read from the wiring `pkit validate` resolves once per run (ADR-057 point 2).
+    A malformed address is refused on its grammar alone, before the wiring is read."""
+    if parse_address(citation) is None:
+        return AddressResolution(citation, None, problem=NOT_AN_ADDRESS)
+    return _resolve_address(connections.shared_wiring(target_root), citation, target_root)
+
+
+def _resolve_address(
+    wiring: connections.Wiring, citation: str, target_root: Path
+) -> AddressResolution:
+    address = parse_address(citation)
+    if address is None:
+        return AddressResolution(citation, None, problem=NOT_AN_ADDRESS)
+    declarations = wiring.declarations
+    role = address.role
+    providers = declarations.providers_of(role)
+    if not providers:
+        return AddressResolution(
+            citation, address, problem=f"no installed capability provides role {role!r}"
+        )
+    binding = wiring.role(role)
+    active = binding.active if binding is not None else None
+    files = {i.name: i.file for i in declarations.installed}
+
+    def declared_at(name: str, pointer: str | None) -> str:
+        return location_of(files[name], target_root, pointer or "")
+
+    if address.point is None:
+        named = (active,) if active is not None else providers
+        return AddressResolution(
+            citation,
+            address,
+            providers=named,
+            locations=tuple(declared_at(n, declarations.role_pointer(n, role)) for n in named),
+        )
+    of_role = tuple(p for p in declarations.points if p.role == role and p.provider in providers)
+    declared = tuple(p for p in of_role if p.address == str(address))
+    if not declared:
+        known = sorted({p.address for p in of_role})
+        return AddressResolution(
+            citation,
+            address,
+            providers=providers,
+            problem=f"no installed provider of role {role!r} declares point {address.point!r}"
+            + (f" (declared: {', '.join(repr(k) for k in known)})" if known else ""),
+        )
+    chosen = tuple(p for p in declared if p.provider == active) or declared
+    return AddressResolution(
+        citation,
+        address,
+        providers=tuple(p.provider for p in chosen),
+        points=chosen,
+        locations=tuple(declared_at(p.provider, p.pointer) for p in chosen),
+    )
+
+
+def _unbracket(text: str) -> str:
+    text = text.strip()
+    return text[1:-1] if text.startswith("[") and text.endswith("]") else text
 
 
 def resolve_record(
@@ -377,6 +517,7 @@ def who_references(artifacts: list[Artifact], target: str) -> list[Artifact]:
             | art.body_refs.hooks
             | cap_citations_flat
             | art.body_refs.rule_citations
+            | art.body_refs.addresses
         )
         if target in all_refs:
             matches.append(art)
@@ -710,6 +851,7 @@ def outgoing_refs(artifact: Artifact) -> dict[str, list[str]]:
             f"{cap}:{stem}" for cap, stem in artifact.body_refs.capability_citations
         ),
         "body.rule-citations": sorted(artifact.body_refs.rule_citations),
+        "body.address-citations": sorted(artifact.body_refs.addresses),
     }
 
 
@@ -739,6 +881,27 @@ _RULE_CITATION = rf"{rule_sets.RULE_ID_PATTERN}(?:#{rule_sets.POINT_NAME_PATTERN
 RULE_CITATION_RE = re.compile(rf"\b{_RULE_CITATION}(?![A-Za-z0-9-])")
 QUALIFIED_RULE_CITATION_RE = re.compile(
     rf"\[({rule_sets.COMPONENT_PATTERN}):({_RULE_CITATION})\]"
+)
+
+# Role and point addresses as typed tokens (COR-019, refined per COR-053):
+# `[<publisher>::<role>]` and `[<publisher>::<role>:<point>]`, every part a word
+# — the words the configuration's selection keys admit. `ADDRESS_PATTERN` is
+# the text inside the brackets, and `refs.schema.json#/$defs/address_token` its
+# bracketed form in data.
+ADDRESS_WORD_PATTERN = "[a-z][a-z0-9-]*"
+ADDRESS_PATTERN = (
+    f"{ADDRESS_WORD_PATTERN}{ROLE_QUALIFIER}{ADDRESS_WORD_PATTERN}"
+    f"(?:{POINT_SEPARATOR}{ADDRESS_WORD_PATTERN})?"
+)
+ADDRESS_RE = re.compile(ADDRESS_PATTERN)
+# A bracketed run carrying the role qualifier is an address token, well formed
+# or not; a bracketed token without it belongs to another family (COR-017,
+# COR-019's schema tokens, COR-051), so a single colon never reads as one.
+ADDRESS_TOKEN_RE = re.compile(rf"\[([^\[\]\s]*{ROLE_QUALIFIER}[^\[\]\s]*)\]")
+NOT_AN_ADDRESS = (
+    "not a role or point address: a role is cited `[<publisher>::<role>]` and a point "
+    "`[<publisher>::<role>:<point>]`, every part lowercase letters, digits and hyphens, "
+    "starting with a letter"
 )
 
 # Backtick text that *looks like* a path. Heuristic: contains a `/` OR
@@ -833,7 +996,7 @@ def _is_url(text: str) -> bool:
 
 
 def extract_body_refs(body: str) -> BodyRefs:
-    """Apply the COR-013 parser convention to extract path / record / hook / capability refs."""
+    """Apply the COR-013 parser convention to extract path / record / hook / capability / rule / address refs."""
     stripped = _strip_skip_regions(body)
     paths: set[str] = set()
     records: set[str] = set()
@@ -854,6 +1017,10 @@ def extract_body_refs(body: str) -> BodyRefs:
         rule_citations.add(f"{match.group(1)}:{match.group(2)}")
     for match in RULE_CITATION_RE.finditer(QUALIFIED_RULE_CITATION_RE.sub(" ", stripped)):
         rule_citations.add(match.group(0))
+
+    # Role and point address tokens, malformed ones included: validation tells
+    # the two apart.
+    addresses = {match.group(1) for match in ADDRESS_TOKEN_RE.finditer(stripped)}
 
     for match in BACKTICK_RE.finditer(stripped):
         inner = match.group(1).strip()
@@ -905,6 +1072,7 @@ def extract_body_refs(body: str) -> BodyRefs:
         hooks=frozenset(hooks),
         capability_citations=frozenset(capability_citations),
         rule_citations=frozenset(rule_citations),
+        addresses=frozenset(addresses),
     )
 
 
@@ -1008,6 +1176,7 @@ def _load_one(
                     | sibling_refs.capability_citations
                 ),
                 rule_citations=body_refs.rule_citations | sibling_refs.rule_citations,
+                addresses=body_refs.addresses | sibling_refs.addresses,
             )
 
     # Name: the file stem (matches both flat and folder layouts).
@@ -1653,6 +1822,35 @@ def _validate_rule_citations(artifacts: list[Artifact], target_root: Path) -> li
                 diagnosis=f"cites rule {citation!r}, which does not resolve: {resolution.problem}.",
             )
         )
+    return issues
+
+
+def _validate_address_citations(artifacts: list[Artifact], target_root: Path) -> list[Issue]:
+    """Every role or point address token in a body is well formed and resolves to a
+    role or point an installed capability declares (COR-019, COR-053).
+
+    A malformed token is a grammar finding, worded apart from an address that
+    names nothing declared, and judged on its text alone. The wiring is read only
+    when a well-formed address is cited, and within one `pkit validate` run it is
+    the run's one wiring.
+    """
+    issues: list[Issue] = []
+    wiring: connections.Wiring | None = None
+    for art in artifacts:
+        for text in sorted(art.body_refs.addresses):
+            token = f"[{text}]"
+            address = parse_address(text)
+            if address is None:
+                diagnosis = f"cites {token!r}, which is {NOT_AN_ADDRESS}."
+            else:
+                if wiring is None:
+                    wiring = connections.shared_wiring(target_root)
+                resolution = _resolve_address(wiring, text, target_root)
+                if resolution.resolved:
+                    continue
+                what = "role" if address.point is None else "point"
+                diagnosis = f"cites {what} {token!r}, which does not resolve: {resolution.problem}."
+            issues.append(Issue(location=_location(art, target_root), diagnosis=diagnosis))
     return issues
 
 

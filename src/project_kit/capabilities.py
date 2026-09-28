@@ -271,6 +271,59 @@ def list_capabilities(target_root: Path, source_kit: Path) -> tuple[list[str], l
     return available, installed
 
 
+@dataclass(frozen=True)
+class CatalogueEntry:
+    """One capability the project can see without the network (COR-053 point 8)."""
+
+    source: CapabilitySource  # where its package metadata is read from
+    origin: CapabilityOrigin  # kit-shipped | incubated-in-repo
+    installed: bool
+
+
+def local_catalogue(target_root: Path, source_kit: Path) -> list[CatalogueEntry]:
+    """Every capability readable locally, one entry per name, sorted by name.
+
+    Three places, all on disk, none fetched: the capabilities registered in this
+    project (their installed tree, origin as recorded); capability subtrees
+    authored in this repository at `.pkit/capabilities/<name>/` and not
+    registered (incubated, COR-031); and the capabilities that ship with the
+    running pkit (`<source_kit>/capabilities/`, the tree installed with the
+    tool). A name found in more than one place is read from the first, in that
+    order — an unregistered in-repo copy is the one `register` would take, as
+    its collision note says (COR-031). Where the in-repo tree *is* the kit source
+    (the methodology's own repository), an unregistered capability is
+    kit-shipped. A subtree that does not read as a capability is not listed.
+    """
+    origins = installed_capability_origins(target_root)
+    entries: dict[str, CatalogueEntry] = {}
+    for name in sorted(origins):
+        source = find_capability_in_repo(target_root, name)
+        if source is not None:
+            entries[name] = CatalogueEntry(source, origins[name], installed=True)
+    for parent, origin in (
+        (target_root / ".pkit" / "capabilities", INCUBATED_IN_REPO),
+        (source_kit / "capabilities", KIT_SHIPPED),
+    ):
+        if not parent.is_dir():
+            continue
+        for candidate in sorted(parent.iterdir()):
+            name = candidate.name
+            if name in entries:
+                continue
+            source = _resolve_capability_dir(candidate, name)
+            if source is None:
+                continue
+            in_source = find_capability_in_source(source_kit, name)
+            # The in-repo tree may be the kit source itself: then it ships.
+            is_kit_source = (
+                in_source is not None and in_source.path.resolve() == candidate.resolve()
+            )
+            entries[name] = CatalogueEntry(
+                source, KIT_SHIPPED if is_kit_source else origin, installed=False
+            )
+    return [entries[name] for name in sorted(entries)]
+
+
 def installed_capability_origins(target_root: Path) -> dict[str, str]:
     """Return ``{name: origin}`` for every registered capability (per COR-031).
 

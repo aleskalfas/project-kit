@@ -433,6 +433,25 @@ A filler command lacking the declaration, or a contribution naming both `command
 
 **What `pkit status` shows** (COR-052 point 7), under "Data points": where the project's filler files live and how many there are; how many points are defined, resolved and unresolved; then per point its policy, inert policy and default participation, and whether it resolved or why not; its value — a `single` point's answer with the filler that gave it, or each entry of a `union` or `additive` point with its origin and what it replaced; each removal override with its reason and the fillers it removed from; and every filler considered — `taken`, `inert` or `passed over`, with the reason — a command filler saying whether its command declares the query contract.
 
+#### Discovery: what a capability would connect to
+
+A capability's connections are readable without installing it, and what an install or an uninstall would change in the wiring is known before it happens ([COR-053](../decisions/core/COR-053-connection-points.md) point 8). `project_kit.capability_plans` computes all of it from the one resolver ("How the wiring is resolved") and resolves nothing of its own (ADR-057 points 2 and 6). The commands are in the CLI reference, "Discovery".
+
+**The local catalogue.** Where a capability not yet installed is found: the capabilities registered in the project (read from their installed tree), capability subtrees authored in the repository at `.pkit/capabilities/<name>/` and not registered (incubated, COR-031), and the capabilities that ship with the running pkit — its kit source, the tree installed with the tool. A name in more than one place is read from the first, in that order; where the repository's `.pkit/` *is* the kit source, an unregistered capability there is kit-shipped. All three are on disk: nothing is fetched to read a capability, to plan for it or to suggest it (`capabilities.local_catalogue`).
+
+**`show`.** From the package metadata alone — `connections.roles`, `extension-points`, `extensions` — as the resolver reads them (the same parser, descriptions included), and what would connect here: the live wiring's bindings to and from an installed capability; for one not installed, the bindings of the wiring the resolver computes with it added.
+
+**A plan is exact because it runs the resolver.** `connections.resolve_wiring_with` is the live resolution over the installed set plus or minus one capability; everything else — the selections, the installed backbone version, the project's filler files — is read from the tree as the live wiring reads it. A candidate is read where it is (its companion schemas, its definitions) and located where the operation will put it (`.pkit/capabilities/<name>/package.yaml`), with the version its package declares — the version install stamps and register reads — and it comes after the installed components, where install appends it to the registry. The plan is the difference between the live wiring and that one, in terms that do not depend on where anything was read: the roles whose answer changes, the points defined and no longer defined, each counterpart whose status or answering capability changes, and the findings added and resolved (located relative to the project root). The wiring the operation then leaves differs from the one before it by exactly that difference; a test runs the plan, runs the operation, and compares, for install and for uninstall.
+
+| Plan | Lists |
+|---|---|
+| Install (`install --plan`) | the connections it would make, and those it would break; each role conflict it would open, with the provider-selection command that resolves it, one per provider (`pkit connections providers set <role> <capability>`); what the capability needs — the errors the install would put on the capability's own package: an unmet mandatory mark, a mandatory cycle, a backbone or capability range the project does not meet; the role blocks whose meaning changes — an orphaned block the new provider adopts, a bare key a second active role would make ambiguous (COR-053 point 10, "Keys"; rewriting it is the project's, with consent) |
+| Uninstall (`uninstall --plan`) | the fillers lost — its contributions, with whether each point stays filled, is left unfilled or is no longer defined, and the project filler files answering a point it defines that no provider would define after it, kept and inert; the processes left without a provider (`depends-on` entries it answered) and every other counterpart left without one; the artefacts whose role blocks would be orphaned — preserved and reported, never an error; the selections in the configuration left naming it |
+
+Both then list the roles, points and findings that change. A plan writes nothing and runs no filler command — the resolver resolves wiring, not data (COR-053 point 7). What it does not predict, stated: the role blocks it judges are those of the artefacts in the places declared now, so a place the operation adds or removes is not walked in advance; rule-set pins are relations between rule-set files, not connections, and are left out of the difference.
+
+**Suggestions — a suggestion is never an action.** Where the live wiring has an unmet need — a data point filled by nothing but its default, a role an installed counterpart targets and no installed capability provides, an implementation-addressed upstream not installed — the status report names each capability of the local catalogue not installed whose package would answer it: a contribution at the point's version, the role among its roles, the upstream by name. Read from package metadata on disk only; never fetched. It is text: the capability, why, and `pkit capabilities show <name>` — nothing is installed, selected or written. `capability_plans.suggestions` is their one computation, which any view of the wiring reads rather than suggesting on its own.
+
 ## The component registry
 
 The backbone manifest's `components` list is the canonical install record.
@@ -447,7 +466,7 @@ The backbone manifest's `components` list is the canonical install record.
 
 ### Install pre-flight checks
 
-Before placing files, `pkit capabilities install` runs four checks in order:
+Before placing files, `pkit capabilities install` runs four checks in order. `--plan` runs after the first — an installed capability has no install plan — and stops there, writing nothing: what the backbone and dependency checks would refuse on is among what the plan says the capability needs ("Discovery: what a capability would connect to").
 
 1. **Already installed?** Refuse with a hint to use `upgrade`.
 2. **Backbone compatibility** — the capability's `requires_backbone` range must include the current backbone version. This is the shared backbone-satisfaction gate (COR-007 pattern-extraction): the *same* check runs from both capability-entry paths — `install` (kit-source copy) and `register` (in-repo incubated) — so neither path can activate a capability the current backbone cannot support.
@@ -462,7 +481,7 @@ Before placing files, `pkit capabilities install` runs four checks in order:
 
 ### Uninstall: origin-aware removal (COR-031 D4)
 
-`pkit capabilities uninstall` first runs two refusal checks (both defeatable by `--force`):
+`pkit capabilities uninstall` first runs two refusal checks (both defeatable by `--force`); `--plan` runs before them and stops there, writing nothing ("Discovery: what a capability would connect to"):
 
 1. **Declared dependents (COR-030)** — if any installed capability lists this one in its `requires_capabilities`, refuse and name the dependents. The operator must uninstall or upgrade the dependents first.
 2. **Textual references** — if any adopter-authored file cites the capability (citation token or path reference), refuse and list the references.

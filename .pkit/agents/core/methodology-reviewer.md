@@ -105,3 +105,7 @@ These come up often enough to name:
 - Not a hook provider. Your `needs:` is empty; you operate on the file system directly via your read tools.
 
 The output of your review is text. The author of the artifact reads it, decides what to act on, and revises.
+
+## Intermediate files
+
+Keep intermediate files — drafts, scripts, captured output, notes — in the agent workspace, `.agent-workspace/` at the repository root (a worktree's own root in a worktree), and nowhere else outside the repository; it is excluded from version control and granted to every agent, so write intermediate files there with the file tools — a shell redirect into it is judged like any other shell write (the workspace rule in the core rules).

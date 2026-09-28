@@ -129,7 +129,7 @@ def main(ctx: click.Context, color: str) -> None:
 
 @main.group()
 def capabilities() -> None:
-    """Manage installed capabilities (per COR-017): list, install, uninstall, upgrade.
+    """Manage installed capabilities (per COR-017): list, show, install, uninstall, upgrade.
 
     Noun-first, consistent with the other resource-domain groups
     (`schemas`, `permissions`, `refs`, `hooks`, `migrations`).
@@ -3134,13 +3134,24 @@ def refs_who_references(target: str) -> None:
 @refs.command("lookup")
 @click.argument("record_id")
 def refs_lookup(record_id: str) -> None:
-    """Resolve a record ID (`COR-005`, `PRJ-002`) to its file, or a rule (`RS-CMN-001`,
-    `RS-CMN-001#point`, `[living-docs:RS-LDOC-001]`) to its place in its rule set."""
+    """Resolve a record ID (`COR-005`, `PRJ-002`) to its file, a rule (`RS-CMN-001`,
+    `RS-CMN-001#point`, `[living-docs:RS-LDOC-001]`) to its place in its rule set,
+    or a role or point address (`[pkit::documentation]`, `[pkit::documentation:readers]`)
+    to where an installed capability declares it."""
     from project_kit import rule_sets as rule_sets_mod
 
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
+    if refs_mod.is_address_citation(record_id):
+        address = refs_mod.resolve_address(target_root, record_id)
+        if address.malformed:
+            raise click.ClickException(f"{record_id!r} is {address.problem}.")
+        if not address.resolved:
+            raise click.ClickException(f"{record_id!r} does not resolve: {address.problem}.")
+        for location in address.locations:
+            click.echo(location)
+        return
     if rule_sets_mod.is_rule_citation(record_id):
         resolution = refs_mod.resolve_rule_citation(target_root, record_id)
         if not resolution.resolved:
@@ -4263,6 +4274,42 @@ def settings_consolidate(dry_run: bool, yes: bool) -> None:
 # --- Capability commands (per COR-017) ------------------------------------
 
 
+@capabilities.command("show")
+@click.argument("name")
+@click.option("--json", "as_json", is_flag=True, default=False, help="Print the machine form.")
+def show_capability_cmd(name: str, as_json: bool) -> None:
+    """Show a capability's connections, installed or not (COR-053 point 8).
+
+    Read from its package metadata alone: the roles it provides, the points it
+    accepts and offers, its extensions (contributes, subscribes, depends-on),
+    and what would connect here — the live wiring for an installed capability,
+    the wiring this project would have with it installed otherwise. Found in the
+    local catalogue only: the installed tree, capabilities authored in this
+    repository, the capabilities that ship with this pkit. Writes nothing.
+    """
+    from project_kit import capability_plans as plans
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    if not (target_root / ".pkit").is_dir():
+        raise click.ClickException(f"{target_root}/.pkit/ does not exist. Run 'pkit init' first.")
+    candidate = plans.find_candidate(target_root, find_source_kit(), name)
+    if candidate is None:
+        raise click.ClickException(
+            f"no capability named {name!r} is installed, authored in this repository, or "
+            f"ships with this pkit. Try `pkit capabilities list`."
+        )
+    view = plans.show(target_root, candidate)
+    click.echo(plans.to_json(view) if as_json else plans.render_show(view), nl=False)
+
+
+def _plan_flags(plan: bool, as_json: bool) -> None:
+    """`--json` is the machine form of a plan; alone it asks for nothing."""
+    if as_json and not plan:
+        raise click.UsageError("--json prints the plan: pass it with --plan.")
+
+
 @capabilities.command("install")
 @click.argument("name")
 @click.option(
@@ -4271,9 +4318,22 @@ def settings_consolidate(dry_run: bool, yes: bool) -> None:
     default=False,
     help="Show what would be installed without writing files.",
 )
-def install_capability_cmd(name: str, dry_run: bool) -> None:
+@click.option(
+    "--plan",
+    is_flag=True,
+    default=False,
+    help="Show the connections the install would make, the role conflicts to resolve and "
+    "what the capability needs, computed by the wiring resolver; writes nothing (COR-053 "
+    "point 8).",
+)
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="With --plan: the machine form."
+)
+def install_capability_cmd(name: str, dry_run: bool, plan: bool, as_json: bool) -> None:
     """Install a capability: copy subtree into adopter, register in manifest, re-deploy."""
     from project_kit import capabilities as caps
+
+    _plan_flags(plan, as_json)
 
     target_root = find_target_root()
     if target_root is None:
@@ -4301,6 +4361,21 @@ def install_capability_cmd(name: str, dry_run: bool) -> None:
             f"capability {name!r} is already installed. "
             f"Use `pkit capabilities upgrade {name}` to refresh."
         )
+
+    if plan:
+        # The plan runs before the gates: what the gates refuse on — the backbone
+        # and dependency ranges — is among what the plan reports it needs.
+        from project_kit import capability_plans as plans
+
+        candidate = plans.candidate_of(capability_source, caps.KIT_SHIPPED, installed=False)
+        if candidate is None:
+            raise click.ClickException(f"capability {name!r}'s package.yaml does not read.")
+        install_plan = plans.plan_install(target_root, candidate)
+        click.echo(
+            plans.to_json(install_plan) if as_json else plans.render_install_plan(install_plan),
+            nl=False,
+        )
+        return
 
     # Pre-flight: backbone-version satisfaction. Shared with `register` via
     # `_check_backbone_satisfied` (COR-007 pattern-extraction): both capability-
@@ -4782,8 +4857,19 @@ def _show_unified_diff(existing: Path, incoming: Path) -> None:
     default=False,
     help="Show what would be removed without deleting files.",
 )
+@click.option(
+    "--plan",
+    is_flag=True,
+    default=False,
+    help="Show the fillers lost, the processes and other counterparts left without a "
+    "provider and the artefacts whose role blocks would be orphaned, computed by the "
+    "wiring resolver; writes nothing (COR-053 point 8).",
+)
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="With --plan: the machine form."
+)
 def uninstall_capability_cmd(
-    name: str, force: bool, purge: bool, yes: bool, dry_run: bool
+    name: str, force: bool, purge: bool, yes: bool, dry_run: bool, plan: bool, as_json: bool
 ) -> None:
     """Uninstall a capability: unregister, drop stale symlinks, and delete the subtree per origin.
 
@@ -4795,6 +4881,7 @@ def uninstall_capability_cmd(
     """
     from project_kit import capabilities as caps
 
+    _plan_flags(plan, as_json)
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
@@ -4804,6 +4891,20 @@ def uninstall_capability_cmd(
 
     origin = caps.read_capability_origin(target_root, name)
     incubated = origin == caps.INCUBATED_IN_REPO
+
+    if plan:
+        # Before the refusal checks: a plan shows what removal would change in the
+        # wiring whether or not the removal would be refused.
+        from project_kit import capability_plans as plans
+
+        uninstall_plan = plans.plan_uninstall(target_root, name, origin)
+        click.echo(
+            plans.to_json(uninstall_plan)
+            if as_json
+            else plans.render_uninstall_plan(uninstall_plan),
+            nl=False,
+        )
+        return
 
     # Declared-dependent safety check (COR-030): refuse when another installed
     # capability declares this one in its requires_capabilities. This catches

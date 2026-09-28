@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING
 
 import click
 
-from project_kit import cli_render
+from project_kit import cli_render, workspace
 from project_kit.install import find_source_kit, find_target_root
 from project_kit.manifest import read_backbone_manifest, read_kit_version
 
@@ -36,7 +36,14 @@ _LIST_INDENT = " " * 25
 
 
 def report_status() -> None:
-    """Walk the project tree and print the status report."""
+    """Walk the project tree and print the status report — as one run, so every
+    section that reads the wiring reads the same resolution of it (ADR-057 point 2)."""
+    from project_kit import validators
+
+    validators.as_one_run(_report_status)
+
+
+def _report_status() -> None:
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not inside a project tree.")
@@ -61,13 +68,15 @@ def report_status() -> None:
 
     click.echo(f"  {'Kit installed at:':<22} .pkit/")
     _report_backbone_version(target_root, source_kit)
+    _report_workspace(target_root)
 
     _report_claude_adapter(target_root)
     _report_capabilities(target_root, source_kit)
     _report_documentation(target_root)
     _report_friction(target_root)
     _report_rule_sets(target_root)
-    _report_wiring(target_root)
+    _report_connections(target_root)
+    _report_data_points(target_root)
     _report_decisions(target_root)
     _report_skills_inventory(target_root)
     _report_agents_inventory(target_root)
@@ -95,6 +104,28 @@ def _report_backbone_version(target_root: Path, source_kit: Path) -> None:
     else:
         gloss = "up to date"
     click.echo(f"  {'Backbone version:':<22} {installed}   ({gloss})")
+
+
+def _report_workspace(target_root: Path) -> None:
+    """The agent workspace (#1043): whether the folder exists and whether git
+    ignores it, with `pkit sync` as the remedy when either is missing — or that
+    a symlink sits where the folder belongs, which is never the workspace."""
+    state = workspace.inspect(target_root)
+    if state.symlinked:
+        click.echo(
+            f"  {'Agent workspace:':<22} {workspace.WORKSPACE_DIR}   (a symlink, never the "
+            "workspace — remove the link, then run `pkit sync`)"
+        )
+        return
+    parts = ["present" if state.present else "missing"]
+    if not state.in_git:
+        parts.append("not a git repository, nothing to exclude it from")
+    else:
+        parts.append("excluded from git" if state.excluded else "NOT excluded from git")
+    gloss = ", ".join(parts)
+    if not state.present or (state.in_git and not state.excluded):
+        gloss += " — run `pkit sync`"
+    click.echo(f"  {'Agent workspace:':<22} {workspace.WORKSPACE_DIR}/   ({gloss})")
 
 
 def _report_claude_adapter(target_root: Path) -> None:
@@ -204,6 +235,27 @@ def _report_capabilities(target_root: Path, source_kit: Path) -> None:
     else:
         installed_value = "(none)"
     click.echo(f"    {'installed':<18} {installed_value}")
+    _report_suggestions(target_root, source_kit)
+
+
+def _report_suggestions(target_root: Path, source_kit: Path) -> None:
+    """Capabilities of the local catalogue that would answer an unmet need of the
+    wiring — an unfilled data point, a targeted role nobody provides, an upstream
+    not installed (COR-053 point 8). Read from package metadata on disk only;
+    nothing is fetched and nothing is installed: a suggestion is never an action.
+    Shown only when there is one. Reads forgivingly: a broken declaration is
+    validate's finding."""
+    from project_kit import capability_plans as plans
+
+    try:
+        found = plans.suggest(target_root, source_kit)
+    except Exception:  # noqa: BLE001 — soft probe
+        return
+    if not found:
+        return
+    click.echo(f"    {'suggested':<18} {len(found)} from local catalogues (nothing is installed):")
+    for suggestion in found:
+        click.echo(f"{_LIST_INDENT}{plans.suggestion_line(suggestion)}")
 
 
 def _report_documentation(target_root: Path) -> None:
@@ -321,18 +373,6 @@ def _report_rule_sets(target_root: Path) -> None:
                 f"{check.inherited.citation} is at {check.inherited.version}"
             )
             click.echo(f"{_LIST_INDENT}  fix: {check.fix}")
-
-
-def _report_wiring(target_root: Path) -> None:
-    """The Connections and Data points sections, as one run: both read the one
-    wiring, resolved once for them (ADR-057 point 2), as under `pkit validate`."""
-    from project_kit import validators
-
-    def both() -> None:
-        _report_connections(target_root)
-        _report_data_points(target_root)
-
-    validators.as_one_run(both)
 
 
 def _report_connections(target_root: Path) -> None:

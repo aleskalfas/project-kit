@@ -99,6 +99,23 @@ privileges:
         - Read
         - Grep
         - Glob
+  workspace:
+    description: >-
+      Create, read and edit intermediate files in the agent workspace, the
+      git-excluded folder at the root of each checkout (rules/core.md, the
+      workspace rule), with the file tools. Recognized only for a file tool
+      whose target lies inside it; a shell command is judged like any other.
+      Never realized as a session-wide rule; the hook enforces it.
+    recognize:
+      path:
+        folders:
+          - ".agent-workspace"
+        tools:
+          - Read
+          - Write
+          - Edit
+          - MultiEdit
+          - NotebookEdit
 
   # --- guardrail privileges (the baseline model grants these effect:deny) ---
   privilege-escalation:

@@ -3,8 +3,10 @@
 This module is the **one** computation of the wiring: `pkit validate` reports
 it, and the graph, the status report and the install / uninstall plans
 (COR-053 points 7 and 8) read its `Wiring` rather than resolving anything of
-their own. A plan resolves a hypothetical set of components the same way
-(`Declarations.from_installed` + `resolve`).
+their own. A plan resolves a hypothetical set of components the same way:
+`resolve_wiring_with` is `resolve_wiring` over the installed set plus or
+minus a candidate, every other input read from the tree as the live wiring
+reads it (`capability_plans` is its reader).
 
 It reads, and reads only:
 
@@ -200,7 +202,10 @@ _RELATION_ORDER = {relation: index for index, relation in enumerate(Relation)}
 
 @dataclass(frozen=True)
 class Installed:
-    """One registered component whose package file is present."""
+    """One registered component whose package file is present — or, for a plan,
+    a candidate: `file` is where its package file sits once it is installed, so
+    findings are located where the operation will put them, and `component_dir`
+    is where its companion schemas and definitions are read from now."""
 
     name: str
     kind: str  # "capability" | "adapter"
@@ -225,7 +230,7 @@ class Point:
     schema: str | None = None  # companion schema, relative to the provider's schemas/
     process_id: str | None = None  # process: the offered definition's id
     fingerprint: str | None = None  # sha256 of the canonical companion schema, when readable
-    description: str | None = None  # the required prose, read by people in the graph
+    description: str | None = None  # the declaration's prose; read by people, never parsed
 
     @property
     def policy(self) -> str | None:
@@ -247,7 +252,7 @@ class Counterpart:
     pointer: str  # JSON Pointer to the entry in its package file
     mandatory: str | None = None  # the reason, when the mark is set
     command: str | None = None
-    description: str | None = None  # the optional prose, read by people in the graph
+    description: str | None = None  # the entry's optional prose; never parsed
 
     @property
     def role_form(self) -> bool:
@@ -390,6 +395,12 @@ class Declarations:
             )
         )
 
+    def role_pointer(self, name: str, role: str) -> str | None:
+        """Where the component `name` declares that it provides `role`: a JSON
+        Pointer into its package file; None when no such component is installed."""
+        component = self.by_name(name)
+        return _roles_pointer(component, role) if component is not None else None
+
 
 @dataclass(frozen=True)
 class Selections:
@@ -473,6 +484,11 @@ def load_declarations(target_root: Path) -> Declarations:
     Shape is the package schema's business (`package_validate`): a slice that
     is not the expected type is skipped here, never reported twice.
     """
+    return Declarations.from_installed(_installed_components(target_root))
+
+
+def _installed_components(target_root: Path) -> list[Installed]:
+    """Every registered component whose package file reads, in registry order."""
     backbone = read_backbone_manifest(target_root)
     entries = {e.name: e for e in backbone.components} if backbone is not None else {}
     installed: list[Installed] = []
@@ -493,7 +509,7 @@ def load_declarations(target_root: Path) -> Declarations:
                 package=package,
             )
         )
-    return Declarations.from_installed(installed)
+    return installed
 
 
 def read_package(file: Path) -> Mapping[str, Any] | None:
@@ -521,8 +537,31 @@ def load_selections(target_root: Path) -> Selections:
 def resolve_wiring(target_root: Path) -> Wiring:
     """The live wiring of the project at `target_root`, with the rule-set pins
     read from its rule-set files among the version relations."""
+    return resolve_wiring_with(target_root)
+
+
+def resolve_wiring_with(
+    target_root: Path,
+    *,
+    add: Iterable[Installed] = (),
+    remove: Iterable[str] = (),
+) -> Wiring:
+    """The wiring the project at `target_root` would have with the components in
+    `add` installed and those named in `remove` not; with neither, the live wiring.
+
+    What a plan predicts (COR-053 point 8), computed by the one resolver: only
+    the component set is hypothetical. The selections, the installed backbone
+    version, the project's filler files and the rule-set pins are read from the
+    tree exactly as the live wiring reads them, and the candidates in `add` come
+    after the installed components, where install and register append them to
+    the registry — so the wiring the operation then leaves is this one.
+    """
+    added = tuple(add)
+    removed = frozenset(remove)
     backbone = read_backbone_manifest(target_root)
-    declarations = load_declarations(target_root)
+    declarations = Declarations.from_installed(
+        (*(c for c in _installed_components(target_root) if c.name not in removed), *added)
+    )
     fillers = project_fillers(target_root)
     wiring = resolve(
         declarations,
@@ -568,6 +607,13 @@ def container_wiring(target_root: Path) -> bs.ContainerWiring:
         ("container-wiring", target_root.resolve()),
         lambda: _container_wiring(shared_wiring(target_root), target_root),
     )
+
+
+def container_wiring_of(wiring: Wiring, target_root: Path) -> bs.ContainerWiring:
+    """What container validation would read of `wiring` — a plan's hypothetical
+    one (`resolve_wiring_with`), so the plan judges a role block by the rule
+    validation applies, against the wiring the operation would leave."""
+    return _container_wiring(wiring, target_root)
 
 
 def _container_wiring(wiring: Wiring, target_root: Path) -> bs.ContainerWiring:
