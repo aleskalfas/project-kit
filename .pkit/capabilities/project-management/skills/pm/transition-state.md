@@ -55,9 +55,9 @@ pkit project-management close-issue <N> --mode pr-merge --pr <M> [--dry-run] [--
 pkit project-management reopen-issue <N> [--reason "<text>"] [--dry-run] [--yes]
 ```
 
-**Move an issue to another milestone** (no state change; the first-line milestone ref follows):
+**Attach an issue to a milestone, or move it to another** (no state change; the first-line milestone ref follows; the reason goes into an audit comment — a Todo issue is scheduled with `promote-issue --milestone` instead):
 ```
-pkit project-management edit-issue <N> --milestone <number|title> | --clear-milestone [--dry-run] [--yes]
+pkit project-management edit-issue <N> --milestone <number|title> | --clear-milestone --reason "<why>" [--dry-run] [--yes]
 ```
 
 **Tick / untick acceptance criteria** (DEC-038 batch substrate primitives — prefer these over a whole-body `edit-issue` for a checkbox flip; address by 1-based index matching `show-issue --field criteria`, with an optional expected-text guard):
