@@ -554,6 +554,13 @@ def _snapshot(root: Path) -> dict[str, tuple[int, bytes]]:
 
 
 def test_neither_command_writes(timeline: Timeline) -> None:
+    """The commands write nothing: every byte under the repository, `.git`
+    included, is the same after each. The test repository has git's automatic
+    maintenance off from its first commit (`GitRepo.init`): a detached
+    `gc --auto` would otherwise add `info/refs`, `objects/info/packs` and the
+    multi-pack index under `.git` at any later moment — git's housekeeping,
+    not the commands' writing (seen on the CI runner, #1065). A failure here
+    is a real write."""
     _debt_history(timeline)
     timeline.adopter.write({"src/cli/main.py": "print('uncommitted')\n"})  # a dirty tree, too
     root = timeline.adopter.root
@@ -567,6 +574,13 @@ def test_neither_command_writes(timeline: Timeline) -> None:
     ):
         _cli(*args)
         assert _snapshot(root) == before, args
+    # the comparison still sees a write: one file under the tree, one under .git
+    (root / "docs" / "written.md").write_text("a write\n")
+    assert _snapshot(root) != before
+    (root / "docs" / "written.md").unlink()
+    assert _snapshot(root) == before
+    (root / ".git" / "written").write_text("a write\n")
+    assert _snapshot(root) != before
 
 
 def test_output_is_deterministic(timeline: Timeline) -> None:
