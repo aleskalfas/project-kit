@@ -377,6 +377,8 @@ pkit:
 
 **Key form.** A role block's key is the role word alone, the qualifier being resolved from the active provider. The qualified form is written when two active roles share a word — the install plan that introduces the second lists the artefacts whose keys change, rewritten only with consent — and always when a role word equals a functionality block's name.
 
+**What ships now.** `backbone/container.schema.json` — the container in both forms (a document's front matter, a collection entry), with the `friction` block modelled strictly. Its discrimination rule, the shared unknown-key renderer and the load-check live in `project_kit.backbone_schemas`; the point-version compatibility check waits on the role resolver. The other three schemas of the class arrive with their Tasks: the configuration file (#981), rule-set files (#989), the filler envelope (#994).
+
 ## Tooling expectations
 
 A schema's value depends on tooling actually consuming the companion. Five tooling layers a schemas-using project can expect:

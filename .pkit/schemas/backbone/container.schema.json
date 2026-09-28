@@ -1,0 +1,240 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "container.schema.json",
+  "title": "The methodology's front-matter container",
+  "description": "A backbone file schema (ADR-056): the one key the methodology owns inside an artefact's front matter or a collection entry (COR-053 point 10) — `pkit` in this distribution. Everything under it is the methodology's; everything outside it is the artefact's own and is not constrained here. Inside the container a functionality block is named for its functionality (`friction`, COR-050) and carries no version; any other key is a role block whose every child is a point block carrying the integer `schema_version` of the point it targets. The discrimination between a misspelt key and a role block, the nearest-known-key suggestion and orphan reporting are applied by `project_kit.backbone_schemas` on top of this shape. Bound by location — the front matter of a document, or a collection entry, in a declared place — never by a field. Backbone-owned; carries no version of its own and is migrated when it changes (COR-010).",
+  "$ref": "#/$defs/carrier",
+  "$defs": {
+    "carrier": {
+      "title": "A document's front matter, or a collection entry",
+      "description": "The object that carries the container. Both forms are the same shape today: an object with the artefact's own keys and, optionally, the methodology's `pkit` key. They are named separately below so a later divergence lands in one place.",
+      "type": "object",
+      "properties": {
+        "pkit": {
+          "$ref": "#/$defs/container"
+        }
+      }
+    },
+    "document-front-matter": {
+      "title": "Document form",
+      "description": "The front matter of a Markdown document in a declared place (COR-050 point 1).",
+      "$ref": "#/$defs/carrier"
+    },
+    "collection-entry": {
+      "title": "Collection-entry form",
+      "description": "One keyed entry of a collection file whose front matter maps entries by id (COR-050 point 1). The entry's id is the key it sits under, outside this object; the entry object carries the same container as a document's front matter.",
+      "$ref": "#/$defs/carrier"
+    },
+    "container": {
+      "title": "The container (the value under `pkit`)",
+      "description": "Functionality blocks by name; every other key is a role block. See the module for how validation reads it.",
+      "type": "object",
+      "properties": {
+        "friction": {
+          "$ref": "#/$defs/friction"
+        }
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/role-block"
+      }
+    },
+    "friction": {
+      "title": "The `friction` functionality block (COR-050)",
+      "description": "Anchors, the last revalidation on a person's decision, and a tool-written `last-check` status. Backbone-owned: no version; unknown keys refused (COR-050 point 2).",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "anchors": {
+          "$ref": "#/$defs/anchors"
+        },
+        "revalidated": {
+          "$ref": "#/$defs/revalidated"
+        },
+        "last-check": {
+          "$ref": "#/$defs/last-check"
+        }
+      }
+    },
+    "anchors": {
+      "title": "Anchors, grouped by kind (COR-050 point 2)",
+      "description": "The three kinds the backbone resolves. A kind a capability registers is not admitted here until the kind registry exists; validation then reads registered kinds the way the container reads role blocks.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "description": "Files or globs relative to the repository root; `**` matches across folders.",
+          "$ref": "#/$defs/anchor-values"
+        },
+        "record": {
+          "description": "Identified records, such as decisions.",
+          "$ref": "#/$defs/anchor-values"
+        },
+        "artefact": {
+          "description": "Other artefacts, by id.",
+          "$ref": "#/$defs/anchor-values"
+        }
+      }
+    },
+    "anchor-values": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/non-empty-string"
+      }
+    },
+    "revalidated": {
+      "title": "The last revalidation (COR-050 points 3 and 4)",
+      "description": "Written on a person's decision. `at` is the marker of a revalidation and comes with its `outcome`; `unchanged` requires `unchanged-because`. An artefact never yet revalidated may carry `deferred` alone; an empty block is refused.",
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "at": {
+          "description": "UTC timestamp of the revalidation; changes on every revalidation.",
+          "$ref": "#/$defs/utc-timestamp"
+        },
+        "outcome": {
+          "type": "string",
+          "enum": [
+            "updated",
+            "unchanged"
+          ]
+        },
+        "unchanged-because": {
+          "description": "Why the content still holds against this change; required with `outcome: unchanged`.",
+          "$ref": "#/$defs/non-empty-string"
+        },
+        "deferred": {
+          "description": "One entry per anchor whose friction is deliberately postponed, kept sorted by anchor.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/deferral"
+          }
+        }
+      },
+      "dependentRequired": {
+        "at": [
+          "outcome"
+        ],
+        "outcome": [
+          "at"
+        ]
+      },
+      "if": {
+        "properties": {
+          "outcome": {
+            "const": "unchanged"
+          }
+        },
+        "required": [
+          "outcome"
+        ]
+      },
+      "then": {
+        "required": [
+          "unchanged-because"
+        ]
+      }
+    },
+    "deferral": {
+      "title": "One deferral (COR-050 point 4)",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "anchor",
+        "reason"
+      ],
+      "properties": {
+        "anchor": {
+          "$ref": "#/$defs/anchor-reference"
+        },
+        "reason": {
+          "$ref": "#/$defs/non-empty-string"
+        }
+      }
+    },
+    "anchor-reference": {
+      "title": "An anchor written as its kind and value",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "value"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "path",
+            "record",
+            "artefact"
+          ]
+        },
+        "value": {
+          "$ref": "#/$defs/non-empty-string"
+        }
+      }
+    },
+    "last-check": {
+      "title": "The tool-written status (COR-050 point 10)",
+      "description": "Written only by the after-merge job, never read for friction. `state` is what the check found, `as-of` the commit it was checked against, `since` where any staleness came from.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "as-of"
+      ],
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "current",
+            "stale",
+            "deferred"
+          ]
+        },
+        "as-of": {
+          "description": "The commit the check ran against.",
+          "$ref": "#/$defs/non-empty-string"
+        },
+        "since": {
+          "description": "Where the staleness came from: the commit at which the first changed anchor moved past the revalidation point.",
+          "$ref": "#/$defs/non-empty-string"
+        }
+      }
+    },
+    "role-block": {
+      "title": "A role block (COR-053 point 10)",
+      "description": "Named for a role — the role word alone, or its qualified form `<publisher>::<role>` when two active roles share a word or the word equals a functionality block's name. Keyed by point; every point block carries the point's `schema_version`. The point's own schema, shipped by the role's provider, validates the rest of the block.",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "$ref": "#/$defs/point-block"
+      }
+    },
+    "point-block": {
+      "title": "A point block",
+      "description": "The data a role's provider keeps about the artefact for one point. Only `schema_version` is fixed here; the body is validated by the provider's point schema at a compatible version, and left alone otherwise (inert, COR-052 point 5).",
+      "type": "object",
+      "required": [
+        "schema_version"
+      ],
+      "properties": {
+        "schema_version": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "non-empty-string": {
+      "type": "string",
+      "minLength": 1
+    },
+    "utc-timestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    }
+  }
+}

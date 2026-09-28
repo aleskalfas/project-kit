@@ -1,0 +1,17 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  The first backbone file schema ships: `.pkit/schemas/backbone/container.schema.json`
+  fixes the methodology's front-matter container (`pkit:`) for a document's front
+  matter and for a collection entry, with the `friction` block modelled strictly
+  (COR-050, COR-053 point 10, ADR-056). `pkit schemas validate` now load-checks every
+  schema under `.pkit/schemas/backbone/` — a malformed one is reported against its
+  own path — and counts them in its summary. A new `project_kit.backbone_schemas`
+  module loads a backbone schema by kind from the project tree, applies the
+  container's discrimination rule (functionality blocks by name, role blocks by their
+  versioned point blocks, anything else an unknown-key error naming the nearest
+  known key, role blocks without an active provider reported as orphans) and carries
+  the one unknown-key renderer the class shares. Nothing user-invocable changes yet;
+  the front-matter reader and `pkit validate` pass follow with their Tasks.
