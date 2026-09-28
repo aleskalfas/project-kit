@@ -13,7 +13,10 @@ optional expected-text guard, per [project-management:DEC-038-criterion-
 addressing].
 
 Signature (batch-capable):
-  uncheck-criterion <issue> <index> [expected-text] [<index> [expected-text]] ...
+  uncheck-criterion <issue> [--section doc-impact] <index> [expected-text] ...
+
+`--section doc-impact` addresses the `## Doc impact` section's boxes instead of
+the criteria, as check-criterion does (#1015).
 
 Addressing, the optional text guard, the validate-up-front whole-batch
 hard-reject, and idempotent recovery are identical to check-criterion — the only

@@ -86,6 +86,37 @@ def test_valid_pr_no_findings(vp, titles, classification, git_conv) -> None:
     assert findings == []
 
 
+# --- several closing references (#1049) --------------------------------
+
+
+def test_pr_closing_two_issues_is_valid(vp, titles, classification, git_conv) -> None:
+    """One PR landing two Tasks carries a `Closes #N` line each; validate-pr
+    reads both and, with both issues of the title's type, finds nothing."""
+    body = "Closes #42\nCloses #43\n\n## Summary\nfoo\n\n## Doc impact\nnone."
+    assert vp._extract_closing_issues(body) == [42, 43]
+    findings = vp._validate_pr(
+        pr_title="feat(pm): land both",
+        pr_body=body,
+        titles=titles,
+        classification=classification,
+        git_conv=git_conv,
+        closing_type_labels=["type:feature", "type:feature"],
+    )
+    assert findings == []
+
+
+def test_with_closing_references_adds_only_the_missing_ones() -> None:
+    from _lib.pr_validation import with_closing_references
+
+    body = "Closes #42\n\n## Summary\n"
+    assert with_closing_references(body, [42]) == body
+    assert with_closing_references(body, [42, 43]) == "Closes #42\nCloses #43\n\n## Summary\n"
+    # Any closing keyword counts as present; a body without one gets them on top.
+    assert with_closing_references("Resolves #7\n", [7]) == "Resolves #7\n"
+    assert with_closing_references("## Summary\n", [7, 8]) == "Closes #7\nCloses #8\n\n## Summary\n"
+    assert with_closing_references("", [7]) == "Closes #7\n"
+
+
 # --- title pattern ---------------------------------------------------
 
 
