@@ -2631,6 +2631,13 @@ def validate(include_refs: bool) -> None:
     config_validate.print_configuration_section(config_report)
     package_validate.print_pass(target_root, packages)
     friction_validate.print_section(friction_result)
+    # --- connections and versions (COR-053 point 7) — the wiring resolver ------
+    # The packages pass resolved the wiring and its errors are in the issue
+    # list; "connections" shows it with its findings, "versions" the relations.
+    if packages.wiring is not None:
+        from project_kit import connections
+
+        connections.print_pass(target_root, packages.wiring)
     if issues:
         raise SystemExit(1)
 

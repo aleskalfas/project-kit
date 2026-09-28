@@ -1,0 +1,28 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  The connection-points wiring is resolved and validated (COR-053 point 7).
+  One resolver, `project_kit.connections`, computes from package metadata and
+  the configuration's `connections` selections alone — no filler command runs,
+  no process definition is parsed — which capability is the active provider of
+  each qualified role, the points each active role defines, and every
+  contribution, subscription and `depends-on` entry against its point
+  (compatible when the version integers are equal, inert otherwise); the graph,
+  the status report and the install / uninstall plans are to read the same
+  `Wiring`. `pkit validate` reports it under a `connections` heading and fails
+  on a role provided twice with no `connections.providers` selection, an unmet
+  mandatory mark (the side carrying it has the error, the side it targets is
+  warned), a mandatory cycle, two providers of one point and version whose
+  companion schemas differ, and a `single` point with several contributors and
+  no selection, each with the fix named. A new `versions` heading checks every
+  version relation deterministically and labels each finding with its relation:
+  `requires_backbone` against the installed backbone, `requires_capabilities`
+  ranges against installed versions, contributions and subscriptions against
+  point versions, and `depends-on` entries against the offered process
+  interface's version; project filler versions and rule-set pins are named
+  hooks until their files have schemas. The configuration pass now checks its
+  connection entries for real: a provider selection must name a capability that
+  provides the role, a contributor selection a `single` data point and one of
+  its contributors — the earlier "cannot verify" information lines are gone.
