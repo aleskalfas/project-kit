@@ -1,10 +1,13 @@
 """Tests for the backbone file schemas: the container schema, its discrimination
-rule, the shared unknown-key renderer, and the load-check `pkit schemas validate`
-runs over `.pkit/schemas/backbone/` (ADR-056, COR-053 point 10, COR-050).
+rule read against the active wiring, the shared unknown-key renderer, and the
+load-check `pkit schemas validate` runs over `.pkit/schemas/backbone/` (ADR-056,
+COR-053 point 10, COR-050).
 
 Fixtures are built on `tmp_path` (the shared adopter-repo fixture of PR #1019 had
 not landed on `main` when this was written). The shipped container schema is read
 from the repository itself, so a change to the schema is exercised here directly.
+The wiring is written out as a `ContainerWiring` here; the friction pass's tests
+cover the one the resolver builds.
 """
 
 from __future__ import annotations
@@ -23,7 +26,36 @@ from project_kit import schemas_validate
 
 REPO = Path(__file__).resolve().parents[1]
 
-ACTIVE = ["pkit::documentation", "pkit::analysis"]
+DOCS = "pkit::documentation"
+ANALYSIS = "pkit::analysis"
+READING = f"{DOCS}:reading-evidence"
+COVERAGE = f"{DOCS}:coverage"
+
+# The provider's point schema for `reading-evidence`: a string `last-run`, nothing else.
+READING_SCHEMA = {
+    "type": "object",
+    "required": ["last-run"],
+    "properties": {"last-run": {"type": "string"}},
+    "additionalProperties": False,
+}
+
+
+def _active_point(version: int, schema: dict[str, Any] | None = None) -> bs.ActivePoint:
+    """A data point at `version`; without a schema, any body passes."""
+    return bs.ActivePoint(version, validator=Draft202012Validator(schema or {}))
+
+
+# Two active roles; the documentation provider defines two data points.
+WIRING = bs.ContainerWiring(
+    providers={DOCS: "docs-a", ANALYSIS: "analysis-a"},
+    points={READING: _active_point(1, READING_SCHEMA), COVERAGE: _active_point(3)},
+)
+NO_ROLES = bs.ContainerWiring()
+
+
+def _roles(*roles: str) -> bs.ContainerWiring:
+    """Active roles whose providers define no data point."""
+    return bs.ContainerWiring(providers={role: f"provider-of-{role}" for role in roles})
 
 REVALIDATED_UNCHANGED = {
     "at": "2026-10-02T09:40:12Z",
@@ -48,9 +80,9 @@ def _friction(**block: Any) -> dict[str, Any]:
 
 
 def _validate(
-    schema: dict, container: dict[Any, Any], active: list[str] = ACTIVE
+    schema: dict, container: dict[Any, Any], wiring: bs.ContainerWiring = WIRING
 ) -> bs.ContainerReport:
-    return bs.validate_container(_carrier(container), schema, active_roles=active)
+    return bs.validate_container(_carrier(container), schema, wiring=wiring)
 
 
 def _messages(report: bs.ContainerReport) -> list[str]:
@@ -79,15 +111,17 @@ pkit:
       last-run: 2026-10-01
 """
     carrier = YAML(typ="safe").load(text)  # `at` parses to an aware datetime here
-    report = bs.validate_container(carrier, schema, active_roles=ACTIVE)
-    assert report.is_clean, _messages(report)
+    report = bs.validate_container(carrier, schema, wiring=WIRING)
+    # No finding at all: the point block is compatible and its body (`last-run`
+    # read back as written text) passes the provider's point schema.
+    assert report.findings == (), _messages(report)
     assert report.functionality_blocks == ("friction",)
     assert report.role_blocks == ("documentation",)
     assert report.orphaned_roles == ()
 
 
 def test_carrier_without_container_is_clean_and_recognises_nothing(schema: dict) -> None:
-    report = bs.validate_container({"title": "plain"}, schema, active_roles=ACTIVE)
+    report = bs.validate_container({"title": "plain"}, schema, wiring=WIRING)
     assert report.is_clean
     assert report.findings == ()
     assert report.functionality_blocks == () and report.role_blocks == ()
@@ -167,7 +201,7 @@ def test_friction_refuses_fractional_seconds_as_written(schema: dict) -> None:
     text = "pkit:\n  friction:\n    revalidated: {at: 2026-10-02T09:40:12.5Z, outcome: updated}\n"
     carrier = YAML(typ="safe").load(text)
     assert carrier["pkit"]["friction"]["revalidated"]["at"].microsecond == 500_000
-    report = bs.validate_container(carrier, schema, active_roles=ACTIVE)
+    report = bs.validate_container(carrier, schema, wiring=WIRING)
     (finding,) = report.errors
     assert finding.location == "/pkit/friction/revalidated/at"
     assert "2026-10-02T09:40:12.5Z" in finding.message
@@ -198,7 +232,7 @@ def test_role_block_with_versioned_point_blocks_is_recognised(schema: dict) -> N
             }
         },
     )
-    assert report.is_clean, _messages(report)
+    assert report.findings == (), _messages(report)
     assert report.role_blocks == ("documentation",)
     assert report.orphaned_roles == ()
 
@@ -234,8 +268,20 @@ def test_values_that_are_not_role_blocks(schema: dict, value: Any) -> None:
     assert all(f.kind is bs.FindingKind.UNKNOWN_KEY for f in report.errors)
 
 
+# --- role blocks against the active wiring ------------------------------------
+
+
+def test_role_with_an_active_provider_is_not_orphaned(schema: dict) -> None:
+    """The bare word resolves to the one active role of that word; nothing is reported."""
+    report = _validate(schema, {"analysis": {"glossary": {"schema_version": 1}}}, _roles(ANALYSIS))
+    assert report.role_blocks == ("analysis",)
+    assert report.orphaned_roles == ()
+    assert all(f.kind is not bs.FindingKind.ORPHANED_ROLE for f in report.findings)
+
+
 def test_orphaned_role_is_reported_not_errored(schema: dict) -> None:
-    report = _validate(schema, {"documentation": {"p": {"schema_version": 1}}}, active=[])
+    """Only a role no active provider answers is an orphan — whatever else is active."""
+    report = _validate(schema, {"documentation": {"p": {"schema_version": 1}}}, _roles(ANALYSIS))
     assert report.is_clean
     assert report.role_blocks == ("documentation",)
     assert report.orphaned_roles == ("documentation",)
@@ -247,9 +293,93 @@ def test_orphaned_role_is_reported_not_errored(schema: dict) -> None:
 
 
 def test_qualified_role_key_is_active(schema: dict) -> None:
-    report = _validate(schema, {"pkit::documentation": {"p": {"schema_version": 1}}})
-    assert report.is_clean and report.orphaned_roles == ()
-    assert report.role_blocks == ("pkit::documentation",)
+    report = _validate(schema, {DOCS: {"coverage": {"schema_version": 3}}})
+    assert report.findings == () and report.orphaned_roles == ()
+    assert report.role_blocks == (DOCS,)
+
+
+def test_compatible_point_block_is_validated_by_the_point_schema(schema: dict) -> None:
+    """A deliberate error in the body is caught, located inside the point block,
+    and an unknown key reads through the shared renderer."""
+    report = _validate(
+        schema,
+        {"documentation": {"reading-evidence": {"schema_version": 1, "last-run": 5, "lastrun": 1}}},
+    )
+    assert [(f.location, f.kind, f.severity) for f in report.findings] == [
+        ("/pkit/documentation/reading-evidence/lastrun", bs.FindingKind.SHAPE, bs.Severity.ERROR),
+        ("/pkit/documentation/reading-evidence/last-run", bs.FindingKind.SHAPE, bs.Severity.ERROR),
+    ]
+    unknown, wrong_type = report.findings
+    assert "unknown key 'lastrun'; did you mean 'last-run'?" in unknown.message
+    assert "5 is not of type 'string'" in wrong_type.message
+    assert f"'docs-a''s point schema for {READING!r}" in wrong_type.message
+
+
+def test_point_block_at_another_version_is_inert_and_its_body_unvalidated(schema: dict) -> None:
+    """The body would fail the point schema; at another version it is not read at all."""
+    report = _validate(
+        schema, {"documentation": {"reading-evidence": {"schema_version": 2, "last-run": 5}}}
+    )
+    assert report.is_clean
+    (finding,) = report.findings
+    assert finding.kind is bs.FindingKind.INERT_POINT
+    assert finding.severity is bs.Severity.REPORT
+    assert finding.location == "/pkit/documentation/reading-evidence"
+    assert f"is at schema_version 2, but 'docs-a' defines {READING!r} at version 1" in (
+        finding.message
+    )
+    assert "inert, body unvalidated" in finding.message
+
+
+def test_point_block_naming_no_defined_data_point_is_inert(schema: dict) -> None:
+    report = _validate(schema, {"documentation": {"readers": {"schema_version": 1, "x": 5}}})
+    assert report.is_clean
+    (finding,) = report.findings
+    assert finding.kind is bs.FindingKind.INERT_POINT
+    assert finding.location == "/pkit/documentation/readers"
+    assert "names no data point 'docs-a' defines" in finding.message
+    assert "(it defines: 'coverage', 'reading-evidence')" in finding.message
+
+
+def test_role_word_two_active_roles_share_must_be_written_qualified(schema: dict) -> None:
+    wiring = bs.ContainerWiring(
+        providers={DOCS: "docs-a", "super-docs::documentation": "super-docs"},
+        points={READING: _active_point(1, READING_SCHEMA)},
+    )
+    block = {"reading-evidence": {"schema_version": 1, "last-run": "2026-10-01"}}
+    report = _validate(schema, {"documentation": block}, wiring)
+    (finding,) = report.findings
+    assert finding.kind is bs.FindingKind.AMBIGUOUS_ROLE
+    assert finding.severity is bs.Severity.ERROR
+    assert finding.location == "/pkit/documentation"
+    assert "'pkit::documentation', 'super-docs::documentation'" in finding.message
+
+    assert _validate(schema, {DOCS: block}, wiring).findings == ()
+
+
+def test_point_schema_that_cannot_be_applied_is_reported(schema: dict) -> None:
+    """No validator, or a `$ref` that does not resolve: the body is left alone, and said so."""
+    block = {"reading-evidence": {"schema_version": 1, "last-run": 5}}
+    for active, reason in [
+        (bs.ActivePoint(1, unavailable="schemas/x.schema.json is not valid JSON"), "not valid JSON"),
+        (_active_point(1, {"$ref": "elsewhere.schema.json"}), "does not resolve"),
+    ]:
+        wiring = bs.ContainerWiring(providers={DOCS: "docs-a"}, points={READING: active})
+        (finding,) = _validate(schema, {"documentation": block}, wiring).findings
+        assert finding.kind is bs.FindingKind.POINT_SCHEMA_UNAVAILABLE
+        assert finding.severity is bs.Severity.REPORT
+        assert reason in finding.message and "body unvalidated" in finding.message
+
+
+def test_point_compatibility_hook_reads_the_wiring() -> None:
+    compatibility = bs.PointCompatibility
+    assert bs.resolve_point_compatibility(WIRING, DOCS, "reading-evidence", 1) is (
+        compatibility.COMPATIBLE
+    )
+    assert bs.resolve_point_compatibility(WIRING, DOCS, "reading-evidence", 2) is (
+        compatibility.OTHER_VERSION
+    )
+    assert bs.resolve_point_compatibility(WIRING, DOCS, "readers", 1) is compatibility.UNDEFINED
 
 
 def test_bare_friction_is_always_the_functionality_block(schema: dict) -> None:
@@ -260,19 +390,19 @@ def test_bare_friction_is_always_the_functionality_block(schema: dict) -> None:
     assert roles.known_keys() == {"friction", "other::friction"}
 
     # Looks like a role block, but the bare key is the functionality block — and fails its shape.
-    report = _validate(schema, {"friction": {"p": {"schema_version": 1}}}, active=active)
+    report = _validate(schema, {"friction": {"p": {"schema_version": 1}}}, _roles(*active))
     assert report.functionality_blocks == ("friction",)
     assert report.role_blocks == ()
     assert not report.is_clean
     assert all(f.kind is bs.FindingKind.SHAPE for f in report.errors)
 
     # The qualified form is the role block.
-    report = _validate(schema, {"other::friction": {"p": {"schema_version": 1}}}, active=active)
+    report = _validate(schema, {"other::friction": {"p": {"schema_version": 1}}}, _roles(*active))
     assert report.is_clean and report.role_blocks == ("other::friction",)
 
 
 def test_container_not_a_mapping_is_a_shape_error(schema: dict) -> None:
-    report = bs.validate_container({bs.CONTAINER_KEY: 3}, schema, active_roles=ACTIVE)
+    report = bs.validate_container({bs.CONTAINER_KEY: 3}, schema, wiring=WIRING)
     (finding,) = report.errors
     assert finding.kind is bs.FindingKind.SHAPE
     assert finding.location == "/pkit"
@@ -282,15 +412,11 @@ def test_container_key_with_no_value_is_present_and_a_shape_error(schema: dict) 
     """`pkit:` written with nothing under it parses to null — present, not absent."""
     carrier = YAML(typ="safe").load("title: plain\npkit:\n")
     assert bs.CONTAINER_KEY in carrier and carrier[bs.CONTAINER_KEY] is None
-    report = bs.validate_container(carrier, schema, active_roles=ACTIVE)
+    report = bs.validate_container(carrier, schema, wiring=WIRING)
     (finding,) = report.errors
     assert finding.kind is bs.FindingKind.SHAPE
     assert finding.location == "/pkit"
     assert "None is not of type 'object'" in finding.message
-
-
-def test_point_compatibility_hook_is_unanswered_until_the_resolver_exists() -> None:
-    assert bs.resolve_point_compatibility("documentation", "p", 1) is None
 
 
 # --- keys the parser did not read as text -----------------------------------
@@ -318,7 +444,7 @@ def test_mixed_key_types_do_not_break_the_shape_pass(schema: dict) -> None:
 
 def test_non_text_role_block_key_keeps_its_shape_findings(schema: dict) -> None:
     """Regression: shape findings were grouped under the text key but looked up by the raw one."""
-    report = _validate(schema, {2026: {"p": {"schema_version": 0}}}, active=[])
+    report = _validate(schema, {2026: {"p": {"schema_version": 0}}}, NO_ROLES)
     assert report.role_blocks == ("2026",) and report.orphaned_roles == ("2026",)
     (finding,) = report.errors
     assert finding.kind is bs.FindingKind.SHAPE
@@ -336,7 +462,7 @@ pkit:
 """
     carrier = YAML(typ="safe").load(text)
     assert {type(k) for k in carrier["pkit"]} == {int, date}
-    report = bs.validate_container(carrier, schema, active_roles=[])
+    report = bs.validate_container(carrier, schema, wiring=NO_ROLES)
     assert report.is_clean, _messages(report)
     assert report.role_blocks == ("2026", "2026-10-02")
     assert [f.location for f in report.reports] == ["/pkit/2026", "/pkit/2026-10-02"]
@@ -363,10 +489,10 @@ def test_collection_entry_carries_the_same_container(schema: dict) -> None:
         }
     }
     entry = collection["rules"]["no-shared-files"]
-    good = bs.validate_container(entry, schema, active_roles=ACTIVE)
+    good = bs.validate_container(entry, schema, wiring=WIRING)
     assert good.is_clean, _messages(good)
     assert good.functionality_blocks == ("friction",) and good.role_blocks == ("documentation",)
-    bad = bs.validate_container(collection["rules"]["typo"], schema, active_roles=ACTIVE)
+    bad = bs.validate_container(collection["rules"]["typo"], schema, wiring=WIRING)
     assert [f.kind for f in bad.errors] == [bs.FindingKind.UNKNOWN_KEY]
 
 
