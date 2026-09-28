@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import subprocess
 from pathlib import Path
 
 import click
@@ -20,6 +19,7 @@ from project_kit.manifest import (
     read_capability_origin,
     write_backbone_manifest,
 )
+from tests.adopter_repo import MakeAdopterRepo
 
 
 # --- fixtures --------------------------------------------------------
@@ -106,18 +106,10 @@ requires_backbone: "{requires_backbone}"{req_caps_block}
 
 
 @pytest.fixture
-def kit_target(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+def kit_target(make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch) -> Path:
     """A minimal adopter project with `.pkit/` initialised."""
-    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
-    monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("PKIT_SOURCE_BIN", "/fake/pkit")
-
-    def _noop(_script: Path, _ctx: install_mod.InstallContext) -> None:
-        return None
-
-    monkeypatch.setattr(install_mod, "_run_adapter_primitive", _noop)
-    install_mod.install_kit(tmp_path)
-    return tmp_path
+    return make_adopter_repo().root
 
 
 @pytest.fixture
