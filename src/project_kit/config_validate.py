@@ -51,7 +51,7 @@ from ruamel.yaml.error import YAMLError
 
 from project_kit import backbone_schemas, cli_render
 from project_kit.manifest import read_backbone_manifest
-from project_kit.report_context import PROJECT_CONFIG_RELPATH, project_config_path
+from project_kit.project_config import PROJECT_CONFIG_RELPATH, project_config_path
 
 # The schema kind under `.pkit/schemas/backbone/` (ADR-056 point 1).
 CONFIG_SCHEMA_KIND = "config"
