@@ -28,15 +28,18 @@ Beyond the two top-level namespaces, decision records also appear in two other p
 
 A capability's **DEC** records are numbered **per capability** — each capability is its own DEC id-space, so two different capabilities may both hold a `DEC-001` without conflict. Only two records sharing a `DEC-NNN` *within the same capability* collide.
 
-`pkit decisions validate` enforces uniqueness within each id-space (core, project, ADR, and per-capability DEC) and is wired into the project's check gate — it catches two records hand-authored with the same id before they land.
+`pkit decisions validate` enforces uniqueness within each id-space (core, project, ADR, and per-capability DEC), and of rule ids across the rule sets (below), and is wired into the project's check gate — it catches two records hand-authored with the same id before they land.
 
 ### Rule sets — a separate family with the same guarantees
 
-Rules are not decision records, but they share their guarantees ([COR-051](core/COR-051-rule-sets.md)). A **rule set** is one file holding many one-paragraph rules: the data sits in front matter, and each rule's statement sits in the body. Rules form their own identifier family, **`RS-<SET>-NNN`**. Ids are permanent and never reused, and every accepted rule carries a recorded origin.
+Rules are not decision records, but they share their guarantees ([COR-051](core/COR-051-rule-sets.md)). A **rule set** is one file holding many one-paragraph rules: the data sits in front matter, and each rule's statement sits in the body, in a section headed by the rule's id. Rules form their own identifier family, **`RS-<SET>-NNN`** — the family prefix, the rule set's name, a number — so a rule id can never collide with a record id. Ids are permanent: a rule is never renumbered, and a retired id is never reused.
 
-- **Statuses.** Rules use `proposed` (the default, binding nothing), `accepted` and `superseded`, like records. They add **`withdrawn`**, for a rule retired without a successor, which only rules have.
-- **The acceptance gate** applies per rule, wherever the rule set lives. That includes project-owned rule sets outside this folder, typically under the project's internal documentation root. A proposed rule binds nothing, and accepting one is a reviewed change.
-- **Uniqueness and origins** will be checked by validation once the rule-set schema and checks ship (COR-051, Implications). Until then they are a convention, and nothing enforces them, nor the per-rule gate above.
+- **Statuses.** A rule without a status is **`proposed`** and binds nothing. **`accepted`** rules bind. A **`superseded`** rule names its successor — in the same rule set, or in one that inherits it — and binds nothing. Rules add **`withdrawn`**, which only rules have: a rule retired without a successor, binding nothing. Superseded and withdrawn rules stay in place with their ids.
+- **The acceptance gate** applies per rule, wherever the rule set lives. That includes project-owned rule sets outside this folder, under the project's internal documentation root by default. A proposed rule binds nothing, and accepting one is a reviewed change.
+- **Origins.** Every accepted rule carries an origin: when it was decided, by whom and why, in the decider's words — or a cited decision record, which must be accepted whenever the rule is.
+- **Where rule sets live.** A method rule set ships with its component and is cited with the component's name; a project rule set is the project's, and is cited bare. A project never edits a method rule set: it inherits it, pinning the set's major version.
+- **Citing a rule.** `RS-CMN-003` names a rule and `RS-CMN-003#cause-location` an extension point it offers. A method rule set's rules are cited with the component in front — `[living-docs:RS-LDOC-003]` in prose, bracketed like a capability decision citation.
+- **Checked by validation.** `pkit validate` checks every rule set — the schema, the join between data and prose, ids, origins, successors and inheritance — and `pkit decisions validate` reports a rule id claimed twice. Where rule-set files live, their front-matter layout and every check are in the schemas reference, "Rule-set files" (`.pkit/schemas/README.md`).
 
 ## The no-shared-files invariant
 
