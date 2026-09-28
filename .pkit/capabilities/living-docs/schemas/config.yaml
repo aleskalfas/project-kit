@@ -1,0 +1,45 @@
+# The living-docs project configuration: what the capability needs that the
+# backbone does not — each documentation space's entry point, and which space
+# each place outside every documentation root belongs to.
+#
+# Per [living-docs:DEC-001-living-docs-discipline] point 1. The places
+# themselves are declared in the friction key of the backbone configuration
+# (`.pkit/project/config.yaml`, `friction.places`, COR-050), because a
+# capability adds no key there (COR-048) and "space" is this capability's term;
+# this file assigns them. The join between the two files is the path, as
+# written in both.
+#
+# - `spaces` — one entry per space, keyed by its id: `user` and `technical`
+#   are the two every project has; a project may add more. Each names its
+#   `entry-point`, the page a reader of that space starts from.
+# - `places` — place → space. A place inside a documentation root belongs to
+#   that root's space and needs no entry here unless the project assigns it
+#   otherwise; a place outside every root must be assigned. A mapping, so each
+#   place names exactly one space.
+#
+# Document-shaped: the file IS the resource. The body below is the minimal
+# reference instance — valid, the schema's self-test, and the starting point
+# a project edits. Adopter-owned: it lives in the capability's `project/`
+# tier and uninstalling the capability leaves it in place.
+
+schema_version: 1
+
+# Adopter-data binding (COR-023). The glob carries the distinguishing segments:
+# a bare `**/config.yaml` would claim the backbone configuration and every
+# other capability's `config.yaml`.
+binds_to:
+  - "**/living-docs/project/config.yaml"
+
+pkit_schema: living-docs:config
+
+# --- reference instance -------------------------------------------------
+
+spaces:
+  user:
+    entry-point: README.md
+  technical:
+    entry-point: CONTRIBUTING.md
+
+places:
+  README.md: user
+  CONTRIBUTING.md: technical

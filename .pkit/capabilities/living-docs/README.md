@@ -18,13 +18,33 @@ Declared in the decision; the package metadata gains them with the first impleme
 - **Accepts** `pkit::documentation:reading-evidence`: results of executed checks that follow the docs, such as a simulated user running a guide. Advisory.
 - **Contributes** to `pkit::work-tracking:doc-check` with page friction and uncovered surface. Inert when no work-tracking capability is installed.
 
+## Declaring your spaces
+
+Where your documentation lives is declared in two files, joined by path:
+
+- **The backbone configuration** (`.pkit/project/config.yaml`) names the two documentation roots (`docs.user`, `docs.internal`) and every place outside them that holds pages (`friction.places`), and the paths the friction checks leave out (`friction.exclude`). The CLI reference's "Configuration file" section documents those keys.
+- **This capability's project configuration** (`.pkit/capabilities/living-docs/project/config.yaml`) holds what only living-docs needs: each space's entry point, and which space each place belongs to.
+
+```yaml
+pkit_schema: living-docs:config
+schema_version: 1
+spaces:
+  user:      { entry-point: README.md }        # the page a user starts from
+  technical: { entry-point: CONTRIBUTING.md }  # the page a maintainer starts from
+places:                                        # place → space, the place written as in friction.places
+  README.md: user
+  CONTRIBUTING.md: technical
+```
+
+A place inside a root belongs to that root's space; list it under `places` only to assign it elsewhere. A place outside every root must be listed. Each place names exactly one space. The file's shape is `schemas/config.schema.json`, which `pkit validate` applies. Trees a sync copies into your repository are never places; in a repository where those trees are the authored source, they may be (the lifecycle README, "The ownership predicates").
+
 ## Adopting it on an existing project
 
 Onboarding is transformation, not moving files. The agent proposes which space each page belongs to, how pages should be split or rewritten for their readers, and which anchors each statement needs. Every proposal lands as a reviewable change.
 
 ## What's shipped now, what's next
 
-This increment ships the decision and this README. Next come: the shared method rule set, page templates, the declarations of places, surface and connections, and the agent that proposes fixes and performs reader-review.
+This increment ships the decision, this README and the project configuration's schema (entry points and place assignment). Next come: the shared method rule set, page templates, the declarations of places, surface and connections, the validation of places and assignments, and the agent that proposes fixes and performs reader-review.
 
 ## Citing this capability's decisions
 

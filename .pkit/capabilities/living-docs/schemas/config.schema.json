@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "config.schema.json",
+  "title": "Project configuration — living-docs capability",
+  "description": "Formal shape of the project's `.pkit/capabilities/living-docs/project/config.yaml`: what the capability needs that the backbone does not (living-docs DEC-001 point 1) — each documentation space's entry point, and the space each place outside every documentation root belongs to. The places themselves are declared in the backbone configuration's `friction.places` (COR-050), which a capability may not extend (COR-048); this file assigns them, joined by path. A place inside a documentation root belongs to that root's space unless assigned here; a place outside every root must be assigned here. `places` is a mapping so that each place names exactly one space. Whether an assignment names a declared place, and whether every out-of-root place has one, is the capability's validation, not this schema's. Document-shaped schema: the file IS the resource (no top-level id collection). Companion per COR-018.",
+  "type": "object",
+  "required": [
+    "schema_version"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "source": {
+      "$ref": "refs.schema.json#/$defs/source"
+    },
+    "binds_to": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Repo-relative globs matching the adopter-data files this schema validates (COR-023 fallback binding). Present on the capability-side carrier; absent from a project's file."
+    },
+    "pkit_schema": {
+      "type": "string",
+      "description": "Self-describing adopter-data binding (COR-023). Expected value: `living-docs:config`."
+    },
+    "spaces": {
+      "description": "The project's documentation spaces, keyed by id. `user` and `technical` are the two every project has (DEC-001 point 1); a project may add others.",
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/space-id"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/space"
+      }
+    },
+    "places": {
+      "description": "Place → space: the space each project place belongs to, keyed by the place's path, normalised as `friction.places` is read (DEC-001 point 1). Required for a place outside every documentation root; for a place inside one, an entry assigns it away from that root's space.",
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/repo-relative-path"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/space-id"
+      }
+    }
+  },
+  "$defs": {
+    "space-id": {
+      "description": "A documentation space's id.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "space": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "entry-point": {
+          "description": "The page a reader of this space starts from: a path relative to the repository root.",
+          "$ref": "#/$defs/repo-relative-path"
+        }
+      }
+    },
+    "repo-relative-path": {
+      "description": "A path relative to the repository root. Not absolute.",
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^/]"
+    }
+  }
+}
