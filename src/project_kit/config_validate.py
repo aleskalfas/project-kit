@@ -426,10 +426,10 @@ def _selection_problem(resolved: wiring.Wiring, address: str, capability: str) -
     point = resolved.data_point(address)
     if point is None:
         return _undefined_point_problem(resolved, address)
-    if point.point.combination != "single":
-        declared = point.point.combination or "no combination"
+    policy = point.point.policy
+    if policy != wiring.SINGLE:
         return (
-            f"point {address!r} is not a `single` point (declared: {declared}); a contributor "
+            f"point {address!r} is not a `single` point (declared: {policy}); a contributor "
             f"selection applies only to `single` points — remove the entry (COR-052 point 4)."
         )
     contributors = point.contributors

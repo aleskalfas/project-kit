@@ -512,9 +512,16 @@ def _connection_findings(
             if not isinstance(entries, list):
                 continue
             for index, entry in enumerate(entries):
-                if isinstance(entry, Mapping) and "command" in entry:
-                    check_command(
-                        f"/connections/extensions/{group}/{index}/command", entry["command"]
+                if not isinstance(entry, Mapping):
+                    continue
+                path = f"/connections/extensions/{group}/{index}"
+                if "command" in entry:
+                    check_command(f"{path}/command", entry["command"])
+                if group == "contributes" and "command" in entry and "value" in entry:
+                    _error(
+                        f"{path}/value",
+                        "a contribution supplies its data through `command` or `value`, not "
+                        "both (COR-052 point 2).",
                     )
 
     return findings

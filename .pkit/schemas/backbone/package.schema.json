@@ -278,15 +278,49 @@
           "$ref": "#/$defs/point-description"
         },
         "combination": {
-          "description": "How several fillers combine (COR-052 point 3).",
+          "description": "How several fillers combine (COR-052 point 3): `single` — one filler answers, by precedence (project filler, then the one contribution — the contributor selection picks among several — then the default); `union` — entries merged by id, a project entry overriding one whole, two capabilities supplying one id an error; `additive` — entries merged, any collision an error, an entry leaving only through a removal override with its reason. `single` when absent.",
           "type": "string",
           "enum": [
             "single",
-            "union"
+            "union",
+            "additive"
+          ]
+        },
+        "default": {
+          "$ref": "#/$defs/point-default"
+        },
+        "inert": {
+          "description": "The inert policy (COR-052 point 6): what the point does when a filler meant to answer cannot — its version does not match, its command failed, its output is invalid. `fallback` resolves from the remaining fillers with a warning naming the one that failed; `fail` leaves the whole point unresolved, as a consumer feeding a gate or a check must declare. `fallback` when absent.",
+          "type": "string",
+          "enum": [
+            "fallback",
+            "fail"
           ]
         },
         "mandatory": {
           "$ref": "#/$defs/mandatory"
+        }
+      }
+    },
+    "point-default": {
+      "title": "The definer's default for a data point (COR-052 point 2)",
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "value",
+        "participation"
+      ],
+      "properties": {
+        "value": {
+          "description": "The default value, in the point's own shape: validated by the point's companion schema when the point resolves."
+        },
+        "participation": {
+          "description": "How the default takes part: `always` — it contributes like any other filler, at the lowest precedence; `alone` — it answers only when no other filler is declared, and never because a declared filler broke.",
+          "type": "string",
+          "enum": [
+            "always",
+            "alone"
+          ]
         }
       }
     },
@@ -382,6 +416,9 @@
         "command": {
           "description": "The command filler that supplies the data (COR-052 point 6); must exist in `commands:` (checked in Python).",
           "$ref": "#/$defs/command-reference"
+        },
+        "value": {
+          "description": "The data this contribution supplies, written here rather than printed by a command: the point's value, validated by the point's companion schema when the point resolves. A contribution names `value` or `command`, not both (checked in Python)."
         },
         "description": {
           "$ref": "#/$defs/non-empty-string"

@@ -1,0 +1,584 @@
+"""Tests for data-point resolution (#994; COR-052, COR-053 point 2): the project
+filler file and its envelope, capability contributions, the definer's default
+and how it takes part, the three policies with precedence, whole-entry and
+removal overrides, the contributor selection, the inert policy — and the
+`connections` member of `pkit validate` that reports it, over one wiring per run."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any
+
+import pytest
+from click.testing import CliRunner
+from ruamel.yaml import YAML
+
+from project_kit import backbone_schemas as bs
+from project_kit import connections as cx
+from project_kit import data_points as dp
+from project_kit import package_validate as pv
+from project_kit import validators
+from project_kit.cli import main
+from project_kit.manifest import (
+    ComponentRegistryEntry,
+    read_backbone_manifest,
+    write_backbone_manifest,
+)
+from project_kit.report_context import project_config_path
+from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+
+DOCS = "pkit::documentation"
+READERS = f"{DOCS}:readers"
+TOOL = f"{DOCS}:tool"
+FILLERS = "docs/pkit/fillers"
+READERS_FILE = f"{FILLERS}/pkit/documentation/readers.yaml"
+TOOL_FILE = f"{FILLERS}/pkit/documentation/tool.yaml"
+
+# A union / additive point: a list of entries, each a string or a mapping with an id.
+ENTRIES_SCHEMA = {
+    "type": "array",
+    "items": {
+        "anyOf": [
+            {"type": "string"},
+            {
+                "type": "object",
+                "required": ["id"],
+                "properties": {"id": {"type": "string"}, "role": {"type": "string"}},
+                "additionalProperties": False,
+            },
+        ]
+    },
+}
+# A single point: one mapping.
+TOOL_SCHEMA = {
+    "type": "object",
+    "required": ["name"],
+    "properties": {"name": {"type": "string"}},
+    "additionalProperties": False,
+}
+SCHEMAS = {"readers.schema.json": ENTRIES_SCHEMA, "tool.schema.json": TOOL_SCHEMA}
+
+W = validators.Severity.WARNING
+E = validators.Severity.ERROR
+
+
+# --- staging ------------------------------------------------------------------
+
+
+@pytest.fixture
+def repo(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
+    return make_adopter_repo()
+
+
+def _stage(repo: AdopterRepo, name: str, connections: dict[str, Any], **extra: Any) -> None:
+    """A synthetic capability registered as incubated, with the two point schemas."""
+    cap_dir = repo.pkit / "capabilities" / name
+    (cap_dir / "schemas").mkdir(parents=True, exist_ok=True)
+    (cap_dir / "scripts").mkdir(exist_ok=True)
+    (cap_dir / "scripts" / "noop.py").write_text("", encoding="utf-8")
+    for file, schema in SCHEMAS.items():
+        (cap_dir / "schemas" / file).write_text(json.dumps(schema), encoding="utf-8")
+    package: dict[str, Any] = {
+        "schema_version": 2,
+        "component": {"kind": "capability", "name": name, "version": "0.1.0"},
+        "description": f"Synthetic {name}.",
+        "requires_backbone": ">=0.0.0",
+        "commands": {"noop": {"script": "scripts/noop.py", "help": "Nothing."}},
+        "connections": connections,
+        **extra,
+    }
+    with (cap_dir / "package.yaml").open("w", encoding="utf-8") as handle:
+        YAML().dump(package, handle)
+    backbone = read_backbone_manifest(repo.root)
+    assert backbone is not None
+    if not any(e.name == name for e in backbone.components):
+        backbone.components.append(
+            ComponentRegistryEntry(
+                kind="capability",
+                name=name,
+                manifest=f".pkit/capabilities/{name}/project/manifest.yaml",
+                origin="incubated-in-repo",
+            )
+        )
+        write_backbone_manifest(repo.root, backbone)
+
+
+def _provider(
+    repo: AdopterRepo,
+    address: str = READERS,
+    *,
+    combination: str | None = "union",
+    default: dict[str, Any] | None = None,
+    inert: str | None = None,
+    version: int = 1,
+    name: str = "docs-a",
+) -> None:
+    point: dict[str, Any] = {
+        "schema_version": version,
+        "schema": "readers.schema.json" if address == READERS else "tool.schema.json",
+        "description": "Who reads the documentation.",
+    }
+    if combination is not None:
+        point["combination"] = combination
+    if default is not None:
+        point["default"] = default
+    if inert is not None:
+        point["inert"] = inert
+    _stage(repo, name, {"roles": [DOCS], "extension-points": {"accepts": {address: point}}})
+
+
+def _contributor(
+    repo: AdopterRepo, name: str, value: Any, *, address: str = READERS, version: int = 1
+) -> None:
+    entry = {"point": address, "schema_version": version, "value": value}
+    _stage(repo, name, {"extensions": {"contributes": [entry]}})
+
+
+def _filler(repo: AdopterRepo, document: Any, path: str = READERS_FILE) -> None:
+    text = document if isinstance(document, str) else json.dumps(document)
+    repo.write({path: text})
+
+
+def _config(repo: AdopterRepo, text: str) -> None:
+    path = project_config_path(repo.root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+
+
+def _resolve(repo: AdopterRepo) -> dp.DataResolution:
+    return dp.resolve_data_points(repo.root)
+
+
+def _point(repo: AdopterRepo, address: str = READERS) -> dp.ResolvedPoint:
+    point = _resolve(repo).point(address)
+    assert point is not None
+    return point
+
+
+def _states(point: dp.ResolvedPoint) -> dict[str, tuple[str, str]]:
+    return {f.name: (f.state.value, f.reason) for f in point.fillers}
+
+
+def _findings(resolution: dp.DataResolution) -> list[tuple[str, str]]:
+    return [(f.location, f.severity.value) for f in resolution.findings]
+
+
+# --- the filler path: the location rule (ADR-056 point 2) --------------------------
+
+
+@pytest.mark.parametrize(
+    ("address", "subpath"),
+    [
+        ("pkit::documentation:readers", "pkit/documentation/readers.yaml"),
+        ("super-docs::documentation:readers", "super-docs/documentation/readers.yaml"),
+        ("pkit::analysis:revalidation-evidence", "pkit/analysis/revalidation-evidence.yaml"),
+    ],
+)
+def test_an_address_maps_to_its_filler_path_and_back(address: str, subpath: str) -> None:
+    assert str(bs.filler_subpath(address)) == subpath
+    assert bs.filler_address(subpath) == address
+
+
+@pytest.mark.parametrize(
+    "address", ["pkit::Documentation:readers", "pkit:documentation:readers", "pkit::docs", "a::b:c.d"]
+)
+def test_an_address_outside_the_word_grammar_has_no_filler_path(address: str) -> None:
+    assert bs.filler_subpath(address) is None
+
+
+@pytest.mark.parametrize(
+    "subpath",
+    ["pkit/documentation.yaml", "a/b/c/d.yaml", "pkit/documentation/readers.yml", "pkit/Doc/readers.yaml"],
+)
+def test_a_path_that_names_no_point_has_no_address(subpath: str) -> None:
+    assert bs.filler_address(subpath) is None
+
+
+# --- the envelope -------------------------------------------------------------------
+
+
+def test_the_project_filler_is_read_at_the_path_its_address_maps_to(repo: AdopterRepo) -> None:
+    _provider(repo)
+    _filler(repo, {"schema_version": 1, "value": ["operator"]})
+    assert cx.project_filler(repo.root, READERS) == cx.ProjectFiller(repo.root / READERS_FILE, 1)
+    point = _point(repo)
+    assert point.resolved and point.value == ["operator"]
+    assert _states(point) == {READERS_FILE: ("taken", "")}
+    assert _resolve(repo).findings == ()
+
+
+def test_the_prefix_follows_the_internal_documentation_root(repo: AdopterRepo) -> None:
+    _provider(repo)
+    _config(repo, "docs:\n  internal: tech-docs\n")
+    _filler(repo, {"schema_version": 1, "value": ["operator"]}, path=READERS_FILE)
+    assert cx.project_filler(repo.root, READERS) is None  # under the old root: not a filler
+    moved = READERS_FILE.replace("docs/", "tech-docs/", 1)
+    _filler(repo, {"schema_version": 1, "value": ["operator"]}, path=moved)
+    assert cx.project_filler(repo.root, READERS) == cx.ProjectFiller(repo.root / moved, 1)
+
+
+def test_a_malformed_envelope_is_an_error_and_fills_nothing(repo: AdopterRepo) -> None:
+    _provider(repo, default={"value": ["guest"], "participation": "alone"})
+    _filler(repo, {"schema_versoin": 1, "value": ["operator"]})
+    resolution = _resolve(repo)
+    messages = {f.location: f.message for f in resolution.findings}
+    assert sorted(_findings(resolution)) == [
+        (READERS_FILE, "error"),
+        (f"{READERS_FILE}:/schema_versoin", "error"),
+    ]
+    assert "'schema_version' is a required property" in messages[READERS_FILE]
+    assert "unknown key 'schema_versoin'; did you mean 'schema_version'?" in (
+        messages[f"{READERS_FILE}:/schema_versoin"]
+    )
+    point = resolution.point(READERS)
+    assert point is not None and not point.resolved
+    assert _states(point)[READERS_FILE] == ("inert", "its envelope is malformed")
+    # A declared filler broke: the `alone` default is not promoted (COR-052 point 6).
+    assert _states(point)["docs-a"] == ("passed over", "not promoted: a declared filler is inert")
+
+
+def test_a_project_filler_at_the_wrong_version_is_an_error_and_is_not_read(
+    repo: AdopterRepo,
+) -> None:
+    """The version relation fails validation; the resolution does not read the value,
+    and the `alone` default is not promoted in its place."""
+    _provider(repo, version=2, default={"value": ["guest"], "participation": "alone"})
+    _filler(repo, {"schema_version": 1, "value": ["operator"]})
+    wiring = cx.resolve_wiring(repo.root)
+    (error,) = wiring.version_findings()
+    assert (error.relation, error.severity) == (cx.Relation.FILLER_VERSION, pv.Severity.ERROR)
+    assert "targets version 1, but 'docs-a' defines the point at version 2" in error.message
+    point = _point(repo)
+    assert not point.resolved and point.why == "no filler answered"
+    assert _states(point) == {
+        READERS_FILE: ("inert", "it targets version 1; the point is at version 2"),
+        "docs-a": ("passed over", "not promoted: a declared filler is inert"),
+    }
+    assert _resolve(repo).findings == ()  # the version error is the one finding, not repeated
+
+
+def test_an_incompatible_project_filler_leaves_what_remains_and_never_the_default(
+    repo: AdopterRepo,
+) -> None:
+    _provider(repo, version=2, default={"value": ["guest"], "participation": "alone"})
+    _contributor(repo, "evidence", ["developer"], version=2)
+    _filler(repo, {"schema_version": 1, "value": ["operator"]})
+    point = _point(repo)
+    assert point.resolved and point.value == ["developer"]
+    assert _states(point)[READERS_FILE][0] == "inert"
+    assert _states(point)["docs-a"] == ("passed over", "not promoted: a declared filler is inert")
+
+
+def test_a_filler_whose_point_no_active_provider_defines_is_inert_and_unread(
+    repo: AdopterRepo,
+) -> None:
+    _filler(repo, {"schema_version": 1, "value": {"not": "checked"}})
+    resolution = _resolve(repo)
+    (report,) = resolution.findings
+    assert (report.location, report.severity) == (READERS_FILE, validators.Severity.REPORT)
+    assert "role 'pkit::documentation' has no active provider" in report.message
+    assert "its value is not read" in report.message
+    assert resolution.points == ()
+
+
+def test_a_stray_file_under_the_prefix_is_warned(repo: AdopterRepo) -> None:
+    repo.write({f"{FILLERS}/pkit/readers.yaml": "schema_version: 1\nvalue: []\n"})
+    (warning,) = _resolve(repo).findings
+    assert (warning.location, warning.severity) == (f"{FILLERS}/pkit/readers.yaml", W)
+    assert "not a project filler" in warning.message
+
+
+def test_a_project_value_the_point_schema_refuses_is_an_error(repo: AdopterRepo) -> None:
+    _provider(repo)
+    _filler(repo, {"schema_version": 1, "value": ["ok", {"id": 5}]})
+    resolution = _resolve(repo)
+    assert _findings(resolution) == [(f"{READERS_FILE}:/value/1", "error")]
+    point = resolution.point(READERS)
+    assert point is not None and not point.resolved
+
+
+def test_removals_on_a_single_point_are_an_error(repo: AdopterRepo) -> None:
+    _provider(repo, TOOL, combination="single")
+    _filler(
+        repo,
+        {"schema_version": 1, "value": {"name": "a"}, "remove": [{"id": "x", "reason": "r"}]},
+        path=TOOL_FILE,
+    )
+    resolution = _resolve(repo)
+    assert _findings(resolution) == [(f"{TOOL_FILE}:/remove", "error")]
+    assert "a `single` point takes no removal overrides" in resolution.findings[0].message
+
+
+# --- `single` ---------------------------------------------------------------------
+
+
+def test_single_precedence_project_then_contribution_then_default(repo: AdopterRepo) -> None:
+    _provider(repo, TOOL, combination="single", default={"value": {"name": "d"}, "participation": "always"})
+    point = _point(repo, TOOL)
+    assert (point.value, point.origin) == ({"name": "d"}, dp.DEFAULT)
+
+    _contributor(repo, "evidence", {"name": "e"}, address=TOOL)
+    point = _point(repo, TOOL)
+    assert (point.value, point.origin) == ({"name": "e"}, "evidence")
+    assert _states(point)["docs-a"] == ("passed over", "'evidence' answers first")
+
+    _filler(repo, {"schema_version": 1, "value": {"name": "p"}}, path=TOOL_FILE)
+    point = _point(repo, TOOL)
+    assert (point.value, point.origin) == ({"name": "p"}, dp.PROJECT)
+    assert _states(point)["evidence"] == ("passed over", "the project filler answers first")
+
+
+def test_an_alone_default_answers_only_when_nothing_is_declared(repo: AdopterRepo) -> None:
+    _provider(repo, TOOL, combination="single", default={"value": {"name": "d"}, "participation": "alone"})
+    assert _point(repo, TOOL).value == {"name": "d"}
+    _contributor(repo, "evidence", {"name": "e"}, address=TOOL)
+    point = _point(repo, TOOL)
+    assert point.value == {"name": "e"}
+    assert _states(point)["docs-a"] == ("passed over", "another filler is declared")
+
+
+def test_single_without_a_declared_policy_is_single(repo: AdopterRepo) -> None:
+    """No `combination`: `single`, so two contributors need a selection (COR-052 point 3)."""
+    _provider(repo, TOOL, combination=None)
+    _contributor(repo, "evidence", {"name": "e"}, address=TOOL)
+    _contributor(repo, "notes", {"name": "n"}, address=TOOL)
+    wiring = cx.resolve_wiring(repo.root)
+    assert [f.path for f in wiring.errors()] == ["/connections/selections"]
+    point = _point(repo, TOOL)
+    assert (point.policy, point.resolved) == ("single", False)
+    assert point.why == "several capabilities contribute and none is selected"
+
+
+def test_single_with_a_selection_takes_the_selected_contributor(repo: AdopterRepo) -> None:
+    _provider(repo, TOOL, combination="single", default={"value": {"name": "d"}, "participation": "always"})
+    _contributor(repo, "evidence", {"name": "e"}, address=TOOL)
+    _contributor(repo, "notes", {"name": "n"}, address=TOOL)
+    _config(repo, f"connections:\n  selections:\n    {TOOL}: notes\n")
+    point = _point(repo, TOOL)
+    assert (point.value, point.origin) == ({"name": "n"}, "notes")
+    assert _states(point)["evidence"] == (
+        "passed over",
+        "not selected: the contributor selection names 'notes'",
+    )
+    assert _resolve(repo).findings == ()
+
+
+def test_single_ambiguous_is_unresolved_and_the_default_does_not_stand_in(
+    repo: AdopterRepo,
+) -> None:
+    _provider(repo, TOOL, combination="single", default={"value": {"name": "d"}, "participation": "always"})
+    _contributor(repo, "evidence", {"name": "e"}, address=TOOL)
+    _contributor(repo, "notes", {"name": "n"}, address=TOOL)
+    point = _point(repo, TOOL)
+    assert not point.resolved
+    assert {state for state, _reason in _states(point).values()} == {"passed over"}
+
+    # The project filler precedes every contribution: it answers, ambiguity or not.
+    _filler(repo, {"schema_version": 1, "value": {"name": "p"}}, path=TOOL_FILE)
+    point = _point(repo, TOOL)
+    assert (point.resolved, point.origin) == (True, dp.PROJECT)
+
+
+def test_single_with_nothing_declared_and_no_default_is_unfilled(repo: AdopterRepo) -> None:
+    _provider(repo, TOOL, combination="single")
+    point = _point(repo, TOOL)
+    assert not point.resolved and point.why.startswith("unfilled")
+    assert _resolve(repo).findings == ()
+
+
+# --- `union` ------------------------------------------------------------------------
+
+
+def test_union_merges_by_id_the_project_overriding_whole_entries(repo: AdopterRepo) -> None:
+    _provider(repo, default={"value": ["guest", {"id": "operator", "role": "d"}], "participation": "always"})
+    _contributor(repo, "evidence", [{"id": "operator", "role": "e"}, "developer"])
+    _filler(repo, {"schema_version": 1, "value": [{"id": "developer"}]})
+    point = _point(repo)
+    assert point.resolved
+    assert point.value == [{"id": "developer"}, "guest", {"id": "operator", "role": "e"}]
+    assert [(e.id, e.origin, e.replaces) for e in point.entries] == [
+        ("developer", dp.PROJECT, ("evidence",)),
+        ("guest", dp.DEFAULT, ()),
+        ("operator", "evidence", (dp.DEFAULT,)),
+    ]
+
+
+def test_union_two_capabilities_with_one_id_is_an_error_the_project_settles(
+    repo: AdopterRepo,
+) -> None:
+    _provider(repo)
+    _contributor(repo, "evidence", [{"id": "operator", "role": "e"}])
+    _contributor(repo, "notes", [{"id": "operator", "role": "n"}])
+    resolution = _resolve(repo)
+    assert _findings(resolution) == [(READERS_FILE, "error")]
+    assert "'evidence' and 'notes' both supply entry 'operator'" in resolution.findings[0].message
+    point = resolution.point(READERS)
+    assert point is not None and not point.resolved and "entries collide" in point.why
+
+    _filler(repo, {"schema_version": 1, "value": [{"id": "operator", "role": "p"}]})
+    point = _point(repo)
+    assert point.resolved and point.value == [{"id": "operator", "role": "p"}]
+    assert point.entries[0].replaces == ("evidence", "notes")
+
+
+def test_union_suppression_with_a_reason_drops_the_entry(repo: AdopterRepo) -> None:
+    _provider(repo)
+    _contributor(repo, "evidence", ["operator", "guest"])
+    _filler(
+        repo,
+        {"schema_version": 1, "value": [], "remove": [{"id": "guest", "reason": "No anonymous readers."}]},
+    )
+    point = _point(repo)
+    assert point.value == ["operator"]
+    assert point.removals == (dp.Removal("guest", "No anonymous readers.", ("evidence",)),)
+
+
+def test_a_removal_that_matches_nothing_is_information(repo: AdopterRepo) -> None:
+    _provider(repo)
+    _filler(repo, {"schema_version": 1, "value": [], "remove": [{"id": "ghost", "reason": "r"}]})
+    (info,) = _resolve(repo).findings
+    assert (info.location, info.severity) == (f"{READERS_FILE}:/remove/0", validators.Severity.INFO)
+
+
+# --- `additive` -----------------------------------------------------------------------
+
+
+def test_additive_keeps_every_entry_in_precedence_order(repo: AdopterRepo) -> None:
+    _provider(repo, combination="additive", default={"value": ["d1"], "participation": "always"})
+    _contributor(repo, "notes", ["n1"])
+    _contributor(repo, "evidence", ["e1", "e2"])
+    _filler(repo, {"schema_version": 1, "value": ["p1"]})
+    point = _point(repo)
+    assert point.value == ["p1", "e1", "e2", "n1", "d1"]
+    assert [e.origin for e in point.entries] == [dp.PROJECT, "evidence", "evidence", "notes", dp.DEFAULT]
+
+
+def test_additive_collision_with_the_project_is_an_error_until_a_removal_override(
+    repo: AdopterRepo,
+) -> None:
+    _provider(repo, combination="additive")
+    _contributor(repo, "evidence", ["security-review", "e2"])
+    _filler(repo, {"schema_version": 1, "value": ["p1", "security-review"]})
+    resolution = _resolve(repo)
+    assert _findings(resolution) == [(f"{READERS_FILE}:/value/1", "error")]
+    assert "collides with the one 'evidence' supplies" in resolution.findings[0].message
+    point = resolution.point(READERS)
+    assert point is not None and not point.resolved
+
+    _filler(
+        repo,
+        {
+            "schema_version": 1,
+            "value": ["p1", "security-review"],
+            "remove": [{"id": "security-review", "reason": "Ours replaces theirs."}],
+        },
+    )
+    point = _point(repo)
+    assert point.resolved and point.value == ["p1", "security-review", "e2"]
+    assert point.removals[0].removed_from == ("evidence",)
+
+
+def test_additive_collision_between_capabilities_is_an_error(repo: AdopterRepo) -> None:
+    _provider(repo, combination="additive")
+    _contributor(repo, "evidence", ["x"])
+    _contributor(repo, "notes", ["x"])
+    resolution = _resolve(repo)
+    assert _findings(resolution) == [(READERS_FILE, "error")]
+    assert "'evidence' and 'notes' both supply entry 'x' to additive point" in (
+        resolution.findings[0].message
+    )
+
+
+# --- the inert policy -------------------------------------------------------------------
+
+
+def test_fallback_resolves_from_what_remains_with_a_warning(repo: AdopterRepo) -> None:
+    _provider(repo, inert="fallback")
+    _contributor(repo, "evidence", ["operator"])
+    _contributor(repo, "notes", [{"id": 7}])
+    resolution = _resolve(repo)
+    assert _findings(resolution) == [
+        (".pkit/capabilities/notes/package.yaml:/connections/extensions/contributes/0", "warning")
+    ]
+    message = resolution.findings[0].message
+    assert "the contribution of 'notes' to 'pkit::documentation:readers' is inert" in message
+    assert "the point resolves from the remaining fillers" in message
+    point = resolution.point(READERS)
+    assert point is not None and point.value == ["operator"]
+
+
+def test_fail_leaves_the_whole_point_unresolved_with_an_error(repo: AdopterRepo) -> None:
+    _provider(repo, inert="fail")
+    _contributor(repo, "evidence", ["operator"])
+    _contributor(repo, "notes", [{"id": 7}])
+    resolution = _resolve(repo)
+    assert [f.severity for f in resolution.findings] == [E]
+    assert "inert policy is `fail`, so it is unresolved" in resolution.findings[0].message
+    point = resolution.point(READERS)
+    assert point is not None and not point.resolved and point.value is None
+    # Asked and answered, but no partial value is ever taken.
+    assert _states(point)["evidence"] == ("passed over", "answered, but the point does not resolve")
+
+
+def test_an_out_of_step_contribution_is_inert_and_under_fail_unresolves(
+    repo: AdopterRepo,
+) -> None:
+    _provider(repo, inert="fail")
+    _contributor(repo, "evidence", ["operator"])
+    _contributor(repo, "notes", ["x"], version=2)
+    point = _point(repo)
+    assert not point.resolved
+    assert _states(point)["notes"] == ("inert", "it targets version 2; the point is at version 1")
+
+
+def test_a_contribution_naming_command_and_value_is_a_package_error(repo: AdopterRepo) -> None:
+    _stage(
+        repo,
+        "evidence",
+        {"extensions": {"contributes": [{"point": READERS, "schema_version": 1, "command": "noop", "value": []}]}},
+    )
+    report = pv.validate_installed_packages(repo.root)
+    errors = [(f.path, f.message) for r in report.reports for f in r.errors]
+    assert errors == [
+        (
+            "/connections/extensions/contributes/0/value",
+            "a contribution supplies its data through `command` or `value`, not both (COR-052 point 2).",
+        )
+    ]
+
+
+# --- `pkit validate` ----------------------------------------------------------------------
+
+
+def test_the_connections_member_reports_the_data_points_and_fails_on_their_errors(
+    repo: AdopterRepo,
+) -> None:
+    _provider(repo)
+    _filler(repo, {"schema_version": 1, "value": [5]})
+    result = CliRunner().invoke(main, ["validate", "--only", "connections"])
+    assert result.exit_code == 1, result.output
+    assert "1 data point(s): 0 resolved, 1 unresolved; 1 project filler file(s)." in result.output
+    assert f"error    {READERS_FILE}:/value/0" in result.output
+
+
+def test_validate_resolves_the_wiring_and_the_data_points_once(
+    repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _provider(repo)
+    _contributor(repo, "evidence", ["operator"])
+    calls: list[str] = []
+    wiring, data = cx.resolve_wiring, dp.resolve_data_points
+
+    def counting_wiring(root: Path) -> cx.Wiring:
+        calls.append("wiring")
+        return wiring(root)
+
+    def counting_data(root: Path) -> dp.DataResolution:
+        calls.append("data")
+        return data(root)
+
+    monkeypatch.setattr(cx, "resolve_wiring", counting_wiring)
+    monkeypatch.setattr(dp, "resolve_data_points", counting_data)
+    result = CliRunner().invoke(main, ["validate", "--no-refs"])
+    assert sorted(calls) == ["data", "wiring"], result.output
