@@ -17,6 +17,6 @@ body: >
   scripts exist, documentation locations and friction places are relative sub-paths.
   `pkit validate` gains a "packages" pass over every registered component's package file;
   errors fail it, warnings only print. The install-time self-consistency check of an
-  incubated capability now runs the same validator (its messages unchanged, its refusals
+  incubated capability now runs the same validator (its previous messages kept, each prefixed by its location in the file — a missing version reports the schema's required-property error when the schema is present —, its refusals
   widened by the new checks). Refusing unknown keys is Task #999; the checks that need the
   wiring resolver are Task #983 and have named hooks.
