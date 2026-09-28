@@ -3,6 +3,12 @@
 Over the artefacts `friction_discovery` finds in the declared places, and the
 settings that declare them, this pass reports:
 
+- **a capability place the walk does not follow** — one discovery could not
+  read in the package schema's shape `{path, location?}` (plain text, no
+  `path`, a location `docs.locations` does not declare in its shape), or one
+  that leaves the repository, through a link included; reported whenever it
+  is declared, dormant or not, because a place nothing is found under must
+  never look like a place with nothing in it (COR-050 point 7);
 - **unparsable front matter** in a declared place — reported whenever places
   are declared, dormant or not, because the check never skips an artefact it
   cannot parse: the broken file may be the one carrying the container;
@@ -22,21 +28,24 @@ These fail validation in either mode, because the project can fix them. A
 rule-set file is claimed before the container rule (ADR-056 point 2): its
 front matter and each rule's container are the rule-set pass's findings
 (`rule_sets`), so this pass reports neither, while its rules still take part
-in the deferral and cycle checks like every artefact. The settings
+in the deferral and cycle checks like every artefact. The project's settings
 themselves — an invalid `friction.mode`, a place, surface or exclude path
 outside the repository — are the configuration pass's findings
-(`config_validate`, which owns the file) and a capability's are the packages
-pass's; this pass only reads the settings, and never walks a place that leaves
-the repository. What it does not do either: compute friction, resolve path
-anchors against git, or report dead anchors — those are the two checks'
-findings (COR-050 points 6 and 7), later Tasks. What the container validator
-reports rather than judges — a role block whose role has no active provider,
-a point block the active provider's point does not match — is carried through
-as reports (never errors) so `pkit validate` can show them.
+(`config_validate`, which owns the file), and a capability's `friction` block
+is the packages pass's, which judges its shape but cannot know where a place
+resolves; so a capability place the walk does not follow is reported here
+too. This pass never walks a place that leaves the repository. What it does
+not do either: compute friction, resolve path anchors against git, or report
+dead anchors — those are the two checks' findings (COR-050 points 6 and 7),
+later Tasks. What the container validator reports rather than judges — a role
+block whose role has no active provider, a point block the active provider's
+point does not match — is carried through as reports (never errors) so
+`pkit validate` can show them.
 
 Dormant until used (COR-050 point 15): with no places declared, or nothing in
 them to judge — no artefact carrying the container and no file it failed to
-parse — the pass reports nothing but its counts.
+parse — the pass reports nothing but its counts and any capability place the
+walk does not follow.
 """
 
 from __future__ import annotations
@@ -53,8 +62,10 @@ from project_kit.friction_discovery import (
     FRICTION_KEY,
     Artefact,
     Discovery,
+    FrictionSettings,
     UnreadableFile,
     discover_artefacts,
+    is_inside_repository,
     read_friction_settings,
 )
 
@@ -62,6 +73,8 @@ Severity = bs.Severity
 
 
 class FrictionFindingKind(Enum):
+    MALFORMED_PLACE = "malformed-place"  # a capability place not in the schema's shape
+    PLACE_OUTSIDE_REPOSITORY = "place-outside-repository"  # a capability place leaving it
     MALFORMED_BLOCK = "malformed-block"
     UNPARSABLE_FRONT_MATTER = "unparsable-front-matter"
     DANGLING_DEFERRAL = "dangling-deferral"
@@ -108,18 +121,68 @@ class FrictionValidation:
 def validate_friction(target_root: Path) -> FrictionValidation:
     """Run the pass over the project at `target_root`.
 
-    Unparsable front matter is reported whenever places are declared: a file
-    that fails to parse also keeps the pass awake (`Discovery.is_dormant`), so
-    a YAML typo in the only container-carrying file is an error, not silence.
+    A capability place the walk does not follow is reported whenever it is
+    declared. Unparsable front matter is reported whenever places are declared:
+    a file that fails to parse also keeps the pass awake (`Discovery.is_dormant`),
+    so a YAML typo in the only container-carrying file is an error, not silence.
     The container, deferral and cycle findings run only when the pass is awake.
     """
     settings = read_friction_settings(target_root)
     discovery = discover_artefacts(target_root, settings)
     findings: list[FrictionFinding] = []
+    findings.extend(_capability_place_findings(target_root, settings))
     findings.extend(_unreadable_findings(discovery))
     if not discovery.is_dormant:
         findings.extend(_artefact_findings(target_root, discovery))
     return FrictionValidation(discovery=discovery, findings=tuple(findings))
+
+
+# --- capability places --------------------------------------------------
+
+# The findings about a capability place the walk does not follow.
+PLACE_KINDS = frozenset(
+    {FrictionFindingKind.MALFORMED_PLACE, FrictionFindingKind.PLACE_OUTSIDE_REPOSITORY}
+)
+
+
+def _capability_place_findings(
+    target_root: Path, settings: FrictionSettings
+) -> Iterable[FrictionFinding]:
+    """Each capability place the walk does not follow, located in its package metadata.
+
+    First those discovery could not read in the package schema's shape, in
+    the order read; then those that leave the repository — absolute, climbing
+    above the root, or resolving outside it through a link — judged as
+    discovery judges it (`is_inside_repository`). A project's places are the
+    configuration pass's.
+    """
+    for place in settings.malformed_places:
+        yield FrictionFinding(
+            location=place.file,
+            pointer=place.pointer,
+            severity=Severity.ERROR,
+            kind=FrictionFindingKind.MALFORMED_PLACE,
+            message=(
+                f"{place.reason}, so friction discovery walks nothing under it; a capability "
+                f"place is `{{path, location?}}`, its `location` naming a `docs.locations` "
+                f"entry written `{{path, root?}}` (COR-050 point 7)."
+            ),
+        )
+    for declared in settings.places:
+        if declared.is_capability and not is_inside_repository(target_root, declared.resolved):
+            yield FrictionFinding(
+                location=declared.file,
+                pointer=declared.pointer,
+                severity=Severity.ERROR,
+                kind=FrictionFindingKind.PLACE_OUTSIDE_REPOSITORY,
+                message=(
+                    f"capability place {declared.value!r} resolves to {declared.resolved!r}, "
+                    f"which leaves the repository (absolute, climbing above the root, or "
+                    f"resolving outside it through a link), so friction discovery walks "
+                    f"nothing under it; every place stays inside the repository (COR-050 "
+                    f"point 14)."
+                ),
+            )
 
 
 # --- artefacts ----------------------------------------------------------
@@ -316,15 +379,19 @@ def summary_lines(result: FrictionValidation) -> list[str]:
 
     Dormant: the counts alone (COR-050 point 15). Awake: the counts, errors and
     reports included; the findings themselves follow as the member's findings.
+    A capability place the walk does not follow is counted in either case, so
+    the line never reads as nothing declared while one was.
     """
     d = result.discovery
     places, artefacts, carrying = len(d.places), len(d.artefacts), len(d.with_container)
-    if not d.places:
+    unfollowed = sum(1 for f in result.findings if f.kind in PLACE_KINDS)
+    not_walked = f"; {unfollowed} capability place(s) not walked" if unfollowed else ""
+    if not d.places and not unfollowed:
         counts = "no places declared; dormant."
     elif d.is_dormant:
         counts = (
             f"{places} place(s), {artefacts} artefact(s), none carrying the "
-            f"`{bs.CONTAINER_KEY}` container; dormant."
+            f"`{bs.CONTAINER_KEY}` container; dormant{not_walked}."
         )
     else:
         reported = _unclaimed_unreadable(d)
@@ -332,7 +399,7 @@ def summary_lines(result: FrictionValidation) -> list[str]:
         counts = (
             f"{places} place(s), {artefacts} artefact(s), {carrying} carrying the "
             f"`{bs.CONTAINER_KEY}` container{unreadable}; mode {d.settings.mode_or_default}; "
-            f"{len(result.errors)} error(s), {len(result.reports)} report(s)."
+            f"{len(result.errors)} error(s), {len(result.reports)} report(s){not_walked}."
         )
     return [counts]
 

@@ -206,31 +206,179 @@ def test_a_place_ending_in_double_star_means_every_markdown_file_beneath(
     assert result.errors == ()
 
 
-def test_capability_places_resolve_under_its_locations_and_the_internal_root(
+# --- capability places (the package schema's `{path, location?}`) ------------
+
+EVIDENCE_PACKAGE = ".pkit/capabilities/evidence/package.yaml"
+
+
+def _evidence_declares(adopter: AdopterRepo, blocks: str) -> None:
+    """Append `docs` / `friction` blocks to the installed evidence capability's package."""
+    package = adopter.root / EVIDENCE_PACKAGE
+    package.write_text(package.read_text(encoding="utf-8") + blocks, encoding="utf-8")
+
+
+def test_capability_places_are_read_in_the_package_schema_shape(
     make_adopter_repo: MakeAdopterRepo,
 ) -> None:
+    """With `location`, a place lies inside that `docs.locations` entry under its
+    root (internal by default, or the user root); without one, it is
+    repository-relative — never under a documentation root."""
     adopter = make_adopter_repo(capabilities=("evidence",))
-    package = adopter.pkit / "capabilities" / "evidence" / "package.yaml"
-    package.write_text(
-        package.read_text(encoding="utf-8")
-        + "docs:\n  locations: [evidence]\nfriction:\n  places: ['**/*.md']\n",
-        encoding="utf-8",
+    _evidence_declares(
+        adopter,
+        "docs:\n"
+        "  locations:\n"
+        "    runs: {path: evidence}\n"
+        "    guides: {path: guides, root: user}\n"
+        "friction:\n"
+        "  places:\n"
+        "    - {location: runs, path: '**/*.md'}\n"
+        "    - {location: guides, path: '*.md', description: The user guides.}\n"
+        "    - {path: notes}\n",
     )
+    anchored = _document("x", anchors={"path": ["src/**"]})
     adopter.write(
         {
-            CONFIG: "name: adopter\ndocs:\n  internal: tech-docs\n",
-            "tech-docs/evidence/run.md": _document("run", anchors={"path": ["src/**"]}),
-            "docs/evidence/ignored.md": _document("ignored", anchors={"path": ["src/**"]}),
+            CONFIG: "name: adopter\ndocs:\n  internal: tech-docs\n  user: handbook\n",
+            "tech-docs/evidence/run.md": anchored.replace("id: x", "id: run"),
+            "handbook/guides/guide.md": anchored.replace("id: x", "id: guide"),
+            "notes/note.md": anchored.replace("id: x", "id: note"),
+            "docs/evidence/default-root.md": anchored.replace("id: x", "id: default-root"),
+            "tech-docs/notes/under-a-root.md": anchored.replace("id: x", "id: under-a-root"),
         }
     )
     result = fv.validate_friction(adopter.root)
 
-    (place,) = result.discovery.places
-    assert place.pattern == "tech-docs/evidence/**/*.md"
-    assert place.source == "capability:evidence"
-    assert place.declaration.file == ".pkit/capabilities/evidence/package.yaml"
-    assert [a.path for a in result.discovery.artefacts] == ["tech-docs/evidence/run.md"]
+    places = result.discovery.places
+    assert [(p.pattern, p.declaration.value, p.declaration.pointer) for p in places] == [
+        ("tech-docs/evidence/**/*.md", "**/*.md", "/friction/places/0"),
+        ("handbook/guides/*.md", "*.md", "/friction/places/1"),
+        ("notes", "notes", "/friction/places/2"),
+    ]
+    assert {p.source for p in places} == {"capability:evidence"}
+    assert {p.declaration.file for p in places} == {EVIDENCE_PACKAGE}
+    assert [a.id for a in result.discovery.artefacts] == ["run", "guide", "note"]
     assert result.errors == ()
+
+
+def test_a_capability_place_in_another_shape_is_a_finding_and_is_not_walked(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """Plain text is not the schema's shape: every place discovery cannot read is
+    an error at its entry, and only the well-formed place is walked."""
+    adopter = make_adopter_repo(capabilities=("evidence",))
+    _evidence_declares(
+        adopter,
+        "docs:\n"
+        "  locations:\n"
+        "    runs: {path: evidence}\n"
+        "    legacy: evidence\n"
+        "    shared: {path: shared, root: team}\n"
+        "friction:\n"
+        "  places:\n"
+        "    - '**/*.md'\n"
+        "    - {location: runs}\n"
+        "    - {path: [notes]}\n"
+        "    - {location: [runs], path: '**/*.md'}\n"
+        "    - {location: spaces, path: '**/*.md'}\n"
+        "    - {location: legacy, path: '**/*.md'}\n"
+        "    - {location: shared, path: '**/*.md'}\n"
+        "    - {location: runs, path: '**/*.md'}\n",
+    )
+    adopter.write({"docs/evidence/run.md": _document("run", anchors={"path": ["src/**"]})})
+    result = fv.validate_friction(adopter.root)
+
+    (place,) = result.discovery.places
+    assert place.pattern == "docs/evidence/**/*.md"
+    assert [a.id for a in result.discovery.artefacts] == ["run"]
+    assert {f.kind for f in result.errors} == {fv.FrictionFindingKind.MALFORMED_PLACE}
+    assert {f.location for f in result.errors} == {EVIDENCE_PACKAGE}
+    reasons = {f.pointer: f.message.split(", so friction discovery")[0] for f in result.errors}
+    assert reasons == {
+        "/friction/places/0": "the place is text ('**/*.md'), not an object `{path, location?}`",
+        "/friction/places/1": "the place has no `path`",
+        "/friction/places/2": "the place's `path` is a list, not a path or glob",
+        "/friction/places/3": "the place's `location` is a list, not a name from `docs.locations`",
+        "/friction/places/4": (
+            "the place names location 'spaces', which `docs.locations` does not declare "
+            "(declared: ['legacy', 'runs', 'shared'])"
+        ),
+        "/friction/places/5": (
+            "the place names location 'legacy', whose `docs.locations` entry is not "
+            "`{path, root?}` with `root` one of ['internal', 'user']"
+        ),
+        "/friction/places/6": (
+            "the place names location 'shared', whose `docs.locations` entry is not "
+            "`{path, root?}` with `root` one of ['internal', 'user']"
+        ),
+    }
+    assert result.errors[0].message.endswith(
+        "so friction discovery walks nothing under it; a capability place is "
+        "`{path, location?}`, its `location` naming a `docs.locations` entry written "
+        "`{path, root?}` (COR-050 point 7)."
+    )
+
+
+def test_a_malformed_capability_place_fails_validate_even_while_dormant(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """Nothing is walked, so the pass is dormant — yet the declaration it could not
+    read is an error, and the count line says a place was not walked."""
+    adopter = make_adopter_repo(capabilities=("evidence",))
+    _evidence_declares(adopter, "friction:\n  places: {path: notes}\n")
+    result = fv.validate_friction(adopter.root)
+
+    assert result.is_dormant
+    (finding,) = result.errors
+    assert finding.kind is fv.FrictionFindingKind.MALFORMED_PLACE
+    assert (finding.location, finding.pointer) == (EVIDENCE_PACKAGE, "/friction/places")
+    assert finding.message.startswith("`friction.places` is a mapping, not a list of places")
+    assert fv.summary_lines(result) == [
+        "0 place(s), 0 artefact(s), none carrying the `pkit` container; dormant; "
+        "1 capability place(s) not walked."
+    ]
+
+    cli = CliRunner().invoke(main, ["validate", "--no-refs"])
+    assert cli.exit_code == 1, cli.output
+    friction = cli.output.split("\n  friction\n")[1].split("\n  rule-sets\n")[0]
+    assert f"error    {EVIDENCE_PACKAGE}:/friction/places" in friction
+
+
+def test_a_capability_place_leaving_the_repository_through_a_link_is_a_finding(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """A place whose location, or whose own path, is a link out of the repository
+    is reported where it is declared — and nothing beyond the link is read."""
+    adopter = make_adopter_repo(capabilities=("evidence",))
+    outside = adopter.root.parent / f"{adopter.root.name}-outside"  # beside the repository
+    outside.mkdir()
+    (outside / "stray.md").write_text(_document("stray", anchors={"path": ["a"]}))
+    (adopter.root / "docs").mkdir()
+    (adopter.root / "docs" / "evidence").symlink_to(outside, target_is_directory=True)
+    (adopter.root / "notes").symlink_to(outside, target_is_directory=True)
+    _evidence_declares(
+        adopter,
+        "docs:\n"
+        "  locations:\n"
+        "    runs: {path: evidence}\n"
+        "friction:\n"
+        "  places:\n"
+        "    - {location: runs, path: '**/*.md'}\n"
+        "    - {path: notes}\n",
+    )
+    result = fv.validate_friction(adopter.root)
+
+    assert result.discovery.artefacts == ()
+    assert [(f.kind, f.location, f.pointer) for f in result.errors] == [
+        (fv.FrictionFindingKind.PLACE_OUTSIDE_REPOSITORY, EVIDENCE_PACKAGE, "/friction/places/0"),
+        (fv.FrictionFindingKind.PLACE_OUTSIDE_REPOSITORY, EVIDENCE_PACKAGE, "/friction/places/1"),
+    ]
+    assert result.errors[0].message.startswith(
+        "capability place '**/*.md' resolves to 'docs/evidence/**/*.md', which leaves the "
+        "repository (absolute, climbing above the root, or resolving outside it through a "
+        "link), so friction discovery walks nothing under it"
+    )
+    assert fv.summary_lines(result)[0].endswith("; dormant; 2 capability place(s) not walked.")
 
 
 # --- the findings validation owns -------------------------------------------
