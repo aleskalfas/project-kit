@@ -19,18 +19,24 @@ checks the owning records ask for:
 - **Friction paths** (COR-050 points 12 and 14): each place / surface /
   exclude pattern stays inside the repository — not absolute, not climbing
   above the root, not resolving outside it through a link — otherwise an
-  error; a pattern matching nothing is a warning. This pass is the one owner
-  of these findings and of the `friction.mode` enum (the schema); the
-  friction pass reads the settings and reports only on the artefacts.
+  error; a pattern matching nothing is a warning. The patterns are the ones
+  discovery reads (`friction_discovery.read_friction_settings`), and a
+  pattern matches something when it covers a file of the working tree's one
+  listing, by the reading every check applies (`pattern_matches_any`) — so
+  what this pass calls live is what the checks see (ADR-057 point 2). This
+  pass is the one owner of these findings and of the `friction.mode` enum
+  (the schema); the friction pass reads the settings and reports only on the
+  artefacts.
 - **Connections** (COR-053 point 7, COR-052 point 4): each provider or
   contributor selection names an installed capability, read from the
   backbone manifest — otherwise an error naming the fix. A provider selection
   must name a capability that *provides the role*; a contributor selection
-  must name a `single` data point some installed provider defines and a
-  capability that *contributes to it* — each read from the package metadata
-  through the wiring resolver's declarations (`connections.load_declarations`),
-  each an error naming the fix. A role with two installed providers and no
-  selection is the resolver's own finding (the `connections` heading).
+  must name a `single` data point the active provider of its role defines and
+  a capability that *contributes to it* — each read from the wiring as
+  resolved once per run (`connections.shared_wiring`), each an error naming
+  the fix. A role with two installed providers and no selection is the
+  resolver's own finding (the `connections` heading), and while a role has no
+  active provider a selection of its points is not judged a second time.
 
 Findings are structured records (a JSON Pointer into the file, a severity,
 a message) in a deterministic order: shape findings by position, then the
@@ -40,9 +46,8 @@ in written order. Only errors fail validation.
 
 from __future__ import annotations
 
-import os
-import re
-from collections.abc import Iterable, Mapping
+import functools
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -57,9 +62,15 @@ from ruamel.yaml.error import YAMLError
 
 from project_kit import backbone_schemas, validators
 from project_kit import connections as wiring
-from project_kit.friction_discovery import is_inside_repository
+from project_kit.friction_discovery import (
+    SettingsPath,
+    is_inside_repository,
+    pattern_matches_any,
+    read_friction_settings,
+)
 from project_kit.manifest import read_backbone_manifest
 from project_kit.project_config import PROJECT_CONFIG_RELPATH, project_config_path
+from project_kit.working_tree import working_tree
 
 # The schema kind under `.pkit/schemas/backbone/` (ADR-056 point 1).
 CONFIG_SCHEMA_KIND = "config"
@@ -288,60 +299,59 @@ def _root_findings(target_root: Path, pointer: str, value: str) -> list[ConfigFi
 def _friction_findings(
     target_root: Path, friction: Any, flagged: frozenset[str]
 ) -> list[ConfigFinding]:
+    """The project's patterns as discovery reads them, each judged where it is written.
+
+    A key whose value is not a list was refused whole by the shape pass, and a
+    pattern the shape pass refused is not judged again: one finding per mistake.
+    """
     if not isinstance(friction, Mapping):
         return []
+    settings = read_friction_settings(target_root)
+    listing = functools.cache(lambda: working_tree(target_root).files())  # on first need
     findings: list[ConfigFinding] = []
     for key in FRICTION_PATTERN_KEYS:
-        patterns = friction.get(key)
-        if not isinstance(patterns, list):
-            continue
-        for index, pattern in enumerate(patterns):
-            pointer = f"/{FRICTION_KEY}/{key}/{index}"
-            if pointer in flagged or not isinstance(pattern, str) or not pattern:
-                continue  # the shape pass already reported it
-            findings.extend(_pattern_findings(target_root, pointer, pattern))
+        if not isinstance(friction.get(key), list):
+            continue  # the shape pass already reported it
+        declared: tuple[SettingsPath, ...] = getattr(settings, key)
+        for setting in declared:
+            if setting.is_capability or setting.pointer in flagged:
+                continue  # a capability's is the packages pass's; a refused one is reported
+            findings.extend(_pattern_findings(target_root, setting, listing))
     return findings
 
 
-def _pattern_findings(target_root: Path, pointer: str, pattern: str) -> list[ConfigFinding]:
+def _pattern_findings(
+    target_root: Path, setting: SettingsPath, listing: Callable[[], Sequence[str]]
+) -> list[ConfigFinding]:
     """One path or glob: stays inside the repository (error otherwise); matches
     something (warning otherwise).
 
-    Inside is judged as discovery judges it (`friction_discovery.is_inside_repository`):
-    on the text, and on where the literal prefix resolves after following links.
+    Both are discovery's answers. Inside is judged on the text, and on where
+    the literal prefix resolves after following links (`is_inside_repository`);
+    matching is over the working tree's one listing, by the reading every
+    check applies (`pattern_matches_any`).
     """
-    normalised = os.path.normpath(pattern).replace(os.sep, "/")
+    pattern = setting.value
     if not is_inside_repository(target_root, pattern):
         return [
             ConfigFinding(
-                pointer,
+                setting.pointer,
                 Severity.ERROR,
                 f"friction pattern {pattern!r} leaves the repository (absolute, climbing above "
                 f"the root, or resolving outside it through a link); every path in these "
                 f"settings stays inside it (COR-050 point 14).",
             )
         ]
-    if normalised == ".":
-        return []  # the repository root itself matches everything
-    if not _glob_matches_anything(target_root, normalised):
+    if not pattern_matches_any(pattern, listing()):
         return [
             ConfigFinding(
-                pointer,
+                setting.pointer,
                 Severity.WARNING,
                 f"friction pattern {pattern!r} matches nothing in the repository; a dead "
                 f"pattern keeps silence looking like health (COR-050 point 12).",
             )
         ]
     return []
-
-
-def _glob_matches_anything(target_root: Path, pattern: str) -> bool:
-    """Does `pattern`, relative to the root, match at least one path? `**` spans folders."""
-    try:
-        return next(iter(target_root.glob(pattern)), None) is not None
-    except (ValueError, NotImplementedError):
-        # An unsupported pattern (e.g. one glob library refuses) matches nothing.
-        return False
 
 
 # --- connections (COR-053, COR-052) ------------------------------------------
@@ -353,7 +363,8 @@ def _connections_findings(
     if not isinstance(connections, Mapping):
         return []
     installed = _installed_capabilities(target_root)
-    declarations = wiring.load_declarations(target_root)
+    # The wiring as resolved once per run, taken when an entry names an installed capability.
+    resolved = functools.cache(lambda: wiring.shared_wiring(target_root))
     findings: list[ConfigFinding] = []
     for key in (PROVIDERS_KEY, SELECTIONS_KEY):
         entries = connections.get(key)
@@ -375,9 +386,9 @@ def _connections_findings(
                 )
                 continue
             if key == PROVIDERS_KEY:
-                problem = _provider_problem(declarations, str(address), capability)
+                problem = _provider_problem(resolved().declarations, str(address), capability)
             else:
-                problem = _selection_problem(declarations, str(address), capability)
+                problem = _selection_problem(resolved(), str(address), capability)
             if problem is not None:
                 findings.append(ConfigFinding(pointer, Severity.ERROR, problem))
     return findings
@@ -408,32 +419,20 @@ def _provider_problem(declarations: wiring.Declarations, role: str, capability: 
     )
 
 
-def _selection_problem(
-    declarations: wiring.Declarations, address: str, capability: str
-) -> str | None:
+def _selection_problem(resolved: wiring.Wiring, address: str, capability: str) -> str | None:
     """The contributor-selection key names a `single` data point and one of its
-    installed contributors (COR-052 point 4)."""
-    points = [
-        p for p in declarations.points if p.address == address and p.kind is wiring.PointKind.DATA
-    ]
-    if not points:
-        return (
-            f"no installed capability defines a data point {address!r}; correct the address "
-            f"or remove the entry (COR-052 point 4)."
-        )
-    if not any(p.combination == "single" for p in points):
-        declared = ", ".join(sorted({p.combination or "no combination" for p in points}))
+    installed contributors (COR-052 point 4), as the resolved wiring defines them:
+    the point of the active provider of its role (COR-053 point 1)."""
+    point = resolved.data_point(address)
+    if point is None:
+        return _undefined_point_problem(resolved, address)
+    if point.point.combination != "single":
+        declared = point.point.combination or "no combination"
         return (
             f"point {address!r} is not a `single` point (declared: {declared}); a contributor "
             f"selection applies only to `single` points — remove the entry (COR-052 point 4)."
         )
-    contributors = sorted(
-        {
-            c.capability
-            for c in declarations.counterparts
-            if c.kind is wiring.CounterpartKind.CONTRIBUTION and c.target == address
-        }
-    )
+    contributors = point.contributors
     if capability in contributors:
         return None
     known = (
@@ -444,6 +443,37 @@ def _selection_problem(
     return (
         f"{capability!r} declares no contribution to {address!r}; {known}, or remove the "
         f"entry (COR-052 point 4)."
+    )
+
+
+def _undefined_point_problem(resolved: wiring.Wiring, address: str) -> str | None:
+    """Why no data point is defined at `address`, or None when another finding says it.
+
+    While the role has no active provider — two providers and no selection, or
+    a provider selection naming no provider — that is the finding, and which
+    points exist is not known until it is fixed. A point only a provider that
+    is not the active one declares is not defined in the project.
+    """
+    points = [
+        p
+        for p in resolved.declarations.points
+        if p.address == address and p.kind is wiring.PointKind.DATA
+    ]
+    if not points:
+        return (
+            f"no installed capability defines a data point {address!r}; correct the address "
+            f"or remove the entry (COR-052 point 4)."
+        )
+    role = points[0].role
+    binding = resolved.role(role)
+    if binding is None or binding.active is None:
+        return None  # the role conflict, or the provider selection, is the finding
+    declared = sorted({p.provider for p in points})
+    return (
+        f"{binding.active!r}, the active provider of role {role!r}, defines no data point "
+        f"{address!r} — only {_names(declared)} declare it, whose points are not defined in "
+        f"this project (COR-053 point 1); correct the address or remove the entry "
+        f"(COR-052 point 4)."
     )
 
 

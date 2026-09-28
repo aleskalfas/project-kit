@@ -361,6 +361,44 @@ def test_friction_findings_on_a_valid_configuration_are_pinned(
     ]
 
 
+def test_a_pattern_is_live_only_when_it_covers_a_file_the_checks_see(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """Matching is discovery's: over the working tree's one listing, by the reading the
+    checks apply. A glob that reaches only a folder, a folder holding only files git
+    ignores, and an empty folder cover no file the checks ever see — dead patterns."""
+    repo = make_adopter_repo()
+    repo.write(
+        {
+            ".gitignore": "build/\n",
+            "build/out.md": "# generated\n",
+            "docs/sub/page.md": "# Page\n",
+        }
+    )
+    (repo.root / "empty").mkdir()
+    _write_config(repo, "friction:\n  exclude: ['docs/*', build, empty, 'docs/**']\n")
+    report = _run(repo)
+    assert report.errors == ()
+    assert _paths(report, cv.Severity.WARNING) == [
+        "/friction/exclude/0",
+        "/friction/exclude/1",
+        "/friction/exclude/2",
+    ]
+
+
+def test_a_pattern_is_judged_as_discovery_reads_it(make_adopter_repo: MakeAdopterRepo) -> None:
+    """Discovery walks a pattern without its surrounding spaces, so that is the pattern
+    judged; the finding still points at the entry as written."""
+    repo = make_adopter_repo()
+    repo.write({"docs/page.md": "# Page\n"})
+    _write_config(repo, "friction:\n  places: [' docs ', ' nowhere']\n")
+    report = _run(repo)
+    assert [(f.path, f.severity) for f in report.findings] == [
+        ("/friction/places/1", cv.Severity.WARNING)
+    ]
+    assert report.findings[0].message.startswith("friction pattern 'nowhere' matches nothing")
+
+
 # --- connections (COR-053, COR-052) ------------------------------------------
 
 

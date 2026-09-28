@@ -56,7 +56,7 @@ import functools
 import io
 import os
 import re
-from collections.abc import Callable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path, PurePosixPath
@@ -669,6 +669,19 @@ def listed_files_in_place(place: Place, files: Sequence[str]) -> list[str]:
 def pattern_matches(pattern: str, path: str) -> bool:
     """Whether a settings or anchor `pattern` covers the repository-relative file `path`."""
     return pattern_matcher(pattern)(path)
+
+
+def pattern_matches_any(pattern: str, files: Iterable[str]) -> bool:
+    """Whether a settings `pattern` covers at least one file of a listing.
+
+    The reading the checks apply (`pattern_matcher`), so a pattern said to
+    match something covers a file the checks can see — not merely a folder, or
+    a file git ignores. `.`, the repository itself, always does.
+    """
+    if os.path.normpath(pattern) == ".":
+        return True
+    match = pattern_matcher(pattern)
+    return any(match(path) for path in files)
 
 
 @functools.lru_cache(maxsize=1024)

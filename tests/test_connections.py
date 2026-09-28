@@ -896,6 +896,50 @@ def test_configuration_pass_findings_on_a_valid_selection_are_pinned(
     assert cv.run_configuration_pass(repo.root).findings == ()
 
 
+def test_a_contributor_selection_is_judged_against_the_active_providers_point(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """The configuration pass reads the point the resolver defines — the active
+    provider's — never another installed provider's declaration of it (COR-053 point 1)."""
+    repo = make_adopter_repo()
+    _stage(repo, "docs-a", _provider("docs-a", accepts={}), schemas=COMPANIONS)
+    _stage(
+        repo,
+        "docs-b",
+        _provider("docs-b", accepts=_accepts(combination="single")),
+        schemas=COMPANIONS,
+    )
+    _stage(repo, "evidence", _contributor("evidence"))
+    selection = f"  selections:\n    {READING}: evidence\n"
+
+    # Only the unselected provider declares the point: the project defines none.
+    _config(repo, f"connections:\n  providers:\n    {DOCS}: docs-a\n{selection}")
+    (error,) = cv.run_configuration_pass(repo.root).errors
+    assert error.path == f"/connections/selections/{READING}"
+    assert error.message.startswith(
+        f"'docs-a', the active provider of role '{DOCS}', defines no data point '{READING}' "
+        f"— only 'docs-b' declare it"
+    )
+
+    # No active provider: the role conflict is the finding, not the selection too.
+    _config(repo, f"connections:\n{selection}")
+    assert cv.run_configuration_pass(repo.root).errors == ()
+    assert [f.path for f in cx.resolve_wiring(repo.root).errors()] == [
+        f"/connections/{cx.PROVIDERS_KEY}"
+    ]
+
+    # The active provider's point is `union`, whatever another provider declares.
+    _stage(
+        repo,
+        "docs-a",
+        _provider("docs-a", accepts=_accepts(combination="union")),
+        schemas=COMPANIONS,
+    )
+    _config(repo, f"connections:\n  providers:\n    {DOCS}: docs-a\n{selection}")
+    (error,) = cv.run_configuration_pass(repo.root).errors
+    assert "is not a `single` point (declared: union)" in error.message
+
+
 # --- the one resolver, for plans too (COR-053 point 8) --------------------------------
 
 

@@ -60,10 +60,11 @@ point 2): those two members read it, and so does container validation in the
 roles and, for each data point their providers define, its version and its
 point schema (COR-053 point 10). `package_validate.check_wiring` is the same
 resolution for the register pre-flight and the plans. The
-configuration pass reads the same declarations (`load_declarations`) to check
-the two selection keys against what is installed; it also owns the last
-relation, the configuration file's shape against the schema the installed
-backbone ships.
+configuration pass reads the same resolved wiring to check the two selection
+keys: a provider selection against the declarations, a contributor selection
+against the active provider's point and its contributors (`Wiring.data_point`,
+`PointBinding.contributors`). It also owns the last relation, the configuration
+file's shape against the schema the installed backbone ships.
 
 A named hook is left for a later Task, documented at its definition:
 `project_filler` (#994 — the filler envelope and its location rule). A stale generated
@@ -275,6 +276,21 @@ class PointBinding:
         filler_fits = self.filler is not None and self.filler.version == self.point.version
         return bool(self.bound) or filler_fits
 
+    @property
+    def contributors(self) -> tuple[str, ...]:
+        """Every capability declaring a contribution to this point, sorted, whether
+        or not the contribution is bound — the candidates of a contributor selection
+        (COR-052 point 4)."""
+        return tuple(
+            sorted(
+                {
+                    b.counterpart.capability
+                    for b in self.bindings
+                    if b.counterpart.kind is CounterpartKind.CONTRIBUTION
+                }
+            )
+        )
+
 
 @dataclass(frozen=True)
 class Finding:
@@ -348,6 +364,24 @@ class Wiring:
 
     def active_roles(self) -> frozenset[str]:
         return frozenset(r.role for r in self.roles if r.active is not None)
+
+    def role(self, role: str) -> RoleBinding | None:
+        """Who answers the qualified role `role`, or None when nothing names it."""
+        return next((r for r in self.roles if r.role == role), None)
+
+    def data_point(self, address: str) -> PointBinding | None:
+        """The data point at `address` as the active provider of its role defines it,
+        with every counterpart resolved to it; None when no active provider defines
+        one — a point only an unselected provider declares is not defined in the
+        project (COR-053 point 1)."""
+        return next(
+            (
+                p
+                for p in self.points
+                if p.point.address == address and p.point.kind is PointKind.DATA
+            ),
+            None,
+        )
 
     def errors(self) -> tuple[Finding, ...]:
         return tuple(f for f in self.findings if f.severity is Severity.ERROR)
@@ -600,7 +634,7 @@ def resolve(
     for binding in bindings:
         findings.extend(_binding_findings(binding, declarations, active_of, files))
     for point in points:
-        findings.extend(_point_findings(point, declarations, files, config))
+        findings.extend(_point_findings(point, files, config))
     findings.extend(_cycle_findings(bindings, declarations, active_of, files))
     findings.extend(_fingerprint_findings(declarations, files))
     range_findings, checked = _range_findings(declarations, backbone_version)
@@ -873,7 +907,6 @@ def _binding_findings(
 
 def _point_findings(
     point: PointBinding,
-    declarations: Declarations,
     files: Mapping[str, Path],
     config_file: Path,
 ) -> list[Finding]:
@@ -897,13 +930,7 @@ def _point_findings(
             )
         )
     if p.mandatory is not None and not point.filled:
-        contributors = sorted(
-            {
-                c.capability
-                for c in declarations.counterparts
-                if c.kind is CounterpartKind.CONTRIBUTION and c.target == p.address
-            }
-        )
+        contributors = point.contributors
         undelivered = (
             f" (declared but not delivered: {_list(contributors)})" if contributors else ""
         )

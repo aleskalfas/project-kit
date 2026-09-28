@@ -1,0 +1,19 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The configuration pass of `pkit validate` now judges the friction patterns and
+  the contributor selections as the rest of the backbone reads them (#1034,
+  ADR-057 point 2), removing three disagreements. A friction pattern is judged
+  as friction discovery reads it — without surrounding spaces, and an entry of
+  spaces alone, which discovery ignores, not at all — and counts as
+  matching something only when it covers a file of the working tree's listing by
+  the reading the friction checks apply, so a glob reaching only folders, or only
+  files git ignores, is now warned as matching nothing, as the checks never see
+  anything under it. A contributor selection is checked against the data point
+  the active provider of its role defines: a point declared only by a provider
+  that is not selected is not defined in the project and is now an error, a point
+  the active provider declares as not `single` is refused even when another
+  provider's declaration says `single`, and while the role has no active
+  provider the selection is not reported a second time beside the role conflict.
