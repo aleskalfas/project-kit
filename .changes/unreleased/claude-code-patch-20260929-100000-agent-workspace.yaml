@@ -1,0 +1,14 @@
+component: claude-code
+kind: patch
+custom:
+  category: Added
+body: >
+  The Claude Code adapter realizes the agent workspace without an allow rule:
+  inside the session's working directory — the worktree root for a subagent in
+  a worktree — Claude Code's own modes already approve reads, accepted edits
+  and sandboxed commands, so nothing is written to `settings.json`; the hook
+  allows the path-confined `workspace` grant (here-documents and redirects into
+  the folder included), and `permission-enforcement.yaml` declares
+  `path-confinement` as hook-enforced. The README states this, and that the
+  harness's own per-session scratch directory lies outside a subagent's
+  working directory, where allow rules did not stop the prompts.

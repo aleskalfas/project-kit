@@ -35,6 +35,13 @@ dimensions:
   directory-scope:
     layer: hook
     enforcement: runtime
+  # A path-confined privilege (the agent workspace, #1043) is recognized by the
+  # request's target, which only the hook sees; no settings rule is written for
+  # it — inside the working directory the harness's own modes already approve
+  # the folder, and a session-wide rule would reach beyond it.
+  path-confinement:
+    layer: hook
+    enforcement: runtime
   domain-scope:
     # Per-agent domain rules the hook inspects (model intent); distinct from the
     # session-wide sandbox `domain-allowlist` below (the OS-enforced host list).
