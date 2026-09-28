@@ -54,8 +54,10 @@ counterpart named.
 functionality it concerns (`connections_outcome`, `versions_outcome`):
 `connections` — the resolved wiring and its findings — and `versions` — how
 many of each relation were checked and each version finding labelled with its
-relation. `package_validate.check_wiring` is the same resolution for the
-register pre-flight and the plans. The
+relation. Within one run the wiring is resolved once (`shared_wiring`, ADR-057
+point 2) and every member that reads it reads that resolution.
+`package_validate.check_wiring` is the same resolution for the register
+pre-flight and the plans. The
 configuration pass reads the same declarations (`load_declarations`) to check
 the two selection keys against what is installed; it also owns the last
 relation, the configuration file's shape against the schema the installed
@@ -427,6 +429,15 @@ def resolve_wiring(target_root: Path) -> Wiring:
         wiring,
         findings=tuple(sorted((*wiring.findings, *pins), key=_finding_key)),
         checked={**wiring.checked, Relation.RULE_SET_PIN: len(pin_checks)},
+    )
+
+
+def shared_wiring(target_root: Path) -> Wiring:
+    """The live wiring, resolved once per run of `pkit validate` and shared by
+    every member that reads it (ADR-057 point 2: a second computation is a
+    defect). Outside a run — a focused surface — it resolves afresh."""
+    return validators.once_per_run(
+        ("wiring", target_root.resolve()), lambda: resolve_wiring(target_root)
     )
 
 
@@ -1244,7 +1255,7 @@ def connections_outcome(target_root: Path) -> validators.Outcome:
     """The `connections` member of `pkit validate`: the wiring as resolved — roles,
     points, counterparts — then the connection findings (roles, points, marks,
     cycles, fingerprints), each at its own severity."""
-    wiring = resolve_wiring(target_root)
+    wiring = shared_wiring(target_root)
     findings = wiring.connection_findings()
     return validators.Outcome(
         tuple(_connections_summary(wiring, findings)), _as_findings(target_root, findings)
@@ -1254,7 +1265,7 @@ def connections_outcome(target_root: Path) -> validators.Outcome:
 def versions_outcome(target_root: Path) -> validators.Outcome:
     """The `versions` member of `pkit validate`: how many of each relation were
     checked, then each version finding labelled with its relation."""
-    wiring = resolve_wiring(target_root)
+    wiring = shared_wiring(target_root)
     findings = wiring.version_findings()
     checked = ", ".join(f"{n} {relation.value}(s)" for relation, n in wiring.checked.items())
     return validators.Outcome(

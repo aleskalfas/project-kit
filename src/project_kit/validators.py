@@ -54,11 +54,12 @@ import json
 import os
 import signal
 import subprocess
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
+from contextvars import ContextVar
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 from ruamel.yaml import YAML
 
@@ -501,8 +502,39 @@ def select(
     )
 
 
+# The values computed so far in the current run of `run_all`; None outside one.
+_RUN_VALUES: ContextVar[dict[Hashable, Any] | None] = ContextVar("validate_run", default=None)
+
+_T = TypeVar("_T")
+
+
+def once_per_run(key: Hashable, compute: Callable[[], _T]) -> _T:
+    """`compute()`, once per run of the umbrella for each `key`.
+
+    Several members read one computation — the wiring is read by the
+    `connections`, `versions`, `friction` and `rule-sets` members — and a
+    second computation of it is a defect (ADR-057 point 2). Inside `run_all`
+    the first reader computes the value and every later reader of the same key
+    gets that value; outside a run — a focused surface, a member called on its
+    own — it simply computes. Members only read the tree, so a value cannot go
+    stale within a run.
+    """
+    values = _RUN_VALUES.get()
+    if values is None:
+        return compute()
+    if key not in values:
+        values[key] = compute()
+    return values[key]
+
+
 def run_all(target_root: Path, validators: Iterable[Validator]) -> list[Result]:
-    return [Result(v, v.run(target_root)) for v in validators]
+    """Run the members in order, as one run: a computation several members read
+    (`once_per_run`) is computed once for all of them."""
+    token = _RUN_VALUES.set({})
+    try:
+        return [Result(v, v.run(target_root)) for v in validators]
+    finally:
+        _RUN_VALUES.reset(token)
 
 
 def has_errors(results: Iterable[Result]) -> bool:

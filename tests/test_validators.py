@@ -187,6 +187,30 @@ def test_select_addresses_members_and_refuses_unknown_names(adopter: AdopterRepo
         validators.select(registered, only=["nope"])
 
 
+def test_a_computation_several_members_read_runs_once_per_run(tmp_path: Path) -> None:
+    """Inside `run_all` each key is computed once and shared; outside, every call computes."""
+    computed: list[str] = []
+
+    def compute(key: str) -> str:
+        computed.append(key)
+        return f"value of {key}"
+
+    def member(root: Path) -> validators.Outcome:
+        values = [validators.once_per_run(key, lambda k=key: compute(k)) for key in ("a", "a", "b")]
+        return validators.Outcome(summary=tuple(values))
+
+    members = [validators.Validator(name, member, order) for order, name in enumerate(["x", "y"])]
+    results = validators.run_all(tmp_path, members)
+    assert computed == ["a", "b"]
+    assert all(r.outcome.summary == ("value of a", "value of a", "value of b") for r in results)
+
+    validators.run_all(tmp_path, members)  # a new run computes afresh
+    assert computed == ["a", "b", "a", "b"]
+    validators.once_per_run("a", lambda: compute("a"))  # outside a run: no sharing
+    validators.once_per_run("a", lambda: compute("a"))
+    assert computed == ["a", "b", "a", "b", "a", "a"]
+
+
 # --- the umbrella command ----------------------------------------------------
 
 
