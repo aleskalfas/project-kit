@@ -771,9 +771,12 @@ prompt, while draft / `--yes` / no-auth paths use config-then-remote-fallback
 silently. No name resolvable ⇒ the body states `(project: not declared)`
 instead. The workstream is **asked of the project-management capability** —
 its `context-workstream` read verb (current branch → issue → workstream),
-invoked by subprocess through the capability dispatcher, so the backbone
-never reads pm's `workstreams.yaml` or labels itself; `--workstream <name>`
-overrides, and pm-absent / underivable simply omits the half. A successful
+resolved through the capability dispatcher and run under the backbone's
+thirty-second command bound (the lifecycle README, "How a registered command
+is run"), so the backbone never reads pm's `workstreams.yaml` or labels
+itself; `--workstream <name>` overrides, and pm-absent / underivable simply
+omits the half — a verb that overruns the bound is stopped, and the report
+warns and goes on without it. A successful
 post stamps the same pair into the reported scratchpad note's
 frontmatter. This context block is the designated extension point for
 version provenance (EPIC #411): future provenance fields join the same

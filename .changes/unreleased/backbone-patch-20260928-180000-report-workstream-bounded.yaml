@@ -1,0 +1,16 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  A hung workstream lookup no longer hangs `pkit report` (#1053). The report
+  asks the project-management capability's `context-workstream` verb for the
+  workstream on its context line; that call now runs through the backbone's
+  one command runner, under the same thirty-second bound as every other
+  command the backbone runs on a component's behalf. A verb that overruns is
+  stopped with everything it started, the report prints a warning saying the
+  workstream was omitted because the verb did not answer in time (pass
+  `--workstream` to name it), and the report is composed without it. Every
+  other miss still omits the workstream silently, and a verb that prints
+  output that is not UTF-8 now omits the workstream instead of stopping the
+  report with a decoding error.

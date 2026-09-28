@@ -4,12 +4,15 @@ pm-dispatched workstream read."""
 
 from __future__ import annotations
 
-import subprocess
+import stat
+import time
 from pathlib import Path
 
 import pytest
 
+from project_kit import command_runner
 from project_kit import report_context as rc
+from project_kit.command_runner import CommandRun, Ending
 from project_kit.report import kind_marker, parse_report_marker, render_context_line
 
 
@@ -108,28 +111,53 @@ def test_resolve_project_name_never_the_directory_basename(
     assert rc.resolve_project_name(project_dir) is None
 
 
-# --- workstream via the pm dispatcher seam ---------------------------
+# --- workstream via the pm dispatcher seam and the bounded runner -----
 
 
-def test_pm_workstream_reads_verb_output(tmp_path: Path, monkeypatch) -> None:
+def _verb(tmp_path: Path, monkeypatch, body: str) -> Path:
+    """An executable stand-in for the pm read verb, resolved in place of the
+    real one — the lookup itself is the dispatcher's, tested there."""
     from project_kit import dispatcher
 
     script = tmp_path / "context-workstream.py"
-    script.write_text("#!/bin/true\n", encoding="utf-8")
+    script.write_text("#!/usr/bin/env python3\n" + body, encoding="utf-8")
+    script.chmod(script.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
     monkeypatch.setattr(
         dispatcher, "resolve_capability_script", lambda root, cap, cmd: script
     )
+    return script
+
+
+def test_pm_workstream_runs_the_verb_under_the_context_read_policy(
+    tmp_path: Path, monkeypatch
+) -> None:
+    # Through the shared runner, from the project root, with no arguments and
+    # the environment left as it is — the verb asks the tracker.
+    script = _verb(tmp_path, monkeypatch, "")
     captured: dict = {}
 
-    def fake_run(cmd, **kwargs):
-        captured["cmd"] = cmd
-        captured["cwd"] = kwargs.get("cwd")
-        return _FakeProc(0, "cli\n")
+    def fake_run(script_arg, args, **kwargs):
+        captured.update(script=script_arg, args=list(args), **kwargs)
+        return CommandRun(Ending.UNPARSABLE, 30, returncode=0, stdout="cli\n")
 
-    monkeypatch.setattr(rc.subprocess, "run", fake_run)
+    monkeypatch.setattr(rc, "run_command", fake_run)
     assert rc.pm_workstream(tmp_path) == "cli"
-    assert captured["cmd"] == [str(script)]  # dispatched by subprocess
-    assert captured["cwd"] == tmp_path
+    assert captured == {"script": script, "args": [], "cwd": tmp_path}
+
+
+@pytest.mark.parametrize(
+    ("printed", "expected"),
+    [
+        ("print('cli')", "cli"),  # the bare value, not a JSON document
+        ("print('42')", "42"),  # read as text even where it parses as JSON
+        ("print()", None),  # empty output ⇒ omit
+    ],
+)
+def test_pm_workstream_reads_the_printed_value_as_text(
+    tmp_path: Path, monkeypatch, printed: str, expected
+) -> None:
+    _verb(tmp_path, monkeypatch, printed + "\n")
+    assert rc.pm_workstream(tmp_path) == expected
 
 
 def test_pm_workstream_none_when_capability_or_verb_absent(
@@ -141,27 +169,48 @@ def test_pm_workstream_none_when_capability_or_verb_absent(
         dispatcher, "resolve_capability_script", lambda root, cap, cmd: None
     )
 
-    def explode(cmd, **kwargs):  # pragma: no cover - must not be reached
-        raise AssertionError("no subprocess should run when the verb is absent")
+    def explode(*args, **kwargs):  # pragma: no cover - must not be reached
+        raise AssertionError("no command should run when the verb is absent")
 
-    monkeypatch.setattr(rc.subprocess, "run", explode)
+    monkeypatch.setattr(rc, "run_command", explode)
     assert rc.pm_workstream(tmp_path) is None
 
 
-def test_pm_workstream_none_on_empty_output_or_failure(
+@pytest.mark.parametrize(
+    "body",
+    [
+        "import sys\nprint('x')\nsys.exit(1)\n",  # non-zero exit ⇒ omit
+        "import sys\nsys.exit(2)\n",  # the un-bootstrapped refusal ⇒ omit
+        "import sys\nsys.stdout.buffer.write(b'\\xff\\n')\n",  # not UTF-8 ⇒ omit
+    ],
+)
+def test_pm_workstream_none_on_failure_silently(
+    tmp_path: Path, monkeypatch, capsys, body: str
+) -> None:
+    _verb(tmp_path, monkeypatch, body)
+    assert rc.pm_workstream(tmp_path) is None
+    assert capsys.readouterr().err == ""  # an ordinary miss degrades to silence
+
+
+def test_pm_workstream_none_when_the_verb_cannot_start(
     tmp_path: Path, monkeypatch
 ) -> None:
-    from project_kit import dispatcher
+    script = _verb(tmp_path, monkeypatch, "print('cli')\n")
+    script.chmod(stat.S_IRUSR | stat.S_IWUSR)  # no longer executable
+    assert rc.pm_workstream(tmp_path) is None
 
-    script = tmp_path / "context-workstream.py"
-    script.write_text("#!/bin/true\n", encoding="utf-8")
-    monkeypatch.setattr(
-        dispatcher, "resolve_capability_script", lambda root, cap, cmd: script
-    )
-    monkeypatch.setattr(rc.subprocess, "run", lambda cmd, **k: _FakeProc(0, "\n"))
-    assert rc.pm_workstream(tmp_path) is None  # empty output ⇒ omit
-    monkeypatch.setattr(rc.subprocess, "run", lambda cmd, **k: _FakeProc(1, "x"))
-    assert rc.pm_workstream(tmp_path) is None  # non-zero exit ⇒ omit
+
+def test_pm_workstream_stops_a_hung_verb_at_the_bound_and_says_so(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
+    _verb(tmp_path, monkeypatch, "import time\ntime.sleep(60)\n")
+    monkeypatch.setattr(command_runner, "COMMAND_TIMEOUT_SECONDS", 1)
+    started = time.monotonic()
+    assert rc.pm_workstream(tmp_path) is None
+    assert time.monotonic() - started < 15  # not the verb's sixty seconds
+    err = capsys.readouterr().err
+    assert "workstream omitted" in err
+    assert "did not answer within 1 s" in err
 
 
 # --- rendering helpers (pure) ----------------------------------------
