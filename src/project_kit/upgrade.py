@@ -42,7 +42,6 @@ import sys
 from pathlib import Path
 
 import click
-from packaging.specifiers import InvalidSpecifier, SpecifierSet
 from packaging.version import InvalidVersion, Version
 
 from project_kit.install import find_source_kit, refuse_if_source_kit_incomplete
@@ -731,7 +730,10 @@ def _resolve_compatibility(
     For each installed component, reads the `requires_backbone` range from the
     **source** `package.yaml` (the version it becomes after the upgrade's sync),
     falling back to the installed copy for components the source no longer ships
-    (see `_resolve_package_yaml`). Raises `click.ClickException` on conflict so
+    (see `_resolve_package_yaml`). The file is read as the wiring resolver reads
+    a package (`connections.read_package`), so the range is found however it is
+    quoted, and compared through the resolver's one relation
+    (`connections.range_admits`). Raises `click.ClickException` on conflict so
     the caller surfaces it before any state changes.
 
     Also checks capability dependency requirements (COR-030): for each installed
@@ -740,8 +742,10 @@ def _resolve_compatibility(
     range. Uses *installed* versions for both sides (backbone upgrade does not
     change capability versions). Conflicts are refused with an actionable hint.
     """
+    from project_kit.connections import REQUIRES_BACKBONE_KEY, range_admits, read_package
+
     try:
-        target = Version(target_version)
+        Version(target_version)
     except InvalidVersion as exc:
         raise click.ClickException(
             f"source kit version {target_version!r} is not valid semver"
@@ -752,15 +756,13 @@ def _resolve_compatibility(
         package_yaml = _resolve_package_yaml(target_root, source_kit, entry)
         if package_yaml is None:
             continue
-        range_str = _extract_requires_backbone(package_yaml)
-        if range_str is None:
-            continue
-        spec = _to_specifier_set(range_str)
-        if spec is None:
-            continue
-        if target not in spec:
+        # The package read as the resolver reads it — any YAML quoting — and the
+        # range compared through its one relation, as `pkit validate` compares it.
+        package = read_package(package_yaml) or {}
+        required = package.get(REQUIRES_BACKBONE_KEY)
+        if range_admits(required, target_version) is False:
             conflicts.append(
-                f"  {entry.kind} '{entry.name}' requires backbone {range_str}; "
+                f"  {entry.kind} '{entry.name}' requires backbone {required}; "
                 f"target {target_version} is out of range"
             )
 
@@ -803,23 +805,6 @@ def _resolve_package_yaml(
         if candidate.is_file():
             return candidate
     return None
-
-
-def _extract_requires_backbone(package_yaml: Path) -> str | None:
-    """Read a package.yaml file and return the requires_backbone string, or None."""
-    import re
-
-    text = package_yaml.read_text(encoding="utf-8")
-    match = re.search(r'requires_backbone:\s*"([^"]+)"', text)
-    return match.group(1) if match else None
-
-
-def _to_specifier_set(range_str: str) -> SpecifierSet | None:
-    """Parse a `>=X,<Y` range into a packaging SpecifierSet, or None on error."""
-    try:
-        return SpecifierSet(range_str)
-    except InvalidSpecifier:
-        return None
 
 
 def _run_backbone_migrations(

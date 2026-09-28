@@ -11,9 +11,11 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+import pytest
 from click.testing import CliRunner
 from ruamel.yaml import YAML
 
+from project_kit import capabilities as caps
 from project_kit import config_validate as cv
 from project_kit import connections as cx
 from project_kit import package_validate as pv
@@ -757,6 +759,45 @@ def test_a_dependency_range_naming_an_adapter_is_not_an_installed_capability(
     assert "which is not installed" in wiring.findings[0].message
 
 
+@pytest.mark.parametrize(
+    ("version_range", "version", "admits"),
+    [
+        (">=0.1.0,<1.0.0", "0.5.0", True),
+        (">=0.1.0,<1.0.0", "1.0.0", False),
+        (" >=0.1.0, <1.0.0 ", "0.9.9", True),
+        ("", "0.5.0", None),  # no range declared: no constraint
+        ("not a range", "0.5.0", None),  # malformed: the packages pass reports it
+        (">=0.1.0", "not a version", None),
+        (None, "0.5.0", None),
+        (">=0.1.0", None, None),
+    ],
+)
+def test_range_admits_is_the_one_comparison_of_a_version_range(
+    version_range: str | None, version: str | None, admits: bool | None
+) -> None:
+    assert cx.range_admits(version_range, version) is admits
+
+
+def test_the_install_gate_and_validation_compare_a_dependency_range_alike(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """Both read the range through `range_admits`, so they refuse the same versions."""
+    repo = make_adopter_repo()
+    dependency = {"name": "evidence", "version": ">=0.2.0,<1.0.0"}
+    _stage(repo, "notes", _package("notes", requires_capabilities=[dependency]))
+    for version, refused in (("0.1.0", True), ("0.2.0", False), ("1.0.0", True)):
+        _stage(repo, "evidence", _package("evidence", version=version))
+        validated = [
+            f
+            for f in cx.resolve_wiring(repo.root).errors()
+            if f.relation is cx.Relation.CAPABILITY_RANGE
+        ]
+        gated = caps.check_capability_dependencies(
+            repo.root, (caps.CapabilityDependency(**dependency),)
+        )
+        assert bool(validated) is bool(gated) is refused, version
+
+
 def test_installed_version_of_record_comes_from_the_component_manifest(
     make_adopter_repo: MakeAdopterRepo,
 ) -> None:
@@ -868,6 +909,76 @@ def test_configuration_pass_checks_a_contributor_selection_for_real(
     assert "'bystander' declares no contribution" in report.errors[0].message
     assert "its installed contributors are 'evidence'" in report.errors[0].message
     assert report.by_severity(cv.Severity.INFO) == ()
+
+
+def test_configuration_pass_findings_on_a_valid_selection_are_pinned(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """Two providers of the role, one selected; two contributors to its `single` point,
+    one at another version, one selected. The configuration pass finds nothing here, and
+    reading the selections through the resolved wiring (ADR-057 point 2) must keep it so."""
+    repo = make_adopter_repo()
+    single = _accepts(combination="single")
+    _stage(repo, "docs-a", _provider("docs-a", accepts=single), schemas=COMPANIONS)
+    _stage(repo, "docs-b", _provider("docs-b", accepts=single), schemas=COMPANIONS)
+    _stage(repo, "evidence", _contributor("evidence"))
+    _stage(repo, "notes", _contributor("notes", version=2))
+    _config(
+        repo,
+        f"connections:\n  providers:\n    {DOCS}: docs-a\n  selections:\n    {READING}: notes\n",
+    )
+    wiring = cx.resolve_wiring(repo.root)
+    assert _role(wiring, DOCS).active == "docs-a"
+    (point,) = wiring.points
+    assert {b.counterpart.capability: b.status for b in point.bindings} == {
+        "evidence": cx.BindingStatus.BOUND,
+        "notes": cx.BindingStatus.INERT_VERSION,
+    }
+    assert cv.run_configuration_pass(repo.root).findings == ()
+
+
+def test_a_contributor_selection_is_judged_against_the_active_providers_point(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """The configuration pass reads the point the resolver defines — the active
+    provider's — never another installed provider's declaration of it (COR-053 point 1)."""
+    repo = make_adopter_repo()
+    _stage(repo, "docs-a", _provider("docs-a", accepts={}), schemas=COMPANIONS)
+    _stage(
+        repo,
+        "docs-b",
+        _provider("docs-b", accepts=_accepts(combination="single")),
+        schemas=COMPANIONS,
+    )
+    _stage(repo, "evidence", _contributor("evidence"))
+    selection = f"  selections:\n    {READING}: evidence\n"
+
+    # Only the unselected provider declares the point: the project defines none.
+    _config(repo, f"connections:\n  providers:\n    {DOCS}: docs-a\n{selection}")
+    (error,) = cv.run_configuration_pass(repo.root).errors
+    assert error.path == f"/connections/selections/{READING}"
+    assert error.message.startswith(
+        f"'docs-a', the active provider of role '{DOCS}', defines no data point '{READING}' "
+        f"— only 'docs-b' declare it"
+    )
+
+    # No active provider: the role conflict is the finding, not the selection too.
+    _config(repo, f"connections:\n{selection}")
+    assert cv.run_configuration_pass(repo.root).errors == ()
+    assert [f.path for f in cx.resolve_wiring(repo.root).errors()] == [
+        f"/connections/{cx.PROVIDERS_KEY}"
+    ]
+
+    # The active provider's point is `union`, whatever another provider declares.
+    _stage(
+        repo,
+        "docs-a",
+        _provider("docs-a", accepts=_accepts(combination="union")),
+        schemas=COMPANIONS,
+    )
+    _config(repo, f"connections:\n  providers:\n    {DOCS}: docs-a\n{selection}")
+    (error,) = cv.run_configuration_pass(repo.root).errors
+    assert "is not a `single` point (declared: union)" in error.message
 
 
 # --- the one resolver, for plans too (COR-053 point 8) --------------------------------

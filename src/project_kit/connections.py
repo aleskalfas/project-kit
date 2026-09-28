@@ -43,7 +43,11 @@ yields the same `Wiring`, finding for finding. It computes:
   `depends-on` entries against the offered process interface's version, a
   project filler against its point's version, and a rule set's inheritance
   pins against the inherited sets' majors (COR-051 point 7), read from the
-  rule-set files by `rule_sets.pin_checks`.
+  rule-set files by `rule_sets.pin_checks`. A version range is compared with a
+  version in one place, `range_admits`, which the capability install and
+  register gates, the capability and backbone upgrade gates and the dependency
+  check they share call too, reading a package file as the resolver does
+  (`read_package`).
 
 Disposition follows the direction split of COR-030 as COR-053 point 6 applies
 it: the side carrying a mandatory mark, or the dependent of a version range,
@@ -60,10 +64,11 @@ point 2): those two members read it, and so does container validation in the
 roles and, for each data point their providers define, its version and its
 point schema (COR-053 point 10). `package_validate.check_wiring` is the same
 resolution for the register pre-flight and the plans. The
-configuration pass reads the same declarations (`load_declarations`) to check
-the two selection keys against what is installed; it also owns the last
-relation, the configuration file's shape against the schema the installed
-backbone ships.
+configuration pass reads the same resolved wiring to check the two selection
+keys: a provider selection against the declarations, a contributor selection
+against the active provider's point and its contributors (`Wiring.data_point`,
+`PointBinding.contributors`). It also owns the last relation, the configuration
+file's shape against the schema the installed backbone ships.
 
 A named hook is left for a later Task, documented at its definition:
 `project_filler` (#994 — the filler envelope and its location rule). A stale generated
@@ -116,6 +121,9 @@ SCHEMAS_DIR = "schemas"
 
 # The kind of registry entry that may provide a role (COR-053 point 1).
 CAPABILITY = "capability"
+
+# The package key of a component's backbone range (COR-010, COR-017).
+REQUIRES_BACKBONE_KEY = "requires_backbone"
 
 
 # --- the data model ------------------------------------------------------
@@ -275,6 +283,21 @@ class PointBinding:
         filler_fits = self.filler is not None and self.filler.version == self.point.version
         return bool(self.bound) or filler_fits
 
+    @property
+    def contributors(self) -> tuple[str, ...]:
+        """Every capability declaring a contribution to this point, sorted, whether
+        or not the contribution is bound — the candidates of a contributor selection
+        (COR-052 point 4)."""
+        return tuple(
+            sorted(
+                {
+                    b.counterpart.capability
+                    for b in self.bindings
+                    if b.counterpart.kind is CounterpartKind.CONTRIBUTION
+                }
+            )
+        )
+
 
 @dataclass(frozen=True)
 class Finding:
@@ -349,6 +372,24 @@ class Wiring:
     def active_roles(self) -> frozenset[str]:
         return frozenset(r.role for r in self.roles if r.active is not None)
 
+    def role(self, role: str) -> RoleBinding | None:
+        """Who answers the qualified role `role`, or None when nothing names it."""
+        return next((r for r in self.roles if r.role == role), None)
+
+    def data_point(self, address: str) -> PointBinding | None:
+        """The data point at `address` as the active provider of its role defines it,
+        with every counterpart resolved to it; None when no active provider defines
+        one — a point only an unselected provider declares is not defined in the
+        project (COR-053 point 1)."""
+        return next(
+            (
+                p
+                for p in self.points
+                if p.point.address == address and p.point.kind is PointKind.DATA
+            ),
+            None,
+        )
+
     def errors(self) -> tuple[Finding, ...]:
         return tuple(f for f in self.findings if f.severity is Severity.ERROR)
 
@@ -378,13 +419,9 @@ def load_declarations(target_root: Path) -> Declarations:
     entries = {e.name: e for e in backbone.components} if backbone is not None else {}
     installed: list[Installed] = []
     for name, component_dir, file in installed_package_files(target_root):
-        try:
-            raw: Any = _yaml.load(file.read_text(encoding="utf-8"))
-        except Exception:
-            continue  # the packages pass reports the parse error
-        package = _mapping(_string_keys(raw))
+        package = read_package(file)
         if package is None:
-            continue
+            continue  # the packages pass reports the parse error
         entry = entries.get(name)
         installed.append(
             Installed(
@@ -399,6 +436,16 @@ def load_declarations(target_root: Path) -> Declarations:
             )
         )
     return Declarations.from_installed(installed)
+
+
+def read_package(file: Path) -> Mapping[str, Any] | None:
+    """A package file as the resolver reads it: its parsed YAML, every key as its
+    text; None when it cannot be read, does not parse, or is not a mapping."""
+    try:
+        raw: Any = _yaml.load(file.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    return _mapping(_string_keys(raw))
 
 
 def load_selections(target_root: Path) -> Selections:
@@ -600,7 +647,7 @@ def resolve(
     for binding in bindings:
         findings.extend(_binding_findings(binding, declarations, active_of, files))
     for point in points:
-        findings.extend(_point_findings(point, declarations, files, config))
+        findings.extend(_point_findings(point, files, config))
     findings.extend(_cycle_findings(bindings, declarations, active_of, files))
     findings.extend(_fingerprint_findings(declarations, files))
     range_findings, checked = _range_findings(declarations, backbone_version)
@@ -873,7 +920,6 @@ def _binding_findings(
 
 def _point_findings(
     point: PointBinding,
-    declarations: Declarations,
     files: Mapping[str, Path],
     config_file: Path,
 ) -> list[Finding]:
@@ -897,13 +943,7 @@ def _point_findings(
             )
         )
     if p.mandatory is not None and not point.filled:
-        contributors = sorted(
-            {
-                c.capability
-                for c in declarations.counterparts
-                if c.kind is CounterpartKind.CONTRIBUTION and c.target == p.address
-            }
-        )
+        contributors = point.contributors
         undelivered = (
             f" (declared but not delivered: {_list(contributors)})" if contributors else ""
         )
@@ -1051,6 +1091,24 @@ def _fingerprint_findings(declarations: Declarations, files: Mapping[str, Path])
 # --- findings: the version ranges -------------------------------------------------
 
 
+def range_admits(version_range: Any, version: Any) -> bool | None:
+    """Whether a version range admits a version — the one comparison of a version
+    range relation, for every reader: a component's `requires_backbone` against a
+    backbone (COR-010, COR-017), a `requires_capabilities` range against a
+    capability (COR-030). Validation reads it here; so do the install, register
+    and upgrade gates.
+
+    `None` when either side cannot be read — a range that is not a non-empty
+    PEP 440 specifier set, a version that is not a PEP 440 version — which every
+    reader takes as no constraint: the packages pass reports a malformed range.
+    """
+    spec = _specifier(version_range)
+    actual = _version(version) if isinstance(version, str) else None
+    if spec is None or actual is None:
+        return None
+    return actual in spec
+
+
 def _range_findings(
     declarations: Declarations, backbone_version: str | None
 ) -> tuple[list[Finding], dict[Relation, int]]:
@@ -1059,20 +1117,19 @@ def _range_findings(
     the dependency is warned with each dependent named. With how many were checked."""
     findings: list[Finding] = []
     checked = {Relation.BACKBONE_RANGE: 0, Relation.CAPABILITY_RANGE: 0}
-    installed_backbone = _version(backbone_version)
     capabilities = {i.name: i for i in declarations.installed if i.kind == CAPABILITY}
     out_of_range: dict[str, list[str]] = {}
     for component in declarations.installed:
         package = component.package
-        required = package.get("requires_backbone")
-        spec = _specifier(required)
-        if spec is not None and installed_backbone is not None:
+        required = package.get(REQUIRES_BACKBONE_KEY)
+        admitted = range_admits(required, backbone_version)
+        if admitted is not None:
             checked[Relation.BACKBONE_RANGE] += 1
-            if installed_backbone not in spec:
+            if not admitted:
                 findings.append(
                     Finding(
                         component.file,
-                        "/requires_backbone",
+                        f"/{REQUIRES_BACKBONE_KEY}",
                         Severity.ERROR,
                         f"{component.name!r} requires backbone {required} but {backbone_version} "
                         f"is installed; upgrade {component.name!r} to a version whose range "
@@ -1087,8 +1144,7 @@ def _range_findings(
                 continue
             name = dependency.get("name")
             dependency_range = dependency.get("version")
-            spec = _specifier(dependency_range)
-            if not isinstance(name, str) or not name or spec is None:
+            if not isinstance(name, str) or not name or _specifier(dependency_range) is None:
                 continue  # the packages pass reports the malformed entry
             checked[Relation.CAPABILITY_RANGE] += 1
             pointer = f"/requires_capabilities/{index}"
@@ -1106,8 +1162,7 @@ def _range_findings(
                     )
                 )
                 continue
-            actual = _version(target.version)
-            if actual is None or actual in spec:
+            if range_admits(dependency_range, target.version) is not False:
                 continue  # an unreadable version is not refused, as the dependency gate reads it
             findings.append(
                 Finding(

@@ -4437,24 +4437,18 @@ def _check_backbone_satisfied(
     activated when this project's backbone falls outside its requires_backbone
     range. An empty/unparseable range is treated as "no constraint" (the
     capability declared nothing enforceable), matching how the dependency
-    check tolerates malformed ranges rather than blocking.
+    check tolerates malformed ranges rather than blocking. The range is
+    compared through the wiring resolver's one relation
+    (`connections.range_admits`), as `pkit validate` compares it.
     """
-    from packaging.specifiers import InvalidSpecifier, SpecifierSet
-    from packaging.version import InvalidVersion, Version
+    from project_kit.connections import range_admits
     from project_kit.manifest import read_backbone_manifest
 
     required = capability_source.package.requires_backbone
-    if not required:
-        return
     backbone = read_backbone_manifest(target_root)
     if backbone is None:
         return
-    try:
-        spec = SpecifierSet(required)
-        ver = Version(backbone.backbone_version)
-    except (InvalidSpecifier, InvalidVersion):
-        return
-    if ver not in spec:
+    if range_admits(required, backbone.backbone_version) is False:
         raise click.ClickException(
             f"capability {capability_source.name!r} requires backbone "
             f"{required}, but this project is on backbone v{backbone.backbone_version}. "
@@ -4474,16 +4468,13 @@ def _find_desynced_dependents(
 
     Returns a list of (dependent_name, declared_range_string) pairs.
     Uses installed versions of the dependent side — only the dependency's
-    version is moving; per the architect note in COR-030 + issue #90.
+    version is moving; per the architect note in COR-030 + issue #90. Each
+    range is compared through the wiring resolver's one relation
+    (`connections.range_admits`); a range or version it cannot read is no
+    constraint.
     """
-    from packaging.specifiers import InvalidSpecifier, SpecifierSet
-    from packaging.version import InvalidVersion, Version
     from project_kit import capabilities as caps
-
-    try:
-        new_ver = Version(new_dep_version)
-    except InvalidVersion:
-        return []
+    from project_kit.connections import range_admits
 
     declared_dependents = caps.find_declared_dependents(target_root, dep_name)
     desynced: list[tuple[str, str]] = []
@@ -4499,11 +4490,10 @@ def _find_desynced_dependents(
         for req in pkg.requires_capabilities:
             if req.name != dep_name:
                 continue
-            try:
-                spec = SpecifierSet(req.version)
-            except InvalidSpecifier:
+            admitted = range_admits(req.version, new_dep_version)
+            if admitted is None:
                 continue
-            if new_ver not in spec:
+            if not admitted:
                 desynced.append((dep_cap, req.version))
             break
     return desynced

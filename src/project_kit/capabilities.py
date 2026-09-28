@@ -29,8 +29,6 @@ from pathlib import Path, PurePath
 from typing import Any, cast
 
 import click
-from packaging.specifiers import InvalidSpecifier, SpecifierSet
-from packaging.version import InvalidVersion, Version
 from ruamel.yaml import YAML
 
 from project_kit import treecopy
@@ -346,10 +344,14 @@ def check_capability_dependencies(
     Returns a list of conflicts; empty means all requirements satisfied.
 
     Reuses ``is_installed`` and ``get_installed_capability_version`` (this
-    module) for the installed-state side, and the ``packaging`` library
-    directly for range evaluation (the same library ``upgrade.py`` uses
-    for backbone-compatibility resolution).
+    module) for the installed-state side, and compares the range through
+    the wiring resolver's one version-range relation
+    (``connections.range_admits``, ADR-057 point 2), so this gate and
+    ``pkit validate`` never disagree on whether a range admits a version.
     """
+    # Imported here: the resolver imports this module (through rule sets).
+    from project_kit.connections import range_admits
+
     if not requires_capabilities:
         return []
 
@@ -371,14 +373,8 @@ def check_capability_dependencies(
             # record and unreadable manifests are already a degraded state.
             continue
 
-        try:
-            spec = SpecifierSet(dep.version)
-            ver = Version(installed_version)
-        except (InvalidSpecifier, InvalidVersion):
-            # Malformed range or version string — skip; can't evaluate.
-            continue
-
-        if ver not in spec:
+        # A malformed range or version (None) can't be evaluated — skip.
+        if range_admits(dep.version, installed_version) is False:
             conflicts.append(CapabilityDependencyConflict(
                 dep_name=dep.name,
                 dep_version_range=dep.version,

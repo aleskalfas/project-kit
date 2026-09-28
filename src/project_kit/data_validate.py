@@ -27,10 +27,9 @@ from __future__ import annotations
 
 import fnmatch
 import json
-import os
 from collections.abc import Iterator
 from dataclasses import dataclass, field
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, Literal
 
 import click
@@ -51,6 +50,7 @@ from project_kit.schemas_validate import (
     _resolve_json_pointer,
     _stringify_dates,
 )
+from project_kit.working_tree import working_tree
 
 _yaml = YAML(typ="safe")
 
@@ -932,6 +932,9 @@ def validate_path(
 # COR-001): `.pkit/project/`, `.pkit/capabilities/<name>/project/`, and so on.
 PROJECT_DIR = "project"
 
+# The kit's own tree, at the repository root.
+KIT_DIR = ".pkit"
+
 
 def discover_repository_data_files(target_root: Path) -> list[Path]:
     """Every `*.yaml` the repository scope offers to the binding resolver: the
@@ -939,18 +942,32 @@ def discover_repository_data_files(target_root: Path) -> list[Path]:
     virtual environment, the changesets, a harness's own folder), plus every
     project-owned folder inside `.pkit/` — a `project/` directory at any depth
     — where an adopter's data for the backbone or a capability lives. The
-    kit-managed rest of `.pkit/` is never adopter data and is not listed."""
-    kit = target_root / ".pkit"
-    out: list[Path] = []
-    for dirpath, dirnames, filenames in os.walk(target_root):
-        here = Path(dirpath)
-        dirnames[:] = sorted(
-            d for d in dirnames if not d.startswith(".") or (here == target_root and d == ".pkit")
-        )
-        if (here == kit or kit in here.parents) and PROJECT_DIR not in here.relative_to(kit).parts:
-            continue  # a kit-managed folder: walk on for a `project/` beneath it, list nothing
-        out.extend(here / name for name in sorted(filenames) if name.endswith(".yaml"))
-    return out
+    kit-managed rest of `.pkit/` is never adopter data and is not listed.
+
+    The files are the working tree's one listing (`working_tree`, ADR-057
+    point 2) — the files git sees, as friction discovery reads them — in the
+    order a walk of the folders meets them: a folder's files before its
+    sub-folders, each by name. A link to a folder is not walked."""
+    found: list[tuple[str, ...]] = []
+    for rel in working_tree(target_root).files():
+        parts = PurePosixPath(rel).parts
+        folders = parts[:-1]
+        if not parts[-1].endswith(".yaml") or (target_root / rel).is_dir():
+            continue
+        if folders[:1] == (KIT_DIR,):
+            folders = folders[1:]
+            if PROJECT_DIR not in folders:
+                continue  # a kit-managed folder is never adopter data
+        if any(folder.startswith(".") for folder in folders):
+            continue
+        found.append(parts)
+    found.sort(key=_walk_order)
+    return [target_root.joinpath(*parts) for parts in found]
+
+
+def _walk_order(parts: tuple[str, ...]) -> list[tuple[int, str]]:
+    """A folder's files before its sub-folders, each by name — a top-down walk's order."""
+    return [(1, folder) for folder in parts[:-1]] + [(0, parts[-1])]
 
 
 def validate_bound(target_root: Path, *, resolve_references: bool = True) -> DataValidationReport:

@@ -632,7 +632,7 @@ def test_nothing_outside_the_repository_is_walked_or_read(adopter: AdopterRepo) 
         {
             CONFIG: _config(
                 [
-                    "docs/**/*.md",  # walks through docs/linked on 3.11/3.12: matches dropped
+                    "docs/**/*.md",  # never walks through the link docs/linked
                     "../sibling",
                     str(outside / "**"),
                     "docs/linked/**",
@@ -988,11 +988,12 @@ def test_is_inside_repository(tmp_path: Path) -> None:
     assert not fd.is_inside_repository(root, "docs/linked/sub/**")
 
 
-def test_a_glob_with_star_star_inside_a_segment_matches_nothing_and_never_raises(
+def test_a_glob_with_star_star_inside_a_segment_reads_as_on_python_3_13_and_never_raises(
     make_adopter_repo,
 ) -> None:
-    """`docs/**.md` is rejected by `Path.glob` before Python 3.13; the walk must
-    treat it as matching nothing rather than crash `pkit validate`."""
+    """`docs/**.md` is rejected by `Path.glob` before Python 3.13; the walk matches
+    it over the working tree's listing, as pathlib 3.13 reads it, on every
+    interpreter — and never crashes `pkit validate`."""
     from project_kit import friction_discovery
 
     repo = make_adopter_repo()
@@ -1007,4 +1008,4 @@ def test_a_glob_with_star_star_inside_a_segment_matches_nothing_and_never_raises
         ),
     )
     files = friction_discovery.files_in_place(root, place)
-    assert all(f.suffix == ".md" for f in files)
+    assert files == [root / "docs" / "page.md"]
