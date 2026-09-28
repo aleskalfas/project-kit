@@ -198,6 +198,41 @@ def test_compat_falls_back_to_installed_when_source_lacks_component(
         upgrade.run_upgrade(installed_target)
 
 
+@pytest.mark.parametrize(
+    ("written", "refused"),
+    [
+        # Single quotes are YAML too: the range governs, as `pkit validate` reads it.
+        ("requires_backbone: '>=0.1.0,<1.5.0'\n", True),
+        # A commented-out range is no range; the one below it governs.
+        (
+            '# requires_backbone: ">=0.1.0,<1.5.0"\nrequires_backbone: ">=0.1.0,<99.0.0"\n',
+            False,
+        ),
+    ],
+)
+def test_compat_reads_the_range_as_the_resolver_does(
+    installed_target: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    written: str,
+    refused: bool,
+) -> None:
+    """The source range is read as YAML, however it is quoted, and compared through
+    the resolver's one relation — never picked out of the text by a pattern."""
+    src = _fake_source(tmp_path, version="2.0.0", adapter_requires=">=0.1.0,<99.0.0")
+    package = src / "adapters" / "claude-code" / "package.yaml"
+    package.write_text(
+        _adapter_pkg("9.9.9", "").replace('requires_backbone: ""\n', written), encoding="utf-8"
+    )
+    monkeypatch.setattr(upgrade, "find_source_kit", lambda: src)
+    monkeypatch.setattr(upgrade, "run_sync", lambda *args, **kwargs: None)
+    if refused:
+        with pytest.raises(click.ClickException, match="requires backbone >=0.1.0,<1.5.0"):
+            upgrade.run_upgrade(installed_target, dry_run=True)
+    else:
+        upgrade.run_upgrade(installed_target, dry_run=True)
+
+
 def test_upgrade_dry_run_writes_nothing(
     installed_target: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -11,9 +11,11 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+import pytest
 from click.testing import CliRunner
 from ruamel.yaml import YAML
 
+from project_kit import capabilities as caps
 from project_kit import config_validate as cv
 from project_kit import connections as cx
 from project_kit import package_validate as pv
@@ -755,6 +757,45 @@ def test_a_dependency_range_naming_an_adapter_is_not_an_installed_capability(
         ("/requires_capabilities/0", cx.Relation.CAPABILITY_RANGE)
     ]
     assert "which is not installed" in wiring.findings[0].message
+
+
+@pytest.mark.parametrize(
+    ("version_range", "version", "admits"),
+    [
+        (">=0.1.0,<1.0.0", "0.5.0", True),
+        (">=0.1.0,<1.0.0", "1.0.0", False),
+        (" >=0.1.0, <1.0.0 ", "0.9.9", True),
+        ("", "0.5.0", None),  # no range declared: no constraint
+        ("not a range", "0.5.0", None),  # malformed: the packages pass reports it
+        (">=0.1.0", "not a version", None),
+        (None, "0.5.0", None),
+        (">=0.1.0", None, None),
+    ],
+)
+def test_range_admits_is_the_one_comparison_of_a_version_range(
+    version_range: str | None, version: str | None, admits: bool | None
+) -> None:
+    assert cx.range_admits(version_range, version) is admits
+
+
+def test_the_install_gate_and_validation_compare_a_dependency_range_alike(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """Both read the range through `range_admits`, so they refuse the same versions."""
+    repo = make_adopter_repo()
+    dependency = {"name": "evidence", "version": ">=0.2.0,<1.0.0"}
+    _stage(repo, "notes", _package("notes", requires_capabilities=[dependency]))
+    for version, refused in (("0.1.0", True), ("0.2.0", False), ("1.0.0", True)):
+        _stage(repo, "evidence", _package("evidence", version=version))
+        validated = [
+            f
+            for f in cx.resolve_wiring(repo.root).errors()
+            if f.relation is cx.Relation.CAPABILITY_RANGE
+        ]
+        gated = caps.check_capability_dependencies(
+            repo.root, (caps.CapabilityDependency(**dependency),)
+        )
+        assert bool(validated) is bool(gated) is refused, version
 
 
 def test_installed_version_of_record_comes_from_the_component_manifest(

@@ -1,0 +1,16 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  Every comparison of a version range — a component's `requires_backbone`
+  against a backbone, a `requires_capabilities` range against a capability — now
+  goes through the wiring resolver's one relation, the one `pkit validate`
+  reports (#1034, ADR-057 point 2): the capability install and register gates,
+  the capability upgrade's dependant check, the dependency check they share and
+  the backbone upgrade's compatibility check all call it. The backbone upgrade
+  read `requires_backbone` out of the package file with a pattern that saw only
+  a double-quoted value, so a single-quoted range was ignored and a
+  commented-out line could be taken for the range; it now reads the file as
+  YAML, as validation does, so a single-quoted range outside the target
+  backbone refuses the upgrade and a comment is never read as one.
