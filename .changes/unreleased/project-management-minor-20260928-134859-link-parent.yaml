@@ -1,0 +1,11 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+body: >
+  Filing an issue from a prepared body now links it under the parent named on
+  the body's first line, even without `--parent`, and refuses a `--parent` that
+  names a different issue; the new `link-parent` command links issues that
+  already exist from that same line, one or more by number or every open issue
+  at once, with a dry run that lists what each issue would get, a prompt before
+  it writes, and no second link where one already exists.
