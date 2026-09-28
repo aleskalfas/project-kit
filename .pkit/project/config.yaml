@@ -11,5 +11,64 @@
 # marker key, and the title parenthetical. Declared here precisely so it is
 # never derived from a filesystem path segment.
 name: project-kit
+
+# `docs` — the documentation roots by audience (COR-049; ADR-055 point 1):
+# users read `docs/`, maintainers and agents read `tech-docs/`. `docs/` does
+# not exist yet, so `pkit validate` warns until the first user page lands.
+docs:
+  user: docs/
+  internal: tech-docs/
+
+# `friction` — anchors and friction (COR-050 point 14). `enforcing` from the
+# day the check exists (ADR-055 point 5).
 friction:
   mode: enforcing
+  # The project's own places: the documents *outside both roots* that hold
+  # documentation. The roots are the living-docs capability's default places
+  # and are never declared here (living-docs DEC-001 point 1). The principle
+  # is ADR-055 point 3's — a document is a place of the space matching its
+  # audience; a README an adopter reads to use an area, capability or adapter
+  # is a page, a maintainer-facing sub-README is not. This explicit list is the
+  # source of truth; each place's space is assigned in
+  # `.pkit/capabilities/living-docs/project/config.yaml`. Not places: CLAUDE.md
+  # and `.pkit/rules/{core,project}.md` (included into the harness file, so no
+  # front matter) and the maintainer sub-READMEs under templates and
+  # migrations. Decision records and rule sets are anchor targets, not pages.
+  places:
+    # technical space — its entry point until tech-docs/README.md exists
+    - CONTRIBUTING.md
+    # technical space — project-kit's own release process: a maintainer guide,
+    # which COR-049 counts as technical documentation
+    - .pkit/release/README.md
+    # user space
+    - README.md
+    - .pkit/README.md
+    - .pkit/adapters/README.md
+    - .pkit/adapters/claude-code/README.md
+    - .pkit/agents/README.md
+    - .pkit/capabilities/demo-recording/README.md
+    - .pkit/capabilities/evidence/README.md
+    - .pkit/capabilities/living-docs/README.md
+    - .pkit/capabilities/project-management/README.md
+    - .pkit/capabilities/software-analysis/README.md
+    - .pkit/capabilities/software-engineering/README.md
+    - .pkit/cli/README.md
+    - .pkit/decisions/README.md
+    - .pkit/lifecycle/README.md
+    - .pkit/permissions/README.md
+    - .pkit/process/README.md
+    - .pkit/rules/README.md
+    - .pkit/schemas/README.md
+    - .pkit/scratchpad/README.md
+    - .pkit/skills/README.md
+  # Left out of anchoring and of the measures (COR-050 point 7).
+  exclude:
+    # scratchpad notes are working drafts, never anchored (ADR-055 point 3)
+    - .pkit/scratchpad/active/
+    - .pkit/scratchpad/done/
+    - .pkit/scratchpad/dropped/
+    # generated: the harness copies deploy writes from `.pkit/` (anchor the
+    # source), the changelog the release step writes, the lockfile
+    - .claude/
+    - CHANGELOG.md
+    - uv.lock
