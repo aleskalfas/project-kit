@@ -20,9 +20,11 @@ passes, in order, each producing findings located by JSON Pointer:
    component's name matches its directory, versions and ranges parse, every
    command script exists, a declared point sits under a provided role, an
    accepted data point's companion schema exists under `schemas/`, every
-   filler / emitter / subscriber command exists in `commands:`, documentation
-   locations are relative sub-paths, friction places lie inside a declared
-   location or the project. All ERRORs.
+   filler / emitter / subscriber command exists in `commands:`, every
+   validator names a command that exists there and declares the query
+   contract (`query-contract: true`, ADR-058), documentation locations are
+   relative sub-paths, friction places lie inside a declared location or the
+   project. All ERRORs.
 
 The checks across packages — roles and their providers, counterparts against
 point versions, mandatory marks and cycles, fingerprints, the version
@@ -62,7 +64,7 @@ from project_kit.backbone_schemas import (
     render_unknown_key,
 )
 from project_kit.manifest import read_backbone_manifest
-from project_kit.validators import VALIDATORS_KEY
+from project_kit.validators import COMMAND_KEY, QUERY_CONTRACT_KEY, VALIDATORS_KEY
 
 if TYPE_CHECKING:
     from project_kit.connections import Wiring
@@ -367,8 +369,8 @@ def _repository_findings(
                 _check_relative(findings, f"/{key}/{index}", value, "a repository-relative path")
 
     commands = raw.get("commands")
-    command_leaves = _command_leaves(commands) if isinstance(commands, Mapping) else {}
-    for tokens, leaf in command_leaves.items():
+    leaves = command_leaves(commands) if isinstance(commands, Mapping) else {}
+    for tokens, leaf in leaves.items():
         script = leaf.get("script")
         path = "/commands/" + "/".join(_token(t) for t in tokens) + "/script"
         relative = _check_relative(findings, path, script, "a path relative to the component root")
@@ -384,19 +386,23 @@ def _repository_findings(
         for name, spec in registered.items():
             if not isinstance(spec, Mapping):
                 continue
-            script = spec.get("script")
-            path = f"/{VALIDATORS_KEY}/{_token(name)}/script"
-            relative = _check_relative(findings, path, script, "a path relative to the component root")
-            if relative and not (component_dir / str(script)).is_file():
+            reference = spec.get(COMMAND_KEY)
+            if not isinstance(reference, str):
+                continue  # the shape pass reports the type
+            path = f"/{VALIDATORS_KEY}/{_token(name)}/{COMMAND_KEY}"
+            problem = undeclared_command(reference, leaves)
+            if problem is not None:
+                _error(path, f"validator {name!r}: {problem}")
+            elif leaves[tuple(reference.split())].get(QUERY_CONTRACT_KEY) is not True:
                 _error(
                     path,
-                    f"validator {name!r} names script {script!r}, which does not "
-                    f"exist under {component_dir.name}/.",
+                    f"validator {name!r} names command {reference!r}, which does not declare "
+                    f"the query contract (`{QUERY_CONTRACT_KEY}: true` on its `commands:` entry).",
                 )
 
     connections = raw.get("connections")
     if isinstance(connections, Mapping):
-        findings.extend(_connection_findings(connections, component_dir, command_leaves))
+        findings.extend(_connection_findings(connections, component_dir, leaves))
 
     location_names: set[str] = set()
     docs = raw.get("docs")
@@ -466,11 +472,9 @@ def _connection_findings(
     def check_command(path: str, reference: Any) -> None:
         if not isinstance(reference, str):
             return
-        tokens = tuple(reference.split())
-        if tokens not in command_leaves:
-            known = sorted(" ".join(t) for t in command_leaves)
-            declared = f" (declared: {known})." if known else " (the package declares no commands)."
-            _error(path, f"command {reference!r} is not declared in `commands:`{declared}")
+        problem = undeclared_command(reference, command_leaves)
+        if problem is not None:
+            _error(path, problem)
 
     points = connections.get("extension-points")
     if isinstance(points, Mapping):
@@ -525,8 +529,23 @@ def role_of(address: str) -> str | None:
     return role
 
 
-def _command_leaves(tree: Mapping[Any, Any]) -> dict[tuple[str, ...], Mapping[Any, Any]]:
-    """Every leaf of a `commands:` tree, keyed by token path (a leaf carries `script`, COR-021)."""
+def undeclared_command(
+    reference: str, command_leaves: Mapping[tuple[str, ...], Mapping[Any, Any]]
+) -> str | None:
+    """Why `reference` — a path through `commands:`, tokens separated by spaces —
+    names no leaf, or None when it does. One check for every command reference:
+    an offered event's emitter, a filler, a subscriber, a validator."""
+    if tuple(reference.split()) in command_leaves:
+        return None
+    known = sorted(" ".join(t) for t in command_leaves)
+    declared = f" (declared: {known})." if known else " (the package declares no commands)."
+    return f"command {reference!r} is not declared in `commands:`{declared}"
+
+
+def command_leaves(tree: Mapping[Any, Any]) -> dict[tuple[str, ...], Mapping[Any, Any]]:
+    """Every leaf of a `commands:` tree, keyed by token path (a leaf carries `script`,
+    COR-021). The validator registry reads a capability's leaves through this
+    walk too, so the reference it resolves is the one the check here judged."""
     leaves: dict[tuple[str, ...], Mapping[Any, Any]] = {}
 
     def walk(node: Mapping[Any, Any], prefix: tuple[str, ...]) -> None:

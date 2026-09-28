@@ -31,21 +31,28 @@ migrations check-diff`, `pkit release lint` — read a base ref and answer about
 a *change*, not the tree's state. They stay their own lines of the check
 aggregator (`scripts/check.sh`, the enforcement boundary of ADR-019).
 
-**A capability's validator is a query command** in the sense of ADR-057
-(bounded, deterministic, needing no network, read-only): the registry starts
-its script from the project root with no arguments, bounds it by the same
-constant the predicate runner uses, and reads one JSON document from its
-standard output — `{"summary": [...], "findings": [{"severity", "location",
-"message"}, ...]}`. No answer — an abnormal exit, a timeout, output that is
-not that document — is an *error finding*, never a clean pass: the umbrella
-fails closed. The start-bound-capture-parse primitive the runners share is
-#1035's extraction; until it lands the runner here is the smallest thing that
-honours the contract.
+**A capability's validator is a query command** in the sense of ADR-057 point
+3 (bounded, deterministic, needing no network, read-only). Its entry names a
+leaf of the capability's `commands:` tree, so the same script is a focused
+surface (`pkit <capability> <command>`) and a member of the umbrella, and the
+leaf carries the declaration of the query contract, `query-contract: true`.
+The registry runs the leaf's script from the project root with the one
+argument `--json`, the offline marker set in its environment, in its own
+process group, bounded by the same constant the predicate runner uses, and
+reads one JSON document — and nothing else — from its standard output:
+`{"summary": [...], "findings": [{"severity", "location", "message"}, ...]}`;
+diagnostics go to standard error. No answer — a leaf without the declaration,
+an abnormal exit, a timeout, output that is not exactly that document — is an
+*error finding*, never a clean pass: the umbrella fails closed. This runner is
+the third start-bound-capture-parse beside the dispatcher's and the predicate
+runner's; #1035 extracts the one primitive they share (ADR-057 point 5).
 """
 
 from __future__ import annotations
 
 import json
+import os
+import signal
 import subprocess
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
@@ -61,14 +68,36 @@ from project_kit import cli_render
 # by the capability and addressed `<capability>:<name>`.
 BACKBONE_OWNER = "backbone"
 
-# The package-metadata key a component registers its validators under.
+# The package-metadata key a component registers its validators under, and the
+# key of an entry that names the `commands:` leaf answering for it.
 VALIDATORS_KEY = "validators"
+COMMAND_KEY = "command"
+
+# The declaration a `commands:` leaf carries to say the command honours the
+# query contract — bounded, deterministic, read-only, needing no network
+# (ADR-057 point 3). `query-contract: true` is the literal ADR-058 specifies:
+# a validator's leaf must carry it, the packages member reports one without
+# it, and the runner here refuses it.
+QUERY_CONTRACT_KEY = "query-contract"
+
+# The one argument the umbrella passes a validator command. The leaf is also a
+# focused surface that prints for people; with this flag it prints the
+# findings document alone.
+QUERY_FLAG = "--json"
+
+# The offline marker (ADR-057 point 3), set in the environment of every query
+# command the umbrella runs. `PKIT_OFFLINE` is what a well-behaved command
+# reads; `UV_OFFLINE` makes `uv` honour it — a `uv run --script` shebang
+# resolves the script's dependencies from uv's cache and never fetches, so a
+# dependency is provisioned by running the focused surface once, online. The
+# lifecycle README's literals section documents both.
+OFFLINE_MARKER: Mapping[str, str] = {"PKIT_OFFLINE": "1", "UV_OFFLINE": "1"}
 
 # Where a capability's validators sort when their entries name no `order`:
 # after every backbone member, in capability order.
 CAPABILITY_ORDER_DEFAULT = 1000
 
-# The time bound on a capability's validator script — the same thirty seconds
+# The time bound on a capability's validator command — the same thirty seconds
 # the process engine gives a predicate (ADR-057 point 3).
 QUERY_TIMEOUT_SECONDS = 30
 
@@ -246,108 +275,180 @@ BACKBONE_VALIDATORS: tuple[Validator, ...] = tuple(
 # --- a capability's members -------------------------------------------
 
 
+@dataclass(frozen=True)
+class QueryCommand:
+    """A capability's validator command as the registry runs it: the leaf's
+    script, the reference that named it (for messages), whether the leaf
+    declares the query contract, and the location of the entry — where every
+    no-answer finding points."""
+
+    script: Path
+    reference: str
+    declares_contract: bool
+    location: str
+
+    def run(self, target_root: Path) -> Outcome:
+        if not self.declares_contract:
+            return _no_answer(
+                self.location,
+                f"command {self.reference!r} does not declare the query contract "
+                f"(`{QUERY_CONTRACT_KEY}: true` on its `commands:` entry); a validator "
+                "runs only when it declares it.",
+            )
+        return run_query(target_root, self.script, location=self.location, reference=self.reference)
+
+
 def capability_validators(target_root: Path) -> tuple[Validator, ...]:
     """The validators every registered component declares in its package metadata.
 
-    Read defensively: a package file that does not parse, a `validators:` that
-    is not a mapping, or an entry without a string `script` contributes
-    nothing here — the packages member reports the defect. `order` is taken
-    when it is an integer, else the capability default.
+    An entry names a `commands:` leaf by `command`; the leaf's `help` is the
+    validator's. Read defensively: a package file that does not parse, a
+    `validators:` that is not a mapping, an entry without a string `command`,
+    or one naming no leaf contributes nothing here — the packages member
+    reports the defect. A leaf that does not declare the query contract *is*
+    registered, and refused when run (the runner's backstop, ADR-057 point
+    3): the umbrella fails closed on it rather than skipping it silently.
+    `order` is taken when it is an integer, else the capability default.
     """
-    from project_kit.package_validate import installed_package_files
+    from project_kit.package_validate import command_leaves, installed_package_files
 
     out: list[Validator] = []
     for owner, component_dir, package in installed_package_files(target_root):
-        block = _validators_block(package)
+        raw = _load_mapping(package)
+        commands = raw.get("commands")
+        leaves = command_leaves(commands) if isinstance(commands, Mapping) else {}
+        block = raw.get(VALIDATORS_KEY)
+        if not isinstance(block, Mapping):
+            continue
         for raw_name, spec in block.items():
             name = str(raw_name)
-            if not isinstance(spec, Mapping) or not isinstance(spec.get("script"), str):
+            reference = spec.get(COMMAND_KEY) if isinstance(spec, Mapping) else None
+            leaf = leaves.get(tuple(reference.split())) if isinstance(reference, str) else None
+            if not isinstance(reference, str) or leaf is None:
                 continue
+            query = QueryCommand(
+                script=component_dir / str(leaf.get("script")),
+                reference=reference,
+                declares_contract=leaf.get(QUERY_CONTRACT_KEY) is True,
+                location=f"{_rel(package, target_root)}:/{VALIDATORS_KEY}/{name}/{COMMAND_KEY}",
+            )
             order = spec.get("order")
             out.append(
                 Validator(
                     name=f"{owner}:{name}",
-                    run=_script_runner(
-                        component_dir / spec["script"],
-                        location=f"{_rel(package, target_root)}:/{VALIDATORS_KEY}/{name}",
-                    ),
+                    run=query.run,
                     order=order if isinstance(order, int) and not isinstance(order, bool)
                     else CAPABILITY_ORDER_DEFAULT,
                     owner=owner,
-                    help=str(spec.get("help") or ""),
+                    help=str(leaf.get("help") or ""),
                 )
             )
     return tuple(out)
 
 
-def _validators_block(package: Path) -> Mapping[Any, Any]:
+def _load_mapping(package: Path) -> Mapping[Any, Any]:
     try:
         raw = _yaml.load(package.read_text(encoding="utf-8"))
     except Exception:  # ruamel raises its own hierarchy; the packages member reports it
         return {}
-    block = raw.get(VALIDATORS_KEY) if isinstance(raw, Mapping) else None
-    return block if isinstance(block, Mapping) else {}
+    return raw if isinstance(raw, Mapping) else {}
 
 
-def _script_runner(script: Path, *, location: str) -> Callable[[Path], Outcome]:
-    def run(target_root: Path) -> Outcome:
-        return run_script(target_root, script, location=location)
-
-    return run
-
-
-def run_script(target_root: Path, script: Path, *, location: str) -> Outcome:
-    """Run one capability validator script and read its answer (the contract in the
-    module docstring). No answer is an error finding at `location` — the
-    validator's own entry in the package file — so the umbrella fails closed."""
-    rel = _rel(script, target_root)
+def run_query(target_root: Path, script: Path, *, location: str, reference: str) -> Outcome:
+    """Run one validator command as a query and read its answer (the contract in
+    the module docstring): from the project root, with `--json`, the offline
+    marker set, in its own process group, bounded by `QUERY_TIMEOUT_SECONDS`.
+    No answer is an error finding at `location` — the validator's own entry in
+    the package file — so the umbrella fails closed."""
     if not script.is_file():
-        return _no_answer(location, f"validator script {rel!r} does not exist.")
-    try:
-        completed = subprocess.run(
-            [str(script)],
-            cwd=str(target_root),
-            capture_output=True,
-            text=True,
-            timeout=QUERY_TIMEOUT_SECONDS,
-            check=False,
-        )
-    except OSError as exc:
-        return _no_answer(location, f"validator script {rel!r} could not start: {exc}")
-    except subprocess.TimeoutExpired:
         return _no_answer(
             location,
-            f"validator script {rel!r} did not answer within {QUERY_TIMEOUT_SECONDS} s.",
+            f"command {reference!r} names script {_rel(script, target_root)!r}, which does not exist.",
         )
-    if completed.returncode != 0:
-        detail = completed.stderr.strip().splitlines()
-        tail = f": {detail[-1]}" if detail else "."
+    try:
+        process = subprocess.Popen(
+            [str(script), QUERY_FLAG],
+            cwd=str(target_root),
+            env={**os.environ, **OFFLINE_MARKER},
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            start_new_session=True,
+        )
+    except OSError as exc:
+        return _no_answer(location, f"command {reference!r} could not start: {exc}")
+    try:
+        stdout, stderr = process.communicate(timeout=QUERY_TIMEOUT_SECONDS)
+    except subprocess.TimeoutExpired:
+        _kill_process_group(process)
         return _no_answer(
-            location, f"validator script {rel!r} exited {completed.returncode}{tail}"
+            location, f"command {reference!r} did not answer within {QUERY_TIMEOUT_SECONDS} s."
         )
-    return parse_answer(completed.stdout, location=location, script=rel)
+    if process.returncode != 0:
+        detail = _decode(stderr).strip().splitlines()
+        tail = f": {detail[-1]}" if detail else "."
+        return _no_answer(location, f"command {reference!r} exited {process.returncode}{tail}")
+    return parse_answer(_decode(stdout), location=location, command=reference)
 
 
-def parse_answer(text: str, *, location: str, script: str) -> Outcome:
-    """The findings document a validator script prints, as an Outcome; a document
-    that is not one is an error finding."""
+def _kill_process_group(process: subprocess.Popen[bytes]) -> None:
+    """End the command and everything it started. `start_new_session` made it
+    the leader of its own group, so one signal reaches the grandchild a `uv run
+    --script` shebang starts — which `Popen.kill` alone leaves running, holding
+    the pipes open, and a second `communicate` would then wait on. The pipes
+    are closed unread: nothing printed after the bound is an answer."""
+    if hasattr(os, "killpg"):
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+    else:  # pragma: no cover — no process groups on this platform
+        process.kill()
+    process.wait()
+    for stream in (process.stdout, process.stderr):
+        if stream is not None:
+            stream.close()
+
+
+def _decode(data: bytes | None) -> str:
+    """A command's output as text; a byte the encoding cannot read is replaced,
+    never a crash — it becomes part of a no-answer finding."""
+    return (data or b"").decode("utf-8", errors="replace")
+
+
+def parse_answer(text: str, *, location: str, command: str) -> Outcome:
+    """The findings document a validator command prints, as an Outcome. Anything
+    that is not exactly one — text that is not JSON, JSON that is not an
+    object, a `summary` or `findings` missing or not a list, a malformed
+    finding — is an error finding: the umbrella fails closed on a half-formed
+    answer as on none."""
     try:
         document = json.loads(text)
     except ValueError:
-        return _no_answer(location, f"validator script {script!r} did not print a JSON document.")
+        return _no_answer(
+            location, f"command {command!r} did not print a JSON document on its standard output."
+        )
     if not isinstance(document, Mapping):
-        return _no_answer(location, f"validator script {script!r} printed {_kind(document)}, not a findings document.")
+        return _no_answer(
+            location, f"command {command!r} printed {_kind(document)}, not a findings document."
+        )
+    for key in ("summary", "findings"):
+        if not isinstance(document.get(key), list):
+            return _no_answer(
+                location,
+                f"command {command!r} answered without a `{key}` list: expected "
+                '{"summary": [...], "findings": [...]}.',
+            )
     findings: list[Finding] = []
-    for index, entry in enumerate(_list(document.get("findings"))):
+    for index, entry in enumerate(document["findings"]):
         finding = _finding(entry)
         if finding is None:
             return _no_answer(
                 location,
-                f"validator script {script!r} answered with a malformed finding at index {index}: "
+                f"command {command!r} answered with a malformed finding at index {index}: "
                 f"expected `severity` (one of {_severities()}), `location` and `message`.",
             )
         findings.append(finding)
-    summary = tuple(str(line) for line in _list(document.get("summary")))
+    summary = tuple(str(line) for line in document["summary"])
     return Outcome(summary=summary, findings=tuple(findings))
 
 
@@ -444,10 +545,6 @@ def _rel(path: Path, target_root: Path) -> str:
         return path.relative_to(target_root).as_posix()
     except ValueError:
         return path.as_posix()
-
-
-def _list(value: Any) -> list[Any]:
-    return list(value) if isinstance(value, list) else []
 
 
 def _kind(value: Any) -> str:

@@ -1,11 +1,16 @@
 """The validator registry behind `pkit validate` (ADR-058; #986).
 
 - the backbone's members run in registry order and print one section each;
-- a capability's validator, registered in package metadata, runs after them
-  and its errors fail the umbrella; no answer is an error, never a clean pass;
+- a capability's validator names a `commands:` leaf that declares the query
+  contract; it runs after the backbone's members with `--json`, offline-marked,
+  in its own process group, and its errors fail the umbrella; no answer — a
+  leaf without the declaration, a timeout, a half-formed document — is an
+  error, never a clean pass;
 - `--only` / `--skip` address members, `--no-refs` is `--skip refs`;
 - warnings, information and reports print and never fail; errors do;
 - every focused surface still works alone with the exit it always had;
+- the data member walks the project-owned folders under `.pkit/` and skips
+  what nothing claims, unreadable files included;
 - the refs member classifies drift as a warning, the rest as errors, and
   reads a bracketed `reads.patterns` declaration the way the deploy does.
 """
@@ -13,7 +18,9 @@
 from __future__ import annotations
 
 import json
+import os
 import stat
+import time
 from pathlib import Path
 
 import pytest
@@ -47,22 +54,33 @@ def adopter(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
     return make_adopter_repo()
 
 
+def _leaf(
+    token: str, *, script: str = "scripts/check.py", help_text: str = "Check things.", contract: bool = True
+) -> str:
+    """One `commands:` leaf as YAML, declaring the query contract unless told not to."""
+    declaration = "    query-contract: true\n" if contract else ""
+    return f"  {token}:\n    script: {script}\n    help: {help_text}\n{declaration}"
+
+
 def _register(
     root: Path,
     name: str,
     *,
-    validators_yaml: str,
+    commands_yaml: str = "commands:\n" + _leaf("check"),
+    validators_yaml: str = "validators:\n  thing:\n    command: check\n",
     script_body: str | None = None,
     script_path: str = "scripts/check.py",
 ) -> Path:
-    """A synthetic capability at `.pkit/capabilities/<name>/` declaring `validators:`,
-    registered in the backbone manifest; `script_body` writes an executable script."""
+    """A synthetic capability at `.pkit/capabilities/<name>/` declaring `commands:`
+    and `validators:`, registered in the backbone manifest; `script_body` writes
+    an executable script. The defaults register `<name>:thing` on the leaf
+    `check`, which declares the query contract."""
     cap_dir = root / ".pkit" / "capabilities" / name
     cap_dir.mkdir(parents=True, exist_ok=True)
     (cap_dir / "package.yaml").write_text(
         f"schema_version: 2\ncomponent:\n  kind: capability\n  name: {name}\n  version: 0.1.0\n"
         f'description: Synthetic capability for validator tests.\nrequires_backbone: ">=0.1.0"\n'
-        f"{validators_yaml}",
+        f"{commands_yaml}{validators_yaml}",
         encoding="utf-8",
     )
     if script_body is not None:
@@ -96,6 +114,11 @@ def _sections(output: str) -> list[str]:
     ]
 
 
+def _member(root: Path, name: str) -> validators.Validator:
+    [member] = [v for v in validators.registered_validators(root) if v.name == name]
+    return member
+
+
 # --- the registry ------------------------------------------------------------
 
 
@@ -112,19 +135,26 @@ def test_capability_validators_sort_after_the_backbone_by_order_then_name(
     _register(
         adopter.root,
         "zeta",
-        validators_yaml="validators:\n  late:\n    script: scripts/late.py\n    help: Late.\n"
-        "  early:\n    script: scripts/early.py\n    help: Early.\n    order: 5\n",
+        commands_yaml="commands:\n" + _leaf("late", help_text="Late.") + _leaf("early", help_text="Early."),
+        validators_yaml="validators:\n  late:\n    command: late\n  early:\n    command: early\n    order: 5\n",
     )
     _register(
         adopter.root,
         "alpha",
-        validators_yaml="validators:\n  citations:\n    script: scripts/c.py\n    help: C.\n",
+        commands_yaml=(
+            "commands:\n  citations:\n    check:\n      script: scripts/check.py\n"
+            "      help: Every citation resolves.\n      query-contract: true\n"
+        ),
+        validators_yaml="validators:\n  citations:\n    command: citations check\n",
     )
-    names = [v.name for v in validators.registered_validators(adopter.root)]
+    registered = validators.registered_validators(adopter.root)
+    names = [v.name for v in registered]
     # `order: 5` sorts among the backbone's members; the default sorts after every one.
     assert names[0] == "zeta:early"
     assert names[1:13] == BACKBONE_ORDER
     assert names[13:] == ["alpha:citations", "zeta:late"]
+    # The help is the leaf's — a nested leaf resolves like a top-level one.
+    assert _member(adopter.root, "alpha:citations").help == "Every citation resolves."
 
 
 def test_capability_block_is_read_defensively(adopter: AdopterRepo) -> None:
@@ -132,12 +162,18 @@ def test_capability_block_is_read_defensively(adopter: AdopterRepo) -> None:
     _register(
         adopter.root,
         "half",
-        validators_yaml="validators:\n  noscript:\n    help: no script here\n"
-        "  ok:\n    script: scripts/ok.py\n    help: Fine.\n    order: not-an-int\n",
+        commands_yaml="commands:\n" + _leaf("check") + _leaf("bare", contract=False),
+        validators_yaml="validators:\n  nocommand:\n    order: 1\n"
+        "  nowhere:\n    command: missing\n"
+        "  ok:\n    command: check\n    order: not-an-int\n"
+        "  undeclared:\n    command: bare\n",
     )
     registered = {v.name: v for v in validators.registered_validators(adopter.root)}
-    assert "half:ok" in registered and "half:noscript" not in registered
-    assert registered["half:ok"].order == validators.CAPABILITY_ORDER_DEFAULT
+    assert "half:ok" in registered and registered["half:ok"].order == validators.CAPABILITY_ORDER_DEFAULT
+    # No command, or a command that names no leaf: the packages member's finding, not a member.
+    assert "half:nocommand" not in registered and "half:nowhere" not in registered
+    # A leaf without the declaration is a member — refused when run, never skipped silently.
+    assert "half:undeclared" in registered
     assert not any(name.startswith("odd:") for name in registered)
 
 
@@ -201,6 +237,9 @@ def test_only_errors_fail_the_umbrella(adopter: AdopterRepo) -> None:
     assert "All checks passed." not in result.output
 
 
+# --- a capability's validator: a query command -------------------------------
+
+
 def test_a_capability_validator_runs_after_the_backbone_and_its_errors_fail(
     adopter: AdopterRepo,
 ) -> None:
@@ -214,8 +253,8 @@ def test_a_capability_validator_runs_after_the_backbone_and_its_errors_fail(
     _register(
         adopter.root,
         "evidence-like",
-        validators_yaml="validators:\n  citations:\n    script: scripts/check.py\n"
-        "    help: Every citation resolves.\n",
+        commands_yaml="commands:\n" + _leaf("check", help_text="Every citation resolves."),
+        validators_yaml="validators:\n  citations:\n    command: check\n",
         script_body=_answering(answer),
     )
     result = CliRunner().invoke(main, ["validate", "--no-refs"])
@@ -228,7 +267,22 @@ def test_a_capability_validator_runs_after_the_backbone_and_its_errors_fail(
     assert "1 error(s), 0 warning(s), 1 info(s), 0 report(s)." in result.output
 
     clean = CliRunner().invoke(main, ["validate", "--only", "evidence-like:citations"])
-    assert clean.exit_code == 1  # same script, same answer: the member alone fails too
+    assert clean.exit_code == 1  # same command, same answer: the member alone fails too
+
+
+def test_the_runner_passes_json_and_marks_the_run_offline(adopter: AdopterRepo) -> None:
+    _register(
+        adopter.root,
+        "cap",
+        script_body=(
+            "import json, os, sys\n"
+            'print(json.dumps({"summary": [" ".join(sys.argv[1:]), os.environ.get("PKIT_OFFLINE", ""),'
+            ' os.environ.get("UV_OFFLINE", ""), os.getcwd()], "findings": []}))\n'
+        ),
+    )
+    outcome = _member(adopter.root, "cap:thing").run(adopter.root)
+    assert outcome.findings == ()
+    assert outcome.summary == ("--json", "1", "1", str(adopter.root.resolve()))
 
 
 @pytest.mark.parametrize(
@@ -236,9 +290,14 @@ def test_a_capability_validator_runs_after_the_backbone_and_its_errors_fail(
     [
         (_answering(CLEAN_ANSWER, exit_code=3), "exited 3"),
         ("print('not json')\n", "did not print a JSON document"),
+        ("import sys\nsys.stdout.buffer.write(b'\\xff\\xfe not json')\n", "did not print a JSON document"),
         (_answering([1, 2]), "printed a list, not a findings document"),
+        (_answering({}), "answered without a `summary` list"),
+        (_answering({"summary": "x", "findings": []}), "answered without a `summary` list"),
+        (_answering({"summary": [], "findings": "oops"}), "answered without a `findings` list"),
+        (_answering({"summary": [], "findings": {"error": "crashed"}}), "answered without a `findings` list"),
         (
-            _answering({"findings": [{"severity": "fatal", "location": "x", "message": "y"}]}),
+            _answering({"summary": [], "findings": [{"severity": "fatal", "location": "x", "message": "y"}]}),
             "malformed finding at index 0",
         ),
         (None, "does not exist"),
@@ -247,43 +306,84 @@ def test_a_capability_validator_runs_after_the_backbone_and_its_errors_fail(
 def test_no_answer_from_a_capability_validator_is_an_error(
     adopter: AdopterRepo, script_body: str | None, expect: str
 ) -> None:
-    _register(
-        adopter.root,
-        "cap",
-        validators_yaml="validators:\n  thing:\n    script: scripts/check.py\n    help: T.\n",
-        script_body=script_body,
-    )
+    _register(adopter.root, "cap", script_body=script_body)
     result = CliRunner().invoke(main, ["validate", "--only", "cap:thing"])
     assert result.exit_code == 1, result.output
     assert "no answer." in result.output
-    assert "error    .pkit/capabilities/cap/package.yaml:/validators/thing" in result.output
+    assert "error    .pkit/capabilities/cap/package.yaml:/validators/thing/command" in result.output
     assert expect in result.output
 
 
-def test_a_clean_capability_validator_passes_and_its_summary_prints(adopter: AdopterRepo) -> None:
-    _register(
-        adopter.root,
-        "cap",
-        validators_yaml="validators:\n  thing:\n    script: scripts/check.py\n    help: T.\n",
-        script_body=_answering(CLEAN_ANSWER),
-    )
-    result = CliRunner().invoke(main, ["validate", "--only", "cap:thing"])
-    assert result.exit_code == 0, result.output
-    assert "\n  cap:thing\n    3 thing(s) checked; 0 error(s).\n" in result.output
-
-
-def test_the_packages_member_reports_a_validator_script_that_does_not_exist(
+def test_a_command_without_the_declaration_is_refused_by_the_runner_and_reported(
     adopter: AdopterRepo,
 ) -> None:
     _register(
         adopter.root,
         "cap",
-        validators_yaml="validators:\n  thing:\n    script: scripts/missing.py\n    help: T.\n",
+        commands_yaml="commands:\n" + _leaf("check", contract=False),
+        script_body=_answering(CLEAN_ANSWER),
     )
+    # The runner's backstop: the script would answer cleanly, and is never started.
+    refused = CliRunner().invoke(main, ["validate", "--only", "cap:thing"])
+    assert refused.exit_code == 1, refused.output
+    assert "no answer." in refused.output
+    assert "command 'check' does not declare the query contract (`query-contract: true`" in refused.output
+    # The packages member reports the same entry, where the author can fix it.
+    packages = CliRunner().invoke(main, ["validate", "--only", "packages"])
+    assert packages.exit_code == 1, packages.output
+    assert "error    .pkit/capabilities/cap/package.yaml:/validators/thing/command" in packages.output
+    assert "validator 'thing' names command 'check', which does not declare the query contract" in (
+        packages.output
+    )
+
+
+def test_a_timeout_kills_the_process_group_and_does_not_wait_on_the_grandchild(
+    adopter: AdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A `uv run --script` shebang runs the interpreter as a grandchild; here the
+    # script starts one itself, sharing the pipes, and both outlive the bound.
+    _register(
+        adopter.root,
+        "cap",
+        script_body=(
+            "import subprocess, sys, time\n"
+            'child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])\n'
+            'open(sys.argv[0] + ".pid", "w").write(str(child.pid))\n'
+            "time.sleep(60)\n"
+        ),
+    )
+    monkeypatch.setattr(validators, "QUERY_TIMEOUT_SECONDS", 1)
+    started = time.monotonic()
+    outcome = _member(adopter.root, "cap:thing").run(adopter.root)
+    elapsed = time.monotonic() - started
+    assert elapsed < 15, elapsed  # not the grandchild's sixty seconds
+    assert [f.message for f in outcome.errors] == ["command 'check' did not answer within 1 s."]
+    grandchild = int((adopter.root / ".pkit" / "capabilities" / "cap" / "scripts" / "check.py.pid").read_text())
+    for _ in range(50):
+        try:
+            os.kill(grandchild, 0)
+        except ProcessLookupError:
+            break
+        time.sleep(0.1)
+    else:
+        os.kill(grandchild, 9)
+        pytest.fail("the grandchild survived the process-group kill")
+
+
+def test_a_clean_capability_validator_passes_and_its_summary_prints(adopter: AdopterRepo) -> None:
+    _register(adopter.root, "cap", script_body=_answering(CLEAN_ANSWER))
+    result = CliRunner().invoke(main, ["validate", "--only", "cap:thing"])
+    assert result.exit_code == 0, result.output
+    assert "\n  cap:thing\n    3 thing(s) checked; 0 error(s).\n" in result.output
+
+
+def test_the_packages_member_reports_a_validator_naming_no_command(adopter: AdopterRepo) -> None:
+    _register(adopter.root, "cap", validators_yaml="validators:\n  thing:\n    command: nope\n")
+    assert "cap:thing" not in [v.name for v in validators.registered_validators(adopter.root)]
     result = CliRunner().invoke(main, ["validate", "--only", "packages"])
     assert result.exit_code == 1, result.output
-    assert ".pkit/capabilities/cap/package.yaml:/validators/thing/script" in result.output
-    assert "validator 'thing' names script 'scripts/missing.py', which does not exist" in (
+    assert ".pkit/capabilities/cap/package.yaml:/validators/thing/command" in result.output
+    assert "validator 'thing': command 'nope' is not declared in `commands:` (declared: ['check'])." in (
         result.output
     )
 
@@ -294,8 +394,7 @@ def test_an_unknown_key_inside_a_validator_entry_warns_with_the_nearest_known(
     _register(
         adopter.root,
         "cap",
-        validators_yaml="validators:\n  thing:\n    script: scripts/check.py\n    help: T.\n"
-        "    ordre: 5\n",
+        validators_yaml="validators:\n  thing:\n    command: check\n    ordre: 5\n",
         script_body=_answering(CLEAN_ANSWER),
     )
     result = CliRunner().invoke(main, ["validate", "--only", "packages"])
@@ -331,25 +430,43 @@ def test_the_data_member_skips_what_nothing_binds_and_checks_what_something_does
     make_adopter_repo: MakeAdopterRepo,
 ) -> None:
     adopter = make_adopter_repo(capabilities=("evidence",))
-    (adopter.root / "notes").mkdir()
-    (adopter.root / "notes" / "loose.yaml").write_text("a: 1\n", encoding="utf-8")
+    notes = adopter.root / "notes"
+    notes.mkdir()
+    (notes / "loose.yaml").write_text("a: 1\n", encoding="utf-8")
+    # Unreadable and unclaimed — a multi-document manifest — is not adopter data either.
+    (notes / "manifest.yaml").write_text("a: 1\n---\nb: 2\n", encoding="utf-8")
     result = CliRunner().invoke(main, ["validate", "--only", "data"])
     assert result.exit_code == 0, result.output
     assert "no adopter data file is bound to a capability schema." in result.output
+    # The focused surface, handed the unreadable file by name, still reports it.
+    focused = CliRunner().invoke(main, ["data", "validate", str(notes / "manifest.yaml")])
+    assert focused.exit_code == 1 and "YAML parse error" in focused.output
 
-    (adopter.root / "notes" / "evidence.yaml").write_text(
-        "pkit_schema: evidence:evidence-record\nschema_version: 1\nrecords: 7\n",
-        encoding="utf-8",
-    )
+    bad_record = "pkit_schema: evidence:evidence-record\nschema_version: 1\nrecords: 7\n"
+    (notes / "evidence.yaml").write_text(bad_record, encoding="utf-8")
     result = CliRunner().invoke(main, ["validate", "--only", "data"])
     assert result.exit_code == 1, result.output
     assert "1 bound data file(s) checked; " in result.output
     assert "error    notes/evidence.yaml" in result.output
-    # A dot-directory is never walked: a copy under `.notes/` is not adopter data.
+    # A dot-directory is never walked, nor a kit-managed folder under `.pkit/`.
     (adopter.root / ".notes").mkdir()
     (adopter.root / ".notes" / "evidence.yaml").write_text("pkit_schema: evidence:nope\n")
+    managed = adopter.root / ".pkit" / "capabilities" / "evidence" / "skills"
+    managed.mkdir(parents=True, exist_ok=True)
+    (managed / "evidence.yaml").write_text("pkit_schema: evidence:nope\n")
     again = CliRunner().invoke(main, ["validate", "--only", "data"])
     assert "1 bound data file(s) checked; " in again.output
+    # A project-owned folder under `.pkit/` is adopter data and is walked.
+    owned = adopter.root / ".pkit" / "capabilities" / "evidence" / "project"
+    owned.mkdir(parents=True, exist_ok=True)
+    (owned / "evidence.yaml").write_text(bad_record, encoding="utf-8")
+    # Unreadable but claimed by a glob (`**/evidence.yaml`): the failure is the finding.
+    (notes / "deeper").mkdir()
+    (notes / "deeper" / "evidence.yaml").write_text("a: 1\n---\nb: 2\n", encoding="utf-8")
+    third = CliRunner().invoke(main, ["validate", "--only", "data"])
+    assert "3 bound data file(s) checked; " in third.output
+    assert "error    .pkit/capabilities/evidence/project/evidence.yaml" in third.output
+    assert "error    notes/deeper/evidence.yaml\n      → YAML parse error" in third.output
 
 
 # --- the refs member: drift warns, breakage fails, patterns read both ways ----
@@ -420,8 +537,28 @@ def test_parse_answer_keeps_labels_and_every_severity() -> None:
             for i, s in enumerate(("error", "warning", "info", "report"))
         ],
     }
-    outcome = validators.parse_answer(json.dumps(document), location="loc", script="s")
+    outcome = validators.parse_answer(json.dumps(document), location="loc", command="c")
     assert outcome.summary == ("one", "2")
     assert [f.severity.value for f in outcome.findings] == ["error", "warning", "info", "report"]
     assert all(f.label == "rel" for f in outcome.findings)
     assert len(outcome.errors) == 1
+
+
+@pytest.mark.parametrize(
+    "document",
+    [
+        {},
+        {"findings": []},
+        {"summary": []},
+        {"summary": "x", "findings": []},
+        {"summary": [], "findings": None},
+        {"summary": [], "findings": {"error": "crashed"}},
+        {"summary": None, "findings": []},
+    ],
+    ids=["empty", "no-summary", "no-findings", "summary-string", "findings-null", "findings-map", "summary-null"],
+)
+def test_parse_answer_fails_closed_on_a_half_formed_document(document: object) -> None:
+    outcome = validators.parse_answer(json.dumps(document), location="loc", command="c")
+    assert outcome.summary == ("no answer.",)
+    assert [f.location for f in outcome.errors] == ["loc"]
+    assert "answered without a" in outcome.errors[0].message

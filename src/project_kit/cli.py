@@ -2609,7 +2609,8 @@ def validate(include_refs: bool, only: tuple[str, ...], skip: tuple[str, ...]) -
     The backbone's members run first — manifests, schemas, configuration,
     packages, connections, versions, friction, rule-sets, decisions, refs,
     process, data — then each installed capability's, registered in its
-    package metadata (`validators:`). One renderer prints every section;
+    package metadata (`validators:`, each naming a `commands:` leaf that
+    declares the query contract). One renderer prints every section;
     warnings, information and reports print, only errors fail. The
     diff-scoped checks (`friction check`, `migrations check-diff`, `release
     lint`) are not members: they answer about a change, not the tree.
