@@ -20,9 +20,10 @@ passes, in order, each producing findings located by JSON Pointer:
    component's name matches its directory, versions and ranges parse, every
    command script exists, a declared point sits under a provided role, an
    accepted data point's companion schema exists under `schemas/`, every
-   filler / emitter / subscriber command exists in `commands:`, every
-   validator names a command that exists there and declares the query
-   contract (`query-contract: true`, ADR-058), documentation locations are
+   filler / emitter / subscriber command exists in `commands:`, every filler
+   command and every validator's command declares the query contract
+   (`query-contract: true`, ADR-057 point 3 and ADR-058), a contribution
+   names `command` or `value` but not both, documentation locations are
    relative sub-paths, friction places lie inside a declared location or the
    project. All ERRORs.
 
@@ -512,9 +513,26 @@ def _connection_findings(
             if not isinstance(entries, list):
                 continue
             for index, entry in enumerate(entries):
-                if isinstance(entry, Mapping) and "command" in entry:
-                    check_command(
-                        f"/connections/extensions/{group}/{index}/command", entry["command"]
+                if not isinstance(entry, Mapping):
+                    continue
+                path = f"/connections/extensions/{group}/{index}"
+                if "command" in entry:
+                    check_command(f"{path}/command", entry["command"])
+                    filler = entry["command"] if group == "contributes" else None
+                    leaf = resolve_command(command_leaves, filler) if isinstance(filler, str) else None
+                    if leaf is not None and leaf.get(QUERY_CONTRACT_KEY) is not True:
+                        _error(
+                            f"{path}/command",
+                            f"the contribution to {entry.get('point')!r} names command "
+                            f"{filler!r} as its filler, which does not declare the query "
+                            f"contract (`{QUERY_CONTRACT_KEY}: true` on its `commands:` entry); "
+                            f"a command filler runs only when it declares it (COR-052 point 6).",
+                        )
+                if group == "contributes" and "command" in entry and "value" in entry:
+                    _error(
+                        f"{path}/value",
+                        "a contribution supplies its data through `command` or `value`, not "
+                        "both (COR-052 point 2).",
                     )
 
     return findings

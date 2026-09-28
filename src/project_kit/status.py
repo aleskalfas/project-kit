@@ -16,14 +16,19 @@ the shim, the bash dispatcher passes its `$SCRIPT_PATH` as the
 
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import click
 
 from project_kit import cli_render
 from project_kit.install import find_source_kit, find_target_root
 from project_kit.manifest import read_backbone_manifest, read_kit_version
+
+if TYPE_CHECKING:
+    from project_kit.data_points import ResolvedPoint
 
 # The indent of an entry listed under a status line's label.
 _LIST_INDENT = " " * 25
@@ -61,6 +66,7 @@ def report_status() -> None:
     _report_documentation(target_root)
     _report_friction(target_root)
     _report_rule_sets(target_root)
+    _report_data_points(target_root)
     _report_decisions(target_root)
     _report_skills_inventory(target_root)
     _report_agents_inventory(target_root)
@@ -314,6 +320,87 @@ def _report_rule_sets(target_root: Path) -> None:
                 f"{check.inherited.citation} is at {check.inherited.version}"
             )
             click.echo(f"{_LIST_INDENT}  fix: {check.fix}")
+
+
+def _report_data_points(target_root: Path) -> None:
+    """How each data point resolved, and why (COR-052 point 7): where project
+    fillers live, then per point its policy, its value or why it has none, and
+    every filler considered — taken, inert or passed over, with the reason.
+
+    The resolution is `pkit validate`'s own (`data_points`), so the two never
+    disagree; its findings are validate's to report. Command fillers run here as
+    they do there, under the query policy. Reads forgivingly: a failure to
+    resolve leaves the section with its heading only.
+    """
+    from project_kit import connections, data_points
+
+    click.echo()
+    click.echo("  " + cli_render.style("heading", "Data points"))
+    try:
+        prefix = connections.fillers_prefix(target_root)
+        resolution = data_points.shared_resolution(target_root)
+    except Exception:  # noqa: BLE001 — soft probe; a broken declaration is validate's finding
+        return
+    click.echo(
+        f"    {'fillers':<18} {prefix.as_posix()}/   ({resolution.filler_files} file(s))"
+    )
+    if not resolution.points:
+        click.echo(f"    {'points':<18} none defined")
+        return
+    resolved = sum(1 for p in resolution.points if p.resolved)
+    click.echo(
+        f"    {'points':<18} {len(resolution.points)} defined: {resolved} resolved, "
+        f"{len(resolution.points) - resolved} unresolved"
+    )
+    for point in resolution.points:
+        for line in _data_point_lines(point):
+            click.echo(line)
+
+
+def _data_point_lines(point: ResolvedPoint) -> list[str]:
+    """One point: its address, its policy and outcome, its value, its fillers.
+
+    A command filler says whether its command declares the query contract —
+    needing no network among its limits — which is declared and trusted, never
+    enforced: nothing holds a command to no network (ADR-057 point 4).
+    """
+    default = f" · default {point.participation}" if point.participation else ""
+    outcome = "resolved" if point.resolved else f"unresolved: {point.why}"
+    lines = [
+        f"    {point.address}",
+        f"{_LIST_INDENT}{point.policy} · inert {point.inert_policy}{default} — {outcome}",
+    ]
+    if point.entries:
+        for entry in point.entries:
+            replaces = f", replaces {', '.join(entry.replaces)}" if entry.replaces else ""
+            lines.append(f"{_LIST_INDENT}{'entry':<8} {entry.id} — {entry.origin}{replaces}")
+    elif point.resolved and point.origin:
+        lines.append(f"{_LIST_INDENT}{'value':<8} {_compact(point.value)} — {point.origin}")
+    elif point.resolved:
+        lines.append(f"{_LIST_INDENT}{'value':<8} no entries")
+    for removal in point.removals:
+        source = (
+            f"from {', '.join(removal.removed_from)}" if removal.removed_from else "matched nothing"
+        )
+        lines.append(f"{_LIST_INDENT}{'removed':<8} {removal.id} — {removal.reason} ({source})")
+    for filler in point.fillers:
+        how = filler.label
+        if filler.query_contract is not None:
+            declared = (
+                "query contract declared: no network, trusted, not enforced"
+                if filler.query_contract
+                else "no query-contract declaration"
+            )
+            how = f"{filler.name} ({filler.supplies}; {declared})"
+        reason = f" — {filler.reason}" if filler.reason else ""
+        lines.append(f"{_LIST_INDENT}{'filler':<8} {how}: {filler.state.value}{reason}")
+    return lines
+
+
+def _compact(value: object, limit: int = 72) -> str:
+    """A value on one line, cut at `limit` characters."""
+    text = json.dumps(value, sort_keys=True, ensure_ascii=False, default=str)
+    return text if len(text) <= limit else text[: limit - 1] + "…"
 
 
 def _report_decisions(target_root: Path) -> None:

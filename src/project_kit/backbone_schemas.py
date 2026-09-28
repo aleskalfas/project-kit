@@ -21,6 +21,13 @@ is where that class is loaded and where its shared rendering lives:
   and `expand_schema_error` route a JSON Schema validator's
   `additionalProperties` violation through it, one finding per key, so every
   pass that validates against a schema phrases the finding the same way.
+- `filler_subpath` / `filler_address` — the filler path location rule (ADR-056
+  point 2): a point address `<publisher>::<role>:<point>` maps to
+  `<publisher>/<role>/<point>.yaml` under the backbone's sub-path of the
+  internal documentation root, `FILLERS_SUBPATH`, and back — injective on valid
+  addresses, whose parts are words (the lifecycle README, "Where a project
+  filler file lives"). `envelope_findings` applies the filler envelope's
+  schema (kind `filler`) through the shared renderer.
 - `validate_container` — the container's discrimination rule (COR-053 point
   10) applied on top of the JSON Schema shape: functionality blocks by name,
   role blocks by their versioned point blocks, anything else an unknown key.
@@ -44,7 +51,7 @@ from collections.abc import Collection, Iterable, Mapping
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from enum import Enum
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from jsonschema import Draft202012Validator
@@ -257,6 +264,62 @@ def expand_schema_error(error: ValidationError) -> list[tuple[tuple[str, ...], s
         return [(path, error.message)]
     known = tuple((error.schema.get("properties") or {}).keys())
     return [((*path, key), render_unknown_key(key, known)) for key in keys]
+
+
+# --- the filler path and the filler envelope (ADR-056 point 2) ---------------
+
+# The sub-path the backbone owns for filler files under the internal
+# documentation root (COR-052 point 2) — this distribution's literal, the
+# lifecycle README's third.
+FILLERS_SUBPATH = PurePosixPath("pkit") / "fillers"
+
+# The kind the envelope's schema is read under (`load_backbone_schema`).
+FILLER_SCHEMA_KIND = "filler"
+
+# A filler file's suffix: the one dot of the path.
+FILLER_SUFFIX = ".yaml"
+
+# A part of a valid address: the words the configuration's selection keys admit.
+_WORD = re.compile(r"^[a-z][a-z0-9-]*$")
+
+
+def filler_subpath(address: str) -> PurePosixPath | None:
+    """The path of the filler for `address`, relative to the fillers prefix:
+    `<publisher>/<role>/<point>.yaml`; None when the address is not valid —
+    three parts, each a word — and so has no filler path."""
+    publisher, sep, rest = address.partition(ROLE_QUALIFIER_SEPARATOR)
+    role, colon, point = rest.partition(POINT_SEPARATOR)
+    parts = (publisher, role, point)
+    if not sep or not colon or not all(_WORD.match(part) for part in parts):
+        return None
+    return PurePosixPath(publisher, role, f"{point}{FILLER_SUFFIX}")
+
+
+def filler_address(subpath: str) -> str | None:
+    """The inverse: the address a path relative to the fillers prefix names, or
+    None when it names none — not exactly three parts, a part that is not a
+    word, or another suffix. `filler_subpath` sends the address back to the
+    same path, so the two are inverse on valid addresses."""
+    if not subpath.endswith(FILLER_SUFFIX):
+        return None
+    parts = subpath[: -len(FILLER_SUFFIX)].split("/")
+    if len(parts) != 3 or not all(_WORD.match(part) for part in parts):
+        return None
+    publisher, role, point = parts
+    return point_address(f"{publisher}{ROLE_QUALIFIER_SEPARATOR}{role}", point)
+
+
+def envelope_findings(document: Any, schema: Mapping[str, Any]) -> list[tuple[str, str]]:
+    """`(JSON Pointer, message)` per violation of the filler envelope's schema,
+    by position; an unknown key reads through the shared renderer. The value
+    inside is the point's to judge, not this schema's."""
+    validator = Draft202012Validator(schema)
+    errors = sorted(validator.iter_errors(document), key=lambda e: [str(p) for p in e.absolute_path])
+    return [
+        ("".join(f"/{_pointer_token(p)}" for p in path), message)
+        for error in errors
+        for path, message in expand_schema_error(error)
+    ]
 
 
 # --- the container ----------------------------------------------------

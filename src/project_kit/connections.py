@@ -15,12 +15,18 @@ It reads, and reads only:
 - the backbone configuration's two selection keys, `connections.providers`
   and `connections.selections`, read forgivingly (`project_config.read_config`);
 - the installed versions: the backbone manifest's `backbone_version` and each
-  component's version of record.
+  component's version of record;
+- the project's filler files — every file under the fillers prefix of the
+  internal documentation root, parsed once per run (`project_fillers`), of
+  which the wiring reads only the envelope's `schema_version`.
 
 It resolves wiring, not data: it never runs a filler command, and it never
 parses a process definition — an implementation-addressed upstream is found
 among the offered points, or by its definition file existing at the
 conventional path (COR-053 point 6 reads the mark from package metadata).
+What each data point resolves to — its fillers combined by its policy — is
+the second layer over this one, `project_kit.data_points`, which reads this
+module's `Wiring` and its filler files rather than resolving either again.
 
 `resolve` is a pure function of those inputs, so the same repository state
 yields the same `Wiring`, finding for finding. It computes:
@@ -70,10 +76,8 @@ against the active provider's point and its contributors (`Wiring.data_point`,
 `PointBinding.contributors`). It also owns the last relation, the configuration
 file's shape against the schema the installed backbone ships.
 
-A named hook is left for a later Task, documented at its definition:
-`project_filler` (#994 — the filler envelope and its location rule). A stale generated
-`depends-on` is the refresh command's check (#995): detecting it means reading
-the process definitions this module never opens.
+A stale generated `depends-on` is the refresh command's check (#995):
+detecting it means reading the process definitions this module never opens.
 """
 
 from __future__ import annotations
@@ -93,7 +97,7 @@ from packaging.version import InvalidVersion, Version
 from ruamel.yaml import YAML
 
 from project_kit import backbone_schemas as bs
-from project_kit import rule_sets, validators
+from project_kit import docs_roots, rule_sets, validators
 from project_kit.manifest import read_backbone_manifest, read_component_manifest
 from project_kit.package_validate import (
     POINT_SEPARATOR,
@@ -105,6 +109,7 @@ from project_kit.package_validate import (
 )
 from project_kit.project_config import PROJECT_CONFIG_RELPATH, project_config_path, read_config
 from project_kit.schemas_validate import _build_registry_for_paths, _kit_defs_schema_paths
+from project_kit.working_tree import working_tree
 
 _yaml = YAML(typ="safe")
 
@@ -124,6 +129,14 @@ CAPABILITY = "capability"
 
 # The package key of a component's backbone range (COR-010, COR-017).
 REQUIRES_BACKBONE_KEY = "requires_backbone"
+
+# The combination policies of a data point (COR-052 point 3). A point that
+# declares none is `single`: one answer, and several contributors need a
+# selection rather than being merged silently.
+SINGLE = "single"
+UNION = "union"
+ADDITIVE = "additive"
+COMBINATIONS = (SINGLE, UNION, ADDITIVE)
 
 
 # --- the data model ------------------------------------------------------
@@ -208,6 +221,14 @@ class Point:
     process_id: str | None = None  # process: the offered definition's id
     fingerprint: str | None = None  # sha256 of the canonical companion schema, when readable
 
+    @property
+    def policy(self) -> str | None:
+        """A data point's combination policy in force: as declared, `single` when
+        it declares none (COR-052 point 3); None for a process or an event."""
+        if self.kind is not PointKind.DATA:
+            return None
+        return self.combination or SINGLE
+
 
 @dataclass(frozen=True)
 class Counterpart:
@@ -277,11 +298,15 @@ class PointBinding:
         return tuple(b for b in self.bindings if b.status is BindingStatus.BOUND)
 
     @property
+    def filler_compatible(self) -> bool:
+        """A project filler exists and targets the point's version (COR-052 point 5)."""
+        return self.filler is not None and self.filler.version == self.point.version
+
+    @property
     def filled(self) -> bool:
         """Filled by something other than the default (COR-053 point 6): a bound
         contribution, or a project filler at a compatible version."""
-        filler_fits = self.filler is not None and self.filler.version == self.point.version
-        return bool(self.bound) or filler_fits
+        return bool(self.bound) or self.filler_compatible
 
     @property
     def contributors(self) -> tuple[str, ...]:
@@ -465,6 +490,7 @@ def resolve_wiring(target_root: Path) -> Wiring:
     read from its rule-set files among the version relations."""
     backbone = read_backbone_manifest(target_root)
     declarations = load_declarations(target_root)
+    fillers = project_fillers(target_root)
     wiring = resolve(
         declarations,
         load_selections(target_root),
@@ -472,7 +498,7 @@ def resolve_wiring(target_root: Path) -> Wiring:
         definition_exists=lambda capability, process_id: _definition_file_exists(
             declarations, capability, process_id
         ),
-        filler=lambda address: project_filler(target_root, address),
+        filler=lambda address: _project_filler(target_root, fillers, address),
         config_file=project_config_path(target_root),
     )
     pin_checks = rule_sets.pin_checks(rule_sets.discover_rule_sets(target_root))
@@ -545,25 +571,97 @@ def _active_point(declarations: Declarations, point: Point, target_root: Path) -
     return bs.ActivePoint(point.version, validator=Draft202012Validator(schema, registry=registry))
 
 
-# --- relations read from other files: fillers (a hook) and rule-set pins -----
+# --- relations read from other files: project fillers and rule-set pins -----
+
+
+@dataclass(frozen=True)
+class FillerFile:
+    """One file under the fillers prefix, as read (COR-052 point 2).
+
+    `address` is the point its path names by the location rule
+    (`backbone_schemas.filler_address`); None for a file that names none — a
+    stray, reported rather than skipped. `document` is its parsed YAML; None
+    when it could not be read, and then `problem` says why.
+    """
+
+    path: str  # repository-relative POSIX path
+    address: str | None
+    document: Any = None
+    problem: str | None = None
+
+    @property
+    def version(self) -> int | None:
+        """The envelope's `schema_version` when it is an integer; None otherwise
+        (the envelope pass reports the shape)."""
+        document = _mapping(self.document)
+        return _point_version(document.get("schema_version")) if document is not None else None
+
+
+def fillers_prefix(target_root: Path) -> PurePosixPath:
+    """Where project filler files live, relative to the repository root: the
+    backbone's sub-path under the internal documentation root (COR-052 point 2).
+    Derived from the current root on every read: no command places a filler
+    yet, so none records the prefix as a chosen location (COR-049 point 5)."""
+    internal = docs_roots.resolve_roots(target_root).internal
+    return PurePosixPath(internal.as_posix()) / bs.FILLERS_SUBPATH
+
+
+def project_fillers(target_root: Path) -> tuple[FillerFile, ...]:
+    """Every file under the fillers prefix, in path order, read once per run of
+    `pkit validate` and shared by the wiring and the data points resolved over it.
+
+    The files are those of the working tree's one listing (ADR-057 point 2); a
+    project with no folder at the prefix has none, and the listing is not taken.
+    """
+    return validators.once_per_run(
+        ("project-fillers", target_root.resolve()), lambda: _read_fillers(target_root)
+    )
+
+
+def _read_fillers(target_root: Path) -> tuple[FillerFile, ...]:
+    prefix = fillers_prefix(target_root)
+    if not (target_root / prefix).is_dir():
+        return ()
+    below = f"{prefix.as_posix()}/"
+    out: list[FillerFile] = []
+    for rel in working_tree(target_root).files():
+        if not rel.startswith(below):
+            continue
+        address = bs.filler_address(rel[len(below) :])
+        if address is None:
+            out.append(FillerFile(rel, None))
+            continue
+        try:
+            document: Any = _yaml.load((target_root / rel).read_text(encoding="utf-8"))
+        except Exception as exc:  # unreadable, or ruamel's own hierarchy
+            out.append(FillerFile(rel, address, problem=f"does not parse as YAML: {exc}"))
+            continue
+        out.append(FillerFile(rel, address, document=_string_keys(document)))
+    return tuple(out)
 
 
 def project_filler(target_root: Path, address: str) -> ProjectFiller | None:
-    """Hook (#994): the project filler file answering the data point `address`.
+    """The project filler file answering the data point `address`, with the
+    version its envelope targets; None when there is none, or when its envelope
+    carries no integer `schema_version` — a malformed envelope fills nothing, and
+    the data points' envelope pass reports it.
 
-    A project filler lives at the path the point address maps to under the
-    internal documentation root (COR-052 point 2; the lifecycle README, "Where a
-    project filler file lives": `<internal-root>/pkit/fillers/<publisher>/<role>/
-    <point>.yaml`), inside an envelope whose `schema_version` names the point
-    version it targets. The envelope's schema, and the location rule that binds
-    a file to it and records the prefix on first use, arrive with #994; until
-    then there is no envelope to read, and every point reads as having no
-    project filler. When #994 lands, this returns the file and its envelope
-    version when one exists; `resolve` already compares that version with the
-    point's (a mismatch is an error, COR-052 point 2) and counts a compatible
-    filler as filling a mandatory point — nothing else here changes.
+    It lives at the path the address maps to under the internal documentation
+    root (COR-052 point 2; the lifecycle README, "Where a project filler file
+    lives": `<internal-root>/pkit/fillers/<publisher>/<role>/<point>.yaml`).
+    `resolve` compares its version with the point's — a mismatch is an error
+    (COR-052 point 2) — and counts a compatible filler as filling a mandatory point.
     """
-    return None
+    return _project_filler(target_root, project_fillers(target_root), address)
+
+
+def _project_filler(
+    target_root: Path, fillers: Iterable[FillerFile], address: str
+) -> ProjectFiller | None:
+    found = next((f for f in fillers if f.address == address), None)
+    if found is None or found.version is None:
+        return None
+    return ProjectFiller(target_root / found.path, found.version)
 
 
 def rule_set_pin_findings(checks: Iterable[rule_sets.PinCheck]) -> list[Finding]:
@@ -959,7 +1057,7 @@ def _point_findings(
             )
         )
     bound = sorted({b.counterpart.capability for b in point.bound})
-    if p.combination == "single" and len(bound) > 1 and point.selected is None:
+    if p.policy == SINGLE and len(bound) > 1 and point.selected is None:
         findings.append(
             Finding(
                 config_file,
@@ -1366,11 +1464,17 @@ UMBRELLA_SEVERITY = {
 def connections_outcome(target_root: Path) -> validators.Outcome:
     """The `connections` member of `pkit validate`: the wiring as resolved — roles,
     points, counterparts — then the connection findings (roles, points, marks,
-    cycles, fingerprints), each at its own severity."""
+    cycles, fingerprints), each at its own severity; then how each data point
+    resolved and the findings of its fillers (`data_points`, the second layer
+    over the same wiring)."""
+    from project_kit import data_points  # the second layer imports this module
+
     wiring = shared_wiring(target_root)
     findings = wiring.connection_findings()
+    data = data_points.shared_resolution(target_root)
     return validators.Outcome(
-        tuple(_connections_summary(wiring, findings)), _as_findings(target_root, findings)
+        (*_connections_summary(wiring, findings), *data_points.summary_lines(data)),
+        (*_as_findings(target_root, findings), *data.findings),
     )
 
 

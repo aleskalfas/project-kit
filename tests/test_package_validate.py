@@ -275,8 +275,12 @@ def test_referenced_command_that_does_not_exist_is_an_error(
             "subject": "page",
         }
     }
+    # The contribution's command is a filler: a query, declaring the query contract.
+    commands = _package()["commands"]
+    commands["create"]["page"]["query-contract"] = True
     errors = _messages(
-        _validate(_package(connections=connections), schema, component_dir), pv.Severity.ERROR
+        _validate(_package(connections=connections, commands=commands), schema, component_dir),
+        pv.Severity.ERROR,
     )
     assert set(errors) == {
         "/connections/extensions/subscribes/0/command",

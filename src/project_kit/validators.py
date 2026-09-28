@@ -373,11 +373,12 @@ def run_query(target_root: Path, script: Path, *, location: str, reference: str)
     run = run_command(script, [QUERY_FLAG], cwd=target_root, extra_env=OFFLINE_MARKER)
     if run.ending is Ending.ANSWERED:
         return _answer_of(run.document, location=location, command=reference)
-    return _no_answer(location, _why_no_answer(run, reference))
+    return _no_answer(location, why_no_answer(run, reference))
 
 
-def _why_no_answer(run: CommandRun, reference: str) -> str:
-    """The message of the no-answer finding for a run that did not answer."""
+def why_no_answer(run: CommandRun, reference: str) -> str:
+    """Why a query run did not answer: the message of a validator's no-answer
+    finding, and the reason a command filler is inert (`data_points`)."""
     if run.ending is Ending.NOT_STARTED:
         return f"command {reference!r} could not start: {run.detail}"
     if run.ending is Ending.TIMED_OUT:
@@ -506,6 +507,19 @@ def once_per_run(key: Hashable, compute: Callable[[], _T]) -> _T:
     if key not in values:
         values[key] = compute()
     return values[key]
+
+
+def as_one_run(compute: Callable[[], _T]) -> _T:
+    """`compute()` as one run: inside `run_all` it already is one; outside — a
+    reading command such as `pkit status` — the computations it shares through
+    `once_per_run` are made once for it, as they would be under the umbrella."""
+    if _RUN_VALUES.get() is not None:
+        return compute()
+    token = _RUN_VALUES.set({})
+    try:
+        return compute()
+    finally:
+        _RUN_VALUES.reset(token)
 
 
 def run_all(target_root: Path, validators: Iterable[Validator]) -> list[Result]:
