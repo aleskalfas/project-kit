@@ -1100,6 +1100,43 @@ def test_probe_subject_agent(tmp_path, monkeypatch):
     assert "ALLOWED — allow grant" not in out.split("repository read")[1].splitlines()[1]
 
 
+_WORKSPACE_GRANTS = (
+    "schema_version: 1\n"
+    "grants:\n"
+    "  - subject: all\n"
+    "    privilege: \"[privilege-catalog:workspace]\"\n"
+    "    effect: allow\n"
+    "  - subject: agent:critic\n"
+    "    privilege: \"[privilege-catalog:workspace]\"\n"
+    "    effect: deny\n"
+)
+
+
+def test_probe_demonstrates_the_workspace_verdict(tmp_path, monkeypatch):
+    # The probe passes the project root as the live hook does, so a file tool's
+    # target is placed in the agent workspace (#1043) — and only there.
+    out = _run(_setup(tmp_path, grants=_WORKSPACE_GRANTS), monkeypatch, "probe")
+    inside = out.split("a file in the agent workspace")[1].splitlines()
+    assert "ALLOWED — allow grant for operator on ['workspace']" in inside[1]
+    outside = out.split("a file outside the agent workspace")[1].splitlines()
+    assert "NOT COVERED" in outside[1]
+    assert "BROKEN" not in out
+
+
+def test_probe_decides_as_the_named_subject_despite_a_default_agent(tmp_path, monkeypatch):
+    # With a root, a payload naming no agent resolves to the configured default
+    # agent (here critic, denied the workspace); the probe keeps the subject it
+    # names, so the operator's verdict is the operator's.
+    proj = _setup(tmp_path, grants=_WORKSPACE_GRANTS, settings='{"agent": "critic"}')
+    out = _run(proj, monkeypatch, "probe")
+    assert "subject: operator" in out
+    assert "ALLOWED — allow grant for operator on ['workspace']" in out
+    assert "BROKEN" not in out
+    out = _run(proj, monkeypatch, "probe", "--subject", "agent:critic")
+    assert "REJECTED — deny grant for agent:critic on ['workspace']" in out
+    assert "BROKEN" not in out
+
+
 def test_probe_invalid_subject_refused(tmp_path, monkeypatch):
     out = _run_fail(_setup(tmp_path), monkeypatch, "probe", "--subject", "Bogus!")
     assert "invalid subject" in out
@@ -2529,12 +2566,23 @@ def test_decide_verdict_path_byte_identical_to_main():
     #   _privilege_ids        → (+ _TOKEN)
     #   _strip_leading_cd     → (+ _CD_SEP, _BARE_CD)
     #   _scope_ok             → _extract_host
+    #
+    # Deliberate, reviewed verdict change (#1043, the agent workspace): a FILE
+    # TOOL whose target lies in the agent workspace is recognized as the
+    # path-scoped `workspace` privilege. It enters through the tool branches
+    # only — `recognized_privileges` adds the path-scoped hits to a tool
+    # request's, and `hook_decide` passes a file tool's target and the project
+    # root (and takes a caller-named subject, so the CLI's probe can pass the
+    # root too) — so those two leave the frozen set. `decide` itself, and with it
+    # the whole shell judgment, stays byte-identical to main; that the shell
+    # verdicts are main's is also pinned behaviourally
+    # (tests/test_permission_workspace.py, `test_the_shell_judgment_is_mains`).
     frozen = (
-        # entry points
-        "decide", "hook_decide",
+        # entry point
+        "decide",
         # pure helpers on the verdict path
         "segments", "_strip_leading_cd", "_matches_bash",
-        "recognized_privileges", "_privilege_ids", "_scope_ok",
+        "_privilege_ids", "_scope_ok",
         "_extract_host", "_effective_grants", "_read_default_agent",
         # module-level verdict regexes the above close over
         "_TOKEN", "_SEP", "_ENVVAR", "_CD_SEP", "_UNTRUSTED", "_BARE_CD",

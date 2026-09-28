@@ -88,6 +88,8 @@ Body prose cites the same references the frontmatter declares. The validator ext
 
 The discipline: cite paths in backticks, cite records by ID, mention hooks by name. The validator can extract unambiguously without ad-hoc prose parsing.
 
+**Intermediate files.** Every shipped agent body ends with the same one-sentence section telling the agent to keep its intermediate files in the agent workspace, `.agent-workspace/` at the repository root, and nowhere else outside the repository, writing them with the file tools — a shell redirect into the folder is judged like any other shell write (the workspace rule in `.pkit/rules/core.md`); `pkit new agent` stamps it. Keep the wording identical across bodies, so one search finds every agent that carries it.
+
 ## Reference graph and bidirectional consistency
 
 `pkit refs validate` walks every agent's and skill's frontmatter and body, building the reference graph. Two consistency checks:

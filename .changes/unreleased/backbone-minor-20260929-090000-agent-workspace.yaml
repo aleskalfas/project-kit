@@ -1,0 +1,22 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  Every agent keeps its intermediate files — pull-request and issue bodies,
+  scripts, captured output, notes — in one workspace, `.agent-workspace/` at
+  the repository root, and nowhere else outside the repository: a new
+  tool-hygiene rule in `rules/core.md` (rule 16; the communication and
+  cross-repository rules move to 17–19). `pkit init` and `pkit sync`
+  (self-host included) create the folder and add `/.agent-workspace/` to the
+  repository's local exclude file in the common git directory, so one entry
+  covers every worktree and nothing there reaches a commit; both are
+  idempotent, and outside a git repository the folder is created and the
+  exclusion skipped with a note; a symlink where the folder belongs is
+  refused, never adopted. The exclude file covers one clone, so `pkit init`
+  also recommends adding `/.agent-workspace/` to the project's committed
+  `.gitignore`, which pkit never writes itself. `pkit status` reports the
+  workspace and whether git ignores it, naming `pkit sync` when either is
+  missing, and reports a symlink in its place. Every core agent body tells
+  its agent to keep intermediate files there, and `pkit new agent` stamps
+  the same section into a new agent.

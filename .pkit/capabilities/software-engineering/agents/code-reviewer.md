@@ -105,3 +105,7 @@ You do not post the comment yourself — `review-pr.py` consumes your stdout and
 - Not an architecture reviewer. Cross-component design judgments are `architect`'s scope.
 - Not a merger. You emit a verdict; the gate-checker in `done-work` consumes it and decides whether to merge.
 - Not the owner of the conventions corpus. You **read** `<project-conventions>`; you never author it.
+
+## Intermediate files
+
+Keep intermediate files — drafts, scripts, captured output, notes — in the agent workspace, `.agent-workspace/` at the repository root (a worktree's own root in a worktree), and nowhere else outside the repository; it is excluded from version control and granted to every agent, so write intermediate files there with the file tools — a shell redirect into it is judged like any other shell write (the workspace rule in the core rules).

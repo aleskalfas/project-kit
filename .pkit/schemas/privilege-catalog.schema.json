@@ -74,8 +74,34 @@
           "type": "object",
           "additionalProperties": false,
           "minProperties": 1,
-          "description": "How a request is identified as this privilege. At least one of `bash` / `tool`.",
+          "description": "How a request is identified as this privilege. At least one of `bash` / `tool` / `path`.",
           "properties": {
+            "path": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["folders", "tools"],
+              "description": "A path-scoped allow: the privilege is recognized only for a file tool listed in `tools` whose target lies inside one of `folders` — never for the tool alone, and never for a shell command, which is judged like any other — so a grant of it neither reaches nor denies anything elsewhere. It reduces prompts; it confines nothing. Enforced by the hook, which sees the target; never realized as a session-wide rule. The agent workspace (#1043) is the shipped instance.",
+              "properties": {
+                "folders": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "^(?!/)(?!~)(?!.*(^|/)\\.\\.(/|$))\\S+$"
+                  },
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "description": "Folders relative to the root of a checkout of the project — the project root, or another working tree of its repository, each with its own copy of the folder. No leading `/` or `~`, no `..`; a folder reached through a symlink is never recognized."
+                },
+                "tools": {
+                  "type": "array",
+                  "items": { "type": "string", "minLength": 1 },
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "description": "File tools recognized when the path they name lies inside a folder (e.g. `Read`, `Write`, `Edit`)."
+                }
+              }
+            },
             "bash": {
               "type": "array",
               "items": { "$ref": "#/$defs/bash_matcher" },
