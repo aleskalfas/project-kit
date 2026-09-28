@@ -354,14 +354,17 @@ def _friction_lines(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     return [line.strip() for line in lines[start + 1 : end]]
 
 
-def test_status_says_the_friction_check_is_dormant_without_places(
+def test_status_says_when_no_place_is_declared(
     make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    make_adopter_repo()
+    repo = make_adopter_repo()
     assert _friction_lines(monkeypatch) == [
         "mode               warning   (default)",
-        "places             none declared — the friction check is dormant",
+        "places             none declared",
     ]
+    # A mode the reader does not recognise reads as the default; validation reports it.
+    _write_config(repo, "friction:\n  mode: loud\n")
+    assert _friction_lines(monkeypatch)[0] == "mode               warning   (default)"
 
 
 def test_status_lists_the_declared_places_surface_and_exclusions(

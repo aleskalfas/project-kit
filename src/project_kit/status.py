@@ -25,6 +25,9 @@ from project_kit import cli_render
 from project_kit.install import find_source_kit, find_target_root
 from project_kit.manifest import read_backbone_manifest, read_kit_version
 
+# The indent of an entry listed under a status line's label.
+_LIST_INDENT = " " * 25
+
 
 def report_status() -> None:
     """Walk the project tree and print the status report."""
@@ -236,10 +239,11 @@ def _report_friction(target_root: Path) -> None:
     each declared place, surface and excluded path — the project's in written
     order, then each capability's, tagged with the capability.
 
-    Places are always shown, so a project sees at a glance that the check is
-    dormant because none is declared (COR-050 point 15); surface and exclude
-    only when declared. Reads forgivingly, as discovery does; `pkit validate`
-    reports a malformed setting.
+    Places are always shown, so a project sees at a glance that it declares
+    none; surface and exclude only when declared. Rule-set folders are places
+    by the location rule, not by declaration, and are not listed. Reads
+    forgivingly, as discovery does; `pkit validate` reports a malformed
+    setting.
     """
     from project_kit.friction_discovery import read_friction_settings
 
@@ -249,10 +253,11 @@ def _report_friction(target_root: Path) -> None:
         settings = read_friction_settings(target_root)
     except Exception:  # noqa: BLE001 — soft probe; a broken configuration is validate's finding
         return
-    mode_source = "default" if settings.mode is None else "explicit"
+    # A value the reader does not recognise falls back to the default, and says so.
+    mode_source = "explicit" if settings.mode == settings.mode_or_default else "default"
     click.echo(f"    {'mode':<18} {settings.mode_or_default}   ({mode_source})")
     if not settings.places:
-        click.echo(f"    {'places':<18} none declared — the friction check is dormant")
+        click.echo(f"    {'places':<18} none declared")
     for label, declared in (
         ("places", settings.places),
         ("surface", settings.surface),
@@ -264,10 +269,6 @@ def _report_friction(target_root: Path) -> None:
         for entry in declared:
             owner = "" if entry.source == "project" else f" ({entry.source.split(':', 1)[-1]})"
             click.echo(f"{_LIST_INDENT}{entry.resolved}{owner}")
-
-
-# The indent of a listed entry under a status line's label.
-_LIST_INDENT = " " * 25
 
 
 def _report_decisions(target_root: Path) -> None:
