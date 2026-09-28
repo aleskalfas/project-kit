@@ -18,7 +18,7 @@ It retires into project-kit's first user-facing concept page, once the living-do
 
 What the hand-off says, and what a builder should confirm with the maintainer before the first slide:
 
-- **Known.** The work began in Mockingbird's documentation rewrite: partner teams are onboarding, and the docs are spread across a README, `docs/`, per-package READMEs, two guides and a separate site. The team's own requirement is that any change to code results in the affected docs being updated, with no manual step. pkit is installed in the maintainer's Mockingbird checkout but its folder is excluded from git, so the team does not use it. The hand-off says "adoption is not decided by the Mockingbird team" and that the case is presented "as a causal chain … without naming pkit until the last link".
+- **Known.** The work began in Mockingbird's documentation rewrite: partner teams are onboarding, and the docs are spread across a README, `docs/`, per-package READMEs, two guides and a separate site. The team's own requirement is that any change to code results in the affected docs being updated, with no manual step. pkit is installed in the maintainer's Mockingbird checkout but hidden from the shared repository — most likely pkit's own *private* visibility mode, which keeps its files out of git for a developer whose team has not adopted it (`pkit visibility` in that checkout says so) — so the team does not use it. The hand-off's adoption argument is replication: the same method is wanted in two of Mockingbird's sibling repositories. The hand-off says "adoption is not decided by the Mockingbird team" and that the case is presented "as a causal chain … without naming pkit until the last link".
 - **Confirm.** Who is in the room; what the ask is (approve the documentation approach, adopt pkit, or both); the length and format; and whether "not decided by the team" means *not yet decided* or *not theirs alone to decide*.
 
 ## The story in one breath
@@ -30,7 +30,7 @@ The hand-off's chain, sharpened by the conclusions. It opens on the team's own w
 3. **So every page says what it rests on, and a check flags the page when any of that changes.** A page is watched as well as it says what it rests on. The answer to a flag is recorded in the page itself.
 4. **Pages serve declared readers**, in spaces kept apart by audience, following a method written down as named, checkable rules.
 5. **People skip manual steps**, so the flagging is automatic, an agent drafts the fix, and a person approves it. That only works when the method is explicit and the checks are deterministic.
-6. **The need is the same in every repository; only the content differs.** The method and the machinery belong in one shared place that every project installs — the last link, and the first time pkit is named.
+6. **The need is the same in the team's two sibling repositories, and in every repository after them; only the content differs.** The method and the machinery belong in one shared place that every project installs — the last link, and the first time pkit is named.
 
 ## The problem — the opening evidence
 
@@ -39,7 +39,7 @@ A documentation spike on another project the maintainer works on (IGW, June 2026
 - one topic split across two documents, the second mirroring the first section by section;
 - an integration guide re-documenting a tool another document owns, including a byte-identical copy;
 - a guide claiming "four modes" while its own table — and the owning document — listed three;
-- one page saying a key is required with no fallback, three others saying it falls back to a default;
+- one page saying a key is required with no fallback — and, further down, that it falls back — while two other pages said, three times, that it falls back to a default;
 - three sections in one file with the same heading, so cross-references were ambiguous.
 
 Its sharpest lesson: **when the docs disagreed, the code decided — and the wrong side was the majority.**
@@ -72,7 +72,7 @@ A page lists its *anchors*: the code it describes, the decisions and rules it ap
 - **Unanchored is visible, not an error.** A document that rests on nothing is counted and shown, so a project sees how much of its documentation stands on nothing.
 - **An anchor that points at nothing is an error.** A path, decision or artefact that no longer exists is reported, never ignored — silence would look like health.
 
-*Behind it:* I1; the hand-off's "truth has three anchors" became four grounds — code, decisions and rules, product knowledge and other pages, sources; CMN-003 · pkit keeps the anchors in a small block in the page's front matter, with three core kinds (paths, identified records, other artefacts) and strict validation — *shipped* ([COR-050][cor050] points 1–2). Sources need an anchor kind a capability provides; none does yet — see gap 7.
+*Behind it:* I1; the hand-off's "truth has three anchors" became four grounds — code, decisions and rules, product knowledge and other pages, sources; CMN-003 · pkit keeps the anchors in a small block in the page's front matter, with three core kinds (paths, identified records, other artefacts); the block's shape and its validation are *shipped*, and anchors pointing at nothing are reported by the checks — *in progress* ([COR-050][cor050] points 1–2, 7). Sources need an anchor kind a capability provides; none does yet — see gap 7.
 
 ### 3. Drift is flagged, not remembered
 
@@ -110,7 +110,7 @@ Every project has two readers without declaring anything — a *user* and a *mai
 
 A *rule* is a statement every artefact in its scope must satisfy, caused by a decision, checkable by a tool, an agent or a reviewer. Rules have permanent identifiers, never renumbered or reused; each records its origin — when, by whom and why, in the decider's words, or a decision record that explains it at length. A rule is **proposed** until accepted, and a proposed rule binds nothing; accepted rules bind; superseded and withdrawn rules stay in place with their ids.
 
-- **Extend, never relax.** A project inherits a shared set of rules and adds its own, or fills the extension points a shared rule offers. It may not contradict an inherited rule: what a tool can check mechanically is checked, the rest is review. Inheriting someone else's rules pins their major version, so a tightened rule never arrives unreviewed.
+- **Extend, never relax.** A project inherits a shared set of rules and adds its own, or fills the extension points a shared rule offers. It may not contradict an inherited rule: what a tool can check mechanically is checked, the rest is review. Inheriting someone else's rules pins their major version, so a tightened rule never arrives unnoticed: the project is told, and its inheritance fails validation until it reviews the change.
 - **A rule can be relied on explicitly.** A page may anchor to a single rule, so changing, superseding or withdrawing that rule flags everything anchored to it.
 - **Light enough to use.** A whole set of rules is one short document — a paragraph per rule — not one formal record per rule.
 - **The shared documentation method.** A page's anchors ground every statement it makes; each fact is stated once and other pages link to it; each page names its reader and says only what that reader needs; pages of a kind follow one format, with a template per kind; an index-like file is a signpost to what a folder holds, never a summary; nothing is created ahead of the need for it. The user space's own definition adds one more: the reader paths stay unbroken.
@@ -123,7 +123,7 @@ Content is what the project knows — its pages, its readers, its product knowle
 
 - **Why.** A method written once can change in one place and apply to every project; a method mixed into content can never be separated again.
 
-*Behind it:* hand-off §5, R4 · pkit ships the method with the documentation capability, and upgrades it like any installed component; nothing the project wrote is touched by an upgrade — *planned* (living-docs DEC-001 point 2).
+*Behind it:* hand-off §5, R4 · pkit ships the method with the documentation capability and upgrades it like any installed component; an upgrade never overwrites the project's content, though it may migrate the methodology's own block inside a page — *planned* (living-docs DEC-001 point 2; COR-053 point 10).
 
 ### 8. Fixes are proposed, never applied blind
 
@@ -132,11 +132,11 @@ An agent resolves a flag by *proposing* the change to the page, citing the chang
 - **Why.** An agent that rewrites pages directly will eventually rewrite them wrongly — misjudge a file's audience, or "fix" a page to match a bug. Proposals with evidence keep the speed and keep the judgement.
 - **Who starts the agent** — a person, or a job that runs on each flagged change and opens the proposal for review — is the project's choice; see gap 1.
 
-*Behind it:* hand-off §5 "agents do the work, checks verify it"; the June spike's "propose with cited evidence, never auto-apply" · pkit: the documentation capability's agent; every proposal lands as a reviewable change — *planned* (living-docs DEC-001 point 5).
+*Behind it:* hand-off §5 "agents do the work and automatic checks verify it"; the June spike's "propose with cited evidence, never auto-apply" · pkit: the documentation capability's agent; every proposal lands as a reviewable change — *planned* (living-docs DEC-001 point 5).
 
 ### 9. Product knowledge comes first, then code, then documentation
 
-What the software must do — its **actors** (who uses it, with their needs), **use cases** (an actor's goal and how the system fulfils it), **journeys** (an end-to-end path across use cases) and **glossary** — is kept true too, as artefacts that say what they rest on. A change is planned in that order: product knowledge first, then code, then docs, each checked against the one before. The anchors point the other way — a use case rests on code, a page rests on the use case — so a code change flags the use case, and the use case flags its pages.
+What the software must do — its **actors** (who uses it, with their needs), **use cases** (an actor's goal and how the system fulfils it), **journeys** (an end-to-end path across use cases) and **glossary** — is kept true too, as artefacts that say what they rest on. A change is planned in that order: product knowledge first, then code, then docs, each checked against the one before. The anchors point the other way — a use case rests on code, a page rests on the use case — so a code change flags the use case. A use case updated in response flags its pages in turn; one that still holds, or a regression reported as a defect, leaves them unflagged.
 
 - **Stale or regressed.** When code and a use case disagree, either the change was intended (the use case is updated, then the docs) or the code regressed (the use case stands and a defect is reported). The product knowledge is never rewritten to match broken code; when the intent is unclear, a person decides. That judgement is what reconciles the planned order with the direction of the anchors.
 - **Membership test** (the hand-off's, kept): an artefact belongs to the product knowledge if a change to the software can make it false and we want to find out when it does.
@@ -145,7 +145,7 @@ What the software must do — its **actors** (who uses it, with their needs), **
 
 ### 10. Adopting on an existing project is a transformation, not a move
 
-On day one nothing is anchored and no document has declared its reader, so a quiet check means nothing. The honest signals are the **unclassified documents** — everything that is not yet a page of some space — and, once the project says which code ought to be described, the **uncovered surface**: that code, where nothing describes it. An agent proposes which space each document belongs to, how pages should be split, merged or rewritten for their readers, which anchors each statement needs, and which existing code-to-document mappings become page anchors. Every proposal is reviewed; files move only as ordinary reviewed changes.
+On day one nothing is anchored and no document has declared its reader, so a quiet check means nothing. The honest signals are the **unclassified documents** — documents in a space's folders or declared places that nothing else claims and that do not yet name a reader and kind; documents elsewhere count once they are declared as places — and, once the project says which code ought to be described, the **uncovered surface**: that code, where nothing describes it. An agent proposes which space each document belongs to, how pages should be split, merged or rewritten for their readers, which anchors each statement needs, and which existing code-to-document mappings become page anchors. Every proposal is reviewed; files move only as ordinary reviewed changes.
 
 - **Done means** the declared surface is covered and no page is left unanchored without an accepted reason — and the same mechanism keeps it there.
 
@@ -157,11 +157,11 @@ Documentation works with no product knowledge and no work tracker; each enriches
 
 - **Why.** A team that wants only part of it adopts only that part, and nobody is locked into an implementation.
 
-*Behind it:* hand-off §7 "two capabilities joined by a slot, not a dependency", and its open question on the slot mechanism — answered by one mechanism generalising the contribution patterns pkit already had; the hand-off's separate *anchors* slot was dropped, since the core anchors cover it (living-docs DEC-001 point 4) · pkit: role-named connection points — resolver *shipped*, data connections *planned* ([COR-052][cor052], [COR-053][cor053]).
+*Behind it:* hand-off §7 "two capabilities joined by a slot, not a dependency", and its open question on the slot mechanism — answered by one mechanism generalising the contribution patterns pkit already had; the hand-off's separate *anchors* slot was dropped, since the core anchors and the kinds capabilities register cover it — for sources only once gap 7 closes (living-docs DEC-001 point 4) · pkit: role-named connection points — resolver *shipped*, data connections *planned* ([COR-052][cor052], [COR-053][cor053]).
 
 ## Where each part of the hand-off ended up
 
-*Met:* **yes** — the concept keeps it as asked; **partly** — kept, with the gap named; **changed** — the conclusion differs, for the reason given.
+*Met:* **yes** — the concept keeps it as asked; **partly** — kept, with the gap named; **changed** — the conclusion differs, for the reason given; **no** — not taken up.
 
 | Hand-off item | Met | Concluded | Record |
 |---|---|---|---|
@@ -183,13 +183,13 @@ Documentation works with no product knowledge and no work tracker; each enriches
 | §5 inheritance, no contradiction | yes | idea 6; the mechanical part is checked, the rest reviewed | COR-051 point 7 |
 | CMN-001 inherit, extend at declared points | yes | rule-set inheritance and extension points | COR-051 point 7 |
 | CMN-002 nothing without an input | partly | the method's "nothing ahead of the need" — judged, not checked (gap 11) | living-docs DEC-001 point 3 |
-| CMN-003 every artefact names its cause | changed | anchors are optional: an artefact without them is counted, and onboarding ends when each is anchored or accepted with a reason; every rule carries an origin | COR-050 point 2; living-docs DEC-001 point 8; COR-051 point 5 |
+| CMN-003 every artefact names its cause | changed | anchors are optional: an artefact without them is counted, and onboarding ends when each is anchored or accepted with a reason; every accepted rule carries an origin | COR-050 point 2; living-docs DEC-001 point 8; COR-051 point 5 |
 | CMN-004 the process is the index | changed | the anchors are the index of why each page exists | living-docs DEC-001 point 3 |
 | CMN-005 a README is a signpost | partly | the method's signpost rule — judged, not checked (gap 11); the `readme-exceptions` extension point has no counterpart until the method is written | living-docs DEC-001 point 3 |
 | CMN-006 permanent ids, `ID:name` extension points | changed | ids `RS-<SET>-NNN`, permanent and never reused; extension points `#name`, so they never clash with a namespace colon. Mockingbird's CMN ids gain the `RS-` prefix once, on adoption | COR-051 point 3 |
 | CMN-007 the method's root exists by decision | yes | the method ships with the capability; each space's definition sits at a sub-path the capability declares and records when first used | living-docs DEC-001 point 2; COR-049 point 5 |
-| CMN-008 origin line | yes | origin fields — when, who, why in the decider's words, or a decision record — checked deterministically | COR-051 point 5 |
-| "Decisions cause rules; steps cause data" | changed | the first half stands; the second is replaced by anchors. Whether a planned re-check becomes a step-based lifecycle is left to a later decision | COR-050; software-analysis DEC-001 point 11 |
+| CMN-008 origin line | changed | the origin's content is kept — when, who, why in the decider's words, or a decision record — as data beside the rule, checked deterministically, rather than a prose line; there is no "raised by" field | COR-051 points 2, 5 |
+| "Decisions cause rules; steps cause data" | changed | the first half stands; the second is replaced by anchors. Whether a planned re-check becomes a step-based lifecycle is left to a later decision | COR-051 point 1; COR-050; software-analysis DEC-001 point 11 |
 | §6 "a lightweight rule-list form" | yes | one short document per set of rules | COR-051 point 2 |
 | §7 two capabilities joined by a slot | yes | idea 11; readers are filled from the product knowledge, neither side names the other | COR-052, COR-053 |
 | §7 where the CMN rules live | yes | split by nature: the rule machinery and anchors in the shared core, the documentation rules in the method | COR-051 (rationale, why core); living-docs DEC-001 point 3 |
@@ -197,24 +197,24 @@ Documentation works with no product knowledge and no work tracker; each enriches
 | §7 "revalidation and I5 become one test" | changed | a run is evidence; it never clears a flag by itself | software-analysis DEC-001 point 7 |
 | §7 the name | yes | living-docs, after Cyrille Martraire's *Living Documentation* | — |
 | §8 R2 decisions as internal docs | yes | as the hand-off concluded: project decisions stay outside pkit's folder, at a configurable location | COR-025 |
-| §8 R3 a first-class internal root | changed | two roots in the project's backbone configuration, not in the agent overlay; a location chosen afterwards derives from the internal root and is recorded; placeholders already set stay, and do not follow a later root change | COR-049 points 3, 5, 6 |
+| §8 R3 a first-class internal root | changed | two roots in the project's backbone configuration, not in the agent overlay; a location chosen afterwards derives from the internal root and is recorded; placeholders already set stay, and do not follow a later root change | COR-049 points 1, 3–6 |
 | §8 "inside `.pkit/` is fine" for agent-maintained projects | changed | a root always lies outside pkit's own folder, whoever maintains it; the record gives no reason (gap 15) | COR-049 point 1 |
-| §8 warn when `.pkit/` is excluded from git | no | not decided or planned (gap 13) | — |
+| §8 warn when `.pkit/` is excluded from git | partly | pkit supports and reports a *private* visibility mode that hides its folder from the shared repository; nothing warns that the checks cannot run in the pipeline under it (gap 13) | project-kit's ADR-009 |
 | §9 Mockingbird's migration shape | changed | see "What adopting means for Mockingbird" | COR-049; living-docs DEC-001 points 1, 8 |
 | §10 statuses and supersession for light rules | yes | proposed, accepted, superseded, withdrawn | COR-051 point 4 |
-| §10 evidence for rules vs for data | yes | origins stay inline and may cite a captured source | COR-051 point 5 |
+| §10 evidence for rules vs for data | partly | origins stay inline and may cite a captured source, once source anchors exist (gap 7) | COR-051 point 5 |
 | §10 the process substrate for doc steps | changed | no — the flags come from a check over the anchors | COR-050; software-analysis DEC-001 point 11 |
 | §10 default internal root: dotfolder or not | yes | the project's choice; both default to `docs/`; outside pkit's own folder | COR-049 point 1 |
 | §10 reader-review: agent or product run | yes | both: the agent reads, the product's runs arrive as evidence | living-docs DEC-001 point 6 |
 
 ## What adopting means for Mockingbird, concretely
 
-- **Commit pkit's folder.** It is excluded from git today, and three things adoption needs live there: the project's backbone configuration (roots, places, what ought to be described, warning or enforcing), the installed method, and the check itself. Without it, the pipeline cannot run the check, and a changed rule flags nothing.
+- **Switch pkit to shared visibility, then commit its folder.** It is hidden from git today — most likely pkit's private mode; `pkit visibility` reports it and `pkit visibility shared` reverses it. The folder holds what adoption needs: the project's backbone configuration (roots, places, what ought to be described, warning or enforcing), the installed method, and the pinned pkit version. The check itself is the pkit tool, which the pipeline installs at that pinned version. Private mode and living documentation cannot coexist anyway: an anchored page carries pkit's block in its front matter, so pkit becomes visible in the shared repository with the first anchored page.
 - **Declare the two roots**: `docs/` for users and `tech-docs/` for maintainers — both folders already exist.
-- **The hand-built method** in `tech-docs/.meta/` becomes the shared method, installed with the capability, plus the two spaces' definitions under `tech-docs/`. The team's CMN rules live on as a project set of rules that inherits the shared method and withdraws what the method or pkit's core already provides.
+- **The hand-built method** in `tech-docs/.meta/` becomes the shared method, installed with the capability, plus the two spaces' definitions under `tech-docs/`. The team's CMN rules move into a project set of rules that inherits the shared method. Rules that duplicate what pkit's core provides are withdrawn, as the documentation record asks; rules the shared method already states are best withdrawn too (advice, not a rule); rules stricter than pkit's — CMN-003's "every artefact names its cause", where pkit's anchors are optional — stay as the team's own binding rules.
 - **The planned `tech-docs/users/`** (actors, journeys, needs, stories) becomes the product knowledge under `tech-docs/`, if the team adopts software-analysis.
 - **Today's `docs/` mixes both audiences**: guides and onboarding pages for users, and the architecture decisions, `ARCHITECTURE.md`, `CONTRIBUTING.md`, `RELEASING.md` for maintainers. Onboarding proposes moving the technical ones to `tech-docs/` or assigning them to the technical space; the existing location of the architecture decisions stays until a reviewed change moves it.
-- **Wire the change check into the pipeline**, in warning mode first, and enforce it when the anchors are trusted.
+- **Wire the change check into the pipeline** — the pipeline installs pkit at the pinned version — in warning mode first, and enforce it when the anchors are trusted.
 - **Fill the reading evidence with the product itself** — persona × task runs over its own docs, the team's own I5 idea.
 
 ## Why not build it in each project
@@ -226,20 +226,20 @@ Every idea above is universal, and the machinery behind it is neither trivial no
 - **A rule system** with permanent ids, recorded origins, statuses, inheritance and version pins.
 - **A connection model** that lets documentation, product knowledge and work tracking enrich each other without depending on each other.
 - **Agents that propose** and a review loop that keeps a person in charge.
-- **Upgrades that reach every project**: the method improves once, every project receives it, and nothing a project wrote is touched.
+- **Upgrades that reach every project**: the method improves once and every project receives it; an upgrade never overwrites a project's content, and where it must change the methodology's own block inside a page it migrates it, keeping every re-check point.
 
-A project keeps only what is genuinely its own: its content (pages, product knowledge, its own rules) and a few choices (where its two roots are, which documents outside them belong to a space, what code ought to be described, warning or enforcing). The machinery **demands nothing until the first page is anchored**, and it can be adopted one piece at a time. That is the last link: **pkit gives every project this machinery for free, so each project writes only its content.**
+A project keeps only what is genuinely its own: its content (pages, product knowledge, its own rules) and a few choices (where its two roots are, which documents outside them belong to a space, what code ought to be described, warning or enforcing). The machinery **demands nothing until the first page is anchored**, and it can be adopted one piece at a time. That is the last link: **pkit gives every project this machinery for free — ready-made, and maintained once for everyone — so each project writes only its content.**
 
 ## The commitment: project-kit adopts it first
 
-project-kit is its own first adopter, ahead of Mockingbird ([ADR-055][adr055]). **Done:** its architecture decisions have moved under what will be its technical root. **Decided, being built:** user root `docs/` and technical root `tech-docs/`; the change check in **enforcing mode from the day it exists**, because every page and anchor here is produced by the tooling under test; its first product knowledge will be the use cases of its own multi-clone coordination work; its code-to-document mapping becomes page anchors during onboarding.
+project-kit is its own first adopter, ahead of Mockingbird ([ADR-055][adr055]). **Done:** its architecture decisions have moved under what will be its technical root. **Being built:** the change check, which project-kit runs in **enforcing mode from the day it exists** — because every page and anchor here is produced by the tooling under test — over whatever is anchored by then, which starts small. **Decided, planned:** user root `docs/` and technical root `tech-docs/`; its first product knowledge, the use cases of its own multi-clone coordination work; its code-to-document mapping converted into page anchors during onboarding.
 
 ## Status on 2026-09-28
 
 | Idea | State |
 |---|---|
 | 1 spaces and roots | roots *shipped*; place rules *decided*, applied with living-docs (*planned*) |
-| 2 anchors | block and its validation *shipped*; source anchors *not yet filed* (gap 7) |
+| 2 anchors | block shape and its validation *shipped*; anchors pointing at nothing reported by the checks — *in progress*; source anchors *not yet filed* (gap 7) |
 | 3 flags | change check *in progress*, with project-kit's enforcing gate; whole-repository check *planned* |
 | 4 answers in the page | shape *shipped*; re-check and postpone commands, debt listing *planned* |
 | 5 readers | *planned* |
@@ -263,23 +263,23 @@ So that no slide promises what the tool will not deliver, and so that pkit can c
 4. **Duplicates and owners** (I3). Duplicates are found by review and the agent, not by a check; nothing records which page owns a fact. The June spike found that a declared owner made "one owner per topic" enforceable.
 5. **Format** (I2). Templates and a page kind are planned; checking a page body against its template is not.
 6. **User paths** (I5, "a break fails loudly"). A rule plus executed runs as evidence; the evidence is advisory, so a broken path informs the review but fails nothing by itself. No path or link check is planned, and executed runs need something to perform them — the product itself, as Mockingbird can, or a future testing capability.
-7. **Sources as anchors.** The anchor block accepts only the three core kinds until capabilities can register further kinds; nothing filed builds that registry yet, so source anchors — most likely from the evidence capability — are not deliverable.
+7. **Sources as anchors.** The anchor block accepts only the three core kinds until capabilities can register further kinds; that registry is decided (COR-050 point 2) but nothing filed builds it yet, so source anchors — most likely from the evidence capability — are not deliverable.
 8. **Docs checked against the tool itself** (commands, flags, examples actually run) arrive as executed evidence; nothing performs it yet.
 9. **Code checked against the product knowledge** is testing, which the product-knowledge capability deliberately leaves out; a re-check reads, and executed results only inform it.
 10. **Files and folders in general** (T2). The anchors explain why each page exists; not why an arbitrary file or folder does.
 11. **Two method rules are judgement only**: "nothing ahead of the need" and "a signpost, not a summary".
 12. **Docs outside the repository** — a separate site — are out of reach of anchors.
-13. **pkit's folder must be tracked.** The configuration, the method and the check live there; nothing warns when it is excluded from git, which the hand-off asked for.
+13. **pkit must be shared for living documentation to work.** pkit supports a *private* mode that hides its folder from the shared repository, and reports it; nothing warns that the checks cannot run in the pipeline under it, and anchored pages would reveal pkit anyway. The hand-off asked for such a warning.
 14. *(internal)* **A flag result is only as fresh as its base.** Two changes landing back to back can each pass while the second made the first's page stale; the whole-repository view catches it afterwards. project-kit does not yet gate on an up-to-date base; a merge queue is the planned end state.
 15. *(internal)* **The roots rule has no recorded reason.** COR-049 keeps roots outside pkit's own folder but does not say why; the hand-off had allowed agent-maintained docs inside it.
 16. *(internal)* **Commands a capability supplies to the checks** must run bounded in time, deterministic and offline; the time bound and the output check are enforceable, how "offline" is realised is not yet decided — the backbone does not own confinement.
 17. *(internal)* **The work tracker's "documentation impact" section** keeps satisfying the tracker's own code-to-document mapping until a project converts that mapping into page anchors; obligations raised by the documentation capability are met only by the pages' answers.
 
-**Candidates for pkit** — the "vice versa" this note surfaces, not yet decided: an unattended agent trigger (1), a declared owner per fact (4), the anchor-kind registry (7), a warning when pkit's folder is untracked (13), and the reason behind the roots rule (15). If the presentation work finds more — a concept pkit misses, or pkit behaviour that contradicts the concept — raise it to project-kit as a change request from the Mockingbird side, the way #949 arrived, rather than editing project-kit from a Mockingbird session.
+**Candidates for pkit** — the "vice versa" this note surfaces. Not yet decided: an unattended agent trigger (1), a declared owner per fact (4), a warning when friction or living documentation is configured while pkit is private (13), and the reason behind the roots rule (15). Decided but not yet filed: the registry through which capabilities add anchor kinds (7). If the presentation work finds more — a concept pkit misses, or pkit behaviour that contradicts the concept — raise it to project-kit as a change request from the Mockingbird side, the way #949 arrived, rather than editing project-kit from a Mockingbird session.
 
 ## Words
 
-**Words the team already uses, and pkit uses the same way:** anchors, spaces, readers, reader-review, re-checking (pkit writes *revalidation*), rules and rule sets, extension points, actors, use cases, journeys, glossary.
+**Words the team already uses, and pkit uses the same way:** spaces, readers, reader-review, revalidation (re-checking), rules and rule sets, extension points, actors, use cases, journeys, glossary. **Anchors** is shared with one difference: the hand-off anchors every statement, pkit anchors every page.
 
 **pkit's own words**, to introduce once, near the end, if at all:
 
@@ -289,15 +289,15 @@ So that no slide promises what the tool will not deliver, and so that pkit can c
 | deferral | a postponed answer, for one anchor, with its reason |
 | debt | everything flagged or postponed, with who, when and which change |
 | LDOC | the shared documentation method |
-| role | the part a component plays (documentation, product knowledge, work tracking) |
+| role | the part a component plays (documentation, analysis, work tracking) |
 | connection point | where one role plugs into another without depending on it |
 
 ## Notes for building the presentation
 
 - **Shape.** Open on the team's own invariants and the IGW evidence; walk the chain; present the eleven ideas; show why not to build it in each project; name pkit only then. Keep the *Behind it* lines off the concept slides — one closing slide can show the traceability table.
-- **Avoid.** Record ids, issue numbers and dates on slides. The phrases *automatic doc updates*, *every statement verified*, *costs nothing*, *project-kit runs on it*. Presenting "living documentation" as a new term — it is Cyrille Martraire's, and the name was chosen for that reason.
-- **Honest status.** Most ideas are decided and being built; the first adopter enforces from the day the check exists. That is a stronger story than an overclaim.
-- **The team's rules shaped the method.** CMN-001 to CMN-008 were not discarded: each became shared machinery or a rule of the shared method, or was replaced for a stated reason (the table above). On adoption they live on as the team's own rules, inheriting the shared method. Worth a slide.
+- **Avoid.** Record ids, issue numbers and dates on slides. The phrases *automatic doc updates*, *every statement verified*, *project-kit runs on it*, and *adoption costs nothing* — the machinery is free, but adopting still means sharing pkit's folder and wiring the check. Presenting "living documentation" as a new term — it is Cyrille Martraire's, and the name was chosen for that reason.
+- **Honest status.** All ideas are decided; the foundations are shipped or being built; the documentation and product-knowledge capabilities come next. The first adopter enforces from the day the check exists, over what it has anchored by then. That is a stronger story than an overclaim.
+- **The team's rules shaped the method.** CMN-001 to CMN-008 were not discarded: each became shared machinery or a rule of the shared method, or was replaced for a stated reason (the table above). On adoption, those pkit already provides are withdrawn and the stricter ones live on as the team's own rules, inheriting the shared method. Worth a slide.
 - **At most one "what it looks like" slide**, at the end — for example this page front matter. The `pkit:` block's keys are decided; the page's own `reader` and `kind` fields are illustrative until the capability ships their schema:
 
   ```yaml
