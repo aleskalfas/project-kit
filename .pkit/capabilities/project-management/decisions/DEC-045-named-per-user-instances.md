@@ -120,7 +120,7 @@ folder with a name-derived suffix and scaffolds the new clone's config (its
 (creating or removing a clone directory is destructive-adjacent per `.pkit/rules/core.md`
 rule 8) and wires the new clone up with the project's pkit setup so it behaves like any
 other clone. It provisions clones for the person running it, on their own machine — it
-does not mutate any other repository's context (`.pkit/rules/core.md` rule 18).
+does not mutate any other repository's context (`.pkit/rules/core.md` rule 19).
 
 **8. Deferred, named-not-built (per [pkit:COR-007]).** The *automatic* "decompose this
 project into instances for me" step — proposing which instances should exist and where

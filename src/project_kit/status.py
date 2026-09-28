@@ -21,7 +21,7 @@ from pathlib import Path
 
 import click
 
-from project_kit import cli_render
+from project_kit import cli_render, workspace
 from project_kit.install import find_source_kit, find_target_root
 from project_kit.manifest import read_backbone_manifest, read_kit_version
 
@@ -55,6 +55,7 @@ def report_status() -> None:
 
     click.echo(f"  {'Kit installed at:':<22} .pkit/")
     _report_backbone_version(target_root, source_kit)
+    _report_workspace(target_root)
 
     _report_claude_adapter(target_root)
     _report_capabilities(target_root, source_kit)
@@ -88,6 +89,21 @@ def _report_backbone_version(target_root: Path, source_kit: Path) -> None:
     else:
         gloss = "up to date"
     click.echo(f"  {'Backbone version:':<22} {installed}   ({gloss})")
+
+
+def _report_workspace(target_root: Path) -> None:
+    """The agent workspace (#1043): whether the folder exists and whether git
+    ignores it, with `pkit sync` as the remedy when either is missing."""
+    state = workspace.inspect(target_root)
+    parts = ["present" if state.present else "missing"]
+    if not state.in_git:
+        parts.append("not a git repository, nothing to exclude it from")
+    else:
+        parts.append("excluded from git" if state.excluded else "NOT excluded from git")
+    gloss = ", ".join(parts)
+    if not state.present or (state.in_git and not state.excluded):
+        gloss += " — run `pkit sync`"
+    click.echo(f"  {'Agent workspace:':<22} {workspace.WORKSPACE_DIR}/   ({gloss})")
 
 
 def _report_claude_adapter(target_root: Path) -> None:

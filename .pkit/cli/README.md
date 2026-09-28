@@ -142,6 +142,7 @@ Runs first install in this order:
 1. **Propagation** — every path in the synced manifest is written into the project's `.pkit/` tree.
 2. **Seed** — every path in the seed manifest is written once with its template content.
 3. **Merge** — every declared merge target is merged with its core baseline (per COR-002's two-tier contract).
+4. **Agent workspace** — creates `.agent-workspace/` at the project root and adds the line `/.agent-workspace/` to the repository's local exclude file, `<git common dir>/info/exclude`, so the intermediate files agents keep there never reach a commit (the workspace rule in `rules/core.md`; the permission model grants the folder to every agent — see `.pkit/permissions/README.md`, "The agent workspace"). The exclude file belongs to the clone and is never committed, so it is not one of the merged fixed-path files of COR-002: the entry is appended directly, no other line is touched, and a line already naming the folder (with or without the leading `/` or trailing `/`) counts as present. Because the entry goes in the *common* git directory, one line covers every worktree of the clone, each at its own root. Outside a git repository the folder is created and the exclusion skipped with a note.
 
 **Announce-and-confirm gate (issue #780).** `init` does not install silently at whatever the resolver picks — the target can be a git root or install-marked ancestor well above where you are standing. Before installing it:
 
@@ -165,6 +166,8 @@ If you arrive at a partial or broken state, run `validate` to see what is and is
 ### `sync`
 
 Re-runs propagation only. Pulls current canonical core content into your project's `.pkit/` tree. Does **not** invoke seed (one-shot only — see COR-001) or merge (separate consent profile — see COR-002 and COR-004). Idempotent: re-running with no changes pending reports "current" and exits cleanly.
+
+**Agent workspace.** Sync runs the same workspace step as `init` (step 4 above) — self-host included — so a project installed before the workspace existed, or one whose folder or exclude entry has gone missing, gets them back. It creates only what is missing and reports each part `unchanged` otherwise.
 
 **Capability downgrade guard (`--force`).** When sync reconciles an installed kit-shipped capability against its kit source (auto-upgrade per COR-017), it compares the source version to the installed version of record (the per-component `manifest.yaml`, falling back to the installed `package.yaml`). If the source is **older** than what's installed — the sign of a stale or mis-pinned source — sync **refuses** that capability's refresh, printing a `refused` line naming both versions, and leaves the installed tree untouched rather than silently downgrading it. Pass **`--force`** to override: the downgrade then proceeds, but a loud `downgrade` line records the deliberate overwrite. A source version equal to or newer than installed refreshes normally, unaffected by the guard. (This is the fix for issue #524, where a stale source silently overwrote a newer committed capability tree.)
 
@@ -428,6 +431,7 @@ Read-only inventory of how project-kit is wired in this project — useful as a 
 
 - **Project root** and the resolved **source pkit binary** (the `pkit` you ran from).
 - **Whether `.pkit/` is installed** at the project root (and a hint to run `pkit init` if not).
+- **Agent workspace** — whether `.agent-workspace/` exists and whether git ignores it (`excluded from git`, `NOT excluded from git`, or not a git repository), asked of git itself so an exclusion by any rule counts; when the folder is missing or not excluded, the line names `pkit sync` as the remedy.
 - **Adapter status** (Claude Code today): whether `.claude/settings.json` is merged, whether a `.pre-pkit` backup exists, and a list of deployed skills split into kit-managed (symlinks into `.pkit/skills/`) vs user-managed (anything else under `.claude/skills/`).
 - **Capabilities** — which are available in `.pkit/capabilities/` and which are installed (per COR-017).
 - **Documentation** — the two documentation roots with their source (`explicit` / `default`), and every recorded documentation location, those inside the internal root and then those outside it, one line each (COR-049 points 6 and 7; see "Configuration file", the `docs` key).

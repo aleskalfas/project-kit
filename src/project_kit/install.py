@@ -22,7 +22,7 @@ from pathlib import Path
 
 import click
 
-from project_kit import treecopy
+from project_kit import treecopy, workspace
 from project_kit.router import looks_like_pkit_install
 
 # Settings-file template seeded into adopter projects when no
@@ -556,7 +556,20 @@ def install_kit(target_root: Path, dry_run: bool = False) -> None:
 
     _stamp_backbone_manifest(ctx)
     _render_runtime_ignore(ctx)
+    ensure_agent_workspace(ctx)
     _print_next_steps(ctx)
+
+
+def ensure_agent_workspace(ctx: InstallContext) -> None:
+    """Create the agent workspace and its local git exclusion (#1043).
+
+    A core step shared by `init` and `sync` — self-host included, so the
+    methodology's own checkout gets the folder too. Idempotent; see
+    `project_kit.workspace` for why the exclusion goes in the local exclude file
+    rather than through the merge primitive.
+    """
+    for verb, detail in workspace.ensure(ctx.target_root, dry_run=ctx.dry_run):
+        click.echo(f"  {verb:<12} {detail}")
 
 
 def _render_runtime_ignore(ctx: InstallContext) -> None:
