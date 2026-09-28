@@ -34,6 +34,13 @@ The check's semantics, all fixed by COR-042:
   of that definition, or a malformed contract block — reported distinctly,
   holding the exit code non-zero (a typo'd trigger must not report green
   forever).
+- **A role-addressed upstream is found through the wiring resolver.** An
+  entry may name its upstream by role, `<publisher>::<role>:<point>` (COR-053
+  point 2); the contract then reads the process the role's active provider
+  offers there (`connections.Wiring.offered_process`), from the one wiring the
+  walk resolves — never a second resolution of roles. No active provider, a
+  role conflict, or an address the provider does not offer is uninterpretable:
+  indeterminate. The `candidates` seam still receives the address as declared.
 - **Determinate-empty is clean; broken-empty is not.** A candidate source that
   evaluated without error and confirmed zero subjects is a clean, determinate
   answer (no lines for that contract). An erroring/unavailable candidate source,
@@ -92,9 +99,10 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from project_kit import cli_render
+from project_kit.package_validate import ROLE_QUALIFIER, role_of
 from project_kit.process import (
     PREDICATE_STUB_MARKER,
     PredicateRunner,
@@ -108,6 +116,9 @@ from project_kit.process_graph import (
     discover_process_addresses,
     installed_capabilities,
 )
+
+if TYPE_CHECKING:
+    from project_kit.connections import Wiring
 
 # Finding kinds — the only two things a per-subject line can report (a satisfied
 # hand-off produces NO line, COR-042's one-line-per-miss shape).
@@ -387,7 +398,9 @@ def _contract_indeterminate(
     )
 
 
-def evaluate_contract(repo_root: Path, contract: HandoffContract) -> ContractReport:
+def evaluate_contract(
+    repo_root: Path, contract: HandoffContract, wiring: Wiring | None = None
+) -> ContractReport:
     """Evaluate one contract per COR-042 point 2. Read-only: it runs the two
     seam predicates and the upstream's detection predicates live, writing
     nothing — never `move`, never a journal entry.
@@ -396,6 +409,12 @@ def evaluate_contract(repo_root: Path, contract: HandoffContract) -> ContractRep
     upstream address -> phantom trigger state -> broken candidate source; then
     per confirmed subject: unreadable position -> broken `resolve` -> explicit
     absence (the miss) / >=1 downstream id (satisfied, no line).
+
+    A role-addressed upstream (`<publisher>::<role>:<point>`, COR-053 point 2)
+    is the process the role's active provider offers at that address, read
+    from `wiring` — the wiring resolver's one computation, never a second
+    resolution of roles here; resolved from the tree when not supplied. An
+    address no active provider offers is uninterpretable: indeterminate.
     """
     handoff = contract.handoff
     if not isinstance(handoff, dict):
@@ -424,8 +443,15 @@ def evaluate_contract(repo_root: Path, contract: HandoffContract) -> ContractRep
         return _contract_indeterminate(
             contract, "entry declares no upstream address to check against"
         )
+    address, unresolved = _implementation_address(repo_root, contract.upstream, wiring)
+    if address is None:
+        return _contract_indeterminate(
+            contract,
+            f"upstream role address {contract.upstream!r} does not resolve to an offered "
+            f"process: {unresolved}",
+        )
     try:
-        upstream_def = load_definition(repo_root, contract.upstream)
+        upstream_def = load_definition(repo_root, address)
     except ProcessError as exc:
         return _contract_indeterminate(
             contract,
@@ -522,6 +548,40 @@ def evaluate_contract(repo_root: Path, contract: HandoffContract) -> ContractRep
     )
 
 
+def _implementation_address(
+    repo_root: Path, upstream: str, wiring: Wiring | None
+) -> tuple[str | None, str]:
+    """`upstream` as the `<capability>:<process-id>` address the engine loads, with
+    `""`; or None and why a role address reaches no process.
+
+    The implementation form is returned as written. The role form is the process
+    the role's active provider offers at that address (`Wiring.offered_process`).
+    """
+    if not _is_role_address(upstream):
+        return upstream, ""
+    from project_kit import connections as cx
+
+    resolved = wiring if wiring is not None else cx.shared_wiring(repo_root)
+    point = resolved.offered_process(upstream)
+    if point is not None and point.process_id is not None:
+        return f"{point.provider}:{point.process_id}", ""
+    if point is not None:
+        return None, f"{point.provider!r} offers it without naming its process definition"
+    role = resolved.role(role_of(upstream) or "")
+    if role is None or not role.providers:
+        return None, "no installed capability provides its role"
+    if role.conflict:
+        providers = ", ".join(repr(p) for p in role.providers)
+        return None, f"its role is provided by {providers} and no provider is selected"
+    if role.active is None:
+        return None, f"the provider selected for its role, {role.selected!r}, does not provide it"
+    return None, f"{role.active!r}, the active provider of its role, offers no process there"
+
+
+def _is_role_address(address: str) -> bool:
+    return ROLE_QUALIFIER in address
+
+
 def _read_candidates(
     repo_root: Path, contract: HandoffContract, predicate: dict[str, Any]
 ) -> list[str] | None:
@@ -606,9 +666,12 @@ def build_report(repo_root: Path, focus: str | None = None) -> HealthReport:
     """
     addresses = discover_process_addresses(repo_root)
     contracts, skipped = collect_contracts(repo_root, addresses)
+    # The wiring, resolved once for the walk and only when a contract names its
+    # upstream by role (COR-053 point 2): every role address reads the same one.
+    wiring = _wiring_for(repo_root, contracts)
     unresolved: UnresolvedScope | None = None
     if focus is not None:
-        contracts = [c for c in contracts if focus in (c.upstream, c.downstream)]
+        contracts = [c for c in contracts if focus in _endpoints(repo_root, c, wiring)]
         # Walked-but-contractless is determinate-empty (the definition WAS read
         # and declares nothing) — only an address the walk never reached, and
         # that no contract names either, is uninterpretable.
@@ -619,10 +682,29 @@ def build_report(repo_root: Path, focus: str | None = None) -> HealthReport:
     rank = _topological_rank(contracts)
     ordered = sorted(contracts, key=lambda c: _contract_sort_key(c, rank))
     return HealthReport(
-        contracts=tuple(evaluate_contract(repo_root, c) for c in ordered),
+        contracts=tuple(evaluate_contract(repo_root, c, wiring) for c in ordered),
         skipped=tuple(sorted(skipped, key=SkippedDefinition.sort_key)),
         unresolved_scope=unresolved,
     )
+
+
+def _wiring_for(repo_root: Path, contracts: list[HandoffContract]) -> Wiring | None:
+    """The live wiring when any contract addresses its upstream by role; None
+    otherwise, so a walk over implementation addresses never resolves roles."""
+    if not any(_is_role_address(c.upstream) for c in contracts):
+        return None
+    from project_kit import connections as cx
+
+    return cx.shared_wiring(repo_root)
+
+
+def _endpoints(
+    repo_root: Path, contract: HandoffContract, wiring: Wiring | None
+) -> tuple[str, ...]:
+    """The addresses a `--process` scope matches a contract by: its downstream, its
+    upstream as declared, and a role-addressed upstream's implementation too."""
+    address, _unresolved = _implementation_address(repo_root, contract.upstream, wiring)
+    return tuple(a for a in (contract.upstream, address, contract.downstream) if a)
 
 
 def _scope_reason(repo_root: Path, focus: str, addresses: list[str]) -> str:
