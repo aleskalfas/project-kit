@@ -45,22 +45,28 @@ from typing import Any
 import click
 from ruamel.yaml import YAML
 
-from project_kit import cli_render
+from project_kit import cli_render, docs_roots
 
 # Conventional default paths for well-known overlay categories, relative to
-# the project root.  reconcile checks whether the directory at this path
-# exists before deciding whether to fill uncommented (detect-then-fill) or
-# fall back to a commented stub.  Declared here — not in agent prose — so that
-# reconcile can act on them programmatically and any future agent category can
-# register its own default in the same place.
+# the project root, **under the default documentation root** — the fallback
+# literals (`docs/architecture`, `docs/architecture/decisions`). Per COR-049
+# point 4 a category that locates a folder of documents derives from the
+# project's *internal root* plus its conventional sub-path; the sub-paths are
+# the one list the backbone owns, `docs_roots.CONVENTIONAL_SUBPATHS`. Register
+# a new category's default there. reconcile / adopt resolve the defaults at
+# run time through :func:`conventional_category_defaults`, so a project that
+# declared another internal root gets its own locations; with the default root
+# they equal this map exactly, so nothing changes for existing adopters.
 #
-# Keys are overlay category names; values are the conventional-default directory
-# path (string, relative to project root, no leading slash).  A missing key
-# means "no conventional default" → always fall back to a commented stub.
-CONVENTIONAL_CATEGORY_DEFAULTS: dict[str, str] = {
-    "architecture-docs": "docs/architecture",
-    "adr-records": "docs/architecture/decisions",
-}
+# A category with no sub-path has no conventional default → always a commented
+# stub.
+CONVENTIONAL_CATEGORY_DEFAULTS: dict[str, str] = docs_roots.default_conventional_locations()
+
+
+def conventional_category_defaults(target_root: Path) -> dict[str, str]:
+    """The conventional default directory per category, derived from the
+    project's internal documentation root (COR-049 point 4)."""
+    return docs_roots.conventional_locations(target_root)
 
 
 def _ownership_mod(target_root: Path) -> Any | None:
@@ -548,9 +554,12 @@ def reconcile_overlay(target_root: Path, *, write: bool) -> tuple[list[str], str
         """A ``# cat:`` stub exists but is not yet uncommented/filled."""
         return bool(re.search(rf"(?m)^\s*#\s*{re.escape(cat)}\s*:", existing))
 
+    conventional = conventional_category_defaults(target_root)
+
     def _conventional_dir_exists(cat: str) -> str | None:
-        """Return the conventional default path if its directory exists, else None."""
-        default = CONVENTIONAL_CATEGORY_DEFAULTS.get(cat)
+        """Return the conventional default path (derived from the internal
+        root) if its directory exists, else None."""
+        default = conventional.get(cat)
         if default and (target_root / default).is_dir():
             return default
         return None
@@ -631,11 +640,11 @@ def reconcile_overlay(target_root: Path, *, write: bool) -> tuple[list[str], str
         if write:
             if not path.is_file():
                 raise FileNotFoundError(f"overlay not found at {path}; run `pkit init` first.")
-            block_lines = ["", "# --- added by `pkit agents reconcile` (detect-then-fill) ---"]
+            # Choosing the location is what records it (COR-049 point 5).
             for cat, conv_path in auto_fill:
-                block_lines += [f"{cat}:", f"  - {conv_path}"]
-            with path.open("a", encoding="utf-8") as fh:
-                fh.write("\n".join(block_lines) + "\n")
+                docs_roots.record_location(
+                    target_root, docs_roots.BACKBONE, cat, conv_path, by="pkit agents reconcile"
+                )
             lines.append("")
             lines.append("conventional paths written — run `pkit sync` to deploy the agent(s).")
         else:
@@ -796,7 +805,8 @@ def adopt_agent(
     defined in ``.pkit/agents/project/overlay.yaml``:
 
     1. Ensure the conventional default dir exists — create it (with a seed README)
-       if absent.  Uses :data:`CONVENTIONAL_CATEGORY_DEFAULTS` to resolve the path.
+       if absent.  The path is the conventional default derived from the project's
+       internal documentation root (:func:`conventional_category_defaults`).
        Categories without a conventional default raise :class:`click.ClickException`
        because there is no canonical path to create — unless the agent reads the
        category only optionally (ADR-052): then it is left undefined, reported in
@@ -851,9 +861,10 @@ def adopt_agent(
     # conventional default is not a prerequisite — the agent deploys without it —
     # so it is set aside rather than refused; one *with* a default is wired as usual.
     _hard, optional = agent_category_roles(src)
+    conventional = conventional_category_defaults(target_root)
     optional_unset = [
         c for c in sorted(optional)
-        if not _is_defined(c) and c not in CONVENTIONAL_CATEGORY_DEFAULTS
+        if not _is_defined(c) and c not in conventional
     ]
     undefined = [
         c for c in sorted(referenced) if not _is_defined(c) and c not in optional_unset
@@ -864,7 +875,7 @@ def adopt_agent(
     # Judged over `undefined`, not everything referenced: an agent whose
     # write-carrying category is already set has nothing for adopt to create and
     # should just deploy, not error.
-    no_default = [c for c in undefined if c not in CONVENTIONAL_CATEGORY_DEFAULTS]
+    no_default = [c for c in undefined if c not in conventional]
     if no_default:
         write_carrying = write_carrying_categories(target_root)
         if set(no_default) <= write_carrying:
@@ -891,7 +902,7 @@ def adopt_agent(
     overlay_additions: list[tuple[str, str]] = []  # (category, path)
 
     for cat in undefined:
-        conv_path = CONVENTIONAL_CATEGORY_DEFAULTS[cat]  # guarded above
+        conv_path = conventional[cat]  # guarded above
         abs_dir = target_root / conv_path
 
         # 1. Ensure the conventional dir exists.
@@ -908,13 +919,12 @@ def adopt_agent(
         overlay_additions.append((cat, conv_path))
         categories_wired.append(cat)
 
-    # 3. Write all new categories to the overlay in one append.
-    if overlay_additions:
-        block_lines = ["", "# --- added by `pkit agents adopt` ---"]
-        for cat, conv_path in overlay_additions:
-            block_lines += [f"{cat}:", f"  - {conv_path}"]
-        with path.open("a", encoding="utf-8") as fh:
-            fh.write("\n".join(block_lines) + "\n")
+    # 3. Record each chosen location in the overlay (COR-049 point 5): the
+    #    adopt command's invocation is the consent to write it.
+    for cat, conv_path in overlay_additions:
+        docs_roots.record_location(
+            target_root, docs_roots.BACKBONE, cat, conv_path, by="pkit agents adopt"
+        )
 
     # 4. Deploy the agent.
     deployed = _deploy_agent(target_root, agent_name, deploy_fn=deploy_fn)

@@ -281,6 +281,56 @@ def _target_kit() -> Path:
     return target_kit
 
 
+@main.group("config")
+def config() -> None:
+    """The backbone configuration file, `.pkit/project/config.yaml` (COR-048).
+
+    Every key is owned by a core record and checked by `pkit validate`; the
+    keys are documented in `.pkit/cli/README.md`, "Configuration file".
+    """
+
+
+@config.command("set")
+@click.argument("key", metavar="KEY")
+@click.argument("value", metavar="VALUE")
+@click.option(
+    "--yes", is_flag=True, default=False, help="Consent to the write without a prompt (CI)."
+)
+def config_set(key: str, value: str, yes: bool) -> None:
+    """Set one backbone-owned KEY (dotted, e.g. `docs.internal`) to VALUE.
+
+    The key must exist in the configuration schema and hold a single value;
+    the reserved `project` block is never written. The result is validated
+    before anything is written — an invalid value is refused. Writing needs
+    consent (COR-048 point 5): an interactive confirmation, or `--yes`; a
+    non-interactive run without `--yes` refuses and names the command to run.
+    """
+    from project_kit import backbone_schemas, project_config
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    try:
+        schema = project_config.load_config_schema(target_root)
+    except backbone_schemas.BackboneSchemaMissing as exc:
+        raise click.ClickException(
+            "this tree ships no backbone configuration schema, so keys cannot be checked; "
+            "run `pkit sync` first."
+        ) from exc
+    resolved = project_config.resolve_key(schema, key)
+    typed = project_config.coerce_value(resolved, value)
+    rerun = f"pkit config set {shlex.quote(key)} {shlex.quote(value)} --yes"
+    project_config.write_config(
+        target_root,
+        lambda data: project_config.set_value(data, resolved, typed),
+        consent=project_config.Consent(yes=yes, rerun=rerun),
+        description=f"Set {resolved.dotted} = {typed!r}",
+    )
+    click.echo(
+        f"set {resolved.dotted} = {typed}  ({project_config.PROJECT_CONFIG_RELPATH.as_posix()})"
+    )
+
+
 @main.group(invoke_without_command=True)
 @click.pass_context
 def version(ctx: click.Context) -> None:
@@ -1367,7 +1417,12 @@ def _resolve_report_context(
                 "skip this prompt?",
                 default=True,
             ):
-                report_context.write_project_name(target_root, project)
+                try:
+                    report_context.write_project_name(target_root, project)
+                except click.ClickException as exc:
+                    # Context enriches a report, never gates one: an unwritable
+                    # config (invalid or unparsable) loses the write-back only.
+                    click.echo(f"warning: name not saved — {exc.format_message()}", err=True)
 
     if workstream_override is not None:
         workstream = workstream_override.strip() or None
