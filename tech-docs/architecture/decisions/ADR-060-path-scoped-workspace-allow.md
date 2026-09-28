@@ -18,7 +18,7 @@ Granting it needed something the catalog did not have. Privileges were recognise
 
 The first implementation also recognised shell writes into the folder — an `echo` / `printf` / `cat` redirected into it, a literal here-document, `rm` of files in it — and let such a write through [ADR-025](ADR-025-segment-conservative-bash-allow.md)'s leading-`cd` strip. Review proved that unsound (see Rationale), and the file tools already do the job with the target in plain sight. This record fixes the shape that remains.
 
-As project-kit's own architecture record, harness specifics are in scope. `status: proposed` is the acceptance-gate gesture; because this is a child of foundational ADR-004, accept it before the change that implements it merges.
+As project-kit's own architecture record, harness specifics are in scope. It was accepted, as a child of foundational ADR-004, before the change it records merged, after the architect's review.
 
 ## Decision
 

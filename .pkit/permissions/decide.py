@@ -165,7 +165,9 @@ def recognized_privileges(catalog: dict[str, Any], request: dict[str, Any]) -> s
 # into the folder is judged like any other shell write (ADR-025, unchanged). So
 # a grant of it neither reaches nor denies a file anywhere else. It reduces
 # prompts on the allow side, keyed on the target path; it confines nothing —
-# reach is the OS sandbox's (`filesystem-confinement`).
+# shell reach is the OS sandbox's (`filesystem-confinement`); the file tools
+# run outside the sandbox, so inside the folder the recogniser's precision is
+# the gate (ADR-060 point 6).
 #
 # The folder counts only as the checkout itself holds it: named relative and
 # never climbing out with `..`, and reached through no symlink — a symlinked
