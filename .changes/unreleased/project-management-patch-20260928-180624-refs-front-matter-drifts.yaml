@@ -1,0 +1,10 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The `project-manager` agent declares COR-047, whose requirement its
+  dispatch discipline upholds; `pm-reviewer` and the `pm` skill's validate-body
+  operation word a configuration key and two validator finding names so they
+  no longer read as hooks. `pkit validate --only refs` reports no drift
+  warnings on them, and `pkit sync` redeploys the two changed agents.

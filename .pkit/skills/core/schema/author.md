@@ -215,7 +215,7 @@ joins.
 
 ## Adopter-data schemas — the `pkit_schema:` field + `binds_to:` fallback
 
-When the new schema describes **adopter-side data** (files an adopting project creates that follow this schema, rather than internal capability data the engine reads), the adopter-data layer needs a binding so the resolver knows which schema applies. Per [COR-023] (superseding [COR-022]):
+When the new schema describes **adopter-side data** (files an adopting project creates that follow this schema, rather than internal capability data the engine reads), the adopter-data layer needs a binding so the resolver knows which schema applies. Per [COR-023]:
 
 - **Adopter data files SHOULD carry a top-level `pkit_schema: <capability>:<schema>` field.** This is the recommended discipline; the field is self-describing and survives `pkit sync`.
 - **The schema YAML SHOULD declare a top-level `binds_to:` field** listing repo-relative glob patterns that match the adopter-data files this schema validates:

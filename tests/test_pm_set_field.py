@@ -6,12 +6,16 @@ the BOARD single-select write (#724 — name → id resolution, and the five
 refusals that each name what the board actually offers), and the honesty posture
 inherited from #709: a requested axis that was not written is `[refused]` with a
 non-zero exit, never `[ok]`, while the label-substrate path and the partial
-(mixed-axes) case stay legible.
+(mixed-axes) case stay legible. And `--parent`'s native half (#1040): the native
+sub-issue link moves with the first line, or the call refuses before writing.
 """
 
 from __future__ import annotations
 
 import importlib.util
+import json
+import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -1327,3 +1331,252 @@ def test_main_label_bound_value_with_no_remap_entry_never_exits_zero(
     assert captured["board"] == [] and captured["labels"] == []
     assert "NOT SET" in out
     assert "no change (all fields already set)" not in out
+
+
+# --- --parent moves the native link with the first line (#1040) -------------
+#
+# The native half of `--parent` goes through the containment seam, whose one gh
+# entry point (`containment._gh_call`) is replaced by `_NativeTracker` — an
+# in-memory model of GitHub's native sub-issues, including its one-parent rule.
+# The body/label/title writers are stubbed by `_run_main` as for every main test.
+
+_ONE_PARENT_BODY = json.dumps(
+    {
+        "message": "Validation Failed",
+        "errors": [{"field": "sub_issue_id", "message": "Sub issue may only have one parent"}],
+        "status": "422",
+    }
+)
+_DB = 1000  # a fake issue's database id is its number plus this
+
+
+class _NativeTracker:
+    """GitHub's native sub-issues, as the containment seam sees them.
+
+    ``native`` maps a parent to its sub-issue numbers. ``honour_replace=False``
+    refuses a move the way an instance without ``replace_parent`` would;
+    ``record_error`` fails the issue-record read; ``unsupported`` answers every
+    sub-issues call the way an instance without the feature does.
+    """
+
+    def __init__(
+        self,
+        native: dict[int, set[int]] | None = None,
+        *,
+        honour_replace: bool = True,
+        record_error: bool = False,
+        unsupported: bool = False,
+    ) -> None:
+        self.native = {p: set(c) for p, c in (native or {}).items()}
+        self.honour_replace = honour_replace
+        self.record_error = record_error
+        self.unsupported = unsupported
+        self.calls: list[list[str]] = []
+
+    @property
+    def posts(self) -> list[list[str]]:
+        return [c for c in self.calls if "POST" in c]
+
+    def parent_of(self, child: int) -> int | None:
+        return next((p for p, children in self.native.items() if child in children), None)
+
+    def __call__(self, args, config):
+        args = [str(a) for a in args]
+        self.calls.append(args)
+        path = next(a for a in args if a.startswith("repos/"))
+        m = re.fullmatch(r"repos/\{owner\}/\{repo\}/issues/(\d+)/sub_issues", path)
+        if m:
+            parent = int(m.group(1))
+            if self.unsupported:
+                return subprocess.CompletedProcess(args, 1, stdout="", stderr="gh: HTTP 410: Gone")
+            if "POST" in args:
+                return self._add(args, parent)
+            listed = [{"id": _DB + n, "number": n} for n in sorted(self.native.get(parent, ()))]
+            return subprocess.CompletedProcess(args, 0, stdout=json.dumps(listed), stderr="")
+        m = re.fullmatch(r"repos/\{owner\}/\{repo\}/issues/(\d+)", path)
+        if m:
+            if self.record_error:
+                return subprocess.CompletedProcess(args, 1, stdout="", stderr="gh: HTTP 502")
+            number = int(m.group(1))
+            parent = self.parent_of(number)
+            url = f"https://api.github.com/repos/o/r/issues/{parent}" if parent else ""
+            stdout = f"{_DB + number}\n{url}\nhttps://api.github.com/repos/o/r\n"
+            return subprocess.CompletedProcess(args, 0, stdout=stdout, stderr="")
+        raise AssertionError(f"unexpected gh call: {args}")
+
+    def _add(self, args: list[str], parent: int) -> subprocess.CompletedProcess:
+        child = int(args[args.index("-F") + 1].split("=", 1)[1]) - _DB
+        holder = self.parent_of(child)
+        moving = "replace_parent=true" in args and self.honour_replace
+        if holder is not None and holder != parent and not moving:
+            return subprocess.CompletedProcess(
+                args, 1, stdout=_ONE_PARENT_BODY, stderr="gh: Validation Failed (HTTP 422)"
+            )
+        if holder is not None:
+            self.native[holder].discard(child)
+        self.native.setdefault(parent, set()).add(child)
+        return subprocess.CompletedProcess(args, 0, stdout="{}", stderr="")
+
+
+def _task_issue(body: str) -> dict:
+    return {**_TASK_ISSUE, "body": body}
+
+
+def _run_parent(sf, monkeypatch, tmp_path, *, native: _NativeTracker, body: str, extra=()):
+    root = _stage_capability_root(tmp_path, has_board=False)
+    monkeypatch.setattr(sf.containment, "_gh_call", native)
+    return _run_main(
+        sf,
+        monkeypatch,
+        root=root,
+        argv=["42", "--parent", "9", *extra],
+        issue=_task_issue(body),
+    )
+
+
+def test_main_parent_moves_the_native_link_with_the_first_line(
+    sf, tmp_path, monkeypatch, capsys
+) -> None:
+    """#42 names #7 on its first line and is natively under #7. `--parent 9`
+    rewrites the line AND moves the link: #7 loses the child, #9 gains it, in
+    one write that asks GitHub to replace the parent."""
+    native = _NativeTracker({7: {42}})
+    captured = _run_parent(
+        sf, monkeypatch, tmp_path, native=native, body="Feature: #7\n\n## What\nx\n"
+    )
+    out = capsys.readouterr().out
+
+    assert captured["rc"] == 0
+    assert native.native == {7: set(), 9: {42}}
+    assert len(native.posts) == 1 and native.posts[0][-2:] == ["-F", "replace_parent=true"]
+    assert captured["bodies"] and captured["bodies"][0].startswith("Feature: #9\n")
+    assert "parent: native link moves from #7 to #9" in out
+    assert "moved #42 from #7 to #9 as a native sub-issue" in out
+
+
+def test_main_parent_dry_run_plans_the_move_and_writes_nothing(
+    sf, tmp_path, monkeypatch, capsys
+) -> None:
+    native = _NativeTracker({7: {42}})
+    captured = _run_parent(
+        sf, monkeypatch, tmp_path, native=native, body="Feature: #7\n", extra=("--dry-run",)
+    )
+    out = capsys.readouterr().out
+
+    assert captured["rc"] == 0
+    assert native.posts == [] and captured["bodies"] == []
+    assert native.native == {7: {42}}
+    assert "parent: native link moves from #7 to #9" in out
+
+
+def test_main_parent_refused_move_writes_nothing_and_names_the_kept_parent(
+    sf, tmp_path, monkeypatch, capsys
+) -> None:
+    """GitHub refuses the move: the call stops before the first line is
+    rewritten, so the two records are left as they were, and it says where the
+    issue stays."""
+    native = _NativeTracker({7: {42}}, honour_replace=False)
+    captured = _run_parent(sf, monkeypatch, tmp_path, native=native, body="Feature: #7\n")
+    out = capsys.readouterr().out
+
+    assert captured["rc"] == 3
+    assert captured["bodies"] == [], "the first line must not move without the link"
+    assert native.native == {7: {42}}
+    assert "[failed] #42: parent NOT set — #42 could not be moved to #9" in out
+    assert "it stays a native sub-issue of #7" in out
+
+
+def test_main_parent_unreadable_native_parent_refuses_before_any_write(
+    sf, tmp_path, monkeypatch, capsys
+) -> None:
+    native = _NativeTracker({7: {42}}, record_error=True)
+    captured = _run_parent(sf, monkeypatch, tmp_path, native=native, body="Feature: #7\n")
+    out = capsys.readouterr().out
+
+    assert captured["rc"] == 1
+    assert native.posts == [] and captured["bodies"] == []
+    assert "native parent could not be read" in out
+
+
+def test_main_parent_right_first_line_but_link_elsewhere_moves_only_the_link(
+    sf, tmp_path, monkeypatch, capsys
+) -> None:
+    """The first line already names #9 but the native link sits under #7 — the
+    disagreement #1040 is about. The call is not a no-op: it moves the link."""
+    native = _NativeTracker({7: {42}})
+    captured = _run_parent(sf, monkeypatch, tmp_path, native=native, body="Feature: #9\n")
+
+    assert captured["rc"] == 0
+    assert native.native == {7: set(), 9: {42}}
+    assert captured["bodies"] == []
+
+
+def test_main_parent_already_in_agreement_is_a_no_op(sf, tmp_path, monkeypatch, capsys) -> None:
+    native = _NativeTracker({9: {42}})
+    captured = _run_parent(sf, monkeypatch, tmp_path, native=native, body="Feature: #9\n")
+    out = capsys.readouterr().out
+
+    assert captured["rc"] == 0
+    assert native.posts == [] and captured["bodies"] == []
+    assert "no change (all fields already set)" in out
+
+
+def test_main_parent_without_a_native_parent_adds_the_link(
+    sf, tmp_path, monkeypatch, capsys
+) -> None:
+    native = _NativeTracker()
+    captured = _run_parent(sf, monkeypatch, tmp_path, native=native, body="## What\nx\n")
+
+    assert captured["rc"] == 0
+    assert native.native == {9: {42}}
+    assert "replace_parent=true" not in native.posts[0]
+    assert captured["bodies"][0].startswith("Feature: #9\n")
+
+
+def test_main_parent_on_an_instance_without_sub_issues_rewrites_the_first_line(
+    sf, tmp_path, monkeypatch, capsys
+) -> None:
+    native = _NativeTracker(unsupported=True)
+    captured = _run_parent(sf, monkeypatch, tmp_path, native=native, body="## What\nx\n")
+    out = capsys.readouterr().out
+
+    assert captured["rc"] == 0
+    assert captured["bodies"][0].startswith("Feature: #9\n")
+    assert "[warn] native sub-issues unsupported on this instance" in out
+
+
+def test_main_parent_in_textual_containment_writes_no_native_link(
+    sf, tmp_path, monkeypatch, capsys
+) -> None:
+    root = _stage_capability_root(tmp_path, has_board=False)
+    (root / "project" / "substrate-map.yaml").write_text(
+        "schema_version: 1\naxes: {}\ncontainment: textual\n", encoding="utf-8"
+    )
+    native = _NativeTracker({7: {42}})
+    monkeypatch.setattr(sf.containment, "_gh_call", native)
+    captured = _run_main(
+        sf,
+        monkeypatch,
+        root=root,
+        argv=["42", "--parent", "9"],
+        issue=_task_issue("Feature: #7\n"),
+    )
+
+    assert captured["rc"] == 0
+    assert native.calls == [], "textual containment reads and writes no native link"
+    assert captured["bodies"][0].startswith("Feature: #9\n")
+
+
+def test_main_parent_naming_the_issue_itself_is_refused(
+    sf, tmp_path, monkeypatch, capsys
+) -> None:
+    root = _stage_capability_root(tmp_path, has_board=False)
+    native = _NativeTracker()
+    monkeypatch.setattr(sf.containment, "_gh_call", native)
+    captured = _run_main(
+        sf, monkeypatch, root=root, argv=["42", "--parent", "42"], issue=_task_issue("")
+    )
+
+    assert captured["rc"] == 1
+    assert native.calls == [] and captured["bodies"] == []
+    assert "cannot be its own parent" in capsys.readouterr().out

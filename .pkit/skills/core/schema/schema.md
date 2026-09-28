@@ -63,7 +63,7 @@ Verify the records in this skill's `gates:` frontmatter list are `accepted`:
 - **COR-018** — capabilities adopt the schemas mechanism. Defines the YAML + companion pairing.
 - **COR-019** — schema reference form. Settles typed tokens for cross-schema references.
 - **COR-020** — skill family folder form. The convention this composite skill itself follows.
-- **COR-023** — adopter data → schema binding. The `pkit_schema:` field convention + per-schema `binds_to:` fallback; supersedes COR-022.
+- **COR-023** — adopter data → schema binding. The `pkit_schema:` field convention + per-schema `binds_to:` fallback.
 
 Halt if any is `proposed` or `superseded`.
 
