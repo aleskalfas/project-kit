@@ -2502,7 +2502,14 @@ def validate(include_refs: bool) -> None:
 
         for ri in ref_issues:
             issues.append(ValidateIssue(location=ri.location, diagnosis=ri.diagnosis))
+    # The "packages" pass (ADR-056 point 5): every registered component's
+    # package.yaml. Errors join the issue list; warnings only print.
+    from project_kit import package_validate
+
+    packages = package_validate.validate_installed_packages(target_root)
+    issues.extend(packages.as_issues(target_root))
     print_validate_report(target_root, issues)
+    package_validate.print_pass(target_root, packages)
     if issues:
         raise SystemExit(1)
 
