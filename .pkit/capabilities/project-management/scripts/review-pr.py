@@ -170,8 +170,10 @@ def _resolve_agent_timeout(cli_value: str | None, env: dict) -> int:
 
 def _resolve_agent_effort(
     cli_value: str | None, env: dict, config: dict | None,
-) -> str | None:
-    """Resolve the reviewer effort level, or None when nothing sets one.
+) -> tuple[str | None, str | None]:
+    """Resolve the reviewer effort level and the source that set it.
+
+    Returns `(level, source)`; `(None, None)` when nothing sets one.
 
     Precedence: `--effort` flag > `PKIT_REVIEW_AGENT_EFFORT` env var >
     `review.agents.effort` in the project config > None (the harness default
@@ -191,17 +193,17 @@ def _resolve_agent_effort(
     elif env.get(AGENT_EFFORT_ENV):
         raw = env[AGENT_EFFORT_ENV]
         source = f"${AGENT_EFFORT_ENV}"
-    elif configured:
+    elif configured is not None and configured != "":
         raw = configured
         source = "review.agents.effort"
     else:
-        return None
+        return None, None
     if not isinstance(raw, str) or raw not in EFFORT_LEVELS:
         raise ValueError(
             f"invalid reviewer effort from {source}: {raw!r} — must be one of "
             + ", ".join(EFFORT_LEVELS) + "."
         )
-    return raw
+    return raw, source
 
 
 def main() -> int:
@@ -259,7 +261,9 @@ def main() -> int:
     yaml_loader = YAML(typ="safe")
     config = load_adopter_config(capability_root)
     try:
-        agent_effort = _resolve_agent_effort(args.effort, os.environ, config)
+        agent_effort, effort_source = _resolve_agent_effort(
+            args.effort, os.environ, config,
+        )
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
@@ -342,6 +346,10 @@ def main() -> int:
     contributed_by = dict(resolution.contributed_by)
     print(f"  agents: {', '.join(required_local)}")
     print(f"  timeout: {agent_timeout}s per agent")
+    if agent_effort is None:
+        print("  effort: harness default")
+    else:
+        print(f"  effort: {agent_effort} ({effort_source})")
 
     # For each required reviewer, invoke and post verdict.
     failures = 0

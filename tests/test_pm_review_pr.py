@@ -594,28 +594,39 @@ def _config_with_effort(level: str | None) -> dict:
 
 
 def test_effort_unset_everywhere_is_none(rpr) -> None:
-    assert rpr._resolve_agent_effort(None, {}, {}) is None
-    assert rpr._resolve_agent_effort(None, {}, _config_with_effort(None)) is None
+    assert rpr._resolve_agent_effort(None, {}, {}) == (None, None)
+    assert rpr._resolve_agent_effort(None, {}, _config_with_effort(None)) == (None, None)
 
 
-def test_effort_config_sets_the_level(rpr) -> None:
-    assert rpr._resolve_agent_effort(None, {}, _config_with_effort("medium")) == "medium"
+def test_effort_config_sets_the_level_and_names_its_source(rpr) -> None:
+    resolved = rpr._resolve_agent_effort(None, {}, _config_with_effort("medium"))
+    assert resolved == ("medium", "review.agents.effort")
 
 
 def test_effort_env_overrides_config(rpr) -> None:
     env = {rpr.AGENT_EFFORT_ENV: "high"}
-    assert rpr._resolve_agent_effort(None, env, _config_with_effort("medium")) == "high"
+    resolved = rpr._resolve_agent_effort(None, env, _config_with_effort("medium"))
+    assert resolved == ("high", f"${rpr.AGENT_EFFORT_ENV}")
 
 
 def test_effort_flag_overrides_env_and_config(rpr) -> None:
     env = {rpr.AGENT_EFFORT_ENV: "high"}
-    assert rpr._resolve_agent_effort("low", env, _config_with_effort("medium")) == "low"
+    resolved = rpr._resolve_agent_effort("low", env, _config_with_effort("medium"))
+    assert resolved == ("low", "--effort")
 
 
 def test_effort_empty_values_are_treated_as_absent(rpr) -> None:
     env = {rpr.AGENT_EFFORT_ENV: ""}
-    assert rpr._resolve_agent_effort("", env, _config_with_effort("")) is None
-    assert rpr._resolve_agent_effort("", env, _config_with_effort("xhigh")) == "xhigh"
+    assert rpr._resolve_agent_effort("", env, _config_with_effort("")) == (None, None)
+    assert rpr._resolve_agent_effort("", env, _config_with_effort("xhigh"))[0] == "xhigh"
+
+
+@pytest.mark.parametrize("bad", [0, False, 3, ["medium"]])
+def test_effort_non_string_config_values_all_error(rpr, bad) -> None:
+    """A falsy non-string is as wrong as a truthy one; only absence and '' are absent."""
+    with pytest.raises(ValueError) as exc:
+        rpr._resolve_agent_effort(None, {}, _config_with_effort(bad))  # type: ignore[arg-type]
+    assert "review.agents.effort" in str(exc.value)
 
 
 @pytest.mark.parametrize("bad", ["extreme", "MEDIUM", "2", " high"])
@@ -636,11 +647,6 @@ def test_effort_invalid_config_errors_and_names_the_key(rpr) -> None:
     with pytest.raises(ValueError) as exc:
         rpr._resolve_agent_effort(None, {}, _config_with_effort("turbo"))
     assert "review.agents.effort" in str(exc.value)
-
-
-def test_effort_non_string_config_value_errors(rpr) -> None:
-    with pytest.raises(ValueError):
-        rpr._resolve_agent_effort(None, {}, _config_with_effort(3))  # type: ignore[arg-type]
 
 
 def _capture_invocation(rpr, monkeypatch) -> dict:
