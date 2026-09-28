@@ -1,0 +1,52 @@
+---
+id: ADR-059
+title: The methodology's source repository is the one whose `.pkit/` is the methodology's own tree
+status: accepted
+date: 2026-09-28
+author: Aleš Kalfas <kalfas.ales@gmail.com>
+---
+
+## Summary
+
+**In plain terms:** the methodology's source repository is the repository whose `.pkit/` is the methodology's own tree — authored there and bundled into the distribution from there, so no sync ever copies into it. Two tests recognise it, one on each side of the tool/tree boundary: the tool's, sync's test, asks whether the target is the parent of the source tree the running code resolves, and the tree's, a marker test for code that cannot ask that, looks for the package source and the in-tree dispatcher at the repository's root. The router's first route keeps the two answers equal, because wherever the markers are present it runs that repository's own code.
+
+## Context
+
+Six places ask whether a repository is the methodology's own source. Sync's self-host path, upgrade's self-host branch and init's refusal to install into the source compare the target root with the folder the source tree is found in: the running package's own checkout first, the bundled tree otherwise ([ADR-033](ADR-033-official-install-bundles-content.md)). The router's first route ([ADR-039](ADR-039-pkit-entry-point-router.md)), upgrade's refusal to replace the tool inside a checkout ([ADR-044](ADR-044-upgrade-self-update-detect-instruct.md) D3) and the ownership predicate `is_methodology_source` (#1007) look for two files at the root instead. The predicate feeds `is_synced_copy`, which living-docs' place validation is to use to refuse a synced copy as a documentation place ([living-docs:DEC-001-living-docs-discipline] point 1). ADR-055 point 3 rests on that answer when it declares `.pkit/` to be source here.
+
+Nothing recorded what the two answers recognise, or why they agree. They agree only because of route 1. With routing bypassed, sync can copy into a checkout that the predicate still calls source. The predicate also carries this distribution's package path, a literal nothing listed. The methodology keeps this distribution's names out of its records and lists them in the distribution's reference, which code carrying one cites ([COR-053](../../../.pkit/decisions/core/COR-053-connection-points.md), its vocabulary paragraph).
+
+## Decision
+
+1. **The definition.** The methodology's source repository is the repository whose `.pkit/` is the methodology's own tree: authored there, and bundled into the distribution from there, so no sync ever copies into it. Every clone and worktree of it qualifies. Two tests recognise it, one on each side of the tool/tree boundary; neither is the definition.
+2. **Sync's test** (`project_kit.install.is_self_host`): the target is the parent of the source tree the running code resolves. It is exact whenever the running code is the repository's own, which route 1 makes the normal case. A bundled tree never has a project as its parent, so where the running code is an installed distribution the test says no in every repository, the source included. Consumers: sync's self-host path (deploy primitives only, no propagation), upgrade's self-host branch (which delegates to sync) and init's refusal.
+3. **The marker test** (the router's route 1, the ownership predicate, upgrade's self-update skip): the package source and the in-tree dispatcher are both at the repository's root. An adopter has the dispatcher but never the package source. The test answers the same for a checkout whichever code operates on it.
+   - **The router's route 1** (`project_kit.router.is_source_checkout`) runs before any code is chosen, because choosing the code is its job.
+   - **The ownership predicate** (`is_methodology_source` in `.pkit/lifecycle/ownership.py`) is loaded where the tool's package cannot be imported, for the reason [ADR-003](ADR-003-permission-core-code-home.md) gives.
+   - **Upgrade's self-update skip** asks the markers, through the router's function, after sync's test has said no, so it answers only in the gap, where the running code is not the repository's own; there it skips the tool update and upgrade still propagates. The refusal belongs at this point (#1070).
+
+   The router's function and the predicate are two copies of one test, and a test holds them equal.
+4. **Route 1 keeps the two tests equal.** When the markers are present, the router execs that checkout's dispatcher, which runs that checkout's package. The source tree the running code resolves is therefore that checkout's `.pkit/`, provided the resolver accepts that checkout's `.pkit/` as a source tree — it requires `decisions/` there, which a source tree always carries — and sync's test says yes. In the other direction, where sync's test says yes, the running code is that repository's package source, and the dispatcher is tracked source beside it. A test holds the predicate to sync's own decision in a source-shaped tree and an adopter-shaped tree, under the condition route 1 establishes.
+5. **The literal.** The two marker paths are this distribution's names: its package and its dispatcher ([PRJ-001](../../../.pkit/decisions/project/PRJ-001-cli-binary-name.md)). They are listed in the lifecycle README's table of the methodology's literals ("The methodology's literals"), and both copies of the marker test cite that table.
+
+## Rationale
+
+**Why the definition names the tree, not a test.** Sync's test gives the same checkout different answers depending on which code runs it: yes under the checkout's own code, no under another checkout's or the installed tool's. A definition cannot depend on that. The markers give one answer whichever code runs, but they describe what a source checkout looks like, not what makes it the source. What makes it the source is that the methodology's tree is authored there and bundled from there. Each test recognises that under its own condition, and point 4 is why the conditions coincide in normal use.
+
+**Why not one function for all six.** The tool and the propagated tree are the boundary. The ownership predicate cannot import the tool. The router could load the tree-side predicate from its own bundled copy, but it would first have to find that copy. That means a second locator for the source tree on the router's stdlib-only hot path, to save a check of two files. Loading the target's own copy would run whatever version that tree holds before routing, and a tree older than the predicate has none; the router needs its own copy regardless. Nor can sync's test move into either of them, because it has to know which code is running. The router decides that, and the predicate never learns it. So each test has one function, and the marker test exists in two copies held equal by a test.
+
+**The gap, and why the markers do not close it.** Where the running code is not the repository's own, sync's test misses the source and sync breaks the invariant. Three paths reach it: an operator's `PKIT_NO_ROUTE=1`; `pkit pin` to a release newer than a checkout's recorded content, which runs that release's `upgrade` with routing bypassed ([ADR-049](ADR-049-per-project-version-pin.md)) and propagates it over the checkout; and a dispatcher that is present but not executable, where route 1 falls back to the installed tool and its warning advises the sync that then copies over the checkout. Keying sync on the markers would not close it. Sync would skip propagation, but it would also run foreign code as though it were the checkout's own. The honest answer there is a refusal, which carries out this record rather than revising it. The refusal is filed as #1070.
+
+### Alternatives considered
+
+- **Sync's test as the definition.** Rejected. Its answer depends on which code runs, so the same checkout would be the source under its own code and an adopter under anyone else's.
+- **Markers as the definition, with sync keyed on them.** Rejected. Sync's self-host path skips propagation because the running source *is* the target's state, and markers cannot establish that.
+- **One shared function across the tool/tree boundary.** Rejected for the reasons above.
+- **Leave both tests unrecorded, joined only by the router-versus-predicate test.** Rejected. That test holds one copy of the marker test to the other, not to sync's test, so sync's test could change and nothing would notice.
+
+## Implications
+
+- `install.is_self_host` replaces three copies of the comparison in sync, upgrade and init. Each consumer of either test cites this record, and the marker copies cite the literals table.
+- `tests/test_lifecycle_ownership.py` holds the predicate equal to the router's markers and to sync's own decision.
+- The gap is closed by a refusal where the two tests disagree, filed as #1070: sync refuses to propagate over the methodology's source repository, and `pkit pin` refuses there. It carries out this record and needs no revision of it.
+- **Revisit** when route 1 changes or is retired; when the package source moves or is renamed; when the resolver's acceptance test changes; or when a second distribution of the methodology ships its own package. Each breaks the argument in point 4.

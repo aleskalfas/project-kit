@@ -369,7 +369,14 @@ def sync_managed_offences(
 # The methodology's source repository, told apart the way the entry-point router
 # tells it (`project_kit.router.is_source_checkout`): the package source beside
 # the in-tree dispatcher. An adopter has the dispatcher, never the package
-# source. A test keeps the two in step; this module cannot import the router.
+# source. The source repository is the one whose `.pkit/` is the methodology's
+# own tree (ADR-059 in project-kit's architecture decisions). The tool
+# recognises it by sync's self-host test, which this module cannot ask: it
+# cannot import the tool that knows which code is running. These markers are
+# the tree side's test, and the router's first route keeps the two answers
+# equal. The paths are this distribution's literals, listed in the lifecycle
+# README's "The methodology's literals". Tests hold this copy to the router's
+# markers and to sync's own decision.
 _SOURCE_MARKERS: tuple[tuple[str, ...], ...] = (
     ("src", "project_kit", "__init__.py"),
     (".pkit", "cli", "pkit"),
