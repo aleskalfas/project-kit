@@ -1,0 +1,10 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The core skills now declare in their front matter what their body cites, so
+  `pkit validate --only refs` reports no drift warnings on them: the
+  `decision-author` skill declares the agents overlay it points ADR authors at,
+  `report-author` declares COR-043, and the `schema` skill stops citing the
+  superseded COR-022.

@@ -96,7 +96,7 @@ The validator scans only `.md` and `.yaml` / `.yml` files (per [evidence:DEC-001
     Flights booked through the partner fare; refundable up to 24h before departure [ev:fare-rules].
   ```
 - **Never in a machine-consumed value.** `region: us-east-1 [ev:region]` corrupts the value — every consumer now reads `us-east-1 [ev:region]`. Use a comment on that line instead.
-- **Any other file type** (`.toml`, `.py`, `.json`, `.html`, …) is **not scanned** — a token there is silently unverified. Cite the claim in an adjacent `.md` or in the scope's YAML prose, and point at the data file from there. Strict JSON has no in-file convention; cite in sibling prose. (A dedicated mechanism is deferred per [project-kit:COR-007].)
+- **Any other file type** (`.toml`, `.py`, `.json`, `.html`, …) is **not scanned** — a token there is silently unverified. Cite the claim in an adjacent `.md` or in the scope's YAML prose, and point at the data file from there. Strict JSON has no in-file convention; cite in sibling prose. (A dedicated mechanism is deferred until the need recurs.)
 
 ### 6. Validate before committing
 

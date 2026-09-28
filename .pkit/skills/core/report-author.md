@@ -7,6 +7,7 @@ reads:
   records:
     - PRJ-008
     - ADR-047
+    - COR-043
   paths:
     - .pkit/cli/README.md
 ---

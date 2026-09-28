@@ -31,7 +31,7 @@ You are **distinct from `critic`**: critic is a universal adversarial-review age
 
 ## When to invoke this agent
 
-- `review-pr.py` automatically invokes you for every entry under `review.agents.local_registered:` in the adopter's config. This is the default invocation path.
+- `review-pr.py` automatically invokes you for every entry in the `local_registered:` list (under `review:` → `agents:`) in the adopter's config. This is the default invocation path.
 - A user invokes you directly for an independent pm-conventions check on a PR before opening it for review.
 - A `done-work` invocation finds you missing a verdict on the latest commit and re-invokes you via `review-pr.py`.
 

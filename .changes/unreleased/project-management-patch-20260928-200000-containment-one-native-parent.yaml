@@ -1,0 +1,20 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+  pr: "1061"
+body: >
+  The native containment link now respects that an issue has one native
+  parent (#1040). Linking a child that is already natively under a different
+  parent is reported as a conflict naming the child, the parent it has and the
+  parent asked for; before, GitHub's HTTP 422 for it read as "the instance does
+  not support sub-issues". The seam reads the child's current native parent
+  before the add, and GitHub's error body when the add is refused, so
+  `link-parent` shows the conflict in its plan, `--dry-run` included, and
+  leaves the link alone. `set-field --parent` now moves the native link along
+  with the first line: it reads the issue's native parent while validating,
+  moves the link in one write, and only then rewrites the first line; a move
+  GitHub refuses, or a native parent that cannot be read, stops the call before
+  anything is written and says why. In `textual` containment and for a
+  milestone parent it still changes only the first line. `link-parent` also
+  reads each parent's sub-issue list once per run instead of once per child.

@@ -16,8 +16,8 @@ Open the RECORDING + CONTROL iTerm2 windows at the bundle's configured bounds, w
    ```
 
 2. **What happens.** The engine writes a dynamic iTerm profile (so the demo font size doesn't disturb your everyday iTerm), opens:
-   - **RECORDING** at `windows.recording` bounds (visible in the video — defaults give a 1280×800 inner window).
-   - **CONTROL** at `windows.control` bounds (off the recording region — drives the take).
+   - **RECORDING** at the `recording` bounds (visible in the video — defaults give a 1280×800 inner window).
+   - **CONTROL** at the `control` bounds (off the recording region — drives the take).
 
    Both `cd` to the bundle's `cwd` and clear their screen, and the engine persists their window IDs so a later recording can raise RECORDING automatically.
 

@@ -1,16 +1,20 @@
-"""Documents and configuration for the friction tests (COR-050).
+"""Documents, configuration and history for the friction tests (COR-050).
 
-Shared by the change-check and whole-repository-check tests: a backbone
-configuration with a `friction` key, and Markdown documents whose front
-matter carries the `friction` block. Front matter is written as JSON — valid
-YAML, and exact about strings — so a test says precisely what an artefact
-holds.
+Shared by the change-check, whole-repository-check and report tests: a
+backbone configuration with a `friction` key, Markdown documents whose front
+matter carries the `friction` block, and a `Timeline` laying down dated
+commits. Front matter is written as JSON — valid YAML, and exact about
+strings — so a test says precisely what an artefact holds.
 """
 
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
+from datetime import datetime, timedelta
 from typing import Any
+
+from tests.adopter_repo import HISTORY_EPOCH, AdopterRepo, Author
 
 CONFIG = ".pkit/project/config.yaml"
 T1 = "2026-10-01T09:00:00Z"
@@ -71,3 +75,38 @@ def guide(**overrides: Any) -> str:
     }
     values.update(overrides)
     return document("guide", **values)
+
+
+class Timeline:
+    """Commits on an adopter repository, each a day after the last, so origins have known dates."""
+
+    def __init__(self, adopter: AdopterRepo) -> None:
+        self.adopter = adopter
+        self.days = 0
+
+    def _next(self) -> datetime:
+        self.days += 1
+        return HISTORY_EPOCH + timedelta(days=self.days)
+
+    def start(self, files: Mapping[str, str], config: str | None = None) -> str:
+        """The base commit on `main`: the install, the configuration, the sources and `files`."""
+        self.adopter.write({CONFIG: config or friction_config(), **SOURCE, **files})
+        return self.commit("base")
+
+    def commit(
+        self,
+        message: str,
+        files: Mapping[str, str | None] | None = None,
+        *,
+        author: Author | None = None,
+    ) -> str:
+        return self.adopter.commit(message, files, author=author, date=self._next())
+
+    def rename(self, src: str, dst: str) -> str:
+        return self.adopter.rename(src, dst, date=self._next())
+
+    def merge(self, branch: str) -> str:
+        return self.adopter.merge(branch, date=self._next())
+
+    def squash_merge(self, branch: str) -> str:
+        return self.adopter.squash_merge(branch, date=self._next())

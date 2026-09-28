@@ -49,7 +49,7 @@ from project_kit.scaffolds import (
 )
 from project_kit.agents import Namespace as AgentNamespace, stamp_new_agent
 from project_kit.storyboards import ArtifactKind, stamp_new_storyboard
-from project_kit import friction_check, friction_repository, friction_write
+from project_kit import friction_check, friction_report, friction_repository, friction_write
 from project_kit import refs as refs_mod
 from project_kit import router
 from project_kit import scratchpads
@@ -329,7 +329,8 @@ def config_set(key: str, value: str, yes: bool) -> None:
 
 @main.group("friction")
 def friction() -> None:
-    """Anchors and friction (COR-050): the checks, which only read, and the
+    """Anchors and friction (COR-050): the reading commands — the checks, the
+    debt listing, one artefact's explanation — which never write, and the
     writers — revalidate, defer, record-status — which write one block, only
     with consent.
 
@@ -540,6 +541,55 @@ def friction_check_command(base_ref: str, whole_repository: bool, as_json: bool)
         click.echo(friction_check.render_human(result), nl=False)
     if result.exit_code:
         raise SystemExit(result.exit_code)
+
+
+@friction.command("debt")
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
+)
+def friction_debt_command(as_json: bool) -> None:
+    """The debt (COR-050 point 9): stale and deferred debt, oldest first, each with its
+    origin — commit, author, date and change — derived from git.
+
+    Exactly the stale and deferred findings of `pkit friction check --all`, from
+    the same run of the whole-repository check: HEAD and its history, never the
+    working tree. Artefacts a shallow clone cannot judge are named apart.
+    Writes nothing; exits 0.
+    """
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    listing = friction_report.run_debt(target_root)
+    if as_json:
+        click.echo(friction_report.render_debt_json(listing), nl=False)
+    else:
+        click.echo(friction_report.render_debt_human(listing), nl=False)
+
+
+@friction.command("explain")
+@click.argument("artefact", metavar="ARTEFACT")
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
+)
+def friction_explain_command(artefact: str, as_json: bool) -> None:
+    """Explain ARTEFACT's friction (COR-050 point 13): its anchors, its revalidation and
+    deferral points, what changed since each, and what clears each finding.
+
+    Every changed anchor is shown with the commits behind it, and each finding
+    with the writer command that answers it (`revalidate … --outcome …`,
+    `defer … --anchor … --reason …`) or the edit it needs. The findings are
+    those `pkit friction check --all` reports for ARTEFACT. ARTEFACT is a
+    location (`path`, or `path#id` for a collection entry) or an id, looked up
+    at HEAD. Writes nothing.
+    """
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    explanation = friction_report.run_explain(target_root, artefact)
+    if as_json:
+        click.echo(friction_report.render_explain_json(explanation), nl=False)
+    else:
+        click.echo(friction_report.render_explain_human(explanation), nl=False)
 
 
 @main.group(invoke_without_command=True)
