@@ -9,9 +9,9 @@ tokens. Two halves live here, and every reader of that tree goes through them.
 `registered_commands` reads a component's package file through it; a reference
 — a path through the tree, tokens separated by spaces (`create page`) — names
 a leaf through `resolve_command`. The dispatcher (`pkit <capability> <command>`),
-package validation, the validator registry and the process engine's predicate
-runner all read the tree this way, so what counts as a leaf, and where its
-script is, is decided once.
+package validation, the validator registry, the process engine's predicate
+runner and the report builder, asking for the workstream, all read the tree
+this way, so what counts as a leaf, and where its script is, is decided once.
 
 **The run.** `run_command` starts a leaf's script with an explicit argument
 list from a working directory, in its own process group, bounded by
@@ -33,6 +33,10 @@ command did.
   leaf must declare the query contract, `--json` as the one argument, the
   offline marker set, and the answer validated against the shape asked for;
   anything else is no answer, an error finding;
+- the *context-read* policy (`report_context.pm_workstream`, ADR-050): no
+  arguments, the caller's environment unchanged — the verb asks the tracker —
+  and the value read as the text an exit-0 run prints, not a JSON document;
+  anything else omits the workstream from the report, and an overrun says so;
 - a *subscriber* policy joins when events run subscribers (COR-053 point 9
   sets its limits; point 11 asks the kinds to share one command runner).
 
