@@ -4,7 +4,7 @@ Every pm script that shells out to `gh` routes through this module so the
 adopter's `project/config.yaml` `gh:` block — not ambient shell state —
 determines which host and owner the call lands on. The public surface:
 `gh_env`, `gh_owner_flag`, `gh_run`, `gh_project_run`, `gh_get_issue`,
-`load_adopter_config`.
+`gh_get_pr`, `load_adopter_config`.
 
 `gh project` calls route through the `gh_project_run` sole-constructor (not
 `gh_run` directly): unlike `gh issue create`, `gh project` does not infer the
@@ -180,6 +180,45 @@ def gh_get_issue(
     except json.JSONDecodeError:
         print(
             f"error: gh returned non-JSON for issue {issue_number}.",
+            file=sys.stderr,
+        )
+        return None
+
+
+def gh_get_pr(
+    pr_number: int,
+    config: dict[str, Any],
+    *,
+    fields: str,
+) -> dict[str, Any] | None:
+    """Fetch PR data via `gh pr view --json <fields>` — `gh_get_issue`'s twin.
+
+    Same contract: the parsed JSON dict on success, None on any failure (gh
+    not on PATH, a non-zero exit — a PR that does not exist included — or
+    non-JSON stdout), with the reason printed to stderr. Callers pass only the
+    fields they need and must not rely on any others.
+    """
+    try:
+        proc = gh_run(
+            ["gh", "pr", "view", str(pr_number), "--json", fields],
+            config,
+            check=False,
+        )
+    except FileNotFoundError:
+        print("error: `gh` not on PATH. Install GitHub CLI.", file=sys.stderr)
+        return None
+    if proc.returncode != 0:
+        print(
+            f"error: gh pr view {pr_number} failed.\n"
+            f"stderr: {proc.stderr.strip()}",
+            file=sys.stderr,
+        )
+        return None
+    try:
+        return json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        print(
+            f"error: gh returned non-JSON for PR {pr_number}.",
             file=sys.stderr,
         )
         return None

@@ -123,15 +123,34 @@ def test_command_call_sites_read_the_shared_rule(script: str) -> None:
     """Every command that refuses on checkboxes resolves to the one rule.
 
     A script that reintroduces a local `_unticked_boxes` body — however
-    faithful a copy — fails here, which is the drift #734 closes.
+    faithful a copy — fails here, which is the drift #734 closes. A script may
+    read the rule in its positional form (`unticked_box_lines`, which
+    `unticked_boxes` itself is built on) when it needs to say where each box
+    lives, as done-work's refusal does (#1015).
     """
     module = _load_script(script)
     resolved = getattr(module, "_unticked_boxes", None) or getattr(
         module, "unticked_boxes", None
     )
-    assert resolved is checkbox_gate.unticked_boxes, (
-        f"{script} does not use `_lib.checkbox_gate.unticked_boxes`"
+    positional = getattr(module, "unticked_box_lines", None)
+    assert (
+        resolved is checkbox_gate.unticked_boxes
+        or positional is checkbox_gate.unticked_box_lines
+    ), f"{script} does not use `_lib.checkbox_gate`'s unticked-box rule"
+
+
+def test_unticked_box_lines_locates_what_unticked_boxes_reports() -> None:
+    body = "## A\n- [x] done\n- [ ] open one\n\n- [ ]\n* [ ] open two\n"
+    located = checkbox_gate.unticked_box_lines(body)
+    assert located == [(2, "- [ ] open one"), (5, "* [ ] open two")]
+    assert [text for _, text in located] == checkbox_gate.unticked_boxes(body)
+
+
+def test_refusal_message_shows_a_hint_under_each_box() -> None:
+    message = checkbox_gate.refusal_message(
+        ["- [ ] a", "- [ ] b"], remedy="tick them.", hints=["tick a", ""],
     )
+    assert "  - - [ ] a\n      → tick a\n  - - [ ] b\n\n  → tick them." in message
 
 
 def test_predicate_and_done_work_agree_on_a_body() -> None:

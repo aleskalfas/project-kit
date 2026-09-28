@@ -31,7 +31,7 @@ Three terms recur. The **revalidation point** of an artefact is the last commit 
    - an identified **record**, such as a decision;
    - **another artefact**, by its id.
 
-   Capabilities may register further kinds, each with a resolver: a command registered in the capability's package metadata. A resolver runs with a bounded time, no network access, and deterministic output for the same inputs. It fails closed: if it exits abnormally, times out, or returns output the backbone cannot read, the anchor is reported as unresolved, never as resolved. An artefact without anchors is *unanchored*: a state the backbone reports, not an error.
+   Capabilities may register further kinds, each with a resolver: a command registered in the capability's package metadata. A resolver's one argument is the anchor value — its subject, as COR-052 point 6 fixes for the commands the backbone queries. A resolver runs with a bounded time, no network access, and deterministic output for the same inputs. It fails closed: if it exits abnormally, times out, or returns output the backbone cannot read, the anchor is reported as unresolved, never as resolved. An artefact without anchors is *unanchored*: a state the backbone reports, not an error.
 
    The block's fields are owned by this record. Their shape, for single documents and for collection entries, is fixed by a schema the backbone ships and validation applies strictly — a revalidation marked `unchanged` without its justification, or an empty revalidation, fails there. The friction check never skips an artefact it cannot parse. In a declared place, an unparsable or malformed block is a validation finding (point 12); the checks report it too, so it is never silent.
 

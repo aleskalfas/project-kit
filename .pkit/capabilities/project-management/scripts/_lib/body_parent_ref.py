@@ -40,6 +40,9 @@ _MILESTONE_LINE = re.compile(
     rf"^(?P<label>{MILESTONE_LABEL}):\s+\[#(?P<number>\d+)\]"
     r"\(\.\./milestone/(?P=number)\)\s*$"
 )
+# The deprecated plain form (`Milestone: #<N>`) validate-issue still accepts
+# with a warning. Read so a milestone move can bring it along; never written.
+_OLD_MILESTONE_LINE = re.compile(rf"^{MILESTONE_LABEL}:\s+#(?P<number>\d+)\s*$")
 
 # How a `parent_ref_form` option spells an issue parent: `<Label>: #<N>`.
 _ISSUE_OPTION = re.compile(r"^([A-Za-z]+):\s*#<N>\s*$")
@@ -83,6 +86,11 @@ def _options(parent_ref_form: str) -> list[tuple[bool, re.Pattern[str]]]:
     return options
 
 
+def form_allows_milestone(parent_ref_form: str) -> bool:
+    """Whether a type's ``parent_ref_form`` offers a milestone parent-ref."""
+    return any(is_milestone for is_milestone, _ in _options(parent_ref_form))
+
+
 def form_matchers(parent_ref_form: str) -> list[re.Pattern[str]]:
     """Compile a type's ``parent_ref_form`` into per-option first-line matchers.
 
@@ -115,4 +123,60 @@ def parse_first_line(body: str, parent_ref_form: str) -> ParentRef | None:
                 number=int(m.group("number")),
                 milestone=is_milestone,
             )
+    return None
+
+
+def milestone_line(number: int) -> str:
+    """The milestone parent-ref line for milestone ``number`` (the link form)."""
+    return f"{MILESTONE_LABEL}: [#{number}](../milestone/{number})"
+
+
+def first_line_milestone(body: str) -> int | None:
+    """The milestone the body's first line names as its parent, or ``None``.
+
+    Reads the link form and the deprecated plain ``Milestone: #<N>`` form alike,
+    whatever the issue's type — the question is what the line says, not whether
+    the type may say it.
+    """
+    line = first_line(body)
+    m = _MILESTONE_LINE.match(line) or _OLD_MILESTONE_LINE.match(line)
+    return int(m.group("number")) if m else None
+
+
+def set_first_line_milestone(body: str, number: int | None) -> str:
+    """Point a milestone first line at milestone ``number``, or remove it.
+
+    Keeps the textual parent-ref in step with the native Milestone field when an
+    issue moves between milestones (#1049): a line left naming the old milestone
+    would still count the issue among that milestone's children. Only a first
+    line that already names a milestone is touched; any other body is returned
+    unchanged. ``None`` removes the line together with the blank line after it.
+    """
+    if first_line_milestone(body) is None:
+        return body
+    lines = body.split("\n")
+    index = _first_line_index(lines)
+    if index is None:  # pragma: no cover - first_line_milestone found one
+        return body
+    if number is not None:
+        lines[index] = milestone_line(number)
+        return "\n".join(lines)
+    del lines[index]
+    if index < len(lines) and not lines[index].strip():
+        del lines[index]
+    return "\n".join(lines)
+
+
+def _first_line_index(lines: list[str]) -> int | None:
+    """Where :func:`first_line` is in ``lines``: the first non-blank line, past
+    a leading DEC-013 ``Integration:`` marker."""
+    marker_skipped = False
+    for index, line in enumerate(lines):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if not marker_skipped and _infer.INTEGRATION_MARKER_RE.match(stripped):
+            marker_skipped = True
+            continue
+        return index
     return None

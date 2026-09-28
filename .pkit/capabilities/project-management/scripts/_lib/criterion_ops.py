@@ -77,6 +77,8 @@ def plan_batch(
     *,
     target_checked: bool,
     headings: frozenset[str] | None = None,
+    noun: str = "criterion",
+    plural: str = "criteria",
 ) -> BatchPlan:
     """Validate the whole batch, then build the rewritten body (DEC-038 D4).
 
@@ -84,6 +86,8 @@ def plan_batch(
     `headings` is the schema-resolved checkbox-bearing heading set (from
     `criteria.checkbox_headings`), passed through to the extractor so the
     engine stays pure (no file I/O); `None` keeps the extractor's fallback.
+    The same engine addresses the Doc impact section when given its headings
+    (#1015); `noun` / `plural` name the items in the result lines.
 
     Validation (all up front, before any mutation):
       - index out of range            → hard-reject the whole batch;
@@ -113,9 +117,9 @@ def plan_batch(
                     ok=False,
                     changed=False,
                     message=(
-                        f"criterion {t.index}: out of range "
+                        f"{noun} {t.index}: out of range "
                         f"(issue has {count} "
-                        f"{'criterion' if count == 1 else 'criteria'})"
+                        f"{noun if count == 1 else plural})"
                     ),
                 )
             )
@@ -128,7 +132,7 @@ def plan_batch(
                     ok=False,
                     changed=False,
                     message=(
-                        f"criterion {t.index}: not a checkbox "
+                        f"{noun} {t.index}: not a checkbox "
                         f"(plain bullet {criterion.text!r}); cannot tick"
                     ),
                 )
@@ -144,9 +148,9 @@ def plan_batch(
                         ok=False,
                         changed=False,
                         message=(
-                            f"criterion {t.index}: ambiguous text-guard "
+                            f"{noun} {t.index}: ambiguous text-guard "
                             f"{t.expected_text.strip()!r} matches "
-                            f"criteria {where}; pass a unique guard or omit it"
+                            f"{plural} {where}; pass a unique guard or omit it"
                         ),
                     )
                 )
@@ -158,7 +162,7 @@ def plan_batch(
                         ok=False,
                         changed=False,
                         message=(
-                            f"criterion {t.index}: text-guard mismatch — "
+                            f"{noun} {t.index}: text-guard mismatch — "
                             f"expected {t.expected_text.strip()!r}, "
                             f"found {criterion.text!r}; re-read and retry"
                         ),
@@ -181,7 +185,7 @@ def plan_batch(
                         ok=False,
                         changed=False,
                         message=(
-                            f"criterion {t.index}: not applied "
+                            f"{noun} {t.index}: not applied "
                             "(batch refused — fix the errors above and re-run)"
                         ),
                     )
@@ -201,7 +205,7 @@ def plan_batch(
                     index=t.index,
                     ok=True,
                     changed=False,
-                    message=f"criterion {t.index}: already {verb} (no-op)",
+                    message=f"{noun} {t.index}: already {verb} (no-op)",
                 )
             )
             continue
@@ -215,7 +219,7 @@ def plan_batch(
                 index=t.index,
                 ok=True,
                 changed=True,
-                message=f"criterion {t.index}: {verb}",
+                message=f"{noun} {t.index}: {verb}",
             )
         )
 

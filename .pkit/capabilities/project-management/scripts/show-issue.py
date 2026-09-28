@@ -44,7 +44,7 @@ from _lib import bootstrap_gate  # noqa: E402
 from _lib import axis_labels  # noqa: E402
 from _lib import provenance  # noqa: E402
 from _lib import lifecycle_inference as infer  # noqa: E402
-from _lib.criteria import FALLBACK_HEADINGS, checkbox_headings  # noqa: E402
+from _lib.criteria import DOC_IMPACT_HEADINGS, FALLBACK_HEADINGS, checkbox_headings  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
@@ -183,6 +183,9 @@ def _summarise(
     parent_ref = _first_body_line(infer.strip_integration_marker(body))
     required_sections = _required_section_status(structural_type, body, body_format)
     criteria = _extract_criteria(body, checkbox_headings(body_format))
+    # The `## Doc impact` items, numbered as `check-criterion --section
+    # doc-impact` addresses them (#1015) — the same walk as the criteria.
+    doc_impact = _extract_criteria(body, DOC_IMPACT_HEADINGS)
 
     type_labels = [lbl for lbl in labels if axis_labels.is_axis_label(lbl, "type")]
 
@@ -240,6 +243,7 @@ def _summarise(
         "other_labels": other_labels,
         "required_sections": required_sections,
         "criteria": criteria,
+        "doc_impact": doc_impact,
         "body": body,
         "url": issue.get("url"),
     }
@@ -258,6 +262,7 @@ ISSUE_FIELD_NAMES = (
     "workstream",
     "labels",
     "criteria",
+    "doc-impact",
     "sections",
     "body",
     "url",
@@ -306,6 +311,7 @@ def _field_lines_for(s: dict) -> dict[str, list[str]]:
         "workstream": list(classification.get("workstream") or []),
         "labels": all_labels,
         "criteria": list(s.get("criteria") or []),
+        "doc-impact": list(s.get("doc_impact") or []),
         "sections": sections,
         "body": _scalar(s.get("body")),
         "url": _scalar(s.get("url")),

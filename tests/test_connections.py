@@ -47,7 +47,10 @@ def _package(name: str, version: str = "0.1.0", **overrides: Any) -> dict[str, A
         "component": {"kind": "capability", "name": name, "version": version},
         "description": f"Synthetic {name}.",
         "requires_backbone": ANY_BACKBONE,
-        "commands": {"publish": {"script": "scripts/publish.py", "help": "Publish."}},
+        # `publish` is every synthetic contribution's filler: a query command.
+        "commands": {
+            "publish": {"script": "scripts/publish.py", "help": "Publish.", "query-contract": True}
+        },
     }
     raw.update(overrides)
     return raw
@@ -814,9 +817,10 @@ def test_installed_version_of_record_comes_from_the_component_manifest(
     assert any(f.path == "/requires_capabilities/0" for f in wiring.findings)
 
 
-def test_project_filler_hook_is_unanswered_and_resolve_judges_what_it_reports() -> None:
-    """#994 owns the filler path and envelope; the hook says no filler exists, and
-    `resolve` compares whatever version the hook reports, located at the filler."""
+def test_no_filler_file_is_no_project_filler_and_resolve_judges_what_the_hook_reports() -> None:
+    """Without a file at the filler path there is no project filler; `resolve`
+    compares whatever version the hook reports, located at the filler (the
+    filler files themselves: `tests/test_data_points.py`)."""
     assert cx.project_filler(Path("/nowhere"), READING) is None
     package = _provider(accepts=_accepts(version=2, mandatory={"reason": "r"}))
     installed = cx.Installed(

@@ -9,6 +9,7 @@ from __future__ import annotations
 import importlib.util
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -188,24 +189,73 @@ def test_build_pr_body_fills_closes_placeholder(op, tmp_path) -> None:
         "Closes #\n\n## Summary\n\n## Test plan\n", encoding="utf-8"
     )
     body = op._build_pr_body(
-        capability_root=tmp_path, issue_number=42, body_file=None
+        capability_root=tmp_path, issue_numbers=[42], body_file=None
     )
     assert body is not None
     assert "Closes #42" in body
 
 
 def test_build_pr_body_user_supplied_file(op, tmp_path) -> None:
+    """The authored body is kept as written; a closing issue it does not name
+    gets its `Closes #N` line on top, so the PR still closes it on merge."""
     f = tmp_path / "custom.md"
     f.write_text("user-supplied body\n", encoding="utf-8")
     body = op._build_pr_body(
-        capability_root=tmp_path, issue_number=42, body_file=f
+        capability_root=tmp_path, issue_numbers=[42], body_file=f
     )
-    assert body == "user-supplied body\n"
+    assert body == "Closes #42\n\nuser-supplied body\n"
+
+
+def test_build_pr_body_user_file_already_closing_is_verbatim(op, tmp_path) -> None:
+    f = tmp_path / "custom.md"
+    f.write_text("Fixes #42\n\n## Summary\n", encoding="utf-8")
+    body = op._build_pr_body(
+        capability_root=tmp_path, issue_numbers=[42], body_file=f
+    )
+    assert body == "Fixes #42\n\n## Summary\n"
+
+
+def test_build_pr_body_user_file_gains_the_missing_references(op, tmp_path) -> None:
+    """#1049: a PR that lands two Tasks closes both — the second reference goes
+    right after the first, not somewhere down the body."""
+    f = tmp_path / "custom.md"
+    f.write_text("Closes #42\n\n## Summary\nwork\n", encoding="utf-8")
+    body = op._build_pr_body(
+        capability_root=tmp_path, issue_numbers=[42, 43, 44], body_file=f
+    )
+    assert body == "Closes #42\nCloses #43\nCloses #44\n\n## Summary\nwork\n"
+
+
+def test_build_pr_body_template_carries_one_line_per_closing_issue(op, tmp_path) -> None:
+    template_dir = tmp_path / "templates"
+    template_dir.mkdir()
+    (template_dir / "PR.md").write_text(
+        "Closes #\n\n## Summary\n\n## Test plan\n", encoding="utf-8"
+    )
+    body = op._build_pr_body(
+        capability_root=tmp_path, issue_numbers=[42, 43], body_file=None
+    )
+    assert body is not None
+    assert body.startswith("Closes #42\nCloses #43\n\n## Summary")
+
+
+def test_closing_issues_from_repeated_flag_then_branch(op) -> None:
+    assert op._closing_issues(None, [7, 8, 7], "feat/7-thing") == [7, 8]
+    assert op._closing_issues(None, None, "feat/7-thing") == [7]
+    assert op._closing_issues(None, None, "main") == []
+
+
+def test_closing_issues_positional_first(op) -> None:
+    """#1017: the positional <N> is the closing issue, as review-work and
+    done-work take it; with --closes as well, it stays the primary one."""
+    assert op._closing_issues(9, None, "feat/7-thing") == [9]
+    assert op._closing_issues(9, [10], "feat/7-thing") == [9, 10]
+    assert op._closing_issues(9, [9], "main") == [9]
 
 
 def test_build_pr_body_fallback_when_no_template(op, tmp_path) -> None:
     body = op._build_pr_body(
-        capability_root=tmp_path, issue_number=42, body_file=None
+        capability_root=tmp_path, issue_numbers=[42], body_file=None
     )
     assert body == "Closes #42\n"
 
@@ -215,7 +265,111 @@ def test_build_pr_body_template_without_closes_placeholder(op, tmp_path) -> None
     template_dir.mkdir()
     (template_dir / "PR.md").write_text("## Summary\n\nfoo\n", encoding="utf-8")
     body = op._build_pr_body(
-        capability_root=tmp_path, issue_number=99, body_file=None
+        capability_root=tmp_path, issue_numbers=[99], body_file=None
     )
     assert body is not None
     assert "Closes #99" in body
+
+
+# --- main(): several closing references (#1049) ------------------------
+
+
+CAP_ROOT = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
+
+
+def _stub_main(op, monkeypatch, argv: list[str], issues: dict[int, dict]) -> dict:
+    """Pass every gate, serve `issues` by number, capture the create call."""
+    monkeypatch.setattr(sys, "argv", argv)
+    monkeypatch.setattr(op, "resolve_capability_root", lambda _explicit: CAP_ROOT)
+    monkeypatch.setattr(op.bootstrap_gate, "enforce", lambda *a, **k: True)
+    monkeypatch.setattr(op.session_guard, "enforce", lambda **k: True)
+    monkeypatch.setattr(op, "load_adopter_config", lambda _root: {"default_branch": "main"})
+    monkeypatch.setattr(op, "_read_members", lambda *a: [])
+    monkeypatch.setattr(
+        op, "resolve_invoker_identity", lambda **k: SimpleNamespace(github_login="me")
+    )
+    monkeypatch.setattr(op, "check_membership", lambda *a: SimpleNamespace(allowed=True))
+    monkeypatch.setattr(op, "_gh_get_issue", lambda n, _config: issues.get(n))
+    monkeypatch.setattr(op, "_current_branch", lambda: "feat/42-thing")
+    captured: dict = {}
+
+    def fake_pr_create(*, title, body, base, draft, config):
+        captured.update(title=title, body=body, base=base)
+        return None  # stop before the post-create comments / hooks
+
+    monkeypatch.setattr(op, "_gh_pr_create", fake_pr_create)
+    return captured
+
+
+def _open_issue() -> dict:
+    return {
+        "title": "[Task] do thing",
+        "labels": [{"name": "type:feature"}],
+        "state": "OPEN",
+        "body": "",
+    }
+
+
+def test_main_repeated_closes_puts_every_reference_in_the_body(op, monkeypatch) -> None:
+    captured = _stub_main(
+        op,
+        monkeypatch,
+        [
+            "open-pr", "--closes", "42", "--closes", "43",
+            "--summary", "land both", "--draft", "--yes",
+        ],
+        {42: _open_issue(), 43: _open_issue()},
+    )
+    assert op.main() == 3  # the faked create returns no URL
+    assert captured["title"] == "feat: land both"
+    closing = [ln for ln in captured["body"].splitlines() if ln.startswith("Closes #")]
+    assert closing == ["Closes #42", "Closes #43"]
+
+
+def test_main_takes_the_issue_number_positionally(op, monkeypatch) -> None:
+    """#1017: `open-pr 43` closes #43 — not the branch's #42 — exactly as
+    `open-pr --closes 43` does."""
+    captured = _stub_main(
+        op,
+        monkeypatch,
+        ["open-pr", "43", "--scope", "pm", "--summary", "land it", "--draft", "--yes"],
+        {43: _open_issue()},
+    )
+    assert op.main() == 3  # the faked create returns no URL
+    assert captured["title"] == "feat(pm): land it"
+    closing = [ln for ln in captured["body"].splitlines() if ln.startswith("Closes #")]
+    assert closing == ["Closes #43"]
+
+
+def test_positional_and_closes_close_both(op, monkeypatch) -> None:
+    captured = _stub_main(
+        op,
+        monkeypatch,
+        ["open-pr", "43", "--closes", "44", "--summary", "land both", "--draft", "--yes"],
+        {43: _open_issue(), 44: _open_issue()},
+    )
+    assert op.main() == 3
+    closing = [ln for ln in captured["body"].splitlines() if ln.startswith("Closes #")]
+    assert closing == ["Closes #43", "Closes #44"]
+
+
+def test_help_states_how_the_title_is_composed(op, monkeypatch, capsys) -> None:
+    monkeypatch.setattr(sys, "argv", ["open-pr", "--help"])
+    with pytest.raises(SystemExit):
+        op.main()
+    text = " ".join(capsys.readouterr().out.split())
+    assert "<type>(<scope>): <summary>" in text
+    assert "description part" in text
+
+
+def test_main_refuses_an_unknown_second_closing_issue(op, monkeypatch) -> None:
+    """A typo'd second issue would close the wrong issue on merge — refused
+    before anything is opened."""
+    captured = _stub_main(
+        op,
+        monkeypatch,
+        ["open-pr", "--closes", "42", "--closes", "9999", "--draft", "--yes"],
+        {42: _open_issue()},
+    )
+    assert op.main() == 2
+    assert captured == {}

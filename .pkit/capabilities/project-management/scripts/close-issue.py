@@ -16,6 +16,10 @@ Closes a GitHub issue via either path declared in workflow.yaml's
   * `--mode=pr-merge` — issue closure was triggered by GitHub's
     `Closes #N` keyword. The script runs the cascade pass on parents
     after the fact; it does not itself close the issue.
+    With `--pr <M>` it DOES close an open leaf (a Task) whose work landed in
+    merged PR M without the PR naming it: PR M is verified merged, the
+    DEC-007 checkbox close-gate runs, the reference is posted as a comment,
+    and the issue closes as completed before the cascade pass (#1049).
   * `--mode=cascade-eligibility-close` — closes a container (epic/feature/
     umbrella) once every child is closed AND its own checkboxes are ticked
     (the DEC-007 gate is non-skippable here). Implements the
@@ -46,8 +50,10 @@ Or via the dispatcher (per COR-021):
 
 Exit codes:
   0  closed (or cascade reported)
-  1  membership refusal / authorisation refusal / checkbox close-gate refusal
-  2  usage error (issue not found; mode contradicts state)
+  1  membership refusal / authorisation refusal / checkbox close-gate refusal /
+     `--pr` names a PR that is not merged
+  2  usage error (issue or PR not found; mode contradicts state; `--pr` outside
+     pr-merge mode or on a non-leaf)
   3  gh failure
 """
 
@@ -66,6 +72,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
+from _lib import audit as _audit  # noqa: E402
 from _lib import bootstrap_gate  # noqa: E402
 from _lib import axis_labels  # noqa: E402
 from _lib import containment  # noqa: E402
@@ -79,7 +86,8 @@ from _lib.checkbox_gate import (  # noqa: E402
     refusal_message as _checkbox_refusal,
     unticked_boxes as _unticked_boxes,
 )
-from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
+from _lib.comment import post_audit_once  # noqa: E402
+from _lib.gh import gh_get_issue, gh_get_pr, gh_run, load_adopter_config  # noqa: E402
 from _lib.hooks import fire_hooks  # noqa: E402
 from _lib.labels import reconcile_state_labels_to_done  # noqa: E402
 from _lib.membership import (  # noqa: E402
@@ -93,6 +101,10 @@ from _lib.structural_type import infer_structural_type  # noqa: E402
 
 VALID_MODES = ("wont-do", "pr-merge", "cascade-eligibility-close")
 DEFAULT_MODE = "wont-do"
+
+# The writer name in the idempotency key of the `--pr` close comment, so a
+# retry after a failed close does not post the reference twice (`_lib.audit`).
+PR_MERGE_CLOSE_WRITER = "close-issue-pr-merge"
 
 
 def main() -> int:
@@ -115,10 +127,25 @@ def main() -> int:
         help=(
             f"Closure mode. Default: {DEFAULT_MODE}. "
             "`wont-do` posts a closing comment + closes; "
-            "`pr-merge` is the cascade-only hook after GitHub-native close; "
+            "`pr-merge` is the cascade-only hook after GitHub-native close "
+            "(with --pr, it closes an open leaf itself); "
             "`cascade-eligibility-close` closes a container (epic/feature/"
             "umbrella) once all children are closed and its own checkboxes "
             "are ticked (non-skippable gate)."
+        ),
+    )
+    parser.add_argument(
+        "--pr",
+        type=int,
+        default=None,
+        metavar="M",
+        help=(
+            "pr-merge mode only: the merged PR that completed this issue "
+            "without naming it in a `Closes #N` line. An OPEN leaf (a Task) is "
+            "closed as completed — PR M is verified merged, the DEC-007 "
+            "checkbox close-gate runs, the reference is posted as a comment, "
+            "then the closure cascade runs. Without --pr, pr-merge mode only "
+            "reconciles labels after GitHub's own close."
         ),
     )
     parser.add_argument(
@@ -163,6 +190,13 @@ def main() -> int:
     )
     session_guard.add_override_argument(parser)
     args = parser.parse_args()
+
+    if args.pr is not None and args.mode != "pr-merge":
+        print(
+            f"error: --pr applies to --mode=pr-merge only (got --mode={args.mode}).",
+            file=sys.stderr,
+        )
+        return 2
 
     capability_root = resolve_capability_root(args.capability_root)
     if capability_root is None:
@@ -283,16 +317,37 @@ def main() -> int:
             return 3
         print(f"\n[ok] closed #{args.issue_number} (wont-do).")
 
+    elif args.mode == "pr-merge" and args.pr is not None and state != "closed":
+        # The work landed in a merged PR that did not name this issue, so
+        # GitHub's `Closes #N` never closed it: close it here, as completed.
+        rc = _close_leaf_through_pr(
+            args,
+            structural_type=structural_type,
+            body=body,
+            labels=labels,
+            config=config,
+            substrate_map=substrate_map,
+        )
+        if rc is not None:
+            return rc
+
     elif args.mode == "pr-merge":
         # In pr-merge mode the issue is expected to be already-closed
         # via GitHub's Closes #N. The script's job is the cascade pass
         # plus label reconciliation (GitHub's auto-close does not touch
         # state:* labels).
-        if state != "closed":
+        if args.pr is not None:
+            print(
+                f"\n[noop] #{args.issue_number} is already closed; --pr is not "
+                "needed — reconciling labels only."
+            )
+        elif state != "closed":
             print(
                 "\n[warn] pr-merge mode but issue is still open. "
                 "GitHub's Closes #N should have closed it on PR merge. "
-                "Re-check the merged PR's body for `Closes #N`.",
+                "Re-check the merged PR's body for `Closes #N`; if the PR did "
+                "not name this issue, re-run with --pr <M> to close it through "
+                "that PR.",
                 file=sys.stderr,
             )
         # Reconcile state:* labels regardless of open/closed state warning
@@ -460,6 +515,114 @@ def main() -> int:
     return 0
 
 
+# ---- pr-merge close through a named PR (#1049) -----------------------
+
+
+def _close_leaf_through_pr(
+    args: argparse.Namespace,
+    *,
+    structural_type: str | None,
+    body: str,
+    labels: list[str],
+    config: dict,
+    substrate_map: "axis_labels.SubstrateMap | None",
+) -> int | None:
+    """Close an open leaf as completed through merged PR ``args.pr``.
+
+    The `pr-merge-into-main` closure trigger, for a leaf whose PR closed another
+    issue and never named this one. Refuses a container (containers close
+    through the cascade), a PR that is not merged, and — as every closure path
+    does — an unticked checkbox (DEC-007). Returns the exit code to stop with,
+    or None once the issue is closed and labelled, so the caller runs the
+    closure cascade and the after-close hooks.
+    """
+    issue_number = args.issue_number
+    if structural_type != "task":
+        kind = structural_type or "of an unrecognised type"
+        print(
+            f"\nerror: --pr closes a leaf (a Task) through the merged PR that "
+            f"completed it; #{issue_number} is {kind}. A container closes "
+            "through --mode=cascade-eligibility-close once every child has "
+            "closed.",
+            file=sys.stderr,
+        )
+        return 2
+
+    pr = _gh_get_pr(args.pr, config)
+    if pr is None:
+        return 2
+    if not _pr_is_merged(pr):
+        pr_state = str(pr.get("state") or "not merged").lower()
+        print(
+            f"\n[refused] PR #{args.pr} is {pr_state}, not merged — a leaf "
+            "closes as completed only through a merged PR.",
+            file=sys.stderr,
+        )
+        return 1
+
+    unticked = [] if args.skip_checkbox_gate else _unticked_boxes(body)
+    if unticked:
+        print(
+            "\n" + _checkbox_refusal(
+                unticked,
+                remedy=(
+                    "tick or remove each unticked checkbox before closing, "
+                    "or pass --skip-checkbox-gate (discouraged)."
+                ),
+            ),
+            file=sys.stderr,
+        )
+        return 1
+
+    print(f"\ncompleted by: PR #{args.pr} (merged)")
+    if args.dry_run:
+        print(
+            "\n[dry-run] would comment the reference, close "
+            f"#{issue_number} as completed and reconcile its labels; nothing "
+            "written."
+        )
+        return 0
+    if not args.yes and sys.stdin.isatty():
+        reply = input("Proceed? [y/N] ").strip().lower()
+        if reply not in ("y", "yes"):
+            print("aborted.", file=sys.stderr)
+            return 0
+
+    key, comment_body = _pr_merge_close_comment(args.pr)
+    if not post_audit_once("issue", issue_number, key, comment_body, config, run=gh_run):
+        return 3
+    if not _gh_close_issue(issue_number, reason="completed", config=config):
+        return 3
+    if not reconcile_state_labels_to_done(
+        issue_number, labels, config, gh_run=gh_run, substrate_map=substrate_map,
+    ):
+        return 3
+    print(f"\n[ok] closed #{issue_number} (pr-merge through PR #{args.pr}, completed).")
+    return None
+
+
+def _pr_is_merged(pr: dict) -> bool:
+    """Whether a `gh pr view` payload describes a merged PR."""
+    return str(pr.get("state") or "").upper() == "MERGED" or bool(pr.get("mergedAt"))
+
+
+def _pr_merge_close_comment(pr_number: int) -> tuple[str, str]:
+    """The reference comment a `--pr` close posts, and its idempotency key.
+
+    The key makes the comment retry-safe: a run that posted it and then failed
+    to close finds it on the re-run and does not post it again.
+    """
+    key = _audit.audit_key(PR_MERGE_CLOSE_WRITER, str(pr_number))
+    body = (
+        f"[pr-merge close] completed by merged PR #{pr_number}.\n\n"
+        "Closed via `pkit project-management close-issue --mode=pr-merge "
+        f"--pr {pr_number}` "
+        "(per [project-management:DEC-006-state-machine-and-cascade]).\n"
+        f"{key}"
+    )
+    return key, body
+
+
 # ---- parent eligibility ---------------------------------------------
 
 
@@ -608,12 +771,17 @@ def _gh_comment(issue_number: int, body: str, config: dict) -> bool:
     return True
 
 
+def _gh_get_pr(pr_number: int, config: dict) -> dict | None:
+    return gh_get_pr(pr_number, config, fields="number,state,mergedAt,url")
+
+
 def _gh_close_issue(issue_number: int, *, reason: str = "completed", config: dict) -> bool:
     cmd = ["gh", "issue", "close", str(issue_number)]
     if reason:
         cmd.extend(["--reason", reason])
     try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        # Through the gh seam, so the adopter's configured host applies (DEC-023).
+        proc = gh_run(cmd, config, check=False)
     except FileNotFoundError:
         return False
     if proc.returncode != 0:

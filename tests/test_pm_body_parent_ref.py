@@ -96,3 +96,53 @@ def test_form_matchers_accept_exactly_what_parse_reads(bpr, forms) -> None:
                  "Feature: 1", "prose"):
         accepted = any(m.match(line) for m in matchers)
         assert accepted == (bpr.parse_first_line(line, forms["task"]) is not None), line
+
+
+def test_every_shipped_type_may_name_a_milestone(bpr, forms) -> None:
+    """#1016: which types may sit under a milestone is read from the shipped
+    forms — all four offer the milestone line, an EPIC's being optional."""
+    assert {name for name, form in forms.items() if bpr.form_allows_milestone(form)} == {
+        "epic", "feature", "umbrella", "task",
+    }
+    assert not bpr.form_allows_milestone("Feature: #<N>")
+
+
+# --- a milestone first line follows a milestone move (#1049) -------------
+
+
+@pytest.mark.parametrize(
+    "body,expected",
+    [
+        ("Milestone: [#5](../milestone/5)\n\n## What\n", 5),
+        ("Milestone: #5\n\n## What\n", 5),  # the deprecated plain form
+        ("Integration: integration/big-thing\nMilestone: [#5](../milestone/5)\n", 5),
+        ("EPIC: #10\n\n## What\n", None),
+        ("## What\nMilestone: [#5](../milestone/5)\n", None),  # not the first line
+    ],
+)
+def test_first_line_milestone(bpr, body, expected) -> None:
+    assert bpr.first_line_milestone(body) == expected
+
+
+def test_set_first_line_milestone_retargets_in_place(bpr) -> None:
+    body = "Milestone: #5\n\n## What\nx\n"
+    assert bpr.set_first_line_milestone(body, 6) == "Milestone: [#6](../milestone/6)\n\n## What\nx\n"
+
+
+def test_set_first_line_milestone_keeps_the_integration_marker(bpr) -> None:
+    body = "Integration: integration/big-thing\nMilestone: [#5](../milestone/5)\n\n## What\n"
+    assert bpr.set_first_line_milestone(body, 6) == (
+        "Integration: integration/big-thing\nMilestone: [#6](../milestone/6)\n\n## What\n"
+    )
+
+
+def test_set_first_line_milestone_removes_the_line_and_its_blank(bpr) -> None:
+    assert bpr.set_first_line_milestone("Milestone: [#5](../milestone/5)\n\n## Thesis\n", None) == (
+        "## Thesis\n"
+    )
+
+
+def test_set_first_line_milestone_leaves_an_issue_parent_alone(bpr) -> None:
+    body = "EPIC: #10\n\n## What\n"
+    assert bpr.set_first_line_milestone(body, 6) == body
+    assert bpr.set_first_line_milestone(body, None) == body

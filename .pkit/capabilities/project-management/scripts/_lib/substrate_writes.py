@@ -274,6 +274,34 @@ def write_milestone(
     )
 
 
+def milestone_clear_args(*, issue_number: int | str) -> list[str]:
+    """Construct the ``gh issue edit <n> --remove-milestone`` argv.
+
+    The detaching counterpart of :func:`milestone_edit_args`: the same substrate
+    (the issue's milestone), so it has its construction point here too.
+    """
+    return ["gh", "issue", "edit", str(issue_number), "--remove-milestone"]
+
+
+def clear_milestone(
+    config: dict[str, Any],
+    *,
+    issue_number: int | str,
+) -> SubstrateWriteResult:
+    """Construct AND execute the milestone removal; return the result.
+
+    Same posture as :func:`write_milestone`: never raises on a failed write, and
+    leaves what a failure means to the caller.
+    """
+    args = milestone_clear_args(issue_number=issue_number)
+    return _execute(
+        args,
+        config,
+        ok_detail=f"removed the milestone from #{issue_number}",
+        fail_prefix="gh issue edit --remove-milestone failed",
+    )
+
+
 # ----- execution (shared) ------------------------------------------------
 
 

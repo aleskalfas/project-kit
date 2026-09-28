@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "filler.schema.json",
+  "title": "Project filler file — the envelope a data point's filler answers in",
+  "description": "A backbone file schema (ADR-056) for the envelope of a filler: the project's own filler file, found by its location — `<internal-root>/pkit/fillers/<publisher>/<role>/<point>.yaml` for the point `<publisher>::<role>:<point>` (the lifecycle README, \"Where a project filler file lives\") — and the one JSON document a capability's command filler prints (COR-052 points 2 and 6). The envelope is the backbone's; the value inside it is the point's, validated by the companion schema of the point's active provider and never by this one. Strict: an unknown key is an error carrying the nearest known key. `remove` is the project's alone: a command filler's answer carries only `schema_version` and `value`. The editor directive (`# yaml-language-server: $schema=...`) is a comment, not a key.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "value"
+  ],
+  "properties": {
+    "schema_version": {
+      "description": "The version of the point this filler targets — the companion integer of the point (COR-052 point 5). It must equal the point's version: a project file at another version is a validation error, and its value is not read.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "value": {
+      "description": "The point's value, in the point's own shape. For a `union` or an `additive` point it is a list of entries, each a string — its own id — or a mapping carrying a string `id`; ids are unique within one filler."
+    },
+    "remove": {
+      "description": "Removal overrides, each with its reason (COR-052 points 2 to 4): entries of the other fillers — capabilities and the default — that the point drops, by id. In a `union` point this is a suppression; in an `additive` point it is the only way an entry leaves. A `single` point takes none.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "reason"
+        ],
+        "properties": {
+          "id": {
+            "description": "The id of the entry to drop.",
+            "type": "string",
+            "minLength": 1
+          },
+          "reason": {
+            "description": "Why it is dropped — required, and shown wherever the resolution is.",
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}

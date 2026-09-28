@@ -317,11 +317,11 @@ Three narrow, batch-capable verbs replace the whole-body fetch-edit-resend that 
 
 | Command | What it does |
 |---|---|
-| `check-criterion <issue> <index> [text] [<index> [text]] ...` | Tick one or more acceptance-criterion checkboxes, addressed by **1-based index** (matching `show-issue --field criteria`'s numbering) with an optional **expected-text guard**. |
-| `uncheck-criterion <issue> <index> [text] ...` | Untick — the symmetric counterpart; identical addressing and failure model. |
+| `check-criterion <issue> [--section doc-impact] <index> [text] [<index> [text]] ...` | Tick one or more acceptance-criterion checkboxes, addressed by **1-based index** (matching `show-issue --field criteria`'s numbering) with an optional **expected-text guard**. `--section doc-impact` addresses the `## Doc impact` section's checkboxes the same way, numbered as `show-issue --field doc-impact` lists them. |
+| `uncheck-criterion <issue> [--section doc-impact] <index> [text] ...` | Untick — the symmetric counterpart; identical addressing and failure model. |
 | `set-field <issue> [--kind K] [--priority X] [--workstream Y] [--parent N]` | Declaratively set classification field(s) in one call. Kind/priority/workstream resolve through the same seam `create-issue` uses (substrate-map-aware); `--kind` applies to **kind-driven (Task) issues** — it swaps the `type:*` label and realigns the title prefix per `title_prefix_by_value` (e.g. `[Chore] → [Bug]`). On an epic/feature/umbrella a non-`feature` kind is **refused up front** (those structural types carry kind `feature` by definition — DEC-011 / `classification.yaml` `structural_restriction`); re-file as a Task if it's genuinely bug/docs/test work. `--parent` rewrites the body's first parent-ref line **and moves the native sub-issue link to the same parent** (native containment; see "An issue has one native parent" above). The `type:*` axis is always a label, so `--kind` labels regardless of board. For priority and workstream, `set-field` asks where the axis actually lives and writes there: your own label where your map binds one, the kit's label in greenfield, and the Projects-v2 field where a board carries it. A degrade note is reported only where nothing carries the axis at all — not, as before, wherever a board exists. |
 
-**Addressing a criterion** (`check`/`uncheck`): the **index** is the primary address; the optional **expected-text** is both a wording-based double-check and a guard that the box has not moved between read and write. The guard rule is **equality on the trimmed, checkbox-marker-stripped text** — copy it verbatim from `show-issue --field criteria` output. Each guard follows the index it guards (`check-criterion 239 1 "docs updated" 3`).
+**Addressing a criterion** (`check`/`uncheck`): the **index** is the primary address; the optional **expected-text** is both a wording-based double-check and a guard that the box has not moved between read and write. The guard rule is **equality on the trimmed, checkbox-marker-stripped text** — copy it verbatim from `show-issue --field criteria` output. Each guard follows the index it guards (`check-criterion 239 1 "docs updated" 3`). A `## Doc impact` section written as checkboxes is addressed the same way with `--section doc-impact`: its items are numbered within that section, as `show-issue --field doc-impact` prints them, and one call addresses one section.
 
 **Failure + recovery** (DEC-038 D4) for all three:
 
@@ -337,6 +337,7 @@ Three narrow, batch-capable verbs replace the whole-body fetch-edit-resend that 
 ```
 pkit pm check-criterion 239 1 3 5            # tick criteria 1, 3, 5 in one call
 pkit pm check-criterion 239 2 "docs updated" # tick #2 only if it still reads "docs updated"
+pkit pm check-criterion 239 --section doc-impact 1   # tick the first `## Doc impact` box
 pkit pm uncheck-criterion 239 2              # untick #2 (idempotent)
 pkit pm set-field 239 --priority High --workstream cli   # set both, idempotently
 pkit pm set-field 239 --kind bug             # Task: swap type:* label + realign prefix ([Chore] → [Bug])
@@ -359,7 +360,38 @@ All three accept `--dry-run` (validate + show the plan, write nothing) and `--ye
 
 Setting the id touches no issue — the per-issue ownership *marker* is written by the lifecycle commands (`create-issue` / `start-work` / `handoff-issue`), which read this id. That marker's substrate is selectable (`comment` default, or `label`) per [project-management:DEC-043-ownership-substrate-selection]; the identity here is orthogonal to that choice.
 
-**`close-issue`** is *not* in the seven-command palette — it handles closure outside forward-progress flow: won't-do / abandonment (`--mode=wont-do`), the post-PR-merge cascade hook (`--mode=pr-merge`), and **cascade-eligibility closure** of a container (epic/feature/umbrella) once all its children are closed and its own checkboxes are ticked (`--mode=cascade-eligibility-close`, a non-skippable DEC-007 gate).
+#### Closing, reopening and editing an issue — `close-issue` / `reopen-issue` / `edit-issue`
+
+**`close-issue`** is *not* in the seven-command palette — it handles closure outside forward-progress flow. **`reopen-issue`** undoes a closure, and **`edit-issue`** changes an issue's title, body or milestone without moving it in the lifecycle.
+
+| Command | What it does |
+|---|---|
+| `close-issue <N> --reason "<R>"` | Won't-do / abandonment (`--mode=wont-do`, the default): the DEC-007 checkbox close-gate, a closing comment with the reason, closed as not planned. |
+| `close-issue <N> --mode=pr-merge` | The post-merge hook after GitHub's own `Closes #N` close: reconciles the state label to done and runs the closure cascade. It closes nothing itself. |
+| `close-issue <N> --mode=pr-merge --pr <M>` | Closes an open **leaf** whose work landed in merged PR `M` without the PR naming it — a Task done through another Task's PR. PR `M` is verified merged, the checkbox close-gate runs, the reference is posted as a comment (once: a retry does not repeat it), the issue closes as completed, and the closure cascade runs. A container, an unmerged PR and an unticked box are refused. |
+| `close-issue <N> --mode=cascade-eligibility-close` | Closes a container (epic/feature/umbrella) once all its children are closed and its own checkboxes are ticked (a non-skippable DEC-007 gate). |
+| `reopen-issue <N> [--reason "<R>"]` | Reopens a closed issue and puts it back into the lifecycle: its state label is removed, so it reads as `backlog` when it has a milestone and `todo` otherwise, and `start-work` (or `promote-issue`) takes it on from there. An open issue still labelled done is repaired the same way. |
+| `edit-issue <N> [--title T] [--body B \| --body-file F \| --append A] [--milestone <M> \| --clear-milestone --reason "<R>"]` | Title / body edit, validated against the title and body rules for the fields edited (see above). `--milestone` attaches the issue to an OPEN milestone or moves it to another — its number or exact title, validated as `create-issue --milestone` validates it, for an issue whose type may carry one; `--clear-milestone` detaches it. A milestone change needs `--reason` and posts an audit comment. See "Attaching an issue to a Milestone" below. |
+
+**Why a reopen removes the state label instead of transitioning out of done.** `done` is the workflow's terminal state (`schemas/workflow.yaml`), and the closure cascade folds children against it; a transition out of it would make it an end state that is not one. A reopened issue re-enters the lifecycle where any open issue without a state label sits — the detectors read `backlog` with a milestone and `todo` without — which is where a freshly filed or freshly scheduled issue sits too. No state label is *added*, so the reset does not show as an ungoverned state change (`history --check-drift` counts added state labels). Where the state is derived from open/closed, nothing is removed; where it lives on a Projects-v2 board, reset the board's Status by hand, as for `move-issue`.
+
+**A milestone edit is not a state change.** The native Milestone field is written through the substrate-write seam, and a first body line naming the old milestone as the parent (`Milestone: [#<N>](../milestone/<N>)`, or the older plain form) is rewritten to the new one, so the textual record and the native field keep agreeing — `close-milestone` counts a milestone's children by both. An issue with no state label has its position read from its milestone, so a milestone edit that would move it is refused: attaching one to a Todo issue is the Todo → Backlog transition (`promote-issue --milestone`), and the workflow has no way from Backlog back to Todo. Clearing the milestone an issue's first line names as its required parent is refused as well — re-parent it first with `set-field <N> --parent <P>`; on an EPIC, whose parent-ref is optional, the line is removed instead.
+
+#### Opening and editing a PR — `open-pr` / `edit-pr`
+
+| Command | What it does |
+|---|---|
+| `open-pr [<N>] [--closes <N> ...] [--type T] [--scope S] [--summary "<s>"] [--body-file F] [--draft]` | Opens the PR for the current branch. The closing issue is the positional `<N>`, as `review-work` and `done-work` take it, or `--closes <N>`, its explicit form; without either it comes from the branch name (`<type>/<N>-<slug>`). **`--closes` repeats**, so one PR that lands several Tasks closes each of them on merge. The first closing issue is the primary one: it supplies the title's Conventional-Commits type, the default summary and the base branch. The body carries a `Closes #N` line for every closing issue — the template gets one each, and a `--body-file` gains any it does not already name. |
+| `edit-pr <PR> [--title T] [--body B \| --body-file F \| --append A] [--closes <N> ...]` | Title / body edit, validated against the PR rules. `--closes` (repeatable) adds a `Closes #N` line beside the existing ones for each named issue the body does not already close. |
+
+**The PR title is composed, not given whole:** `<type>(<scope>): <summary>`. `--type` overrides the type derived from the primary issue's `type:*` label, `--scope` adds the scope (the title has none without it), and `--summary` is only the description part after the colon, defaulting to the issue title without its `[Type]` prefix, lowercased:
+
+```
+pkit pm open-pr 1017 --scope pm --summary "take the issue number positionally" --body-file body.md
+# → fix(pm): take the issue number positionally   (closes #1017; fix from its type:bug label)
+```
+
+`validate-pr` reads every closing reference: a PR closing several issues is valid, and its title type is cross-checked against each closing issue's type (a mix of types is a warning). `done-work <N>` gates the checkboxes of issue `N` only, so tick the other closing issues' boxes before the merge, and run `close-issue <M> --mode=pr-merge` on each afterwards to reconcile its state label.
 
 #### Milestone lifecycle — `create-milestone` / `close-milestone` (per [project-management:DEC-016-time-bound-containers])
 
@@ -378,7 +410,22 @@ Both run the DEC-021 membership gate and the COR-039 foreign-repo guard at start
 
 A Milestone's children are resolved the same way the rest of the capability resolves membership: the union of issues carrying the **native GitHub Milestone field** for it and issues whose body carries the textual `Milestone: [#<n>](../milestone/<n>)` ref. Because a Milestone has no comment thread, the audit note is **appended to the description** in the same PATCH that flips `state=closed` (idempotent on re-run), rather than posted as a comment the way `close-issue` does.
 
-> **Not yet automated:** date-based / `either` closes do **not** roll open children forward to the next Milestone (schema `rollforward_behaviour`) — `close-milestone` only warns and lists them, so reassign by hand for now. Automated rollforward, and surfacing "milestone now closeable" from the closure cascade when the last child EPIC closes, are follow-ups.
+> **Not yet automated:** date-based / `either` closes do **not** roll open children forward to the next Milestone (schema `rollforward_behaviour`) — `close-milestone` only warns and lists them, so reassign them with `edit-issue --milestone` for now. Automated rollforward, and surfacing "milestone now closeable" from the closure cascade when the last child EPIC closes, are follow-ups.
+
+##### Attaching an issue to a Milestone
+
+Which verb depends on where the issue is in the lifecycle:
+
+- **At filing** — `create-issue --milestone <M>`.
+- **A Todo issue being scheduled** — `promote-issue <N> --milestone <M> --reason "<R>"`. Scheduling *is* the Todo → Backlog transition, so it goes through the verb that owns it, and `move-issue` records the audit comment.
+- **Any other issue — attaching, moving, detaching** — `edit-issue <N> --milestone <M> --reason "<R>"` (or `--clear-milestone --reason "<R>"`). No state transition happens. The milestone must be OPEN (number or exact title), and the issue's type must be one `issue-types.yaml` lets sit under a milestone (its parents include `milestone`, or its parent-ref form offers a `Milestone:` line — true of all four shipped types, an EPIC included). Before writing, it posts an audit comment naming the old and new milestone and the reason; a retry does not post it twice. The first body line follows the move, and a change that would move the issue in the lifecycle is refused (see "A milestone edit is not a state change" above).
+
+```
+pkit pm edit-issue 885 --milestone 5 --reason "EPIC scheduled into Milestone 5"
+pkit pm edit-issue 1044 --milestone "Milestone 6: …" --reason "filed into the wrong milestone"
+```
+
+`promote-issue` without `--milestone` leaves the milestone as it is and says so (`milestone: unchanged`). On an issue already past Todo, `promote-issue --milestone` still attaches the milestone but has no transition to carry an audit comment, so it points at `edit-issue` instead.
 
 **Review-mode resolution** is settled in [project-management:DEC-027-review-modes] (mode lookup) and [project-management:DEC-028-agent-as-approver-paths] (agent gate).
 
@@ -394,7 +441,7 @@ Both surface the methodology-relevant view of an existing issue / PR. Three outp
 
 Addressable fields:
 
-- **`show-issue`**: `title`, `type`, `state`, `assignees`, `milestone`, `parent`, `priority`, `workstream`, `labels`, `criteria`, `sections`, `body`, `url`.
+- **`show-issue`**: `title`, `type`, `state`, `assignees`, `milestone`, `parent`, `priority`, `workstream`, `labels`, `criteria`, `doc-impact`, `sections`, `body`, `url`. `doc-impact` lists the `## Doc impact` items in the order `check-criterion --section doc-impact` numbers them.
 - **`show-pr`**: `title`, `state`, `draft`, `base`, `head`, `merged-at`, `cc-type`, `cc-summary`, `closes`, `reviewers`, `review`, `review-history`, `doc-impact`, `body`, `url`. The `review` field surfaces the **latest DEC-028 reviewer verdict(s)** — the verdict **token** (`APPROVED`/`CHANGES_REQUESTED`) and the **reasons** (the verdict comment body) — one entry per reviewer (latest-per-reviewer). It shows each reviewer's latest verdict, unfiltered (every round is in `review-history`); `done-work`'s merge gate acts on a *filtered subset* of these (the gate additionally drops stale verdicts and verdicts from non-required reviewers). A verdict that predates the PR's latest commit — which the gate will not count — is flagged **stale** (`… (stale — predates the latest commit; the merge gate will not count it)`), so an APPROVED the gate would refuse is not mistaken for gate-agreement. It reads the verdict comments through the same governed `gh` path the rest of the view uses, so it works for the `project-manager` agent whose raw `gh pr view --comments` is denied; a PR with no verdict comment prints `no reviewer verdict posted`. The `review-history` field is the full sequence behind that reduction: **every** verdict each reviewer posted, oldest first — rounds a later verdict superseded included — each with its token, timestamp, the full body, and whether it is the reviewer's **current** verdict (the one `review` shows) or **stale**. It is built on the same verdict recogniser with the same permissive scope as `review`, so it shows exactly the verdicts `review` reduces; in `--json` it is the `review_history` key. Use it to read earlier review rounds on a PR reviewed several times.
 
 ```
@@ -489,6 +536,8 @@ Both run the membership gate (DEC-021) and the foreign-repo session interlock (C
 #### The checkbox close-gate on the merge path (per [project-management:DEC-007-checkbox-validation]; #734)
 
 Checkboxes are lifecycle-gating: an issue with an unticked `- [ ]` cannot reach Done. On the **PR-merge** closure path that check has to run **before the squash-merge is authorised**, because GitHub's `Closes #N` auto-closes the issue *on* merge — a check afterwards could only report a gate it had already let through. So `done-work` runs it as a **pre-flight**: it reads the closing issue's body, and on any unticked box refuses (exit 1) listing each unticked line before naming the remedy. An issue with **no checkboxes at all** is unaffected (the rule applies only when boxes exist); a body that could not be read **fails closed**, since an unverifiable gate is not a satisfied one and the merge it guards is irreversible.
+
+**Every box counts, and each has a verb.** The gate counts the boxes of every section, `## Doc impact` included, so a Task whose Doc impact section uses the checkbox shape needs those ticked too. Tick them with `check-criterion <N> --section doc-impact <index>` — the same index and guard grammar as the criteria (see the batch primitives above) — rather than rewriting the body. `done-work`'s refusal prints, under each unticked box, the command that ticks it: `check-criterion <N> <index>` for a criterion, `check-criterion <N> --section doc-impact <index>` for a Doc impact box, and a body edit (`edit-issue <N> --body-file`) for a box in any other section, which no narrow verb addresses.
 
 `--skip-checkbox-gate` overrides it — **discouraged**, and deliberately the same flag name and semantics `close-issue` carries, so the two closure paths behave alike. (Whether both should instead take an audited `--bypass "<reason>"` is an open question, not settled by #734.)
 

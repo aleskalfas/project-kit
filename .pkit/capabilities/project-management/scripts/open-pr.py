@@ -13,14 +13,21 @@ Opens a PR per the methodology's branch + PR conventions
 Inputs:
   * Current branch must match `git-conventions.yaml`'s branch-name
     pattern (refused if not).
-  * Closing issue number — derived from the branch name's `<N>`
-    segment unless overridden by `--closes`.
-  * PR Conventional-Commits `<type>` — derived from the closing
-    issue's `type:*` label via classification.yaml's pr_type_mapping;
-    overridden by `--type`.
-  * PR title scope — extracted from caller via `--scope` or omitted.
-  * PR body — `templates/PR.md` skeleton with the `Closes #N`
-    placeholder filled in; user-supplied `--body-file` overrides.
+  * Closing issue number(s) — the positional `<N>`, as review-work and
+    done-work take it (#1017), and/or `--closes`, its explicit form, which
+    repeats: one PR that lands several Tasks closes each of them on merge
+    (#1049). Without either, the branch name's `<N>` segment. The first
+    is the primary issue — it supplies the title's `<type>`, the default
+    summary and the base branch.
+  * PR title — composed as `<type>(<scope>): <summary>`, never taken
+    whole. `<type>` is derived from the primary closing issue's `type:*`
+    label via classification.yaml's pr_type_mapping, overridden by
+    `--type`; `(<scope>)` comes from `--scope` and is omitted without it;
+    `<summary>` — the description part — is `--summary`, defaulting to
+    the issue title without its `[Type]` prefix, lowercased.
+  * PR body — `templates/PR.md` skeleton with a `Closes #N` line per
+    closing issue; user-supplied `--body-file` overrides, and gains a
+    `Closes #N` line for any closing issue it does not already name.
 
 Membership gate per DEC-021 runs at startup.
 
@@ -28,7 +35,7 @@ Self-contained via PEP 723; runs via
   uv run --script .pkit/capabilities/project-management/scripts/open-pr.py --scope cli --summary "add new dispatcher"
 
 Or via the dispatcher (per COR-021):
-  pkit project-management open-pr --summary "..."
+  pkit project-management open-pr 42 --scope cli --summary "add new dispatcher"
 
 Exit codes:
   0  PR opened (or dry-run reported)
@@ -75,40 +82,64 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Open a GitHub PR per the methodology's branch + PR + title "
-            "conventions. Derives the closing issue from the current branch "
-            "name; derives the Conventional Commits <type> from the issue's "
-            "type:* label."
+            "conventions. The closing issue is the positional <N> (as "
+            "review-work and done-work take it), or --closes, or else the "
+            "current branch's <N>. The PR title is composed, not taken whole: "
+            "`<type>(<scope>): <summary>`, where <type> is --type or the "
+            "primary closing issue's type:* label mapped through "
+            "classification.yaml, `(<scope>)` is --scope and is left out "
+            "without it, and <summary> — the title's description part — is "
+            "--summary or the issue title without its [Type] prefix, "
+            "lowercased."
+        ),
+    )
+    parser.add_argument(
+        "issue_number",
+        nargs="?",
+        type=int,
+        default=None,
+        metavar="N",
+        help=(
+            "The closing issue, as review-work and done-work take it: the same "
+            "as `--closes N`, and the primary issue when --closes names more."
         ),
     )
     parser.add_argument(
         "--closes",
         type=int,
+        action="append",
         default=None,
+        metavar="N",
         help=(
-            "Closing issue number. Default: derived from the current "
-            "branch's `<conv-type>/<N>-<slug>` form."
+            "Closing issue number — the explicit form of the positional <N>; "
+            "repeat it to close several issues with one PR — the body carries "
+            "a `Closes #N` line for each. The first closing issue is the "
+            "primary one (title <type>, default summary, base branch). "
+            "Default: derived from the current branch's "
+            "`<conv-type>/<N>-<slug>` form."
         ),
     )
     parser.add_argument(
         "--type",
         default=None,
         help=(
-            "Conventional Commits <type> to use (overrides the value "
-            "derived from the closing issue's type:* label)."
+            "The title's Conventional Commits <type> (overrides the value "
+            "derived from the primary closing issue's type:* label)."
         ),
     )
     parser.add_argument(
         "--scope",
         default=None,
-        help="Conventional Commits <scope> (optional).",
+        help="The title's Conventional Commits <scope>; omitted from the title when not given.",
     )
     parser.add_argument(
         "--summary",
         default=None,
         help=(
-            "Conventional Commits <summary> — short, imperative, lowercase, "
-            "no trailing period. Default: derived from the issue title (drop "
-            "the [Type] prefix and lowercase)."
+            "The title's description part — the <summary> after "
+            "`<type>(<scope>): ` — short, imperative, lowercase, no trailing "
+            "period. The type and scope are not part of it. Default: the "
+            "primary issue's title without its [Type] prefix, lowercased."
         ),
     )
     parser.add_argument(
@@ -216,20 +247,26 @@ def main() -> int:
         )
         return 1
 
-    # Derive the closing issue number.
-    issue_number = args.closes if args.closes is not None else _extract_issue_number(branch)
-    if issue_number is None:
+    # Derive the closing issue number(s); the first is the primary issue.
+    closing_issues = _closing_issues(args.issue_number, args.closes, branch)
+    if not closing_issues:
         print(
             f"error: could not derive closing issue from branch {branch!r}; "
-            "pass --closes <N>.",
+            "pass it: `open-pr <N>` (or --closes <N>).",
             file=sys.stderr,
         )
         return 2
+    issue_number = closing_issues[0]
 
-    # Fetch the closing issue to derive title / type label.
+    # Fetch the primary closing issue to derive title / type label.
     issue = _gh_get_issue(issue_number, config)
     if issue is None:
         return 2
+    # Every other closing issue must exist too — a typo would otherwise ride
+    # into the body as a `Closes #N` that closes the wrong issue on merge.
+    for other in closing_issues[1:]:
+        if _gh_get_issue(other, config) is None:
+            return 2
 
     issue_title = str(issue.get("title", ""))
     issue_labels = [
@@ -260,7 +297,7 @@ def main() -> int:
     # Build the PR body.
     body = _build_pr_body(
         capability_root=capability_root,
-        issue_number=issue_number,
+        issue_numbers=closing_issues,
         body_file=args.body_file,
     )
     if body is None:
@@ -317,7 +354,7 @@ def main() -> int:
     print("open-pr: plan")
     print(f"  branch:  {branch}")
     print(f"  base:    {base}")
-    print(f"  closes:  #{issue_number}")
+    print(f"  closes:  {', '.join(f'#{n}' for n in closing_issues)}")
     print(f"  type:    {conv_type}")
     if args.scope:
         print(f"  scope:   {args.scope}")
@@ -384,6 +421,23 @@ def _extract_issue_number(branch: str) -> int | None:
     return int(m.group(1))
 
 
+def _closing_issues(
+    positional: int | None, closes: list[int] | None, branch: str
+) -> list[int]:
+    """The issues the PR closes, primary first, without repeats.
+
+    The positional `<N>` (as review-work and done-work take it) and
+    `--closes` (repeatable, the explicit form) name them — the positional one
+    first; without either, the branch's `<N>` segment is the one closing
+    issue. Empty when none yields one.
+    """
+    named = ([positional] if positional is not None else []) + list(closes or [])
+    if named:
+        return list(dict.fromkeys(named))
+    derived = _extract_issue_number(branch)
+    return [derived] if derived is not None else []
+
+
 def _conv_type_from_issue_labels(
     labels: list[str],
     classification: dict,
@@ -417,30 +471,35 @@ def _summary_from_issue_title(title: str) -> str:
 def _build_pr_body(
     *,
     capability_root: Path,
-    issue_number: int,
+    issue_numbers: list[int],
     body_file: Path | None,
 ) -> str | None:
+    """The PR body, carrying a `Closes #N` line for every closing issue."""
     if body_file is not None:
         try:
-            return body_file.read_text(encoding="utf-8")
+            authored = body_file.read_text(encoding="utf-8")
         except OSError as exc:
             print(
                 f"error: failed to read {body_file}: {exc}",
                 file=sys.stderr,
             )
             return None
+        return pr_validation.with_closing_references(authored, issue_numbers)
     template_path = capability_root / "templates" / "PR.md"
     if not template_path.is_file():
-        return f"Closes #{issue_number}\n"
+        return pr_validation.with_closing_references("", issue_numbers)
     raw = template_path.read_text(encoding="utf-8")
     # Drop the HTML comment scaffolding lines so the PR body stays clean.
     stripped = _strip_html_comments(raw)
-    # Replace the `Closes #` placeholder with the actual issue number.
-    out = re.sub(r"^Closes #\s*$", f"Closes #{issue_number}", stripped, flags=re.MULTILINE)
-    if out == stripped:
-        # Template lacked the placeholder; prepend a Closes line.
-        out = f"Closes #{issue_number}\n\n{stripped}"
-    return out
+    # Replace the `Closes #` placeholder with one line per closing issue; a
+    # template without the placeholder gets them prepended instead.
+    closing_lines = "\n".join(f"Closes #{n}" for n in issue_numbers)
+    # `[ \t]*`, not `\s*`: the latter also swallowed the newline after the
+    # placeholder, gluing the next heading onto the last `Closes` line.
+    out = re.sub(
+        r"^Closes #[ \t]*$", lambda _m: closing_lines, stripped, count=1, flags=re.MULTILINE
+    )
+    return pr_validation.with_closing_references(out, issue_numbers)
 
 
 def _strip_html_comments(text: str) -> str:

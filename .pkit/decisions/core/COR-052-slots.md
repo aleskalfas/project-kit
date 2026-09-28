@@ -53,6 +53,7 @@ Capability dependencies (COR-030) make one capability require another, which is 
 
 6. **Command fillers, and failure.**
    - **Command fillers.** A capability may supply its data through a command registered in its package metadata (COR-021). The command runs under the same limits as anchor resolvers (COR-050): a bounded time, no network access, and deterministic output for the same inputs. It fails closed: an abnormal exit, a timeout, or output that does not validate against the slot's schema counts as *no answer*, never as an empty answer.
+   - **A filler takes no parameter.** A command filler is run with nothing but the request for machine-readable output, and prints the slot's value. A slot holds a *value*: the one thing the status report shows, a project file overrides, contributions merge into and the resolver may keep for the length of a run. A question that needs an input — which documentation does *this* change owe — is therefore not a slot. It belongs to the process kind of connection point (COR-053 point 2), whose predicates already take one subject, the identifier the engine threads through them (COR-032). A gate that asks what documentation one change owes is served either by a parameterless slot listing the obligations, which the gate applies to the change itself, or by a process point whose subject is the change. An anchor-kind resolver (COR-050 point 2) takes the anchor value as its one subject in the same way. A query command takes at most one subject: none for a filler, the anchor value for a resolver.
    - **The inert policy.** Each slot declares what happens when a filler that was meant to answer cannot: its version does not match, its command failed, or its output is invalid.
      - `fallback`: the slot resolves from the remaining fillers, with a warning naming the one that failed. If none remain, it is unresolved with a warning.
      - `fail`: the **whole** slot is unresolved, whatever its combination policy, so a gate never passes on the entries that happened to survive.
@@ -73,6 +74,8 @@ Capability dependencies (COR-030) make one capability require another, which is 
 
 **Why reuse the schema and command machinery.** Companion schemas, their versions, and fail-closed commands registered by capabilities already exist. Slot commands and anchor resolvers run under one set of limits, so there is one way of running a capability's data command, not two.
 
+**Why a filler takes no parameter.** A slot answered per argument is a function, not a value: the status report could not show it, a project file could not override it, contributions could not be merged except for the same argument everywhere, and the resolver could keep nothing. The need that raised the question — what one change owes — already has a home in the process kind, whose predicates take exactly one subject.
+
 **Why core.** Several components need to exchange knowledge without depending on each other, and nothing here names a discipline. The pattern has already been built several times as single-purpose contribution mechanisms, so extracting it follows the usual recurrence test (COR-007).
 
 ### Alternatives considered
@@ -81,6 +84,7 @@ Capability dependencies (COR-030) make one capability require another, which is 
 - **Consumers reading providers' data directly, through shared data references.** Rejected. It forces every provider to store its data in the consumer's format, which couples their models.
 - **A bespoke mechanism per pair of components.** Rejected. It adds a new copy of the same rules each time.
 - **Silently falling back to the default everywhere.** Rejected. Gates would fail open while looking as if they passed.
+- **Command fillers that take a parameter.** Rejected. The slot would stop being a value (see Rationale); a question with an input is a process point.
 - **Letting install order decide between competing fillers.** Rejected. The answer would change without anyone choosing.
 
 ## Implications
