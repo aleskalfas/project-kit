@@ -11,16 +11,26 @@ body: >
   `schemas`, `configuration`, `packages`, `connections`, `versions`, `friction`, `rule-sets`,
   `decisions`, `refs`, `process`, `data` — and the five focused commands (`schemas validate`,
   `decisions validate`, `refs validate`, `data validate <path>`, `process validate <address>`)
-  stay as they are. A capability registers its own validators in package metadata
-  (`validators:` — `script`, `help`, optional `order`), addressed `<capability>:<name>`, run from
-  the project root as a bounded query answering one JSON findings document; no answer is an
-  error finding. One renderer prints every member under its heading, every unknown-key message
-  comes from the shared renderer (the schemas and data members included), and one summary
-  closes the report. `--only NAME` and `--skip NAME` address members; `--no-refs` stays as
-  `--skip refs`. The `refs` member reports drift between an artifact's front matter and its
-  body as a warning and everything that does not resolve as an error, and reads a bracketed
-  `reads.patterns` declaration the way the deploy does; `pkit refs validate` keeps failing on
-  any finding. The `data` member checks every file in the repository that a `pkit_schema:` field
-  or a `binds_to:` glob claims; the `process` member checks that every declared definition
-  resolves. The check aggregator calls `pkit validate` once in place of `schemas validate` and
-  `decisions validate`; the diff-scoped checks stay their own lines.
+  stay, `schemas validate` and `data validate` now phrasing an unknown key through the shared
+  renderer (one line per key, with the nearest known key). A capability registers its own
+  validators in package metadata: a `validators:` entry names a `commands:` leaf by `command`
+  (optional `order`), the leaf carries `query-contract: true` — the literal of ADR-057's
+  query-contract declaration, now specified — and the umbrella runs it addressed
+  `<capability>:<name>`, from the project root with the one argument `--json`, the offline
+  marker set (`PKIT_OFFLINE=1`, `UV_OFFLINE=1`), in its own process group, bounded like a
+  predicate, reading one JSON findings document from stdout; no answer — a leaf without the
+  declaration, an abnormal exit, a timeout, a half-formed document — is an error finding. The
+  package schema requires the declaration on a validator's command, and package validation
+  checks the reference like every other command reference. One renderer prints every member
+  under its heading and one summary closes the report. `--only NAME` and `--skip NAME` address
+  members; `--no-refs` stays as `--skip refs`. The `refs` member reports drift between an
+  artifact's front matter and its body as a warning, and as an error a path owned twice or by
+  nobody, a hook no provider answers, colliding providers, a missing storyboard, a citation
+  that does not resolve or a sub-procedure that does not exist; it reads a bracketed
+  `reads.patterns` declaration the way the deploy does, so four false positives on the shipped
+  agents are gone; `pkit refs validate` keeps failing on any finding. The `data` member checks
+  every file a `pkit_schema:` field or a `binds_to:` glob claims, in the repository outside
+  `.pkit/` and in every project-owned `project/` folder under it, skipping what nothing claims
+  (an unreadable unclaimed file included); the `process` member checks that every declared
+  definition resolves. The check aggregator calls `pkit validate` once in place of `schemas
+  validate` and `decisions validate`; the diff-scoped checks stay their own lines.
