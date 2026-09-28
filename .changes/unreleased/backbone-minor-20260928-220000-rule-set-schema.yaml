@@ -16,12 +16,13 @@ body: >
   between the data and the body's id-headed sections; well-formed ids that carry their set's
   name and are written once; unique set names; the container inside each rule; a complete
   origin on every accepted rule, whose cited decision record exists and is accepted; successors
-  in the same set or one inheriting it; and inheritance — a pinned set that exists at the
-  pinned major (the finding names the new one), no redefined inherited id, fills only of
-  offered points and at most once along a chain, a method set never inheriting a project one,
-  and a capability's set inheriting another capability's only when that dependency is
-  declared. A rule without a status is proposed. An unresolved source kind and an orphaned fill
-  are reported, never failed. Rules are friction artefacts: the friction pass walks the
+  in the same set or one inheriting it; and inheritance — a pinned set that exists, no
+  redefined inherited id, fills only of offered points and at most once along a chain, a
+  method set never inheriting a project one, and a capability's set inheriting another
+  capability's only when that dependency is declared. The pinned major is a version relation:
+  the `versions` heading counts the rule-set pins and fails on one whose inherited set has
+  moved to another major, naming it (`[rule-set pin]`). A rule without a status is proposed. An
+  unresolved source kind and an orphaned fill are reported, never failed. Rules are friction artefacts: the friction pass walks the
   rule-set places too, reading each rule as one entry, and leaves a rule-set file's own findings
   to the new pass. `RS-<SET>-NNN`, `RS-<SET>-NNN#<point>` and `[<component>:RS-<SET>-NNN]` are
   citation tokens: `pkit refs validate` resolves them in agent and skill bodies, `pkit refs

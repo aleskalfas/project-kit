@@ -23,7 +23,10 @@ This module:
   keys through the shared renderer; the container inside each rule — the
   rule-set file is claimed before the container rule, so this pass and not
   the friction pass applies it; the join between data and prose; ids;
-  origins; successors; inheritance (points 3, 5 and 7);
+  origins; successors; inheritance (points 3, 5 and 7). Whether a pinned
+  major is still the inherited set's is a version relation: `pin_checks`
+  hands it to the wiring resolver, which reports every version relation
+  under `versions` (`connections.rule_set_pin_findings`);
 - resolves citations to rules (`resolve_citation`) and lists rule ids
   claimed more than once in the rule-set space (`rule_id_collisions`), for
   `pkit refs` and `pkit decisions validate`.
@@ -543,7 +546,6 @@ class RuleSetFindingKind(Enum):
     SUCCESSOR_NOT_FOUND = "successor-not-found"
     SUCCESSOR_OUT_OF_LINE = "successor-out-of-line"  # not in the set or one inheriting it
     INHERITED_SET_MISSING = "inherited-set-missing"
-    PIN_MISMATCH = "pin-mismatch"  # the pinned major is not the inherited set's
     INHERITANCE_NOT_ALLOWED = "inheritance-not-allowed"
     INHERITANCE_CYCLE = "inheritance-cycle"
     UNDECLARED_FILL = "undeclared-fill"
@@ -1001,7 +1003,11 @@ def _successor_findings(rule_set: RuleSet, catalogue: _Catalogue) -> Iterable[Ru
 
 
 def _inheritance_findings(rule_set: RuleSet, catalogue: _Catalogue) -> Iterable[RuleSetFinding]:
-    """Each pin names an existing set, at its major, that this set may inherit (COR-051 point 7)."""
+    """Each pin names an existing set that this set may inherit (COR-051 point 7).
+
+    Whether the pinned major is the set's is a version relation, reported with
+    the others under `versions` (`pin_checks`; `connections.rule_set_pin_findings`).
+    """
     for index, pin in rule_set.pins:
         pointer = f"/inherits/{index}"
         parent, problem = catalogue.resolve_pin(pin)
@@ -1013,15 +1019,6 @@ def _inheritance_findings(rule_set: RuleSet, catalogue: _Catalogue) -> Iterable[
         if refusal is not None:
             yield _error(
                 rule_set.path, pointer, RuleSetFindingKind.INHERITANCE_NOT_ALLOWED, refusal
-            )
-        if parent.major is not None and parent.major != pin.major:
-            yield _error(
-                rule_set.path,
-                pointer,
-                RuleSetFindingKind.PIN_MISMATCH,
-                f"pins {pin}, but {parent.citation} is at version {parent.version}, major "
-                f"{parent.major}; review what changed in it, then update the pin to "
-                f"{parent.citation}@{parent.major} (COR-051 point 7).",
             )
 
 
@@ -1150,29 +1147,7 @@ class _Catalogue:
         return locate_rule(self.discovery, reference)
 
     def resolve_pin(self, pin: Pin) -> tuple[RuleSet | None, str | None]:
-        """(the pinned set, None), or (None, why not).
-
-        (None, None) when two files declare the name under the same owner: the
-        duplicate-name finding already reports that, so the pin adds nothing.
-        """
-        named = self.discovery.sets_named(pin.set_name)
-        owned = [s for s in named if s.component == pin.component]
-        if len(owned) == 1:
-            return owned[0], None
-        if owned:
-            return None, None
-        if not named:
-            return None, (
-                f"inherits {pin}, but no rule set is named {pin.set_name} in this repository "
-                f"(COR-051 point 7)."
-            )
-        other = named[0]
-        wanted = "a project rule set" if pin.component is None else f"a rule set of {pin.component}"
-        return None, (
-            f"inherits {pin}, but {pin.set_name} is not {wanted}: it belongs to {other.owner} — "
-            f"write the pin as {other.citation}@{pin.major} (a method rule set is cited with its "
-            f"component's name, a project one bare; COR-051 point 6)."
-        )
+        return resolve_pin(self.discovery, pin)
 
     def parents(self, rule_set: RuleSet) -> tuple[RuleSet, ...]:
         """The sets `rule_set` pins, resolved, in pin order."""
@@ -1311,6 +1286,81 @@ class _Catalogue:
             )
             self._requires[capability] = names
         return self._requires[capability]
+
+
+def resolve_pin(discovery: RuleSetDiscovery, pin: Pin) -> tuple[RuleSet | None, str | None]:
+    """(the pinned set, None), or (None, why not).
+
+    The address must be the set's: a method set with its component, a project
+    set bare (COR-051 point 6). (None, None) when two files declare the name
+    under the same owner: the duplicate-name finding already reports that, so
+    the pin adds nothing.
+    """
+    named = discovery.sets_named(pin.set_name)
+    owned = [s for s in named if s.component == pin.component]
+    if len(owned) == 1:
+        return owned[0], None
+    if owned:
+        return None, None
+    if not named:
+        return None, (
+            f"inherits {pin}, but no rule set is named {pin.set_name} in this repository "
+            f"(COR-051 point 7)."
+        )
+    other = named[0]
+    wanted = "a project rule set" if pin.component is None else f"a rule set of {pin.component}"
+    return None, (
+        f"inherits {pin}, but {pin.set_name} is not {wanted}: it belongs to {other.owner} — "
+        f"write the pin as {other.citation}@{pin.major} (a method rule set is cited with its "
+        f"component's name, a project one bare; COR-051 point 6)."
+    )
+
+
+@dataclass(frozen=True)
+class PinCheck:
+    """One inheritance pin that names an existing rule set: a version relation.
+
+    Inheriting a set pins its major (COR-051 point 7); a newer major fails
+    validation until the inheriting set's owner reviews it and updates the pin.
+    `pkit validate` reports it with the other version relations, under
+    `versions` (`connections.rule_set_pin_findings`).
+    """
+
+    rule_set: RuleSet  # the inheriting set
+    index: int  # the pin's index in `inherits`, as written
+    pin: Pin
+    inherited: RuleSet
+
+    @property
+    def pointer(self) -> str:
+        return f"/inherits/{self.index}"
+
+    @property
+    def problem(self) -> str | None:
+        """Why the pin no longer holds, naming the new major; None while it does."""
+        major = self.inherited.major
+        if major is None or major == self.pin.major:
+            return None  # an unreadable version is the inherited file's shape finding
+        return (
+            f"pins {self.pin}, but {self.inherited.citation} is at version "
+            f"{self.inherited.version}, major {major}; review what changed in it, then update "
+            f"the pin to {self.inherited.citation}@{major} (COR-051 point 7)."
+        )
+
+
+def pin_checks(discovery: RuleSetDiscovery) -> tuple[PinCheck, ...]:
+    """Every pin that names an existing rule set, in path and written order.
+
+    A pin naming no set, or a set it may not inherit, is the rule-sets pass's
+    finding; here it is simply not a check.
+    """
+    checks: list[PinCheck] = []
+    for rule_set in discovery.rule_sets:
+        for index, pin in rule_set.pins:
+            inherited, _problem = resolve_pin(discovery, pin)
+            if inherited is not None:
+                checks.append(PinCheck(rule_set, index, pin, inherited))
+    return tuple(checks)
 
 
 def locate_rule(

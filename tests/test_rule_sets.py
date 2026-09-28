@@ -21,6 +21,7 @@ from jsonschema import Draft202012Validator
 from ruamel.yaml import YAML
 
 from project_kit import backbone_schemas as bs
+from project_kit import connections as cx
 from project_kit import decisions_validate, refs
 from project_kit import friction_discovery as fd
 from project_kit import friction_validate as fv
@@ -452,13 +453,31 @@ def test_an_inherited_set_that_does_not_exist(adopter: AdopterRepo) -> None:
     assert "no rule set is named LDOC" in finding.message
 
 
-def test_a_wrong_major_names_the_new_major(adopter: AdopterRepo) -> None:
+def test_a_wrong_major_is_a_version_relation_naming_the_new_major(adopter: AdopterRepo) -> None:
     write_set(adopter, f"{PROJECT_SETS}/cmn.md", cmn(version="2.1.0"))
     write_set(adopter, f"{PROJECT_SETS}/doc.md", doc("CMN@1"))
-    finding = only(validate(adopter), Kind.PIN_MISMATCH)
-    assert finding.where == f"{PROJECT_SETS}/doc.md /inherits/0"
+    app = {"rule-set": "APP", "version": "1.0.0", "inherits": ["CMN@2"], "rules": {}}
+    write_set(adopter, f"{PROJECT_SETS}/app.md", app)
+
+    checks = rs.pin_checks(rs.discover_rule_sets(adopter.root))
+    assert [(c.rule_set.name, str(c.pin), c.problem is None) for c in checks] == [
+        ("APP", "CMN@2", True),
+        ("DOC", "CMN@1", False),
+    ]
+    wiring = cx.resolve_wiring(adopter.root)
+    assert wiring.checked[cx.Relation.RULE_SET_PIN] == 2
+    (finding,) = [f for f in wiring.findings if f.relation is cx.Relation.RULE_SET_PIN]
+    assert (finding.file.as_posix(), finding.path) == (f"{PROJECT_SETS}/doc.md", "/inherits/0")
+    assert finding.severity is cx.Severity.ERROR
     assert "at version 2.1.0, major 2" in finding.message
     assert "update the pin to CMN@2" in finding.message
+    assert validate(adopter).errors == ()  # reported once, under `versions`
+
+    result = CliRunner().invoke(main, ["validate", "--no-refs"])
+    assert result.exit_code == 1, result.output
+    versions = result.output.split("\n  versions\n")[1].split("\n  rule-sets\n")[0]
+    assert "2 rule-set pin(s)" in versions and "[rule-set pin]" in versions
+    assert f"{PROJECT_SETS}/doc.md:/inherits/0" in versions
 
 
 def test_an_inherited_id_is_never_redefined(adopter: AdopterRepo) -> None:
