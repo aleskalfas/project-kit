@@ -1,0 +1,22 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  The package-metadata schema ships: `.pkit/schemas/backbone/package.schema.json`
+  type-checks every field the shipped `package.yaml` files use — both `schema_version`
+  values 1 and 2 are accepted, nothing is bumped — and the blocks the newer records add:
+  `connections` (roles, `extension-points {accepts, offers}`, `extensions {contributes,
+  subscribes, depends-on}` with `depends-on` marked generated, per COR-053 point 3),
+  `docs.locations` (COR-049 point 4) and `friction {places, surface}` (COR-050 points 1
+  and 8). The schema is permissive on unknown keys: a new `project_kit.package_validate`
+  module reports an unknown key as a WARNING naming the nearest known key, through the
+  shared renderer of ADR-056, and adds the repository checks — a declared point sits under
+  a provided role, an accepted data point's companion schema exists under the capability's
+  `schemas/`, every filler, emitter and subscriber command exists in `commands:`, command
+  scripts exist, documentation locations and friction places are relative sub-paths.
+  `pkit validate` gains a "packages" pass over every registered component's package file;
+  errors fail it, warnings only print. The install-time self-consistency check of an
+  incubated capability now runs the same validator (its previous messages kept, each prefixed by its location in the file — a missing version reports the schema's required-property error when the schema is present —, its refusals
+  widened by the new checks). Refusing unknown keys is Task #999; the checks that need the
+  wiring resolver are Task #983 and have named hooks.
