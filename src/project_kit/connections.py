@@ -91,6 +91,7 @@ from __future__ import annotations
 import dataclasses
 import hashlib
 import json
+import shlex
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
 from enum import Enum
@@ -123,6 +124,10 @@ _yaml = YAML(typ="safe")
 CONNECTIONS_KEY = "connections"
 PROVIDERS_KEY = "providers"
 SELECTIONS_KEY = "selections"
+
+# The configuration command that writes a provider selection: a role conflict
+# names it, once per provider, as the exact fix (`provider_set_command`).
+PROVIDERS_SET_COMMAND = "pkit connections providers set"
 
 # A component's companion schemas and, by convention, its process definitions
 # (`schemas/<process-id>.yaml`, the process area README; `pkit process new`
@@ -320,6 +325,16 @@ class PointBinding:
         return bool(self.bound) or self.filler_compatible
 
     @property
+    def mark_unmet(self) -> bool:
+        """A mandatory data point filled only by its default (COR-053 point 6) —
+        what `pkit validate` reports as an error on the point's provider."""
+        return (
+            self.point.mandatory is not None
+            and self.point.kind is PointKind.DATA
+            and not self.filled
+        )
+
+    @property
     def contributors(self) -> tuple[str, ...]:
         """Every capability declaring a contribution to this point, sorted, whether
         or not the contribution is bound — the candidates of a contributor selection
@@ -449,15 +464,29 @@ class Wiring:
 
     def unmet_marks(self, kind: CounterpartKind | None = None) -> tuple[Binding, ...]:
         """The counterparts, of `kind` or of every kind, whose mandatory mark this
-        wiring leaves unmet — each an error on the side carrying it (COR-053 point
-        6). A mark aimed at a role whose providers conflict is not among them: the
-        conflict is the finding, and selecting a provider decides the mark. The
-        capability lifecycle reads the `depends-on` ones to refuse or warn."""
+        wiring leaves unmet (`mark_unmet`), in declaration order. The capability
+        lifecycle reads the `depends-on` ones to refuse or warn (COR-053 point 6)."""
         return tuple(
             b
             for b in self.bindings
-            if (kind is None or b.counterpart.kind is kind) and _mark_unmet(b, self.declarations)
+            if (kind is None or b.counterpart.kind is kind) and self.mark_unmet(b)
         )
+
+    def mark_unmet(self, binding: Binding) -> bool:
+        """Whether `binding` carries a mandatory mark this wiring leaves unmet —
+        what `pkit validate` reports as an error on the side carrying it (COR-053
+        point 6): its target missing, or at another version. An unselected
+        provider's marks bind nothing (point 1), and a mark aimed at a role in
+        conflict waits on the conflict, which is the finding."""
+        c = binding.counterpart
+        if c.mandatory is None or binding.status in (
+            BindingStatus.BOUND,
+            BindingStatus.INERT_PROVIDER,
+        ):
+            return False
+        if binding.status is BindingStatus.NO_ACTIVE_PROVIDER:
+            return not self.declarations.providers_of(c.role or "")
+        return True
 
     def errors(self) -> tuple[Finding, ...]:
         return tuple(f for f in self.findings if f.severity is Severity.ERROR)
@@ -932,24 +961,6 @@ def _version_status(counterpart: Counterpart, point: Point) -> BindingStatus:
     return BindingStatus.INERT_VERSION
 
 
-# The statuses under which a mandatory mark is unmet whatever else holds; a
-# role without an active provider is unmet only when nothing provides it.
-_UNMET = (BindingStatus.INERT_VERSION, BindingStatus.NO_SUCH_POINT, BindingStatus.NOT_INSTALLED)
-
-
-def _mark_unmet(binding: Binding, declarations: Declarations) -> bool:
-    """A mandatory counterpart the wiring leaves without a compatible target —
-    exactly the marks `_binding_findings` reports as errors."""
-    counterpart = binding.counterpart
-    if counterpart.mandatory is None:
-        return False
-    if binding.status in _UNMET:
-        return True
-    if binding.status is BindingStatus.NO_ACTIVE_PROVIDER:
-        return not declarations.providers_of(counterpart.role or "")
-    return False
-
-
 def _count_versioned(bindings: Iterable[Binding], *, dependency: bool) -> int:
     """How many counterparts had a version compared with their point's."""
     return sum(
@@ -972,15 +983,18 @@ def _role_findings(
     findings: list[Finding] = []
     for role in roles:
         if role.conflict:
+            commands = " or ".join(
+                f"`{provider_set_command(role.role, name)}`" for name in role.providers
+            )
             findings.append(
                 Finding(
                     config_file,
                     f"/{CONNECTIONS_KEY}/{PROVIDERS_KEY}",
                     Severity.ERROR,
                     f"role {role.role!r} is provided by {_list(role.providers)} and no "
-                    f"provider is selected; select one with the `{CONNECTIONS_KEY}."
-                    f"{PROVIDERS_KEY}` entry `{role.role}: <one of them>`"
-                    f"{_config_set_hint(PROVIDERS_KEY, role.role)} (COR-053 point 1).",
+                    f"provider is selected; select one with {commands}, which writes the "
+                    f"`{CONNECTIONS_KEY}.{PROVIDERS_KEY}` entry `{role.role}: <one of them>` "
+                    f"(COR-053 point 1).",
                 )
             )
             continue
@@ -1676,6 +1690,12 @@ def _is_qualified_role(name: str) -> bool:
     """`<publisher>::<role>`, each side non-empty and free of `:`."""
     publisher, sep, role = name.partition(ROLE_QUALIFIER)
     return bool(sep and publisher and role) and POINT_SEPARATOR not in publisher + role
+
+
+def provider_set_command(role: str, capability: str) -> str:
+    """The exact command that selects `capability` as the provider of the qualified
+    `role` — the fix a role conflict names, in `pkit validate` and `pkit status`."""
+    return f"{PROVIDERS_SET_COMMAND} {shlex.quote(role)} {shlex.quote(capability)}"
 
 
 def _config_set_hint(key: str, entry: str) -> str:

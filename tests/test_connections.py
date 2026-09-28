@@ -193,10 +193,12 @@ def test_two_providers_without_a_selection_is_a_role_conflict(
         (".pkit/project/config.yaml:/connections/providers", "error")
     ]
     message = wiring.findings[0].message
-    assert "select one with the `connections.providers` entry `pkit::documentation: <one of" in (
-        message
-    )
-    assert "`pkit config set connections.providers.pkit::documentation <capability>`" in message
+    # The exact command that resolves it, once per provider, and the entry it writes.
+    assert (
+        "select one with `pkit connections providers set pkit::documentation docs-a` or "
+        "`pkit connections providers set pkit::documentation docs-b`, which writes the "
+        "`connections.providers` entry `pkit::documentation: <one of them>`"
+    ) in message
 
 
 def test_a_provider_selection_resolves_the_conflict_and_the_other_provider_is_inert(
@@ -1269,3 +1271,55 @@ def test_pkit_validate_says_when_nothing_is_wired(make_adopter_repo: MakeAdopter
     assert result.exit_code == 0, result.output
     assert "no connection points declared by installed components." in result.output
     assert "  versions\n    checked: " in result.output
+
+
+# --- what the status report reads of the wiring ------------------------------------
+
+
+def test_an_unmet_mark_is_exactly_what_validate_fails_on_its_carrier(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """The status report reads the wiring's own judgement of an unmet mark
+    (`Wiring.mark_unmet`, `PointBinding.mark_unmet`); it is the set of carriers
+    `pkit validate` fails, never a second reading of it."""
+    repo = make_adopter_repo()
+    _stage(
+        repo,
+        "docs-a",
+        _provider("docs-a", accepts=_accepts(version=2, mandatory={"reason": "r"})),
+        schemas=COMPANIONS,
+    )
+    for name in ("an-a", "an-b"):  # a role in conflict
+        analysis = _provider(name, role=ANALYSIS, accepts=_accepts(GLOSSARY))
+        _stage(repo, name, analysis, schemas=COMPANIONS)
+    _stage(repo, "stale", _contributor("stale", version=1, mandatory="an old contract"))
+    _stage(repo, "met", _contributor("met", version=2, mandatory="it holds"))
+    _stage(repo, "waits", _contributor("waits", point=GLOSSARY, mandatory="the conflict first"))
+    _stage(repo, "lost", _contributor("lost", point="pkit::nobody:thing", mandatory="none"))
+    _stage(
+        repo,
+        "orphan",
+        _package("orphan") | _depends_on({"process": "gone:flow", "mandatory": {"reason": "x"}}),
+    )
+    wiring = cx.resolve_wiring(repo.root)
+
+    def carrier(name: str) -> Path:
+        component = wiring.declarations.by_name(name)
+        assert component is not None
+        return component.file
+
+    unmet = {
+        (carrier(b.counterpart.capability), b.counterpart.pointer)
+        for b in wiring.bindings
+        if wiring.mark_unmet(b)
+    }
+    failed = {
+        (f.file, f.path)
+        for f in wiring.errors()
+        if f.message.startswith("mandatory ") and "cycle" not in f.message
+    }
+    assert unmet == failed
+    assert {file.parent.name for file, _ in unmet} == {"stale", "lost", "orphan"}
+    # The point's own mark: filled by `met`, so not unmet — and validate agrees.
+    assert [p.mark_unmet for p in wiring.points if p.point.address == READING] == [False]
+    assert not any(f.path.endswith("/mandatory") for f in wiring.errors())

@@ -28,6 +28,7 @@ from project_kit.install import find_source_kit, find_target_root
 from project_kit.manifest import read_backbone_manifest, read_kit_version
 
 if TYPE_CHECKING:
+    from project_kit.connections import Binding, PointBinding, RoleBinding, Wiring
     from project_kit.data_points import ResolvedPoint
 
 # The indent of an entry listed under a status line's label.
@@ -74,6 +75,7 @@ def _report_status() -> None:
     _report_documentation(target_root)
     _report_friction(target_root)
     _report_rule_sets(target_root)
+    _report_connections(target_root)
     _report_data_points(target_root)
     _report_decisions(target_root)
     _report_skills_inventory(target_root)
@@ -371,6 +373,181 @@ def _report_rule_sets(target_root: Path) -> None:
                 f"{check.inherited.citation} is at {check.inherited.version}"
             )
             click.echo(f"{_LIST_INDENT}  fix: {check.fix}")
+
+
+def _report_connections(target_root: Path) -> None:
+    """The resolved wiring (COR-053 point 7): who answers each role, then what
+    reaches each point, then the counterparts that reach none.
+
+    Per role: its provider; a conflict — several provide it and none is
+    selected — or a selection naming no provider, each with the exact command
+    that resolves it, once per provider; or orphaned — no installed capability
+    provides it. Per point an active provider defines: the project filler and
+    the counterparts bound to it, the inert ones with why, and each mandatory
+    mark it leaves unmet. What a data point resolves to, and how its fillers
+    combine, is the Data points section's, below — not repeated here.
+
+    The wiring is `pkit validate`'s own (`connections.shared_wiring`), so the
+    two never disagree; its findings are validate's to report. Reads
+    forgivingly: a failure to resolve leaves the section with its heading only.
+    """
+    from project_kit import connections
+
+    click.echo()
+    click.echo("  " + cli_render.style("heading", "Connections"))
+    try:
+        wiring = connections.shared_wiring(target_root)
+    except Exception:  # noqa: BLE001 — soft probe; a broken declaration is validate's finding
+        return
+    for line in (
+        *_role_lines(wiring),
+        *_point_lines(wiring, target_root),
+        *_unreached_lines(wiring),
+    ):
+        click.echo(line)
+
+
+def _role_lines(wiring: Wiring) -> list[str]:
+    if not wiring.roles:
+        return [f"    {'roles':<18} none named"]
+    conflicts = sum(1 for r in wiring.roles if r.conflict)
+    orphaned = sum(1 for r in wiring.roles if not r.providers)
+    lines = [
+        f"    {'roles':<18} {len(wiring.roles)} named: {len(wiring.active_roles())} active, "
+        f"{conflicts} in conflict, {orphaned} orphaned"
+    ]
+    for role in wiring.roles:
+        lines.extend(_role_entry(role))
+    return lines
+
+
+def _role_entry(role: RoleBinding) -> list[str]:
+    """A role's provider; its conflict, or a selection naming no provider, with a
+    fix per provider; or orphaned."""
+    from project_kit.connections import provider_set_command
+
+    if role.active is not None:
+        notes = ["selected"] if role.selected is not None else []
+        others = [p for p in role.providers if p != role.active]
+        if others:
+            notes.append(f"not selected: {', '.join(others)}")
+        tail = f" ({'; '.join(notes)})" if notes else ""
+        return [f"{_LIST_INDENT}{role.role} → {role.active}{tail}"]
+    if not role.providers:
+        named = f"; the selection names {role.selected!r}" if role.selected is not None else ""
+        return [f"{_LIST_INDENT}{role.role} — orphaned: no installed capability provides it{named}"]
+    if role.conflict:
+        state = f"conflict: {', '.join(role.providers)} provide it and none is selected"
+    else:
+        state = f"the selection names {role.selected!r}, which does not provide it"
+    return [
+        f"{_LIST_INDENT}{role.role} — {state}",
+        *(f"{_LIST_INDENT}  fix: {provider_set_command(role.role, p)}" for p in role.providers),
+    ]
+
+
+def _point_lines(wiring: Wiring, target_root: Path) -> list[str]:
+    from project_kit.connections import PointKind
+
+    if not wiring.points:
+        return [f"    {'points':<18} none defined"]
+    unfilled = sum(1 for p in wiring.points if p.point.kind is PointKind.DATA and not p.filled)
+    unmet = sum(1 for p in wiring.points if p.mark_unmet) + sum(
+        1 for p in wiring.points for b in p.bindings if wiring.mark_unmet(b)
+    )
+    lines = [
+        f"    {'points':<18} {len(wiring.points)} defined: {unfilled} unfilled, "
+        f"{unmet} unmet mandatory mark(s)"
+    ]
+    for point in wiring.points:
+        lines.extend(_wired_point_lines(wiring, point, target_root))
+    return lines
+
+
+def _wired_point_lines(wiring: Wiring, point: PointBinding, target_root: Path) -> list[str]:
+    """One point: its kind, version and provider, whether anything fills or
+    reaches it, then the project filler and each counterpart — bound or inert —
+    and an unmet mandatory mark of its own."""
+    from project_kit.connections import PointKind
+
+    p = point.point
+    mark = " · mandatory" if p.mandatory is not None else ""
+    if p.kind is PointKind.DATA:
+        state = "filled" if point.filled else "unfilled"
+    else:
+        state = f"{len(point.bound)} bound" if point.bindings else "no counterpart"
+    lines = [
+        f"    {p.address}",
+        f"{_LIST_INDENT}{p.kind.value} v{p.version} · {p.provider}{mark} — {state}",
+    ]
+    filler = point.filler
+    if filler is not None:
+        path = filler.file
+        if path.is_absolute() and path.is_relative_to(target_root):
+            path = path.relative_to(target_root)
+        who = f"project filler {path.as_posix()}"
+        if point.filler_compatible:
+            lines.append(f"{_LIST_INDENT}{'bound':<8} {who}")
+        else:
+            lines.append(
+                f"{_LIST_INDENT}{'inert':<8} {who} — targets v{filler.version}; the point is at "
+                f"v{p.version}"
+            )
+    lines.extend(_counterpart_line(wiring, b) for b in point.bindings)
+    if point.mark_unmet:
+        lines.append(
+            f"{_LIST_INDENT}{'unmet':<8} mandatory, filled only by its default "
+            f"(reason: {p.mandatory})"
+        )
+    return lines
+
+
+def _counterpart_line(wiring: Wiring, binding: Binding) -> str:
+    """A counterpart reaching a point: bound, or inert with why."""
+    from project_kit.connections import BindingStatus
+
+    c = binding.counterpart
+    who = f"{c.capability} ({c.kind.value})"
+    mark = _mark(wiring, binding)
+    if binding.status is BindingStatus.BOUND:
+        return f"{_LIST_INDENT}{'bound':<8} {who}{mark}"
+    if binding.status is BindingStatus.INERT_VERSION and binding.point is not None:
+        why = f"targets v{c.version}; the point is at v{binding.point.version}"
+    elif binding.status is BindingStatus.INERT_PROVIDER:
+        why = (
+            f"not delivered: {c.capability} provides a role for which it is not the "
+            f"selected provider"
+        )
+    else:
+        why = binding.status.value
+    return f"{_LIST_INDENT}{'inert':<8} {who} — {why}{mark}"
+
+
+def _unreached_lines(wiring: Wiring) -> list[str]:
+    """The counterparts that reach no point: a role nobody answers, a point its
+    role does not define, an upstream not installed."""
+    from project_kit.connections import BindingStatus
+
+    unreached = [
+        b for b in wiring.bindings if b.point is None and b.status is not BindingStatus.BOUND
+    ]
+    if not unreached:
+        return []
+    lines = [f"    {'unreached':<18} {len(unreached)} counterpart(s) reach no point:"]
+    for b in unreached:
+        c = b.counterpart
+        lines.append(
+            f"{_LIST_INDENT}{c.capability} ({c.kind.value}) {c.target} — "
+            f"{b.status.value}{_mark(wiring, b)}"
+        )
+    return lines
+
+
+def _mark(wiring: Wiring, binding: Binding) -> str:
+    """A counterpart's mandatory mark, and whether the wiring leaves it unmet."""
+    if wiring.mark_unmet(binding):
+        return " · mandatory, unmet"
+    return " · mandatory" if binding.counterpart.mandatory is not None else ""
 
 
 def _report_data_points(target_root: Path) -> None:

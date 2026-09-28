@@ -75,9 +75,6 @@ STAYS_FILLED = "stays filled"
 LEFT_UNFILLED = "left unfilled"
 NO_LONGER_DEFINED = "no longer defined"
 
-# The command that selects a role's provider — the connections command group's.
-PROVIDERS_SET = "pkit connections providers set"
-
 _BOUND = cx.BindingStatus.BOUND.value
 
 
@@ -461,7 +458,7 @@ def plan_install(target_root: Path, candidate: Candidate) -> InstallPlan:
         Conflict(
             r.role,
             r.providers,
-            tuple(f"{PROVIDERS_SET} {r.role} {provider}" for provider in r.providers),
+            tuple(cx.provider_set_command(r.role, provider) for provider in r.providers),
         )
         for r in after.roles
         if r.conflict and r.role not in conflicted_before

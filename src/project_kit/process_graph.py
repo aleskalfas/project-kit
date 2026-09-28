@@ -7,6 +7,12 @@ already owns and UNIONING them with the inert, annotated `depends_on` edges --
 each edge expressible exactly one way, no edge both (the derive-don't-annotate
 discipline, single source of truth, COR-006). This module is that render.
 
+The one wiring graph (COR-053 point 7, `wiring_graph`) subsumes this one: it
+adds the wiring resolver's edges -- data, event and offered-process edges,
+source `resolved` -- to the `Graph` built here, and `pkit process graph`
+renders that graph filtered to its process edges. The graph model, the filters
+and the renderers stay here and serve both commands, so the two formats are one.
+
 THE SAFETY POINT (COR-038, load-bearing). The render reads DECLARATIONS only.
 It walks each installed process DEFINITION and reads its structure -- it never
 resolves a live subject position, never runs a detection / gate / membership
@@ -76,6 +82,19 @@ ANNOTATED_RELATIONS = (
 SOURCE_DERIVED = "derived"
 SOURCE_ANNOTATED = "annotated"
 
+# Resolved relations -- read by the wiring resolver from package metadata and
+# the configuration (COR-053 point 7), never from a process definition. The one
+# wiring graph (`wiring_graph`) draws them beside the derived and annotated
+# edges, through the renderers below; an edge runs from the definer or the
+# counterpart INTO the connection point (provider -> point <- counterparts).
+SOURCE_RESOLVED = "resolved"
+RELATION_ACCEPTS = "accepts"  # a data point's definer -> the point
+RELATION_EMITS = "emits"  # an event's definer -> the event
+RELATION_OFFERS = "offers"  # the offered process definition -> its process point
+RELATION_CONTRIBUTES = "contributes"  # a contributing capability -> a data point
+RELATION_FILLS = "fills"  # the project's filler file -> a data point
+RELATION_SUBSCRIBES = "subscribes"  # a subscribing capability -> an event
+
 # Direction glyphs for the adjacency view (a per-edge line is read out- or
 # in-edge, with a glyph naming the relation kind in that direction).
 GLYPH_DEPENDS = "→ depends on"  # -> (gates-on-readiness / informational / constrained-with, out)
@@ -83,6 +102,20 @@ GLYPH_GATED_BY = "← gated by"  # <- (the dependency seen from the upstream, in
 GLYPH_EMBEDS = "⊃ embeds"  # composed-subprocess, out
 GLYPH_EMBEDDED_BY = "⊂ embedded by"  # composed-subprocess, in
 GLYPH_FOLDS = "⇄ folds"  # aggregates (cascade), bidirectional reading
+
+# (out, in) glyph per relation; a `depends_on` relation reads GLYPH_DEPENDS /
+# GLYPH_GATED_BY. A definer's edge is marked ◇ (the point is its own); a
+# counterpart's edge is an arrow.
+_GLYPHS: dict[str, tuple[str, str]] = {
+    RELATION_COMPOSED: (GLYPH_EMBEDS, GLYPH_EMBEDDED_BY),
+    RELATION_AGGREGATES: (GLYPH_FOLDS, GLYPH_FOLDS),
+    RELATION_ACCEPTS: ("◇ accepts", "◇ accepted by"),
+    RELATION_EMITS: ("◇ emits", "◇ emitted by"),
+    RELATION_OFFERS: ("◇ offers", "◇ offered by"),
+    RELATION_CONTRIBUTES: ("→ contributes to", "← contributed by"),
+    RELATION_FILLS: ("→ fills", "← filled by"),
+    RELATION_SUBSCRIBES: ("→ subscribes to", "← subscribed by"),
+}
 
 
 @dataclass(frozen=True)
@@ -694,35 +727,41 @@ def _skipped_lines(graph: Graph) -> list[str]:
 
 
 def _out_glyph(edge: Edge) -> str:
-    """The direction glyph for an OUT-edge (this process -> the upstream) in the
-    adjacency view."""
-    if edge.relation == RELATION_COMPOSED:
-        return GLYPH_EMBEDS
-    if edge.relation == RELATION_AGGREGATES:
-        return GLYPH_FOLDS
-    return GLYPH_DEPENDS
+    """The direction glyph for an OUT-edge (this node -> the upstream or the
+    point) in the adjacency view."""
+    return _GLYPHS.get(edge.relation, (GLYPH_DEPENDS, GLYPH_GATED_BY))[0]
 
 
 def _in_glyph(edge: Edge) -> str:
-    """The direction glyph for an IN-edge (some process -> this process), read
-    from this process's side."""
-    if edge.relation == RELATION_COMPOSED:
-        return GLYPH_EMBEDDED_BY
-    if edge.relation == RELATION_AGGREGATES:
-        return GLYPH_FOLDS
-    return GLYPH_GATED_BY
+    """The direction glyph for an IN-edge (some node -> this node), read from
+    this node's side."""
+    return _GLYPHS.get(edge.relation, (GLYPH_DEPENDS, GLYPH_GATED_BY))[1]
 
 
-def render_adjacency(graph: Graph, *, verbose: bool = False) -> str:
-    """ASCII ADJACENCY view: per process, its out- and in-edges with a direction
+# The adjacency and flow views' titles and empty states. The process graph is
+# the default; the wiring graph passes its own (`wiring_graph`).
+PROCESS_TITLE = "Process graph"
+PROCESS_EMPTY = "(no installed processes)"
+PROCESS_FLOW_TITLE = "Process flow"
+
+
+def render_adjacency(
+    graph: Graph,
+    *,
+    verbose: bool = False,
+    title: str = PROCESS_TITLE,
+    empty: str = PROCESS_EMPTY,
+) -> str:
+    """ASCII ADJACENCY view: per node, its out- and in-edges with a direction
     glyph and a `relation · mode` label. Cycle-safe (no layout engine -- it just
     lists each node's incident edges). TTY-aware styling (ADR-011); prose wraps
-    through `cli_render.wrap` (ADR-024)."""
+    through `cli_render.wrap` (ADR-024). `title` and `empty` name the graph
+    rendered: the process graph by default."""
     lines: list[str] = []
-    lines.append(cli_render.style("title", "Process graph") + "  (configured topology)")
+    lines.append(cli_render.style("title", title) + "  (configured topology)")
     if not graph.nodes:
         lines.append("")
-        lines.append("  (no installed processes)")
+        lines.append(f"  {empty}")
         lines.extend(_skipped_lines(graph))
         return "\n".join(lines) + "\n"
 
@@ -758,14 +797,17 @@ def _adjacency_edge_lines(
     return out
 
 
-def render_flow(graph: Graph, *, verbose: bool = False) -> str:
+def render_flow(
+    graph: Graph, *, verbose: bool = False, title: str = PROCESS_FLOW_TITLE
+) -> str:
     """ASCII PIPELINE view: edges drawn DOWNSTREAM (the work-flows-this-way
     reading). The stored edge is the dependency direction (subscriber ->
     upstream); flow reorients it to upstream ==> subscriber, so a reader follows
     work from the thing-depended-on toward the thing-that-depends. Grouped by
-    upstream, cycle-safe."""
+    upstream, cycle-safe. `title` names the graph rendered: the process graph by
+    default."""
     lines: list[str] = []
-    lines.append(cli_render.style("title", "Process flow") + "  (downstream pipeline)")
+    lines.append(cli_render.style("title", title) + "  (downstream pipeline)")
     if not graph.edges:
         lines.append("")
         lines.append("  (no configured connections)")
@@ -792,16 +834,24 @@ def render_flow(graph: Graph, *, verbose: bool = False) -> str:
 
 
 def _mermaid_node_id(address: str) -> str:
-    """A mermaid-safe node id for an address (`:` and `-` are not valid in a
-    bare flowchart id). Deterministic 1:1 mapping."""
-    return "n_" + address.replace(":", "__").replace("-", "_")
+    """A mermaid-safe node id for a node name (`:` and `-` are not valid in a
+    bare flowchart id; a wiring-graph node may also be a file path). Any other
+    character outside `[A-Za-z0-9_]` becomes its code point, so the mapping stays
+    deterministic and a process address maps as it always has."""
+    body = address.replace(":", "__").replace("-", "_")
+    return "n_" + "".join(c if _mermaid_safe(c) else f"_{ord(c):x}_" for c in body)
+
+
+def _mermaid_safe(char: str) -> bool:
+    return char == "_" or (char.isascii() and char.isalnum())
 
 
 def render_mermaid(graph: Graph) -> str:
     """A mermaid `flowchart` of the topology. The derive-vs-annotate split is
     VISIBLE in the link style: derived edges are thick (`==>`), declared-pull
-    edges solid (`-->`), push edges dotted (`-.->`). Arrow direction is the
-    canonical dependency direction (subscriber -> upstream).
+    edges solid (`-->`), push edges dotted (`-.->`), and the wiring resolver's
+    edges end in a circle (`--o`). Arrow direction is the canonical stored
+    direction (subscriber -> upstream; definer or counterpart -> point).
 
     Byte-stable in its own right: nodes and edges emit in sorted order, no TTY
     styling. (It is human-targeted markup, not the `--json` machine surface, but
@@ -815,6 +865,8 @@ def render_mermaid(graph: Graph) -> str:
         label = _relation_label(edge)
         if edge.source == SOURCE_DERIVED:
             arrow = f"  {src} ==>|{label}| {dst}"  # thick: derived
+        elif edge.source == SOURCE_RESOLVED:
+            arrow = f"  {src} --o|{label}| {dst}"  # circle end: resolved
         elif edge.mode == "push":
             arrow = f"  {src} -.->|{label}| {dst}"  # dotted: push
         else:
