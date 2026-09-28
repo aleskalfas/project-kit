@@ -158,14 +158,15 @@ Scope notes for this slice:
 The engine is invoked only as `pkit process …` (ADR-020): a backbone CLI
 surface, never imported by a capability wrapper. Wrappers call it by
 subprocess. Predicate commands the engine runs are themselves resolved through
-the owning capability's `package.yaml` command registry and invoked as plain
-subprocesses (explicit argv) — never a shell string.
+the owning capability's `package.yaml` command registry and run under the
+predicate policy of the backbone's one command runner (`command_runner`,
+ADR-057 point 5): explicit argv — never a shell string — in their own process
+group, bounded, and killed as a group when they overrun.
 """
 
 from __future__ import annotations
 
 import json
-import subprocess
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -175,6 +176,7 @@ from jsonschema import Draft202012Validator
 from ruamel.yaml import YAML
 
 from project_kit import cli_render
+from project_kit.command_runner import Ending, registered_commands, run_command
 from project_kit.validators import Finding, Outcome
 from project_kit.install import find_target_root
 
@@ -186,10 +188,6 @@ _yaml = YAML(typ="safe")
 # subject id instead — threaded through the predicate runner and the journal
 # path — and never defaults to this key.
 SINGLETON_SUBJECT = "_"
-
-# Predicate subprocess timeout. A predicate that overruns is indeterminate
-# (fail-closed), exactly like an error or unparseable output.
-_PREDICATE_TIMEOUT_SECONDS = 30
 
 
 class ProcessError(Exception):
@@ -378,27 +376,14 @@ class PredicateRunner:
         # COR-032: the engine threads the (singleton or keyed) subject id as the
         # first argv to every predicate, so a keyed predicate resolves the right
         # unit's reality. Singleton processes pass the fixed SINGLETON_SUBJECT.
-        argv = [str(script), self.subject, "--json"]
-        try:
-            completed = subprocess.run(
-                argv,
-                cwd=str(self.repo_root),
-                capture_output=True,
-                text=True,
-                timeout=_PREDICATE_TIMEOUT_SECONDS,
-                check=False,
-            )
-        except (OSError, subprocess.TimeoutExpired):
+        # The predicate policy over the shared runner: the caller's environment
+        # unchanged (a predicate may reach the network), and anything but an
+        # answered JSON object — no start, a timeout, a non-zero exit,
+        # unparseable output — is indeterminate, fail-closed.
+        run = run_command(script, [self.subject, "--json"], cwd=self.repo_root)
+        if run.ending is not Ending.ANSWERED or not isinstance(run.document, dict):
             return None
-        if completed.returncode != 0:
-            return None
-        try:
-            parsed = json.loads(completed.stdout)
-        except (json.JSONDecodeError, ValueError):
-            return None
-        if not isinstance(parsed, dict):
-            return None
-        return parsed
+        return run.document
 
 
 def _freeze(value: Any) -> tuple[tuple[str, Any], ...]:
@@ -409,41 +394,14 @@ def _freeze(value: Any) -> tuple[tuple[str, Any], ...]:
 
 
 def _load_command_registry(capability_dir: Path) -> dict[str, Path]:
-    """Map each command a capability registers to its resolved script path.
-
-    Walks the `commands:` tree in the capability's `package.yaml` (the same
-    tree the dispatcher reads, COR-021) and records every leaf with a `script`.
-    A predicate's `run:` must name one of these (COR-033 engine contract).
+    """Map each command a capability registers to its resolved script path, by
+    the command's own name — the address a predicate's `run:` uses (COR-033
+    engine contract). Read through the backbone's one command lookup
+    (`command_runner.registered_commands`, the tree the dispatcher reads,
+    COR-021); where two leaves share a name, the later one in the tree wins.
     """
-    package_yaml = capability_dir / "package.yaml"
-    if not package_yaml.is_file():
-        return {}
-    try:
-        raw = _yaml.load(package_yaml.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
-    if not isinstance(raw, dict):
-        return {}
-    commands = raw.get("commands")
-    if not isinstance(commands, dict):
-        return {}
-    registry: dict[str, Path] = {}
-    _collect_command_scripts(commands, capability_dir, registry)
-    return registry
-
-
-def _collect_command_scripts(
-    tree: dict[str, Any], capability_dir: Path, registry: dict[str, Path]
-) -> None:
-    """Recursively collect `{command_name: script_path}` from a commands tree."""
-    for name, value in tree.items():
-        if not isinstance(value, dict):
-            continue
-        script = value.get("script")
-        if isinstance(script, str):
-            registry[str(name)] = capability_dir / script
-        else:
-            _collect_command_scripts(value, capability_dir, registry)
+    commands = registered_commands(capability_dir).values()
+    return {command.name: command.script for command in commands}
 
 
 # --- the process definition + engine --------------------------------------

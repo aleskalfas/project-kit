@@ -306,14 +306,14 @@ The engine is **content-free**: it reads any capability's process definition + t
 
 ### The predicate runner (engine contract)
 
-A predicate's `run:` resolves to a command the owning capability **registers** in its `package.yaml` — not a raw path or shell string; the engine rejects an unregistered name with a self-explaining error. The engine invokes the resolved script as a plain subprocess (explicit argv — the subject + `--json`), with the working directory at the repo root, reads structured JSON, and:
+A predicate's `run:` resolves to a command the owning capability **registers** in its `package.yaml` — a leaf of its `commands:` tree, named by the leaf's own name — not a raw path or shell string; the engine rejects an unregistered name with a self-explaining error. The engine runs the resolved script through the backbone's **one command runner**, the lookup and bounded run it shares with the validator registry's query runner (the lifecycle README, "How a registered command is run"; ADR-057 point 5), under the **predicate policy**: explicit argv — the subject + `--json` — with the working directory at the repo root and the environment unchanged, since a predicate may reach the network (no offline marker is set); in its own process group, bounded by the backbone's thirty-second command bound, and overrunning kills the whole group, so the interpreter a `uv run --script` shebang starts as a grandchild stops too. The engine reads one JSON object from standard output, and:
 
 - **deterministic gate / detection** → uses the predicate's `result`;
 - **authorisation-artifact gate** → reads `{ exists, produced_by }` and computes `result = exists && produced_by != actor` *itself* — the engine enforces cross-authority and **ignores any `result` the predicate supplies** (non-overridable).
 
 Predicates **must be read-only** — `status` runs them live, so a mutating predicate would be a side-effect bug.
 
-**Failure is fail-closed.** A predicate that errors, times out, returns unparseable JSON, or doesn't resolve is **indeterminate**: `status` shows it distinctly ("couldn't evaluate: …") and `move` refuses. An unrecognised or schema-future gate (engine/definition version skew) likewise fails closed — never a silent pass. Gates are correctness boundaries (unlike the permission hook's fail-open *availability* posture).
+**Failure is fail-closed.** A predicate that errors, times out, returns unparseable JSON or anything but a JSON object, or doesn't resolve is **indeterminate**: `status` shows it distinctly ("couldn't evaluate: …") and `move` refuses. An unrecognised or schema-future gate (engine/definition version skew) likewise fails closed — never a silent pass. Gates are correctness boundaries (unlike the permission hook's fail-open *availability* posture).
 
 **Performance.** Resolve position first (run detection predicates), then precheck only the transitions *out of* the current state; evaluate each predicate at most once per `(command, args)` per invocation. No cross-invocation position caching — that is the deferred `stored` detection mode.
 

@@ -26,7 +26,7 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from project_kit import refs, validators
+from project_kit import command_runner, refs, validators
 from project_kit.cli import main
 from project_kit.manifest import ComponentRegistryEntry, read_backbone_manifest, write_backbone_manifest
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
@@ -352,7 +352,7 @@ def test_a_timeout_kills_the_process_group_and_does_not_wait_on_the_grandchild(
             "time.sleep(60)\n"
         ),
     )
-    monkeypatch.setattr(validators, "QUERY_TIMEOUT_SECONDS", 1)
+    monkeypatch.setattr(command_runner, "COMMAND_TIMEOUT_SECONDS", 1)
     started = time.monotonic()
     outcome = _member(adopter.root, "cap:thing").run(adopter.root)
     elapsed = time.monotonic() - started
