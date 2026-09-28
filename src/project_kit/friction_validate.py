@@ -15,9 +15,13 @@ settings that declare them, this pass reports:
   path — a cycle has no order in which its members could be revalidated
   (COR-050 point 5).
 
-These fail validation in either mode, because the project can fix them. The
-settings themselves — an invalid `friction.mode`, a place, surface or exclude
-path outside the repository — are the configuration pass's findings
+These fail validation in either mode, because the project can fix them. A
+rule-set file is claimed before the container rule (ADR-056 point 2): its
+front matter and each rule's container are the rule-set pass's findings
+(`rule_sets`), so this pass reports neither, while its rules still take part
+in the deferral and cycle checks like every artefact. The settings
+themselves — an invalid `friction.mode`, a place, surface or exclude path
+outside the repository — are the configuration pass's findings
 (`config_validate`, which owns the file) and a capability's are the packages
 pass's; this pass only reads the settings, and never walks a place that leaves
 the repository. What it does not do either: compute friction, resolve path
@@ -46,6 +50,7 @@ from project_kit.friction_discovery import (
     FRICTION_KEY,
     Artefact,
     Discovery,
+    UnreadableFile,
     discover_artefacts,
     read_friction_settings,
 )
@@ -118,8 +123,11 @@ def validate_friction(target_root: Path) -> FrictionValidation:
 
 
 def _unreadable_findings(discovery: Discovery) -> Iterable[FrictionFinding]:
-    """A Markdown file in a declared place whose front matter does not parse."""
-    for unreadable in discovery.unreadable:
+    """A Markdown file in a declared place whose front matter does not parse.
+
+    A rule-set file is left to the rule-set pass, which claims it.
+    """
+    for unreadable in _unclaimed_unreadable(discovery):
         yield FrictionFinding(
             location=unreadable.path,
             pointer="",
@@ -140,12 +148,17 @@ def _artefact_findings(target_root: Path, discovery: Discovery) -> list[Friction
         findings.append(schema_finding)
 
     for artefact in discovery.with_container:
-        if schema is not None:
+        if schema is not None and artefact.rule_set is None:  # a rule's: the rule-set pass's
             findings.extend(_container_findings(artefact, schema))
         findings.extend(_dangling_deferrals(artefact))
 
     findings.extend(_cycles(discovery))
     return findings
+
+
+def _unclaimed_unreadable(discovery: Discovery) -> tuple[UnreadableFile, ...]:
+    """The unparsable files this pass reports: all but rule-set files."""
+    return tuple(u for u in discovery.unreadable if u.rule_set is None)
 
 
 def _container_schema(target_root: Path) -> tuple[dict | None, FrictionFinding | None]:
@@ -308,7 +321,8 @@ def summary_lines(result: FrictionValidation) -> list[str]:
             f"`{bs.CONTAINER_KEY}` container; dormant."
         )
     else:
-        unreadable = f", {len(d.unreadable)} with unparsable front matter" if d.unreadable else ""
+        reported = _unclaimed_unreadable(d)
+        unreadable = f", {len(reported)} with unparsable front matter" if reported else ""
         counts = (
             f"{places} place(s), {artefacts} artefact(s), {carrying} carrying the "
             f"`{bs.CONTAINER_KEY}` container{unreadable}; mode {d.settings.mode_or_default}; "

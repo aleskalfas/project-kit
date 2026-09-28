@@ -2583,10 +2583,19 @@ def validate(include_refs: bool) -> None:
         ValidateIssue(location=f.where, diagnosis=f.message) for f in friction_result.errors
     )
     # ------------------------------------------------------------------------
+    # --- rule-sets (COR-051) — one pass, one section ------------------------
+    from project_kit import rule_sets as rule_sets_mod
+
+    rule_sets_result = rule_sets_mod.validate_rule_sets(target_root)
+    issues.extend(
+        ValidateIssue(location=f.where, diagnosis=f.message) for f in rule_sets_result.errors
+    )
+    # ------------------------------------------------------------------------
     print_validate_report(target_root, issues)
     config_validate.print_configuration_section(config_report)
     package_validate.print_pass(target_root, packages)
     friction_validate.print_section(friction_result)
+    rule_sets_mod.print_section(rule_sets_result)
     if issues:
         raise SystemExit(1)
 
