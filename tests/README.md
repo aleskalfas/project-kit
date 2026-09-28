@@ -25,7 +25,8 @@ Outside a fixture (a plain helper that takes `tmp_path` and `monkeypatch`), call
   `pkit capabilities install` does.
 - Git helpers inherited from `GitRepo`, each returning the resulting SHA:
   `commit(message, {path: content_or_None}, author=Author(...), date=datetime)`,
-  `rename(src, dst)`, `squash_merge(branch)`, plus `checkout`, `head`,
+  `rename(src, dst)`, `merge(branch)` (a `--no-ff` merge commit),
+  `squash_merge(branch)`, plus `checkout`, `head`,
   `current_branch`, `shas(path, follow=True)` and raw `git(*args)`.
   Pass `files=None` to `commit` to stage everything in the working tree.
   `date` should be timezone-aware; `author` / `date` set both the author and

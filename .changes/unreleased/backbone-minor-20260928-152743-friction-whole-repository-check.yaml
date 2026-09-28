@@ -1,0 +1,22 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  The whole-repository friction check of COR-050 ships as `pkit friction check
+  --all [--json]`. Every artefact in the declared places at HEAD is checked
+  against the current history. Its revalidation point — the last commit, renames
+  followed, in which the parsed `at` changed, or the commit that introduced its
+  block — and each deferral's point — the commit that first introduced the entry,
+  rewording aside — are derived from git, per file and no further back than the
+  oldest point in question, from one log matched in memory. An anchor is stale
+  when a commit after the point touched it beyond what a deferral covers, and a
+  move after the point with no revalidation is stale too. It reports stale and
+  deferred debt with their origins (author, date, change), every dead anchor and
+  unresolved kind, over-broad anchors (a path matching more than half of the
+  tracked files) and the two measures — unanchored artefacts and uncovered
+  surface, excluded paths ignored — upstream first, and never fails: exit 0 in
+  either mode. A shallow clone whose history stops before a point reports the
+  artefact as unreachable rather than guessing. `--json` emits a stable document
+  in the change check's style, with each finding's origin, each artefact's
+  points and state, and the measures. Dormant while no place is declared.

@@ -111,7 +111,7 @@ _CAPABILITY_RECORD = re.compile(r"^([a-z][a-z0-9-]*[a-z0-9]):(DEC-\d+)((?:-[a-z0
 _IDENTICAL = 100
 
 # How many characters of a commit the human output shows.
-_SHORT = 12
+SHORT = 12
 
 # The mode of a link in a git tree.
 _LINK_MODE = "120000"
@@ -233,7 +233,7 @@ class FrictionCheckError(click.ClickException):
 # --- git ----------------------------------------------------------------------
 
 
-def _git(
+def run_git(
     root: Path, *args: str, stdin: bytes | None = None, accept: tuple[int, ...] = (0,)
 ) -> subprocess.CompletedProcess[bytes]:
     try:
@@ -250,13 +250,15 @@ def _git(
     return completed
 
 
-def _nul_separated(raw: bytes) -> list[str]:
+def nul_separated(raw: bytes) -> list[str]:
     return [item.decode("utf-8", "surrogateescape") for item in raw.split(b"\0") if item]
 
 
-def _commit_of(root: Path, name: str) -> str | None:
+def commit_of(root: Path, name: str) -> str | None:
     """The commit `name` resolves to, or None."""
-    completed = _git(root, "rev-parse", "--verify", "--quiet", f"{name}^{{commit}}", accept=(0, 1))
+    completed = run_git(
+        root, "rev-parse", "--verify", "--quiet", f"{name}^{{commit}}", accept=(0, 1)
+    )
     commit = completed.stdout.decode().strip()
     return commit if completed.returncode == 0 and commit else None
 
@@ -273,11 +275,11 @@ class WorkingTree:
 
     @cached_property
     def _files(self) -> tuple[str, ...]:
-        listed = _git(
+        listed = run_git(
             self._root, "ls-files", "-z", "--cached", "--others", "--exclude-standard"
         ).stdout
         held: set[str] = set()
-        for rel in _nul_separated(listed):
+        for rel in nul_separated(listed):
             try:
                 mode = os.lstat(self._root / rel).st_mode
             except OSError:
@@ -308,7 +310,7 @@ class CommitTree:
 
     def __init__(self, root: Path, commit: str) -> None:
         self._root = root
-        listed = _git(root, "ls-tree", "-r", "-z", commit).stdout
+        listed = run_git(root, "ls-tree", "-r", "-z", commit).stdout
         self._blobs: dict[str, tuple[str, str]] = {}  # path -> (mode, object)
         for record in listed.split(b"\0"):
             if not record:
@@ -332,7 +334,7 @@ class CommitTree:
         if not wanted:
             return contents
         batch = "".join(f"{obj}\n" for _rel, obj in wanted).encode()
-        out = _git(self._root, "cat-file", "--batch", stdin=batch).stdout
+        out = run_git(self._root, "cat-file", "--batch", stdin=batch).stdout
         offset = 0
         for rel, _obj in wanted:
             header_end = out.index(b"\n", offset)
@@ -349,7 +351,7 @@ class CommitTree:
 
 def head_commit(root: Path) -> str:
     """HEAD's commit; refuses before the first commit, when there is nothing to compare."""
-    head = _commit_of(root, "HEAD")
+    head = commit_of(root, "HEAD")
     if head is None:
         raise FrictionCheckError(
             "HEAD names no commit yet; the change check compares a branch with its base, "
@@ -363,13 +365,13 @@ def resolve_base(root: Path, ref: str) -> BaseState:
     if not ref or ref.startswith("-"):
         raise FrictionCheckError(f"the base {ref!r} is not a revision name.")
     head = head_commit(root)
-    tip = _commit_of(root, ref)
+    tip = commit_of(root, ref)
     if tip is None:
         raise FrictionCheckError(
             f"the base {ref!r} does not resolve to a commit in this repository: fetch it "
             f"(e.g. `git fetch origin main`), or name another with --base or {BASE_ENV}."
         )
-    found = _git(root, "merge-base", tip, head, accept=(0, 1))
+    found = run_git(root, "merge-base", tip, head, accept=(0, 1))
     commit = found.stdout.decode().strip()
     if found.returncode != 0 or not commit:
         raise FrictionCheckError(
@@ -377,7 +379,7 @@ def resolve_base(root: Path, ref: str) -> BaseState:
             f"fetch the history back to where the branch left the base (e.g. `git fetch "
             f"--unshallow`)."
         )
-    ancestor = _git(root, "merge-base", "--is-ancestor", tip, head, accept=(0, 1))
+    ancestor = run_git(root, "merge-base", "--is-ancestor", tip, head, accept=(0, 1))
     return BaseState(ref=ref, tip=tip, commit=commit, outdated=ancestor.returncode != 0)
 
 
@@ -420,10 +422,25 @@ class Diff:
 
 def read_diff(root: Path, base_commit: str) -> Diff:
     """`git diff -M --name-status` from the base to the working tree, untracked files added."""
-    raw = _git(
+    raw = run_git(
         root, "diff", "-M", "--name-status", "-z", "--no-color", "--relative", base_commit, "--"
     ).stdout
-    tokens = _nul_separated(raw)
+    entries = parse_name_status(nul_separated(raw))
+    untracked = _untracked(root)
+    known = {e.path for e in entries}
+    entries.extend(DiffEntry("A", rel) for rel in untracked if rel not in known)
+    return Diff(
+        entries=tuple(sorted(entries, key=lambda e: (e.path, e.status))),
+        uncommitted=uncommitted_paths(root),
+    )
+
+
+def parse_name_status(tokens: Sequence[str]) -> list[DiffEntry]:
+    """The entries of a NUL-separated `--name-status` listing, as `git diff` and `git log` print it.
+
+    A rename or copy is three tokens (`R<score>`, old, new); anything else two
+    (status, path). A copy adds its new path and leaves the source alone.
+    """
     entries: list[DiffEntry] = []
     index = 0
     while index < len(tokens):
@@ -435,28 +452,22 @@ def read_diff(root: Path, base_commit: str) -> Diff:
             if letter == "R":
                 score = int(code[1:]) if code[1:].isdigit() else None
                 entries.append(DiffEntry("R", new, old, score))
-            else:  # a copy adds its new path and leaves the source alone
+            else:
                 entries.append(DiffEntry("A", new))
             continue
         entries.append(DiffEntry(letter, tokens[index + 1]))
         index += 2
-    untracked = _untracked(root)
-    known = {e.path for e in entries}
-    entries.extend(DiffEntry("A", rel) for rel in untracked if rel not in known)
-    return Diff(
-        entries=tuple(sorted(entries, key=lambda e: (e.path, e.status))),
-        uncommitted=uncommitted_paths(root),
-    )
+    return entries
 
 
 def _untracked(root: Path) -> list[str]:
-    return _nul_separated(_git(root, "ls-files", "-z", "--others", "--exclude-standard").stdout)
+    return nul_separated(run_git(root, "ls-files", "-z", "--others", "--exclude-standard").stdout)
 
 
 def uncommitted_paths(root: Path) -> int:
     """How many paths the working tree changes beyond HEAD, untracked ones included."""
-    beyond_head = _nul_separated(
-        _git(root, "diff", "--name-only", "-z", "--no-color", "--relative", "HEAD", "--").stdout
+    beyond_head = nul_separated(
+        run_git(root, "diff", "--name-only", "-z", "--no-color", "--relative", "HEAD", "--").stdout
     )
     return len(set(beyond_head) | set(_untracked(root)))
 
@@ -467,7 +478,7 @@ def uncommitted_paths(root: Path) -> int:
 # --- one side of the diff -----------------------------------------------------
 
 
-class _Side:
+class Side:
     """One state of the repository as the check reads it: its files and its artefacts."""
 
     def __init__(self, root: Path, tree: RepositoryTree, discovery: Discovery) -> None:
@@ -536,7 +547,7 @@ def _has_own_id(artefact: Artefact) -> bool:
     return isinstance(own, str) and bool(own)
 
 
-def _counterparts(head: _Side, base: _Side, diff: Diff) -> dict[int, Artefact]:
+def _counterparts(head: Side, base: Side, diff: Diff) -> dict[int, Artefact]:
     """Each head artefact's base counterpart, by the head artefact's walk index.
 
     By location first, following the diff's renames; then, for an artefact
@@ -587,7 +598,7 @@ def _revalidated_field(artefact: Artefact, key: str) -> Any:
     return revalidated.get(key) if isinstance(revalidated, Mapping) else None
 
 
-def _parsed_at(artefact: Artefact) -> Any:
+def parsed_at(artefact: Artefact) -> Any:
     """The parsed value of `at`: the instant, so a quoting or formatting change is no change."""
     value = _revalidated_field(artefact, "at")
     if not isinstance(value, str):
@@ -605,11 +616,11 @@ def _because(artefact: Artefact) -> str | None:
     return " ".join(value.split()) if isinstance(value, str) else None
 
 
-def _anchors(artefact: Artefact) -> list[Anchor]:
+def anchors_of(artefact: Artefact) -> list[Anchor]:
     return [Anchor(kind, value) for kind, values in artefact.anchors.items() for value in values]
 
 
-def _deferral_reason(artefact: Artefact, anchor: Anchor) -> str:
+def deferral_reason(artefact: Artefact, anchor: Anchor) -> str:
     """The reason written on the deferral of `anchor`, whitespace folded; `""` when none."""
     deferred: Any = _revalidated_field(artefact, "deferred")
     for deferral in artefact.deferrals:
@@ -633,8 +644,8 @@ class _Revalidation:
 
 def _revalidation(artefact: Artefact, before: Artefact) -> _Revalidation | None:
     """What a change of the parsed `at` answers (COR-050 point 5); `None` when `at` held."""
-    at = _parsed_at(artefact)
-    if at is None or at == _parsed_at(before):
+    at = parsed_at(artefact)
+    if at is None or at == parsed_at(before):
         return None
     outcome = _revalidated_field(artefact, "outcome")
     changed = content(artefact) != content(before)
@@ -663,13 +674,13 @@ def _answer_text(answer: Answer, artefact: Artefact, anchor: Anchor | None = Non
     if answer is Answer.UNCHANGED:
         return f"unchanged — {_because(artefact)}"
     if answer is Answer.DEFERRED and anchor is not None:
-        reason = _deferral_reason(artefact, anchor)
+        reason = deferral_reason(artefact, anchor)
         return f"deferred — {reason}" if reason else "deferred"
     return answer.value
 
 
 def _anchor_changed(
-    anchor: Anchor, own: frozenset[str], head: _Side, base: _Side, diff: Diff
+    anchor: Anchor, own: frozenset[str], head: Side, base: Side, diff: Diff
 ) -> bool:
     """Whether a live anchor of a core kind changed in the diff (COR-050 point 5)."""
     if anchor.kind == "path":
@@ -684,7 +695,7 @@ def _anchor_changed(
     return target is not None and (before is None or content(target) != content(before))
 
 
-_NOTHING = {
+RESOLVES_NOTHING = {
     "path": "matches no file (or only excluded ones)",
     "record": "names no record",
     "artefact": "names no artefact in the declared places",
@@ -702,8 +713,8 @@ class _Question:
 def _judge(
     artefact: Artefact,
     before: Artefact | None,
-    head: _Side,
-    base: _Side,
+    head: Side,
+    base: Side,
     diff: Diff,
     registry: Mapping[str, ResolverCommand],
 ) -> list[Finding]:
@@ -714,10 +725,10 @@ def _judge(
     ) -> Finding:
         return Finding(kind, message, artefact.id, artefact.location, anchor, answer)
 
-    base_anchors = frozenset(_anchors(before)) if before is not None else frozenset[Anchor]()
+    base_anchors = frozenset(anchors_of(before)) if before is not None else frozenset[Anchor]()
     findings: list[Finding] = []
     live: list[Anchor] = []  # anchors kept from the base that resolve at head
-    for anchor in _anchors(artefact):
+    for anchor in anchors_of(artefact):
         added = anchor not in base_anchors
         problem = _anchor_problem(anchor, added, head, base, registry)
         if problem is None:
@@ -741,7 +752,7 @@ def _judge(
         for anchor in live
         if _anchor_changed(anchor, own, head, base, diff)
     ]
-    if frozenset(_anchors(artefact)) != base_anchors:
+    if frozenset(anchors_of(artefact)) != base_anchors:
         questions.append(_Question("its anchor list changed in this diff"))
     if before.location != artefact.location:
         questions.append(_Question(f"it moved here from {before.location} in this diff"))
@@ -772,8 +783,8 @@ def _judge(
 def _anchor_problem(
     anchor: Anchor,
     added: bool,
-    head: _Side,
-    base: _Side,
+    head: Side,
+    base: Side,
     registry: Mapping[str, ResolverCommand],
 ) -> tuple[FindingKind, str | None] | None:
     """`None` when the anchor resolves at head; otherwise its finding kind and message.
@@ -793,12 +804,12 @@ def _anchor_problem(
     if added:
         return (
             FindingKind.DEAD_ANCHOR,
-            f"{_NOTHING[anchor.kind]}; the anchor was added in this diff",
+            f"{RESOLVES_NOTHING[anchor.kind]}; the anchor was added in this diff",
         )
     if base.resolves(anchor):
         return (
             FindingKind.DEAD_ANCHOR,
-            f"{_NOTHING[anchor.kind]}; the diff removed or moved its target",
+            f"{RESOLVES_NOTHING[anchor.kind]}; the diff removed or moved its target",
         )
     return FindingKind.DEAD_ANCHOR, None
 
@@ -889,8 +900,8 @@ def run_change_check(
     base_state = resolve_base(target_root, base_ref)
     diff = read_diff(target_root, base_state.commit)
     base_tree = CommitTree(target_root, base_state.commit)
-    head = _Side(target_root, head_tree, head_discovery)
-    base = _Side(target_root, base_tree, discover_artefacts(target_root, tree=base_tree))
+    head = Side(target_root, head_tree, head_discovery)
+    base = Side(target_root, base_tree, discover_artefacts(target_root, tree=base_tree))
     registry = registered_anchor_kinds(target_root) if registry is None else registry
 
     findings: list[Finding] = []
@@ -928,7 +939,7 @@ def _dormant_context(root: Path, base_ref: str) -> tuple[BaseState | None, HeadS
     except FrictionCheckError:
         base = None
     try:
-        commit = _commit_of(root, "HEAD")
+        commit = commit_of(root, "HEAD")
         head = None if commit is None else HeadState(commit, uncommitted_paths(root))
     except FrictionCheckError:
         head = None
@@ -937,8 +948,8 @@ def _dormant_context(root: Path, base_ref: str) -> tuple[BaseState | None, HeadS
 
 def _outdated_message(base: BaseState) -> str:
     return (
-        f"the base {base.ref} is at {base.tip[:_SHORT]}, which is not an ancestor of HEAD: it "
-        f"moved on after this branch left it at {base.commit[:_SHORT]}; results hold only "
+        f"the base {base.ref} is at {base.tip[:SHORT]}, which is not an ancestor of HEAD: it "
+        f"moved on after this branch left it at {base.commit[:SHORT]}; results hold only "
         f"against an up-to-date base — merge or rebase onto {base.ref}, then run again"
     )
 
@@ -1057,15 +1068,15 @@ def _header_lines(result: ChangeCheck) -> list[str]:
     lines: list[str] = []
     if result.base is not None:
         lines.append(
-            f"  Base: {result.base.ref} at {result.base.commit[:_SHORT]}"
+            f"  Base: {result.base.ref} at {result.base.commit[:SHORT]}"
             + cli_render.style("muted", "   (merge-base with HEAD)")
         )
     if result.head is not None:
-        uncommitted = _counted(result.head.uncommitted, "uncommitted path", "uncommitted paths")
+        uncommitted = counted(result.head.uncommitted, "uncommitted path", "uncommitted paths")
         working = (
             f"+ working tree, {uncommitted}" if result.head.uncommitted else "(working tree clean)"
         )
-        lines.append(f"  Head: {result.head.commit[:_SHORT]} {working}")
+        lines.append(f"  Head: {result.head.commit[:SHORT]} {working}")
     gloss = _MODE_GLOSS.get(result.mode, "")
     lines.append(f"  Mode: {result.mode}" + cli_render.style("muted", f"   ({gloss})"))
     lines.extend(_mode_warning(result))
@@ -1085,7 +1096,7 @@ def _dormant_lines(result: ChangeCheck) -> list[str]:
         )
     lines = [f"  {counts}"]
     if result.base is not None:
-        lines.append(f"  Base: {result.base.ref} at {result.base.commit[:_SHORT]}")
+        lines.append(f"  Base: {result.base.ref} at {result.base.commit[:SHORT]}")
     lines.extend(_mode_warning(result))
     return lines
 
@@ -1108,11 +1119,11 @@ def _failing_summary(result: ChangeCheck) -> str:
         (FindingKind.BUMP, "bump", "bumps"),
     ]
     return ", ".join(
-        _counted(result.count(kind), one, many) for kind, one, many in parts if result.count(kind)
+        counted(result.count(kind), one, many) for kind, one, many in parts if result.count(kind)
     )
 
 
-def _counted(count: int, one: str, many: str) -> str:
+def counted(count: int, one: str, many: str) -> str:
     return f"{count} {one if count == 1 else many}"
 
 

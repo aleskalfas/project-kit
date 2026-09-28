@@ -48,7 +48,7 @@ from project_kit.scaffolds import (
 )
 from project_kit.agents import Namespace as AgentNamespace, stamp_new_agent
 from project_kit.storyboards import ArtifactKind, stamp_new_storyboard
-from project_kit import friction_check
+from project_kit import friction_check, friction_repository
 from project_kit import refs as refs_mod
 from project_kit import router
 from project_kit import scratchpads
@@ -346,9 +346,20 @@ def friction() -> None:
     help=f"Compare against the merge-base of REF and HEAD (or ${friction_check.BASE_ENV}).",
 )
 @click.option(
+    "--all",
+    "whole_repository",
+    is_flag=True,
+    default=False,
+    help=(
+        "The whole-repository check: every artefact at HEAD against the current history "
+        "(REF is not read). Reports stale and deferred debt, dead anchors and the two "
+        "measures; never fails."
+    ),
+)
+@click.option(
     "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
 )
-def friction_check_command(base_ref: str, as_json: bool) -> None:
+def friction_check_command(base_ref: str, whole_repository: bool, as_json: bool) -> None:
     """The change check (COR-050 point 6): every artefact whose anchor changed in the diff
     carries an answer — updated, unchanged with why, or deferred.
 
@@ -357,10 +368,24 @@ def friction_check_command(base_ref: str, as_json: bool) -> None:
     the change, bumps with nothing behind them and an outdated base. Exit 1
     in enforcing mode on friction, a dead anchor, an unresolved kind or a
     bump; an outdated base never fails.
+
+    With --all, the whole-repository check instead: every artefact at HEAD
+    against the current history, each anchor judged from the artefact's
+    revalidation point (derived from git, renames followed). Reports stale
+    and deferred debt with their origins, dead anchors, over-broad anchors,
+    unanchored artefacts and uncovered surface. Needs the full history, says
+    so in a shallow clone, and exits 0 in either mode.
     """
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
+    if whole_repository:
+        report = friction_repository.run_repository_check(target_root)
+        if as_json:
+            click.echo(friction_repository.render_json(report), nl=False)
+        else:
+            click.echo(friction_repository.render_human(report), nl=False)
+        return
     result = friction_check.run_change_check(target_root, base_ref)
     if as_json:
         click.echo(friction_check.render_json(result), nl=False)

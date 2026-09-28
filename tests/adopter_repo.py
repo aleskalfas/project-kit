@@ -10,9 +10,9 @@ across.
 Two layers:
 
 - `GitRepo` — git plumbing only: init, commit arbitrary edits with a
-  controllable author/date, rename, branch, squash-merge, read SHAs. Usable
-  on its own for tests whose repo is not an adopter (e.g. a synthetic source
-  kit).
+  controllable author/date, rename, branch, merge, squash-merge, read SHAs.
+  Usable on its own for tests whose repo is not an adopter (e.g. a synthetic
+  source kit).
 - `AdopterRepo` — a `GitRepo` whose root carries an installed `.pkit/`, plus
   capability installation and the scripted `history`.
 
@@ -166,6 +166,22 @@ class GitRepo:
         if create:
             args.append("-b")
         self.git(*args, branch)
+
+    def merge(
+        self,
+        branch: str,
+        message: str | None = None,
+        *,
+        author: Author | None = None,
+        date: datetime | None = None,
+    ) -> str:
+        """Merge `branch` into the current branch with a merge commit
+        (`--no-ff`, never a fast-forward): two parents, the side commits
+        reachable from the result through the second. Returns the merge
+        commit's SHA."""
+        message = message or f"merge {branch}"
+        self.git("merge", "-q", "--no-ff", "-m", message, branch, author=author, date=date)
+        return self.head()
 
     def squash_merge(
         self,
