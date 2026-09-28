@@ -90,6 +90,10 @@ milestone_categories:
 review:
   mode: agent
   agents:
+    # Reviewers reason at medium effort (#1046): a review pass does not
+    # need the operator's interactive effort, and four reviewers re-run
+    # after every push. Override once with `review-pr --effort <level>`.
+    effort: medium
     local_registered:
       - name: pm-reviewer
 

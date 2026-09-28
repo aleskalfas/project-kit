@@ -1,0 +1,15 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+body: >
+  `review-pr` gains one uniform reviewer **effort** knob (#1046). A reviewer
+  started headless reads the operator's user settings and so reasons at the
+  operator's own interactive effort, which a review pass rarely needs; the only
+  way to lower it was to lower the operator's sessions with it. Resolution
+  precedence: the new `--effort <level>` flag > the `PKIT_REVIEW_AGENT_EFFORT`
+  env var > the new `review.agents.effort` config key > unset (nothing is passed;
+  the harness default applies). Levels are the harness's own — `low`, `medium`,
+  `high`, `xhigh`, `max`; anything else is a usage error naming its source. Like
+  the timeout, it is one value for every reviewer, not a per-agent map (COR-007);
+  per-agent model and effort policy is #1047's.
