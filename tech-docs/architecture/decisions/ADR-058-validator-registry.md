@@ -1,7 +1,7 @@
 ---
 id: ADR-058
 title: One validator registry behind `pkit validate`; only errors fail
-status: proposed
+status: accepted
 date: 2026-09-28
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
