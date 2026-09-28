@@ -14,11 +14,15 @@
   the file's header (the editor directive stamped on a file the backbone
   creates, ADR-056). Consent is an interactive confirmation, an explicit
   `--yes`, or a refusal naming the exact command to run — a non-interactive run
-  without `--yes` never writes silently.
+  without `--yes` never writes silently. `preview_config` computes the same
+  result without writing it, so a command's dry run shows the diff of exactly
+  what the write would make.
 """
 
 from __future__ import annotations
 
+import difflib
+import io
 import os
 import re
 import sys
@@ -139,6 +143,52 @@ class UnwritableConfig(click.ClickException):
     """The existing file cannot be preserved through a write (unparsable or not a mapping)."""
 
 
+@dataclass(frozen=True)
+class ConfigChange:
+    """What a write would make of the configuration file: its text before and after."""
+
+    path: Path
+    before: str  # empty when the file does not exist
+    after: str
+
+    @property
+    def changes(self) -> bool:
+        return self.after != self.before
+
+    def diff(self) -> str:
+        """The change as a unified diff of the file, repository-relative."""
+        rel = PROJECT_CONFIG_RELPATH.as_posix()
+        return "".join(
+            difflib.unified_diff(
+                self.before.splitlines(keepends=True),
+                self.after.splitlines(keepends=True),
+                fromfile=f"a/{rel}",
+                tofile=f"b/{rel}",
+            )
+        )
+
+
+def preview_config(target_root: Path, mutate: Callable[[CommentedMap], None]) -> ConfigChange:
+    """What `write_config` would write, computed the way it computes it and
+    written nowhere: re-read the file round-trip (comments and key order kept),
+    apply `mutate` to the mapping in place, validate the result against the
+    backbone-shipped config schema (an invalid result is refused; a tree without
+    the schema is not validated — ADR-056 point 1), and render the text — a file
+    the write creates, or an empty one, opening with the editor directive. No
+    consent is asked: nothing is written. A command's dry run shows its diff."""
+    path = project_config_path(target_root)
+    before = _read_existing(path)
+    yaml = YAML()  # round-trip: keep an existing file's other keys + comments
+    data, fresh = _load_round_trip(before, yaml)
+    mutate(data)
+    _refuse_unless_valid(target_root, data)
+    stream = io.StringIO()
+    if fresh:
+        stream.write(EDITOR_DIRECTIVE + "\n")
+    yaml.dump(data, stream)
+    return ConfigChange(path=path, before=before or "", after=stream.getvalue())
+
+
 def write_config(
     target_root: Path,
     mutate: Callable[[CommentedMap], None],
@@ -148,44 +198,43 @@ def write_config(
 ) -> Path:
     """The one write path for `.pkit/project/config.yaml` (COR-048 point 5).
 
-    Re-reads the file round-trip (comments and key order kept), applies
-    `mutate` to the mapping in place, validates the result against the
-    backbone-shipped config schema (an invalid result is refused, nothing
-    written; a tree without the schema is not validated — ADR-056 point 1),
-    asks `consent`, then writes atomically. A file the write creates, or an
-    empty one, opens with the editor directive; an existing file keeps its
-    header. Returns the file's path.
+    Computes the result as `preview_config` does — re-read, mutate, validate
+    (an invalid result is refused, nothing written) — asks `consent`, then
+    writes that text atomically. Returns the file's path.
     """
-    path = project_config_path(target_root)
-    yaml = YAML()  # round-trip: keep an existing file's other keys + comments
-    data, fresh = _load_round_trip(path, yaml)
-    mutate(data)
-    _refuse_unless_valid(target_root, data)
+    change = preview_config(target_root, mutate)
     consent.confirm(description)
 
+    path = change.path
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(path.name + ".tmp")
     try:
         with tmp.open("w", encoding="utf-8") as stream:
-            if fresh:
-                stream.write(EDITOR_DIRECTIVE + "\n")
-            yaml.dump(data, stream)
+            stream.write(change.after)
         os.replace(tmp, path)
     finally:
         tmp.unlink(missing_ok=True)
     return path
 
 
-def _load_round_trip(path: Path, yaml: YAML) -> tuple[CommentedMap, bool]:
-    """The file as a round-trip mapping, and whether it needs the header stamped
-    (absent or empty). An unparsable or non-mapping file is refused: a write
-    that cannot keep the project's content is not one to make silently."""
+def _read_existing(path: Path) -> str | None:
+    """The file's text, or None when it does not exist."""
     if not path.is_file():
-        return CommentedMap(), True
+        return None
     try:
-        loaded = yaml.load(path.read_text(encoding="utf-8"))
+        return path.read_text(encoding="utf-8")
     except OSError as exc:
         raise UnwritableConfig(f"cannot read {PROJECT_CONFIG_RELPATH.as_posix()}: {exc}") from exc
+
+
+def _load_round_trip(text: str | None, yaml: YAML) -> tuple[CommentedMap, bool]:
+    """The file's text as a round-trip mapping, and whether it needs the header
+    stamped (absent or empty). An unparsable or non-mapping file is refused: a
+    write that cannot keep the project's content is not one to make silently."""
+    if text is None:
+        return CommentedMap(), True
+    try:
+        loaded = yaml.load(text)
     except YAMLError as exc:
         raise UnwritableConfig(
             f"{PROJECT_CONFIG_RELPATH.as_posix()} does not parse as YAML "
@@ -340,14 +389,21 @@ def coerce_value(key: ResolvedKey, raw: str) -> Any:
 def set_value(data: CommentedMap, key: ResolvedKey, value: Any) -> None:
     """Assign `value` at `key`, creating intermediate mappings; replaces a
     non-mapping intermediate (the schema pass would refuse that state anyway)."""
+    set_path(data, key.segments, value)
+
+
+def set_path(data: CommentedMap, segments: tuple[str, ...], value: Any) -> None:
+    """Assign `value` at the key path `segments`, as `set_value` does — for a
+    writer that knows its key path rather than resolving a dotted key; the
+    schema validation in `write_config` judges the result either way."""
     node: Any = data
-    for segment in key.segments[:-1]:
+    for segment in segments[:-1]:
         child = node.get(segment)
         if not isinstance(child, Mapping):
             child = CommentedMap()
             node[segment] = child
         node = child
-    node[key.segments[-1]] = value
+    node[segments[-1]] = value
 
 
 def _deref(root: Mapping[str, Any], node: Mapping[str, Any]) -> Mapping[str, Any]:
