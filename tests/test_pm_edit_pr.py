@@ -89,6 +89,20 @@ def test_an_unknown_issue_is_refused_before_any_write(ep, monkeypatch) -> None:
     assert rec.edits == []
 
 
+def test_force_posts_its_audit_comment(ep, monkeypatch) -> None:
+    """Regression: the `--force` audit comment was called without `config`,
+    so `edit-pr --force` died with a TypeError before writing — the edit-issue
+    bug #567 fixed, still present here."""
+    posted: list = []
+    monkeypatch.setattr(
+        ep, "_gh_pr_comment", lambda n, body, config: posted.append((n, body)) or True
+    )
+    rec = _run(ep, monkeypatch, ["7", "--body", "no closing line, no doc impact", "--force", "--yes"])
+    assert rec.rc == 0
+    assert posted and posted[0][0] == 7
+    assert "--force" in posted[0][1]
+
+
 def test_closes_applies_to_a_replaced_body(ep, monkeypatch, tmp_path) -> None:
     new = tmp_path / "body.md"
     new.write_text("Closes #42\n\n## Summary\nrewritten\n\n## Doc impact\n- [x] none\n", encoding="utf-8")

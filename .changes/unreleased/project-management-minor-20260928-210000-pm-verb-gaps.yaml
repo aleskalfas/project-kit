@@ -17,4 +17,5 @@ body: >
   line; `open-pr --body-file` gains a line for any closing issue the file does
   not name. `reopen-issue` now removes the state label, so a reopened issue
   reads as backlog (milestone set) or todo instead of staying at done, and it
-  repairs an open issue still labelled done.
+  repairs an open issue still labelled done. `edit-pr --force` no longer
+  fails before posting its audit comment.

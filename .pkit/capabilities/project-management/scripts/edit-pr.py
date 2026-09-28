@@ -260,7 +260,7 @@ def main() -> int:
         for f in findings:
             if f.severity == SEVERITY_HARD_REJECT:
                 audit_lines.append(f"  - {f.label}: {f.detail}")
-        if not _gh_pr_comment(args.pr_number, "\n".join(audit_lines)):
+        if not _gh_pr_comment(args.pr_number, "\n".join(audit_lines), config):
             return 3
 
     if not _gh_apply_edit(
