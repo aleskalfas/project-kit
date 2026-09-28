@@ -45,9 +45,19 @@ pkit project-management close-issue <N> --mode wont-do --reason "<text>" \
 pkit project-management close-issue <N> --mode pr-merge [--no-cascade]
 ```
 
-**Reopen:**
+**Close a leaf done through another Task's merged PR** (the PR never named it, so GitHub did not close it; verified merged, checkbox-gated, reference commented, closed as completed):
+```
+pkit project-management close-issue <N> --mode pr-merge --pr <M> [--dry-run] [--yes]
+```
+
+**Reopen** (removes the state label, so the issue reads as backlog with a milestone and todo without; also repairs an open issue still labelled done):
 ```
 pkit project-management reopen-issue <N> [--reason "<text>"] [--dry-run] [--yes]
+```
+
+**Move an issue to another milestone** (no state change; the first-line milestone ref follows):
+```
+pkit project-management edit-issue <N> --milestone <number|title> | --clear-milestone [--dry-run] [--yes]
 ```
 
 **Tick / untick acceptance criteria** (DEC-038 batch substrate primitives — prefer these over a whole-body `edit-issue` for a checkbox flip; address by 1-based index matching `show-issue --field criteria`, with an optional expected-text guard):
