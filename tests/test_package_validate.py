@@ -463,9 +463,11 @@ def test_if_condition_resolves_a_ref_against_the_schema_root() -> None:
     assert walker.walk({"kind": "process", "process": "x"}, schema, resolver, "") == []
 
 
-def test_hooks_for_the_wiring_resolver_are_unanswered(tmp_path: Path) -> None:
-    assert pv.resolve_active_roles(tmp_path) is None
-    assert pv.check_wiring(tmp_path, []) == []
+def test_the_wiring_hooks_answer_from_the_resolver(tmp_path: Path) -> None:
+    """Outside a project tree there is nothing to wire: no roles, no findings."""
+    assert pv.resolve_active_roles(tmp_path) == frozenset()
+    wiring = pv.check_wiring(tmp_path)
+    assert wiring.roles == () and wiring.findings == ()
 
 
 # --- the install-time path is a caller of the same validator ----------------
