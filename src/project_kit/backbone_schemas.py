@@ -335,7 +335,7 @@ def resolve_point_compatibility(role_key: str, point: str, schema_version: int) 
 
 
 def validate_container(
-    carrier: Mapping[str, Any],
+    carrier: Mapping[Any, Any],
     schema: Mapping[str, Any],
     *,
     active_roles: Collection[str] = (),
@@ -358,17 +358,19 @@ def validate_container(
        unknown-key error, and the shape errors the schema raised while trying
        to read it as a role block are dropped in its favour.
 
-    A carrier without the container is clean with nothing recognised. Date and
-    datetime values a YAML parser produced are rendered back to their written
-    form first (a UTC datetime as `...Z`), so the schema's string patterns
-    judge what the person wrote.
+    A carrier without the container key is clean with nothing recognised; the
+    key written with no value (`pkit:` parses to null) is present, and the
+    shape pass reports it. Date and datetime values a YAML parser produced, and
+    keys it did not read as text (`2026:`, `2026-10-02:`), are rendered back to
+    their written form first (a UTC datetime as `...Z`), so the schema's string
+    patterns and the rule judge what the person wrote.
     """
     carrier = _as_written(carrier)
-    container = carrier.get(CONTAINER_KEY)
-    if container is None:
+    if CONTAINER_KEY not in carrier:
         return ContainerReport(
             findings=(), functionality_blocks=(), role_blocks=(), orphaned_roles=()
         )
+    container = carrier[CONTAINER_KEY]
 
     roles = KnownRoles.from_active(active_roles)
     shape_by_key = _shape_findings_by_container_key(carrier, schema)
@@ -457,7 +459,8 @@ def _shape_findings_by_container_key(
     """Run the JSON Schema pass; group findings by the container key they fall under.
 
     The `None` group holds findings at or above the container itself (`/pkit`
-    not a mapping, say). Sorted by position so output is stable.
+    not a mapping, say). Sorted by position so output is stable; the sort key
+    renders every segment as text because a path mixes keys with list indices.
     """
     registry = Registry().with_resource(
         uri=schema.get("$id", "container.schema.json"),
@@ -465,7 +468,8 @@ def _shape_findings_by_container_key(
     )
     validator = Draft202012Validator(schema, registry=registry)
     grouped: dict[str | None, list[ContainerFinding]] = {}
-    for error in sorted(validator.iter_errors(carrier), key=lambda e: list(e.absolute_path)):
+    errors = sorted(validator.iter_errors(carrier), key=lambda e: [str(p) for p in e.absolute_path])
+    for error in errors:
         path = list(error.absolute_path)
         key = str(path[1]) if len(path) >= 2 and path[0] == CONTAINER_KEY else None
         pointer = "/" + "/".join(_pointer_token(p) for p in path) if path else ""
@@ -481,25 +485,40 @@ def _shape_findings_by_container_key(
 
 
 def _as_written(obj: Any) -> Any:
-    """Render parsed date/datetime values back to the form written in the file.
+    """Render parsed values — and mapping keys — back to the form written in the file.
 
     YAML's `2026-10-02T09:40:12Z` parses to an aware datetime; the schema's
     `utc-timestamp` pattern wants the written `Z` form, and `isoformat()` would
-    give `+00:00`. A UTC datetime renders as `...Z`; a date as ISO; a datetime
-    in another zone keeps `isoformat()` and so fails the pattern, which is
-    right — the record asks for UTC. Other values pass through unchanged.
+    give `+00:00`. A UTC datetime renders as `...Z`, keeping any fractional
+    seconds so `...12.5Z` still fails the pattern as the written text would; a
+    date as ISO; a datetime in another zone keeps `isoformat()` and so fails
+    the pattern, which is right — the record asks for UTC. Not recoverable: a
+    space-separated `2026-10-02 09:40:12Z` parses to the same datetime as the
+    `T` form and is accepted. Other values pass through unchanged.
+
+    Mapping keys are rendered too: YAML reads `2026:` as an integer and
+    `2026-10-02:` as a date, while JSON Schema and the container's rule know
+    only text keys. Every key downstream — grouping, lookup, the edit-distance
+    suggestion — is therefore a string.
     """
     if isinstance(obj, Mapping):
-        return {k: _as_written(v) for k, v in obj.items()}
+        return {_key_as_written(k): _as_written(v) for k, v in obj.items()}
     if isinstance(obj, list):
         return [_as_written(x) for x in obj]
     if isinstance(obj, datetime):
         if obj.tzinfo is not None and obj.utcoffset() == timedelta(0):
-            return obj.strftime("%Y-%m-%dT%H:%M:%SZ")
+            seconds = obj.strftime("%Y-%m-%dT%H:%M:%S")
+            fraction = f".{obj.microsecond:06d}".rstrip("0") if obj.microsecond else ""
+            return f"{seconds}{fraction}Z"
         return obj.isoformat()
     if isinstance(obj, date):
         return obj.isoformat()
     return obj
+
+
+def _key_as_written(key: Any) -> str:
+    """A mapping key as text: unchanged when already text, else its written form."""
+    return key if isinstance(key, str) else str(_as_written(key))
 
 
 def _pointer_token(segment: Any) -> str:

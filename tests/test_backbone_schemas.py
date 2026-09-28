@@ -10,6 +10,7 @@ from the repository itself, so a change to the schema is exercised here directly
 from __future__ import annotations
 
 import json
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -37,7 +38,7 @@ def schema() -> dict:
     return bs.load_backbone_schema(REPO, "container")
 
 
-def _carrier(container: dict[str, Any]) -> dict[str, Any]:
+def _carrier(container: dict[Any, Any]) -> dict[str, Any]:
     """A document's front matter: the artefact's own keys plus the container."""
     return {"title": "An artefact", "status": "active", bs.CONTAINER_KEY: container}
 
@@ -47,7 +48,7 @@ def _friction(**block: Any) -> dict[str, Any]:
 
 
 def _validate(
-    schema: dict, container: dict[str, Any], active: list[str] = ACTIVE
+    schema: dict, container: dict[Any, Any], active: list[str] = ACTIVE
 ) -> bs.ContainerReport:
     return bs.validate_container(_carrier(container), schema, active_roles=active)
 
@@ -161,6 +162,17 @@ def test_friction_refuses_non_utc_timestamp(schema: dict) -> None:
     assert finding.location == "/pkit/friction/revalidated/at"
 
 
+def test_friction_refuses_fractional_seconds_as_written(schema: dict) -> None:
+    """The parser keeps the fraction; the rendered text must too, so the pattern sees it."""
+    text = "pkit:\n  friction:\n    revalidated: {at: 2026-10-02T09:40:12.5Z, outcome: updated}\n"
+    carrier = YAML(typ="safe").load(text)
+    assert carrier["pkit"]["friction"]["revalidated"]["at"].microsecond == 500_000
+    report = bs.validate_container(carrier, schema, active_roles=ACTIVE)
+    (finding,) = report.errors
+    assert finding.location == "/pkit/friction/revalidated/at"
+    assert "2026-10-02T09:40:12.5Z" in finding.message
+
+
 def test_misspelt_functionality_key_is_unknown_key_with_suggestion(schema: dict) -> None:
     report = _validate(schema, {"frictoin": {"anchors": {"path": ["a"]}}})
     (finding,) = report.errors
@@ -266,8 +278,68 @@ def test_container_not_a_mapping_is_a_shape_error(schema: dict) -> None:
     assert finding.location == "/pkit"
 
 
+def test_container_key_with_no_value_is_present_and_a_shape_error(schema: dict) -> None:
+    """`pkit:` written with nothing under it parses to null — present, not absent."""
+    carrier = YAML(typ="safe").load("title: plain\npkit:\n")
+    assert bs.CONTAINER_KEY in carrier and carrier[bs.CONTAINER_KEY] is None
+    report = bs.validate_container(carrier, schema, active_roles=ACTIVE)
+    (finding,) = report.errors
+    assert finding.kind is bs.FindingKind.SHAPE
+    assert finding.location == "/pkit"
+    assert "None is not of type 'object'" in finding.message
+
+
 def test_point_compatibility_hook_is_unanswered_until_the_resolver_exists() -> None:
     assert bs.resolve_point_compatibility("documentation", "p", 1) is None
+
+
+# --- keys the parser did not read as text -----------------------------------
+
+
+def test_non_text_key_that_is_not_a_role_block_is_an_unknown_key(schema: dict) -> None:
+    """Regression: an int key reached the edit-distance suggestion and raised TypeError."""
+    report = _validate(schema, {1: "x"})
+    (finding,) = report.findings
+    assert finding.kind is bs.FindingKind.UNKNOWN_KEY
+    assert finding.location == "/pkit/1"
+    assert "unknown key '1'" in finding.message
+    assert "did you mean" in finding.message
+
+
+def test_mixed_key_types_do_not_break_the_shape_pass(schema: dict) -> None:
+    """Regression: sorting shape errors compared an int path segment with a str one."""
+    report = _validate(schema, {"friction": {"bogus": 1}, 5: {"x": 1}})
+    assert report.functionality_blocks == ("friction",)
+    assert [(f.location, f.kind) for f in report.errors] == [
+        ("/pkit/friction", bs.FindingKind.SHAPE),
+        ("/pkit/5", bs.FindingKind.UNKNOWN_KEY),
+    ]
+
+
+def test_non_text_role_block_key_keeps_its_shape_findings(schema: dict) -> None:
+    """Regression: shape findings were grouped under the text key but looked up by the raw one."""
+    report = _validate(schema, {2026: {"p": {"schema_version": 0}}}, active=[])
+    assert report.role_blocks == ("2026",) and report.orphaned_roles == ("2026",)
+    (finding,) = report.errors
+    assert finding.kind is bs.FindingKind.SHAPE
+    assert finding.location == "/pkit/2026/p/schema_version"
+
+
+def test_yaml_keys_are_judged_as_written(schema: dict) -> None:
+    """YAML reads `2026:` as an int and `2026-10-02:` as a date; the rule sees the text."""
+    text = """
+pkit:
+  2026:
+    p: {schema_version: 1}
+  2026-10-02:
+    q: {schema_version: 1}
+"""
+    carrier = YAML(typ="safe").load(text)
+    assert {type(k) for k in carrier["pkit"]} == {int, date}
+    report = bs.validate_container(carrier, schema, active_roles=[])
+    assert report.is_clean, _messages(report)
+    assert report.role_blocks == ("2026", "2026-10-02")
+    assert [f.location for f in report.reports] == ["/pkit/2026", "/pkit/2026-10-02"]
 
 
 # --- the collection-entry form --------------------------------------------
