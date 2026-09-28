@@ -1,0 +1,21 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  An agent's front matter may declare the model it runs on (`model:`) and the
+  effort it reasons at (`effort:`), and an adopter may override either per
+  agent in the overlay under `overrides.<agent>.model` / `.effort` — the two
+  keys are reserved in that block and are not overlay categories. Both are
+  optional and default to inherit: nothing is carried and the harness default
+  applies, so an adopter who sets nothing sees no change, and the shipped
+  agents set neither. Precedence per key: the overlay override, else the front
+  matter, else inherit. Accepted values are the harness's own — `model`:
+  `inherit`, an alias (`sonnet`, `opus`, `haiku`, `fable`, `best`, `opusplan`,
+  `sonnet[1m]`, `opus[1m]`, `fable[1m]`) or a full `claude-…` model name;
+  `effort`: `inherit`, `low`, `medium`, `high`, `xhigh`, `max` (the same levels
+  `review-pr --effort` takes, which wins over an agent's effort at run time).
+  `pkit agents` shows each agent's effective model and effort on its row, and
+  `pkit validate` (the `refs` member) reports a value outside the vocabulary as
+  an error, at the agent file or at the overlay. The fresh-install overlay
+  seed shows the override shape in its commented example.
