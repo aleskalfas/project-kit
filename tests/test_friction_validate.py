@@ -467,11 +467,11 @@ def test_validate_command_prints_the_friction_section_and_fails_on_errors(
 
     assert result.exit_code == 1, result.output
     assert "1 place(s), 2 artefact(s), 2 carrying the `pkit` container" in result.output
-    assert "docs/rules.md#RS-CMN-002 /pkit/friction" in result.output
-    # The section prints after the issue list, in the order of the three passes.
+    # The finding sits under its own heading; the members print in registry order.
     out = result.output
-    assert out.index("issue(s) found") < out.index("configuration") < out.index("packages")
-    assert out.index("packages") < out.index("\n  friction\n")
+    friction = out.split("\n  friction\n")[1].split("\n  rule-sets\n")[0]
+    assert "error    docs/rules.md#RS-CMN-002:/pkit/friction" in friction
+    assert out.index("\n  configuration\n") < out.index("\n  packages\n") < out.index("\n  friction\n")
 
 
 def test_validate_command_reports_settings_findings_once_under_configuration(
@@ -486,9 +486,10 @@ def test_validate_command_reports_settings_findings_once_under_configuration(
     result = CliRunner().invoke(main, ["validate", "--no-refs"])
 
     assert result.exit_code == 1, result.output
-    issues = result.output.split("issue(s) found:")[1].split("\n  configuration")[0]
-    assert issues.count("/friction/mode") == 1
-    assert issues.count("/friction/places/1") == 1
+    configuration = result.output.split("\n  configuration\n")[1].split("\n  packages\n")[0]
+    assert configuration.count("/friction/mode") == 1
+    assert configuration.count("/friction/places/1") == 1
+    assert result.output.count("/friction/mode") == 1  # nowhere else
     assert fv.validate_friction(adopter.root).errors == ()
 
 

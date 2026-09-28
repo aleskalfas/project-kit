@@ -62,6 +62,7 @@ import click
 from jsonschema import Draft202012Validator
 
 from project_kit import backbone_schemas, cli_render
+from project_kit.validators import Finding, Outcome
 from referencing import Registry, Resource
 from referencing.exceptions import Unresolvable
 from referencing.jsonschema import DRAFT202012
@@ -634,14 +635,11 @@ def _shape_issues(
         ]
     issues: list[ValidationIssue] = []
     for error in sorted(shape_errors, key=lambda e: list(e.absolute_path)):
-        pointer = (
-            "/" + "/".join(str(p) for p in error.absolute_path)
-            if error.absolute_path
-            else ""
-        )
-        issues.append(
-            ValidationIssue(location=f"{yaml_rel}{pointer}", message=error.message)
-        )
+        # An unknown key is one finding per key, phrased by the shared renderer
+        # (ADR-056 point 4); any other violation keeps the validator's message.
+        for path, message in backbone_schemas.expand_schema_error(error):
+            pointer = "/" + "/".join(path) if path else ""
+            issues.append(ValidationIssue(location=f"{yaml_rel}{pointer}", message=message))
     return issues
 
 
@@ -751,6 +749,17 @@ def validate_all(target_root: Path, *, resolve: bool = True) -> ValidationReport
         instances_checked=report.instances_checked,
         backbone_schemas_checked=backbone_checked,
     )
+
+
+def outcome(target_root: Path) -> Outcome:
+    """The `schemas` member of `pkit validate`: `validate_all`, both passes."""
+    report = validate_all(target_root, resolve=True)
+    summary = (
+        f"{report.pairs_checked} schema pair(s), {report.instances_checked} instance(s), "
+        f"{report.backbone_schemas_checked} backbone file schema(s) checked; "
+        f"{len(report.issues)} error(s).",
+    )
+    return Outcome(summary, tuple(Finding(i.location, i.message) for i in report.issues))
 
 
 def _load_check_backbone_schemas(target_root: Path) -> tuple[int, list[ValidationIssue]]:
