@@ -40,8 +40,10 @@ yields the same `Wiring`, finding for finding. It computes:
 - the **version relations** (`Relation`): `requires_backbone` against the
   installed backbone, capability dependency ranges against installed versions
   (COR-030), contributions and subscriptions against point versions,
-  `depends-on` entries against the offered process interface's version, and a
-  project filler against its point's version.
+  `depends-on` entries against the offered process interface's version, a
+  project filler against its point's version, and a rule set's inheritance
+  pins against the inherited sets' majors (COR-051 point 7), read from the
+  rule-set files by `rule_sets.pin_checks`.
 
 Disposition follows the direction split of COR-030 as COR-053 point 6 applies
 it: the side carrying a mandatory mark, or the dependent of a version range,
@@ -58,9 +60,8 @@ the two selection keys against what is installed; it also owns the last
 relation, the configuration file's shape against the schema the installed
 backbone ships.
 
-Named hooks left for later Tasks, each documented at its definition:
-`project_filler` (#994 — the filler envelope and its location rule) and
-`rule_set_pin_findings` (#989 — the rule-set schema). A stale generated
+A named hook is left for a later Task, documented at its definition:
+`project_filler` (#994 — the filler envelope and its location rule). A stale generated
 `depends-on` is the refresh command's check (#995): detecting it means reading
 the process definitions this module never opens.
 """
@@ -81,7 +82,7 @@ from packaging.specifiers import InvalidSpecifier, SpecifierSet
 from packaging.version import InvalidVersion, Version
 from ruamel.yaml import YAML
 
-from project_kit import cli_render
+from project_kit import cli_render, rule_sets
 from project_kit.manifest import read_backbone_manifest, read_component_manifest
 from project_kit.package_validate import (
     POINT_SEPARATOR,
@@ -407,7 +408,8 @@ def load_selections(target_root: Path) -> Selections:
 
 
 def resolve_wiring(target_root: Path) -> Wiring:
-    """The live wiring of the project at `target_root`."""
+    """The live wiring of the project at `target_root`, with the rule-set pins
+    read from its rule-set files among the version relations."""
     backbone = read_backbone_manifest(target_root)
     declarations = load_declarations(target_root)
     wiring = resolve(
@@ -420,15 +422,16 @@ def resolve_wiring(target_root: Path) -> Wiring:
         filler=lambda address: project_filler(target_root, address),
         config_file=project_config_path(target_root),
     )
-    pins = rule_set_pin_findings(target_root, declarations)
-    if not pins:
-        return wiring
+    pin_checks = rule_sets.pin_checks(rule_sets.discover_rule_sets(target_root))
+    pins = rule_set_pin_findings(pin_checks)
     return dataclasses.replace(
-        wiring, findings=tuple(sorted((*wiring.findings, *pins), key=_finding_key))
+        wiring,
+        findings=tuple(sorted((*wiring.findings, *pins), key=_finding_key)),
+        checked={**wiring.checked, Relation.RULE_SET_PIN: len(pin_checks)},
     )
 
 
-# --- the hooks other Tasks fill ---------------------------------------------
+# --- relations read from other files: fillers (a hook) and rule-set pins -----
 
 
 def project_filler(target_root: Path, address: str) -> ProjectFiller | None:
@@ -449,16 +452,31 @@ def project_filler(target_root: Path, address: str) -> ProjectFiller | None:
     return None
 
 
-def rule_set_pin_findings(target_root: Path, declarations: Declarations) -> list[Finding]:
-    """Hook (#989): rule-set inheritance pins against the inherited sets' major
-    versions (COR-051 point 7), as `Relation.RULE_SET_PIN` findings.
+def rule_set_pin_findings(checks: Iterable[rule_sets.PinCheck]) -> list[Finding]:
+    """Rule-set inheritance pins against the inherited sets' major versions
+    (COR-051 point 7), as `Relation.RULE_SET_PIN` findings.
 
-    A rule set inheriting one owned by someone else pins that set's major
-    version; a newer major fails validation until the project reviews the pin.
-    Rule-set files have no schema and no declared places yet, so there is
-    nothing to read; this returns no findings until #989 ships them.
+    A rule set inheriting another pins that set's major version; a newer major
+    fails validation until the inheriting set's owner reviews it and updates
+    the pin — an error on the inheriting set, naming the new major. The pins
+    come from the rule-set files the location rule finds (`rule_sets`, the
+    schemas README "Rule-set files"); a pin naming no set, or one it may not
+    inherit, is the `rule-sets` pass's finding, not a version relation.
     """
-    return []
+    findings: list[Finding] = []
+    for check in checks:
+        problem = check.problem
+        if problem is not None:
+            findings.append(
+                Finding(
+                    file=Path(check.rule_set.path),
+                    path=check.pointer,
+                    severity=Severity.ERROR,
+                    message=problem,
+                    relation=Relation.RULE_SET_PIN,
+                )
+            )
+    return findings
 
 
 # --- the resolver -----------------------------------------------------------

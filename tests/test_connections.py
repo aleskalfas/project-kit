@@ -804,9 +804,13 @@ def test_project_filler_hook_is_unanswered_and_resolve_judges_what_it_reports() 
     assert "its `schema_version` (COR-052 point 2)" in stale.findings[0].message
 
 
-def test_rule_set_pin_hook_is_unanswered(make_adopter_repo: MakeAdopterRepo) -> None:
+def test_rule_set_pins_are_a_version_relation_that_finds_nothing_without_rule_sets(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """The pins themselves are covered in `test_rule_sets.py`."""
     repo = make_adopter_repo()
-    assert cx.rule_set_pin_findings(repo.root, cx.load_declarations(repo.root)) == []
+    assert cx.rule_set_pin_findings(()) == []
+    assert cx.resolve_wiring(repo.root).checked[cx.Relation.RULE_SET_PIN] == 0
 
 
 # --- contributor selection (COR-052 point 4) ------------------------------------

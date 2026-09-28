@@ -2583,6 +2583,14 @@ def validate(include_refs: bool) -> None:
         ValidateIssue(location=f.where, diagnosis=f.message) for f in friction_result.errors
     )
     # ------------------------------------------------------------------------
+    # --- rule-sets (COR-051) — one pass, one section ------------------------
+    from project_kit import rule_sets as rule_sets_mod
+
+    rule_sets_result = rule_sets_mod.validate_rule_sets(target_root)
+    issues.extend(
+        ValidateIssue(location=f.where, diagnosis=f.message) for f in rule_sets_result.errors
+    )
+    # ------------------------------------------------------------------------
     print_validate_report(target_root, issues)
     config_validate.print_configuration_section(config_report)
     package_validate.print_pass(target_root, packages)
@@ -2594,6 +2602,7 @@ def validate(include_refs: bool) -> None:
         from project_kit import connections
 
         connections.print_pass(target_root, packages.wiring)
+    rule_sets_mod.print_section(rule_sets_result)
     if issues:
         raise SystemExit(1)
 
@@ -2672,10 +2681,19 @@ def refs_who_references(target: str) -> None:
 @refs.command("lookup")
 @click.argument("record_id")
 def refs_lookup(record_id: str) -> None:
-    """Resolve a record ID (`COR-005`, `PRJ-002`) to its current file path."""
+    """Resolve a record ID (`COR-005`, `PRJ-002`) to its file, or a rule (`RS-CMN-001`,
+    `RS-CMN-001#point`, `[living-docs:RS-LDOC-001]`) to its place in its rule set."""
+    from project_kit import rule_sets as rule_sets_mod
+
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
+    if rule_sets_mod.is_rule_citation(record_id):
+        resolution = refs_mod.resolve_rule_citation(target_root, record_id)
+        if not resolution.resolved:
+            raise click.ClickException(f"{record_id!r} does not resolve: {resolution.problem}.")
+        click.echo(resolution.location)
+        return
     path = refs_mod.resolve_record(target_root, record_id)
     if path is None:
         raise click.ClickException(f"no record matches {record_id!r}.")
@@ -3419,7 +3437,7 @@ def permissions_profile_activate(name: str, no_apply: bool) -> None:
 
 @main.group()
 def decisions() -> None:
-    """Decision-record integrity checks across every id-space (core, project, ADR, per-capability DEC)."""
+    """Decision-record integrity checks across every id-space (core, project, ADR, per-capability DEC, rules)."""
 
 
 @decisions.command("validate")
@@ -3435,7 +3453,9 @@ def decisions_validate() -> None:
     not a collision.
 
     Also sanity-checks that each record's frontmatter id matches its
-    filename number. Exits non-zero on any duplicate or mismatch.
+    filename number, and that no rule id (`RS-<SET>-NNN`, COR-051) is
+    claimed twice across the rule sets. Exits non-zero on any duplicate or
+    mismatch.
     """
     from project_kit import decisions_validate as decisions_mod
 

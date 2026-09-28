@@ -19,6 +19,10 @@ Body parser convention (per COR-013, documented in `.pkit/agents/README.md`):
   looks path-like (contains `/` or a recognised extension).
 - Markdown link targets: `[text](relative/path.md)` — URLs are skipped.
 - Record IDs as bare tokens: `COR-NNN`, `PRJ-NNN`.
+- Rule citations (COR-051 point 3): `RS-<SET>-NNN`, `RS-<SET>-NNN#<point>`,
+  and in brackets with the owning component in front,
+  `[<component>:RS-<SET>-NNN]`. Each must resolve to a rule of an installed
+  rule set; unlike records they are not declared in frontmatter.
 - Hook names: `<topic>.<operation>` or `<topic>.<provider>.<operation>`.
 - Skipped regions: fenced code blocks, HTML comments, strikethrough.
 """
@@ -35,7 +39,7 @@ from typing import Any, Literal
 
 from ruamel.yaml import YAML
 
-from project_kit import agents_overlay
+from project_kit import agents_overlay, rule_sets
 
 Kind = Literal["agent", "skill"]
 Namespace = Literal["core", "project"]
@@ -70,6 +74,9 @@ class BodyRefs:
     # Capability decision citations: (capability-name, decision-filename-stem)
     # extracted from `[<capability>:<filename-stem>]` body tokens per COR-017.
     capability_citations: frozenset[tuple[str, str]] = field(default_factory=frozenset)
+    # Rule citations per COR-051 point 3, as written without brackets:
+    # `RS-CMN-001`, `RS-CMN-001#point`, `living-docs:RS-LDOC-001`.
+    rule_citations: frozenset[str] = field(default_factory=frozenset)
 
 
 @dataclass(frozen=True)
@@ -204,8 +211,14 @@ def validate_corpus(target_root: Path) -> list[Issue]:
     issues.extend(_validate_same_tier_collisions(providers))
     issues.extend(_validate_storyboards(artifacts, target_root))
     issues.extend(_validate_capability_citations(artifacts, target_root))
+    issues.extend(_validate_rule_citations(artifacts, target_root))
     issues.extend(_validate_composes(artifacts, target_root))
     return issues
+
+
+def resolve_rule_citation(target_root: Path, citation: str) -> rule_sets.CitationResolution:
+    """Resolve a rule citation (`RS-CMN-001`, `RS-CMN-001#point`, `[cap:RS-CMN-001]`)."""
+    return rule_sets.resolve_citation(rule_sets.discover_rule_sets(target_root), citation)
 
 
 def resolve_record(target_root: Path, record_id: str) -> Path | None:
@@ -279,6 +292,7 @@ def who_references(artifacts: list[Artifact], target: str) -> list[Artifact]:
             | art.body_refs.records
             | art.body_refs.hooks
             | cap_citations_flat
+            | art.body_refs.rule_citations
         )
         if target in all_refs:
             matches.append(art)
@@ -611,6 +625,7 @@ def outgoing_refs(artifact: Artifact) -> dict[str, list[str]]:
         "body.capability-citations": sorted(
             f"{cap}:{stem}" for cap, stem in artifact.body_refs.capability_citations
         ),
+        "body.rule-citations": sorted(artifact.body_refs.rule_citations),
     }
 
 
@@ -631,6 +646,15 @@ STRIKETHROUGH_RE = re.compile(r"~~[^~\n]+~~")
 # Decision stem: `DEC-NNN` optionally followed by `-<slug>` segments.
 CAP_CITATION_RE = re.compile(
     r"\[([a-z][a-z0-9-]*[a-z0-9]):(DEC-\d+(?:-[a-z0-9-]+)*)\]"
+)
+
+# Rule citations per COR-051 point 3, built from the RS family's grammar in
+# `rule_sets`: a bare `RS-<SET>-NNN` or `RS-<SET>-NNN#<point>` anywhere, and the
+# component-qualified form in brackets like a capability decision citation.
+_RULE_CITATION = rf"{rule_sets.RULE_ID_PATTERN}(?:#{rule_sets.POINT_NAME_PATTERN})?"
+RULE_CITATION_RE = re.compile(rf"\b{_RULE_CITATION}(?![A-Za-z0-9-])")
+QUALIFIED_RULE_CITATION_RE = re.compile(
+    rf"\[({rule_sets.COMPONENT_PATTERN}):({_RULE_CITATION})\]"
 )
 
 # Backtick text that *looks like* a path. Heuristic: contains a `/` OR
@@ -739,6 +763,14 @@ def extract_body_refs(body: str) -> BodyRefs:
     for match in CAP_CITATION_RE.finditer(stripped):
         capability_citations.add((match.group(1), match.group(2)))
 
+    # Rule citations: the bracketed, component-qualified form first, then bare
+    # ids in what is left, so a qualified citation is not also counted bare.
+    rule_citations: set[str] = set()
+    for match in QUALIFIED_RULE_CITATION_RE.finditer(stripped):
+        rule_citations.add(f"{match.group(1)}:{match.group(2)}")
+    for match in RULE_CITATION_RE.finditer(QUALIFIED_RULE_CITATION_RE.sub(" ", stripped)):
+        rule_citations.add(match.group(0))
+
     for match in BACKTICK_RE.finditer(stripped):
         inner = match.group(1).strip()
         if _is_path_like(inner):
@@ -788,6 +820,7 @@ def extract_body_refs(body: str) -> BodyRefs:
         records=frozenset(records),
         hooks=frozenset(hooks),
         capability_citations=frozenset(capability_citations),
+        rule_citations=frozenset(rule_citations),
     )
 
 
@@ -890,6 +923,7 @@ def _load_one(
                     body_refs.capability_citations
                     | sibling_refs.capability_citations
                 ),
+                rule_citations=body_refs.rule_citations | sibling_refs.rule_citations,
             )
 
     # Name: the file stem (matches both flat and folder layouts).
@@ -1499,6 +1533,34 @@ def _validate_capability_citations(
                     "(capability not installed, or decision renamed?).",
                 )
             )
+    return issues
+
+
+def _validate_rule_citations(artifacts: list[Artifact], target_root: Path) -> list[Issue]:
+    """Every rule citation in a body resolves to a rule of an installed rule set (COR-051).
+
+    Bare or component-qualified, a citation must name an existing rule, and a
+    written component must be the one that owns the rule's set; `#<point>`
+    must be an extension point the rule offers. The rule sets are read only
+    when something cites one.
+    """
+    cited = [
+        (art, citation) for art in artifacts for citation in sorted(art.body_refs.rule_citations)
+    ]
+    if not cited:
+        return []
+    discovery = rule_sets.discover_rule_sets(target_root)
+    issues: list[Issue] = []
+    for art, citation in cited:
+        resolution = rule_sets.resolve_citation(discovery, citation)
+        if resolution.resolved:
+            continue
+        issues.append(
+            Issue(
+                location=_location(art, target_root),
+                diagnosis=f"cites rule {citation!r}, which does not resolve: {resolution.problem}.",
+            )
+        )
     return issues
 
 
