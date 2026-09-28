@@ -19,6 +19,8 @@ reads:
     - .pkit/capabilities/demo-recording/decisions/DEC-002-three-layer-plugin-architecture.md
     - .pkit/capabilities/demo-recording/decisions/DEC-004-platform-coupling-and-gate-placement.md
     - .pkit/capabilities/demo-recording/schemas/record-config.yaml
+  records:
+    - COR-016
 ---
 
 # Working with the demo-recording capability
