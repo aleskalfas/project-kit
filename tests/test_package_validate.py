@@ -11,6 +11,9 @@ from typing import Any
 
 import pytest
 from click.testing import CliRunner
+from jsonschema import Draft202012Validator
+from referencing import Registry, Resource
+from referencing.jsonschema import DRAFT202012
 
 from project_kit import backbone_schemas as bs
 from project_kit import capabilities as caps
@@ -401,6 +404,65 @@ def test_legacy_messages_are_kept_and_run_without_a_schema(component_dir: Path) 
     }
 
 
+@pytest.mark.parametrize(
+    ("component", "path"),
+    [
+        ({"kind": "capability", "name": "demo"}, "/component"),
+        ({"kind": "capability", "name": "demo", "version": ""}, "/component/version"),
+    ],
+    ids=["missing", "empty"],
+)
+def test_missing_or_empty_version_is_refused_without_a_schema(
+    component_dir: Path, component: dict[str, Any], path: str
+) -> None:
+    """The old install-time refusal survives on the no-schema path, with its message."""
+    findings = _validate(_package(component=component), None, component_dir)
+    assert _messages(findings, pv.Severity.ERROR) == {
+        path: "package.yaml is missing component.version."
+    }
+
+
+@pytest.mark.parametrize(
+    ("component", "path", "fragment"),
+    [
+        ({"kind": "capability", "name": "demo"}, "/component", "'version' is a required property"),
+        ({"kind": "capability", "name": "demo", "version": ""}, "/component/version", "non-empty"),
+    ],
+    ids=["missing", "empty"],
+)
+def test_a_location_the_shape_pass_rejected_is_reported_once(
+    schema: dict[str, Any],
+    component_dir: Path,
+    component: dict[str, Any],
+    path: str,
+    fragment: str,
+) -> None:
+    """With a schema the shape pass owns the location; the repository pass adds nothing there."""
+    findings = _validate(_package(component=component), schema, component_dir)
+    assert [f.path for f in findings] == [path]
+    assert fragment in findings[0].message
+
+
+def test_if_condition_resolves_a_ref_against_the_schema_root() -> None:
+    """A `$ref` inside an `if` is looked up from the schema root, not from the condition."""
+    schema = {
+        "$id": "conditional.schema.json",
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {"is-event": {"properties": {"kind": {"const": "event"}}}},
+        "type": "object",
+        "if": {"$ref": "#/$defs/is-event"},
+        "then": {"properties": {"kind": {}, "command": {}}},
+        "else": {"properties": {"kind": {}, "process": {}}},
+    }
+    walker = pv._UnknownKeyWalker(Draft202012Validator(schema))  # pyright: ignore[reportPrivateUsage]
+    resource = Resource.from_contents(schema, default_specification=DRAFT202012)
+    resolver = Registry().with_resource(schema["$id"], resource).resolver(base_uri=schema["$id"])
+    assert walker.walk({"kind": "event", "command": "x"}, schema, resolver, "") == []
+    warned = walker.walk({"kind": "event", "process": "x"}, schema, resolver, "")
+    assert [(f.path, f.severity) for f in warned] == [("/process", pv.Severity.WARNING)]
+    assert walker.walk({"kind": "process", "process": "x"}, schema, resolver, "") == []
+
+
 def test_hooks_for_the_wiring_resolver_are_unanswered(tmp_path: Path) -> None:
     assert pv.resolve_active_roles(tmp_path) is None
     assert pv.check_wiring(tmp_path, []) == []
@@ -433,6 +495,21 @@ def test_install_time_check_still_refuses_what_it_refused_before(
     problems = caps.validate_capability_self_consistency(source)
     assert any("not a valid version" in p for p in problems)
     assert any("not a valid version specifier" in p for p in problems)
+
+
+def test_install_time_check_refuses_an_empty_version_without_a_schema(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    adopter = make_adopter_repo()
+    bs.backbone_schema_path(adopter.root, pv.SCHEMA_KIND).unlink()
+    source = _stage_incubated(
+        adopter.root,
+        "homegrown",
+        "schema_version: 1\ncomponent:\n  kind: capability\n  name: homegrown\n"
+        "  version: ''\nrequires_backbone: '>=1.0.0'\n",
+    )
+    problems = caps.validate_capability_self_consistency(source)
+    assert any("package.yaml is missing component.version." in p for p in problems), problems
 
 
 def test_install_time_check_refuses_the_new_repository_checks_too(

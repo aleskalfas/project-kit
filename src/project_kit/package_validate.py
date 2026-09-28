@@ -181,11 +181,16 @@ def validate_package(
 
     `schema` is the loaded package schema (`load_backbone_schema(root,
     "package")`), or None when the tree ships none — then only the repository
-    checks run, which is exactly the set the install-time check ran before the
-    schema existed (ADR-056 point 1: never validate against a shape the tree
-    never shipped). `component_dir` is the component's root, where `scripts`
-    and `schemas/` are resolved; `expected_name` is the directory name the
-    component must match, when the caller knows it.
+    checks run, which cover every check the install-time check ran before the
+    schema existed, and more (ADR-056 point 1: never validate against a shape
+    the tree never shipped). `component_dir` is the component's root, where
+    `scripts` and `schemas/` are resolved; `expected_name` is the directory
+    name the component must match, when the caller knows it.
+
+    One location is reported by one pass: a later pass never adds a finding
+    where an earlier one already stands (a key whose type the shape pass
+    rejected is not also warned about or re-checked). Within a pass every
+    finding is kept — two missing required keys are two errors at one location.
     """
     findings: list[PackageFinding] = []
     if schema is not None:
@@ -195,14 +200,25 @@ def validate_package(
             resource=Resource.from_contents(schema, default_specification=DRAFT202012),
         )
         validator = Draft202012Validator(schema, registry=registry)
-        for error in sorted(validator.iter_errors(raw), key=lambda e: _sort_key(e.absolute_path)):
-            findings.append(
+        _add_pass(
+            findings,
+            (
                 PackageFinding(_pointer(error.absolute_path), Severity.ERROR, error.message)
-            )
-        walker = _UnknownKeyWalker(registry)
-        findings.extend(walker.walk(raw, schema, registry.resolver(base_uri=schema_id), ""))
-    findings.extend(_repository_findings(raw, component_dir, expected_name))
+                for error in sorted(
+                    validator.iter_errors(raw), key=lambda e: _sort_key(e.absolute_path)
+                )
+            ),
+        )
+        walker = _UnknownKeyWalker(validator)
+        _add_pass(findings, walker.walk(raw, schema, registry.resolver(base_uri=schema_id), ""))
+    _add_pass(findings, _repository_findings(raw, component_dir, expected_name))
     return findings
+
+
+def _add_pass(findings: list[PackageFinding], new: Iterable[PackageFinding]) -> None:
+    """Append one pass's findings, skipping every location an earlier pass reported."""
+    located = {f.path for f in findings}
+    findings.extend(f for f in new if f.path not in located)
 
 
 # --- pass 2: unknown keys ---------------------------------------------
@@ -217,12 +233,14 @@ class _UnknownKeyWalker:
     address, say) has no known set to judge against and yields nothing; an
     object whose `additionalProperties` is itself a schema has its extra keys
     validated by that schema, not judged here; `additionalProperties: false`
-    is the shape pass's business. The registry is kept so an `if` condition is
-    evaluated with the same `$ref` resolution as the shape pass.
+    is the shape pass's business. The shape pass's validator is kept so an
+    `if` condition is evaluated through it, against the resolver in hand — a
+    `$ref` inside an `if` resolves from the same base as everywhere else, not
+    from the condition treated as a root.
     """
 
-    def __init__(self, registry: Registry) -> None:
-        self.registry = registry
+    def __init__(self, validator: Draft202012Validator) -> None:
+        self.validator = validator
 
     def walk(self, instance: Any, schema: Any, resolver: Any, pointer: str) -> list[PackageFinding]:
         if not isinstance(schema, Mapping):
@@ -235,7 +253,7 @@ class _UnknownKeyWalker:
         for sub in schema.get("allOf", ()):
             findings.extend(self.walk(instance, sub, resolver, pointer))
         if "if" in schema:
-            holds = Draft202012Validator(schema["if"], registry=self.registry).is_valid(instance)
+            holds = not any(self.validator.descend(instance, schema["if"], resolver=resolver))
             branch = "then" if holds else "else"
             if branch in schema:
                 findings.extend(self.walk(instance, schema[branch], resolver, pointer))
@@ -272,7 +290,10 @@ def _repository_findings(
     """The checks that need the tree or a parser the schema lacks.
 
     Each check reads its own slice defensively — a slice the shape pass
-    already rejected is skipped, never reported twice.
+    already rejected is skipped (and `validate_package` drops what a later pass
+    reports at a location an earlier one did). Without a schema this pass is
+    the whole check, so it also refuses what the schema would have: a missing
+    or empty `component.version`.
     """
     findings: list[PackageFinding] = []
     _error = _error_appender(findings)
@@ -287,7 +308,14 @@ def _repository_findings(
                 f"capability directory name {expected_name!r}.",
             )
         version = component.get("version")
-        if isinstance(version, str) and version:
+        if version is None or version == "":
+            # An absent key is located at its parent — the pointer that exists,
+            # and where the shape pass locates a `required` failure.
+            _error(
+                "/component" if version is None else "/component/version",
+                "package.yaml is missing component.version.",
+            )
+        elif isinstance(version, str):
             try:
                 Version(version)
             except InvalidVersion:
