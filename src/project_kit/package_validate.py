@@ -63,6 +63,7 @@ from project_kit.backbone_schemas import (
     load_backbone_schema,
     render_unknown_key,
 )
+from project_kit.command_runner import command_leaves, resolve_command
 from project_kit.manifest import read_backbone_manifest
 from project_kit.validators import COMMAND_KEY, QUERY_CONTRACT_KEY, VALIDATORS_KEY
 
@@ -390,10 +391,10 @@ def _repository_findings(
             if not isinstance(reference, str):
                 continue  # the shape pass reports the type
             path = f"/{VALIDATORS_KEY}/{_token(name)}/{COMMAND_KEY}"
-            problem = undeclared_command(reference, leaves)
-            if problem is not None:
-                _error(path, f"validator {name!r}: {problem}")
-            elif leaves[tuple(reference.split())].get(QUERY_CONTRACT_KEY) is not True:
+            leaf = resolve_command(leaves, reference)
+            if leaf is None:
+                _error(path, f"validator {name!r}: {undeclared_command(reference, leaves)}")
+            elif leaf.get(QUERY_CONTRACT_KEY) is not True:
                 _error(
                     path,
                     f"validator {name!r} names command {reference!r}, which does not declare "
@@ -535,31 +536,11 @@ def undeclared_command(
     """Why `reference` — a path through `commands:`, tokens separated by spaces —
     names no leaf, or None when it does. One check for every command reference:
     an offered event's emitter, a filler, a subscriber, a validator."""
-    if tuple(reference.split()) in command_leaves:
+    if resolve_command(command_leaves, reference) is not None:
         return None
     known = sorted(" ".join(t) for t in command_leaves)
     declared = f" (declared: {known})." if known else " (the package declares no commands)."
     return f"command {reference!r} is not declared in `commands:`{declared}"
-
-
-def command_leaves(tree: Mapping[Any, Any]) -> dict[tuple[str, ...], Mapping[Any, Any]]:
-    """Every leaf of a `commands:` tree, keyed by token path (a leaf carries `script`,
-    COR-021). The validator registry reads a capability's leaves through this
-    walk too, so the reference it resolves is the one the check here judged."""
-    leaves: dict[tuple[str, ...], Mapping[Any, Any]] = {}
-
-    def walk(node: Mapping[Any, Any], prefix: tuple[str, ...]) -> None:
-        for token, value in node.items():
-            if not isinstance(value, Mapping):
-                continue
-            tokens = (*prefix, str(token))
-            if "script" in value:
-                leaves[tokens] = value
-            else:
-                walk(value, tokens)
-
-    walk(tree, ())
-    return leaves
 
 
 def _error_appender(findings: list[PackageFinding]) -> Callable[[str, str], None]:

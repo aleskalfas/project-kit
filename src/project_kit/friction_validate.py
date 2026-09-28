@@ -13,7 +13,10 @@ settings that declare them, this pass reports:
   are declared, dormant or not, because the check never skips an artefact it
   cannot parse: the broken file may be the one carrying the container;
 - **a malformed block** — the container fails its schema or the container's
-  rule; delegated to `backbone_schemas.validate_container`, whose errors are
+  rule, or a compatible point block fails its provider's point schema;
+  delegated to `backbone_schemas.validate_container`, handed what the wiring
+  says of the active roles and their data points (`connections.
+  container_wiring`, from the one resolution of the run), whose errors are
   surfaced against the artefact (COR-050 point 2, COR-053 point 10);
 - **a dangling deferral** — a `deferred[].anchor` naming, by kind and value,
   no anchor of the artefact (COR-050 point 4);
@@ -33,9 +36,10 @@ is the packages pass's, which judges its shape but cannot know where a place
 resolves; so a capability place the walk does not follow is reported here
 too. This pass never walks a place that leaves the repository. What it does
 not do either: compute friction, resolve path anchors against git, or report
-dead anchors — those are the two checks'
-findings (COR-050 points 6 and 7), later Tasks. Orphaned role blocks the
-container validator reports are carried through as reports (never errors) so
+dead anchors — those are the two checks' findings (COR-050 points 6 and 7),
+later Tasks. What the container validator reports rather than judges — a role
+block whose role has no active provider, a point block the active provider's
+point does not match — is carried through as reports (never errors) so
 `pkit validate` can show them.
 
 Dormant until used (COR-050 point 15): with no places declared, or nothing in
@@ -53,7 +57,7 @@ from pathlib import Path
 
 
 from project_kit import backbone_schemas as bs
-from project_kit import validators
+from project_kit import connections, validators
 from project_kit.friction_discovery import (
     FRICTION_KEY,
     Artefact,
@@ -208,14 +212,32 @@ def _artefact_findings(target_root: Path, discovery: Discovery) -> list[Friction
     schema, schema_finding = _container_schema(target_root)
     if schema_finding is not None:
         findings.append(schema_finding)
+    wiring = connections.container_wiring(target_root)
 
     for artefact in discovery.with_container:
         if schema is not None and artefact.rule_set is None:  # a rule's: the rule-set pass's
-            findings.extend(_container_findings(artefact, schema))
+            findings.extend(_container_findings(artefact, schema, wiring))
         findings.extend(_dangling_deferrals(artefact))
 
     findings.extend(_cycles(discovery))
     return findings
+
+
+def block_findings(artefact: Artefact, schema: dict | None) -> tuple[FrictionFinding, ...]:
+    """What this pass finds in one artefact's own block: its shape and dangling deferrals.
+
+    The per-artefact judgments `validate_friction` applies — the container
+    schema and the container's rule (skipped when `schema` is `None`, as the
+    pass skips them without a readable schema), then every deferral naming no
+    anchor of the artefact. The cycle check spans artefacts and is not here.
+    The writing commands (`friction_write`) read what they would write back
+    through this, so a writer never writes a block validation would refuse.
+    """
+    findings: list[FrictionFinding] = []
+    if schema is not None:
+        findings.extend(_container_findings(artefact, schema))
+    findings.extend(_dangling_deferrals(artefact))
+    return tuple(findings)
 
 
 def _unclaimed_unreadable(discovery: Discovery) -> tuple[UnreadableFile, ...]:
@@ -240,9 +262,12 @@ def _container_schema(target_root: Path) -> tuple[dict | None, FrictionFinding |
     )
 
 
-def _container_findings(artefact: Artefact, schema: dict) -> Iterable[FrictionFinding]:
-    """Delegate the block's shape and the container's rule; surface each finding."""
-    report = bs.validate_container(artefact.carrier, schema)
+def _container_findings(
+    artefact: Artefact, schema: dict, wiring: bs.ContainerWiring
+) -> Iterable[FrictionFinding]:
+    """Delegate the block's shape and the container's rule, read against the
+    active wiring; surface each finding."""
+    report = bs.validate_container(artefact.carrier, schema, wiring=wiring)
     for finding in report.findings:
         is_error = finding.severity is Severity.ERROR
         yield FrictionFinding(

@@ -631,6 +631,9 @@ def validate_rule_sets(target_root: Path) -> RuleSetValidation:
     container_schema, note = _container_schema(target_root)
     if note is not None:
         findings.append(note)
+    from project_kit import connections  # the resolver imports this module for its pins
+
+    wiring = connections.container_wiring(target_root)
     for rule_set in discovery.rule_sets:
         findings.extend(_duplicate_key_findings(rule_set))
         findings.extend(_shape_findings(rule_set, schema))
@@ -638,7 +641,7 @@ def validate_rule_sets(target_root: Path) -> RuleSetValidation:
         findings.extend(_id_findings(rule_set, catalogue))
         findings.extend(_join_findings(rule_set))
         if container_schema is not None:
-            findings.extend(_container_findings(rule_set, container_schema))
+            findings.extend(_container_findings(rule_set, container_schema, wiring))
         findings.extend(_origin_findings(rule_set, catalogue))
         findings.extend(_successor_findings(rule_set, catalogue))
         findings.extend(_inheritance_findings(rule_set, catalogue))
@@ -847,12 +850,15 @@ def _join_findings(rule_set: RuleSet) -> Iterable[RuleSetFinding]:
 # --- per file: the container inside each rule ----------------------------------
 
 
-def _container_findings(rule_set: RuleSet, schema: Mapping[str, Any]) -> Iterable[RuleSetFinding]:
-    """The container rule applied inside each rule entry (ADR-056 point 2; COR-053 point 10)."""
+def _container_findings(
+    rule_set: RuleSet, schema: Mapping[str, Any], wiring: bs.ContainerWiring
+) -> Iterable[RuleSetFinding]:
+    """The container rule applied inside each rule entry, read against the active
+    wiring (ADR-056 point 2; COR-053 point 10)."""
     for rule in rule_set.rules:
         if bs.CONTAINER_KEY not in rule.data:
             continue
-        for finding in bs.validate_container(rule.data, schema).findings:
+        for finding in bs.validate_container(rule.data, schema, wiring=wiring).findings:
             is_error = finding.severity is Severity.ERROR
             yield RuleSetFinding(
                 location=rule.location,

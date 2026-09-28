@@ -26,7 +26,7 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from project_kit import refs, validators
+from project_kit import command_runner, refs, validators
 from project_kit.cli import main
 from project_kit.manifest import ComponentRegistryEntry, read_backbone_manifest, write_backbone_manifest
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
@@ -185,6 +185,30 @@ def test_select_addresses_members_and_refuses_unknown_names(adopter: AdopterRepo
     assert "refs" not in [v.name for v in skipped] and len(skipped) == len(registered) - 1
     with pytest.raises(ValueError, match="unknown validator\\(s\\) 'nope'"):
         validators.select(registered, only=["nope"])
+
+
+def test_a_computation_several_members_read_runs_once_per_run(tmp_path: Path) -> None:
+    """Inside `run_all` each key is computed once and shared; outside, every call computes."""
+    computed: list[str] = []
+
+    def compute(key: str) -> str:
+        computed.append(key)
+        return f"value of {key}"
+
+    def member(root: Path) -> validators.Outcome:
+        values = [validators.once_per_run(key, lambda k=key: compute(k)) for key in ("a", "a", "b")]
+        return validators.Outcome(summary=tuple(values))
+
+    members = [validators.Validator(name, member, order) for order, name in enumerate(["x", "y"])]
+    results = validators.run_all(tmp_path, members)
+    assert computed == ["a", "b"]
+    assert all(r.outcome.summary == ("value of a", "value of a", "value of b") for r in results)
+
+    validators.run_all(tmp_path, members)  # a new run computes afresh
+    assert computed == ["a", "b", "a", "b"]
+    validators.once_per_run("a", lambda: compute("a"))  # outside a run: no sharing
+    validators.once_per_run("a", lambda: compute("a"))
+    assert computed == ["a", "b", "a", "b", "a", "a"]
 
 
 # --- the umbrella command ----------------------------------------------------
@@ -352,7 +376,7 @@ def test_a_timeout_kills_the_process_group_and_does_not_wait_on_the_grandchild(
             "time.sleep(60)\n"
         ),
     )
-    monkeypatch.setattr(validators, "QUERY_TIMEOUT_SECONDS", 1)
+    monkeypatch.setattr(command_runner, "COMMAND_TIMEOUT_SECONDS", 1)
     started = time.monotonic()
     outcome = _member(adopter.root, "cap:thing").run(adopter.root)
     elapsed = time.monotonic() - started

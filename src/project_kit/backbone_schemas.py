@@ -23,12 +23,17 @@ is where that class is loaded and where its shared rendering lives:
   pass that validates against a schema phrases the finding the same way.
 - `validate_container` — the container's discrimination rule (COR-053 point
   10) applied on top of the JSON Schema shape: functionality blocks by name,
-  role blocks by their versioned point blocks, anything else an unknown key;
-  role blocks with no active provider reported as orphans.
+  role blocks by their versioned point blocks, anything else an unknown key.
+  What it knows of the roles and points comes from the resolved wiring, handed
+  in as a `ContainerWiring` (`connections.container_wiring` builds it from the
+  run's one resolution): a role block whose role has no active provider is
+  reported as an orphan; a point block at another version than the active
+  provider's point, or naming no data point that provider defines, is reported
+  as inert with its body unvalidated (`resolve_point_compatibility`); a
+  compatible one is validated by the provider's point schema.
 
-What is deliberately *not* here yet: provider-version compatibility of a point
-block (COR-053 point 10's "inert" state) needs the role/provider resolver,
-which does not exist. `resolve_point_compatibility` is the hook it will fill.
+This module reads no package metadata and resolves no wiring: it is below the
+resolver, which imports it.
 """
 
 from __future__ import annotations
@@ -36,7 +41,7 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import Collection, Iterable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from enum import Enum
 from pathlib import Path
@@ -45,6 +50,7 @@ from typing import Any
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError, ValidationError
 from referencing import Registry, Resource
+from referencing.exceptions import Unresolvable
 from referencing.jsonschema import DRAFT202012
 
 # Where the class lives in a project tree (ADR-056 point 1), relative to root.
@@ -60,8 +66,10 @@ CONTAINER_KEY = "pkit"
 FUNCTIONALITY_BLOCKS: frozenset[str] = frozenset({"friction"})
 
 # The separator of a qualified role name, `<publisher>::<role>` (COR-053
-# point 1).
+# point 1), and of the point in an address `<publisher>::<role>:<point>`
+# (point 2).
 ROLE_QUALIFIER_SEPARATOR = "::"
+POINT_SEPARATOR = ":"
 
 # The version field every point block carries (COR-052 point 5, COR-053
 # point 10).
@@ -264,10 +272,12 @@ class Severity(Enum):
 class FindingKind(Enum):
     """What a container finding is about."""
 
-    SHAPE = "shape"  # a JSON Schema violation inside a recognised block
+    SHAPE = "shape"  # a JSON Schema violation inside a recognised block, or a point body
     UNKNOWN_KEY = "unknown-key"  # neither a functionality block nor a role block
+    AMBIGUOUS_ROLE = "ambiguous-role"  # a bare role word two or more active roles share
     ORPHANED_ROLE = "orphaned-role"  # a role block whose role has no active provider
-    INERT_POINT = "inert-point"  # a point block at a version the active provider cannot read
+    INERT_POINT = "inert-point"  # a point block the active provider's point does not match
+    POINT_SCHEMA_UNAVAILABLE = "point-schema-unavailable"  # the provider's point schema is unreadable
 
 
 @dataclass(frozen=True)
@@ -303,12 +313,55 @@ class ContainerReport:
         return not self.errors
 
 
+# --- what the container reads of the wiring ----------------------------
+
+
+@dataclass(frozen=True)
+class ActivePoint:
+    """A data point an active role's provider defines, as a point block reads it.
+
+    `validator` checks a point block's body against the provider's point
+    schema; when the schema could not be loaded it is None and `unavailable`
+    says why.
+    """
+
+    version: int
+    validator: Draft202012Validator | None = field(default=None, compare=False)
+    unavailable: str | None = None
+
+
+@dataclass(frozen=True)
+class ContainerWiring:
+    """What container validation reads from the resolved wiring (COR-053 points 7 and 10).
+
+    `providers` maps each qualified role with an active provider to that
+    provider; `points` maps the address `<publisher>::<role>:<point>` of every
+    data point those providers define to what a point block needs of it. The
+    resolver computes both (`connections.container_wiring`); the empty value has
+    no active role, so every role block reads as orphaned.
+    """
+
+    providers: Mapping[str, str] = field(default_factory=dict[str, str])
+    points: Mapping[str, ActivePoint] = field(default_factory=dict[str, ActivePoint])
+
+    def points_of(self, role: str) -> tuple[str, ...]:
+        """The names of the data points `role`'s active provider defines, sorted."""
+        prefix = point_address(role, "")
+        return tuple(sorted(a[len(prefix) :] for a in self.points if a.startswith(prefix)))
+
+
+def point_address(role: str, point: str) -> str:
+    """`<publisher>::<role>:<point>` (COR-053 point 2)."""
+    return f"{role}{POINT_SEPARATOR}{point}"
+
+
 @dataclass(frozen=True)
 class KnownRoles:
     """The active role set, split the way the container's rule reads it."""
 
-    words: frozenset[str]  # bare role words usable as keys
+    words: frozenset[str]  # bare role words usable as keys: each names one active role
     qualified: frozenset[str]  # `<publisher>::<role>` forms
+    roles_of_word: Mapping[str, tuple[str, ...]]  # every active role a bare word names, sorted
 
     @classmethod
     def from_active(cls, active_roles: Collection[str]) -> KnownRoles:
@@ -316,29 +369,43 @@ class KnownRoles:
 
         Each entry is a qualified role name `<publisher>::<role>`; a bare word
         is accepted and contributes only itself. A role word equal to a
-        functionality block's name is never a valid bare key — it must be
-        written qualified (COR-053 point 10, "Keys") — so it is left out of
-        `words`. Qualifier resolution from the installed provider is the
-        resolver's job; until it exists the caller passes the set.
+        functionality block's name, or shared by two active roles, is never a
+        valid bare key — it must be written qualified (COR-053 point 10,
+        "Keys") — so it is left out of `words`.
         """
-        words: set[str] = set()
+        roles_of_word: dict[str, list[str]] = {}
         qualified: set[str] = set()
-        for role in active_roles:
+        for role in sorted(active_roles):
             if ROLE_QUALIFIER_SEPARATOR in role:
                 qualified.add(role)
                 word = role.rsplit(ROLE_QUALIFIER_SEPARATOR, 1)[1]
             else:
                 word = role
             if word not in FUNCTIONALITY_BLOCKS:
-                words.add(word)
-        return cls(words=frozenset(words), qualified=frozenset(qualified))
+                roles_of_word.setdefault(word, []).append(role)
+        return cls(
+            words=frozenset(w for w, roles in roles_of_word.items() if len(roles) == 1),
+            qualified=frozenset(qualified),
+            roles_of_word={w: tuple(roles) for w, roles in roles_of_word.items()},
+        )
 
     def known_keys(self) -> frozenset[str]:
         """The known set for the unknown-key suggestion (COR-053 point 10)."""
         return FUNCTIONALITY_BLOCKS | self.words | self.qualified
 
-    def is_active(self, key: str) -> bool:
-        return key in self.words or key in self.qualified
+    def role_of(self, key: str) -> str | None:
+        """The active role a key names: the key itself when qualified, the one
+        active role of its word when bare; None when it names none, or several."""
+        if key in self.qualified:
+            return key
+        if key in self.words:
+            return self.roles_of_word[key][0]
+        return None
+
+    def sharing(self, key: str) -> tuple[str, ...]:
+        """The active roles a bare key's word belongs to, when two or more share it."""
+        roles = self.roles_of_word.get(key, ())
+        return roles if len(roles) > 1 else ()
 
 
 def is_point_block(value: Any) -> bool:
@@ -356,30 +423,48 @@ def is_role_block(value: Any) -> bool:
     return all(is_point_block(child) for child in value.values())
 
 
-def resolve_point_compatibility(role_key: str, point: str, schema_version: int) -> bool | None:
-    """Hook: is this point block's version compatible with the active provider's point?
+class PointCompatibility(Enum):
+    """How a point block stands against its role's active provider (COR-053 point 10)."""
 
-    Returns True (compatible), False (inert — reported, body unvalidated, per
-    COR-053 point 10 and COR-052 point 5) or None when the question cannot be
-    answered. The role/provider resolver does not exist yet, so every call
-    returns None and `validate_container` emits no inert findings. When the
-    resolver lands, this is the one function to fill; nothing else changes.
+    COMPATIBLE = "compatible"  # the provider defines the point at the block's version
+    OTHER_VERSION = "other version"  # defined at another version: inert
+    UNDEFINED = "undefined"  # the provider defines no such data point: inert
+
+
+def resolve_point_compatibility(
+    wiring: ContainerWiring, role: str, point: str, schema_version: int
+) -> PointCompatibility:
+    """The compatibility hook: is a point block of the active role `role` readable
+    by its provider?
+
+    Compatible when the provider defines the data point and the integers are
+    equal — the rule the resolver applies to every counterpart (COR-053 point
+    5). Anything else is inert: reported, the body left unvalidated, as an
+    out-of-step filler is (COR-052 point 5). A point the provider does not
+    define is inert rather than an error, as a filler whose point has no active
+    provider is (ADR-056 point 2): the data is the project's, and may be read
+    again by a later provider.
     """
-    return None
+    active = wiring.points.get(point_address(role, point))
+    if active is None:
+        return PointCompatibility.UNDEFINED
+    if active.version != schema_version:
+        return PointCompatibility.OTHER_VERSION
+    return PointCompatibility.COMPATIBLE
 
 
 def validate_container(
     carrier: Mapping[Any, Any],
     schema: Mapping[str, Any],
     *,
-    active_roles: Collection[str] = (),
+    wiring: ContainerWiring | None = None,
 ) -> ContainerReport:
-    """Validate the container carried by `carrier` against `schema` and the rule.
+    """Validate the container carried by `carrier` against `schema`, the rule and the wiring.
 
     `carrier` is the parsed front matter of a document, or one collection
     entry; `schema` is the loaded container schema (`load_backbone_schema(root,
-    "container")`); `active_roles` is the set of active qualified role names
-    (see `KnownRoles.from_active`).
+    "container")`); `wiring` is what the resolved wiring says of the active
+    roles and their data points (`ContainerWiring`; none means no active role).
 
     Two layers, in order:
 
@@ -387,18 +472,24 @@ def validate_container(
        block strictly and models any other key as a role block.
     2. The discrimination rule (COR-053 point 10) on each key of the container:
        a functionality name is that block (its shape findings are kept); a
-       value that is a role block is one (active, or orphaned when its role is
-       not in `active_roles` — a report, never an error); anything else is one
-       unknown-key error, and the shape errors the schema raised while trying
-       to read it as a role block are dropped in its favour.
+       value that is a role block is one; anything else is one unknown-key
+       error, and the shape errors the schema raised while trying to read it as
+       a role block are dropped in its favour. A role block's key then names
+       its role: a qualified key itself, a bare word the one active role of
+       that word. A word several active roles share is an error — the key must
+       be written qualified; a role with no active provider is an orphan — a
+       report, never an error; an active role's point blocks are each
+       compatible, and their bodies validated by the provider's point schema,
+       or inert — a report, the body unvalidated.
 
     A carrier without the container key is clean with nothing recognised; the
     key written with no value (`pkit:` parses to null) is present, and the
     shape pass reports it. Date and datetime values a YAML parser produced, and
     keys it did not read as text (`2026:`, `2026-10-02:`), are rendered back to
     their written form first (a UTC datetime as `...Z`), so the schema's string
-    patterns and the rule judge what the person wrote. `as_written` is public
-    so the front-matter reader hands every consumer the same rendering.
+    patterns, the rule and the point schemas judge what the person wrote.
+    `as_written` is public so the front-matter reader hands every consumer the
+    same rendering.
     """
     carrier = as_written(carrier)
     if CONTAINER_KEY not in carrier:
@@ -407,7 +498,8 @@ def validate_container(
         )
     container = carrier[CONTAINER_KEY]
 
-    roles = KnownRoles.from_active(active_roles)
+    wiring = wiring if wiring is not None else ContainerWiring()
+    roles = KnownRoles.from_active(wiring.providers.keys())
     shape_by_key = _shape_findings_by_container_key(carrier, schema)
     findings: list[ContainerFinding] = list(shape_by_key.pop(None, []))
     functionality: list[str] = []
@@ -432,7 +524,22 @@ def validate_container(
         if is_role_block(value):
             role_blocks.append(key)
             findings.extend(shape_by_key.get(key, []))
-            if not roles.is_active(key):
+            sharing = roles.sharing(key)
+            role = roles.role_of(key)
+            if sharing:
+                findings.append(
+                    ContainerFinding(
+                        location=location,
+                        kind=FindingKind.AMBIGUOUS_ROLE,
+                        severity=Severity.ERROR,
+                        message=(
+                            f"role key {key!r} is the word of several active roles "
+                            f"({_quoted(sharing)}); write the qualified key of the role this "
+                            f"block belongs to (COR-053 point 10)."
+                        ),
+                    )
+                )
+            elif role is None:
                 orphans.append(key)
                 findings.append(
                     ContainerFinding(
@@ -445,8 +552,8 @@ def validate_container(
                         ),
                     )
                 )
-                continue
-            findings.extend(_inert_point_findings(key, value, location))
+            else:
+                findings.extend(_point_findings(key, role, value, location, wiring))
             continue
         findings.append(
             ContainerFinding(
@@ -465,27 +572,89 @@ def validate_container(
     )
 
 
-def _inert_point_findings(
-    role_key: str, role_block: Mapping[str, Any], location: str
+def _point_findings(
+    key: str, role: str, role_block: Mapping[str, Any], location: str, wiring: ContainerWiring
 ) -> list[ContainerFinding]:
-    """Ask the compatibility hook about each point block; report the inert ones."""
+    """Each point block of an active role: inert and reported, or its body validated."""
+    provider = wiring.providers[role]
     findings: list[ContainerFinding] = []
     for point, block in role_block.items():
-        compatible = resolve_point_compatibility(role_key, point, block[POINT_VERSION_FIELD])
-        if compatible is False:
-            findings.append(
-                ContainerFinding(
-                    location=f"{location}/{_pointer_token(point)}",
-                    kind=FindingKind.INERT_POINT,
-                    severity=Severity.REPORT,
-                    message=(
-                        f"point block {point!r} of role {role_key!r} is at "
-                        f"{POINT_VERSION_FIELD} {block[POINT_VERSION_FIELD]}, which the active "
-                        f"provider cannot read; inert, body unvalidated."
-                    ),
-                )
+        point_location = f"{location}/{_pointer_token(point)}"
+        version = block[POINT_VERSION_FIELD]
+        address = point_address(role, point)
+        standing = resolve_point_compatibility(wiring, role, point, version)
+        if standing is PointCompatibility.COMPATIBLE:
+            findings.extend(
+                _body_findings(address, provider, wiring.points[address], block, point_location)
             )
+            continue
+        if standing is PointCompatibility.OTHER_VERSION:
+            problem = (
+                f"is at {POINT_VERSION_FIELD} {version}, but {provider!r} defines {address!r} "
+                f"at version {wiring.points[address].version}"
+            )
+        else:
+            defined = wiring.points_of(role)
+            problem = (
+                f"names no data point {provider!r} defines for {role!r} "
+                + (f"(it defines: {_quoted(defined)})" if defined else "(it defines none)")
+            )
+        findings.append(
+            ContainerFinding(
+                location=point_location,
+                kind=FindingKind.INERT_POINT,
+                severity=Severity.REPORT,
+                message=(
+                    f"point block {point!r} of role block {key!r} {problem}; inert, body "
+                    f"unvalidated (COR-053 point 10)."
+                ),
+            )
+        )
     return findings
+
+
+def _body_findings(
+    address: str, provider: str, active: ActivePoint, block: Mapping[str, Any], location: str
+) -> list[ContainerFinding]:
+    """A compatible point block's body — everything but `schema_version` — against
+    the provider's point schema. An unknown key reads through the shared renderer."""
+
+    def cannot_apply(reason: str) -> list[ContainerFinding]:
+        return [
+            ContainerFinding(
+                location=location,
+                kind=FindingKind.POINT_SCHEMA_UNAVAILABLE,
+                severity=Severity.REPORT,
+                message=(
+                    f"the point schema {provider!r} ships for {address!r} cannot be applied "
+                    f"({reason}); body unvalidated."
+                ),
+            )
+        ]
+
+    if active.validator is None:
+        return cannot_apply(active.unavailable or "it was not loaded")
+    body = {k: v for k, v in block.items() if k != POINT_VERSION_FIELD}
+    try:
+        errors = sorted(
+            active.validator.iter_errors(body), key=lambda e: [str(p) for p in e.absolute_path]
+        )
+    except Unresolvable as exc:
+        return cannot_apply(f"a `$ref` in it does not resolve: {exc.ref!r}")
+    return [
+        ContainerFinding(
+            location=location + "".join(f"/{_pointer_token(p)}" for p in path),
+            kind=FindingKind.SHAPE,
+            severity=Severity.ERROR,
+            message=f"{message} ({provider!r}'s point schema for {address!r})",
+        )
+        for error in errors
+        for path, message in expand_schema_error(error)
+    ]
+
+
+def _quoted(names: Iterable[str]) -> str:
+    return ", ".join(repr(n) for n in names)
 
 
 def _shape_findings_by_container_key(

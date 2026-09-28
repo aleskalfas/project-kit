@@ -1,0 +1,22 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  The three writers of COR-050 ship in the `friction` command group, each
+  naming what it writes and writing only with consent: `--yes`, a terminal
+  confirmation shown with the diff, or `--dry-run` to see the diff and write
+  nothing; a non-interactive run without either refuses and names the command.
+  `pkit friction revalidate <artefact> --outcome updated|unchanged [--because
+  <text>] [--keep <anchor>]...` rewrites the `revalidated` block with a fresh
+  `at`, the outcome and, for `unchanged`, a justification that must differ from
+  the one written; it re-states only the deferrals kept by `--keep` or confirmed
+  at the prompt and removes the rest. `pkit friction defer <artefact> --anchor
+  <anchor> --reason <text>` adds or rewords one deferral, kept sorted, without
+  touching `at`, and refuses an anchor the artefact does not carry. `pkit
+  friction record-status <artefact>` writes the tool-written `last-check` from
+  the whole-repository check at HEAD, only when the state changes. Each rewrites
+  one key of the block and leaves every other byte of the file as it was, in
+  block or flow style, and reads the result back before writing, so it never
+  writes a block `pkit validate` would refuse. The after-merge job that would
+  run `record-status` is not shipped.

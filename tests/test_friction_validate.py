@@ -7,14 +7,21 @@ container schema is read from the adopter's own `.pkit/schemas/backbone/`.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
 from click.testing import CliRunner
 
+from project_kit import connections
 from project_kit import friction_discovery as fd
 from project_kit import friction_validate as fv
 from project_kit.cli import main
+from project_kit.manifest import (
+    ComponentRegistryEntry,
+    read_backbone_manifest,
+    write_backbone_manifest,
+)
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 
 CONFIG = ".pkit/project/config.yaml"
@@ -538,6 +545,145 @@ def test_unparsable_front_matter_as_the_only_file_in_a_place_keeps_the_pass_awak
     cli = CliRunner().invoke(main, ["validate", "--no-refs"])
     assert cli.exit_code == 1, cli.output
     assert "docs/broken.md" in cli.output and "dormant" not in cli.output
+
+
+# --- role blocks against the resolved wiring (COR-053 point 10) --------------
+
+# An incubated capability providing `pkit::documentation`, whose one data point
+# takes a string `last-run` and nothing else.
+DOCS_PROVIDER = """schema_version: 1
+component: {kind: capability, name: docs-a, version: 0.1.0}
+description: Synthetic documentation provider.
+requires_backbone: ">=0.0.0"
+commands:
+  publish: {script: scripts/publish.py, help: Publish.}
+connections:
+  roles: [pkit::documentation]
+  extension-points:
+    accepts:
+      pkit::documentation:reading-evidence:
+        schema_version: 1
+        schema: reading-evidence.schema.json
+        description: What readers found.
+"""
+READING_SCHEMA = {
+    "type": "object",
+    "required": ["last-run"],
+    "properties": {"last-run": {"type": "string"}},
+    "additionalProperties": False,
+}
+
+
+def _stage_documentation_provider(adopter: AdopterRepo) -> None:
+    name = "docs-a"
+    adopter.write(
+        {
+            f".pkit/capabilities/{name}/package.yaml": DOCS_PROVIDER,
+            f".pkit/capabilities/{name}/scripts/publish.py": "",
+            f".pkit/capabilities/{name}/schemas/reading-evidence.schema.json": json.dumps(
+                READING_SCHEMA
+            ),
+        }
+    )
+    backbone = read_backbone_manifest(adopter.root)
+    assert backbone is not None
+    backbone.components.append(
+        ComponentRegistryEntry(
+            kind="capability",
+            name=name,
+            manifest=f".pkit/capabilities/{name}/project/manifest.yaml",
+            origin="incubated-in-repo",
+        )
+    )
+    write_backbone_manifest(adopter.root, backbone)
+
+
+def _with_roles(**roles: str) -> str:
+    """A document whose container carries one role block per keyword (YAML flow text)."""
+    blocks = "\n".join(f"  {key}: {block}" for key, block in roles.items())
+    return f"---\nid: guide\npkit:\n{blocks}\n---\n\nThe body.\n"
+
+
+@pytest.fixture
+def documented(adopter: AdopterRepo) -> AdopterRepo:
+    """The adopter with the documentation provider installed and `docs` declared."""
+    _stage_documentation_provider(adopter)
+    adopter.write({CONFIG: _config(["docs"])})
+    return adopter
+
+
+def test_only_a_role_without_an_active_provider_is_orphaned(documented: AdopterRepo) -> None:
+    """`documentation` has its provider and a compatible, valid point block: nothing
+    is said of it. `analysis` has no provider: it alone is the orphan."""
+    documented.write(
+        {
+            "docs/guide.md": _with_roles(
+                documentation="{reading-evidence: {schema_version: 1, last-run: 2026-10-01}}",
+                analysis="{glossary: {schema_version: 1}}",
+            )
+        }
+    )
+    result = fv.validate_friction(documented.root)
+
+    assert result.errors == ()
+    (report,) = result.reports
+    assert report.kind is fv.FrictionFindingKind.CONTAINER_REPORT
+    assert (report.location, report.pointer) == ("docs/guide.md", "/pkit/analysis")
+    assert "no active provider" in report.message
+
+
+def test_point_block_at_another_version_is_inert_and_not_validated(
+    documented: AdopterRepo,
+) -> None:
+    """The body breaks the point schema, but at version 2 it is never read."""
+    documented.write(
+        {"docs/guide.md": _with_roles(documentation="{reading-evidence: {schema_version: 2, x: 5}}")}
+    )
+    result = fv.validate_friction(documented.root)
+
+    assert result.errors == ()
+    (report,) = result.reports
+    assert report.pointer == "/pkit/documentation/reading-evidence"
+    assert "defines 'pkit::documentation:reading-evidence' at version 1" in report.message
+    assert "inert, body unvalidated" in report.message
+
+
+def test_compatible_point_block_is_validated_by_the_provider_point_schema(
+    documented: AdopterRepo,
+) -> None:
+    documented.write(
+        {"docs/guide.md": _with_roles(documentation="{reading-evidence: {schema_version: 1, last-run: 5}}")}
+    )
+    result = fv.validate_friction(documented.root)
+
+    (error,) = result.errors
+    assert error.kind is fv.FrictionFindingKind.MALFORMED_BLOCK
+    assert error.pointer == "/pkit/documentation/reading-evidence/last-run"
+    assert "5 is not of type 'string'" in error.message
+    assert result.reports == ()
+
+
+def test_validate_resolves_the_wiring_once_for_every_member_that_reads_it(
+    documented: AdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`connections`, `versions`, `friction` and `rule-sets` all read the wiring;
+    one run of `pkit validate` resolves it once (ADR-057 point 2)."""
+    documented.write(
+        {"docs/guide.md": _with_roles(documentation="{reading-evidence: {schema_version: 2}}")}
+    )
+    calls: list[Path] = []
+    resolve = connections.resolve_wiring
+
+    def counting(target_root: Path) -> connections.Wiring:
+        calls.append(target_root)
+        return resolve(target_root)
+
+    monkeypatch.setattr(connections, "resolve_wiring", counting)
+    result = CliRunner().invoke(main, ["validate", "--no-refs"])
+
+    assert len(calls) == 1, result.output
+    friction = result.output.split("\n  friction\n")[1].split("\n  rule-sets\n")[0]
+    assert "report   docs/guide.md:/pkit/documentation/reading-evidence" in friction
 
 
 # --- dormancy and determinism ------------------------------------------------
