@@ -6,8 +6,8 @@ body: >
   `pkit validate` now runs a `friction` pass (COR-050 point 12). It discovers
   artefacts only in the declared places — the `friction.places` of
   `.pkit/project/config.yaml` and, for each installed capability, the
-  `friction.places` of its `package.yaml` resolved under its `docs.locations`
-  and the internal documentation root — reading a Markdown document's front
+  string-shaped `friction.places` of its `package.yaml` under the internal
+  documentation root (object-shaped capability places follow in #1025) — reading a Markdown document's front
   matter or each keyed entry of a collection file, and never front matter
   elsewhere or a plain YAML file, and never a file that resolves outside the
   repository. It fails validation on front matter in a place that does not

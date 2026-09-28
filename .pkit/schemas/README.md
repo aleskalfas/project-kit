@@ -412,7 +412,7 @@ pkit:                                     RS-CMN-001:
 
 Unknown keys anywhere in the block are refused. The block carries no version; it is migrated when it changes, preserving the parsed value of `at`.
 
-**Where artefacts are looked for.** Only in the **declared places**: the project's `friction.places` in `.pkit/project/config.yaml` (repository-relative paths or globs; a directory, or a glob ending in `**`, means every Markdown file beneath it), and each installed capability's `friction.places` in its `package.yaml`, resolved under the capability's `docs.locations` beneath the internal documentation root (`docs.internal` in the configuration, default `docs/`). Front matter outside the places is never read, a plain YAML file in a place is not a document, and a match that resolves outside the repository through a link is dropped — the walk never reads a file the repository does not hold. The same reader takes the rest of the `friction` key — `mode`, `surface`, `exclude` — so the configuration is read once.
+**Where artefacts are looked for.** Only in the **declared places**: the project's `friction.places` in `.pkit/project/config.yaml` (repository-relative paths or globs; a directory, or a glob ending in `**`, means every Markdown file beneath it), and each installed capability's `friction.places` in its `package.yaml`. A capability place is an object `{location, path}` — inside the named `docs.locations` entry, or repository-relative without one (the lifecycle README, "The connection, documentation and friction blocks"); today's discovery reads only string-shaped capability places and resolves them under the internal root, so object-shaped ones are not yet walked — Task #1025 aligns discovery with the schema. Front matter outside the places is never read, a plain YAML file in a place is not a document, and a match that resolves outside the repository through a link is dropped — the walk never reads a file the repository does not hold. The same reader takes the rest of the `friction` key — `mode`, `surface`, `exclude` — so the configuration is read once.
 
 **Validation findings** (COR-050 point 12) — each fails `pkit validate`, in either mode, and names the fix:
 
@@ -421,9 +421,11 @@ Unknown keys anywhere in the block are refused. The block carries no version; it
 - *a dangling deferral* — a `deferred[].anchor` matching, by kind and value, no anchor of the artefact; the pointer carries the entry's index as written;
 - *a cycle between artefacts* through `anchors.artefact`, reported once with its path (`A -> B -> A`; a self-anchor is `A -> A`).
 
+Two things the pass **reports** without failing: orphaned role blocks in the container, and *schema unavailable* — the tree has no readable container schema, so the block check was skipped (sync the tree).
+
 The settings themselves are the **configuration pass's** findings, since it owns the file (the CLI reference, "Configuration file"): an invalid `friction.mode` (the schema's enum — never switched off silently) and a place, surface or exclude path outside the repository (absolute, climbing above the root, or resolving outside it through a link); a capability's `friction` entries are the packages pass's. The friction pass reads those settings and never walks a place that leaves the repository.
 
-Orphaned role blocks in the same container are carried through as reports, never errors. The pass is **dormant** — it prints only its counts — when no places are declared, or when nothing in them needs judging: no artefact carries the container and no file failed to parse.
+The pass is **dormant** — it prints only its counts — when no places are declared, or when nothing in them needs judging: no artefact carries the container and no file failed to parse.
 
 **Not here.** Friction itself — the change check and the whole-repository check, dead anchors, over-broad anchors, the two measures — arrives with Tasks #990 and #991; this pass never touches git.
 
