@@ -1,0 +1,19 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  A rule that fills an inherited extension point anchors to the rule it fills (COR-051
+  point 7): `pkit validate`'s `rule-sets` pass fails a fill whose rule carries no `artefact`
+  anchor naming that rule — bare, or as it is cited (`living-docs:RS-LDOC-003`) — so a change
+  to the inherited rule flags the fill as friction (`unanchored-fill`, naming the anchor to
+  add). An orphaned fill is still only reported, and asks for no anchor. A rule's cited
+  source takes the verdict the friction checks give an anchor of its kind, from the one
+  anchor-kind registry (COR-051 point 5): unregistered, refused without the query contract, or
+  failing closed until registered resolvers run — reported as an unresolved kind, as before,
+  with the registry's reason. `path`, `record` and `artefact` are reported as anchor kinds,
+  never source kinds. `pkit status` gains a `Rule sets` section: the rule sets and rules
+  found, how many inheritance pins were checked, and each pin whose inherited set has moved
+  to another major — beside the `versions` failure `pkit validate` already reports on it —
+  with its fix, the edit to `inherits` that re-pins it; the validate message names the same
+  edit.

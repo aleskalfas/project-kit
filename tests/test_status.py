@@ -9,7 +9,7 @@ import click
 import pytest
 from click.testing import CliRunner
 
-from project_kit.cli import status
+from project_kit.cli import main, status
 from tests.adopter_repo import MakeAdopterRepo
 
 
@@ -218,3 +218,61 @@ def test_status_reports_backbone_version_when_behind(installed_target: Path) -> 
     assert result.exit_code == 0, result.output
     assert "Backbone version:      0.1.0" in result.output
     assert "pkit upgrade --dry-run" in result.output
+
+
+# --- rule sets (COR-051 point 7) ---------------------------------------------------
+
+PROJECT_SETS = "docs/rule-sets"
+
+
+def _rule_set(name: str, version: str, *pins: str) -> str:
+    """A rule-set file with no rules, pinning `pins`."""
+    inherits = f"inherits: [{', '.join(pins)}]\n" if pins else ""
+    return f"---\nrule-set: {name}\nversion: {version}\n{inherits}rules: {{}}\n---\n"
+
+
+def _section(output: str, heading: str) -> str:
+    """The lines of one status section, from its heading to the next blank line."""
+    return output.split(f"\n  {heading}\n", 1)[1].split("\n\n", 1)[0]
+
+
+def test_status_reports_no_rule_sets_on_a_fresh_install(installed_target: Path) -> None:
+    result = CliRunner().invoke(status, [])
+    assert result.exit_code == 0, result.output
+    assert _section(result.output, "Rule sets").split() == ["found", "none"]
+
+
+def test_status_shows_each_pin_behind_the_inherited_major_with_the_fix(
+    installed_target: Path,
+) -> None:
+    sets = installed_target / PROJECT_SETS
+    sets.mkdir(parents=True)
+    (sets / "cmn.md").write_text(_rule_set("CMN", "2.1.0"), encoding="utf-8")
+    (sets / "doc.md").write_text(_rule_set("DOC", "1.0.0", "CMN@1"), encoding="utf-8")
+    (sets / "app.md").write_text(_rule_set("APP", "1.0.0", "CMN@2"), encoding="utf-8")
+
+    result = CliRunner().invoke(status, [])
+    assert result.exit_code == 0, result.output
+    fix = (
+        f"review what changed in CMN, then update the pin to CMN@2 in `inherits` of "
+        f"{PROJECT_SETS}/doc.md"
+    )
+    assert _section(result.output, "Rule sets").splitlines() == [
+        f"    {'found':<18} 3 rule set(s), 0 rule(s)",
+        f"    {'pins':<18} 2 checked, 1 behind the inherited set's major:",
+        "                         DOC pins CMN@1; CMN is at 2.1.0",
+        f"                           fix: {fix}",
+    ]
+
+    # Beside the failure `pkit validate` already reports on the same pin, with the same fix.
+    validated = CliRunner().invoke(main, ["validate", "--only", "versions"])
+    assert validated.exit_code == 1, validated.output
+    assert f"{PROJECT_SETS}/doc.md:/inherits/0" in validated.output
+    assert fix in validated.output
+
+    # The fix applied: every pin current, and nothing listed.
+    (sets / "doc.md").write_text(_rule_set("DOC", "1.0.0", "CMN@2"), encoding="utf-8")
+    repinned = CliRunner().invoke(status, [])
+    assert _section(repinned.output, "Rule sets").splitlines()[1] == (
+        f"    {'pins':<18} 2 checked, all current"
+    )
