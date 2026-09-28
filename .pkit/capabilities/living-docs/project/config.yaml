@@ -1,0 +1,40 @@
+# project-kit's living-docs configuration (living-docs DEC-001 point 1;
+# ADR-055 point 3). Project-owned. Shape: ../schemas/config.schema.json.
+#
+# The places are declared in the backbone configuration's `friction.places`
+# (.pkit/project/config.yaml), which holds the reasons for the list; this file
+# names each space's entry point and assigns each place to its space. Every
+# place here lies outside both documentation roots, so each must be assigned.
+
+pkit_schema: living-docs:config
+schema_version: 1
+
+spaces:
+  user:
+    entry-point: README.md
+  technical:
+    # until tech-docs/README.md exists (ADR-055 point 3)
+    entry-point: CONTRIBUTING.md
+
+places:
+  CONTRIBUTING.md: technical
+  README.md: user
+  .pkit/README.md: user
+  .pkit/adapters/README.md: user
+  .pkit/adapters/claude-code/README.md: user
+  .pkit/agents/README.md: user
+  .pkit/capabilities/demo-recording/README.md: user
+  .pkit/capabilities/evidence/README.md: user
+  .pkit/capabilities/living-docs/README.md: user
+  .pkit/capabilities/project-management/README.md: user
+  .pkit/capabilities/software-analysis/README.md: user
+  .pkit/capabilities/software-engineering/README.md: user
+  .pkit/cli/README.md: user
+  .pkit/decisions/README.md: user
+  .pkit/lifecycle/README.md: user
+  .pkit/permissions/README.md: user
+  .pkit/process/README.md: user
+  .pkit/rules/README.md: user
+  .pkit/schemas/README.md: user
+  .pkit/scratchpad/README.md: user
+  .pkit/skills/README.md: user
