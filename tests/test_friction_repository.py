@@ -490,6 +490,22 @@ def test_the_measures_are_reported_while_nothing_is_anchored_yet(timeline: Timel
     assert result.uncovered == ("src/cli/main.py", "src/core/engine.py")
 
 
+def test_a_capability_surface_is_measured_repository_relative(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """A capability's `friction.surface` names repository paths (the package
+    schema), so its uncovered paths are the repository's — not paths under one
+    of the capability's documentation locations."""
+    timeline = Timeline(make_adopter_repo(capabilities=("evidence",)))
+    package = ".pkit/capabilities/evidence/package.yaml"
+    declared = (timeline.adopter.root / package).read_text(encoding="utf-8") + (
+        "docs:\n  locations:\n    runs: {path: evidence}\nfriction:\n  surface: [src/core]\n"
+    )
+    timeline.start({package: declared, "docs/guide.md": guide()})
+    result = _run(timeline)
+    assert (result.surface, result.uncovered) == (1, ("src/core/engine.py",))
+
+
 def test_excluded_paths_are_ignored_for_anchoring_and_the_measures(timeline: Timeline) -> None:
     timeline.start(
         {

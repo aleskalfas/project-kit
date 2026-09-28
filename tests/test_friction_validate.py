@@ -13,10 +13,11 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from project_kit import connections
+from project_kit import connections, docs_roots
 from project_kit import friction_discovery as fd
 from project_kit import friction_validate as fv
 from project_kit.cli import main
+from project_kit.friction_check import CommitTree
 from project_kit.manifest import (
     ComponentRegistryEntry,
     read_backbone_manifest,
@@ -304,12 +305,12 @@ def test_a_capability_place_in_another_shape_is_a_finding_and_is_not_walked(
             "(declared: ['legacy', 'runs', 'shared'])"
         ),
         "/friction/places/5": (
-            "the place names location 'legacy', whose `docs.locations` entry is not "
-            "`{path, root?}` with `root` one of ['internal', 'user']"
+            "the place names location 'legacy', whose `docs.locations` entry is not an "
+            "object `{path, root?}`"
         ),
         "/friction/places/6": (
-            "the place names location 'shared', whose `docs.locations` entry is not "
-            "`{path, root?}` with `root` one of ['internal', 'user']"
+            "the place names location 'shared', whose `docs.locations` entry names `root` "
+            "'team', not one of ['internal', 'user']"
         ),
     }
     assert result.errors[0].message.endswith(
@@ -379,6 +380,151 @@ def test_a_capability_place_leaving_the_repository_through_a_link_is_a_finding(
         "link), so friction discovery walks nothing under it"
     )
     assert fv.summary_lines(result)[0].endswith("; dormant; 2 capability place(s) not walked.")
+
+
+def test_a_capability_place_lies_inside_the_recorded_location_when_one_is_recorded(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """A location recorded in `docs-locations.yaml` wins over the declared one
+    (COR-049 point 5): discovery walks where the project chose, and a recorded
+    location places even a declaration the reading could not."""
+    adopter = make_adopter_repo(capabilities=("evidence",))
+    _evidence_declares(
+        adopter,
+        "docs:\n"
+        "  locations:\n"
+        "    runs: {path: evidence}\n"
+        "    legacy: notes\n"
+        "friction:\n"
+        "  places:\n"
+        "    - {location: runs, path: '**/*.md'}\n"
+        "    - {location: legacy, path: '*.md'}\n",
+    )
+    anchored = _document("x", anchors={"path": ["src/**"]})
+    adopter.write(
+        {
+            "docs/evidence/declared.md": anchored.replace("id: x", "id: declared"),
+            "records/runs/recorded.md": anchored.replace("id: x", "id: recorded"),
+            "records/notes/note.md": anchored.replace("id: x", "id: note"),
+        }
+    )
+    docs_roots.record_location(adopter.root, "evidence", "runs", "records/runs")
+    docs_roots.record_location(adopter.root, "evidence", "legacy", "records/notes")
+    result = fv.validate_friction(adopter.root)
+
+    assert [p.pattern for p in result.discovery.places] == [
+        "records/runs/**/*.md",
+        "records/notes/*.md",
+    ]
+    assert [a.id for a in result.discovery.artefacts] == ["recorded", "note"]
+    assert result.errors == ()
+
+
+def test_discovery_reads_the_recorded_location_of_the_state_it_is_given(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """The change check reads its base commit through a tree: the location
+    recorded in that commit places the base's places, not the working tree's."""
+    adopter = make_adopter_repo(capabilities=("evidence",))
+    _evidence_declares(
+        adopter,
+        "docs:\n"
+        "  locations:\n"
+        "    runs: {path: evidence}\n"
+        "friction:\n"
+        "  places:\n"
+        "    - {location: runs, path: '**/*.md'}\n",
+    )
+    docs_roots.record_location(adopter.root, "evidence", "runs", "records/runs")
+    base = adopter.commit("record the runs location", None)
+    recorded = docs_roots.capability_locations_path(adopter.root, "evidence")
+    recorded.write_text("locations:\n  runs: archive/runs\n", encoding="utf-8")
+
+    def patterns(tree: CommitTree | None = None) -> list[str]:
+        return [p.resolved for p in fd.read_friction_settings(adopter.root, tree).places]
+
+    assert patterns() == ["archive/runs/**/*.md"]
+    assert patterns(CommitTree(adopter.root, base)) == ["records/runs/**/*.md"]
+
+
+# --- capability surface (the package schema's repository-relative globs) ------
+
+
+def test_a_capability_surface_is_repository_relative(make_adopter_repo: MakeAdopterRepo) -> None:
+    """The package schema's `friction.surface` holds repository-relative paths
+    or globs: read as written, never under a documentation location or root."""
+    adopter = make_adopter_repo(capabilities=("evidence",))
+    _evidence_declares(
+        adopter,
+        "docs:\n"
+        "  locations:\n"
+        "    runs: {path: evidence}\n"
+        "friction:\n"
+        "  surface: ['src/**', lib/core.py]\n",
+    )
+    adopter.write({CONFIG: "name: adopter\ndocs:\n  internal: tech-docs\n"})
+    surface = fd.read_friction_settings(adopter.root).surface
+
+    assert {(s.file, s.source) for s in surface} == {(EVIDENCE_PACKAGE, "capability:evidence")}
+    assert [(s.value, s.resolved, s.pointer) for s in surface] == [
+        ("src/**", "src/**", "/friction/surface/0"),
+        ("lib/core.py", "lib/core.py", "/friction/surface/1"),
+    ]
+    assert fv.validate_friction(adopter.root).errors == ()
+
+
+def test_a_capability_surface_entry_in_another_shape_is_a_finding(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """An entry that is not a path is an error at its entry, never dropped
+    silently; the entries that are paths are still read."""
+    adopter = make_adopter_repo(capabilities=("evidence",))
+    _evidence_declares(adopter, "friction:\n  surface: ['src/**', {path: lib}, 42, '']\n")
+    result = fv.validate_friction(adopter.root)
+
+    assert [s.resolved for s in result.discovery.settings.surface] == ["src/**"]
+    assert [(f.kind, f.location, f.pointer) for f in result.errors] == [
+        (fv.FrictionFindingKind.MALFORMED_SURFACE, EVIDENCE_PACKAGE, f"/friction/surface/{i}")
+        for i in (1, 2, 3)
+    ]
+    assert [f.message.split(", so the uncovered")[0] for f in result.errors] == [
+        "the surface entry is a mapping, not a path or glob",
+        "the surface entry is int (42), not a path or glob",
+        "the surface entry is text (''), not a path or glob",
+    ]
+    assert result.errors[0].message.endswith(
+        "so the uncovered-surface measure reads nothing from it; a capability's "
+        "`friction.surface` is a list of repository-relative paths or globs "
+        "(COR-050 points 7 and 8)."
+    )
+    assert fv.summary_lines(result) == [
+        "0 place(s), 0 artefact(s), none carrying the `pkit` container; dormant; "
+        "3 capability surface entries not read."
+    ]
+
+
+def test_a_capability_surface_that_is_not_a_list_fails_validate_even_while_dormant(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    adopter = make_adopter_repo(capabilities=("evidence",))
+    _evidence_declares(adopter, "friction:\n  surface: src/**\n")
+    result = fv.validate_friction(adopter.root)
+
+    assert result.is_dormant
+    assert result.discovery.settings.surface == ()
+    (finding,) = result.errors
+    assert finding.kind is fv.FrictionFindingKind.MALFORMED_SURFACE
+    assert (finding.location, finding.pointer) == (EVIDENCE_PACKAGE, "/friction/surface")
+    assert finding.message.startswith("`friction.surface` is text ('src/**'), not a list of paths")
+    assert fv.summary_lines(result) == [
+        "0 place(s), 0 artefact(s), none carrying the `pkit` container; dormant; "
+        "1 capability surface entry not read."
+    ]
+
+    cli = CliRunner().invoke(main, ["validate", "--no-refs"])
+    assert cli.exit_code == 1, cli.output
+    friction = cli.output.split("\n  friction\n")[1].split("\n  rule-sets\n")[0]
+    assert f"error    {EVIDENCE_PACKAGE}:/friction/surface" in friction
 
 
 # --- the findings validation owns -------------------------------------------
