@@ -426,7 +426,7 @@ Two things the pass **reports** without failing: orphaned role blocks in the con
 
 The settings themselves are the **configuration pass's** findings, since it owns the file (the CLI reference, "Configuration file"): an invalid `friction.mode` (the schema's enum — never switched off silently) and a place, surface or exclude path outside the repository (absolute, climbing above the root, or resolving outside it through a link); a capability's `friction` entries are the packages pass's, which judges their shape but not where they resolve — so a capability place the walk does not follow is also the friction pass's finding (above). The friction pass never walks a place that leaves the repository.
 
-The pass is **dormant** — it prints only its counts — when no places are declared, or when nothing in them needs judging: no artefact carries the container and no file failed to parse.
+The pass is **dormant** — it prints its counts and nothing else about artefacts — when no places are declared, or when nothing in them needs judging: no artefact carries the container and no file failed to parse. Dormancy is about artefacts, not declarations: a capability place the walk cannot follow (`malformed-place`, `place-outside-repository`) is reported, and fails `pkit validate`, dormant or not.
 
 A rule-set file is claimed by the rule-set rule before the container rule (ADR-056 point 2), so its unparsable front matter and the malformed container of one of its rules are the `rule-sets` pass's findings, reported once there; the friction pass still takes its rules into the deferral and cycle checks.
 
