@@ -69,7 +69,7 @@ The companion requirement scopes to **schema definitions**, not to every YAML th
 - **Fixtures and examples.** YAML under any `examples/` directory, or named `*-example.yaml`, is an instance/fixture demonstrating a schema — categorically not a schema itself.
 - **Instances of an external/shared schema.** YAML that declares a `$schema` pointer — a `# yaml-language-server: $schema=<path>` directive comment (per COR-023's IDE binding) or a top-level `$schema:` key — at a schema **other than its own `<name>.schema.json`** is an *instance* validated against that named schema, not a definition. A common shape: process-definition YAMLs validated against one shared `_defs/<name>.schema.json`. (A `$schema` pointer at the YAML's *own* companion is an ordinary pair — the companion is still required.)
 
-Subdirectories under `schemas/` (`examples/`, `_defs/`) hold non-schema material; the companion requirement lives with the direct-child schema definitions.
+Subdirectories under `schemas/` hold material that is not a pair: `_defs/` the shared `$defs` library and pointer targets, `backbone/` the backbone file schemas (below), `examples/` samples. The companion requirement lives with the direct-child schema definitions.
 
 ### The pointer is validated, not just classifying
 
@@ -345,6 +345,40 @@ Deferred to successor decisions (each pending a real consumer, per COR-029): cro
 
 The `schema` skill (composite per COR-020) covers adopter-data schemas through its `author.md` and `extend.md` sub-procedures. A pair is stamped into its owner's home by `pkit new schema <owner> <name>` — `<owner>` is a capability name, or `core` to stamp into this area (`.pkit/schemas/`), which the sibling verbs (`schemas validate` / `list` / `show` / `add` / `rename`) treat as an owner alongside every capability. Stamping a schema that describes adopter-data files includes adding the `binds_to:` field to that schema's YAML alongside the namespace content; adopter files themselves carry `pkit_schema:` + the IDE directive as recommended.
 
+## Backbone file schemas and the methodology's front-matter container
+
+Most schemas here govern **kit-shipped YAML** — a capability's own data file with its companion, or an instance that points at a shared shape contract. A second class governs **files the backbone does not author but validates**: the backbone configuration file ([COR-048](../decisions/core/COR-048-backbone-configuration.md)), rule-set files ([COR-051](../decisions/core/COR-051-rule-sets.md)), the project filler files that answer a data point ([COR-052](../decisions/core/COR-052-slots.md) point 2), and the methodology-owned block inside an artefact's front matter ([COR-053](../decisions/core/COR-053-connection-points.md) point 10). These are the **backbone file schemas**. Three things hold for all of them, each decided by the record named:
+
+- **They live in the tree**, under `backbone/` in this area, as companion-only JSON Schema files: schemas are propagated data, and the configuration file's shape is the one the *installed* backbone defines, which is the tree (COR-048 point 6). The binary reads the same files and carries no second copy.
+- **They bind by location, never by a field in the file.** The configuration file by its fixed path (COR-048 point 1); a filler file by the path derived from its point address under the internal documentation root (COR-052 point 2); a rule-set file by the places declared to hold rule sets (COR-051 point 2); the container in the front matter of a Markdown document, or in a collection entry, in a declared place (COR-050 point 1). Location rules will be consulted before the capability-data resolution below; a file they claim never reaches `pkit_schema:` / `binds_to:` resolution, and a plain YAML data file in a declared place is not a document and falls through to it.
+- **Strict at validation.** An unknown key is an error carrying the nearest known key (COR-048 point 4 for the configuration file; each owning record for the rest). A version is written only where a *capability* owns the shape — the filler envelope and a role block's point blocks carry the point's `schema_version` (COR-052 point 5) — while backbone-owned shapes carry none and are migrated when they change ([COR-010](../decisions/core/COR-010-resource-lifecycle.md)).
+
+`pkit validate` will run them (its registered-validator pass is Task #986). The path each file is expected at, and project-kit's own placement choices, are recorded in project-kit's architecture decisions (they do not propagate).
+
+### The container
+
+An artefact's front matter — for a collection entry, the entry itself — may hold **one key owned by the methodology** (`pkit:` in this distribution). Everything under it is the methodology's; everything outside it is the artefact's own (COR-053 point 10). Inside it:
+
+- a **functionality block** is named for a functionality and its command group — `friction` ([COR-050](../decisions/core/COR-050-anchors-and-friction.md)) is the first — and carries no version;
+- a **role block** is named for a role and holds, keyed by point, the data that role's provider keeps about the artefact; every point block carries the `schema_version` of the point it targets.
+
+```yaml
+pkit:
+  friction:                       # functionality block — shape owned by the backbone
+    anchors: { path: [src/cli/**] }
+    revalidated: { at: 2026-10-02T09:40:12Z, outcome: unchanged, unchanged-because: "…" }
+  documentation:                  # role block — one point block per point, each versioned
+    reading-evidence:
+      schema_version: 1
+      last-run: 2026-10-01
+```
+
+**How validation reads it** (COR-053 point 10). A key naming a shipped functionality is that block. Any other key is a role block only if every child is a point block carrying `schema_version`. Anything else is an unknown-key error with the nearest known key suggested — the known set is the functionality names, the active role words and their qualified forms — and a reminder that a role block needs a versioned point block. A point block at an incompatible version is inert and reported, its body unvalidated. A role block whose role has no active provider is an **orphan**: preserved and reported, never an error, validated again when a provider returns. A misspelt `frictoin:` therefore fails loudly, while a `documentation:` block left behind by an uninstalled capability waits quietly.
+
+**Key form.** A role block's key is the role word alone, the qualifier being resolved from the active provider. The qualified form is written when two active roles share a word — the install plan that introduces the second lists the artefacts whose keys change, rewritten only with consent — and always when a role word equals a functionality block's name.
+
+**What ships now.** `backbone/container.schema.json` — the container in both forms (a document's front matter, a collection entry), with the `friction` block modelled strictly. Its discrimination rule, the shared unknown-key renderer and the load-check live in `project_kit.backbone_schemas`; the point-version compatibility check waits on the role resolver. The other three schemas of the class arrive with their Tasks: the configuration file (#981), rule-set files (#989), the filler envelope (#994). No command applies the container rule or the location binding yet: `pkit schemas validate` only load-checks the schema files in `backbone/`, and the container validator is a library function until `pkit validate` (Task #986) and the friction discovery (Task #988) call it.
+
 ## Tooling expectations
 
 A schema's value depends on tooling actually consuming the companion. Five tooling layers a schemas-using project can expect:
@@ -364,8 +398,10 @@ A schema's value depends on tooling actually consuming the companion. Five tooli
 ```
 .pkit/schemas/
 ├── README.md                  # this file — mechanism overview, conventions, patterns
-├── _defs/                     # kit-wide shared $defs library (cross-file $ref target)
-│   └── refs.schema.json       # canonical reference_token + source patterns
+├── _defs/                     # kit-wide shared $defs library (cross-file $ref target) and pointer targets
+│   ├── refs.schema.json       # canonical reference_token + source patterns
+│   └── process.schema.json    # the process shape contract (pointer target)
+├── backbone/                  # backbone file schemas: config file, container, rule-set file, filler envelope
 ├── privilege-catalog.yaml     # a core-owned schema pair: data ...
 ├── privilege-catalog.schema.json   # ... + companion, side by side
 ├── harness-requirements.yaml

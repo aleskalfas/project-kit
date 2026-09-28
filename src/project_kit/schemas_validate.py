@@ -60,9 +60,8 @@ from typing import Any, Iterator
 
 import click
 from jsonschema import Draft202012Validator
-from jsonschema.exceptions import SchemaError
 
-from project_kit import cli_render
+from project_kit import backbone_schemas, cli_render
 from referencing import Registry, Resource
 from referencing.exceptions import Unresolvable
 from referencing.jsonschema import DRAFT202012
@@ -146,6 +145,7 @@ class ValidationReport:
     pairs_checked: int = 0
     issues: tuple[ValidationIssue, ...] = field(default_factory=tuple)
     instances_checked: int = 0  # pointered instances validated against their target
+    backbone_schemas_checked: int = 0  # lone companions under `.pkit/schemas/backbone/`
 
     @property
     def is_clean(self) -> bool:
@@ -588,23 +588,11 @@ def _load_json_schema(schema_path: Path) -> tuple[dict | None, str | None]:
 
     Exactly one of the two is non-None. `reason` completes the sentence
     "<the file> is <reason>", so each caller names the file in the terms its
-    own report uses — a pair's companion, an instance's declared target.
+    own report uses — a pair's companion, an instance's declared target. The
+    loader is shared with the backbone file schemas (ADR-056), which are lone
+    companions read the same way.
     """
-    try:
-        text = schema_path.read_text(encoding="utf-8")
-    except OSError as exc:
-        return None, f"unreadable: {exc}."
-    try:
-        schema = json.loads(text)
-    except json.JSONDecodeError as exc:
-        return None, (
-            f"not valid JSON: {exc.msg} at line {exc.lineno} col {exc.colno}."
-        )
-    try:
-        Draft202012Validator.check_schema(schema)
-    except SchemaError as exc:
-        return None, f"not a valid Draft 2020-12 JSON Schema: {exc.message}"
-    return schema, None
+    return backbone_schemas.load_schema_document(schema_path)
 
 
 def _load_yaml_data(yaml_path: Path) -> tuple[Any, str | None]:
@@ -755,14 +743,34 @@ def validate_all(target_root: Path, *, resolve: bool = True) -> ValidationReport
         target_root,
         resolve=resolve,
     )
+    backbone_checked, backbone_issues = _load_check_backbone_schemas(target_root)
     fragment_issues = _lint_fragment_grant_tokens(target_root)
-    if not fragment_issues:
-        return report
     return ValidationReport(
         pairs_checked=report.pairs_checked,
-        issues=report.issues + tuple(fragment_issues),
+        issues=report.issues + tuple(backbone_issues) + tuple(fragment_issues),
         instances_checked=report.instances_checked,
+        backbone_schemas_checked=backbone_checked,
     )
+
+
+def _load_check_backbone_schemas(target_root: Path) -> tuple[int, list[ValidationIssue]]:
+    """Load-check the backbone file schemas (ADR-056 Implications).
+
+    `.pkit/schemas/backbone/` holds lone companions — schemas for files the
+    backbone validates but does not author — so the pair walk never reaches
+    them. Each `*.schema.json` there must parse as a valid Draft 2020-12
+    schema; one that does not is reported against its own path. Returns
+    (count checked, issues).
+    """
+    result = backbone_schemas.load_check(target_root)
+    issues = [
+        ValidationIssue(
+            location=_rel(path, target_root),
+            message=f"backbone file schema is {reason}",
+        )
+        for path, reason in result.failures
+    ]
+    return len(result.checked), issues
 
 
 def _lint_fragment_grant_tokens(target_root: Path) -> list[ValidationIssue]:
@@ -804,6 +812,8 @@ def _checked_summary(report: ValidationReport) -> str:
     summary = f"{report.pairs_checked} schema(s)"
     if report.instances_checked:
         summary += f" and {report.instances_checked} instance(s)"
+    if report.backbone_schemas_checked:
+        summary += f" and {report.backbone_schemas_checked} backbone file schema(s)"
     return summary
 
 
