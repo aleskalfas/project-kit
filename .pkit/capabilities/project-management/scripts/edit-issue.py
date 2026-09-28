@@ -28,7 +28,10 @@ is optional), so the textual record and the native field keep agreeing. A
 milestone edit never moves the issue in the lifecycle: where the issue's
 state is read from its milestone alone (it carries no state label), a change
 that would move it — scheduling a Todo issue, unscheduling a Backlog one — is
-refused and the verb that owns that transition is named.
+refused and the verb that owns that transition is named. A milestone change
+takes `--reason` and posts an audit comment (from, to, why) before it writes,
+and the issue's type must be one `issue-types.yaml` lets sit under a
+milestone (#1016).
 
 Refuses on hard-reject validation findings; warns on warning-level
 findings. The `--force` flag is the operator override of a hard-reject
@@ -55,6 +58,7 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
 import re
 import subprocess
@@ -71,6 +75,8 @@ sys.path.insert(0, str(_HERE))
 from _lib import axis_labels  # noqa: E402
 from _lib import body_parent_ref  # noqa: E402
 from _lib import bootstrap_gate  # noqa: E402
+from _lib.audit import audit_key  # noqa: E402
+from _lib.comment import post_audit_once  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib import session_guard  # noqa: E402
 from _lib import provenance  # noqa: E402
@@ -89,6 +95,11 @@ from _lib.substrate_writes import clear_milestone, write_milestone  # noqa: E402
 SEVERITY_HARD_REJECT = "hard-reject"
 SEVERITY_BYPASSABLE = "bypassable-with-audit"
 SEVERITY_WARNING = "warning"
+
+# The milestone-change audit comment (#1016): its kind marker (the shape
+# handoff-issue's audit uses) and the writer name in its idempotency key.
+MILESTONE_AUDIT_MARKER = "<!-- pkit-hook: edit-issue-milestone -->"
+MILESTONE_AUDIT_WRITER = "edit-issue-milestone"
 
 
 @dataclass(frozen=True)
@@ -177,6 +188,15 @@ def main() -> int:
         ),
     )
     parser.add_argument(
+        "--reason",
+        default=None,
+        help=(
+            "Why the milestone changes — required with --milestone / "
+            "--clear-milestone and recorded in the audit comment the change "
+            "posts (who scheduled what, and why, as promote-issue records it)."
+        ),
+    )
+    parser.add_argument(
         "--force",
         action="store_true",
         help=(
@@ -219,6 +239,21 @@ def main() -> int:
         print(
             "error: nothing to edit. Pass --body, --body-file, --append, "
             "--title, --milestone or --clear-milestone.",
+            file=sys.stderr,
+        )
+        return 2
+    reason = (args.reason or "").strip()
+    if milestone_requested and not reason:
+        print(
+            "error: a milestone change records why it was made: pass --reason "
+            "\"<why>\" (the audit comment carries it).",
+            file=sys.stderr,
+        )
+        return 2
+    if reason and not milestone_requested:
+        print(
+            "error: --reason goes with --milestone / --clear-milestone; a title "
+            "or body edit carries none.",
             file=sys.stderr,
         )
         return 2
@@ -298,6 +333,10 @@ def main() -> int:
             issue,
             config=config,
             substrate_map=axis_labels.load_substrate_map(capability_root),
+            structural_type=infer_structural_type(
+                new_title, issue_types, classification=classification
+            ),
+            issue_types=issue_types,
         )
         if isinstance(planned, int):
             return planned
@@ -395,11 +434,16 @@ def main() -> int:
         if not _gh_comment(args.issue_number, "\n".join(audit_lines), config):
             return 3
 
-    # The native milestone first, then the first line that follows it (the
-    # order set-field keeps for a parent): a failure in between leaves a state a
-    # re-run completes, since an already-set milestone is not written again.
-    if writes_milestone and not _write_milestone(args.issue_number, milestone_edit, config):
-        return 3
+    # The audit comment first, so the record of who moved it and why survives
+    # a failed write (#1016); then the native milestone, then the first line
+    # that follows it (the order set-field keeps for a parent): a failure in
+    # between leaves a state a re-run completes, since an already-set milestone
+    # is not written again and the posted comment is not posted twice.
+    if writes_milestone:
+        if not _post_milestone_audit(args.issue_number, milestone_edit, reason, config):
+            return 3
+        if not _write_milestone(args.issue_number, milestone_edit, config):
+            return 3
 
     if writes_issue:
         # Seam: write exactly one current footer (strip-then-append-one).
@@ -420,13 +464,16 @@ def _plan_milestone(
     *,
     config: dict,
     substrate_map: "axis_labels.SubstrateMap | None",
+    structural_type: str | None,
+    issue_types: dict,
 ) -> MilestoneEdit | int:
     """Resolve the requested milestone and check the move is an edit, not a
     lifecycle transition. Returns the edit, or the exit code to stop with.
 
     The target resolves exactly as `create-issue --milestone` resolves it: an
     OPEN milestone, by number or exact title (`_lib.milestone`). A closed or
-    unknown milestone is a usage error.
+    unknown milestone is a usage error. The issue's type must be one that may
+    carry a milestone (#1016) — read from `issue-types.yaml`, not assumed.
     """
     current = _issue_milestone(issue)
     target: Milestone | None = None
@@ -440,6 +487,14 @@ def _plan_milestone(
                 file=sys.stderr,
             )
             return 2
+        if not _type_may_carry_milestone(structural_type, issue_types):
+            kind = structural_type or "of an unrecognised type"
+            print(
+                f"\n[refused] #{args.issue_number} is {kind}, which "
+                "issue-types.yaml does not let sit under a milestone.",
+                file=sys.stderr,
+            )
+            return 1
     edit = MilestoneEdit(current=current, target=target)
     if not edit.changed:
         return edit
@@ -520,6 +575,61 @@ def _parent_ref_optional(title: str, issue_types: dict, classification: dict) ->
     structural_type = infer_structural_type(title, issue_types, classification=classification)
     type_entry = (issue_types.get("types") or {}).get(structural_type)
     return isinstance(type_entry, dict) and bool(type_entry.get("parent_ref_optional"))
+
+
+def _type_may_carry_milestone(structural_type: str | None, issue_types: dict) -> bool:
+    """Whether issue-types.yaml lets this type sit under a milestone: its
+    parents include `milestone`, or its parent-ref form has a milestone option
+    (an EPIC's optional `Milestone:` line). An unrecognised type may not — the
+    cautious reading, since nothing says it may."""
+    entry = (issue_types.get("types") or {}).get(structural_type)
+    if not isinstance(entry, dict):
+        return False
+    return "milestone" in (entry.get("parent_issue_types") or []) or (
+        body_parent_ref.form_allows_milestone(str(entry.get("parent_ref_form") or ""))
+    )
+
+
+def _post_milestone_audit(
+    issue_number: int, edit: MilestoneEdit, reason: str, config: dict
+) -> bool:
+    """Post the milestone-change audit comment unless it is already there.
+
+    The record of who moved the issue and why (#1016): a milestone change is a
+    scheduling decision, which the workflow gives to the user, so it carries its
+    reason the way `promote-issue`'s milestone attach does. Posted through the
+    shared `post_audit_once`: a retry of a failed attempt finds its own comment
+    and does not post it again.
+    """
+    key = _milestone_audit_key(edit, reason)
+    body = _milestone_audit_body(edit, reason, dt.date.today().isoformat(), key)
+    return post_audit_once(
+        "issue", issue_number, key, body, config,
+        run=gh_run,
+        present_note="milestone audit comment already present; idempotent skip",
+    )
+
+
+def _milestone_audit_key(edit: MilestoneEdit, reason: str) -> str:
+    """The idempotency key for one milestone change: where from, where to, why.
+    The date is in the prose, so the same change for the same reason on a later
+    day posts its own comment; on the same day it reads as the retry it most
+    likely is."""
+    return audit_key(
+        MILESTONE_AUDIT_WRITER,
+        str(_milestone_number(edit.current) or ""),
+        str(_milestone_number(edit.target) or ""),
+        reason.strip(),
+    )
+
+
+def _milestone_audit_body(edit: MilestoneEdit, reason: str, today: str, key: str) -> str:
+    """The milestone audit comment: kind marker, the change line, idempotency key."""
+    return (
+        f"{MILESTONE_AUDIT_MARKER}\n\n"
+        f"Milestone: {edit.describe()} ({today}, reason: {reason.strip()})\n\n"
+        f"{key}"
+    )
 
 
 def _write_milestone(issue_number: int, edit: MilestoneEdit, config: dict) -> bool:

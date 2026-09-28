@@ -1,0 +1,14 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  Attaching an existing issue to a Milestone, or moving it to another, has its
+  own path (#1016): `edit-issue --milestone` / `--clear-milestone` now take a
+  required `--reason`, post an audit comment naming the old and new milestone
+  and the reason before writing (once, even on a retry), and refuse an issue
+  whose type `issue-types.yaml` does not let sit under a milestone; the
+  milestone must still be open. `promote-issue` without `--milestone` now says
+  the milestone is unchanged instead of printing "no milestone", and on an
+  issue already past Todo it points at `edit-issue` for a milestone change on
+  its own.
