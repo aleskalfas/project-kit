@@ -35,7 +35,14 @@ _LIST_INDENT = " " * 25
 
 
 def report_status() -> None:
-    """Walk the project tree and print the status report."""
+    """Walk the project tree and print the status report — as one run, so every
+    section that reads the wiring reads the same resolution of it (ADR-057 point 2)."""
+    from project_kit import validators
+
+    validators.as_one_run(_report_status)
+
+
+def _report_status() -> None:
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not inside a project tree.")
@@ -203,6 +210,27 @@ def _report_capabilities(target_root: Path, source_kit: Path) -> None:
     else:
         installed_value = "(none)"
     click.echo(f"    {'installed':<18} {installed_value}")
+    _report_suggestions(target_root, source_kit)
+
+
+def _report_suggestions(target_root: Path, source_kit: Path) -> None:
+    """Capabilities of the local catalogue that would answer an unmet need of the
+    wiring — an unfilled data point, a targeted role nobody provides, an upstream
+    not installed (COR-053 point 8). Read from package metadata on disk only;
+    nothing is fetched and nothing is installed: a suggestion is never an action.
+    Shown only when there is one. Reads forgivingly: a broken declaration is
+    validate's finding."""
+    from project_kit import capability_plans as plans
+
+    try:
+        found = plans.suggest(target_root, source_kit)
+    except Exception:  # noqa: BLE001 — soft probe
+        return
+    if not found:
+        return
+    click.echo(f"    {'suggested':<18} {len(found)} from local catalogues (nothing is installed):")
+    for suggestion in found:
+        click.echo(f"{_LIST_INDENT}{plans.suggestion_line(suggestion)}")
 
 
 def _report_documentation(target_root: Path) -> None:
