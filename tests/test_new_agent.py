@@ -67,6 +67,7 @@ def test_stamp_seeds_frontmatter_and_canonical_body_sections(kit_target: Path) -
     # The agent workspace (#1043): every agent body carries the same sentence.
     assert "## Intermediate files" in body
     assert "`.agent-workspace/` at the repository root" in body
+    assert "with the file tools" in body
 
 
 def test_stamp_rejects_invalid_name(kit_target: Path) -> None:
