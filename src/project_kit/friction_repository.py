@@ -20,9 +20,11 @@ which commits a point reaches (its ancestors, from the parent lists), each
 file's names over time with renames followed (`History.versions`), and which
 commits touched a path (`History.touched`). A file's earlier versions are
 read, newest first, through one `git cat-file --batch` process (`BlobReader`)
-and parsed by the same reading as the present (`parse_artefacts`), only as
-far back as the oldest point in question — never one log per anchor, never a
-file's whole history for its own sake.
+and parsed by the same reading as the present (`parse_artefacts`), each
+judged against the file's state at its commit's own first parent — what `git
+log` diffed it against, never whatever the log lists next — and no blob is
+read beyond the oldest point in question: never one log per anchor, never a
+file's contents through its history for their own sake.
 
 **What it reports** (points 7, 8, 11, 12), per artefact, upstream first
 along artefact anchors: *stale* — an anchor changed after the revalidation
@@ -256,12 +258,15 @@ class Version:
 class History:
     """Every commit reachable from HEAD, newest first, matched in memory.
 
-    Answers three questions without a further `git log`: which commits a
-    point reaches (`ancestors`), which commits touched a path (`touched`),
-    and what names a file had over time (`versions`, renames followed as
-    git's rename detection paired them). A merge commit lists no paths, as
-    `git log` prints none for it: the commits it merges carry the changes.
-    `shallow` names the commits at which a shallow clone's history is cut.
+    The order is the log's `--date-order`: by commit date, but no parent
+    before all of its children, so whatever a walk stops at, every descendant
+    of it has been seen. Answers three questions without a further `git
+    log`: which commits a point reaches (`ancestors`), which commits touched
+    a path (`touched`), and what names a file had over time (`versions`,
+    renames followed as git's rename detection paired them). A merge commit
+    lists no paths, as `git log` prints none for it: the commits it merges
+    carry the changes. `shallow` names the commits at which a shallow
+    clone's history is cut.
     """
 
     def __init__(self, commits: Sequence[Commit], shallow: frozenset[str]) -> None:
@@ -341,7 +346,11 @@ class History:
 
 
 def read_history(root: Path, head: str) -> History:
-    """`git log --name-status -M` from `head`: one listing for the whole check."""
+    """`git log --name-status -M` from `head`: one listing for the whole check.
+
+    `--date-order` keeps every parent after all of its children, so the log
+    order the walks rely on is a topological one even under skewed clocks.
+    """
     raw = run_git(
         root,
         "log",
@@ -349,6 +358,7 @@ def read_history(root: Path, head: str) -> History:
         "--no-color",
         "--no-decorate",
         "--no-show-signature",
+        "--date-order",
         _LOG_FORMAT,
         "--name-status",
         "-M",
@@ -441,8 +451,8 @@ class Points:
 
     revalidation: int | None  # the revalidation point's log index; `None` when unreachable
     deferrals: tuple[tuple[Anchor, int | None], ...]  # each deferral's point, in written order
-    moves: tuple[Version, ...]  # renames newer than the revalidation point, unanswered
-    own_paths: frozenset[str]  # the names the file had back to the point: never an anchor's change
+    moves: tuple[Version, ...]  # renames not reached from the revalidation point, unanswered
+    own_paths: frozenset[str]  # every name the file had: a change under one is never an anchor's
     unreachable: str | None  # which point the clone's history does not reach, when one
 
 
@@ -452,14 +462,14 @@ class _Walker:
     def __init__(self, history: History, blobs: BlobReader) -> None:
         self._history = history
         self._blobs = blobs
-        self._parsed: dict[tuple[int, str], list[Artefact]] = {}
+        self._parsed: dict[tuple[str, str], list[Artefact]] = {}
 
-    def artefacts_at(self, version: Version, like: Artefact) -> list[Artefact]:
-        """The artefacts the file held at `version`, read by the same rule as the present."""
-        key = (version.index, version.path)
+    def _artefacts(self, commit: str, path: str, like: Artefact) -> list[Artefact]:
+        """The artefacts `path` held in `commit`, read by the same rule as the present."""
+        key = (commit, path)
         found = self._parsed.get(key)
         if found is None:
-            raw = self._blobs.read(self._history.commits[version.index].sha, version.path)
+            raw = self._blobs.read(commit, path)
             found = []
             if raw is not None:
                 try:
@@ -467,23 +477,49 @@ class _Walker:
                 except UnicodeDecodeError:
                     text = None
                 if text is not None:
-                    found, _reason = parse_artefacts(
-                        version.path, like.place, text, rule_set=like.rule_set
-                    )
+                    found, _reason = parse_artefacts(path, like.place, text, rule_set=like.rule_set)
             self._parsed[key] = found
         return found
 
-    def same_at(self, version: Version, artefact: Artefact) -> Artefact | None:
-        """`artefact` as it was at `version`: the document, or the entry under the same id."""
-        for candidate in self.artefacts_at(version, artefact):
+    def _same(self, commit: str, path: str, artefact: Artefact) -> Artefact | None:
+        for candidate in self._artefacts(commit, path, artefact):
             if candidate.kind is not artefact.kind:
                 continue
             if artefact.kind is ArtefactKind.DOCUMENT or candidate.id == artefact.id:
                 return candidate
         return None
 
+    def same_at(self, version: Version, artefact: Artefact) -> Artefact | None:
+        """`artefact` as it was at `version`: the document, or the entry under the same id."""
+        return self._same(self._history.commits[version.index].sha, version.path, artefact)
+
+    def same_before(self, version: Version, artefact: Artefact) -> Artefact | None:
+        """`artefact` as the file stood at the first parent of `version`'s commit.
+
+        That is the state `git log` diffed the version against, read under
+        the file's name there; `None` at a root, or where the file was added.
+        """
+        entry = version.entry
+        parents = self._history.commits[version.index].parents
+        if entry.status == "A" or not parents:
+            return None
+        path = (
+            entry.old_path if entry.status == "R" and entry.old_path is not None else version.path
+        )
+        return self._same(parents[0], path, artefact)
+
     def points(self, artefact: Artefact) -> Points:
-        """Walk back from HEAD until the revalidation point and every deferral point are found."""
+        """Walk back from HEAD until the revalidation point and every deferral point are found.
+
+        Each version is judged against the file's state at its commit's own
+        first parent: a point is the newest commit, in log order, at which the
+        marker — or the deferral entry — differs from that parent's. So a
+        version on a merged branch is compared with its own ancestor, never
+        with whatever the log lists next. When no listed commit shows the
+        change (it was made while resolving a merge), the point is the commit
+        that added the file. Once every point is found the walk goes on
+        without reading a blob, for the file's names and its renames.
+        """
         at = parsed_at(artefact)
 
         def marker(version: Artefact | None) -> Any:
@@ -496,14 +532,39 @@ class _Walker:
         pending = set(wanted)
         deferral_points: dict[Anchor, int | None] = {}
         revalidation: int | None = None
-        found_revalidation = False
-        moves: list[Version] = []
+        renames: list[Version] = []
         own: set[str] = {artefact.path}
         unreachable: str | None = None
+        oldest: Version | None = None
 
-        versions = self._history.versions(artefact.path)
-        current_version = next(versions, None)
-        if current_version is None:
+        for version in self._history.versions(artefact.path):
+            oldest = version
+            own.add(version.path)
+            if version.entry.old_path is not None:
+                own.add(version.entry.old_path)
+            if version.entry.status == "R":
+                renames.append(version)
+            if revalidation is not None and not pending:
+                continue  # every point is found: only the names and the renames are still wanted
+            if self._history.is_cut(version.index):
+                # Its parent is beyond the clone: whether anything changed here cannot be told.
+                if revalidation is None:
+                    unreachable = "its revalidation point"
+                for anchor in pending:
+                    unreachable = (
+                        unreachable or f"the deferral point of {anchor.kind} {anchor.value}"
+                    )
+                break
+            here = self.same_at(version, artefact)
+            before = self.same_before(version, artefact)
+            if revalidation is None and marker(here) != marker(before):
+                revalidation = version.index
+            for anchor in list(pending):
+                if _defers(here, anchor) and not _defers(before, anchor):
+                    pending.discard(anchor)
+                    deferral_points[anchor] = version.index
+
+        if oldest is None:
             return Points(
                 None,
                 tuple((a, None) for a in wanted),
@@ -511,40 +572,21 @@ class _Walker:
                 frozenset(own),
                 "the commit that added its file (none in this clone touches it)",
             )
-        head_marker = marker(artefact)
-        while True:
-            own.add(current_version.path)
-            older_version = next(versions, None)
-            older = None if older_version is None else self.same_at(older_version, artefact)
-            at_cut = older_version is None and self._history.is_cut(current_version.index)
-            if not found_revalidation and (older_version is None or marker(older) != head_marker):
-                found_revalidation = True
-                if at_cut:
-                    unreachable = unreachable or "its revalidation point"
-                else:
-                    revalidation = current_version.index
-            for anchor in list(pending):
-                if older_version is None or not _defers(older, anchor):
-                    pending.discard(anchor)
-                    if at_cut:
-                        deferral_points[anchor] = None
-                        unreachable = unreachable or (
-                            f"the deferral point of {anchor.kind} {anchor.value}"
-                        )
-                    else:
-                        deferral_points[anchor] = current_version.index
-            # A rename met before the revalidation point is found lies after
-            # the point: a move with no revalidation in the same change
-            # (point 3). One met in the point's own commit, or older, is not.
-            if current_version.entry.status == "R" and not found_revalidation:
-                moves.append(current_version)
-            if (found_revalidation and not pending) or older_version is None:
-                break
-            current_version = older_version
+        if unreachable is None:
+            # No listed commit shows the change: it was made while resolving a
+            # merge, which lists nothing. The file's own addition is the point.
+            if revalidation is None:
+                revalidation = oldest.index
+            for anchor in pending:
+                deferral_points[anchor] = oldest.index
+        moves: tuple[Version, ...] = ()
+        if revalidation is not None:
+            reached = self._history.ancestors(revalidation)
+            moves = tuple(v for v in renames if v.index not in reached)
         return Points(
             revalidation=revalidation,
             deferrals=tuple((a, deferral_points.get(a)) for a in wanted),
-            moves=tuple(moves),
+            moves=moves,
             own_paths=frozenset(own),
             unreachable=unreachable,
         )

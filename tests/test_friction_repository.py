@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -59,6 +60,9 @@ class Timeline:
 
     def rename(self, src: str, dst: str) -> str:
         return self.adopter.rename(src, dst, date=self._next())
+
+    def merge(self, branch: str) -> str:
+        return self.adopter.merge(branch, date=self._next())
 
     def squash_merge(self, branch: str) -> str:
         return self.adopter.squash_merge(branch, date=self._next())
@@ -285,6 +289,65 @@ def test_a_kept_deferral_covers_nothing_after_the_revalidation(timeline: Timelin
     assert _point(result) == revalidated
     assert [s[:1] for s in _summary(result)] == [("stale",), ("deferred",)]
     assert result.findings[0].origin is not None and result.findings[0].origin.sha == changed
+
+
+# --- a real merge: branch commits interleaved by date -----------------------------------
+
+
+@dataclass(frozen=True)
+class Merged:
+    """The commits `_interleaved_merge` lays down."""
+
+    base: str
+    first: str  # main: the first edit of the guide
+    cli: str  # main: the CLI changed
+    side: str  # side: the guide's body edited, dated between main's two edits
+    last: str  # main: the last edit of the guide
+    merge: str  # main: `side` merged with a merge commit
+
+
+def _interleaved_merge(timeline: Timeline, first: str, last: str) -> Merged:
+    """`base`; on main `first`, a CLI change and `last`; on `side`, off `base`, one body edit
+    dated between them; then `side` merged into main with `--no-ff`. In log order the side
+    edit sits between main's two edits of the guide, though its parent is `base`."""
+    repo = timeline.adopter
+    base = timeline.start({"docs/guide.md": guide()})
+    repo.checkout("side", create=True)
+    repo.checkout("main")
+    first_sha = timeline.commit("main: first edit", {"docs/guide.md": first})
+    cli = timeline.commit("change the CLI", {"src/cli/main.py": "print('cli v2')\n"}, author=ALICE)
+    repo.checkout("side")
+    side = timeline.commit("side: edit the body", {"docs/guide.md": guide(body="Edited on side.")})
+    repo.checkout("main")
+    last_sha = timeline.commit("main: last edit", {"docs/guide.md": last})
+    merge = timeline.merge("side")
+    return Merged(base, first_sha, cli, side, last_sha, merge)
+
+
+def test_the_revalidation_point_is_judged_against_each_commits_own_parent(
+    timeline: Timeline,
+) -> None:
+    history = _interleaved_merge(timeline, first=guide(at=T2), last=guide(at=T2, title="Guide"))
+    result = _run(timeline)
+    # `last` kept `at`, though the log lists the side edit — still at T1 — right after it;
+    # `first` is where `at` changed against its own parent, and the CLI change lies after it.
+    assert _point(result) == history.first
+    assert _summary(result) == [("stale", "docs/guide.md", "path:src/cli/**", history.cli)]
+    assert result.artefact_reports[0].state is fr.ArtefactState.STALE
+
+
+def test_a_deferral_point_is_judged_against_each_commits_own_parent(timeline: Timeline) -> None:
+    deferred = [("path", "src/cli/**", "waiting")]
+    history = _interleaved_merge(
+        timeline, first=guide(deferred=deferred), last=guide(deferred=deferred, title="Guide")
+    )
+    result = _run(timeline)
+    # `first` introduced the deferral, `last` only kept it: the CLI change is not covered.
+    assert _point(result) == history.base
+    assert _summary(result) == [
+        ("stale", "docs/guide.md", "path:src/cli/**", history.cli),
+        ("deferred", "docs/guide.md", "path:src/cli/**", history.first),
+    ]
 
 
 # --- the cascade along artefact anchors, upstream first -------------------------------
