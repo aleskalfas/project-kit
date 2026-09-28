@@ -633,7 +633,7 @@ pm collects a declaration purely on its presence in a **manifest-registered** co
 
 ## Connections
 
-The capability provides the `pkit::work-tracking` role (COR-053; `pkit::` is the methodology's publisher qualifier, written `<methodology>::` in the decision records).
+The capability provides the `pkit::work-tracking` role (COR-053); `pkit::` is this distribution's literal for the methodology's publisher qualifier ([the lifecycle README, "The methodology's literals"](../../lifecycle/README.md#the-methodologys-literals)).
 
 - **Accepts** `pkit::work-tracking:doc-check`: the documentation obligations a pull request owes, per [project-management:DEC-053-doc-check-slot]. This capability's code-to-doc mapping is the always-included default filler; a documentation capability may contribute friction on anchored pages and uncovered surface. Design-ahead until the slot is implemented.
 
