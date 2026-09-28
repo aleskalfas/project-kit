@@ -436,8 +436,9 @@ def test_each_focused_surface_still_runs_alone(adopter: AdopterRepo) -> None:
         result = runner.invoke(main, args)
         assert result.exit_code == 0, (args, result.output)
         assert "validator(s) ran" not in result.output  # the umbrella's summary is the umbrella's
-    # The shipped core skills carry drift; the focused surface fails on any finding,
-    # as it always did, while the umbrella's member reports the same drift as warnings.
+    # Given drift, the focused surface fails on any finding, as it always did,
+    # while the umbrella's member reports the same drift as a warning.
+    _agent(adopter.root, "drifter", "reads:\n  records:\n    - COR-001\n", "Cites nothing.")
     focused = runner.invoke(main, ["refs", "validate"])
     assert focused.exit_code == 1 and "Reference validation" in focused.output
     assert "validator(s) ran" not in focused.output

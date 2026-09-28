@@ -1,0 +1,8 @@
+component: evidence
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The `evidence` skill declares COR-023, whose binding rule its add operation
+  applies, and drops a background citation of COR-007, so `pkit validate
+  --only refs` reports no drift warnings on it.

@@ -30,6 +30,9 @@ issue gets exactly one outcome:
                            type allows, or the title's type is not recognised
   parent #P not found      the named parent is not an issue in this repository
   parent #P is closed      the parent is closed while the issue is open
+  conflict                 the issue is natively a sub-issue of a different
+                           parent than its first line names; an issue has one
+                           native parent, so it is reported with both named
   unsupported              the instance has no native sub-issues (the seam's
                            verdict); nothing is linked, and that is no failure
 
@@ -39,12 +42,19 @@ first line is stale, so it is reported instead of linked — reopen the parent o
 re-parent the issue, and a re-run links it. A closed issue under a closed parent
 (history) links normally.
 
+A conflict is not linked either: taking the issue from the parent it has would
+be a re-parent this verb was not asked for. `set-field <N> --parent <P>` makes
+the two records agree on the parent you mean — it rewrites the first line and
+moves the native link together.
+
 The first line is read by `_lib.body_parent_ref`, the same reading
 `create-issue` files and links by, against the forms the issue's own type
 allows (`schemas/issue-types.yaml`). Issues are read through the containment
 seam's corpus acquisition (`_lib.containment.fetch_issue_corpus`); the link is
 made only by `_lib.containment.link_sub_issue`, which re-checks idempotency
-itself, so a concurrent link is still reported as already linked.
+itself, so a concurrent link is still reported as already linked. Each parent's
+native sub-issues are read once per run (`_lib.containment.SubIssueReads`), for
+the plan and the links alike, however many of its children are selected.
 
 Containment mode ([project-management:DEC-039-containment-substrate-selection],
 contract ADR-035): under `native` (the default) the plan's links are made. Under
@@ -65,7 +75,8 @@ Or via the dispatcher (per COR-021):
   pkit pm link-parent --all-open --dry-run
 
 Exit codes:
-  0  linked, already linked, nothing to link, dry run, or declined at the prompt
+  0  linked, already linked, nothing to link, a conflict reported, dry run, or
+     declined at the prompt
   1  membership or foreign-repo refusal; or, in textual mode, a refusal to
      refresh children views from an issue list that was not read in full
   2  usage error — no selection or both selections, a number that is not an
@@ -99,7 +110,9 @@ from _lib import session_guard  # noqa: E402
 from _lib.containment import (  # noqa: E402
     LinkOutcome,
     LinkResult,
+    NativeParent,
     NativeReadOutcome,
+    SubIssueReads,
     link_sub_issue,
 )
 from _lib.gh import load_adopter_config  # noqa: E402
@@ -121,11 +134,11 @@ _QUOTE_LIMIT = 60
 class Outcome(Enum):
     """What one selected issue got. The value is its label in the summary.
 
-    The plan assigns each issue WOULD_LINK, ALREADY_LINKED, UNSUPPORTED,
-    MILESTONE_PARENT, NO_PARENT_LINE or PARENT_UNAVAILABLE; applying it turns
-    WOULD_LINK into LINKED, ALREADY_LINKED, UNSUPPORTED or FAILED. TEXTUAL
-    replaces WOULD_LINK in textual containment mode, where nothing is linked.
-    The declaration order is the summary's order.
+    The plan assigns each issue WOULD_LINK, ALREADY_LINKED, CONFLICT,
+    UNSUPPORTED, MILESTONE_PARENT, NO_PARENT_LINE or PARENT_UNAVAILABLE;
+    applying it turns WOULD_LINK into LINKED, ALREADY_LINKED, CONFLICT,
+    UNSUPPORTED or FAILED. TEXTUAL replaces WOULD_LINK in textual containment
+    mode, where nothing is linked. The declaration order is the summary's order.
     """
 
     WOULD_LINK = "would link"
@@ -135,6 +148,7 @@ class Outcome(Enum):
     MILESTONE_PARENT = "milestone parent"
     NO_PARENT_LINE = "no parent line"
     PARENT_UNAVAILABLE = "parent not found or closed"
+    CONFLICT = "conflict (another native parent)"
     UNSUPPORTED = "not linked (unsupported)"
     FAILED = "failed"
 
@@ -236,10 +250,13 @@ def main() -> int:
         )
         for number in selected
     ]
+    # One read of each parent's native sub-issues for the whole run: the plan
+    # reads through it, and the links made after consent reuse the same reads.
+    reads = SubIssueReads(config)
     if textual:
         entries = [_as_textual(entry) for entry in entries]
     else:
-        entries = check_native_links(entries, config)
+        entries = check_native_links(entries, config, reads)
 
     _print_plan(entries, mode=mode, dry_run=args.dry_run)
 
@@ -286,7 +303,7 @@ def main() -> int:
             refresh_parents, config=config, corpus=corpus, mode=mode
         )
     else:
-        entries = apply_links(entries, config)
+        entries = apply_links(entries, config, reads)
         failed = any(entry.outcome is Outcome.FAILED for entry in entries)
     print(f"done: {_summary(entries)}")
     return 3 if failed else 0
@@ -369,25 +386,27 @@ def classify(
     return Entry(number, Outcome.WOULD_LINK, f"would link under #{parent}", parent=parent)
 
 
-def check_native_links(entries: list[Entry], config: dict) -> list[Entry]:
-    """Settle, read-only, which planned links already exist.
+def check_native_links(
+    entries: list[Entry], config: dict, reads: SubIssueReads
+) -> list[Entry]:
+    """Settle, read-only, which planned links already exist or cannot be made.
 
-    One native read per distinct parent (``containment.read_native_children``):
-    a child already among the parent's sub-issues is ALREADY_LINKED and is never
-    posted again (DEC-026 value-equality); an instance whose sub-issues read as
-    unsupported links nothing. A read that fails leaves the link planned — the
-    linker checks again before it posts.
+    Each distinct parent's native sub-issues are read once, through the run's
+    ``reads`` (the links made later reuse them): a child already among them is
+    ALREADY_LINKED and is never posted again (DEC-026 value-equality); an
+    instance whose sub-issues read as unsupported links nothing. A child not
+    among them has its own native parent read (:func:`_check_child_parent`),
+    so one already under a different parent is reported as a CONFLICT here,
+    in the plan, rather than discovered at the add. A read that fails leaves
+    the link planned — the linker checks again before it posts.
     """
-    reads: dict[int, containment.NativeRead] = {}
     checked: list[Entry] = []
     for entry in entries:
         if entry.outcome is not Outcome.WOULD_LINK or entry.parent is None:
             checked.append(entry)
             continue
         parent = entry.parent
-        if parent not in reads:
-            reads[parent] = containment.read_native_children(config, parent_number=parent)
-        read = reads[parent]
+        read = reads.read(parent)
         if read.outcome is NativeReadOutcome.UNSUPPORTED:
             checked.append(
                 replace(
@@ -409,20 +428,55 @@ def check_native_links(entries: list[Entry], config: dict) -> list[Entry]:
                     native=read.outcome,
                 )
             )
-        elif read.outcome is NativeReadOutcome.UNREADABLE:
-            checked.append(
-                replace(
-                    entry,
-                    detail=(
-                        f"would link under #{parent} (#{parent}'s sub-issues could "
-                        "not be read; the link checks again before posting)"
-                    ),
-                    native=read.outcome,
-                )
-            )
         else:
-            checked.append(replace(entry, native=read.outcome))
+            checked.append(_check_child_parent(entry, read.outcome, config))
     return checked
+
+
+def _check_child_parent(entry: Entry, native: NativeReadOutcome, config: dict) -> Entry:
+    """A planned link, checked against the child's own native parent.
+
+    Only reached for a child its parent's list does not show, so a run whose
+    links already exist reads no child records. A child whose record could not
+    be read keeps its planned link; the linker reads it again before posting.
+    """
+    parent = entry.parent
+    state = containment.read_link_state(config, issue_number=entry.issue)
+    holder = state.parent if state is not None else None
+    if holder is not None and parent is not None and holder.is_issue(parent):
+        return replace(
+            entry,
+            outcome=Outcome.ALREADY_LINKED,
+            detail=f"already linked under #{parent}",
+            native=native,
+        )
+    if holder is not None:
+        return replace(
+            entry,
+            outcome=Outcome.CONFLICT,
+            detail=_conflict_detail(holder, parent),
+            native=native,
+        )
+    if native is NativeReadOutcome.UNREADABLE:
+        return replace(
+            entry,
+            detail=(
+                f"would link under #{parent} (#{parent}'s sub-issues could "
+                "not be read; the link checks again before posting)"
+            ),
+            native=native,
+        )
+    return replace(entry, native=native)
+
+
+def _conflict_detail(holder: NativeParent | None, parent: int | None) -> str:
+    """The report line for a conflict: the parent the issue has natively, and the
+    one its first line names."""
+    held = holder.ref if holder is not None else "another parent"
+    return (
+        f"conflict — natively a sub-issue of {held}, but the first line names "
+        f"#{parent}; not linked (an issue has one native parent)"
+    )
 
 
 def _as_textual(entry: Entry) -> Entry:
@@ -449,18 +503,29 @@ def _refresh_targets(entries: list[Entry]) -> list[int]:
 # ---- applying the plan -------------------------------------------------
 
 
-def apply_links(entries: list[Entry], config: dict) -> list[Entry]:
-    """Make every planned link through the sole constructor, reporting each."""
+def apply_links(entries: list[Entry], config: dict, reads: SubIssueReads) -> list[Entry]:
+    """Make every planned link through the sole constructor, reporting each.
+
+    The linker is handed the run's ``reads``, so its idempotency check reuses
+    the parent reads the plan made instead of reading each parent again per
+    child.
+    """
     applied: list[Entry] = []
     for entry in entries:
         if entry.outcome is not Outcome.WOULD_LINK or entry.parent is None:
             applied.append(entry)
             continue
-        result = link_sub_issue(config, parent_number=entry.parent, child_number=entry.issue)
+        result = link_sub_issue(
+            config,
+            parent_number=entry.parent,
+            child_number=entry.issue,
+            sub_issues=reads,
+        )
         done = _after_link(entry, result)
         marker = {
             Outcome.LINKED: "[ok]",
             Outcome.ALREADY_LINKED: "[ok]",
+            Outcome.CONFLICT: "[warn]",
             Outcome.UNSUPPORTED: "[warn]",
         }.get(done.outcome, "[fail]")
         print(f"  {marker} #{done.issue} {done.detail}")
@@ -476,6 +541,11 @@ def _after_link(entry: Entry, result: LinkResult) -> Entry:
     successfully, in which case the instance plainly has them and the refusal
     is specific to this link: that one is reported as a failure, stating only
     what was established.
+
+    CONFLICT — the issue went under another parent after the plan read it, or
+    its record does not carry the parent and GitHub's refusal named the rule —
+    is reported like the plan's conflicts, naming the parent where the seam
+    could establish it.
     """
     parent = entry.parent
     if result.outcome is LinkOutcome.LINKED:
@@ -485,6 +555,12 @@ def _after_link(entry: Entry, result: LinkResult) -> Entry:
             entry,
             outcome=Outcome.ALREADY_LINKED,
             detail=f"already linked under #{parent} (no change)",
+        )
+    if result.outcome is LinkOutcome.CONFLICT:
+        return replace(
+            entry,
+            outcome=Outcome.CONFLICT,
+            detail=_conflict_detail(result.current_parent, parent),
         )
     if result.outcome is LinkOutcome.UNSUPPORTED:
         if entry.native is NativeReadOutcome.READ:
@@ -606,7 +682,19 @@ def _print_plan(entries: list[Entry], *, mode: str, dry_run: bool) -> None:
     targets = _refresh_targets(entries)
     if targets:
         print(f"children views to refresh: {', '.join(f'#{p}' for p in targets)}")
+    if any(entry.outcome is Outcome.CONFLICT for entry in entries):
+        print(_CONFLICT_REMEDY)
     print(f"plan: {_summary(entries)}")
+
+
+# A conflict is two records naming different parents; which one is right is the
+# operator's call, so the verb names the one command that makes them agree
+# either way rather than picking a side.
+_CONFLICT_REMEDY = (
+    "to resolve a conflict, set the parent you mean: "
+    "`pkit pm set-field <N> --parent <P>` rewrites the first line and moves the "
+    "native link together"
+)
 
 
 def _summary(entries: list[Entry]) -> str:

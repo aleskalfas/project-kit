@@ -16,6 +16,7 @@ reads:
     - .pkit/capabilities/evidence/scripts/validate.py
   records:
     - COR-008
+    - COR-023
 ---
 
 # Working with evidence

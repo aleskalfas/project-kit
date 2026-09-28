@@ -29,7 +29,7 @@ reads:
 owns:
   - CONTRIBUTING.md
   - .pkit/decisions/core/
-  - docs/architecture/decisions/
+  - tech-docs/architecture/decisions/
 ---
 
 # Architect
