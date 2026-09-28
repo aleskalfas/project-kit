@@ -96,8 +96,8 @@ def main() -> int:
         help=(
             "OPEN milestone to attach. Accepts the milestone number "
             "(e.g. `6`) or its exact title (e.g. `Milestone 1: ...`). "
-            "Optional — omit to promote on --reason alone (no milestone "
-            "attached). When given, must match an OPEN milestone exactly; "
+            "Optional — omit to promote on --reason alone (the milestone "
+            "is left as it is). When given, must match an OPEN milestone exactly; "
             "an unresolvable value is always an error."
         ),
     )
@@ -184,7 +184,7 @@ def main() -> int:
     if milestone_title is not None:
         print(f"  milestone: {milestone_title}")
     else:
-        print("  milestone: (none — promoting on --reason alone)")
+        print("  milestone: unchanged (no --milestone given)")
     print(f"  reason:    {reason}")
 
     if args.dry_run:
@@ -196,7 +196,7 @@ def main() -> int:
         else:
             print(
                 "(dry-run: would call move-issue --to backlog, which posts the "
-                "single audit comment (no milestone — --reason-only path).)"
+                "single audit comment (milestone unchanged — no --milestone given).)"
             )
         return 0
 
@@ -226,14 +226,22 @@ def main() -> int:
     current_state = _detect_current_state(args.issue_number, config, substrate_map)
     if current_state in ("backlog", "in-progress", "review", "done"):
         idempotent_detail = (
-            "milestone reattached; no state transition needed"
+            "milestone attached; no state transition needed"
             if milestone_title is not None
-            else "no state transition needed"
+            else "milestone unchanged; no state transition needed"
         )
         print(
             f"\n[ok] #{args.issue_number} already at {axis_labels.label('state', current_state)} "
             f"({idempotent_detail})."
         )
+        if milestone_title is not None:
+            # Past Todo there is no transition to carry the audit comment; the
+            # verb for a milestone change on its own records why (#1016).
+            print(
+                "  → to change an issue's milestone without a state transition, use "
+                f"`edit-issue {args.issue_number} --milestone <M> --reason \"<why>\"`, "
+                "which records the change in an audit comment."
+            )
         return 0
 
     # Compose over move-issue for the actual state transition. move-issue posts
@@ -254,7 +262,7 @@ def main() -> int:
     if milestone_title is not None:
         print(f"\n[ok] promoted #{args.issue_number} Todo → Backlog (milestone: {milestone_title})")
     else:
-        print(f"\n[ok] promoted #{args.issue_number} Todo → Backlog (no milestone)")
+        print(f"\n[ok] promoted #{args.issue_number} Todo → Backlog (milestone unchanged)")
     return 0
 
 
