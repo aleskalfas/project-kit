@@ -118,6 +118,20 @@ from _lib.review_contributions import collect_contributions  # noqa: E402
 DEFAULT_AGENT_TIMEOUT = 1200
 AGENT_TIMEOUT_ENV = "PKIT_REVIEW_AGENT_TIMEOUT"
 
+# ---- per-agent reviewer effort (issue #1046) --------------------------
+#
+# A reviewer started headless reads the operator's user settings, so it
+# reasons at whatever effort the operator set for their own interactive
+# sessions. A review pass rarely needs that. Like the timeout, the effort is
+# ONE uniform knob applied to every reviewer (COR-007: one value, not a
+# per-agent map); the per-agent policy belongs to agent front matter (#1047).
+# Precedence: `--effort` flag > `PKIT_REVIEW_AGENT_EFFORT` env var >
+# `review.agents.effort` in the project config > unset, in which case no
+# `--effort` is passed and the harness default applies. Resolve once in
+# `main()` and pass the value into every `_invoke_agent` call.
+AGENT_EFFORT_ENV = "PKIT_REVIEW_AGENT_EFFORT"
+EFFORT_LEVELS = ("low", "medium", "high", "xhigh", "max")
+
 
 def _resolve_agent_timeout(cli_value: str | None, env: dict) -> int:
     """Resolve the per-agent reviewer timeout in seconds.
@@ -154,6 +168,42 @@ def _resolve_agent_timeout(cli_value: str | None, env: dict) -> int:
     return value
 
 
+def _resolve_agent_effort(
+    cli_value: str | None, env: dict, config: dict | None,
+) -> str | None:
+    """Resolve the reviewer effort level, or None when nothing sets one.
+
+    Precedence: `--effort` flag > `PKIT_REVIEW_AGENT_EFFORT` env var >
+    `review.agents.effort` in the project config > None (the harness default
+    applies; no `--effort` is passed). One uniform value applies to every
+    reviewer (COR-007: no per-agent map).
+
+    A value outside `EFFORT_LEVELS` is a usage error and raises `ValueError`
+    naming its source (fail fast), never a silent fall-back. An empty flag,
+    variable or config value is treated as absent.
+    """
+    review = config.get("review") if isinstance(config, dict) else None
+    agents = review.get("agents") if isinstance(review, dict) else None
+    configured = agents.get("effort") if isinstance(agents, dict) else None
+    if cli_value:
+        raw: object = cli_value
+        source = "--effort"
+    elif env.get(AGENT_EFFORT_ENV):
+        raw = env[AGENT_EFFORT_ENV]
+        source = f"${AGENT_EFFORT_ENV}"
+    elif configured:
+        raw = configured
+        source = "review.agents.effort"
+    else:
+        return None
+    if not isinstance(raw, str) or raw not in EFFORT_LEVELS:
+        raise ValueError(
+            f"invalid reviewer effort from {source}: {raw!r} — must be one of "
+            + ", ".join(EFFORT_LEVELS) + "."
+        )
+    return raw
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
@@ -180,6 +230,13 @@ def main() -> int:
         f"to every reviewer). Precedence: this flag > ${AGENT_TIMEOUT_ENV} env "
         f"var > default {DEFAULT_AGENT_TIMEOUT}. Must be a positive integer.",
     )
+    parser.add_argument(
+        "--effort", default=None, metavar="LEVEL",
+        help="Effort level every reviewer reasons at (one uniform value). "
+        f"Precedence: this flag > ${AGENT_EFFORT_ENV} env var > "
+        "`review.agents.effort` in the project config > unset (the harness "
+        "default). One of: " + ", ".join(EFFORT_LEVELS) + ".",
+    )
     session_guard.add_override_argument(parser)
     args = parser.parse_args()
 
@@ -201,6 +258,11 @@ def main() -> int:
 
     yaml_loader = YAML(typ="safe")
     config = load_adopter_config(capability_root)
+    try:
+        agent_effort = _resolve_agent_effort(args.effort, os.environ, config)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
     members = _read_members(capability_root, yaml_loader)
     invoker = resolve_invoker_identity(config=config)
     membership = check_membership(members, invoker)
@@ -302,7 +364,9 @@ def main() -> int:
             print(f"  [{name}] (dry-run) would invoke against PR #{pr_number}")
             continue
 
-        verdict, body = _invoke_agent(name, pr_number, config, agent_timeout)
+        verdict, body = _invoke_agent(
+            name, pr_number, config, agent_timeout, effort=agent_effort,
+        )
         if verdict is None:
             print(f"  [{name}] invocation failed; no verdict to post.", file=sys.stderr)
             failures += 1
@@ -335,7 +399,7 @@ def main() -> int:
 
 def _invoke_agent(
     name: str, pr_number: int | None, config: dict,
-    timeout: int = DEFAULT_AGENT_TIMEOUT,
+    timeout: int = DEFAULT_AGENT_TIMEOUT, effort: str | None = None,
 ) -> tuple[str | None, str]:
     """Invoke a Claude Code agent against the PR diff.
 
@@ -346,6 +410,11 @@ def _invoke_agent(
     reviewer that runs longer is killed and yields no verdict. The caller
     resolves the value once (`_resolve_agent_timeout`) and passes the same
     uniform value for every reviewer.
+
+    `effort` is the effort level the reviewer reasons at (issue #1046),
+    passed to the harness as `--effort`; None passes nothing and the harness
+    default applies. Resolved once by the caller (`_resolve_agent_effort`),
+    the same uniform value for every reviewer.
 
     At v1 this uses the `claude` CLI when available. Adopters with
     custom harnesses or invocation patterns override by editing this
@@ -376,8 +445,11 @@ def _invoke_agent(
     )
 
     try:
+        command = [claude_bin, "-p", prompt, "--agent", name]
+        if effort is not None:
+            command += ["--effort", effort]
         proc = subprocess.run(
-            [claude_bin, "-p", prompt, "--agent", name],
+            command,
             capture_output=True, text=True, check=False, timeout=timeout,
         )
     except (subprocess.TimeoutExpired, FileNotFoundError) as exc:

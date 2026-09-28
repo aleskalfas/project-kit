@@ -430,7 +430,7 @@ def _wire_main(
         lambda pr_number, config, repo_root, baseline: resolution,
     )
 
-    def fake_invoke(name, pr_number, config, timeout=None):
+    def fake_invoke(name, pr_number, config, timeout=None, effort=None):
         invoked.append(name)
         return "APPROVED", "body"
 
@@ -577,3 +577,100 @@ def test_gh_pr_author_and_current_login(rpr, monkeypatch) -> None:
     monkeypatch.setattr(rpr, "gh_run", fake)
     assert rpr._gh_pr_author(42, {}) == "alice"
     assert rpr._gh_current_login({}) == "bob"
+
+
+# ---- per-agent reviewer effort (issue #1046) ---------------------
+#
+# Precedence: --effort flag > PKIT_REVIEW_AGENT_EFFORT env var >
+# review.agents.effort in the project config > None (nothing passed; the
+# harness default applies). One uniform value for every reviewer.
+
+
+def _config_with_effort(level: str | None) -> dict:
+    agents: dict = {"local_registered": [{"name": "pm-reviewer"}]}
+    if level is not None:
+        agents["effort"] = level
+    return {"review": {"mode": "agent", "agents": agents}}
+
+
+def test_effort_unset_everywhere_is_none(rpr) -> None:
+    assert rpr._resolve_agent_effort(None, {}, {}) is None
+    assert rpr._resolve_agent_effort(None, {}, _config_with_effort(None)) is None
+
+
+def test_effort_config_sets_the_level(rpr) -> None:
+    assert rpr._resolve_agent_effort(None, {}, _config_with_effort("medium")) == "medium"
+
+
+def test_effort_env_overrides_config(rpr) -> None:
+    env = {rpr.AGENT_EFFORT_ENV: "high"}
+    assert rpr._resolve_agent_effort(None, env, _config_with_effort("medium")) == "high"
+
+
+def test_effort_flag_overrides_env_and_config(rpr) -> None:
+    env = {rpr.AGENT_EFFORT_ENV: "high"}
+    assert rpr._resolve_agent_effort("low", env, _config_with_effort("medium")) == "low"
+
+
+def test_effort_empty_values_are_treated_as_absent(rpr) -> None:
+    env = {rpr.AGENT_EFFORT_ENV: ""}
+    assert rpr._resolve_agent_effort("", env, _config_with_effort("")) is None
+    assert rpr._resolve_agent_effort("", env, _config_with_effort("xhigh")) == "xhigh"
+
+
+@pytest.mark.parametrize("bad", ["extreme", "MEDIUM", "2", " high"])
+def test_effort_invalid_flag_errors_and_names_the_flag(rpr, bad) -> None:
+    with pytest.raises(ValueError) as exc:
+        rpr._resolve_agent_effort(bad, {}, {})
+    assert "--effort" in str(exc.value)
+    assert "low, medium, high, xhigh, max" in str(exc.value)
+
+
+def test_effort_invalid_env_errors_and_names_env(rpr) -> None:
+    with pytest.raises(ValueError) as exc:
+        rpr._resolve_agent_effort(None, {rpr.AGENT_EFFORT_ENV: "nope"}, {})
+    assert rpr.AGENT_EFFORT_ENV in str(exc.value)
+
+
+def test_effort_invalid_config_errors_and_names_the_key(rpr) -> None:
+    with pytest.raises(ValueError) as exc:
+        rpr._resolve_agent_effort(None, {}, _config_with_effort("turbo"))
+    assert "review.agents.effort" in str(exc.value)
+
+
+def test_effort_non_string_config_value_errors(rpr) -> None:
+    with pytest.raises(ValueError):
+        rpr._resolve_agent_effort(None, {}, _config_with_effort(3))  # type: ignore[arg-type]
+
+
+def _capture_invocation(rpr, monkeypatch) -> dict:
+    import subprocess
+
+    captured: dict = {}
+    monkeypatch.setattr(rpr.shutil, "which", lambda _bin: "/usr/bin/claude")
+
+    def fake_run(args, **kwargs):
+        captured["args"] = list(args)
+        return subprocess.CompletedProcess(
+            args=args, returncode=0,
+            stdout="Reviewer agent (local, reviewer): APPROVED\n", stderr="",
+        )
+
+    monkeypatch.setattr(rpr.subprocess, "run", fake_run)
+    return captured
+
+
+def test_invoke_agent_passes_effort_to_the_harness(rpr, monkeypatch) -> None:
+    captured = _capture_invocation(rpr, monkeypatch)
+    rpr._invoke_agent("reviewer", 99, {}, 720, effort="medium")
+    args = captured["args"]
+    assert args[-2:] == ["--effort", "medium"]
+    assert args[:2] == ["/usr/bin/claude", "-p"]
+    assert args[-4:-2] == ["--agent", "reviewer"]
+
+
+def test_invoke_agent_passes_no_effort_when_unset(rpr, monkeypatch) -> None:
+    captured = _capture_invocation(rpr, monkeypatch)
+    rpr._invoke_agent("reviewer", 99, {}, 720)
+    assert "--effort" not in captured["args"]
+    assert captured["args"][-2:] == ["--agent", "reviewer"]

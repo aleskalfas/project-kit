@@ -161,6 +161,11 @@
           "additionalProperties": false,
           "description": "Registered reviewer agents per DEC-028. Both lists optional; at least one entry across them is needed for the agent gate to be satisfiable.",
           "properties": {
+            "effort": {
+              "type": "string",
+              "enum": ["low", "medium", "high", "xhigh", "max"],
+              "description": "Effort level every locally-registered reviewer reasons at (issue #1046): one uniform value, passed to the harness as `--effort`. Overridden by `PKIT_REVIEW_AGENT_EFFORT` and by `review-pr --effort`. Absent: the harness default applies."
+            },
             "remote_registered": {
               "type": "array",
               "maxItems": 1,
