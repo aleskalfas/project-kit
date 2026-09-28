@@ -46,12 +46,13 @@ friction, dead anchors, unresolved kinds and bumps. An outdated base never
 fails. Dormant — counts only, exit 0 — when no place is declared or nothing in
 the places carries the container (point 15).
 
-**Resolver limits** (point 2). Capability-registered anchor kinds are looked
-up in `registered_anchor_kinds`, where a resolver command that does not
-declare no network egress is refused (`refuse_resolver_without_no_network`).
-No capability registers a kind yet, so every other kind is unresolved. The
-residual gap: a declaration is trusted, not enforced — nothing here confines a
-resolver's process.
+**Resolver limits** (point 2; ADR-057). Capability-registered anchor kinds are
+looked up in `registered_anchor_kinds`, where a resolver command that does not
+declare the query contract — bounded, deterministic, read-only, needing no
+network — is refused (`refuse_resolver_without_query_contract`). No capability
+registers a kind yet, so every other kind is unresolved. The residual gap: the
+declaration is trusted, not enforced — no layer of this distribution holds a
+single command to "no network" (ADR-057 point 4).
 
 The check writes nothing (point 13).
 """
@@ -99,9 +100,6 @@ ENFORCING = "enforcing"
 
 #: The anchor kinds the backbone resolves itself (COR-050 point 2).
 CORE_ANCHOR_KINDS: tuple[str, ...] = ("path", "record", "artefact")
-
-#: The one network-egress declaration under which a registered resolver may run.
-NO_NETWORK = "none"
 
 # A capability decision named as a record anchor: `<capability>:DEC-NNN`, with
 # or without its slug (the citation form of COR-017).
@@ -468,35 +466,33 @@ def uncommitted_paths(root: Path) -> int:
 class ResolverCommand:
     """A command a capability registers to resolve an anchor kind (COR-050 point 2).
 
-    `network` is the command's declared network egress as written — `None`
-    when it declares none at all.
+    `query_contract` is whether the command's registry entry declares the
+    query contract (ADR-057 point 3): bounded, deterministic, read-only and
+    needing no network. The declaration grants nothing; it is a claim the
+    backbone requires and trusts.
     """
 
     kind: str
     capability: str
     command: str
-    network: Any = None
+    query_contract: bool = False
 
 
-def refuse_resolver_without_no_network(resolver: ResolverCommand) -> str | None:
+def refuse_resolver_without_query_contract(resolver: ResolverCommand) -> str | None:
     """Why `resolver` may not run, or `None` when it may.
 
-    A resolver runs with no network access (COR-050 point 2); the backbone
-    admits one only when its command *declares* that, as `network: none`, and
-    refuses every other declaration or none. The declaration is trusted, not
-    enforced: nothing here confines the process it would start — that is the
-    residual gap the CLI reference states.
+    A resolver is a query: bounded, deterministic, read-only, needing no network
+    (COR-050 point 2). The backbone admits one only when its command declares
+    that contract (ADR-057 point 3). The declaration is trusted, not enforced:
+    nothing here confines the process it would start — the residual gap the CLI
+    reference states.
     """
-    if resolver.network == NO_NETWORK:
+    if resolver.query_contract:
         return None
-    declared = (
-        "declares no network egress"
-        if resolver.network is None
-        else f"declares network egress {resolver.network!r}"
-    )
     return (
         f"the resolver `{resolver.command}` that {resolver.capability} registers for it "
-        f"{declared}; a resolver runs only when it declares `network: {NO_NETWORK}`"
+        f"does not declare the query contract (bounded, deterministic, read-only, "
+        f"needing no network); a resolver runs only when it declares it"
     )
 
 
@@ -514,7 +510,7 @@ def registered_anchor_kinds(target_root: Path) -> dict[str, ResolverCommand]:
 def unresolved_kind_reason(kind: str, registry: Mapping[str, ResolverCommand]) -> str | None:
     """`None` when the backbone resolves `kind`; otherwise why nothing does.
 
-    A registered kind passes `refuse_resolver_without_no_network` before its
+    A registered kind passes `refuse_resolver_without_query_contract` before its
     resolver could run; one that passes is still unresolved, since registered
     resolvers are not run yet — failing closed (COR-050 point 2).
     """
@@ -523,7 +519,7 @@ def unresolved_kind_reason(kind: str, registry: Mapping[str, ResolverCommand]) -
     resolver = registry.get(kind)
     if resolver is None:
         return "no installed component registers a resolver for it"
-    refusal = refuse_resolver_without_no_network(resolver)
+    refusal = refuse_resolver_without_query_contract(resolver)
     if refusal is not None:
         return refusal
     return (

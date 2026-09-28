@@ -485,31 +485,34 @@ def test_an_unresolved_kind_is_reported_apart_from_a_dead_anchor(repo: AdopterRe
     assert result.failing
 
 
-def test_a_registered_resolver_without_no_network_is_refused(repo: AdopterRepo) -> None:
+def test_a_registered_resolver_without_the_query_contract_is_refused(repo: AdopterRepo) -> None:
     _start(repo, {"docs/guide.md": _guide()})
     repo.commit(
         "anchor a registered kind",
         {"docs/guide.md": _guide(anchors={"use-case": ["UC-1"]}, at=T2, because="x")},
     )
-    unconfined = fc.ResolverCommand("use-case", "software-analysis", "resolve-use-case")
-    result = _run(repo, registry={"use-case": unconfined})
-    assert "declares no network egress" in result.findings[0].message
-    confined = fc.ResolverCommand("use-case", "software-analysis", "resolve-use-case", "none")
-    result = _run(repo, registry={"use-case": confined})
+    undeclared = fc.ResolverCommand("use-case", "software-analysis", "resolve-use-case")
+    result = _run(repo, registry={"use-case": undeclared})
+    assert "does not declare the query contract" in result.findings[0].message
+    declared = fc.ResolverCommand(
+        "use-case", "software-analysis", "resolve-use-case", query_contract=True
+    )
+    result = _run(repo, registry={"use-case": declared})
     assert "is not run yet" in result.findings[0].message
 
 
 @pytest.mark.parametrize(
-    ("network", "refused"),
+    ("query_contract", "refused"),
     [
-        (None, "declares no network egress"),
-        ("any", "declares network egress 'any'"),
-        ("none", None),
+        (False, "does not declare the query contract"),
+        (True, None),
     ],
 )
-def test_refuse_resolver_without_no_network(network: Any, refused: str | None) -> None:
-    resolver = fc.ResolverCommand("use-case", "software-analysis", "resolve-use-case", network)
-    reason = fc.refuse_resolver_without_no_network(resolver)
+def test_refuse_resolver_without_query_contract(query_contract: bool, refused: str | None) -> None:
+    resolver = fc.ResolverCommand(
+        "use-case", "software-analysis", "resolve-use-case", query_contract=query_contract
+    )
+    reason = fc.refuse_resolver_without_query_contract(resolver)
     if refused is None:
         assert reason is None
     else:
