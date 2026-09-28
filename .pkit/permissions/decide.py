@@ -17,7 +17,9 @@ the loaders are thin helpers. No third-party deps beyond PyYAML for the loaders
 from __future__ import annotations
 
 import fnmatch
+import os
 import re
+import stat
 from typing import Any
 
 # A grant's privilege value is the COR-019 token `[privilege-catalog:<id>]`
@@ -129,7 +131,11 @@ def _matches_bash(rule: dict[str, Any], toks: list[str]) -> bool:
 
 
 def recognized_privileges(catalog: dict[str, Any], request: dict[str, Any]) -> set[str]:
-    """Which privilege ids does this request match?"""
+    """Which privilege ids does this request match?
+
+    A file-tool request that names its target (`path`) and the project root
+    (`root`) also matches the path-scoped privileges whose folder holds that
+    target (the agent workspace); see `_path_scoped_privileges`."""
     privileges = catalog.get("privileges", {})
     hits: set[str] = set()
     if request.get("type") == "tool":
@@ -137,6 +143,7 @@ def recognized_privileges(catalog: dict[str, Any], request: dict[str, Any]) -> s
         for name, spec in privileges.items():
             if tool in spec.get("recognize", {}).get("tool", []):
                 hits.add(name)
+        hits |= _path_scoped_privileges(privileges, request)
     elif request.get("type") == "bash":
         segs = segments(request.get("command", ""))
         for name, spec in privileges.items():
@@ -144,6 +151,181 @@ def recognized_privileges(catalog: dict[str, Any], request: dict[str, Any]) -> s
                 if any(_matches_bash(rule, toks) for toks in segs):
                     hits.add(name)
                     break
+    return hits
+
+
+# ---- path-scoped allows: the agent workspace (#1043) ------------------------
+#
+# A privilege whose recognizer carries `path` is scoped to folders, each named
+# relative to the root of a checkout of the project: the project root, or
+# another working tree of the same repository (a subagent working in a linked
+# worktree keeps its workspace at that worktree's root). It is recognized only
+# for a FILE TOOL listed in `path.tools` whose target lies inside one of those
+# folders — never for the tool alone, and never for a shell command: a redirect
+# into the folder is judged like any other shell write (ADR-025, unchanged). So
+# a grant of it neither reaches nor denies a file anywhere else. It reduces
+# prompts on the allow side, keyed on the target path; it confines nothing —
+# shell reach is the OS sandbox's (`filesystem-confinement`); the file tools
+# run outside the sandbox, so inside the folder the recogniser's precision is
+# the gate (ADR-060 point 6).
+#
+# The folder counts only as the checkout itself holds it: named relative and
+# never climbing out with `..`, and reached through no symlink — a symlinked
+# `.agent-workspace` would carry the grant to wherever it points. A repository
+# or worktree nested inside the folder is not the folder: its tracked files are
+# another checkout's. Nor is a file hard-linked from elsewhere, which a write
+# through the folder's name would change at its other name.
+
+def _target_path(tool_input: dict[str, Any]) -> Any:
+    """The path a file tool names: `file_path` (Read, Write, Edit, MultiEdit)
+    or `notebook_path` (NotebookEdit)."""
+    return tool_input.get("file_path") or tool_input.get("notebook_path")
+
+
+def _enclosing_checkout(start: str) -> str | None:
+    """The nearest directory at or above `start` holding a `.git` entry."""
+    current = start
+    while True:
+        if os.path.lexists(os.path.join(current, ".git")):
+            return current
+        parent = os.path.dirname(current)
+        if parent == current:
+            return None
+        current = parent
+
+
+def _git_pointer(checkout: str) -> str | None:
+    """Where a linked worktree's `.git` file points (`gitdir: <dir>`), resolved;
+    None when `checkout`'s `.git` is not such a file."""
+    try:
+        with open(os.path.join(checkout, ".git"), encoding="utf-8") as fh:
+            pointer = fh.read().strip()
+    except OSError:
+        return None
+    if not pointer.startswith("gitdir:"):
+        return None
+    return os.path.realpath(os.path.join(checkout, pointer[len("gitdir:"):].strip()))
+
+
+def _common_git_dir(checkout: str) -> str | None:
+    """The git directory every working tree of `checkout`'s repository shares —
+    what `git rev-parse --git-common-dir` answers: its `.git` directory, or, for
+    a linked worktree, the directory its own git directory's `commondir` names."""
+    marker = os.path.join(checkout, ".git")
+    if os.path.isdir(marker):
+        return os.path.realpath(marker)
+    gitdir = _git_pointer(checkout)
+    if gitdir is None:
+        return None
+    try:
+        with open(os.path.join(gitdir, "commondir"), encoding="utf-8") as fh:
+            return os.path.realpath(os.path.join(gitdir, fh.read().strip()))
+    except OSError:
+        return gitdir
+
+
+def _same_repository(holder: str, common: str) -> bool:
+    """Is `holder` a working tree of the repository whose common git directory
+    is `common`? The main one, whose `.git` is that directory; or a linked one
+    git registered there — its `.git` points at `<common>/worktrees/<id>`, and
+    that entry's `gitdir` file points back at it. A `.git` pointer planted
+    anywhere else does not make a worktree."""
+    marker = os.path.join(holder, ".git")
+    if os.path.isdir(marker):
+        return os.path.realpath(marker) == common
+    gitdir = _git_pointer(holder)
+    if gitdir is None or os.path.dirname(gitdir) != os.path.realpath(os.path.join(common, "worktrees")):
+        return False
+    try:
+        with open(os.path.join(gitdir, "gitdir"), encoding="utf-8") as fh:
+            back = fh.read().strip()
+    except OSError:
+        return False
+    return os.path.realpath(os.path.join(gitdir, back)) == os.path.realpath(marker)
+
+
+def _checkouts(path: str, root: str) -> list[str]:
+    """The checkouts whose folders `path` may lie in: the project root, and the
+    working tree holding `path` when it is another one of the same repository.
+    Another repository's never counts."""
+    project = os.path.realpath(root)
+    found = [project]
+    holder = _enclosing_checkout(os.path.dirname(path))
+    if holder is not None and holder != project:
+        common = _common_git_dir(project)
+        if common is not None and _same_repository(holder, common):
+            found.append(holder)
+    return found
+
+
+def _folder_top(checkout: str, folder: Any) -> str | None:
+    """`folder`'s path in `checkout` (a resolved directory), or None when the
+    folder cannot be trusted there: not a relative name, climbing out with
+    `..`, or reached through a symlink."""
+    if not isinstance(folder, str) or not folder or os.path.isabs(folder) or folder.startswith("~"):
+        return None
+    if ".." in folder.split("/"):
+        return None
+    top = os.path.join(checkout, os.path.normpath(folder))
+    return top if os.path.realpath(top) == top else None
+
+
+def _nested_checkout(path: str, top: str) -> bool:
+    """Does any directory from the folder `top` down to `path`'s parent hold a
+    `.git` entry? Then `path` lies in a repository or worktree nested inside
+    the folder — another checkout's files, not the folder's."""
+    current = os.path.dirname(path)
+    while True:
+        if os.path.lexists(os.path.join(current, ".git")):
+            return True
+        parent = os.path.dirname(current)
+        if current == top or parent == current:
+            return False
+        current = parent
+
+
+def _inside(path: str, root: str, folders: list[Any]) -> bool:
+    """Does the resolved `path` lie strictly inside one of `folders` of a
+    checkout of the project at `root`, and in no repository or worktree nested
+    inside that folder?"""
+    for checkout in _checkouts(path, root):
+        for folder in folders:
+            top = _folder_top(checkout, folder)
+            if top is None or path == top or os.path.commonpath([path, top]) != top:
+                continue
+            if not _nested_checkout(path, top):
+                return True
+    return False
+
+
+def _hard_linked(path: str) -> bool:
+    """Is `path` an existing file with more than one name? A write through one
+    name changes the file at every other, wherever it lies."""
+    try:
+        info = os.stat(path)
+    except OSError:
+        return False
+    return stat.S_ISREG(info.st_mode) and info.st_nlink > 1
+
+
+def _path_scoped_privileges(privileges: dict[str, Any], request: dict[str, Any]) -> set[str]:
+    """The path-scoped privileges a file-tool request is recognized as: those
+    listing its tool whose folder holds its target, symlinks resolved — a link
+    out of the folder is outside it, and so is a file hard-linked from anywhere.
+    Empty without a target or a project root."""
+    target, root = request.get("path"), request.get("root")
+    if not isinstance(target, str) or not target or not root:
+        return set()
+    path = os.path.realpath(os.path.join(request.get("cwd") or root, target))
+    if _hard_linked(path):
+        return set()
+    hits: set[str] = set()
+    for name, spec in privileges.items():
+        scoped = spec.get("recognize", {}).get("path")
+        if not isinstance(scoped, dict) or request.get("tool") not in (scoped.get("tools") or []):
+            continue
+        if _inside(path, root, scoped.get("folders") or []):
+            hits.add(name)
     return hits
 
 
@@ -360,24 +542,32 @@ def hook_decide(
     catalog: dict[str, Any],
     payload: dict[str, Any],
     project_root: str | None = None,
+    *,
+    as_subject: str | None = None,
 ) -> tuple[str, str]:
     """Decision-core entry point for a PreToolUse hook payload. Fails OPEN —
     any fault yields abstain (defer), never a silent block; non-negotiable
     denies are double-locked in the fail-closed native settings (ADR-002).
 
     Subject resolution (per issue #57):
+      - ``as_subject`` given → that subject (a caller that names the subject
+        it decides as — the CLI's probe)
       - ``agent_type`` present in payload → ``agent:<agent_type>`` (unchanged)
       - ``agent_type`` absent + ``project_root`` set + ``.claude/settings.json``
         has ``agent: X`` → ``agent:X`` (main session runs as the configured agent)
       - ``agent_type`` absent + no configured default → ``operator``
 
     Pass ``project_root`` (the adopter tree root) from the hook entry-point so
-    main-session calls resolve to the configured agent.  The CLI synthesizes
-    payloads with explicit ``agent_type`` and does not need to pass a root.
+    main-session calls resolve to the configured agent, and so a file tool's
+    target can be placed in the agent workspace (a path-scoped privilege);
+    without a root no path-scoped privilege is recognized. The CLI's probe
+    passes the root too, with ``as_subject`` naming the subject it probes.
     """
     try:
         agent_type = payload.get("agent_type")
-        if agent_type:
+        if as_subject:
+            subject = as_subject
+        elif agent_type:
             subject = f"agent:{agent_type}"
         elif project_root:
             default_agent = _read_default_agent(project_root)
@@ -403,10 +593,36 @@ def hook_decide(
                 # for all other tools.  A missing key becomes None, which _scope_ok
                 # treats as an unparseable host → deny for domain-scoped grants.
                 "url": payload.get("tool_input", {}).get("url"),
+                # A file tool's target and the project root, for the path-scoped
+                # privileges (the agent workspace).
+                "path": _target_path(payload.get("tool_input", {})),
+                "root": project_root,
             }
         return decide(model, catalog, request)
     except Exception as exc:  # fail-open
         return "abstain", f"hook fault → fail-open: {exc!r}"
+
+
+def targets_path_scoped(
+    catalog: dict[str, Any], payload: dict[str, Any], project_root: str | None
+) -> bool:
+    """Does a path-scoped privilege — the agent workspace — recognize this
+    PreToolUse payload? File tools only, like the recognizer itself.
+
+    The diagnostic loop's defect test (#1043): every shipped profile grants the
+    workspace to every agent, so a prompt for a request it recognizes is a
+    defect, not an allowlist gap. Never raises; any fault reads as False."""
+    try:
+        request = {
+            "type": "tool",
+            "tool": payload.get("tool_name"),
+            "cwd": payload.get("cwd", ""),
+            "path": _target_path(payload.get("tool_input") or {}),
+            "root": project_root,
+        }
+        return bool(_path_scoped_privileges(catalog.get("privileges", {}), request))
+    except Exception:
+        return False
 
 
 # ---- thin loaders ----------------------------------------------------------

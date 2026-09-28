@@ -31,8 +31,9 @@ closes all three.
   adopter's own repo). It is a distinct surface. (Placement — core CLI vs tiny
   capability — is an open question below.)
 - It is a **deliberate cross-repo write** to a repo the session isn't rooted in.
-  Sanctioned because the human explicitly invokes `report` (core.md rule 18's
-  operator-gated exception); the command states the target plainly.
+  Sanctioned because the human explicitly invokes `report` (the
+  cross-repository rule's operator-gated exception, core.md rule 19); the
+  command states the target plainly.
 
 ## Command palette
 

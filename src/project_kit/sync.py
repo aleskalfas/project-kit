@@ -80,6 +80,7 @@ def run_sync(target_root: Path, dry_run: bool = False, force: bool = False) -> N
         # primitive, so it must run here too or backbone/capability runtime
         # ignores would never render in self-host (or any adapter-less) sync.
         install._render_runtime_ignore(ctx)  # pyright: ignore[reportPrivateUsage]
+        install.ensure_agent_workspace(ctx)
         click.echo()
         click.echo("Self-host sync complete (deploy primitives re-run).")
         return
@@ -135,6 +136,10 @@ def run_sync(target_root: Path, dry_run: bool = False, force: bool = False) -> N
     # primitive, so it covers backbone + capability declarations regardless of
     # whether an adapter is installed.
     install._render_runtime_ignore(ctx)  # pyright: ignore[reportPrivateUsage]
+
+    # The agent workspace and its local git exclusion (#1043) — a core step,
+    # also run on the self-host path above.
+    install.ensure_agent_workspace(ctx)
 
     click.echo()
     click.echo("Sync complete.")

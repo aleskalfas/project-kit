@@ -26,6 +26,9 @@ Scope (per the #249 critic pass):
     `unprojectable`.
   - Per-agent tool-gating is frontmatter-owned and has no consumer yet (#249
     cut it); per-agent tool grants are reported as `runtime`.
+  - A path-scoped allow (the agent workspace) projects nothing: the hook
+    recognizes a file tool's target, and any session-wide rule would reach
+    beyond its folders → `runtime`.
 """
 from __future__ import annotations
 
@@ -78,6 +81,15 @@ def project(model: dict[str, Any], catalog: dict[str, Any]) -> dict[str, Any]:
                      "scoped grant — confinement is sandbox-delegated (ADR-004), "
                      "not expressible in session-wide settings")
                 continue
+            if recog.get("path"):
+                # A path-scoped allow (the agent workspace, #1043) is keyed on
+                # a file tool's target, which only the hook sees; a session-wide
+                # tool allow would reach beyond its folders, so none is
+                # emitted — a harness that needed an explicit rule for the
+                # folder would render it here.
+                note(runtime, subject, pid,
+                     "path-scoped allow — the hook recognizes a file tool's "
+                     "target; a session-wide rule would reach beyond its folders")
             tools = recog.get("tool", []) or []
             bash = recog.get("bash", []) or []
             if tools:

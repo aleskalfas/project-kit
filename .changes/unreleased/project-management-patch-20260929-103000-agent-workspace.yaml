@@ -1,0 +1,12 @@
+component: project-management
+kind: patch
+custom:
+  category: Changed
+body: >
+  The `project-manager` and `pm-reviewer` agents are told to keep their
+  intermediate files — drafts, scripts, captured output, notes — in the agent
+  workspace, `.agent-workspace/` at the repository root, and nowhere else
+  outside the repository, writing them with the file tools: the workspace is
+  granted to every agent for those, while a shell redirect into it is judged
+  like any other shell write. DEC-045 cites the cross-repository rule by
+  meaning and follows its renumbering to rule 19.
