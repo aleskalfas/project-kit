@@ -13,14 +13,18 @@ Opens a PR per the methodology's branch + PR conventions
 Inputs:
   * Current branch must match `git-conventions.yaml`'s branch-name
     pattern (refused if not).
-  * Closing issue number — derived from the branch name's `<N>`
-    segment unless overridden by `--closes`.
-  * PR Conventional-Commits `<type>` — derived from the closing
+  * Closing issue number(s) — derived from the branch name's `<N>`
+    segment unless overridden by `--closes`, which repeats: one PR that
+    lands several Tasks closes each of them on merge (#1049). The first
+    is the primary issue — it supplies the title's `<type>`, the default
+    summary and the base branch.
+  * PR Conventional-Commits `<type>` — derived from the primary closing
     issue's `type:*` label via classification.yaml's pr_type_mapping;
     overridden by `--type`.
   * PR title scope — extracted from caller via `--scope` or omitted.
-  * PR body — `templates/PR.md` skeleton with the `Closes #N`
-    placeholder filled in; user-supplied `--body-file` overrides.
+  * PR body — `templates/PR.md` skeleton with a `Closes #N` line per
+    closing issue; user-supplied `--body-file` overrides, and gains a
+    `Closes #N` line for any closing issue it does not already name.
 
 Membership gate per DEC-021 runs at startup.
 
@@ -83,10 +87,15 @@ def main() -> int:
     parser.add_argument(
         "--closes",
         type=int,
+        action="append",
         default=None,
+        metavar="N",
         help=(
-            "Closing issue number. Default: derived from the current "
-            "branch's `<conv-type>/<N>-<slug>` form."
+            "Closing issue number; repeat it to close several issues with one "
+            "PR — the body carries a `Closes #N` line for each. The first is "
+            "the primary issue (title <type>, default summary, base branch). "
+            "Default: derived from the current branch's "
+            "`<conv-type>/<N>-<slug>` form."
         ),
     )
     parser.add_argument(
@@ -216,20 +225,26 @@ def main() -> int:
         )
         return 1
 
-    # Derive the closing issue number.
-    issue_number = args.closes if args.closes is not None else _extract_issue_number(branch)
-    if issue_number is None:
+    # Derive the closing issue number(s); the first is the primary issue.
+    closing_issues = _closing_issues(args.closes, branch)
+    if not closing_issues:
         print(
             f"error: could not derive closing issue from branch {branch!r}; "
             "pass --closes <N>.",
             file=sys.stderr,
         )
         return 2
+    issue_number = closing_issues[0]
 
-    # Fetch the closing issue to derive title / type label.
+    # Fetch the primary closing issue to derive title / type label.
     issue = _gh_get_issue(issue_number, config)
     if issue is None:
         return 2
+    # Every other closing issue must exist too — a typo would otherwise ride
+    # into the body as a `Closes #N` that closes the wrong issue on merge.
+    for other in closing_issues[1:]:
+        if _gh_get_issue(other, config) is None:
+            return 2
 
     issue_title = str(issue.get("title", ""))
     issue_labels = [
@@ -260,7 +275,7 @@ def main() -> int:
     # Build the PR body.
     body = _build_pr_body(
         capability_root=capability_root,
-        issue_number=issue_number,
+        issue_numbers=closing_issues,
         body_file=args.body_file,
     )
     if body is None:
@@ -317,7 +332,7 @@ def main() -> int:
     print("open-pr: plan")
     print(f"  branch:  {branch}")
     print(f"  base:    {base}")
-    print(f"  closes:  #{issue_number}")
+    print(f"  closes:  {', '.join(f'#{n}' for n in closing_issues)}")
     print(f"  type:    {conv_type}")
     if args.scope:
         print(f"  scope:   {args.scope}")
@@ -384,6 +399,18 @@ def _extract_issue_number(branch: str) -> int | None:
     return int(m.group(1))
 
 
+def _closing_issues(closes: list[int] | None, branch: str) -> list[int]:
+    """The issues the PR closes, primary first, without repeats.
+
+    `--closes` (repeatable) names them explicitly; without it the branch's
+    `<N>` segment is the one closing issue. Empty when neither yields one.
+    """
+    if closes:
+        return list(dict.fromkeys(closes))
+    derived = _extract_issue_number(branch)
+    return [derived] if derived is not None else []
+
+
 def _conv_type_from_issue_labels(
     labels: list[str],
     classification: dict,
@@ -417,30 +444,35 @@ def _summary_from_issue_title(title: str) -> str:
 def _build_pr_body(
     *,
     capability_root: Path,
-    issue_number: int,
+    issue_numbers: list[int],
     body_file: Path | None,
 ) -> str | None:
+    """The PR body, carrying a `Closes #N` line for every closing issue."""
     if body_file is not None:
         try:
-            return body_file.read_text(encoding="utf-8")
+            authored = body_file.read_text(encoding="utf-8")
         except OSError as exc:
             print(
                 f"error: failed to read {body_file}: {exc}",
                 file=sys.stderr,
             )
             return None
+        return pr_validation.with_closing_references(authored, issue_numbers)
     template_path = capability_root / "templates" / "PR.md"
     if not template_path.is_file():
-        return f"Closes #{issue_number}\n"
+        return pr_validation.with_closing_references("", issue_numbers)
     raw = template_path.read_text(encoding="utf-8")
     # Drop the HTML comment scaffolding lines so the PR body stays clean.
     stripped = _strip_html_comments(raw)
-    # Replace the `Closes #` placeholder with the actual issue number.
-    out = re.sub(r"^Closes #\s*$", f"Closes #{issue_number}", stripped, flags=re.MULTILINE)
-    if out == stripped:
-        # Template lacked the placeholder; prepend a Closes line.
-        out = f"Closes #{issue_number}\n\n{stripped}"
-    return out
+    # Replace the `Closes #` placeholder with one line per closing issue; a
+    # template without the placeholder gets them prepended instead.
+    closing_lines = "\n".join(f"Closes #{n}" for n in issue_numbers)
+    # `[ \t]*`, not `\s*`: the latter also swallowed the newline after the
+    # placeholder, gluing the next heading onto the last `Closes` line.
+    out = re.sub(
+        r"^Closes #[ \t]*$", lambda _m: closing_lines, stripped, count=1, flags=re.MULTILINE
+    )
+    return pr_validation.with_closing_references(out, issue_numbers)
 
 
 def _strip_html_comments(text: str) -> str:
