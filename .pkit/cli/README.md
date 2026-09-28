@@ -420,6 +420,7 @@ Read-only state check. Verifies:
 - The manifest — every declared path is present and well-formed.
 - Per-area schema rules — decision-record schema, link validity, naming conventions, and any rules each area documents in its own README.
 - **The configuration file** — `.pkit/project/config.yaml` against the backbone-shipped `config.schema.json`, then the repository checks its records ask for (documentation roots inside the repository and outside `.pkit/`, friction patterns inside the repository and matching something, connection entries naming installed capabilities). Reported under a `configuration` heading with a severity per finding; only errors fail. See "Configuration file" above for every key and finding.
+- **Package metadata** — every registered capability's and adapter's `package.yaml` against the backbone-shipped `package.schema.json`, then the repository checks (name matches directory, versions and ranges parse, command scripts exist, connection points under a provided role with their companion schemas and commands, document locations and friction places relative). Reported under a `packages` heading; errors fail, unknown-key warnings only print. See the lifecycle README, "Validation: the package schema".
 
 Reports issues with their locations and a brief diagnosis. Makes no changes.
 

@@ -147,6 +147,71 @@ Fields:
 - **`requires_capabilities`** — optional list of capability dependencies, each a `{name, version}` pair where `version` is a semver range. The lifecycle gates on these at install, upgrade, and uninstall (COR-030). Absence means no dependencies; capabilities without this field are unaffected.
 - **`footprint`** — optional list of git-footprint globs this component deploys outside `.pkit/` (e.g. an adapter's `.claude/` deploys). Aggregated across installed components and routed into the per-clone `.git/info/exclude` by `pkit visibility private` (ADR-009). Absence means the component adds nothing to the footprint beyond the backbone's own `.pkit/`.
 - **`runtime_ignore`** — optional list of runtime-local file globs this component wants git-ignored (e.g. per-clone logs, caches, sidecars under the component's own subtree). Aggregated across installed components and wholesale-rendered into the pkit-owned `.pkit/.gitignore` (ADR-009 rule 7). Each component names only paths it owns — core never invents adapter/capability paths. Absence means the component contributes no runtime-ignore lines; components without a `package.yaml` (such as the backbone itself) declare their runtime-ignore paths through a core-level seam instead.
+- **`commands`** — optional tree of the commands the dispatcher registers under `pkit <capability>` (COR-021). A key is a token; a value carrying `script` (a path relative to the component root, which must exist) and `help` (one line) is a leaf; any other value is a sub-group of further tokens. **`aliases`** — optional alternative namespaces for the same tree (`pm` for `project-management`). **`description`** — the one-line summary the command group shows as help.
+- **`provides`** — reserved by COR-013 for hook implementations (`{hook-name: implementation}`); no shipped file uses it.
+
+#### Validation: the package schema
+
+Every `package.yaml` validates against one backbone file schema, `.pkit/schemas/backbone/package.schema.json` (Draft 2020-12; the class is described in the schemas README's "Backbone file schemas" section and placed by ADR-056). It is read from the tree of the project being validated, never from a copy in the binary, so a tree recorded before it landed skips the shape checks and reports so. The validator is `project_kit.package_validate`; two callers run it on the same code: `pkit validate` (the **"packages"** pass, over every capability and adapter the backbone manifest registers) and the register pre-flight below (for the one incubated capability about to be activated).
+
+- **Two `schema_version` values are in use, and both are accepted.** Version 1 is the scaffolded default (`claude-code`, `living-docs`, `software-analysis`, `software-engineering`); version 2 marks the files that adopted the `commands:` block when COR-021 said the version bumps with it (`demo-recording`, `evidence`, `project-management`). No reader distinguishes the two — the dispatcher reads `commands:` from either — and every field is optional in both, so the schema accepts `1` and `2` as an integer enum and nothing is bumped or migrated. A third value is an error until a record introduces it.
+- **Known keys are strictly typed; unknown keys warn.** The schema leaves `additionalProperties` open at the top level and inside the blocks below, so an unknown key is not a schema error: the validator reports it as a **warning** with the nearest known key suggested (`unknown key 'foootprint'; did you mean 'footprint'?`), through the one renderer every backbone file schema shares (ADR-056 point 4). Warnings never fail `pkit validate` or refuse a register. **Flipping to strict — unknown keys as errors — is Task #999**, taken once every block is known; the schema's description says so.
+- **Repository checks**, all errors: `component.name` equals the directory name; `component.version`, `requires_backbone` and every dependency range parse; every command `script` exists; a declared connection point sits under a role in `connections.roles`; an accepted data point's (and an offered event's) companion `schema` exists under the capability's `schemas/`; every command a point or extension names exists in `commands:`; `docs.locations` paths, `friction` places and surface entries, `footprint` and `runtime_ignore` entries are relative sub-paths (no absolute path, no `..`), and every command `script` path is relative; a place's `location` is a declared one. Checks that need the wiring resolver — two providers of one role, counterpart version compatibility, a stale generated `depends-on` — are Task #983's; `package_validate.resolve_active_roles` and `check_wiring` are the hooks it fills.
+
+#### The connection, documentation and friction blocks
+
+Three optional blocks carry what the newer core records ask a component to declare. The key names each record decides are used as written; the layout beneath them is this reference's choice.
+
+```yaml
+# COR-053 point 3 — roles this component provides and its connection points.
+connections:
+  roles: [pkit::documentation]                     # qualified, <publisher>::<role>
+  extension-points:                                # points this component DEFINES
+    accepts:                                       # data in (a slot, COR-052)
+      pkit::documentation:reading-evidence:        # <publisher>::<role>:<point>; the role must be provided above
+        schema_version: 1                          # the point's version (COR-053 point 5)
+        schema: reading-evidence.schema.json       # companion under this component's schemas/
+        description: What readers found on each page.   # required prose on every extension point
+        combination: union                         # optional: single | union
+        mandatory: { reason: "…" }                 # optional; the mark without a reason is refused
+    offers:                                        # processes and events out
+      pkit::documentation:page-created:
+        kind: event
+        schema_version: 1
+        description: A page was written by a writing command.
+        command: publish                           # the emitting command; must exist in commands:
+        schema: page-created.schema.json           # payload companion under schemas/
+        subject: page                              # the payload field naming the subject
+      pkit::documentation:review:
+        kind: process
+        schema_version: 1
+        description: The review process other components may depend on.
+        process: page-review                       # the offered process definition's id (COR-036)
+  extensions:                                      # where this component PLUGS INTO others
+    contributes:                                   # data it supplies to another role's point
+      - { point: pkit::analysis:glossary, schema_version: 1, command: export-glossary }
+    subscribes:                                    # events it reacts to, with its command
+      - { point: pkit::analysis:use-case-created, schema_version: 1, command: refresh }
+    depends-on:                                    # GENERATED from process definitions' depends_on (COR-053 point 4)
+      generated: true                              # the mark; a hand-written copy without it is refused
+      entries:
+        - { process: project-management:issue-lifecycle }
+
+# COR-049 point 4 — the sub-paths of this component's own documents, relative to a documentation root.
+docs:
+  locations:
+    pages: { path: pages, root: user }             # root: internal (default) | user; relative sub-paths only
+    spaces: { path: spaces }
+
+# COR-050 points 1 and 8 — where anchored artefacts live, and the surface that ought to be described.
+friction:
+  places:
+    - { location: pages, path: "**/*.md" }         # inside a declared location…
+    - { path: "notes/**/*.md" }                    # …or, without one, inside the project
+  surface: ["src/**"]                              # repository-relative globs
+```
+
+A command is referenced by its token path through the `commands:` tree, space-separated for a nested leaf (`create page`). `depends-on` is the one block a person never writes: the refresh command regenerates it from the process definitions and marks it `generated: true`; validation today fixes only the shape and the mark, and fails a stale copy once the resolver exists (#983).
 
 ## The component registry
 
@@ -173,7 +238,7 @@ Before placing files, `pkit capabilities install` runs four checks in order:
 
 `pkit capabilities register` shares the install pre-flights that still apply (backbone-satisfaction, capability-dependencies, collision detection against *other* installed content) and skips "exists in kit source" (the in-repo tree *is* the source). It adds one check the install path doesn't need:
 
-- **Self-consistency validation (COR-031 D1)** — the adopter hand-authored this capability; nothing upstream validated it. Before activation, its own `package.yaml` (parseable capability manifest, valid version, valid `requires_backbone` / dependency ranges), required layout (`README.md`), and own schema pairs (validated by the same validator `pkit schemas validate` runs) are checked against the working tree, which is its spec. Refuse with the structural problems listed. This is *self-validation*, not source-reconciliation — origin suppresses the latter (below), never the former.
+- **Self-consistency validation (COR-031 D1)** — the adopter hand-authored this capability; nothing upstream validated it. Before activation, its own `package.yaml` (run through the same package validator `pkit validate` uses — the schema and the repository checks in "Validation" above; only its errors refuse, its unknown-key warnings do not), required layout (`README.md`), and own schema pairs (validated by the same validator `pkit schemas validate` runs) are checked against the working tree, which is its spec. Refuse with the structural problems listed. This is *self-validation*, not source-reconciliation — origin suppresses the latter (below), never the former.
 
 ### Uninstall: origin-aware removal (COR-031 D4)
 
