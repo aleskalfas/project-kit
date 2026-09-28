@@ -98,6 +98,15 @@ def test_form_matchers_accept_exactly_what_parse_reads(bpr, forms) -> None:
         assert accepted == (bpr.parse_first_line(line, forms["task"]) is not None), line
 
 
+def test_every_shipped_type_may_name_a_milestone(bpr, forms) -> None:
+    """#1016: which types may sit under a milestone is read from the shipped
+    forms — all four offer the milestone line, an EPIC's being optional."""
+    assert {name for name, form in forms.items() if bpr.form_allows_milestone(form)} == {
+        "epic", "feature", "umbrella", "task",
+    }
+    assert not bpr.form_allows_milestone("Feature: #<N>")
+
+
 # --- a milestone first line follows a milestone move (#1049) -------------
 
 

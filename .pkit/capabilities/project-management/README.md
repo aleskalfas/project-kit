@@ -371,7 +371,7 @@ Setting the id touches no issue — the per-issue ownership *marker* is written 
 | `close-issue <N> --mode=pr-merge --pr <M>` | Closes an open **leaf** whose work landed in merged PR `M` without the PR naming it — a Task done through another Task's PR. PR `M` is verified merged, the checkbox close-gate runs, the reference is posted as a comment (once: a retry does not repeat it), the issue closes as completed, and the closure cascade runs. A container, an unmerged PR and an unticked box are refused. |
 | `close-issue <N> --mode=cascade-eligibility-close` | Closes a container (epic/feature/umbrella) once all its children are closed and its own checkboxes are ticked (a non-skippable DEC-007 gate). |
 | `reopen-issue <N> [--reason "<R>"]` | Reopens a closed issue and puts it back into the lifecycle: its state label is removed, so it reads as `backlog` when it has a milestone and `todo` otherwise, and `start-work` (or `promote-issue`) takes it on from there. An open issue still labelled done is repaired the same way. |
-| `edit-issue <N> [--title T] [--body B \| --body-file F \| --append A] [--milestone <M> \| --clear-milestone]` | Title / body edit, validated against the title and body rules for the fields edited (see above). `--milestone` moves the issue to an OPEN milestone — its number or exact title, validated as `create-issue --milestone` validates it; `--clear-milestone` detaches it. |
+| `edit-issue <N> [--title T] [--body B \| --body-file F \| --append A] [--milestone <M> \| --clear-milestone --reason "<R>"]` | Title / body edit, validated against the title and body rules for the fields edited (see above). `--milestone` attaches the issue to an OPEN milestone or moves it to another — its number or exact title, validated as `create-issue --milestone` validates it, for an issue whose type may carry one; `--clear-milestone` detaches it. A milestone change needs `--reason` and posts an audit comment. See "Attaching an issue to a Milestone" below. |
 
 **Why a reopen removes the state label instead of transitioning out of done.** `done` is the workflow's terminal state (`schemas/workflow.yaml`), and the closure cascade folds children against it; a transition out of it would make it an end state that is not one. A reopened issue re-enters the lifecycle where any open issue without a state label sits — the detectors read `backlog` with a milestone and `todo` without — which is where a freshly filed or freshly scheduled issue sits too. No state label is *added*, so the reset does not show as an ungoverned state change (`history --check-drift` counts added state labels). Where the state is derived from open/closed, nothing is removed; where it lives on a Projects-v2 board, reset the board's Status by hand, as for `move-issue`.
 
@@ -381,8 +381,15 @@ Setting the id touches no issue — the per-issue ownership *marker* is written 
 
 | Command | What it does |
 |---|---|
-| `open-pr [--closes <N> ...] [--type T] [--scope S] [--summary "<s>"] [--body-file F] [--draft]` | Opens the PR for the current branch. The closing issue comes from the branch name (`<type>/<N>-<slug>`) unless `--closes` names it; **`--closes` repeats**, so one PR that lands several Tasks closes each of them on merge. The first closing issue is the primary one: it supplies the title's Conventional-Commits type, the default summary and the base branch. The body carries a `Closes #N` line for every closing issue — the template gets one each, and a `--body-file` gains any it does not already name. |
+| `open-pr [<N>] [--closes <N> ...] [--type T] [--scope S] [--summary "<s>"] [--body-file F] [--draft]` | Opens the PR for the current branch. The closing issue is the positional `<N>`, as `review-work` and `done-work` take it, or `--closes <N>`, its explicit form; without either it comes from the branch name (`<type>/<N>-<slug>`). **`--closes` repeats**, so one PR that lands several Tasks closes each of them on merge. The first closing issue is the primary one: it supplies the title's Conventional-Commits type, the default summary and the base branch. The body carries a `Closes #N` line for every closing issue — the template gets one each, and a `--body-file` gains any it does not already name. |
 | `edit-pr <PR> [--title T] [--body B \| --body-file F \| --append A] [--closes <N> ...]` | Title / body edit, validated against the PR rules. `--closes` (repeatable) adds a `Closes #N` line beside the existing ones for each named issue the body does not already close. |
+
+**The PR title is composed, not given whole:** `<type>(<scope>): <summary>`. `--type` overrides the type derived from the primary issue's `type:*` label, `--scope` adds the scope (the title has none without it), and `--summary` is only the description part after the colon, defaulting to the issue title without its `[Type]` prefix, lowercased:
+
+```
+pkit pm open-pr 1017 --scope pm --summary "take the issue number positionally" --body-file body.md
+# → fix(pm): take the issue number positionally   (closes #1017; fix from its type:bug label)
+```
 
 `validate-pr` reads every closing reference: a PR closing several issues is valid, and its title type is cross-checked against each closing issue's type (a mix of types is a warning). `done-work <N>` gates the checkboxes of issue `N` only, so tick the other closing issues' boxes before the merge, and run `close-issue <M> --mode=pr-merge` on each afterwards to reconcile its state label.
 
@@ -403,7 +410,22 @@ Both run the DEC-021 membership gate and the COR-039 foreign-repo guard at start
 
 A Milestone's children are resolved the same way the rest of the capability resolves membership: the union of issues carrying the **native GitHub Milestone field** for it and issues whose body carries the textual `Milestone: [#<n>](../milestone/<n>)` ref. Because a Milestone has no comment thread, the audit note is **appended to the description** in the same PATCH that flips `state=closed` (idempotent on re-run), rather than posted as a comment the way `close-issue` does.
 
-> **Not yet automated:** date-based / `either` closes do **not** roll open children forward to the next Milestone (schema `rollforward_behaviour`) — `close-milestone` only warns and lists them, so reassign by hand for now. Automated rollforward, and surfacing "milestone now closeable" from the closure cascade when the last child EPIC closes, are follow-ups.
+> **Not yet automated:** date-based / `either` closes do **not** roll open children forward to the next Milestone (schema `rollforward_behaviour`) — `close-milestone` only warns and lists them, so reassign them with `edit-issue --milestone` for now. Automated rollforward, and surfacing "milestone now closeable" from the closure cascade when the last child EPIC closes, are follow-ups.
+
+##### Attaching an issue to a Milestone
+
+Which verb depends on where the issue is in the lifecycle:
+
+- **At filing** — `create-issue --milestone <M>`.
+- **A Todo issue being scheduled** — `promote-issue <N> --milestone <M> --reason "<R>"`. Scheduling *is* the Todo → Backlog transition, so it goes through the verb that owns it, and `move-issue` records the audit comment.
+- **Any other issue — attaching, moving, detaching** — `edit-issue <N> --milestone <M> --reason "<R>"` (or `--clear-milestone --reason "<R>"`). No state transition happens. The milestone must be OPEN (number or exact title), and the issue's type must be one `issue-types.yaml` lets sit under a milestone (its parents include `milestone`, or its parent-ref form offers a `Milestone:` line — true of all four shipped types, an EPIC included). Before writing, it posts an audit comment naming the old and new milestone and the reason; a retry does not post it twice. The first body line follows the move, and a change that would move the issue in the lifecycle is refused (see "A milestone edit is not a state change" above).
+
+```
+pkit pm edit-issue 885 --milestone 5 --reason "EPIC scheduled into Milestone 5"
+pkit pm edit-issue 1044 --milestone "Milestone 6: …" --reason "filed into the wrong milestone"
+```
+
+`promote-issue` without `--milestone` leaves the milestone as it is and says so (`milestone: unchanged`). On an issue already past Todo, `promote-issue --milestone` still attaches the milestone but has no transition to carry an audit comment, so it points at `edit-issue` instead.
 
 **Review-mode resolution** is settled in [project-management:DEC-027-review-modes] (mode lookup) and [project-management:DEC-028-agent-as-approver-paths] (agent gate).
 

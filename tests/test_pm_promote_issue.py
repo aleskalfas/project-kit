@@ -330,17 +330,44 @@ def test_main_milestone_omitted_calls_move_issue(pi, monkeypatch, capsys) -> Non
     assert move_calls == [(42, "backlog", "triage")]
 
 
-def test_main_milestone_omitted_ok_line_says_no_milestone(pi, monkeypatch, capsys) -> None:
-    """The [ok] line must not claim a milestone when none was given."""
+def test_main_milestone_omitted_ok_line_says_milestone_unchanged(pi, monkeypatch, capsys) -> None:
+    """Without --milestone the milestone is left as it is — the output says
+    so, rather than "no milestone", which read as if an attached milestone had
+    been removed (#1016)."""
     _wire_main_mocks(
         pi, monkeypatch,
         sys_argv=["promote-issue", "42", "--reason", "triage", "--yes"],
     )
     pi.main()
     out = capsys.readouterr().out
-    assert "no milestone" in out
-    # Must not mention a specific milestone title
-    assert "milestone:" not in out or "(none" in out
+    assert "milestone: unchanged" in out
+    assert "(milestone unchanged)" in out
+    assert "no milestone" not in out
+
+
+def test_already_promoted_without_milestone_says_unchanged(pi, monkeypatch, capsys) -> None:
+    """#1016: a later promote-issue on an issue past Backlog, without
+    --milestone, must not suggest its milestone went away."""
+    _wire_main_mocks(
+        pi, monkeypatch,
+        sys_argv=["promote-issue", "885", "--reason", "triage", "--yes"],
+        current_state="in-progress",
+    )
+    assert pi.main() == 0
+    out = capsys.readouterr().out
+    assert "milestone unchanged; no state transition needed" in out
+    assert "no milestone" not in out
+
+
+def test_already_promoted_with_milestone_points_at_edit_issue(pi, monkeypatch, capsys) -> None:
+    _wire_main_mocks(
+        pi, monkeypatch,
+        sys_argv=["promote-issue", "885", "--milestone", "Sprint 1", "--reason", "r", "--yes"],
+        milestone_obj=_FakeMilestone(number=7, title="Sprint 1"),
+        current_state="in-progress",
+    )
+    assert pi.main() == 0
+    assert "edit-issue 885 --milestone" in capsys.readouterr().out
 
 
 # --- milestone-given happy path (acceptance criterion 2, unchanged) ---

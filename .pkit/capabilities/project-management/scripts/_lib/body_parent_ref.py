@@ -86,6 +86,11 @@ def _options(parent_ref_form: str) -> list[tuple[bool, re.Pattern[str]]]:
     return options
 
 
+def form_allows_milestone(parent_ref_form: str) -> bool:
+    """Whether a type's ``parent_ref_form`` offers a milestone parent-ref."""
+    return any(is_milestone for is_milestone, _ in _options(parent_ref_form))
+
+
 def form_matchers(parent_ref_form: str) -> list[re.Pattern[str]]:
     """Compile a type's ``parent_ref_form`` into per-option first-line matchers.
 

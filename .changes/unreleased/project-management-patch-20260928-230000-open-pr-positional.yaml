@@ -1,0 +1,11 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `open-pr` takes the closing issue number positionally, as `review-work` and
+  `done-work` do (`open-pr 1017`), keeping `--closes` as the explicit form; with
+  both, the positional issue is the primary one (#1017). Its help now states
+  how the PR title is composed — `<type>(<scope>): <summary>`, with `--summary`
+  as the description part only — so a first invocation no longer fails on the
+  asymmetry with its sibling verbs.

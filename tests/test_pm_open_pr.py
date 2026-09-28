@@ -240,9 +240,17 @@ def test_build_pr_body_template_carries_one_line_per_closing_issue(op, tmp_path)
 
 
 def test_closing_issues_from_repeated_flag_then_branch(op) -> None:
-    assert op._closing_issues([7, 8, 7], "feat/7-thing") == [7, 8]
-    assert op._closing_issues(None, "feat/7-thing") == [7]
-    assert op._closing_issues(None, "main") == []
+    assert op._closing_issues(None, [7, 8, 7], "feat/7-thing") == [7, 8]
+    assert op._closing_issues(None, None, "feat/7-thing") == [7]
+    assert op._closing_issues(None, None, "main") == []
+
+
+def test_closing_issues_positional_first(op) -> None:
+    """#1017: the positional <N> is the closing issue, as review-work and
+    done-work take it; with --closes as well, it stays the primary one."""
+    assert op._closing_issues(9, None, "feat/7-thing") == [9]
+    assert op._closing_issues(9, [10], "feat/7-thing") == [9, 10]
+    assert op._closing_issues(9, [9], "main") == [9]
 
 
 def test_build_pr_body_fallback_when_no_template(op, tmp_path) -> None:
@@ -316,6 +324,42 @@ def test_main_repeated_closes_puts_every_reference_in_the_body(op, monkeypatch) 
     assert captured["title"] == "feat: land both"
     closing = [ln for ln in captured["body"].splitlines() if ln.startswith("Closes #")]
     assert closing == ["Closes #42", "Closes #43"]
+
+
+def test_main_takes_the_issue_number_positionally(op, monkeypatch) -> None:
+    """#1017: `open-pr 43` closes #43 — not the branch's #42 — exactly as
+    `open-pr --closes 43` does."""
+    captured = _stub_main(
+        op,
+        monkeypatch,
+        ["open-pr", "43", "--scope", "pm", "--summary", "land it", "--draft", "--yes"],
+        {43: _open_issue()},
+    )
+    assert op.main() == 3  # the faked create returns no URL
+    assert captured["title"] == "feat(pm): land it"
+    closing = [ln for ln in captured["body"].splitlines() if ln.startswith("Closes #")]
+    assert closing == ["Closes #43"]
+
+
+def test_positional_and_closes_close_both(op, monkeypatch) -> None:
+    captured = _stub_main(
+        op,
+        monkeypatch,
+        ["open-pr", "43", "--closes", "44", "--summary", "land both", "--draft", "--yes"],
+        {43: _open_issue(), 44: _open_issue()},
+    )
+    assert op.main() == 3
+    closing = [ln for ln in captured["body"].splitlines() if ln.startswith("Closes #")]
+    assert closing == ["Closes #43", "Closes #44"]
+
+
+def test_help_states_how_the_title_is_composed(op, monkeypatch, capsys) -> None:
+    monkeypatch.setattr(sys, "argv", ["open-pr", "--help"])
+    with pytest.raises(SystemExit):
+        op.main()
+    text = " ".join(capsys.readouterr().out.split())
+    assert "<type>(<scope>): <summary>" in text
+    assert "description part" in text
 
 
 def test_main_refuses_an_unknown_second_closing_issue(op, monkeypatch) -> None:

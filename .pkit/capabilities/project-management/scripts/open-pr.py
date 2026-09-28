@@ -13,15 +13,18 @@ Opens a PR per the methodology's branch + PR conventions
 Inputs:
   * Current branch must match `git-conventions.yaml`'s branch-name
     pattern (refused if not).
-  * Closing issue number(s) — derived from the branch name's `<N>`
-    segment unless overridden by `--closes`, which repeats: one PR that
-    lands several Tasks closes each of them on merge (#1049). The first
+  * Closing issue number(s) — the positional `<N>`, as review-work and
+    done-work take it (#1017), and/or `--closes`, its explicit form, which
+    repeats: one PR that lands several Tasks closes each of them on merge
+    (#1049). Without either, the branch name's `<N>` segment. The first
     is the primary issue — it supplies the title's `<type>`, the default
     summary and the base branch.
-  * PR Conventional-Commits `<type>` — derived from the primary closing
-    issue's `type:*` label via classification.yaml's pr_type_mapping;
-    overridden by `--type`.
-  * PR title scope — extracted from caller via `--scope` or omitted.
+  * PR title — composed as `<type>(<scope>): <summary>`, never taken
+    whole. `<type>` is derived from the primary closing issue's `type:*`
+    label via classification.yaml's pr_type_mapping, overridden by
+    `--type`; `(<scope>)` comes from `--scope` and is omitted without it;
+    `<summary>` — the description part — is `--summary`, defaulting to
+    the issue title without its `[Type]` prefix, lowercased.
   * PR body — `templates/PR.md` skeleton with a `Closes #N` line per
     closing issue; user-supplied `--body-file` overrides, and gains a
     `Closes #N` line for any closing issue it does not already name.
@@ -32,7 +35,7 @@ Self-contained via PEP 723; runs via
   uv run --script .pkit/capabilities/project-management/scripts/open-pr.py --scope cli --summary "add new dispatcher"
 
 Or via the dispatcher (per COR-021):
-  pkit project-management open-pr --summary "..."
+  pkit project-management open-pr 42 --scope cli --summary "add new dispatcher"
 
 Exit codes:
   0  PR opened (or dry-run reported)
@@ -79,9 +82,26 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Open a GitHub PR per the methodology's branch + PR + title "
-            "conventions. Derives the closing issue from the current branch "
-            "name; derives the Conventional Commits <type> from the issue's "
-            "type:* label."
+            "conventions. The closing issue is the positional <N> (as "
+            "review-work and done-work take it), or --closes, or else the "
+            "current branch's <N>. The PR title is composed, not taken whole: "
+            "`<type>(<scope>): <summary>`, where <type> is --type or the "
+            "primary closing issue's type:* label mapped through "
+            "classification.yaml, `(<scope>)` is --scope and is left out "
+            "without it, and <summary> — the title's description part — is "
+            "--summary or the issue title without its [Type] prefix, "
+            "lowercased."
+        ),
+    )
+    parser.add_argument(
+        "issue_number",
+        nargs="?",
+        type=int,
+        default=None,
+        metavar="N",
+        help=(
+            "The closing issue, as review-work and done-work take it: the same "
+            "as `--closes N`, and the primary issue when --closes names more."
         ),
     )
     parser.add_argument(
@@ -91,9 +111,10 @@ def main() -> int:
         default=None,
         metavar="N",
         help=(
-            "Closing issue number; repeat it to close several issues with one "
-            "PR — the body carries a `Closes #N` line for each. The first is "
-            "the primary issue (title <type>, default summary, base branch). "
+            "Closing issue number — the explicit form of the positional <N>; "
+            "repeat it to close several issues with one PR — the body carries "
+            "a `Closes #N` line for each. The first closing issue is the "
+            "primary one (title <type>, default summary, base branch). "
             "Default: derived from the current branch's "
             "`<conv-type>/<N>-<slug>` form."
         ),
@@ -102,22 +123,23 @@ def main() -> int:
         "--type",
         default=None,
         help=(
-            "Conventional Commits <type> to use (overrides the value "
-            "derived from the closing issue's type:* label)."
+            "The title's Conventional Commits <type> (overrides the value "
+            "derived from the primary closing issue's type:* label)."
         ),
     )
     parser.add_argument(
         "--scope",
         default=None,
-        help="Conventional Commits <scope> (optional).",
+        help="The title's Conventional Commits <scope>; omitted from the title when not given.",
     )
     parser.add_argument(
         "--summary",
         default=None,
         help=(
-            "Conventional Commits <summary> — short, imperative, lowercase, "
-            "no trailing period. Default: derived from the issue title (drop "
-            "the [Type] prefix and lowercase)."
+            "The title's description part — the <summary> after "
+            "`<type>(<scope>): ` — short, imperative, lowercase, no trailing "
+            "period. The type and scope are not part of it. Default: the "
+            "primary issue's title without its [Type] prefix, lowercased."
         ),
     )
     parser.add_argument(
@@ -226,11 +248,11 @@ def main() -> int:
         return 1
 
     # Derive the closing issue number(s); the first is the primary issue.
-    closing_issues = _closing_issues(args.closes, branch)
+    closing_issues = _closing_issues(args.issue_number, args.closes, branch)
     if not closing_issues:
         print(
             f"error: could not derive closing issue from branch {branch!r}; "
-            "pass --closes <N>.",
+            "pass it: `open-pr <N>` (or --closes <N>).",
             file=sys.stderr,
         )
         return 2
@@ -399,14 +421,19 @@ def _extract_issue_number(branch: str) -> int | None:
     return int(m.group(1))
 
 
-def _closing_issues(closes: list[int] | None, branch: str) -> list[int]:
+def _closing_issues(
+    positional: int | None, closes: list[int] | None, branch: str
+) -> list[int]:
     """The issues the PR closes, primary first, without repeats.
 
-    `--closes` (repeatable) names them explicitly; without it the branch's
-    `<N>` segment is the one closing issue. Empty when neither yields one.
+    The positional `<N>` (as review-work and done-work take it) and
+    `--closes` (repeatable, the explicit form) name them — the positional one
+    first; without either, the branch's `<N>` segment is the one closing
+    issue. Empty when none yields one.
     """
-    if closes:
-        return list(dict.fromkeys(closes))
+    named = ([positional] if positional is not None else []) + list(closes or [])
+    if named:
+        return list(dict.fromkeys(named))
     derived = _extract_issue_number(branch)
     return [derived] if derived is not None else []
 
