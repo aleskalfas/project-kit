@@ -254,20 +254,20 @@ project:
 
 **Schema.** The file is validated as a whole against `.pkit/schemas/backbone/config.schema.json`, a backbone file schema shipped in the tree and bound to this file by its fixed path ([ADR-056](../../tech-docs/architecture/decisions/ADR-056-backbone-file-schemas-home.md); the schemas README's "Backbone file schemas" section). The file carries **no version key** — the backbone owns its shape and migrates it (COR-010). The first line above is the editor directive the backbone stamps into a file it creates; an editor that reads it validates and completes as you type.
 
-**Strict when checked, forgiving when read** (COR-048 point 4). `pkit validate` runs the configuration pass and reports under a `configuration` heading; commands that merely read a key warn and use the default. The findings, each with a JSON Pointer into the file and a severity:
+**Strict when checked, forgiving when read** (COR-048 point 4). `pkit validate` runs the configuration pass and reports under a `configuration` heading; commands that merely read a key never fail because of it and use the default (COR-048 point 4); today's only reader, `pkit report`, falls back silently. The findings, each with a JSON Pointer into the file and a severity:
 
 | Severity | Finding |
 |---|---|
 | error | An unknown key at any backbone-owned level, reported with the nearest known key (`unknown key 'doc'; did you mean 'docs'?`). A key of `connections.providers` / `connections.selections` that is not an address of the right form. |
 | error | A wrong type, an invalid `mode` / `status-job` value, an absolute path, a duplicate pattern. A file that does not parse, or is not a mapping. |
 | error | A documentation root that resolves (after following links) outside the repository or inside `.pkit/` (COR-049 point 1). |
-| warning | A documentation root that does not exist yet (COR-049 point 7). |
-| error | A friction pattern that leaves the repository — absolute, or climbing above the root (COR-050 point 14). |
+| warning | A documentation root that does not exist yet, or exists but is not a directory (COR-049 point 7). |
+| error | A friction pattern that leaves the repository — absolute, or climbing above the root (COR-050 point 14). A bare `.` means the whole repository and is accepted. |
 | warning | A friction pattern that matches nothing: a dead pattern keeps silence looking like health (COR-050 point 12). |
 | error | A connection entry naming a capability that is not installed, with the fix (`pkit capabilities install <name>`, or remove the entry). |
 | info | A connection entry naming an installed capability: whether it *provides the role* or *fills the point* cannot be verified until package metadata declares connections, so it is reported as unverifiable, never refused. |
 
-Only errors fail the command. The same repository state always yields the same findings in the same order: schema findings by position, then the repository checks in the file's key order. A tree recorded before the schema landed has no `config.schema.json`; the pass reports "no config schema present; skipped" rather than validating against a shape that tree never shipped (ADR-056 point 1).
+Only errors fail the command. The same repository state always yields the same findings in the same order: schema findings by position, then the repository checks in the file's key order. A tree recorded before the schema landed has no `config.schema.json`; the pass reports "no config schema present in this tree; skipped." rather than validating against a shape that tree never shipped (ADR-056 point 1).
 
 **Writing.** A key is written only by the writers its record names, with consent (COR-048 point 5): today that is the `name` write-back of `pkit report`; the configuration commands the records anticipate have not shipped. Editing the file by hand is the project's own edit, always allowed.
 
