@@ -9,9 +9,8 @@ a shallow clone — before running the check at HEAD. The documents come from
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
@@ -21,8 +20,16 @@ from click.testing import CliRunner
 from project_kit import friction_repository as fr
 from project_kit.cli import main
 from project_kit.friction_discovery import Anchor
-from tests.adopter_repo import HISTORY_EPOCH, AdopterRepo, Author, GitRepo, MakeAdopterRepo
-from tests.friction_documents import CONFIG, SOURCE, T1, T2, document, friction_config, guide
+from tests.adopter_repo import HISTORY_EPOCH, Author, GitRepo, MakeAdopterRepo
+from tests.friction_documents import (
+    CONFIG,
+    T1,
+    T2,
+    Timeline,
+    document,
+    friction_config,
+    guide,
+)
 
 ALICE = Author("Alice", "alice@example.com")
 BOB = Author("Bob", "bob@example.com")
@@ -31,41 +38,6 @@ BOB = Author("Bob", "bob@example.com")
 NOW = HISTORY_EPOCH + timedelta(days=100)
 
 CLI = Anchor("path", "src/cli/**")
-
-
-class Timeline:
-    """Commits on an adopter repository, each a day after the last, so origins have known dates."""
-
-    def __init__(self, adopter: AdopterRepo) -> None:
-        self.adopter = adopter
-        self.days = 0
-
-    def _next(self) -> datetime:
-        self.days += 1
-        return HISTORY_EPOCH + timedelta(days=self.days)
-
-    def start(self, files: Mapping[str, str], config: str | None = None) -> str:
-        """The base commit on `main`: the install, the configuration, the sources and `files`."""
-        self.adopter.write({CONFIG: config or friction_config(), **SOURCE, **files})
-        return self.commit("base")
-
-    def commit(
-        self,
-        message: str,
-        files: Mapping[str, str | None] | None = None,
-        *,
-        author: Author | None = None,
-    ) -> str:
-        return self.adopter.commit(message, files, author=author, date=self._next())
-
-    def rename(self, src: str, dst: str) -> str:
-        return self.adopter.rename(src, dst, date=self._next())
-
-    def merge(self, branch: str) -> str:
-        return self.adopter.merge(branch, date=self._next())
-
-    def squash_merge(self, branch: str) -> str:
-        return self.adopter.squash_merge(branch, date=self._next())
 
 
 @pytest.fixture
