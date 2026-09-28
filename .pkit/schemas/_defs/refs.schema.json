@@ -9,6 +9,11 @@
       "pattern": "^\\[[a-z][a-z0-9-]*:[a-z][a-z0-9-]*(?::[a-z][a-z0-9-]*)?\\]$",
       "description": "Generic cross-schema reference token per COR-019. Form: `[<namespace>:<id>]`. The namespace is a single kebab-case segment. The id half is kebab-case and MAY carry one further colon-separated segment to scope the reference to a contributing source (`[<namespace>:<scope>:<id>]`), per COR-019's id-scope clarification. All segments are kebab-case starting with a lowercase letter."
     },
+    "rule_citation": {
+      "type": "string",
+      "pattern": "^(?:[a-z](?:[a-z0-9-]*[a-z0-9])?:)?RS-[A-Z][A-Z0-9]*-(?:[0-9]{3}|[1-9][0-9]{3,})(?:#[a-z][a-z0-9]*(?:-[a-z0-9]+)*)?$",
+      "description": "A citation of a rule, or of an extension point a rule offers, per COR-051 point 3: `RS-<SET>-NNN` or `RS-<SET>-NNN#<point>`, optionally with the owning component in front, `<component>:RS-<SET>-NNN`, as a method rule set's rules are cited (COR-051 point 6). In prose the component-qualified form is written in brackets, `[<component>:RS-<SET>-NNN]`, like a capability decision citation (COR-017). Rule ids are upper-case, so this is its own family beside `reference_token`. JSON Schema checks the shape only; resolution to the rule is the rule-set pass's and `pkit refs validate`'s."
+    },
     "source": {
       "type": "object",
       "description": "Structured lineage block carried by a schema distilled from an upstream spec. Optional — schemas that are their own source of truth omit it.",

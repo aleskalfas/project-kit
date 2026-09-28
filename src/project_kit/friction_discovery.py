@@ -16,11 +16,18 @@ is the one reader of those declarations and the one walker of the places:
   order) then capabilities by name. A capability's place is relative to the
   document locations it declares under the internal documentation root
   (COR-049 point 4; COR-050 point 1).
+- `rule_set_places` / `rule_set_files` — the location rule for rule-set files
+  (COR-051 point 2, ADR-056 point 2): the places declared to hold rule sets,
+  each with the component that owns the sets in it, and the Markdown files
+  they claim. Rules are artefacts found where artefacts are found, so the
+  walk below covers these places too.
 - `discover_artefacts` — every artefact in the places, in a deterministic
   order: a Markdown document with front matter, or one keyed entry of a
   collection file (a Markdown file whose front matter maps ids to entries;
   an entry's content is its data plus the body section headed by its id).
-  A plain YAML file in a place is not a document (ADR-056 point 2).
+  A rule-set file is the collection whose entries are the values of its
+  `rules` map, one artefact per rule. A plain YAML file in a place is not a
+  document (ADR-056 point 2).
 - `RepositoryTree` — the seam through which a caller discovers what another
   state of the repository held. The change check (COR-050 point 6) reads the
   working tree and its base commit side by side through it, so both sides are
@@ -78,6 +85,25 @@ BACKBONE_MANIFEST = Path(".pkit") / "manifest.yaml"
 
 # Only Markdown files can be documents or collections (ADR-056 point 2).
 DOCUMENT_SUFFIX = ".md"
+
+# The location rule for rule-set files (COR-051 points 2 and 6; the schemas
+# README, "Rule-set files"): a folder of this name holds rule sets. A method
+# rule set ships in its component's own folder — the backbone's directly under
+# `.pkit/`, a capability's in its subtree; a project rule set lives in the one
+# under the internal documentation root, or in a declared place whose path has
+# this segment. Nothing in the file itself binds it.
+RULE_SETS_SEGMENT = "rule-sets"
+BACKBONE_RULE_SETS_DIR = Path(".pkit") / RULE_SETS_SEGMENT
+
+# The component name a backbone-shipped rule set is cited with.
+BACKBONE_COMPONENT = "backbone"
+
+# The front-matter key of a rule-set file whose values are its entries.
+RULES_KEY = "rules"
+
+# A signpost in a rule-set folder describes the folder; it is not a rule set,
+# as a README in a decision-record folder is not a record.
+RULE_SETS_SIGNPOST = "README.md"
 
 # Directories a glob never descends into: git's own store.
 _SKIPPED_TOP_LEVEL = frozenset({".git"})
@@ -574,6 +600,93 @@ def _segment_regex(segment: str) -> str:
     return "".join(out)
 
 
+# --- rule-set places ----------------------------------------------------
+
+
+@dataclass(frozen=True)
+class RuleSetPlace:
+    """A place declared to hold rule sets, and who owns the rule sets in it.
+
+    `component` names the component a *method* rule set ships with — the
+    backbone or a capability — and is `None` for a *project* rule set, which
+    the project owns and cites bare (COR-051 point 6).
+    """
+
+    place: Place
+    component: str | None
+
+    @property
+    def pattern(self) -> str:
+        return self.place.pattern
+
+
+def rule_set_places(
+    target_root: Path, settings: FrictionSettings, tree: RepositoryTree | None = None
+) -> tuple[RuleSetPlace, ...]:
+    """The places declared to hold rule sets, in claim order (the location rule).
+
+    Method rule sets first: the backbone's `.pkit/rule-sets/`, then each
+    installed capability's `.pkit/capabilities/<name>/rule-sets/` by name.
+    Then project rule sets: `<internal root>/rule-sets/`, and every declared
+    place whose path has a `rule-sets` segment. A folder the location rule
+    names is a place only while it exists inside the repository, so a project
+    without rule sets declares nothing; a declared place is taken as written.
+    A folder the rule names has no declaring file, so its declaration names
+    the folder itself.
+    """
+    places: list[RuleSetPlace] = []
+
+    listing = tree.files() if tree is not None else None
+
+    def exists(rel: str) -> bool:
+        if listing is None:
+            return (target_root / rel).is_dir()
+        prefix = rel.rstrip("/") + "/"
+        return any(f.startswith(prefix) for f in listing)
+
+    def folder(rel: str, component: str | None, source: str) -> None:
+        if is_inside_repository(target_root, rel) and exists(rel):
+            declaration = SettingsPath(value=rel, resolved=rel, file=rel, pointer="", source=source)
+            places.append(RuleSetPlace(Place(pattern=rel, declaration=declaration), component))
+
+    folder(BACKBONE_RULE_SETS_DIR.as_posix(), BACKBONE_COMPONENT, BACKBONE_COMPONENT)
+    for name in installed_capability_names(target_root, tree):
+        rel = (CAPABILITIES_DIR / name / RULE_SETS_SEGMENT).as_posix()
+        folder(rel, name, f"capability:{name}")
+    folder(_join_posix(settings.internal_root, RULE_SETS_SEGMENT), None, "project")
+    for place in declared_places(settings):
+        if RULE_SETS_SEGMENT in PurePosixPath(place.pattern).parts:
+            places.append(RuleSetPlace(place, None))
+
+    unique: dict[str, RuleSetPlace] = {}
+    for rule_set_place in places:
+        unique.setdefault(os.path.normpath(rule_set_place.pattern), rule_set_place)
+    return tuple(unique.values())
+
+
+def _place_files(target_root: Path, place: Place, tree: RepositoryTree | None) -> list[str]:
+    """The repository-relative files a place matches, on disk or in a `tree`'s listing."""
+    if tree is None:
+        return [p.relative_to(target_root).as_posix() for p in files_in_place(target_root, place)]
+    return listed_files_in_place(place, tree.files())
+
+
+def rule_set_files(target_root: Path, places: Sequence[RuleSetPlace]) -> dict[Path, RuleSetPlace]:
+    """Every rule-set file the places claim, with the place that claimed it.
+
+    A Markdown file a rule-set place matches is a rule-set file, whatever it
+    holds — except the folder's signpost, `README.md`. A file two places match
+    is claimed by the first, so a method folder always wins over a project
+    place that happens to reach into it. Keyed by the path the walk yields.
+    """
+    claimed: dict[Path, RuleSetPlace] = {}
+    for rule_set_place in places:
+        for path in files_in_place(target_root, rule_set_place.place):
+            if path.name != RULE_SETS_SIGNPOST:
+                claimed.setdefault(path, rule_set_place)
+    return claimed
+
+
 # --- artefacts ----------------------------------------------------------
 
 
@@ -620,6 +733,9 @@ class Artefact:
       block validator says so.
     - `anchors`: by kind, in written order, from a well-formed `anchors`
       mapping; `revalidated`: the block as written, when a mapping.
+    - `rule_set`: for a rule, the rule-set place that claimed its file, else
+      `None`. The rule-set file is claimed before the container rule
+      (ADR-056 point 2), so the rule-set pass validates a rule's container.
     """
 
     id: str
@@ -632,6 +748,7 @@ class Artefact:
     friction: Any
     anchors: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
     revalidated: Mapping[str, Any] | None = None
+    rule_set: RuleSetPlace | None = None
 
     @property
     def location(self) -> str:
@@ -648,10 +765,16 @@ class Artefact:
 
     @property
     def identifiers(self) -> frozenset[str]:
-        """What an `anchors.artefact` value may name to reach this artefact."""
+        """What an `anchors.artefact` value may name to reach this artefact.
+
+        A rule of a method rule set may also be named the way it is cited,
+        with its component in front (COR-051 point 6).
+        """
         names = {self.id}
         if self.kind is ArtefactKind.DOCUMENT:
             names.add(self.path)
+        if self.rule_set is not None and self.rule_set.component is not None:
+            names.add(f"{self.rule_set.component}:{self.id}")
         return frozenset(names)
 
     @property
@@ -678,16 +801,25 @@ class Artefact:
 
 @dataclass(frozen=True)
 class UnreadableFile:
-    """A Markdown file in a place whose front matter does not parse as YAML."""
+    """A Markdown file in a place whose front matter does not parse as YAML.
+
+    `rule_set` is the rule-set place that claimed it, when it is a rule-set
+    file; the rule-set pass reports such a file, the friction pass does not.
+    """
 
     path: str
     place: Place
     reason: str
+    rule_set: RuleSetPlace | None = None
 
 
 @dataclass(frozen=True)
 class Discovery:
-    """What a walk of the declared places found, in deterministic order."""
+    """What a walk of the declared places found, in deterministic order.
+
+    `places` are the declared places followed by the rule-set places not
+    already among them.
+    """
 
     settings: FrictionSettings
     places: tuple[Place, ...]
@@ -723,24 +855,29 @@ def discover_artefacts(
 ) -> Discovery:
     """Walk the declared places and parse every artefact's container.
 
-    A file matched by more than one place is read once, under the first place
-    that matched it. Order: places in declaration order, files within a place
-    by path, entries within a collection in written order. With a `tree`, the
-    settings, the listing and every file are that state's
-    (`listed_files_in_place`); a link in a tree is never read.
+    The places are the declared ones followed by the rule-set places not
+    already among them: rules are artefacts found where artefacts are found
+    (COR-051 point 2). A file matched by more than one place is read once,
+    under the first place that matched it; whether it is a rule-set file
+    depends only on the location rule, not on which place met it. Order:
+    places in that order, files within a place by path, entries within a
+    collection in written order. With a `tree`, the settings, the listing and
+    every file are that state's (`listed_files_in_place`); a link in a tree is
+    never read.
     """
     settings = settings if settings is not None else read_friction_settings(target_root, tree)
+    rule_set_places_found = rule_set_places(target_root, settings, tree)
     places = declared_places(settings)
+    places += tuple(r.place for r in rule_set_places_found if r.place not in places)
+    claimed: dict[str, RuleSetPlace] = {}
+    for rule_set_place in rule_set_places_found:
+        for rel in _place_files(target_root, rule_set_place.place, tree):
+            if PurePosixPath(rel).name != RULE_SETS_SIGNPOST:
+                claimed.setdefault(rel, rule_set_place)
     matched: list[tuple[Place, str]] = []
     seen: set[str] = set()
     for place in places:
-        if tree is None:
-            rels = [
-                p.relative_to(target_root).as_posix() for p in files_in_place(target_root, place)
-            ]
-        else:
-            rels = listed_files_in_place(place, tree.files())
-        for rel in rels:
+        for rel in _place_files(target_root, place, tree):
             if rel not in seen:
                 seen.add(rel)
                 matched.append((place, rel))
@@ -749,11 +886,14 @@ def discover_artefacts(
     unreadable: list[UnreadableFile] = []
     texts = _document_texts(target_root, tree, [rel for _place, rel in matched])
     for place, rel in matched:
+        rule_set = claimed.get(rel)
         text = texts[rel]
         if text is None:
             continue  # a link in a tree: never read as a document
         if isinstance(text, _ReadFailure):
-            unreadable.append(UnreadableFile(path=rel, place=place, reason=text.reason))
+            unreadable.append(
+                UnreadableFile(path=rel, place=place, reason=text.reason, rule_set=rule_set)
+            )
             continue
         front_matter, body = split_front_matter(text)
         if front_matter is None:
@@ -761,12 +901,14 @@ def discover_artefacts(
         try:
             data = _yaml.load(io.StringIO(front_matter))
         except YAMLError as exc:
-            unreadable.append(UnreadableFile(path=rel, place=place, reason=_yaml_reason(exc)))
+            unreadable.append(
+                UnreadableFile(path=rel, place=place, reason=_yaml_reason(exc), rule_set=rule_set)
+            )
             continue
         if not isinstance(data, Mapping):
             continue  # front matter that is not a mapping carries nothing
         carrier = as_written(data)
-        artefacts.extend(_artefacts_of_file(rel, place, carrier, body))
+        artefacts.extend(_artefacts_of_file(rel, place, carrier, body, rule_set=rule_set))
     return Discovery(
         settings=settings,
         places=places,
@@ -806,17 +948,28 @@ def _document_texts(
 
 
 def _artefacts_of_file(
-    rel: str, place: Place, front_matter: Mapping[str, Any], body: str
+    rel: str,
+    place: Place,
+    front_matter: Mapping[str, Any],
+    body: str,
+    *,
+    rule_set: RuleSetPlace | None = None,
 ) -> list[Artefact]:
     """One document, or one artefact per entry of a collection file.
 
-    A file is a collection when its front matter does not itself carry the
-    container but at least one of its top-level mapping values does (COR-050
-    point 1: "a collection file whose front matter maps entries by id"). Every
-    top-level mapping value is then an entry — including those without a
-    container, which are unanchored artefacts. Otherwise the file is one
-    document.
+    A rule-set file (`rule_set` given) is a collection whose entries are the
+    values of its `rules` map, each a rule (COR-051 point 2); its other keys
+    are the set's own data, never entries.
+
+    Otherwise, a file is a collection when its front matter does not itself
+    carry the container but at least one of its top-level mapping values does
+    (COR-050 point 1: "a collection file whose front matter maps entries by
+    id"). Every top-level mapping value is then an entry — including those
+    without a container, which are unanchored artefacts. Otherwise the file is
+    one document.
     """
+    if rule_set is not None:
+        return _rules_of_file(rel, place, front_matter, body, rule_set)
     entries = {k: v for k, v in front_matter.items() if isinstance(v, Mapping)}
     is_collection = CONTAINER_KEY not in front_matter and any(
         CONTAINER_KEY in entry for entry in entries.values()
@@ -846,6 +999,33 @@ def _artefacts_of_file(
     ]
 
 
+def _rules_of_file(
+    rel: str, place: Place, front_matter: Mapping[str, Any], body: str, rule_set: RuleSetPlace
+) -> list[Artefact]:
+    """One artefact per rule of a rule-set file, in written order.
+
+    A rule's content is its data entry together with the body section headed
+    by its id (COR-051 point 2). An entry that is not a mapping carries no
+    fields to read; the rule-set pass reports its shape.
+    """
+    rules = front_matter.get(RULES_KEY)
+    if not isinstance(rules, Mapping):
+        return []
+    return [
+        _artefact(
+            artefact_id=rule_id,
+            rel=rel,
+            kind=ArtefactKind.ENTRY,
+            place=place,
+            carrier=entry,
+            body=entry_section(body, rule_id),
+            rule_set=rule_set,
+        )
+        for rule_id, entry in rules.items()
+        if isinstance(entry, Mapping)
+    ]
+
+
 def _artefact(
     *,
     artefact_id: str,
@@ -854,6 +1034,7 @@ def _artefact(
     place: Place,
     carrier: Mapping[str, Any],
     body: str,
+    rule_set: RuleSetPlace | None = None,
 ) -> Artefact:
     container = carrier.get(CONTAINER_KEY)
     friction = container.get(FRICTION_KEY) if isinstance(container, Mapping) else None
@@ -879,6 +1060,7 @@ def _artefact(
         friction=friction,
         anchors=anchors,
         revalidated=revalidated,
+        rule_set=rule_set,
     )
 
 

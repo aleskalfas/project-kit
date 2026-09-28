@@ -350,7 +350,7 @@ The `schema` skill (composite per COR-020) covers adopter-data schemas through i
 Most schemas here govern **kit-shipped YAML** — a capability's own data file with its companion, or an instance that points at a shared shape contract. A second class governs **files the backbone does not author but validates**: the backbone configuration file ([COR-048](../decisions/core/COR-048-backbone-configuration.md)), rule-set files ([COR-051](../decisions/core/COR-051-rule-sets.md)), the project filler files that answer a data point ([COR-052](../decisions/core/COR-052-slots.md) point 2), and the methodology-owned block inside an artefact's front matter ([COR-053](../decisions/core/COR-053-connection-points.md) point 10). These are the **backbone file schemas**. Three things hold for all of them, each decided by the record named:
 
 - **They live in the tree**, under `backbone/` in this area, as companion-only JSON Schema files: schemas are propagated data, and the configuration file's shape is the one the *installed* backbone defines, which is the tree (COR-048 point 6). The binary reads the same files and carries no second copy.
-- **They bind by location, never by a field in the file.** The configuration file by its fixed path (COR-048 point 1); a filler file by the path derived from its point address under the internal documentation root (COR-052 point 2; the mapping and its inverse: [the lifecycle README, "Where a project filler file lives"](../lifecycle/README.md#where-a-project-filler-file-lives-the-address-to-path-mapping)); a rule-set file by the places declared to hold rule sets (COR-051 point 2); the container in the front matter of a Markdown document, or in a collection entry, in a declared place (COR-050 point 1). Location rules will be consulted before the capability-data resolution below; a file they claim never reaches `pkit_schema:` / `binds_to:` resolution, and a plain YAML data file in a declared place is not a document and falls through to it.
+- **They bind by location, never by a field in the file.** The configuration file by its fixed path (COR-048 point 1); a filler file by the path derived from its point address under the internal documentation root (COR-052 point 2; the mapping and its inverse: [the lifecycle README, "Where a project filler file lives"](../lifecycle/README.md#where-a-project-filler-file-lives-the-address-to-path-mapping)); a rule-set file by the places declared to hold rule sets — a `rule-sets/` folder (COR-051 point 2; "Rule-set files" below); the container in the front matter of a Markdown document, or in a collection entry, in a declared place (COR-050 point 1). Location rules will be consulted before the capability-data resolution below; a file they claim never reaches `pkit_schema:` / `binds_to:` resolution, and a plain YAML data file in a declared place is not a document and falls through to it.
 - **Strict at validation.** An unknown key is an error carrying the nearest known key (COR-048 point 4 for the configuration file; each owning record for the rest). A version is written only where a *capability* owns the shape — the filler envelope and a role block's point blocks carry the point's `schema_version` (COR-052 point 5) — while backbone-owned shapes carry none and are migrated when they change ([COR-010](../decisions/core/COR-010-resource-lifecycle.md)).
 
 `pkit validate` will run them (its registered-validator pass is Task #986). The location rules, their order and project-kit's other placement choices are recorded in its architecture decisions (ADR-056; they do not propagate); the fixed and derived paths are in the propagated references — the configuration file's in the CLI reference ("Configuration file"), a filler file's in the lifecycle README (linked above).
@@ -377,7 +377,7 @@ pkit:
 
 **Key form.** A role block's key is the role word alone, the qualifier being resolved from the active provider. The qualified form is written when two active roles share a word — the install plan that introduces the second lists the artefacts whose keys change, rewritten only with consent — and always when a role word equals a functionality block's name.
 
-**What ships now.** `backbone/container.schema.json` — the container in both forms (a document's front matter, a collection entry), with the `friction` block modelled strictly. Its discrimination rule, the shared unknown-key renderer and the load-check live in `project_kit.backbone_schemas`; the point-version compatibility check waits on the role resolver. `backbone/config.schema.json` — the backbone configuration file (`.pkit/project/config.yaml`): `name`, `docs`, `friction`, `connections` and the reserved `project` block, unknown keys refused at every backbone-owned level, no version key. `pkit validate` applies it, with the repository checks the owning records ask for, in its configuration pass (`project_kit.config_validate`); the CLI reference's "Configuration file" section documents every key. `backbone/package.schema.json` — a component's `package.yaml`: every field in use plus the `connections`, `docs` and `friction` blocks, **permissive on unknown keys** (they warn with the nearest known key; the strict flip is #999) where the rest of the class is strict; its validator and repository checks are `project_kit.package_validate`, run by `pkit validate`'s "packages" pass and by the register pre-flight (the lifecycle README, "Validation: the package schema"). The other two schemas of the class arrive with their Tasks: rule-set files (#989), the filler envelope (#994). `pkit validate`'s friction pass discovers artefacts in the declared places and applies the container rule to them (below); the registry refactor that generalises the passes is Task #986.
+**What ships now.** `backbone/container.schema.json` — the container in both forms (a document's front matter, a collection entry), with the `friction` block modelled strictly. Its discrimination rule, the shared unknown-key renderer and the load-check live in `project_kit.backbone_schemas`; the point-version compatibility check waits on the role resolver. `backbone/config.schema.json` — the backbone configuration file (`.pkit/project/config.yaml`): `name`, `docs`, `friction`, `connections` and the reserved `project` block, unknown keys refused at every backbone-owned level, no version key. `pkit validate` applies it, with the repository checks the owning records ask for, in its configuration pass (`project_kit.config_validate`); the CLI reference's "Configuration file" section documents every key. `backbone/package.schema.json` — a component's `package.yaml`: every field in use plus the `connections`, `docs` and `friction` blocks, **permissive on unknown keys** (they warn with the nearest known key; the strict flip is #999) where the rest of the class is strict; its validator and repository checks are `project_kit.package_validate`, run by `pkit validate`'s "packages" pass and by the register pre-flight (the lifecycle README, "Validation: the package schema"). `backbone/rule-set.schema.json` — a rule-set file's front matter: the set's name, version, inheritance and scope, and each rule's machine fields, unknown keys refused at every level, no version key of the shape's own; `pkit validate` applies it in its `rule-sets` pass (`project_kit.rule_sets`) with the checks COR-051 asks for, and the container rule inside every rule ("Rule-set files" below). The last schema of the class arrives with its Task: the filler envelope (#994). `pkit validate`'s friction pass discovers artefacts in the declared places and applies the container rule to them (below); the registry refactor that generalises the passes is Task #986.
 
 ### The friction block
 
@@ -412,7 +412,7 @@ pkit:                                     RS-CMN-001:
 
 Unknown keys anywhere in the block are refused. The block carries no version; it is migrated when it changes, preserving the parsed value of `at`.
 
-**Where artefacts are looked for.** Only in the **declared places**: the project's `friction.places` in `.pkit/project/config.yaml` (repository-relative paths or globs; a directory, or a glob ending in `**`, means every Markdown file beneath it), and each installed capability's `friction.places` in its `package.yaml`. A capability place is an object `{location, path}` — inside the named `docs.locations` entry, or repository-relative without one (the lifecycle README, "The connection, documentation and friction blocks"); today's discovery reads only string-shaped capability places and resolves them under the internal root, so object-shaped ones are not yet walked — Task #1025 aligns discovery with the schema. Front matter outside the places is never read, a plain YAML file in a place is not a document, and a match that resolves outside the repository through a link is dropped — the walk never reads a file the repository does not hold. The same reader takes the rest of the `friction` key — `mode`, `surface`, `exclude` — so the configuration is read once.
+**Where artefacts are looked for.** Only in the **declared places**: the project's `friction.places` in `.pkit/project/config.yaml` (repository-relative paths or globs; a directory, or a glob ending in `**`, means every Markdown file beneath it), and each installed capability's `friction.places` in its `package.yaml`. A capability place is an object `{location, path}` — inside the named `docs.locations` entry, or repository-relative without one (the lifecycle README, "The connection, documentation and friction blocks"); today's discovery reads only string-shaped capability places and resolves them under the internal root, so object-shaped ones are not yet walked — Task #1025 aligns discovery with the schema. Front matter outside the places is never read, a plain YAML file in a place is not a document, and a match that resolves outside the repository through a link is dropped — the walk never reads a file the repository does not hold. The same reader takes the rest of the `friction` key — `mode`, `surface`, `exclude` — so the configuration is read once. The places **declared to hold rule sets** are walked too, because a rule is an artefact found where artefacts are found (COR-051 point 2): a rule-set file's entries are the values of its `rules` map, one artefact per rule, and its other keys are the set's own data ("Rule-set files" below).
 
 **Validation findings** (COR-050 point 12) — each fails `pkit validate`, in either mode, and names the fix:
 
@@ -427,7 +427,96 @@ The settings themselves are the **configuration pass's** findings, since it owns
 
 The pass is **dormant** — it prints only its counts — when no places are declared, or when nothing in them needs judging: no artefact carries the container and no file failed to parse.
 
+A rule-set file is claimed by the rule-set rule before the container rule (ADR-056 point 2), so its unparsable front matter and the malformed container of one of its rules are the `rule-sets` pass's findings, reported once there; the friction pass still takes its rules into the deferral and cycle checks.
+
 **Not here.** Friction itself is the `friction` command group's: the change check — the three answers, bumps with nothing behind them, dead anchors of a change, an outdated base, the modes and the `--json` document — is `pkit friction check` (the CLI reference, "Friction checks"); the whole-repository check, over-broad anchors and the two measures arrive with Task #991. This pass never touches git.
+
+### Rule-set files
+
+A rule set ([COR-051](../decisions/core/COR-051-rule-sets.md)) is one Markdown file: its front matter holds the data, its body one section per rule. `backbone/rule-set.schema.json` fixes the data's shape, and `pkit validate` applies it, with every check below, in its `rule-sets` pass (`project_kit.rule_sets`).
+
+**Where they are — the location rule.** A file is a rule-set file because of where it is; nothing in the file binds it (ADR-056 point 2). A folder named `rule-sets` holds rule sets:
+
+| Folder | Holds | The set is cited |
+|---|---|---|
+| `.pkit/rule-sets/` | the backbone's method rule sets | `backbone:<SET>` |
+| `.pkit/capabilities/<name>/rule-sets/` | an installed capability's method rule sets, shipped, versioned and synced with it | `<name>:<SET>` |
+| `rule-sets/` under the internal documentation root (`docs/rule-sets/` by default, COR-049) | the project's rule sets | bare, `<SET>` |
+| any declared place — a `friction.places` entry of the project or of a capability — whose path has a `rule-sets` segment | more project rule sets, wherever the project keeps them | bare |
+
+Every Markdown file in or beneath such a folder is a rule-set file, except its `README.md`, which is the folder's signpost. A file two of them reach belongs to the first in the table's order. A file there with no front matter, or front matter that does not parse, is a finding, never skipped. Method rule sets are refreshed by sync with their component; project rule sets are the project's, and sync and uninstall never touch them (COR-051 point 6). A project never edits a method rule set: it inherits it.
+
+**The front matter.**
+
+```yaml
+---
+rule-set: DOC                          # the set's name, unique among rule sets
+version: 2.1.0                         # the set's own version; inheritors pin its major
+inherits: [living-docs:LDOC@1]         # a method set with its component, a project set bare
+scope: [docs/**]                       # optional: the artefacts the rules apply to, as places
+rules:
+  RS-DOC-001:
+    status: accepted
+    origin: {date: 2026-09-27, by: A. Person, why: "A reader finds the answer first."}
+    offers: [example-kind]             # an extension point, cited RS-DOC-001#example-kind
+  RS-DOC-002:                          # no status: proposed, and binds nothing
+    fills: [living-docs:RS-LDOC-003#reader]
+    pkit:
+      friction:
+        anchors: {artefact: [living-docs:RS-LDOC-003]}
+  RS-DOC-003:
+    status: superseded
+    successor: RS-DOC-004
+    origin: {decision: PRJ-012}
+  RS-DOC-004:
+    status: accepted
+    origin: {decision: PRJ-012}
+---
+
+## RS-DOC-001 — Answer first
+
+The statement.
+```
+
+| Key | Meaning |
+|---|---|
+| `rule-set` | Required. Upper-case letters and digits, starting with a letter. Unique among all rule sets; every rule id carries it. |
+| `version` | Required. The set's own semantic version, not its component's. A new major is due when an accepted rule is withdrawn, superseded or tightened, when an offered extension point is removed, or when a new accepted rule is added (COR-051 point 7). |
+| `inherits` | The sets this one inherits, each pinned to a major: `<SET>@<major>` for a project rule set, `<component>:<SET>@<major>` for a method one. |
+| `scope` | The places whose artefacts the rules apply to; a consuming component may narrow it. Checked for shape only. |
+| `rules` | Required. Each rule's id mapped to its machine fields, below. |
+| `status` | `proposed` (the default: absent means proposed), `accepted`, `superseded`, `withdrawn`. |
+| `origin` | Where the rule came from: the decider's own words — `date` (`YYYY-MM-DD`), `by`, `why` — or a decision record, `decision: COR-NNN` / `PRJ-NNN` / `ADR-NNN` / `<capability>:DEC-NNN`, never both. Either may add `source: {kind, value}`, a captured record of where the words were said. |
+| `offers` | The extension points the rule offers, by kebab-case name. |
+| `fills` | Extension points of inherited rules this rule fills: `RS-<SET>-NNN#<point>`, optionally with the owning component in front. |
+| `successor` | The rule that replaces a superseded one. Written by, and only by, a superseded rule. |
+| `pkit` | The methodology's container, with the friction block every artefact may carry ("The container", "The friction block" above). |
+
+Unknown keys are refused at every level, each with the nearest known key. The shape carries no version of its own; it is migrated when it changes (ADR-056 point 3).
+
+**The body.** One section per rule, headed by its id and its title — `## RS-DOC-001 — Answer first`, at any heading level — holding the statement. A rule's content, for friction, is its data entry together with that section. Headings inside fenced code are not sections.
+
+**Ids.** `RS-<SET>-NNN`: the family prefix, the set's name, and a number of at least three digits, zero-padded below 100 (COR-051 point 3). An extension point is written after `#`: `RS-DOC-001#example-kind`. An id is never renumbered and never reused: superseded and withdrawn rules stay in the file with their ids and sections, so a new rule under a retired id is a duplicate. Whether an id was reused after its rule was deleted outright cannot be seen in one repository state, and this pass reads no history.
+
+**Statuses** (COR-051 point 4). A proposed rule binds nothing; an accepted one binds, and writers and checks follow it; a superseded one names its successor and binds nothing; a withdrawn one is retired without a successor and binds nothing. Accepting a rule is a reviewed change, as accepting a decision record is (the decision-record specification, "The acceptance gate").
+
+**Citing a rule.** `RS-<SET>-NNN` or `RS-<SET>-NNN#<point>`, and with the owning component in front for a method rule set — `[living-docs:RS-LDOC-003]` in prose, in brackets like a capability decision citation, and `living-docs:RS-LDOC-003` in data. A bare id resolves too, since set names are unique; a component, when written, must be the one that owns the set. `pkit refs validate` resolves every rule citation in an agent's or skill's body; `pkit refs lookup <citation>` prints where the rule lives; `refs.schema.json#/$defs/rule_citation` checks the shape in data; `pkit decisions validate` reports a rule id claimed twice across the rule sets.
+
+**What the pass checks.** Errors fail `pkit validate`; reports print under its `rule-sets` heading.
+
+- *The file* — unreadable, no front matter, front matter that does not parse or is not a mapping; a key written twice (a rule id written twice in `rules` is a duplicate id); the schema, with unknown keys suggested.
+- *The join* — every rule in `rules` has a section headed by its id, every section has an entry, no id heads two sections, and no heading opens like an id without being one.
+- *Ids and names* — every id is well formed and carries the file's set name; an id of an inherited set is a redefinition; no two rule sets share a name.
+- *The container* inside each rule — the container schema and rule, as for any artefact ("The container" above); an orphaned role block is a report.
+- *Origins* (COR-051 point 5) — every accepted rule has a complete origin; a cited decision record exists, and is accepted whenever the rule is; a cited source resolves through the anchor kind a capability registers for it. No capability registers anchor kinds yet, so every source is **reported** as an unresolved kind, never silently passed — a report, not an error, because the project could do nothing to fix it.
+- *Successors* — each exists, in the same set or in a set that inherits it, and is not the rule itself.
+- *Inheritance* (COR-051 point 7) — a pinned set exists under the address written (a method set with its component, a project set bare); no cycle; a method rule set never inherits a project one, the backbone's only the backbone's, and a capability's another capability's only if its `package.yaml` declares that capability in `requires_capabilities` (COR-030); any capability may inherit the backbone's. A fill names a point that a rule of an inherited set offers; each point is filled at most once along the chain — the set and everything it inherits, each set once — reported where the second fill arrives. A superseded or withdrawn rule binds nothing, so its own fills are neither checked nor counted. A fill of a superseded or withdrawn rule is **reported** as orphaned.
+
+**The pinned major** is a version relation, checked and reported with the others under the `versions` heading of `pkit validate` (the lifecycle README, "Version relations"): a pin whose major is not the inherited set's is an error on the inheriting set that names the new major — the set is at `2.1.0`, so update the pin to `CMN@2` — until its owner reviews what changed and updates the pin.
+
+A tree without the rule-set schema — one recorded before it landed — skips the kind and says so (ADR-056 point 1).
+
+**Not here.** Whether a quoted reason supports its rule, and whether an inheriting set contradicts or relaxes what it inherits beyond the mechanical checks, are judgment for agents and reviewers (COR-051 points 5 and 7). A filling rule anchors to the rule it fills (point 7); this pass does not check that anchor. Resolving a source through a registered anchor kind arrives with the kind registry, through the hook `project_kit.rule_sets.resolve_source_kind`.
 
 ## Tooling expectations
 
