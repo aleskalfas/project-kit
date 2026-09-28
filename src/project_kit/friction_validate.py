@@ -155,6 +155,23 @@ def _artefact_findings(target_root: Path, discovery: Discovery) -> list[Friction
     return findings
 
 
+def block_findings(artefact: Artefact, schema: dict | None) -> tuple[FrictionFinding, ...]:
+    """What this pass finds in one artefact's own block: its shape and dangling deferrals.
+
+    The per-artefact judgments `validate_friction` applies — the container
+    schema and the container's rule (skipped when `schema` is `None`, as the
+    pass skips them without a readable schema), then every deferral naming no
+    anchor of the artefact. The cycle check spans artefacts and is not here.
+    The writing commands (`friction_write`) read what they would write back
+    through this, so a writer never writes a block validation would refuse.
+    """
+    findings: list[FrictionFinding] = []
+    if schema is not None:
+        findings.extend(_container_findings(artefact, schema))
+    findings.extend(_dangling_deferrals(artefact))
+    return tuple(findings)
+
+
 def _unclaimed_unreadable(discovery: Discovery) -> tuple[UnreadableFile, ...]:
     """The unparsable files this pass reports: all but rule-set files."""
     return tuple(u for u in discovery.unreadable if u.rule_set is None)
