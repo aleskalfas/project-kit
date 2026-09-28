@@ -8,7 +8,7 @@ If you have a project that has *adopted* project-kit and you want to record deci
 
 ## Running checks
 
-There is one source of truth for "what must pass before this lands": **`scripts/check.sh`** — the check aggregator. It runs the test suite, `pkit schemas validate`, `pkit decisions validate`, `pkit migrations check-diff`, the friction change check (`pkit friction check`) and `pkit release lint`. Run it any time:
+There is one source of truth for "what must pass before this lands": **`scripts/check.sh`** — the check aggregator. It runs the test suite, `pkit validate` (the one umbrella over every registered check of the tree's state — the CLI reference's "validate" section lists the members), and the diff-scoped checks: `pkit migrations check-diff`, the friction change check (`pkit friction check`) and `pkit release lint`. Run it any time:
 
 ```
 ./scripts/check.sh
