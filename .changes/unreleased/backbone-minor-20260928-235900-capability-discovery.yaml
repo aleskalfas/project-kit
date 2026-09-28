@@ -1,0 +1,20 @@
+component: backbone
+kind: minor
+body: >
+  A capability's connections are readable before it is installed, and what an install or
+  an uninstall would change in the wiring is shown before it happens (COR-053 point 8).
+  pkit capabilities show <name> lists, from package metadata alone, the roles a capability
+  provides, the points it accepts and offers, its extensions and what would connect here,
+  for installed capabilities and for those in the local catalogue: capabilities authored
+  in the repository and those that ship with the running pkit. pkit capabilities install
+  <name> --plan lists the connections the install would make and break, the role conflicts
+  it would open with the provider-selection command that resolves each, and what the
+  capability needs; pkit capabilities uninstall <name> --plan lists the fillers lost, the
+  processes and other counterparts left without a provider, the artefacts whose role
+  blocks would be orphaned and the selections left naming it. Both plans are computed by
+  the wiring resolver over the installed set plus or minus the capability, so the
+  operation then changes the wiring by exactly the plan; both write nothing, and --json
+  prints the machine form of show and the plans. pkit status suggests, for an unfilled
+  data point, a role nobody provides or an upstream not installed, the capabilities of the
+  local catalogue that would answer it, reading only what is on disk; a suggestion is
+  never an action.
