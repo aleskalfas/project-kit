@@ -1,0 +1,13 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  The lifecycle's ownership module answers a third question beside write
+  authority and tier: `is_synced_copy(target_root, path)` — does this path arrive
+  as a copy a sync makes from the methodology's source? It is sync-managed content
+  in a repository that is not the methodology's own source
+  (`is_methodology_source`, the same two markers the entry-point router uses), so
+  it keys on origin and on the repository, never on the path. Documentation
+  places ask it: a synced copy is never a place, while the methodology's source
+  repository, where nothing is copied, may declare its `.pkit/` READMEs.
