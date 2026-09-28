@@ -110,12 +110,12 @@ Sections:
 
 Notably absent: enumerations of files, labels, symlinks, settings entries, templates. These are *derivable* state — the kit-side spec at the component's recorded version + the adopter's config tells you what should exist; the validate/upgrade reconciliation tells you whether reality matches.
 
-### Per-capability `package.yaml` (source-side metadata)
+### Package metadata (`package.yaml`)
 
-A capability's source-side `package.yaml` carries the metadata the lifecycle reads at install and upgrade time. Adapters have a similar shape.
+Every component — a capability or an adapter — ships a source-side `package.yaml`: the metadata the lifecycle reads at install and upgrade time, the dispatcher reads for commands, and `pkit validate` checks. This section is the **package-metadata reference** the core records leave field layout and casing to (COR-053 point 3). It also records this distribution's literals and where a project's filler files live, which the records leave to the same reference.
 
 ```yaml
-schema_version: 1
+schema_version: 1                 # 1 or 2 — see "Field layout and casing"
 component:
   kind: capability
   name: evidence
@@ -141,14 +141,51 @@ runtime_ignore:
   - .pkit/capabilities/<name>/project/some-runtime.log
 ```
 
-Fields:
+#### Field layout and casing
 
-- **`requires_backbone`** — semver range of backbone versions this capability version is compatible with. Evaluated at install and upgrade.
-- **`requires_capabilities`** — optional list of capability dependencies, each a `{name, version}` pair where `version` is a semver range. The lifecycle gates on these at install, upgrade, and uninstall (COR-030). Absence means no dependencies; capabilities without this field are unaffected.
-- **`footprint`** — optional list of git-footprint globs this component deploys outside `.pkit/` (e.g. an adapter's `.claude/` deploys). Aggregated across installed components and routed into the per-clone `.git/info/exclude` by `pkit visibility private` (ADR-009). Absence means the component adds nothing to the footprint beyond the backbone's own `.pkit/`.
-- **`runtime_ignore`** — optional list of runtime-local file globs this component wants git-ignored (e.g. per-clone logs, caches, sidecars under the component's own subtree). Aggregated across installed components and wholesale-rendered into the pkit-owned `.pkit/.gitignore` (ADR-009 rule 7). Each component names only paths it owns — core never invents adapter/capability paths. Absence means the component contributes no runtime-ignore lines; components without a `package.yaml` (such as the backbone itself) declare their runtime-ignore paths through a core-level seam instead.
-- **`commands`** — optional tree of the commands the dispatcher registers under `pkit <capability>` (COR-021). A key is a token; a value carrying `script` (a path relative to the component root, which must exist) and `help` (one line) is a leaf; any other value is a sub-group of further tokens. **`aliases`** — optional alternative namespaces for the same tree (`pm` for `project-management`). **`description`** — the one-line summary the command group shows as help.
-- **`provides`** — reserved by COR-013 for hook implementations (`{hook-name: implementation}`); no shipped file uses it.
+The table lists every key `.pkit/schemas/backbone/package.schema.json` knows, with its shape and the record that owns it. **The schema is the authority**: where the table and the schema disagree, the table is the defect. A key the schema does not know is a warning, not an error, until the strict flip (see "Validation" below).
+
+**Required.** The schema requires `component` and, inside it, `kind`, `name` and `version`; every other top-level key is optional. COR-017 also lists `schema_version`, `description` and `requires_backbone` among a capability's required fields, and every shipped capability carries them; the schema, which serves adapters too (the adapter has no `description`), does not enforce that.
+
+| Key | Shape and meaning | Owning record |
+|---|---|---|
+| `schema_version` | The package file's own version: the integer `1` or `2`, both accepted, and a file without the key reads as `1`. See "Validation" below for what each marks. | COR-017; COR-021 (the `2`) |
+| `component` | `kind` — `capability` or `adapter`; `name` — a component name (lowercase letters, digits and hyphens, starting with a letter and not ending with a hyphen) equal to the component's directory; `version` — the component's own semver, which gates dependency edges. | COR-010, COR-017 |
+| `description` | A non-empty line: the summary `pkit capabilities list` shows, which the dispatcher also uses as the command group's help. | COR-017; COR-021 |
+| `requires_backbone` | A version range of compatible backbone versions; must parse. Evaluated at install and upgrade. | COR-010, COR-017 |
+| `requires_capabilities` | A list of `{name, version}`, both required: a component name and a version range, which must parse. Gated at install, upgrade and uninstall; absence means no dependencies. | COR-030 |
+| `commands` | The command tree registered under `pkit <capability>`. A key is a token. A value carrying `script` is a leaf and also needs `help` (one line); `script` is a path relative to the component root and must exist. Any other value is a group of further tokens. | COR-021 |
+| `aliases` | A list of unique component names: other namespaces for the same command tree (`pm` for `project-management`). | none — the dispatcher's, beside COR-021 |
+| `provides` | A mapping from hook name to an implementation string. Reserved; no shipped file uses it. | COR-013 |
+| `footprint` | A list of unique relative paths or globs: what the component deploys outside `.pkit/`, aggregated across components and routed into `.git/info/exclude` by `pkit visibility private`. | ADR-009 rule 1 |
+| `runtime_ignore` | A list of unique relative paths or globs: runtime-local files to git-ignore, aggregated into the pkit-owned `.pkit/.gitignore`. A component names only paths it owns; the backbone declares its own through a core-level seam. | ADR-009 rule 7 |
+| `connections.roles` | A list of unique qualified role names, `<publisher>::<role>`: the roles this component provides. Every point it defines sits under one of them. | COR-053 points 1 and 3 |
+| `connections.extension-points.accepts` | A mapping from point address, `<publisher>::<role>:<point>`, to a data point this component defines: `schema_version`, `schema` (its companion JSON Schema, relative to the component's `schemas/`; must exist) and `description`, all required, plus optional `combination` (`single` or `union`) and `mandatory`. | COR-053 point 2; COR-052 points 1, 3 and 5 |
+| `connections.extension-points.offers` | A mapping from point address to a process or event this component offers: `kind` (`process` or `event`), `schema_version` and `description`, all required. `kind: process` also requires `process`, the offered definition's id; `kind: event` also requires `command` (the emitting command), `schema` (the payload's companion under `schemas/`; must exist) and `subject` (the payload field naming the subject). | COR-053 point 2; COR-036 |
+| `connections.extensions.contributes` | A list of contributions to another role's data point: `point` (an address) and `schema_version`, required, plus optional `command` (a command filler), `description` and `mandatory`. | COR-053 point 3; COR-052 point 6 |
+| `connections.extensions.subscribes` | A list of subscriptions to another role's event: `point`, `schema_version` and `command` (the subscriber), all required, plus optional `description` and `mandatory`. | COR-053 points 2, 3 and 9 |
+| `connections.extensions.depends-on` | **Generated, never hand-written**: `generated: true`, required, and `entries`, a list of `{process}` plus optional `schema_version` and `mandatory`; `process` is in the implementation form `<capability>:<process-id>` or the role form `<publisher>::<role>:<point>`. | COR-053 point 4; COR-038 |
+| `mandatory` — on a data point, a contribution, a subscription or a `depends-on` entry | `{reason}`, a non-empty reason required: the mark without one is refused. An offered point takes no mark. | COR-053 point 6 |
+| `docs.locations` | A mapping from a location name (`[a-z][a-z0-9-]*`) to `{path}` plus optional `root` (`internal`, the default, or `user`) and `description`; `path` is a sub-path of that documentation root. | COR-049 point 4 |
+| `friction.places` | A list of `{path}` plus optional `location` (a name declared in `docs.locations`, inside which `path` applies; without one, `path` is repository-relative) and `description`. | COR-050 point 1 |
+| `friction.surface` | A list of unique repository-relative paths or globs this component says ought to be described; the part no artefact anchors to is reported as uncovered. | COR-050 point 8 |
+
+What holds across the table:
+
+- **Two kinds of `schema_version`.** At the top level it versions the package file. Everywhere else — a data point, an offered point, a contribution, a subscription, a `depends-on` entry — it is the *point's* version, an integer from 1, and two versions are compatible when they are equal (COR-053 point 5).
+- **Command references** — `command` on an offered event, a contribution or a subscription — are a path through the `commands:` tree, tokens separated by single spaces (`create page`), landing on a leaf that exists.
+- **Paths** — every `script`, `schema`, `docs.locations` path, `friction` place and surface entry, `footprint` and `runtime_ignore` entry — are relative, with no `..` segment; the repository check names the offending segment.
+- **Write role names and addresses in words.** The schema types them loosely — each part any run of characters other than whitespace and `:` — but the configuration file's selection keys admit only *words*, `[a-z][a-z0-9-]*`, and so does the filler mapping below. A role or point whose parts are not words cannot be selected in the configuration file and has no filler path.
+- **Ahead of the schema.** COR-052 point 3 decides a third combination policy, `additive`, which the schema does not admit yet, so `combination: additive` is refused today; and COR-052 point 1 asks a data point to declare how the definer's default takes part and its inert policy, keys the schema does not know yet, so they would warn as unknown. They arrive with the data-point resolution, #994.
+
+**Casing.** Two spellings meet in this file, and both stay.
+
+- The keys that predate the connection-points record are snake_case — `schema_version`, `requires_backbone`, `requires_capabilities`, `runtime_ignore` — like the backbone's other YAML (the manifests above; the schemas README, "YAML conventions").
+- The compound keys COR-053 decides by name are kebab-case — `extension-points`, `depends-on` — written as the record spells them, because a record that names the keys people write decides their spelling (COR-053 point 3 and its Rationale; COR-050 point 1 says the same of the friction block).
+- Every other key inside `connections`, `docs` and `friction` is a single word. `schema_version` keeps its snake_case there because it is the field that carries a point's version everywhere that version is written — a filler envelope, a role block's point block (COR-052 point 5, COR-053 point 10).
+- One near-collision to mind: the generated `depends-on` here is copied from the process definitions' `depends_on` (COR-038) — one fact in two files, each spelt as its own record spells it.
+
+No record decides a casing rule for the whole file, and renaming either family would be a surface change owing a migration (COR-010) for no reader's benefit. **A new key** is spelt as the record that decides it spells it. Where no record names it, it is a single word if one suffices; a compound is kebab-case inside `connections`, `docs` and `friction`, and snake_case at the top level, like the keys it sits beside.
 
 #### Validation: the package schema
 
@@ -160,7 +197,7 @@ Every `package.yaml` validates against one backbone file schema, `.pkit/schemas/
 
 #### The connection, documentation and friction blocks
 
-Three optional blocks carry what the newer core records ask a component to declare. The key names each record decides are used as written; the layout beneath them is this reference's choice.
+Three optional blocks carry what the newer core records ask a component to declare. The key names each record decides are used as written; the layout beneath them is this reference's ("Field layout and casing" lists every key). `pkit::` in the example is this distribution's publisher qualifier ("The methodology's literals", below).
 
 ```yaml
 # COR-053 point 3 — roles this component provides and its connection points.
@@ -211,7 +248,80 @@ friction:
   surface: ["src/**"]                              # repository-relative globs
 ```
 
-A command is referenced by its token path through the `commands:` tree, space-separated for a nested leaf (`create page`). `depends-on` is the one block a person never writes: the refresh command regenerates it from the process definitions and marks it `generated: true`; validation today fixes only the shape and the mark, and fails a stale copy once the resolver exists (#983).
+`depends-on` is the one block a person never writes: the refresh command regenerates it from the process definitions and marks it `generated: true`; validation today fixes only the shape and the mark, and fails a stale copy once the resolver exists (#983).
+
+#### The methodology's literals
+
+Three names the core records need are written record-neutrally, and the literal is left to the distribution's reference ([COR-053](../decisions/core/COR-053-connection-points.md), the vocabulary paragraph of its Decision). This is that reference. In this distribution:
+
+| In the records | Here | Where it is written |
+|---|---|---|
+| The publisher qualifier the methodology reserves for the roles it defines, written `<methodology>::` (COR-053 point 1) | **`pkit::`** | Role names (`pkit::documentation`) and point addresses (`pkit::documentation:readers`): in the `connections` block above, in the configuration file's `connections.providers` and `connections.selections` keys, and as a role block's key where the qualified form is needed. |
+| The one front-matter key "owned by the methodology, named for it" (COR-053 point 10) | **`pkit:`** | An artefact's front matter, or a collection entry: the container (the schemas README, "The container"; `backbone/container.schema.json`). |
+| "a sub-path the backbone owns for slot files", under the internal documentation root ([COR-052](../decisions/core/COR-052-slots.md) point 2) | **`pkit/fillers/`** | The prefix of every project filler file (the next section). |
+
+**The qualifier names who defined a role, never who implements it** (COR-053 point 1). A third party coins its roles under its own name — `super-docs::documentation` is a different role that shares a word with `pkit::documentation` — and may also *provide* a `pkit::` role, interchangeably with the capability that first defined it, but it never coins a role under `pkit::`. Project-published roles have no qualifier yet; COR-053 leaves them to a later refinement. **The container key is not a qualifier**: an artefact has one `pkit:` key whoever published its roles, and a third party's role block sits inside it, beside the methodology's own blocks (COR-053 point 10).
+
+These strings are this distribution's choice, not a principle: another distribution of the same records could choose others. Changing one would change files adopters have written, so it would be a surface change shipping a migration (COR-010), not a record amendment.
+
+#### Where a project filler file lives: the address-to-path mapping
+
+A project answers a data point with a file of its own (COR-052 point 2). The file's location is **derived from the point's address, never declared**, and the location rule binds the file to the backbone's filler schema by that path ([ADR-056](../../tech-docs/architecture/decisions/ADR-056-backbone-file-schemas-home.md) point 2). The mapping must be **path-safe**, because an address contains `::` and `:` (COR-053 Implications), and **injective on valid addresses**, so that no two points share a file and no path binds the wrong schema (ADR-056 point 2). This section defines it and its inverse.
+
+**Valid addresses.** A *word* matches `[a-z][a-z0-9-]*`: a lowercase letter, then lowercase letters, digits and hyphens. A valid address is `<publisher>::<role>:<point>` with each part a word — the grammar `config.schema.json` applies to the keys of `connections.providers` and `connections.selections`. Because `:` is not a word character, a valid address splits into its three parts in exactly one way. The package schema types addresses more loosely ("Field layout and casing"); an address outside the grammar has no filler path.
+
+**The mapping.** One directory per address part, the point as the file name:
+
+```
+<publisher>::<role>:<point>   ↦   <internal-root>/pkit/fillers/<publisher>/<role>/<point>.yaml
+```
+
+`<internal-root>` is the internal documentation root: `docs.internal` in the configuration file, default `docs/`. The prefix `<internal-root>/pkit/fillers/` is a documentation location derived like any other, so COR-049's rules apply to it. It is recorded when first used, and a root changed later moves no filler already placed ([COR-049](../decisions/core/COR-049-documentation-roots.md) points 4 to 6). Recording it belongs to the location rule, which arrives with #994 (below). The mapping fixes only what follows the prefix. `pkit/fillers/` is the backbone's sub-path, the third literal above. Its `pkit/` segment marks the folder as the methodology's among the project's own documents, as the `pkit:` key does in front matter. Because the backbone owns the sub-path, no component places documents in it (COR-052 point 2).
+
+| Address | Path, with the default internal root |
+|---|---|
+| `pkit::documentation:readers` | `docs/pkit/fillers/pkit/documentation/readers.yaml` |
+| `pkit::analysis:revalidation-evidence` | `docs/pkit/fillers/pkit/analysis/revalidation-evidence.yaml` |
+| `super-docs::documentation:readers` | `docs/pkit/fillers/super-docs/documentation/readers.yaml` |
+
+The first `pkit` in each path is the fixed sub-path; the second is the role's publisher, and varies.
+
+**Why it is injective.** Let two valid addresses map to the same path. Both paths carry the same prefix and the suffix `.yaml`; removing them leaves equal strings, `p/r/q` and `p'/r'/q'`. No word contains `/`, so each string has exactly two slashes, and splitting at them gives `p = p'`, `r = r'` and `q = q'`: the same address. The argument uses a single fact, **`/` is not a word character**. As strings, then, the mapping stays injective under any word grammar that keeps `/` out, and a word containing `/` could not name a directory anyway. On disk it needs one more fact, the lower case below.
+
+**Why it is path-safe.** Each address part becomes exactly one path segment, and the word alphabet keeps every segment ordinary:
+
+- no `:` reaches the path — the address's separators become `/`;
+- no `.`, so no segment is `.` or `..`, and the suffix's is the only dot;
+- a letter first, so no segment is empty or starts with `-`;
+- no upper case, so a case-insensitive filesystem cannot fold two distinct paths into one — the mapping stays injective on disk, not only as strings;
+- no whitespace, quote or glob character, so a path needs no quoting in a shell or a glob.
+
+Two limits the grammar does not rule out: a word longer than a filesystem allows for one name (commonly 255 bytes, `.yaml` included for the point), and device names Windows reserves (`con`, `nul`, `aux`, …). Neither breaks injectivity — each only makes a file impossible to create there — so a capability author avoids such words.
+
+**The inverse.** Given a file under `<internal-root>/pkit/fillers/`: remove that prefix, require and remove the `.yaml` suffix, and split the rest on `/`. Exactly three parts, each a word, give the address `<first>::<second>:<third>`, which the mapping sends back to the same path — so the two are inverse to each other on valid addresses. Any other file under the prefix — two parts or four, a part that is not a word, `.yml` or no suffix — is not a filler: it binds to no point, and is reported rather than skipped in silence. This is the walk the location rule performs ("Filler path", ADR-056 point 2).
+
+**Why directories rather than one file name.** Folding the address into a single name needs a separator no word contains. `<publisher>__<role>__<point>.yaml` works today, since `_` is not a word character — but its correctness then rests on a character the grammar merely happens to exclude, and a grammar that later admitted `_` would break the inverse without a trace. Folding on `-`, as `<publisher>--<role>-<point>.yaml`, is not injective at all, because `-` is a word character: `a--b-c-d` is both `a::b:c-d` and `a::b-c:d`. The directory form rests on the one separator no path segment can contain, lists fillers by publisher and by role in any file browser, and inverts by splitting, not parsing.
+
+**What the file holds — arrives with #994.** The envelope is the backbone's (COR-052 point 2). Its schema under `backbone/`, the location rule that binds a file to it by this path, and the resolution of the entries all land with the data-point Task, #994, and that schema is then the authority. The shape it implements:
+
+```yaml
+schema_version: 1       # the version of the point this file targets (COR-052 point 5)
+entries:                # the point's entries, in the point's own shape (its companion schema)
+  - id: operator
+    # …the fields the point's schema defines
+suppress:               # optional, union points: entries from other fillers to drop, each with its reason
+  - { id: guest, reason: "No anonymous readers on this project." }
+remove:                 # optional, additive points: removal overrides, each with its reason
+  - { id: security-review, reason: "Covered by the platform team's own gate." }
+```
+
+What the records already fix around it:
+
+- **Precedence.** In `single` and `union` points the project file beats a capability, which beats the definer's default (COR-052 point 4).
+- **Overrides.** In a `union` point, a project entry whose id matches a capability's entry replaces it whole, never field by field (COR-052 points 3 and 4). In an `additive` point the same collision is an error, and only `remove` takes an entry out (point 3).
+- **Errors the project can fix.** A malformed envelope, or one targeting the wrong version of the point, is a validation error whatever the point's inert policy (COR-052 point 2).
+- **Inert, not wrong.** A filler whose point has no active provider has its envelope checked and its body left alone, and is reported as inert (ADR-056 point 2).
+- **Editor support.** The authoring command that creates a filler file stamps the editor directive at the backbone schema's path (ADR-056 point 1).
 
 ## The component registry
 
