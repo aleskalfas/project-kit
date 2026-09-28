@@ -1,0 +1,28 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  The friction change check of COR-050 ships as `pkit friction check [--base
+  REF] [--json]`, the first command of a new `friction` group. It works from
+  git alone and writes nothing: the working tree, uncommitted and untracked
+  work included, against the merge-base of REF (default `origin/main`, or
+  `$PKIT_CHECK_BASE`), both sides discovered in their own declared places.
+  Every artefact whose anchor changed — a path matched by a changed file, a
+  record whose file changed, another artefact whose content changed, with the
+  cascade stopping where a revalidation leaves content alone — must carry one
+  of three answers in the same change: updated, unchanged with a new
+  justification, or a deferral introduced for that anchor; a new artefact
+  counts as revalidated, and a changed anchor list or a move needs a
+  revalidation. It reports friction, a marker bump with nothing behind it,
+  dead anchors of the change (an unresolved kind separately), an outdated base
+  and front matter that does not parse, upstream first along artefact
+  anchors, and `--json` emits a stable document (artefact, location, kind,
+  anchor, answer, message per finding) for other components. `friction.mode`
+  decides the exit: `warning` reports and passes; `enforcing` fails on
+  friction, dead anchors and bumps, never on an outdated base; with no place
+  declared or nothing carrying the container the check is dormant.
+  Capability-registered anchor kinds are refused unless their resolver
+  declares no network egress; none are registered yet. The record resolver
+  and artefact discovery gain a listing seam so a commit's files are read
+  without checking anything out.

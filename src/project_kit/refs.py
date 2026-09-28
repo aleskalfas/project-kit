@@ -25,12 +25,14 @@ Body parser convention (per COR-013, documented in `.pkit/agents/README.md`):
 
 from __future__ import annotations
 
+import fnmatch
 import io
 import itertools
 import os
 import re
+from collections.abc import Collection
 from dataclasses import dataclass, field
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, Literal
 
 from ruamel.yaml import YAML
@@ -208,8 +210,15 @@ def validate_corpus(target_root: Path) -> list[Issue]:
     return issues
 
 
-def resolve_record(target_root: Path, record_id: str) -> Path | None:
-    """Resolve `COR-005` / `PRJ-NNN` / `ADR-NNN` to the matching record file, or None."""
+def resolve_record(
+    target_root: Path, record_id: str, *, files: Collection[str] | None = None
+) -> Path | None:
+    """Resolve `COR-005` / `PRJ-NNN` / `ADR-NNN` to the matching record file, or None.
+
+    With `files` — repository-relative POSIX paths, a listing of the tree at
+    some state — the record is looked for in that listing instead of on disk,
+    by the same rule; the ADR directory is still the overlay's, read from disk.
+    """
     if not RECORD_RE.match(record_id):
         return None
     if record_id.startswith("COR-"):
@@ -220,9 +229,22 @@ def resolve_record(target_root: Path, record_id: str) -> Path | None:
         decisions_dir = _adr_records_dir_or_none(target_root)
         if decisions_dir is None:
             return None
+    pattern = f"{record_id}-*.md"
+    if files is not None:
+        try:  # the overlay's ADR directory comes back resolved; compare like with like
+            directory = decisions_dir.resolve().relative_to(target_root.resolve()).as_posix()
+        except (OSError, ValueError):
+            return None
+        listed = sorted(
+            rel
+            for rel in files
+            if PurePosixPath(rel).parent.as_posix() == directory
+            and fnmatch.fnmatchcase(PurePosixPath(rel).name, pattern)
+        )
+        return target_root / listed[0] if listed else None
     if not decisions_dir.is_dir():
         return None
-    matches = sorted(decisions_dir.glob(f"{record_id}-*.md"))
+    matches = sorted(decisions_dir.glob(pattern))
     if matches:
         return matches[0]
     return None
