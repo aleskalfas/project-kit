@@ -660,63 +660,47 @@ def validate_capability_self_consistency(
     Returns a list of human-readable problem descriptions; an empty list means
     the capability is structurally sound. Checks performed:
 
-    - **package.yaml** parses as a capability and its declared name matches
-      the directory (already guaranteed if the caller resolved a
-      ``CapabilitySource``, re-checked here so this is usable standalone);
-    - **version** is a parseable semver string (it gates dependency edges);
-    - **requires_backbone**, when present, is a parseable specifier;
-    - **declared dependency ranges** are parseable specifiers;
+    - **package.yaml** — the same validator `pkit validate` runs over every
+      installed package (`package_validate`): the shape against the package
+      schema when the tree ships one, and the repository checks — declared
+      name matches the directory, version and ranges parse, command scripts
+      exist, connection points sit under provided roles with their companion
+      schemas and commands present, documentation locations and friction
+      places are relative. Only its *errors* refuse; unknown-key warnings are
+      the `pkit validate` pass's to show (the permissive posture until #999).
     - **README.md** is present (the capability's layout contract);
     - the capability's **own schema pairs** (under ``schemas/``) pass schema
       validation, reusing the same validator ``pkit schemas validate`` runs.
 
-    No reusable end-to-end capability validator existed, so these are the
-    minimal structural checks plus delegation to the schema validator for the
-    schema surface; deeper citation/reference closure is corpus-wide
-    (``refs.validate_corpus``) and runs post-activation, not here.
+    Deeper citation/reference closure is corpus-wide (``refs.validate_corpus``)
+    and runs post-activation, not here.
     """
-    from project_kit import schemas_validate
+    from project_kit import package_validate, schemas_validate
 
     problems: list[str] = []
     cap_dir = capability_source.path
-    package = capability_source.package
 
-    # package.yaml name/kind are guaranteed by resolution, but re-checking
-    # keeps this callable on a hand-built CapabilitySource.
-    if package.name != capability_source.name:
-        problems.append(
-            f"package.yaml component.name {package.name!r} does not match the "
-            f"capability directory name {capability_source.name!r}."
+    package_path = cap_dir / "package.yaml"
+    schema, _note = package_validate.load_package_schema(_project_root_of(cap_dir))
+    if package_path.is_file():
+        report = package_validate.validate_package_file(
+            package_path, schema, component_dir=cap_dir, expected_name=capability_source.name
         )
-
-    if not package.version:
-        problems.append("package.yaml is missing component.version.")
+        findings = report.errors
     else:
-        try:
-            Version(package.version)
-        except InvalidVersion:
-            problems.append(
-                f"package.yaml component.version {package.version!r} is not a "
-                "valid version (it gates dependency edges)."
+        # A hand-built `CapabilitySource` with no file on disk: judge the
+        # package it carries, so the checks still run standalone.
+        findings = tuple(
+            f
+            for f in package_validate.validate_package(
+                _package_as_mapping(capability_source.package),
+                schema,
+                component_dir=cap_dir,
+                expected_name=capability_source.name,
             )
-
-    if package.requires_backbone:
-        try:
-            SpecifierSet(package.requires_backbone)
-        except InvalidSpecifier:
-            problems.append(
-                f"requires_backbone {package.requires_backbone!r} is not a "
-                "valid version specifier."
-            )
-
-    for dep in package.requires_capabilities:
-        try:
-            SpecifierSet(dep.version)
-        except InvalidSpecifier:
-            problems.append(
-                f"requires_capabilities entry for {dep.name!r} has an invalid "
-                f"version range {dep.version!r}."
-            )
+            if f.severity is package_validate.Severity.ERROR
+        )
+    problems.extend(f"package.yaml{f.path}: {f.message}" if f.path else f.message for f in findings)
 
     if not (cap_dir / "README.md").is_file():
         problems.append("README.md is missing (required capability layout).")
@@ -728,6 +712,33 @@ def validate_capability_self_consistency(
             problems.append(f"schema {issue.location}: {issue.message}")
 
     return problems
+
+
+def _project_root_of(cap_dir: Path) -> Path:
+    """The project root a capability directory sits in — `<root>/.pkit/capabilities/<name>`
+    — where the package schema is read from (ADR-056 point 1). A directory not in
+    that layout yields its own parent, where no schema will be found and the
+    validator runs its repository checks alone."""
+    if cap_dir.parent.name == "capabilities" and cap_dir.parent.parent.name == ".pkit":
+        return cap_dir.parent.parent.parent
+    return cap_dir.parent
+
+
+def _package_as_mapping(package: CapabilityPackage) -> dict[str, Any]:
+    """Render a `CapabilityPackage` back to the mapping shape its file has."""
+    raw: dict[str, Any] = {
+        "schema_version": package.schema_version,
+        "component": {"kind": "capability", "name": package.name, "version": package.version},
+    }
+    if package.description:
+        raw["description"] = package.description
+    if package.requires_backbone:
+        raw["requires_backbone"] = package.requires_backbone
+    if package.requires_capabilities:
+        raw["requires_capabilities"] = [
+            {"name": dep.name, "version": dep.version} for dep in package.requires_capabilities
+        ]
+    return raw
 
 
 def detect_upgrade_collisions(

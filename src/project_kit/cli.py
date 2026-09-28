@@ -2506,6 +2506,21 @@ def validate(include_refs: bool) -> None:
         # Convert refs.Issue to validate.Issue for unified reporting.
         for ri in ref_issues:
             issues.append(ValidateIssue(location=ri.location, diagnosis=ri.diagnosis))
+    # --- backbone configuration pass (COR-048 point 4; #981) -------------------
+    # Errors join the issue list and fail the command; warnings and information
+    # print under the "configuration" heading only. Registry refactor is #986.
+    from project_kit import config_validate
+
+    config_report = config_validate.run_configuration_pass(target_root)
+    for location, diagnosis in config_validate.as_issues(config_report):
+        issues.append(ValidateIssue(location=location, diagnosis=diagnosis))
+    # ---------------------------------------------------------------------------
+    # The "packages" pass (ADR-056 point 5): every registered component's
+    # package.yaml. Errors join the issue list; warnings only print.
+    from project_kit import package_validate
+
+    packages = package_validate.validate_installed_packages(target_root)
+    issues.extend(packages.as_issues(target_root))
     sections: list[ValidateSection] = []
     # --- friction (COR-050 point 12) — one pass, one section ---------------
     friction_result = friction_validate.validate_friction(target_root)
@@ -2517,6 +2532,8 @@ def validate(include_refs: bool) -> None:
     )
     # ------------------------------------------------------------------------
     print_validate_report(target_root, issues, sections)
+    config_validate.print_configuration_section(config_report)
+    package_validate.print_pass(target_root, packages)
     if issues:
         raise SystemExit(1)
 

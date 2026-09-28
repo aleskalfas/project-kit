@@ -219,6 +219,58 @@ A capability enters a project through one of two verbs, distinguished by where t
 
 If a same-named capability later begins shipping from kit source (graduation, before graduation is specified), `register` surfaces the overlap as a note and registers the in-repo copy; `sync` surfaces the same collision rather than silently shadowing either tree (COR-031 boundary case).
 
+## Configuration file
+
+A project keeps its declarations to the backbone in **one project-owned file**: `.pkit/project/config.yaml` ([COR-048](../decisions/core/COR-048-backbone-configuration.md) point 1). It sits in the project namespace — `sync`, `upgrade` and every uninstall leave it alone — and it is the file `pkit report` already reads the project's `name` from. An absent file, an empty file or a missing key means the owning record's default applies; that is never an error (point 3).
+
+**Every key is owned by a core record** (point 2), which defines its meaning, default and writers. A capability never adds a key here; its settings live in its own subtree. Project records may own keys only under the reserved `project` block.
+
+| Key | Meaning | Default | Owning record |
+|---|---|---|---|
+| `name` | The project's declared name, rendered wherever the backbone names the project (never derived from a folder or remote name). | none — readers fall back to the git remote's repository name | COR-048 point 2 (writer: the `pkit report` prompt-once write-back, ADR-050) |
+| `docs.user` | The **user root**: the directory, relative to the repository root, where user-facing documentation lives. | `docs/` | [COR-049](../decisions/core/COR-049-documentation-roots.md) point 1 |
+| `docs.internal` | The **internal root**: where technical documentation for maintainers and agents (decisions, architecture, guides, analysis) lives; components that choose a documentation location derive it from this root plus their conventional sub-path. | `docs/` | COR-049 points 1 and 4 |
+| `friction.mode` | How the friction change check treats what it finds: `warning` reports and passes; `enforcing` fails on friction, dead anchors and a bump with nothing behind it. | `warning` | [COR-050](../decisions/core/COR-050-anchors-and-friction.md) points 12 and 14 |
+| `friction.status-job` | When the job that writes the tool-written `last-check` status runs: `never`, or `after-merge`. | `never` | COR-050 points 10 and 14 |
+| `friction.places` | The project's own anchored places: paths or globs, relative to the repository root, where the friction check looks for artefacts carrying the methodology's container. `**` spans folders. | none | COR-050 points 1 and 14 |
+| `friction.surface` | The project's declared surface: paths or globs that artefacts are expected to anchor to; the check reports the uncovered part. | none | COR-050 point 14 |
+| `friction.exclude` | Paths or globs the friction checks leave out. | none | COR-050 point 14 |
+| `connections.providers` | The **provider-selection key**: `<publisher>::<role>` → the installed capability that answers the role. | empty | [COR-053](../decisions/core/COR-053-connection-points.md) point 7 |
+| `connections.selections` | The **contributor-selection key**: `<publisher>::<role>:<point>` → the installed capability whose contribution wins a `single` data point. | empty | [COR-052](../decisions/core/COR-052-slots.md) point 4, COR-053 point 7 |
+| `project` | Reserved for keys the project's own decision records own. Checked only for being a mapping; never inspected. | empty | COR-048 point 2 |
+
+```yaml
+# yaml-language-server: $schema=../schemas/backbone/config.schema.json
+name: example
+docs: { user: docs/, internal: docs/ }
+friction:
+  mode: warning
+  places: [docs/**/*.md]
+connections:
+  providers: { pkit::work-tracking: project-management }
+project:
+  anything-the-project-decides: true
+```
+
+**Schema.** The file is validated as a whole against `.pkit/schemas/backbone/config.schema.json`, a backbone file schema shipped in the tree and bound to this file by its fixed path ([ADR-056](../../tech-docs/architecture/decisions/ADR-056-backbone-file-schemas-home.md); the schemas README's "Backbone file schemas" section). The file carries **no version key** — the backbone owns its shape and migrates it (COR-010). The first line above is the editor directive the backbone stamps into a file it creates; an editor that reads it validates and completes as you type.
+
+**Strict when checked, forgiving when read** (COR-048 point 4). `pkit validate` runs the configuration pass and reports under a `configuration` heading; commands that merely read a key never fail because of it and use the default (COR-048 point 4); today's only reader, `pkit report`, falls back silently. The findings, each with a JSON Pointer into the file and a severity:
+
+| Severity | Finding |
+|---|---|
+| error | An unknown key at any backbone-owned level, reported with the nearest known key (`unknown key 'doc'; did you mean 'docs'?`). A key of `connections.providers` / `connections.selections` that is not an address of the right form. |
+| error | A wrong type, an invalid `mode` / `status-job` value, an absolute path, a duplicate pattern. A file that does not parse, or is not a mapping. |
+| error | A documentation root that resolves (after following links) outside the repository or inside `.pkit/` (COR-049 point 1). |
+| warning | A documentation root that does not exist yet, or exists but is not a directory (COR-049 point 7). |
+| error | A friction pattern that leaves the repository — absolute, or climbing above the root (COR-050 point 14). A bare `.` means the whole repository and is accepted. |
+| warning | A friction pattern that matches nothing: a dead pattern keeps silence looking like health (COR-050 point 12). |
+| error | A connection entry naming a capability that is not installed, with the fix (`pkit capabilities install <name>`, or remove the entry). |
+| info | A connection entry naming an installed capability: whether it *provides the role* or *fills the point* cannot be verified until package metadata declares connections, so it is reported as unverifiable, never refused. |
+
+Only errors fail the command. The same repository state always yields the same findings in the same order: schema findings by position, then the repository checks in a fixed order — docs, friction, connections — each entry in written order. A tree recorded before the schema landed has no `config.schema.json`; the pass reports "no config schema present in this tree; skipped." rather than validating against a shape that tree never shipped (ADR-056 point 1).
+
+**Writing.** A key is written only by the writers its record names, with consent (COR-048 point 5): today that is the `name` write-back of `pkit report`; the configuration commands the records anticipate have not shipped. Editing the file by hand is the project's own edit, always allowed.
+
 ## Authoring commands
 
 The `new` family scaffolds first-class methodology elements — areas, adapters, capabilities, migrations — by stamping the contract their owning record fixes (COR-005 for adapters, COR-010 for the manifest layer and migrations, COR-011 for areas, COR-017 for capabilities). Every `new` command is a one-shot generator: it refuses to overwrite existing targets, and the output is a directory or file the rest of the CLI surface (`status`, `sync`, `upgrade`, etc.) recognises immediately. No manual manifest edits are needed after a scaffold call.
@@ -367,6 +419,8 @@ Read-only state check. Verifies:
 - The no-shared-files invariant — no project edits to core-owned paths.
 - The manifest — every declared path is present and well-formed.
 - Per-area schema rules — decision-record schema, link validity, naming conventions, and any rules each area documents in its own README.
+- **The configuration file** — `.pkit/project/config.yaml` against the backbone-shipped `config.schema.json`, then the repository checks its records ask for (documentation roots inside the repository and outside `.pkit/`, friction patterns inside the repository and matching something, connection entries naming installed capabilities). Reported under a `configuration` heading with a severity per finding; only errors fail. See "Configuration file" above for every key and finding.
+- **Package metadata** — every registered capability's and adapter's `package.yaml` against the backbone-shipped `package.schema.json`, then the repository checks (name matches directory, versions and ranges parse, command scripts exist, connection points under a provided role with their companion schemas and commands, document locations and friction places relative). Reported under a `packages` heading; errors fail, unknown-key warnings only print. See the lifecycle README, "Validation: the package schema".
 - The `friction` pass (COR-050 point 12) — discovers artefacts in the declared places (`friction.places` in the project configuration and in each installed capability's package metadata) and fails on a malformed `friction` block, a dangling deferral, a cycle between artefacts, an invalid `friction.mode`, or a settings path outside the repository. Dormant — a count line only — until a place is declared and an artefact carries the container. Reference: `.pkit/schemas/README.md`, "The friction block".
 
 Reports issues with their locations and a brief diagnosis. Makes no changes.

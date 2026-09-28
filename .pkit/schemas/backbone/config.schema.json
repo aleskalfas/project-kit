@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "config.schema.json",
+  "title": "The backbone configuration file",
+  "description": "A backbone file schema (ADR-056): the project's declarations to the backbone, kept in one project-owned file at `.pkit/project/config.yaml` (COR-048 point 1). Every key is owned by a core record, which defines its meaning, its default and who may write it (COR-048 point 2); an absent file, an empty file or a missing key means the owning record's default applies (point 3). Validation is strict: an unknown key is an error carrying the nearest known key, rendered by `project_kit.backbone_schemas`; commands that merely read the file must never fail because of it and use the default (point 4). The reserved `project` block is checked only for being well-formed. Bound by its fixed path, never by a field. Backbone-owned; carries no version of its own and is migrated when it changes (COR-010, ADR-056 point 3).",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "description": "The project's declared name, rendered wherever the backbone names the project (COR-048 point 2, first entry). Declared here so it is never derived from a folder or remote name. Default: none — readers fall back to the git remote's repository name.",
+      "$ref": "#/$defs/non-empty-string"
+    },
+    "docs": {
+      "$ref": "#/$defs/docs"
+    },
+    "friction": {
+      "$ref": "#/$defs/friction"
+    },
+    "connections": {
+      "$ref": "#/$defs/connections"
+    },
+    "project": {
+      "title": "The reserved `project` block (COR-048 point 2)",
+      "description": "Keys owned by the project's own decision records. Checked only for being well-formed — a mapping — and otherwise not inspected; project-supplied schemas for it are deferred until a real need appears.",
+      "type": "object"
+    }
+  },
+  "$defs": {
+    "docs": {
+      "title": "Documentation roots, by audience (COR-049)",
+      "description": "Where the project's documentation lives. Each root is a directory path relative to the repository root whose resolved location, after following links, lies inside the repository and outside the methodology's own tree (`.pkit/`); validation checks that and warns when the directory does not exist yet (COR-049 points 1 and 7). The two roots may be the same folder, or one nested in the other. Both default to `docs/`.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "user": {
+          "description": "The user root: where user-facing documentation (how to use the system) lives. Default `docs/`. No backbone consumer today; components that place user-facing documents derive from it.",
+          "$ref": "#/$defs/repo-relative-directory"
+        },
+        "internal": {
+          "description": "The internal root: where technical documentation for maintainers and agents (decisions, architecture, contributing and release guides, analysis) lives. Default `docs/`. Components that choose a documentation location derive it from this root plus their conventional sub-path (COR-049 point 4).",
+          "$ref": "#/$defs/repo-relative-directory"
+        }
+      }
+    },
+    "friction": {
+      "title": "Friction settings (COR-050 point 14)",
+      "description": "The project's settings for anchors and friction, named for the functionality and its command group. Every path here stays inside the repository (validation refuses one that does not) and a pattern matching nothing is a warning (a dead pattern would keep silence looking like health).",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "description": "How the change check treats what it finds (COR-050 point 12): `warning` reports and passes; `enforcing` fails on friction, dead anchors and a bump with nothing behind it. Default `warning`. An invalid value is a validation error, so enforcement is never switched off silently.",
+          "type": "string",
+          "enum": [
+            "warning",
+            "enforcing"
+          ]
+        },
+        "status-job": {
+          "description": "When the job that writes the tool-written `last-check` status runs (COR-050 point 10): `never`, or `after-merge` — after each merge to the project's default branch. Default `never`.",
+          "type": "string",
+          "enum": [
+            "never",
+            "after-merge"
+          ]
+        },
+        "places": {
+          "description": "The project's own anchored places: paths or globs, relative to the repository root, where the friction check looks for artefacts carrying the methodology's container (COR-050 point 1). `**` matches across folders. Default: none. Components declare their places in their own package metadata, not here.",
+          "$ref": "#/$defs/repo-relative-patterns"
+        },
+        "surface": {
+          "description": "The project's declared surface: paths or globs, relative to the repository root, that artefacts are expected to anchor to; the check reports the uncovered part (COR-050 point 14). Default: none.",
+          "$ref": "#/$defs/repo-relative-patterns"
+        },
+        "exclude": {
+          "description": "Paths or globs, relative to the repository root, that the friction checks leave out. Default: none.",
+          "$ref": "#/$defs/repo-relative-patterns"
+        }
+      }
+    },
+    "connections": {
+      "title": "Connection selections (COR-053 point 7, COR-052 point 4)",
+      "description": "The project's answers to wiring conflicts, in the block named for the functionality. Empty by default; written with consent by configuration commands or when a conflict is reported; validated against what is installed; cleared on uninstall with consent (COR-048 point 2, 'keys naming installed components').",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "providers": {
+          "title": "The provider-selection key",
+          "description": "Selects one capability per qualified role: a mapping from `<publisher>::<role>` to the name of the installed capability that answers the role. Validation checks that the capability is installed; that it provides the role is checked once package metadata declares roles.",
+          "type": "object",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[a-z][a-z0-9-]*::[a-z][a-z0-9-]*$": {
+              "$ref": "#/$defs/capability-name"
+            }
+          }
+        },
+        "selections": {
+          "title": "The contributor-selection key",
+          "description": "Selects one contributor per `single` data point when several capabilities contribute to it: a mapping from `<publisher>::<role>:<point>` to the name of the installed capability whose contribution wins (COR-052 point 4 with COR-053's role-qualified address). Validation checks that the capability is installed; that the point is a declared `single` point the capability fills is checked once package metadata declares points.",
+          "type": "object",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[a-z][a-z0-9-]*::[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$": {
+              "$ref": "#/$defs/capability-name"
+            }
+          }
+        }
+      }
+    },
+    "capability-name": {
+      "description": "The name of an installed capability, as registered in `.pkit/manifest.yaml`.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "repo-relative-directory": {
+      "description": "A directory path relative to the repository root. Not absolute; a trailing slash is allowed.",
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^/]"
+    },
+    "repo-relative-patterns": {
+      "description": "Paths or globs relative to the repository root; `**` matches across folders. Not absolute.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[^/]"
+      }
+    },
+    "non-empty-string": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}
