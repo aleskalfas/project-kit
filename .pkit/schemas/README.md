@@ -377,7 +377,57 @@ pkit:
 
 **Key form.** A role block's key is the role word alone, the qualifier being resolved from the active provider. The qualified form is written when two active roles share a word — the install plan that introduces the second lists the artefacts whose keys change, rewritten only with consent — and always when a role word equals a functionality block's name.
 
-**What ships now.** `backbone/container.schema.json` — the container in both forms (a document's front matter, a collection entry), with the `friction` block modelled strictly. Its discrimination rule, the shared unknown-key renderer and the load-check live in `project_kit.backbone_schemas`; the point-version compatibility check waits on the role resolver. `backbone/config.schema.json` — the backbone configuration file (`.pkit/project/config.yaml`): `name`, `docs`, `friction`, `connections` and the reserved `project` block, unknown keys refused at every backbone-owned level, no version key. `pkit validate` applies it, with the repository checks the owning records ask for, in its configuration pass (`project_kit.config_validate`); the CLI reference's "Configuration file" section documents every key. `backbone/package.schema.json` — a component's `package.yaml`: every field in use plus the `connections`, `docs` and `friction` blocks, **permissive on unknown keys** (they warn with the nearest known key; the strict flip is #999) where the rest of the class is strict; its validator and repository checks are `project_kit.package_validate`, run by `pkit validate`'s "packages" pass and by the register pre-flight (the lifecycle README, "Validation: the package schema"). The other two schemas of the class arrive with their Tasks: rule-set files (#989), the filler envelope (#994). No command applies the container rule or the location binding yet: `pkit schemas validate` only load-checks the schema files in `backbone/`, and the container validator is a library function until `pkit validate` (Task #986) and the friction discovery (Task #988) call it.
+**What ships now.** `backbone/container.schema.json` — the container in both forms (a document's front matter, a collection entry), with the `friction` block modelled strictly. Its discrimination rule, the shared unknown-key renderer and the load-check live in `project_kit.backbone_schemas`; the point-version compatibility check waits on the role resolver. `backbone/config.schema.json` — the backbone configuration file (`.pkit/project/config.yaml`): `name`, `docs`, `friction`, `connections` and the reserved `project` block, unknown keys refused at every backbone-owned level, no version key. `pkit validate` applies it, with the repository checks the owning records ask for, in its configuration pass (`project_kit.config_validate`); the CLI reference's "Configuration file" section documents every key. `backbone/package.schema.json` — a component's `package.yaml`: every field in use plus the `connections`, `docs` and `friction` blocks, **permissive on unknown keys** (they warn with the nearest known key; the strict flip is #999) where the rest of the class is strict; its validator and repository checks are `project_kit.package_validate`, run by `pkit validate`'s "packages" pass and by the register pre-flight (the lifecycle README, "Validation: the package schema"). The other two schemas of the class arrive with their Tasks: rule-set files (#989), the filler envelope (#994). `pkit validate`'s friction pass discovers artefacts in the declared places and applies the container rule to them (below); the registry refactor that generalises the passes is Task #986.
+
+### The friction block
+
+The `friction` functionality block is what an artefact carries for [COR-050](../decisions/core/COR-050-anchors-and-friction.md): what makes it true, and when it was last revalidated against that. The record owns the keys; `container.schema.json` fixes their shape; `pkit validate` applies it.
+
+**Where it sits — both forms.** Inside the container, in a **document's** front matter, or inside each **entry** of a collection file (a Markdown file whose front matter maps ids to entries; the entry's content is its data plus the body section headed by its id). The artefact's own fields — `id`, `status`, whatever defines it — stay outside the container.
+
+```yaml
+# a document                              # a collection file
+---                                       ---
+id: cli-guide                             name: cmn
+pkit:                                     RS-CMN-001:
+  friction:                                 status: accepted
+    anchors: { path: [src/cli/**] }         pkit:
+    revalidated:                              friction:
+      at: 2026-10-02T09:40:12Z                  anchors: { record: [COR-050] }
+      outcome: unchanged                  RS-CMN-002:
+      unchanged-because: "…"                status: draft
+---                                         pkit: { friction: { anchors: { artefact: [RS-CMN-001] } } }
+                                          ---
+                                          ## RS-CMN-001 — Name things
+                                          …
+```
+
+**Fields.**
+
+| Key | Meaning |
+|---|---|
+| `anchors` | What makes the artefact true, grouped by kind — `path` (files or globs relative to the repository root, `**` across folders), `record` (an identified record, such as a decision), `artefact` (another artefact by its id; a document may also be named by its repository-relative path). Each list is non-empty with unique entries. An artefact without anchors is *unanchored* — reported, never an error. |
+| `revalidated` | The last revalidation, written on a person's decision. `at` — a UTC timestamp `YYYY-MM-DDTHH:MM:SSZ`; the revalidation point is the last commit in which its parsed value changed. `outcome` — `updated` or `unchanged`; `at` and `outcome` come together. `unchanged-because` — required with `outcome: unchanged`: why the content still holds against *this* change. `deferred` — one entry per anchor whose friction is deliberately postponed: `anchor: {kind, value}` plus a `reason`; kept sorted by anchor. An artefact never yet revalidated may carry `deferred` alone; an empty `revalidated` is refused. |
+| `last-check` | Tool-written only, by the after-merge job: `state` (`current` / `stale` / `deferred`), `as-of` (the commit checked against), `since` (where staleness came from). Never read for friction. |
+
+Unknown keys anywhere in the block are refused. The block carries no version; it is migrated when it changes, preserving the parsed value of `at`.
+
+**Where artefacts are looked for.** Only in the **declared places**: the project's `friction.places` in `.pkit/project/config.yaml` (repository-relative paths or globs; a directory, or a glob ending in `**`, means every Markdown file beneath it), and each installed capability's `friction.places` in its `package.yaml`. A capability place is an object `{location, path}` — inside the named `docs.locations` entry, or repository-relative without one (the lifecycle README, "The connection, documentation and friction blocks"); today's discovery reads only string-shaped capability places and resolves them under the internal root, so object-shaped ones are not yet walked — Task #1025 aligns discovery with the schema. Front matter outside the places is never read, a plain YAML file in a place is not a document, and a match that resolves outside the repository through a link is dropped — the walk never reads a file the repository does not hold. The same reader takes the rest of the `friction` key — `mode`, `surface`, `exclude` — so the configuration is read once.
+
+**Validation findings** (COR-050 point 12) — each fails `pkit validate`, in either mode, and names the fix:
+
+- *unparsable front matter* in a place — reported whenever places are declared, and it keeps the pass awake, since the check never skips an artefact it cannot parse: a YAML typo in the only container-carrying file is an error, not silence;
+- *a malformed block* — the container schema's or the container rule's errors, against `path` (a document) or `path#id` (an entry) and a JSON Pointer into the block;
+- *a dangling deferral* — a `deferred[].anchor` matching, by kind and value, no anchor of the artefact; the pointer carries the entry's index as written;
+- *a cycle between artefacts* through `anchors.artefact`, reported once with its path (`A -> B -> A`; a self-anchor is `A -> A`).
+
+Two things the pass **reports** without failing: orphaned role blocks in the container, and *schema unavailable* — the tree has no readable container schema, so the block check was skipped (sync the tree).
+
+The settings themselves are the **configuration pass's** findings, since it owns the file (the CLI reference, "Configuration file"): an invalid `friction.mode` (the schema's enum — never switched off silently) and a place, surface or exclude path outside the repository (absolute, climbing above the root, or resolving outside it through a link); a capability's `friction` entries are the packages pass's. The friction pass reads those settings and never walks a place that leaves the repository.
+
+The pass is **dormant** — it prints only its counts — when no places are declared, or when nothing in them needs judging: no artefact carries the container and no file failed to parse.
+
+**Not here.** Friction itself — the change check and the whole-repository check, dead anchors, over-broad anchors, the two measures — arrives with Tasks #990 and #991; this pass never touches git.
 
 ## Tooling expectations
 

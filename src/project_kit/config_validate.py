@@ -17,8 +17,11 @@ checks the owning records ask for:
   following links, inside the repository and outside `.pkit/` — otherwise an
   error; a root that does not exist yet is a warning.
 - **Friction paths** (COR-050 points 12 and 14): each place / surface /
-  exclude pattern stays inside the repository — otherwise an error; a pattern
-  matching nothing is a warning.
+  exclude pattern stays inside the repository — not absolute, not climbing
+  above the root, not resolving outside it through a link — otherwise an
+  error; a pattern matching nothing is a warning. This pass is the one owner
+  of these findings and of the `friction.mode` enum (the schema); the
+  friction pass reads the settings and reports only on the artefacts.
 - **Connections** (COR-053 point 7, COR-052 point 4): each provider or
   contributor selection names an installed capability, read from the
   backbone manifest — otherwise an error naming the fix. Whether that
@@ -28,7 +31,8 @@ checks the owning records ask for:
 
 Findings are structured records (a JSON Pointer into the file, a severity,
 a message) in a deterministic order: shape findings by position, then the
-repository checks in a fixed order — docs, friction, connections — each entry in written order. Only errors fail validation.
+repository checks in a fixed order — docs, friction, connections — each entry
+in written order. Only errors fail validation.
 """
 
 from __future__ import annotations
@@ -38,7 +42,7 @@ import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from enum import Enum
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 from typing import Any
 
 import click
@@ -50,6 +54,7 @@ from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
 from project_kit import backbone_schemas, cli_render
+from project_kit.friction_discovery import is_inside_repository
 from project_kit.manifest import read_backbone_manifest
 from project_kit.project_config import PROJECT_CONFIG_RELPATH, project_config_path
 
@@ -309,14 +314,19 @@ def _friction_findings(
 
 def _pattern_findings(target_root: Path, pointer: str, pattern: str) -> list[ConfigFinding]:
     """One path or glob: stays inside the repository (error otherwise); matches
-    something (warning otherwise)."""
+    something (warning otherwise).
+
+    Inside is judged as discovery judges it (`friction_discovery.is_inside_repository`):
+    on the text, and on where the literal prefix resolves after following links.
+    """
     normalised = os.path.normpath(pattern).replace(os.sep, "/")
-    if PurePosixPath(pattern).is_absolute() or normalised == ".." or normalised.startswith("../"):
+    if not is_inside_repository(target_root, pattern):
         return [
             ConfigFinding(
                 pointer,
                 Severity.ERROR,
-                f"friction pattern {pattern!r} leaves the repository; every path in these "
+                f"friction pattern {pattern!r} leaves the repository (absolute, climbing above "
+                f"the root, or resolving outside it through a link); every path in these "
                 f"settings stays inside it (COR-050 point 14).",
             )
         ]

@@ -48,6 +48,7 @@ from project_kit.scaffolds import (
 )
 from project_kit.agents import Namespace as AgentNamespace, stamp_new_agent
 from project_kit.storyboards import ArtifactKind, stamp_new_storyboard
+from project_kit import friction_validate
 from project_kit import refs as refs_mod
 from project_kit import router
 from project_kit import scratchpads
@@ -77,7 +78,11 @@ from project_kit.upgrade import (
     run_tool_update,
     run_upgrade,
 )
-from project_kit.validate import print_validate_report, run_validate
+from project_kit.validate import (
+    Issue as ValidateIssue,
+    print_validate_report,
+    run_validate,
+)
 from project_kit.versioning import (
     PreKind,
     Segment,
@@ -2553,15 +2558,12 @@ def validate(include_refs: bool) -> None:
     if include_refs:
         ref_issues = refs_mod.validate_corpus(target_root)
         # Convert refs.Issue to validate.Issue for unified reporting.
-        from project_kit.validate import Issue as ValidateIssue
-
         for ri in ref_issues:
             issues.append(ValidateIssue(location=ri.location, diagnosis=ri.diagnosis))
     # --- backbone configuration pass (COR-048 point 4; #981) -------------------
     # Errors join the issue list and fail the command; warnings and information
     # print under the "configuration" heading only. Registry refactor is #986.
     from project_kit import config_validate
-    from project_kit.validate import Issue as ValidateIssue
 
     config_report = config_validate.run_configuration_pass(target_root)
     for location, diagnosis in config_validate.as_issues(config_report):
@@ -2573,9 +2575,18 @@ def validate(include_refs: bool) -> None:
 
     packages = package_validate.validate_installed_packages(target_root)
     issues.extend(packages.as_issues(target_root))
+    # --- friction (COR-050 point 12) — one pass, one section ---------------
+    # Errors join the issue list; the section (counts, reports) prints after
+    # it, in the same order as the configuration and packages sections.
+    friction_result = friction_validate.validate_friction(target_root)
+    issues.extend(
+        ValidateIssue(location=f.where, diagnosis=f.message) for f in friction_result.errors
+    )
+    # ------------------------------------------------------------------------
     print_validate_report(target_root, issues)
     config_validate.print_configuration_section(config_report)
     package_validate.print_pass(target_root, packages)
+    friction_validate.print_section(friction_result)
     if issues:
         raise SystemExit(1)
 
