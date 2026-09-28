@@ -48,6 +48,7 @@ from project_kit.scaffolds import (
 )
 from project_kit.agents import Namespace as AgentNamespace, stamp_new_agent
 from project_kit.storyboards import ArtifactKind, stamp_new_storyboard
+from project_kit import friction_validate
 from project_kit import refs as refs_mod
 from project_kit import router
 from project_kit import scratchpads
@@ -77,7 +78,12 @@ from project_kit.upgrade import (
     run_tool_update,
     run_upgrade,
 )
-from project_kit.validate import print_validate_report, run_validate
+from project_kit.validate import (
+    Issue as ValidateIssue,
+    Section as ValidateSection,
+    print_validate_report,
+    run_validate,
+)
 from project_kit.versioning import (
     PreKind,
     Segment,
@@ -2498,11 +2504,19 @@ def validate(include_refs: bool) -> None:
     if include_refs:
         ref_issues = refs_mod.validate_corpus(target_root)
         # Convert refs.Issue to validate.Issue for unified reporting.
-        from project_kit.validate import Issue as ValidateIssue
-
         for ri in ref_issues:
             issues.append(ValidateIssue(location=ri.location, diagnosis=ri.diagnosis))
-    print_validate_report(target_root, issues)
+    sections: list[ValidateSection] = []
+    # --- friction (COR-050 point 12) — one pass, one section ---------------
+    friction_result = friction_validate.validate_friction(target_root)
+    issues.extend(
+        ValidateIssue(location=f.where, diagnosis=f.message) for f in friction_result.errors
+    )
+    sections.append(
+        ValidateSection("friction", tuple(friction_validate.summary_lines(friction_result)))
+    )
+    # ------------------------------------------------------------------------
+    print_validate_report(target_root, issues, sections)
     if issues:
         raise SystemExit(1)
 

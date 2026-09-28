@@ -27,6 +27,7 @@ What's NOT checked yet (scope deferred to future PRs):
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -69,11 +70,31 @@ def run_validate(target_root: Path) -> list[Issue]:
     return issues
 
 
-def print_validate_report(target_root: Path, issues: list[Issue]) -> None:
+@dataclass(frozen=True)
+class Section:
+    """A headed block one pass prints before the issue list (its counts, its reports).
+
+    Passes that have something to say beyond issues — the friction pass's
+    dormant count, say — hand one of these to `print_validate_report`; their
+    issues still join the shared list so failures print uniformly.
+    """
+
+    heading: str
+    lines: tuple[str, ...]
+
+
+def print_validate_report(
+    target_root: Path, issues: list[Issue], sections: Sequence[Section] = ()
+) -> None:
     """Pretty-print validate findings. Mirrors the spec in `.pkit/cli/README.md`."""
     click.echo()
     click.echo(cli_render.style("title", f"Validating {target_root}"))
     click.echo()
+    for section in sections:
+        click.echo("  " + cli_render.style("heading", section.heading))
+        for line in section.lines:
+            click.echo(f"    {line}")
+        click.echo()
     if not issues:
         click.echo("  " + cli_render.style("strong", "All checks passed."))
         click.echo()
