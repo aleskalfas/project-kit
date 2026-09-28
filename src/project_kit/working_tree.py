@@ -163,7 +163,9 @@ def working_tree(target_root: Path) -> WorkingTree:
     """
     return validators.once_per_run(
         ("working-tree", target_root.resolve()),
-        lambda: WorkingTree(target_root)
-        if in_git_work_tree(target_root)
-        else FilesystemTree(target_root),
+        lambda: (
+            WorkingTree(target_root)
+            if in_git_work_tree(target_root)
+            else FilesystemTree(target_root)
+        ),
     )
