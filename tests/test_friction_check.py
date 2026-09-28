@@ -2,8 +2,8 @@
 
 Every test stands up a real adopter repository (`make_adopter_repo`), commits
 a base state on `main`, branches `feature` off it and makes real commits (or
-leaves uncommitted work) before running the check against `main`. Documents
-are written with JSON front matter — valid YAML, and exact about strings.
+leaves uncommitted work) before running the check against `main`. The
+documents come from `tests.friction_documents`.
 """
 
 from __future__ import annotations
@@ -19,63 +19,7 @@ from project_kit import friction_check as fc
 from project_kit import friction_discovery as fd
 from project_kit.cli import main
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
-
-CONFIG = ".pkit/project/config.yaml"
-T1 = "2026-10-01T09:00:00Z"
-T2 = "2026-10-02T09:40:12Z"
-SOURCE = {"src/cli/main.py": "print('cli')\n", "src/core/engine.py": "ENGINE = 1\n"}
-
-
-def _config(mode: str = "warning", places: tuple[str, ...] = ("docs",), **friction: Any) -> str:
-    block: dict[str, Any] = {"mode": mode, "places": list(places), **friction}
-    return json.dumps({"name": "adopter", "friction": block}, indent=2) + "\n"
-
-
-def _doc(
-    artefact_id: str | None,
-    *,
-    anchors: dict[str, list[str]] | None = None,
-    at: str | None = None,
-    outcome: str | None = None,
-    because: str | None = None,
-    deferred: list[tuple[str, str, str]] | None = None,
-    body: str = "Body.",
-    **fields: Any,
-) -> str:
-    """A document whose front matter carries the `friction` block, as JSON."""
-    front: dict[str, Any] = {} if artefact_id is None else {"id": artefact_id}
-    front.update(fields)
-    revalidated: dict[str, Any] = {}
-    if at is not None:
-        revalidated["at"] = at
-    if outcome is not None:
-        revalidated["outcome"] = outcome
-    if because is not None:
-        revalidated["unchanged-because"] = because
-    if deferred:
-        revalidated["deferred"] = [
-            {"anchor": {"kind": kind, "value": value}, "reason": reason}
-            for kind, value, reason in deferred
-        ]
-    block: dict[str, Any] = {}
-    if anchors is not None:
-        block["anchors"] = anchors
-    if revalidated:
-        block["revalidated"] = revalidated
-    front["pkit"] = {"friction": block}
-    return f"---\n{json.dumps(front, indent=2)}\n---\n\n{body}\n"
-
-
-def _guide(**overrides: Any) -> str:
-    """The workhorse artefact: `guide`, anchored to the CLI sources, revalidated at T1."""
-    values: dict[str, Any] = {
-        "anchors": {"path": ["src/cli/**"]},
-        "at": T1,
-        "outcome": "unchanged",
-        "because": "the CLI surface is as described",
-    }
-    values.update(overrides)
-    return _doc("guide", **values)
+from tests.friction_documents import CONFIG, SOURCE, T1, T2, document, friction_config, guide
 
 
 @pytest.fixture
@@ -85,7 +29,7 @@ def repo(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
 
 def _start(adopter: AdopterRepo, files: dict[str, str], config: str | None = None) -> None:
     """Commit the base state on `main` (the install included) and branch `feature` off it."""
-    adopter.write({CONFIG: config or _config(), **SOURCE, **files})
+    adopter.write({CONFIG: config or friction_config(), **SOURCE, **files})
     adopter.commit("base", files=None)
     adopter.checkout("feature", create=True)
 
@@ -111,12 +55,12 @@ def _summary(result: fc.ChangeCheck) -> list[tuple[str, str | None, str | None, 
 
 
 def test_a_changed_anchor_answered_by_an_update_is_not_friction(repo: AdopterRepo) -> None:
-    _start(repo, {"docs/guide.md": _guide()})
+    _start(repo, {"docs/guide.md": guide()})
     repo.commit(
         "change the CLI and update the guide",
         {
             "src/cli/main.py": "print('cli v2')\n",
-            "docs/guide.md": _guide(at=T2, outcome="updated", because=None, body="Body, v2."),
+            "docs/guide.md": guide(at=T2, outcome="updated", because=None, body="Body, v2."),
         },
     )
     result = _run(repo)
@@ -128,12 +72,12 @@ def test_a_changed_anchor_answered_by_an_update_is_not_friction(repo: AdopterRep
 
 
 def test_unchanged_with_a_new_justification_answers(repo: AdopterRepo) -> None:
-    _start(repo, {"docs/guide.md": _guide()})
+    _start(repo, {"docs/guide.md": guide()})
     repo.commit(
         "change the CLI; the guide still holds",
         {
             "src/cli/main.py": "print('cli, refactored')\n",
-            "docs/guide.md": _guide(at=T2, because="a refactor: nothing the guide says moved"),
+            "docs/guide.md": guide(at=T2, because="a refactor: nothing the guide says moved"),
         },
     )
     (finding,) = _run(repo).findings
@@ -143,12 +87,12 @@ def test_unchanged_with_a_new_justification_answers(repo: AdopterRepo) -> None:
 
 
 def test_a_deferral_introduced_in_the_diff_answers_its_anchor(repo: AdopterRepo) -> None:
-    _start(repo, {"docs/guide.md": _guide()})
+    _start(repo, {"docs/guide.md": guide()})
     repo.commit(
         "change the CLI; defer the guide",
         {
             "src/cli/main.py": "print('cli v3')\n",
-            "docs/guide.md": _guide(deferred=[("path", "src/cli/**", "rewrite after the rename")]),
+            "docs/guide.md": guide(deferred=[("path", "src/cli/**", "rewrite after the rename")]),
         },
     )
     (finding,) = _run(repo).findings
@@ -157,7 +101,7 @@ def test_a_deferral_introduced_in_the_diff_answers_its_anchor(repo: AdopterRepo)
 
 
 def test_a_changed_anchor_without_an_answer_is_friction(repo: AdopterRepo) -> None:
-    _start(repo, {"docs/guide.md": _guide()})
+    _start(repo, {"docs/guide.md": guide()})
     repo.commit("change the CLI only", {"src/cli/main.py": "print('cli v4')\n"})
     result = _run(repo)
     assert _summary(result) == [("friction", "docs/guide.md", "path:src/cli/**", None)]
@@ -166,7 +110,7 @@ def test_a_changed_anchor_without_an_answer_is_friction(repo: AdopterRepo) -> No
 
 def test_a_pre_existing_deferral_does_not_cover_a_new_change(repo: AdopterRepo) -> None:
     deferred = [("path", "src/cli/**", "waiting on the rename")]
-    _start(repo, {"docs/guide.md": _guide(deferred=deferred)})
+    _start(repo, {"docs/guide.md": guide(deferred=deferred)})
     repo.commit("change the CLI again", {"src/cli/main.py": "print('cli v5')\n"})
     (finding,) = _run(repo).findings
     assert finding.kind is fc.FindingKind.FRICTION
@@ -180,22 +124,22 @@ def test_a_pre_existing_deferral_does_not_cover_a_new_change(repo: AdopterRepo) 
     ("head", "reason"),
     [
         pytest.param(
-            _guide(at=T2), "`unchanged-because` is the same as before", id="same-justification"
+            guide(at=T2), "`unchanged-because` is the same as before", id="same-justification"
         ),
         pytest.param(
-            _guide(at=T2, outcome="updated", because=None),
+            guide(at=T2, outcome="updated", because=None),
             "`outcome: updated`, but the content did not change",
             id="updated-without-content-change",
         ),
         pytest.param(
-            _guide(at=T2, because="a new reason", body="Body, edited."),
+            guide(at=T2, because="a new reason", body="Body, edited."),
             "`outcome: unchanged`, but the content changed",
             id="unchanged-although-content-changed",
         ),
     ],
 )
 def test_a_marker_bump_with_nothing_behind_it(repo: AdopterRepo, head: str, reason: str) -> None:
-    _start(repo, {"docs/guide.md": _guide()})
+    _start(repo, {"docs/guide.md": guide()})
     repo.commit("bump the marker", {"docs/guide.md": head})
     result = _run(repo)
     assert _summary(result) == [("bump", "docs/guide.md", None, None)]
@@ -204,19 +148,19 @@ def test_a_marker_bump_with_nothing_behind_it(repo: AdopterRepo, head: str, reas
 
 
 def test_a_bump_answers_no_changed_anchor(repo: AdopterRepo) -> None:
-    _start(repo, {"docs/guide.md": _guide()})
+    _start(repo, {"docs/guide.md": guide()})
     repo.commit(
         "change the CLI; bump without a new reason",
-        {"src/cli/main.py": "print('cli v6')\n", "docs/guide.md": _guide(at=T2)},
+        {"src/cli/main.py": "print('cli v6')\n", "docs/guide.md": guide(at=T2)},
     )
     assert [kind for kind, *_ in _summary(_run(repo))] == ["friction", "bump"]
 
 
 def test_a_voluntary_revalidation_is_reported_as_such(repo: AdopterRepo) -> None:
-    _start(repo, {"docs/guide.md": _guide()})
+    _start(repo, {"docs/guide.md": guide()})
     repo.commit(
         "improve the guide",
-        {"docs/guide.md": _guide(at=T2, outcome="updated", because=None, body="Clearer.")},
+        {"docs/guide.md": guide(at=T2, outcome="updated", because=None, body="Clearer.")},
     )
     assert _summary(_run(repo)) == [("revalidated", "docs/guide.md", None, "updated")]
 
@@ -238,13 +182,13 @@ def test_a_reformatted_marker_is_not_a_revalidation(repo: AdopterRepo) -> None:
 def _chain() -> dict[str, str]:
     """`c` anchors `b`, `b` anchors `a`, `a` anchors the engine; walked c, b, a."""
     return {
-        "docs/a-engine.md": _doc(
+        "docs/a-engine.md": document(
             "engine-notes", anchors={"path": ["src/core/**"]}, at=T1, outcome="updated"
         ),
-        "docs/b-overview.md": _doc(
+        "docs/b-overview.md": document(
             "overview", anchors={"artefact": ["engine-notes"]}, at=T1, outcome="updated"
         ),
-        "docs/c-intro.md": _doc(
+        "docs/c-intro.md": document(
             "intro", anchors={"artefact": ["overview"]}, at=T1, outcome="updated"
         ),
     }
@@ -252,7 +196,7 @@ def _chain() -> dict[str, str]:
 
 def test_a_content_change_flags_its_dependants_upstream_first(repo: AdopterRepo) -> None:
     files = _chain()
-    files["docs/0-first.md"] = _doc(
+    files["docs/0-first.md"] = document(
         "first", anchors={"artefact": ["intro"]}, at=T1, outcome="updated"
     )
     _start(repo, files)
@@ -260,7 +204,7 @@ def test_a_content_change_flags_its_dependants_upstream_first(repo: AdopterRepo)
         "the engine changed and its notes were updated",
         {
             "src/core/engine.py": "ENGINE = 2\n",
-            "docs/a-engine.md": _doc(
+            "docs/a-engine.md": document(
                 "engine-notes",
                 anchors={"path": ["src/core/**"]},
                 at=T2,
@@ -280,10 +224,10 @@ def test_an_unchanged_revalidation_stops_the_cascade(repo: AdopterRepo) -> None:
     repo.commit(
         "engine notes edited; the overview still holds",
         {
-            "docs/a-engine.md": _doc(
+            "docs/a-engine.md": document(
                 "engine-notes", anchors={"path": ["src/core/**"]}, at=T1, body="Reworded."
             ),
-            "docs/b-overview.md": _doc(
+            "docs/b-overview.md": document(
                 "overview",
                 anchors={"artefact": ["engine-notes"]},
                 at=T2,
@@ -302,10 +246,10 @@ def test_an_updated_revalidation_continues_the_cascade(repo: AdopterRepo) -> Non
     repo.commit(
         "engine notes edited; the overview updated with them",
         {
-            "docs/a-engine.md": _doc(
+            "docs/a-engine.md": document(
                 "engine-notes", anchors={"path": ["src/core/**"]}, at=T1, body="Reworked."
             ),
-            "docs/b-overview.md": _doc(
+            "docs/b-overview.md": document(
                 "overview",
                 anchors={"artefact": ["engine-notes"]},
                 at=T2,
@@ -326,7 +270,7 @@ def test_the_container_is_not_content(repo: AdopterRepo) -> None:
     repo.commit(
         "defer on the engine notes",
         {
-            "docs/a-engine.md": _doc(
+            "docs/a-engine.md": document(
                 "engine-notes",
                 anchors={"path": ["src/core/**"]},
                 at=T1,
@@ -345,16 +289,16 @@ def test_an_artefact_new_in_the_diff_counts_as_revalidated(repo: AdopterRepo) ->
     _start(repo, {})
     repo.commit(
         "a new page next to a CLI change",
-        {"src/cli/main.py": "print('new')\n", "docs/guide.md": _guide()},
+        {"src/cli/main.py": "print('new')\n", "docs/guide.md": guide()},
     )
     assert _summary(_run(repo)) == [("answered", "docs/guide.md", None, "new")]
 
 
 def test_changing_the_anchor_list_needs_a_revalidation(repo: AdopterRepo) -> None:
-    _start(repo, {"docs/guide.md": _guide()})
+    _start(repo, {"docs/guide.md": guide()})
     repo.commit(
         "anchor the guide to the engine too",
-        {"docs/guide.md": _guide(anchors={"path": ["src/cli/**", "src/core/**"]})},
+        {"docs/guide.md": guide(anchors={"path": ["src/cli/**", "src/core/**"]})},
     )
     result = _run(repo)
     assert _summary(result) == [("friction", "docs/guide.md", None, None)]
@@ -362,11 +306,11 @@ def test_changing_the_anchor_list_needs_a_revalidation(repo: AdopterRepo) -> Non
 
 
 def test_a_revalidation_answers_an_anchor_list_change(repo: AdopterRepo) -> None:
-    _start(repo, {"docs/guide.md": _guide()})
+    _start(repo, {"docs/guide.md": guide()})
     repo.commit(
         "anchor the guide to the engine too, and revalidate",
         {
-            "docs/guide.md": _guide(
+            "docs/guide.md": guide(
                 anchors={"path": ["src/cli/**", "src/core/**"]},
                 at=T2,
                 because="the guide already covered the engine's part",
@@ -377,7 +321,7 @@ def test_a_revalidation_answers_an_anchor_list_change(repo: AdopterRepo) -> None
 
 
 def test_a_move_needs_a_revalidation(repo: AdopterRepo) -> None:
-    _start(repo, {"docs/guide.md": _guide()})
+    _start(repo, {"docs/guide.md": guide()})
     repo.rename("docs/guide.md", "docs/cli/guide.md")
     result = _run(repo)
     assert _summary(result) == [("friction", "docs/cli/guide.md", None, None)]
@@ -385,9 +329,9 @@ def test_a_move_needs_a_revalidation(repo: AdopterRepo) -> None:
 
 
 def test_a_move_with_a_revalidation_is_answered(repo: AdopterRepo) -> None:
-    _start(repo, {"docs/guide.md": _guide()})
+    _start(repo, {"docs/guide.md": guide()})
     repo.rename("docs/guide.md", "docs/cli/guide.md")
-    repo.commit("revalidate the moved guide", {"docs/cli/guide.md": _guide(at=T2, because="moved")})
+    repo.commit("revalidate the moved guide", {"docs/cli/guide.md": guide(at=T2, because="moved")})
     assert _summary(_run(repo)) == [("answered", "docs/cli/guide.md", None, "unchanged")]
 
 
@@ -430,11 +374,11 @@ def test_an_entry_body_section_is_part_of_its_content(repo: AdopterRepo) -> None
 
 
 def test_an_anchor_added_dead_is_the_pull_requests(repo: AdopterRepo) -> None:
-    _start(repo, {"docs/guide.md": _guide()})
+    _start(repo, {"docs/guide.md": guide()})
     repo.commit(
         "anchor to a path that does not exist",
         {
-            "docs/guide.md": _guide(
+            "docs/guide.md": guide(
                 anchors={"path": ["src/cli/**", "src/gone/**"]}, at=T2, because="extended"
             )
         },
@@ -446,7 +390,7 @@ def test_an_anchor_added_dead_is_the_pull_requests(repo: AdopterRepo) -> None:
 
 
 def test_a_pre_existing_dead_anchor_is_not_the_change_checks(repo: AdopterRepo) -> None:
-    _start(repo, {"docs/guide.md": _guide(anchors={"path": ["src/cli/**", "src/gone/**"]})})
+    _start(repo, {"docs/guide.md": guide(anchors={"path": ["src/cli/**", "src/gone/**"]})})
     repo.commit("an unrelated change", {"src/core/engine.py": "ENGINE = 3\n"})
     assert _summary(_run(repo)) == []
 
@@ -455,8 +399,8 @@ def test_a_target_removed_by_the_diff_turns_the_anchor_dead(repo: AdopterRepo) -
     _start(
         repo,
         {
-            "docs/guide.md": _guide(anchors={"path": ["src/core/engine.py"]}),
-            "docs/other.md": _doc(
+            "docs/guide.md": guide(anchors={"path": ["src/core/engine.py"]}),
+            "docs/other.md": document(
                 "other", anchors={"artefact": ["guide"]}, at=T1, outcome="updated"
             ),
         },
@@ -470,11 +414,11 @@ def test_a_target_removed_by_the_diff_turns_the_anchor_dead(repo: AdopterRepo) -
 
 
 def test_an_unresolved_kind_is_reported_apart_from_a_dead_anchor(repo: AdopterRepo) -> None:
-    _start(repo, {"docs/guide.md": _guide()})
+    _start(repo, {"docs/guide.md": guide()})
     repo.commit(
         "a kind nothing resolves",
         {
-            "docs/guide.md": _guide(
+            "docs/guide.md": guide(
                 anchors={"path": ["src/cli/**"], "use-case": ["UC-1"]}, at=T2, because="x"
             )
         },
@@ -486,10 +430,10 @@ def test_an_unresolved_kind_is_reported_apart_from_a_dead_anchor(repo: AdopterRe
 
 
 def test_a_registered_resolver_without_the_query_contract_is_refused(repo: AdopterRepo) -> None:
-    _start(repo, {"docs/guide.md": _guide()})
+    _start(repo, {"docs/guide.md": guide()})
     repo.commit(
         "anchor a registered kind",
-        {"docs/guide.md": _guide(anchors={"use-case": ["UC-1"]}, at=T2, because="x")},
+        {"docs/guide.md": guide(anchors={"use-case": ["UC-1"]}, at=T2, because="x")},
     )
     undeclared = fc.ResolverCommand("use-case", "software-analysis", "resolve-use-case")
     result = _run(repo, registry={"use-case": undeclared})
@@ -521,7 +465,7 @@ def test_refuse_resolver_without_query_contract(query_contract: bool, refused: s
 
 
 def test_a_record_anchor_changes_with_its_decision_file(repo: AdopterRepo) -> None:
-    _start(repo, {"docs/guide.md": _guide(anchors={"record": ["COR-050"]})})
+    _start(repo, {"docs/guide.md": guide(anchors={"record": ["COR-050"]})})
     record = ".pkit/decisions/core/COR-050-anchors-and-friction.md"
     text = (repo.root / record).read_text(encoding="utf-8")
     repo.commit("amend the record", {record: text + "\nAmended.\n"})
@@ -529,10 +473,10 @@ def test_a_record_anchor_changes_with_its_decision_file(repo: AdopterRepo) -> No
 
 
 def test_a_record_anchor_naming_no_record_is_dead(repo: AdopterRepo) -> None:
-    _start(repo, {"docs/guide.md": _guide()})
+    _start(repo, {"docs/guide.md": guide()})
     repo.commit(
         "anchor a record that does not exist",
-        {"docs/guide.md": _guide(anchors={"record": ["COR-999"]}, at=T2, because="x")},
+        {"docs/guide.md": guide(anchors={"record": ["COR-999"]}, at=T2, because="x")},
     )
     result = _run(repo)
     assert _summary(result)[0] == ("dead-anchor", "docs/guide.md", "record:COR-999", None)
@@ -544,7 +488,7 @@ def test_a_capability_decision_resolves_as_a_record(make_adopter_repo: MakeAdopt
     decisions = sorted((adopter.pkit / "capabilities" / "evidence" / "decisions").glob("DEC-*.md"))
     stem = decisions[0].stem
     number = "-".join(stem.split("-")[:2])
-    _start(adopter, {"docs/guide.md": _guide(anchors={"record": [f"evidence:{number}"]})})
+    _start(adopter, {"docs/guide.md": guide(anchors={"record": [f"evidence:{number}"]})})
     rel = decisions[0].relative_to(adopter.root).as_posix()
     adopter.commit("amend it", {rel: decisions[0].read_text(encoding="utf-8") + "\nMore.\n"})
     assert _summary(_run(adopter)) == [
@@ -558,24 +502,24 @@ def test_a_capability_decision_resolves_as_a_record(make_adopter_repo: MakeAdopt
 def test_excluded_paths_do_not_change_an_anchor(repo: AdopterRepo) -> None:
     _start(
         repo,
-        {"docs/guide.md": _guide(), "src/cli/generated/table.py": "T = 1\n"},
-        config=_config(exclude=["src/cli/generated"]),
+        {"docs/guide.md": guide(), "src/cli/generated/table.py": "T = 1\n"},
+        config=friction_config(exclude=["src/cli/generated"]),
     )
     repo.commit("regenerate", {"src/cli/generated/table.py": "T = 2\n"})
     assert _summary(_run(repo)) == []
 
 
 def test_an_artefact_is_not_anchored_to_its_own_file(repo: AdopterRepo) -> None:
-    _start(repo, {"docs/guide.md": _guide(anchors={"path": ["docs/**"]})})
+    _start(repo, {"docs/guide.md": guide(anchors={"path": ["docs/**"]})})
     repo.commit(
         "edit the guide's body only",
-        {"docs/guide.md": _guide(anchors={"path": ["docs/**"]}, body="New.")},
+        {"docs/guide.md": guide(anchors={"path": ["docs/**"]}, body="New.")},
     )
     assert _summary(_run(repo)) == []
 
 
 def test_uncommitted_work_is_part_of_the_diff(repo: AdopterRepo) -> None:
-    _start(repo, {"docs/guide.md": _guide()})
+    _start(repo, {"docs/guide.md": guide()})
     repo.write({"src/cli/main.py": "print('uncommitted')\n", "src/cli/new.py": "NEW = 1\n"})
     result = _run(repo)
     assert _summary(result) == [("friction", "docs/guide.md", "path:src/cli/**", None)]
@@ -584,11 +528,11 @@ def test_uncommitted_work_is_part_of_the_diff(repo: AdopterRepo) -> None:
 
 
 def test_places_are_read_from_each_side(repo: AdopterRepo) -> None:
-    _start(repo, {"notes/guide.md": _guide()})
+    _start(repo, {"notes/guide.md": guide()})
     # Declaring the place makes the guide new at head, not stale.
     repo.commit(
         "declare notes as a place",
-        {CONFIG: _config(places=("docs", "notes")), "src/cli/main.py": "print('x')\n"},
+        {CONFIG: friction_config(places=("docs", "notes")), "src/cli/main.py": "print('x')\n"},
     )
     assert _summary(_run(repo)) == [("answered", "notes/guide.md", None, "new")]
 
@@ -597,7 +541,7 @@ def test_places_are_read_from_each_side(repo: AdopterRepo) -> None:
 
 
 def test_an_outdated_base_is_reported_and_never_fails(repo: AdopterRepo) -> None:
-    _start(repo, {"docs/guide.md": _guide()}, config=_config(mode="enforcing"))
+    _start(repo, {"docs/guide.md": guide()}, config=friction_config(mode="enforcing"))
     repo.commit("feature work", {"src/core/engine.py": "ENGINE = 4\n"})
     repo.checkout("main")
     repo.commit("main moves on", {"README.md": "main moved\n"})
@@ -610,7 +554,7 @@ def test_an_outdated_base_is_reported_and_never_fails(repo: AdopterRepo) -> None
 
 
 def test_every_run_names_the_base_commit_it_compared_against(repo: AdopterRepo) -> None:
-    _start(repo, {"docs/guide.md": _guide()})
+    _start(repo, {"docs/guide.md": guide()})
     base = repo.head()
     result = _run(repo)
     assert result.base is not None
@@ -619,7 +563,7 @@ def test_every_run_names_the_base_commit_it_compared_against(repo: AdopterRepo) 
 
 
 def test_a_base_that_does_not_resolve_is_an_error(repo: AdopterRepo) -> None:
-    _start(repo, {"docs/guide.md": _guide()})
+    _start(repo, {"docs/guide.md": guide()})
     with pytest.raises(fc.FrictionCheckError, match="does not resolve"):
         fc.run_change_check(repo.root, "no-such-branch")
     result = _cli("--base", "no-such-branch")
@@ -627,7 +571,7 @@ def test_a_base_that_does_not_resolve_is_an_error(repo: AdopterRepo) -> None:
 
 
 def test_a_base_sharing_no_history_is_an_error(repo: AdopterRepo) -> None:
-    _start(repo, {"docs/guide.md": _guide()})
+    _start(repo, {"docs/guide.md": guide()})
     repo.git("checkout", "-q", "--orphan", "unrelated")
     repo.commit("an unrelated root", files=None)
     with pytest.raises(fc.FrictionCheckError, match="share no history"):
@@ -642,7 +586,7 @@ def _cli(*args: str, env: dict[str, str] | None = None) -> Any:
 
 
 def test_warning_mode_reports_and_passes(repo: AdopterRepo) -> None:
-    _start(repo, {"docs/guide.md": _guide()}, config=_config(mode="warning"))
+    _start(repo, {"docs/guide.md": guide()}, config=friction_config(mode="warning"))
     repo.commit("change the CLI only", {"src/cli/main.py": "print('w')\n"})
     result = _cli("--base", "main")
     assert result.exit_code == 0, result.output
@@ -651,7 +595,7 @@ def test_warning_mode_reports_and_passes(repo: AdopterRepo) -> None:
 
 
 def test_enforcing_mode_fails_on_friction(repo: AdopterRepo) -> None:
-    _start(repo, {"docs/guide.md": _guide()}, config=_config(mode="enforcing"))
+    _start(repo, {"docs/guide.md": guide()}, config=friction_config(mode="enforcing"))
     repo.commit("change the CLI only", {"src/cli/main.py": "print('e')\n"})
     result = _cli("--base", "main")
     assert result.exit_code == 1, result.output
@@ -659,17 +603,17 @@ def test_enforcing_mode_fails_on_friction(repo: AdopterRepo) -> None:
 
 
 def test_enforcing_mode_passes_a_revalidated_change(repo: AdopterRepo) -> None:
-    _start(repo, {"docs/guide.md": _guide()}, config=_config(mode="enforcing"))
+    _start(repo, {"docs/guide.md": guide()}, config=friction_config(mode="enforcing"))
     repo.commit(
         "change the CLI and revalidate",
-        {"src/cli/main.py": "print('r')\n", "docs/guide.md": _guide(at=T2, because="still true")},
+        {"src/cli/main.py": "print('r')\n", "docs/guide.md": guide(at=T2, because="still true")},
     )
     result = _cli("--base", "main")
     assert result.exit_code == 0, result.output
 
 
 def test_the_base_comes_from_the_environment(repo: AdopterRepo) -> None:
-    _start(repo, {"docs/guide.md": _guide()})
+    _start(repo, {"docs/guide.md": guide()})
     result = _cli("--json", env={fc.BASE_ENV: "main"})
     assert result.exit_code == 0, result.output
     assert json.loads(result.output)["base"]["ref"] == "main"
@@ -677,7 +621,7 @@ def test_the_base_comes_from_the_environment(repo: AdopterRepo) -> None:
 
 def test_dormant_without_places(repo: AdopterRepo) -> None:
     _start(
-        repo, {"docs/guide.md": _guide()}, config=json.dumps({"friction": {"mode": "enforcing"}})
+        repo, {"docs/guide.md": guide()}, config=json.dumps({"friction": {"mode": "enforcing"}})
     )
     repo.commit("change the CLI only", {"src/cli/main.py": "print('d')\n"})
     result = _cli("--base", "main")
@@ -689,7 +633,7 @@ def test_dormant_without_places(repo: AdopterRepo) -> None:
 def test_a_mode_that_is_not_a_mode_reads_as_warning_and_says_so(
     repo: AdopterRepo, places: tuple[str, ...]
 ) -> None:
-    _start(repo, {"docs/guide.md": _guide()}, config=_config(mode="enforcin", places=places))
+    _start(repo, {"docs/guide.md": guide()}, config=friction_config(mode="enforcin", places=places))
     repo.commit("change the CLI only", {"src/cli/main.py": "print('m')\n"})
     result = _run(repo)
     assert (result.mode, result.exit_code) == ("warning", 0)
@@ -703,7 +647,9 @@ def test_dormant_demands_no_repository(tmp_path: Path) -> None:
 
 def test_dormant_when_nothing_carries_the_container(repo: AdopterRepo) -> None:
     _start(
-        repo, {"docs/plain.md": "---\ntitle: Plain\n---\n\nText.\n"}, config=_config("enforcing")
+        repo,
+        {"docs/plain.md": "---\ntitle: Plain\n---\n\nText.\n"},
+        config=friction_config("enforcing"),
     )
     repo.commit("change the CLI only", {"src/cli/main.py": "print('d')\n"})
     result = _run(repo)
@@ -712,7 +658,7 @@ def test_dormant_when_nothing_carries_the_container(repo: AdopterRepo) -> None:
 
 
 def test_json_document_shape(repo: AdopterRepo) -> None:
-    _start(repo, {"docs/guide.md": _guide()}, config=_config(mode="enforcing"))
+    _start(repo, {"docs/guide.md": guide()}, config=friction_config(mode="enforcing"))
     repo.commit("change the CLI only", {"src/cli/main.py": "print('j')\n"})
     result = _cli("--base", "main", "--json")
     assert result.exit_code == 1
@@ -749,7 +695,7 @@ def test_json_document_shape(repo: AdopterRepo) -> None:
 
 def test_output_is_deterministic(repo: AdopterRepo) -> None:
     files = _chain()
-    files["docs/guide.md"] = _guide()
+    files["docs/guide.md"] = guide()
     _start(repo, files)
     repo.commit(
         "several changes",
@@ -762,7 +708,7 @@ def test_output_is_deterministic(repo: AdopterRepo) -> None:
 
 
 def test_unparsable_front_matter_is_reported(repo: AdopterRepo) -> None:
-    _start(repo, {"docs/guide.md": _guide()})
+    _start(repo, {"docs/guide.md": guide()})
     repo.commit("break a page", {"docs/broken.md": "---\nid: [unclosed\n---\n"})
     result = _run(repo)
     assert _summary(result) == [("unreadable", "docs/broken.md", None, None)]
@@ -788,15 +734,15 @@ def test_listing_discovery_agrees_with_the_filesystem(
     repo: AdopterRepo, places: tuple[str, ...]
 ) -> None:
     files = {
-        "README.md": _doc("readme"),
-        "docs/a.md": _doc("a"),
-        "docs/.hidden.md": _doc("hidden"),
-        "docs/sub/b.md": _doc("b"),
-        "docs/sub/deep/c.md": _doc("c"),
+        "README.md": document("readme"),
+        "docs/a.md": document("a"),
+        "docs/.hidden.md": document("hidden"),
+        "docs/sub/b.md": document("b"),
+        "docs/sub/deep/c.md": document("c"),
         "docs/data.yaml": "pkit: {}\n",
-        "notes/guide.md": _guide(),
+        "notes/guide.md": guide(),
     }
-    repo.write({CONFIG: _config(places=places), **files})
+    repo.write({CONFIG: friction_config(places=places), **files})
     on_disk = fd.discover_artefacts(repo.root)
     listed = fd.discover_artefacts(repo.root, tree=fc.WorkingTree(repo.root))
     assert [a.location for a in listed.artefacts] == [a.location for a in on_disk.artefacts]
@@ -806,12 +752,12 @@ def test_listing_discovery_agrees_with_the_filesystem(
 
 
 def test_a_commit_tree_reads_what_the_commit_held(repo: AdopterRepo) -> None:
-    _start(repo, {"docs/guide.md": _guide()})
+    _start(repo, {"docs/guide.md": guide()})
     base = repo.head()
-    repo.commit("rewrite", {"docs/guide.md": _guide(body="Rewritten.")})
+    repo.commit("rewrite", {"docs/guide.md": guide(body="Rewritten.")})
     tree = fc.CommitTree(repo.root, base)
     assert "docs/guide.md" in tree.files()
     assert tree.read_bytes(["docs/guide.md", "missing.md"]) == {
-        "docs/guide.md": _guide().encode(),
+        "docs/guide.md": guide().encode(),
         "missing.md": None,
     }
