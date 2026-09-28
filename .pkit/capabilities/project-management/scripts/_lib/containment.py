@@ -37,9 +37,10 @@ Every script that links a child under a parent obtains the ``gh`` write **only
 by asking this module** — it never string-builds the ``gh api …/sub_issues``
 argv itself. That makes "no script string-builds the sub-issue write inline" a
 structural property the guard enforces, the direct analogue of the field-value /
-milestone seam. ``create-issue`` calls it today on ``--parent``; any future
-parent-link mutation (re-parent, promote, a batch set-field that moves a parent)
-reuses the same construction point.
+milestone seam. ``create-issue`` and ``link-parent`` link through
+:func:`link_sub_issue`; ``set-field --parent`` re-parents through
+:func:`move_sub_issue`. Any further parent-link mutation (promote, …) reuses the
+same construction point.
 
 The API mechanism
 -----------------
@@ -50,14 +51,29 @@ repos/.../issues/<n> --jq .id``), NOT the issue number and NOT the GraphQL
 node id (``gh issue view --json id`` returns the node id, which this endpoint
 rejects). REST is chosen over the GraphQL ``addSubIssue`` mutation because it
 needs only the integer id the same ``gh api`` round-trip already yields, with no
-node-id resolution or query crafting.
+node-id resolution or query crafting. A move is the same add with
+``replace_parent=true``: GitHub takes the child from its old parent and gives it
+to the new one in one write, so there is no moment at which it has neither.
 
 Idempotency (DEC-026, value-equality)
 -------------------------------------
-Linking an already-linked child is a no-op. Before adding, the linker lists the
-parent's current sub-issues (``GET …/sub_issues``) and skips the write when the
-child's database id is already present — value-equality, no duplicate-add error
-relied upon.
+Linking an already-linked child is a no-op. Before adding, the linker reads the
+child's own record — the read that resolves its database id also carries its
+current native parent — and, when that names no parent, lists the parent's
+current sub-issues (``GET …/sub_issues``); either showing the child already there
+skips the write. A caller linking many children holds a :class:`SubIssueReads`
+for the run, so each parent's list is read once however many of its children are
+linked.
+
+One native parent (#1040)
+-------------------------
+An issue has at most one native parent. A child already under a *different*
+parent is a **conflict**, not an unsupported instance: :func:`link_sub_issue`
+reports it (:attr:`LinkOutcome.CONFLICT`, naming the parent the child has) and
+does not post. It is recognised twice — before the add, from the child's record,
+and after it, from the body of GitHub's refusal (a 422 whose message states the
+one-parent rule), so an instance whose issue record does not carry the parent
+still gets the conflict by name rather than a misleading "unsupported".
 
 Graceful degradation (the textual ref is the fallback)
 ------------------------------------------------------
@@ -96,8 +112,14 @@ class LinkOutcome(Enum):
     """The outcome class of one native sub-issue link attempt.
 
     LINKED       — the native link was created this call.
+    MOVED        — the child was a native sub-issue of another parent and was
+                   moved under this one this call (:func:`move_sub_issue` only).
     ALREADY       — the child was already a sub-issue of the parent (idempotent
                     no-op, value-equality per DEC-026).
+    CONFLICT     — the child is a native sub-issue of a DIFFERENT parent. An issue
+                   has one native parent, so the link was not made; the result
+                   names the parent the child has. Not "unsupported": the
+                   instance has sub-issues, this child is spoken for.
     UNSUPPORTED  — the instance does not support sub-issues (a conclusive 410/422,
                    or a 404 attributed to the endpoint rather than to an unseeable
                    repository — see `_classify_native_failure`; feature
@@ -109,9 +131,46 @@ class LinkOutcome(Enum):
     """
 
     LINKED = "linked"
+    MOVED = "moved"
     ALREADY = "already"
+    CONFLICT = "conflict"
     UNSUPPORTED = "unsupported"
     FAILED = "failed"
+
+
+@dataclass(frozen=True)
+class NativeParent:
+    """The issue a child is natively a sub-issue of, as the child's record says.
+
+    ``repository`` is ``owner/repo`` when the parent lives in another repository
+    (native sub-issues may cross repositories) and ``None`` when it is this one,
+    so a parent elsewhere is never mistaken for the same-numbered issue here.
+    """
+
+    number: int
+    repository: str | None = None
+
+    @property
+    def ref(self) -> str:
+        """How a report names the parent: ``#979``, or ``owner/repo#979``."""
+        return f"{self.repository}#{self.number}" if self.repository else f"#{self.number}"
+
+    def is_issue(self, number: int | str) -> bool:
+        """True when this parent is issue ``number`` of this repository."""
+        return self.repository is None and self.number == int(number)
+
+
+@dataclass(frozen=True)
+class IssueLinkState:
+    """What linking a child needs to know about it, from one read of its record.
+
+    ``database_id`` is the id the sub-issues endpoint takes; ``parent`` is the
+    child's current native parent, ``None`` when it has none (or when the
+    instance's issue record does not carry the field).
+    """
+
+    database_id: int
+    parent: NativeParent | None
 
 
 @dataclass(frozen=True)
@@ -125,20 +184,26 @@ class LinkResult:
     note keyed on ``outcome``.
 
     Fields:
-      outcome — the :class:`LinkOutcome`.
-      detail  — a one-line human-readable summary for the caller to print.
+      outcome        — the :class:`LinkOutcome`.
+      detail         — a one-line human-readable summary for the caller to print.
+      current_parent — for CONFLICT, the parent the child is natively under
+                       (``None`` when GitHub refused on the one-parent rule but
+                       the child's record could not name the parent); for MOVED,
+                       the parent it was moved from. ``None`` otherwise.
     """
 
     outcome: LinkOutcome
     detail: str = ""
+    current_parent: NativeParent | None = None
 
     @property
     def ok(self) -> bool:
-        """True when the relationship is in place after this call (linked or
-        already-linked). UNSUPPORTED and FAILED are not ``ok`` — the native link
-        is absent — but only FAILED is a genuine error (UNSUPPORTED is expected
-        on instances without the feature)."""
-        return self.outcome in (LinkOutcome.LINKED, LinkOutcome.ALREADY)
+        """True when the relationship is in place after this call (linked,
+        moved, or already-linked). CONFLICT, UNSUPPORTED and FAILED are not
+        ``ok`` — the native link to this parent is absent — but only FAILED is a
+        genuine error (UNSUPPORTED is expected on instances without the feature;
+        CONFLICT is a disagreement for the caller to report)."""
+        return self.outcome in (LinkOutcome.LINKED, LinkOutcome.MOVED, LinkOutcome.ALREADY)
 
 
 # HTTP statuses that mean "this instance does not support sub-issues" — degrade
@@ -154,7 +219,12 @@ _UNSUPPORTED_STATUSES = (410, 422)
 _AMBIGUOUS_STATUS = 404
 
 
-def add_sub_issue_args(*, parent_number: int | str, child_database_id: int | str) -> list[str]:
+def add_sub_issue_args(
+    *,
+    parent_number: int | str,
+    child_database_id: int | str,
+    replace_parent: bool = False,
+) -> list[str]:
     """Construct the ``gh api …/sub_issues`` add argv.
 
     The sole constructor of the native sub-issue link write. Callers obtain this
@@ -168,13 +238,21 @@ def add_sub_issue_args(*, parent_number: int | str, child_database_id: int | str
     with ``HTTP 422 … is not of type integer``. The ``{owner}/{repo}``
     placeholders are resolved by ``gh`` against the current repo (host/owner
     pinned via the gh helper per DEC-023).
+
+    ``replace_parent`` adds ``-F replace_parent=true`` (a typed boolean), which
+    makes the add a MOVE: GitHub takes the child from its current parent in the
+    same write. Only :func:`move_sub_issue` asks for it — a plain link never
+    takes a child from another parent.
     """
-    return [
+    args = [
         "gh", "api",
         "-X", "POST",
         f"repos/{{owner}}/{{repo}}/issues/{parent_number}/sub_issues",
         "-F", f"sub_issue_id={child_database_id}",
     ]
+    if replace_parent:
+        args += ["-F", "replace_parent=true"]
+    return args
 
 
 def list_sub_issues_args(*, parent_number: int | str) -> list[str]:
@@ -191,23 +269,39 @@ def list_sub_issues_args(*, parent_number: int | str) -> list[str]:
     ]
 
 
-def resolve_issue_database_id(
-    config: dict[str, Any], *, issue_number: int | str
-) -> int | None:
-    """Resolve an issue NUMBER to its integer database id via ``gh api``.
+# The child's record answers both questions linking asks of it: its database id
+# and its current native parent. GitHub's REST issue carries the parent as
+# `parent_issue_url` and omits it when there is none; `repository_url` is read
+# beside it so a parent in another repository is told apart from the
+# same-numbered issue here. One value per line, the id first.
+_LINK_STATE_JQ = '.id, (.parent_issue_url // ""), .repository_url'
+_ISSUE_URL = re.compile(r"/repos/(?P<repo>[^/]+/[^/]+)/issues/(?P<number>\d+)/?$")
+_REPOSITORY_URL = re.compile(r"/repos/(?P<repo>[^/]+/[^/]+)/?$")
 
-    The sub-issues endpoint keys on the database id, not the number and not the
-    GraphQL node id. ``gh api repos/{owner}/{repo}/issues/<n> --jq .id`` yields
-    the integer id; ``gh issue view --json id`` would return the node id, which
-    the endpoint rejects. Returns ``None`` on any failure (missing ``gh``,
-    non-zero exit, non-integer payload) — the caller degrades.
+
+def read_link_state(
+    config: dict[str, Any], *, issue_number: int | str
+) -> IssueLinkState | None:
+    """Read a child's database id and its current native parent in one call.
+
+    The sub-issues endpoint keys on the integer DATABASE id, not the number and
+    not the GraphQL node id (``gh issue view --json id`` returns the node id,
+    which the endpoint rejects). ``gh api repos/{owner}/{repo}/issues/<n>`` —
+    the read that resolves that id — also carries the child's native parent, so
+    knowing the parent before an add costs no extra call. ``None`` on any
+    failure (missing ``gh``, non-zero exit, non-integer id); callers degrade.
+
+    An instance whose issue record lacks the parent field reads as "no parent".
+    That never produces a wrong link: the add is then refused on the one-parent
+    rule, and :func:`link_sub_issue` reads the refusal (see the module
+    docstring).
     """
     try:
         proc = _gh_call(
             [
                 "gh", "api",
                 f"repos/{{owner}}/{{repo}}/issues/{issue_number}",
-                "--jq", ".id",
+                "--jq", _LINK_STATE_JQ,
             ],
             config,
         )
@@ -215,11 +309,35 @@ def resolve_issue_database_id(
         return None
     if proc.returncode != 0:
         return None
-    text = (proc.stdout or "").strip()
+    lines = (proc.stdout or "").split("\n")
     try:
-        return int(text)
+        database_id = int(lines[0].strip())
     except (TypeError, ValueError):
         return None
+    parent_url = lines[1].strip() if len(lines) > 1 else ""
+    repository_url = lines[2].strip() if len(lines) > 2 else ""
+    return IssueLinkState(
+        database_id=database_id,
+        parent=_parse_native_parent(parent_url, repository_url),
+    )
+
+
+def _parse_native_parent(parent_url: str, repository_url: str) -> NativeParent | None:
+    """The parent a ``parent_issue_url`` names, relative to the child's repository.
+
+    A parent URL whose repository cannot be compared with the child's (no
+    ``repository_url``) is kept as foreign: calling it "this repository's #N"
+    on no evidence could turn a conflict into a false "already linked".
+    """
+    m = _ISSUE_URL.search(parent_url)
+    if not m:
+        return None
+    here = _REPOSITORY_URL.search(repository_url)
+    same = here is not None and here.group("repo").lower() == m.group("repo").lower()
+    return NativeParent(
+        number=int(m.group("number")),
+        repository=None if same else m.group("repo"),
+    )
 
 
 def link_sub_issue(
@@ -227,28 +345,79 @@ def link_sub_issue(
     *,
     parent_number: int | str,
     child_number: int | str,
+    sub_issues: SubIssueReads | None = None,
 ) -> LinkResult:
     """Link the child issue under the parent via GitHub's native sub-issues API.
 
     The one place the native containment link is established (ADR-031
-    sole-constructor discipline applied to containment). Composes three steps,
+    sole-constructor discipline applied to containment). Composes these steps,
     all through the gh helper (DEC-023 host/owner pinning):
 
-      1. resolve the child's integer database id (the id the endpoint needs);
-      2. read the parent's current sub-issues and short-circuit to
-         :attr:`LinkOutcome.ALREADY` when the child is present (value-equality
-         idempotency per DEC-026);
-      3. POST the add.
+      1. read the child's record — its integer database id (the id the endpoint
+         needs) and its current native parent (:func:`read_link_state`);
+      2. a child already under this parent is :attr:`LinkOutcome.ALREADY`; one
+         under a DIFFERENT parent is :attr:`LinkOutcome.CONFLICT`, and nothing
+         is posted — an issue has one native parent;
+      3. otherwise read the parent's current sub-issues and short-circuit to
+         ALREADY when the child is among them (value-equality idempotency per
+         DEC-026). ``sub_issues`` is the caller's per-run snapshot when it links
+         many children; without one the parent is read fresh;
+      4. POST the add, and on a refusal read what GitHub's error body says about
+         the child's parent before falling back to the status.
 
     Never raises and never returns a fatal posture for an *unsupported* instance:
     a conclusive 410 / 422, or a 404 attributed to the endpoint, yields
     :attr:`LinkOutcome.UNSUPPORTED` so the caller carries the textual ref as the
-    fallback. A genuine error (auth / network / missing ``gh``, or an
+    fallback — except a 422 that names the one-parent rule, which is the
+    CONFLICT it is. A genuine error (auth / network / missing ``gh``, or an
     unresolvable child id) yields :attr:`LinkOutcome.FAILED` for the caller to
     report — still non-fatal to the create, which already wrote the textual ref.
     """
-    child_id = resolve_issue_database_id(config, issue_number=child_number)
-    if child_id is None:
+    return _attach(
+        config,
+        parent_number=parent_number,
+        child_number=child_number,
+        move=False,
+        sub_issues=sub_issues,
+    )
+
+
+def move_sub_issue(
+    config: dict[str, Any],
+    *,
+    parent_number: int | str,
+    child_number: int | str,
+) -> LinkResult:
+    """Put the child natively under the parent, moving it from any other parent.
+
+    The re-parenting counterpart of :func:`link_sub_issue`, for a caller that
+    has just been told which parent is meant (``set-field --parent``). Where the
+    child is under another parent the add is posted with ``replace_parent``, so
+    GitHub moves it in one write — :attr:`LinkOutcome.MOVED`, with the old parent
+    in ``current_parent``. Otherwise it behaves as :func:`link_sub_issue`. A
+    move GitHub refuses is :attr:`LinkOutcome.CONFLICT`, naming the parent the
+    child stays under.
+    """
+    return _attach(
+        config,
+        parent_number=parent_number,
+        child_number=child_number,
+        move=True,
+        sub_issues=None,
+    )
+
+
+def _attach(
+    config: dict[str, Any],
+    *,
+    parent_number: int | str,
+    child_number: int | str,
+    move: bool,
+    sub_issues: SubIssueReads | None,
+) -> LinkResult:
+    """The shared body of :func:`link_sub_issue` and :func:`move_sub_issue`."""
+    state = read_link_state(config, issue_number=child_number)
+    if state is None:
         return LinkResult(
             LinkOutcome.FAILED,
             detail=(
@@ -256,19 +425,27 @@ def link_sub_issue(
                 "native sub-issue link; textual ref recorded"
             ),
         )
+    holder = state.parent
+    if holder is not None and holder.is_issue(parent_number):
+        return _already_linked(child_number, parent_number)
+    if holder is not None and not move:
+        return _conflict(child_number, parent_number, holder, move=False)
 
-    # Idempotency read: already a sub-issue of this parent? value-equality skip.
-    existing = _list_sub_issue_ids(config, parent_number=parent_number)
-    if existing is not None and child_id in existing:
-        return LinkResult(
-            LinkOutcome.ALREADY,
-            detail=(
-                f"#{child_number} is already a native sub-issue of #{parent_number} "
-                "(no-op)"
-            ),
+    if holder is None:
+        # Idempotency read: already a sub-issue of this parent? value-equality skip.
+        existing = (
+            sub_issues.read(parent_number)
+            if sub_issues is not None
+            else read_native_children(config, parent_number=parent_number)
         )
+        if existing.outcome is NativeReadOutcome.READ and int(child_number) in existing.numbers:
+            return _already_linked(child_number, parent_number)
 
-    args = add_sub_issue_args(parent_number=parent_number, child_database_id=child_id)
+    args = add_sub_issue_args(
+        parent_number=parent_number,
+        child_database_id=state.database_id,
+        replace_parent=holder is not None,
+    )
     try:
         proc = _gh_call(args, config)
     except FileNotFoundError:
@@ -277,11 +454,25 @@ def link_sub_issue(
             detail="`gh` not on PATH; native sub-issue link skipped, textual ref recorded",
         )
     if proc.returncode == 0:
+        if holder is not None:
+            return LinkResult(
+                LinkOutcome.MOVED,
+                detail=(
+                    f"moved #{child_number} from {holder.ref} to #{parent_number} "
+                    "as a native sub-issue"
+                ),
+                current_parent=holder,
+            )
         return LinkResult(
             LinkOutcome.LINKED,
             detail=f"linked #{child_number} as a native sub-issue of #{parent_number}",
         )
 
+    refusal = _read_refusal(
+        config, proc, parent_number=parent_number, child_number=child_number, move=move
+    )
+    if refusal is not None:
+        return refusal
     stderr = (proc.stderr or "").strip()
     if (
         _classify_native_failure(config, parent_number=parent_number, stderr=stderr)
@@ -300,35 +491,114 @@ def link_sub_issue(
     )
 
 
-def _list_sub_issue_ids(
-    config: dict[str, Any], *, parent_number: int | str
-) -> set[int] | None:
-    """Return the set of database ids of the parent's current sub-issues.
+def _already_linked(child_number: int | str, parent_number: int | str) -> LinkResult:
+    return LinkResult(
+        LinkOutcome.ALREADY,
+        detail=f"#{child_number} is already a native sub-issue of #{parent_number} (no-op)",
+    )
 
-    ``None`` when the list could not be read (missing ``gh``, non-zero exit,
-    unparseable payload) — the caller then proceeds to the add without the
-    idempotency short-circuit (a duplicate add on an already-linked child is
-    itself caught as UNSUPPORTED/handled by the add's own outcome, so a failed
-    read never wrongly reports ALREADY). An empty set is a successful read of a
-    parent with no sub-issues.
+
+def _conflict(
+    child_number: int | str,
+    parent_number: int | str,
+    holder: NativeParent | None,
+    *,
+    move: bool,
+) -> LinkResult:
+    """The CONFLICT result, naming the child, the parent it has and the one asked for."""
+    held = holder.ref if holder is not None else "another parent (its record does not say which)"
+    if move:
+        detail = (
+            f"#{child_number} could not be moved to #{parent_number}: it stays a "
+            f"native sub-issue of {held}"
+        )
+    else:
+        detail = (
+            f"#{child_number} is already a native sub-issue of {held}, not "
+            f"#{parent_number}; an issue has one native parent, so it was not linked"
+        )
+    return LinkResult(LinkOutcome.CONFLICT, detail=detail, current_parent=holder)
+
+
+# What GitHub's refusal of an add says, read from the error body `gh api` prints
+# on stdout — its stderr carries only a summary line, which names the first
+# error's message OR the status, not reliably both. An issue has one native
+# parent: adding a child that has another is refused with a 422 whose message
+# states that rule ("Sub issue may only have one parent"); adding one this parent
+# already holds is refused as a duplicate. Both are matched on the rule they
+# state rather than the exact sentence, and both are read BEFORE the
+# 422-means-unsupported fallback they would otherwise fall into (#1040).
+_ONE_PARENT = re.compile(r"\bone parent\b", re.IGNORECASE)
+_DUPLICATE = re.compile(r"\bduplicate sub-?issues?\b", re.IGNORECASE)
+
+
+def _read_refusal(
+    config: dict[str, Any],
+    proc: subprocess.CompletedProcess,
+    *,
+    parent_number: int | str,
+    child_number: int | str,
+    move: bool,
+) -> LinkResult | None:
+    """What a refused add says about the child's parent — ``None`` when nothing.
+
+    A duplicate means the child is already here (ALREADY). The one-parent rule,
+    or any other 422, sends the seam back to the child's record, because the
+    record, not the wording, is the evidence: a child now under this parent is
+    ALREADY (someone linked it meanwhile), one under another parent is a
+    CONFLICT naming that parent. A one-parent refusal whose parent the record
+    cannot name is still a CONFLICT. Anything else is left to the status
+    classification, so a 422 from an instance without sub-issues stays
+    UNSUPPORTED.
     """
-    args = list_sub_issues_args(parent_number=parent_number)
+    body = _error_body(proc.stdout or "")
+    messages = _refusal_messages(body, proc.stderr or "")
+    if any(_DUPLICATE.search(message) for message in messages):
+        return _already_linked(child_number, parent_number)
+    one_parent = any(_ONE_PARENT.search(message) for message in messages)
+    if not (one_parent or _is_422(body, proc.stderr or "")):
+        return None
+    now = read_link_state(config, issue_number=child_number)
+    holder = now.parent if now is not None else None
+    if holder is not None and holder.is_issue(parent_number):
+        return _already_linked(child_number, parent_number)
+    if holder is not None or one_parent:
+        return _conflict(child_number, parent_number, holder, move=move)
+    return None
+
+
+def _error_body(stdout: str) -> dict[str, Any] | None:
+    """The JSON error body ``gh api`` prints on stdout for a refused request."""
     try:
-        proc = _gh_call(args, config)
-    except FileNotFoundError:
+        body = json.loads(stdout)
+    except ValueError:
         return None
-    if proc.returncode != 0:
-        return None
-    payload = _parse_concatenated_arrays((proc.stdout or "").strip())
-    if payload is None:
-        return None
-    ids: set[int] = set()
-    for entry in payload:
-        if isinstance(entry, dict):
-            raw = entry.get("id")
-            if isinstance(raw, int):
-                ids.add(raw)
-    return ids
+    return body if isinstance(body, dict) else None
+
+
+def _refusal_messages(body: dict[str, Any] | None, stderr: str) -> list[str]:
+    """Every message a refusal carries: the body's ``message``, each ``errors``
+    entry (an object's ``message`` or a bare string), then gh's stderr lines."""
+    messages: list[str] = []
+    if body is not None:
+        if isinstance(body.get("message"), str):
+            messages.append(body["message"])
+        errors = body.get("errors")
+        for error in errors if isinstance(errors, list) else []:
+            if isinstance(error, dict) and isinstance(error.get("message"), str):
+                messages.append(error["message"])
+            elif isinstance(error, str):
+                messages.append(error)
+    messages.extend(line for line in stderr.splitlines() if line.strip())
+    return messages
+
+
+def _is_422(body: dict[str, Any] | None, stderr: str) -> bool:
+    """True when the refusal was a 422, by the body's ``status`` or gh's stderr."""
+    if body is not None and str(body.get("status", "")) == "422":
+        return True
+    lowered = stderr.lower()
+    return "http 422" in lowered or "(422)" in lowered
 
 
 def _is_unsupported(stderr: str) -> bool:
@@ -370,7 +640,7 @@ def _classify_native_failure(
 
     A 404 on `…/sub_issues` is genuinely ambiguous, so it is settled by probing
     the parent issue itself — the same `gh api repos/{owner}/{repo}/issues/<n>`
-    call :func:`resolve_issue_database_id` already makes:
+    endpoint :func:`read_link_state` reads a child from:
 
     * the probe succeeds — repository, credentials and parent are all visible, so
       a 404 on the *sub-resource* really is an absent endpoint -> UNSUPPORTED
@@ -597,6 +867,33 @@ def read_native_children(
             if isinstance(raw, int):
                 numbers.add(raw)
     return NativeRead(numbers=numbers, outcome=NativeReadOutcome.READ)
+
+
+class SubIssueReads:
+    """A run's reads of parents' native sub-issues — each parent read at most once.
+
+    A verb that links many children under a few parents holds one of these for
+    the run and hands it to :func:`link_sub_issue`, so a parent's list is read
+    once however many of its children the run touches (#1040: one Feature was
+    read nine times, once per child). Keyed by parent number; every read goes
+    through :func:`read_native_children`, so a cached answer carries the same
+    three-valued outcome a fresh one would.
+
+    The reads are a snapshot taken when first asked. The linker still reads each
+    child's own record fresh before it posts, so a link someone else made after
+    the snapshot is reported as already linked, never posted twice.
+    """
+
+    def __init__(self, config: dict[str, Any]) -> None:
+        self._config = config
+        self._reads: dict[int, NativeRead] = {}
+
+    def read(self, parent_number: int | str) -> NativeRead:
+        """The parent's native sub-issues — read on first ask, then remembered."""
+        key = int(parent_number)
+        if key not in self._reads:
+            self._reads[key] = read_native_children(self._config, parent_number=key)
+        return self._reads[key]
 
 
 def read_native_child_numbers(

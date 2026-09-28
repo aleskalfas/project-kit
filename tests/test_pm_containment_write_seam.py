@@ -86,10 +86,10 @@ def test_list_sub_issues_args_constructs_the_paginated_get(containment) -> None:
 # --- child database-id resolution (number/node-id are NOT it) ------------
 
 
-def test_resolve_issue_database_id_reads_integer_id(containment, monkeypatch) -> None:
-    """The endpoint keys on the integer DATABASE id, resolved via
-    `gh api repos/.../issues/<n> --jq .id` (NOT the node id `gh issue view`
-    returns)."""
+def test_read_link_state_reads_the_integer_database_id(containment, monkeypatch) -> None:
+    """The endpoint keys on the integer DATABASE id, read via
+    `gh api repos/.../issues/<n> --jq .id, …` (NOT the node id `gh issue view`
+    returns). A bare id line is a child with no native parent."""
     captured: dict = {}
 
     def fake_gh(args, config):
@@ -97,27 +97,28 @@ def test_resolve_issue_database_id_reads_integer_id(containment, monkeypatch) ->
         return subprocess.CompletedProcess(args, 0, stdout="4775677101\n", stderr="")
 
     monkeypatch.setattr(containment, "_gh_call", fake_gh)
-    assert containment.resolve_issue_database_id({}, issue_number=344) == 4775677101
-    # asks the REST issue endpoint with --jq .id (not `gh issue view --json id`).
+    state = containment.read_link_state({}, issue_number=344)
+    assert state.database_id == 4775677101 and state.parent is None
+    # asks the REST issue endpoint with a jq program leading with .id.
     assert captured["args"][:2] == ["gh", "api"]
     assert "--jq" in captured["args"]
-    assert captured["args"][captured["args"].index("--jq") + 1] == ".id"
+    assert captured["args"][captured["args"].index("--jq") + 1].startswith(".id")
 
 
-def test_resolve_issue_database_id_none_on_failure(containment, monkeypatch) -> None:
+def test_read_link_state_none_on_failure(containment, monkeypatch) -> None:
     def fake_gh(args, config):
         return subprocess.CompletedProcess(args, 1, stdout="", stderr="boom")
 
     monkeypatch.setattr(containment, "_gh_call", fake_gh)
-    assert containment.resolve_issue_database_id({}, issue_number=344) is None
+    assert containment.read_link_state({}, issue_number=344) is None
 
 
-def test_resolve_issue_database_id_none_on_non_integer(containment, monkeypatch) -> None:
+def test_read_link_state_none_on_non_integer(containment, monkeypatch) -> None:
     def fake_gh(args, config):
         return subprocess.CompletedProcess(args, 0, stdout="not-a-number\n", stderr="")
 
     monkeypatch.setattr(containment, "_gh_call", fake_gh)
-    assert containment.resolve_issue_database_id({}, issue_number=344) is None
+    assert containment.read_link_state({}, issue_number=344) is None
 
 
 # --- link_sub_issue: the happy path links the resolved id ----------------
@@ -273,6 +274,239 @@ def test_link_proceeds_to_add_when_list_unreadable(containment, monkeypatch) -> 
     monkeypatch.setattr(containment, "_gh_call", fake_gh)
     result = containment.link_sub_issue({}, parent_number=342, child_number=344)
     assert result.outcome == containment.LinkOutcome.LINKED
+
+
+# --- one native parent: conflict, move, and the child's record (#1040) -----
+
+_API = "https://api.github.com"
+
+# The error body `gh api` prints on stdout when GitHub refuses an add because
+# the child already has a parent; stderr carries only the summary line.
+_ONE_PARENT_BODY = (
+    '{"message": "Validation Failed", "errors": [{"resource": "Issue", '
+    '"code": "custom", "field": "sub_issue_id", '
+    '"message": "Sub issue may only have one parent"}], "status": "422"}'
+)
+
+
+def _record(db_id: int, parent: int | None = None, *, parent_repo: str = "o/r") -> str:
+    """The child-record read's output: id, native parent URL, repository URL."""
+    parent_url = f"{_API}/repos/{parent_repo}/issues/{parent}" if parent else ""
+    return f"{db_id}\n{parent_url}\n{_API}/repos/o/r\n"
+
+
+class _ScriptedLink:
+    """Answers the link path's calls: the child's record (one answer per read,
+    the last repeating), the parent's list, and the add."""
+
+    def __init__(self, *records: str, listed: str = "[]", post=(0, "{}", "")) -> None:
+        self.records = list(records)
+        self.listed = listed
+        self.post = post
+        self.calls: list[list[str]] = []
+
+    def __call__(self, args, config):
+        self.calls.append(args)
+        if "--jq" in args:
+            stdout = self.records.pop(0) if len(self.records) > 1 else self.records[0]
+            return subprocess.CompletedProcess(args, 0, stdout=stdout, stderr="")
+        if "--paginate" in args:
+            return subprocess.CompletedProcess(args, 0, stdout=self.listed, stderr="")
+        rc, stdout, stderr = self.post
+        return subprocess.CompletedProcess(args, rc, stdout=stdout, stderr=stderr)
+
+    @property
+    def posts(self) -> list[list[str]]:
+        return [a for a in self.calls if "POST" in a]
+
+    @property
+    def list_reads(self) -> list[list[str]]:
+        return [a for a in self.calls if "--paginate" in a]
+
+
+def test_read_link_state_reads_the_id_and_the_native_parent(containment, monkeypatch) -> None:
+    captured: dict = {}
+
+    def fake_gh(args, config):
+        captured["args"] = args
+        return subprocess.CompletedProcess(args, 0, stdout=_record(999, 7), stderr="")
+
+    monkeypatch.setattr(containment, "_gh_call", fake_gh)
+    state = containment.read_link_state({}, issue_number=344)
+    assert state.database_id == 999
+    assert state.parent == containment.NativeParent(number=7)
+    assert state.parent.ref == "#7" and state.parent.is_issue(7)
+    # one read of the REST issue, the id first so the id-only readers agree.
+    assert captured["args"][:3] == ["gh", "api", "repos/{owner}/{repo}/issues/344"]
+    assert captured["args"][captured["args"].index("--jq") + 1].startswith(".id,")
+
+
+def test_read_link_state_without_a_parent(containment, monkeypatch) -> None:
+    monkeypatch.setattr(containment, "_gh_call", _ScriptedLink(_record(999)))
+    assert containment.read_link_state({}, issue_number=344).parent is None
+
+
+def test_read_link_state_tells_a_parent_in_another_repository_apart(
+    containment, monkeypatch
+) -> None:
+    """Native sub-issues may cross repositories: #7 elsewhere is not our #7."""
+    monkeypatch.setattr(
+        containment, "_gh_call", _ScriptedLink(_record(999, 7, parent_repo="other/repo"))
+    )
+    parent = containment.read_link_state({}, issue_number=344).parent
+    assert parent.ref == "other/repo#7"
+    assert not parent.is_issue(7)
+
+
+def test_a_child_under_another_parent_is_a_conflict_and_nothing_is_posted(
+    containment, monkeypatch
+) -> None:
+    """The child's record names #7; linking it under #342 is refused by the
+    one-parent rule, so the seam reports the conflict by name and does not
+    post — and does not call it unsupported."""
+    fake = _ScriptedLink(_record(999, 7))
+    monkeypatch.setattr(containment, "_gh_call", fake)
+    result = containment.link_sub_issue({}, parent_number=342, child_number=344)
+
+    assert result.outcome == containment.LinkOutcome.CONFLICT
+    assert result.ok is False
+    assert result.current_parent == containment.NativeParent(number=7)
+    assert "#344" in result.detail and "#7" in result.detail and "#342" in result.detail
+    assert fake.posts == [] and fake.list_reads == []
+
+
+def test_a_child_whose_record_names_this_parent_is_already_linked(
+    containment, monkeypatch
+) -> None:
+    fake = _ScriptedLink(_record(999, 342))
+    monkeypatch.setattr(containment, "_gh_call", fake)
+    result = containment.link_sub_issue({}, parent_number=342, child_number=344)
+    assert result.outcome == containment.LinkOutcome.ALREADY
+    assert fake.posts == [] and fake.list_reads == []
+
+
+def test_the_one_parent_422_body_is_a_conflict_not_unsupported(containment, monkeypatch) -> None:
+    """The record did not show the parent (a field this instance may not carry);
+    GitHub refuses the add with a 422 whose error body states the one-parent
+    rule. That is a conflict, named by re-reading the child — a bare 422 would
+    otherwise have been read as an instance without sub-issues."""
+    fake = _ScriptedLink(
+        _record(999),
+        _record(999, 7),
+        post=(1, _ONE_PARENT_BODY, "gh: Validation Failed (HTTP 422)"),
+    )
+    monkeypatch.setattr(containment, "_gh_call", fake)
+    result = containment.link_sub_issue({}, parent_number=342, child_number=344)
+
+    assert result.outcome == containment.LinkOutcome.CONFLICT
+    assert result.current_parent == containment.NativeParent(number=7)
+    assert "unsupported" not in result.detail
+
+
+def test_the_one_parent_rule_is_a_conflict_even_when_the_parent_cannot_be_named(
+    containment, monkeypatch
+) -> None:
+    fake = _ScriptedLink(
+        _record(999), post=(1, _ONE_PARENT_BODY, "gh: Validation Failed (HTTP 422)")
+    )
+    monkeypatch.setattr(containment, "_gh_call", fake)
+    result = containment.link_sub_issue({}, parent_number=342, child_number=344)
+
+    assert result.outcome == containment.LinkOutcome.CONFLICT
+    assert result.current_parent is None
+    assert "another parent" in result.detail
+
+
+def test_the_one_parent_rule_on_stderr_alone_is_a_conflict(containment, monkeypatch) -> None:
+    """`gh` may print the first error's message instead of the status line."""
+    fake = _ScriptedLink(_record(999), post=(1, "", "gh: Sub issue may only have one parent"))
+    monkeypatch.setattr(containment, "_gh_call", fake)
+    result = containment.link_sub_issue({}, parent_number=342, child_number=344)
+    assert result.outcome == containment.LinkOutcome.CONFLICT
+
+
+def test_a_duplicate_refusal_is_already_linked(containment, monkeypatch) -> None:
+    """Linked by someone else after the list was read: GitHub refuses the
+    duplicate, and that means the link is in place."""
+    body = (
+        '{"message": "Validation Failed", "errors": [{"message": '
+        '"Issue may not contain duplicate sub-issues"}], "status": "422"}'
+    )
+    fake = _ScriptedLink(_record(999), post=(1, body, "gh: Validation Failed (HTTP 422)"))
+    monkeypatch.setattr(containment, "_gh_call", fake)
+    result = containment.link_sub_issue({}, parent_number=342, child_number=344)
+    assert result.outcome == containment.LinkOutcome.ALREADY
+    assert result.ok is True
+
+
+def test_add_sub_issue_args_replace_parent_makes_the_add_a_move(containment) -> None:
+    args = containment.add_sub_issue_args(
+        parent_number=342, child_database_id=999, replace_parent=True
+    )
+    assert args[-4:] == ["-F", "sub_issue_id=999", "-F", "replace_parent=true"]
+
+
+def test_move_sub_issue_moves_the_child_in_one_write(containment, monkeypatch) -> None:
+    fake = _ScriptedLink(_record(999, 7))
+    monkeypatch.setattr(containment, "_gh_call", fake)
+    result = containment.move_sub_issue({}, parent_number=342, child_number=344)
+
+    assert result.outcome == containment.LinkOutcome.MOVED
+    assert result.ok is True
+    assert result.current_parent == containment.NativeParent(number=7)
+    assert len(fake.posts) == 1
+    post = fake.posts[0]
+    assert "repos/{owner}/{repo}/issues/342/sub_issues" in post
+    assert post[-2:] == ["-F", "replace_parent=true"]
+
+
+def test_move_sub_issue_refused_names_the_parent_the_child_keeps(
+    containment, monkeypatch
+) -> None:
+    fake = _ScriptedLink(
+        _record(999, 7), post=(1, _ONE_PARENT_BODY, "gh: Validation Failed (HTTP 422)")
+    )
+    monkeypatch.setattr(containment, "_gh_call", fake)
+    result = containment.move_sub_issue({}, parent_number=342, child_number=344)
+
+    assert result.outcome == containment.LinkOutcome.CONFLICT
+    assert "could not be moved to #342" in result.detail
+    assert "#7" in result.detail
+
+
+def test_move_sub_issue_without_a_current_parent_is_a_plain_link(
+    containment, monkeypatch
+) -> None:
+    fake = _ScriptedLink(_record(999))
+    monkeypatch.setattr(containment, "_gh_call", fake)
+    result = containment.move_sub_issue({}, parent_number=342, child_number=344)
+
+    assert result.outcome == containment.LinkOutcome.LINKED
+    assert "replace_parent=true" not in fake.posts[0]
+
+
+def test_sub_issue_reads_reads_each_parent_once(containment, monkeypatch) -> None:
+    fake = _ScriptedLink(_record(999), listed='[{"id": 1, "number": 345}]')
+    monkeypatch.setattr(containment, "_gh_call", fake)
+    reads = containment.SubIssueReads({})
+
+    first = reads.read(342)
+    again = reads.read("342")
+    reads.read(343)
+    assert first is again and first.numbers == {345}
+    assert len(fake.list_reads) == 2  # #342 once, #343 once
+
+
+def test_link_sub_issue_reuses_the_runs_reads(containment, monkeypatch) -> None:
+    """A caller holding the run's reads pays no list read per link."""
+    fake = _ScriptedLink(_record(999))
+    monkeypatch.setattr(containment, "_gh_call", fake)
+    reads = containment.SubIssueReads({})
+    reads.read(342)
+    for child in (344, 345, 346):
+        containment.link_sub_issue({}, parent_number=342, child_number=child, sub_issues=reads)
+    assert len(fake.list_reads) == 1
+    assert len(fake.posts) == 3
 
 
 # --- create-issue obtains the link FROM the primitive --------------------
