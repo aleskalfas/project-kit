@@ -13,6 +13,12 @@ composes the body from the matching `templates/<Type>.md`, applies the
 classification axes (type:*, priority:*, workstream:* per
 `classification.yaml`), and posts the issue via `gh issue create`.
 
+An issue parent — `--parent`, or when that is absent the EPIC / Feature /
+Umbrella the body's first line names — is also set as GitHub's native
+sub-issue parent (DEC-005), subject to the substrate-map's `containment`
+selector (DEC-039). `--parent` and a first line naming a different issue are
+refused before anything is filed.
+
 For board-substrate adopters (per DEC-019 +
 `schemas/mandatory-issue-state.yaml`), the new issue is also added to
 the configured Projects v2 board as the final step of filing. The
@@ -64,9 +70,9 @@ sys.path.insert(0, str(_HERE))
 from _lib import bootstrap_gate  # noqa: E402
 from _lib import axis_carriage  # noqa: E402
 from _lib import axis_labels  # noqa: E402
+from _lib import body_parent_ref  # noqa: E402
 from _lib import classification_rules  # noqa: E402
 from _lib import containment  # noqa: E402
-from _lib import lifecycle_inference as infer  # noqa: E402
 from _lib.containment import link_sub_issue  # noqa: E402
 from _lib.gh import gh_project_run, gh_run, load_adopter_config  # noqa: E402
 from _lib.hooks import fire_hooks  # noqa: E402
@@ -145,7 +151,12 @@ def main() -> int:
         default=None,
         help=(
             "Parent issue number. Substituted into the body template's "
-            "first parent-ref line. create-issue enforces parent-*requiredness* "
+            "first parent-ref line, and linked as a native sub-issue parent. "
+            "When omitted, the issue parent the body's first line names "
+            "(an EPIC / Feature / Umbrella ref) is linked instead; a "
+            "Milestone first line links nothing. Refused when it and the "
+            "body's first line name different issues. create-issue enforces "
+            "parent-*requiredness* "
             "only (whether a parent-ref is required for this type, degradable "
             "via the hierarchy mode); it does NOT gate issue-types.yaml's "
             "containment graph at filing — the containment_invariants are a "
@@ -176,9 +187,10 @@ def main() -> int:
             "bypassing the template-based composition. The file's "
             "first line must be the parent-ref per the issue type's "
             "`parent_ref_form` (the same first-line check the "
-            "template-composition path enforces). Useful when the "
-            "caller has the full body already prepared (e.g. agent "
-            "filing). See #218."
+            "template-composition path enforces); an issue parent it "
+            "names is linked natively even without --parent. Useful "
+            "when the caller has the full body already prepared (e.g. "
+            "agent filing). See #218."
         ),
     )
     parser.add_argument(
@@ -532,9 +544,7 @@ def main() -> int:
         # path agents use, supplying their own (correctly-labelled) parent-ref.
         # Skip a leading DEC-013 `Integration:` marker — it sits ABOVE the
         # parent-ref (#763), so the parent-ref is the next line.
-        first_line = (
-            infer.strip_integration_marker(body).lstrip().split("\n", 1)[0].strip()
-        )
+        first_line = body_parent_ref.first_line(body)
         matchers = _parent_ref_form_matchers(str(type_entry.get("parent_ref_form", "")))
         first_line_is_parent_ref = any(m.match(first_line) for m in matchers)
         # This first-line format check mirrors the requiredness gate above: it
@@ -572,6 +582,37 @@ def main() -> int:
                 capability_root / "templates" / f"{type_entry.get('title_prefix', '')}.md"
             )
         body = _compose_body(template_path, parent_ref=expected_parent_ref)
+
+    # The issue parent to link natively (#1033). `--parent` names it; without the
+    # flag, it is the issue the body's first line names (for a prepared body, the
+    # line the check above accepts), so a body filed from a file is linked exactly
+    # as `--parent` would link it. Only an issue parent (EPIC / Feature /
+    # Umbrella) links: a `Milestone:` first line is not a sub-issue relationship.
+    # Both paths' bodies are read the same way (a template-composed body carries
+    # only the flag's own ref, so it never names a second parent). When the flag
+    # and the first line name different issues, the native link and the textual
+    # record would disagree from the moment of filing, so refuse before any
+    # mutation rather than pick one.
+    first_line_ref = body_parent_ref.parse_first_line(
+        body, str(type_entry.get("parent_ref_form", ""))
+    )
+    first_line_parent = first_line_ref.issue_number if first_line_ref else None
+    if (
+        args.parent is not None
+        and first_line_parent is not None
+        and first_line_parent != args.parent
+    ):
+        print(
+            f"error: --parent #{args.parent} and the body's first line "
+            f"{body_parent_ref.first_line(body)!r} name different parents "
+            f"(#{args.parent} vs #{first_line_parent}). The first line is the "
+            "textual parent record and the native sub-issue link must name the "
+            "same issue — correct one of them, or omit --parent to link the "
+            "first line's parent.",
+            file=sys.stderr,
+        )
+        return 2
+    parent_number = args.parent if args.parent is not None else first_line_parent
 
     # Residual-placeholder check at create-phase (DEC-031).
     # Emits warnings when the composed body is still the raw skeleton so
@@ -620,8 +661,9 @@ def main() -> int:
     print(f"  priority:   {args.priority}")
     if args.workstream:
         print(f"  workstream: {args.workstream}")
-    if args.parent:
-        print(f"  parent:     #{args.parent}")
+    if parent_number is not None:
+        parent_source = "" if args.parent is not None else "  (from the body's first line)"
+        print(f"  parent:     #{parent_number}{parent_source}")
         # Containment-substrate selector (DEC-039 D2 / ADR-035): show which
         # parent-link decision the post-create step will take. `native` (and the
         # greenfield default) links the native sub-issue; `textual` skips it and
@@ -682,9 +724,11 @@ def main() -> int:
     # Set GitHub's native sub-issue link under the parent, IN ADDITION to the
     # textual first-line parent-ref already written into the body above (DEC-005:
     # native sub-issues are the canonical containment mechanism; the textual ref
-    # is the universal spine). Only an ISSUE parent is linked natively — a
-    # milestone parent (--milestone) is not a sub-issue relationship and carries
-    # its own native Milestone field, so it is not linked here. The link is
+    # is the universal spine). The parent is `parent_number` — `--parent`, or the
+    # issue the body's first line names when the flag is absent (#1033). Only an
+    # ISSUE parent is linked natively — a milestone parent (--milestone, or a
+    # `Milestone:` first line) is not a sub-issue relationship and carries its own
+    # native Milestone field, so it is not linked here. The link is
     # idempotent (value-equality re-link is a no-op, DEC-026) and degrades to a
     # no-op where the instance lacks sub-issue support — the textual ref carries
     # the relationship in that case, and a native failure never fails the create.
@@ -702,21 +746,21 @@ def main() -> int:
         print(provenance.post_filing_comment(new_issue_number, capability_root, config))
     containment = axis_labels.containment_mode(substrate_map)
     if (
-        args.parent is not None
+        parent_number is not None
         and new_issue_number is not None
         and containment == axis_labels.CONTAINMENT_NATIVE
     ):
         link = link_sub_issue(
             config,
-            parent_number=args.parent,
+            parent_number=parent_number,
             child_number=new_issue_number,
         )
         prefix = "[ok]" if link.ok else "[warn]"
         print(f"{prefix} {link.detail}", file=sys.stderr)
-    elif args.parent is not None and containment == axis_labels.CONTAINMENT_TEXTUAL:
+    elif parent_number is not None and containment == axis_labels.CONTAINMENT_TEXTUAL:
         print(
             f"[ok] containment: textual mode — native sub-issue link skipped; "
-            f"textual parent-ref to #{args.parent} recorded as the containment record",
+            f"textual parent-ref to #{parent_number} recorded as the containment record",
             file=sys.stderr,
         )
         # Render-on-demand textual children view (DEC-039 D4 / ADR-035 section 4):
@@ -729,7 +773,7 @@ def main() -> int:
         # arm, so the call writes.
         _refresh_parent_children_view(
             config,
-            parent_number=args.parent,
+            parent_number=parent_number,
             containment_mode=containment,
         )
 
@@ -1212,27 +1256,12 @@ def _detect_parent_structural_type(
 def _parent_ref_form_matchers(parent_ref_form: str) -> list[re.Pattern[str]]:
     """Compile a type's ``parent_ref_form`` into per-option first-line matchers.
 
-    Each `` or ``-separated option becomes a regex matching a concrete first
-    line: ``<Label>: #<N>`` → ``^<Label>:\\s+#\\d+\\s*$`` and the milestone link
-    form → its back-referenced pattern. Used to accept a ``--body-file`` whose
-    first line is ANY allowed parent-ref form for the type (#356), the same option
-    set validate-body accepts.
+    Used to accept a ``--body-file`` whose first line is ANY allowed parent-ref
+    form for the type (#356), the same option set validate-body accepts. The
+    compilation lives in ``_lib.body_parent_ref`` — the one reading of the first
+    line, which the derived native link (#1033) uses too.
     """
-    matchers: list[re.Pattern[str]] = []
-    for raw in str(parent_ref_form).split(" or "):
-        option = raw.strip()
-        if not option:
-            continue
-        if "../milestone/" in option:
-            matchers.append(
-                re.compile(r"^Milestone:\s+\[#(\d+)\]\(\.\./milestone/\1\)\s*$")
-            )
-            continue
-        m = re.match(r"^([A-Za-z]+):\s*#<N>\s*$", option)
-        if m:
-            label = re.escape(m.group(1))
-            matchers.append(re.compile(rf"^{label}:\s+#\d+\s*$"))
-    return matchers
+    return body_parent_ref.form_matchers(parent_ref_form)
 
 
 def _title_pattern_for(titles: dict, structural_type: str) -> str | None:

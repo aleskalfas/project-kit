@@ -1,0 +1,117 @@
+"""The parent an issue body names on its first line — one reading for every caller.
+
+Every issue body opens with a parent-ref naming its immediate parent, in one of
+the forms its structural type allows ([project-management:DEC-005-linking-and-containment];
+`schemas/issue-types.yaml`'s per-type `parent_ref_form`): `<Label>: #<N>` for an
+issue parent (EPIC, Feature, Umbrella), or `Milestone: [#<N>](../milestone/<N>)`
+for a milestone parent.
+
+`create-issue` acts on that line twice: it checks that a prepared body's first
+line is an allowed form, and, when no `--parent` is given, links the new issue
+natively under the parent the line names. Both read it here, so the line that
+passes the filing check is exactly the line that gets linked — one reading, not
+two that could drift.
+
+The *first line* is the first non-blank line after a leading DEC-013
+`Integration:` marker (which sits above the parent-ref) — the reading
+create-issue's first-line check has always used. Only the forms the issue's own
+type permits are recognised, so a line naming a parent the type may not have
+(an EPIC under a Feature) is not a parent-ref for that issue.
+"""
+
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass
+
+from _lib import lifecycle_inference as _infer
+
+# The label every milestone parent-ref carries. A milestone is not an issue:
+# it scopes issues through its own native Milestone field, so a milestone ref
+# never becomes a sub-issue link.
+MILESTONE_LABEL = "Milestone"
+
+# How a `parent_ref_form` option spells a milestone parent (the link form), and
+# the concrete first line that option accepts. The number is back-referenced so
+# a link whose text and target disagree is not accepted.
+_MILESTONE_OPTION_MARKER = "../milestone/"
+_MILESTONE_LINE = re.compile(
+    rf"^(?P<label>{MILESTONE_LABEL}):\s+\[#(?P<number>\d+)\]"
+    r"\(\.\./milestone/(?P=number)\)\s*$"
+)
+
+# How a `parent_ref_form` option spells an issue parent: `<Label>: #<N>`.
+_ISSUE_OPTION = re.compile(r"^([A-Za-z]+):\s*#<N>\s*$")
+
+
+@dataclass(frozen=True)
+class ParentRef:
+    """A parsed first-line parent-ref.
+
+    ``label`` is the ref's label as written (``EPIC``, ``Feature``,
+    ``Umbrella``, ``Milestone``); ``number`` is the issue number, or the
+    milestone number for a milestone ref; ``milestone`` says which.
+    """
+
+    label: str
+    number: int
+    milestone: bool
+
+    @property
+    def issue_number(self) -> int | None:
+        """The parent issue to link under, or ``None`` for a milestone parent."""
+        return None if self.milestone else self.number
+
+
+def _options(parent_ref_form: str) -> list[tuple[bool, re.Pattern[str]]]:
+    """Each `` or ``-separated option of a form as ``(is_milestone, matcher)``."""
+    options: list[tuple[bool, re.Pattern[str]]] = []
+    for raw in str(parent_ref_form).split(" or "):
+        option = raw.strip()
+        if not option:
+            continue
+        if _MILESTONE_OPTION_MARKER in option:
+            options.append((True, _MILESTONE_LINE))
+            continue
+        m = _ISSUE_OPTION.match(option)
+        if m:
+            label = re.escape(m.group(1))
+            options.append(
+                (False, re.compile(rf"^(?P<label>{label}):\s+#(?P<number>\d+)\s*$"))
+            )
+    return options
+
+
+def form_matchers(parent_ref_form: str) -> list[re.Pattern[str]]:
+    """Compile a type's ``parent_ref_form`` into per-option first-line matchers.
+
+    Each option becomes a regex matching a concrete first line: ``<Label>: #<N>``
+    matches ``^<Label>:\\s+#\\d+\\s*$``, and the milestone link form matches its
+    back-referenced link. The option set is the same one validate-issue accepts.
+    Every matcher carries ``label`` and ``number`` groups.
+    """
+    return [matcher for _, matcher in _options(parent_ref_form)]
+
+
+def first_line(body: str) -> str:
+    """The body's parent-ref line as written: its first non-blank line after a
+    leading DEC-013 ``Integration:`` marker, stripped. Empty for an empty body."""
+    return _infer.strip_integration_marker(body or "").lstrip().split("\n", 1)[0].strip()
+
+
+def parse_first_line(body: str, parent_ref_form: str) -> ParentRef | None:
+    """The parent-ref on the body's first line, read against the type's forms.
+
+    ``None`` when the first line is not one of the forms ``parent_ref_form``
+    allows — including a line naming a parent the type may not have.
+    """
+    line = first_line(body)
+    for is_milestone, matcher in _options(parent_ref_form):
+        m = matcher.match(line)
+        if m:
+            return ParentRef(
+                label=m.group("label"),
+                number=int(m.group("number")),
+                milestone=is_milestone,
+            )
+    return None
