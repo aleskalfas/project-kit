@@ -111,8 +111,8 @@ def run_upgrade(
     # the deploy primitives so the harness picks up source edits. Skips the
     # version comparison (the recorded manifest version is moot on self-host)
     # and the migration steps (self-host authors migrations with the source
-    # change; it does not run them against itself). The test is sync's, the
-    # definition of the methodology's source repository (ADR-059).
+    # change; it does not run them against itself). The test is sync's test for
+    # the methodology's source repository (ADR-059 point 2).
     if is_self_host(target_root, source_kit):
         click.echo("Self-host: source is the installed state; no backbone upgrade needed.")
         click.echo("Re-running deploy primitives via sync.")
@@ -559,10 +559,11 @@ def _maybe_self_update_tool(
     - **D3 suppression.** On a source checkout / self-host, reinstalling a released
       tag over working-tree code is nonsensical — skip entirely (no lookup, no
       output). `target_root is None` (run outside a project) is never a checkout.
-      Reached only after the self-host branch has said no, so it asks the
-      router's marker test, which also recognises a checkout that other code
-      is operating on (ADR-059 point 2; the markers are in the lifecycle
-      README's "The methodology's literals").
+      It asks the router's marker test after sync's test (the self-host branch
+      above) has said no, so it answers only where the running code is not the
+      checkout's own; there it skips the tool update and upgrade still
+      propagates (ADR-059 point 3; the refusal for that gap is #1070). The
+      markers are in the lifecycle README's "The methodology's literals".
     - **D1 degrade.** Any lookup failure (offline, no credentials, `git` absent,
       timeout) warns and returns; the caller proceeds unchanged.
     - **Act (amended).** When the tool is behind and self-update is allowed

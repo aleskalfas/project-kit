@@ -542,11 +542,11 @@ def test_the_source_discriminator_is_the_routers(tmp_path: Path) -> None:
 def test_the_source_discriminator_agrees_with_syncs_own_decision(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The markers stand in for sync's self-host condition, the definition (ADR-059).
+    """The marker test and sync's test recognise the same repository (ADR-059).
 
-    Holding the predicate to the router's markers pins the stand-in, not what it
-    stands for: sync's condition could change and nothing would notice. So this
-    asks sync. Route 1 is what makes the two agree — where the markers hold, the
+    Holding the predicate to the router's markers holds one copy of the marker
+    test to the other, not to sync's test: sync's could change and nothing would
+    notice. So this asks sync. Route 1 is what makes the two agree — where the markers hold, the
     router execs that tree's dispatcher, which runs that tree's own package — so
     each tree is synced by the code route 1 would run there: its own package
     where the markers hold, and this test's checkout (the tool) everywhere else.

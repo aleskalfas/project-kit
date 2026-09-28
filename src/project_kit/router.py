@@ -178,10 +178,11 @@ def is_source_checkout(root: Path) -> bool:
     the dispatcher (which `uv run`s a project-kit package that isn't there)
     would fail.
 
-    These marker files stand in for the definition of the methodology's source
-    repository, sync's self-host condition (`install.is_self_host`, ADR-059).
-    Route 1 is what keeps the two equal: execing the checkout's dispatcher runs
-    the checkout's own package, which makes the checkout the source it resolves.
+    This is the marker test for the methodology's source repository, the one
+    whose `.pkit/` is the methodology's own tree (ADR-059 point 3); the tool's
+    other test is sync's (`install.is_self_host`). Route 1 is what keeps the two
+    equal: execing the checkout's dispatcher runs the checkout's own package,
+    which makes the checkout the source it resolves.
     The markers are this distribution's literals, listed in the lifecycle
     README's "The methodology's literals"; the ownership predicate
     `is_methodology_source` carries the same two, and a test holds them equal.

@@ -504,18 +504,20 @@ def find_source_kit() -> Path:
 
 
 def is_self_host(target_root: Path, source_kit: Path) -> bool:
-    """True when *target_root* is the methodology's source repository (ADR-059).
+    """Sync's test for the methodology's source repository (ADR-059 point 2).
 
-    The definition: the target is the repository whose `.pkit/` is
-    *source_kit*, the tree this process copies from (`find_source_kit`), so a
-    sync has nothing to copy into it. A bundled tree never has a project as its
-    parent, so under an installed distribution this is never true. Sync's
-    self-host path, upgrade's self-host branch and init's refusal ask it here.
+    The source repository is the one whose `.pkit/` is the methodology's own
+    tree. This test recognises it as the parent of *source_kit*, the tree the
+    running code resolves (`find_source_kit`), and is exact whenever the
+    running code is that repository's own. A bundled tree never has a project
+    as its parent, so under an installed distribution this is never true.
+    Sync's self-host path, upgrade's self-host branch and init's refusal ask it
+    here.
 
-    Code that cannot evaluate it — the entry-point router, before any code is
-    chosen, and the propagated ownership predicate — recognises the source by
-    marker files instead (`router.is_source_checkout`); route 1 is what keeps
-    the two answers equal (ADR-059 point 3).
+    Code that must answer without knowing which code runs — the entry-point
+    router, before any code is chosen, and the propagated ownership predicate —
+    recognises the source by marker files instead (`router.is_source_checkout`);
+    route 1 is what keeps the two answers equal (ADR-059 point 4).
     """
     return target_root.resolve() == source_kit.parent.resolve()
 
