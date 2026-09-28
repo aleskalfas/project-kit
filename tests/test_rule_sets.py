@@ -880,11 +880,11 @@ def test_validate_command_prints_the_rule_sets_section_and_fails_on_errors(
 
     assert result.exit_code == 1, result.output
     out = result.output
-    assert f"{PROJECT_SETS}/cmn.md#RS-CMN-005" in out.split("\n  configuration")[0]
     section = out.split("\n  rule-sets\n")[1]
     assert section.lstrip().startswith("1 rule set(s), 6 rule(s)")
     assert "1 error(s), 1 report(s)." in section
-    assert f"{PROJECT_SETS}/cmn.md#RS-CMN-001 /origin/source" in section
+    assert f"error    {PROJECT_SETS}/cmn.md#RS-CMN-005" in section
+    assert f"report   {PROJECT_SETS}/cmn.md#RS-CMN-001:/origin/source" in section
     assert out.index("\n  friction\n") < out.index("\n  rule-sets\n")
 
 

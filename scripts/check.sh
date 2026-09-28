@@ -5,6 +5,17 @@
 # AND by CI (.github/workflows/checks.yml), so the gate can't drift between the
 # two. Add a check here once and both pick it up.
 #
+# Two kinds of line, deliberately apart (ADR-058):
+#
+#   - `pkit validate` — the one umbrella over every check of the tree's STATE:
+#     the backbone's registered members (manifests, schemas, configuration,
+#     packages, connections, versions, friction, rule-sets, decisions, refs,
+#     process, data) and each installed capability's. One line, so nothing
+#     registered can be forgotten here; it fails on errors only.
+#   - the diff-scoped checks — migration coverage, the friction change check
+#     and the changelog lint read a base ref and answer about the CHANGE, not
+#     the tree. They are not validators and stay their own lines.
+#
 # Runs every check (does not stop at the first failure) and reports a summary,
 # so one run surfaces all problems. Exits non-zero if any check failed.
 #
@@ -15,7 +26,7 @@
 set -uo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
-# Base ref for the diff-based checks (migration coverage, friction). CI
+# Base ref for the diff-scoped checks (migration coverage, friction). CI
 # overrides via env for PRs; locally it defaults to the tracked main.
 BASE="${PKIT_CHECK_BASE:-origin/main}"
 
@@ -33,8 +44,7 @@ run() {
 }
 
 run "tests"              uv run pytest -q
-run "schemas validate"   uv run pkit schemas validate
-run "decisions validate" uv run pkit decisions validate
+run "validate"           uv run pkit validate
 run "migrations check"   uv run pkit migrations check-diff --base "${BASE}"
 run "friction check"     uv run pkit friction check --base "${BASE}"
 run "changelog lint"     uv run pkit release lint

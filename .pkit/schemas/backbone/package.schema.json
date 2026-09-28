@@ -47,6 +47,16 @@
         "$ref": "#/$defs/component-name"
       }
     },
+    "validators": {
+      "description": "Validators this component registers with `pkit validate` (ADR-058): a mapping from a validator name (a word) to its entry, which names one leaf of this component's `commands:` tree by `command` — the leaf carries the `help` line and must declare `query-contract: true`. The umbrella addresses the validator `<component>:<name>` and runs the leaf's script from the project root with the one argument `--json`, the offline marker set and bounded like a predicate, reading one JSON document — and nothing else — from its standard output: `{\"summary\": [\"...\"], \"findings\": [{\"severity\": \"error\"|\"warning\"|\"info\"|\"report\", \"location\": \"...\", \"message\": \"...\"}]}` (a finding may add a `label`); diagnostics go to standard error. Only `error` fails the umbrella. An abnormal exit, a timeout, a leaf without the declaration or an answer that is not that document is an error finding, never a clean pass. `order` sorts the validator among the members (default 1000, after the backbone's, which take the orders below 1000). No shipped component uses it yet.",
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/validator"
+      }
+    },
     "provides": {
       "description": "Hook implementations this component answers, `{hook-name: implementation}` (COR-013). Reserved; no shipped file uses it.",
       "type": "object",
@@ -159,6 +169,28 @@
         "help": {
           "description": "One-line user-facing description.",
           "$ref": "#/$defs/non-empty-string"
+        },
+        "query-contract": {
+          "description": "The one constant declaration that this command honours the query contract (ADR-057 point 3; the literal is ADR-058's): bounded, deterministic, read-only, needing no network. Required on the command a validator names, and on every query command a capability registers. It grants nothing and is trusted, not enforced.",
+          "const": true
+        }
+      }
+    },
+    "validator": {
+      "title": "One registered validator",
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "command"
+      ],
+      "properties": {
+        "command": {
+          "description": "The leaf of this component's `commands:` tree that answers the validator's findings; must exist and declare `query-contract: true` (checked in Python). Its `help` is the validator's.",
+          "$ref": "#/$defs/command-reference"
+        },
+        "order": {
+          "description": "Where it sorts among the members: the backbone's members take the orders below 1000, and 1000 is the default.",
+          "type": "integer"
         }
       }
     },

@@ -47,6 +47,7 @@ from pathlib import Path
 import click
 
 from project_kit import cli_render, rule_sets
+from project_kit.validators import Finding, Outcome
 from project_kit.decisions import resolve_adr_records_dir
 
 
@@ -190,6 +191,24 @@ def discover_decision_records(target_root: Path) -> list[DecisionRecord]:
                 records.extend(_scan_dir(cap_decisions, f"capability:{cap_dir.name}"))
 
     return records
+
+
+def outcome(target_root: Path) -> Outcome:
+    """The `decisions` member of `pkit validate`: every record's front matter
+    (`validate.decision_frontmatter_issues`) and the id spaces (`validate_decision_ids`)."""
+    from project_kit.validate import decision_frontmatter_issues
+
+    front_matter = decision_frontmatter_issues(target_root)
+    report = validate_decision_ids(target_root)
+    findings = (
+        *(Finding(issue.location, issue.diagnosis) for issue in front_matter),
+        *(Finding(issue.location, issue.message) for issue in report.issues),
+    )
+    rules = f" and {report.rules_checked} rule(s)" if report.rules_checked else ""
+    summary = (
+        f"{report.records_checked} decision record(s){rules} checked; {len(findings)} error(s).",
+    )
+    return Outcome(summary, findings)
 
 
 def print_report(report: DecisionValidationReport) -> None:

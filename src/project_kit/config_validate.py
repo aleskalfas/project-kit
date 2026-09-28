@@ -48,7 +48,6 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-import click
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import ValidationError
 from referencing import Registry, Resource
@@ -56,7 +55,7 @@ from referencing.jsonschema import DRAFT202012
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
-from project_kit import backbone_schemas, cli_render
+from project_kit import backbone_schemas, validators
 from project_kit import connections as wiring
 from project_kit.friction_discovery import is_inside_repository
 from project_kit.manifest import read_backbone_manifest
@@ -215,16 +214,11 @@ def _shape_findings(config: Mapping[str, Any], schema: Mapping[str, Any]) -> lis
 def _render_schema_error(error: ValidationError) -> list[ConfigFinding]:
     """One finding per violation; an `additionalProperties` error becomes one per unknown key."""
     pointer = _pointer(error.absolute_path)
-    if error.validator != "additionalProperties" or not isinstance(error.instance, Mapping):
+    unknown = backbone_schemas.unknown_keys(error)
+    if not unknown:
         return [ConfigFinding(pointer, Severity.ERROR, error.message)]
 
     known = tuple((error.schema.get("properties") or {}).keys())
-    patterns = error.schema.get("patternProperties") or {}
-    unknown = sorted(
-        key
-        for key in error.instance
-        if key not in known and not any(_matches(pattern, key) for pattern in patterns)
-    )
     findings: list[ConfigFinding] = []
     for key in unknown:
         key_pointer = f"{pointer}/{_pointer_token(key)}"
@@ -237,13 +231,6 @@ def _render_schema_error(error: ValidationError) -> list[ConfigFinding]:
             message = f"key {key!r} is not a {form} address."
         findings.append(ConfigFinding(key_pointer, Severity.ERROR, message))
     return findings
-
-
-def _matches(pattern: str, key: str) -> bool:
-    return re.search(pattern, key) is not None
-
-
-# --- documentation roots (COR-049) ------------------------------------------
 
 
 def _docs_findings(target_root: Path, docs: Any, flagged: frozenset[str]) -> list[ConfigFinding]:
@@ -467,43 +454,42 @@ def _names(names: Iterable[str]) -> str:
 # --- rendering ---------------------------------------------------------------
 
 
-def print_configuration_section(report: ConfigReport) -> None:
-    """The "configuration" section of the validate report: state and every finding.
+UMBRELLA_SEVERITY = {
+    Severity.ERROR: validators.Severity.ERROR,
+    Severity.WARNING: validators.Severity.WARNING,
+    Severity.INFO: validators.Severity.INFO,
+}
 
-    Errors are also carried in the issue list (see `as_issues`), which is what
-    fails the command; here they sit with the warnings and information so the
-    whole file is read in one place.
-    """
-    click.echo("  " + cli_render.style("strong", "configuration") + f"  ({report.location})")
+
+def outcome(target_root: Path) -> validators.Outcome:
+    """The `configuration` member of `pkit validate`: the file's state, then every finding."""
+    return as_outcome(run_configuration_pass(target_root))
+
+
+def as_outcome(report: ConfigReport) -> validators.Outcome:
+    """The pass's report as the umbrella's outcome: one state line naming the file,
+    then each finding located by JSON Pointer into it, at its own severity."""
     if not report.schema_present:
-        click.echo("    no config schema present in this tree; skipped.")
-        click.echo()
-        return
-    if not report.present and not report.findings:
-        click.echo("    absent or empty: defaults apply.")
-        click.echo()
-        return
-    if not report.findings:
-        click.echo("    valid.")
-        click.echo()
-        return
-    counts = ", ".join(
-        f"{len(report.by_severity(sev))} {sev.value}" for sev in Severity if report.by_severity(sev)
+        state = "no config schema present in this tree; skipped."
+    elif not report.present and not report.findings:
+        state = "absent or empty: defaults apply."
+    elif not report.findings:
+        state = "valid."
+    else:
+        state = ", ".join(
+            f"{len(report.by_severity(sev))} {sev.value}"
+            for sev in Severity
+            if report.by_severity(sev)
+        ) + "."
+    findings = tuple(
+        validators.Finding(
+            f"{report.location}:{finding.path}" if finding.path else report.location,
+            finding.message,
+            UMBRELLA_SEVERITY[finding.severity],
+        )
+        for finding in report.findings
     )
-    click.echo(f"    {counts}")
-    for finding in report.findings:
-        where = finding.path or "(file)"
-        click.echo(f"    {finding.severity.value:<8}{where}")
-        click.echo(f"      → {finding.message}")
-    click.echo()
-
-
-def as_issues(report: ConfigReport) -> list[tuple[str, str]]:
-    """The errors as `(location, diagnosis)` pairs for the validate issue list."""
-    return [
-        (report.location, f"{finding.path or '(file)'}: {finding.message}")
-        for finding in report.errors
-    ]
+    return validators.Outcome((f"{report.location}: {state}",), findings)
 
 
 # --- helpers -----------------------------------------------------------------

@@ -288,6 +288,41 @@ def test_referenced_command_that_does_not_exist_is_an_error(
     # `create page` — a nested leaf — resolved, so the contribution raised nothing.
 
 
+def test_a_validator_names_a_declared_command_that_declares_the_query_contract(
+    schema: dict[str, Any], component_dir: Path
+) -> None:
+    undeclared = _messages(
+        _validate(_package(validators={"citations": {"command": "refresh"}}), schema, component_dir),
+        pv.Severity.ERROR,
+    )
+    assert undeclared == {
+        "/validators/citations/command": (
+            "validator 'citations': command 'refresh' is not declared in `commands:` "
+            "(declared: ['create page', 'publish'])."
+        )
+    }
+    no_contract = _messages(
+        _validate(_package(validators={"citations": {"command": "publish"}}), schema, component_dir),
+        pv.Severity.ERROR,
+    )
+    assert no_contract == {
+        "/validators/citations/command": (
+            "validator 'citations' names command 'publish', which does not declare the query "
+            "contract (`query-contract: true` on its `commands:` entry)."
+        )
+    }
+    raw = _package(validators={"citations": {"command": "create page", "order": 5}})
+    raw["commands"]["create"]["page"]["query-contract"] = True
+    assert _validate(raw, schema, component_dir) == []
+    # The declaration is one constant: anything but `true` is the shape pass's error
+    # at the leaf, and the validator that names the leaf is undeclared all the same.
+    raw["commands"]["create"]["page"]["query-contract"] = False
+    assert set(_messages(_validate(raw, schema, component_dir), pv.Severity.ERROR)) == {
+        "/commands/create/page/query-contract",
+        "/validators/citations/command",
+    }
+
+
 def test_command_script_that_does_not_exist_is_an_error(
     schema: dict[str, Any], component_dir: Path
 ) -> None:
@@ -563,7 +598,8 @@ def test_pkit_validate_prints_the_packages_pass_and_warnings_do_not_fail(
     assert "packages" in result.output
     assert "1 warning(s)" in result.output
     assert ".pkit/capabilities/evidence/package.yaml:/foootprint" in result.output
-    assert "warning: unknown key 'foootprint'; did you mean 'footprint'?" in result.output
+    assert "warning " in result.output
+    assert "→ unknown key 'foootprint'; did you mean 'footprint'?" in result.output
 
 
 def test_pkit_validate_fails_on_a_package_error(make_adopter_repo: MakeAdopterRepo) -> None:
