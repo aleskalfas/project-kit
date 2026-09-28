@@ -11,6 +11,7 @@ target paths resolve the way they do live.
 """
 from __future__ import annotations
 
+import copy
 import importlib.util
 import json
 import os
@@ -268,6 +269,82 @@ def test_another_repositorys_workspace_is_not_the_projects(dm, catalog, root, tm
     (other / WS).mkdir()
     payload = _write(other / WS / "x.md", root)
     assert _decide(dm, _model(dm, catalog), catalog, payload, root) == "abstain"
+
+
+def test_from_a_linked_worktree_the_main_checkouts_workspace_counts(
+    dm, catalog, root, tmp_path
+) -> None:
+    repo = GitRepo(root)
+    repo.commit("initial", {"README.md": "hi\n"})
+    worktree = tmp_path / "wt"
+    repo.git("worktree", "add", "-q", "-b", "topic", str(worktree))
+
+    payload = _write(root / WS / "x.md", root)
+    assert _decide(dm, _model(dm, catalog), catalog, payload, worktree) == "allow"
+
+
+def test_a_planted_git_pointer_does_not_make_a_worktree(dm, catalog, root, tmp_path) -> None:
+    # A `.git` file naming the project's git directory — directly, or copied
+    # from a registered worktree — does not register the directory holding it:
+    # git's own entry for the worktree must point back at it.
+    repo = GitRepo(root)
+    repo.commit("initial", {"README.md": "hi\n"})
+    worktree = tmp_path / "wt"
+    repo.git("worktree", "add", "-q", "-b", "topic", str(worktree))
+    model = _model(dm, catalog)
+    pointers = {
+        "direct": f"gitdir: {root / '.git'}\n",
+        "copied": (worktree / ".git").read_text(encoding="utf-8"),
+    }
+    for name, pointer in pointers.items():
+        planted = tmp_path / name
+        (planted / WS).mkdir(parents=True)
+        (planted / ".git").write_text(pointer, encoding="utf-8")
+        payload = _write(planted / WS / "x.md", planted)
+        assert _decide(dm, model, catalog, payload, root) == "abstain", name
+
+
+# --- the folder is the checkout's own ------------------------------------------------
+
+
+def test_a_symlinked_workspace_folder_is_never_the_workspace(dm, catalog, tmp_path) -> None:
+    # A hostile checkout could commit `.agent-workspace` as a symlink to the
+    # home directory; the grant must not follow it there.
+    root = GitRepo.init(tmp_path / "proj").root
+    home = tmp_path / "home"
+    home.mkdir()
+    (root / WS).symlink_to(home, target_is_directory=True)
+    model = _model(dm, catalog)
+
+    assert _decide(dm, model, catalog, _write(root / WS / ".bashrc", root), root) == "abstain"
+    assert _decide(dm, model, catalog, _write(home / ".bashrc", root), root) == "abstain"
+
+
+@pytest.mark.parametrize("folder,target", [
+    ("/", "src/x.py"),
+    ("/tmp", "/tmp/x"),
+    ("~", "~/x"),
+    ("..", "src/x.py"),
+    ("../elsewhere", "../elsewhere/x"),
+    ("sub/../..", "../x"),
+    (".", "src/x.py"),
+])
+def test_a_folder_entry_that_is_absolute_or_climbs_out_is_never_recognized(
+    dm, catalog, root, folder, target
+) -> None:
+    # A capability's catalog fragment (ADR-021) could otherwise declare the
+    # whole filesystem, or the directory above the project, a workspace.
+    widened = copy.deepcopy(catalog)
+    widened["privileges"]["workspace"]["recognize"]["path"]["folders"] = [folder]
+    payload = _write(os.path.normpath(root / target), root)
+    assert _decide(dm, _model(dm, widened), widened, payload, root) == "abstain"
+
+
+def test_a_nested_relative_folder_entry_is_recognized(dm, catalog, root) -> None:
+    widened = copy.deepcopy(catalog)
+    widened["privileges"]["workspace"]["recognize"]["path"]["folders"] = ["build/scratch"]
+    payload = _write(root / "build" / "scratch" / "x", root)
+    assert _decide(dm, _model(dm, widened), widened, payload, root) == "allow"
 
 
 # --- the catalog, the profiles and the realizer ------------------------------------------

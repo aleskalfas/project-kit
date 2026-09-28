@@ -131,6 +131,22 @@ def test_dry_run_writes_nothing(tmp_path: Path) -> None:
     assert exclude.read_text(encoding="utf-8") == before
 
 
+def test_a_symlinked_folder_is_refused_not_adopted(tmp_path: Path) -> None:
+    # The permission grant would follow a symlinked `.agent-workspace` to
+    # wherever it points, so init and sync never accept one as the workspace.
+    repo = GitRepo.init(tmp_path / "repo")
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    (repo.root / WS).symlink_to(elsewhere, target_is_directory=True)
+
+    lines = workspace.ensure(repo.root)
+
+    assert lines[0][0] == "refused" and "symlink" in lines[0][1]
+    assert (repo.root / WS).is_symlink()
+    state = workspace.inspect(repo.root)
+    assert state.symlinked and not state.present
+
+
 # --- pkit status -----------------------------------------------------------------
 
 
@@ -178,4 +194,19 @@ def test_status_names_sync_when_the_folder_is_not_excluded(
     line = _workspace_line(_status_output(monkeypatch))
 
     assert "present, NOT excluded from git" in line
+    assert "run `pkit sync`" in line
+
+
+def test_status_reports_a_symlinked_folder(
+    make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    root = make_adopter_repo().root
+    (root / WS).rmdir()
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    (root / WS).symlink_to(elsewhere, target_is_directory=True)
+
+    line = _workspace_line(_status_output(monkeypatch))
+
+    assert "a symlink, never the workspace" in line
     assert "run `pkit sync`" in line

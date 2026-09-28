@@ -14,6 +14,11 @@ never touches another line. Resolving the *common* git directory makes the one
 entry cover every worktree of the clone: the anchored pattern matches the folder
 at each worktree's own root, which is where an agent working in that worktree
 keeps its files.
+
+The folder must be a real directory. A symlink named `.agent-workspace` is never
+the workspace — the permission model's grant would follow it to wherever it
+points — so init and sync refuse it rather than adopting it, and status reports
+it.
 """
 
 from __future__ import annotations
@@ -33,9 +38,10 @@ EXCLUDE_ENTRY = f"/{WORKSPACE_DIR}/"
 class WorkspaceState:
     """What `pkit status` reports about a project's workspace."""
 
-    present: bool
+    present: bool  # a real folder, not a symlink
     in_git: bool  # the project root is inside a git repository
     excluded: bool  # git ignores the folder, whichever rule does it
+    symlinked: bool = False  # a symlink sits where the folder belongs
 
 
 def _git(root: Path, *args: str) -> subprocess.CompletedProcess[str] | None:
@@ -106,7 +112,11 @@ def ensure(root: Path, *, dry_run: bool = False) -> list[tuple[str, str]]:
     """
     lines: list[tuple[str, str]] = []
     folder = root / WORKSPACE_DIR
-    if folder.is_dir():
+    if folder.is_symlink():
+        lines.append(
+            ("refused", f"{WORKSPACE_DIR} is a symlink, never the workspace — remove the link so a folder can take its place")
+        )
+    elif folder.is_dir():
         lines.append(("unchanged", f"{WORKSPACE_DIR}/"))
     elif folder.exists():
         lines.append(("skipped", f"{WORKSPACE_DIR} exists and is not a folder — move it aside"))
@@ -132,10 +142,14 @@ def ensure(root: Path, *, dry_run: bool = False) -> list[tuple[str, str]]:
 
 def inspect(root: Path) -> WorkspaceState:
     """Whether the workspace exists and whether git ignores it. Read-only."""
-    present = (root / WORKSPACE_DIR).is_dir()
+    folder = root / WORKSPACE_DIR
+    symlinked = folder.is_symlink()
+    present = folder.is_dir() and not symlinked
     # check-ignore exits 0 (ignored), 1 (not ignored) or 128 (not a repository);
     # the trailing slash asks about the folder even before it exists.
     result = _git(root, "check-ignore", "-q", f"{WORKSPACE_DIR}/")
     if result is None or result.returncode not in (0, 1):
-        return WorkspaceState(present=present, in_git=False, excluded=False)
-    return WorkspaceState(present=present, in_git=True, excluded=result.returncode == 0)
+        return WorkspaceState(present=present, in_git=False, excluded=False, symlinked=symlinked)
+    return WorkspaceState(
+        present=present, in_git=True, excluded=result.returncode == 0, symlinked=symlinked
+    )

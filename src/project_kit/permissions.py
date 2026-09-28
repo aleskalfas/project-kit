@@ -2258,7 +2258,8 @@ def activate_profile(target_root: Path, name: str, apply_after: bool = True) -> 
 # their own; until then a schema'd data file is speculative generality.
 
 # Each probe: description; a synthesized PreToolUse payload fragment
-# (tool/command, optional cwd — None means the project root); the privilege
+# (tool/command, optional cwd — None means the project root — and, for a file
+# tool, the path it names relative to that cwd); the privilege
 # ids it SHOULD exercise (membership check against the recognized set —
 # catches recognizer drift; [] asserts the request must stay unrecognized);
 # and an optional static `expect` (guardrails: always deny, regardless of
@@ -2302,6 +2303,12 @@ _PROBES: list[dict[str, Any]] = [
      "command": "docker ps", "cwd": "/", "privileges": ["docker"]},
     {"desc": "web fetch (tool)", "tool": "WebFetch", "privileges": ["web-fetch"]},
     {"desc": "repository read (tool)", "tool": "Read", "privileges": ["repo-read"]},
+    # The agent workspace (#1043): a path-scoped allow, recognized only for a
+    # file tool whose target lies in the folder — so the probe names the path.
+    {"desc": "a file in the agent workspace (tool) — `Write .agent-workspace/notes.md`",
+     "tool": "Write", "path": ".agent-workspace/notes.md", "privileges": ["workspace"]},
+    {"desc": "a file outside the agent workspace (tool) — `Write notes.md`",
+     "tool": "Write", "path": "notes.md", "privileges": []},
     {"desc": "an unrecognized command — `frobnicate --xyz`",
      "command": "frobnicate --xyz", "privileges": []},
 ]
@@ -2373,7 +2380,7 @@ def _probe_payload(p: dict[str, Any], subject: str, cwd: str) -> dict[str, Any]:
         payload["tool_input"] = {"command": p["command"]}
     else:
         payload["tool_name"] = p["tool"]
-        payload["tool_input"] = {}
+        payload["tool_input"] = {"file_path": str(Path(cwd) / p["path"])} if "path" in p else {}
     return payload
 
 
@@ -2403,10 +2410,17 @@ def probe(target_root: Path, subject: str = "operator", live: bool = False) -> t
         request = (
             {"type": "bash", "command": p["command"], "cwd": cwd, "subject": subject}
             if "command" in p
-            else {"type": "tool", "tool": p["tool"], "cwd": cwd, "subject": subject}
+            else {"type": "tool", "tool": p["tool"], "cwd": cwd, "subject": subject,
+                  "path": payload["tool_input"].get("file_path"), "root": str(target_root)}
         )
         hits = dm.recognized_privileges(catalog, request)
-        verdict, reason = dm.hook_decide(model, catalog, payload)
+        # The project root, as the live hook passes it, so a file tool's target
+        # can be placed in the agent workspace; the subject stays the one probed
+        # (a root alone would resolve a payload with no agent to the configured
+        # default agent).
+        verdict, reason = dm.hook_decide(
+            model, catalog, payload, project_root=str(target_root), as_subject=subject
+        )
 
         lines.append("\n" + cli_render.style("heading", f"[{i:>2}/{n}] {p['desc']}"))
         declared = set(p["privileges"])

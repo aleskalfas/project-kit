@@ -93,8 +93,15 @@ def _report_backbone_version(target_root: Path, source_kit: Path) -> None:
 
 def _report_workspace(target_root: Path) -> None:
     """The agent workspace (#1043): whether the folder exists and whether git
-    ignores it, with `pkit sync` as the remedy when either is missing."""
+    ignores it, with `pkit sync` as the remedy when either is missing — or that
+    a symlink sits where the folder belongs, which is never the workspace."""
     state = workspace.inspect(target_root)
+    if state.symlinked:
+        click.echo(
+            f"  {'Agent workspace:':<22} {workspace.WORKSPACE_DIR}   (a symlink, never the "
+            "workspace — remove the link, then run `pkit sync`)"
+        )
+        return
     parts = ["present" if state.present else "missing"]
     if not state.in_git:
         parts.append("not a git repository, nothing to exclude it from")
