@@ -42,7 +42,6 @@ NOT_PLACES: dict[str, str] = {
     ".pkit/capabilities/project-management/migrations/README.md": (
         "maintainer-facing: the capability's migration scripts"
     ),
-    ".pkit/release/README.md": "project-kit's own release process, never propagated",
 }
 
 
@@ -153,7 +152,13 @@ def test_every_place_is_assigned_to_one_declared_space_with_its_entry_point() ->
     for space, entry in spaces.items():
         entry_point = entry["entry-point"]
         assert assignments.get(entry_point) == space, (space, entry_point)
-    assert {p for p, s in assignments.items() if s == "technical"} == {"CONTRIBUTING.md"}
+    # the technical space outside its root: the contributor guide (its entry
+    # point until tech-docs/README.md exists) and the release guide, both
+    # maintainer documentation per COR-049
+    assert {p for p, s in assignments.items() if s == "technical"} == {
+        "CONTRIBUTING.md",
+        ".pkit/release/README.md",
+    }
 
 
 # --- criterion 4: the analysis location --------------------------------------

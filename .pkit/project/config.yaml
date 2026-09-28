@@ -32,12 +32,14 @@ friction:
   # source of truth; each place's space is assigned in
   # `.pkit/capabilities/living-docs/project/config.yaml`. Not places: CLAUDE.md
   # and `.pkit/rules/{core,project}.md` (included into the harness file, so no
-  # front matter), the maintainer sub-READMEs under templates and migrations,
-  # and `.pkit/release/README.md` (project-kit's own release process, never
-  # propagated). Decision records and rule sets are anchor targets, not pages.
+  # front matter) and the maintainer sub-READMEs under templates and
+  # migrations. Decision records and rule sets are anchor targets, not pages.
   places:
     # technical space — its entry point until tech-docs/README.md exists
     - CONTRIBUTING.md
+    # technical space — project-kit's own release process: a maintainer guide,
+    # which COR-049 counts as technical documentation
+    - .pkit/release/README.md
     # user space
     - README.md
     - .pkit/README.md

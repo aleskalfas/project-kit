@@ -39,7 +39,7 @@
       }
     },
     "places": {
-      "description": "Place → space: the space each project place belongs to, keyed by the place exactly as `friction.places` writes it. Required for a place outside every documentation root; for a place inside one, an entry assigns it away from that root's space.",
+      "description": "Place → space: the space each project place belongs to, keyed by the place's path, normalised as `friction.places` is read (DEC-001 point 1). Required for a place outside every documentation root; for a place inside one, an entry assigns it away from that root's space.",
       "type": "object",
       "propertyNames": {
         "$ref": "#/$defs/repo-relative-path"
