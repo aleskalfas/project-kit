@@ -26,7 +26,8 @@ This module:
   origins; successors; inheritance (points 3, 5 and 7). Whether a pinned
   major is still the inherited set's is a version relation: `pin_checks`
   hands it to the wiring resolver, which reports every version relation
-  under `versions` (`connections.rule_set_pin_findings`);
+  under `versions` (`connections.rule_set_pin_findings`), and `pkit status`
+  shows each pin behind with the edit that re-pins it (`PinCheck.fix`);
 - resolves citations to rules (`resolve_citation`) and lists rule ids
   claimed more than once in the rule-set space (`rule_id_collisions`), for
   `pkit refs` and `pkit decisions validate`.
@@ -43,7 +44,7 @@ from __future__ import annotations
 import io
 import re
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 from functools import cached_property
 from pathlib import Path
@@ -108,6 +109,10 @@ RETIRED_STATUSES: frozenset[str] = frozenset({SUPERSEDED, WITHDRAWN})
 
 # The quote form of an origin; the alternative is a `decision` (COR-051 point 5).
 QUOTE_FIELDS: tuple[str, ...] = ("date", "by", "why")
+
+#: The anchor kind that names another artefact (COR-050 point 2): the kind a
+#: filling rule anchors to the rule it fills with (COR-051 point 7).
+ARTEFACT_ANCHOR_KIND = "artefact"
 
 _yaml = YAML(typ="safe")
 _yaml_keeping_first = YAML(typ="safe")
@@ -264,6 +269,18 @@ class Rule:
         reference = parse_rule_reference(self.data.get("successor"))
         return reference if reference is not None and reference.point is None else None
 
+    def anchors(self, kind: str) -> tuple[str, ...]:
+        """The anchors of `kind` the rule's friction block declares, in written order.
+
+        Read forgivingly like every field here: the container rule judges the
+        block's shape, and a malformed block reads as declaring nothing.
+        """
+        container = self.data.get(bs.CONTAINER_KEY)
+        friction = container.get(fd.FRICTION_KEY) if isinstance(container, Mapping) else None
+        anchors = friction.get("anchors") if isinstance(friction, Mapping) else None
+        values = anchors.get(kind) if isinstance(anchors, Mapping) else None
+        return tuple(value for value in _list(values) if isinstance(value, str))
+
 
 @dataclass(frozen=True)
 class Section:
@@ -335,6 +352,11 @@ class RuleSet:
         """How the set is cited: `<component>:<SET>` for a method set, bare for a project one."""
         name = self.name or "?"
         return f"{self.component}:{name}" if self.component else name
+
+    def cite(self, rule_id: str) -> str:
+        """How one of its rules is cited: `<component>:RS-<SET>-NNN` for a method set, bare
+        for a project one — a form every reader resolves, anchors included."""
+        return f"{self.component}:{rule_id}" if self.component else rule_id
 
     @property
     def owner(self) -> str:
@@ -550,6 +572,7 @@ class RuleSetFindingKind(Enum):
     INHERITANCE_CYCLE = "inheritance-cycle"
     UNDECLARED_FILL = "undeclared-fill"
     DOUBLE_FILL = "double-fill"
+    UNANCHORED_FILL = "unanchored-fill"  # a fill whose rule does not anchor to the rule it fills
     ORPHANED_FILL = "orphaned-fill"  # a fill of a superseded or withdrawn rule
 
 
@@ -946,23 +969,13 @@ def _decision_findings(
 def _source_findings(
     rule: Rule, origin: Mapping[str, Any], catalogue: _Catalogue
 ) -> Iterable[RuleSetFinding]:
-    """A cited source resolves through the one anchor-kind registry (ADR-057 point 2)."""
+    """A cited source resolves through the anchor kind a capability registers for it
+    (COR-051 point 5), judged by the one anchor-kind registry (ADR-057 point 2)."""
     source = origin.get("source")
     kind = source.get("kind") if isinstance(source, Mapping) else None
     if not isinstance(kind, str) or not kind:
         return  # absent, or malformed: the shape pass reports it
-    # A source resolves only through a kind a capability registered (COR-051
-    # point 5): the core anchor kinds are not source kinds, and this validator
-    # resolves no source itself, so every source is gated on the registry and
-    # never silently passed.
-    registry = fd.registered_anchor_kinds(catalogue.target_root)
-    resolver = registry.get(kind)
-    reason = (
-        "no installed capability registers a resolver for it"
-        if resolver is None
-        else fd.refuse_resolver_without_query_contract(resolver)
-        or f"the resolver `{resolver.command}` that {resolver.capability} registers for it is not run yet"
-    )
+    reason = _source_kind_problem(kind, catalogue.anchor_kinds)
     if reason is not None:
         yield _report(
             rule.location,
@@ -971,6 +984,26 @@ def _source_findings(
             f"source kind {kind!r} is unresolved: {reason}, so the source is not checked "
             f"(COR-051 point 5; COR-050 point 2).",
         )
+
+
+def _source_kind_problem(kind: str, registry: Mapping[str, fd.ResolverCommand]) -> str | None:
+    """Why a source of `kind` is unresolved, or None when the registry resolves it.
+
+    A source is of a kind some capability resolves as an anchor kind (COR-051
+    point 5), so the kinds the backbone resolves itself are not source kinds.
+    Every other kind takes the verdict the friction checks give an anchor of
+    that kind (`unresolved_kind_reason`): unregistered, refused without the
+    query contract, or failing closed until registered resolvers run
+    (COR-050 point 2). This validator runs no resolver of its own, so a source
+    resolves exactly when the registry resolves its kind, and is never
+    silently passed.
+    """
+    if kind in fd.CORE_ANCHOR_KINDS:
+        return (
+            "the backbone resolves it as an anchor, never as a source — a source is of a kind "
+            "an installed capability registers a resolver for"
+        )
+    return fd.unresolved_kind_reason(kind, registry)
 
 
 # --- per file: successors ------------------------------------------------------
@@ -1034,10 +1067,12 @@ def _inheritance_findings(rule_set: RuleSet, catalogue: _Catalogue) -> Iterable[
 
 
 def _fill_findings(rule_set: RuleSet, catalogue: _Catalogue) -> Iterable[RuleSetFinding]:
-    """Fills name points that inherited rules offer, each filled at most once (COR-051 point 7).
+    """Fills name points that inherited rules offer, each filled at most once, and
+    each filling rule anchors to the rule it fills (COR-051 point 7).
 
     A superseded or withdrawn rule binds nothing, so its fills are history:
-    they are neither checked nor counted.
+    they are neither checked nor counted. An orphaned fill is to be removed,
+    so its anchor is not asked for.
     """
     ancestors = catalogue.ancestors(rule_set)
     for rule in rule_set.rules:
@@ -1072,7 +1107,35 @@ def _fill_findings(rule_set: RuleSet, catalogue: _Catalogue) -> Iterable[RuleSet
                     f"fills {reference}, but {target.id} is {target.status}, so the fill is "
                     f"orphaned: remove it{instead} (COR-051 point 7).",
                 )
+            elif not _anchors_to(rule, target, catalogue):
+                cited = target_set.cite(target.id)
+                block = f"{bs.CONTAINER_KEY}.{fd.FRICTION_KEY}.anchors.{ARTEFACT_ANCHOR_KIND}"
+                yield _error(
+                    rule.location,
+                    pointer,
+                    RuleSetFindingKind.UNANCHORED_FILL,
+                    f"fills {reference}, but {rule.id} does not anchor to {cited}; a filling "
+                    f"rule anchors to the rule it fills, so a change to the inherited rule flags "
+                    f"the fill — add {cited} to `{block}` (COR-051 point 7).",
+                )
     yield from _double_fill_findings(rule_set, catalogue)
+
+
+def _anchors_to(rule: Rule, target: Rule, catalogue: _Catalogue) -> bool:
+    """Whether one of `rule`'s artefact anchors names `target`.
+
+    An anchor names a rule when it resolves to it as a citation does — bare,
+    or with the owning component in front — never through an extension point:
+    the rule is the artefact, a point of it is not.
+    """
+    for value in rule.anchors(ARTEFACT_ANCHOR_KIND):
+        reference = parse_rule_reference(value)
+        if reference is None or reference.point is not None:
+            continue
+        _set, found, problem = catalogue.locate(reference)
+        if problem is None and found is target:
+            return True
+    return False
 
 
 def _double_fill_findings(rule_set: RuleSet, catalogue: _Catalogue) -> Iterable[RuleSetFinding]:
@@ -1140,7 +1203,8 @@ class _Catalogue:
     """The rule sets of one repository state, indexed for the cross-file checks.
 
     Every answer is computed once and kept: ancestors, the fills along a
-    chain, a record's status, a capability's declared dependencies.
+    chain, a record's status, a capability's declared dependencies, the
+    registered anchor kinds.
     """
 
     def __init__(self, target_root: Path, discovery: RuleSetDiscovery) -> None:
@@ -1278,6 +1342,12 @@ class _Catalogue:
 
     # -- the repository
 
+    @cached_property
+    def anchor_kinds(self) -> dict[str, fd.ResolverCommand]:
+        """The anchor kinds installed capabilities register, from the one registry
+        the friction checks read (`registered_anchor_kinds`; ADR-057 point 2)."""
+        return fd.registered_anchor_kinds(self.target_root)
+
     def decision(self, record: str) -> tuple[Path | None, str | None]:
         """(the record's file, its status) for a cited decision id, or (None, None)."""
         if record not in self._decisions:
@@ -1334,7 +1404,8 @@ class PinCheck:
     Inheriting a set pins its major (COR-051 point 7); a newer major fails
     validation until the inheriting set's owner reviews it and updates the pin.
     `pkit validate` reports it with the other version relations, under
-    `versions` (`connections.rule_set_pin_findings`).
+    `versions` (`connections.rule_set_pin_findings`); `pkit status` shows
+    each such pin with its fix.
     """
 
     rule_set: RuleSet  # the inheriting set
@@ -1347,15 +1418,36 @@ class PinCheck:
         return f"/inherits/{self.index}"
 
     @property
-    def problem(self) -> str | None:
-        """Why the pin no longer holds, naming the new major; None while it does."""
+    def repinned(self) -> Pin | None:
+        """The pin the inherited set's major now calls for; None while the pin holds.
+
+        An unreadable inherited version is the inherited file's shape finding,
+        so it asks for no new pin.
+        """
         major = self.inherited.major
         if major is None or major == self.pin.major:
-            return None  # an unreadable version is the inherited file's shape finding
+            return None
+        return replace(self.pin, major=major)
+
+    @property
+    def fix(self) -> str | None:
+        """The edit that re-pins, once the inherited set has moved on; None while the pin holds."""
+        repinned = self.repinned
+        if repinned is None:
+            return None
+        return (
+            f"review what changed in {self.inherited.citation}, then update the pin to "
+            f"{repinned} in `inherits` of {self.rule_set.path}"
+        )
+
+    @property
+    def problem(self) -> str | None:
+        """Why the pin no longer holds, naming the new major and the fix; None while it does."""
+        if self.repinned is None:
+            return None
         return (
             f"pins {self.pin}, but {self.inherited.citation} is at version "
-            f"{self.inherited.version}, major {major}; review what changed in it, then update "
-            f"the pin to {self.inherited.citation}@{major} (COR-051 point 7)."
+            f"{self.inherited.version}, major {self.inherited.major}; {self.fix} (COR-051 point 7)."
         )
 
 
