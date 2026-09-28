@@ -1,0 +1,9 @@
+component: demo-recording
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The `demo-recording` skill declares COR-016, which its storyboard-author
+  operation cites, and names the recording and control window bounds as
+  `record.yaml` keys rather than hook-shaped tokens, so `pkit validate --only
+  refs` reports no drift warnings on it.

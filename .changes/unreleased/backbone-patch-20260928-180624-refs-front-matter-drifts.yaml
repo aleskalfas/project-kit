@@ -3,14 +3,8 @@ kind: patch
 custom:
   category: Fixed
 body: >
-  Shipped skills and agents now declare in their front matter what their body
-  cites, so `pkit validate --only refs` reports no drift warnings on a fresh
-  install. The core `decision-author` skill declares the agents overlay it
-  points ADR authors at, `report-author` declares COR-043, and the `schema`
-  skill stops citing the superseded COR-022. Capability artifacts change too:
-  the `demo-recording` skill declares COR-016 and names its window bounds as
-  `record.yaml` keys rather than hook-shaped tokens; the `evidence` skill
-  declares COR-023 and drops a background citation of COR-007; in
-  project-management, `project-manager` declares COR-047, and `pm-reviewer` and
-  the `pm` skill word a configuration key and two validator finding names so
-  they no longer read as hooks. `pkit sync` redeploys the two changed agents.
+  The core skills now declare in their front matter what their body cites, so
+  `pkit validate --only refs` reports no drift warnings on them: the
+  `decision-author` skill declares the agents overlay it points ADR authors at,
+  `report-author` declares COR-043, and the `schema` skill stops citing the
+  superseded COR-022.
