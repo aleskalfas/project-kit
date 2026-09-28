@@ -316,6 +316,16 @@ class PointBinding:
         return bool(self.bound) or self.filler_compatible
 
     @property
+    def mark_unmet(self) -> bool:
+        """A mandatory data point filled only by its default (COR-053 point 6) —
+        what `pkit validate` reports as an error on the point's provider."""
+        return (
+            self.point.mandatory is not None
+            and self.point.kind is PointKind.DATA
+            and not self.filled
+        )
+
+    @property
     def contributors(self) -> tuple[str, ...]:
         """Every capability declaring a contribution to this point, sorted, whether
         or not the contribution is bound — the candidates of a contributor selection
@@ -421,6 +431,22 @@ class Wiring:
             ),
             None,
         )
+
+    def mark_unmet(self, binding: Binding) -> bool:
+        """Whether `binding` carries a mandatory mark this wiring leaves unmet —
+        what `pkit validate` reports as an error on the side carrying it (COR-053
+        point 6): its target missing, or at another version. An unselected
+        provider's marks bind nothing (point 1), and a mark aimed at a role in
+        conflict waits on the conflict, which is the finding."""
+        c = binding.counterpart
+        if c.mandatory is None or binding.status in (
+            BindingStatus.BOUND,
+            BindingStatus.INERT_PROVIDER,
+        ):
+            return False
+        if binding.status is BindingStatus.NO_ACTIVE_PROVIDER:
+            return not self.declarations.providers_of(c.role or "")
+        return True
 
     def errors(self) -> tuple[Finding, ...]:
         return tuple(f for f in self.findings if f.severity is Severity.ERROR)
