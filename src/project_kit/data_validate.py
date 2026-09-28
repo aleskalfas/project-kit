@@ -206,16 +206,17 @@ def resolve_binding(
     # 1. Parse the YAML enough to inspect `pkit_schema`.
     try:
         data = _yaml.load(data_path.read_text(encoding="utf-8"))
-    except YAMLError as exc:
-        return BindingError(
-            data_path=data_path,
-            message=f"YAML parse error: {exc}",
-        )
-    except OSError as exc:
-        return BindingError(
-            data_path=data_path,
-            message=f"could not read data file: {exc}",
-        )
+    except (YAMLError, OSError, UnicodeDecodeError) as exc:
+        # A file that cannot be read carries no `pkit_schema:` field to claim
+        # it, so only a `binds_to:` glob can: unclaimed, it is not adopter data
+        # and the repository scope skips it (a multi-document manifest, a
+        # templated file); claimed, or named to the focused surface, the
+        # failure is the finding.
+        if capability_bindings is None:
+            capability_bindings = load_all_capability_bindings(target_root)
+        claimed = bool(_match_bindings(data_path, target_root, capability_bindings))
+        what = "YAML parse error" if isinstance(exc, YAMLError) else "could not read data file"
+        return BindingError(data_path=data_path, message=f"{what}: {exc}", unbound=not claimed)
 
     # Empty or non-mapping top-level — proceed to capability fallback.
     field_value: str | None = None
@@ -926,14 +927,29 @@ def validate_path(
     )
 
 
+# The name of a project-owned folder inside `.pkit/` — the one place under the
+# kit's tree where an adopter's own files live (the `project/` namespacing of
+# COR-001): `.pkit/project/`, `.pkit/capabilities/<name>/project/`, and so on.
+PROJECT_DIR = "project"
+
+
 def discover_repository_data_files(target_root: Path) -> list[Path]:
-    """Every `*.yaml` under the repository outside `.pkit/` and outside any
-    dot-directory (`.git`, a virtual environment, the changesets, a harness's
-    own folder): what the repository scope offers to the binding resolver."""
+    """Every `*.yaml` the repository scope offers to the binding resolver: the
+    repository outside `.pkit/` and outside any dot-directory (`.git`, a
+    virtual environment, the changesets, a harness's own folder), plus every
+    project-owned folder inside `.pkit/` — a `project/` directory at any depth
+    — where an adopter's data for the backbone or a capability lives. The
+    kit-managed rest of `.pkit/` is never adopter data and is not listed."""
+    kit = target_root / ".pkit"
     out: list[Path] = []
     for dirpath, dirnames, filenames in os.walk(target_root):
-        dirnames[:] = sorted(d for d in dirnames if not d.startswith("."))
-        out.extend(Path(dirpath) / name for name in sorted(filenames) if name.endswith(".yaml"))
+        here = Path(dirpath)
+        dirnames[:] = sorted(
+            d for d in dirnames if not d.startswith(".") or (here == target_root and d == ".pkit")
+        )
+        if (here == kit or kit in here.parents) and PROJECT_DIR not in here.relative_to(kit).parts:
+            continue  # a kit-managed folder: walk on for a `project/` beneath it, list nothing
+        out.extend(here / name for name in sorted(filenames) if name.endswith(".yaml"))
     return out
 
 
