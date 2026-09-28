@@ -19,6 +19,7 @@ from __future__ import annotations
 import fnmatch
 import os
 import re
+import stat
 from typing import Any
 
 # A grant's privilege value is the COR-019 token `[privilege-catalog:<id>]`
@@ -168,7 +169,10 @@ def recognized_privileges(catalog: dict[str, Any], request: dict[str, Any]) -> s
 #
 # The folder counts only as the checkout itself holds it: named relative and
 # never climbing out with `..`, and reached through no symlink — a symlinked
-# `.agent-workspace` would carry the grant to wherever it points.
+# `.agent-workspace` would carry the grant to wherever it points. A repository
+# or worktree nested inside the folder is not the folder: its tracked files are
+# another checkout's. Nor is a file hard-linked from elsewhere, which a write
+# through the folder's name would change at its other name.
 
 def _target_path(tool_input: dict[str, Any]) -> Any:
     """The path a file tool names: `file_path` (Read, Write, Edit, MultiEdit)
@@ -264,25 +268,55 @@ def _folder_top(checkout: str, folder: Any) -> str | None:
     return top if os.path.realpath(top) == top else None
 
 
+def _nested_checkout(path: str, top: str) -> bool:
+    """Does any directory from the folder `top` down to `path`'s parent hold a
+    `.git` entry? Then `path` lies in a repository or worktree nested inside
+    the folder — another checkout's files, not the folder's."""
+    current = os.path.dirname(path)
+    while True:
+        if os.path.lexists(os.path.join(current, ".git")):
+            return True
+        parent = os.path.dirname(current)
+        if current == top or parent == current:
+            return False
+        current = parent
+
+
 def _inside(path: str, root: str, folders: list[Any]) -> bool:
     """Does the resolved `path` lie strictly inside one of `folders` of a
-    checkout of the project at `root`?"""
+    checkout of the project at `root`, and in no repository or worktree nested
+    inside that folder?"""
     for checkout in _checkouts(path, root):
         for folder in folders:
             top = _folder_top(checkout, folder)
-            if top is not None and path != top and os.path.commonpath([path, top]) == top:
+            if top is None or path == top or os.path.commonpath([path, top]) != top:
+                continue
+            if not _nested_checkout(path, top):
                 return True
     return False
+
+
+def _hard_linked(path: str) -> bool:
+    """Is `path` an existing file with more than one name? A write through one
+    name changes the file at every other, wherever it lies."""
+    try:
+        info = os.stat(path)
+    except OSError:
+        return False
+    return stat.S_ISREG(info.st_mode) and info.st_nlink > 1
 
 
 def _path_scoped_privileges(privileges: dict[str, Any], request: dict[str, Any]) -> set[str]:
     """The path-scoped privileges a file-tool request is recognized as: those
     listing its tool whose folder holds its target, symlinks resolved — a link
-    out of the folder is outside it. Empty without a target or a project root."""
+    out of the folder is outside it, and so is a file hard-linked from anywhere.
+    Empty without a target or a project root."""
     target, root = request.get("path"), request.get("root")
     if not isinstance(target, str) or not target or not root:
         return set()
     path = os.path.realpath(os.path.join(request.get("cwd") or root, target))
+    if _hard_linked(path):
+        return set()
     hits: set[str] = set()
     for name, spec in privileges.items():
         scoped = spec.get("recognize", {}).get("path")

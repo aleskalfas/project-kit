@@ -304,6 +304,64 @@ def test_a_planted_git_pointer_does_not_make_a_worktree(dm, catalog, root, tmp_p
         assert _decide(dm, model, catalog, payload, root) == "abstain", name
 
 
+
+# --- a repository nested inside the workspace is not the workspace -----------------------
+#
+# Its tracked files are another checkout's; the folder's allow must not make them
+# writable without a prompt, whether the nested checkout is another repository
+# cloned into the folder or a worktree of this one added there.
+
+_NOT_GRANTED = [("lenient", "abstain"), ("strict", "deny")]
+
+
+@pytest.mark.parametrize("posture,expected", _NOT_GRANTED)
+def test_a_clone_nested_inside_the_workspace_is_not_the_workspace(
+    dm, catalog, root, posture, expected
+) -> None:
+    clone = GitRepo.init(root / WS / "clone")
+    clone.commit("initial", {"src/a.py": "x = 1\n"})
+    model = _model(dm, catalog, posture=posture)
+
+    for make in (_write, _edit):
+        for target in (clone.root / "src" / "a.py", clone.root / "notes.md"):
+            assert _decide(dm, model, catalog, make(target, root), root) == expected, target
+
+
+@pytest.mark.parametrize("posture,expected", _NOT_GRANTED)
+def test_a_worktree_nested_inside_the_workspace_is_not_the_workspace(
+    dm, catalog, root, posture, expected
+) -> None:
+    repo = GitRepo(root)
+    repo.commit("initial", {"README.md": "hi\n", "src/a.py": "x = 1\n"})
+    nested = root / WS / "wt"
+    repo.git("worktree", "add", "-q", "-b", "topic", str(nested))
+    model = _model(dm, catalog, posture=posture)
+
+    for make in (_write, _edit):
+        for cwd in (root, nested):
+            payload = make(nested / "src" / "a.py", cwd)
+            assert _decide(dm, model, catalog, payload, root) == expected, cwd
+    # The nested worktree's own workspace is still its workspace.
+    (nested / WS).mkdir()
+    assert _decide(dm, model, catalog, _write(nested / WS / "x.md", nested), root) == "allow"
+
+
+@pytest.mark.parametrize("posture,expected", _NOT_GRANTED)
+def test_a_file_hard_linked_into_the_workspace_is_not_the_workspace(
+    dm, catalog, root, posture, expected
+) -> None:
+    # A hard link planted in the folder is the same file as its other name: a
+    # write through it changes the file outside the folder too.
+    source = root / "src" / "module.py"
+    source.write_text("x = 1\n", encoding="utf-8")
+    os.link(source, root / WS / "module.py")
+    (root / WS / "own.md").write_text("mine\n", encoding="utf-8")
+    model = _model(dm, catalog, posture=posture)
+
+    assert _decide(dm, model, catalog, _edit(root / WS / "module.py", root), root) == expected
+    assert _decide(dm, model, catalog, _edit(root / WS / "own.md", root), root) == "allow"
+
+
 # --- the folder is the checkout's own ------------------------------------------------
 
 
