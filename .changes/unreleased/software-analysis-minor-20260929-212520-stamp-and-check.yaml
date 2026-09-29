@@ -15,7 +15,10 @@ body: >
   friction block inside the `pkit:` container. `pkit analysis validate`, run by
   `pkit validate` as its `software-analysis:artefacts` member, fails on
   duplicate ids, missing required parts, a use case not anchored to its actor,
-  a journey whose anchors do not match its steps, a number another branch took
-  first on the default branch, and malformed revalidation records. The package
+  a journey whose anchors do not match its steps, and malformed revalidation
+  records, reading the working tree alone. `pkit analysis check-numbers --base
+  <ref>`, a line of its own in your check gate beside `pkit friction check`,
+  fails on a use case or journey number the default branch gave another file
+  since your branch left it, and when the base names no commit. The package
   metadata declares the `analysis` location and the glossary, actors, use cases
   and journeys as places.

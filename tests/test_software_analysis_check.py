@@ -4,10 +4,9 @@
 validate` — held to software-analysis DEC-001 points 1 to 6: what the stamp
 writes passes it; it reports duplicate ids, missing or misshapen required
 parts, a use case not anchored to its actor, a journey whose use-case anchors
-do not match its steps, a number the default branch took first — reading the
-default branch through the backbone's discovery at a commit — and revalidation
-records against their schema; a base that names no commit is reported, never
-failed.
+do not match its steps, and revalidation records against their schema. It
+reads the working tree alone: a number the default branch took first is
+`pkit analysis check-numbers`' (`test_software_analysis_numbers.py`).
 """
 
 from __future__ import annotations
@@ -21,6 +20,7 @@ import pytest
 from click.testing import CliRunner
 
 from project_kit.cli import main
+from project_kit.friction_check import BASE_ENV
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.analysis_repo import (
     ACTORS,
@@ -28,6 +28,7 @@ from tests.analysis_repo import (
     GLOSSARY,
     JOURNEYS,
     MAIN,
+    NEW,
     RECORDS,
     USE_CASES,
     VALIDATE,
@@ -46,9 +47,9 @@ def project(
     return installed(make_adopter_repo, monkeypatch)
 
 
-def check(repo: AdopterRepo, base: str = MAIN) -> dict[str, Any]:
-    """The validator's findings document, run as the backbone runs it."""
-    completed = run_script(repo, VALIDATE, "--json", "--base", base)
+def check(repo: AdopterRepo) -> dict[str, Any]:
+    """The validator's findings document, run as the backbone runs it: `--json` alone."""
+    completed = run_script(repo, VALIDATE, "--json")
     assert completed.returncode == 0, completed.stderr
     return json.loads(completed.stdout)
 
@@ -88,13 +89,40 @@ def test_what_the_stamp_writes_passes_the_check(project: AdopterRepo) -> None:
     stamped(project, "term", "sandbox", "--record", "ADR-001")
     stamped(project, "actor", "admin", "--name", "Administrator")
     document = check(project)
-    assert document["findings"] == []
-    counts, numbers = document["summary"]
-    assert counts == (
-        "analysis at tech-docs/analysis: 2 actor(s), 1 term(s), 3 use case(s), 1 journey(s); "
-        "0 revalidation record(s)."
-    )
-    assert numbers.startswith("numbers: this branch contains main (")
+    assert document == {
+        "summary": [
+            "analysis at tech-docs/analysis: 2 actor(s), 1 term(s), 3 use case(s), "
+            "1 journey(s); 0 revalidation record(s)."
+        ],
+        "findings": [],
+    }
+
+
+def test_the_validator_reads_the_working_tree_alone(
+    project: AdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A validator answers about the tree (ADR-058 point 7): no base, no variable naming
+    one and no fetch state changes its answer — even where the default branch has since
+    taken a number this branch took, which `pkit analysis check-numbers` reports."""
+    stamped(project, "actor", "tester")
+    project.commit("an actor")
+    project.checkout("topic", create=True)
+    project.checkout(MAIN)
+    stamped(project, "use-case", "theirs", "--actor", "ACT-tester")
+    project.commit("UC-001 on main")
+    project.checkout("topic")
+    # Numbered against this branch alone: UC-001, the number main took since.
+    ours = run_script(project, NEW, "use-case", "ours", "--actor", "ACT-tester", "--base", "topic")
+    assert ours.stdout.splitlines()[-1] == f"stamped UC-001 at {USE_CASES}/UC-001-ours.md"
+    answers = [check(project)]
+    for base in (MAIN, "no-such-branch"):
+        monkeypatch.setenv(BASE_ENV, base)
+        answers.append(check(project))
+    assert answers == [answers[0]] * 3
+    assert answers[0]["findings"] == []
+    completed = run_script(project, VALIDATE, "--json", "--base", MAIN)
+    assert completed.returncode == 2
+    assert "unrecognized arguments: --base main" in completed.stderr
 
 
 # --- ids (DEC-001 point 3) --------------------------------------------------------------------
@@ -111,50 +139,6 @@ def test_a_shared_id_is_reported_at_every_later_holder(project: AdopterRepo) -> 
             "in the analysis share an id, and an id is never used again (DEC-001 point 3)",
         )
     ]
-
-
-def test_a_number_the_default_branch_took_first_is_reported(project: AdopterRepo) -> None:
-    stamped(project, "actor", "tester")
-    stamped(project, "use-case", "one", "--actor", "ACT-tester")
-    project.commit("UC-001")
-    project.checkout("topic", create=True)
-    project.checkout("main")
-    stamped(project, "use-case", "two", "--actor", "ACT-tester")
-    project.commit("UC-002 on main")
-    project.checkout("topic")
-    # This branch numbered a use case before seeing main's: the same number.
-    template = (project.root / USE_CASES / "UC-001-one.md").read_text(encoding="utf-8")
-    ours = f"{USE_CASES}/UC-002-mine.md"
-    project.write({ours: template.replace("UC-001", "UC-002")})
-    # Moving an inherited use case into an area is no collision.
-    (project.root / USE_CASES / "core").mkdir()
-    project.git("mv", f"{USE_CASES}/UC-001-one.md", f"{USE_CASES}/core/UC-001-one.md")
-    document = check(project)
-    assert errors(document) == [
-        (
-            ours,
-            f"UC-002 is numbered on main too, for {USE_CASES}/UC-002-two.md, since this branch "
-            "left it: the first to reach the default branch keeps the number, so renumber this "
-            "use case before merging — `pkit analysis new` gives the next free one (DEC-001 "
-            "point 3)",
-        )
-    ]
-    assert document["summary"][1].startswith("numbers: compared with main (")
-    # Once main is merged in, both files are in the working tree: a shared id.
-    project.commit("topic's use case")
-    project.git("merge", "-q", "--no-edit", "main")
-    assert [message.split(":")[0] for _loc, message in errors(check(project))] == [
-        f"the id UC-002 is also held by {USE_CASES}/UC-002-mine.md"
-    ]
-
-
-def test_a_base_that_names_no_commit_is_reported_and_nothing_fails(project: AdopterRepo) -> None:
-    seed(project)
-    document = check(project, base="origin/main")
-    assert errors(document) == []
-    (report,) = document["findings"]
-    assert report["severity"] == "report"
-    assert "the base 'origin/main' names no commit here — fetch it" in report["message"]
 
 
 # --- required parts (DEC-001 points 1 and 3) --------------------------------------------------

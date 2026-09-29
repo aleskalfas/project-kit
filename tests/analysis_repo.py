@@ -32,6 +32,7 @@ CAPABILITY = REPO / ".pkit" / "capabilities" / "software-analysis"
 SA = Path(".pkit") / "capabilities" / "software-analysis"
 NEW = SA / "scripts" / "new.py"
 VALIDATE = SA / "scripts" / "validate.py"
+NUMBERS = SA / "scripts" / "check-numbers.py"
 CONFIG = ".pkit/project/config.yaml"
 RECORDED = f"{SA.as_posix()}/project/docs-locations.yaml"
 

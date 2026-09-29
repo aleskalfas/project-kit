@@ -10,8 +10,7 @@
 
 Checks each artefact's shape and own fields against its companion schema, ids
 two artefacts share, a use case not anchored to its actor, a journey whose
-use-case anchors do not match its steps, a number the default branch took for
-another file since this branch left it, and the revalidation records' front
+use-case anchors do not match its steps, and the revalidation records' front
 matter. `_lib/check.py` states every check and the record point it applies.
 
 The backbone runs it as this capability's validator, the
@@ -19,15 +18,14 @@ The backbone runs it as this capability's validator, the
 project root, with `--json` alone and the offline marker set, reading one
 findings document from standard output. It is a query — bounded,
 deterministic, read-only, needing no network — and `pkit init` and `pkit sync`
-provision its dependencies in uv's cache. It reads the analysis through the
-backbone's discovery, `pkit friction artefacts`, at the working tree and at
-the default branch's commits, and git only for which commits those are.
+provision its dependencies in uv's cache. It reads the analysis in the working
+tree alone, through the backbone's discovery, `pkit friction artefacts`; a
+number another branch took first reads a base, and is `pkit analysis
+check-numbers`' to report.
 
 Usage:
-  pkit analysis validate [--base <ref>]          the summary and the findings
-  pkit analysis validate [--base <ref>] --json   the findings document {summary, findings}
-
-The default branch is `--base`, else `$PKIT_CHECK_BASE`, else `origin/main`.
+  pkit analysis validate          the summary and the findings
+  pkit analysis validate --json   the findings document {summary, findings}
 
 Exit codes:
   0  answered; without --json, also: no error found
@@ -48,19 +46,11 @@ from _lib import backbone, check  # noqa: E402
 
 def main() -> int:
     parser = argparse.ArgumentParser(
+        prog="pkit analysis validate",
         description=(
             "Check the analysis artefacts (software-analysis DEC-001): shape and required "
-            "parts, duplicate ids, actor and journey anchors, numbers another branch took, "
-            "revalidation records. Read-only and offline."
-        ),
-    )
-    parser.add_argument(
-        "--base",
-        metavar="REF",
-        default=None,
-        help=(
-            "The default branch numbers are compared with "
-            f"(default: ${backbone.BASE_ENV}, else {backbone.DEFAULT_BASE})."
+            "parts, duplicate ids, actor and journey anchors, revalidation records. "
+            "Read-only and offline; the working tree alone."
         ),
     )
     parser.add_argument(
@@ -70,15 +60,11 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    outcome = check.check(backbone.project_root(), args.base or backbone.default_base())
+    outcome = check.check(backbone.project_root())
     if args.json:
         print(json.dumps(outcome.document(), indent=2, ensure_ascii=False))
         return 0
-    for line in outcome.summary:
-        print(line)
-    for finding in outcome.findings:
-        print(f"  {finding.severity:<7}{finding.location}")
-        print(f"    → {finding.message}")
+    print("\n".join(outcome.lines()))
     return 1 if outcome.errors else 0
 
 

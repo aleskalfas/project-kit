@@ -20,8 +20,8 @@ time an artefact is placed there (COR-049 point 5):
 - a term, the entry `TERM-<slug>` of `glossary.md`.
 
 A use case or journey takes the next free number on the default branch and in
-the working tree; `pkit analysis validate` reports a number another branch
-took first. `_lib/stamp.py` states the rules.
+the working tree; `pkit analysis check-numbers` reports a number another
+branch took first. `_lib/stamp.py` states the rules.
 
 Usage:
   pkit analysis new use-case <slug> --actor <ACT-id> [--area <area>] [--title <text>]

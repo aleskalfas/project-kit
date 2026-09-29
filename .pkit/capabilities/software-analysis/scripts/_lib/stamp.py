@@ -7,7 +7,7 @@ the capability's places put it under the analysis location:
   `JRN-NNN-<slug>.md`, numbered with the next free number — one past the
   highest the working tree and the default branch hold, withdrawn ones
   included, since a number is never used again. Numbers two branches take in
-  parallel are the check's to report (point 3);
+  parallel are `pkit analysis check-numbers`' to report (point 3);
 - an **actor** or a **term** is a new entry, `ACT-<slug>` or `TERM-<slug>`, of
   its collection file — added to its front matter, with its section at the
   end of the body, every other byte left as it was — the file created from
@@ -189,7 +189,7 @@ def _base_analysis(root: Path, base: str, notes: list[str]) -> Analysis | None:
     if tip is None:
         notes.append(
             f"{base} names no commit here, so ids were taken from the working tree alone; "
-            f"`pkit analysis validate` compares again once it resolves"
+            f"`pkit analysis check-numbers` compares them once it resolves"
         )
         return None
     try:

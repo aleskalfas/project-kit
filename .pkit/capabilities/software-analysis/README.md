@@ -61,7 +61,7 @@ Create artefacts with the stamp, never by copying a template by hand: it gives e
 
 Every form also takes `--path <glob>` and `--record <id>`, each repeatable: the code that makes the artefact true and the decisions it relies on, written as its path and record anchors. Without them an actor or term is stamped unanchored — the core reports that, and never fails on it.
 
-- **Ids.** A slug is a word: a lowercase letter, then lowercase letters, digits and hyphens. An actor is `ACT-<slug>` and a term `TERM-<slug>`; the stamp refuses an id already held, withdrawn or not, since an id is never used again. A use case or journey takes the **next free number**: one past the highest the working tree and the default branch hold. The default branch is `--base <ref>`, else `$PKIT_CHECK_BASE`, else `origin/main`; when it names no commit, the stamp numbers from the working tree alone and says so.
+- **Ids.** A slug is a word: a lowercase letter, then lowercase letters, digits and hyphens. An actor is `ACT-<slug>` and a term `TERM-<slug>`; the stamp refuses an id already held, withdrawn or not, since an id is never used again. A use case or journey takes the **next free number**: one past the highest the working tree and the default branch hold. The default branch is `--base <ref>`, else `$PKIT_CHECK_BASE`, else `origin/main`; when it names no commit, the stamp numbers from the working tree alone and says so. A number another branch takes after yours is `pkit analysis check-numbers`' to report (below).
 - **What it writes.** The artefact's own fields from its template, its title or name (the slug, capitalised, by default), and the friction block with the anchors the decision asks for: a use case anchors to its actor, and a journey to the use cases of its steps. The body keeps the template's placeholders, `<…>`, for you to fill.
 - **Collection files.** A new actor or term is added to the end of the file's front matter and its section to the end of the body; every other byte stays as it was, and the stamp checks the result reads back as the file plus the new entry before writing. The file is created from the template the first time.
 - **What it refuses**, writing nothing: an actor, or a step, that is not in the analysis or is withdrawn; a journey with fewer than two steps; a slug or area that is not a word; an id already held.
@@ -139,17 +139,27 @@ The body gives each artefact's outcome with its justification, then the gaps and
 
 ## Checking: `pkit analysis validate`
 
-`pkit validate` runs the check as its `software-analysis:artefacts` member, so it runs wherever your check gate runs `pkit validate`; `pkit analysis validate` runs it alone, and `--json` prints the findings document it reads. It is a query: read-only, offline, and `pkit sync` provisions its dependencies. It fails on:
+`pkit validate` runs the check as its `software-analysis:artefacts` member, so it runs wherever your check gate runs `pkit validate`; `pkit analysis validate` runs it alone, and `--json` prints the findings document it reads. It is a query: read-only, offline, and `pkit sync` provisions its dependencies. It reads the working tree alone, so the same tree always gets the same answer. It fails on:
 
 - **a file in a place that is not its kind's shape** — a file without front matter, a glossary or actors file that is not a collection, a use-case or journey file holding entries;
 - **missing required parts** — an artefact's own fields against its schema, and a collection entry whose key is not its kind's id;
 - **duplicate ids** — two artefacts holding one id;
 - **a use case not anchored to its actor**, so a changed actor would not flag it;
 - **a journey whose use-case anchors do not match its steps** — the message names the anchors to write;
-- **a number two branches took**: a use case or journey whose number the default branch gave to another file since your branch left it. The first to reach the default branch keeps the number; renumber yours before merging. The default branch is read as the stamp reads it (`--base`, `$PKIT_CHECK_BASE`, `origin/main`); when it names no commit here, the numbers are not compared, and the check says so without failing;
 - **a revalidation record** whose front matter does not fit its schema.
 
 Friction itself, dead anchors and the friction block's own shape are the core's checks (`pkit validate`'s `friction` member and `pkit friction check`), and so is front matter that does not parse; an unanchored artefact is the core's measure, never an error.
+
+## Numbers another branch took: `pkit analysis check-numbers`
+
+`pkit analysis check-numbers [--base <ref>] [--json]` fails on **a number two branches took**: a use case or journey numbered in your working tree whose number the default branch gave to another file since your branch left it. The first to reach the default branch keeps the number; renumber yours before merging (`pkit analysis new` gives the next free one). A use case you moved into an area is not a collision, and once the default branch is merged in, a number both took is two files holding one id, which `pkit validate` reports as a duplicate.
+
+It reads the default branch — its tip, and where your branch left it — so it answers about your change rather than the tree, and it is not a member of `pkit validate`: run it as a line of its own in your check gate, beside `pkit friction check`, with the same base. The base is `--base <ref>`, else `$PKIT_CHECK_BASE`, else `origin/main`. Like the friction change check:
+
+- it **fails when the base names no commit** here, or shares no history with `HEAD` — fetch it, or name another — rather than passing without comparing. A working tree that numbers nothing has nothing to compare and needs no base;
+- it **reports an outdated base** — one that moved on after your branch left it, which is when it can have taken a number since — and never fails on it.
+
+`--json` prints `{schema_version, base, summary, findings}`: `base` is `{ref, tip, commit, outdated}` (`commit` is the merge-base), or `null` when nothing was compared. It is a query: read-only, offline, and `pkit sync` provisions its dependencies.
 
 ## Connections (design-ahead)
 
@@ -160,7 +170,7 @@ Declared in the decision; the package metadata gains them in a later increment. 
 
 ## What's shipped now, what's next
 
-Shipped: the decision; the analysis location and its places; a companion schema and a template for each artefact kind and for the revalidation record; the stamp, `pkit analysis new`; and the check, `pkit analysis validate`, a member of `pkit validate`. Next come: the connections above, and an authoring skill that guides revalidation. Named for later: planned-revalidation and onboarding lifecycles, a supplementary specification (constraints and quality), architecture views, and executable use cases.
+Shipped: the decision; the analysis location and its places; a companion schema and a template for each artefact kind and for the revalidation record; the stamp, `pkit analysis new`; the check, `pkit analysis validate`, a member of `pkit validate`; and the number check, `pkit analysis check-numbers`, a check-gate line of its own. Next come: the connections above, and an authoring skill that guides revalidation. Named for later: planned-revalidation and onboarding lifecycles, a supplementary specification (constraints and quality), architecture views, and executable use cases.
 
 ## Citing this capability's decisions
 
