@@ -19,10 +19,10 @@ body: >
   `package.yaml`: the backbone owns it and follows the setting. Upgrade the
   capability together with the backbone: it requires the backbone release that
   makes process journal logging opt-in, which takes the ignore line over. On
-  that backbone an older version of this capability still declares the line,
-  so with `committed: true` the journals already tracked stay tracked, but new
-  journal files are silently left out of commits until the capability is
-  upgraded. The README gains a "Lifecycle history" section.
+  that backbone an older version of this capability still declares the line;
+  while journals are committed the render leaves that entry out and `pkit
+  validate` warns until the capability is upgraded. The README gains a
+  "Lifecycle history" section.
 
   With journal logging off, `move-issue --bypass` keys its audit comment on the
   issue's count of state-label events on the GitHub timeline instead of the
