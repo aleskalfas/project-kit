@@ -1166,7 +1166,7 @@ def render_human(result: RepositoryCheck, *, now: datetime | None = None) -> str
         lines.append("  nothing to report")
     kind_width = max((len(f.kind.value) for f in rows + unreadable), default=0)
     anchor_width = max((len(_anchor_cell(f)) for f in rows), default=0)
-    points = {r.location: r for r in result.artefact_reports}
+    points: dict[str | None, ArtefactReport] = {r.location: r for r in result.artefact_reports}
     current: str | None = None
     for finding in rows:
         if finding.location != current:
