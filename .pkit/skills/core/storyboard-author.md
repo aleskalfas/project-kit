@@ -53,9 +53,11 @@ Do use a storyboard for:
 
 ### 2. Pick the implementing artifact
 
-Today the only supported artifact-kind is **agent**. The named agent must already exist — stamp it first with `pkit new agent <namespace> <name>` if it doesn't.
+Today the only supported artifact-kind is **agent**. The named agent must already exist — stamp it first with `pkit new agent <namespace> <name>` if it doesn't. It may live in core, project, or a capability's `agents/` folder.
 
-The storyboard binds to the agent that drives the scripted scenario. If the agent is currently in flat form (`<ns>/<name>.md`), stamping the storyboard migrates it to folder form (`<ns>/<name>/<name>.md` + `<ns>/<name>/storyboard.md`) per COR-015's first-helper rule.
+The storyboard binds to the agent that drives the scripted scenario. If the agent is currently in flat form (`<name>.md` in its agents folder), stamping the storyboard migrates it to folder form (`<name>/<name>.md` + `<name>/storyboard.md`) per COR-015's first-helper rule.
+
+The command finds the agent in the deploy's order — project, core, then capabilities by name. When the same name exists in more than one place and you mean one the deploy does not pick, name it with `--namespace <ns>` (`core`, `project` or the capability's name).
 
 ### 3. Decide single-file or per-scenario layout
 
@@ -78,12 +80,16 @@ Or per-scenario:
 pkit new storyboard agent <agent-name> --scenario <slug>
 ```
 
+Add `--namespace <ns>` to either to pin where the agent lives.
+
 The command stamps the file with:
 
-- A frontmatter block declaring the consumer(s) — `consumers:` list with `kind`, `name`, `namespace` filled in automatically per COR-016.
+- A frontmatter block declaring the consumer(s) — `consumers:` list with `kind`, `name`, `namespace` filled in automatically per COR-016 (`namespace` is the capability's name for a capability's agent).
 - The three-layer scaffold below the frontmatter: `## Framing`, `## Tone`, and a `## Scenario 1` template carrying `Trigger` / `Preconditions` / `Walkthrough` / `Behind-the-scenes` sub-sections.
 
 Do not edit the `consumers:` frontmatter at first stamp — the command fills it correctly. Edit it only when the storyboard genuinely gains a second consumer (rare today; when it happens, add an additional `{kind, name, namespace}` entry, and verify each named consumer's `storyboards:` declares this file back).
+
+The agent declares the storyboard back in its `storyboards:` by the bare sibling filename the command stamped (`storyboard.md` or `<slug>.storyboard.md`) and cites that name in its body; the deploy rewrites it to the source path in the deployed copy (`.pkit/agents/README.md`, "Storyboards"). `pkit refs validate` checks both sides, for a capability's agent as for one in `.pkit/agents/`.
 
 ### 5. Draft the framing
 

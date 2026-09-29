@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import click
@@ -154,11 +155,12 @@ def test_cli_new_agent_dry_run_reports_intent(kit_target: Path) -> None:
 
 
 def test_cli_new_agent_rejects_unknown_namespace(kit_target: Path) -> None:
+    """A namespace that is neither core/project nor a capability is refused, naming both."""
     runner = CliRunner()
     result = runner.invoke(main, ["new", "agent", "bogus", "foo"])
     assert result.exit_code != 0
-    # Click's Choice error.
-    assert "Invalid value" in result.output or "is not one of" in result.output.lower()
+    assert "unknown namespace 'bogus'" in result.output
+    assert "not one of core/project" in result.output
 
 
 def test_cli_new_agent_refuses_outside_pkit_tree(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -228,3 +230,110 @@ def test_cli_new_agent_with_storyboard_flag(kit_target: Path) -> None:
     folder = kit_target / ".pkit" / "agents" / "project" / "my-coord"
     assert (folder / "my-coord.md").is_file()
     assert (folder / "storyboard.md").is_file()
+
+
+# --- capability namespace (#1101) ------------------------------------
+
+
+def _make_capability(root: Path, name: str) -> Path:
+    """A minimal capability: a directory carrying a package.yaml, no agents/ yet."""
+    cap_dir = root / ".pkit" / "capabilities" / name
+    cap_dir.mkdir(parents=True)
+    (cap_dir / "package.yaml").write_text(
+        f"component:\n  kind: capability\n  name: {name}\n  version: 0.1.0\n",
+        encoding="utf-8",
+    )
+    return cap_dir
+
+
+def _front_matter(path: Path) -> dict:
+    from ruamel.yaml import YAML
+
+    return YAML(typ="safe").load(path.read_text(encoding="utf-8").split("---\n")[1])
+
+
+def test_stamp_under_capability_creates_its_agents_folder(kit_target: Path) -> None:
+    cap_dir = _make_capability(kit_target, "my-cap")
+    assert not (cap_dir / "agents").exists()
+
+    target = agents.stamp_new_agent(kit_target, name="cap-agent", namespace="my-cap")
+
+    assert target == cap_dir / "agents" / "cap-agent.md"
+    assert target.is_file()
+
+
+def test_stamp_under_capability_has_the_agent_front_matter(kit_target: Path) -> None:
+    _make_capability(kit_target, "my-cap")
+    target = agents.stamp_new_agent(kit_target, name="cap-agent", namespace="my-cap")
+
+    front = _front_matter(target)
+    assert front["name"] == "cap-agent"
+    assert set(front) == {"name", "description", "tools", "reads", "owns", "needs"}
+    assert front["reads"] == {"paths": [], "records": [], "patterns": []}
+
+
+def test_stamp_under_capability_with_storyboard_names_the_capability(kit_target: Path) -> None:
+    """The scaffold's consumer namespace is the capability's name, as refs expects."""
+    cap_dir = _make_capability(kit_target, "my-cap")
+    target = agents.stamp_new_agent(
+        kit_target, name="coord", namespace="my-cap", with_storyboard=True
+    )
+
+    assert target == cap_dir / "agents" / "coord" / "coord.md"
+    storyboard = target.parent / "storyboard.md"
+    assert _front_matter(storyboard)["consumers"] == [
+        {"kind": "agent", "name": "coord", "namespace": "my-cap"}
+    ]
+
+
+def test_stamp_refuses_unknown_capability_listing_the_known_ones(kit_target: Path) -> None:
+    _make_capability(kit_target, "alpha")
+    _make_capability(kit_target, "beta")
+    with pytest.raises(click.ClickException) as excinfo:
+        agents.stamp_new_agent(kit_target, name="x", namespace="gamma")
+    message = excinfo.value.message
+    assert "unknown namespace 'gamma'" in message
+    assert "Available capabilities: alpha, beta." in message
+    assert not (kit_target / ".pkit" / "capabilities" / "gamma").exists()
+
+
+def test_stamp_refuses_capability_without_package_yaml(kit_target: Path) -> None:
+    (kit_target / ".pkit" / "capabilities" / "half-built").mkdir(parents=True)
+    with pytest.raises(click.ClickException, match="unknown namespace"):
+        agents.stamp_new_agent(kit_target, name="x", namespace="half-built")
+    assert not (kit_target / ".pkit" / "capabilities" / "half-built" / "agents").exists()
+
+
+def test_stamp_refuses_a_name_a_capability_already_ships(kit_target: Path) -> None:
+    """A capability's agent masks or is masked by a same-named one — refuse, either direction."""
+    cap_dir = _make_capability(kit_target, "my-cap")
+    shared = cap_dir / "agents" / "shared" / "shared.md"
+    shared.parent.mkdir(parents=True)
+    shared.write_text("---\nname: shared\n---\n", encoding="utf-8")
+
+    with pytest.raises(
+        click.ClickException, match=re.escape("already exists at .pkit/capabilities/my-cap")
+    ):
+        agents.stamp_new_agent(kit_target, name="shared", namespace="project")
+
+    agents.stamp_new_agent(kit_target, name="core-one", namespace="core")
+    with pytest.raises(
+        click.ClickException, match=re.escape("already exists at .pkit/agents/core")
+    ):
+        agents.stamp_new_agent(kit_target, name="core-one", namespace="my-cap")
+
+
+def test_stamp_under_capability_dry_run_creates_nothing(kit_target: Path) -> None:
+    cap_dir = _make_capability(kit_target, "my-cap")
+    target = agents.stamp_new_agent(
+        kit_target, name="ghost", namespace="my-cap", dry_run=True
+    )
+    assert target == cap_dir / "agents" / "ghost.md"
+    assert not (cap_dir / "agents").exists()
+
+
+def test_cli_new_agent_stamps_under_capability(kit_target: Path) -> None:
+    _make_capability(kit_target, "my-cap")
+    result = CliRunner().invoke(main, ["new", "agent", "my-cap", "cap-agent"])
+    assert result.exit_code == 0, result.output
+    assert "Stamped: .pkit/capabilities/my-cap/agents/cap-agent.md" in result.output

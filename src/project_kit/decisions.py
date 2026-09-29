@@ -32,13 +32,15 @@ from typing import Literal
 import click
 from ruamel.yaml import YAML
 
+from project_kit.capability_namespace import resolve_capability_dir
+
 # The three fixed namespaces. A `new decision` namespace argument that is none
 # of these is interpreted as a capability name (DEC id-space).
 FixedNamespace = Literal["core", "project", "adr"]
 # `Namespace` widens to `str` because a capability name is also accepted.
 Namespace = str
 
-_FIXED_NAMESPACES: frozenset[str] = frozenset({"core", "project", "adr"})
+_FIXED_NAMESPACES: tuple[str, ...] = ("core", "project", "adr")
 
 _OVERLAY_PATH = Path(".pkit") / "agents" / "project" / "overlay.yaml"
 
@@ -181,41 +183,16 @@ def resolve_adr_records_dir(target_root: Path) -> Path:
 def _resolve_capability_decisions_dir(target_root: Path, capability: str) -> Path:
     """Resolve a capability's `decisions/` directory, refusing if the capability is absent.
 
-    A capability lives at `.pkit/capabilities/<capability>/` and is valid
-    when it carries a `package.yaml` (the same existence contract the
-    capability lifecycle uses). The `decisions/` subdirectory is created if
-    the capability exists but hasn't held a DEC record yet — stamping the
-    first DEC into a capability is a normal first step, not an error. An
-    absent or non-capability directory is refused with a clear message so a
-    typo'd capability name doesn't silently create a stray tree.
+    The existence contract and the refusal are the shared capability-namespace
+    ones (`capability_namespace.resolve_capability_dir`). The `decisions/`
+    subdirectory is created if the capability exists but hasn't held a DEC
+    record yet — stamping the first DEC into a capability is a normal first
+    step, not an error.
     """
-    cap_dir = target_root / ".pkit" / "capabilities" / capability
-    if not (cap_dir / "package.yaml").is_file():
-        available = _list_capability_names(target_root)
-        avail_note = (
-            f" Available capabilities: {', '.join(available)}."
-            if available
-            else " No capabilities are present under .pkit/capabilities/."
-        )
-        raise click.ClickException(
-            f"unknown namespace {capability!r}: not one of core/project/adr and "
-            f"no capability at .pkit/capabilities/{capability}/.{avail_note}"
-        )
+    cap_dir = resolve_capability_dir(target_root, capability, _FIXED_NAMESPACES)
     decisions_dir = cap_dir / "decisions"
     decisions_dir.mkdir(parents=True, exist_ok=True)
     return decisions_dir
-
-
-def _list_capability_names(target_root: Path) -> list[str]:
-    """Sorted names of capabilities present under `.pkit/capabilities/` (each has a package.yaml)."""
-    caps_dir = target_root / ".pkit" / "capabilities"
-    if not caps_dir.is_dir():
-        return []
-    return sorted(
-        entry.name
-        for entry in caps_dir.iterdir()
-        if entry.is_dir() and (entry / "package.yaml").is_file()
-    )
 
 
 def _next_number(decisions_dir: Path, prefix: str) -> int:
