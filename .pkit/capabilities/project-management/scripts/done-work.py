@@ -204,9 +204,11 @@ from _lib.audit import (  # noqa: E402
 from _lib.comment import fetch_comments, post_audit_once  # noqa: E402
 from _lib.review_contributions import collect_contributions  # noqa: E402
 from _lib.review_mode import resolve_mode  # noqa: E402
+from _lib.review_opt_outs import OPT_OUT_PATH, read_opt_outs  # noqa: E402
 from _lib.required_reviewers import (  # noqa: E402
     ERROR_CLOSING_ISSUES,
     ERROR_COLLECTION,
+    ERROR_OPT_OUT,
     Resolution,
     resolve_required_local_reviewers,
 )
@@ -1157,10 +1159,16 @@ def _check_agent_gate(
     D3 as widened by DEC-050, replacing DEC-028's steps 6–7; steps 1–5 below
     stand unchanged.
 
+    A contribution the project opts out of (`review.agents.contributed_opt_out`,
+    #148) is withdrawn by the shared resolver before matching, so it is never
+    in the resolved set — the gate neither requires nor lists it as a slot; a
+    refusal names it, with its reason, so its absence is visible.
+
     Fail-closed (DEC-032 D5): if the contribution collection has any
     blocking error (a malformed declaration or a contributed reviewer whose
-    agent is undeployed) the gate REFUSES rather than silently proceeding on
-    the baseline — an unsatisfiable required reviewer cannot be dropped.
+    agent is undeployed) or the opt-out list is invalid, the gate REFUSES
+    rather than silently proceeding on the baseline — an unsatisfiable
+    required reviewer cannot be dropped.
 
     For a project with only the static baseline and no contributions this is
     equivalent to the single-baseline case (DEC-032 D3: the per-reviewer-OR /
@@ -1375,7 +1383,9 @@ def _check_agent_gate(
     )
 
     if any(not slot.satisfied for slot in slots):
-        return refuse(_agent_gate_refusal(mode_source=mode_source, slots=slots))
+        return refuse(_agent_gate_refusal(
+            mode_source=mode_source, slots=slots, opted_out=resolution.opted_out,
+        ))
 
     return _GateResult(
         passed=True,
@@ -1408,8 +1418,10 @@ def _resolve_required_local(
     `collect_contributions`. The fetcher lambdas reference `gh_run` /
     `gh_get_issue` as module globals, looked up at call time, so the agent-gate
     tests' monkeypatches of `collect_contributions` / `gh_run` / `gh_get_issue`
-    on this module stay effective. Returns a `Resolution`; the caller maps a
-    non-ok result to a `_GateResult` refusal (fail-closed, DEC-032 D5).
+    on this module stay effective. The project's contribution opt-outs (#148)
+    are read from `config` exactly as `review-pr` reads them. Returns a
+    `Resolution`; the caller maps a non-ok result to a `_GateResult` refusal
+    (fail-closed, DEC-032 D5).
     """
     return resolve_required_local_reviewers(
         pr_number,
@@ -1424,6 +1436,7 @@ def _resolve_required_local(
         changed_files=lambda n: _pr_changed_files_fetch(
             n, config, gh_run=gh_run
         ),
+        opt_outs=read_opt_outs(config),
         collect_contributions=collect_contributions,
     )
 
@@ -1448,6 +1461,8 @@ def _resolution_refusal(
         message = _contribution_error_refusal(error.collection)
     elif error.kind == ERROR_CLOSING_ISSUES:
         message = _closing_issue_unresolvable_refusal(error.message)
+    elif error.kind == ERROR_OPT_OUT:
+        message = _opt_out_invalid_refusal(error.details)
     else:
         # Defensive: any other (unexpected) kind still fails closed.
         message = error.message
@@ -1561,11 +1576,34 @@ def _contribution_error_refusal(collection) -> str:
         "(`pkit ... deploy-agents`), or"
     )
     lines.append(
-        "              b) Uninstall the contributing capability if its gate "
-        "is not wanted, or"
+        "              b) If its gate is not wanted, opt out of the "
+        f"contribution in `{OPT_OUT_PATH}` or uninstall the contributing "
+        "capability, or"
     )
     lines.append("              c) Fix the malformed contribution declaration, or")
     lines.append("              d) Merge with `done-work --bypass \"<reason>\"`.")
+    return "\n".join(lines)
+
+
+def _opt_out_invalid_refusal(details: tuple[str, ...]) -> str:
+    """Refusal text when the contribution opt-out list is invalid (#148).
+
+    A malformed opt-out, or one naming a capability / reviewer no installed
+    capability contributes, leaves the adopter's intent unknown — the gate
+    refuses rather than guess which requirements they meant to withdraw.
+    """
+    lines = [
+        "[refused] agent-mode approval gate cannot be resolved — the "
+        "reviewer-contribution opt-out list is invalid.",
+    ]
+    lines.extend(f"            → {detail}" for detail in details)
+    lines.extend([
+        "            Remediation:",
+        f"              a) Fix or remove the entry in `{OPT_OUT_PATH}` "
+        "(project/config.yaml) — each names an installed capability, a "
+        "reviewer it contributes, and a reason, or",
+        "              b) Merge with `done-work --bypass \"<reason>\"`.",
+    ])
     return "\n".join(lines)
 
 
@@ -1615,12 +1653,16 @@ def _closing_issue_unresolvable_refusal(reason: str) -> str:
     ])
 
 
-def _agent_gate_refusal(*, mode_source: str, slots: list[_Slot]) -> str:
+def _agent_gate_refusal(
+    *, mode_source: str, slots: list[_Slot], opted_out: tuple = (),
+) -> str:
     """Refusal text naming the full resolved required set + who is unsatisfied.
 
     Names every required reviewer (baseline + contributed, with provenance) and
     its status, so the operator sees exactly which members of the AND-composed
-    set still need to approve (DEC-032 D3).
+    set still need to approve (DEC-032 D3). Contributions the project opts out
+    of (#148) are named after the set with their reasons, so a reviewer missing
+    from it reads as withdrawn, not forgotten.
 
     It reads the same `_Slot` records the pass path's `passed_via` reads, which
     is what keeps the two honest with each other: a reviewer with a genuine fresh
@@ -1638,6 +1680,11 @@ def _agent_gate_refusal(*, mode_source: str, slots: list[_Slot]) -> str:
     ]
     for slot in slots:
         lines.append(f"                  {slot.label}: {slot.status}")
+    for opt_out in opted_out:
+        lines.append(
+            f"            → opted out ({OPT_OUT_PATH}): {opt_out.reviewer} "
+            f"(capability `{opt_out.capability}`) — {opt_out.reason}"
+        )
     missing = ", ".join(slot.label for slot in slots if not slot.satisfied)
     lines.append(f"            → still missing a fresh APPROVED: {missing}")
     lines.append("            Remediation:")
@@ -1681,7 +1728,7 @@ def _unknown_override_refusal(
         f"            → resolved required set: {', '.join(resolved) or '(none)'}",
         "            A per-reviewer override must name a reviewer this PR "
         "actually requires — check for a typo, or a reviewer dropped by "
-        "reclassification / a capability uninstall.",
+        "reclassification / a capability uninstall / a contribution opt-out.",
         "            Remediation:",
         "              a) Re-run naming a reviewer from the resolved set above.",
         "              b) Merge with `done-work --bypass \"<reason>\"` for a "
