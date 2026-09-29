@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "reading-evidence.schema.json",
+  "title": "Reading evidence — the value of pkit::documentation:reading-evidence, version 1",
+  "description": "The data point's companion schema (COR-052 point 5; living-docs DEC-001 point 7): the results of executed checks that follow the documentation — a simulated reader running a guide against the system, say. This capability runs no such check; the results arrive from a capability that does, or from the project's own filler file. One entry per page or path and commit, keyed by the pair: its `id` is `<path>@<commit>`. The point is `union`, no default takes part, and its inert policy is `fallback`, because the evidence advises: it informs a reader-review and never replaces one (DEC-001 point 6). The version rises only on a change that breaks existing fillers.",
+  "type": "array",
+  "items": { "$ref": "#/$defs/evidence" },
+  "$defs": {
+    "commit": {
+      "description": "A commit, by its full or abbreviated hexadecimal name.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{7,64}$"
+    },
+    "evidence": {
+      "description": "The result of one executed check, for one page or path at one commit.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "path", "commit", "outcome"],
+      "properties": {
+        "id": {
+          "description": "The entry's key, the pair it is for: `<path>@<commit>`.",
+          "type": "string",
+          "pattern": "^\\S+@[0-9a-f]{7,64}$"
+        },
+        "path": {
+          "description": "What the check followed: a page, by its repository-relative path, or a reader path through several pages, by a gitignore-style pattern matching them.",
+          "type": "string",
+          "minLength": 1
+        },
+        "commit": {
+          "description": "The commit the check ran against.",
+          "$ref": "#/$defs/commit"
+        },
+        "outcome": {
+          "description": "`passed`: the reader could follow it. `failed`: they could not.",
+          "enum": ["passed", "failed"]
+        },
+        "description": {
+          "description": "One line a person reads: what was checked, and what was found.",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

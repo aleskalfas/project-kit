@@ -201,6 +201,18 @@ def pointer_token(segment: Any) -> str:
 # --- files -------------------------------------------------------------------
 
 
+def project_root() -> Path:
+    """The repository a command runs in: git's top level, else the working directory."""
+    try:
+        completed = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True, check=False
+        )
+    except OSError:
+        return Path.cwd()
+    top = completed.stdout.strip()
+    return Path(top) if completed.returncode == 0 and top else Path.cwd()
+
+
 def load_yaml(path: Path) -> Any:
     """A YAML file's value; `None` when absent or unparsable."""
     try:

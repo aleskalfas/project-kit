@@ -9,15 +9,18 @@
 """living-docs capability — validate: the project's documentation spaces (DEC-001).
 
 Checks the places the spaces' pages are found in and their assignment to a
-space, what is never a page, the pages' own fields, each space's entry point
-and definition, and whether the two spaces are separate. `_lib/spaces.py`
-states every check and the record point it applies.
+space, what is never a page, the pages' own fields and whether each page's
+reader resolves, each space's entry point and definition, and whether the two
+spaces are separate. `_lib/spaces.py` states every check and the record point
+it applies.
 
 The backbone runs it as this capability's validator, the `living-docs:spaces`
 member of `pkit validate` (ADR-058): from the project root, with `--json`
 alone and the offline marker set, reading one findings document from standard
 output. It is a query — bounded, deterministic, read-only, needing no network —
-and `pkit init` and `pkit sync` provision its dependencies in uv's cache.
+and `pkit init` and `pkit sync` provision its dependencies in uv's cache. It
+reads the readers point through `pkit connections resolve`, the backbone's read
+command, and only when some page names a reader.
 
 Usage:
   pkit living-docs validate           the summary, the findings and the unclassified documents
@@ -32,25 +35,13 @@ from __future__ import annotations
 
 import argparse
 import json
-import subprocess
 import sys
 from pathlib import Path
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import spaces  # noqa: E402
-
-
-def _project_root() -> Path:
-    """The repository the command runs in: git's top level, else the working directory."""
-    try:
-        completed = subprocess.run(
-            ["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True, check=False
-        )
-    except OSError:
-        return Path.cwd()
-    top = completed.stdout.strip()
-    return Path(top) if completed.returncode == 0 and top else Path.cwd()
+from _lib.declarations import project_root  # noqa: E402
 
 
 def main() -> int:
@@ -67,7 +58,7 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    outcome = spaces.check(_project_root())
+    outcome = spaces.check(project_root())
     if args.json:
         print(json.dumps(outcome.document(), indent=2, ensure_ascii=False))
         return 0

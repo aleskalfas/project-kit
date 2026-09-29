@@ -9,7 +9,11 @@ requires_backbone: ">=1.149.0,<2.0.0"
 commands:
   validate:
     script: scripts/validate.py
-    help: "Validate the documentation spaces (DEC-001): places and their assignment, what is never a page, pages' reader and kind, entry points and definitions; --json prints the findings document `pkit validate` reads. A query: read-only, offline; `pkit sync` provisions its dependencies."
+    help: "Validate the documentation spaces (DEC-001): places and their assignment, what is never a page, pages' reader and kind, each reader against the readers point, entry points and definitions; --json prints the findings document `pkit validate` reads. A query: read-only, offline; `pkit sync` provisions its dependencies."
+    query-contract: true
+  fill-doc-check:
+    script: scripts/fill-doc-check.py
+    help: "This capability's filler of the pkit::work-tracking:doc-check point (DEC-001 point 7): one page-stale obligation per page the whole-repository friction check reports stale or deferred, one code-undocumented obligation per uncovered surface path; --json prints the filler envelope the backbone reads. A query: read-only, offline, no parameter; `pkit sync` provisions its dependencies."
     query-contract: true
 
 # The `living-docs:spaces` member of `pkit validate` (ADR-058).
@@ -44,3 +48,54 @@ friction:
     - location: definitions
       path: rule-sets
       description: The spaces' definitions, project rule sets that inherit LDOC (COR-051 point 2).
+
+# COR-053 — the documentation role, the two data points defined under it, and
+# the contribution to the work-tracking role's documentation check (DEC-001
+# point 7). See the README, "Connections".
+connections:
+  roles: [pkit::documentation]
+  extension-points:
+    accepts:
+      pkit::documentation:readers:
+        schema_version: 1
+        schema: readers.schema.json
+        description: >-
+          Who reads the documentation and what they need, one entry per reader:
+          its id, which a page names as its reader, and a description of what
+          that reader needs. A user and a maintainer are always included; a
+          project filler adds or overrides readers, and a capability that keeps
+          knowledge about the software's users may add its own. Validation
+          fails a page whose reader does not resolve, so a filler that cannot
+          answer leaves the point unresolved rather than check pages against
+          whichever readers survived.
+        combination: union
+        default:
+          participation: always
+          value:
+            - id: user
+              description: Uses the system, and needs to know what it does and how to use it — never its internals.
+            - id: maintainer
+              description: Builds and keeps the system — a person, or an agent that writes and checks its documentation — and needs to know why, from where and by which rules.
+        inert: fail
+      pkit::documentation:reading-evidence:
+        schema_version: 1
+        schema: reading-evidence.schema.json
+        description: >-
+          Results of executed checks that follow the documentation — a
+          simulated reader running a guide against the system, say — one entry
+          per page or path and commit, keyed by the pair. Supplied by a
+          capability that runs such checks, or by the project; this capability
+          runs none. Advisory: evidence informs a reader-review and never
+          replaces one, so a filler that cannot answer is warned and the rest
+          still count.
+        combination: union
+        inert: fallback
+  extensions:
+    contributes:
+      # Friction on anchored pages and uncovered surface, read from the
+      # backbone's whole-repository friction check at HEAD. Inert while no
+      # capability provides the work-tracking role.
+      - point: pkit::work-tracking:doc-check
+        schema_version: 1
+        command: fill-doc-check
+        description: One page-stale obligation per page carrying friction debt, one code-undocumented obligation per path of the declared surface that nothing anchors.
