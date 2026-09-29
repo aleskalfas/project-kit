@@ -8,8 +8,10 @@ backbone through its commands:
   discovery (ADR-057 point 2), at the working tree or, with `--at <commit>`, at
   another state: what the default branch holds, and what it held where this
   branch left it. The script never walks a place or lists a commit itself;
-- **recording the analysis location** on first use — `pkit docs record`, the
-  backbone's one writer of a capability's recorded locations (COR-049 point 5).
+- **recording the analysis location** on first use — `pkit docs
+  record-location`, the backbone's one writer of a capability's recorded
+  locations (COR-049 point 5), with `--yes`: the stamp runs it when it places
+  an artefact, so invoking the stamp is the consent.
 
 Git answers only which commit a name resolves to, and the merge-base of two.
 
@@ -57,9 +59,9 @@ def read_analysis(root: Path, at: str | None = None, run: Runner = subprocess.ru
 
 def record_location(root: Path, run: Runner = subprocess.run) -> str | None:
     """Record the analysis location where it now lies (COR-049 point 5), through
-    `pkit docs record`. Returns the line it printed when it recorded, `None` when
-    the location was recorded already. Raises Unreadable when it fails."""
-    argv = ["pkit", "docs", "record", CAPABILITY, LOCATION]
+    `pkit docs record-location`. Returns the line it printed when it recorded,
+    `None` when the location was recorded already. Raises Unreadable when it fails."""
+    argv = ["pkit", "docs", "record-location", CAPABILITY, LOCATION, "--yes"]
     proc = _run(root, argv, run)
     if proc.returncode != 0:
         raise Unreadable(_failed(argv, proc))

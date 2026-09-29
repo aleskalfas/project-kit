@@ -273,7 +273,7 @@ def test_a_stamp_refuses_what_it_cannot_ground(
 def test_the_capability_s_scripts_carry_no_discovery_of_their_own() -> None:
     """software-analysis reads the places, the files each matches and their
     artefacts through `pkit friction artefacts` — at head and at a commit — and
-    records its location through `pkit docs record`; no script of it matches,
+    records its location through `pkit docs record-location`; no script of it matches,
     lists or reads a place declaration, or writes a recorded location, itself."""
     scripts = sorted((CAPABILITY / "scripts").rglob("*.py"))
     assert scripts

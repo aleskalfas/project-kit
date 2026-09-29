@@ -66,7 +66,7 @@ Every form also takes `--path <glob>` and `--record <id>`, each repeatable: the 
 - **Collection files.** A new actor or term is added to the end of the file's front matter and its section to the end of the body; every other byte stays as it was, and the stamp checks the result reads back as the file plus the new entry before writing. The file is created from the template the first time.
 - **What it refuses**, writing nothing: an actor, or a step, that is not in the analysis or is withdrawn; a journey with fewer than two steps; a slug or area that is not a word; an id already held.
 
-The stamp reads the analysis through the core's reading command, `pkit friction artefacts` — the working tree's, and with `--at` the default branch's — and records the location through `pkit docs record`; it never walks the folders itself.
+The stamp reads the analysis through the core's reading command, `pkit friction artefacts` — the working tree's, and with `--at` the default branch's — and records the location through `pkit docs record-location --yes` (running the stamp is your consent to that write); it never walks the folders itself.
 
 ## The artefacts
 

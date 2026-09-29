@@ -327,47 +327,100 @@ def test_record_location_for_a_capability_lands_in_its_project_namespace(
     assert recorded == dr.Location(Path("docs/guides"), dr.Source.EXPLICIT)
 
 
-def _docs_record(*args: str) -> tuple[int, str]:
-    result = CliRunner().invoke(main, ["--color", "never", "docs", "record", *args])
+def _record_location(*args: str, input: str | None = None) -> tuple[int, str]:
+    result = CliRunner().invoke(
+        main, ["--color", "never", "docs", "record-location", *args], input=input
+    )
     return result.exit_code, result.output
 
 
-def test_docs_record_records_a_derived_capability_location_once(
-    make_adopter_repo: MakeAdopterRepo,
-) -> None:
-    """`pkit docs record` is the backbone's recording on first use for a
-    capability's own script: it writes where the location lies now, once."""
+GUIDES_RECORDED_IN = ".pkit/capabilities/project-management/project/docs-locations.yaml"
+
+
+def _guides(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
+    """An adopter whose project-management declares a `guides` location, under `tech-docs/`."""
     repo = make_adopter_repo(capabilities=("project-management",))
     _write_config(repo, "docs:\n  internal: tech-docs\n")
     _declare_locations(repo, "project-management", "    guides: {path: guides}\n")
-    recorded_in = ".pkit/capabilities/project-management/project/docs-locations.yaml"
-    assert _docs_record("project-management", "guides") == (
+    return repo
+
+
+def test_record_location_records_a_derived_capability_location_once(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """`pkit docs record-location` is the backbone's recording on first use for a
+    capability's own script: it writes where the location lies now, once."""
+    repo = _guides(make_adopter_repo)
+    assert _record_location("project-management", "guides", "--yes") == (
         0,
-        f"recorded project-management guides = tech-docs/guides  ({recorded_in})\n",
+        f"recorded project-management guides = tech-docs/guides  ({GUIDES_RECORDED_IN})\n",
     )
     assert dr.recorded_capability_locations(repo.root, "project-management") == {
         "guides": "tech-docs/guides"
     }
-    # A later root change moves nothing already recorded, and recording again writes nothing.
+    # A later root change moves nothing already recorded, and recording again writes
+    # nothing — with or without consent, since there is nothing to consent to.
     _set_internal_root(repo, "handbook")
-    before = (repo.root / recorded_in).read_text(encoding="utf-8")
-    assert _docs_record("project-management", "guides") == (
+    before = (repo.root / GUIDES_RECORDED_IN).read_text(encoding="utf-8")
+    for consent in (("--yes",), ()):
+        assert _record_location("project-management", "guides", *consent) == (
+            0,
+            "project-management guides = tech-docs/guides  (recorded already)\n",
+        )
+    assert (repo.root / GUIDES_RECORDED_IN).read_text(encoding="utf-8") == before
+
+
+def test_record_location_writes_only_with_consent(
+    make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """COR-048 point 5, as the sibling backbone writers ask it: `--yes`, or a terminal's
+    confirmation; a non-interactive run without `--yes` refuses and names the commands."""
+    repo = _guides(make_adopter_repo)
+    written = dr.capability_locations_path(repo.root, "project-management")
+    code, output = _record_location("project-management", "guides")
+    assert code == 1
+    assert (
+        f"refusing to write {GUIDES_RECORDED_IN} without consent: stdin is not a terminal "
+        "and --yes was not given (COR-048 point 5). Nothing was written.\n"
+        "To see the change first, run:\n"
+        "  pkit docs record-location project-management guides --dry-run\n"
+        "To consent non-interactively, run:\n"
+        "  pkit docs record-location project-management guides --yes\n"
+    ) in output
+    assert _record_location("project-management", "guides", "--dry-run") == (
         0,
-        "project-management guides = tech-docs/guides  (recorded already)\n",
+        f"would record project-management guides = tech-docs/guides  ({GUIDES_RECORDED_IN})\n"
+        "Dry run: nothing written.\n",
     )
-    assert (repo.root / recorded_in).read_text(encoding="utf-8") == before
+    code, output = _record_location("project-management", "guides", "--yes", "--dry-run")
+    assert code == 2
+    assert "--yes and --dry-run exclude each other" in output
+    assert not written.exists()
+    # On a terminal it asks once; declining writes nothing, agreeing records.
+    monkeypatch.setattr(pc, "stdin_is_tty", lambda: True)
+    code, _output = _record_location("project-management", "guides", input="n\n")
+    assert code == 1
+    assert not written.exists()
+    code, output = _record_location("project-management", "guides", input="y\n")
+    assert code == 0, output
+    assert output.startswith(
+        f"Record project-management guides = tech-docs/guides in {GUIDES_RECORDED_IN}? [Y/n]: y"
+    )
+    assert dr.recorded_capability_locations(repo.root, "project-management") == {
+        "guides": "tech-docs/guides"
+    }
 
 
-def test_docs_record_refuses_what_no_installed_capability_declares(
+def test_record_location_refuses_what_no_installed_capability_declares(
     make_adopter_repo: MakeAdopterRepo,
 ) -> None:
     repo = make_adopter_repo(capabilities=("project-management",))
     _declare_locations(repo, "project-management", "    guides: {path: guides}\n")
-    code, output = _docs_record("project-management", "notes")
+    code, output = _record_location("project-management", "notes", "--yes")
     assert code == 1
     assert "declares no documentation location 'notes'" in output
     assert "(declared: guides)" in output
-    code, output = _docs_record("living-docs", "definitions")
+    code, output = _record_location("living-docs", "definitions", "--yes")
     assert code == 1
     assert "no capability named 'living-docs' is installed" in output
     assert not dr.capability_locations_path(repo.root, "project-management").exists()

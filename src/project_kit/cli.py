@@ -349,43 +349,83 @@ def docs() -> None:
     """
 
 
-@docs.command("record")
+@docs.command("record-location")
 @click.argument("capability", metavar="CAPABILITY")
-@click.argument("location", metavar="LOCATION")
-def docs_record(capability: str, location: str) -> None:
-    """Record the documentation LOCATION of CAPABILITY where it now lies (COR-049 point 5).
+@click.argument("name", metavar="NAME")
+@click.option(
+    "--yes",
+    is_flag=True,
+    default=False,
+    help="Consent to the write without a prompt (CI). Without it a terminal is asked; "
+    "a non-interactive run refuses.",
+)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Say what would be recorded, and write nothing.",
+)
+def docs_record_location(capability: str, name: str, yes: bool, dry_run: bool) -> None:
+    """Record where CAPABILITY's documentation location NAME now lies (COR-049 point 5).
 
-    A location a capability declares in its package metadata derives from a
-    documentation root until it is first used. The command that places the
-    first document there records it, in the capability's
-    `project/docs-locations.yaml`, so a later change of root moves nothing
-    already written. A location already recorded is never overwritten: the
-    command says where it lies and writes nothing. Running it is the consent
-    to the write — a capability's stamping command runs it when it places a
-    document. Exit 1 when CAPABILITY is not installed or declares no LOCATION.
+    NAME is a location the capability declares in its package metadata
+    (`docs.locations`), never a path. Until it is recorded it derives from a
+    documentation root; the command writes where it lies now to the
+    capability's `project/docs-locations.yaml`, so a later change of root
+    moves nothing already written. A location already recorded is never
+    overwritten: the command says where it lies and writes nothing. Writing
+    needs consent (COR-048 point 5): a terminal is asked once, `--yes`
+    consents non-interactively, and a non-interactive run without `--yes`
+    refuses and names the command to run; `--dry-run` says what would be
+    recorded and writes nothing. A capability's stamping command runs it with
+    `--yes` when it places the first document there. Exit 1 when CAPABILITY
+    is not installed or declares no location NAME.
     """
-    from project_kit import docs_roots
+    from project_kit import docs_roots, project_config
     from project_kit.friction_discovery import installed_capability_names
 
+    if yes and dry_run:
+        raise click.UsageError(
+            "--yes and --dry-run exclude each other: one writes, the other never does."
+        )
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
     if capability not in installed_capability_names(target_root):
         raise click.ClickException(f"no capability named {capability!r} is installed.")
-    found = docs_roots.capability_location(target_root, capability, location)
+    found = docs_roots.capability_location(target_root, capability, name)
     if found is None:
         declared = sorted(docs_roots.capability_subpaths(target_root, capability))
         raise click.ClickException(
-            f"{capability} declares no documentation location {location!r} in its "
+            f"{capability} declares no documentation location {name!r} in its "
             f"`docs.locations` (declared: {', '.join(declared) or 'none'})."
         )
     where = found.path.as_posix()
     if found.source is docs_roots.Source.EXPLICIT:
-        click.echo(f"{capability} {location} = {where}  (recorded already)")
+        click.echo(f"{capability} {name} = {where}  (recorded already)")
         return
-    docs_roots.record_location(target_root, capability, location, found.path, by="pkit docs record")
     recorded_in = docs_roots.capability_locations_relpath(capability).as_posix()
-    click.echo(f"recorded {capability} {location} = {where}  ({recorded_in})")
+    recording = f"{capability} {name} = {where}  ({recorded_in})"
+    if dry_run:
+        click.echo(f"would record {recording}")
+        click.echo(cli_render.style("strong", "Dry run: nothing written."))
+        return
+    if not yes:
+        if not project_config.stdin_is_tty():
+            rerun = f"pkit docs record-location {shlex.quote(capability)} {shlex.quote(name)}"
+            raise project_config.ConsentRefused(
+                f"refusing to write {recorded_in} without consent: stdin is not a terminal "
+                f"and --yes was not given (COR-048 point 5). Nothing was written.\n"
+                f"To see the change first, run:\n  {rerun} --dry-run\n"
+                f"To consent non-interactively, run:\n  {rerun} --yes"
+            )
+        click.confirm(
+            f"Record {capability} {name} = {where} in {recorded_in}?", default=True, abort=True
+        )
+    docs_roots.record_location(
+        target_root, capability, name, found.path, by="pkit docs record-location"
+    )
+    click.echo(f"recorded {recording}")
 
 
 def _graph_format_options(command: Callable[..., None]) -> Callable[..., None]:
