@@ -7,6 +7,10 @@ dispatcher runs `pkit analysis new`. The scripts run as subprocesses under
 this interpreter — their `uv run --script` shebang pointed at it — and the
 `pkit` they read through is the real CLI under this interpreter (the
 `pkit_on_path` fixture), so nothing reaches `uv` or the network.
+
+`installed` builds the adopter each test module's `project` fixture returns, with
+`$PKIT_CHECK_BASE` removed: the scripts read the default branch from it when
+set, and a developer's own value must not decide what these repositories answer.
 """
 
 from __future__ import annotations
@@ -16,10 +20,12 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import pytest
 from ruamel.yaml import YAML
 
 from project_kit import friction_discovery as fd
-from tests.adopter_repo import AdopterRepo
+from project_kit.friction_check import BASE_ENV
+from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 
 REPO = Path(__file__).resolve().parent.parent
 CAPABILITY = REPO / ".pkit" / "capabilities" / "software-analysis"
@@ -55,6 +61,12 @@ def prepare(repo: AdopterRepo) -> AdopterRepo:
     repo.write({CONFIG: "docs:\n  internal: tech-docs\n", "src/run.py": "print('run')\n"})
     repo.commit("install")
     return repo
+
+
+def installed(make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch) -> AdopterRepo:
+    """An adopter with software-analysis installed and prepared, `$PKIT_CHECK_BASE` unset."""
+    monkeypatch.delenv(BASE_ENV, raising=False)
+    return prepare(make_adopter_repo(capabilities=("software-analysis",)))
 
 
 def run_script(repo: AdopterRepo, script: Path, *args: str) -> subprocess.CompletedProcess[str]:

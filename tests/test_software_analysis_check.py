@@ -32,7 +32,7 @@ from tests.analysis_repo import (
     USE_CASES,
     VALIDATE,
     front,
-    prepare,
+    installed,
     run_script,
     seed,
     stamped,
@@ -40,8 +40,10 @@ from tests.analysis_repo import (
 
 
 @pytest.fixture
-def project(make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path) -> AdopterRepo:
-    return prepare(make_adopter_repo(capabilities=("software-analysis",)))
+def project(
+    make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> AdopterRepo:
+    return installed(make_adopter_repo, monkeypatch)
 
 
 def check(repo: AdopterRepo, base: str = MAIN) -> dict[str, Any]:

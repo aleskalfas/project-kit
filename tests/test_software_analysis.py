@@ -44,9 +44,9 @@ from tests.analysis_repo import (
     RECORDS,
     USE_CASES,
     front,
+    installed,
     load,
     new,
-    prepare,
     run_script,
     seed,
     stamped,
@@ -60,8 +60,10 @@ from tests.test_living_docs_spaces import (
 
 
 @pytest.fixture
-def project(make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path) -> AdopterRepo:
-    return prepare(make_adopter_repo(capabilities=("software-analysis",)))
+def project(
+    make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> AdopterRepo:
+    return installed(make_adopter_repo, monkeypatch)
 
 
 # --- the package metadata (DEC-001 point 2) -------------------------------------------------
