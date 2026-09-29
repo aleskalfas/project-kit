@@ -1,0 +1,19 @@
+component: living-docs
+kind: minor
+custom:
+  category: Added
+body: >
+  living-docs ships its first artefacts (DEC-001). Its package metadata declares
+  the two documentation roots as the default places of their spaces and a
+  definitions location, `living-docs/` under the internal root, whose
+  `rule-sets/` folder holds each space's definition as a project rule set. The
+  shared method rule set, `living-docs:LDOC` (`RS-LDOC-001` to `RS-LDOC-006`,
+  the rules DEC-001 point 3 states, each accepted with the decision as its
+  origin), ships in `rule-sets/ldoc.md`. `templates/` holds a space-definition
+  template, inheriting `LDOC`, and the signpost page template; a page names its
+  `reader` and `kind`, whose shape is `schemas/page.schema.json`. A space in the
+  project configuration may name its `definition`. `pkit living-docs validate`,
+  run by `pkit validate` as its `living-docs:spaces` member, checks the places
+  and their assignment, what is never a page, pages' fields, entry points and
+  definitions; reader resolution stays dormant until the readers point ships,
+  and the validator says so.

@@ -31,7 +31,8 @@ from project_kit.cli import main
 from project_kit.friction_discovery import read_friction_settings
 
 REPO = Path(__file__).resolve().parent.parent
-LIVING_DOCS_CONFIG = REPO / ".pkit" / "capabilities" / "living-docs" / "project" / "config.yaml"
+LIVING_DOCS = REPO / ".pkit" / "capabilities" / "living-docs"
+LIVING_DOCS_CONFIG = LIVING_DOCS / "project" / "config.yaml"
 
 # Every README under `.pkit/` that is *not* a place, with the reason ADR-055
 # point 3's principle gives: a README an adopter reads in order to use an area,
@@ -99,9 +100,12 @@ def test_the_status_report_shows_roots_places_and_the_records_inside_the_interna
     assert "internal root      tech-docs/   (explicit)" in lines
     inside = lines.index("inside root        1 recorded location(s) inside the internal root:")
     assert lines[inside + 1] == "adr-records -> tech-docs/architecture/decisions"
-    assert f"places             {len(_project_places())} declared:" in lines
+    assert f"places             {len(read_friction_settings(REPO).places)} declared:" in lines
     for place in _project_places():
         assert place in lines, place
+    # living-docs' default places — the roots — and its definitions (DEC-001 points 1 and 2).
+    for place in ("docs/**", "tech-docs/**", "tech-docs/living-docs/rule-sets"):
+        assert f"{place} (living-docs)" in lines, place
 
 
 # --- criterion 2: exactly the adopter-facing `.pkit/` READMEs ----------------
