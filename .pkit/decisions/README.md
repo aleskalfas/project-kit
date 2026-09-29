@@ -1,5 +1,19 @@
 ---
 variant: universal
+reader: user
+kind: reference
+pkit:
+  friction:
+    anchors:
+      path:
+        - src/project_kit/decisions.py
+        - src/project_kit/decisions_validate.py
+        - src/project_kit/refs.py
+        - src/project_kit/rule_sets.py
+      record: [COR-001, COR-019, COR-025, COR-051, COR-053]
+    revalidated:
+      at: 2026-09-29T15:15:32Z
+      outcome: updated
 ---
 
 # Decision records
@@ -124,7 +138,7 @@ The gate applies to every kind of dependent work:
 
 - **Decisions** that build on other decisions cite only accepted predecessors.
 - **Docs** describing systems built on a decision wait until that decision is accepted.
-- **Skills and agents** that automate work depending on a decision verify acceptance before running. The mechanism for declaring and verifying decision dependencies is part of each artifact area's own README (e.g. future `.pkit/skills/README.md`, `.pkit/agents/README.md`).
+- **Skills and agents** that automate work depending on a decision verify acceptance before running. The mechanism for declaring and verifying decision dependencies is part of each artifact area's own README (e.g. `.pkit/skills/README.md`, `.pkit/agents/README.md`).
 
 Acceptance is intentionally cheap — flipping `proposed → accepted` is one line and one commit. The friction is not in the flip; it's in the requirement that everyone look at the record and agree before depending on it.
 

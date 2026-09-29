@@ -1,12 +1,28 @@
 ---
 variant: specialized
+reader: user
+kind: reference
+pkit:
+  friction:
+    anchors:
+      path:
+        - src/project_kit/process.py
+        - src/project_kit/process_authoring.py
+        - src/project_kit/process_dependencies.py
+        - src/project_kit/process_graph.py
+        - src/project_kit/process_health.py
+        - .pkit/schemas/_defs/process.schema.json
+      record: [COR-033, COR-034, COR-035, COR-036, COR-037, COR-038, COR-040, COR-042, COR-044, COR-053, ADR-020, ADR-036, ADR-048, ADR-051]
+    revalidated:
+      at: 2026-09-29T15:15:35Z
+      outcome: updated
 ---
 
 # Process
 
 The shared **process substrate** — a content-free state machine that any discipline binds its own staged, gated process to. Decided in [COR-033](../decisions/core/COR-033-process-substrate.md): the backbone owns the *shape contract* and the *engine*; each capability ships its own *process definition* as an instance that conforms to the shape. The substrate gives every process two guarantees for free — a deterministic **validator** of each move, and a self-explaining **memory** of where each subject stands — so an automated agent can rely on it for "where am I / may I move / am I valid", and a human with no manual can read the same answers.
 
-This README is the authoritative spec; the full design rationale (incl. the `critic` and `architect` reviews) lives in `.pkit/scratchpad/active/2026-06-21-process-primitive.md`.
+This README is the authoritative spec; the full design rationale (incl. the `critic` and `architect` reviews) lives in `.pkit/scratchpad/done/2026-06-21-process-primitive.md`.
 
 Two markers appear below: **core** — ships in the minimal first cut; **deferred** — a named extension point designed into the shape now, but built only when a real binding needs it (name-broad / ship-narrow, per COR-016).
 

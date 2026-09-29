@@ -1,5 +1,16 @@
 ---
 variant: specialized
+reader: user
+kind: reference
+pkit:
+  friction:
+    anchors:
+      path:
+        - src/project_kit/scratchpads.py
+      record: [COR-006, COR-012, COR-043]
+    revalidated:
+      at: 2026-09-29T15:15:40Z
+      outcome: updated
 ---
 
 # Scratchpad notes

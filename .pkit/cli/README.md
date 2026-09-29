@@ -1,5 +1,47 @@
 ---
 variant: specialized
+reader: user
+kind: reference
+pkit:
+  friction:
+    anchors:
+      path:
+        - .pkit/cli/**
+        - src/project_kit/cli.py
+        - src/project_kit/__main__.py
+        - src/project_kit/dispatcher.py
+        - src/project_kit/router.py
+        - src/project_kit/cli_render.py
+        - src/project_kit/install.py
+        - src/project_kit/sync.py
+        - src/project_kit/upgrade.py
+        - src/project_kit/merge.py
+        - src/project_kit/workspace.py
+        - src/project_kit/visibility.py
+        - src/project_kit/versioning.py
+        - src/project_kit/status.py
+        - src/project_kit/validate.py
+        - src/project_kit/validators.py
+        - src/project_kit/scaffolds.py
+        - src/project_kit/decisions.py
+        - src/project_kit/scratchpads.py
+        - src/project_kit/permissions.py
+        - src/project_kit/project_config.py
+        - src/project_kit/config_validate.py
+        - src/project_kit/docs_roots.py
+        - src/project_kit/friction_check.py
+        - src/project_kit/friction_repository.py
+        - src/project_kit/friction_report.py
+        - src/project_kit/friction_write.py
+        - src/project_kit/connections_config.py
+        - src/project_kit/wiring_graph.py
+        - src/project_kit/report.py
+        - src/project_kit/report_context.py
+        - src/project_kit/environment.py
+      record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, PRJ-001, PRJ-003, PRJ-004, ADR-033, ADR-039, ADR-049, ADR-058, ADR-059]
+    revalidated:
+      at: 2026-09-29T15:15:31Z
+      outcome: updated
 ---
 
 # Command-line interface
@@ -12,7 +54,7 @@ The design rules governing the CLI's shape — why these commands exist and not 
 
 The CLI is implemented in Python (per PRJ-003), with `.pkit/cli/pkit` as a thin proxy that exec's the Python runtime via `uv` and bypasses to the adapter's shell scripts for `deploy-skills` / `merge-settings` (which are shell to the bone — primitives the adapter ships, not surface commands).
 
-The full COR-004 surface is implemented: `init`, `sync`, `merge`, `upgrade`, `capabilities install / register / uninstall / upgrade / list / show` (per COR-017 + COR-031; `show` and the install and uninstall plans per COR-053 point 8), `status`, `validate`, `version`, `version bump`, `release plan / apply / merge / publish-notes / check / lint / check-shareable` (per PRJ-002 + COR-041), `new decision`, the authoring commands (`area`, `adapter`, `capability`, `agent`, `storyboard`, `schema`, `migration`), and the scratchpad commands (`new scratchpad`, `scratchpad done`, `scratchpad drop`, `scratchpad reported`, `scratchpad list`) per COR-012 + COR-043. Each authoring command ships paired with its skill under `.pkit/skills/core/<name>-author/` per COR-005's "Skill / command pairing". (The `bundle` command family was retired in COR-027 — capabilities subsumed the bundle role.)
+The full COR-004 surface is implemented: `init`, `sync`, `merge`, `upgrade`, `capabilities install / register / uninstall / upgrade / list / show` (per COR-017 + COR-031; `show` and the install and uninstall plans per COR-053 point 8), `status`, `validate`, `version`, `version bump`, `release plan / apply / merge / publish-notes / check / lint / check-shareable` (per PRJ-002 + COR-041), `new decision`, the authoring commands (`area`, `adapter`, `capability`, `agent`, `storyboard`, `schema`, `migration`), and the scratchpad commands (`new scratchpad`, `scratchpad done`, `scratchpad drop`, `scratchpad reported`, `scratchpad list`) per COR-012 + COR-043. Each authoring command ships paired with its skill under `.pkit/skills/core/` per COR-005's "Skill / command pairing". (The `bundle` command family was retired in COR-027 — capabilities subsumed the bundle role.)
 
 ## Installing pkit on PATH
 
@@ -338,7 +380,7 @@ Set one backbone-owned key. `<key>` is dotted (`docs.internal`, `friction.mode`,
 
 The `new` family scaffolds first-class methodology elements — areas, adapters, capabilities, migrations — by stamping the contract their owning record fixes (COR-005 for adapters, COR-010 for the manifest layer and migrations, COR-011 for areas, COR-017 for capabilities). Every `new` command is a one-shot generator: it refuses to overwrite existing targets, and the output is a directory or file the rest of the CLI surface (`status`, `sync`, `upgrade`, etc.) recognises immediately. No manual manifest edits are needed after a scaffold call.
 
-Templates live where the contract they instantiate lives — `.pkit/lifecycle/templates/` for migration scripts and per-component manifest skeletons; `.pkit/cli/scaffolds/` for area, adapter, and capability directory shapes — so a kit upgrade that changes a contract also updates what gets stamped.
+The shapes are stamped by the CLI's own scaffolding code (`src/project_kit/scaffolds.py`), which ships with the binary, so a kit upgrade that changes a contract also updates what gets stamped.
 
 ### `new area <name> [--variant <variant>]`
 
@@ -405,7 +447,7 @@ The stamped file includes:
 
 Refuses if a record with the same slug already exists in the id-space, or if the namespace is invalid — for a capability namespace, "invalid" means no capability of that name exists under `.pkit/capabilities/`.
 
-**Coordination with the `decision-author` skill.** Per COR-006's discriminator: a command stamps deterministically, a skill drafts content conversationally. The `decision-author` skill (`.pkit/skills/core/decision-author/`) calls `pkit new decision <namespace> <slug>` for the stub, then walks the author through filling the body — content drafting, discipline self-checks, and approval. Authors who don't need the conversational help can call the command directly.
+**Coordination with the `decision-author` skill.** Per COR-006's discriminator: a command stamps deterministically, a skill drafts content conversationally. The `decision-author` skill (`.pkit/skills/core/decision-author.md`) calls `pkit new decision <namespace> <slug>` for the stub, then walks the author through filling the body — content drafting, discipline self-checks, and approval. Authors who don't need the conversational help can call the command directly.
 
 ### `new scratchpad <slug>`
 
@@ -420,7 +462,7 @@ The stamped file includes:
 
 Supports `--dry-run`.
 
-**Coordination with the `scratchpad-author` skill.** The paired skill (`.pkit/skills/core/scratchpad-author/`) carries the slug-choice judgement, the topic-boundary discipline, and the body-drafting opening prompt. Authors who don't need the conversational help can call the command directly.
+**Coordination with the `scratchpad-author` skill.** The paired skill (`.pkit/skills/core/scratchpad-author.md`) carries the slug-choice judgement, the topic-boundary discipline, and the body-drafting opening prompt. Authors who don't need the conversational help can call the command directly.
 
 ## Scratchpad commands
 
