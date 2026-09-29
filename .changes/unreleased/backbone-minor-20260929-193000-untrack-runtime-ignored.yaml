@@ -1,5 +1,5 @@
 component: backbone
-kind: patch
+kind: minor
 custom:
   category: Fixed
 body: >
@@ -19,4 +19,4 @@ body: >
   reported with the command to finish by hand. A re-run finds nothing to untrack
   and says so. Once the removal is committed, another clone that pulls it while
   still tracking the files has git delete its copies; the migration's report
-  says to untrack them there first.
+  says to untrack them there first. In another clone that pulls the committed removal while still tracking the files, git deletes the working copies; the bytes are the pre-pull commit's, and `git restore --source=ORIG_HEAD --worktree -- <paths>` right after the pull restores them without re-tracking them.

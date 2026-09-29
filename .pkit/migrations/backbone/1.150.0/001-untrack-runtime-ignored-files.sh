@@ -167,7 +167,10 @@ if [ ${#refused[@]} -gt 0 ]; then
 fi
 if [ ${#untracked[@]} -gt 0 ]; then
     echo "  note    staged, not committed — commit the removal. Another clone that pulls that commit while"
-    echo "          it still tracks these files has git delete its copies: run \`git rm --cached\` on them"
-    echo "          there first, or copy them aside."
+    echo "          it still tracks these files has git delete its working copies (the bytes are the"
+    echo "          pre-pull commit's; git refuses the pull if a copy has local changes). There, right"
+    echo "          after the pull, restore the copies without re-tracking them:"
+    echo "            git restore --source=ORIG_HEAD --worktree -- <paths>"
+    echo "          or run \`git rm --cached\` on them before pulling."
 fi
 echo "  untrack-runtime-ignored-files: ${#untracked[@]} untracked, ${#refused[@]} left tracked"
