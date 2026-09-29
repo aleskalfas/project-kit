@@ -361,6 +361,18 @@ def read_capability_locations(
     return resolved
 
 
+def declared_location_roots(package: Any) -> dict[str, str]:
+    """The root each location a parsed package metadata declares names, by location
+    name — `internal` or `user` — for the declarations in the package schema's shape.
+    A recorded location keeps its declaration's root here: the root says where the
+    location was declared, not where it lies."""
+    return {
+        name: declaration.root
+        for name, declaration in _declared_locations(package).items()
+        if isinstance(declaration, DeclaredLocation)
+    }
+
+
 def _declared_locations(package: Any) -> dict[str, DeclaredLocation | UnreadableLocation]:
     """Every entry of a parsed package metadata's `docs.locations`, read in the
     package schema's shape `{path, root?}`; an entry in another shape says why.

@@ -49,7 +49,8 @@ def adopter_repo(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
 def pkit_on_path(tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch) -> Path:
     """A `pkit` that is the real CLI under this interpreter, first on PATH, for the
     capability scripts a test runs that read through the backbone — `pkit
-    connections resolve`, `pkit friction check`. It bypasses the entry-point
+    connections resolve`, `pkit friction check`, `pkit friction artefacts`. It
+    bypasses the entry-point
     router, so no test reaches `uv` or the network. Returns its directory, which
     lies outside the adopter repository."""
     bin_dir = tmp_path_factory.mktemp("pkit-bin")

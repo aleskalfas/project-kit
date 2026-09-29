@@ -1,0 +1,17 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  A new read command, `pkit friction artefacts [--json]`, prints where the
+  artefacts are, from the one artefact discovery `pkit validate` and the friction
+  checks read: the
+  documentation roots; each declared place, the project's and each capability's,
+  with the location and root a capability place names, the files it matches and
+  the skips validation applies (a synced copy, a place outside the repository, a
+  malformed declaration); every file read, with the places matching it, its
+  rule-set claim, whether `friction.exclude` leaves it out and its front matter's
+  own fields; and every artefact. The JSON document is stable
+  (`schema_version: 1`): it is how a capability's own script reads the places
+  without importing the backbone or walking them itself. Read-only; exit 1 when
+  the configuration cannot be read, 2 on a usage error.

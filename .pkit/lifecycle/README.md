@@ -333,6 +333,15 @@ The backbone runs the commands a component registers through one runner, `projec
 
   A subscriber's policy arrives with the events that run subscribers ([COR-053](../decisions/core/COR-053-connection-points.md) point 9 sets its limits).
 
+- **The seams back: what a script reads from the backbone.** A component's script runs in its own environment and never imports the backbone. What it needs of what the backbone computes, it reads through the backbone's reading commands, each printing one stable JSON document — never by computing it again, which would be a second home for one computation (ADR-057 points 1 and 2):
+
+  | Reading command | What it answers |
+  |---|---|
+  | `pkit connections resolve <address> --json` | one data point as it resolves — its value and every filler considered ("Reading one point from a script" below) |
+  | `pkit friction artefacts --json` | where the artefacts are: the documentation roots, each place the project and every installed capability declares with the files it matches and the skips validation applies, every file read with its front matter's own fields, and every artefact (the CLI README, "friction artefacts") |
+
+  Both are read-only and need no network, so a query may call them. The script applies the answer itself — the living-docs validator decides which of two places matching a file wins, and which space it serves — but never re-reads the declarations, lists the working tree or matches a path against a place. The artefacts reading resolves no data point, so a filler may call it while a point it contributes to resolves; a filler never asks for a point.
+
 The dispatcher's proxy is not a run in this sense: `pkit <capability> <command>` is a person's focused surface, so it takes the lookup, inherits the terminal's streams, and is neither bounded nor captured.
 
 #### Where a project filler file lives: the address-to-path mapping
