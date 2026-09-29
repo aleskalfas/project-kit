@@ -447,6 +447,158 @@ def test_discovery_reads_the_recorded_location_of_the_state_it_is_given(
     assert patterns(CommitTree(adopter.root, base)) == ["records/runs/**/*.md"]
 
 
+# --- synced places (COR-050 point 14, living-docs DEC-001 point 1) ------------
+#
+# A place is never a synced tree. Whether a path is a synced copy is the tree's
+# ownership predicate's question — keyed on the capability's recorded origin and
+# on the repository being the methodology's source, never on the path.
+
+EVIDENCE_README = ".pkit/capabilities/evidence/README.md"
+
+
+def _anchored(artefact_id: str) -> str:
+    return _document(artefact_id, anchors={"path": ["src/**"]})
+
+
+def _as_methodology_source(adopter: AdopterRepo) -> None:
+    """Make the adopter the methodology's source repository, as the ownership
+    tests simulate it: the package source beside the in-tree dispatcher it
+    already has (ADR-059)."""
+    assert (adopter.pkit / "cli" / "pkit").is_file()
+    adopter.write({"src/project_kit/__init__.py": ""})
+
+
+@pytest.mark.parametrize("place", [EVIDENCE_README, ".pkit/cli/README.md"])
+def test_a_synced_copy_declared_as_a_place_is_refused_even_while_dormant(
+    make_adopter_repo: MakeAdopterRepo, place: str
+) -> None:
+    """A kit-shipped capability's README, or a backbone area's, arrives in an
+    adopter by sync: declared as a place it is an error at its declaration, and
+    it is not walked — so the pass is dormant, and the error stands."""
+    adopter = make_adopter_repo(capabilities=("evidence",))
+    (evidence,) = [
+        c for c in read_backbone_manifest(adopter.root).components if c.name == "evidence"
+    ]
+    assert evidence.origin == "kit-shipped"
+    adopter.write({CONFIG: _config([place]), place: _anchored("copied")})
+    result = fv.validate_friction(adopter.root)
+
+    assert result.discovery.artefacts == ()
+    assert [m.path for m in result.discovery.synced] == [place]
+    assert result.is_dormant
+    (finding,) = result.errors
+    assert (finding.kind, finding.location, finding.pointer) == (
+        fv.FrictionFindingKind.SYNCED_PLACE,
+        CONFIG,
+        "/friction/places/0",
+    )
+    assert finding.message == (
+        f"place {place!r} is a synced copy — the methodology's sync writes it into this "
+        f"repository, so friction discovery does not walk it; a place is never a synced "
+        f"tree: narrow it to the project's own files or remove it (COR-050 point 14)."
+    )
+    assert fv.summary_lines(result) == [
+        "1 place(s), 0 artefact(s), none carrying the `pkit` container; dormant; "
+        "1 place(s) matching a synced copy."
+    ]
+
+    cli = CliRunner().invoke(main, ["validate", "--no-refs"])
+    assert cli.exit_code == 1, cli.output
+    friction = cli.output.split("\n  friction\n")[1].split("\n  rule-sets\n")[0]
+    assert f"error    {CONFIG}:/friction/places/0" in friction
+
+
+def test_a_capability_place_matching_a_synced_copy_is_reported_in_its_package(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    adopter = make_adopter_repo(capabilities=("evidence",))
+    _evidence_declares(adopter, f"friction:\n  places:\n    - {{path: {EVIDENCE_README}}}\n")
+    result = fv.validate_friction(adopter.root)
+
+    (finding,) = result.errors
+    assert (finding.kind, finding.location, finding.pointer) == (
+        fv.FrictionFindingKind.SYNCED_PLACE,
+        EVIDENCE_PACKAGE,
+        "/friction/places/0",
+    )
+    assert finding.message.startswith(f"capability place {EVIDENCE_README!r} is a synced copy")
+
+
+def test_a_place_in_the_methodology_source_is_not_a_synced_copy(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """Where the methodology is authored, its trees are the source a sync copies
+    from: the same READMEs are places there, walked like any other."""
+    adopter = make_adopter_repo(capabilities=("evidence",))
+    _as_methodology_source(adopter)
+    adopter.write(
+        {
+            CONFIG: _config([".pkit/cli/README.md", EVIDENCE_README]),
+            ".pkit/cli/README.md": _anchored("cli"),
+            EVIDENCE_README: _anchored("evidence"),
+        }
+    )
+    result = fv.validate_friction(adopter.root)
+
+    assert result.discovery.synced == ()
+    assert [a.id for a in result.discovery.artefacts] == ["cli", "evidence"]
+    assert result.errors == (), [f.message for f in result.errors]
+
+
+def test_a_glob_matching_a_synced_copy_and_the_project_s_own_file_refuses_only_the_copy(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """One glob over a kit-shipped capability's subtree: its README and every
+    other shipped file are synced copies, reported at the declaration and not
+    walked; the `project/` tier inside it is the adopter's, and is walked."""
+    adopter = make_adopter_repo(capabilities=("evidence",))
+    own = ".pkit/capabilities/evidence/project/notes.md"
+    place = ".pkit/capabilities/evidence/**/*.md"
+    adopter.write(
+        {CONFIG: _config([place]), EVIDENCE_README: _anchored("copied"), own: _anchored("own")}
+    )
+    result = fv.validate_friction(adopter.root)
+
+    assert [a.path for a in result.discovery.artefacts] == [own]
+    synced = [m.path for m in result.discovery.synced]
+    assert EVIDENCE_README in synced and own not in synced
+    assert len(synced) > 3  # the message names three and counts the rest
+    (finding,) = result.errors
+    assert (finding.kind, finding.location, finding.pointer) == (
+        fv.FrictionFindingKind.SYNCED_PLACE,
+        CONFIG,
+        "/friction/places/0",
+    )
+    shown = ", ".join(repr(p) for p in synced[:3])
+    assert finding.message.startswith(
+        f"place {place!r} matches {len(synced)} synced copies: {shown} and {len(synced) - 3} "
+        f"more — the methodology's sync writes them into this repository, so friction "
+        f"discovery does not walk them;"
+    )
+    assert fv.summary_lines(result)[0].endswith(
+        "0 report(s); 1 place(s) matching a synced copy."
+    )
+
+
+def test_without_the_tree_s_ownership_module_the_synced_check_is_reported_skipped(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """A tree that has not synced since the lifecycle area carried the module
+    cannot tell a synced copy: every match is walked, and a report says why."""
+    adopter = make_adopter_repo()
+    (adopter.pkit / "lifecycle" / "ownership.py").unlink()
+    place = ".pkit/cli/README.md"
+    adopter.write({CONFIG: _config([place]), place: _anchored("cli")})
+    result = fv.validate_friction(adopter.root)
+
+    assert [a.id for a in result.discovery.artefacts] == ["cli"]
+    assert result.errors == (), [f.message for f in result.errors]
+    unavailable = fv.FrictionFindingKind.OWNERSHIP_UNAVAILABLE
+    (report,) = [f for f in result.reports if f.kind is unavailable]
+    assert report.location == ".pkit/lifecycle/ownership.py"
+    assert report.message.endswith("every match is walked (run `pkit sync`).")
+
+
 # --- capability surface (the package schema's repository-relative globs) ------
 
 
