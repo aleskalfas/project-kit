@@ -17,8 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-29T15:20:29Z
-      outcome: updated
+      at: 2026-09-29T16:34:28Z
+      outcome: unchanged
+      unchanged-because: The signpost names the CLI's command groups and points at the CLI and lifecycle references; the capability verbs' behaviour in the methodology's source repository was added inside those references, and every area, command group and pointer the signpost names is as it was.
 ---
 
 # project-kit

@@ -27,7 +27,7 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, ADR-056, ADR-057, ADR-059]
     revalidated:
-      at: 2026-09-29T15:15:33Z
+      at: 2026-09-29T16:34:26Z
       outcome: updated
 ---
 
@@ -534,6 +534,8 @@ Before placing files, `pkit capabilities install` runs five checks in order. `--
 4. **Mandatory process connections (COR-053 point 6)** — every `depends-on` entry the capability marks mandatory must find its upstream, at an equal interface version when it names one. Refuse, one line per unmet mark with its reason ("Mandatory process connections", below). Never auto-installs.
 5. **Naming collision detection** — skills/agents from the new capability must not collide with already-installed names. Interactive resolution available.
 
+**In the methodology's source repository, run by its own code** ([ADR-059](../../tech-docs/architecture/decisions/ADR-059-methodology-source-repository.md)), the capability's subtree lies in the tree the running code installs from (`capabilities.authored_in_source`): the source is the destination. Install then places no files: after the first four checks it registers the capability in place with origin `kit-shipped` — no copy, no per-component receipt, no `project/` stub — and deploys it. Its collision check is register's (the capability's own artefacts are not collisions against themselves), and a collision with other content is refused, since nothing is copied that could be skipped. Beneath the verbs, a capability copy whose source and destination are one tree is refused for any caller.
+
 ### Register pre-flight checks (incubated; COR-031)
 
 `pkit capabilities register` shares the install pre-flights that still apply (backbone-satisfaction, capability-dependencies, mandatory process connections, collision detection against *other* installed content) and skips "exists in kit source" (the in-repo tree *is* the source). It adds one check the install path doesn't need:
@@ -552,6 +554,7 @@ Once those pass, **what gets deleted depends on origin** — origin-blind deleti
 
 - **`kit-shipped`** — the subtree is a disposable copy of kit source. Uninstall deletes the subtree, removes the registry entry, and re-runs deploy (deploy's stale-removal pass then drops the harness symlinks, since the source is gone). Unchanged from before.
 - **`incubated-in-repo`** — the subtree is the adopter's *only* copy of authored work. Uninstall **unregisters in place**: it removes the registry entry and drops the capability's deployed harness skills/agents, but **leaves the authored subtree on disk** (the CLI reports "unregistered in place; your authored files are kept at `<path>`"). Because the adapter deploy primitives key stale-removal on whether the *source file* still exists — and here it does — the lifecycle drops those harness entries explicitly rather than relying on a deploy re-run. Deleting an incubated capability's files is a separate explicit opt-in: `--purge` (which confirms first, honouring the pause-before-destructive-ops discipline; `--yes` skips the prompt for non-interactive use). The default never deletes incubated files.
+- **The methodology's source repository, run by its own code** ([ADR-059](../../tech-docs/architecture/decisions/ADR-059-methodology-source-repository.md)) — whatever the origin, the subtree is the capability's source, never a copy, so it is never deleted: it is unregistered in place as an incubated one is. For a `kit-shipped` registration, whose uninstall would otherwise delete the subtree, the CLI first says which subtree it would have deleted and that it unregisters instead, and asks (`--yes` answers, `--dry-run` asks nothing). `--purge` is refused; a capability leaves the source through git. The guard sits in `capabilities.uninstall_capability`, which resolves the running code's tree itself, so no caller deletes the source. Run by other code, uninstall refuses there before anything else, as install, upgrade and register do.
 
 ## Migration framework
 
@@ -618,6 +621,8 @@ Upgrading just one component (e.g., the project-management capability) skips bac
 #### Upgrading an incubated capability (COR-031 D1/D4)
 
 `pkit capabilities upgrade <name>` is **origin-aware**. For an `incubated-in-repo` capability there is no kit source to resolve against — the working tree *is* the source — so the command **must not** route through the kit-source resolution path. Doing so would mislabel the capability "no longer ships from source" and steer the adopter toward the destructive uninstall. Instead, "upgrade" for an incubated capability **re-applies deploy from the in-repo tree** (mirroring the sync skip-branch below): any newly-authored skills/agents re-materialise in the harness, and source-reconciliation stays suppressed. If the in-repo subtree has gone missing, the command reports that plainly — never as a kit-source orphan, and never suggesting uninstall. A `kit-shipped` capability's upgrade path is unchanged (resolve from kit source, refresh, run migrations).
+
+In the methodology's source repository, run by its own code ([ADR-059](../../tech-docs/architecture/decisions/ADR-059-methodology-source-repository.md)), a `kit-shipped` capability's kit source *is* its subtree, so its upgrade re-applies deploy in place the same way: the deploy primitives re-run and its query commands are provisioned, with nothing copied, no receipt restamped and no migration run — migrations carry an adopter's copy forward, and there is no copy. It is sync's self-host path for one capability.
 
 For capabilities, a **direction-split dependency check (COR-030)** runs before collision detection:
 
