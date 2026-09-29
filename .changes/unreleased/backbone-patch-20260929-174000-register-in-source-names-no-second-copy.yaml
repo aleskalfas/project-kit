@@ -1,0 +1,10 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit capabilities register <name>` in the methodology's source repository no
+  longer prints "a capability named <name> also ships from kit source … the
+  kit-shipped one is not installed": there the capability's subtree is the kit
+  source, so there is no second copy to name. The note still appears for an
+  adopter whose incubated capability later ships from the kit too.

@@ -4749,7 +4749,9 @@ def register_capability_cmd(name: str, dry_run: bool) -> None:
     # COR-031 boundary: a same-named capability now also ships from kit
     # source (graduation, before graduation is specified). Surface it so the
     # adopter can decide, rather than silently registering the in-repo copy.
-    if resolved.in_kit_source:
+    # In the methodology's source repository the in-repo subtree *is* the kit
+    # source (#1107), so there is no second copy to name.
+    if resolved.in_kit_source and not caps.authored_in_source(target_root, source_kit, name):
         click.echo(
             "\n  " + cli_render.style("strong",
                 f"Note: a capability named {name!r} also ships from kit source. "
