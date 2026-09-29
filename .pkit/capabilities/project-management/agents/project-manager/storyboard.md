@@ -13,7 +13,7 @@ This storyboard covers the **autonomous batch-planning flow** the `project-manag
 
 The flow operates on:
 
-- **Input state**: the user's fuzzy intent expressed in natural language; reference artifacts the user points the agent at (scratchpad notes under `.pkit/scratchpad/`, handoff documents, related issues, decision records); the capability's eight schemas at runtime (issue-types, workflow, body-format, titles, classification, git-conventions, validation-severity, time-containers); the adopter's `project/config.yaml` and `project/workstreams.yaml`.
+- **Input state**: the user's fuzzy intent expressed in natural language; reference artifacts the user points the agent at (scratchpad notes under `.pkit/scratchpad/`, handoff documents, related issues, decision records); the capability's eight schemas at runtime (issue-types, workflow, body-format, titles, classification, git-conventions, validation-severity, time-containers); the adopter's `project/config.yaml` and `project/workstreams.yaml`; and, only where the software-analysis capability is installed, the project's use cases (`UC-NNN`) as they stand on the default branch, per [project-management:DEC-054-use-case-validation].
 - **Mutations**: GitHub issue creation via `create-issue.py`; body edits via `edit-issue.py`; milestone attachment via `gh issue edit`; optional state transitions via `move-issue.py`; audit comments per [project-management:DEC-014-validation-severity-model].
 - **The single approval gate**: the moment the agent shows the proposed slicing and waits for the user's approval / revision / refusal. No `gh` mutation happens before this gate.
 
@@ -44,6 +44,7 @@ User invokes `project-manager` with fuzzy intent + a pointer to a reference docu
 - The reference document exists at the path the user names (or under a directory pattern the agent can resolve).
 - The user has filing authority for the issue types implied by the slicing per [project-management:DEC-008-pm-and-implementer-roles].
 - A milestone is either specified or default-resolvable from the capability's milestone config; if neither, the agent prompts before the approval gate.
+- Software-analysis is not installed, or it is and the use cases the intent affects exist on the default branch (otherwise Scenario 5).
 
 ### Walkthrough
 
@@ -64,6 +65,7 @@ User invokes `project-manager` with fuzzy intent + a pointer to a reference docu
 ### Behind the scenes
 
 - Read the reference document (scratchpad / handoff / issue) via the Read tool.
+- Where software-analysis is installed: read the use cases on the default branch that the intent affects, before any slicing. Each ticket in the plan then names the use cases it satisfies (a Use cases column; `none` for a ticket that serves none), and each filed body lists them under `## Use cases`. When no use case covers the intent, Scenario 5 applies instead. Where software-analysis is not installed, this bullet does not happen and the dialogue never mentions use cases.
 - Parse out the implied work units. Apply [project-management:DEC-004-six-level-hierarchy]'s typing rules (Umbrella / EPIC / Feature / Task / Milestone) to choose ticket types.
 - Apply [project-management:DEC-012-classification-axes]'s rules to assign workstream / priority / kind labels per ticket.
 - Resolve parent-refs per [project-management:DEC-005-linking-and-containment].
@@ -169,3 +171,47 @@ After approval, during the filing pass, one of the planned issues' bodies fails 
 - If the user chooses to skip the failing issue and continue: log the skip in the agent's surfaced result so the user remembers what wasn't filed.
 - If multiple issues fail in sequence: aggregate the corrections where possible; surface the aggregate plan to the user before re-trying.
 - After the filing loop terminates (success or partial-success), surface the final result: filed issues, skipped issues, total mutations.
+
+## Scenario 5: No use-case set exists yet
+
+### Trigger
+
+The software-analysis capability is installed, and the use-case step of batch planning finds nothing to plan against on the default branch: the project has no use cases yet (the walkthrough below), or none describes behaviour the intent involves (the last bullets of Behind the scenes).
+
+### Preconditions
+
+- The request has been recognised as batch planning, and the intent and reference material are clear (otherwise Scenario 2 comes first).
+- Software-analysis is registered as installed in the project's manifest. Where it is not, this scenario never fires: the use-case step is skipped, the dialogue never mentions use cases, and Scenario 1 runs as written.
+- On the default branch, the analysis location holds no use case, or none that describes some behaviour the intent involves.
+
+### Walkthrough
+
+> **User:** Plan the export feature from the handoff note in the scratchpad.
+>
+> **project-manager:** *Reading the handoff note…* *Reading the use cases on origin/main…* There are no use cases yet, so I can't check this plan against what the software must do. Want them written first — the export goal and its variants, through software-analysis — or should I plan without them?
+>
+> **User:** Write them first.
+>
+> **project-manager:** Then I'll stop here and file nothing. The handoff names three goals: export a report, schedule an export, and export to a shared folder. Write them with software-analysis's authoring, land them on main, and ask me again; I'll slice against them then.
+>
+> *(Later session, once the use cases have landed.)*
+>
+> **User:** The use cases are in — plan the export feature now.
+>
+> **project-manager:** *Reading the use cases on origin/main…* UC-001 to UC-003 cover the three goals. *(Continues with Scenario 1 from the slicing step; each ticket names the use cases it satisfies.)*
+
+The user may choose the other way at the first question:
+
+> **User:** Plan without them.
+>
+> **project-manager:** Planning without use cases, so no ticket will cite one. I'll note that at the approval gate. *(Continues with Scenario 1 from the slicing step, without the Use cases column.)*
+
+### Behind the scenes
+
+- Check that software-analysis is installed: `.pkit/manifest.yaml` lists it under `components:`. If it is not, skip everything below.
+- Read the use cases on the default branch at software-analysis's `analysis` location — the internal documentation root's `analysis` folder unless software-analysis has recorded another location — as the batch-plan sub-procedure's step 2 describes. Read `origin/<default branch>`, not the working tree: a use case on an unlanded branch can still be renumbered.
+- Finding none, raise the gap before any slicing, and offer both ways on in one turn.
+- **Write them first:** name the goals from the intent that need use cases, and end the session with no mutation. The project-manager never writes a use case itself — it does not stamp, edit or commit analysis files. It suggests nothing for the ids, since numbers are assigned when the use cases land.
+- **Plan without them:** continue with Scenario 1 without the Use cases column and with no `## Use cases` sections, and say at the approval gate that the plan cites no use case.
+- The same offer applies when use cases exist but none describes behaviour the intent involves. Then the plan may cite the use cases that do apply, and the gate names the behaviour that nothing describes.
+- No `gh` mutation happens in this scenario before the approval gate of the plan that follows, if there is one.

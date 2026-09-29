@@ -11,7 +11,7 @@ When the request is **single-issue** ("file this one bug", "create the EPIC for 
 
 ## What this sub-procedure carries
 
-Five sequential steps. The agent narrates each step's start to the user per the storyboard's tone rules; the procedural detail is here.
+Six sequential steps. The agent narrates each step's start to the user per the storyboard's tone rules; the procedural detail is here. Step 2 runs only where the software-analysis capability is installed ([project-management:DEC-054-use-case-validation]); elsewhere the flow goes from step 1 straight to step 3, and nothing in it mentions use cases.
 
 ### 1. Read intent and reference material
 
@@ -20,7 +20,18 @@ Five sequential steps. The agent narrates each step's start to the user per the 
 - If any reference cannot be resolved (path not found, issue not accessible), surface the gap before proposing a slicing — do not guess content.
 - If the user's intent has missing inputs that prevent slicing (no reference at all; scope too vague), ask at most two clarifying questions per the storyboard's Scenario 2 — not a sequence of single-question turns.
 
-### 2. Propose the slicing
+### 2. Walk the use cases (only when software-analysis is installed)
+
+Per [project-management:DEC-054-use-case-validation], a slicing is checked against what the software must do before it is proposed.
+
+- **Is it installed?** Software-analysis is installed when `.pkit/manifest.yaml` lists it under `components:` (kind `capability`). If it is not, skip this step, leave out the Use cases column in step 3 and the `## Use cases` section in step 6, and say nothing about use cases.
+- **Read the use cases as they stand on the default branch**, not in the working tree. A use case written on a branch that has not landed may still be renumbered, so its number cannot be cited yet. They live under software-analysis's `analysis` location — the `analysis` folder of the internal documentation root (the `internal` entry under `docs` in `.pkit/project/config.yaml`, `docs/` by default), unless software-analysis has recorded another location in its own project configuration. A use case is a Markdown file there whose front matter carries an `id` of the form `UC-NNN`. Read them at `origin/<default branch>` (for example `git ls-tree -r --name-only origin/main -- <location>` and `git show origin/main:<path>`), after a `git fetch` if the clone may be stale.
+- **Map the intent onto them.** Note which use cases the intent affects, and which behaviour in the intent no use case describes.
+- **A gap stops the flow before slicing.** When the project has no use cases yet, or the intent involves behaviour no use case describes, say so and offer two ways on, per the storyboard's Scenario 5:
+  - **Have the use cases written first**, through software-analysis's own authoring. The project-manager does not write use cases. Planning resumes once they have landed on the default branch, so the plan can cite them.
+  - **Plan without them.** Planning goes ahead, and the plan marks the issues that cite no use case.
+
+### 3. Propose the slicing
 
 Apply the methodology's typing rules to the work units implied by intent + references:
 
@@ -29,13 +40,14 @@ Apply the methodology's typing rules to the work units implied by intent + refer
 - **Parent-refs** — [project-management:DEC-005-linking-and-containment] specifies the `Milestone: #N` / `EPIC: #N` / `Feature: #N` / `Task: #N` body-first-line format. The slicing must produce a consistent reference graph (no cycles; each child has the correct parent type per `issue-types.yaml`'s containment graph).
 - **Dependency chain** — express ordering between issues either implicitly (via parent-refs) or explicitly (as Dependencies sections in the body). Flag tight coupling in the body's Approach / Notes section.
 - **Milestone resolution** — if the adopter's config or the intent names a milestone, attach it. If neither, prompt before the approval gate.
+- **Use cases per ticket** (only when step 2 ran) — name the use cases each ticket satisfies, citing only ids step 2 found on the default branch. A ticket that serves none — an internal refactor, a chore — shows `none`.
 
-Render the slicing as a single table the user can scan at a glance:
+Render the slicing as a single table the user can scan at a glance (the Use cases column only when step 2 ran):
 
-| # | Type | Title | Parent | Workstream | Milestone | Priority | Notes |
-|---|---|---|---|---|---|---|---|
+| # | Type | Title | Parent | Workstream | Milestone | Priority | Use cases | Notes |
+|---|---|---|---|---|---|---|---|---|
 
-### 3. Adversarial review (when threshold applies)
+### 4. Adversarial review (when threshold applies)
 
 Per [project-management:DEC-029-project-manager-agent-shape]'s reviewer-invocation discipline:
 
@@ -45,26 +57,28 @@ Per [project-management:DEC-029-project-manager-agent-shape]'s reviewer-invocati
 
 Capture each reviewer's findings. Decide per finding whether to (a) revise the slicing to incorporate the concern, (b) annotate the EPIC body's Approach / Notes section to record the unresolved concern, or (c) note the disagreement and let the user resolve at the approval gate.
 
-### 4. Single approval gate
+### 5. Single approval gate
 
 Present the slicing to the user as a single message:
 
 - The slicing table.
 - The dependency chain (explicit ordering).
 - Reviewer findings summary (which were incorporated, which are noted, which need user resolution).
-- Bodies are not shown at the gate — they are filled per ticket after approval. The slicing's classifications and parent-refs are the contract the user approves.
+- When step 2 ran: the behaviour no use case describes, if the user chose to plan without it.
+- Bodies are not shown at the gate — they are filled per ticket after approval. The slicing's classifications, parent-refs and use cases are the contract the user approves.
 
 End the message with: "Approve, revise, or cancel?"
 
-**No `gh` mutation happens before this gate fires positively.** On revision, return to step 2 and re-render. On cancel, end the operation; surface "Cancelled. Nothing filed." On approve, proceed to step 5.
+**No `gh` mutation happens before this gate fires positively.** On revision, return to step 3 and re-render. On cancel, end the operation; surface "Cancelled. Nothing filed." On approve, proceed to step 6.
 
-### 5. File via primitives
+### 6. File via primitives
 
 In dependency order (parents before children so parent-ref values are available):
 
 - For each ticket: call `scripts/create-issue.py` with `--type`, `--title`, `--kind`, `--workstream`, `--priority`, `--parent` (if any), `--yes` — and, when the plan originated from a feedback/change-request report #N, `--from-report N` so each filed issue is auto-linked into #N's `## Tracked by` (per [project-management:DEC-048-from-report-auto-link]; a link failure exits 4 with a remediation command and never rolls the issue back).
 - Parse the script's `[ok] created: <URL>` line for the new issue number.
-- Immediately call `scripts/edit-issue.py --body-file <tmp> --yes` to overwrite the auto-generated template body with the planned body content (the create-issue.py script produces a placeholder body; the real content is what was approved at the gate).
+- Immediately call `scripts/edit-issue.py --body-file <tmp> --yes` to overwrite the auto-generated template body with the planned body content (the create-issue.py script produces a placeholder body; the real content is what was approved at the gate). When the ticket names use cases, the body lists them in a `## Use cases` section, one per line (`- UC-003 — <the use case's title>`); a ticket that serves none has no such section.
+- A use-case citation warning from `edit-issue` on a body the plan wrote means it cites a use case that is not on the default branch — step 2 read a stale view, or a use case was renumbered since. Correct the body (fix or drop the id) and re-run `edit-issue` rather than leave the guess filed.
 - Attach milestone via `gh issue edit <number> -R <repo> --milestone "<title>"` per the workaround for issue #177 (the create-issue.py `--milestone NUM` path is broken pending that issue's fix).
 - Handle each script's failure modes per [validate-body](validate-body.md)'s severity model: warnings emit and continue; hard-rejects pause and follow the storyboard's Scenario 4 walkthrough.
 
@@ -80,6 +94,7 @@ Per the storyboard's Scenario 4: on hard-reject, surface the specific rule that 
 ## What this sub-procedure does NOT do
 
 - It does not architect *what* to build. Architectural and product decisions go to the user, the `architect` agent, or a human. Batch-planning takes the user's stated outcomes and slices them into tickets; it does not invent the outcomes.
+- It does not write use cases. When they are missing it offers to have them written through software-analysis, and plans against them once they have landed.
 - It does not authorise itself to bypass the membership gate ([project-management:DEC-021-team-membership-gate]) or any hard-reject severity. The user authorises bypassable-with-audit overrides; hard-rejects are never bypassable.
 - It does not skip the single approval gate even when "the slicing seems obvious". The gate is the contract; the agent waits.
 - It does not file before the cited prerequisites (parent EPIC, dependent decisions). If a slicing depends on an unfiled prerequisite, file the prerequisite first and then file the dependents in the same approval-gated session.

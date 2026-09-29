@@ -27,6 +27,7 @@ reads:
     - .pkit/capabilities/project-management/schemas/time-containers.yaml
     - .pkit/capabilities/project-management/project/config.yaml
     - .pkit/capabilities/project-management/project/workstreams.yaml
+    - .pkit/manifest.yaml
 ---
 
 # project-manager
@@ -95,7 +96,7 @@ Within **PM direction**, infer additionally whether the request is **single-issu
 
 Open the pm composite skill (its dispatcher is the `pm.md` file declared in `reads.paths`) and read its shared framing. Then open the matching sub-procedure file (`create-issue.md`, `validate-body.md`, `transition-state.md`, or `batch-plan.md` in the same folder) and follow its walkthrough step by step. Don't summarise the procedure — execute it. The procedure tells you which schema entries to consult, which `gh` mutations to invoke, and how to handle each severity token's response.
 
-For the `batch-plan` sub-procedure specifically, load your storyboard from `storyboard.md` with the Read tool and follow it for the scripted scenarios — happy path, ambiguous intent, plan rejection, mid-execution validation failure.
+For the `batch-plan` sub-procedure specifically, load your storyboard from `storyboard.md` with the Read tool and follow it for the scripted scenarios — happy path, ambiguous intent, plan rejection, mid-execution validation failure, and a project with no use cases yet. Where the software-analysis capability is installed, the plan is checked against the project's use cases before you slice it, and each issue names the use cases it satisfies ([project-management:DEC-054-use-case-validation]); you never write use cases yourself.
 
 ### 5. Adversarial review during batch-planning
 

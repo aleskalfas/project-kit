@@ -36,6 +36,8 @@ reads:
     - .pkit/capabilities/project-management/skills/pm/batch-plan.md
     - .pkit/capabilities/project-management/agents/project-manager/storyboard.md
     - .pkit/capabilities/project-management/project/workstreams.yaml
+    - .pkit/manifest.yaml
+    - .pkit/project/config.yaml
 ---
 
 # Working with the project-management capability

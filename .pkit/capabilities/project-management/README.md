@@ -15,7 +15,7 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-09-29T18:35:28Z
+      at: 2026-09-29T18:57:45Z
       outcome: updated
 ---
 
@@ -277,6 +277,16 @@ pkit pm link-parent 1101 1102 --yes          # link two issues without the promp
 The asymmetry is deliberate: `create-issue` keeps stamping the template skeleton for the author to fill (stamp-then-fill workflow is preserved), and a just-filed Todo that cannot advance is harmless. The **block** lives at the first transition — that is where the harm of an unauthored body advancing through its whole lifecycle is closed.
 
 `create-issue` always emits the warning when filing an unauthored body; it never silently admits one.
+
+#### Use cases in planning and in bodies (per [project-management:DEC-054-use-case-validation])
+
+With the **software-analysis** capability installed, work is planned against the project's use cases — its written account of what the software must do, each numbered `UC-NNN`. Without it, nothing below applies, and nothing changes.
+
+- **Batch planning reads the use cases before it slices.** The project-manager's batch-plan flow reads the use cases the intent affects before it proposes a slicing. The plan shows, for each issue, the use cases it satisfies (`none` for a chore or a refactor), and each filed body lists them in a `## Use cases` section. The section is optional and outside the required minimum.
+- **A gap is raised first.** When the project has no use cases yet, or the intent involves behaviour no use case describes, the agent offers two ways on: have them written first through software-analysis and plan once they have landed, or plan without them. The project-manager never writes use cases itself.
+- **Bodies cite only use cases that have landed.** `validate-issue` and `edit-issue` (on a body edit) find every `UC-NNN` a body cites and warn — `body.use-case-citation` — about each one that is not a use case on the default branch. It is the rule for predicted decision ids, at the same severity: a use-case number is settled only when its use case reaches the default branch, and when two branches pick the same number the later one renumbers. A warning never blocks the edit. A withdrawn use case still counts, since its id is never reused.
+- **What the check reads.** Software-analysis counts as installed when `.pkit/manifest.yaml` lists it under `components:` — the same test as any other capability's contribution. The use cases are read at `origin/<default_branch>` (the configured `default_branch`, `main` when none is set), falling back to the local branch when the clone has no remote-tracking ref; the working tree is never read, so fetch first for a current view. They are read under software-analysis's `analysis` location, taken as the backbone takes it: a location recorded in `.pkit/capabilities/software-analysis/project/docs-locations.yaml` wins, then the one its package metadata declares, then the `analysis` folder of the internal documentation root (`docs.internal` in `.pkit/project/config.yaml`). A use case is any Markdown file there whose front matter carries an `id` of the form `UC-NNN`, whatever its folder or file name. The reading lives in `scripts/_lib/use_case_citations.py`.
+- **When the default branch cannot be read** — no `origin/<branch>` or `<branch>` in the clone, or `git` fails — the check does not guess. It warns once, as `body.use-case-citation.unverified`, that the citations were not checked, which is not a report that they are missing. A body that cites no use case is never read against the default branch.
 
 #### PR body validation — residual placeholder detection (per [project-management:DEC-031-reject-unauthored-placeholder-bodies])
 
@@ -897,7 +907,7 @@ Schemas distilled from upstream METs carry a structured `source:` block (per the
 
 - **GitHub** as the work-tracker. The methodology names GitHub primitives directly (per MET-002 / DEC-002): Issues, native sub-issues, Milestones, Projects v2 boards and fields, labels, branch protection, GraphQL.
 - **`gh` CLI** authenticated for the target organization, or equivalent GitHub access for whatever tooling the project-manager invokes.
-- **No other capabilities required.** This capability is self-contained.
+- **No other capabilities required.** This capability is self-contained. Installing software-analysis adds the use-case step to batch planning and the use-case citation check (see "Use cases in planning and in bodies" above); neither needs the other.
 
 ## Feedback to the spec
 
