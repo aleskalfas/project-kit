@@ -2,6 +2,22 @@
 authors:
   - Aleš Kalfas <kalfas.ales@gmail.com>
 started: 2026-09-24
+retired: 2026-09-29
+produced:
+  - tech-docs/analysis/use-case-model/use-cases/coordination/UC-001-resume-after-all-sessions-died.md
+  - tech-docs/analysis/use-case-model/use-cases/coordination/UC-002-resume-an-interrupted-task.md
+  - tech-docs/analysis/use-case-model/use-cases/coordination/UC-003-find-work-when-the-clone-holds-none.md
+  - tech-docs/analysis/use-case-model/use-cases/coordination/UC-004-see-every-clone-at-once.md
+  - tech-docs/analysis/use-case-model/use-cases/coordination/UC-005-release-with-unfinished-work.md
+  - tech-docs/analysis/use-case-model/use-cases/coordination/UC-006-resolve-a-decision-number-collision.md
+  - tech-docs/analysis/use-case-model/use-cases/coordination/UC-007-resume-sessions-during-a-stabilisation.md
+  - tech-docs/analysis/use-case-model/use-cases/coordination/UC-008-land-integration-work-during-a-stabilisation.md
+  - tech-docs/analysis/use-case-model/use-cases/coordination/UC-009-delegate-a-task-to-a-developer-subagent.md
+  - tech-docs/analysis/use-case-model/use-cases/coordination/UC-010-stabilise-a-milestone.md
+  - tech-docs/analysis/use-case-model/journeys/JRN-001-restart-after-every-session-died.md
+  - tech-docs/analysis/use-case-model/journeys/JRN-002-release-under-stabilisation.md
+  - tech-docs/analysis/revalidations/2026-09-29-multi-clone-coordination.md
+  - 'EPIC #943'
 ---
 
 # Multi clone coordination arc
@@ -54,3 +70,18 @@ COR provisional numbering · DEC-049 reciprocal (content vs projection) · PRJ-0
 ## Status
 
 Active. Waiting on EPIC #885 (#886–#890). Next: land the core record (#886), tooling (#887, #888), pm adoption (#889), then author the scenario file (#890) and **re-walk S1–S9 against this design — expect new gaps** — then file the coordination EPIC citing the scenarios and retire this note.
+
+## Closing (2026-09-29)
+
+Retired as produced by the coordination use cases and EPIC #943. The scenarios became project-kit's first analysis artefacts, under `tech-docs/analysis/` (#890): use cases UC-001 to UC-009 for S1 to S9 in order, UC-010 for stabilising a Milestone (the first half of S5), and journeys JRN-001 (S1 → S4 → S3) and JRN-002 (stabilise → overview → release), with the actors and glossary terms they rest on. Where a use case describes design not built yet, its text says so and names EPIC #943; its anchors are the records and code that exist.
+
+The re-walk is recorded in `tech-docs/analysis/revalidations/2026-09-29-multi-clone-coordination.md`, beside gaps A to D. It found six more, each resolved by a design change the slicing above must carry when EPIC #943's Features are filed:
+
+- **E** (S1, S4) — `brief` reads ownership through the ADR-041 seam from one batched read of the open assigned issues and their comments, not from label queries: the default substrate is the comment log. → F1 T1.2.
+- **F** (S3) — reclaimable items are a group of their own, not intersected with the instance's workstreams, which would remove exactly what gap A added; an empty position names the filter that emptied it. → F1 T1.2.
+- **G** (S5) — one release-scope computation, read by the gate, the guards and `brief`, dropping a deferred parent with its subtree. → F2 T2.1 and T2.2.
+- **H** (S6) — `renumber` refuses when the record already landed under this branch's slug, or `<new>` is taken; "refuses if `<old>` is on main under another slug" above was inverted. → F3 T3.2.
+- **I** (S8) — the new-front test reads "landed" on the branch the work lands on, so continuing an integration arc is no new front. → F2 T2.2.
+- **J** (S9) — the instance id resolves through git's common directory, so every worktree of a clone shares it. → F1 (T1.1, or a Task of its own).
+
+Use cases per Feature, for the slicing: F1 — UC-001, UC-002, UC-003, UC-004, UC-009; F2 — UC-005, UC-007, UC-008, UC-010; F3 — UC-006. Still owed before the Features are filed: the `critic` and `architect` re-run under Reviews, and the authorisations listed above.
