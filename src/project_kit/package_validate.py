@@ -38,10 +38,12 @@ passes, in order, each producing findings located by JSON Pointer:
    `pkit capabilities refresh <name>` as the fix. All ERRORs but one WARNING:
    a `runtime_ignore` entry that declares the process journals, whose ignore
    line the backbone owns (`process_journal.claims_journals`) — the mark of a
-   component older than the backbone it runs on. Its fix follows where the
-   package comes from (`Provenance`): the project drops the entry from its own
-   file, upgrades a synced copy's component together with the backbone, and
-   moves an externally sourced one's pin.
+   component older than the backbone it runs on — while the project commits
+   its journals, when the `.pkit/.gitignore` render drops the entry
+   (`JournalSettings.drops_claim`). Its fix follows where the package comes
+   from (`Provenance`): the project drops the entry from its own file, upgrades
+   a synced copy's component together with the backbone, and moves an
+   externally sourced one's pin.
 
 One check across packages is this pass's, over the installed components only:
 an `aliases` entry another name shadows — a backbone command, another
@@ -121,12 +123,17 @@ POINT_SEPARATOR = ":"
 
 _yaml = YAML(typ="safe")
 
+# The journal settings a package is judged under when the caller has no project's
+# in hand: the defaults, under which the render drops no entry, so none is warned.
+_DEFAULT_JOURNAL = process_journal.JournalSettings()
+
 
 class Severity(Enum):
     """Whether a finding fails the check. Warnings never do; their three sources
     are an unknown key under a schema that leaves its object open (pass 2), a
-    `runtime_ignore` entry declaring the process journals (pass 3), and an
-    installed capability's alias another name shadows (`shadowed_alias_message`)."""
+    `runtime_ignore` entry declaring the process journals the project commits
+    (pass 3), and an installed capability's alias another name shadows
+    (`shadowed_alias_message`)."""
 
     ERROR = "error"
     WARNING = "warning"
@@ -204,6 +211,7 @@ def validate_package_file(
     component_dir: Path | None = None,
     expected_name: str | None = None,
     provenance: Provenance = Provenance.OWN,
+    journal: process_journal.JournalSettings = _DEFAULT_JOURNAL,
 ) -> PackageReport:
     """Read and validate one package file. See `validate_package` for the passes.
 
@@ -231,6 +239,7 @@ def validate_package_file(
         component_dir=component_dir if component_dir is not None else path.parent,
         expected_name=expected_name,
         provenance=provenance,
+        journal=journal,
     )
     return PackageReport(file=path, findings=tuple(findings))
 
@@ -242,6 +251,7 @@ def validate_package(
     component_dir: Path,
     expected_name: str | None = None,
     provenance: Provenance = Provenance.OWN,
+    journal: process_journal.JournalSettings = _DEFAULT_JOURNAL,
 ) -> list[PackageFinding]:
     """Validate a parsed package mapping: shape (unknown keys included), unknown
     keys under an open schema, repository checks.
@@ -254,7 +264,10 @@ def validate_package(
     `scripts` and `schemas/` are resolved; `expected_name` is the directory
     name the component must match, when the caller knows it; `provenance` is
     where the file comes from (`package_provenance`), which decides the fix a
-    finding names — the project's own file unless the caller knows otherwise.
+    finding names — the project's own file unless the caller knows otherwise;
+    `journal` is the project's journal settings, which decide whether an entry
+    declaring the process journals is warned — the defaults, never, unless the
+    caller has the project's (`validate_installed_packages`).
 
     One location is reported by one pass: a later pass never adds a finding
     where an earlier one already stands (a key whose type the shape pass
@@ -285,7 +298,9 @@ def validate_package(
         )
         walker = _UnknownKeyWalker(validator)
         _add_pass(findings, walker.walk(raw, schema, registry.resolver(base_uri=schema_id), ""))
-    _add_pass(findings, _repository_findings(raw, component_dir, expected_name, provenance))
+    _add_pass(
+        findings, _repository_findings(raw, component_dir, expected_name, provenance, journal)
+    )
     return findings
 
 
@@ -365,6 +380,7 @@ def _repository_findings(
     component_dir: Path,
     expected_name: str | None,
     provenance: Provenance,
+    journal: process_journal.JournalSettings,
 ) -> list[PackageFinding]:
     """The checks that need the tree or a parser the schema lacks.
 
@@ -437,7 +453,7 @@ def _repository_findings(
                 _check_relative(findings, f"/{key}/{index}", value, "a repository-relative path")
 
     for index, pattern in enumerate(_items(raw.get("runtime_ignore"))):
-        if isinstance(pattern, str) and process_journal.claims_journals(pattern):
+        if isinstance(pattern, str) and journal.drops_claim(pattern):
             findings.append(
                 PackageFinding(
                     f"/runtime_ignore/{index}",
@@ -685,14 +701,15 @@ _JOURNAL_CLAIM_FIX = {
 
 
 def journal_claim_message(pattern: str, provenance: Provenance = Provenance.OWN) -> str:
-    """The warning on a `runtime_ignore` entry that declares process journals
-    (`process_journal.claims_journals`): what it breaks, and the way out for a
-    package of that provenance."""
+    """The warning on a `runtime_ignore` entry that declares the process journals
+    a project commits (`process_journal.JournalSettings.drops_claim`): what the
+    render does with it, and the way out for a package of that provenance."""
     return (
         f"{pattern!r} declares process journals, whose ignore line the backbone owns: it "
-        f"ignores {process_journal.JOURNAL_GLOB!r} unless the project commits its journals "
-        f"(`process.journal.committed: true`, COR-033 point 7). Declared here too, it keeps "
-        f"them ignored when the project commits them. {_JOURNAL_CLAIM_FIX[provenance]}"
+        f"ignores {process_journal.JOURNAL_GLOB!r} unless the project commits its journals, "
+        f"and this project does (`process.journal.committed: true`, COR-033 point 7), so "
+        f"the `.pkit/.gitignore` render drops the entry and names it in a comment line. "
+        f"{_JOURNAL_CLAIM_FIX[provenance]}"
     )
 
 
@@ -844,10 +861,13 @@ def load_package_schema(target_root: Path) -> tuple[Mapping[str, Any] | None, st
 def validate_installed_packages(target_root: Path) -> PackagesPass:
     """Validate every registered component's package file (the `packages` member),
     each with its provenance (`package_provenance`), so a finding names the fix
-    that lasts; then add, to each capability's report, the aliases of it another
-    name shadows (`_shadowed_alias_findings`)."""
+    that lasts, and under the project's journal settings, so an entry is warned
+    on exactly when the `.pkit/.gitignore` render drops it; then add, to each
+    capability's report, the aliases of it another name shadows
+    (`_shadowed_alias_findings`)."""
     schema, note = load_package_schema(target_root)
     ownership = lifecycle_ownership.load_ownership(target_root)
+    journal = process_journal.read_settings(target_root)
     shadowed = _shadowed_alias_findings(target_root)
     reports = [
         _with_pass(
@@ -857,6 +877,7 @@ def validate_installed_packages(target_root: Path) -> PackagesPass:
                 component_dir=component_dir,
                 expected_name=entry.name,
                 provenance=package_provenance(target_root, package, entry.origin, ownership),
+                journal=journal,
             ),
             shadowed.get(entry.name, []) if entry.kind == "capability" else [],
         )

@@ -21,12 +21,14 @@ region.
 Separately, this module renders the pkit-owned `.pkit/.gitignore` for the
 runtime-local files pkit writes (ADR-009 rule 7), wholesale from the backbone's
 and each installed component's declarations and from the project's
-configuration.
+configuration — the backbone's choice for the process journals taking
+precedence over a component entry that still claims them.
 """
 from __future__ import annotations
 
 import subprocess
 from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 
 import click
@@ -48,8 +50,8 @@ _BACKBONE_FOOTPRINT: tuple[str, ...] = (".pkit/",)
 # directory it lands in — so this list holds the runtime-local files core writes
 # under `.pkit/`. The process journals core's engine writes pass the same test,
 # though they land in each capability's `project/` subtree; their pattern
-# follows a setting, so `runtime_ignore()` takes it from `process_journal`, not
-# from this fixed list.
+# follows a setting, so `resolve_runtime_ignore()` takes it from
+# `process_journal`, not from this fixed list.
 #
 # Patterns are repo-root-relative strings declared verbatim, exactly as
 # `footprint` declarations are (the aggregator stores them as-given; the T2
@@ -153,28 +155,81 @@ def _read_runtime_ignore_decl(package_yaml: Path) -> list[str]:
     return [str(x).strip() for x in raw if str(x).strip()]
 
 
-def runtime_ignore(target_root: Path) -> list[str]:
+@dataclass(frozen=True)
+class DroppedEntries:
+    """A component's `runtime_ignore` entries the render leaves out: each claims
+    the process journals while the project commits them, so the backbone's
+    choice takes precedence (`process_journal.JournalSettings.drops_claim`)."""
+
+    component: str
+    entries: tuple[str, ...]  # as declared, repo-root-relative
+
+    def describe(self) -> str:
+        """`<component> '<entry>' — <why>`: the one wording of the rendered
+        comment line and of the `pkit config set` report."""
+        quoted = ", ".join(f"'{entry}'" for entry in self.entries)
+        return f"{self.component} {quoted} — {process_journal.CLAIM_DROPPED}"
+
+
+@dataclass(frozen=True)
+class RuntimeIgnore:
+    """What the `.pkit/.gitignore` render is made of (`resolve_runtime_ignore`)."""
+
+    patterns: tuple[str, ...]  # repo-root-relative, de-duped, order-stable
+    dropped: tuple[DroppedEntries, ...]  # one per component, in manifest order
+    components: int  # the backbone seam plus each component a pattern comes from
+
+
+def resolve_runtime_ignore(target_root: Path) -> RuntimeIgnore:
     """Aggregate runtime-local ignore patterns across installed components
     (backbone + permissions seam + each adapter/capability's declared
-    `runtime_ignore`). De-duped, order-stable — the source list the T2
-    `.pkit/.gitignore` renderer wholesale-renders from (ADR-009 rule 7).
+    `runtime_ignore`) — what the `.pkit/.gitignore` renderer wholesale-renders
+    from (ADR-009 rule 7).
 
     The backbone's contribution has one configured part: the process journal
     (COR-033 point 7). The engine writes every journal and owns their path —
     inside each capability's `project/process/` — so the backbone, not a
-    capability, declares the pattern, and declares it unless the project
-    chose to commit its journals (`process_journal.runtime_ignore_patterns`).
-    Because the render is wholesale, the ignore line follows the setting on the
-    next render: install, sync, or a `pkit config set`."""
-    out: list[str] = list(_BACKBONE_RUNTIME_IGNORE)
-    out.extend(process_journal.runtime_ignore_patterns(target_root))
+    capability, declares the pattern, and declares it unless the project chose
+    to commit its journals. Its choice takes precedence: while the journals are
+    committed, a component entry that still claims them (a package older than
+    the backbone's ownership) is left out and listed in `dropped`, so no
+    component keeps committed journals ignored. Because the render is
+    wholesale, the result follows the setting on the next render: install,
+    sync, or a `pkit config set`."""
+    journal = process_journal.read_settings(target_root)
+    patterns: list[str] = [*_BACKBONE_RUNTIME_IGNORE, *journal.runtime_ignore_patterns()]
+    dropped: list[DroppedEntries] = []
+    components = 1  # the backbone/permissions core seam
+    for name, declared in _component_runtime_ignore(target_root):
+        kept = [p for p in declared if not journal.drops_claim(p)]
+        lost = _dedupe([p for p in declared if journal.drops_claim(p)])
+        patterns.extend(kept)
+        components += 1 if kept else 0
+        if lost:
+            dropped.append(DroppedEntries(component=name, entries=tuple(lost)))
+    return RuntimeIgnore(
+        patterns=tuple(_dedupe(patterns)), dropped=tuple(dropped), components=components
+    )
+
+
+def runtime_ignore(target_root: Path) -> list[str]:
+    """The patterns `resolve_runtime_ignore` aggregates: what the rendered
+    `.pkit/.gitignore` ignores."""
+    return list(resolve_runtime_ignore(target_root).patterns)
+
+
+def _component_runtime_ignore(target_root: Path) -> list[tuple[str, list[str]]]:
+    """Each installed adapter/capability's `runtime_ignore:` declaration, by
+    component name, in manifest order."""
     manifest = read_backbone_manifest(target_root)
-    if manifest is not None:
-        for entry in manifest.components:
-            pkg = _component_package_yaml(target_root, entry.kind, entry.name)
-            if pkg is not None:
-                out.extend(_read_runtime_ignore_decl(pkg))
-    return _dedupe(out)
+    if manifest is None:
+        return []
+    declarations: list[tuple[str, list[str]]] = []
+    for entry in manifest.components:
+        pkg = _component_package_yaml(target_root, entry.kind, entry.name)
+        if pkg is not None:
+            declarations.append((entry.name, _read_runtime_ignore_decl(pkg)))
+    return declarations
 
 
 def _dedupe(paths: list[str]) -> list[str]:
@@ -190,9 +245,9 @@ def _dedupe(paths: list[str]) -> list[str]:
 
 # --- runtime-ignore renderer (ADR-009 rule 7) -----------------------
 #
-# The renderer that *consumes* the `runtime_ignore()` collector above and
+# The renderer that *consumes* the `resolve_runtime_ignore()` collector above and
 # wholesale-regenerates the pkit-owned `.pkit/.gitignore`. Lives at the CORE
-# tier (a sibling to `runtime_ignore()`), invoked directly from the install path
+# tier (a sibling to the collector), invoked directly from the install path
 # and BOTH sync paths — NOT from the adapter-primitives runner, which is adapter
 # tier and would skip backbone/capability declarations when no adapter is
 # installed (the layering inversion ADR-009 forbids).
@@ -232,12 +287,20 @@ def _render_pattern(pattern: str) -> str:
 
 def render_runtime_ignore_content(target_root: Path) -> str:
     """Build the full text of `.pkit/.gitignore` from the aggregated
-    `runtime_ignore()` declarations. Pure: no filesystem writes, deterministic
-    for a given set of installed components (so re-rendering is byte-identical).
+    `runtime_ignore` declarations and the configuration they follow. Pure: no
+    filesystem writes, deterministic for a given set of installed components
+    and configuration (so re-rendering is byte-identical).
     """
-    patterns = [_render_pattern(p) for p in runtime_ignore(target_root)]
-    body = "".join(f"{p}\n" for p in patterns)
-    return _RUNTIME_IGNORE_HEADER + ("\n" + body if body else "")
+    return _render_content(resolve_runtime_ignore(target_root))
+
+
+def _render_content(resolved: RuntimeIgnore) -> str:
+    """The file's text: the header, the patterns, then one comment line per
+    component whose entries the render left out, so a reader of the file sees
+    why they are absent."""
+    patterns = "".join(f"{_render_pattern(p)}\n" for p in resolved.patterns)
+    dropped = "".join(f"# dropped: {d.describe()}\n" for d in resolved.dropped)
+    return _RUNTIME_IGNORE_HEADER + "".join("\n" + part for part in (patterns, dropped) if part)
 
 
 def render_runtime_ignore(target_root: Path, *, dry_run: bool = False) -> str:
@@ -250,34 +313,45 @@ def render_runtime_ignore(target_root: Path, *, dry_run: bool = False) -> str:
 
     Returns a one-line status message for the caller to echo.
     """
-    patterns = runtime_ignore(target_root)
-    component_count = _runtime_ignore_component_count(target_root)
-    content = render_runtime_ignore_content(target_root)
+    return _render(target_root, resolve_runtime_ignore(target_root), dry_run=dry_run)
 
+
+def _render(target_root: Path, resolved: RuntimeIgnore, *, dry_run: bool) -> str:
+    """Write the render of `resolved` (dry-run: write nothing); its status line."""
+    summary = (
+        f"{_RUNTIME_IGNORE_PATH} "
+        f"({len(resolved.patterns)} pattern(s) from {resolved.components} component(s))"
+    )
     if dry_run:
-        return cli_render.style(
-            "strong",
-            f"  would render  {_RUNTIME_IGNORE_PATH} "
-            f"({len(patterns)} pattern(s) from {component_count} component(s))",
-        )
+        return cli_render.style("strong", f"  would render  {summary}")
 
     path = target_root / ".pkit" / ".gitignore"
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8")
-    return cli_render.style(
-        "strong",
-        f"  rendered      {_RUNTIME_IGNORE_PATH} "
-        f"({len(patterns)} pattern(s) from {component_count} component(s))",
-    )
+    path.write_text(_render_content(resolved), encoding="utf-8")
+    return cli_render.style("strong", f"  rendered      {summary}")
 
 
-def refresh_runtime_ignore(target_root: Path) -> str | None:
+@dataclass(frozen=True)
+class Refreshed:
+    """A re-render `refresh_runtime_ignore` made: the render's status line, and
+    the component entries the new render leaves out, for the writer to report."""
+
+    status: str
+    dropped: tuple[DroppedEntries, ...]
+
+    def report(self) -> str:
+        """The status line, then one line per component whose entries were left out."""
+        return "\n".join([self.status, *(f"  dropped       {d.describe()}" for d in self.dropped)])
+
+
+def refresh_runtime_ignore(target_root: Path) -> Refreshed | None:
     """Re-render an existing `.pkit/.gitignore` whose content no longer matches
     what the declarations and configuration render to — for a writer that has
     just changed something the render reads (a configuration write, COR-033
-    point 7). Returns the render's status line, or None when there was nothing
-    to do: the file matches, or there is no rendered file yet (install and sync
-    create it; a configuration write does not)."""
+    point 7). Returns the re-render with the component entries it leaves out
+    (`resolve_runtime_ignore`), or None when there was nothing to do: the file
+    matches, or there is no rendered file yet (install and sync create it; a
+    configuration write does not)."""
     path = target_root / ".pkit" / ".gitignore"
     if not path.is_file():
         return None
@@ -285,23 +359,10 @@ def refresh_runtime_ignore(target_root: Path) -> str | None:
         current = path.read_text(encoding="utf-8")
     except OSError:
         return None
-    if current == render_runtime_ignore_content(target_root):
+    resolved = resolve_runtime_ignore(target_root)
+    if current == _render_content(resolved):
         return None
-    return render_runtime_ignore(target_root)
-
-
-def _runtime_ignore_component_count(target_root: Path) -> int:
-    """Count the components contributing to the runtime-ignore render: the
-    backbone seam (always one) plus each installed adapter/capability whose
-    `package.yaml` declares a non-empty `runtime_ignore:`."""
-    count = 1  # the backbone/permissions core seam (_BACKBONE_RUNTIME_IGNORE)
-    manifest = read_backbone_manifest(target_root)
-    if manifest is not None:
-        for entry in manifest.components:
-            pkg = _component_package_yaml(target_root, entry.kind, entry.name)
-            if pkg is not None and _read_runtime_ignore_decl(pkg):
-                count += 1
-    return count
+    return Refreshed(status=_render(target_root, resolved, dry_run=False), dropped=resolved.dropped)
 
 
 # --- git helpers -------------------------------------------------------------

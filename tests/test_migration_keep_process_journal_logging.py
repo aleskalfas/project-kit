@@ -134,8 +134,9 @@ def test_tracked_journals_keep_logging_on_committed(tmp_path: Path) -> None:
 
 
 def test_a_component_still_declaring_journals_is_reported_not_hidden(tmp_path: Path) -> None:
-    """An older component's own journal line survives the backbone's removal, so
-    the migration does not claim journals are no longer ignored."""
+    """An older component's own journal line survives the backbone's removal until
+    the next render drops it, so the migration does not claim journals are no
+    longer ignored."""
     root = _project(tmp_path, journal=True, tracked=True)
     component_line = "capabilities/project-management/project/process/**/*.journal.jsonl"
     gitignore = root / ".pkit" / ".gitignore"
@@ -149,6 +150,7 @@ def test_a_component_still_declaring_journals_is_reported_not_hidden(tmp_path: P
     assert component_line in text
     assert "no longer ignores process journals" not in result.stdout
     assert "[warn] removed the backbone's process-journal line" in result.stdout
+    assert "the next pkit sync drops that line too" in result.stdout
     assert "pkit validate names the component" in result.stdout
 
 
