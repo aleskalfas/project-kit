@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -521,6 +522,7 @@ _UNSET_ISSUE = object()
 def _wire_main_seams(
     dw, monkeypatch, *, rollup, gate_passed=True, issue=_UNSET_ISSUE,
     mode="human", agent_gate_result=None,
+    pr_body="## Test plan\n- [x] ok\n", issues=None,
 ):
     """Monkeypatch done-work's heavy seams so main() reaches the CI gate.
 
@@ -542,10 +544,17 @@ def _wire_main_seams(
     per-reviewer override's audit posting) without a live gate resolution.
     `calls["order"]` records the sequence of override-audit and merge
     side-effects so a test can assert the audit lands BEFORE the merge.
+
+    *pr_body* is the PR body done-work reads its closing references from
+    (#1086); the default names none, so only issue 42 closes. *issues*, when
+    given, maps each issue number to what `_gh_get_issue` returns for it (a
+    missing number reads as a failed fetch) and replaces *issue*. The post-merge
+    `close-issue` run is stubbed: `calls["closed"]` lists each
+    `(issue, pr, skip_checkbox_gate)` it was invoked with.
     """
     calls = {"merged": False, "ci_audit": False, "approval_audit": False,
              "moved": False, "override_audits": [], "order": [],
-             "merge_kwargs": {}}
+             "merge_kwargs": {}, "closed": []}
 
     monkeypatch.setattr(dw, "resolve_capability_root", lambda arg: Path("/cap"))
     monkeypatch.setattr(dw, "load_adopter_config", lambda root: {})
@@ -577,7 +586,10 @@ def _wire_main_seams(
     resolved_issue = (
         {"labels": [], "body": ""} if issue is _UNSET_ISSUE else issue
     )
-    monkeypatch.setattr(dw, "_gh_get_issue", lambda n, config: resolved_issue)
+    if issues is None:
+        monkeypatch.setattr(dw, "_gh_get_issue", lambda n, config: resolved_issue)
+    else:
+        monkeypatch.setattr(dw, "_gh_get_issue", lambda n, config: issues.get(n))
     monkeypatch.setattr(
         dw, "resolve_mode",
         lambda config, issue_labels=None: type(
@@ -606,9 +618,7 @@ def _wire_main_seams(
     monkeypatch.setattr(
         dw, "_post_reviewer_override_audit", _stub_reviewer_override_audit,
     )
-    monkeypatch.setattr(
-        dw, "_gh_get_pr_body", lambda pr_number, config: "## Test plan\n- [x] ok\n",
-    )
+    monkeypatch.setattr(dw, "_gh_get_pr_body", lambda pr_number, config: pr_body)
     monkeypatch.setattr(
         dw, "_check_pr_placeholder", lambda body, pr_number, cap_root: [],
     )
@@ -635,6 +645,11 @@ def _wire_main_seams(
         calls["order"].append(("moved", None))
         return 0
 
+    def _stub_close(issue_number, pr_number, cap_root_arg, *, skip_checkbox_gate):
+        calls["closed"].append((issue_number, pr_number, skip_checkbox_gate))
+        calls["order"].append(("closed", issue_number))
+        return 0
+
     def _stub_delete_remote(branch, config, **kwargs):
         calls.setdefault("cross", []).append(kwargs.get("cross_repository"))
         calls["order"].append(("remote_delete", branch))
@@ -650,6 +665,7 @@ def _wire_main_seams(
     monkeypatch.setattr(dw.pr_merge, "delete_remote_branch", _stub_delete_remote)
     monkeypatch.setattr(dw.pr_merge, "cleanup_local", _stub_cleanup_local)
     monkeypatch.setattr(dw, "_invoke_move_issue", _stub_move)
+    monkeypatch.setattr(dw, "_invoke_close_issue", _stub_close)
     return calls
 
 
@@ -1119,13 +1135,16 @@ _MAIN_HELD_ELSEWHERE_ERR = (
 
 
 def test_transition_runs_immediately_after_merge_before_cleanup(dw, monkeypatch):
-    """merge → move-issue → remote delete → local cleanup, in that order."""
+    """merge → move-issue → close-issue → remote delete → local cleanup, in
+    that order: closing the issue (#1086) is lifecycle work, so it too lands
+    before any best-effort step."""
     calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
     rc = _run_main(dw, monkeypatch, ["42", "--yes"])
     assert rc == 0
     assert calls["order"] == [
         ("merged", None),
         ("moved", None),
+        ("closed", 42),
         ("remote_delete", "fix/42-slug"),
         ("local_cleanup", "fix/42-slug"),
     ]
@@ -1222,5 +1241,284 @@ def test_cleanup_still_runs_when_move_issue_fails(dw, monkeypatch, capsys):
     assert rc == 1
     assert "[warn] PR merged but move-issue exited 1" in capsys.readouterr().err
     assert [kind for kind, _ in calls["order"]] == [
-        "merged", "moved", "remote_delete", "local_cleanup",
+        "merged", "moved", "closed", "remote_delete", "local_cleanup",
     ]
+
+
+# ---- every issue the PR closes (#1086) --------------------------------
+#
+# One PR may close several issues (`open-pr --closes`, #1049), and GitHub's
+# `Closes #N` closes each of them on merge. So done-work gates each before the
+# merge — the checkbox close-gate and the state check — and closes + cascades
+# each after it. Every refusal asserts `calls["merged"] is False`: that, not
+# the exit code, pins "before the merge". The post-merge close is stubbed at
+# `_invoke_close_issue` except in the end-to-end test, which runs the real
+# close-issue against a fake `gh`.
+
+_TWO_ISSUE_PR_BODY = (
+    "Closes #42\nCloses #43\n\n"
+    "## Summary\n\nLand two Tasks.\n\n"
+    "## Test plan\n\n- [x] ok\n\n"
+    "## Doc impact\n\nNone.\n"
+)
+
+
+def _open_issue(body: str) -> dict:
+    return {"labels": [], "body": body, "state": "OPEN"}
+
+
+def test_a_pr_closing_two_issues_gates_closes_and_cascades_both(dw, monkeypatch, capsys):
+    calls = _wire_main_seams(
+        dw, monkeypatch, rollup=_GREEN_ROLLUP, pr_body=_TWO_ISSUE_PR_BODY,
+        issues={42: _open_issue(_TICKED_BODY), 43: _open_issue(_TICKED_BODY)},
+    )
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "closes: #42, #43" in out
+    assert "checkbox-gate: all checkboxes ticked (#42)" in out
+    assert "checkbox-gate: all checkboxes ticked (#43)" in out
+    assert calls["merged"] is True
+    # Each goes through close-issue's pr-merge close through the merged PR —
+    # closed as completed, closure cascade run — the primary first.
+    assert calls["closed"] == [(42, 496, False), (43, 496, False)]
+    # The issue done-work ran for is still the primary one.
+    assert "done-work: #42" in out
+    assert "[ok] merged + closed #42 (also closed: #43)" in out
+
+
+def test_the_first_closing_issue_with_an_unticked_box_refuses_naming_it(
+    dw, monkeypatch, capsys,
+):
+    """A second issue's unticked box refuses before the merge, with the
+    existing refusal text naming that issue, its box and the verb that ticks
+    it; a later failing issue is not reached."""
+    calls = _wire_main_seams(
+        dw, monkeypatch, rollup=_GREEN_ROLLUP,
+        pr_body="Closes #42\nCloses #43\nCloses #44\n\n## Test plan\n\n- [x] ok\n",
+        issues={
+            42: _open_issue(_TICKED_BODY),
+            43: _open_issue(_UNTICKED_BODY),
+            44: _open_issue(_UNTICKED_BODY),
+        },
+    )
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+    assert rc == 1
+    assert calls["merged"] is False
+    assert calls["moved"] is False
+    assert calls["closed"] == []
+    err = capsys.readouterr().err
+    assert "[refused] DEC-007 checkbox close-gate (#43, pre-merge)" in err
+    assert "The regression test covers the wobble" in err
+    assert "→ pkit pm check-criterion 43 2" in err
+    assert "#44" not in err
+
+
+def test_a_closing_issue_already_closed_is_skipped_with_a_note(dw, monkeypatch, capsys):
+    """An issue closed before the merge is not closed by it: neither gated (its
+    unticked box does not refuse) nor closed again, and not an error."""
+    closed = {"labels": [], "body": _UNTICKED_BODY, "state": "CLOSED"}
+    calls = _wire_main_seams(
+        dw, monkeypatch, rollup=_GREEN_ROLLUP, pr_body=_TWO_ISSUE_PR_BODY,
+        issues={42: _open_issue(_TICKED_BODY), 43: closed},
+    )
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+    assert rc == 0
+    assert calls["merged"] is True
+    assert calls["closed"] == [(42, 496, False)]
+    out = capsys.readouterr().out
+    assert "#43: already closed, skipped (not gated, not closed again)" in out
+    assert "[ok] merged + closed #42\n" in out
+
+
+def test_an_unreadable_closing_issue_fails_closed(dw, monkeypatch, capsys):
+    calls = _wire_main_seams(
+        dw, monkeypatch, rollup=_GREEN_ROLLUP, pr_body=_TWO_ISSUE_PR_BODY,
+        issues={42: _open_issue(_TICKED_BODY)},
+    )
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+    assert rc == 1
+    assert calls["merged"] is False
+    assert "checkbox close-gate for #43: the issue body could not be read" in (
+        capsys.readouterr().err
+    )
+
+
+def test_an_unreadable_pr_body_fails_closed_unless_the_gate_is_skipped(
+    dw, monkeypatch, capsys,
+):
+    """Without the PR body the issues the merge closes are unknown, so the gate
+    refuses; `--skip-checkbox-gate` merges, closing only the primary, and says
+    so."""
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP, pr_body=None)
+    assert _run_main(dw, monkeypatch, ["42", "--yes"]) == 1
+    assert calls["merged"] is False
+    assert "the PR body could not be read" in capsys.readouterr().err
+
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP, pr_body=None)
+    assert _run_main(dw, monkeypatch, ["42", "--skip-checkbox-gate", "--yes"]) == 0
+    assert calls["closed"] == [(42, 496, True)]
+    assert "[warn] PR #496's body could not be read" in capsys.readouterr().err
+
+
+def test_a_failed_close_warns_with_the_rerun_and_the_rest_still_run(
+    dw, monkeypatch, capsys,
+):
+    """The merge is durable: one close failing is reported with its re-run, the
+    other closing issues are still closed, cleanup runs, and the exit is the
+    failure's."""
+    calls = _wire_main_seams(
+        dw, monkeypatch, rollup=_GREEN_ROLLUP, pr_body=_TWO_ISSUE_PR_BODY,
+        issues={42: _open_issue(_TICKED_BODY), 43: _open_issue(_TICKED_BODY)},
+    )
+
+    def flaky_close(issue_number, pr_number, cap_root_arg, *, skip_checkbox_gate):
+        calls["order"].append(("closed", issue_number))
+        return 3 if issue_number == 42 else 0
+
+    monkeypatch.setattr(dw, "_invoke_close_issue", flaky_close)
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+    assert rc == 3
+    err = capsys.readouterr().err
+    assert "close-issue exited 3 for #42" in err
+    assert "`close-issue 42 --mode pr-merge --pr 496`" in err
+    assert calls["order"][1:] == [
+        ("moved", None), ("closed", 42), ("closed", 43),
+        ("remote_delete", "fix/42-slug"), ("local_cleanup", "fix/42-slug"),
+    ]
+
+
+def test_closing_issues_lead_with_the_primary_and_reuse_its_fetch(dw, monkeypatch):
+    """The primary comes first even when the body names it later (or not at
+    all), repeats collapse, and the primary's issue is not fetched twice."""
+    fetched: list[int] = []
+
+    def fake_get_issue(n, config):
+        fetched.append(n)
+        return _open_issue("")
+
+    monkeypatch.setattr(dw, "_gh_get_issue", fake_get_issue)
+    primary = _open_issue(_TICKED_BODY)
+    closing = dw._read_closing_issues(
+        42, primary, "Fixes #43\nCloses #42\nresolves #44\nCloses #43", {},
+    )
+    assert [c.number for c in closing] == [42, 43, 44]
+    assert closing[0].issue is primary
+    assert fetched == [43, 44]
+
+
+def test_the_close_is_close_issue_pr_merge_through_the_merged_pr(dw, monkeypatch):
+    """The post-merge close composes over `close-issue --mode pr-merge --pr`,
+    the one implementation of closing a Task through a merged PR, and carries
+    an operator's `--skip-checkbox-gate` through."""
+    import subprocess
+
+    seen: list[list[str]] = []
+
+    def fake_run(cmd, **kwargs):
+        seen.append(list(cmd))
+        return subprocess.CompletedProcess(cmd, 0)
+
+    monkeypatch.setattr(dw.subprocess, "run", fake_run)
+    assert dw._invoke_close_issue(43, 496, Path("/cap"), skip_checkbox_gate=True) == 0
+    assert dw._invoke_close_issue(44, 496, None, skip_checkbox_gate=False) == 0
+    assert seen[0][0] == sys.executable
+    assert Path(seen[0][1]).name == "close-issue.py"
+    assert seen[0][2:] == [
+        "43", "--mode", "pr-merge", "--pr", "496", "--skip-checkbox-gate",
+        "--yes", "--capability-root", "/cap",
+    ]
+    assert seen[1][2:] == ["44", "--mode", "pr-merge", "--pr", "496", "--yes"]
+
+
+_FAKE_GH = """\
+import json, os, sys
+args = sys.argv[1:]
+with open(os.environ["FAKE_GH_LOG"], "a", encoding="utf-8") as log:
+    log.write(json.dumps(args) + "\\n")
+with open(os.environ["FAKE_GH_STATE"], encoding="utf-8") as fh:
+    state = json.load(fh)
+if args[:2] == ["issue", "view"]:
+    fields = args[args.index("--json") + 1] if "--json" in args else ""
+    if fields == "comments":
+        print(json.dumps({"comments": []}))
+        sys.exit(0)
+    issue = state["issues"].get(args[2])
+    if issue is None:
+        sys.exit(1)
+    print(json.dumps(issue))
+    sys.exit(0)
+if args[:2] == ["pr", "view"]:
+    print(json.dumps(state["pr"]))
+    sys.exit(0)
+if args[:1] == ["api"]:
+    print("octocat")
+sys.exit(0)
+"""
+
+
+def test_both_closing_issues_are_closed_and_cascaded_by_the_real_close_issue(
+    dw, tmp_path, monkeypatch, capfd,
+):
+    """End to end past the merge: done-work runs the real close-issue on each
+    closing issue against a fake `gh`. Both issues are still open after the
+    merge (a base branch GitHub does not auto-close on), so each is closed as
+    completed, and each one's closure cascade visits its parent."""
+    import shutil
+
+    cap_root = tmp_path / ".pkit" / "capabilities" / "project-management"
+    cap_root.mkdir(parents=True)
+    _mark_bootstrapped(cap_root)
+    shutil.copytree(CAPABILITY_ROOT_DW / "schemas", cap_root / "schemas")
+
+    def task(title: str, state_label: str) -> dict:
+        return {
+            "title": title,
+            "body": "Feature: #7\n\n## What\n\nx\n\n## Acceptance criteria\n\n- [x] done\n",
+            "state": "OPEN",
+            "labels": [{"name": state_label}],
+            "milestone": None,
+        }
+
+    state = {
+        "issues": {
+            "42": task("[Task] land the widget", "state:review"),
+            "43": task("[Task] land the gadget", "state:in-progress"),
+            "7": {
+                "title": "[Feature] widgets", "state": "OPEN", "labels": [],
+                "milestone": None,
+                "body": "## What\n\nw\n\n## Acceptance criteria\n\n- [x] shipped\n",
+            },
+        },
+        "pr": {"number": 496, "state": "MERGED",
+               "mergedAt": "2026-09-29T10:00:00Z", "url": "u"},
+    }
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    fake_gh = bin_dir / "gh"
+    fake_gh.write_text(f"#!{sys.executable}\n{_FAKE_GH}", encoding="utf-8")
+    fake_gh.chmod(0o755)
+    (tmp_path / "state.json").write_text(json.dumps(state), encoding="utf-8")
+    log = tmp_path / "gh.log"
+    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}")
+    monkeypatch.setenv("FAKE_GH_STATE", str(tmp_path / "state.json"))
+    monkeypatch.setenv("FAKE_GH_LOG", str(log))
+    # No session anchor: the foreign-repo guard cannot evaluate and stands aside.
+    monkeypatch.delenv("CLAUDE_PROJECT_DIR", raising=False)
+
+    real_close = dw._invoke_close_issue
+    _wire_main_seams(
+        dw, monkeypatch, rollup=_GREEN_ROLLUP, pr_body=_TWO_ISSUE_PR_BODY,
+        issues={42: _open_issue(_TICKED_BODY), 43: _open_issue(_TICKED_BODY)},
+    )
+    monkeypatch.setattr(dw, "_invoke_close_issue", real_close)
+
+    rc = _run_main(dw, monkeypatch, ["42", "--yes", "--capability-root", str(cap_root)])
+
+    out = capfd.readouterr().out
+    assert rc == 0, out
+    calls = [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines()]
+    for number in ("42", "43"):
+        assert ["issue", "close", number, "--reason", "completed"] in calls
+        assert f"[ok] closed #{number} (pr-merge through PR #496, completed)." in out
+    assert out.count("[cascade] parents to check for eligibility: #7") == 2

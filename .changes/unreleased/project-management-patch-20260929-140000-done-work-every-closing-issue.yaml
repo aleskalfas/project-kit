@@ -1,0 +1,15 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `done-work` now gates and closes every issue a pull request closes, not only
+  the one it runs for (#1086). It reads each `Closes #N` the PR body carries,
+  with the reader `open-pr` and `validate-pr` use, and runs the checkbox
+  close-gate on each before the merge, refusing at the first issue with an
+  unticked box and naming it. After the merge it runs each through
+  `close-issue --mode pr-merge --pr <PR>`, the issue it ran for first, so each
+  is closed as completed and its closure cascade runs. An issue already closed
+  before the merge is skipped with a note, and a PR body that cannot be read
+  fails closed. `merge-pr` reads closing references through the same shared
+  reader.
