@@ -16,5 +16,11 @@ body: >
   and `--check-drift` guarantee with committed, clone-local and no journals. The
   capability no longer declares the process-journal ignore pattern in its
   `package.yaml`: the backbone owns it and follows the setting. The README gains
-  a "Lifecycle history" section, and the transition-audit key's description says
-  what happens to it without a journal.
+  a "Lifecycle history" section.
+
+  With journal logging off, `move-issue --bypass` keys its audit comment on the
+  issue's count of state-label events on the GitHub timeline instead of the
+  journal length, which no longer grows. A retry of a failed attempt still posts
+  nothing new, and the same bypass made again later posts its own comment — one
+  audit comment per audited mutation in both modes. With logging on the key is
+  unchanged.

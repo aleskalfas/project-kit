@@ -78,6 +78,7 @@ from _lib import bootstrap_gate  # noqa: E402
 from _lib import classification_rules  # noqa: E402
 from _lib import lifecycle_inference as infer  # noqa: E402
 from _lib import session_guard  # noqa: E402
+from _lib import state_timeline  # noqa: E402
 # The one fetch / scan / post-once wiring every audit writer shares (#902).
 from _lib.comment import post_audit_once  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
@@ -515,13 +516,14 @@ def main() -> int:
         # through rather than posting their own (killing the #672 double-post).
         #
         # Posted BEFORE the mutation so the justification survives a failed
-        # label write (DEC-049's `audit` floor), and posted at most once per
+        # label write (DEC-049's `audit` floor), and posted exactly once per
         # mutation: a retry of that failed attempt finds its own comment by the
-        # idempotency key and skips (#901).
+        # idempotency key and skips (#901), while the same transition made again
+        # later has a grown landed-move count and posts its own (#954).
         reason = (args.bypass_reason or "").strip()
         key = _transition_audit_key(
             current_state, args.to, reason,
-            _journal_length_from_status(engine_status),
+            _landed_moves(args.issue_number, engine_status, config, substrate_map),
         )
         audit_comment = (
             _render_audit_comment(capability_root, invoker, reason) + "\n\n" + key
@@ -738,21 +740,19 @@ def _severity_from_token(token: str) -> str:
 
 
 def _transition_audit_key(
-    from_state: str, to_state: str, reason: str, journal_length: int | None
+    from_state: str, to_state: str, reason: str, landed_moves: str
 ) -> str:
     """The idempotency key for one audited transition (#901).
 
     A retry must reproduce it exactly, and a genuinely new audited mutation must
     not. The components are what a retry repeats — the transition, the stripped
-    reason — plus the issue's engine-journal length, which stays put across a
-    failed attempt (the journal is written only after the label write succeeds)
-    and has grown by the time the issue could make the same transition again.
-    Without it, an issue moved back and re-promoted for the same reason would
-    lose its second audit comment, breaking DEC-049's one comment per audited
-    mutation from the other side. An unreachable engine contributes an empty
-    component: the key is then (transition, reason) alone, and differs from any
-    key minted while the engine was reachable, so a retry across that boundary
-    posts again — the safe direction for an audit trail.
+    reason — plus `landed_moves` (`_landed_moves`), which stays put across a
+    failed attempt and has grown by the time the issue could make the same
+    transition again. Without it, an issue moved back and re-promoted for the
+    same reason would lose its second audit comment, breaking DEC-049's one
+    comment per audited mutation from the other side. An empty `landed_moves`
+    differs from every known one, so a retry across that boundary posts again —
+    the safe direction for an audit trail.
 
     Hashed rather than interpolated (by `_lib.audit.audit_key`) so the reason
     cannot close the HTML comment early; the readable reason is in the comment's
@@ -763,7 +763,7 @@ def _transition_audit_key(
         from_state or "",
         to_state,
         reason.strip(),
-        "" if journal_length is None else str(journal_length),
+        landed_moves,
     )
 
 
@@ -852,8 +852,9 @@ def _engine_status(issue_number: int) -> dict | None:
     when the engine cannot be reached or answers with something unparseable.
 
     One read serves two consumers: `_position_from_status` (where the issue is)
-    and `_journal_length_from_status` (how many governed moves it has had, which
-    keys the transition audit's retry detection).
+    and `_landed_moves` (whether the project keeps a journal and, where it does,
+    how many governed moves it holds — which keys the transition audit's retry
+    detection).
     """
     try:
         proc = subprocess.run(
@@ -904,6 +905,55 @@ def _journal_length_from_status(status: dict | None) -> int | None:
     """
     journal = status.get("journal") if isinstance(status, dict) else None
     return len(journal) if isinstance(journal, list) else None
+
+
+def _journal_logging_off(status: dict | None) -> bool:
+    """Whether the engine says this project keeps no journal (COR-033 point 7).
+
+    Only an explicit `journal_logging.enabled: false` says so. A payload without
+    the field comes from an engine that predates the setting and always kept a
+    journal, and no payload at all says nothing either way.
+    """
+    logging = status.get("journal_logging") if isinstance(status, dict) else None
+    return isinstance(logging, dict) and logging.get("enabled", True) is False
+
+
+def _landed_moves(
+    issue_number: int,
+    status: dict | None,
+    config: dict,
+    substrate_map: axis_labels.SubstrateMap | None,
+) -> str:
+    """The transition audit key's "has a move landed since?" component.
+
+    It must stay put across a failed attempt and its retry, and have grown by the
+    time the issue could make the same transition again. What counts the moves
+    follows where the project's audit trail is (DEC-049):
+
+    * Where the project keeps a journal: the journal's length, as a bare number.
+      A move is journaled only after its label write succeeds (#901).
+    * Where it keeps none: the issue's count of state-label events on the GitHub
+      timeline, labels put on and taken off (#954). A landed move changes the
+      state label, and a failed label write changes nothing. The count is
+      tagged, so it can never equal a journal length read on another attempt,
+      after the project turned logging on or off.
+    * Empty when it cannot be known: the engine is unreachable, the timeline
+      cannot be read, or no label carries state (a board or a derivation does,
+      and `move-issue` writes no label there). Two attempts that both land here
+      look alike.
+
+    The timeline is read only in the second case, and only on the bypass path
+    that keys an audit comment.
+    """
+    if not _journal_logging_off(status):
+        length = _journal_length_from_status(status)
+        return "" if length is None else str(length)
+    if not state_timeline.label_carries_state(config, substrate_map):
+        return ""
+    events = state_timeline.state_label_events(
+        issue_number, config, substrate_map, run=gh_run,
+    )
+    return "" if events is None else f"state-label-events:{len(events)}"
 
 
 def _journal_move(
