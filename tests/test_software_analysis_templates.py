@@ -248,6 +248,22 @@ def test_the_revalidation_record_template_is_no_anchored_artefact() -> None:
     assert _schema_errors("revalidation-record", data) == []
 
 
+def test_the_revalidation_record_template_shows_an_evidence_copy() -> None:
+    """The optional `evidence` the template shows, commented out, is an entry of the
+    evidence point copied whole: uncommented, the record still fits its schema."""
+    text = (CAPABILITY / "templates" / "revalidation-record.md").read_text(encoding="utf-8")
+    front_matter, _body = fd.split_front_matter(text)
+    assert front_matter is not None
+    lines = front_matter.splitlines()
+    start = lines.index(next(line for line in lines if line.startswith("# evidence:")))
+    shown = load("\n".join(line.removeprefix("# ") for line in lines[start:]))
+    (entry,) = shown["evidence"]
+    assert entry["id"] == f"{entry['artefact']}@{entry['commit']}"
+    record = {**_template("revalidation-record"), "evidence": shown["evidence"]}
+    assert entry["artefact"] in record["outcomes"]
+    assert _schema_errors("revalidation-record", record) == []
+
+
 @pytest.mark.parametrize(
     ("stem", "instance", "message"),
     [

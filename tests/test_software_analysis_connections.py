@@ -13,9 +13,11 @@ contributes the analysis' actors to the documentation role's readers point,
   point unresolved rather than answer without them;
 - the evidence point through the real backbone — a project filler's entries
   resolve against the companion schema, a malformed one is the project's error
-  — and in the check: a record cites evidence as support for an outcome and
-  never in place of one; a citation the point does not hold only warns, since
-  evidence advises.
+  — and in the check: a record copies the evidence it draws on, whole, as
+  support for an outcome and never in place of one; an entry's id is its own
+  pair; a result at odds with its outcome, or a copy that differs from what the
+  point now holds, only warns, since evidence advises; and an id the point no
+  longer holds says nothing, since the record is history.
 
 The capability's scripts are pointed at this interpreter in the adopter copy,
 and the `pkit` they read through is the real CLI under this interpreter
@@ -382,7 +384,7 @@ def test_the_evidence_point_resolves_from_the_project_filler(project: AdopterRep
     assert not _resolve(EVIDENCE)["resolved"]
 
 
-def _record(outcomes: Mapping[str, str], evidence: list[str] | None = None) -> str:
+def _record(outcomes: Mapping[str, str], evidence: list[Any] | None = None) -> str:
     front: dict[str, Any] = {
         "change": "#1001",
         "trigger": "drift",
@@ -395,30 +397,37 @@ def _record(outcomes: Mapping[str, str], evidence: list[str] | None = None) -> s
     return f"---\n{json.dumps(front, indent=2)}\n---\n\n# 2026-10-01 — First run\n"
 
 
-def test_a_record_cites_evidence_as_support_for_an_outcome(project: AdopterRepo) -> None:
+def test_a_record_copies_evidence_as_support_for_an_outcome(project: AdopterRepo) -> None:
+    """The record shows the evidence it drew on: each entry copied whole, in the
+    point's shape, and each equal to what the point holds under its id."""
     seed(project)
+    passed, failed = _entry("UC-001"), _entry("UC-002", result="failed")
     project.write(
         {
-            EVIDENCE_FILLER: _evidence(_entry("UC-001"), _entry("UC-002", result="failed")),
-            RECORD: _record(
-                {"UC-001": "holds", "UC-002": "code-regressed"},
-                [f"UC-001@{SHA}", f"UC-002@{SHA}"],
-            ),
+            EVIDENCE_FILLER: _evidence(passed, failed),
+            RECORD: _record({"UC-001": "holds", "UC-002": "code-regressed"}, [passed, failed]),
         }
     )
     document = _check(project)
     assert document["findings"] == []
-    assert document["summary"][1] == (f"evidence ({EVIDENCE}): 2 held; 2 citation(s) checked.")
+    assert document["summary"][1] == (
+        f"evidence ({EVIDENCE}): 2 held; 2 copied entry(ies) compared with it."
+    )
+    # The full entry, `steps`, `where` and `by` included, is a copy like any other.
+    full = {**EVIDENCE_ENTRY, "id": f"UC-001@{SHA}", "artefact": "UC-001"}
+    project.write({EVIDENCE_FILLER: _evidence(full), RECORD: _record({"UC-001": "holds"}, [full])})
+    assert _check(project)["findings"] == []
 
 
 def test_evidence_never_replaces_an_outcome(project: AdopterRepo) -> None:
     """Evidence for an artefact the record gives no outcome leaves the record
     incomplete: the evidence informs the revalidation, and is never it."""
     seed(project)
+    entries = [_entry("UC-001"), _entry("UC-002")]
     project.write(
         {
-            EVIDENCE_FILLER: _evidence(_entry("UC-001"), _entry("UC-002")),
-            RECORD: _record({"UC-001": "holds"}, [f"UC-001@{SHA}", f"UC-002@{SHA}"]),
+            EVIDENCE_FILLER: _evidence(*entries),
+            RECORD: _record({"UC-001": "holds"}, entries),
         }
     )
     assert _findings(_check(project), "error") == [
@@ -426,74 +435,142 @@ def test_evidence_never_replaces_an_outcome(project: AdopterRepo) -> None:
             f"{RECORD}:/evidence/1",
             f"cites evidence UC-002@{SHA} for UC-002, to which it gives no outcome: evidence "
             "supports a revalidation's outcome and never replaces it — give UC-002 its "
-            "outcome, or drop the citation (DEC-001 point 7)",
+            "outcome, or drop the evidence (DEC-001 point 7)",
         )
     ]
     # The record alone decides it: with nothing filling the point, it is still incomplete.
     project.write({EVIDENCE_FILLER: None})
     assert [loc for loc, _ in _findings(_check(project), "error")] == [f"{RECORD}:/evidence/1"]
-    # And a citation that is no evidence id is the schema's to refuse.
-    project.write({RECORD: _record({"UC-001": "holds"}, ["UC-001@HEAD"])})
+    # An entry of another shape is the schema's to refuse: a short commit, a bare id.
+    project.write({RECORD: _record({"UC-001": "holds"}, [_entry("UC-001", commit=SHA[:7])])})
+    assert sorted(loc for loc, _ in _findings(_check(project), "error")) == [
+        f"{RECORD}:/evidence/0/commit",
+        f"{RECORD}:/evidence/0/id",
+    ]
+    project.write({RECORD: _record({"UC-001": "holds"}, [f"UC-001@{SHA}"])})
     ((location, message),) = _findings(_check(project), "error")
     assert location == f"{RECORD}:/evidence/0"
-    assert message.startswith("'UC-001@HEAD' does not match")
+    assert "is not of type 'object'" in message
 
 
-def test_a_citation_the_point_does_not_hold_only_warns(project: AdopterRepo) -> None:
-    """The evidence advises: a citation the point does not hold — a typo, or a result
-    no filler gives any more — asks for attention and never fails."""
+def test_an_evidence_entry_s_id_is_its_own_artefact_and_commit(project: AdopterRepo) -> None:
+    """The id is the pair the result is for: an entry whose id names another pair is
+    an error naming the entry, and nothing more is read from it — which of the two
+    is meant cannot be told."""
     seed(project)
+    miskeyed = {**_entry("UC-001"), "id": f"UC-001@{OTHER}"}
     project.write(
         {
-            EVIDENCE_FILLER: _evidence(_entry("UC-001")),
-            RECORD: _record({"UC-001": "holds"}, [f"UC-001@{OTHER}"]),
+            # The point holds the id with other content: no second finding for one mistake.
+            EVIDENCE_FILLER: _evidence(_entry("UC-001", commit=OTHER, result="failed")),
+            RECORD: _record({"UC-002": "holds"}, [miskeyed]),
         }
     )
+    document = _check(project)
+    assert _findings(document, "warning") == []
+    assert _findings(document, "error") == [
+        (
+            f"{RECORD}:/evidence/0",
+            f"the evidence entry UC-001@{OTHER} is for UC-001@{SHA} by its own `artefact` and "
+            "`commit`: an entry's id is the pair it is for, `<artefact>@<commit>` — write "
+            f"`id: UC-001@{SHA}`, or correct the fields (DEC-001 point 7)",
+        )
+    ]
+    assert run_script(project, VALIDATE).returncode == 1
+
+
+@pytest.mark.parametrize(
+    ("outcome", "result", "at_odds"),
+    [
+        ("holds", "failed", True),
+        ("code-regressed", "passed", True),
+        ("holds", "passed", False),
+        ("code-regressed", "failed", False),
+        ("analysis-stale", "failed", False),
+        ("gap-found", "passed", False),
+    ],
+)
+def test_a_result_at_odds_with_its_outcome_warns(
+    project: AdopterRepo, outcome: str, result: str, at_odds: bool
+) -> None:
+    """DEC-001 point 7 pairs a passing result with holds and a failing one with a
+    regression: evidence the other way round asks for attention, naming the
+    artefact, and never fails — the revalidation decides."""
+    seed(project)
+    entry = _entry("UC-001", result=result)
+    project.write(
+        {EVIDENCE_FILLER: _evidence(entry), RECORD: _record({"UC-001": outcome}, [entry])}
+    )
+    document = _check(project)
+    assert _findings(document, "error") == []
+    expected = (
+        [
+            (
+                f"{RECORD}:/evidence/0",
+                f"cites a {result} result, UC-001@{SHA}, for UC-001, whose outcome is {outcome}: "
+                "a passing result supports holds and a failing one is a regression's proof "
+                "(DEC-001 point 7) — check UC-001's outcome against the evidence",
+            )
+        ]
+        if at_odds
+        else []
+    )
+    assert _findings(document, "warning") == expected
+
+
+def test_a_copy_that_differs_from_the_point_warns(project: AdopterRepo) -> None:
+    """The point now holds the id with other content: the copy strayed from its source,
+    or the result at that commit was reported again otherwise. The evidence advises,
+    so it only warns."""
+    seed(project)
+    held = _entry("UC-001")
+    copy = {**held, "ran": "tests/test_other.py", "where": "https://ci.example/runs/7"}
+    project.write({EVIDENCE_FILLER: _evidence(held), RECORD: _record({"UC-001": "holds"}, [copy])})
     document = _check(project)
     assert _findings(document, "error") == []
     assert _findings(document, "warning") == [
         (
             f"{RECORD}:/evidence/0",
-            f"cites evidence UC-001@{OTHER}, which {EVIDENCE} does not hold: cite an entry the "
-            "point holds, by its `<artefact>@<commit>` id, or drop the citation (DEC-001 "
-            "point 7)",
+            f"its copy of UC-001@{SHA} differs from the entry {EVIDENCE} now holds under that "
+            "id, in ran, where: the record keeps the evidence it drew on, so either the copy "
+            "strayed from its source — correct it — or the result at that commit was reported "
+            "again otherwise — revalidate UC-001 against it (DEC-001 point 7)",
         )
     ]
     assert run_script(project, VALIDATE).returncode == 0
 
 
-def test_an_unresolved_evidence_point_is_one_warning(project: AdopterRepo) -> None:
+def test_a_copy_the_point_no_longer_holds_says_nothing(project: AdopterRepo) -> None:
+    """A record is history: an id no filler reports any more, or a point that does not
+    resolve, leaves the record's copy as the evidence, and says nothing."""
     seed(project)
+    old = _entry("UC-001", commit=OTHER)
     project.write(
-        {
-            RECORD: _record(
-                {"UC-001": "holds", "UC-002": "holds"}, [f"UC-001@{SHA}", f"UC-002@{SHA}"]
-            )
-        }
+        {EVIDENCE_FILLER: _evidence(_entry("UC-001")), RECORD: _record({"UC-001": "holds"}, [old])}
     )
     document = _check(project)
-    assert _findings(document, "error") == []
-    assert _findings(document, "warning") == [
-        (
-            EVIDENCE,
-            "evidence unresolved — unfilled: no filler is declared and the point has no "
-            "default. No record's citation can be checked until the point resolves; evidence "
-            "advises, so nothing fails on it (DEC-001 point 7)",
-        )
-    ]
+    assert document["findings"] == []
     assert document["summary"][1] == (
-        f"evidence ({EVIDENCE}) unresolved: 2 citation(s) not checked."
+        f"evidence ({EVIDENCE}): 1 held; 1 copied entry(ies) compared with it."
+    )
+    project.write({EVIDENCE_FILLER: None})
+    document = _check(project)
+    assert document["findings"] == []
+    assert document["summary"][1] == (
+        f"evidence ({EVIDENCE}) unresolved — unfilled: no filler is declared and the point has "
+        "no default; 1 copied entry(ies) not compared."
     )
 
 
-def test_the_point_is_read_only_when_a_record_cites_evidence(
+def test_the_point_is_read_only_when_a_record_copies_evidence(
     project: AdopterRepo,
     pkit_on_path: Path,
     tmp_path_factory: pytest.TempPathFactory,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A `pkit` that answers nothing for the point is never asked while no record
-    cites evidence; once one does, no document is an unresolved point, never a pass."""
+    copies evidence; once one does, no document is an unresolved point, which says
+    nothing but the summary line."""
     broken = tmp_path_factory.mktemp("broken-pkit")
     (broken / "pkit").write_text(
         f'#!/bin/sh\nif [ "$1" = connections ]; then exit 3; fi\nexec "{pkit_on_path}/pkit" "$@"\n',
@@ -506,7 +583,7 @@ def test_the_point_is_read_only_when_a_record_cites_evidence(
     document = _check(project)
     assert document["findings"] == []
     assert len(document["summary"]) == 1
-    project.write({RECORD: _record({"UC-001": "holds"}, [f"UC-001@{SHA}"])})
-    ((location, message),) = _findings(_check(project), "warning")
-    assert location == EVIDENCE
-    assert f"`pkit connections resolve {EVIDENCE} --json` exited 3" in message
+    project.write({RECORD: _record({"UC-001": "holds"}, [_entry("UC-001")])})
+    document = _check(project)
+    assert document["findings"] == []
+    assert f"`pkit connections resolve {EVIDENCE} --json` exited 3" in document["summary"][1]

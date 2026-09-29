@@ -4,7 +4,9 @@ Each kind's own fields have a companion schema in `schemas/` (DEC-001 point 2):
 `actor`, `term`, `use-case`, `journey`, and `revalidation-record` for the
 records. They share `analysis.schema.json` — each kind's id, the status, a line
 of text — which is also where the commands read the id patterns from, so the
-stamp that gives an id and the check that judges one never disagree. The
+stamp that gives an id and the check that judges one never disagree. A record
+copies the evidence it draws on in the evidence point's own entry shape, so
+the point's companion, `revalidation-evidence`, is loaded beside them. The
 friction block beside the own fields is the core's shape, validated by the
 backbone, and never here.
 """
@@ -26,9 +28,11 @@ from _lib.model import ACTOR, JOURNEY, TERM, USE_CASE
 #: Where the schemas are, in the capability's own tree.
 SCHEMAS = Path(__file__).resolve().parents[2] / "schemas"
 
-#: The shared definitions, and the kind of front matter a revalidation record is.
+#: The shared definitions, the kind of front matter a revalidation record is, and
+#: the evidence point's companion, whose entries a record copies.
 SHARED = "analysis"
 RECORD = "revalidation-record"
+EVIDENCE = "revalidation-evidence"
 
 #: Each kind's schema, by file stem.
 SCHEMA_OF = {ACTOR: "actor", TERM: "term", USE_CASE: "use-case", JOURNEY: "journey", RECORD: RECORD}
@@ -41,7 +45,7 @@ ID_DEF = {ACTOR: "actor-id", TERM: "term-id", USE_CASE: "use-case-id", JOURNEY: 
 def _schemas() -> dict[str, dict[str, Any]]:
     return {
         stem: json.loads((SCHEMAS / f"{stem}.schema.json").read_text(encoding="utf-8"))
-        for stem in (SHARED, *SCHEMA_OF.values())
+        for stem in (SHARED, EVIDENCE, *SCHEMA_OF.values())
     }
 
 
@@ -75,9 +79,16 @@ def slug_pattern() -> re.Pattern[str]:
 
 
 @functools.cache
-def evidence_id_pattern() -> re.Pattern[str]:
-    """The pattern an evidence id has, `<artefact>@<commit>` (DEC-001 point 7)."""
-    return re.compile(definition("evidence-id")["pattern"])
+def _evidence_entry() -> Draft202012Validator:
+    return Draft202012Validator(
+        {"$ref": f"{_schemas()[EVIDENCE]['$id']}#/$defs/evidence"}, registry=_registry()
+    )
+
+
+def is_evidence(value: object) -> bool:
+    """Whether `value` is one entry of the evidence point, in its companion's shape
+    (DEC-001 point 7) — as a record copies it."""
+    return _evidence_entry().is_valid(value)
 
 
 def errors(kind: str, fields: Mapping[str, Any]) -> list[tuple[str, str]]:

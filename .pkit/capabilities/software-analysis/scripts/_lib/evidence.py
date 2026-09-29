@@ -12,18 +12,19 @@ The backbone resolves the point and applies its companion schema,
 filler that does not fit is the project's error, a capability's is inert — so
 what resolves fits the schema, and this reading applies nothing again (ADR-057
 point 2). It is read through `pkit connections resolve --json`
-(`backbone.read_point`), and only when a revalidation record cites evidence.
+(`backbone.read_point`), and only when a revalidation record copies evidence.
 
-Evidence informs a revalidation and never replaces it: a record cites it as
-support for an artefact's outcome, and the check requires the outcome
-(`_lib/check.py`).
+Evidence informs a revalidation and never replaces it. A record copies each
+entry it draws on whole, since the record is history and the point holds only
+what its fillers report now; the check compares a copy with the entry the
+point now holds under its id (`_lib/check.py`).
 """
 
 from __future__ import annotations
 
 import subprocess
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -36,13 +37,12 @@ POINT = "pkit::analysis:revalidation-evidence"
 
 @dataclass(frozen=True)
 class Evidence:
-    """The evidence point as it resolved: the ids it holds, or why it holds none, and
-    the fillers that went inert — whose entries a resolved point lacks."""
+    """The evidence point as it resolved: each entry it holds, by id, or why it
+    holds none."""
 
     resolved: bool
-    ids: frozenset[str] = frozenset()
+    entries: Mapping[str, Mapping[str, Any]] = field(default_factory=dict[str, Mapping[str, Any]])
     why: str = ""
-    inert: tuple[str, ...] = ()
 
 
 def read_evidence(root: Path, run: backbone.Runner = subprocess.run) -> Evidence:
@@ -58,23 +58,15 @@ def read_evidence(root: Path, run: backbone.Runner = subprocess.run) -> Evidence
 
 def evidence_of(document: Mapping[str, Any]) -> Evidence:
     """The `pkit connections resolve --json` document as Evidence."""
-    inert = tuple(
-        f"{filler.get('name')}: {filler.get('reason')}"
-        for filler in document.get("fillers") or []
-        if isinstance(filler, Mapping) and filler.get("state") == "inert"
-    )
     if document.get("defined") is False:
         return Evidence(False, why=f"it is not defined: {document.get('why', '')}")
     if not document.get("resolved"):
-        return Evidence(False, why=str(document.get("why") or "it does not resolve"), inert=inert)
-    ids = frozenset(
-        str(entry["id"])
+        return Evidence(False, why=str(document.get("why") or "it does not resolve"))
+    entries = {
+        str(entry["id"]): entry["value"]
         for entry in document.get("entries") or []
-        if isinstance(entry, Mapping) and isinstance(entry.get("id"), str)
-    )
-    return Evidence(True, ids=ids, inert=inert)
-
-
-def artefact_of(evidence_id: str) -> str:
-    """The artefact an evidence id is for: `UC-003@1a2b3c4` is for UC-003."""
-    return evidence_id.rpartition("@")[0]
+        if isinstance(entry, Mapping)
+        and isinstance(entry.get("id"), str)
+        and isinstance(entry.get("value"), Mapping)
+    }
+    return Evidence(True, entries=entries)

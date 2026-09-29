@@ -10,11 +10,15 @@ body: >
   a commit, one entry per artefact and commit keyed `<artefact>@<commit>`, the
   commit by its full name, `union`, no default, inert policy `fallback` — with
   its companion schema, `schemas/revalidation-evidence.schema.json`, which
-  reads alone, filled by a capability or by the project's filler file. A revalidation record may cite the evidence it
-  drew on under `evidence`; `pkit analysis validate` fails a record citing
+  reads alone, filled by a capability or by the project's filler file. A
+  revalidation record may copy the entries it drew on under `evidence`, whole
+  and in the point's shape, so the record keeps the evidence it shows whatever
+  the fillers report later. `pkit analysis validate` fails a record copying
   evidence for an artefact it gives no outcome, since evidence supports an
-  outcome and never replaces one, and warns on a citation the point does not
-  hold. The capability contributes its actors in force to
+  outcome and never replaces one, and an entry whose id is not its own
+  `<artefact>@<commit>`; it warns on a `failed` result under `holds` or a
+  `passed` one under `code-regressed`, and on a copy that differs from what the
+  point now holds under its id. The capability contributes its actors in force to
   `pkit::documentation:readers` through a new query command, `pkit analysis
   fill-readers`: each actor a reader whose id is the actor's id in lower case
   (`ACT-tester` → `act-tester`) and whose description is its name and needs.
