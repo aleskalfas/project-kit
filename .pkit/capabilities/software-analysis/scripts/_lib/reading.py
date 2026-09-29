@@ -1,17 +1,38 @@
 """Reading a flagged artefact's change, as `_lib/resolve.py` classifies it.
 
-The evidence comes from two places, and nothing is recomputed:
+The evidence comes from two places:
 
 - **the backbone** — `pkit friction explain <artefact> --json` (COR-050 point
   13): the artefact's state, each anchor and its state, the commits behind each
   changed anchor, and its revalidation point;
-- **git, at HEAD and at the revalidation point** — the artefact's text, and for
-  each changed path anchor which pieces of code the artefact quotes (what it
+- **git, at HEAD and at the revalidation point** — the artefact's text; for
+  each changed path anchor, which pieces of code the artefact quotes (what it
   writes in backticks) the anchor's files held at the point, and which of those
-  they no longer hold at HEAD; and, for an anchor whose files are gone — a dead
-  anchor, which the explanation names no commits for — the commits that touched
-  them since the point. The anchor is handed to git as a glob pathspec, so no
-  file list is computed here.
+  they no longer hold at HEAD; and, where the anchor resolves to nothing or its
+  quoted code is gone from it, where that went.
+
+Three things the backbone computes are worked out again here, because it does
+not expose them to a capability yet, and each can disagree with it:
+
+- **which files an anchor names** — git's glob pathspec reads the anchor, not
+  the backbone's matcher, and it knows nothing of the project's
+  `friction.exclude`: a quote held only by an excluded file still counts as
+  held, and one that moved into an excluded file as moved;
+- **the commits behind a dead anchor** — the explanation names none for an
+  anchor that resolves to nothing, so `git log` over the anchor since the
+  point names them;
+- **a collection entry's section** — the body section headed by the entry's
+  id, `## <id>`, which the backbone counts as part of the entry's content;
+  here it is found by that heading alone.
+
+And one thing only this reading derives: **where lost code went**. The quoted
+code an anchor no longer holds moved when one file outside it, of a kind (by
+its extension) the anchor's files are, now holds every piece of it and held
+none of it at the point — a file renamed, or the code carried into another
+file. An anchor the artefact quotes nothing from, gone because its files are,
+moved where git's rename detection says they went. Anything else is not a
+move: more than one such file, a quote found only in a file of another kind,
+a quote the file already held.
 
 Both read HEAD, as the explanation does: uncommitted work is not read.
 """
@@ -26,7 +47,7 @@ from typing import Any
 
 from _lib import backbone, markdown
 from _lib.model import Unreadable
-from _lib.resolve import Anchor, Commit
+from _lib.resolve import DEAD, Anchor, Commit
 
 #: A piece of code quoted in Markdown, and a template placeholder that is none.
 _QUOTE = re.compile(r"`([^`\n]+)`")
@@ -80,7 +101,9 @@ def read(root: Path, artefact: str) -> Reading:
             behind = anchor.commits or tuple(
                 Commit(sha, subject) for sha, subject in backbone.touched(root, point, value)
             )
-            anchor = Anchor(kind, value, anchor.state, behind, quoted, gone)
+            lost = anchor.state == DEAD or bool(gone)
+            moved_to = _moved_to(root, point, value, gone) if lost else ()
+            anchor = Anchor(kind, value, anchor.state, behind, quoted, gone, moved_to)
         anchors.append(anchor)
     return Reading(
         artefact=_text(document.get("artefact")) or artefact,
@@ -90,6 +113,32 @@ def read(root: Path, artefact: str) -> Reading:
         point=point,
         anchors=tuple(anchors),
     )
+
+
+def _moved_to(root: Path, point: str, anchor: str, gone: tuple[str, ...]) -> tuple[str, ...]:
+    """Where the code a path anchor lost since `point` went, or `()` when the reading
+    cannot name one place: the one file outside the anchor, of a kind its files are,
+    that holds every piece of `gone` at HEAD and held none of it at `point` — or,
+    with nothing quoted from it, where git says the anchor's files were renamed."""
+    if not gone:
+        return tuple(backbone.renamed(root, point, anchor))
+    arrived: set[str] | None = None
+    kinds: set[str] = set()
+    for quote in gone:
+        kinds |= {_kind(path) for path in backbone.files_holding(root, point, quote, anchor)}
+        fresh = backbone.files_holding(root, "HEAD", quote) - backbone.files_holding(
+            root, point, quote
+        )
+        arrived = fresh if arrived is None else arrived & fresh
+        if not arrived:
+            return ()
+    found = sorted(path for path in arrived or () if _kind(path) in kinds)
+    return tuple(found) if len(found) == 1 else ()
+
+
+def _kind(path: str) -> str:
+    """A file's kind, as far as a move goes: its extension."""
+    return Path(path).suffix
 
 
 def _quotes(root: Path, location: str) -> tuple[str, ...]:

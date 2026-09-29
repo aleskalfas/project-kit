@@ -5,13 +5,20 @@ regressed decided by intent, a person deciding where intent is unclear, and the
 analysis never rewritten to match broken code:
 
 - the **rules** (`scripts/_lib/resolve.py`), on their own: each shape of evidence
-  and what it decides — a proposal, a reading left to the agent, or ambiguous;
+  and what it comes to — a proposal, a reading left to the agent with what the
+  evidence leans to, or ambiguous;
 - **the stop**, in a repository: an anchored file changes so that code a use
   case quotes is gone, and nothing says whether that was meant. `pkit analysis
   propose` answers ambiguous with the question for a person, and nothing is
   written — no artefact, no revalidation, no record — the friction still
-  standing. Given the person's answer as a quote, it proposes stale or
-  regressed; other shapes propose holds, or leave the change to be read;
+  standing. Given the person's answer as a quote with its source, it proposes
+  stale or regressed; a quote from a commit is checked against its message;
+- **moved code** is not the stop: a file renamed, or quoted code carried into
+  another file, proposes `holds` with the anchor re-pointed, recorded
+  `unchanged`;
+- **the commands for the person** it emits, word for word and with no consent
+  flag: a regression's carries the defect's placeholder, which the writer
+  refuses until the person fills it;
 - the **agent's files**: its front matter (Write for the workspace, no Edit,
   owning no path), the writers it runs and the one it never does, its
   storyboard's three scenarios, the references, and the deployed copy.
@@ -19,9 +26,10 @@ analysis never rewritten to match broken code:
 
 from __future__ import annotations
 
-import importlib.util
+import importlib
 import json
 import re
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -64,30 +72,49 @@ FIRST_RUN = f"{JOURNEYS}/JRN-001-first-run.md"
 # --- the rules, on their own ---------------------------------------------------------------
 
 
-def _load_resolve() -> ModuleType:
-    """`_lib/resolve.py` by its path: it imports nothing of `_lib`, and the capability's
-    `_lib` is not importable beside another capability's."""
-    path = CAPABILITY / "scripts" / "_lib" / "resolve.py"
-    spec = importlib.util.spec_from_file_location("software_analysis_resolve", path)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
+def _load_lib(*names: str) -> tuple[ModuleType, ...]:
+    """Pure `_lib` modules, imported together as the scripts import them: `_lib` is on
+    the path only while they load, since another capability's `_lib` is not
+    importable beside it."""
+    scripts = str(CAPABILITY / "scripts")
+
+    def ours() -> list[str]:
+        return [k for k in sys.modules if k == "_lib" or k.startswith("_lib.")]
+
+    saved = {k: sys.modules.pop(k) for k in ours()}
+    sys.path.insert(0, scripts)
+    try:
+        return tuple(importlib.import_module(f"_lib.{name}") for name in names)
+    finally:
+        sys.path.remove(scripts)
+        for key in ours():
+            del sys.modules[key]
+        sys.modules.update(saved)
 
 
-R: Any = _load_resolve()
+_RESOLVE, _ANSWERS = _load_lib("resolve", "answers")
+R: Any = _RESOLVE
+A: Any = _ANSWERS
 
 
-def _path(state: str = "stale", quoted: tuple[str, ...] = (), gone: tuple[str, ...] = ()) -> Any:
+def _path(
+    state: str = "stale",
+    quoted: tuple[str, ...] = (),
+    gone: tuple[str, ...] = (),
+    moved_to: tuple[str, ...] = (),
+) -> Any:
     commits = (R.Commit("4c1d2e9aaaaa", "refactor: split the runner"),)
-    return R.Anchor("path", "src/run.py", state, commits, quoted, gone)
+    return R.Anchor("path", "src/run.py", state, commits, quoted, gone, moved_to)
 
 
-def _verdict(anchors: list[Any], state: str = "stale", **intent: str) -> tuple[str, str]:
+def _verdict(anchors: list[Any], state: str = "stale", **intent: Any) -> tuple[str, str]:
+    """What the rules come to: an outcome proposed, `read` (with what it leans to), an
+    ambiguity, or nothing — and by which rule."""
     verdict: Any = R.propose("UC-001", state, anchors, R.Intent(**intent))
     if isinstance(verdict, R.Proposal):
         return str(verdict.outcome), str(verdict.rule)
+    if isinstance(verdict, R.Read) and verdict.hint:
+        return f"read, leaning to {verdict.hint}", str(verdict.rule)
     names = {R.Ambiguous: "ambiguous", R.Read: "read", R.Nothing: "none"}
     return names[type(verdict)], str(verdict.rule)
 
@@ -95,13 +122,17 @@ def _verdict(anchors: list[Any], state: str = "stale", **intent: str) -> tuple[s
 KEPT = _path(quoted=("run_suite",))
 GONE = _path(quoted=("run_suite", "fast"), gone=("run_suite",))
 DEAD = _path(state="dead-anchor")
+MOVED = _path(quoted=("run_suite", "fast"), gone=("run_suite",), moved_to=("src/suite.py",))
+RENAMED = _path(state="dead-anchor", quoted=("run_suite",), moved_to=("src/runner.py",))
 UNQUOTED = _path()
 RECORD = R.Anchor("record", "ADR-006", "stale")
 ACTOR = R.Anchor("artefact", "ACT-tester", "stale")
 CURRENT = R.Anchor("path", "src/other.py", "current")
-INTENDED = {"intended": "PR #212: 'rename run_suite to execute'"}
-UNINTENDED = {"unintended": "tests/test_run.py::test_suite fails at HEAD"}
-CONTRADICTED = {"contradicted": "step 2 still says the suite runs on its own"}
+INTENDED = {"intended": R.Quote("rename run_suite to execute", "https://example.org/pr/212")}
+UNINTENDED = {"unintended": R.Quote("tests/test_run.py::test_suite fails at HEAD", "Sam")}
+CONTRADICTED = {"contradicted": R.Quote("step 2 says the suite runs on its own", "Sam")}
+HOLDS_READ = "read, leaning to holds"
+STALE_READ = "read, leaning to analysis-stale"
 
 
 @pytest.mark.parametrize(
@@ -112,31 +143,39 @@ CONTRADICTED = {"contradicted": "step 2 still says the suite runs on its own"}
         ([], "unanchored", {}, ("none", "nothing-to-resolve")),
         # a stale artefact with no changed anchor moved: read it
         ([CURRENT], "stale", {}, ("read", "nothing-decides")),
-        # quoted-code-kept
-        ([KEPT, CURRENT], "stale", {}, ("holds", "quoted-code-kept")),
-        ([KEPT], "deferred", INTENDED, ("holds", "quoted-code-kept")),
+        # quoted-code-kept: no quoted name vanished, which is all it shows — read it
+        ([KEPT, CURRENT], "stale", {}, (HOLDS_READ, "quoted-code-kept")),
+        ([KEPT], "deferred", INTENDED, (HOLDS_READ, "quoted-code-kept")),
+        ([KEPT, MOVED], "stale", {}, (HOLDS_READ, "quoted-code-kept")),
+        # anchor-moved: the code went somewhere the reading names, so the anchor is stale
+        ([MOVED], "stale", {}, ("holds", "anchor-moved")),
+        ([RENAMED], "stale", {}, ("holds", "anchor-moved")),
+        ([MOVED, RENAMED], "stale", INTENDED, ("holds", "anchor-moved")),
         # ground-gone: stale or regressed, by intent
         ([GONE], "stale", {}, ("ambiguous", "ground-gone")),
         ([DEAD], "stale", {}, ("ambiguous", "ground-gone")),
         ([GONE, KEPT], "stale", {}, ("ambiguous", "ground-gone")),
+        ([GONE, MOVED], "stale", {}, ("ambiguous", "ground-gone")),
         ([GONE], "stale", INTENDED, ("analysis-stale", "ground-gone")),
         ([DEAD], "stale", UNINTENDED, ("code-regressed", "ground-gone")),
         ([GONE], "stale", {**INTENDED, **UNINTENDED}, ("ambiguous", "ground-gone")),
         # the agent's reading, or evidence, of a contradiction where code changed
         ([UNQUOTED], "stale", CONTRADICTED, ("ambiguous", "ground-gone")),
+        ([MOVED], "stale", CONTRADICTED, ("ambiguous", "ground-gone")),
         ([UNQUOTED], "stale", {**CONTRADICTED, **INTENDED}, ("analysis-stale", "ground-gone")),
         ([KEPT], "stale", UNINTENDED, ("code-regressed", "ground-gone")),
-        # deliberate-change: records and artefacts change only on purpose
-        ([RECORD], "stale", CONTRADICTED, ("analysis-stale", "deliberate-change")),
+        # deliberate-change: a record changes on purpose; this artefact following it is read
+        ([RECORD], "stale", CONTRADICTED, (STALE_READ, "deliberate-change")),
         ([ACTOR], "stale", UNINTENDED, ("ambiguous", "deliberate-change")),
         # nothing-decides
         ([UNQUOTED], "stale", {}, ("read", "nothing-decides")),
         ([RECORD, KEPT], "stale", {}, ("read", "nothing-decides")),
+        ([RECORD, MOVED], "stale", {}, ("read", "nothing-decides")),
         ([ACTOR], "stale", INTENDED, ("read", "nothing-decides")),
     ],
 )
-def test_each_shape_of_evidence_decides_what_the_rules_say(
-    anchors: list[Any], state: str, intent: dict[str, str], expected: tuple[str, str]
+def test_each_shape_of_evidence_comes_to_what_the_rules_say(
+    anchors: list[Any], state: str, intent: dict[str, Any], expected: tuple[str, str]
 ) -> None:
     assert _verdict(anchors, state, **intent) == expected
 
@@ -152,18 +191,64 @@ def test_the_question_names_what_disagrees_the_commit_and_both_readings() -> Non
     )
 
 
-def test_the_rules_never_propose_a_gap() -> None:
-    """A gap is found by reading the change, never by comparing quotes: over every
-    shape and every reading, the rules propose one of the other three or none."""
-    shapes = [KEPT, GONE, DEAD, UNQUOTED, RECORD, ACTOR, CURRENT]
+def test_the_rules_never_propose_a_gap_and_propose_holds_only_for_moved_code() -> None:
+    """A gap is found by reading the change, never by comparing quotes; and that no
+    quoted name vanished leans to `holds` without proposing it. Over every shape and
+    every reading, `holds` is proposed only where every changed anchor moved."""
+    shapes = [KEPT, GONE, DEAD, MOVED, RENAMED, UNQUOTED, RECORD, ACTOR, CURRENT]
     readings = [{}, INTENDED, UNINTENDED, CONTRADICTED, {**INTENDED, **UNINTENDED}]
-    proposed = {
-        _verdict([one, other], "stale", **reading)[0]
-        for one in shapes
-        for other in shapes
-        for reading in readings
+    seen: dict[str, set[tuple[str, ...]]] = {}
+    for one in shapes:
+        for other in shapes:
+            for reading in readings:
+                verdict = _verdict([one, other], "stale", **reading)[0]
+                shapes_changed = {a.shape for a in (one, other) if a.changed}
+                seen.setdefault(verdict, set()).add(tuple(sorted(shapes_changed)))
+    assert set(seen) == {
+        "holds",
+        "analysis-stale",
+        "code-regressed",
+        "ambiguous",
+        "read",
+        HOLDS_READ,
+        STALE_READ,
     }
-    assert proposed == {"holds", "analysis-stale", "code-regressed", "ambiguous", "read"}
+    assert seen["holds"] == {("moved",)}
+
+
+def test_the_answer_emits_the_person_s_commands_word_for_word() -> None:
+    """No consent flag — each writer asks once — and a placeholder wherever the words
+    are the agent's to draft or the person's alone."""
+    location = "tech-docs/analysis/use-case-model/use-cases/UC-001-run-suite.md"
+    moved: Any = A.answer(location, R.propose("UC-001", "stale", [RENAMED], R.Intent()), [RENAMED])
+    assert moved.outcome == "holds"
+    assert moved.first == ("re-point path:src/run.py to src/runner.py in the artefact's anchors",)
+    assert moved.commands == (
+        f"pkit friction revalidate {location} --outcome unchanged --because "
+        f"'src/run.py moved to src/runner.py; anchor re-pointed.'",
+    )
+    kept: Any = A.answer(location, R.propose("UC-001", "stale", [KEPT], R.Intent()), [KEPT])
+    assert kept.commands == (
+        f"pkit friction revalidate {location} --outcome unchanged --because "
+        f"'<why it still holds against this change>'",
+    )
+    regressed: Any = A.answer(
+        location, R.propose("UC-001", "stale", [GONE], R.Intent(**UNINTENDED)), [GONE]
+    )
+    (command,) = regressed.commands
+    assert "--because 'The description stands: <why it is still wanted>; 4c1d2e9aaaaa broke it" in (
+        command
+    )
+    assert "defect <the defect reference> reported.'" in command
+    assert regressed.first[0].startswith("report the defect")
+    stale: Any = A.answer(
+        location, R.propose("UC-001", "stale", [GONE], R.Intent(**INTENDED)), [GONE]
+    )
+    assert stale.commands == (f"pkit friction revalidate {location} --outcome updated",)
+    ambiguous = R.propose("UC-001", "stale", [GONE], R.Intent())
+    assert A.answer(location, ambiguous, [GONE]) is None
+    for answer in (moved, kept, regressed, stale):
+        assert all("--yes" not in c and "--dry-run" not in c for c in answer.commands)
 
 
 # --- the stop, in a repository ---------------------------------------------------------------
@@ -241,19 +326,79 @@ def test_the_person_s_answer_decides_stale_or_regressed(flagged: AdopterRepo) ->
     flagged.commit(
         "refactor: tidy the runner", {RUN: "def execute(fast=False):\n    print('run')\n"}
     )
-    meant = "Yes — run_suite became execute on purpose (#212)."
-    assert _propose(flagged, "UC-001", "--intended", meant)["verdict"] == "analysis-stale"
-    broken = "Not meant — that's a bug, #231."
-    regressed = _propose(flagged, "UC-001", "--unintended", broken)
-    assert (regressed["verdict"], regressed["read"]["unintended"]) == ("code-regressed", broken)
-    both = _propose(flagged, "UC-001", "--intended", meant, "--unintended", broken)
+    meant = ("--intended", "Yes — run_suite became execute on purpose.", "--intended-from", "Sam")
+    assert _propose(flagged, "UC-001", *meant)["verdict"] == "analysis-stale"
+    broken = "Not meant — that's a bug."
+    regressed = _propose(flagged, "UC-001", "--unintended", broken, "--unintended-from", "Sam")
+    assert regressed["verdict"] == "code-regressed"
+    assert regressed["read"]["unintended"] == {
+        "quote": broken,
+        "source": "Sam",
+        "source_kind": "other",
+        "verified": None,
+    }
+    both = _propose(flagged, "UC-001", *meant, "--unintended", broken, "--unintended-from", "Sam")
     assert both["verdict"] == "ambiguous"
+    assert both["answer"] is None
     assert flagged.git("status", "--porcelain").stdout == ""
+
+
+def test_a_quote_is_given_with_its_source_and_a_commit_s_is_checked(flagged: AdopterRepo) -> None:
+    said = "run_suite becomes execute, as every other entry point is named."
+    sha = flagged.commit(
+        f"refactor: tidy the runner\n\n{said}",
+        {RUN: "def execute(fast=False):\n    print('run')\n"},
+    )
+    lone = run_script(flagged, PROPOSE, "UC-001", "--intended", said, "--json")
+    assert lone.returncode == 2 and "--intended and --intended-from go together" in lone.stderr
+
+    def checked(quote: str, source: str) -> Any:
+        return _propose(flagged, "UC-001", "--intended", quote, "--intended-from", source)
+
+    found = checked(said.replace(" as", "\n as"), sha[:7])  # whitespace runs read as one
+    assert (found["verdict"], found["read"]["intended"]["verified"]) == ("analysis-stale", True)
+    assert found["read"]["intended"]["source_kind"] == "commit"
+    assert checked("run_suite is dropped on purpose.", sha)["read"]["intended"]["verified"] is False
+    install = flagged.git("rev-list", "--max-parents=0", "HEAD").stdout.split()[0]
+    assert checked(said, install)["read"]["intended"]["verified"] is False  # not behind it
+    assert checked(said, "https://example.org/pr/212")["read"]["intended"]["verified"] is None
+    # Shown, never enforced: an unchecked or failed quote decides as any quote does.
+    assert checked("run_suite is dropped on purpose.", sha)["verdict"] == "analysis-stale"
+    human = run_script(
+        flagged, PROPOSE, "UC-001", "--intended", "Dropped.", "--intended-from", sha[:12]
+    )
+    assert f"intended: 'Dropped.' — {sha[:12]}, NOT found in its message" in human.stdout
+
+
+def test_a_regression_s_command_waits_for_the_person_s_defect(flagged: AdopterRepo) -> None:
+    """The proposal never names the defect: its command carries the placeholder, the
+    writer refuses it as shown, and records it once the person has filled it."""
+    flagged.commit(
+        "refactor: tidy the runner", {RUN: "def execute(fast=False):\n    print('run')\n"}
+    )
+    document = _propose(flagged, "UC-001", "--unintended", "A bug.", "--unintended-from", "Sam")
+    answer = document["answer"]
+    assert answer["outcome"] == "code-regressed"
+    (command,) = answer["commands"]
+    assert "<the defect reference>" in command and "--yes" not in command
+    drafted = command.replace("<why it is still wanted>", "running the suite is still wanted")
+
+    def run(line: str) -> Any:
+        return CliRunner().invoke(main, [*shlex.split(line)[1:], "--yes"])
+
+    refused = run(drafted)
+    assert refused.exit_code != 0
+    assert "still holds the placeholder '<the defect reference>'" in refused.output
+    assert flagged.git("status", "--porcelain").stdout == ""
+    recorded = run(drafted.replace("<the defect reference>", "#231"))
+    assert recorded.exit_code == 0, recorded.output
+    flagged.commit("docs(analysis): UC-001 stands; the defect is #231")
+    assert _explained_state(flagged, "UC-001") == "current"
 
 
 def test_quoted_code_is_matched_as_a_whole_word(flagged: AdopterRepo) -> None:
     """`fast` renamed to `fastest` is gone, though `fastest` holds it as a substring: a
-    substring match would propose `holds` over code that changed under the quote."""
+    substring match would read code that changed under the quote as kept."""
     flagged.commit("feat: a faster pass", {RUN: "def run_suite(fastest=False):\n    pass\n"})
     document = _propose(flagged, "UC-001")
     assert document["verdict"] == "ambiguous"
@@ -265,27 +410,94 @@ def test_a_deleted_anchor_is_ambiguous_until_intent_is_quoted(flagged: AdopterRe
     document = _propose(flagged, "UC-001")
     assert document["verdict"] == "ambiguous"
     (anchor,) = document["anchors"]
-    assert (anchor["state"], anchor["shape"]) == ("dead-anchor", "gone")
+    assert (anchor["state"], anchor["shape"], anchor["moved_to"]) == ("dead-anchor", "gone", [])
     # The checks name no commit for a dead anchor; the proposal names the one that did it.
     assert [c["change"] for c in anchor["commits"]] == ["chore: drop the runner"]
     assert "path:src/run.py resolves to nothing any more" in document["question"]
     assert "'chore: drop the runner'" in document["question"]
-    intended = _propose(flagged, "UC-001", "--intended", "The runner is gone on purpose (#300).")
+    intended = _propose(
+        flagged, "UC-001", "--intended", "The runner is gone on purpose.", "--intended-from", "Sam"
+    )
     assert intended["verdict"] == "analysis-stale"
+    assert any("resolves to nothing" in step for step in intended["answer"]["first"])
 
 
-def test_a_change_that_keeps_the_quoted_code_is_proposed_as_holding(flagged: AdopterRepo) -> None:
+def test_a_renamed_file_is_moved_code_not_the_stop(flagged: AdopterRepo) -> None:
+    """The anchor is what went stale: re-pointed and recorded `unchanged`, since an
+    anchor-only edit changes no content — `updated` would be a bump."""
+    flagged.rename(RUN, "src/runner.py", "refactor: name the runner module for what it does")
+    document = _propose(flagged, "UC-001")
+    assert (document["verdict"], document["rule"]) == ("holds", "anchor-moved")
+    (anchor,) = document["anchors"]
+    assert (anchor["shape"], anchor["moved_to"]) == ("moved", ["src/runner.py"])
+    answer = document["answer"]
+    assert answer["first"] == [
+        "re-point path:src/run.py to src/runner.py in the artefact's anchors"
+    ]
+    (command,) = answer["commands"]
+    assert command.endswith(
+        "--outcome unchanged --because 'src/run.py moved to src/runner.py; anchor re-pointed.'"
+    )
+
+    # The person re-points the anchor and runs the command: the friction is answered.
+    text = (flagged.root / RUN_SUITE).read_text(encoding="utf-8")
+    flagged.write({RUN_SUITE: text.replace(f"- {RUN}\n", "- src/runner.py\n")})
+    result = CliRunner().invoke(main, [*shlex.split(command)[1:], "--yes"])
+    assert result.exit_code == 0, result.output
+    flagged.commit("docs(analysis): UC-001 follows the runner to its new module")
+    assert _explained_state(flagged, "UC-001") == "current"
+
+
+def test_quoted_code_carried_into_another_file_is_moved_code(flagged: AdopterRepo) -> None:
+    flagged.commit(
+        "refactor: the suite runs from its own module",
+        {
+            RUN: "fast = False\nprint('run')\n",
+            "src/suite.py": "def run_suite(fast=False):\n    print('run')\n",
+        },
+    )
+    document = _propose(flagged, "UC-001")
+    assert (document["verdict"], document["rule"]) == ("holds", "anchor-moved")
+    (anchor,) = document["anchors"]
+    assert (anchor["gone"], anchor["moved_to"]) == (["run_suite"], ["src/suite.py"])
+    # `fast` stayed in src/run.py: the new file joins the anchor rather than replacing it.
+    assert document["answer"]["first"] == [
+        "add src/suite.py to the artefact's path anchors, beside src/run.py"
+    ]
+    assert document["answer"]["commands"][0].endswith(
+        "'`run_suite` moved from src/run.py to src/suite.py; anchored there too.'"
+    )
+
+
+def test_a_quote_found_only_in_a_file_of_another_kind_did_not_move(flagged: AdopterRepo) -> None:
+    """A note mentioning the old name is no new home for the code."""
+    flagged.commit(
+        "refactor: tidy the runner",
+        {
+            RUN: "def execute(fast=False):\n    print('run')\n",
+            "docs/notes.md": "We used to call `run_suite` here.\n",
+        },
+    )
+    document = _propose(flagged, "UC-001")
+    assert (document["verdict"], document["anchors"][0]["shape"]) == ("ambiguous", "gone")
+
+
+def test_kept_code_leans_to_holds_and_leaves_the_diff_to_be_read(flagged: AdopterRepo) -> None:
     flagged.commit("fix: say what runs", {RUN: "def run_suite(fast=False):\n    print('suite')\n"})
     document = _propose(flagged, "UC-001")
-    assert (document["verdict"], document["rule"]) == ("holds", "quoted-code-kept")
+    assert (document["verdict"], document["rule"], document["hint"]) == (
+        "read",
+        "quoted-code-kept",
+        "holds",
+    )
     assert document["anchors"][0]["gone"] == []
+    assert "<why it still holds against this change>" in document["answer"]["commands"][0]
     # The actor quotes nothing from `src/**`: the same change is the agent's to read.
-    assert _propose(flagged, "ACT-tester")["verdict"] == "read"
+    actor = _propose(flagged, "ACT-tester")
+    assert (actor["verdict"], actor["hint"], actor["answer"]) == ("read", None, None)
 
 
-def test_an_upstream_artefact_changed_is_read_or_stale_never_regressed(
-    flagged: AdopterRepo,
-) -> None:
+def test_an_upstream_artefact_changed_is_read_never_regressed(flagged: AdopterRepo) -> None:
     text = (flagged.root / RUN_SUITE).read_text(encoding="utf-8")
     flagged.commit(
         "docs(analysis): the suite reports its time",
@@ -294,8 +506,9 @@ def test_an_upstream_artefact_changed_is_read_or_stale_never_regressed(
     document = _propose(flagged, "JRN-001")
     assert (document["verdict"], document["rule"]) == ("read", "nothing-decides")
     assert document["anchors"][0]["shape"] == "deliberate"
-    read = "Step 1 of JRN-001 says nothing of the time UC-001 now shows."
-    assert _propose(flagged, "JRN-001", "--contradicted", read)["verdict"] == "analysis-stale"
+    read = ("--contradicted", "Step 1 says nothing of the time.", "--contradicted-from", "Sam")
+    contradicted = _propose(flagged, "JRN-001", *read)
+    assert (contradicted["verdict"], contradicted["hint"]) == ("read", "analysis-stale")
     assert (flagged.root / FIRST_RUN).read_text(encoding="utf-8") == (
         flagged.git("show", f"HEAD:{FIRST_RUN}").stdout
     )

@@ -8,11 +8,14 @@ decides before anything is recorded, and the analysis is never rewritten to
 match broken code.
 
 This module is the part of that judgment that needs no judgment: it classifies
-the shapes the evidence takes and says which outcome they decide, or that they
-decide none. Reading the change — whether a step still describes the code,
-whether the change's context says it was meant — is the resolving agent's; it
-passes what it read in as `Intent`, each part a quote of where it read it. So
-the stop is one rule, here, and the agent writes nothing unless this says so.
+the shapes the evidence takes and says what they come to — an outcome it
+proposes, a reading it leaves to the agent with the outcome the evidence leans
+to, or a question for a person. Reading the change — whether a step still
+describes the code, whether the change's context says it was meant — is the
+resolving agent's; it passes what it read in as `Intent`, each part a `Quote`
+with where it was read and, where that can be checked, whether it is there.
+None of this enforces the stop: the proposal shows each quote beside its source
+and its check, and the person who runs the proposed commands decides.
 
 Each anchor that changed since the artefact's revalidation point — or that
 resolves to nothing any more, which the checks report as a dead anchor rather
@@ -21,11 +24,13 @@ than as a change — has a shape:
 - **kept** — a path anchor whose files still hold every piece of code the
   artefact quotes from them (what it writes in backticks and those files held
   at its revalidation point, each as a whole word), and it quotes something;
-- **gone** — a path anchor that now resolves to nothing, or whose files no longer
-  hold a piece of code the artefact quotes from them: the description and the
-  code disagree;
-- **deliberate** — a record or another artefact changed: a decision or an
-  analysis artefact is only ever changed on purpose;
+- **moved** — a path anchor that resolves to nothing any more, or no longer
+  holds code the artefact quotes, where that code went somewhere the reading
+  can name (`moved_to`): a file renamed, or the code carried into another file.
+  The description stands; its anchor is what is out of date;
+- **gone** — the same, and the code went nowhere the reading can name: the
+  description and the code disagree;
+- **deliberate** — a record or another artefact changed;
 - **unread** — a path anchor the artefact quotes nothing from, or an anchor of a
   kind no component resolves: nothing mechanical reads it.
 
@@ -37,11 +42,20 @@ And the rules, in the order they apply:
    evidence of one, `unintended`) where code changed: stale or regressed,
    decided by intent. Intent cited and none against → `analysis-stale`;
    unintent cited and none for → `code-regressed`; neither, or both →
-   **ambiguous**, and the agent stops.
-3. **deliberate-change** — a contradiction where only records or artefacts
-   changed → `analysis-stale`; with unintent cited against it → ambiguous.
-4. **quoted-code-kept** — every changed anchor *kept* → `holds`.
-5. **nothing-decides** — otherwise: the agent reads the change, and proposes
+   **ambiguous**, and the agent asks.
+3. **anchor-moved** — every changed anchor *moved* → `holds`, with the anchor
+   re-pointed. An edit to the anchors alone changes no content, so it is
+   recorded `unchanged` (COR-050 point 5: `updated` with no content change is
+   a bump).
+4. **deliberate-change** — a contradiction where only records or artefacts
+   changed → read, leaning to `analysis-stale`: a decision or an artefact
+   changes on purpose, but that alone does not say this artefact was meant to
+   follow it. With unintent cited against it → ambiguous.
+5. **quoted-code-kept** — every changed anchor *kept*, or *moved* → read,
+   leaning to `holds`. That no quoted name vanished is all it shows: behaviour
+   can change inside a name that stays, and a quote can survive in a call
+   site, a comment, a test name or an excluded path.
+6. **nothing-decides** — otherwise: the agent reads the change, and proposes
    `holds` or `gap-found` itself — or reads a contradiction, and asks again.
 
 `gap-found` is never proposed here: behaviour nothing describes is found by
@@ -60,11 +74,12 @@ from dataclasses import dataclass
 HOLDS, STALE, REGRESSED = "holds", "analysis-stale", "code-regressed"
 
 #: The shapes of a changed anchor.
-KEPT, GONE, DELIBERATE, UNREAD = "kept", "gone", "deliberate", "unread"
+KEPT, MOVED, GONE, DELIBERATE, UNREAD = "kept", "moved", "gone", "deliberate", "unread"
 
 #: The rules, by name, as the verdicts cite them.
 NOTHING_TO_RESOLVE = "nothing-to-resolve"
 GROUND_GONE = "ground-gone"
+ANCHOR_MOVED = "anchor-moved"
 DELIBERATE_CHANGE = "deliberate-change"
 QUOTED_CODE_KEPT = "quoted-code-kept"
 NOTHING_DECIDES = "nothing-decides"
@@ -75,6 +90,7 @@ SETTLED = frozenset({"current", "unanchored"})
 #: The anchor states that are a change to judge; the rest are current. A dead anchor
 #: counts whatever the artefact's state: the checks report it apart from staleness.
 CHANGED = frozenset({"stale", "deferred", "dead-anchor"})
+DEAD = "dead-anchor"
 
 #: The anchor kinds whose change is deliberate by nature.
 DELIBERATE_KINDS = frozenset({"record", "artefact"})
@@ -90,8 +106,8 @@ class Commit:
 class Anchor:
     """One anchor of the artefact, as the evidence reads it: its kind and value, its
     state (`pkit friction explain`'s), the commits behind its change, oldest first,
-    and — for a path — what the artefact quotes from its files and what of that is
-    gone at HEAD."""
+    and — for a path — what the artefact quotes from its files, what of that is gone
+    from them at HEAD, and where it went, when the reading can name it."""
 
     kind: str
     value: str
@@ -99,6 +115,7 @@ class Anchor:
     commits: tuple[Commit, ...] = ()
     quoted: tuple[str, ...] = ()
     gone: tuple[str, ...] = ()
+    moved_to: tuple[str, ...] = ()
 
     @property
     def changed(self) -> bool:
@@ -110,9 +127,15 @@ class Anchor:
             return DELIBERATE
         if self.kind != "path":
             return UNREAD
-        if self.state == "dead-anchor" or self.gone:
-            return GONE
+        if self.state == DEAD or self.gone:
+            return MOVED if self.moved_to else GONE
         return KEPT if self.quoted else UNREAD
+
+    @property
+    def repointed(self) -> bool:
+        """Whether a moved anchor is re-pointed — it resolves to nothing, or holds none
+        of what the artefact quoted from it — rather than joined by where the code went."""
+        return self.state == DEAD or set(self.gone) == set(self.quoted)
 
     @property
     def label(self) -> str:
@@ -120,20 +143,36 @@ class Anchor:
 
 
 @dataclass(frozen=True)
-class Intent:
-    """What the agent read, each part a quote of where it read it: `contradicted` —
-    the change contradicts what the artefact says; `intended` — the change's context
-    says the change was meant; `unintended` — it says it was not (a failing result on
-    the artefact, a report of the defect)."""
+class Quote:
+    """What the agent read, and where: `source` is a commit, a URL, or a person.
+    `verified` is whether the quote is in a commit's message, word for word, when
+    the source is a commit behind the change — `None` when the source is not a
+    commit, and nothing here can check it."""
 
-    contradicted: str | None = None
-    intended: str | None = None
-    unintended: str | None = None
+    text: str
+    source: str
+    verified: bool | None = None
+
+    def __str__(self) -> str:
+        return f"{self.text!r} ({self.source})"
+
+
+@dataclass(frozen=True)
+class Intent:
+    """What the agent read, each part a quote with its source: `contradicted` — the
+    change contradicts what the artefact says; `intended` — the change's context says
+    the change was meant; `unintended` — it says it was not (a failing result on the
+    artefact, a report of the defect)."""
+
+    contradicted: Quote | None = None
+    intended: Quote | None = None
+    unintended: Quote | None = None
 
 
 @dataclass(frozen=True)
 class Proposal:
-    """An outcome the evidence decides; the agent confirms it by reading the change."""
+    """An outcome the evidence decides; the agent confirms it by reading the change,
+    and a person runs what records it."""
 
     outcome: str
     rule: str
@@ -142,10 +181,12 @@ class Proposal:
 
 @dataclass(frozen=True)
 class Read:
-    """Nothing mechanical decides: the agent reads the change."""
+    """Nothing mechanical decides: the agent reads the change. `hint` is the outcome
+    the evidence leans to, when it leans — never more than a place to start."""
 
     rule: str
     reason: str
+    hint: str | None = None
 
 
 @dataclass(frozen=True)
@@ -185,30 +226,40 @@ def propose(artefact: str, state: str, anchors: Sequence[Anchor], intent: Intent
     contradicted = bool(gone) or intent.contradicted is not None or intent.unintended is not None
     if contradicted and code:
         return _stale_or_regressed(artefact, gone or code, intent)
+    if all(a.shape == MOVED for a in changed):
+        return Proposal(
+            HOLDS,
+            ANCHOR_MOVED,
+            f"the code {artefact} rests on moved, and nothing it quotes is gone: "
+            f"{'; '.join(_moved(a) for a in changed)}. Re-point the anchor and record it "
+            f"unchanged — confirm by reading the diff that the code moved, not only its name",
+        )
     if contradicted:
         if intent.unintended is not None:
             return Ambiguous(
                 DELIBERATE_CHANGE,
                 f"only {_labels(changed)} changed, which is only ever changed on purpose, yet "
-                f"{intent.unintended!r} says the change was not meant",
+                f"{intent.unintended} says the change was not meant",
                 f"{artefact}: only {_labels(changed)} changed. Is {artefact} out of date with "
                 f"it, or does the evidence show a defect elsewhere?",
             )
-        return Proposal(
-            STALE,
+        return Read(
             DELIBERATE_CHANGE,
             f"{_labels(changed)} changed on purpose and contradicts {artefact}: "
-            f"{intent.contradicted}",
+            f"{intent.contradicted}. That the change was meant does not say {artefact} was "
+            f"meant to follow it: read the change",
+            STALE,
         )
-    if all(a.shape == KEPT for a in changed):
-        quoted = sorted({q for a in changed for q in a.quoted})
-        return Proposal(
-            HOLDS,
+    if all(a.shape in (KEPT, MOVED) for a in changed):
+        quoted = sorted({q for a in changed for q in a.quoted if q not in a.gone})
+        return Read(
             QUOTED_CODE_KEPT,
-            f"the change to {_labels(changed)} leaves in place everything {artefact} quotes "
-            f"from it: {_quotes(quoted)}",
+            f"the change to {_labels(changed)} leaves in place every name {artefact} quotes "
+            f"from it: {_quotes(quoted)}. That shows only that none vanished — read the diff "
+            f"for behaviour that changed inside them",
+            HOLDS,
         )
-    unread = [a for a in changed if a.shape != KEPT]
+    unread = [a for a in changed if a.shape not in (KEPT, MOVED)]
     return Read(
         NOTHING_DECIDES,
         f"nothing mechanical reads the change to {_labels(unread)}: read it against "
@@ -233,7 +284,7 @@ def _stale_or_regressed(artefact: str, grounds: Sequence[Anchor], intent: Intent
         )
     else:
         reason = f"{what} — and nothing in the change's context says whether it was meant"
-    commits = _commits(grounds)
+    commits = commit_list(grounds)
     return Ambiguous(
         GROUND_GONE,
         reason,
@@ -244,14 +295,31 @@ def _stale_or_regressed(artefact: str, grounds: Sequence[Anchor], intent: Intent
 
 
 def _disagreement(artefact: str, anchor: Anchor) -> str:
-    if anchor.state == "dead-anchor":
+    if anchor.shape == MOVED:
+        return _moved(anchor)
+    if anchor.state == DEAD:
         return f"{anchor.label} resolves to nothing any more"
     if anchor.gone:
         return f"{anchor.label} no longer holds {_quotes(anchor.gone)}, which {artefact} quotes"
     return f"{anchor.label} changed"
 
 
-def _commits(anchors: Sequence[Anchor]) -> str:
+def moved_sentence(anchor: Anchor) -> str:
+    """Where a moved anchor's code went, and what becomes of the anchor: the words a
+    revalidation of it is recorded with."""
+    fix = "anchor re-pointed" if anchor.repointed else "anchored there too"
+    return f"{_moved(anchor)}; {fix}"
+
+
+def _moved(anchor: Anchor) -> str:
+    where = ", ".join(anchor.moved_to)
+    if anchor.state == DEAD:
+        return f"{anchor.value} moved to {where}"
+    return f"{_quotes(anchor.gone)} moved from {anchor.value} to {where}"
+
+
+def commit_list(anchors: Sequence[Anchor]) -> str:
+    """The commits behind the anchors, each once: `<short> '<subject>'`."""
     seen = dict.fromkeys(f"{c.commit[:12]} {c.change!r}" for a in anchors for c in a.commits)
     return ", ".join(seen)
 

@@ -19,8 +19,12 @@ backbone through its commands:
 Git answers which commit a name resolves to, the merge-base of two, who is
 working here — the default author of a revalidation record — and, for the
 proposal, a file's text at a commit, whether a path anchor's files held a piece
-of code at a commit, and which commits touched them: each asked of git with the
-anchor as a glob pathspec, so no file list is computed here.
+of code at a commit, which commits touched them, which files anywhere in the
+tree held a piece of code, which of an anchor's files were renamed and where
+to, and a commit's message: each asked of git, with an anchor as a glob
+pathspec. Git's pathspec, not the backbone's matcher, decides which files an
+anchor names here, and it knows nothing of the project's `friction.exclude`,
+which the backbone does not expose to a capability yet.
 
 `default_base` is the branch that numbers are compared with: `$PKIT_CHECK_BASE`,
 the variable the project's diff-scoped checks already read, else `origin/main`.
@@ -103,6 +107,53 @@ def holds(root: Path, commit: str, anchor: str, text: str) -> bool:
     except OSError:
         return False
     return proc.returncode == 0
+
+
+def files_holding(root: Path, commit: str, text: str, anchor: str | None = None) -> set[str]:
+    """The files that held `text` at `commit`, as a whole word, as `holds` reads it —
+    in the whole tree, or among a path anchor's files."""
+    argv = ["git", "grep", "-l", "-I", "-F", "-w", "-e", text, commit]
+    if anchor is not None:
+        argv += ["--", f":(glob){anchor}"]
+    try:
+        proc = subprocess.run(argv, cwd=root, capture_output=True, text=True, check=False)
+    except OSError:
+        return set()
+    prefix = f"{commit}:"
+    return {
+        line[len(prefix) :]
+        for line in proc.stdout.splitlines()
+        if proc.returncode == 0 and line.startswith(prefix)
+    }
+
+
+def renamed(root: Path, since: str, anchor: str) -> list[str]:
+    """Where the path anchor's files that are gone since `since` were renamed to, by
+    git's rename detection between `since` and HEAD — the whole tree compared, so a
+    file renamed out of the anchor is found."""
+    gone = _git(
+        root,
+        "diff",
+        "--name-only",
+        "--no-renames",
+        "--diff-filter=D",
+        since,
+        "HEAD",
+        "--",
+        f":(glob){anchor}",
+    )
+    if not gone:
+        return []
+    deleted = set(gone.splitlines())
+    renames = _git(root, "diff", "-M", "--name-status", "--diff-filter=R", "-z", since, "HEAD")
+    fields = (renames or "").split("\0")
+    pairs = zip(fields[1::3], fields[2::3], strict=False)
+    return sorted({new for old, new in pairs if old in deleted and new})
+
+
+def message(root: Path, commit: str) -> str | None:
+    """A commit's message, subject and body — `git log --format=%B` — or `None`."""
+    return _git(root, "log", "-1", "--format=%B", commit)
 
 
 def touched(root: Path, since: str, anchor: str) -> list[tuple[str, str]]:
