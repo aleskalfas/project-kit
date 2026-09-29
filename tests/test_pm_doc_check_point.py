@@ -14,8 +14,9 @@ Three layers:
   capability installed — its default filler run as a query, a documentation
   capability contributing beside it;
 - `check-doc-mapping` over that repository, reading the point through a `pkit`
-  that is the real CLI: a contributed obligation met only by its page in the
-  diff, never by a `## Doc impact` line; each source enforced on its own
+  that is the real CLI: a contributed obligation naming a page met only by
+  that page in the diff, one naming only a path unmet for as long as it is
+  given, neither by a `## Doc impact` line; each source enforced on its own
   setting; an unresolved point failing the check, naming the filler and the fix.
 
 The filler's `uv run --script` shebang is pointed at this interpreter in the
@@ -73,6 +74,16 @@ STALE_GUIDE = {
     "reason": "page-stale",
     "document": "docs/guide.md",
     "description": "an anchor of the guide changed",
+}
+
+# Code nothing documents: its answer is a page anchoring it, so it names no page.
+UNANCHORED = {
+    "id": "friction:code-undocumented:src/a.py",
+    "source": "friction",
+    "reason": "code-undocumented",
+    "path": "src/a.py",
+    "description": "src/a.py is in the declared surface and nothing anchors it — "
+    "anchor it from a page",
 }
 
 
@@ -143,6 +154,21 @@ def test_the_companion_schema_separates_mapping_from_contributed_obligations() -
         # A mapping obligation has the mapping's shape, whoever writes it.
         {**STALE_GUIDE, "source": "mapping"},
         {"id": "x", "source": "mapping", "reason": "mapped-path-changed", "code": "a/**", "documents": []},
+    ):
+        assert not schema.is_valid([broken]), broken
+
+
+def test_a_page_s_friction_names_its_page_and_undocumented_code_its_path() -> None:
+    """`document` is required of `page-stale`, optional for `code-undocumented`:
+    its subject is its `path`, answered by a page anchoring it, not by a page
+    changing."""
+    schema = _schema()
+    assert schema.is_valid([UNANCHORED])
+    assert schema.is_valid([{**UNANCHORED, "document": "docs/a.md"}])
+    for broken in (
+        {k: v for k, v in STALE_GUIDE.items() if k != "document"},
+        {k: v for k, v in UNANCHORED.items() if k != "path"},
+        {**UNANCHORED, "path": ""},
     ):
         assert not schema.is_valid([broken]), broken
 
@@ -444,6 +470,49 @@ def test_enforcing_the_mapping_enforces_no_other_source(project: AdopterRepo, tm
     run = _check(project, tmp_path, {"lib/x.py": "x\n", "docs/lib.md": "# Lib 2\n"})
     assert run.returncode == 0
     assert "[advisory] 1 friction obligation(s) unanswered" in run.stderr
+
+
+@pytest.mark.parametrize(
+    ("setting", "code", "summary"),
+    [
+        (
+            "advisory",
+            0,
+            "[advisory] 1 friction obligation(s) unanchored. Set "
+            "doc_check.sources.friction: enforcing to block.",
+        ),
+        (
+            "enforcing",
+            1,
+            "[refused] 1 friction obligation(s) unanchored — anchor each path from a page; "
+            "a `## Doc impact` line does not meet them.",
+        ),
+    ],
+)
+def test_an_unanchored_path_is_unmet_whatever_page_the_diff_changes(
+    project: AdopterRepo, tmp_path: Path, setting: str, code: int, summary: str
+) -> None:
+    """A path obligation stays unmet while it is given — the internal root's
+    pages changed, a `## Doc impact` line naming it — and the line names the fix.
+    The page obligation beside it is met by its page, as before."""
+    _configure(
+        project,
+        RULES.format(enforce="false"),
+        f"doc_check:\n  sources:\n    friction: {setting}\n",
+    )
+    _contribute(project, [STALE_GUIDE, UNANCHORED])
+    body = "## Doc impact\n- src/a.py: described in docs/guide.md\n"
+    changes = {"docs/guide.md": "# Guide 2\n", "docs/new.md": "# New\n"}
+    run = _check(project, tmp_path, changes, body)
+    assert (run.returncode, run.stdout, run.stderr) == (
+        code,
+        "check-doc-mapping: 2 rule(s), 2 changed file(s), mode=advisory\n"
+        "check-doc-mapping: 2 contributed obligation(s) from friction\n"
+        "  ✓ [friction] docs/guide.md → answered in the diff\n"
+        "  ✗ [friction] src/a.py → no page anchors it (code-undocumented); "
+        "anchor `src/a.py` from a page\n",
+        f"\n{summary}\n",
+    )
 
 
 def test_an_unresolved_point_fails_the_check_naming_the_filler_and_the_fix(

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "readers.schema.json",
+  "title": "Readers — the value of pkit::documentation:readers, version 1",
+  "description": "The data point's companion schema (COR-052 point 5; living-docs DEC-001 point 7): who reads the documentation and what they need. The point is `union`: entries from every filler merge by `id`, a project entry replacing a capability's or the default's whole, and the project may drop one under `remove` with a reason. The default — `user` and `maintainer`, one per mandatory space — always takes part, so a project has readers on day one; a capability that keeps knowledge about the software's users may add its own, under ids of its own. Each page names one of these ids as its `reader` (schemas/page.schema.json), and the capability's validator fails a page whose reader does not resolve. The inert policy is `fail`: a filler that cannot answer leaves the whole point unresolved, and no page's reader is checked until it does. The version rises only on a change that breaks existing fillers.",
+  "type": "array",
+  "items": { "$ref": "#/$defs/reader" },
+  "$defs": {
+    "word": {
+      "description": "A lowercase letter, then lowercase letters, digits and hyphens: the shape a page's `reader` field takes.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "reader": {
+      "description": "One reader of the documentation.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "description"],
+      "properties": {
+        "id": {
+          "description": "The reader's id, which a page names as its `reader`. Distinct from the ids an analysis capability gives its actors (DEC-001 point 7).",
+          "$ref": "#/$defs/word"
+        },
+        "description": {
+          "description": "Who the reader is and what they need from the documentation — what a reader-review reads a page against (DEC-001 point 6).",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

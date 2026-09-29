@@ -7,8 +7,9 @@ The capability's first artefacts, each held to living-docs DEC-001:
   installed: one test per rule it applies (an out-of-root place without an
   assignment, a place enclosing a root, a record declared as a page, another
   component's place, an entry point outside its space, a page's fields, the
-  most specific place, a definition that does not inherit LDOC), and reader
-  resolution dormant, said so in its summary;
+  most specific place, a definition that does not inherit LDOC), and the
+  readers each page's reader resolves against, named in its summary (reader
+  resolution itself is `test_living_docs_points.py`'s);
 - the **LDOC rule set** validating as a method rule set with its origins, and
   a space definition instantiated from the template inheriting it;
 - the **page template** validating — its own fields by the capability's
@@ -16,9 +17,10 @@ The capability's first artefacts, each held to living-docs DEC-001:
 
 The validator runs as a subprocess under this interpreter, as the backbone
 runs it (its `--json` findings document); where `pkit validate` runs it, the
-script's `uv run --script` shebang is pointed at this interpreter, so no test
-reaches `uv` or the network. project-kit's own configuration passing is in
-`test_self_host_documentation.py`.
+script's `uv run --script` shebang is pointed at this interpreter, and the
+`pkit` it reads the readers point through is the real CLI under this
+interpreter (`pkit_on_path`), so no test reaches `uv` or the network.
+project-kit's own configuration passing is in `test_self_host_documentation.py`.
 """
 
 from __future__ import annotations
@@ -110,7 +112,7 @@ def declare(
 
 
 @pytest.fixture
-def project(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
+def project(make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path) -> AdopterRepo:
     """An adopter with living-docs installed, two separate roots, one page per
     space's entry, a decision record, and both spaces' definitions — clean."""
     repo = make_adopter_repo(capabilities=("living-docs",))
@@ -156,7 +158,7 @@ def only_error(document: Mapping[str, Any]) -> tuple[str, str]:
 # --- a clean project, and what is dormant -----------------------------------------------
 
 
-def test_a_clean_project_answers_with_no_finding_and_says_reader_resolution_is_dormant(
+def test_a_clean_project_answers_with_no_finding_and_names_the_readers(
     project: AdopterRepo,
 ) -> None:
     document = run(project)
@@ -172,8 +174,7 @@ def test_a_clean_project_answers_with_no_finding_and_says_reader_resolution_is_d
     )
     assert "1 decision record(s)" in summary[3] and "2 in the definitions location" in summary[3]
     assert summary[4] == (
-        "reader resolution: dormant until the readers point pkit::documentation:readers "
-        "ships — a page's reader is checked for its shape only."
+        "readers (pkit::documentation:readers): maintainer, user; 3 page reader(s) checked."
     )
 
 
@@ -183,13 +184,20 @@ def test_the_validator_is_a_member_of_pkit_validate(project: AdopterRepo) -> Non
     )
     assert result.exit_code == 0, result.output
     assert "living-docs:spaces" in result.output
-    assert "reader resolution: dormant" in result.output
+    assert "readers (pkit::documentation:readers): maintainer, user" in result.output
     project.write({"docs/guide.md": "---\nreader: 42\nkind: signpost\n---\n"})
     result = CliRunner().invoke(
         main, ["--color", "never", "validate", "--only", "living-docs:spaces"]
     )
     assert result.exit_code == 1
     assert "docs/guide.md:/reader" in result.output
+    # A well-formed reader the readers point does not hold fails the page too.
+    project.write({"docs/guide.md": "---\nreader: guest\nkind: signpost\n---\n"})
+    result = CliRunner().invoke(
+        main, ["--color", "never", "validate", "--only", "living-docs:spaces"]
+    )
+    assert result.exit_code == 1
+    assert "reader 'guest', which does not resolve" in result.output
 
 
 # --- places and their assignment (DEC-001 point 1) ---------------------------------------
@@ -535,7 +543,8 @@ def test_the_page_template_validates_its_fields_and_its_friction_block() -> None
     container = bs.load_backbone_schema(REPO, "container")
     result = bs.validate_container(front, container, wiring=bs.ContainerWiring())
     assert result.findings == ()
-    assert set(front["pkit"]) == {"friction"}  # no point is defined yet: no role block
+    # The page's reader is its own field, outside the container: no role block.
+    assert set(front["pkit"]) == {"friction"}
 
 
 @pytest.mark.parametrize("reader", ["User", "", 7, None, ["user"], "a reader"])

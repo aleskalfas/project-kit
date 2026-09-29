@@ -1,0 +1,15 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  A `code-undocumented` obligation of the `pkit::work-tracking:doc-check` point
+  is met by anchoring its code from a page, no longer by any page changing. The
+  companion schema `doc-check.schema.json` makes `document` optional for a
+  `code-undocumented` obligation, whose subject is its `path` (now required),
+  and keeps it required for `page-stale`. `check-doc-mapping` reports an
+  obligation that names no `document` as unmet for as long as the point gives
+  it, whatever the diff changed: its filler reads the pull request's head, so
+  the obligation leaves the point once a page anchors the path. Its line names
+  the fix, anchor `<path>` from a page, and each source counts such
+  obligations as unanchored, under that source's own setting.

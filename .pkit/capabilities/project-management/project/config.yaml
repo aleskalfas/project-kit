@@ -59,10 +59,11 @@ code_path_to_doc_mapping:
 # The rules above are the always-included default filler of the
 # `pkit::work-tracking:doc-check` point, one obligation per rule, and `enforce`
 # above stays the mapping's enforcement setting (DEC-053). Obligations another
-# source contributes — a documentation capability's friction on anchored pages
-# — are met only by the page changed in the diff, never by a `## Doc impact`
-# line, and each source has its own setting here: advisory (the default) or
-# enforcing. Nothing contributes here yet, so no source is listed, e.g.:
+# source contributes are never met by a `## Doc impact` line: a documentation
+# capability's friction on an anchored page is met only by the page changed in
+# the diff, and code nothing documents only once a page anchors it. Each source
+# has its own setting here: advisory (the default) or enforcing. Nothing
+# contributes here yet, so no source is listed, e.g.:
 #   doc_check:
 #     sources:
 #       friction: enforcing

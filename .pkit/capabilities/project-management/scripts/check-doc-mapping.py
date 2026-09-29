@@ -19,10 +19,13 @@ and this check applies them to the diff:
   mapped doc is in the diff too — or a line in the PR's `## Doc impact`
   section names the code path or the rule's glob.
 - **A contributed obligation** — from a documentation capability, or the
-  project's own filler file — is met only by the page's answer in the diff:
-  a changed file matches its `document`. A `## Doc impact` line meets nothing;
-  the form of the answer is the core change check's to verify (`pkit friction
-  check`).
+  project's own filler file — that names a `document` is met only by the
+  page's answer in the diff: a changed file matches its `document`; the form
+  of the answer is the core change check's to verify (`pkit friction check`).
+  One that names no `document` — a `code-undocumented` path — is met only by
+  leaving the point: its filler reads the branch's HEAD, so once a page anchors
+  the path it is no longer given. Still given, it is unmet, whatever else the
+  diff changed. A `## Doc impact` line meets neither.
 - **Unresolved means fail.** The point's inert policy is `fail`: when a filler
   cannot answer, the point does not resolve and the check exits 1, naming the
   filler and the fix, rather than pass on fewer obligations than it should.
@@ -259,22 +262,34 @@ def main() -> int:
         print(f"  ✗ {code_glob} → {docs_str} (not updated; e.g. {triggered[0]})")
         unsatisfied.append(code_glob)
 
-    # Contributed obligations: met only by the page's answer in the diff — the
-    # page changed. The `## Doc impact` section is not read for them.
+    # Contributed obligations. One naming a page is met by the page's answer in
+    # the diff — the page changed. One naming none is met only by leaving the
+    # point: the filler read HEAD, so an obligation still here is unmet, however
+    # much else the diff changed. The `## Doc impact` section is not read.
     unanswered: dict[str, int] = {}
+    unanchored: dict[str, int] = {}
     for obligation in contributed:
         source = str(obligation["source"])
+        reason = obligation["reason"]
+        if "document" not in obligation:
+            path = str(obligation["path"])
+            print(
+                f"  ✗ [{source}] {path} → no page anchors it ({reason}); "
+                f"anchor `{path}` from a page"
+            )
+            unanchored[source] = unanchored.get(source, 0) + 1
+            continue
         page = str(obligation["document"])
         if any(_matches(page, f) for f in changed_set):
             print(f"  ✓ [{source}] {page} → answered in the diff")
             continue
-        print(f"  ✗ [{source}] {page} → no answer in the diff ({obligation['reason']})")
+        print(f"  ✗ [{source}] {page} → no answer in the diff ({reason})")
         unanswered[source] = unanswered.get(source, 0) + 1
 
     for obligation_id, reason in doc_check.removed(point):
         print(f"  − {obligation_id} → removed by the project filler: {reason}")
 
-    if not unsatisfied and not unanswered:
+    if not unsatisfied and not unanswered and not unanchored:
         print(
             "check-doc-mapping: all touched mappings satisfied."
             if not contributed
@@ -296,17 +311,25 @@ def main() -> int:
             "Set code_path_to_doc_mapping.enforce: true (with surgical rules) to block.",
             file=sys.stderr,
         )
-    for source, count in sorted(unanswered.items()):
+    # Per source, its pages' obligations, then its paths'; each source on its setting.
+    unmet = [
+        (source, count, "unanswered", "answer each on its page in this diff")
+        for source, count in unanswered.items()
+    ] + [
+        (source, count, "unanchored", "anchor each path from a page")
+        for source, count in unanchored.items()
+    ]
+    for source, count, state, fix in sorted(unmet, key=lambda entry: entry[0]):
         if doc_check.setting_of(settings, source) == doc_check.ENFORCING:
             print(
-                f"\n[refused] {count} {source} obligation(s) unanswered — answer each on "
-                "its page in this diff; a `## Doc impact` line does not meet them.",
+                f"\n[refused] {count} {source} obligation(s) {state} — {fix}; "
+                "a `## Doc impact` line does not meet them.",
                 file=sys.stderr,
             )
             failed = True
         else:
             print(
-                f"\n[advisory] {count} {source} obligation(s) unanswered. Set "
+                f"\n[advisory] {count} {source} obligation(s) {state}. Set "
                 f"doc_check.sources.{source}: enforcing to block.",
                 file=sys.stderr,
             )
