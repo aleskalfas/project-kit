@@ -19,15 +19,22 @@ Approval gate (human-mode three-way OR per DEC-026):
   3. `--bypass "<reason>"` is supplied (writes an audit comment).
 
 Checkbox close-gate (DEC-007, #734): a pre-flight in front of the merge —
-every `- [ ]` in the closing issue's body must be ticked, else refuse,
-listing each unticked line. It runs BEFORE the squash-merge is authorised
-because GitHub's `Closes #N` auto-closes the issue *on* merge, so a check
-afterwards would report a gate it had already let through. An issue with no
-checkboxes at all is unaffected (the rule applies only when boxes exist); a
-body that cannot be read fails closed. Overridable with
-`--skip-checkbox-gate` (discouraged), mirroring `close-issue`'s flag. The
-rule itself lives once in `_lib.checkbox_gate`, shared with `close-issue`,
-`merge-pr` and the engine's `gate-checkboxes-ticked` predicate.
+every `- [ ]` in the body of every issue the PR closes must be ticked, else
+refuse at the first issue that fails, naming it and listing each unticked
+line. It runs BEFORE the squash-merge is authorised because GitHub's
+`Closes #N` auto-closes each named issue *on* merge, so a check afterwards
+would report a gate it had already let through. The issues are the one
+`done-work` runs for, first, then every closing reference the PR body
+carries (#1086), read with the reader `open-pr` and `validate-pr` use
+(`_lib.pr_validation.extract_closing_issues`). An issue already closed before
+the merge is skipped with a note: the merge does not close it, so it is
+neither gated nor closed again. An issue with no checkboxes at all is
+unaffected (the rule applies only when boxes exist); an issue body — or the
+PR body naming the issues — that cannot be read fails closed. Overridable
+with `--skip-checkbox-gate` (discouraged), mirroring `close-issue`'s flag.
+The rule itself lives once in `_lib.checkbox_gate`, shared with
+`close-issue`, `merge-pr` and the engine's `gate-checkboxes-ticked`
+predicate.
 
 CI-status gate (#498): in front of the merge, the PR's `statusCheckRollup`
 must be green — a failing or still-pending check refuses the merge (an
@@ -108,6 +115,12 @@ Side-effects, in order (#878; the merge mechanic itself lives once in
   - Composes over `move-issue.py --to done` IMMEDIATELY after the merge, so
     no best-effort step can stand between the irreversible merge and the
     lifecycle transition.
+  - Then composes over `close-issue.py <M> --mode pr-merge --pr <PR>` for
+    every issue the merge closed, the primary first (#1086): each is closed
+    as completed if the merge left it open (a base branch other than the
+    default one, where GitHub does not auto-close), its state label is
+    reconciled to done, and its closure cascade runs (DEC-006). A failure is
+    a warning naming the re-run, and the run exits with it after cleanup.
   - Best-effort branch cleanup, after the transition: delete the remote head
     ref through the API (`gh api -X DELETE .../git/refs/heads/<branch>`, no
     local-checkout dependency), then `git checkout <default_branch>`, `git
@@ -150,6 +163,9 @@ from _lib.checkbox_gate import (  # noqa: E402
 )
 from _lib.criteria import checkbox_headings, tick_hints  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
+# The closing-reference reader `open-pr` and `validate-pr` use, so all three
+# agree on which issues a PR closes (#1086).
+from _lib.pr_validation import extract_closing_issues  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
     Identity,
@@ -197,9 +213,10 @@ from _lib.required_reviewers import (  # noqa: E402
 
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
-    """Fetch the issue's labels (review-mode resolution, DEC-027) and body (the
-    DEC-007 checkbox pre-flight) in one round-trip."""
-    return gh_get_issue(issue_number, config, fields="labels,body")
+    """Fetch the issue's labels (review-mode resolution, DEC-027), body (the
+    DEC-007 checkbox pre-flight) and state (an issue already closed is not
+    gated, #1086) in one round-trip."""
+    return gh_get_issue(issue_number, config, fields="labels,body,state")
 
 
 # The whole-gate and CI-bypass audit comments' first-line kind markers. They
@@ -579,22 +596,51 @@ def main() -> int:
             )
             return 1
 
-    # Checkbox close-gate (DEC-007, #734) — the PR-merge closure path. Runs
-    # BEFORE the merge is authorised: `Closes #N` auto-closes the issue *on*
-    # merge, so a check afterwards gates nothing. Reads the body already
-    # fetched above, so it costs no extra round-trip.
-    checkbox_gate = _check_checkbox_gate(
-        args.issue_number,
-        issue,
-        skip=args.skip_checkbox_gate,
-        criteria_headings=_criteria_headings(capability_root, yaml_loader),
-    )
-    if not checkbox_gate.passed:
-        print(checkbox_gate.refusal_message, file=sys.stderr)
-        return 1
-    # Report the outcome even when it passes: a gate nobody can see run is how
-    # this one went missing for as long as it did (#734).
-    print(f"  checkbox-gate: {checkbox_gate.passed_via}")
+    # Every issue the PR closes (#1086): `Closes #N` closes each of them on
+    # merge, so each is gated before it and closed + cascaded after it. The PR
+    # body names them; when it cannot be read the set is unknown, which fails
+    # closed like an unreadable issue body — unless the checkbox gate is
+    # skipped, in which case only the primary is known to close.
+    if pr_body is None:
+        if not args.skip_checkbox_gate:
+            print(_pr_body_unreadable_refusal(pr_number), file=sys.stderr)
+            return 1
+        print(
+            f"[warn] PR #{pr_number}'s body could not be read, so any issue it "
+            f"closes besides #{args.issue_number} is unknown and is not closed "
+            "or cascaded here.",
+            file=sys.stderr,
+        )
+    closing = _read_closing_issues(args.issue_number, issue, pr_body or "", config)
+    print(f"  closes: {_issue_list(c.number for c in closing)}")
+
+    # Checkbox close-gate (DEC-007, #734) and the state check, on each closing
+    # issue in turn — the PR-merge closure path. Runs BEFORE the merge is
+    # authorised: `Closes #N` auto-closes the issue *on* merge, so a check
+    # afterwards gates nothing. Refuses at the first issue that fails, with the
+    # refusal naming it and each unticked box. The primary's body was fetched
+    # above, so it costs no extra round-trip.
+    criteria_headings = _criteria_headings(capability_root, yaml_loader)
+    for closing_issue in closing:
+        if closing_issue.already_closed:
+            print(
+                f"  #{closing_issue.number}: already closed, skipped "
+                "(not gated, not closed again)"
+            )
+            continue
+        checkbox_gate = _check_checkbox_gate(
+            closing_issue.number,
+            closing_issue.issue,
+            skip=args.skip_checkbox_gate,
+            criteria_headings=criteria_headings,
+        )
+        if not checkbox_gate.passed:
+            print(checkbox_gate.refusal_message, file=sys.stderr)
+            return 1
+        # Report the outcome even when it passes: a gate nobody can see run is
+        # how this one went missing for as long as it did (#734).
+        print(f"  checkbox-gate: {checkbox_gate.passed_via} (#{closing_issue.number})")
+    to_close = [c.number for c in closing if not c.already_closed]
 
     # CI-status gate (#498). A satisfied approval gate is not evidence CI
     # passed — refuse to land a PR whose checks are red or still running. The
@@ -637,9 +683,10 @@ def main() -> int:
     if args.dry_run:
         print(
             f"(dry-run: would post bypass audit (if any), squash-merge "
-            f"--subject {pr_title!r}, call move-issue, then best-effort "
-            f"cleanup: delete remote branch {branch!r}, checkout main + pull, "
-            f"delete local branch.)"
+            f"--subject {pr_title!r}, call move-issue, close and cascade "
+            f"{_issue_list(to_close) or 'no issue'} through close-issue, then "
+            f"best-effort cleanup: delete remote branch {branch!r}, checkout "
+            f"main + pull, delete local branch.)"
         )
         return 0
 
@@ -726,6 +773,27 @@ def main() -> int:
             file=sys.stderr,
         )
 
+    # Close every issue the merge closed as completed and run its closure
+    # cascade (#1086), still ahead of the best-effort cleanup. `close-issue`'s
+    # pr-merge close through this PR is the one implementation: it closes an
+    # issue the merge left open (a non-default base, where GitHub does not
+    # auto-close), reconciles the state label, and walks the parents (DEC-006).
+    close_rc = 0
+    for number in to_close:
+        rc = _invoke_close_issue(
+            number, pr_number, args.capability_root,
+            skip_checkbox_gate=args.skip_checkbox_gate,
+        )
+        if rc != 0:
+            print(
+                f"[warn] PR merged but close-issue exited {rc} for #{number}. "
+                "The merge is durable; re-run `close-issue "
+                f"{number} --mode pr-merge --pr {pr_number}` to close and "
+                "cascade it.",
+                file=sys.stderr,
+            )
+            close_rc = close_rc or rc
+
     # Branch cleanup — best-effort, never fatal. The remote head ref goes
     # through the API so it has no local-checkout dependency; the local steps
     # warn and continue when the working tree cannot switch to the default
@@ -736,7 +804,13 @@ def main() -> int:
 
     if move_rc != 0:
         return move_rc
-    print(f"\n[ok] merged + closed #{args.issue_number}")
+    if close_rc != 0:
+        return close_rc
+    also = _issue_list(n for n in to_close if n != args.issue_number)
+    print(
+        f"\n[ok] merged + closed #{args.issue_number}"
+        + (f" (also closed: {also})" if also else "")
+    )
     return 0
 
 
@@ -932,6 +1006,64 @@ def _check_approval_gate(
 # ---- checkbox close-gate (DEC-007) -----------------------------------
 
 
+@dataclass(frozen=True)
+class _ClosingIssue:
+    """One issue the PR closes, as read before the merge (#1086)."""
+
+    number: int
+    #: The fetched issue (labels, body, state), or None when the read failed —
+    #: which the checkbox gate refuses rather than merge unverified.
+    issue: dict | None
+
+    @property
+    def already_closed(self) -> bool:
+        """Closed before the merge, so the merge does not close it: it is
+        neither gated nor closed again. An unreadable issue is not known to be
+        closed, so it stays gated (and fails closed there)."""
+        return (
+            self.issue is not None
+            and str(self.issue.get("state") or "").lower() == "closed"
+        )
+
+
+def _read_closing_issues(
+    primary: int, primary_issue: dict | None, pr_body: str, config: dict,
+) -> list[_ClosingIssue]:
+    """Every issue the PR closes, the one done-work runs for first (#1086).
+
+    The PR body's closing references are read with the reader `open-pr` and
+    `validate-pr` use, so the three agree on what a PR closes. The primary leads
+    even when the body does not name it — done-work has always gated and
+    transitioned the issue it runs for — and its already-fetched issue is
+    reused rather than read twice.
+    """
+    numbers = dict.fromkeys([primary, *extract_closing_issues(pr_body)])
+    return [
+        _ClosingIssue(n, primary_issue if n == primary else _gh_get_issue(n, config))
+        for n in numbers
+    ]
+
+
+def _pr_body_unreadable_refusal(pr_number: int | None) -> str:
+    """Refusal text when the PR body naming the closing issues cannot be read.
+
+    Every issue the body names is closed by the merge, so without it the
+    checkbox gate cannot know which issues to check (#1086). The gate fails
+    closed, as it does on an unreadable issue body.
+    """
+    return (
+        f"[refused] DEC-007 checkbox close-gate for PR #{pr_number}: the PR "
+        "body could not be read.\n"
+        "          → `gh pr view` failed, so which issues the merge closes is "
+        "unknown; the gate refuses rather than merge closing issues it has not "
+        "checked (the merge auto-closes them and cannot be undone).\n"
+        "          Remediation:\n"
+        "            - Transient gh failure — retry `done-work`.\n"
+        "            - If persistent, re-run with --skip-checkbox-gate "
+        "(discouraged) after checking every closing issue's boxes by hand."
+    )
+
+
 def _check_checkbox_gate(
     issue_number: int,
     issue: dict | None,
@@ -939,7 +1071,7 @@ def _check_checkbox_gate(
     skip: bool,
     criteria_headings: frozenset[str] | None = None,
 ) -> _GateResult:
-    """DEC-007's checkbox close-gate on the issue this merge closes.
+    """DEC-007's checkbox close-gate on one issue this merge closes.
 
     Markdown checkboxes are lifecycle-gating: an issue with an unticked box
     cannot reach Done. On the PR-merge path the check has to happen BEFORE the
@@ -2031,13 +2163,48 @@ def _find_pr_for_branch(branch: str, config: dict) -> dict | None:
     return None
 
 
+def _issue_list(numbers) -> str:
+    """`#1, #2` — how done-work's output names a set of issues."""
+    return ", ".join(f"#{n}" for n in numbers)
+
+
 def _invoke_move_issue(
     issue_number: int, target: str, capability_root_arg: Path | None
 ) -> int:
-    cmd = [
-        sys.executable, str(_HERE / "move-issue.py"),
-        str(issue_number), "--to", target, "--yes",
-    ]
+    return _run_sibling(
+        "move-issue.py", [str(issue_number), "--to", target], capability_root_arg,
+    )
+
+
+def _invoke_close_issue(
+    issue_number: int,
+    pr_number: int,
+    capability_root_arg: Path | None,
+    *,
+    skip_checkbox_gate: bool,
+) -> int:
+    """Close one issue the merge closed, through the merged PR (#1086).
+
+    `close-issue --mode pr-merge --pr <PR>` is the closure path for a Task whose
+    work landed in a merged PR: an issue the merge left open is closed as
+    completed (PR verified merged, checkbox gate, a reference comment), one
+    GitHub already closed has its state label reconciled, and both run the
+    closure cascade over their parents (DEC-006). An operator's
+    `--skip-checkbox-gate` carries through, so the close does not refuse what
+    the merge gate was told to let pass.
+    """
+    argv = [str(issue_number), "--mode", "pr-merge", "--pr", str(pr_number)]
+    if skip_checkbox_gate:
+        argv.append("--skip-checkbox-gate")
+    return _run_sibling("close-issue.py", argv, capability_root_arg)
+
+
+def _run_sibling(
+    script: str, argv: list[str], capability_root_arg: Path | None,
+) -> int:
+    """Run a sibling pm verb non-interactively (`--yes`), passing the capability
+    root through; its output streams into this run's. Returns its exit code."""
+    cmd = [sys.executable, str(_HERE / script), *argv, "--yes"]
     if capability_root_arg is not None:
         cmd += ["--capability-root", str(capability_root_arg)]
     proc = subprocess.run(cmd, check=False)

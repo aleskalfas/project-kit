@@ -86,6 +86,11 @@ from _lib.audit import bypass_audit_key, render_ci_bypass_audit_body  # noqa: E4
 from _lib.comment import post_audit_once  # noqa: E402
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config  # noqa: E402
 from _lib.hooks import fire_hooks  # noqa: E402
+# The one closing-reference reader, shared with done-work, open-pr and
+# validate-pr, so every verb agrees on which issues a PR closes (#1086).
+from _lib.pr_validation import (  # noqa: E402
+    extract_closing_issues as _extract_closing_issues,
+)
 from _lib import session_guard  # noqa: E402
 from _lib.membership import (  # noqa: E402
     CAPABILITY_NAME,
@@ -95,10 +100,6 @@ from _lib.membership import (  # noqa: E402
     resolve_invoker_identity,
 )
 
-
-CLOSING_KEYWORD_RE = re.compile(
-    r"\b(?:closes|fixes|resolves)\s+#(\d+)", re.IGNORECASE
-)
 
 # The CI-bypass audit comment's first-line kind marker. It says WHAT the comment
 # is; it is not what makes the post idempotent — a fixed string recognised in
@@ -370,17 +371,7 @@ def main() -> int:
     return 0
 
 
-# ---- closing-issue parsing -----------------------------------------
-
-
-def _extract_closing_issues(pr_body: str) -> list[int]:
-    """Find all `Closes #N` / `Fixes #N` / `Resolves #N` numbers."""
-    out: list[int] = []
-    for m in CLOSING_KEYWORD_RE.finditer(pr_body or ""):
-        n = int(m.group(1))
-        if n not in out:
-            out.append(n)
-    return out
+# ---- closing-issue checkbox sweep ----------------------------------
 
 
 def _gather_unticked_findings(
