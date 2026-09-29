@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-29T21:00:24Z
+      at: 2026-09-29T21:25:48Z
       outcome: unchanged
-      unchanged-because: the CLI, lifecycle and process READMEs now say the floor raise's refusals and notices and that the journal warning's fix follows the component's origin; the area map's one-line summaries of those areas still hold
+      unchanged-because: the CLI README gained the analysis commands, friction artefacts --at and docs record-location, all inside its own sections (#887); the area map holds
 ---
 
 # project-kit
