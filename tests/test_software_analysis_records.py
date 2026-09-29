@@ -16,17 +16,24 @@ Held to software-analysis DEC-001 points 5, 6 and 9:
 - **every word is the person's** — an outcome with no justification, and a text
   still holding a placeholder, are refused rather than written;
 - an **actor or term nothing embodies** is stamped with its reason,
-  `unanchored-because`, instead of anchors, and never with both.
+  `unanchored-because`, instead of anchors, and never with both — and the
+  check warns about an artefact carrying both, written by hand;
+- **an open regression is visible**: the check reports a record's
+  `code-regressed` artefact until it is revalidated on a later day than the
+  record, and never fails on it.
 """
 
 from __future__ import annotations
 
 import datetime
 import subprocess
+from collections.abc import Mapping
 from pathlib import Path
+from typing import Any
 
 import pytest
 
+from project_kit import friction_write as fw
 from project_kit.friction_validate import validate_friction
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.analysis_repo import (
@@ -62,6 +69,13 @@ def _today() -> str:
 def _record(repo: AdopterRepo, *args: str) -> subprocess.CompletedProcess[str]:
     """`pkit analysis new revalidation …`: a record reads no default branch."""
     return run_script(repo, NEW, "revalidation", *args)
+
+
+def _said(document: Mapping[str, Any], severity: str) -> list[tuple[str, str]]:
+    """The check's findings of one severity that never fails: `warning` or `report`."""
+    return [
+        (f["location"], f["message"]) for f in document["findings"] if f["severity"] == severity
+    ]
 
 
 def _records(repo: AdopterRepo) -> list[str]:
@@ -141,6 +155,48 @@ def test_a_planned_revalidation_is_recorded_even_when_everything_holds(
     body = (project.root / rel).read_text(encoding="utf-8")
     assert body.endswith("## Gaps\n\nNone found.\n")
     assert errors(check(project)) == []
+
+
+def test_an_open_regression_is_reported_until_it_is_revalidated_on_a_later_day(
+    project: AdopterRepo,
+) -> None:
+    regression = (
+        "--change",
+        "#45",
+        "--trigger",
+        "drift",
+        "--outcome",
+        "UC-001=code-regressed",
+        "--because",
+        "UC-001=Running the suite is still wanted; the change dropped it.",
+        "--gap",
+        "The suite no longer runs => defect #46 reported",
+    )
+    assert _record(project, "suite-lost", *regression).returncode == 0
+    where = f"{RECORDS}/{_today()}-suite-lost.md:/outcomes/UC-001"
+    ((location, message),) = _said(check(project), "report")
+    assert location == where
+    assert message.startswith("UC-001's regression is open: never revalidated, not since")
+
+    # The regression's own answer, the same day, leaves it open.
+    now = datetime.datetime.now(datetime.UTC)
+    because = "The description stands: running the suite is wanted; defect #46 reported."
+    fw.write(
+        fw.plan_revalidate(project.root, "UC-001", outcome="unchanged", because=because, now=now)
+    )
+    ((location, message),) = _said(check(project), "report")
+    assert location == where
+    assert f"is open: last revalidated {_today()}, not since" in message
+
+    # Revalidated against the fix on a later day, it is closed; it never failed the check.
+    later = now + datetime.timedelta(days=1)
+    fixed = "The fix for #46 runs the suite again, as step 1 says."
+    fw.write(
+        fw.plan_revalidate(project.root, "UC-001", outcome="unchanged", because=fixed, now=later)
+    )
+    document = check(project)
+    assert _said(document, "report") == []
+    assert errors(document) == []
 
 
 # --- nothing to say, or not enough (DEC-001 points 5 and 6) ------------------------------------
@@ -337,3 +393,15 @@ def test_a_use_case_takes_no_unanchored_reason(project: AdopterRepo) -> None:
     )
     assert completed.returncode == 2  # not an option a use case has: it anchors to its actor
     assert not any((project.root / USE_CASES).glob("*-idle.md"))
+
+
+def test_unanchored_because_beside_anchors_is_warned_and_never_failed(project: AdopterRepo) -> None:
+    """The stamp refuses the pair; a hand edit that writes it is warned about."""
+    text = (project.root / ACTORS).read_text(encoding="utf-8")
+    reason = "ACT-tester:\n  unanchored-because: No code embodies it.\n"
+    project.write({ACTORS: text.replace("ACT-tester:\n", reason, 1)})
+    document = check(project)
+    ((location, message),) = _said(document, "warning")
+    assert location == f"{ACTORS}#ACT-tester:/unanchored-because"
+    assert "carries `unanchored-because` beside anchors" in message
+    assert errors(document) == []

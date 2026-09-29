@@ -155,6 +155,11 @@ The body gives each artefact's outcome with its justification, then the gaps and
 - **a journey whose use-case anchors do not match its steps** — the message names the anchors to write;
 - **a revalidation record** whose front matter does not fit its schema, or whose outcomes cite an id that is no artefact of the analysis (withdrawn ones are fine).
 
+It says two more things, and never fails on them:
+
+- **an open regression**, reported: a record's `code-regressed` artefact that has not been revalidated since the record — its `at` falls on no later day (UTC) than the record's date. The defect the record names is still open, or its fix was never revalidated against the artefact. It is worked out from the records and the artefacts each time, never kept in a ledger;
+- **`unanchored-because` beside anchors**, a warning: the reason says why an actor or term has none, so one that has anchors says two things at once. The stamp refuses the pair; the warning catches a hand edit.
+
 Friction itself, dead anchors and the friction block's own shape are the core's checks (`pkit validate`'s `friction` member and `pkit friction check`), and so is front matter that does not parse; an unanchored artefact is the core's measure, never an error.
 
 ## Numbers another branch took: `pkit analysis check-numbers`

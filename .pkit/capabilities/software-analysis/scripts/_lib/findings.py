@@ -4,7 +4,9 @@ Both the validator (`_lib/check.py`, the `software-analysis:artefacts` member of
 `pkit validate`) and the number comparison (`_lib/numbers.py`, `pkit analysis
 check-numbers`) answer in this shape: a finding is a severity, a location —
 a path, `path:/json/pointer`, or `path#id` for an entry — and a message
-(ADR-058 point 1). An `error` fails; a `report` is said and never fails.
+(ADR-058 point 1). An `error` fails; a `warning` asks for attention and a
+`report` states what an owning record says is reported rather than judged —
+both are said and never fail (ADR-058 point 2).
 """
 
 from __future__ import annotations
@@ -12,7 +14,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-ERROR, REPORT = "error", "report"
+ERROR, WARNING, REPORT = "error", "warning", "report"
 
 
 @dataclass(frozen=True)

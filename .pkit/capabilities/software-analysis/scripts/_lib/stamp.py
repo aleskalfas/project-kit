@@ -41,11 +41,13 @@ from _lib import backbone, markdown, schemas
 from _lib.model import (
     ACTOR,
     COLLECTIONS,
+    CONTAINER,
     JOURNEY,
     NOUN,
     NUMBERED,
     PREFIX,
     TERM,
+    UNANCHORED_BECAUSE,
     USE_CASE,
     Analysis,
     Unreadable,
@@ -71,10 +73,6 @@ _SEAM_LINE = re.compile(r"^- \*\*UC-\d+ → UC-\d+:\*\* (?P<rest>.*)$")
 
 #: A collection entry's section heading, `## <id> — <name>`.
 _SECTION = re.compile(r"^## (?P<id>\S+)")
-
-#: The field an actor or a term nothing embodies carries instead of anchors: the
-#: reason onboarding accepts it unanchored (DEC-001 point 9).
-UNANCHORED_BECAUSE = "unanchored-because"
 
 
 class Refused(Exception):
@@ -267,7 +265,7 @@ def _document(kind: str, new_id: str, request: Request) -> str:
         anchored = list(dict.fromkeys(request.steps))
     else:
         anchored = [str(request.actor)]
-    data["pkit"] = _container(request, anchored)
+    data[CONTAINER] = _container(request, anchored)
     body = body.replace(template_id, new_id).replace(TITLE, _title(request))
     if kind == JOURNEY:
         body = _journey_body(body, request.steps)
@@ -311,11 +309,11 @@ def _added_entry(target: Path, place: str, kind: str, new_id: str, request: Requ
     front, body = _template(kind)
     ((template_id, example),) = dict(markdown.load(front)).items()
     name = _title(request)
-    entry = {key: value for key, value in example.items() if key != "pkit"}
+    entry = {key: value for key, value in example.items() if key != CONTAINER}
     entry["name"] = name
     if request.unanchored_because:
         entry[UNANCHORED_BECAUSE] = request.unanchored_because
-    entry["pkit"] = _container(request, [])
+    entry[CONTAINER] = _container(request, [])
     heading = body.find(f"## {template_id}")
     preamble, section = body[:heading], body[heading:]
     section = section.replace(template_id, new_id).replace(str(example["name"]), name)

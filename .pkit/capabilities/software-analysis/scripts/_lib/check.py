@@ -34,6 +34,18 @@ What is checked, each against the record's words:
   and lie in no place, so they are read from their folder under the analysis
   location.
 
+And two findings that never fail:
+
+- **An open regression** (point 5), a report: a record's `code-regressed`
+  artefact not revalidated since the record — its `at` on no later day (UTC)
+  than the record's date, or no `at` at all. The defect the record names is
+  still open, or its fix was never revalidated against the artefact. Derived
+  from the records and the artefacts in the working tree each time, never
+  kept in a ledger (COR-050 point 9).
+- **`unanchored-because` beside anchors** (point 9), a warning: the reason
+  says why an artefact has no anchors, so one with anchors carrying it says
+  two things at once. The stamp refuses the pair; this catches a hand edit.
+
 It reads the working tree alone, so the same tree always answers the same.
 
 **Not here.** A number two branches took (point 3) is `pkit analysis
@@ -54,14 +66,17 @@ from pathlib import Path
 from ruamel.yaml.error import YAMLError
 
 from _lib import backbone, markdown, schemas
-from _lib.findings import ERROR, Finding, Outcome, at
+from _lib.findings import ERROR, REPORT, WARNING, Finding, Outcome, at
 from _lib.model import (
     ACTOR,
+    CONTAINER,
     ID_SHAPE,
     JOURNEY,
     KINDS,
     NOUN,
+    REVALIDATED_AT,
     REVALIDATIONS,
+    UNANCHORED_BECAUSE,
     USE_CASE,
     Analysis,
     Artefact,
@@ -71,7 +86,10 @@ from _lib.model import (
 )
 
 #: Where in an artefact its artefact anchors sit.
-ARTEFACT_ANCHORS = "/pkit/friction/anchors/artefact"
+ARTEFACT_ANCHORS = f"/{CONTAINER}/friction/anchors/artefact"
+
+#: The outcome whose record stays open until the artefact is revalidated again.
+REGRESSED = "code-regressed"
 
 
 def check(root: Path) -> Outcome:
@@ -99,7 +117,10 @@ def check(root: Path) -> Outcome:
     outcome.findings += _references(analysis)
     outcome.findings += _actor_anchors(analysis)
     outcome.findings += _journey_anchors(analysis)
-    outcome.findings += _record_findings(root, records, analysis)
+    outcome.findings += _unanchored_beside_anchors(analysis)
+    found, read = _record_findings(root, records, analysis)
+    outcome.findings += found
+    outcome.findings += _open_regressions(root, read, analysis)
     return outcome
 
 
@@ -280,6 +301,20 @@ def _journey_anchors(analysis: Analysis) -> list[Finding]:
     return found
 
 
+def _unanchored_beside_anchors(analysis: Analysis) -> list[Finding]:
+    """An artefact carrying the reason it has no anchors, and anchors (DEC-001 point 9)."""
+    return [
+        Finding(
+            WARNING,
+            at(artefact.location, f"/{UNANCHORED_BECAUSE}"),
+            f"carries `{UNANCHORED_BECAUSE}` beside anchors: the reason says why it has none — "
+            f"drop the reason, or the anchors (DEC-001 point 9)",
+        )
+        for artefact in analysis.artefacts
+        if UNANCHORED_BECAUSE in artefact.fields and any(artefact.anchors.values())
+    ]
+
+
 def _unique(values: Iterable[str]) -> list[str]:
     return list(dict.fromkeys(values))
 
@@ -297,8 +332,12 @@ def _records(root: Path, location: str) -> list[Path]:
     )
 
 
-def _record_findings(root: Path, records: list[Path], analysis: Analysis) -> list[Finding]:
+def _record_findings(
+    root: Path, records: list[Path], analysis: Analysis
+) -> tuple[list[Finding], list[tuple[str, dict[str, object]]]]:
+    """Each record's findings, and the records whose front matter was read."""
     found: list[Finding] = []
+    read: list[tuple[str, dict[str, object]]] = []
     for path in records:
         rel = path.relative_to(root).as_posix()
         try:
@@ -325,7 +364,8 @@ def _record_findings(root: Path, records: list[Path], analysis: Analysis) -> lis
         for pointer, message in schemas.errors(schemas.RECORD, data):
             found.append(Finding(ERROR, at(rel, pointer), message))
         found += _cited(rel, data.get("outcomes"), analysis)
-    return found
+        read.append((rel, data))
+    return found, read
 
 
 def _cited(rel: str, outcomes: object, analysis: Analysis) -> list[Finding]:
@@ -345,3 +385,50 @@ def _cited(rel: str, outcomes: object, analysis: Analysis) -> list[Finding]:
         and any(schemas.id_pattern(kind).match(cited) for kind in KINDS)
         and analysis.find(cited) is None
     ]
+
+
+def _open_regressions(
+    root: Path, records: list[tuple[str, dict[str, object]]], analysis: Analysis
+) -> list[Finding]:
+    """Each `code-regressed` outcome whose artefact was not revalidated on a later day
+    than its record: reported, never failed (DEC-001 point 5)."""
+    found: list[Finding] = []
+    for rel, data in records:
+        day, outcomes = data.get("date"), data.get("outcomes")
+        if not isinstance(day, str) or not isinstance(outcomes, dict):
+            continue  # the schema reports it
+        for cited, outcome in outcomes.items():
+            artefact = analysis.find(cited) if isinstance(cited, str) else None
+            if outcome != REGRESSED or artefact is None:
+                continue
+            last = _revalidated_on(root, artefact)
+            if last is not None and last > day[:10]:
+                continue
+            since = f"last revalidated {last}" if last else "never revalidated"
+            found.append(
+                Finding(
+                    REPORT,
+                    at(rel, f"/outcomes/{cited}"),
+                    f"{cited}'s regression is open: {since}, not since this record of "
+                    f"{day[:10]}. Once the defect is fixed, revalidate {cited} against the fix "
+                    f"— until then, what it describes is not what the code does (DEC-001 "
+                    f"point 5)",
+                )
+            )
+    return found
+
+
+def _revalidated_on(root: Path, artefact: Artefact) -> str | None:
+    """The day, `YYYY-MM-DD` in UTC, of the artefact's revalidation marker as the
+    working tree holds it; `None` without one. The marker is inside the container,
+    which the backbone's reading leaves out of an artefact's own fields, so it is
+    read from the file."""
+    try:
+        front, _body = markdown.split((root / artefact.path).read_text(encoding="utf-8"))
+        data = markdown.load(front) if front is not None else None
+    except (OSError, UnicodeDecodeError, YAMLError):
+        return None  # the core reports a file it cannot read
+    node: object = data.get(artefact.id) if artefact.entry and isinstance(data, dict) else data
+    for key in (CONTAINER, *REVALIDATED_AT):
+        node = node.get(key) if isinstance(node, dict) else None
+    return node[:10] if isinstance(node, str) and len(node) >= 10 else None
