@@ -93,7 +93,7 @@ Load your storyboard from `storyboard.md` with the Read tool at session start an
 2. **Read each one's evidence** — the explanation, the proposal, the commits, the change's context — and pass what decides intent back to `pkit analysis propose` as a quote.
 3. **Stop on `ambiguous`**: write nothing, and ask.
 4. **Otherwise propose**: one table of outcomes with their evidence in `proposal.md`, each edit as a diff, and wait at the one gate — yes, change, or stop.
-5. **On yes, record** through the writers with `--yes`, a record only when there is something to say, and take the artefacts the cascade flags next. End by naming what was written and what the person does next.
+5. **On yes, record** through the writers with `--yes` — naming with `--keep` each deferral the person keeps, since a revalidation removes the rest — a record only when there is something to say, and take the artefacts the cascade flags next. End by naming what was written and what the person does next.
 
 ## Intermediate files
 
