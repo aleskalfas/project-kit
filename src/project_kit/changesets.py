@@ -19,16 +19,24 @@ plain `changie new` writes exactly what this parser reads):
     body: Add the `pkit release` command.   # the note
     category: Added              # optional Keep-a-Changelog group (see below)
     pr: 465                      # optional PR reference for the changelog link
+    requires_backbone: release   # optional: raise the component's floor (see below)
 
-`category` and `pr` are optional and read from either the top level (a
-hand-written changeset) or a nested `custom:` map (what `changie new` writes
-via the `custom:` block in `.changie.yaml`). `category` is one of the
-Keep-a-Changelog groups (`Added`, `Changed`, `Fixed`, `Removed`,
+`category`, `pr` and `requires_backbone` are optional and read from either the
+top level (a hand-written changeset) or a nested `custom:` map (what `changie
+new` writes via the `custom:` block in `.changie.yaml`). `category` is one of
+the Keep-a-Changelog groups (`Added`, `Changed`, `Fixed`, `Removed`,
 `Deprecated`, `Security`); it is **orthogonal to the `kind` segment** (a
 `patch` may be `Fixed` or `Changed`) and defaults at render time when absent.
 It is irrelevant for `none` changesets, which move no version. `pr` is
 captured at author time (release-time derivation is unreliable under
 squash/rebase) and the changelog degrades gracefully when it is absent.
+
+`requires_backbone: release` declares that the component needs the backbone
+the release ships: the release step raises the lower bound of the component's
+`requires_backbone` range to that backbone version. `release` is its one value;
+the parser keeps whatever was written, and the release step and its lint
+refuse anything else, and the field on a changeset that cannot carry it
+(`project_kit.release.floor_problems`).
 
 changie also writes a `time` field; it is ignored here. `none` is the escape
 hatch — a declared "this touched a component's tree but is not a surface
@@ -42,6 +50,7 @@ import secrets
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any, cast
 
 import click
 from ruamel.yaml import YAML
@@ -54,6 +63,12 @@ _SEGMENT_RANK = {seg: rank for rank, seg in enumerate(SEGMENTS)}
 # The synthetic component name for the backbone tier (`.pkit/VERSION`), which
 # has no `package.yaml`. Reserved — a real component may not take this name.
 BACKBONE = "backbone"
+
+# The changeset field that raises a component's `requires_backbone` floor, named
+# after the package key it writes, and its one value: the backbone this release
+# ships.
+FLOOR_FIELD = "requires_backbone"
+FLOOR_RELEASE = "release"
 
 _yaml = YAML(typ="safe")
 
@@ -71,6 +86,12 @@ class Changeset:
     path: Path
     category: str | None = None  # optional Keep-a-Changelog group; defaulted at render
     pr: str | None = None  # optional PR reference for the changelog link
+    requires_backbone: str | None = None  # the floor field as written; see FLOOR_FIELD
+
+    @property
+    def raises_floor(self) -> bool:
+        """Whether this changeset declares its component needs the release's backbone."""
+        return self.requires_backbone == FLOOR_RELEASE
 
 
 @dataclass(frozen=True)
@@ -155,8 +176,9 @@ def discover_components(source_kit: Path) -> list[Component]:
 
 def parse_changeset(path: Path) -> Changeset:
     """Parse one changeset file. Raises `click.ClickException` on a bad shape."""
-    data = _yaml.load(path.read_text(encoding="utf-8")) or {}
-    if not isinstance(data, dict):
+    loaded: object = _yaml.load(path.read_text(encoding="utf-8")) or {}
+    data = _as_mapping(loaded)
+    if not isinstance(loaded, dict):
         raise click.ClickException(f"changeset {path.name} is not a YAML mapping")
 
     component = data.get("component")
@@ -170,14 +192,14 @@ def parse_changeset(path: Path) -> Changeset:
             f"changeset {path.name} has kind {segment!r} — expected one of {', '.join(SEGMENTS)}"
         )
 
-    # `category` / `pr` are optional and accepted either top-level (a
-    # hand-written changeset) or under changie's nested `custom:` map. A
-    # missing value is never an error — the changelog defaults the category
-    # and omits the link.
-    custom = data.get("custom")
-    custom = custom if isinstance(custom, dict) else {}
+    # `category` / `pr` / the floor field are optional and accepted either
+    # top-level (a hand-written changeset) or under changie's nested `custom:`
+    # map. A missing value is never an error — the changelog defaults the
+    # category and omits the link, and no floor moves.
+    custom = _as_mapping(data.get("custom"))
     category = custom.get("category") or data.get("category")
     pr = custom.get("pr") or data.get("pr")
+    floor = custom.get(FLOOR_FIELD) or data.get(FLOOR_FIELD)
 
     return Changeset(
         component=str(component),
@@ -186,7 +208,13 @@ def parse_changeset(path: Path) -> Changeset:
         path=path,
         category=str(category).strip() if category else None,
         pr=str(pr).strip() if pr else None,
+        requires_backbone=str(floor).strip() if floor else None,
     )
+
+
+def _as_mapping(value: object) -> dict[str, Any]:
+    """`value` when it is a YAML mapping, else an empty one."""
+    return cast("dict[str, Any]", value) if isinstance(value, dict) else {}
 
 
 def load_changesets(repo_root: Path) -> list[Changeset]:

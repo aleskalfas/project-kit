@@ -33,6 +33,10 @@ ComponentKind = Literal["adapter", "capability"]
 # (additive, no migration — COR-031 D2).
 ORIGIN_KIT_SHIPPED = "kit-shipped"
 ORIGIN_INCUBATED_IN_REPO = "incubated-in-repo"
+# COR-041's third origin: content pulled whole from an external source at a
+# pin and restored to it by reconciliation. Its fetch is not built yet; the
+# wire value is named so a reader can tell an entry carrying it apart.
+ORIGIN_EXTERNALLY_SOURCED = "externally-sourced"
 
 
 # Singleton YAML instance: round-trip mode preserves comments and key

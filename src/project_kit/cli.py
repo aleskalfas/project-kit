@@ -1145,7 +1145,8 @@ def release_plan(as_json: bool) -> None:
     default=False,
     help="Skip widening released components' requires_backbone to cover the "
     "current backbone. Default is to broaden (releasing under backbone X "
-    "asserts compatibility with X); pass this to keep a range as authored.",
+    "asserts compatibility with X); pass this to keep an upper bound as "
+    "authored. A floor a changeset declares is still raised.",
 )
 @click.option("--yes", is_flag=True, default=False, help="Skip the confirmation prompt (CI).")
 def release_apply(tag: bool, push: bool, no_broaden: bool, yes: bool) -> None:
@@ -1158,7 +1159,11 @@ def release_apply(tag: bool, push: bool, no_broaden: bool, yes: bool) -> None:
     On a component release, widens that component's `requires_backbone` to
     cover the repo's current backbone (the version being released under) unless
     `--no-broaden` is given; a backbone release widens every component as
-    before. Both are widen-only. See `.pkit/release/README.md`.
+    before. Both are widen-only. A changeset declaring `requires_backbone:
+    release` raises its component's floor to the backbone the release ships —
+    raise-only, and not skipped by `--no-broaden`; a raise that would leave a
+    range admitting no backbone refuses the release before anything is written.
+    See `.pkit/release/README.md`.
     """
     source_kit = _target_kit()
     plan = compute_release(source_kit)
@@ -1231,38 +1236,53 @@ def release_check(base: str, skip: bool | None) -> None:
     "--skip",
     is_flag=True,
     default=None,
-    help="Escape hatch: pass unconditionally. Also honoured via the "
-    "PKIT_CHANGELOG_LINT_SKIP env var.",
+    help="Escape hatch: pass the format checks unconditionally (a requires_backbone "
+    "floor field is still checked). Also honoured via the PKIT_CHANGELOG_LINT_SKIP "
+    "env var.",
 )
 def release_lint(skip: bool | None) -> None:
     """Format lint: the OBJECTIVE changeset + CHANGELOG.md format subset.
 
     Checks the mechanically-verifiable subset only — a changeset's category is
     a Keep-a-Changelog group, its body is a non-empty sentence (not a bare
-    reference, capitalized, period-ended), and `CHANGELOG.md` headings are
-    well-formed. It does *not* judge plain language / jargon — that is the
-    guide plus review. A reminder, not a proof; see `.pkit/release/README.md`.
+    reference, capitalized, period-ended), a `requires_backbone` floor field
+    says `release` on a version-moving changeset of a capability or adapter
+    whose range is `">=X.Y.Z,<A.B.C"` or `">=X.Y.Z"`, in a release that ships a
+    release version of the backbone, and `CHANGELOG.md` headings are
+    well-formed. It does
+    *not* judge plain language / jargon — that is the guide plus review. A
+    reminder, not a proof; see `.pkit/release/README.md`.
 
     Reads committed files only (no PR context), so it runs in the shared check
-    aggregator. Escape hatch: `--skip` or the PKIT_CHANGELOG_LINT_SKIP env var.
+    aggregator. Escape hatch: `--skip` or the PKIT_CHANGELOG_LINT_SKIP env var —
+    except for the floor field, which the release itself refuses: an invalid one
+    fails the lint either way, since it would block every later release on main.
     """
     source_kit = _target_kit()
     skip_active = bool(skip) or _env_flag("PKIT_CHANGELOG_LINT_SKIP")
     result = lint_release_format(source_kit, skip=skip_active)
 
-    if result.skipped:
-        click.echo("changelog lint: skipped (escape hatch active).")
-        return
     if result.ok:
-        click.echo("changelog lint: changesets + CHANGELOG.md are well-formed — ok.")
+        click.echo(
+            "changelog lint: skipped (escape hatch active)."
+            if result.skipped
+            else "changelog lint: changesets + CHANGELOG.md are well-formed — ok."
+        )
         return
-    detail = "\n".join(f"  {v.source}: {v.message}" for v in result.violations)
+    shown = result.floor_violations + ([] if result.skipped else result.violations)
+    detail = "\n".join(f"  {v.source}: {v.message}" for v in shown)
+    advice = (
+        "\n  The escape hatch is active, but it does not cover a requires_backbone "
+        "floor field: the release refuses one it cannot raise, which blocks every "
+        "later release on main. Fix the field."
+        if result.skipped
+        else "\n  Fix the entries above, or apply the escape hatch (--skip / "
+        "PKIT_CHANGELOG_LINT_SKIP) if an objective rule mis-fired — it does not "
+        "cover a requires_backbone floor field. See the format guide in "
+        ".pkit/release/README.md."
+    )
     raise click.ClickException(
-        "changeset / changelog format problems (the objective subset):\n"
-        + detail
-        + "\n  Fix the entries above, or apply the escape hatch (--skip / "
-        "PKIT_CHANGELOG_LINT_SKIP) if an objective rule mis-fired. See the "
-        "format guide in .pkit/release/README.md."
+        "changeset / changelog format problems (the objective subset):\n" + detail + advice
     )
 
 
@@ -1365,6 +1385,9 @@ def _print_release_plan(plan: ReleasePlan) -> None:
                 f"  {rel.component.name}: {rel.old_version} -> "
                 f"{rel.new_version} ({rel.segment})"
             )
+            if rel.floor_raise is not None:
+                for line in rel.floor_raise.lines:
+                    click.echo(f"    {line}")
             for note in rel.notes:
                 click.echo(f"    - {note}")
     click.echo(f"  changesets to consume: {len(plan.consumed)}")

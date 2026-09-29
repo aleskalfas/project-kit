@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-29T20:44:44Z
+      at: 2026-09-29T21:00:24Z
       outcome: unchanged
-      unchanged-because: The CLI README's docs command became docs record-location with its --yes and --dry-run consent, beside friction artefacts --at already signposted; this page still points to the same pages and names no command those changes touch.
+      unchanged-because: the CLI, lifecycle and process READMEs now say the floor raise's refusals and notices and that the journal warning's fix follows the component's origin; the area map's one-line summaries of those areas still hold
 ---
 
 # project-kit

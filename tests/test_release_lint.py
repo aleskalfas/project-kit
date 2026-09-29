@@ -1,16 +1,20 @@
 """Tests for the objective changeset + changelog format lint (#478).
 
 Covers each objective check (pass on valid, fail on the specific invalid
-input), the escape hatch, and a dogfood check that the live repo's pending
-changesets + CHANGELOG.md pass. Deliberately does *not* test plain-language /
-jargon judgment — that is out of the objective subset by design."""
+input) — the floor field's value, carrier and target backbone among them —
+the escape hatch, which does not cover the floor field, and a dogfood check
+that the live repo's pending changesets + CHANGELOG.md pass. Deliberately does
+*not* test plain-language / jargon judgment — that is out of the objective
+subset by design."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from project_kit import release
-from project_kit.changesets import Changeset
+from project_kit.changesets import Changeset, Component, discover_components
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -101,7 +105,180 @@ def test_none_changeset_still_validates_category() -> None:
     assert any("unknown category" in v.message for v in violations)
 
 
-# --- Check 3: CHANGELOG.md structure -------------------------------------
+# --- Check 3: the floor field --------------------------------------------
+
+
+# The backbone every kit in these tests holds, which a release that does not move
+# it ships.
+SHIPPED = "1.5.0"
+
+
+def _kit(
+    tmp_path: Path,
+    *,
+    requires_backbone: str = '">=1.0.0,<2.0.0"',
+    kind: str = "capability",
+    backbone: str = SHIPPED,
+) -> Path:
+    """A kit holding the backbone and one component, `houseware`."""
+    source_kit = tmp_path / ".pkit"
+    source_kit.mkdir(exist_ok=True)
+    (source_kit / "VERSION").write_text(f"{backbone}\n", encoding="utf-8")
+    home = source_kit / "capabilities" / "houseware"
+    home.mkdir(parents=True)
+    (home / "package.yaml").write_text(
+        "schema_version: 1\n"
+        f"component:\n  kind: {kind}\n  name: houseware\n  version: 0.3.0\n"
+        f"requires_backbone: {requires_backbone}\n",
+        encoding="utf-8",
+    )
+    return source_kit
+
+
+def _components(
+    tmp_path: Path, *, requires_backbone: str = '">=1.0.0,<2.0.0"', kind: str = "capability"
+) -> dict[str, Component]:
+    """The components of a kit holding one component, `houseware`."""
+    source_kit = _kit(tmp_path, requires_backbone=requires_backbone, kind=kind)
+    return {c.name: c for c in discover_components(source_kit)}
+
+
+def _floor(
+    component: str = "houseware", *, segment: str = "minor", value: str = "release"
+) -> Changeset:
+    return Changeset(
+        component=component,
+        segment=segment,
+        note="Needs the new backbone.",
+        path=Path(f"{component}-{segment}-x.yaml"),
+        requires_backbone=value,
+    )
+
+
+@pytest.mark.parametrize("requires_backbone", ['">=1.0.0,<2.0.0"', '">=1.0.0"'])
+def test_floor_field_on_a_capability_with_a_floor_passes(
+    tmp_path: Path, requires_backbone: str
+) -> None:
+    components = _components(tmp_path, requires_backbone=requires_backbone)
+    assert release.lint_floor(_floor(), components, SHIPPED) == []
+
+
+def test_a_changeset_without_the_floor_field_is_not_checked() -> None:
+    assert release.lint_floor(_cs(), {}, SHIPPED) == []
+
+
+def test_floor_field_on_a_backbone_changeset_fails(tmp_path: Path) -> None:
+    violations = release.lint_floor(_floor("backbone"), _components(tmp_path), SHIPPED)
+    assert [v.message for v in violations] == [
+        "`requires_backbone` is a component's field: the backbone has no "
+        "`requires_backbone` to raise."
+    ]
+
+
+@pytest.mark.parametrize(
+    ("requires_backbone", "kind"),
+    [
+        ('"*"', "capability"),  # no floor to raise
+        ('"<2.0.0,>=1.0.0"', "capability"),  # does not open with the floor
+        ("'>=1.0.0,<2.0.0'", "capability"),  # single-quoted
+        ('">=1.0.0, <2.0.0"', "capability"),  # spaced
+        ('">=1.0.0,<2.0.0"', "bundle"),  # not a capability or adapter
+    ],
+)
+def test_floor_field_on_a_component_without_a_floor_to_raise_fails(
+    tmp_path: Path, requires_backbone: str, kind: str
+) -> None:
+    components = _components(tmp_path, requires_backbone=requires_backbone, kind=kind)
+    violations = release.lint_floor(_floor(), components, SHIPPED)
+    assert [v.message for v in violations] == [
+        "'houseware' is not a capability or adapter whose `requires_backbone` has a "
+        'floor the release can raise (a range of the form ">=X.Y.Z,<A.B.C" or ">=X.Y.Z").'
+    ]
+
+
+def test_floor_field_on_an_unknown_component_says_so(tmp_path: Path) -> None:
+    violations = release.lint_floor(_floor("nowhere"), _components(tmp_path), SHIPPED)
+    assert [v.message for v in violations] == [
+        "names unknown component 'nowhere', so there is no floor to raise. "
+        "Known: backbone, houseware."
+    ]
+
+
+def test_floor_field_with_another_value_fails(tmp_path: Path) -> None:
+    violations = release.lint_floor(_floor(value="1.150.0"), _components(tmp_path), SHIPPED)
+    assert any("takes one value, `release`" in v.message for v in violations)
+
+
+def test_floor_field_on_a_none_changeset_fails(tmp_path: Path) -> None:
+    violations = release.lint_floor(_floor(segment="none"), _components(tmp_path), SHIPPED)
+    assert any("a `none` changeset moves no version" in v.message for v in violations)
+
+
+def test_floor_field_in_a_release_shipping_a_pre_release_backbone_fails(tmp_path: Path) -> None:
+    """No floor is raised to a pre-release: the lint refuses what `apply` would
+    otherwise refuse only after writing the component's version."""
+    violations = release.lint_floor(_floor(), _components(tmp_path), "1.6.0rc1")
+    assert len(violations) == 1
+    assert "ships backbone '1.6.0rc1'" in violations[0].message
+    assert "not a release version" in violations[0].message
+
+
+def test_lint_release_format_flags_a_floor_field_on_a_backbone_changeset(tmp_path: Path) -> None:
+    source_kit = tmp_path / ".pkit"
+    _seed(
+        source_kit,
+        changeset=(
+            "component: backbone\nkind: minor\nbody: Ship it.\n"
+            "custom:\n  category: Added\n  requires_backbone: release\n"
+        ),
+        changelog=VALID_CHANGELOG,
+    )
+    result = release.lint_release_format(source_kit)
+    assert not result.ok
+    assert result.violations == []
+    assert [v.source for v in result.floor_violations] == ["changeset backbone-minor-x.yaml"]
+
+
+def _floor_changeset(source_kit: Path) -> None:
+    """A pending changeset declaring `houseware` needs the backbone the release ships."""
+    unreleased = source_kit.parent / ".changes" / "unreleased"
+    unreleased.mkdir(parents=True, exist_ok=True)
+    (unreleased / "houseware-minor-x.yaml").write_text(
+        "component: houseware\nkind: minor\nbody: Needs the new backbone.\n"
+        "custom:\n  category: Changed\n  requires_backbone: release\n",
+        encoding="utf-8",
+    )
+
+
+def test_lint_release_format_checks_the_backbone_the_release_ships(tmp_path: Path) -> None:
+    """With no backbone changeset the release ships the current `.pkit/VERSION`;
+    a pre-release there is refused, and a backbone changeset lifts the refusal."""
+    source_kit = _kit(tmp_path, backbone="1.6.0rc1")
+    _floor_changeset(source_kit)
+
+    refused = release.lint_release_format(source_kit)
+    assert not refused.ok
+    assert ["not a release version" in v.message for v in refused.floor_violations] == [True]
+
+    (source_kit.parent / ".changes" / "unreleased" / "backbone-minor-x.yaml").write_text(
+        "component: backbone\nkind: minor\nbody: Ship it.\n", encoding="utf-8"
+    )
+    assert release.lint_release_format(source_kit).ok
+
+
+def test_escape_hatch_does_not_cover_the_floor_field(tmp_path: Path) -> None:
+    """An invalid floor field blocks every later release on `main`, so the prose
+    lint's escape hatch does not pass it."""
+    source_kit = _kit(tmp_path, requires_backbone='"*"')
+    _floor_changeset(source_kit)
+
+    result = release.lint_release_format(source_kit, skip=True)
+    assert result.skipped
+    assert not result.ok
+    assert len(result.floor_violations) == 1
+
+
+# --- Check 4: CHANGELOG.md structure -------------------------------------
 
 
 VALID_CHANGELOG = """# Changelog

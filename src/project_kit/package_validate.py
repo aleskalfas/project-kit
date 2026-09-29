@@ -35,7 +35,13 @@ passes, in order, each producing findings located by JSON Pointer:
    `schema_version` (COR-053 point 5), and the generated `depends-on` list says
    what the component's process definitions generate
    (`process_dependencies.staleness`, COR-053 point 4) — a stale copy names
-   `pkit capabilities refresh <name>` as the fix. All ERRORs.
+   `pkit capabilities refresh <name>` as the fix. All ERRORs but one WARNING:
+   a `runtime_ignore` entry that declares the process journals, whose ignore
+   line the backbone owns (`process_journal.claims_journals`) — the mark of a
+   component older than the backbone it runs on. Its fix follows where the
+   package comes from (`Provenance`): the project drops the entry from its own
+   file, upgrades a synced copy's component together with the backbone, and
+   moves an externally sourced one's pin.
 
 The checks across packages — roles and their providers, counterparts against
 point versions, mandatory marks and cycles, fingerprints, the version
@@ -58,7 +64,7 @@ from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path, PurePosixPath, PureWindowsPath
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from jsonschema import Draft202012Validator
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
@@ -67,7 +73,7 @@ from referencing import Registry, Resource
 from referencing.jsonschema import DRAFT202012
 from ruamel.yaml import YAML
 
-from project_kit import process_dependencies, validators
+from project_kit import lifecycle_ownership, process_dependencies, process_journal, validators
 from project_kit.backbone_schemas import (
     BackboneSchemaMissing,
     expand_schema_error,
@@ -75,10 +81,17 @@ from project_kit.backbone_schemas import (
     render_unknown_key,
 )
 from project_kit.command_runner import command_leaves, resolve_command
-from project_kit.manifest import read_backbone_manifest
+from project_kit.manifest import (
+    ORIGIN_EXTERNALLY_SOURCED,
+    ORIGIN_KIT_SHIPPED,
+    ComponentRegistryEntry,
+    read_backbone_manifest,
+)
 from project_kit.validators import COMMAND_KEY, QUERY_CONTRACT_KEY, VALIDATORS_KEY
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     from project_kit.connections import Wiring
 
 # The kind under which the schema is read from the tree (`load_backbone_schema`).
@@ -96,11 +109,22 @@ _yaml = YAML(typ="safe")
 
 
 class Severity(Enum):
-    """Whether a finding fails the check. Warnings never do; the one source of them
-    is an unknown key under a schema that leaves its object open (pass 2)."""
+    """Whether a finding fails the check. Warnings never do; their two sources are
+    an unknown key under a schema that leaves its object open (pass 2) and a
+    `runtime_ignore` entry declaring the process journals (pass 3)."""
 
     ERROR = "error"
     WARNING = "warning"
+
+
+class Provenance(Enum):
+    """Where a package file in the tree comes from, which decides how a finding in
+    it is fixed: the project edits its own file, but an edit to a copy is undone
+    by the next sync, so a copy is fixed at its source (`package_provenance`)."""
+
+    OWN = "own"  # the project's: an incubated capability, or the methodology's source
+    SYNCED = "synced"  # a copy a sync makes from the methodology's source (kit-shipped)
+    PINNED = "pinned"  # restored to its pin on every sync (externally sourced, COR-041)
 
 
 @dataclass(frozen=True)
@@ -164,6 +188,7 @@ def validate_package_file(
     *,
     component_dir: Path | None = None,
     expected_name: str | None = None,
+    provenance: Provenance = Provenance.OWN,
 ) -> PackageReport:
     """Read and validate one package file. See `validate_package` for the passes.
 
@@ -190,6 +215,7 @@ def validate_package_file(
         schema,
         component_dir=component_dir if component_dir is not None else path.parent,
         expected_name=expected_name,
+        provenance=provenance,
     )
     return PackageReport(file=path, findings=tuple(findings))
 
@@ -200,6 +226,7 @@ def validate_package(
     *,
     component_dir: Path,
     expected_name: str | None = None,
+    provenance: Provenance = Provenance.OWN,
 ) -> list[PackageFinding]:
     """Validate a parsed package mapping: shape (unknown keys included), unknown
     keys under an open schema, repository checks.
@@ -210,7 +237,9 @@ def validate_package(
     schema existed, and more (ADR-056 point 1: never validate against a shape
     the tree never shipped). `component_dir` is the component's root, where
     `scripts` and `schemas/` are resolved; `expected_name` is the directory
-    name the component must match, when the caller knows it.
+    name the component must match, when the caller knows it; `provenance` is
+    where the file comes from (`package_provenance`), which decides the fix a
+    finding names — the project's own file unless the caller knows otherwise.
 
     One location is reported by one pass: a later pass never adds a finding
     where an earlier one already stands (a key whose type the shape pass
@@ -241,7 +270,7 @@ def validate_package(
         )
         walker = _UnknownKeyWalker(validator)
         _add_pass(findings, walker.walk(raw, schema, registry.resolver(base_uri=schema_id), ""))
-    _add_pass(findings, _repository_findings(raw, component_dir, expected_name))
+    _add_pass(findings, _repository_findings(raw, component_dir, expected_name, provenance))
     return findings
 
 
@@ -317,7 +346,10 @@ class _UnknownKeyWalker:
 
 
 def _repository_findings(
-    raw: Mapping[Any, Any], component_dir: Path, expected_name: str | None
+    raw: Mapping[Any, Any],
+    component_dir: Path,
+    expected_name: str | None,
+    provenance: Provenance,
 ) -> list[PackageFinding]:
     """The checks that need the tree or a parser the schema lacks.
 
@@ -388,6 +420,16 @@ def _repository_findings(
         if isinstance(values, list):
             for index, value in enumerate(values):
                 _check_relative(findings, f"/{key}/{index}", value, "a repository-relative path")
+
+    for index, pattern in enumerate(_items(raw.get("runtime_ignore"))):
+        if isinstance(pattern, str) and process_journal.claims_journals(pattern):
+            findings.append(
+                PackageFinding(
+                    f"/runtime_ignore/{index}",
+                    Severity.WARNING,
+                    journal_claim_message(pattern, provenance),
+                )
+            )
 
     commands = raw.get("commands")
     leaves = command_leaves(commands) if isinstance(commands, Mapping) else {}
@@ -611,6 +653,34 @@ def _offered_process_findings(
     ]
 
 
+# The way out of a `runtime_ignore` entry declaring process journals, by where the
+# package comes from: only the project's own file is edited in place.
+_JOURNAL_CLAIM_FIX = {
+    Provenance.OWN: "Drop the entry: the backbone declares the pattern for every capability.",
+    Provenance.SYNCED: (
+        "This package is a synced copy the next sync overwrites, so do not edit it: "
+        "upgrade this component together with the backbone, to a version that leaves "
+        "the line to the backbone."
+    ),
+    Provenance.PINNED: (
+        "This package is restored to its pinned release on every sync (COR-041), so do "
+        "not edit it: move the pin to an author release that drops the entry."
+    ),
+}
+
+
+def journal_claim_message(pattern: str, provenance: Provenance = Provenance.OWN) -> str:
+    """The warning on a `runtime_ignore` entry that declares process journals
+    (`process_journal.claims_journals`): what it breaks, and the way out for a
+    package of that provenance."""
+    return (
+        f"{pattern!r} declares process journals, whose ignore line the backbone owns: it "
+        f"ignores {process_journal.JOURNAL_GLOB!r} unless the project commits its journals "
+        f"(`process.journal.committed: true`, COR-033 point 7). Declared here too, it keeps "
+        f"them ignored when the project commits them. {_JOURNAL_CLAIM_FIX[provenance]}"
+    )
+
+
 def _component_name(raw: Mapping[Any, Any], expected: str | None, component_dir: Path) -> str:
     """The component's name for a message: as the package declares it, else the
     name its directory gives it."""
@@ -699,10 +769,18 @@ class PackagesPass:
 def installed_package_files(target_root: Path) -> list[tuple[str, Path, Path]]:
     """`(name, component_dir, package.yaml)` for every registered capability and adapter
     whose package file is present in the tree, in manifest order."""
+    return [
+        (entry.name, component_dir, package)
+        for entry, component_dir, package in _registered_packages(target_root)
+    ]
+
+
+def _registered_packages(target_root: Path) -> list[tuple[ComponentRegistryEntry, Path, Path]]:
+    """`installed_package_files`, with each component's registry entry."""
     backbone = read_backbone_manifest(target_root)
     if backbone is None:
         return []
-    out: list[tuple[str, Path, Path]] = []
+    out: list[tuple[ComponentRegistryEntry, Path, Path]] = []
     for entry in backbone.components:
         area = _COMPONENT_DIRS.get(entry.kind)
         if area is None:
@@ -710,8 +788,31 @@ def installed_package_files(target_root: Path) -> list[tuple[str, Path, Path]]:
         component_dir = target_root / ".pkit" / area / entry.name
         package = component_dir / "package.yaml"
         if package.is_file():
-            out.append((entry.name, component_dir, package))
+            out.append((entry, component_dir, package))
     return out
+
+
+def package_provenance(
+    target_root: Path, package: Path, origin: str, ownership: ModuleType | None
+) -> Provenance:
+    """Where a registered component's package file comes from.
+
+    Its registry `origin` first: an externally sourced component is restored to
+    its pin (COR-041). Otherwise the tree's ownership predicate
+    (`is_synced_copy`, loaded by the caller through `lifecycle_ownership`)
+    tells a copy a sync makes — a kit-shipped component, in a project that is
+    not the methodology's own source — from the project's own file: an
+    incubated capability, or any package in the source, where the package is
+    authored. A tree without the predicate falls back to the origin alone.
+    """
+    if origin == ORIGIN_EXTERNALLY_SOURCED:
+        return Provenance.PINNED
+    if ownership is None:
+        synced = origin == ORIGIN_KIT_SHIPPED
+    else:
+        relative = package.relative_to(target_root).as_posix()
+        synced = bool(ownership.is_synced_copy(target_root, relative))
+    return Provenance.SYNCED if synced else Provenance.OWN
 
 
 def load_package_schema(target_root: Path) -> tuple[Mapping[str, Any] | None, str | None]:
@@ -726,11 +827,20 @@ def load_package_schema(target_root: Path) -> tuple[Mapping[str, Any] | None, st
 
 
 def validate_installed_packages(target_root: Path) -> PackagesPass:
-    """Validate every registered component's package file (the `packages` member)."""
+    """Validate every registered component's package file (the `packages` member),
+    each with its provenance (`package_provenance`), so a finding names the fix
+    that lasts."""
     schema, note = load_package_schema(target_root)
+    ownership = lifecycle_ownership.load_ownership(target_root)
     reports = [
-        validate_package_file(package, schema, component_dir=component_dir, expected_name=name)
-        for name, component_dir, package in installed_package_files(target_root)
+        validate_package_file(
+            package,
+            schema,
+            component_dir=component_dir,
+            expected_name=entry.name,
+            provenance=package_provenance(target_root, package, entry.origin, ownership),
+        )
+        for entry, component_dir, package in _registered_packages(target_root)
     ]
     return PackagesPass(reports=tuple(reports), schema_note=note)
 
@@ -775,6 +885,11 @@ def _locate(target_root: Path, file: Path, finding: PackageFinding) -> str:
 
 def _kind(value: Any) -> str:
     return "null" if value is None else type(value).__name__
+
+
+def _items(value: object) -> list[object]:
+    """`value`'s items when it is a list, else none (the shape pass reports the type)."""
+    return cast("list[object]", value) if isinstance(value, list) else []
 
 
 def _token(segment: Any) -> str:
