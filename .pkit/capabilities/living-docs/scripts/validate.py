@@ -19,8 +19,9 @@ member of `pkit validate` (ADR-058): from the project root, with `--json`
 alone and the offline marker set, reading one findings document from standard
 output. It is a query — bounded, deterministic, read-only, needing no network —
 and `pkit init` and `pkit sync` provision its dependencies in uv's cache. It
-reads the readers point through `pkit connections resolve`, the backbone's read
-command, and only when some page names a reader.
+reads through the backbone's read commands: the roots, the places and the
+documents in them through `pkit friction artefacts`, and the readers point
+through `pkit connections resolve`, only when some page names a reader.
 
 Usage:
   pkit living-docs validate           the summary, the findings and the unclassified documents

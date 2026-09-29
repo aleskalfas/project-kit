@@ -18,7 +18,8 @@ Outside a fixture (a plain helper that takes `tmp_path` and `monkeypatch`), call
 `build_adopter_repo(root, monkeypatch=monkeypatch, ...)` directly.
 
 A capability script under test that reads through the backbone — `pkit
-connections resolve`, `pkit friction check` — needs a `pkit` on PATH. The
+connections resolve`, `pkit friction check`, `pkit friction artefacts` — needs
+a `pkit` on PATH. The
 `pkit_on_path` fixture puts the real CLI under this interpreter first on PATH,
 bypassing the entry-point router, so the read never reaches `uv` or the
 network. Point the script's own `uv run --script` shebang at `sys.executable`
