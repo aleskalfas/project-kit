@@ -10,9 +10,9 @@ pkit:
         - .pkit/adapters/claude-code/deploy-skills.sh
       record: [COR-003, COR-005, COR-006, COR-013, COR-015, COR-020]
     revalidated:
-      at: 2026-09-29T17:26:05Z
+      at: 2026-09-29T17:33:44Z
       outcome: unchanged
-      unchanged-because: agent-author gained a note that the --with-storyboard stamp declares the pair on both sides; the skills area's layout, pairing and deploy are unchanged
+      unchanged-because: "The skills area and its deploy hold: adapter-author gained a bullet naming the adapter's undeploy script; no skill's layout, deploy or pairing changed."
 ---
 
 # Skills

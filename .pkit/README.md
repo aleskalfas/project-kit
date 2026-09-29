@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-29T17:26:06Z
+      at: 2026-09-29T17:33:47Z
       outcome: unchanged
-      unchanged-because: the CLI reference only states that new agent --with-storyboard declares the storyboard on the agent; the map of the .pkit tree is unchanged
+      unchanged-because: "The area table holds: the adapters, lifecycle, CLI and agents READMEs gained the undeploy primitive beside the deploy ones, and each area's one-line purpose here is unchanged."
 ---
 
 # project-kit

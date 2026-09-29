@@ -17,9 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/merge-settings.sh
       record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049]
     revalidated:
-      at: 2026-09-29T17:22:03Z
+      at: 2026-09-29T17:33:41Z
       outcome: unchanged
-      unchanged-because: refs.py now reads the address word pattern from backbone_schemas instead of repeating it; the citation grammar and what refs validate reports are unchanged
+      unchanged-because: "The front page's install story holds: install.py gained only the runner that calls each adapter's undeploy primitive when a capability is uninstalled in place, which the page does not describe."
 ---
 
 # project-kit

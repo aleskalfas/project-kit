@@ -1,0 +1,14 @@
+component: claude-code
+kind: minor
+custom:
+  category: Added
+body: >
+  The Claude Code adapter ships `undeploy-capability.sh <name>`, which removes
+  one capability's deployed skills and agents from `.claude/`: a skill folder
+  whose `SKILL.md` is the relative symlink `deploy-skills.sh` writes into the
+  capability, and a resolved agent copy carrying `deploy-agents.sh`'s marker
+  for an agent the capability ships, flat or folder form, unless a project
+  agent of that name outranks it. Adopter content and the capability's own
+  subtree are never touched. The script is idempotent and exits 2 on anything
+  but one capability name. The adapters README documents it beside the deploy
+  primitives as the contract every adapter answers.
