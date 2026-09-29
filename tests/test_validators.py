@@ -5,7 +5,8 @@
   contract; it runs after the backbone's members with `--json`, offline-marked,
   in its own process group, and its errors fail the umbrella; no answer — a
   leaf without the declaration, a timeout, a half-formed document — is an
-  error, never a clean pass;
+  error, never a clean pass; an environment not provisioned — uv's report on
+  standard error, pinned as uv prints it — is named as such, with `pkit sync`;
 - `--only` / `--skip` address members, `--no-refs` is `--skip refs`;
 - warnings, information and reports print and never fail; errors do;
 - every focused surface still works alone with the exit it always had;
@@ -336,6 +337,100 @@ def test_no_answer_from_a_capability_validator_is_an_error(
     assert "no answer." in result.output
     assert "error    .pkit/capabilities/cap/package.yaml:/validators/thing/command" in result.output
     assert expect in result.output
+
+
+# uv's standard error when an offline run misses its cache, verbatim from uv
+# 0.9.30: a registry package never fetched (the resolver's hint — the same hint
+# ends the report when only the package's index page is cached), and a
+# direct-URL dependency whose file was never downloaded (the client's error).
+# `test_provisioning` meets the first under the real uv.
+UV_MISSING_REGISTRY_PACKAGE = """\
+  × No solution found when resolving script dependencies:
+  ╰─▶ Because ruamel-yaml was not found in the cache and you require
+      ruamel-yaml>=0.18, we can conclude that your requirements are
+      unsatisfiable.
+
+      hint: Packages were unavailable because the network was disabled. When
+      the network is disabled, registry packages may only be read from the
+      cache.
+"""
+UV_MISSING_DIRECT_URL = """\
+  × Failed to download `pkit-probe-dep @
+  │ http://127.0.0.1:9/pkit_probe_dep-1.0-py3-none-any.whl`
+  ╰─▶ Network connectivity is disabled, but the requested data wasn't found in
+      the cache for: `http://127.0.0.1:9/pkit_probe_dep-1.0-py3-none-any.whl`
+"""
+
+NOT_PROVISIONED_FINDING = (
+    "command 'check': environment not provisioned — run `pkit sync` (its dependencies "
+    "are not in uv's cache, and a query runs offline)."
+)
+
+
+NO_DOCUMENT = "command 'check' did not print a JSON document on its standard output."
+
+
+def _ended(
+    ending: command_runner.Ending, stderr: str, returncode: int = 1
+) -> command_runner.CommandRun:
+    return command_runner.CommandRun(ending, 30, returncode=returncode, stderr=stderr)
+
+
+@pytest.mark.parametrize("stderr", [UV_MISSING_REGISTRY_PACKAGE, UV_MISSING_DIRECT_URL])
+def test_uv_s_offline_miss_is_an_environment_not_provisioned(stderr: str) -> None:
+    run = _ended(command_runner.Ending.ABNORMAL_EXIT, stderr)
+    assert validators.not_provisioned(run)
+    assert validators.why_no_answer(run, "check") == NOT_PROVISIONED_FINDING
+
+
+def test_a_wrapped_report_is_still_recognised() -> None:
+    # uv wraps to the width it sees: the phrase may break anywhere.
+    stderr = "hint: Packages were unavailable because the\n   network was disabled."
+    assert validators.not_provisioned(_ended(command_runner.Ending.ABNORMAL_EXIT, stderr))
+
+
+@pytest.mark.parametrize(
+    ("run", "message"),
+    [
+        (
+            _ended(command_runner.Ending.ABNORMAL_EXIT, "Traceback …\nKeyError: 'x'\n"),
+            "command 'check' exited 1: KeyError: 'x'",
+        ),
+        (_ended(command_runner.Ending.UNPARSABLE, "", returncode=0), NO_DOCUMENT),
+        # uv's text on an ending that is not an exit is not read.
+        (
+            _ended(command_runner.Ending.UNPARSABLE, UV_MISSING_REGISTRY_PACKAGE, returncode=0),
+            NO_DOCUMENT,
+        ),
+    ],
+)
+def test_any_other_no_answer_keeps_its_own_message(
+    run: command_runner.CommandRun, message: str
+) -> None:
+    assert not validators.not_provisioned(run)
+    assert validators.why_no_answer(run, "check") == message
+
+
+def test_the_finding_names_pkit_sync_and_differs_from_a_command_answering_nothing(
+    adopter: AdopterRepo,
+) -> None:
+    uv_report = UV_MISSING_REGISTRY_PACKAGE.encode()
+    cap_dir = _register(
+        adopter.root,
+        "cap",
+        script_body=f"import sys\nsys.stderr.buffer.write({uv_report!r})\nsys.exit(1)\n",
+    )
+    result = CliRunner().invoke(main, ["validate", "--only", "cap:thing"])
+    assert result.exit_code == 1, result.output
+    assert "error    .pkit/capabilities/cap/package.yaml:/validators/thing/command" in result.output
+    assert f"→ {NOT_PROVISIONED_FINDING}" in result.output
+
+    # Exits 0 and prints nothing: no answer, and not the provisioning finding.
+    (cap_dir / "scripts" / "check.py").write_text("#!/usr/bin/env python3\n", encoding="utf-8")
+    silent = CliRunner().invoke(main, ["validate", "--only", "cap:thing"])
+    assert silent.exit_code == 1, silent.output
+    assert "environment not provisioned" not in silent.output
+    assert "command 'check' did not print a JSON document" in silent.output
 
 
 def test_a_command_without_the_declaration_is_refused_by_the_runner_and_reported(

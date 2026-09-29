@@ -46,7 +46,9 @@ its standard output:
 `{"summary": [...], "findings": [{"severity", "location", "message"}, ...]}`;
 diagnostics go to standard error. No answer — a leaf without the declaration,
 an abnormal exit, a timeout, output that is not exactly that document — is an
-*error finding*, never a clean pass: the umbrella fails closed.
+*error finding*, never a clean pass: the umbrella fails closed. An exit that is
+uv's report of a dependency missing from its cache is named for what it is, an
+environment not provisioned, with `pkit sync` — which provisions it — as the fix.
 """
 
 from __future__ import annotations
@@ -95,10 +97,23 @@ QUERY_FLAG = "--json"
 # The offline marker (ADR-057 point 3), set in the environment of every query
 # command the umbrella runs. `PKIT_OFFLINE` is what a well-behaved command
 # reads; `UV_OFFLINE` makes `uv` honour it — a `uv run --script` shebang
-# resolves the script's dependencies from uv's cache and never fetches, so a
-# dependency is provisioned by running the focused surface once, online. The
+# resolves the script's dependencies from uv's cache and never fetches, so
+# `pkit init` and `pkit sync` provision them beforehand (`provisioning`). The
 # lifecycle README's literals section documents both.
 OFFLINE_MARKER: Mapping[str, str] = {"PKIT_OFFLINE": "1", "UV_OFFLINE": "1"}
+
+# What `uv`, honouring the offline marker, prints on standard error when a
+# script's dependency is not in its cache: the resolver's hint for a registry
+# package, and the client's error for a file it would have to download (a
+# direct URL). Matched with whitespace collapsed, since uv wraps its messages to
+# the width it sees. `tests/test_provisioning.py` pins both against uv's text.
+UV_OFFLINE_MISSES = (
+    "because the network was disabled",
+    "Network connectivity is disabled, but the requested data wasn't found in the cache",
+)
+
+# The no-answer of a query whose environment is not provisioned, and its fix.
+NOT_PROVISIONED = "environment not provisioned — run `pkit sync`"
 
 # Where a capability's validators sort when their entries name no `order`:
 # after every backbone member, in capability order.
@@ -376,13 +391,30 @@ def run_query(target_root: Path, script: Path, *, location: str, reference: str)
     return _no_answer(location, why_no_answer(run, reference))
 
 
+def not_provisioned(run: CommandRun) -> bool:
+    """True when a query run gave no answer because its environment is not
+    provisioned: it exited non-zero with uv's report that a dependency is not in
+    its cache and the network is disabled — the offline marker's doing."""
+    if run.ending is not Ending.ABNORMAL_EXIT:
+        return False
+    stderr = " ".join(run.stderr.split())
+    return any(miss in stderr for miss in UV_OFFLINE_MISSES)
+
+
 def why_no_answer(run: CommandRun, reference: str) -> str:
     """Why a query run did not answer: the message of a validator's no-answer
-    finding, and the reason a command filler is inert (`data_points`)."""
+    finding, and the reason a command filler is inert (`data_points`). An
+    environment not provisioned is named as such, with its fix, rather than as
+    the exit it shows as."""
     if run.ending is Ending.NOT_STARTED:
         return f"command {reference!r} could not start: {run.detail}"
     if run.ending is Ending.TIMED_OUT:
         return f"command {reference!r} did not answer within {run.bound_seconds} s."
+    if not_provisioned(run):
+        return (
+            f"command {reference!r}: {NOT_PROVISIONED} (its dependencies are not in "
+            "uv's cache, and a query runs offline)."
+        )
     if run.ending is Ending.ABNORMAL_EXIT:
         detail = run.stderr.strip().splitlines()
         tail = f": {detail[-1]}" if detail else "."
