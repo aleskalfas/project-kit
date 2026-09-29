@@ -1,0 +1,9 @@
+component: project-management
+kind: minor
+body: >
+  `open-pr --doc-impact-from-friction` (opt-in) runs `pkit friction check --json`
+  against origin/<base> and renders the answers the changed pages carry —
+  updated, unchanged, deferred, new — as the `## Doc impact` bullets, filling
+  only an unwritten section (the template's placeholder, empty, or absent). A
+  page still carrying friction is named on stderr. Rendering only: the section
+  meets no documentation obligation (DEC-053).

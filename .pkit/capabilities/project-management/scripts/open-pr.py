@@ -28,6 +28,12 @@ Inputs:
   * PR body — `templates/PR.md` skeleton with a `Closes #N` line per
     closing issue; user-supplied `--body-file` overrides, and gains a
     `Closes #N` line for any closing issue it does not already name.
+  * `--doc-impact-from-friction` (opt-in) — run `pkit friction check --json`
+    against the base and render the answers the changed pages carry
+    (updated, unchanged, deferred, new) as the `## Doc impact` bullets, when
+    the section is unwritten: the template's placeholder, empty, or absent.
+    An authored section is never touched. Rendering only (DEC-053 point 2):
+    the section meets no documentation obligation; the pages do.
 
 Membership gate per DEC-021 runs at startup.
 
@@ -47,6 +53,7 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import subprocess
 import sys
@@ -62,6 +69,7 @@ from _lib import (  # noqa: E402
     axis_labels,
     bootstrap_gate,
     classification_rules,
+    doc_impact,
     pr_validation,
     provenance,
     session_guard,
@@ -149,6 +157,17 @@ def main() -> int:
         help=(
             "Path to a file containing the PR body. Default: use the "
             "capability's templates/PR.md skeleton with `Closes #N` filled in."
+        ),
+    )
+    parser.add_argument(
+        "--doc-impact-from-friction",
+        action="store_true",
+        help=(
+            "Render the `## Doc impact` section from `pkit friction check --json` "
+            "against origin/<base>: one bullet per answer the changed pages carry. "
+            "Fills only an unwritten section (the template's placeholder, empty, "
+            "or absent); an authored one is left as it is. Rendering only: the "
+            "section meets no documentation obligation (DEC-053)."
         ),
     )
     parser.add_argument(
@@ -294,6 +313,12 @@ def main() -> int:
     else:
         pr_title = f"{conv_type}: {summary}"
 
+    # Base branch (DEC-013, #903): --base, else the closing issue's integration
+    # marker, else default_branch — the resolution start-work cut the branch by.
+    base = infer.resolve_base_branch(
+        config, str(issue.get("body") or ""), explicit=args.base
+    )
+
     # Build the PR body.
     body = _build_pr_body(
         capability_root=capability_root,
@@ -302,6 +327,9 @@ def main() -> int:
     )
     if body is None:
         return 2
+    doc_impact_note = None
+    if args.doc_impact_from_friction:
+        body, doc_impact_note = _prefill_doc_impact(body, base)
     # Seam: stamp exactly one provenance footer onto the PR body (ADR-037).
     body = provenance.stamp(body, provenance.read_versions(capability_root))
 
@@ -345,12 +373,6 @@ def main() -> int:
                 file=sys.stderr,
             )
 
-    # Base branch (DEC-013, #903): --base, else the closing issue's integration
-    # marker, else default_branch — the resolution start-work cut the branch by.
-    base = infer.resolve_base_branch(
-        config, str(issue.get("body") or ""), explicit=args.base
-    )
-
     print("open-pr: plan")
     print(f"  branch:  {branch}")
     print(f"  base:    {base}")
@@ -360,6 +382,8 @@ def main() -> int:
         print(f"  scope:   {args.scope}")
     print(f"  title:   {pr_title}")
     print(f"  body:    {len(body)} chars")
+    if doc_impact_note is not None:
+        print(f"  doc impact: {doc_impact_note}")
     if args.draft:
         print("  draft:   yes")
 
@@ -505,6 +529,45 @@ def _build_pr_body(
 def _strip_html_comments(text: str) -> str:
     """Remove <!-- ... --> blocks (including multi-line ones)."""
     return re.sub(r"<!--.*?-->\s*", "", text, flags=re.DOTALL)
+
+
+def _prefill_doc_impact(body: str, base: str) -> tuple[str, str]:
+    """`body` with its unwritten `## Doc impact` section rendered from the
+    change check's answers, and one line saying what happened. Never refuses:
+    no answers, or no check to read, leave the body as it was."""
+    document = _friction_check(base)
+    if document is None:
+        return body, "not pre-filled — `pkit friction check --json` gave no document"
+    still = doc_impact.unanswered(document)
+    if still:
+        print(
+            f"warn: {len(still)} artefact(s) still carry friction with no answer on the "
+            f"page: {', '.join(still)} — answer each there (`pkit friction check`).",
+            file=sys.stderr,
+        )
+    lines = doc_impact.answer_lines(document)
+    if not lines:
+        return body, "not pre-filled — the change check reports no answers"
+    body, filled = doc_impact.prefill(body, lines)
+    if not filled:
+        return body, "not pre-filled — the section is already written"
+    return body, f"pre-filled from `pkit friction check` ({len(lines)} answer(s))"
+
+
+def _friction_check(base: str) -> dict | None:
+    """`pkit friction check --json` against origin/<base>, or None. The check
+    exits 1 in enforcing mode on friction and still prints its document, so
+    the document decides, not the exit code."""
+    argv = ["pkit", "friction", "check", "--json", "--base", f"origin/{base}"]
+    try:
+        proc = subprocess.run(argv, capture_output=True, text=True, check=False)
+    except FileNotFoundError:
+        return None
+    try:
+        document = json.loads(proc.stdout or "")
+    except ValueError:
+        return None
+    return document if isinstance(document, dict) else None
 
 
 # ---- gh + git wrappers ---------------------------------------------

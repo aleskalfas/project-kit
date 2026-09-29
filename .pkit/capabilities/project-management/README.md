@@ -384,7 +384,7 @@ Setting the id touches no issue — the per-issue ownership *marker* is written 
 
 | Command | What it does |
 |---|---|
-| `open-pr [<N>] [--closes <N> ...] [--type T] [--scope S] [--summary "<s>"] [--body-file F] [--draft]` | Opens the PR for the current branch. The closing issue is the positional `<N>`, as `review-work` and `done-work` take it, or `--closes <N>`, its explicit form; without either it comes from the branch name (`<type>/<N>-<slug>`). **`--closes` repeats**, so one PR that lands several Tasks closes each of them on merge. The first closing issue is the primary one: it supplies the title's Conventional-Commits type, the default summary and the base branch. The body carries a `Closes #N` line for every closing issue — the template gets one each, and a `--body-file` gains any it does not already name. |
+| `open-pr [<N>] [--closes <N> ...] [--type T] [--scope S] [--summary "<s>"] [--body-file F] [--draft] [--doc-impact-from-friction]` | Opens the PR for the current branch. The closing issue is the positional `<N>`, as `review-work` and `done-work` take it, or `--closes <N>`, its explicit form; without either it comes from the branch name (`<type>/<N>-<slug>`). **`--closes` repeats**, so one PR that lands several Tasks closes each of them on merge. The first closing issue is the primary one: it supplies the title's Conventional-Commits type, the default summary and the base branch. The body carries a `Closes #N` line for every closing issue — the template gets one each, and a `--body-file` gains any it does not already name. **`--doc-impact-from-friction`** (opt-in) renders the `## Doc impact` section from the answers the changed pages carry — see "Connections". |
 | `edit-pr <PR> [--title T] [--body B \| --body-file F \| --append A] [--closes <N> ...]` | Title / body edit, validated against the PR rules. `--closes` (repeatable) adds a `Closes #N` line beside the existing ones for each named issue the body does not already close. |
 
 **The PR title is composed, not given whole:** `<type>(<scope>): <summary>`. `--type` overrides the type derived from the primary issue's `type:*` label, `--scope` adds the scope (the title has none without it), and `--summary` is only the description part after the colon, defaulting to the issue title without its `[Type]` prefix, lowercased:
@@ -741,7 +741,7 @@ doc_check:
     friction: enforcing         # a documentation capability's page friction
 ```
 
-The `## Doc impact` section itself stays required on every Task and pull request (DEC-015), whatever fills the point.
+**The `## Doc impact` section may render the pages' answers.** `open-pr --doc-impact-from-friction` (opt-in) runs `pkit friction check --json` against `origin/<base>` and writes one bullet per answer the changed pages carry into an unwritten section — the template's placeholder, an empty section, or none — and leaves an authored section as it is; a page still carrying friction is named on stderr, to be answered on the page. Rendering only: the check never reads the section for a contributed obligation. The section itself stays required on every Task and pull request (DEC-015), whatever fills the point.
 
 ## Permissions
 
