@@ -59,7 +59,7 @@ def run_sync(target_root: Path, dry_run: bool = False, force: bool = False) -> N
     # This is sync's test for the methodology's source repository, the one whose
     # `.pkit/` is the methodology's own tree (ADR-059 point 2). It is exact
     # whenever the running code is that repository's own; code that cannot ask
-    # it checks marker files instead.
+    # it runs the marker test (`router.is_source_checkout`) instead.
     if install.is_self_host(target_root, source_kit):
         ctx = install.InstallContext(
             target_root=target_root,

@@ -65,9 +65,13 @@ print(json.dumps({{"summary": [f"probe {{{DEP_MODULE}.VALUE}}"], "findings": []}
 needs_uv = pytest.mark.skipif(shutil.which("uv") is None, reason="needs uv on the PATH")
 
 
-def _register(root: Path, script_text: str = QUERY_SCRIPT, *, contract: bool = True) -> Path:
+def _register(
+    root: Path, script_text: str = QUERY_SCRIPT, *, contract: bool = True, in_manifest: bool = True
+) -> Path:
     """A capability `cap` registering the command `check` — declaring the query
-    contract unless told not to — and the validator `cap:thing` that names it."""
+    contract unless told not to — and the validator `cap:thing` that names it.
+    Recorded in the manifest as incubated unless `in_manifest` is false, which
+    leaves it authored in the repository for `capabilities register`."""
     cap_dir = root / ".pkit" / "capabilities" / "cap"
     script = cap_dir / "scripts" / "check.py"
     script.parent.mkdir(parents=True, exist_ok=True)
@@ -81,6 +85,9 @@ def _register(root: Path, script_text: str = QUERY_SCRIPT, *, contract: bool = T
         "validators:\n  thing:\n    command: check\n",
         encoding="utf-8",
     )
+    if not in_manifest:
+        (cap_dir / "README.md").write_text("# cap\n", encoding="utf-8")
+        return script
     backbone = read_backbone_manifest(root)
     assert backbone is not None
     backbone.components.append(
@@ -211,6 +218,90 @@ def test_init_runs_the_step(
     )
     root = make_adopter_repo().root
     assert ran == [root]
+
+
+# --- the capability verbs provision what they bring in (#1090) ---------------
+
+
+def _provisioned(owner: str, reference: str) -> str:
+    return (
+        f"  provisioned  query command {reference!r} ({owner}) — its dependencies "
+        "resolved into uv's cache\n"
+    )
+
+
+def test_capability_install_provisions_that_capability_s_query_commands(
+    make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Install provisions the installed capability's query commands with sync's
+    lines, and only its: another component's are sync's to provision."""
+    root = make_adopter_repo().root
+    _register(root)
+    uv = _FakeUv(offline="miss", online=None)
+    monkeypatch.setattr(provisioning, "_resolve", uv)
+
+    result = CliRunner().invoke(main, ["capabilities", "install", "project-management"])
+
+    assert result.exit_code == 0, result.output
+    assert _provisioned("project-management", "fill-doc-check") in result.output
+    assert "(cap)" not in result.output
+    scoped = provisioning.query_commands(root, component="project-management")
+    assert [c.reference for c in scoped] == ["fill-doc-check"]
+    assert uv.calls == ["offline", "online"] * len(scoped)
+
+
+def test_capability_upgrade_provisions_the_refreshed_capability(
+    make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A kit-shipped capability's upgrade re-provisions it; one already in the
+    cache says so and fetches nothing, as sync's re-run does."""
+    make_adopter_repo(capabilities=("project-management",))
+    uv = _FakeUv(offline=None)
+    monkeypatch.setattr(provisioning, "_resolve", uv)
+
+    result = CliRunner().invoke(main, ["capabilities", "upgrade", "project-management"])
+
+    assert result.exit_code == 0, result.output
+    assert (
+        "  unchanged    query command 'fill-doc-check' (project-management) — already "
+        "provisioned\n"
+    ) in result.output
+    assert uv.calls == ["offline"]
+
+
+def test_register_and_an_incubated_upgrade_provision_the_capability(
+    make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An in-repo capability is deployed as a kit-shipped one is (COR-031 D1),
+    its query commands included — on `register`, and on `upgrade`'s re-deploy."""
+    root = make_adopter_repo().root
+    _register(root, in_manifest=False)
+    monkeypatch.setattr(provisioning, "_resolve", _FakeUv(offline="miss", online=None))
+    runner = CliRunner()
+
+    registered = runner.invoke(main, ["capabilities", "register", "cap"])
+    assert registered.exit_code == 0, registered.output
+    assert _provisioned("cap", "check") in registered.output
+
+    upgraded = runner.invoke(main, ["capabilities", "upgrade", "cap"])
+    assert upgraded.exit_code == 0, upgraded.output
+    assert _provisioned("cap", "check") in upgraded.output
+
+
+def test_a_dry_run_provisions_nothing(
+    make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    uv = _FakeUv()
+    monkeypatch.setattr(provisioning, "_resolve", uv)
+    make_adopter_repo()
+
+    result = CliRunner().invoke(
+        main, ["capabilities", "install", "project-management", "--dry-run"]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "query command" not in result.output
+    assert uv.calls == []
 
 
 # --- end to end, with the real uv --------------------------------------------

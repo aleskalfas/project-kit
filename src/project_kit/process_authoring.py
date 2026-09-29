@@ -1120,24 +1120,36 @@ def couple_process(
 
 def _unresolved_upstream(repo_root: Path, upstream: str) -> str | None:
     """Why `upstream` reaches no definition here, as the stamp's warning; None when
-    it does. A role address is read through the wiring resolver, as health reads
-    it (`process_health.implementation_address`) — never a resolution of roles
-    of the stamp's own. Unresolved is declarable: the entry is inert metadata."""
-    consequence = (
-        "the entry is inert metadata (COR-038) so this is declarable, but a "
-        "later hand-off contract on it would report indeterminate."
+    it does. Unresolved is declarable: the entry is inert metadata."""
+    _definition, why_not = _upstream_definition(repo_root, upstream)
+    if why_not is None:
+        return None
+    return (
+        f"{why_not}; the entry is inert metadata (COR-038) so this is declarable, "
+        "but a later hand-off contract on it would report indeterminate."
     )
+
+
+def _upstream_definition(
+    repo_root: Path, upstream: str
+) -> tuple[ProcessDefinition | None, str | None]:
+    """The definition `upstream` reaches here, or None and why it reaches none.
+
+    A role address is read through the wiring resolver, as health reads it
+    (`process_health.implementation_address`) — never a resolution of roles of
+    the stamps' own. Shared by `couple`, which warns on an upstream that reaches
+    none, and `hand-off`, which validates its trigger against the one it reaches.
+    """
     target, why_not = implementation_address(repo_root, upstream, None)
     if target is None:
-        return (
+        return None, (
             f"upstream role address {upstream!r} does not resolve to an offered "
-            f"process here ({why_not}); {consequence}"
+            f"process here ({why_not})"
         )
     try:
-        load_definition(repo_root, target)
+        return load_definition(repo_root, target), None
     except ProcessError as exc:
-        return f"upstream {upstream!r} does not resolve to a definition here ({exc}); {consequence}"
-    return None
+        return None, f"upstream {upstream!r} does not resolve to a definition here ({exc})"
 
 
 def _entry_differences(declared: dict[str, Any], wanted: dict[str, Any]) -> list[str]:
@@ -1214,9 +1226,11 @@ def handoff_process(
     Refuses when no `depends_on` entry for `upstream` exists (`process couple`
     first — the contract is a sub-block of a declared coupling, never a
     free-floating edge). Validates the trigger is a state of the upstream
-    definition WHERE that definition resolves at authoring time; an
-    unresolvable upstream degrades to a warning (health will report the
-    contract indeterminate until it resolves — never silently green).
+    definition WHERE that definition resolves at authoring time — a role
+    address through the wiring, to the process the role's active provider
+    offers, as health resolves it; an unresolvable upstream degrades to a
+    warning (health will report the contract indeterminate until it resolves —
+    never silently green).
 
     `candidates` / `resolve` name commands of the DECLARING capability: names
     not yet registered are scaffolded as fail-closed seam stubs (ADR-048
@@ -1262,23 +1276,23 @@ def handoff_process(
     if not trigger.strip():
         raise ProcessAuthoringError("a hand-off contract requires a trigger state.")
     warnings: list[str] = []
-    try:
-        upstream_def = load_definition(repo_root, upstream)
-    except ProcessError as exc:
+    # A role address is read through the wiring, as health reads the contract
+    # and couple the coupling: the trigger is validated against the process the
+    # role's active provider offers there (#1090).
+    upstream_def, why_not = _upstream_definition(repo_root, upstream)
+    if why_not is not None:
         warnings.append(
-            f"upstream {upstream!r} does not resolve at authoring time ({exc}); "
-            "the trigger cannot be validated here and `health` will report the "
-            "contract INDETERMINATE until it resolves."
+            f"{why_not}; the trigger cannot be validated here and `health` will "
+            "report the contract INDETERMINATE until it resolves."
         )
-    else:
-        if upstream_def.state(trigger) is None:
-            known = ", ".join(s.get("id", "?") for s in upstream_def.states)
-            raise ProcessAuthoringError(
-                f"trigger {trigger!r} is not a state of {upstream!r} (states: "
-                f"{known}); a phantom trigger would report indeterminate "
-                "forever (COR-042). Declare a STABLE upstream state — one the "
-                "subject holds until the hand-off happens."
-            )
+    if upstream_def is not None and upstream_def.state(trigger) is None:
+        known = ", ".join(s.get("id", "?") for s in upstream_def.states)
+        raise ProcessAuthoringError(
+            f"trigger {trigger!r} is not a state of {upstream!r} (states: "
+            f"{known}); a phantom trigger would report indeterminate "
+            "forever (COR-042). Declare a STABLE upstream state — one the "
+            "subject holds until the hand-off happens."
+        )
 
     for name, label in ((candidates, "candidates"), (resolve, "resolve")):
         if not _KEBAB_CASE.match(name):

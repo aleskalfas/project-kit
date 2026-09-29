@@ -31,6 +31,7 @@ from project_kit.install import (
     find_target_root,
     install_kit,
     refuse_if_pkit_present,
+    refuse_propagation_into_source,
     source_checkout_root,
     resolve_init_target,
     scan_pkit_installs,
@@ -2893,13 +2894,25 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
             f"{target_root}/.pkit/ does not exist. Run 'pkit init' first."
         )
 
+    source_kit = find_source_kit()
+    # The methodology's source repository run by code that is not its own (the
+    # gap, ADR-059): refuse before anything is read or written (#1090).
+    refuse_propagation_into_source(
+        target_root,
+        source_kit,
+        command=f"capabilities upgrade {name}",
+        would=(
+            "refresh the capability with that code — a kit-shipped one from that "
+            "tree, over the one it is built from"
+        ),
+        own_code_does=None,
+    )
+
     if not caps.is_installed(target_root, name):
         raise click.ClickException(
             f"capability {name!r} is not installed. "
             f"Use `pkit capabilities install {name}` first."
         )
-
-    source_kit = find_source_kit()
 
     # Origin-aware branch (COR-031 D1/D4): an incubated (in-repo) capability has
     # no kit source to reconcile against — the working tree *is* the source. It
@@ -3060,7 +3073,8 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
 
     if not dry_run:
         # Re-run installed adapter primitives so the harness side picks
-        # up any newly-added skills/agents from the upgraded capability.
+        # up any newly-added skills/agents from the upgraded capability,
+        # then provision its query commands, as sync would (#1090).
         from project_kit import install as install_mod
         ctx = install_mod.InstallContext(
             target_root=target_root,
@@ -3068,6 +3082,7 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
             dry_run=False,
         )
         install_mod.run_installed_adapter_primitives(ctx)
+        install_mod.provision_query_commands(ctx, component=name)
 
 
 @main.command()
@@ -4409,11 +4424,23 @@ def install_capability_cmd(name: str, dry_run: bool, plan: bool, as_json: bool) 
             f"{target_root}/.pkit/ does not exist. Run 'pkit init' first."
         )
 
+    source_kit = find_source_kit()
+    # The methodology's source repository run by code that is not its own (the
+    # gap, ADR-059): the install would copy the running code's capability
+    # subtree into the tree it is built from. Refuse before anything else —
+    # the plan included, since the install it previews would refuse (#1090).
+    refuse_propagation_into_source(
+        target_root,
+        source_kit,
+        command=f"capabilities install {name}",
+        would="copy the capability's subtree from that tree into the one it is built from",
+        own_code_does=None,
+    )
+
     # A reserved name is refused before lookup, so the refusal names the
     # reservation rather than reporting the capability as missing.
     caps.refuse_reserved_capability_name(name)
 
-    source_kit = find_source_kit()
     capability_source = caps.find_capability_in_source(source_kit, name)
     if capability_source is None:
         raise click.ClickException(
@@ -4511,7 +4538,9 @@ def install_capability_cmd(name: str, dry_run: bool, plan: bool, as_json: bool) 
         # the capability's newly-copied skills and agents (e.g.,
         # deploy-skills.sh symlinks them into .claude/skills/).
         # Mirrors what `pkit capabilities upgrade` does after refresh and
-        # what `pkit init` does after its first-time copy.
+        # what `pkit init` does after its first-time copy. Then provision the
+        # capability's query commands, so an offline `pkit validate` answers
+        # without a `pkit sync` first (#1090).
         from project_kit import install as install_mod
         ctx = install_mod.InstallContext(
             target_root=target_root,
@@ -4519,6 +4548,7 @@ def install_capability_cmd(name: str, dry_run: bool, plan: bool, as_json: bool) 
             dry_run=False,
         )
         install_mod.run_installed_adapter_primitives(ctx)
+        install_mod.provision_query_commands(ctx, component=name)
 
 
 @capabilities.command("register")
@@ -4563,6 +4593,19 @@ def register_capability_cmd(name: str, dry_run: bool) -> None:
             f"{target_root}/.pkit/ does not exist. Run 'pkit init' first."
         )
 
+    source_kit = find_source_kit()
+    # The methodology's source repository run by code that is not its own (the
+    # gap, ADR-059): registering writes install-state with that code. Refuse
+    # before anything else, as `install` does (#1090).
+    refuse_propagation_into_source(
+        target_root,
+        source_kit,
+        command=f"capabilities register {name}",
+        would="register the capability with that code, writing install-state into the tree "
+        "it is built from",
+        own_code_does=None,
+    )
+
     # A reserved name is refused before resolution, as in `install`.
     caps.refuse_reserved_capability_name(name)
 
@@ -4570,7 +4613,6 @@ def register_capability_cmd(name: str, dry_run: bool) -> None:
     # Consulting both trees lets us surface the COR-031 boundary case where
     # a same-named capability now also ships from kit source — graduation
     # arriving unbidden — rather than silently shadowing it.
-    source_kit = find_source_kit()
     resolved = caps.resolve_capability_source(
         name,
         source_kit=source_kit,
@@ -4722,7 +4764,8 @@ def register_capability_cmd(name: str, dry_run: bool) -> None:
     if not dry_run:
         # Run the SAME deploy primitives a kit-source install runs, so the
         # capability's skills/agents land in the harness (COR-031 D1: deploy
-        # is identical regardless of origin).
+        # is identical regardless of origin) — its query-command provisioning
+        # included (#1090).
         from project_kit import install as install_mod
         ctx = install_mod.InstallContext(
             target_root=target_root,
@@ -4730,6 +4773,7 @@ def register_capability_cmd(name: str, dry_run: bool) -> None:
             dry_run=False,
         )
         install_mod.run_installed_adapter_primitives(ctx)
+        install_mod.provision_query_commands(ctx, component=name)
 
 
 def _upgrade_incubated_capability(
@@ -4774,6 +4818,7 @@ def _upgrade_incubated_capability(
             dry_run=False,
         )
         install_mod.run_installed_adapter_primitives(ctx)
+        install_mod.provision_query_commands(ctx, component=name)
 
 
 def _check_backbone_satisfied(

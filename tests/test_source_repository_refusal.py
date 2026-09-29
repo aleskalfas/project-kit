@@ -1,11 +1,13 @@
-"""The refusal in the gap between the two source tests (ADR-059; #1070).
+"""The refusal in the gap between the two source tests (ADR-059; #1070, #1090).
 
 The methodology's source repository is recognised by sync's test (the target is
 the parent of the tree the running code resolves) and by the marker test (the
-package source beside the in-tree dispatcher). Route 1 keeps them equal; where
-the running code is not the repository's own they disagree, and sync and
-upgrade would copy a foreign `.pkit/` over the source. They refuse instead, and
-`pkit pin` refuses wherever either test recognises the source.
+package source beside `.pkit/`). Route 1 keeps them equal; where the running
+code is not the repository's own they disagree, and sync and upgrade would copy
+a foreign `.pkit/` over the source, and the capability verbs a foreign
+capability subtree. They refuse instead, and `pkit pin` refuses wherever either
+test recognises the source. A deleted dispatcher is one more way into the gap,
+never a way out of the marker test.
 
 Each path into the gap is exercised without taking it for real: the fixture
 tree carries both markers while this suite's checkout is the running code, so
@@ -23,6 +25,7 @@ import click
 import pytest
 from click.testing import CliRunner
 
+from project_kit import capabilities as caps
 from project_kit import install, manifest, router, upgrade
 from project_kit.cli import main
 from project_kit.sync import run_sync
@@ -84,7 +87,7 @@ def test_sync_refuses_under_no_route(
         run_sync(source_checkout)
 
     message = _refusal(exc)
-    assert f"refusing to sync {source_checkout}" in message
+    assert f"refusing to run `sync` in {source_checkout}" in message
     assert "The marker test says it is the source" in message
     assert "Sync's test says it is not" in message
     assert "PKIT_NO_ROUTE=1" in message
@@ -121,7 +124,7 @@ def test_upgrade_refuses_under_no_route(
         upgrade.run_upgrade(source_checkout)
 
     message = _refusal(exc)
-    assert f"refusing to upgrade {source_checkout}" in message
+    assert f"refusing to run `upgrade` in {source_checkout}" in message
     assert "PKIT_NO_ROUTE=1" in message
     _assert_untouched(source_checkout)
     after = manifest.read_backbone_manifest(source_checkout)
@@ -179,9 +182,103 @@ def test_non_executable_dispatcher_refuses_through_the_router(
     err = capsys.readouterr().err
     assert f"chmod +x {dispatcher}" in err  # the router's warning names the repair
     assert "Re-run `pkit sync`" not in err
-    assert f"refusing to sync {source_checkout}" in err
+    assert f"refusing to run `sync` in {source_checkout}" in err
     assert "is not executable, so the router fell back" in err
     _assert_untouched(source_checkout)
+
+
+def test_deleted_dispatcher_is_still_the_source_and_refuses_through_the_router(
+    source_checkout: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The fourth way into the gap (#1090): a dispatcher deleted outright. The
+    package source still marks the checkout as the source, so it is never taken
+    for an adopter: route 1 falls back naming the restore, and the sync that
+    fallback runs refuses rather than propagating over it."""
+    dispatcher = router.source_dispatcher(source_checkout)
+    dispatcher.unlink()
+    monkeypatch.setattr(sys, "argv", ["pkit", "sync"])
+
+    with pytest.raises(SystemExit) as exited:
+        router.main(["sync"])
+
+    assert exited.value.code == 1
+    err = " ".join(capsys.readouterr().err.split())
+    # The router's warning: the checkout is recognised, and what to restore.
+    assert "carries the methodology's package source but no dispatcher" in err
+    assert f"restore it with `git checkout -- {dispatcher}`" in err
+    # The refusal: the dispatcher's absence is the way in, and the remedy waits on it.
+    assert f"refusing to run `sync` in {source_checkout}" in err
+    assert f"the dispatcher {dispatcher} is missing, so the router fell back" in err
+    assert "own code instead, once its dispatcher is restored: `.pkit/cli/pkit sync`" in err
+    _assert_untouched(source_checkout)
+
+
+# --- the capability verbs refuse the same way (#1090) --------------------------
+
+# A file of an installed kit-shipped capability carrying a local edit: a refresh
+# from the running code's tree would overwrite it.
+_CAPABILITY_SENTINEL = Path(".pkit") / "capabilities" / "evidence" / "README.md"
+
+
+@pytest.mark.parametrize(
+    ("args", "would"),
+    [
+        pytest.param(
+            ["install", "demo-recording"],
+            "copy the capability's subtree from that tree into the one it is built from",
+            id="install",
+        ),
+        pytest.param(
+            ["install", "demo-recording", "--plan"],
+            "copy the capability's subtree from that tree into the one it is built from",
+            id="install-plan",
+        ),
+        pytest.param(
+            ["upgrade", "evidence"],
+            "refresh the capability with that code — a kit-shipped one from that tree, "
+            "over the one it is built from",
+            id="upgrade",
+        ),
+        pytest.param(
+            ["register", "evidence"],
+            "register the capability with that code, writing install-state into the tree "
+            "it is built from",
+            id="register",
+        ),
+    ],
+)
+def test_capability_verbs_refuse_in_the_source_run_by_other_code(
+    source_checkout: Path, monkeypatch: pytest.MonkeyPatch, args: list[str], would: str
+) -> None:
+    """`capabilities install`, `upgrade` and `register` copy or register a
+    capability with the running code's tree, so in the gap they refuse as sync
+    does — with the same message, naming the command as it would be re-run —
+    before any other pre-flight, and write nothing."""
+    installed = caps.find_capability_in_source(install.find_source_kit(), "evidence")
+    assert installed is not None
+    caps.install_capability(source_checkout, installed)
+    (source_checkout / _CAPABILITY_SENTINEL).write_text(_SENTINEL_TEXT, encoding="utf-8")
+    recorded = (source_checkout / ".pkit" / "manifest.yaml").read_bytes()
+    monkeypatch.setenv(router._BYPASS_ENV, "1")
+
+    result = CliRunner().invoke(main, ["capabilities", *args])
+
+    assert result.exit_code == 1, result.output
+    message = " ".join(result.output.split())
+    command = " ".join(["capabilities", *args[:2]])
+    assert f"refusing to run `{command}` in {source_checkout}" in message
+    assert "The marker test says it is the source" in message
+    assert "Sync's test says it is not" in message
+    assert f"`{command}` would {would} (ADR-059)" in message
+    assert "Nothing was written, and no flag overrides this refusal." in message
+    assert "PKIT_NO_ROUTE=1" in message
+    assert f"own code instead: `.pkit/cli/pkit {command}` from {source_checkout}." in message
+    _assert_untouched(source_checkout)
+    assert (source_checkout / ".pkit" / "manifest.yaml").read_bytes() == recorded
+    assert (source_checkout / _CAPABILITY_SENTINEL).read_text(encoding="utf-8") == _SENTINEL_TEXT
+    assert not (source_checkout / ".pkit" / "capabilities" / "demo-recording").exists()
 
 
 def test_inherited_loop_guard_is_named(
