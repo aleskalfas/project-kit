@@ -19,10 +19,17 @@ fixture's capability root and wraps its envelope as the backbone resolves an
 additive point with one filler — the mapping's obligations, in order, each
 from project-management. The expected outcomes were captured before the check
 read the point, and are unchanged.
+
+The last fixture is the merge gate under the setting project-kit runs with
+(#1012): the friction source enforcing, in an adopter with living-docs and
+project-management installed, the point resolved by the real `pkit` — a
+pull request with a stale page and unanchored code is refused naming both, and
+passes once the page is revalidated and the path anchored.
 """
 
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
@@ -30,6 +37,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import pytest
+from click.testing import CliRunner
+
+from project_kit.cli import main
+from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.friction_documents import document as friction_document
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CAPABILITY = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
@@ -370,3 +382,141 @@ def test_the_rules_it_applies_are_the_ones_the_point_resolves_to(
 
 def test_every_fixture_has_its_expected_outcome() -> None:
     assert set(FIXTURES) == set(EXPECTED)
+
+
+# --- a documentation capability's obligations, enforced (#1012) ------------------
+#
+# The setting project-kit runs with: `doc_check.sources.friction: enforcing`.
+# The point here is the real one — an adopter with living-docs and
+# project-management installed, the backbone resolving the point, living-docs'
+# filler reading the whole-repository friction check at the branch's head — so
+# the obligations are the ones a stale page and unanchored code give rise to.
+
+LIVING_DOCS_REL = Path(".pkit") / "capabilities" / "living-docs"
+PM_REL = Path(".pkit") / "capabilities" / "project-management"
+
+BACKBONE_CONFIG = {
+    "name": "adopter",
+    "docs": {"user": "docs/", "internal": "tech-docs/"},
+    "friction": {"mode": "enforcing", "surface": ["src"]},
+}
+
+PM_CONFIG = (
+    "schema_version: 1\ndefault_branch: main\nworkstreams: []\n"
+    "code_path_to_doc_mapping:\n  enforce: false\n  rules: []\n"
+    "doc_check:\n  sources:\n    friction: enforcing\n"
+)
+
+# A line naming each obligation, which meets neither: a contributed obligation
+# is met on the page, never by the section.
+DOC_IMPACT = "## Doc impact\n- docs/guide.md: still accurate\n- src/b.py: an internal helper\n"
+
+
+def _guide(*anchors: str, body: str) -> str:
+    return friction_document(
+        None,
+        anchors={"path": list(anchors)},
+        at="2026-10-01T09:00:00Z",
+        outcome="updated",
+        reader="user",
+        kind="signpost",
+        body=body,
+    )
+
+
+def _to_this_interpreter(repo: AdopterRepo, script: Path) -> None:
+    """A capability script run under this interpreter, not `uv run --script`."""
+    path = repo.root / script
+    body = path.read_text(encoding="utf-8").split("\n", 1)[1]
+    path.write_text(f"#!{sys.executable}\n{body}", encoding="utf-8")
+
+
+@pytest.fixture
+def enforcing_project(make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path) -> AdopterRepo:
+    """The adopter at its base: `src/a.py`, and the user page describing it."""
+    repo = make_adopter_repo(capabilities=("living-docs", "project-management"))
+    for script in (LIVING_DOCS_REL, PM_REL):
+        _to_this_interpreter(repo, script / "scripts" / "fill-doc-check.py")
+    repo.write(
+        {
+            ".pkit/project/config.yaml": json.dumps(BACKBONE_CONFIG, indent=2) + "\n",
+            f"{PM_REL}/project/config.yaml": PM_CONFIG,
+            f"{PM_REL}/project/bootstrap-stamp.yaml": (
+                "schema_version: 1\n"
+                "bootstrap:\n"
+                "  completed_at: '2026-01-01T00:00:00+00:00'\n"
+                "  capability_version: 0.0.0-test\n"
+                "  by: bootstrap\n"
+                "  repo:\n"
+            ),
+            "src/a.py": "A = 1\n",
+            "docs/guide.md": _guide("src/a.py", body="`src/a.py` holds A, set to 1."),
+            "tech-docs/README.md": "---\nreader: maintainer\nkind: signpost\n---\n\n# Notes\n",
+        }
+    )
+    repo.commit("base")
+    repo.git("branch", "base")
+    return repo
+
+
+def _merge_gate(repo: AdopterRepo, tmp_path: Path) -> Outcome:
+    """check-doc-mapping on the branch against `base`, as the gate's `doc check`
+    line runs it (`scripts/check.sh`, a required status)."""
+    body = tmp_path / "body.md"
+    body.write_text(DOC_IMPACT, encoding="utf-8")
+    env = {k: v for k, v in os.environ.items() if k != "PKIT_OFFLINE"}
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(repo.root / PM_REL / "scripts" / "check-doc-mapping.py"),
+            "--base",
+            "base",
+            "--pr-body-file",
+            str(body),
+        ],
+        cwd=repo.root,
+        capture_output=True,
+        text=True,
+        env={**env, "NO_COLOR": "1"},
+        check=False,
+    )
+    return Outcome(proc.returncode, proc.stdout, proc.stderr)
+
+
+def test_the_merge_gate_refuses_unmet_contributed_obligations_until_they_are_met(
+    enforcing_project: AdopterRepo, tmp_path: Path
+) -> None:
+    """One branch in two states. It changes code a page anchors without answering
+    on the page, and adds code nothing anchors: the check refuses, naming both.
+    Revalidating the page — with the writer a contributor runs — and anchoring
+    the new path from it leaves no obligation, and the check passes."""
+    repo = enforcing_project
+    repo.commit("change a, add b", {"src/a.py": "A = 2\n", "src/b.py": "B = 1\n"})
+    assert _merge_gate(repo, tmp_path) == Outcome(
+        1,
+        "check-doc-mapping: 0 rule(s), 2 changed file(s), mode=advisory\n"
+        "check-doc-mapping: 2 contributed obligation(s) from friction\n"
+        "  ✗ [friction] docs/guide.md → no answer in the diff (page-stale)\n"
+        "  ✗ [friction] src/b.py → no page anchors it (code-undocumented); "
+        "anchor `src/b.py` from a page\n",
+        "\n[refused] 1 friction obligation(s) unanswered — answer each on its page in this "
+        "diff; a `## Doc impact` line does not meet them.\n"
+        "\n[refused] 1 friction obligation(s) unanchored — anchor each path from a page; "
+        "a `## Doc impact` line does not meet them.\n",
+    )
+
+    repo.write(
+        {
+            "docs/guide.md": _guide(
+                "src/a.py", "src/b.py", body="`src/a.py` holds A, set to 2; `src/b.py` holds B."
+            )
+        }
+    )
+    revalidated = CliRunner().invoke(
+        main, ["friction", "revalidate", "docs/guide.md", "--outcome", "updated", "--yes"]
+    )
+    assert revalidated.exit_code == 0, revalidated.output
+    repo.commit("describe a and b")
+    assert _merge_gate(repo, tmp_path) == Outcome(
+        0, "check-doc-mapping: no rules configured; skipped.\n", ""
+    )

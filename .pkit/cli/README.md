@@ -16,6 +16,7 @@ pkit:
         - src/project_kit/sync.py
         - src/project_kit/upgrade.py
         - src/project_kit/merge.py
+        - src/project_kit/settings_consolidate.py
         - src/project_kit/workspace.py
         - src/project_kit/visibility.py
         - src/project_kit/versioning.py
@@ -24,6 +25,7 @@ pkit:
         - src/project_kit/validators.py
         - src/project_kit/scaffolds.py
         - src/project_kit/decisions.py
+        - src/project_kit/capability_namespace.py
         - src/project_kit/scratchpads.py
         - src/project_kit/permissions.py
         - src/project_kit/project_config.py
@@ -40,7 +42,7 @@ pkit:
         - src/project_kit/environment.py
       record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, PRJ-001, PRJ-003, PRJ-004, ADR-033, ADR-039, ADR-049, ADR-058, ADR-059]
     revalidated:
-      at: 2026-09-29T17:33:36Z
+      at: 2026-09-29T18:00:03Z
       outcome: updated
 ---
 
@@ -95,6 +97,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # or: brew install uv
 | `init` | first install: announce target + confirm off-CWD, then propagation + seed + merge (`--here` / `--yes` / `--root <path>` / `--dry-run`) | yes | no — refuses re-run (points you to `pkit sync`) |
 | `sync` | re-run propagation | yes | yes |
 | `merge [<target>...]` | re-run merge for one or all targets | yes | yes |
+| `settings consolidate [--dry-run] [--yes]` | remove the permission allow entries a broader rule already covers from `.claude/settings.json` and `.claude/settings.local.json`; the plan first, then one confirmation (see "Lifecycle commands") | yes | yes — nothing redundant left is a no-op |
 | `upgrade` | version-aware migrations + sync; **pins the project by default** at the version it upgrades to (ADR-049) — `--no-pin` opts out (keep following the installed global tool). In an already-pinned project it auto-advances the `.pkit/version-pin` directive to the latest release (reconcile forward via `uvx`, flip the pin last; no `uv tool install`); offline-safe; self-host is never pinned | yes | yes |
 | `pin [<version>]` | write the `.pkit/version-pin` directive (per ADR-049): no argument freezes at the current content version (`backbone_version`); `<version>` (a version number only, leading `v` stripped) freezes (equal), reconciles content forward then flips the pin last (newer), or refuses (older — forward-only migrations). Requires the manifest; refuses branch/sha/pre-release pins. Project-owned; never kit-synced | yes | no — overwrites an existing pin |
 | `unpin` | remove the `.pkit/version-pin` directive (per ADR-049); the project reverts to floating on the installed binary | yes | yes — no-op when absent |
@@ -234,6 +237,14 @@ On **self-host** (project-kit itself, where the source *is* the installed `.pkit
 Re-runs merge against one or more declared merge targets, or against all targets if no argument is given. Honours the two-tier (auto-add / prompt-once) contract from COR-002. Idempotent.
 
 Use this when you want to pull baseline updates for a single fixed-path config file (e.g., `.claude/settings.json`, `.gitignore`) without invoking other operations.
+
+### `settings consolidate [--dry-run] [--yes]`
+
+Removes redundant permission allow entries from `.claude/settings.json` and `.claude/settings.local.json`. Merge never removes an entry from the allow list (COR-002's append-only rule), so narrow entries a harness's permission prompts once added stay after the baseline grows a broader rule that covers them — `Bash(pkit new *)` next to `Bash(pkit:*)`. `sync` prints a one-line hint when it finds any; this command is the deliberate cleanup.
+
+- **What counts as redundant.** An entry a broader rule in *either* file covers, removed from whichever file holds it. The comparison is deliberately narrow: `Bash(<prefix>:*)` covers `Bash(<prefix>)`, `Bash(<prefix> <args>)` and `Bash(<prefix>:<args>)`, and nothing else — no other tool's rules, no path globs.
+- **What it leaves alone.** Only `permissions.allow` is consolidated; denies stay explicit, for audit.
+- **Consent.** It prints the plan grouped by file and asks once before writing. `--dry-run` prints the plan only; `--yes` writes without asking.
 
 ### `upgrade`
 
@@ -440,7 +451,7 @@ Scaffolds a new decision-record stub per the schema in `.pkit/decisions/README.m
   | `adr` | `ADR-NNN` | overlay-resolved (see below) | COR-025 |
   | *a capability name* | `DEC-NNN` | `.pkit/capabilities/<capability>/decisions/` | (per-capability) |
 
-  Numbering is independent per id-space. A `<namespace>` that is not `core`, `project`, or `adr` is interpreted as a capability name: the record stamps under that capability's `decisions/` directory with the `DEC` prefix, numbered independently within that capability (two different capabilities may both hold a `DEC-001`). The command refuses if no capability of that name exists under `.pkit/capabilities/`; the `decisions/` subdirectory is created on first use.
+  Numbering is independent per id-space. A `<namespace>` that is not `core`, `project`, or `adr` is interpreted as a capability name: the record stamps under that capability's `decisions/` directory with the `DEC` prefix, numbered independently within that capability (two different capabilities may both hold a `DEC-001`). The command refuses if no capability of that name exists under `.pkit/capabilities/` — a capability being a folder there that carries a `package.yaml` — naming the command's own namespaces and the capabilities that do exist; the `decisions/` subdirectory is created on first use.
 
 - **`<slug>`** is a kebab-case shorthand of the decision's title — short enough to keep listings self-documenting (e.g., `merge-delivery`, `pattern-extraction`).
 

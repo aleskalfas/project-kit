@@ -1,0 +1,9 @@
+component: project-management
+kind: none
+body: >
+  project-kit enforces the `friction` source of the documentation check in its
+  own project configuration (`doc_check.sources.friction: enforcing`), and a
+  fixture pins the check refusing a pull request with a stale page and an
+  unanchored path; project-kit's check gate runs it as its `doc check` line.
+  The README names that gate line for any project; otherwise project-tier
+  configuration and tests only, and nothing the capability does changed.
