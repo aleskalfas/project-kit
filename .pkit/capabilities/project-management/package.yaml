@@ -154,7 +154,7 @@ commands:
     help: "Check a PR's documentation obligations (DEC-015 + DEC-053 + ADR-019): reads the resolved pkit::work-tracking:doc-check point — the code->doc mapping plus any contributed obligations — and applies it to the diff. Read-only; exits non-zero when an enforced obligation is unmet (the mapping with enforce: true; a contributed source set enforcing) or the point does not resolve. A mapping rule is met by its doc in the diff or a `## Doc impact` line naming the code path; a contributed obligation only by its page changed in the diff. Wire as a required CI status check for a real boundary."
   fill-doc-check:
     script: scripts/fill-doc-check.py
-    help: "The default filler of the pkit::work-tracking:doc-check point (DEC-053): print the code->doc mapping as the point's obligations, one per rule; --json prints the filler envelope the backbone reads. A query: read-only, offline, no parameter. Run it once in a fresh environment to provision its dependency before an offline `pkit validate`."
+    help: "The default filler of the pkit::work-tracking:doc-check point (DEC-053): print the code->doc mapping as the point's obligations, one per rule; --json prints the filler envelope the backbone reads. A query: read-only, offline, no parameter; `pkit sync` provisions its dependency."
     query-contract: true
   promote-issue:
     script: scripts/promote-issue.py

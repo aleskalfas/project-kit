@@ -640,6 +640,7 @@ def install_kit(target_root: Path, dry_run: bool = False) -> None:
     _stamp_backbone_manifest(ctx)
     _render_runtime_ignore(ctx)
     ensure_agent_workspace(ctx)
+    provision_query_commands(ctx)
     _print_next_steps(ctx)
 
 
@@ -652,6 +653,22 @@ def ensure_agent_workspace(ctx: InstallContext) -> None:
     rather than through the merge primitive.
     """
     for verb, detail in workspace.ensure(ctx.target_root, dry_run=ctx.dry_run):
+        click.echo(f"  {verb:<12} {detail}")
+
+
+def provision_query_commands(ctx: InstallContext) -> None:
+    """Resolve every registered query command's environment once, online (#1092).
+
+    A core step shared by `init` and `sync` — self-host included, where it is
+    what readies the methodology's own checkout for an offline `pkit validate`.
+    Runs after the manifest is stamped, so every registered component is read.
+    Idempotent, and never a failure: a command that cannot be provisioned is a
+    warning line. See `project_kit.provisioning`. Local import, like the
+    renderer's: the package reader stays off the install hot path.
+    """
+    from project_kit import provisioning
+
+    for verb, detail in provisioning.ensure(ctx.target_root, dry_run=ctx.dry_run):
         click.echo(f"  {verb:<12} {detail}")
 
 

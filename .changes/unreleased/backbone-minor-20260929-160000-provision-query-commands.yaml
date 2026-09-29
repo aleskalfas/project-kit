@@ -1,0 +1,20 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  Every query command is provisioned before it runs offline: `pkit init` and
+  `pkit sync` (self-host included), for each command a registered capability
+  or adapter declares with `query-contract: true` whose script carries inline
+  script metadata, resolve the script's environment once, online, with
+  `uv sync --script`, which never runs the script. One line per command says
+  what happened — provisioned, already provisioned (the script resolves
+  offline, so nothing is fetched and a re-run is a no-op), nothing to
+  provision, or a warning naming the command when it cannot be provisioned;
+  the warning never fails the step, so init and sync keep working offline.
+  A query whose environment is not provisioned is now named as such rather
+  than as the exit it shows as: `pkit validate` reports "environment not
+  provisioned — run `pkit sync`" for a validator, and a command filler's
+  inert reason says the same, distinct from a command that answered nothing.
+  A fresh clone or a pipeline no longer needs to run a query command by hand
+  before `pkit validate`; running `pkit sync` on checkout is enough.

@@ -12,6 +12,4 @@ body: >
   `## Doc impact` line; an unresolved point fails the check, naming the filler
   and the fix. Each contributed source has its own setting,
   doc_check.sources.<source> (advisory by default); the mapping keeps
-  code_path_to_doc_mapping.enforce. An offline `pkit validate` in a fresh
-  environment needs the filler provisioned first: run `pkit pm fill-doc-check`
-  once.
+  code_path_to_doc_mapping.enforce.

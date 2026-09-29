@@ -569,10 +569,13 @@ def test_the_source_discriminator_agrees_with_syncs_own_decision(
     def _propagates(*_args: object, **_kwargs: object) -> None:
         raise _Propagates
 
-    # Nothing is written. The self-host branch's two steps are stubbed, and the
-    # first steps past it — the source guard, then propagation — stop the run.
+    # Nothing is written. The self-host branch's deploy and render steps are
+    # stubbed, and so is provisioning, which would ask uv about the real
+    # checkout's query commands; the first steps past the branch — the source
+    # guard, then propagation — stop the run.
     monkeypatch.setattr(install, "run_installed_adapter_primitives", lambda _ctx: None)
     monkeypatch.setattr(install, "_render_runtime_ignore", lambda _ctx: None)
+    monkeypatch.setattr(install, "provision_query_commands", lambda _ctx: None)
     monkeypatch.setattr(install, "refuse_if_source_kit_incomplete", _propagates)
     monkeypatch.setattr(install, "_install_area", _propagates)
 

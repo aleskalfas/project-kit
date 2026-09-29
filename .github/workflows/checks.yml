@@ -35,6 +35,14 @@ jobs:
       - name: Install project (clean resolve)
         run: uv sync
 
+      # Self-host sync: re-runs the deploy primitives and provisions every
+      # registered query command's environment into uv's cache, once, online —
+      # `pkit validate` in the aggregator runs those commands offline, so a
+      # fresh runner needs them provisioned first (#1092). `uv run pkit` routes
+      # to this checkout's own dispatcher.
+      - name: Sync (provisions the query commands)
+        run: uv run pkit sync
+
       - name: Run the check aggregator
         env:
           # PR: diff against the PR base. Push to main: against main (no-op diff).

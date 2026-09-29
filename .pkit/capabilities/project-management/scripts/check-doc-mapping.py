@@ -336,8 +336,8 @@ def _report_unresolved(point: doc_check.ResolvedPoint, problems: list[str]) -> N
         if name == CAPABILITY_NAME:
             print(
                 f"  fix: run `pkit pm {doc_check.FILLER_VERB}` to see why it gives no "
-                "answer; run once online, it also provisions its dependency for the "
-                "offline run.",
+                "answer; when its environment is not provisioned, `pkit sync` "
+                "provisions it for the offline run.",
                 file=sys.stderr,
             )
         else:
