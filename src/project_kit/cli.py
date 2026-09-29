@@ -1053,7 +1053,9 @@ def release_apply(tag: bool, push: bool, no_broaden: bool, yes: bool) -> None:
     `--no-broaden` is given; a backbone release widens every component as
     before. Both are widen-only. A changeset declaring `requires_backbone:
     release` raises its component's floor to the backbone the release ships —
-    raise-only, and not skipped by `--no-broaden`. See `.pkit/release/README.md`.
+    raise-only, and not skipped by `--no-broaden`; a raise that would leave a
+    range admitting no backbone refuses the release before anything is written.
+    See `.pkit/release/README.md`.
     """
     source_kit = _target_kit()
     plan = compute_release(source_kit)

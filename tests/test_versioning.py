@@ -537,7 +537,7 @@ def _package_with(tmp_path: Path, requires_backbone_line: str) -> Path:
         ('requires_backbone: ">=1.2.0,<2.0.0"', "1.2.0"),
         ('requires_backbone:   ">=1.2.0,<2.0.0"  # why', "1.2.0"),
         ('requires_backbone: ">=1.2.0"', "1.2.0"),
-        # Shapes the broaden cannot widen either, so no floor is raised in them.
+        # Shapes whose floor the release does not raise.
         ("requires_backbone: '>=1.2.0,<2.0.0'", None),
         ('requires_backbone: ">= 1.2.0,<2.0.0"', None),
         ('requires_backbone: ">=1.2.0, <2.0.0"', None),
@@ -547,7 +547,7 @@ def _package_with(tmp_path: Path, requires_backbone_line: str) -> Path:
         ("requires_backbone: >=1.2.0", None),
     ],
 )
-def test_requires_backbone_floor_reads_the_one_shape_the_release_rewrites(
+def test_requires_backbone_floor_reads_the_ranges_whose_floor_the_release_raises(
     tmp_path: Path, line: str, floor: str | None
 ) -> None:
     text = _package_with(tmp_path, line).read_text(encoding="utf-8")
@@ -574,6 +574,30 @@ def test_raise_floor_is_raise_only(tmp_path: Path) -> None:
     assert versioning.raise_component_requires_backbone_floor(pkg, "1.6.0") is None
     assert versioning.raise_component_requires_backbone_floor(pkg, "1.7.0") is None
     assert pkg.read_text(encoding="utf-8") == before
+
+
+@pytest.mark.parametrize(
+    "comment",
+    [
+        '# was requires_backbone: ">=1.0.0,<1.4.0"',
+        '  # requires_backbone: ">=1.0.0,<1.4.0"',
+        'requires_backbone_note: ">=1.0.0,<1.4.0"',
+    ],
+)
+def test_the_broaden_and_the_floor_read_the_key_not_a_line_mentioning_it(comment: str) -> None:
+    """Both rewrites locate the range through one prefix — the top-level key at the
+    start of a line — so a comment quoting an older range is never read, and the
+    two always rewrite the same line."""
+    text = f'{comment}\nrequires_backbone: ">=1.0.0,<1.5.0"\n'
+
+    broadened = versioning.broaden_requires_backbone(text, "1.5.0")
+    assert broadened is not None
+    assert broadened[0] == f'{comment}\nrequires_backbone: ">=1.0.0,<1.6.0"\n'
+    assert versioning.requires_backbone_floor(text) == "1.0.0"
+    raised = versioning.raise_requires_backbone_floor(broadened[0], "1.5.0")
+    assert raised is not None
+    assert raised[0] == f'{comment}\nrequires_backbone: ">=1.5.0,<1.6.0"\n'
+    assert versioning.requires_backbone_range(raised[0]) == ">=1.5.0,<1.6.0"
 
 
 def test_raise_floor_refuses_a_range_with_no_floor(tmp_path: Path) -> None:

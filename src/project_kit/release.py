@@ -276,9 +276,10 @@ def apply_release(
     The floor raise is never automatic: it raises the lower bound of each
     moving component a changeset declares needs the backbone the release ships
     (`requires_backbone: release`) to `plan.shipped_backbone`, **raise-only**.
-    `--no-broaden` does not skip it — the need was declared — so under it a
-    floor raise whose upper bound does not admit the shipped backbone would
-    leave an empty range, and the release is refused before anything is written.
+    `--no-broaden` does not skip it — the need was declared. Before anything is
+    written, every raised range is computed in memory as it will be written —
+    broadened first when the broaden runs, then raised — and a range that would
+    admit no backbone refuses the release (`_refuse_empty_raised_ranges`).
 
     Tagging is **off by default** and deliberately a separate step, matching
     the codebase's anchoring principle (bump writes; `pkit version tag` tags —
@@ -294,8 +295,7 @@ def apply_release(
         _delete_changesets(plan.consumed)
         return
 
-    if not broaden:
-        _refuse_floors_past_the_upper_bound(plan)
+    _refuse_empty_raised_ranges(plan, broaden=broaden)
 
     backbone = plan.backbone
     for rel in plan.releases:
@@ -332,7 +332,9 @@ def _broaden_at_release(source_kit: Path, plan: ReleasePlan) -> None:
     exclusive: a mixed release (backbone + a component in one plan) runs the
     backbone broaden, which already covers every component including the moved
     one, so the per-component step is only reached for a component release with
-    no backbone move.
+    no backbone move. Either way the target is `plan.shipped_backbone` — the new
+    backbone, or the current one — which `_refuse_empty_raised_ranges` broadens
+    to in memory first.
     """
     backbone = plan.backbone
     if backbone is not None:
@@ -343,7 +345,7 @@ def _broaden_at_release(source_kit: Path, plan: ReleasePlan) -> None:
 
     # Component-only release — widen each released component's own bound to the
     # repo's current backbone (the version being released under / tested with).
-    current_backbone = (source_kit / "VERSION").read_text(encoding="utf-8").strip()
+    current_backbone = plan.shipped_backbone
     for rel in plan.releases:
         if rel.component.name == BACKBONE:
             continue  # unreachable here (backbone is None), but keep the guard explicit
@@ -373,28 +375,44 @@ def _raise_declared_floors(source_kit: Path, plan: ReleasePlan) -> None:
             click.echo(f"  raised floor {rel_path}: {changed} (declared by a changeset)")
 
 
-def _refuse_floors_past_the_upper_bound(plan: ReleasePlan) -> None:
-    """Refuse, before anything is written, a floor raise whose upper bound does not
-    admit the shipped backbone: raised to it, the range would admit nothing. Only
-    reachable without the broaden, which otherwise widens that bound first — the
-    raise holds to the one shape the broaden rewrites (`requires_backbone_floor`)."""
-    from project_kit.connections import REQUIRES_BACKBONE_KEY, range_admits, read_package
+def _refuse_empty_raised_ranges(plan: ReleasePlan, *, broaden: bool) -> None:
+    """Refuse, before anything is written, a floor raise that would leave a range
+    admitting no backbone.
 
-    target = parse_version_tuple(plan.shipped_backbone)
+    Each raised range is computed in memory as `apply` writes it, through the
+    same rewrites: broadened first when the broaden runs — to the shipped
+    backbone, the target of both its shapes — then raised to it. The raised
+    range must admit the shipped backbone, which its floor now names, so the
+    guarantee holds on every raise, with the broaden or without, and whatever
+    else the package file holds. A floor already at or above the shipped
+    backbone is not raised, so its range is not the release's to refuse.
+    """
+    from project_kit.connections import range_admits
+
+    shipped = plan.shipped_backbone
     for rel in plan.floor_raises:
-        floor = versioning.requires_backbone_floor(
-            rel.component.version_path.read_text(encoding="utf-8")
-        )
-        if floor is None or parse_version_tuple(floor) >= target:
-            continue  # nothing is raised: `compute_release` refused the first, the second stays
-        package = read_package(rel.component.version_path)
-        declared = package.get(REQUIRES_BACKBONE_KEY) if package else None
-        if range_admits(declared, plan.shipped_backbone) is False:
+        text = rel.component.version_path.read_text(encoding="utf-8")
+        if broaden:
+            broadened = versioning.broaden_requires_backbone(text, shipped)
+            text = broadened[0] if broadened is not None else text
+        try:
+            raised = versioning.raise_requires_backbone_floor(text, shipped)
+        except click.ClickException as exc:
+            raise click.ClickException(f"{rel.component.name}: {exc.message}") from None
+        if raised is None:
+            continue
+        written = versioning.requires_backbone_range(raised[0])
+        if range_admits(written, shipped) is not True:
+            remedy = (
+                "widen the range's upper bound"
+                if broaden
+                else "drop --no-broaden, or widen the range's upper bound"
+            )
             raise click.ClickException(
                 f"{rel.component.name}: a changeset raises its requires_backbone floor to "
-                f"{plan.shipped_backbone}, but its range {declared!r} does not admit "
-                f"{plan.shipped_backbone} — raised, it would admit no backbone. Drop "
-                f"--no-broaden, or widen the range's upper bound."
+                f"{shipped}, but the range the release would write, {written!r}, does not "
+                f"admit {shipped} — it would admit no backbone. Nothing was written; "
+                f"{remedy}."
             )
 
 

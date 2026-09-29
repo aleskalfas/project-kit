@@ -674,6 +674,48 @@ def test_no_broaden_does_not_refuse_a_floor_it_leaves_alone(tmp_path: Path) -> N
     assert "  version: 0.3.1\n" in pkg.read_text()
 
 
+def test_a_comment_naming_the_key_is_neither_broadened_nor_raised(tmp_path: Path) -> None:
+    """A comment quoting an older range sits above the key. The broaden and the
+    floor raise both rewrite the key, so the raised range still admits the
+    backbone — were the comment broadened instead, the key would be left
+    `">=1.5.0,<1.5.0"`, admitting nothing."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    pkg = _write_capability(source_kit, "houseware", "0.3.0", ">=1.0.0,<1.5.0")
+    comment = '# was requires_backbone: ">=1.0.0,<1.4.0"\n'
+    pkg.write_text(pkg.read_text().replace("requires_backbone:", comment + "requires_backbone:"))
+    _add_floor(source_kit, "houseware", "minor", "a.yaml")
+
+    release.apply_release(source_kit, release.compute_release(source_kit), tag=False)
+
+    text = pkg.read_text()
+    assert comment in text
+    assert 'requires_backbone: ">=1.5.0,<1.6.0"' in text
+
+
+def test_the_empty_range_check_runs_with_the_broaden_too(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The check is not a `--no-broaden` special case: every raise is checked
+    against the range computed in memory. With a broaden that (hypothetically)
+    widens nothing, the raised range would be empty, and nothing is written."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    pkg = _write_capability(source_kit, "houseware", "0.3.0", ">=1.0.0,<1.5.0")
+    _add_floor(source_kit, "houseware", "minor", "a.yaml")
+    before = pkg.read_text()
+
+    def widens_nothing(package_text: str, backbone: str) -> tuple[str, str] | None:
+        return None
+
+    monkeypatch.setattr(versioning, "broaden_requires_backbone", widens_nothing)
+
+    plan = release.compute_release(source_kit)
+    with pytest.raises(click.ClickException, match="would admit no backbone"):
+        release.apply_release(source_kit, plan, tag=False)
+
+    assert pkg.read_text() == before
+    assert (source_kit / "VERSION").read_text().strip() == "1.5.0"
+
+
 # --- Dogfood: the release that ships the backbone-owned journal line ---------
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
