@@ -251,6 +251,15 @@ def test_the_person_s_answer_decides_stale_or_regressed(flagged: AdopterRepo) ->
     assert flagged.git("status", "--porcelain").stdout == ""
 
 
+def test_quoted_code_is_matched_as_a_whole_word(flagged: AdopterRepo) -> None:
+    """`fast` renamed to `fastest` is gone, though `fastest` holds it as a substring: a
+    substring match would propose `holds` over code that changed under the quote."""
+    flagged.commit("feat: a faster pass", {RUN: "def run_suite(fastest=False):\n    pass\n"})
+    document = _propose(flagged, "UC-001")
+    assert document["verdict"] == "ambiguous"
+    assert document["anchors"][0]["gone"] == ["fast"]
+
+
 def test_a_deleted_anchor_is_ambiguous_until_intent_is_quoted(flagged: AdopterRepo) -> None:
     flagged.commit("chore: drop the runner", {RUN: None})
     document = _propose(flagged, "UC-001")

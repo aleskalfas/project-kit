@@ -12,7 +12,7 @@ pkit:
         - .pkit/capabilities/software-analysis/agents/**
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-053]
     revalidated:
-      at: 2026-09-29T22:14:49Z
+      at: 2026-09-29T22:17:23Z
       outcome: updated
 ---
 
@@ -218,7 +218,7 @@ Its scripted flows — a drift resolved, the stop, and a regression recorded wit
 
 ### What the evidence decides: `pkit analysis propose`
 
-`pkit analysis propose <artefact> [--contradicted <quote>] [--intended <quote>] [--unintended <quote>] [--json]` is the part of the agent's judgment that needs no judgment, so the stop is one rule you can read. For one flagged artefact it reads `pkit friction explain`, and for each changed path anchor which code the artefact **quotes** — what it writes in backticks — the anchor's files held at its revalidation point, and which of that is gone at HEAD. What the agent read of the change goes in as quotes of where it read it. The rules, in order (`scripts/_lib/resolve.py`):
+`pkit analysis propose <artefact> [--contradicted <quote>] [--intended <quote>] [--unintended <quote>] [--json]` is the part of the agent's judgment that needs no judgment, so the stop is one rule you can read. For one flagged artefact it reads `pkit friction explain`, and for each changed path anchor which code the artefact **quotes** — what it writes in backticks — the anchor's files held at its revalidation point, and which of that is gone at HEAD. A quote is matched as a whole word, so a quoted `--out` is gone once only `--output` is left. What the agent read of the change goes in as quotes of where it read it. The rules, in order (`scripts/_lib/resolve.py`):
 
 | Rule | When | Verdict |
 |---|---|---|

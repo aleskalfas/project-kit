@@ -87,12 +87,15 @@ def show(root: Path, commit: str, path: str) -> str | None:
 
 
 def holds(root: Path, commit: str, anchor: str, text: str) -> bool:
-    """Whether a file a path anchor names held `text` at `commit` — git's own search,
-    the anchor read as a glob pathspec (`**` across folders, `*` within one, a
-    folder naming everything beneath it), so no file list is computed here."""
+    """Whether a file a path anchor names held `text` at `commit`, as a whole word —
+    so a quoted `--out` is not held by `--output` — through git's own search, the
+    anchor read as a glob pathspec (`**` across folders, `*` within one, a folder
+    naming everything beneath it), so no file list is computed here. Whole words
+    fail safe: a quote that never matches is never counted as quoted, and one that
+    stops matching reads as gone, which asks rather than proposes `holds`."""
     try:
         proc = subprocess.run(
-            ["git", "grep", "-q", "-I", "-F", "-e", text, commit, "--", f":(glob){anchor}"],
+            ["git", "grep", "-q", "-I", "-F", "-w", "-e", text, commit, "--", f":(glob){anchor}"],
             cwd=root,
             capture_output=True,
             check=False,

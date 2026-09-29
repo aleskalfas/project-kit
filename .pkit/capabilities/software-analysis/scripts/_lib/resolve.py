@@ -20,7 +20,7 @@ than as a change — has a shape:
 
 - **kept** — a path anchor whose files still hold every piece of code the
   artefact quotes from them (what it writes in backticks and those files held
-  at its revalidation point), and it quotes something;
+  at its revalidation point, each as a whole word), and it quotes something;
 - **gone** — a path anchor that now resolves to nothing, or whose files no longer
   hold a piece of code the artefact quotes from them: the description and the
   code disagree;
