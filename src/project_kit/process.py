@@ -1875,6 +1875,11 @@ class ProcessEngine:
         if not allowed:
             return MoveResult(ok=False, reason=reason)
         if not self.journal_enabled:
+            # Deliberately skips the wait reconcile below too, not only the move
+            # entry: `reconcile_blocked` only journals the wait's enter/resume
+            # audit, and with no journal there is nothing to record. Blocked-ness
+            # is the live overlay (`evaluate_blocked`), recomputed on every read
+            # and authoritative either way, so no verdict is lost here.
             return MoveResult(ok=True, reason=reason)
 
         check = next(
