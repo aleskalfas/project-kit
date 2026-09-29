@@ -150,17 +150,29 @@ def test_the_status_report_shows_roots_places_and_the_records_inside_the_interna
     lines = [line.strip() for line in result.output.splitlines()]
     assert "user root          docs/   (explicit)" in lines
     assert "internal root      tech-docs/   (explicit)" in lines
-    inside = lines.index("inside root        2 recorded location(s) inside the internal root:")
+    inside = lines.index("inside root        3 recorded location(s) inside the internal root:")
     assert lines[inside + 1] == "adr-records -> tech-docs/architecture/decisions"
     # living-docs' definitions location, recorded when the first space
     # definition was placed there (COR-049 point 5; DEC-001 point 2).
     assert lines[inside + 2] == "definitions (living-docs) -> tech-docs/living-docs"
+    # software-analysis' location, recorded by the first stamp (COR-049 point 5;
+    # ADR-055 point 4).
+    assert lines[inside + 3] == "analysis (software-analysis) -> tech-docs/analysis"
     assert f"places             {len(read_friction_settings(REPO).places)} declared:" in lines
     for place in _project_places():
         assert place in lines, place
     # living-docs' default places — the roots — and its definitions (DEC-001 points 1 and 2).
     for place in ("docs/**", "tech-docs/**", "tech-docs/living-docs/rule-sets"):
         assert f"{place} (living-docs)" in lines, place
+    # software-analysis' places under its recorded location (DEC-001 point 2).
+    analysis_places = (
+        "glossary.md",
+        "use-case-model/actors.md",
+        "use-case-model/use-cases",
+        "use-case-model/journeys",
+    )
+    for place in analysis_places:
+        assert f"tech-docs/analysis/{place} (software-analysis)" in lines, place
 
 
 # --- criterion 2: exactly the adopter-facing `.pkit/` READMEs ----------------
