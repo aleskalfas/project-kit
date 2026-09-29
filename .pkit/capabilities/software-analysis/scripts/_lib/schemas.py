@@ -74,6 +74,16 @@ def slug_pattern() -> re.Pattern[str]:
     return re.compile(definition("slug")["pattern"])
 
 
+def record_triggers() -> tuple[str, ...]:
+    """What can trigger a revalidation, as its record's schema words them (DEC-001 point 5)."""
+    return tuple(_schemas()[RECORD]["properties"]["trigger"]["enum"])
+
+
+def record_outcomes() -> tuple[str, ...]:
+    """How a revalidation ends for an artefact, as its record's schema words them."""
+    return tuple(_schemas()[RECORD]["properties"]["outcomes"]["additionalProperties"]["enum"])
+
+
 def errors(kind: str, fields: Mapping[str, Any]) -> list[tuple[str, str]]:
     """Each way `fields` falls short of the kind's schema: a JSON Pointer into
     them and the message, in a stable order."""

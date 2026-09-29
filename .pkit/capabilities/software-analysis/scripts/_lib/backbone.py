@@ -13,7 +13,8 @@ backbone through its commands:
   locations (COR-049 point 5), with `--yes`: the stamp runs it when it places
   an artefact, so invoking the stamp is the consent.
 
-Git answers only which commit a name resolves to, and the merge-base of two.
+Git answers only which commit a name resolves to, the merge-base of two, and
+who is working here — the default author of a revalidation record.
 
 `default_base` is the branch that numbers are compared with: `$PKIT_CHECK_BASE`,
 the variable the project's diff-scoped checks already read, else `origin/main`.
@@ -79,6 +80,11 @@ def commit_of(root: Path, name: str) -> str | None:
 def merge_base(root: Path, one: str, other: str) -> str | None:
     """The merge-base of two commits, or `None` when they share no history."""
     return _git(root, "merge-base", one, other)
+
+
+def user_name(root: Path) -> str | None:
+    """Who git says is working here, its `user.name`, or `None`."""
+    return _git(root, "config", "user.name")
 
 
 def _document(root: Path, argv: list[str], run: Runner) -> Mapping[str, Any]:
