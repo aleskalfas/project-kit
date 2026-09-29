@@ -275,6 +275,16 @@ def test_stamp_decision_refuses_capability_without_package_yaml(kit_target: Path
         decisions.stamp_decision(kit_target, namespace="bogus", slug="x")
 
 
+def test_stamp_decision_refuses_a_path_as_capability_name(kit_target: Path) -> None:
+    """A namespace walking out of `.pkit/capabilities/` names no capability, package.yaml or not."""
+    adapter = kit_target / ".pkit" / "adapters" / "some-adapter"
+    adapter.mkdir(parents=True)
+    (adapter / "package.yaml").write_text("component:\n  kind: adapter\n", encoding="utf-8")
+    with pytest.raises(click.ClickException, match="unknown namespace"):
+        decisions.stamp_decision(kit_target, namespace="../adapters/some-adapter", slug="x")
+    assert not (adapter / "decisions").exists()
+
+
 def test_stamp_decision_dec_refuses_duplicate_slug(kit_target: Path) -> None:
     _make_capability(kit_target, "cap")
     decisions.stamp_decision(kit_target, namespace="cap", slug="dupe")

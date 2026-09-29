@@ -15,6 +15,11 @@ Stamping a storyboard alongside an agent makes the agent composite per
 COR-015. If the named agent is currently flat (`<ns>/<name>.md`), the
 module converts it to folder form (`<ns>/<name>/<name>.md`) before
 writing the storyboard sibling.
+
+The agent is found wherever agents ship from — `.pkit/agents/{core,project}/`
+or a capability's `agents/` folder — in the deploy's resolution order; a
+namespace (`core`, `project` or a capability name) pins the lookup to one
+location.
 """
 
 from __future__ import annotations
@@ -24,6 +29,13 @@ from pathlib import Path
 from typing import Literal
 
 import click
+
+from project_kit.agents import (
+    Namespace,
+    agent_locations,
+    agents_dir_for,
+    find_agent_file,
+)
 
 ArtifactKind = Literal["agent"]
 
@@ -96,15 +108,18 @@ def stamp_new_storyboard(
     kind: ArtifactKind,
     name: str,
     *,
+    namespace: Namespace | None = None,
     scenario: str | None = None,
     dry_run: bool = False,
 ) -> Path:
     """Stamp a storyboard sibling to the named implementing artifact.
 
     `kind` selects the handler; today only `agent` is supported. `name`
-    is the implementing artifact's name (kebab-case). `scenario`, if
-    given, produces `<scenario>.storyboard.md` for the multi-scenario
-    case; otherwise the file is `storyboard.md`.
+    is the implementing artifact's name (kebab-case). `namespace`, if
+    given, is where the agent lives — `core`, `project` or a capability
+    name; otherwise the agent is looked up in the deploy's resolution
+    order. `scenario`, if given, produces `<scenario>.storyboard.md` for
+    the multi-scenario case; otherwise the file is `storyboard.md`.
 
     Returns the absolute path written. In dry-run mode, returns the
     path that would be written without writing it.
@@ -114,7 +129,7 @@ def stamp_new_storyboard(
         _validate_name(scenario)
 
     if kind == "agent":
-        return _stamp_agent_storyboard(target_root, name, scenario, dry_run)
+        return _stamp_agent_storyboard(target_root, name, namespace, scenario, dry_run)
     raise click.ClickException(
         f"unknown artifact-kind {kind!r}. Supported kinds today: agent. "
         f"Other classes (cli, migration, tutorial) are recognized by COR-016 "
@@ -125,46 +140,28 @@ def stamp_new_storyboard(
 def _stamp_agent_storyboard(
     target_root: Path,
     agent_name: str,
+    namespace: Namespace | None,
     scenario: str | None,
     dry_run: bool,
 ) -> Path:
-    """Find the agent (in either layout, either namespace) and stamp a sibling.
+    """Find the agent (in either layout) and stamp a sibling.
 
     If the agent is in flat form, convert to folder form first per COR-015
     (an agent gaining its first helper migrates to folder layout).
     """
-    agents_dir = target_root / ".pkit" / "agents"
-    if not agents_dir.is_dir():
+    agents_area = target_root / ".pkit" / "agents"
+    if not agents_area.is_dir():
         raise click.ClickException(
-            f"{agents_dir.relative_to(target_root)} does not exist. "
+            f"{agents_area.relative_to(target_root)} does not exist. "
             f"Run 'pkit init' from this project's root first."
         )
 
-    located: tuple[str, str, Path] | None = None
-    # Resolution mirrors deploy-agents.sh: project > core when both have it.
-    for ns in ("project", "core"):
-        flat = agents_dir / ns / f"{agent_name}.md"
-        folder_file = agents_dir / ns / agent_name / f"{agent_name}.md"
-        if flat.is_file():
-            located = ("flat", ns, flat)
-            break
-        if folder_file.is_file():
-            located = ("folder", ns, folder_file)
-            break
-
-    if located is None:
-        raise click.ClickException(
-            f"no agent named {agent_name!r} found in "
-            f".pkit/agents/{{core,project}}/. "
-            f"Stamp the agent first with `pkit new agent <namespace> {agent_name}`."
-        )
-
-    form, ns, agent_file = located
+    ns, ns_dir, agent_file = _locate_agent(target_root, agent_name, namespace)
 
     # Convert flat → folder form if needed (COR-015 — agent gaining its
     # first sibling helper migrates from atomic to composite layout).
-    if form == "flat":
-        folder_dir = agents_dir / ns / agent_name
+    if agent_file.parent == ns_dir:
+        folder_dir = ns_dir / agent_name
         new_agent_file = folder_dir / f"{agent_name}.md"
         if not dry_run:
             folder_dir.mkdir(parents=True, exist_ok=True)
@@ -189,6 +186,37 @@ def _stamp_agent_storyboard(
     if not dry_run:
         target.write_text(content, encoding="utf-8")
     return target
+
+
+def _locate_agent(
+    target_root: Path, agent_name: str, namespace: Namespace | None
+) -> tuple[Namespace, Path, Path]:
+    """The agent's (namespace, agents folder, canonical file), or refuse.
+
+    With `namespace`, only that namespace's folder is searched (an unknown
+    namespace gets the shared refusal). Without it, every location agents ship
+    from is searched in the deploy's order — project, core, then capabilities
+    by name — so the agent found is the one that deploys.
+    """
+    if namespace is not None:
+        ns_dir = agents_dir_for(target_root, namespace)
+        agent_file = find_agent_file(ns_dir, agent_name)
+        if agent_file is None:
+            raise click.ClickException(
+                f"no agent named {agent_name!r} in {ns_dir.relative_to(target_root)}/. "
+                f"Stamp the agent first with `pkit new agent {namespace} {agent_name}`."
+            )
+        return namespace, ns_dir, agent_file
+
+    for ns, ns_dir in agent_locations(target_root):
+        agent_file = find_agent_file(ns_dir, agent_name)
+        if agent_file is not None:
+            return ns, ns_dir, agent_file
+    raise click.ClickException(
+        f"no agent named {agent_name!r} found in .pkit/agents/{{core,project}}/ "
+        f"or any capability's agents/ folder. "
+        f"Stamp the agent first with `pkit new agent <namespace> {agent_name}`."
+    )
 
 
 def _validate_name(name: str) -> None:

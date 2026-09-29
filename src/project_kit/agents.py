@@ -9,17 +9,33 @@ command pairing".
 Layout per COR-015: a new agent stamps flat as `<name>.md`. If helpers
 materialise later, the author migrates to folder form (`<name>/<name>.md`
 + siblings) as a separate gesture.
+
+Namespaces: `core` and `project` stamp under `.pkit/agents/<namespace>/`; any
+other namespace names a capability (COR-017, COR-026) and stamps under
+`.pkit/capabilities/<capability>/agents/` — the capability must exist, the
+`agents/` folder is created on first use, the same shape as
+`pkit new decision <capability>`.
 """
 
 from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Literal
 
 import click
 
-Namespace = Literal["core", "project"]
+from project_kit.capability_namespace import (
+    CAPABILITIES_DIR,
+    capability_names,
+    resolve_capability_dir,
+)
+
+# The namespaces under `.pkit/agents/`. Any other namespace is a capability name.
+AREA_NAMESPACES: tuple[str, ...] = ("core", "project")
+# `Namespace` widens to `str` because a capability name is also accepted.
+Namespace = str
+
+_AGENTS_DIR = Path(".pkit") / "agents"
 
 _NAME_RE = re.compile(r"^[a-z][a-z0-9]*(-[a-z0-9]+)*$")
 
@@ -76,41 +92,35 @@ def stamp_new_agent(
     with_storyboard: bool = False,
     dry_run: bool = False,
 ) -> Path:
-    """Stamp a new agent file at `.pkit/agents/<namespace>/<name>.md`.
+    """Stamp a new agent file in `namespace`'s agents folder.
+
+    `core` / `project` stamp under `.pkit/agents/<namespace>/`; a capability
+    name stamps under `.pkit/capabilities/<capability>/agents/` (see
+    `agents_dir_for`).
 
     Default: flat layout (`<name>.md`). When `with_storyboard=True`,
     stamps folder layout per COR-015 (`<name>/<name>.md`) plus a sibling
     `storyboard.md` scaffold per COR-016 — for agents that drive
     scripted interaction scenarios.
 
-    Refuses if the name is already taken in either namespace (project >
-    core resolution means a colliding name would mask the existing core
-    agent — surface the collision instead of silently shadowing).
+    Refuses if the name is already taken anywhere agents ship from — core,
+    project, or any capability — since the deploy resolves one agent per
+    name and a colliding one would mask the other. Surface the collision
+    instead of silently shadowing.
 
     Returns the agent file path (not the storyboard). When stamping
-    folder-form, that's `<ns>/<name>/<name>.md`.
+    folder-form, that's `<agents folder>/<name>/<name>.md`.
     """
     _validate_name(name)
-    agents_dir = target_root / ".pkit" / "agents"
-    ns_dir = agents_dir / namespace
-    if not ns_dir.is_dir():
-        raise click.ClickException(
-            f"{ns_dir.relative_to(target_root)} does not exist. "
-            f"Run 'pkit init' from this project's root first."
-        )
+    ns_dir = agents_dir_for(target_root, namespace)
 
-    # Refuse if the name is already taken in EITHER namespace, in either
-    # the flat or folder layout (per COR-015 either is valid).
-    for ns in ("core", "project"):
-        for candidate in (
-            agents_dir / ns / f"{name}.md",
-            agents_dir / ns / name / f"{name}.md",
-        ):
-            if candidate.exists():
-                raise click.ClickException(
-                    f"agent {name!r} already exists at "
-                    f"{candidate.relative_to(target_root)}."
-                )
+    for _, location in agent_locations(target_root):
+        existing = find_agent_file(location, name)
+        if existing is not None:
+            raise click.ClickException(
+                f"agent {name!r} already exists at "
+                f"{existing.relative_to(target_root)}."
+            )
 
     title = _name_to_title(name)
     content = AGENT_TEMPLATE.format(name=name, title=title)
@@ -138,8 +148,54 @@ def stamp_new_agent(
     # Default: flat layout.
     target = ns_dir / f"{name}.md"
     if not dry_run:
+        ns_dir.mkdir(parents=True, exist_ok=True)
         target.write_text(content, encoding="utf-8")
     return target
+
+
+def agents_dir_for(target_root: Path, namespace: Namespace) -> Path:
+    """The folder `namespace`'s agents live in, refusing an unknown namespace.
+
+    `core` and `project` resolve to `.pkit/agents/<namespace>/`, which must
+    exist (`pkit init` creates both). Any other namespace names a capability,
+    which must exist — the shared capability-namespace refusal otherwise; its
+    `agents/` folder is returned whether or not it exists yet, so the first
+    stamp creates it.
+    """
+    if namespace in AREA_NAMESPACES:
+        ns_dir = target_root / _AGENTS_DIR / namespace
+        if not ns_dir.is_dir():
+            raise click.ClickException(
+                f"{ns_dir.relative_to(target_root)} does not exist. "
+                f"Run 'pkit init' from this project's root first."
+            )
+        return ns_dir
+    return resolve_capability_dir(target_root, namespace, AREA_NAMESPACES) / "agents"
+
+
+def agent_locations(target_root: Path) -> list[tuple[Namespace, Path]]:
+    """Every folder agents ship from, as (namespace, folder), in deploy order.
+
+    `project`, `core`, then each capability by name — the order the Claude
+    Code deploy (`deploy-agents.sh`) resolves a name in, so the first location
+    holding an agent is the one that deploys. Folders need not exist.
+    """
+    locations: list[tuple[Namespace, Path]] = [
+        (ns, target_root / _AGENTS_DIR / ns) for ns in ("project", "core")
+    ]
+    locations += [
+        (cap, target_root / CAPABILITIES_DIR / cap / "agents")
+        for cap in capability_names(target_root)
+    ]
+    return locations
+
+
+def find_agent_file(agents_dir: Path, name: str) -> Path | None:
+    """The agent's canonical file in `agents_dir`: `<name>.md` or `<name>/<name>.md` (COR-015)."""
+    for candidate in (agents_dir / f"{name}.md", agents_dir / name / f"{name}.md"):
+        if candidate.is_file():
+            return candidate
+    return None
 
 
 def _validate_name(name: str) -> None:

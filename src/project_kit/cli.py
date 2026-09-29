@@ -47,7 +47,7 @@ from project_kit.scaffolds import (
     stamp_capability,
     stamp_migration,
 )
-from project_kit.agents import Namespace as AgentNamespace, stamp_new_agent
+from project_kit.agents import stamp_new_agent
 from project_kit.storyboards import ArtifactKind, stamp_new_storyboard
 from project_kit import friction_check, friction_report, friction_repository, friction_write
 from project_kit import refs as refs_mod
@@ -5509,7 +5509,7 @@ def new_migration(
 
 
 @new.command("agent")
-@click.argument("namespace", type=click.Choice(["core", "project"]))
+@click.argument("namespace")
 @click.argument("name")
 @click.option(
     "--with-storyboard",
@@ -5526,7 +5526,16 @@ def new_migration(
     help="Show what would be stamped without writing the file (per COR-004).",
 )
 def new_agent(namespace: str, name: str, with_storyboard: bool, dry_run: bool) -> None:
-    """Stamp a new agent stub at .pkit/agents/<namespace>/<name>.md (per COR-013 + COR-015).
+    """Stamp a new agent stub (per COR-013 + COR-015).
+
+    Namespaces:
+      core           → .pkit/agents/core/<name>.md
+      project        → .pkit/agents/project/<name>.md
+      <capability>   → .pkit/capabilities/<capability>/agents/<name>.md (COR-017, COR-026)
+
+    Any NAMESPACE that is not core/project is interpreted as a capability
+    name; the command refuses if no such capability exists, and creates its
+    agents/ folder on first use.
 
     With --with-storyboard, stamps folder layout with a sibling storyboard
     scaffold (per COR-016) — for agents driving scripted interaction scenarios.
@@ -5541,7 +5550,7 @@ def new_agent(namespace: str, name: str, with_storyboard: bool, dry_run: bool) -
     target = stamp_new_agent(
         target_root,
         name=name,
-        namespace=_cast_agent_namespace(namespace),
+        namespace=namespace,
         with_storyboard=with_storyboard,
         dry_run=dry_run,
     )
@@ -5556,15 +5565,16 @@ def new_agent(namespace: str, name: str, with_storyboard: bool, dry_run: bool) -
         click.echo(f"{verb}: {rel}")
 
 
-def _cast_agent_namespace(value: str) -> AgentNamespace:
-    if value == "core":
-        return "core"
-    return "project"
-
-
 @new.command("storyboard")
 @click.argument("artifact_kind", type=click.Choice(["agent"]))
 @click.argument("name")
+@click.option(
+    "--namespace",
+    type=str,
+    default=None,
+    help="Where the agent lives: core, project or a capability name. "
+    "Default: the agent the deploy resolves — project, core, then capabilities by name.",
+)
 @click.option(
     "--scenario",
     type=str,
@@ -5581,16 +5591,18 @@ def _cast_agent_namespace(value: str) -> AgentNamespace:
 def new_storyboard(
     artifact_kind: str,
     name: str,
+    namespace: str | None,
     scenario: str | None,
     dry_run: bool,
 ) -> None:
     """Stamp a storyboard sibling to an implementing artifact (per COR-016).
 
     Today's only supported artifact-kind is `agent`. The command resolves
-    the named agent (in either namespace, either flat or folder form);
-    if the agent is currently flat, it migrates to folder form first per
-    COR-015. Future application classes (cli, migration, tutorial) slot
-    in as additional artifact-kind values without renaming this command.
+    the named agent — in core, project or a capability's agents/ folder,
+    flat or folder form; --namespace pins where to look. If the agent is
+    currently flat, it migrates to folder form first per COR-015. Future
+    application classes (cli, migration, tutorial) slot in as additional
+    artifact-kind values without renaming this command.
     """
     target_root = find_target_root()
     if target_root is None:
@@ -5603,6 +5615,7 @@ def new_storyboard(
         target_root,
         kind=_cast_artifact_kind(artifact_kind),
         name=name,
+        namespace=namespace,
         scenario=scenario,
         dry_run=dry_run,
     )
