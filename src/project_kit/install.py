@@ -25,11 +25,13 @@ import click
 from project_kit import treecopy, workspace
 from project_kit.router import (
     can_exec_source_dispatcher,
+    dispatcher_repair,
     is_route_bypassed,
     is_routed_child,
     is_source_checkout,
     looks_like_pkit_install,
     source_dispatcher,
+    source_dispatcher_missing,
 )
 
 # Settings-file template seeded into adopter projects when no
@@ -533,7 +535,20 @@ def is_self_host(target_root: Path, source_kit: Path) -> bool:
     return target_root.resolve() == source_kit.parent.resolve()
 
 
-def refuse_propagation_into_source(target_root: Path, source_kit: Path, *, command: str) -> None:
+# What sync and upgrade would do in the gap, and what the checkout's own code
+# does instead; a capability verb that refuses there names its own harm (#1090).
+PROPAGATION_HARM = "copy that tree over the one it is built from"
+SELF_HOST_SYNC = "which re-runs the deploy primitives and propagates nothing"
+
+
+def refuse_propagation_into_source(
+    target_root: Path,
+    source_kit: Path,
+    *,
+    command: str,
+    would: str = PROPAGATION_HARM,
+    own_code_does: str | None = SELF_HOST_SYNC,
+) -> None:
     """Refuse to propagate over the methodology's source repository (ADR-059; #1070).
 
     The gap ADR-059 names: sync's test (`is_self_host`) says *target_root* is
@@ -543,7 +558,13 @@ def refuse_propagation_into_source(target_root: Path, source_kit: Path, *, comma
     upgrade call this right after their self-host branch, where sync's test has
     said no and the markers can still be asked — in upgrade, before its bypass
     guard, because both bypass paths into the gap skip what follows that guard.
-    *command* names the refusing command in the message.
+    The capability verbs that write — install, upgrade, register — call it
+    before anything else, since each copies or registers a capability with the
+    running code's tree (#1090).
+
+    *command* names the refusing command, as the operator would re-run it;
+    *would* says what it would do to the source in the gap; *own_code_does*,
+    when given, what the checkout's own code does instead.
 
     Nothing overrides the refusal. The gap is a defect path, not a choice:
     `--force` overrides only sync's capability downgrade guard, and the routing
@@ -553,19 +574,25 @@ def refuse_propagation_into_source(target_root: Path, source_kit: Path, *, comma
     if is_self_host(target_root, source_kit) or not is_source_checkout(target_root):
         return
     dispatcher = source_dispatcher(target_root).relative_to(target_root)
+    restored = ", once its dispatcher is restored" if source_dispatcher_missing(target_root) else ""
+    remedy = (
+        f"Run this checkout's own code instead{restored}: `{dispatcher} {command}` "
+        f"from {target_root}"
+    )
+    if own_code_does:
+        remedy += f", {own_code_does}"
     lines = [
-        f"refusing to {command} {target_root}: it is the methodology's source "
+        f"refusing to run `{command}` in {target_root}: it is the methodology's source "
         "repository, and the running pkit is not its own code.",
-        "The marker test says it is the source: the package source sits beside the "
-        "in-tree dispatcher.",
+        "The marker test says it is the source: the package source sits beside its "
+        "`.pkit/` tree.",
         f"Sync's test says it is not: the running code's methodology tree is "
         f"{source_kit}, not {target_root / '.pkit'}.",
-        f"`{command}` would copy that tree over the one it is built from (ADR-059). "
+        f"`{command}` would {would} (ADR-059). "
         "Nothing was written, and no flag overrides this refusal.",
         "How this run reached the source with other code:",
         *(f"  - {cause}" for cause in _source_gap_causes(target_root)),
-        f"Run this checkout's own code instead: `{dispatcher} {command}` from "
-        f"{target_root}, which re-runs the deploy primitives and propagates nothing.",
+        f"{remedy}.",
     ]
     raise click.ClickException("\n       ".join(lines))
 
@@ -595,10 +622,10 @@ def _source_gap_causes(target_root: Path) -> list[str]:
         )
     if not can_exec_source_dispatcher(target_root):
         dispatcher = source_dispatcher(target_root)
+        state = "missing" if source_dispatcher_missing(target_root) else "not executable"
         causes.append(
-            f"the dispatcher {dispatcher} is not executable, so the router fell back "
-            f"to the running binary. Repair it: `chmod +x {dispatcher}`, or `git "
-            f"checkout -- {dispatcher}`."
+            f"the dispatcher {dispatcher} is {state}, so the router fell back to the "
+            f"running binary. Repair it: {dispatcher_repair(target_root)}."
         )
     if not causes:
         causes.append(

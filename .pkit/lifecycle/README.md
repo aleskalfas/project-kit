@@ -309,7 +309,7 @@ A query whose environment is not provisioned exits with uv's report that a depen
 
 | In the records | Here | Where it is written |
 |---|---|---|
-| The marker files that recognise the source repository on the tree's side (ADR-059 point 3) | **`src/project_kit/__init__.py`** beside **`.pkit/cli/pkit`**, both required | Nowhere by a project. They are read at a repository root by the entry-point router's first route (`project_kit.router.is_source_checkout`) and by the ownership predicate (`is_methodology_source`, "The ownership predicates" below). Both copies cite this table, and a test holds them equal. |
+| The marker that recognises the source repository on the tree's side (ADR-059 point 3) | **`src/project_kit/__init__.py`** beside the **`.pkit/`** tree. The in-tree dispatcher **`.pkit/cli/pkit`** is what the router's first route execs, not a marker: a checkout whose dispatcher was deleted is still the source, and the dispatcher is reported missing | Nowhere by a project. They are read at a repository root by the entry-point router's first route (`project_kit.router.is_source_checkout`) and by the ownership predicate (`is_methodology_source`, "The ownership predicates" below). Both copies cite this table, and a test holds them equal. |
 
 An adopter has the dispatcher but never the package source. Unlike the literals above, no project writes these, so changing them means changing the two copies together, not migrating an adopter's files.
 

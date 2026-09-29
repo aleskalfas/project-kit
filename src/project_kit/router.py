@@ -172,11 +172,17 @@ def looks_like_pkit_install(pkit_dir: Path) -> bool:
 def is_source_checkout(root: Path) -> bool:
     """True iff `root` is a project-kit *source checkout* (not an adopter).
 
-    The discriminator is the Python package source plus the in-tree dispatcher.
-    An adopter has `.pkit/cli/pkit` too, but never `src/project_kit/` — so this
-    fires only inside a real checkout, never in an adopter repo where execing
-    the dispatcher (which `uv run`s a project-kit package that isn't there)
-    would fail.
+    The discriminator is the Python package source beside the methodology's
+    `.pkit/` tree. An adopter has `.pkit/`, its dispatcher included, but never
+    `src/project_kit/` — so this fires only inside a real checkout, never in an
+    adopter repo where execing the dispatcher (which `uv run`s a project-kit
+    package that isn't there) would fail.
+
+    The in-tree dispatcher is not a marker: it is what route 1 execs, not what
+    tells a checkout from an adopter. A checkout whose dispatcher has been
+    deleted is therefore still the source — route 1 falls back with a warning
+    naming the restore, and sync run by the fallback refuses to copy over it
+    rather than treating it as an adopter (ADR-059 point 3; #1090).
 
     This is the marker test for the methodology's source repository, the one
     whose `.pkit/` is the methodology's own tree (ADR-059 point 3); the tool's
@@ -185,12 +191,9 @@ def is_source_checkout(root: Path) -> bool:
     which makes the checkout the source it resolves.
     The markers are this distribution's literals, listed in the lifecycle
     README's "The methodology's literals"; the ownership predicate
-    `is_methodology_source` carries the same two, and a test holds them equal.
+    `is_methodology_source` carries the same test, and a test holds them equal.
     """
-    return (
-        (root / "src" / "project_kit" / "__init__.py").is_file()
-        and (root / ".pkit" / "cli" / "pkit").is_file()
-    )
+    return (root / "src" / "project_kit" / "__init__.py").is_file() and (root / ".pkit").is_dir()
 
 
 def source_dispatcher(root: Path) -> Path:
@@ -206,6 +209,23 @@ def can_exec_source_dispatcher(root: Path) -> bool:
     the way a run reached the methodology's source with foreign code (ADR-059).
     """
     return os.access(source_dispatcher(root), os.X_OK)
+
+
+def source_dispatcher_missing(root: Path) -> bool:
+    """True when the source checkout at `root` has no dispatcher at all — deleted,
+    not merely left without its executable bit. Both send route 1 to its
+    fallback; the repair differs, so the warning and the refusal tell them apart."""
+    return not source_dispatcher(root).is_file()
+
+
+def dispatcher_repair(root: Path) -> str:
+    """The repair for a dispatcher route 1 cannot exec in the checkout at `root`,
+    as the router's warning and the refusal in the gap both name it: restore a
+    deleted one from git, or give a present one back its executable bit."""
+    dispatcher = source_dispatcher(root)
+    if source_dispatcher_missing(root):
+        return f"restore it with `git checkout -- {dispatcher}`"
+    return f"`chmod +x {dispatcher}`, or restore it with `git checkout -- {dispatcher}`"
 
 
 def _resolve_pin(root: Path) -> str | None:
@@ -299,19 +319,25 @@ def _exec_source_dispatcher(root: Path, argv: list[str], environ) -> None:  # ty
     The fallback runs code that is not the checkout's own, so its warning points
     at repairing the dispatcher, never at `pkit sync`: run by this binary in the
     checkout, sync would copy this binary's tree over the source, and it refuses
-    to (ADR-059; #1070).
+    to (ADR-059; #1070). A deleted dispatcher is named as such: the checkout
+    still carries the package source, so it is still the source (#1090).
     """
     dispatcher = source_dispatcher(root)
     if can_exec_source_dispatcher(root):
         _stamp_cli_version(root, environ)
         os.execv(str(dispatcher), [str(dispatcher), *argv])  # replaces this process
+    if source_dispatcher_missing(root):
+        problem = (
+            f"this checkout ({root}) carries the methodology's package source but no "
+            f"dispatcher: {dispatcher} is missing"
+        )
+    else:
+        problem = f"source checkout at {root} but {dispatcher} is not executable"
     _warn(
-        f"source checkout at {root} but {dispatcher} is missing or not "
-        f"executable — running this binary ({running_version()}) instead, which "
-        f"is not this checkout's code. Repair the dispatcher: `chmod +x {dispatcher}`, "
-        f"or restore it with `git checkout -- {dispatcher}`. `pkit sync` does not "
-        f"repair it: run by this binary here, it refuses to copy this binary's "
-        f"tree over the checkout."
+        f"{problem} — running this binary ({running_version()}) instead, which is "
+        f"not this checkout's code. Repair the dispatcher: {dispatcher_repair(root)}. "
+        f"`pkit sync` does not repair it: run by this binary here, it refuses to "
+        f"copy this binary's tree over the checkout."
     )
 
 
