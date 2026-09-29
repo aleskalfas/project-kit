@@ -1069,6 +1069,130 @@ def test_cli_bare_empty_run_stays_clean_in_both_views(health_repo, monkeypatch) 
         assert "scope indeterminate" not in result.output
 
 
+# --- role-addressed upstreams, resolved through the wiring (COR-053) --------
+
+_ROLE = "acme::design"
+_SCREEN_ROLE_ADDRESS = f"{_ROLE}:screen"
+
+
+def _offer_screen_by_role(repo: Path) -> None:
+    """`design` provides the `acme::design` role and offers its `screen` process
+    there; both capabilities are registered, so the wiring resolver reads them."""
+    package = repo / ".pkit" / "capabilities" / "design" / "package.yaml"
+    package.write_text(
+        package.read_text(encoding="utf-8")
+        + "connections:\n"
+        + f"  roles: ['{_ROLE}']\n"
+        + "  extension-points:\n"
+        + "    offers:\n"
+        + f"      '{_SCREEN_ROLE_ADDRESS}':\n"
+        + "        kind: process\n"
+        + "        schema_version: 1\n"
+        + "        process: screen\n"
+        + "        description: The screen design ladder.\n",
+        encoding="utf-8",
+    )
+    _register(repo, "design", "delivery")
+
+
+def _register(repo: Path, *names: str) -> None:
+    lines = ["schema_version: 1", "backbone_version: 1.0.0", "components:"]
+    for name in names:
+        lines += [
+            "  - kind: capability",
+            f"    name: {name}",
+            f"    manifest: .pkit/capabilities/{name}/manifest.yaml",
+            "    origin: incubated-in-repo",
+        ]
+    (repo / ".pkit" / "manifest.yaml").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _role_unit(repo_factory) -> Path:
+    return repo_factory(
+        _UNIT_DEF_TEMPLATE.format(upstream=_SCREEN_ROLE_ADDRESS, trigger="implementation-ready")
+    )
+
+
+def test_a_role_addressed_upstream_is_the_active_providers_offered_process(
+    health_repo,
+) -> None:
+    repo = _role_unit(health_repo)
+    _offer_screen_by_role(repo)
+    _add_screen(repo, "s-1")
+    _add_screen(repo, "s-2")
+    _set_pickups(repo, {"s-2": ["unit-2"]})
+
+    cr = _the_contract(ph.build_report(repo))
+    assert cr.contract.upstream == _SCREEN_ROLE_ADDRESS  # reported as declared
+    assert [f.subject for f in cr.misses] == ["s-1"]
+    assert cr.indeterminate == ()
+    assert cr.at_trigger == 2 and cr.satisfied == 1
+
+
+def test_a_role_nobody_provides_is_indeterminate_never_green(health_repo) -> None:
+    repo = _role_unit(health_repo)
+    _register(repo, "design", "delivery")  # registered, but `design` provides no role
+    _add_screen(repo, "s-1")
+
+    cr = _the_contract(ph.build_report(repo))
+    assert [f.subject for f in cr.indeterminate] == [None]
+    assert cr.indeterminate[0].reason == (
+        f"upstream role address {_SCREEN_ROLE_ADDRESS!r} does not resolve to an offered "
+        "process: no installed capability provides its role"
+    )
+
+
+def test_a_role_address_the_provider_does_not_offer_is_indeterminate(health_repo) -> None:
+    repo = health_repo(
+        _UNIT_DEF_TEMPLATE.format(upstream=f"{_ROLE}:nothing", trigger="implementation-ready")
+    )
+    _offer_screen_by_role(repo)
+    reason = _the_contract(ph.build_report(repo)).indeterminate[0].reason
+    assert reason.endswith("'design', the active provider of its role, offers no process there")
+
+
+def test_the_walk_resolves_the_wiring_once_and_only_for_role_addresses(
+    health_repo, monkeypatch
+) -> None:
+    """One computation (ADR-057 point 2): every role-addressed contract of a walk
+    reads the same wiring; a walk with none resolves no wiring at all."""
+    from project_kit import connections
+
+    calls: list[Path] = []
+    real = connections.resolve_wiring
+
+    def counting(target_root: Path) -> connections.Wiring:
+        calls.append(target_root)
+        return real(target_root)
+
+    monkeypatch.setattr(connections, "resolve_wiring", counting)
+    repo = _role_unit(health_repo)
+    pipeline = repo / ".pkit" / "capabilities" / "delivery" / "schemas" / "pipeline.yaml"
+    pipeline.write_text(
+        _PIPELINE_DEF.replace("design:catalog", _SCREEN_ROLE_ADDRESS).replace(
+            "trigger: ready", "trigger: implementation-ready"
+        ),
+        encoding="utf-8",
+    )
+    _offer_screen_by_role(repo)
+    report = ph.build_report(repo)
+    assert len(report.contracts) == 2 and len(calls) == 1
+
+    calls.clear()
+    pipeline.unlink()
+    ph.build_report(health_repo())  # the implementation-addressed unit, rebuilt in place
+    assert calls == []
+
+
+def test_a_scope_on_the_implementation_matches_a_role_addressed_contract(health_repo) -> None:
+    repo = _role_unit(health_repo)
+    _offer_screen_by_role(repo)
+    _add_screen(repo, "s-1")
+    report = ph.build_report(repo, focus="design:screen")
+    assert [c.contract.upstream for c in report.contracts] == [_SCREEN_ROLE_ADDRESS]
+    assert report.unresolved_scope is None and report.missed_total == 1
+
+
 # --- the ADR-048 module boundary, pinned -----------------------------------
 
 

@@ -2,15 +2,18 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "package.schema.json",
   "title": "Component package metadata (`package.yaml`)",
-  "description": "A backbone file schema (ADR-056) for the `package.yaml` of a component — a capability or an adapter. It type-checks every field the shipped package files use today and the blocks the connection-points, documentation-roots and friction records add. PERMISSIVE ON UNKNOWN KEYS: `additionalProperties` is left open at the top level and inside the new blocks, so an unknown key is not a schema error; `project_kit.package_validate` reports it as a WARNING with the nearest known key suggested (the renderer of ADR-056 point 4). Refusing unknown keys is the strict flip of Task #999, taken once every block is known. Known keys are strictly typed. Inventory of the keys in use when this schema landed, by `schema_version` — version 1 (adapter `claude-code`; capabilities `living-docs`, `software-analysis`, `software-engineering`): `schema_version`, `component {kind, name, version}`, `requires_backbone`, `footprint` (adapter), `description`, `requires_capabilities`; version 2 (capabilities `demo-recording`, `evidence`, `project-management`): `schema_version`, `component`, `description`, `requires_backbone`, `commands`, `aliases`, `runtime_ignore`. Version 2 marks a file that adopted the `commands:` block (COR-021 said the version bumps with it); no reader distinguishes the two, every field is optional in both, and this schema accepts both without bumping either. `provides` is admitted from COR-013 (hook implementations) though no shipped file uses it; no egress or privilege declaration exists in any package file — those live in the permission capability's own data.",
+  "description": "A backbone file schema (ADR-056) for the `package.yaml` of a component — a capability or an adapter: every field the shipped package files use and the blocks the connection-points, documentation-roots and friction records add. STRICT ON UNKNOWN KEYS: every object here that declares its keys closes with `additionalProperties: false`, at the top level and inside every block, so a key the schema does not know is an error; `project_kit.package_validate` reports it at the key with the nearest known key suggested, through the one renderer of ADR-056 point 4. The lifecycle README records the decision and what an adopter does about such a key ('Validation: the package schema'); a tree whose schema predates it keeps its permissive copy until synced, and there an unknown key is a warning. The fields COR-017 lists among a component's required ones — `schema_version`, `component`, `description`, `requires_backbone` — are required of capabilities and adapters alike. Every part of a role name or a point address is a word, `[a-z][a-z0-9-]*`: the word the configuration schema's selection keys admit, defined once as `project_kit.refs.ADDRESS_WORD_PATTERN` and held equal here by a test. Two `schema_version` values are in use and both are accepted: version 2 marks a file that adopted the `commands:` block (COR-021 said the version bumps with it); no reader distinguishes the two, and both require the same fields. `provides` is admitted from COR-013 (hook implementations) though no shipped file uses it; no egress or privilege declaration exists in any package file — those live in the permission capability's own data.",
   "type": "object",
-  "additionalProperties": true,
+  "additionalProperties": false,
   "required": [
-    "component"
+    "schema_version",
+    "component",
+    "description",
+    "requires_backbone"
   ],
   "properties": {
     "schema_version": {
-      "description": "The package file's own schema version. Two values are in use, both accepted; a file without the key reads as 1.",
+      "description": "The package file's own schema version, required (COR-017). Two values are in use, both accepted.",
       "type": "integer",
       "enum": [
         1,
@@ -21,11 +24,11 @@
       "$ref": "#/$defs/component"
     },
     "description": {
-      "description": "One-line summary shown as the capability's command-group help (COR-021).",
+      "description": "One-line summary, required (COR-017): what `pkit capabilities list` shows and the capability's command-group help (COR-021).",
       "$ref": "#/$defs/non-empty-string"
     },
     "requires_backbone": {
-      "description": "Version range of compatible backbone versions, evaluated at install and upgrade (COR-010, COR-017). Parseability is checked in Python.",
+      "description": "Version range of compatible backbone versions, required (COR-017), evaluated at install and upgrade (COR-010). Parseability is checked in Python.",
       "$ref": "#/$defs/version-range"
     },
     "requires_capabilities": {
@@ -86,7 +89,7 @@
     "component": {
       "title": "The component's identity",
       "type": "object",
-      "additionalProperties": true,
+      "additionalProperties": false,
       "required": [
         "kind",
         "name",
@@ -116,7 +119,7 @@
     },
     "capability-dependency": {
       "type": "object",
-      "additionalProperties": true,
+      "additionalProperties": false,
       "required": [
         "name",
         "version"
@@ -156,7 +159,7 @@
     "command-leaf": {
       "title": "One command",
       "type": "object",
-      "additionalProperties": true,
+      "additionalProperties": false,
       "required": [
         "script",
         "help"
@@ -179,7 +182,7 @@
     "validator": {
       "title": "One registered validator",
       "type": "object",
-      "additionalProperties": true,
+      "additionalProperties": false,
       "required": [
         "command"
       ],
@@ -198,7 +201,7 @@
       "title": "The `connections` block (COR-053 point 3)",
       "description": "The roles this component provides and its connection points, split by whose point it is and which way it flows: `extension-points` are points this component defines (`accepts` data in, `offers` processes and events out); `extensions` are where it plugs into others (`contributes` data, `subscribes` to events, `depends-on` processes). Field layout beyond the two key pairs is this reference's choice (the lifecycle README).",
       "type": "object",
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
         "roles": {
           "description": "Qualified role names this component provides, `<publisher>::<role>` (COR-053 point 1). Every point it defines sits under one of these (checked in Python).",
@@ -210,7 +213,7 @@
         },
         "extension-points": {
           "type": "object",
-          "additionalProperties": true,
+          "additionalProperties": false,
           "properties": {
             "accepts": {
               "description": "Data points this component defines, keyed by point address.",
@@ -236,7 +239,7 @@
         },
         "extensions": {
           "type": "object",
-          "additionalProperties": true,
+          "additionalProperties": false,
           "properties": {
             "contributes": {
               "type": "array",
@@ -260,7 +263,7 @@
     "data-point": {
       "title": "An accepted data point (COR-053 point 2, COR-052)",
       "type": "object",
-      "additionalProperties": true,
+      "additionalProperties": false,
       "required": [
         "schema_version",
         "schema",
@@ -305,7 +308,7 @@
     "point-default": {
       "title": "The definer's default for a data point (COR-052 point 2)",
       "type": "object",
-      "additionalProperties": true,
+      "additionalProperties": false,
       "required": [
         "value",
         "participation"
@@ -327,7 +330,7 @@
     "offered-point": {
       "title": "An offered process or event (COR-053 point 2)",
       "type": "object",
-      "additionalProperties": true,
+      "additionalProperties": false,
       "required": [
         "kind",
         "schema_version",
@@ -400,7 +403,7 @@
     "contribution": {
       "title": "A contribution to another role's data point",
       "type": "object",
-      "additionalProperties": true,
+      "additionalProperties": false,
       "required": [
         "point",
         "schema_version"
@@ -431,7 +434,7 @@
     "subscription": {
       "title": "A subscription to another role's event",
       "type": "object",
-      "additionalProperties": true,
+      "additionalProperties": false,
       "required": [
         "point",
         "schema_version",
@@ -458,9 +461,9 @@
     },
     "depends-on": {
       "title": "Generated process connections (COR-053 point 4)",
-      "description": "GENERATED, never hand-written: its single source is the process definitions' `depends_on`, regenerated by the refresh command and marked `generated: true`. The wiring resolver reads the entries; a stale copy fails validation once the refresh command ships (Task #995), since detecting it reads the process definitions. This schema fixes only the shape and the mark.",
+      "description": "GENERATED, never hand-written: its single source is the process definitions' `depends_on`, regenerated by `pkit capabilities refresh <name>` and marked `generated: true` — one entry per distinct upstream and targeted interface version, sorted. The wiring resolver reads the entries and the capability lifecycle reads their `mandatory` marks; a copy that differs from what the definitions generate fails validation (the packages pass, which reads the definitions), naming the refresh command as the fix. This schema fixes only the shape and the mark.",
       "type": "object",
-      "additionalProperties": true,
+      "additionalProperties": false,
       "required": [
         "generated"
       ],
@@ -472,16 +475,18 @@
           "type": "array",
           "items": {
             "type": "object",
-            "additionalProperties": true,
+            "additionalProperties": false,
             "required": [
               "process"
             ],
             "properties": {
               "process": {
-                "description": "The upstream process, in the implementation form `<capability>:<process-id>` or the role form `<publisher>::<role>:<point>` (COR-038, COR-053 point 2).",
-                "$ref": "#/$defs/non-empty-string"
+                "description": "The upstream process, in the implementation form `<capability>:<process-id>` or the role form `<publisher>::<role>:<point>` (COR-038, COR-053 point 2), each part a word: the pattern of the process definitions' `upstream` it is copied from.",
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]*(::[a-z][a-z0-9-]*)?:[a-z][a-z0-9-]*$"
               },
               "schema_version": {
+                "description": "The upstream interface version the connection targets, copied from the definition entry's `version`; absent when the entry names none.",
                 "$ref": "#/$defs/point-version"
               },
               "mandatory": {
@@ -496,7 +501,7 @@
       "title": "The mandatory mark (COR-053 point 6)",
       "description": "Only with a reason; the mark without one is rejected.",
       "type": "object",
-      "additionalProperties": true,
+      "additionalProperties": false,
       "required": [
         "reason"
       ],
@@ -509,7 +514,7 @@
     "docs": {
       "title": "The `docs` block (COR-049 point 4)",
       "type": "object",
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
         "locations": {
           "description": "The sub-paths of this component's own documents, keyed by a location name, each relative to one of the project's documentation roots. Relative sub-paths only: no absolute path, no `..` (checked in Python).",
@@ -525,7 +530,7 @@
     },
     "doc-location": {
       "type": "object",
-      "additionalProperties": true,
+      "additionalProperties": false,
       "required": [
         "path"
       ],
@@ -549,7 +554,7 @@
     "friction": {
       "title": "The `friction` block (COR-050 points 1 and 8)",
       "type": "object",
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
         "places": {
           "description": "Where this component's anchored artefacts live: each place a path glob inside one of the component's declared documentation locations (`location`), or, without one, inside the project (checked in Python).",
@@ -566,7 +571,7 @@
     },
     "friction-place": {
       "type": "object",
-      "additionalProperties": true,
+      "additionalProperties": false,
       "required": [
         "path"
       ],
@@ -584,14 +589,14 @@
       }
     },
     "qualified-role": {
-      "description": "`<publisher>::<role>`.",
+      "description": "`<publisher>::<role>`, each part a word `[a-z][a-z0-9-]*` (`project_kit.refs.ADDRESS_WORD_PATTERN`): the configuration schema's provider-selection key.",
       "type": "string",
-      "pattern": "^[^\\s:]+::[^\\s:]+$"
+      "pattern": "^[a-z][a-z0-9-]*::[a-z][a-z0-9-]*$"
     },
     "point-address": {
-      "description": "`<publisher>::<role>:<point>`.",
+      "description": "`<publisher>::<role>:<point>`, each part a word `[a-z][a-z0-9-]*` (`project_kit.refs.ADDRESS_WORD_PATTERN`): the configuration schema's contributor-selection key.",
       "type": "string",
-      "pattern": "^[^\\s:]+::[^\\s:]+:[^\\s:]+$"
+      "pattern": "^[a-z][a-z0-9-]*::[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$"
     },
     "point-version": {
       "type": "integer",

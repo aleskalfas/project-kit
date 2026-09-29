@@ -1,0 +1,19 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  The wiring of connection points is drawn, shown and selected (#997). `pkit connections graph`
+  renders the one wiring graph in the process graph's text, flow, mermaid and `--json` formats:
+  the process definitions' derived and annotated edges together with the wiring resolver's
+  edges — `accepts`, `emits` and `offers` from each point's definer, `contributes`, `subscribes`
+  and `fills` from its counterparts — each saying how it stands (`active`, `conflict`, `bound`,
+  `inert (version)`, …), with `--kind` to narrow it to data, process or event edges. `pkit
+  process graph` now renders that same graph filtered to its process edges, so nothing it drew
+  is removed and the two never disagree; its `--source` filter accepts `resolved`. `pkit
+  connections providers set <role> <capability>` writes the provider selection through the
+  consent-gated configuration writer after checking that the capability declares the role,
+  showing the diff first (`--dry-run` stops there, `--yes` writes). A role conflict in `pkit
+  validate` and `pkit status` now names that exact command for each provider, and `pkit status`
+  gains a "Connections" section showing each role's provider, conflict or orphaned state and,
+  per point, the bound and inert fillers and counterparts and every unmet mandatory mark.

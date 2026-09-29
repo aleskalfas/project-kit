@@ -16,6 +16,11 @@ It is deliberately separate from `decide.py`:
   - This module runs under the hook's bare `python3` (no uv, no third-party deps,
     ADR-014), so it is stdlib-only — same runtime constraint as `decide.py`.
 
+  - The dependency runs one way only: to tag a deferral that targets the agent
+    workspace (#1043) — a defect, since every agent is granted it — capture asks
+    the decision core's own path recognizer, never its verdict; the decision
+    core never imports this module.
+
 Inert-on-failure contract (PRJ-006 sub-decision 2): the single entry point
 ``capture(...)`` is wrapped so that ANY exception — unreadable marker, unwritable
 log, a clock fault — is swallowed and turned into a no-op. A capture failure can
@@ -31,6 +36,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 import time
 from pathlib import Path
 
@@ -172,7 +178,7 @@ def _redact(command: str) -> str:
     return " ".join(out)
 
 
-def _entry(payload: dict, reason: str, redact: bool, now: float) -> dict:
+def _entry(payload: dict, reason: str, redact: bool, now: float, workspace: bool = False) -> dict:
     tool = payload.get("tool_name", "")
     command = ""
     if tool == "Bash":
@@ -185,7 +191,41 @@ def _entry(payload: dict, reason: str, redact: bool, now: float) -> dict:
         "tool": tool,
         "command": command,
         "reason": reason,
+        # A boolean, never the path: redaction drops paths from the command,
+        # and the report needs only whether the target is the workspace.
+        "workspace": workspace,
     }
+
+
+def _decision_core():
+    """The decision core beside this module: the one the hook already imported,
+    else loaded by path (a caller that imported only this module)."""
+    core = sys.modules.get("decide")
+    if core is not None and hasattr(core, "targets_path_scoped"):
+        return core
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "pkit_perm_decide_for_capture", Path(__file__).with_name("decide.py")
+    )
+    if spec is None or spec.loader is None:
+        raise ImportError("decision core not found beside diagnose_capture")
+    core = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(core)
+    return core
+
+
+def _targets_workspace(root: str, payload: dict) -> bool:
+    """Does this deferred request target the agent workspace (#1043)? The
+    workspace is granted to every agent, so a prompt for it is a defect, which
+    the report groups apart from allowlist gaps. Answered by the decision core's
+    own recognizer, so the diagnosis and the decision cannot disagree about
+    what lies inside; any fault reads as False."""
+    try:
+        core = _decision_core()
+        return bool(core.targets_path_scoped(core.load_catalog(root), payload, root))
+    except Exception:
+        return False
 
 
 def _subject(payload: dict) -> str:
@@ -232,7 +272,7 @@ def capture(root: str, payload: dict, decision: str, reason: str) -> None:
         max_entries = marker.get("max_entries", _DEFAULT_MAX_ENTRIES)
         if not isinstance(max_entries, int):
             max_entries = _DEFAULT_MAX_ENTRIES
-        entry = _entry(payload, reason, bool(redact), now)
+        entry = _entry(payload, reason, bool(redact), now, _targets_workspace(root, payload))
         _append_capped(_log_path(root_path), entry, max_entries)
     except Exception:  # inert on ANY failure — never change a decision / break the hook
         if os.environ.get("PKIT_PERMISSIONS_DEBUG"):

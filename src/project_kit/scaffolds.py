@@ -54,6 +54,7 @@ component:
   kind: {kind}
   name: {name}
   version: 0.1.0
+description: <one-line summary of the harness this adapter translates the methodology for>
 requires_backbone: "{requires_backbone}"
 """
 

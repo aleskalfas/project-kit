@@ -29,6 +29,7 @@ What this distribution can do about network access is limited, and the limit sha
    - **How a version range compares** — the resolver's one relation (`range_admits`), which validation reports under its version relations and which the capability install and register gates, the capability upgrade's dependant check, the dependency check they share and the backbone upgrade's compatibility check all call, the upgrade reading a package file as the resolver reads it.
 
    - **How a data point resolves** — the second layer over the wiring, `project_kit.data_points`: the project filler, the contributions, the provider's default and command fillers combined by the point's policy, computed once per run and read by validation's `connections` member and by the status report (COR-052; the placement point 6 asked for).
+   - **How the wiring is drawn** — one graph, `project_kit.wiring_graph`, built from the resolver and the process definitions: the process graph is its process-kind view through the same filters, so the two never disagree; each edge names its source (a definition's derived or annotated edge, or a resolved one) and how it stands (point 6's "source of each edge").
 
    The anchor-kind registry has one home too, which the friction checks and the rule-set validator both call.
 

@@ -1,0 +1,24 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  The permission catalog gains a `workspace` privilege, granted to every agent
+  by all three shipped profiles: reading, creating and editing files in the
+  agent workspace (`.agent-workspace/` of the project root or of another
+  working tree of the same repository) with the file tools — `Read`,
+  `Write`, `Edit`, `MultiEdit`, `NotebookEdit` — no longer prompts once
+  enforcement is on. It is a path-scoped allow: the new `recognize.path`
+  recognizer matches a file tool only when its target lies inside the folder,
+  so outside it the grant has no opinion. The folder counts only as the
+  checkout holds it — a symlinked `.agent-workspace`, a folder entry that is
+  absolute or climbs out with `..`, a directory whose `.git` pointer git
+  never registered as a worktree, a repository or worktree nested inside the
+  folder, and a file hard-linked into it from elsewhere are never the
+  workspace. A shell command is never the workspace's — a redirect, a
+  here-document or an `rm` into the folder is judged exactly as before. The
+  grant is hook-enforced and never realized as a session-wide rule;
+  `pkit permissions catalog` and `overview` show the folder,
+  `pkit permissions probe` demonstrates the verdict, and
+  `pkit permissions diagnose report` lists a prompt for the workspace first,
+  as a defect.

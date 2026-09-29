@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 import click
 
 if TYPE_CHECKING:
-    from project_kit.capabilities import CapabilitySource
+    from project_kit.capabilities import CapabilitySource, MandatoryUpstream
 
 from project_kit import __version__
 from project_kit import cli_render
@@ -92,6 +92,7 @@ from project_kit.versioning import (
 
 if TYPE_CHECKING:
     from project_kit.process import ProcessEngine
+    from project_kit.process_graph import Graph
 
 
 @click.group(cls=CapabilityDispatchGroup, invoke_without_command=True)
@@ -128,7 +129,7 @@ def main(ctx: click.Context, color: str) -> None:
 
 @main.group()
 def capabilities() -> None:
-    """Manage installed capabilities (per COR-017): list, install, uninstall, upgrade.
+    """Manage installed capabilities (per COR-017): list, show, install, uninstall, upgrade.
 
     Noun-first, consistent with the other resource-domain groups
     (`schemas`, `permissions`, `refs`, `hooks`, `migrations`).
@@ -329,14 +330,204 @@ def config_set(key: str, value: str, yes: bool) -> None:
     )
 
 
+def _graph_format_options(command: Callable[..., None]) -> Callable[..., None]:
+    """The output options both graph commands share (`process graph`, `connections
+    graph`): the adjacency view by default, or one of three other formats."""
+    options = [
+        click.option(
+            "--flow",
+            "fmt_flow",
+            is_flag=True,
+            default=False,
+            help="ASCII downstream pipeline (work-flows-this-way) instead of the adjacency view.",
+        ),
+        click.option(
+            "--mermaid",
+            "fmt_mermaid",
+            is_flag=True,
+            default=False,
+            help="Emit a mermaid flowchart (derived = thick ==>, declared-pull = -->, "
+            "push = -.->, resolved = --o).",
+        ),
+        click.option(
+            "--json",
+            "fmt_json",
+            is_flag=True,
+            default=False,
+            help="Emit the byte-stable machine form {nodes, edges, skipped} (no styling; "
+            "deterministic order).",
+        ),
+        click.option(
+            "--verbose",
+            is_flag=True,
+            default=False,
+            help="Show each edge's `why` (default omits it).",
+        ),
+    ]
+    for option in reversed(options):
+        command = option(command)
+    return command
+
+
+def _refuse_several_formats(fmt_flow: bool, fmt_mermaid: bool, fmt_json: bool) -> None:
+    if sum([fmt_flow, fmt_mermaid, fmt_json]) > 1:
+        raise click.ClickException(
+            "choose at most one of --flow / --mermaid / --json (the default is the adjacency view)."
+        )
+
+
+def _echo_graph(
+    graph: Graph,
+    *,
+    fmt_flow: bool,
+    fmt_mermaid: bool,
+    fmt_json: bool,
+    verbose: bool,
+    title: str | None = None,
+    flow_title: str | None = None,
+    empty: str | None = None,
+) -> None:
+    """Render a graph in the chosen format, through the one set of renderers
+    (`process_graph`); the titles default to the process graph's."""
+    from project_kit import process_graph as pg
+
+    if fmt_json:
+        click.echo(pg.render_json(graph), nl=False)
+    elif fmt_mermaid:
+        click.echo(pg.render_mermaid(graph), nl=False)
+    elif fmt_flow:
+        click.echo(
+            pg.render_flow(graph, verbose=verbose, title=flow_title or pg.PROCESS_FLOW_TITLE),
+            nl=False,
+        )
+    else:
+        click.echo(
+            pg.render_adjacency(
+                graph,
+                verbose=verbose,
+                title=title or pg.PROCESS_TITLE,
+                empty=empty or pg.PROCESS_EMPTY,
+            ),
+            nl=False,
+        )
+
+
 @main.group("connections")
 def connections_group() -> None:
-    """Connection points (COR-053): read what a data point resolves to.
+    """Connection points (COR-053): the one wiring graph, the provider selection, and
+    one data point as it resolves.
 
     The wiring the installed packages and the configuration resolve to is
     reported by `pkit validate` (its `connections` member) and shown by `pkit
-    status`. Reference: `.pkit/cli/README.md`, "Connections commands".
+    status` (its Connections section). Reference: `.pkit/cli/README.md`,
+    "Connections commands".
     """
+
+
+@connections_group.command("graph")
+@_graph_format_options
+@click.option(
+    "--kind",
+    "kinds",
+    type=click.Choice(["data", "process", "event"]),
+    multiple=True,
+    help="Keep only edges of this kind (repeatable). `process` is exactly what "
+    "`pkit process graph` renders.",
+)
+def connections_graph(
+    fmt_flow: bool, fmt_mermaid: bool, fmt_json: bool, verbose: bool, kinds: tuple[str, ...]
+) -> None:
+    """Render the one wiring graph (COR-053 point 7), read-only.
+
+    \b
+    Every edge, in the process graph's format:
+      derived    subprocess / cascade blocks of the process definitions
+      annotated  their depends_on entries (either address form)
+      resolved   the wiring resolver: provider → point ← counterparts —
+                 accepts / emits / offers from the definer; contributes,
+                 subscribes, fills from a counterpart; the mode is how the
+                 edge stands (active, conflict, bound, inert (version), …)
+
+    `pkit process graph` is this graph filtered to its process edges, so the
+    two never disagree. It reads declarations only: no filler command runs, no
+    position resolves. The generated depends-on list of package metadata is not
+    drawn — the depends_on edges it copies are.
+    """
+    from project_kit import process as process_mod
+    from project_kit import process_graph as pg
+    from project_kit import wiring_graph as wg
+
+    _refuse_several_formats(fmt_flow, fmt_mermaid, fmt_json)
+    try:
+        graph = wg.build_wiring_graph(process_mod.resolve_repo_root())
+    except process_mod.ProcessError as exc:
+        raise click.ClickException(str(exc)) from exc
+    if kinds:
+        graph = wg.with_kinds(graph, kinds)
+    # Through the process graph's filter pass, unconstrained: a view shows the
+    # nodes its edges touch, exactly as `process graph` renders its own.
+    _echo_graph(
+        pg.apply_filters(graph, pg.FilterSpec()),
+        fmt_flow=fmt_flow,
+        fmt_mermaid=fmt_mermaid,
+        fmt_json=fmt_json,
+        verbose=verbose,
+        title=wg.TITLE,
+        flow_title=wg.FLOW_TITLE,
+        empty=wg.EMPTY,
+    )
+
+
+@connections_group.group("providers")
+def connections_providers() -> None:
+    """The provider selection (COR-053 point 7): which installed capability answers a
+    role several provide — the configuration's `connections.providers` key."""
+
+
+@connections_providers.command("set")
+@click.argument("role", metavar="ROLE")
+@click.argument("capability", metavar="CAPABILITY")
+@click.option(
+    "--yes",
+    is_flag=True,
+    default=False,
+    help="Consent to the write without a prompt (CI). Without it a terminal is asked, "
+    "after the diff; a non-interactive run refuses.",
+)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Show what would be written, as a diff, and write nothing.",
+)
+def connections_providers_set(role: str, capability: str, yes: bool, dry_run: bool) -> None:
+    """Select CAPABILITY as the provider of ROLE (`<publisher>::<role>`).
+
+    Writes the `connections.providers` entry of `.pkit/project/config.yaml`
+    through the consent-gated writer (COR-048 point 5), after checking that
+    CAPABILITY is installed and declares ROLE. The diff is shown first;
+    `--dry-run` stops there. A role conflict names this command as its fix.
+    """
+    from project_kit import connections_config
+
+    if yes and dry_run:
+        raise click.UsageError(
+            "--yes and --dry-run exclude each other: one writes, the other never does."
+        )
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    change = connections_config.plan(target_root, role, capability)
+    key = connections_config.key(role)
+    if not change.changes:
+        click.echo(f"{key} is already {capability}; nothing to write.")
+        return
+    click.echo(change.diff(), nl=False)
+    if dry_run:
+        click.echo(cli_render.style("strong", "Dry run: nothing written."))
+        return
+    path = connections_config.write(target_root, role, capability, yes=yes)
+    click.echo(f"set {key} = {capability}  ({path.relative_to(target_root).as_posix()})")
 
 
 @connections_group.command("resolve")
@@ -2658,7 +2849,8 @@ def visibility_untrack(dry_run: bool) -> None:
     is_flag=True,
     default=False,
     help="Proceed even when upgrading this capability would desync an installed "
-    "dependent's declared version range (COR-030). Mirrors the uninstall "
+    "dependent's declared version range (COR-030) or leave another capability's "
+    "mandatory process connection unmet (COR-053 point 6). Mirrors the uninstall "
     "--force shape; use when cascade-upgrading dependents manually.",
 )
 @click.option(
@@ -2750,6 +2942,9 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
             f"unsatisfied dependencies:\n" + "\n".join(lines) + "\n"
             "Install or upgrade the required capabilities first, then retry."
         )
+    # The same direction for its mandatory process connections (COR-053 point 6):
+    # the new version's generated `depends-on` against the wiring it would leave.
+    _refuse_unmet_mandatory_upstreams(target_root, capability_source)
 
     # Direction 2 — this capability is a *dependency*: upgrading it to the new
     # source version may push it outside the declared range of installed
@@ -2791,6 +2986,16 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
             "  Proceeding under --force; upgrade dependent capabilities "
             "to restore consistency."
         )
+    # The same direction for mandatory process connections aimed at this
+    # capability (COR-053 point 6): warn, naming each, and proceed under --force.
+    _warn_mandatory_counterparts(
+        target_root,
+        name,
+        action=f"upgrading {name!r} to v{new_version}",
+        verb="upgrade",
+        force=force,
+        replacement=capability_source,
+    )
 
     # --- Collision detection ---
 
@@ -2992,13 +3197,24 @@ def refs_who_references(target: str) -> None:
 @refs.command("lookup")
 @click.argument("record_id")
 def refs_lookup(record_id: str) -> None:
-    """Resolve a record ID (`COR-005`, `PRJ-002`) to its file, or a rule (`RS-CMN-001`,
-    `RS-CMN-001#point`, `[living-docs:RS-LDOC-001]`) to its place in its rule set."""
+    """Resolve a record ID (`COR-005`, `PRJ-002`) to its file, a rule (`RS-CMN-001`,
+    `RS-CMN-001#point`, `[living-docs:RS-LDOC-001]`) to its place in its rule set,
+    or a role or point address (`[pkit::documentation]`, `[pkit::documentation:readers]`)
+    to where an installed capability declares it."""
     from project_kit import rule_sets as rule_sets_mod
 
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
+    if refs_mod.is_address_citation(record_id):
+        address = refs_mod.resolve_address(target_root, record_id)
+        if address.malformed:
+            raise click.ClickException(f"{record_id!r} is {address.problem}.")
+        if not address.resolved:
+            raise click.ClickException(f"{record_id!r} does not resolve: {address.problem}.")
+        for location in address.locations:
+            click.echo(location)
+        return
     if rule_sets_mod.is_rule_citation(record_id):
         resolution = refs_mod.resolve_rule_citation(target_root, record_id)
         if not resolution.resolved:
@@ -4121,6 +4337,42 @@ def settings_consolidate(dry_run: bool, yes: bool) -> None:
 # --- Capability commands (per COR-017) ------------------------------------
 
 
+@capabilities.command("show")
+@click.argument("name")
+@click.option("--json", "as_json", is_flag=True, default=False, help="Print the machine form.")
+def show_capability_cmd(name: str, as_json: bool) -> None:
+    """Show a capability's connections, installed or not (COR-053 point 8).
+
+    Read from its package metadata alone: the roles it provides, the points it
+    accepts and offers, its extensions (contributes, subscribes, depends-on),
+    and what would connect here — the live wiring for an installed capability,
+    the wiring this project would have with it installed otherwise. Found in the
+    local catalogue only: the installed tree, capabilities authored in this
+    repository, the capabilities that ship with this pkit. Writes nothing.
+    """
+    from project_kit import capability_plans as plans
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    if not (target_root / ".pkit").is_dir():
+        raise click.ClickException(f"{target_root}/.pkit/ does not exist. Run 'pkit init' first.")
+    candidate = plans.find_candidate(target_root, find_source_kit(), name)
+    if candidate is None:
+        raise click.ClickException(
+            f"no capability named {name!r} is installed, authored in this repository, or "
+            f"ships with this pkit. Try `pkit capabilities list`."
+        )
+    view = plans.show(target_root, candidate)
+    click.echo(plans.to_json(view) if as_json else plans.render_show(view), nl=False)
+
+
+def _plan_flags(plan: bool, as_json: bool) -> None:
+    """`--json` is the machine form of a plan; alone it asks for nothing."""
+    if as_json and not plan:
+        raise click.UsageError("--json prints the plan: pass it with --plan.")
+
+
 @capabilities.command("install")
 @click.argument("name")
 @click.option(
@@ -4129,9 +4381,22 @@ def settings_consolidate(dry_run: bool, yes: bool) -> None:
     default=False,
     help="Show what would be installed without writing files.",
 )
-def install_capability_cmd(name: str, dry_run: bool) -> None:
+@click.option(
+    "--plan",
+    is_flag=True,
+    default=False,
+    help="Show the connections the install would make, the role conflicts to resolve and "
+    "what the capability needs, computed by the wiring resolver; writes nothing (COR-053 "
+    "point 8).",
+)
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="With --plan: the machine form."
+)
+def install_capability_cmd(name: str, dry_run: bool, plan: bool, as_json: bool) -> None:
     """Install a capability: copy subtree into adopter, register in manifest, re-deploy."""
     from project_kit import capabilities as caps
+
+    _plan_flags(plan, as_json)
 
     target_root = find_target_root()
     if target_root is None:
@@ -4159,6 +4424,21 @@ def install_capability_cmd(name: str, dry_run: bool) -> None:
             f"capability {name!r} is already installed. "
             f"Use `pkit capabilities upgrade {name}` to refresh."
         )
+
+    if plan:
+        # The plan runs before the gates: what the gates refuse on — the backbone
+        # and dependency ranges — is among what the plan reports it needs.
+        from project_kit import capability_plans as plans
+
+        candidate = plans.candidate_of(capability_source, caps.KIT_SHIPPED, installed=False)
+        if candidate is None:
+            raise click.ClickException(f"capability {name!r}'s package.yaml does not read.")
+        install_plan = plans.plan_install(target_root, candidate)
+        click.echo(
+            plans.to_json(install_plan) if as_json else plans.render_install_plan(install_plan),
+            nl=False,
+        )
+        return
 
     # Pre-flight: backbone-version satisfaction. Shared with `register` via
     # `_check_backbone_satisfied` (COR-007 pattern-extraction): both capability-
@@ -4191,6 +4471,10 @@ def install_capability_cmd(name: str, dry_run: bool) -> None:
             f"unsatisfied dependencies:\n" + "\n".join(lines) + "\n"
             "Install or upgrade the required capabilities first."
         )
+
+    # Pre-flight: mandatory process connections (COR-053 point 6). Refuse when an
+    # upstream the capability marks mandatory is missing or incompatible.
+    _refuse_unmet_mandatory_upstreams(target_root, capability_source)
 
     # Pre-flight: collision detection.
     collisions = caps.detect_collisions(target_root, capability_source)
@@ -4377,6 +4661,9 @@ def register_capability_cmd(name: str, dry_run: bool) -> None:
             "Install or upgrade the required capabilities first."
         )
 
+    # Pre-flight: mandatory process connections (COR-053 point 6), as install.
+    _refuse_unmet_mandatory_upstreams(target_root, capability_source)
+
     if adopt_in_place:
         # Adopt in place: the capability is already registered and its subtree
         # already installed, so we do not re-copy or re-deploy — the only change
@@ -4517,6 +4804,79 @@ def _check_backbone_satisfied(
         )
 
 
+def _refuse_unmet_mandatory_upstreams(
+    target_root: Path, capability_source: CapabilitySource
+) -> None:
+    """Refuse the capability carrying a mandatory process connection its upstream
+    would not meet — missing, or at another interface version (COR-053 point 6).
+
+    The carrier's side of COR-030's direction split, shared by `install`,
+    `register` and `upgrade`: the operator chooses which version of the carrier to
+    install, so there is no deadlock, and no `--force`. The mark is read from the
+    capability's generated `depends-on` list, the reason shown as the mark gives it.
+    """
+    from project_kit import capabilities as caps
+
+    unmet = caps.unmet_mandatory_upstreams(target_root, capability_source)
+    if not unmet:
+        return
+    raise click.ClickException(
+        f"capability {capability_source.name!r} v{capability_source.package.version} has "
+        f"{len(unmet)} unmet mandatory process connection(s):\n"
+        + "\n".join(_mandatory_line(u, carrier=False) for u in unmet)
+        + "\nInstall or upgrade the upstream first, then retry (COR-053 point 6)."
+    )
+
+
+def _warn_mandatory_counterparts(
+    target_root: Path,
+    name: str,
+    *,
+    action: str,
+    verb: str,
+    force: bool,
+    replacement: CapabilitySource | None = None,
+) -> None:
+    """Warn, naming each counterpart, when uninstalling `name` — or upgrading it to
+    `replacement` — would leave another capability's mandatory process connection
+    unmet; proceed only under `--force` (COR-053 point 6).
+
+    The targeted side of COR-030's direction split: never a hard block, since a
+    hard block could deadlock. `action` names the operation in the warning
+    (`uninstalling 'x'`), `verb` in the refusal (`uninstall`).
+    """
+    from project_kit import capabilities as caps
+
+    broken = caps.mandatory_counterparts_left_unmet(target_root, name, replacement=replacement)
+    if not broken:
+        return
+    header = (
+        f"Warning (--force): {action} leaves" if force else f"Warning: {action} would leave"
+    )
+    click.echo(
+        "\n  "
+        + cli_render.style(
+            "strong", f"{header} {len(broken)} mandatory process connection(s) unmet:"
+        )
+    )
+    for counterpart in broken:
+        click.echo(_mandatory_line(counterpart, carrier=True))
+    if not force:
+        raise click.ClickException(
+            f"refusing to {verb}: another capability's mandatory process connection "
+            "would be left unmet.\nUninstall or upgrade the dependent capabilities first, "
+            "or pass --force to proceed anyway (the deadlock-free override, COR-053 point 6)."
+        )
+    click.echo("  Proceeding under --force; the dependents' marks stay unmet until resolved.")
+
+
+def _mandatory_line(unmet: MandatoryUpstream, *, carrier: bool) -> str:
+    """One unmet mark: the upstream, why it is not met, and the mark's reason —
+    prefixed by the capability carrying it when that is not the one operated on."""
+    who = f"{unmet.capability!r} depends on " if carrier else ""
+    return f"    - {who}{unmet.process!r}: {unmet.problem} (mandatory: {unmet.reason})"
+
+
 def _find_desynced_dependents(
     target_root: Path, dep_name: str, new_dep_version: str
 ) -> list[tuple[str, str]]:
@@ -4615,8 +4975,9 @@ def _show_unified_diff(existing: Path, incoming: Path) -> None:
     "--force",
     is_flag=True,
     default=False,
-    help="Override the safety checks; remove even if references exist or "
-    "other installed capabilities declare a dependency on this one (COR-030).",
+    help="Override the safety checks; remove even if references exist, other "
+    "installed capabilities declare a dependency on this one (COR-030), or a "
+    "mandatory process connection would be left unmet (COR-053 point 6).",
 )
 @click.option(
     "--purge",
@@ -4640,8 +5001,19 @@ def _show_unified_diff(existing: Path, incoming: Path) -> None:
     default=False,
     help="Show what would be removed without deleting files.",
 )
+@click.option(
+    "--plan",
+    is_flag=True,
+    default=False,
+    help="Show the fillers lost, the processes and other counterparts left without a "
+    "provider and the artefacts whose role blocks would be orphaned, computed by the "
+    "wiring resolver; writes nothing (COR-053 point 8).",
+)
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="With --plan: the machine form."
+)
 def uninstall_capability_cmd(
-    name: str, force: bool, purge: bool, yes: bool, dry_run: bool
+    name: str, force: bool, purge: bool, yes: bool, dry_run: bool, plan: bool, as_json: bool
 ) -> None:
     """Uninstall a capability: unregister, drop stale symlinks, and delete the subtree per origin.
 
@@ -4653,6 +5025,7 @@ def uninstall_capability_cmd(
     """
     from project_kit import capabilities as caps
 
+    _plan_flags(plan, as_json)
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
@@ -4662,6 +5035,20 @@ def uninstall_capability_cmd(
 
     origin = caps.read_capability_origin(target_root, name)
     incubated = origin == caps.INCUBATED_IN_REPO
+
+    if plan:
+        # Before the refusal checks: a plan shows what removal would change in the
+        # wiring whether or not the removal would be refused.
+        from project_kit import capability_plans as plans
+
+        uninstall_plan = plans.plan_uninstall(target_root, name, origin)
+        click.echo(
+            plans.to_json(uninstall_plan)
+            if as_json
+            else plans.render_uninstall_plan(uninstall_plan),
+            nl=False,
+        )
+        return
 
     # Declared-dependent safety check (COR-030): refuse when another installed
     # capability declares this one in its requires_capabilities. This catches
@@ -4682,6 +5069,13 @@ def uninstall_capability_cmd(
                 "Uninstall or upgrade the dependent capabilities first, "
                 "or pass --force to override."
             )
+
+    # Mandatory process connections aimed at it (COR-053 point 6): warn, naming
+    # each counterpart the removal leaves unmet; refused unless --force, and still
+    # reported under --force.
+    _warn_mandatory_counterparts(
+        target_root, name, action=f"uninstalling {name!r}", verb="uninstall", force=force
+    )
 
     # Reference safety check.
     if not force:
@@ -4800,6 +5194,75 @@ def list_capabilities_cmd() -> None:
             ("pkit capabilities register <name>", "register an in-repo (incubated) one"),
         ],
     ), nl=False)
+
+
+@capabilities.command("refresh")
+@click.argument("name")
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Show what the generated list would hold without writing the package file.",
+)
+def refresh_capability_cmd(name: str, dry_run: bool) -> None:
+    """Regenerate a capability's generated package metadata (COR-053 point 4).
+
+    Rewrites `connections.extensions.depends-on` in
+    `.pkit/capabilities/<name>/package.yaml` from the `depends_on` its process
+    definitions declare, marked `generated: true`; the rest of the file is kept
+    as written. Run it where the capability is authored — after coupling a
+    process, or when `pkit validate` reports the list stale. A kit-shipped
+    capability installed in an adopting project is refused: its package file is
+    core-owned and sync would overwrite the edit.
+    """
+    from project_kit import capabilities as caps
+    from project_kit import install as install_mod
+    from project_kit import process_dependencies as deps
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    caps.refuse_reserved_capability_name(name)
+    cap_dir = target_root / ".pkit" / "capabilities" / name
+    if not (cap_dir / "package.yaml").is_file():
+        raise click.ClickException(
+            f"no capability named {name!r} is authored in this repository at "
+            f".pkit/capabilities/{name}/package.yaml."
+        )
+    kit_shipped = (
+        caps.is_installed(target_root, name)
+        and caps.read_capability_origin(target_root, name) == caps.KIT_SHIPPED
+    )
+    if kit_shipped and not install_mod.is_self_host(target_root, find_source_kit()):
+        raise click.ClickException(
+            f"capability {name!r} is kit-shipped: its package.yaml is core-owned and "
+            "`pkit sync` overwrites it (the no-shared-files invariant). A stale "
+            "`depends-on` list there is the capability author's to regenerate — report "
+            "it upstream."
+        )
+
+    try:
+        result = deps.refresh(cap_dir, dry_run=dry_run)
+    except deps.RefreshError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    where = result.package_file.relative_to(target_root)
+    count = f"{len(result.entries)} entry(ies)"
+    if not result.changed:
+        fresh = f"`{deps.DEPENDS_ON_KEY}` in {where} is fresh ({count}); nothing to write."
+        click.echo("\n  " + cli_render.style("strong", fresh))
+        return
+    verb = "Would refresh" if dry_run else "Refreshed"
+    click.echo(
+        "\n  "
+        + cli_render.style(
+            "strong",
+            f"{verb} `{'.'.join(deps.BLOCK_PATH)}` in {where}: {count} generated from the "
+            "process definitions' `depends_on`.",
+        )
+    )
+    for entry in result.entries:
+        click.echo(f"    - {entry.text()}")
 
 
 # --- New artifacts (decisions, agents, etc.) ------------------------------
@@ -6023,23 +6486,12 @@ def process_handoff(
 
 
 @process.command("graph")
-@click.option(
-    "--flow", "fmt_flow", is_flag=True, default=False,
-    help="ASCII downstream pipeline (work-flows-this-way) instead of the adjacency view.",
-)
-@click.option(
-    "--mermaid", "fmt_mermaid", is_flag=True, default=False,
-    help="Emit a mermaid flowchart (derived = thick ==>, declared-pull = -->, push = -.->).",
-)
-@click.option(
-    "--json", "fmt_json", is_flag=True, default=False,
-    help="Emit the byte-stable machine form {nodes, edges} (no styling; deterministic order).",
-)
+@_graph_format_options
 @click.option("--capability", default=None, help="Atomic filter: keep edges touching this capability.")
 @click.option("--process", "focus_process", default=None, help="Atomic filter: focus on this <capability>:<process-id> (hops counted from it).")
 @click.option("--relation", "relations_csv", default=None, help="Atomic filter: keep only these relation kinds (csv).")
 @click.option("--mode", "mode", type=click.Choice(["pull", "push"]), default=None, help="Atomic filter: keep only edges of this mode.")
-@click.option("--source", "source", type=click.Choice(["derived", "annotated"]), default=None, help="Atomic filter: keep only edges of this source.")
+@click.option("--source", "source", type=click.Choice(["derived", "annotated", "resolved"]), default=None, help="Atomic filter: keep only edges of this source (`resolved`: the offered-process edges the wiring resolver adds).")
 @click.option("--depth", type=int, default=None, help="Atomic filter: hops from the focused --process (requires --process). Without --direction it is UNDIRECTED (the depth-bounded neighbourhood), distinct from the directed --upstream-of/--downstream-of closures.")
 @click.option("--direction", type=click.Choice(["in", "out"]), default=None, help="Atomic filter: with --process, keep only its out- or in-edges (requires --process).")
 @click.option("--enforced", is_flag=True, default=False, help="Preset = source:derived ∪ relation:gates-on-readiness (the edges that actually block).")
@@ -6051,7 +6503,6 @@ def process_handoff(
 @click.option("--cycles", is_flag=True, default=False, help="Preset = edges lying on a dependency cycle.")
 @click.option("--upstream-of", "upstream_of", default=None, help="Preset = transitive closure of what this <addr> depends on.")
 @click.option("--downstream-of", "downstream_of", default=None, help="Preset = transitive closure of what depends on this <addr>.")
-@click.option("--verbose", is_flag=True, default=False, help="Show each edge's `why` (default omits it).")
 def process_graph(
     fmt_flow: bool,
     fmt_mermaid: bool,
@@ -6080,9 +6531,12 @@ def process_graph(
     \b
     The render is DERIVED edges (from each definition's subprocess/cascade
     blocks) ∪ ANNOTATED edges (from each state's depends_on list) — no edge
-    expressible both ways (COR-038's derive-don't-annotate). It reads
-    DECLARATIONS only: it never resolves a live subject position, never runs a
-    predicate, never moves anything (that is the safety point).
+    expressible both ways (COR-038's derive-don't-annotate) — plus the
+    RESOLVED `offers` edges by which a role-addressed depends_on reaches the
+    process offering it. It is the one wiring graph (`pkit connections graph`,
+    COR-053 point 7) filtered to its process edges, so the two never disagree.
+    It reads DECLARATIONS only: it never resolves a live subject position, never
+    runs a predicate, never moves anything (that is the safety point).
 
     \b
     Presets are documented EXPANSIONS of the atomic filters (a preset is a named
@@ -6115,11 +6569,9 @@ def process_graph(
     """
     from project_kit import process as process_mod
     from project_kit import process_graph as pg
+    from project_kit import wiring_graph as wg
 
-    if sum([fmt_flow, fmt_mermaid, fmt_json]) > 1:
-        raise click.ClickException(
-            "choose at most one of --flow / --mermaid / --json (the default is the adjacency view)."
-        )
+    _refuse_several_formats(fmt_flow, fmt_mermaid, fmt_json)
     # --depth / --direction count hops FROM the focused --process, so they are
     # only meaningful with it. They are consumed inside the --process focus pass;
     # without --process they would be silently ignored (G3), so fail loudly.
@@ -6155,18 +6607,16 @@ def process_graph(
     )
     try:
         repo_root = process_mod.resolve_repo_root()
-        graph = pg.apply_filters(pg.build_graph(repo_root), spec)
+        view = wg.process_view(wg.build_wiring_graph(repo_root))
     except process_mod.ProcessError as exc:
         raise click.ClickException(str(exc)) from exc
-
-    if fmt_json:
-        click.echo(pg.render_json(graph), nl=False)
-    elif fmt_mermaid:
-        click.echo(pg.render_mermaid(graph), nl=False)
-    elif fmt_flow:
-        click.echo(pg.render_flow(graph, verbose=verbose), nl=False)
-    else:
-        click.echo(pg.render_adjacency(graph, verbose=verbose), nl=False)
+    _echo_graph(
+        pg.apply_filters(view, spec),
+        fmt_flow=fmt_flow,
+        fmt_mermaid=fmt_mermaid,
+        fmt_json=fmt_json,
+        verbose=verbose,
+    )
 
 
 if __name__ == "__main__":

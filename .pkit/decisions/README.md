@@ -41,6 +41,14 @@ Rules are not decision records, but they share their guarantees ([COR-051](core/
 - **Citing a rule.** `RS-CMN-003` names a rule and `RS-CMN-003#cause-location` an extension point it offers. A method rule set's rules are cited with the component in front — `[living-docs:RS-LDOC-003]` in prose, bracketed like a capability decision citation.
 - **Checked by validation.** `pkit validate` checks every rule set — the schema, the join between data and prose, ids, origins, successors and inheritance — and `pkit decisions validate` reports a rule id claimed twice. Where rule-set files live, their front-matter layout and every check are in the schemas reference, "Rule-set files" (`.pkit/schemas/README.md`).
 
+## Citing
+
+Each kind of thing a record, an agent or a skill cites has one written form:
+
+- **A record** by its id: `COR-019`, `PRJ-007`, `ADR-012`. A capability's record goes in brackets with the capability in front: `[project-management:DEC-053-doc-check-slot]`.
+- **A rule** by its rule id, as "Rule sets" above describes: `RS-CMN-003`, `[living-docs:RS-LDOC-003]`.
+- **A role or a point of a connection** by its address, in brackets ([COR-019](core/COR-019-schema-reference-form.md), [COR-053](core/COR-053-connection-points.md)): `[pkit::documentation]` names the documentation role and `[pkit::documentation:readers]` its readers point. The double colon marks an address; `[issue-types:task]`, with a single colon, stays a schema reference. An address resolves to what an installed capability declares in its package metadata. `pkit refs validate` reports an address that names no declared role or point, and reports a bracketed token with a double colon that is not an address — `[::documentation:readers]`, with no publisher — as malformed. `pkit refs lookup '[pkit::documentation:readers]'` prints where the point is declared.
+
 ## The no-shared-files invariant
 
 Every file has exactly one owner — kit or project — and they never share a path.

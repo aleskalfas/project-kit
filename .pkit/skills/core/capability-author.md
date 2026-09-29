@@ -15,6 +15,7 @@ reads:
     - PRJ-002
   paths:
     - .pkit/cli/README.md
+    - .pkit/lifecycle/README.md
     - .pkit/permissions/README.md
     - .pkit/decisions/README.md
     - .pkit/decisions/core/COR-017-capability-pattern.md
@@ -72,7 +73,7 @@ The name becomes the directory name, the value of `component.name` in `package.y
 
 Read `.pkit/decisions/core/COR-017-capability-pattern.md`. Every capability ships:
 
-- `package.yaml` — component metadata (`kind: capability`, `name`, `version`, `requires_backbone`).
+- `package.yaml` — component metadata (`schema_version`, `kind: capability`, `name`, `version`, `description`, `requires_backbone`, all required; the package schema refuses a key it does not know — see `.pkit/lifecycle/README.md`, "Package metadata").
 - `README.md` — adopter-facing intro: the discipline, the commands, the conventions.
 - Some non-empty subset of `decisions/`, `skills/`, `agents/`, `scripts/`, `schemas/`. A capability with no decisions and no skills is suspicious — at minimum, you'd expect one decision establishing the discipline's invariant plus one skill or script operationalising it.
 
@@ -87,7 +88,7 @@ pkit new capability <name>
 The command:
 
 - Creates `.pkit/capabilities/<name>/`.
-- Stamps `package.yaml` with `kind: capability`, `version: 0.1.0`, and `requires_backbone` pinned to a range matching the project's current backbone.
+- Stamps `package.yaml` with `kind: capability`, `version: 0.1.0`, a placeholder `description` to replace with the one-line summary, and `requires_backbone` pinned to a range matching the project's current backbone.
 - Stamps `README.md` with placeholder prose explaining the discipline, install command, and citation form.
 - Creates empty `decisions/`, `skills/`, `agents/`, `scripts/`, and `schemas/` subdirectories with `.gitkeep`.
 

@@ -3,8 +3,10 @@
 This module is the **one** computation of the wiring: `pkit validate` reports
 it, and the graph, the status report and the install / uninstall plans
 (COR-053 points 7 and 8) read its `Wiring` rather than resolving anything of
-their own. A plan resolves a hypothetical set of components the same way
-(`Declarations.from_installed` + `resolve`).
+their own. A plan resolves a hypothetical set of components the same way:
+`resolve_wiring_with` is `resolve_wiring` over the installed set plus or
+minus a candidate, every other input read from the tree as the live wiring
+reads it (`capability_plans` is its reader).
 
 It reads, and reads only:
 
@@ -76,8 +78,12 @@ against the active provider's point and its contributors (`Wiring.data_point`,
 `PointBinding.contributors`). It also owns the last relation, the configuration
 file's shape against the schema the installed backbone ships.
 
-A stale generated `depends-on` is the refresh command's check (#995):
-detecting it means reading the process definitions this module never opens.
+A stale generated `depends-on` is the packages pass's finding
+(`process_dependencies.staleness`): detecting it means reading the process
+definitions this module never opens. What it offers the other readers of
+`depends_on` is the resolved wiring itself: health finds the implementation of
+a role-addressed upstream through `Wiring.offered_process`, and the capability
+lifecycle refuses or warns on `Wiring.unmet_marks` (COR-053 point 6).
 """
 
 from __future__ import annotations
@@ -85,6 +91,7 @@ from __future__ import annotations
 import dataclasses
 import hashlib
 import json
+import shlex
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
 from enum import Enum
@@ -117,6 +124,10 @@ _yaml = YAML(typ="safe")
 CONNECTIONS_KEY = "connections"
 PROVIDERS_KEY = "providers"
 SELECTIONS_KEY = "selections"
+
+# The configuration command that writes a provider selection: a role conflict
+# names it, once per provider, as the exact fix (`provider_set_command`).
+PROVIDERS_SET_COMMAND = "pkit connections providers set"
 
 # A component's companion schemas and, by convention, its process definitions
 # (`schemas/<process-id>.yaml`, the process area README; `pkit process new`
@@ -195,7 +206,10 @@ _RELATION_ORDER = {relation: index for index, relation in enumerate(Relation)}
 
 @dataclass(frozen=True)
 class Installed:
-    """One registered component whose package file is present."""
+    """One registered component whose package file is present — or, for a plan,
+    a candidate: `file` is where its package file sits once it is installed, so
+    findings are located where the operation will put them, and `component_dir`
+    is where its companion schemas and definitions are read from now."""
 
     name: str
     kind: str  # "capability" | "adapter"
@@ -220,6 +234,7 @@ class Point:
     schema: str | None = None  # companion schema, relative to the provider's schemas/
     process_id: str | None = None  # process: the offered definition's id
     fingerprint: str | None = None  # sha256 of the canonical companion schema, when readable
+    description: str | None = None  # the declaration's prose; read by people, never parsed
 
     @property
     def policy(self) -> str | None:
@@ -241,6 +256,7 @@ class Counterpart:
     pointer: str  # JSON Pointer to the entry in its package file
     mandatory: str | None = None  # the reason, when the mark is set
     command: str | None = None
+    description: str | None = None  # the entry's optional prose; never parsed
 
     @property
     def role_form(self) -> bool:
@@ -309,6 +325,16 @@ class PointBinding:
         return bool(self.bound) or self.filler_compatible
 
     @property
+    def mark_unmet(self) -> bool:
+        """A mandatory data point filled only by its default (COR-053 point 6) —
+        what `pkit validate` reports as an error on the point's provider."""
+        return (
+            self.point.mandatory is not None
+            and self.point.kind is PointKind.DATA
+            and not self.filled
+        )
+
+    @property
     def contributors(self) -> tuple[str, ...]:
         """Every capability declaring a contribution to this point, sorted, whether
         or not the contribution is bound — the candidates of a contributor selection
@@ -373,6 +399,12 @@ class Declarations:
             )
         )
 
+    def role_pointer(self, name: str, role: str) -> str | None:
+        """Where the component `name` declares that it provides `role`: a JSON
+        Pointer into its package file; None when no such component is installed."""
+        component = self.by_name(name)
+        return _roles_pointer(component, role) if component is not None else None
+
 
 @dataclass(frozen=True)
 class Selections:
@@ -415,6 +447,47 @@ class Wiring:
             None,
         )
 
+    def offered_process(self, address: str) -> Point | None:
+        """The process offered at the role address `address` as the active provider
+        of its role defines it — the implementation a role-addressed `depends_on`
+        entry reaches (COR-053 point 2); None when no active provider offers a
+        process there. Health reads it to find the upstream of a role-addressed
+        hand-off contract rather than resolving roles of its own."""
+        return next(
+            (
+                p.point
+                for p in self.points
+                if p.point.address == address and p.point.kind is PointKind.PROCESS
+            ),
+            None,
+        )
+
+    def unmet_marks(self, kind: CounterpartKind | None = None) -> tuple[Binding, ...]:
+        """The counterparts, of `kind` or of every kind, whose mandatory mark this
+        wiring leaves unmet (`mark_unmet`), in declaration order. The capability
+        lifecycle reads the `depends-on` ones to refuse or warn (COR-053 point 6)."""
+        return tuple(
+            b
+            for b in self.bindings
+            if (kind is None or b.counterpart.kind is kind) and self.mark_unmet(b)
+        )
+
+    def mark_unmet(self, binding: Binding) -> bool:
+        """Whether `binding` carries a mandatory mark this wiring leaves unmet —
+        what `pkit validate` reports as an error on the side carrying it (COR-053
+        point 6): its target missing, or at another version. An unselected
+        provider's marks bind nothing (point 1), and a mark aimed at a role in
+        conflict waits on the conflict, which is the finding."""
+        c = binding.counterpart
+        if c.mandatory is None or binding.status in (
+            BindingStatus.BOUND,
+            BindingStatus.INERT_PROVIDER,
+        ):
+            return False
+        if binding.status is BindingStatus.NO_ACTIVE_PROVIDER:
+            return not self.declarations.providers_of(c.role or "")
+        return True
+
     def errors(self) -> tuple[Finding, ...]:
         return tuple(f for f in self.findings if f.severity is Severity.ERROR)
 
@@ -440,6 +513,11 @@ def load_declarations(target_root: Path) -> Declarations:
     Shape is the package schema's business (`package_validate`): a slice that
     is not the expected type is skipped here, never reported twice.
     """
+    return Declarations.from_installed(_installed_components(target_root))
+
+
+def _installed_components(target_root: Path) -> list[Installed]:
+    """Every registered component whose package file reads, in registry order."""
     backbone = read_backbone_manifest(target_root)
     entries = {e.name: e for e in backbone.components} if backbone is not None else {}
     installed: list[Installed] = []
@@ -460,7 +538,7 @@ def load_declarations(target_root: Path) -> Declarations:
                 package=package,
             )
         )
-    return Declarations.from_installed(installed)
+    return installed
 
 
 def read_package(file: Path) -> Mapping[str, Any] | None:
@@ -488,8 +566,31 @@ def load_selections(target_root: Path) -> Selections:
 def resolve_wiring(target_root: Path) -> Wiring:
     """The live wiring of the project at `target_root`, with the rule-set pins
     read from its rule-set files among the version relations."""
+    return resolve_wiring_with(target_root)
+
+
+def resolve_wiring_with(
+    target_root: Path,
+    *,
+    add: Iterable[Installed] = (),
+    remove: Iterable[str] = (),
+) -> Wiring:
+    """The wiring the project at `target_root` would have with the components in
+    `add` installed and those named in `remove` not; with neither, the live wiring.
+
+    What a plan predicts (COR-053 point 8), computed by the one resolver: only
+    the component set is hypothetical. The selections, the installed backbone
+    version, the project's filler files and the rule-set pins are read from the
+    tree exactly as the live wiring reads them, and the candidates in `add` come
+    after the installed components, where install and register append them to
+    the registry — so the wiring the operation then leaves is this one.
+    """
+    added = tuple(add)
+    removed = frozenset(remove)
     backbone = read_backbone_manifest(target_root)
-    declarations = load_declarations(target_root)
+    declarations = Declarations.from_installed(
+        (*(c for c in _installed_components(target_root) if c.name not in removed), *added)
+    )
     fillers = project_fillers(target_root)
     wiring = resolve(
         declarations,
@@ -535,6 +636,13 @@ def container_wiring(target_root: Path) -> bs.ContainerWiring:
         ("container-wiring", target_root.resolve()),
         lambda: _container_wiring(shared_wiring(target_root), target_root),
     )
+
+
+def container_wiring_of(wiring: Wiring, target_root: Path) -> bs.ContainerWiring:
+    """What container validation would read of `wiring` — a plan's hypothetical
+    one (`resolve_wiring_with`), so the plan judges a role block by the rule
+    validation applies, against the wiring the operation would leave."""
+    return _container_wiring(wiring, target_root)
 
 
 def _container_wiring(wiring: Wiring, target_root: Path) -> bs.ContainerWiring:
@@ -875,15 +983,18 @@ def _role_findings(
     findings: list[Finding] = []
     for role in roles:
         if role.conflict:
+            commands = " or ".join(
+                f"`{provider_set_command(role.role, name)}`" for name in role.providers
+            )
             findings.append(
                 Finding(
                     config_file,
                     f"/{CONNECTIONS_KEY}/{PROVIDERS_KEY}",
                     Severity.ERROR,
                     f"role {role.role!r} is provided by {_list(role.providers)} and no "
-                    f"provider is selected; select one with the `{CONNECTIONS_KEY}."
-                    f"{PROVIDERS_KEY}` entry `{role.role}: <one of them>`"
-                    f"{_config_set_hint(PROVIDERS_KEY, role.role)} (COR-053 point 1).",
+                    f"provider is selected; select one with {commands}, which writes the "
+                    f"`{CONNECTIONS_KEY}.{PROVIDERS_KEY}` entry `{role.role}: <one of them>` "
+                    f"(COR-053 point 1).",
                 )
             )
             continue
@@ -1351,6 +1462,7 @@ def _points_of(component: Installed) -> list[Point]:
                     schema=schema,
                     process_id=_optional_str(raw, "process"),
                     fingerprint=_fingerprint(component.component_dir, schema),
+                    description=_optional_str(raw, "description"),
                 )
             )
     return points
@@ -1397,6 +1509,7 @@ def _counterparts_of(component: Installed) -> list[Counterpart]:
                     pointer=f"{base}/{index}",
                     mandatory=_mandatory_reason(entry),
                     command=_optional_str(entry, "command"),
+                    description=_optional_str(entry, "description"),
                 )
             )
     return out
@@ -1577,6 +1690,12 @@ def _is_qualified_role(name: str) -> bool:
     """`<publisher>::<role>`, each side non-empty and free of `:`."""
     publisher, sep, role = name.partition(ROLE_QUALIFIER)
     return bool(sep and publisher and role) and POINT_SEPARATOR not in publisher + role
+
+
+def provider_set_command(role: str, capability: str) -> str:
+    """The exact command that selects `capability` as the provider of the qualified
+    `role` — the fix a role conflict names, in `pkit validate` and `pkit status`."""
+    return f"{PROVIDERS_SET_COMMAND} {shlex.quote(role)} {shlex.quote(capability)}"
 
 
 def _config_set_hint(key: str, entry: str) -> str:

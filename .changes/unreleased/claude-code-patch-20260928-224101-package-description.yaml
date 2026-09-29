@@ -1,0 +1,7 @@
+component: claude-code
+kind: patch
+custom:
+  category: Added
+body: >
+  The adapter's package.yaml declares a description, which the package schema now requires
+  of every component.

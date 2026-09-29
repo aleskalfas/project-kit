@@ -98,3 +98,7 @@ Different stages. Don't try to do their jobs — surface anything that looks lik
 - Not a gate. Your output is advisory per COR-024; the primary agent (or user) decides what to do with it. Promotion to gate is a future decision (per COR-007's recurrence test).
 
 The output of your critique is text. The proposing agent reads it, decides what to act on, revises (or pushes back if your critique is wrong), and then shows the user the revised proposal plus any unresolved critiques flagged.
+
+## Intermediate files
+
+Keep intermediate files — drafts, scripts, captured output, notes — in the agent workspace, `.agent-workspace/` at the repository root (a worktree's own root in a worktree), and nowhere else outside the repository; it is excluded from version control and granted to every agent, so write intermediate files there with the file tools — a shell redirect into it is judged like any other shell write (the workspace rule in the core rules).

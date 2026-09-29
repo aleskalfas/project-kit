@@ -35,6 +35,16 @@ dimensions:
   directory-scope:
     layer: hook
     enforcement: runtime
+  # A path-scoped allow (the agent workspace, #1043): a file tool's grant keyed
+  # on its target path, which only the hook sees. Not a confinement boundary;
+  # shell reach is `filesystem-confinement` (sandbox); the file tools run
+  # outside it, so the recogniser's precision is the gate. It reduces prompts on the
+  # allow side; no settings rule is written for it — inside the working
+  # directory the harness's own modes already approve the folder, and a
+  # session-wide rule would reach beyond it.
+  path-scoped-allow:
+    layer: hook
+    enforcement: runtime
   domain-scope:
     # Per-agent domain rules the hook inspects (model intent); distinct from the
     # session-wide sandbox `domain-allowlist` below (the OS-enforced host list).
