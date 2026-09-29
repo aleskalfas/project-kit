@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-29T21:25:48Z
+      at: 2026-09-29T21:53:35Z
       outcome: unchanged
-      unchanged-because: the CLI README gained the analysis commands, friction artefacts --at and docs record-location, all inside its own sections (#887); the area map holds
+      unchanged-because: the lifecycle and CLI READMEs gained the shadowed-alias warning of the packages member, inside the package-metadata table, the package-schema validation section and the validate members table (#1131); what each area covers, and the map, hold
 ---
 
 # project-kit
