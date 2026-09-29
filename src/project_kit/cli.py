@@ -5813,7 +5813,7 @@ def new_agent(namespace: str, name: str, with_storyboard: bool, dry_run: bool) -
     type=str,
     default=None,
     help="Where the agent lives: core, project or a capability name. "
-    "Default: the agent the deploy resolves — project, core, then capabilities by name.",
+    "Default: the agent the deploy resolves — project, capabilities by name, then core.",
 )
 @click.option(
     "--scenario",

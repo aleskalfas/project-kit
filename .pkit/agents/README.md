@@ -17,9 +17,8 @@ pkit:
         - .pkit/adapters/claude-code/_resolve_agent.py
       record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, ADR-051, ADR-052]
     revalidated:
-      at: 2026-09-29T17:22:04Z
-      outcome: unchanged
-      unchanged-because: refs.py now reads the address word pattern from backbone_schemas instead of repeating it; the body parser convention and the citation grammar are unchanged
+      at: 2026-09-29T17:31:44Z
+      outcome: updated
 ---
 
 # Agents
@@ -320,7 +319,9 @@ Three locations can ship agents (core, project, installed capability). On name c
 2. **Capability** (`.pkit/capabilities/<name>/agents/`) wins over **core** (`.pkit/agents/core/`). A capability that ships an agent with the same name as a core agent is opting to override the core surface for adopters who install the capability — the capability's agent is the discipline-specific specialisation; the core's is the universal default. The capability author signals this by shipping the colliding name deliberately.
 3. **Core** (`.pkit/agents/core/`) is the fallback. Used when no project or capability ships the name.
 
-The precedence applies symmetrically across capabilities: if two installed capabilities ship an agent with the same name, the deploy refuses rather than silently picking — same shape as the bundle-collision rule. Adopters disambiguate by uninstalling one capability or by shipping a project-side overlay.
+The Claude Code deploy resolves every name in this order — `source_for` in `.pkit/adapters/claude-code/deploy-agents.sh` looks in the project, then each capability, then core — and the commands that name "the agent that deploys" (`pkit agents`, the ownership check of `pkit refs validate`, `pkit new storyboard` without `--namespace`) resolve it the same way. So when a capability ships the name of a core agent — installed with `override` at the collision prompt, or a core agent arriving later under a name the capability already ships — the capability's agent is the one deployed.
+
+Between capabilities there is no precedence to appeal to. `pkit capabilities install` surfaces a name a second capability already ships and asks per collision (`override` / `skip` / `inspect`); `skip` keeps the installed agent. The deploy does not refuse a collision that reaches it: the first capability by name wins. Resolve it by renaming one agent, skipping it at install, uninstalling one capability, or shipping a project agent of that name.
 
 Per [COR-026](../decisions/core/COR-026-agent-placement-by-discipline.md), discipline-implying agents belong in their capability, not at core. Capability-vs-core name collisions are therefore not the common case — they exist for explicit override scenarios.
 
@@ -453,7 +454,7 @@ pkit new storyboard agent <agent-name> --scenario <slug>   # per-scenario file
 pkit new storyboard agent <agent-name> --namespace <ns>    # pin where the agent lives
 ```
 
-The command finds the agent wherever agents ship from, in the deploy's order — project, core, then capabilities by name — so it stamps beside the agent that deploys. `--namespace` (`core`, `project` or a capability name) looks in that one place instead; a capability name that names no capability gets the same refusal as `pkit new agent`.
+The command finds the agent wherever agents ship from, in the deploy's order — project, capabilities by name, then core — so it stamps beside the agent that deploys. `--namespace` (`core`, `project` or a capability name) looks in that one place instead; a capability name that names no capability gets the same refusal as `pkit new agent`.
 
 The paired `storyboard-author` skill walks the author through framing, tone, and scenario drafting.
 

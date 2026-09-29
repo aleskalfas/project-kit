@@ -487,7 +487,7 @@ Stamps an agent stub — the unified front matter (COR-013) and the canonical bo
 Stamps a storyboard (COR-016) beside an existing agent: `storyboard.md`, or `<slug>.storyboard.md` with `--scenario`, carrying the three-layer scaffold and a `consumers:` entry naming the agent. A flat agent migrates to folder form first (COR-015, an agent gaining its first helper).
 
 - **`agent`** is the only artifact kind handled today.
-- **`<name>`** is the agent's name. Without `--namespace`, the command looks wherever agents ship from, in the deploy's order — project, core, then capabilities by name — and stamps beside the first agent of that name, the one that deploys.
+- **`<name>`** is the agent's name. Without `--namespace`, the command looks wherever agents ship from, in the deploy's order — project, capabilities by name, then core — and stamps beside the first agent of that name, the one that deploys.
 - **`--namespace <ns>`** pins the lookup to one location: `core`, `project` or a capability name (an unknown capability gets the `new agent` refusal).
 
 Refuses if the storyboard already exists or no agent of that name is found. **Coordination with the `storyboard-author` skill**: the skill walks the framing, tone and scenario drafting after the stamp.

@@ -195,18 +195,19 @@ def agents_dir_for(target_root: Path, namespace: Namespace) -> Path:
 def agent_locations(target_root: Path) -> list[tuple[Namespace, Path]]:
     """Every folder agents ship from, as (namespace, folder), in deploy order.
 
-    `project`, `core`, then each capability by name — the order the Claude
-    Code deploy (`deploy-agents.sh`) resolves a name in, so the first location
+    `project`, each capability by name, then `core` — the name-collision
+    precedence the Claude Code deploy (`deploy-agents.sh`) resolves a name by
+    (the agents README, "Name-collision precedence"), so the first location
     holding an agent is the one that deploys. Folders need not exist.
     """
-    locations: list[tuple[Namespace, Path]] = [
-        (ns, target_root / _AGENTS_DIR / ns) for ns in ("project", "core")
+    return [
+        ("project", target_root / _AGENTS_DIR / "project"),
+        *(
+            (cap, target_root / CAPABILITIES_DIR / cap / "agents")
+            for cap in capability_names(target_root)
+        ),
+        ("core", target_root / _AGENTS_DIR / "core"),
     ]
-    locations += [
-        (cap, target_root / CAPABILITIES_DIR / cap / "agents")
-        for cap in capability_names(target_root)
-    ]
-    return locations
 
 
 def find_agent_file(agents_dir: Path, name: str) -> Path | None:

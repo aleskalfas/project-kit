@@ -159,35 +159,33 @@ def _source_in(dir_: Path, name: str) -> Path | None:
 def discover_kit_agents(target_root: Path) -> dict[str, tuple[str, Path]]:
     """Return ``{name: (namespace, source_path)}`` for every kit-shipped agent.
 
-    Precedence mirrors the adapter's ``source_for``: project wins over core,
-    flat over folder within a namespace, then installed-capability agents.
+    Precedence mirrors the adapter's ``source_for`` (the agents README,
+    "Name-collision precedence"): project, then installed capabilities by
+    name, then core — flat over folder within each location.
     """
     agents_root = target_root / ".pkit" / "agents"
     caps_root = target_root / ".pkit" / "capabilities"
+    capabilities = sorted(caps_root.iterdir()) if caps_root.is_dir() else []
 
-    # Collect candidate names across all namespaces (deduped later by precedence).
+    # Every location agents ship from, in precedence order.
+    locations: list[tuple[str, Path]] = [
+        ("project", agents_root / "project"),
+        *((f"capability:{cap.name}", cap / "agents") for cap in capabilities),
+        ("core", agents_root / "core"),
+    ]
+
+    # Collect candidate names across all locations (deduped by precedence below).
     names: set[str] = set()
-    for ns in ("core", "project"):
-        names.update(_agent_names_in(agents_root / ns))
-    if caps_root.is_dir():
-        for cap in sorted(caps_root.iterdir()):
-            names.update(_agent_names_in(cap / "agents"))
+    for _, folder in locations:
+        names.update(_agent_names_in(folder))
 
     resolved: dict[str, tuple[str, Path]] = {}
     for name in sorted(names):
-        # project then core, flat-before-folder handled by _source_in.
-        for ns in ("project", "core"):
-            src = _source_in(agents_root / ns, name)
+        for namespace, folder in locations:
+            src = _source_in(folder, name)
             if src is not None:
-                resolved[name] = (ns, src)
+                resolved[name] = (namespace, src)
                 break
-        else:
-            if caps_root.is_dir():
-                for cap in sorted(caps_root.iterdir()):
-                    src = _source_in(cap / "agents", name)
-                    if src is not None:
-                        resolved[name] = (f"capability:{cap.name}", src)
-                        break
     return resolved
 
 
