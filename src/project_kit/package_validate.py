@@ -45,8 +45,15 @@ passes, in order, each producing findings located by JSON Pointer:
    a synced copy's component together with the backbone, and moves an
    externally sourced one's pin.
 
-The checks across packages — roles and their providers, counterparts against
-point versions, mandatory marks and cycles, fingerprints, the version
+One check across packages is this pass's, over the installed components only:
+an `aliases` entry another name shadows — a backbone command, another
+capability's name, or the same alias a capability earlier in the manifest
+declares — is a WARNING at the entry, read from the table the dispatcher binds
+(`dispatcher.installed_alias_table`), so the finding and `pkit <alias>` never
+disagree. The alias is a shorthand; the capability's own name still reaches it.
+
+The other checks across packages — roles and their providers, counterparts
+against point versions, mandatory marks and cycles, fingerprints, the version
 relations — are the wiring resolver's (`connections`, COR-053 point 7).
 `check_wiring` hands the pass the resolved `Wiring`, whose errors join the
 issue list and which `pkit validate` shows under its "connections" and
@@ -63,7 +70,7 @@ on the one capability it is about to activate. Same code, same messages.
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import TYPE_CHECKING, Any, cast
@@ -83,6 +90,13 @@ from project_kit.backbone_schemas import (
     render_unknown_key,
 )
 from project_kit.command_runner import command_leaves, resolve_command
+from project_kit.dispatcher import (
+    ALIASES_KEY,
+    ShadowedAlias,
+    ShadowKind,
+    installed_alias_table,
+    static_command_names,
+)
 from project_kit.manifest import (
     ORIGIN_EXTERNALLY_SOURCED,
     ORIGIN_KIT_SHIPPED,
@@ -115,10 +129,11 @@ _DEFAULT_JOURNAL = process_journal.JournalSettings()
 
 
 class Severity(Enum):
-    """Whether a finding fails the check. Warnings never do; their two sources are
-    an unknown key under a schema that leaves its object open (pass 2) and a
+    """Whether a finding fails the check. Warnings never do; their three sources
+    are an unknown key under a schema that leaves its object open (pass 2), a
     `runtime_ignore` entry declaring the process journals the project commits
-    (pass 3)."""
+    (pass 3), and an installed capability's alias another name shadows
+    (`shadowed_alias_message`)."""
 
     ERROR = "error"
     WARNING = "warning"
@@ -847,22 +862,81 @@ def validate_installed_packages(target_root: Path) -> PackagesPass:
     """Validate every registered component's package file (the `packages` member),
     each with its provenance (`package_provenance`), so a finding names the fix
     that lasts, and under the project's journal settings, so an entry is warned
-    on exactly when the `.pkit/.gitignore` render drops it."""
+    on exactly when the `.pkit/.gitignore` render drops it; then add, to each
+    capability's report, the aliases of it another name shadows
+    (`_shadowed_alias_findings`)."""
     schema, note = load_package_schema(target_root)
     ownership = lifecycle_ownership.load_ownership(target_root)
     journal = process_journal.read_settings(target_root)
+    shadowed = _shadowed_alias_findings(target_root)
     reports = [
-        validate_package_file(
-            package,
-            schema,
-            component_dir=component_dir,
-            expected_name=entry.name,
-            provenance=package_provenance(target_root, package, entry.origin, ownership),
-            journal=journal,
+        _with_pass(
+            validate_package_file(
+                package,
+                schema,
+                component_dir=component_dir,
+                expected_name=entry.name,
+                provenance=package_provenance(target_root, package, entry.origin, ownership),
+                journal=journal,
+            ),
+            shadowed.get(entry.name, []) if entry.kind == "capability" else [],
         )
         for entry, component_dir, package in _registered_packages(target_root)
     ]
     return PackagesPass(reports=tuple(reports), schema_note=note)
+
+
+def _with_pass(report: PackageReport, new: list[PackageFinding]) -> PackageReport:
+    """`report` with one more pass's findings, by the rule of `_add_pass`."""
+    if not new:
+        return report
+    findings = list(report.findings)
+    _add_pass(findings, new)
+    return replace(report, findings=tuple(findings))
+
+
+def _shadowed_alias_findings(target_root: Path) -> dict[str, list[PackageFinding]]:
+    """Each installed capability's aliases another name shadows, as warnings
+    located at the entry, keyed by the capability. Read from the table the
+    dispatcher binds (`dispatcher.installed_alias_table`, one precedence walk),
+    so what is reported is exactly what `pkit <alias>` does not reach."""
+    table = installed_alias_table(target_root, static_command_names())
+    out: dict[str, list[PackageFinding]] = {}
+    for shadow in table.shadowed:
+        out.setdefault(shadow.alias.capability, []).append(
+            PackageFinding(
+                f"/{ALIASES_KEY}/{shadow.alias.index}",
+                Severity.WARNING,
+                shadowed_alias_message(shadow),
+            )
+        )
+    return out
+
+
+def shadowed_alias_message(shadow: ShadowedAlias) -> str:
+    """The warning on an alias another name shadows: the alias, its capability,
+    what holds the name — which capability, for another's name or alias — and
+    the canonical form that still reaches the capability."""
+    alias, capability, holder = shadow.alias.name, shadow.alias.capability, shadow.holder
+    if shadow.by is ShadowKind.STATIC:
+        held_by = (
+            f"the backbone command `pkit {alias}`, which every capability name and alias yields to"
+        )
+        reached = "runs that command"
+    elif shadow.by is ShadowKind.CAPABILITY:
+        held_by = f"the name of capability {holder!r}, which every alias yields to"
+        reached = f"reaches {holder}"
+    else:
+        held_by = (
+            f"the same alias of capability {holder!r}, registered first (it comes earlier "
+            f"in the backbone manifest)"
+        )
+        reached = f"reaches {holder}"
+    return (
+        f"alias {alias!r} of capability {capability!r} is shadowed by {held_by}: "
+        f"`pkit {alias}` {reached}, never {capability}. An alias is only a shorthand, so "
+        f"this is a warning: `pkit {capability} …` still reaches it."
+    )
 
 
 UMBRELLA_SEVERITY = {

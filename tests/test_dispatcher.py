@@ -16,6 +16,14 @@ import pytest
 from click.testing import CliRunner
 
 from project_kit.cli import main
+from project_kit.dispatcher import (
+    DeclaredAlias,
+    ShadowedAlias,
+    ShadowKind,
+    installed_alias_table,
+    resolve_aliases,
+    static_command_names,
+)
 from project_kit.manifest import ComponentRegistryEntry, read_backbone_manifest, write_backbone_manifest
 from tests.adopter_repo import MakeAdopterRepo
 
@@ -534,6 +542,109 @@ def test_alias_malformed_field_is_ignored(kit_target: Path) -> None:
     result = runner.invoke(main, ["--help"])
     assert result.exit_code == 0
     assert "demo" in result.output
+
+
+# --- the alias table: one precedence walk (#1131) ---------------------
+
+
+def _declared(capability: str, *names: str) -> list[DeclaredAlias]:
+    return [DeclaredAlias(name, capability, index) for index, name in enumerate(names)]
+
+
+def _ping_commands(*aliases: str) -> str:
+    listed = "".join(f"  - {alias}\n" for alias in aliases)
+    return (
+        f"aliases:\n{listed}"
+        "commands:\n"
+        "  ping:\n"
+        "    script: scripts/ping.py\n"
+        "    help: Print a ping.\n"
+    )
+
+
+def test_the_alias_walk_yields_to_a_static_command_a_capability_name_and_an_earlier_alias() -> None:
+    """Precedence: a backbone command, a capability's own name, the first declaration.
+    What loses is shadowed, naming what holds the name and which capability."""
+    table = resolve_aliases(
+        {"cap-a", "cap-b", "cap-c"},
+        [
+            *_declared("cap-a", "shared", "status"),
+            *_declared("cap-b", "cap-a", "shared", "b"),
+            *_declared("cap-c", "c"),
+        ],
+        {"status"},
+    )
+    assert table.bound == {"shared": "cap-a", "b": "cap-b", "c": "cap-c"}
+    assert table.shadowed == (
+        ShadowedAlias(DeclaredAlias("status", "cap-a", 1), ShadowKind.STATIC, None),
+        ShadowedAlias(DeclaredAlias("cap-a", "cap-b", 0), ShadowKind.CAPABILITY, "cap-a"),
+        ShadowedAlias(DeclaredAlias("shared", "cap-b", 1), ShadowKind.ALIAS, "cap-a"),
+    )
+
+
+def test_an_alias_that_already_reaches_its_own_capability_is_not_shadowed() -> None:
+    """Its own name, or its own alias repeated: `pkit <alias>` reaches it, nothing is lost."""
+    table = resolve_aliases({"demo"}, _declared("demo", "demo", "d", "d"), set())
+    assert table.bound == {"d": "demo"}
+    assert table.shadowed == ()
+
+
+def test_static_command_names_are_the_cli_root_group_s() -> None:
+    assert {"status", "validate", "version"} <= static_command_names()
+    assert static_command_names() == frozenset(main.commands)
+
+
+def test_the_first_declared_alias_wins_and_the_table_reports_the_later_one(
+    kit_target: Path, capfd: pytest.CaptureFixture[str]
+) -> None:
+    """The dispatcher binds what the table binds: `pkit <alias>` reaches the
+    capability earlier in the manifest, and the table names the one it shadows."""
+    cap_a = _install_synthetic_capability(kit_target, "cap-a", commands_yaml=_ping_commands("dc"))
+    cap_b = _install_synthetic_capability(kit_target, "cap-b", commands_yaml=_ping_commands("dc"))
+    _stage_proxy_script(cap_a, "scripts/ping.py", body='print("from A")')
+    _stage_proxy_script(cap_b, "scripts/ping.py", body='print("from B")')
+
+    result = CliRunner().invoke(main, ["dc", "ping"])
+    assert result.exit_code == 0
+    captured = capfd.readouterr().out
+    assert "from A" in captured and "from B" not in captured
+
+    table = installed_alias_table(kit_target, static_command_names())
+    assert table.bound == {"dc": "cap-a"}
+    assert table.shadowed == (
+        ShadowedAlias(DeclaredAlias("dc", "cap-b", 0), ShadowKind.ALIAS, "cap-a"),
+    )
+
+
+def test_an_alias_a_static_command_holds_is_reported_and_never_bound(kit_target: Path) -> None:
+    _install_synthetic_capability(kit_target, "demo", commands_yaml=_ping_commands("status", "dm"))
+
+    table = installed_alias_table(kit_target, static_command_names())
+    assert table.bound == {"dm": "demo"}
+    assert table.shadowed == (
+        ShadowedAlias(DeclaredAlias("status", "demo", 0), ShadowKind.STATIC, None),
+    )
+
+
+def test_an_alias_entry_s_position_counts_the_malformed_entries_before_it(
+    kit_target: Path,
+) -> None:
+    """A finding points at the entry as written, so a skipped entry keeps its place."""
+    _install_synthetic_capability(
+        kit_target,
+        "demo",
+        commands_yaml=(
+            "aliases:\n"
+            "  - 7\n"
+            "  - status\n"
+            "commands:\n"
+            "  ping:\n"
+            "    script: scripts/ping.py\n"
+            "    help: Print a ping.\n"
+        ),
+    )
+    table = installed_alias_table(kit_target, static_command_names())
+    assert [shadow.alias.index for shadow in table.shadowed] == [1]
 
 
 # --- uninstall round-trip --------------------------------------------
