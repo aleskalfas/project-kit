@@ -305,7 +305,7 @@ A dry run asks uv nothing and prints `would provision` for each script with inli
 
 A query whose environment is not provisioned exits with uv's report that a dependency is not in its cache and the network is disabled; the query policy recognises it on standard error and names it, rather than reporting the exit: **"environment not provisioned — run `pkit sync`"** — an error finding for a validator, the reason an inert filler gives for a command filler, and distinct from a command that answered nothing.
 
-**Two more, for recognising the methodology's source repository.** [ADR-059](../../tech-docs/architecture/decisions/ADR-059-methodology-source-repository.md) defines the source repository as the one whose `.pkit/` is the methodology's own tree. Code that must recognise it without knowing which code runs does so by two files at the repository root, and their paths name this distribution's package and dispatcher. In this distribution:
+**Two more, for recognising the methodology's source repository.** [ADR-059](../../tech-docs/architecture/decisions/ADR-059-methodology-source-repository.md) defines the source repository as the one whose `.pkit/` is the methodology's own tree. Code that must recognise it without knowing which code runs does so by the package source beside the `.pkit/` tree at the repository root; the package's path, and the path of the dispatcher the router execs there, are this distribution's names. In this distribution:
 
 | In the records | Here | Where it is written |
 |---|---|---|
