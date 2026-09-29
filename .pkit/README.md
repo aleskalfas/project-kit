@@ -17,8 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-09-29T15:20:29Z
-      outcome: updated
+      at: 2026-09-29T16:25:16Z
+      outcome: unchanged
+      unchanged-because: the CLI reference gained the settings consolidate section and two anchors; what it holds and where it sits, which this signpost says, did not change
 ---
 
 # project-kit

@@ -8,12 +8,14 @@ pkit:
         - .pkit/adapters/claude-code/*.sh
         - .pkit/adapters/claude-code/*.py
         - .pkit/adapters/claude-code/settings/core/**
+        - .pkit/adapters/claude-code/settings/project/settings.json
         - .pkit/adapters/claude-code/permission-enforcement.yaml
         - src/project_kit/visibility.py
       record: [COR-002, COR-005, COR-028, ADR-002, ADR-004, ADR-009, ADR-014, ADR-052, ADR-060, "project-management:DEC-030"]
     revalidated:
-      at: 2026-09-29T15:18:46Z
-      outcome: updated
+      at: 2026-09-29T16:25:01Z
+      outcome: unchanged
+      unchanged-because: the layout and the settings section already describe project/settings.json as the project's additions merged over the core baseline; the anchor now names the file
 ---
 
 # Claude Code adapter
