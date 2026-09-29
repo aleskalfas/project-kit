@@ -55,8 +55,11 @@ KIND_OF_PLACE = {
 #: describe an act and are not anchored artefacts, so it is not a place.
 REVALIDATIONS = "revalidations"
 
-#: The version of `pkit friction artefacts --json` this reading understands.
+#: The version of `pkit friction artefacts --json` this reading understands, and
+#: the key of each artefact's anchors in it — added within that version, so a
+#: backbone that predates it answers the same version without the key.
 SCHEMA_VERSION = 1
+ANCHORS = "anchors"
 
 
 class Unreadable(Exception):
@@ -119,7 +122,10 @@ class Analysis:
 
 
 def analysis_of(document: Mapping[str, Any]) -> Analysis:
-    """The `pkit friction artefacts --json` document as the analysis."""
+    """The `pkit friction artefacts --json` document as the analysis. Raises
+    Unreadable for a document this reading does not understand — another
+    version, or an artefact of this capability's places without its anchors,
+    which reading as none would report every use case as not anchored."""
     if document.get("schema_version") != SCHEMA_VERSION:
         raise Unreadable(
             f"`pkit friction artefacts` answered schema_version "
@@ -171,7 +177,15 @@ def analysis_of(document: Mapping[str, Any]) -> Analysis:
     for entry in _mappings(document.get("artefacts")):
         path = str(entry.get("path"))
         kind = kind_of_file.get(path)
-        if kind is None or path in strays:
+        if kind is None:
+            continue
+        if ANCHORS not in entry:
+            raise Unreadable(
+                f"`pkit friction artefacts` gave {entry.get('location') or path} without the "
+                f"`{ANCHORS}` key this capability reads each artefact's anchors from: the "
+                f"installed backbone predates it — upgrade it (`pkit upgrade`)"
+            )
+        if path in strays:
             continue
         is_entry = entry.get("kind") == "entry"
         if is_entry != (kind in COLLECTIONS):
@@ -188,7 +202,7 @@ def analysis_of(document: Mapping[str, Any]) -> Analysis:
                 location=str(entry.get("location") or path),
                 entry=is_entry,
                 fields=fields,
-                anchors=_anchors(entry.get("anchors")),
+                anchors=_anchors(entry.get(ANCHORS)),
             )
         )
     return Analysis(

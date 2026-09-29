@@ -12,6 +12,8 @@ reads the working tree alone: a number the default branch took first is
 from __future__ import annotations
 
 import json
+import os
+import sys
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -96,6 +98,49 @@ def test_what_the_stamp_writes_passes_the_check(project: AdopterRepo) -> None:
         ],
         "findings": [],
     }
+
+
+#: A `pkit` answering `friction artefacts` as a backbone from before the document
+#: carried `anchors`: the real answer, with the key taken out of every artefact.
+_OLDER_PKIT = """#!{python}
+import json, subprocess, sys
+done = subprocess.run([sys.executable, "-m", "project_kit", *sys.argv[1:]],
+                      capture_output=True, text=True)
+out = done.stdout
+if sys.argv[1:3] == ["friction", "artefacts"] and done.returncode == 0:
+    document = json.loads(out)
+    for artefact in document["artefacts"]:
+        del artefact["anchors"]
+    out = json.dumps(document)
+sys.stdout.write(out)
+sys.stderr.write(done.stderr)
+sys.exit(done.returncode)
+"""
+
+
+def test_a_backbone_without_anchors_in_its_document_is_unreadable(
+    project: AdopterRepo, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Read as none, missing anchors would report every use case as not anchored to its
+    actor and every journey as not anchored to its steps; the check says what is missing."""
+    seed(project)
+    older = tmp_path / "older-backbone"
+    older.mkdir()
+    (older / "pkit").write_text(_OLDER_PKIT.format(python=sys.executable), encoding="utf-8")
+    (older / "pkit").chmod(0o755)
+    monkeypatch.setenv("PATH", f"{older}{os.pathsep}{os.environ['PATH']}")
+    document = check(project)
+    assert document["summary"] == ["the analysis could not be read; nothing checked."]
+    ((location, message),) = errors(document)
+    assert location == "."
+    assert message.startswith("the places could not be read: `pkit friction artefacts` gave ")
+    assert message.endswith(
+        "without the `anchors` key this capability reads each artefact's anchors from: the "
+        "installed backbone predates it — upgrade it (`pkit upgrade`)"
+    )
+    refused = run_script(project, NEW, "use-case", "more", "--actor", "ACT-tester")
+    assert refused.returncode == 1
+    assert "without the `anchors` key" in refused.stderr
 
 
 def test_the_validator_reads_the_working_tree_alone(
