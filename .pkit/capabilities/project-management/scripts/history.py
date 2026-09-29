@@ -7,9 +7,9 @@
 # ///
 """Project-management capability — history (read-only, per DEC-049).
 
-Renders an issue's engine journal — the substrate-neutral, canonical audit
-trail of pkit-governed lifecycle moves — so the state log is discoverable
-without reading the GitHub timeline by hand (the #672 "looked unlogged" gap).
+Renders an issue's engine journal — the substrate-neutral audit trail of
+pkit-governed lifecycle moves — so the state log is discoverable without reading
+the GitHub timeline by hand (the #672 "looked unlogged" gap).
 
     pkit project-management history <N>
     pkit project-management history <N> --check-drift
@@ -18,6 +18,14 @@ without reading the GitHub timeline by hand (the #672 "looked unlogged" gap).
 engine journal (what pkit governed) against the GitHub timeline's state-label
 events (what actually happened) and flags state changes with no matching
 journal entry — an out-of-band mutation made without pkit's control.
+
+The journal exists only where the project keeps one: journal logging is opt-in
+and off by default (the backbone's `process.journal.enabled`, COR-033 point 7).
+The engine's status read says which, and with logging off both reads say
+"journal logging is not enabled for this project" — never an empty history that
+reads as "nothing happened", and never a drift verdict computed against a record
+that was not being kept. The canonical audit trail is then the tracker itself:
+the timeline plus pkit's audit comments (DEC-049).
 
 WHICH labels those are is asked of `_lib/axis_carriage`, not assumed to be the
 kit's `state:` prefix ([project-management:DEC-051-axis-carriage-activation]
@@ -33,7 +41,8 @@ Or via the dispatcher:
   pkit project-management history 42
 
 Exit codes:
-  0  rendered (and, with --check-drift, no drift)
+  0  rendered (and, with --check-drift, no drift or the check was skipped:
+     journal logging off, or state not label-carried)
   2  usage error (gh / engine failure)
   3  drift detected (--check-drift only)
 """
@@ -44,6 +53,7 @@ import argparse
 import json
 import subprocess
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 _HERE = Path(__file__).parent
@@ -54,12 +64,30 @@ from _lib.membership import resolve_capability_root  # noqa: E402
 
 _PROCESS_ADDRESS = "project-management:issue-lifecycle"
 
+#: What both reads say when the project keeps no journal — the backbone's own
+#: wording (COR-033 point 7), repeated here because a capability script reads the
+#: engine only through its CLI, never by import (ADR-020).
+NOT_ENABLED = "journal logging is not enabled for this project"
+
+#: The command that turns journal logging on.
+ENABLE_COMMAND = "pkit config set process.journal.enabled true --yes"
+
+
+@dataclass(frozen=True)
+class EngineJournal:
+    """One subject's journal as the engine reports it: whether the project keeps
+    a journal at all, and the entries (empty when it does not)."""
+
+    enabled: bool
+    entries: list[dict]
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Render an issue's engine journal (the canonical pkit-governed audit "
-            "trail); --check-drift flags ungoverned state changes. Per DEC-049."
+            "Render an issue's engine journal (the pkit-governed audit trail, when "
+            "journal logging is enabled); --check-drift flags ungoverned state "
+            "changes. Per DEC-049."
         ),
     )
     parser.add_argument("issue_number", type=int)
@@ -93,20 +121,54 @@ def main() -> int:
         )
         return 2
 
-    print(f"history: #{args.issue_number} — engine journal ({len(journal)} entry(ies))")
-    if not journal:
+    if not journal.enabled:
+        _report_not_enabled(args.issue_number)
+        if args.check_drift:
+            _report_drift_not_enabled()
+        return 0
+
+    entries = journal.entries
+    print(f"history: #{args.issue_number} — engine journal ({len(entries)} entry(ies))")
+    if not entries:
         print("  (no journal entries — no pkit-governed moves recorded yet.)")
-    for entry in journal:
+    for entry in entries:
         print("  " + _render_entry(entry))
 
     if args.check_drift:
-        return _report_drift(args.issue_number, journal, config, substrate_map)
+        return _report_drift(args.issue_number, entries, config, substrate_map)
     return 0
 
 
-def _read_journal(issue_number: int) -> list[dict] | None:
+def _report_not_enabled(issue_number: int) -> None:
+    """Say that there is no journal to show, where the audit trail is instead
+    (DEC-049), and how to start keeping one."""
+    print(f"history: #{issue_number} — {NOT_ENABLED}.")
+    print(
+        "  pkit keeps no engine journal here, so there are no recorded moves to "
+        "show. The audit trail is the tracker: the issue's timeline records every "
+        "state change, and pkit's audit comments record override justifications "
+        "(and, at `audit.projection: full`, every governed move)."
+    )
+    print(f"  To keep a journal from now on: {ENABLE_COMMAND}")
+
+
+def _report_drift_not_enabled() -> None:
+    """The drift check diffs the journal against the timeline; with no journal
+    being kept there is nothing to diff, and a clean verdict would be a lie."""
+    print(
+        f"\ndrift check: SKIPPED — {NOT_ENABLED}, so there is no record of the "
+        "moves pkit governed to compare the timeline against. This is NOT a report "
+        "that no ungoverned change happened."
+    )
+
+
+def _read_journal(issue_number: int) -> EngineJournal | None:
     """Read the subject's journal via `pkit process status … --json` (the read
-    seam homed in the binary, ADR-020). None on any failure."""
+    seam homed in the binary, ADR-020). None on any failure.
+
+    `journal_logging.enabled` says whether the project keeps a journal; a
+    status payload without it comes from an engine that predates the setting
+    and always kept one."""
     try:
         proc = subprocess.run(
             [
@@ -123,8 +185,15 @@ def _read_journal(issue_number: int) -> list[dict] | None:
         data = json.loads(proc.stdout)
     except json.JSONDecodeError:
         return None
+    if not isinstance(data, dict):
+        return None
+    logging = data.get("journal_logging")
+    enabled = logging.get("enabled", True) if isinstance(logging, dict) else True
     journal = data.get("journal")
-    return journal if isinstance(journal, list) else []
+    return EngineJournal(
+        enabled=bool(enabled),
+        entries=journal if isinstance(journal, list) else [],
+    )
 
 
 def _render_entry(entry: dict) -> str:

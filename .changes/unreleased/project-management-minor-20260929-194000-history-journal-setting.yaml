@@ -1,0 +1,20 @@
+component: project-management
+kind: minor
+custom:
+  category: Changed
+body: >
+  `pkit pm history` and `history --check-drift` follow the project's journal
+  setting (`process.journal`, off by default). With journal logging off,
+  `history` reports "journal logging is not enabled for this project", names the
+  tracker (the timeline plus pkit's audit comments) as the audit trail, and gives
+  the command that turns logging on, instead of an empty history; `--check-drift`
+  is skipped with the same reason and exits 0 rather than reporting a clean
+  result. With logging on they behave as before.
+
+  DEC-049 now says where the canonical audit trail lives in each mode — the
+  engine journal where one is kept, the tracker otherwise — and what `history`
+  and `--check-drift` guarantee with committed, clone-local and no journals. The
+  capability no longer declares the process-journal ignore pattern in its
+  `package.yaml`: the backbone owns it and follows the setting. The README gains
+  a "Lifecycle history" section, and the transition-audit key's description says
+  what happens to it without a journal.
