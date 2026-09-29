@@ -686,3 +686,69 @@ def test_duplicate_same_workstream_label_is_single(dw, rc, monkeypatch) -> None:
     )
     result = dw._check_agent_gate(99, {}, _config(), "resolved", CAP_ROOT)
     assert result.passed is True
+
+
+# ---- per-contribution opt-out (#148) ------------------------------------
+
+_DESIGN_OPT_OUT = {
+    "capability": "ux-ui-design",
+    "reviewer": "design-reviewer",
+    "reason": "This project has no UI.",
+}
+
+
+def _config_opting_out(*opt_outs):
+    config = _config()
+    config["review"]["agents"]["contributed_opt_out"] = list(opt_outs)
+    return config
+
+
+def test_opted_out_reviewer_is_not_required(dw, rc, monkeypatch) -> None:
+    """A design PR with design-reviewer opted out passes on the baseline
+    approval alone — the contributed gate no longer applies."""
+    _wire(
+        dw, monkeypatch,
+        collection=_design_collection(rc),
+        comments=[_local_verdict_comment("reviewer", "APPROVED")],
+        closing_issue_labels={42: ["workstream:design"]},
+    )
+    result = dw._check_agent_gate(
+        99, {}, _config_opting_out(_DESIGN_OPT_OUT), "resolved", CAP_ROOT,
+    )
+    assert result.passed is True, result.refusal_message
+    assert "design-reviewer" not in result.passed_via
+
+
+def test_opted_out_undeployed_reviewer_does_not_fail_closed(dw, rc, monkeypatch) -> None:
+    """An undeployed contributed agent refuses the gate (D5) unless its
+    contribution is opted out — then it is never required."""
+    _wire(
+        dw, monkeypatch,
+        collection=_design_collection(rc, deployed=False),
+        comments=[_local_verdict_comment("reviewer", "APPROVED")],
+        closing_issue_labels={42: ["workstream:design"]},
+    )
+    result = dw._check_agent_gate(
+        99, {}, _config_opting_out(_DESIGN_OPT_OUT), "resolved", CAP_ROOT,
+    )
+    assert result.passed is True, result.refusal_message
+
+
+def test_opt_out_naming_no_contribution_refuses(dw, rc, monkeypatch) -> None:
+    """An opt-out naming a reviewer no installed capability contributes is a
+    validation error: the gate refuses, naming the entry and the key to fix."""
+    _wire(
+        dw, monkeypatch,
+        collection=_design_collection(rc),
+        comments=[_local_verdict_comment("reviewer", "APPROVED")],
+        closing_issue_labels={42: ["workstream:design"]},
+    )
+    result = dw._check_agent_gate(
+        99, {},
+        _config_opting_out({**_DESIGN_OPT_OUT, "reviewer": "ui-reviewer"}),
+        "resolved", CAP_ROOT,
+    )
+    assert result.passed is False
+    assert "opt-out list is invalid" in result.refusal_message
+    assert "contributed_opt_out[0]" in result.refusal_message
+    assert "no reviewer `ui-reviewer`" in result.refusal_message

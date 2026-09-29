@@ -38,7 +38,8 @@ that skips a name on one side but not the other):
 
 Together these pin the gate's required-local set to exactly the invoked set,
 across the DEC-032 D1 resolution domain (baseline-only, compose, multi-issue
-union, dedup) and the fail-closed branch.
+union, dedup), the adopter's per-contribution opt-out (#148 — both consumers
+read it from the same config), and the fail-closed branch.
 """
 
 from __future__ import annotations
@@ -164,7 +165,28 @@ def _scenarios(rc):
         "dedup": lambda: (
             _dedup_collection(rc), {42: ["workstream:design"]},
         ),
+        "opted-out-design": lambda: (
+            _design_collection(rc), {42: ["workstream:design"]},
+        ),
+        "opted-out-one-of-two": lambda: (
+            _multi_collection(rc),
+            {42: ["workstream:design"], 43: ["workstream:backend"]},
+        ),
     }
+
+
+# The contribution opt-outs (#148) a scenario configures, identically for both
+# consumers; a scenario absent here configures none.
+_SCENARIO_OPT_OUTS = {
+    "opted-out-design": [{
+        "capability": "ux-ui-design", "reviewer": "design-reviewer",
+        "reason": "No design review in this project.",
+    }],
+    "opted-out-one-of-two": [{
+        "capability": "backend-discipline", "reviewer": "backend-reviewer",
+        "reason": "Backend changes are reviewed upstream.",
+    }],
+}
 
 
 _SCENARIO_LABELS = [
@@ -174,6 +196,8 @@ _SCENARIO_LABELS = [
     "compose-design",
     "multi-issue-union",
     "dedup",
+    "opted-out-design",
+    "opted-out-one-of-two",
 ]
 
 
@@ -220,7 +244,16 @@ def _closing_refs_response(args, labels, refs_rc):
 # ---- review-pr: capture the set it actually INVOKES -------------------
 
 
-def _invoke_set(rpr, monkeypatch, tmp_path, *, collection, labels):
+def _review_config(opt_outs=()):
+    """The pm config both consumers read: one baseline reviewer, plus the
+    contribution opt-outs (#148) when a scenario configures any."""
+    agents: dict = {"local_registered": [{"name": "reviewer"}]}
+    if opt_outs:
+        agents["contributed_opt_out"] = list(opt_outs)
+    return {"review": {"agents": agents}}
+
+
+def _invoke_set(rpr, monkeypatch, tmp_path, *, collection, labels, opt_outs=()):
     """Drive `review-pr.main()` against the stubbed world; return invoked names.
 
     Exercises the REAL invoke loop (`main()`'s `for name in required_local:`),
@@ -252,9 +285,9 @@ def _invoke_set(rpr, monkeypatch, tmp_path, *, collection, labels):
         (agents_dir / f"{name}.md").write_text("agent", encoding="utf-8")
 
     monkeypatch.setattr(rpr, "resolve_capability_root", lambda arg: cap_root)
-    monkeypatch.setattr(rpr, "load_adopter_config", lambda root: {
-        "review": {"agents": {"local_registered": [{"name": "reviewer"}]}}
-    })
+    monkeypatch.setattr(
+        rpr, "load_adopter_config", lambda root: _review_config(opt_outs),
+    )
     monkeypatch.setattr(rpr, "_read_members", lambda root, loader: [])
     monkeypatch.setattr(rpr, "resolve_invoker_identity", lambda config: "dev")
     monkeypatch.setattr(
@@ -282,7 +315,9 @@ def _invoke_set(rpr, monkeypatch, tmp_path, *, collection, labels):
 # ---- done-work: probe the set its gate actually GATES on --------------
 
 
-def _run_gate(dw, monkeypatch, *, collection, labels, approved_names, refs_rc=0):
+def _run_gate(
+    dw, monkeypatch, *, collection, labels, approved_names, refs_rc=0, opt_outs=(),
+):
     """Run `_check_agent_gate` against the stubbed world with `approved_names`
     having a fresh APPROVED. Returns the `_GateResult`.
 
@@ -325,10 +360,8 @@ def _run_gate(dw, monkeypatch, *, collection, labels, approved_names, refs_rc=0)
 
     monkeypatch.setattr(dw, "gh_run", fake_gh_run)
 
-    config = {"review": {"agents": {
-        "local_registered": [{"name": "reviewer"}],
-        "remote_registered": [],
-    }}}
+    config = _review_config(opt_outs)
+    config["review"]["agents"]["remote_registered"] = []
     return dw._check_agent_gate(99, {}, config, "resolved", CAP_ROOT)
 
 
@@ -373,13 +406,18 @@ def test_invoke_set_equals_gate_set(dw, rpr, rc, monkeypatch, tmp_path, label) -
     post-resolution wiring against one stubbed world.
     """
     collection, labels = _scenarios(rc)[label]()
+    opt_outs = _SCENARIO_OPT_OUTS.get(label, ())
 
-    invoked = _invoke_set(rpr, monkeypatch, tmp_path, collection=collection, labels=labels)
+    invoked = _invoke_set(
+        rpr, monkeypatch, tmp_path,
+        collection=collection, labels=labels, opt_outs=opt_outs,
+    )
     assert invoked, "every scenario invokes at least the baseline reviewer"
 
     # Direction 1: approving exactly the invoked set satisfies the gate.
     passing = _run_gate(
         dw, monkeypatch, collection=collection, labels=labels, approved_names=invoked,
+        opt_outs=opt_outs,
     )
     assert passing.passed, (
         f"[{label}] gate refused on exactly review-pr's invoked set "
@@ -394,7 +432,7 @@ def test_invoke_set_equals_gate_set(dw, rpr, rc, monkeypatch, tmp_path, label) -
         remaining = [n for n in invoked if n != withheld]
         refusing = _run_gate(
             dw, monkeypatch, collection=collection, labels=labels,
-            approved_names=remaining,
+            approved_names=remaining, opt_outs=opt_outs,
         )
         assert not refusing.passed, (
             f"[{label}] gate PASSED without {withheld!r} approved, yet "
@@ -402,6 +440,43 @@ def test_invoke_set_equals_gate_set(dw, rpr, rc, monkeypatch, tmp_path, label) -
             f"review-pr invokes (gate-set ⊊ invoke-set divergence). A "
             f"post-resolution filter on the gate side would slip through here."
         )
+
+
+def test_opted_out_reviewer_neither_invoked_nor_required(
+    dw, rpr, rc, monkeypatch, tmp_path,
+) -> None:
+    """#148: an opted-out contribution is out of BOTH sets, and the rest of the
+    contributions still apply. On a PR closing a design issue and a backend
+    issue with backend-reviewer opted out, review-pr invokes the baseline and
+    design-reviewer only, and the gate passes on exactly those approvals —
+    no backend-reviewer verdict is needed — while still requiring
+    design-reviewer."""
+    collection, labels = _scenarios(rc)["opted-out-one-of-two"]()
+    opt_outs = _SCENARIO_OPT_OUTS["opted-out-one-of-two"]
+
+    invoked = _invoke_set(
+        rpr, monkeypatch, tmp_path,
+        collection=collection, labels=labels, opt_outs=opt_outs,
+    )
+    assert invoked == ["reviewer", "design-reviewer"]
+
+    gate = _run_gate(
+        dw, monkeypatch, collection=collection, labels=labels,
+        approved_names=["reviewer", "design-reviewer"], opt_outs=opt_outs,
+    )
+    assert gate.passed, gate.refusal_message
+    assert "backend-reviewer" not in gate.passed_via
+
+    without_design = _run_gate(
+        dw, monkeypatch, collection=collection, labels=labels,
+        approved_names=["reviewer"], opt_outs=opt_outs,
+    )
+    assert not without_design.passed
+    # The refusal names the opt-out with its reason, so the missing
+    # backend-reviewer slot reads as withdrawn, not forgotten.
+    assert "opted out" in without_design.refusal_message
+    assert "backend-reviewer" in without_design.refusal_message
+    assert "Backend changes are reviewed upstream." in without_design.refusal_message
 
 
 def test_invoke_set_equals_gate_set_on_fail_closed(dw, rpr, rc, monkeypatch, tmp_path) -> None:
