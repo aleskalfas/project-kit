@@ -19,6 +19,7 @@ from pathlib import Path
 
 import pytest
 
+from tests.backbone_manifest import register_capabilities
 
 SOURCE_REPO = Path(__file__).resolve().parents[1]
 DEPLOY_SCRIPT = SOURCE_REPO / ".pkit" / "adapters" / "claude-code" / "deploy-skills.sh"
@@ -144,26 +145,6 @@ def test_deploy_never_exits_nonzero_with_empty_output(mock_kit: Path) -> None:
 # --- capability skills: registered capabilities only ----------------------------
 
 
-def _register(root: Path, *capabilities: str) -> None:
-    """Write the backbone manifest registering exactly `capabilities`, as the
-    lifecycle writes it — an adapter entry first, so the parser meets other kinds."""
-    lines = [
-        "schema_version: 1",
-        "backbone_version: 0.0.0",
-        "components:",
-        "  - kind: adapter",
-        "    name: claude-code",
-        "    manifest: .pkit/adapters/claude-code/project/manifest.yaml",
-    ]
-    for cap in capabilities:
-        lines += [
-            "  - kind: capability",
-            f"    name: {cap}",
-            f"    manifest: .pkit/capabilities/{cap}/manifest.yaml",
-        ]
-    (root / ".pkit" / "manifest.yaml").write_text("\n".join(lines) + "\n", encoding="utf-8")
-
-
 def _write_capability_skill(root: Path, capability: str, name: str, *, composite: bool) -> Path:
     """A skill shipped by `capability`; a composite one carries a sub-procedure."""
     skills = root / ".pkit" / "capabilities" / capability / "skills"
@@ -184,7 +165,7 @@ def _deployed(root: Path, name: str) -> Path:
 
 def test_a_registered_capability_s_skills_deploy(mock_kit: Path) -> None:
     source = _write_capability_skill(mock_kit, "my-cap", "cap-skill", composite=True)
-    _register(mock_kit, "my-cap")
+    register_capabilities(mock_kit, "my-cap")
 
     result = _run_deploy(mock_kit)
 
@@ -197,7 +178,7 @@ def test_an_unregistered_capability_s_skills_do_not_deploy(mock_kit: Path) -> No
     """A capability directory on disk that the manifest does not register ships no skill."""
     _write_capability_skill(mock_kit, "registered", "kept", composite=False)
     _write_capability_skill(mock_kit, "on-disk-only", "ignored", composite=True)
-    _register(mock_kit, "registered")
+    register_capabilities(mock_kit, "registered")
 
     result = _run_deploy(mock_kit)
 
@@ -223,11 +204,11 @@ def test_unregistering_in_place_removes_the_skills_on_the_next_deploy(mock_kit: 
     unregistering it is what makes its deployed skills stale."""
     _write_capability_skill(mock_kit, "my-cap", "composite-skill", composite=True)
     _write_capability_skill(mock_kit, "my-cap", "flat-skill", composite=False)
-    _register(mock_kit, "my-cap")
+    register_capabilities(mock_kit, "my-cap")
     assert _run_deploy(mock_kit).returncode == 0
     assert (_deployed(mock_kit, "composite-skill") / "sub-procedure.md").is_symlink()
 
-    _register(mock_kit)
+    register_capabilities(mock_kit)
     result = _run_deploy(mock_kit)
 
     assert result.returncode == 0, result.stderr
@@ -244,7 +225,7 @@ def test_the_stale_removal_never_touches_adopter_content(mock_kit: Path) -> None
     """Only a symlink into `.pkit/skills/` or `.pkit/capabilities/` is the deploy's:
     a real file, or a symlink elsewhere, under a name no source ships survives."""
     _write_capability_skill(mock_kit, "my-cap", "authored", composite=False)
-    _register(mock_kit)
+    register_capabilities(mock_kit)
     own = _deployed(mock_kit, "authored")
     own.mkdir(parents=True)
     (own / "SKILL.md").write_text("# the adopter's own skill\n", encoding="utf-8")
@@ -265,7 +246,7 @@ def test_a_name_that_now_resolves_flat_drops_the_old_siblings(mock_kit: Path) ->
     """A capability's composite skill shadowed by a same-named flat core skill: the
     capability's sub-procedure links go with it, not just its SKILL.md."""
     _write_capability_skill(mock_kit, "my-cap", "shared", composite=True)
-    _register(mock_kit, "my-cap")
+    register_capabilities(mock_kit, "my-cap")
     assert _run_deploy(mock_kit).returncode == 0
     assert (_deployed(mock_kit, "shared") / "sub-procedure.md").is_symlink()
 
@@ -282,7 +263,7 @@ def test_siblings_deploy_from_the_source_that_wins_only(mock_kit: Path) -> None:
     """A flat skill that wins by precedence deploys alone: a lower location's
     composite folder of the same name contributes no sibling beside it."""
     _write_capability_skill(mock_kit, "my-cap", "shared", composite=True)
-    _register(mock_kit, "my-cap")
+    register_capabilities(mock_kit, "my-cap")
     _write_flat_skill(mock_kit, "core", "shared", "# shared, from core\n")
 
     result = _run_deploy(mock_kit)
