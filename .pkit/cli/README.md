@@ -42,7 +42,7 @@ pkit:
         - src/project_kit/environment.py
       record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, PRJ-001, PRJ-003, PRJ-004, ADR-033, ADR-039, ADR-049, ADR-058, ADR-059]
     revalidated:
-      at: 2026-09-29T22:37:15Z
+      at: 2026-09-29T23:19:16Z
       outcome: updated
 ---
 
@@ -770,7 +770,7 @@ The **debt listing** (COR-050 point 9): the debt derived from git, never kept in
 Writes the artefact's **revalidation** (COR-050 point 3): the `revalidated` block, rewritten whole.
 
 - **`at`** is the current UTC time, to the second — a second later if that equals the `at` already written, since `at` changes on every revalidation. Its commit becomes the revalidation point once committed.
-- **`--outcome updated`**: the content changed with this revalidation; it carries no justification, and `--because` is refused. **`--outcome unchanged`**: the content did not need to change; `--because` is required and is written as `unchanged-because`, and it must differ from the justification already written (compared with whitespace folded, as the change check compares it) — the one piece of judgment the tool cannot supply, so a repeated one is refused.
+- **`--outcome updated`**: the content changed with this revalidation; it carries no justification, and `--because` is refused. **`--outcome unchanged`**: the content did not need to change; `--because` is required and is written as `unchanged-because`, and it must differ from the justification already written (compared with whitespace folded, as the change check compares it) — the one piece of judgment the tool cannot supply, so a repeated one is refused. So is one that still holds a **placeholder**: words in angle brackets, as a command shown for you to run writes what you supply (`--because "<why the content still holds>"`, from `friction explain`). Code in brackets is not one: a bracket without a space inside, or opening in capitals (`Vec<u8>`, `Map<String, int>`).
 - **Kept deferrals are re-stated deliberately** (point 4). A deferral is kept only when `--keep <anchor>` names it, or — on a terminal — when you confirm it at the prompt, one question per deferral, removing by default; every other entry is removed, and the output names each deferral it keeps or removes. A kept entry keeps its reason and its deferral point. Keeping a deferral the artefact does not have, or one whose anchor it no longer declares (it would dangle), is refused; an entry whose anchor is gone is always removed.
 - It writes the marker; whether the diff bears the outcome out — `updated` with a content change, `unchanged` without one — is the change check's to judge (a `bump` otherwise).
 
@@ -778,7 +778,7 @@ Writes the artefact's **revalidation** (COR-050 point 3): the `revalidated` bloc
 
 Writes one **deferral** (COR-050 point 4): the anchor's entry in `deferred`, inside `revalidated`.
 
-- The anchor must be one the artefact carries; any other, and an empty `--anchor` or `--reason`, is refused. A new entry is added in its sorted place; an entry already deferring that anchor has its reason reworded, which keeps its deferral point — the commit that first introduced the entry — and the same reason again is a no-op.
+- The anchor must be one the artefact carries; any other, an empty `--anchor` or `--reason`, and a reason still holding a placeholder (`<why it can wait>`, as under `revalidate`), is refused. A new entry is added in its sorted place; an entry already deferring that anchor has its reason reworded, which keeps its deferral point — the commit that first introduced the entry — and the same reason again is a no-op.
 - **`at` is never touched**, nor `outcome` or `unchanged-because` — their lines stay byte for byte: a deferral is not a revalidation. An artefact never revalidated gets a `revalidated` block holding `deferred` alone.
 - The entry answers the anchor's change in the change check, and covers the anchor's changes up to the commit that introduces it; a later change is new friction.
 
