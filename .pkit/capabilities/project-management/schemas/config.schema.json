@@ -177,7 +177,7 @@
         "agents": {
           "type": "object",
           "additionalProperties": false,
-          "description": "Registered reviewer agents per DEC-028. Both lists optional; at least one entry across them is needed for the agent gate to be satisfiable.",
+          "description": "Registered reviewer agents per DEC-028, and the opt-outs from capability-contributed ones per DEC-032. Both registration lists optional; at least one entry across them is needed for the agent gate to be satisfiable.",
           "properties": {
             "effort": {
               "type": "string",
@@ -217,6 +217,39 @@
                     "type": "string",
                     "minLength": 1,
                     "description": "Agent name; must correspond to a deployed agent file (`.claude/agents/<name>.md` on the Claude Code adapter). pre-check refuses a registered name with no deployed file — an unsatisfiable merge gate."
+                  }
+                }
+              }
+            },
+            "contributed_opt_out": {
+              "type": "array",
+              "description": "Per-contribution opt-out (DEC-032, #148). Installing a review-discipline capability activates its contributed reviewer requirements (DEC-032 D5); each entry here withdraws one of them — every rule `capability` contributes for `reviewer` — so that reviewer is neither invoked by `review-pr` nor required by `done-work`, while the capability stays installed and its other contributions still apply. A reviewer the baseline `local_registered` names, or another capability contributes, is still required. An entry naming a capability or reviewer no installed capability contributes is refused by `pre-check` and by the gate. pre-check lists each opt-out with its reason.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "capability",
+                  "reviewer",
+                  "reason"
+                ],
+                "properties": {
+                  "capability": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S",
+                    "description": "The installed capability that contributes the requirement, as named in `.pkit/manifest.yaml` (e.g. `software-engineering`)."
+                  },
+                  "reviewer": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S",
+                    "description": "The contributed reviewer agent to stop requiring (e.g. `docs-reviewer`)."
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S",
+                    "description": "Why this project does not want the contributed gate. Required: an opt-out withdraws a merge gate, so it states why; pre-check and review-pr show it next to the opt-out."
                   }
                 }
               }

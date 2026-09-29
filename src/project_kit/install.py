@@ -1025,9 +1025,10 @@ def _backup_existing_claude_settings(ctx: InstallContext) -> None:
         click.echo(f"  {'backed-up':<12} .claude/settings.json -> .claude/settings.json.pre-pkit")
 
 
-def _run_adapter_primitive(script: Path, ctx: InstallContext) -> None:
+def _run_adapter_primitive(script: Path, ctx: InstallContext, *args: str) -> None:
     if ctx.dry_run:
-        click.echo(f"  {'would run':<12} {script.relative_to(ctx.target_root)}")
+        command = shlex.join([str(script.relative_to(ctx.target_root)), *args])
+        click.echo(f"  {'would run':<12} {command}")
         return
     if not script.is_file():
         return
@@ -1036,7 +1037,7 @@ def _run_adapter_primitive(script: Path, ctx: InstallContext) -> None:
     # partial failure. We surface the failure cleanly via a
     # ClickException so the operator sees `Error: ...` instead of a
     # Python traceback, but the script's own output stays intact.
-    result = subprocess.run([str(script)], cwd=ctx.target_root)
+    result = subprocess.run([str(script), *args], cwd=ctx.target_root)
     if result.returncode != 0:
         rel = script.relative_to(ctx.target_root)
         raise click.ClickException(
@@ -1059,6 +1060,24 @@ _ADAPTER_PRIMITIVES = (
 )
 
 
+# The adapter primitive that removes one capability's deployed skills and
+# agents from its harness, called with the capability's name as its one
+# argument. Discovered by name in each adapter's directory, as the deploy
+# primitives are. It runs where they cannot help: a capability unregistered
+# while its subtree stays on disk, which a filesystem-keyed deploy re-run does
+# not see as gone. Unlike them its absence is reported, never skipped
+# silently — an adapter without it leaves the capability active in its harness.
+ADAPTER_UNDEPLOY_PRIMITIVE = "undeploy-capability.sh"
+
+
+def _installed_adapter_dirs(target_root: Path) -> list[Path]:
+    """Each installed adapter's directory, `.pkit/adapters/<name>/`, in name order."""
+    adapters_root = target_root / ".pkit" / "adapters"
+    if not adapters_root.is_dir():
+        return []
+    return sorted(p for p in adapters_root.iterdir() if p.is_dir())
+
+
 def run_installed_adapter_primitives(ctx: InstallContext) -> None:
     """Invoke each installed adapter's primitive scripts in turn.
 
@@ -1068,12 +1087,38 @@ def run_installed_adapter_primitives(ctx: InstallContext) -> None:
     `.pkit/adapters/<name>/`; the scripts must be idempotent so re-runs
     on a stable state report "exists" rather than "created".
     """
-    adapters_root = ctx.target_root / ".pkit" / "adapters"
-    if not adapters_root.is_dir():
-        return
-    for adapter_dir in sorted(p for p in adapters_root.iterdir() if p.is_dir()):
+    for adapter_dir in _installed_adapter_dirs(ctx.target_root):
         for name in _ADAPTER_PRIMITIVES:
             _run_adapter_primitive(adapter_dir / name, ctx)
+
+
+def undeploy_capability_from_adapters(ctx: InstallContext, capability: str) -> tuple[str, ...]:
+    """Run each installed adapter's undeploy primitive for *capability*.
+
+    Adapters are discovered as `run_installed_adapter_primitives` discovers
+    them; each runs `ADAPTER_UNDEPLOY_PRIMITIVE <capability>`, which removes
+    what the adapter deployed for that capability and nothing else. The
+    lifecycle names the capability only — where a harness keeps skills and
+    agents is the adapter's knowledge (COR-013).
+
+    An adapter that ships no undeploy primitive is reported by a `warning`
+    line naming it, and its name is returned, so no caller can miss that its
+    harness still carries the capability. A primitive that fails raises, as a
+    deploy primitive does.
+    """
+    lacking: list[str] = []
+    for adapter_dir in _installed_adapter_dirs(ctx.target_root):
+        script = adapter_dir / ADAPTER_UNDEPLOY_PRIMITIVE
+        if not script.is_file():
+            lacking.append(adapter_dir.name)
+            click.echo(
+                f"  {'warning':<12} adapter {adapter_dir.name!r} ships no "
+                f"{ADAPTER_UNDEPLOY_PRIMITIVE}: capability {capability!r} stays deployed in "
+                "its harness. Remove its skills and agents there by hand."
+            )
+            continue
+        _run_adapter_primitive(script, ctx, capability)
+    return tuple(lacking)
 
 
 def _print_next_steps(ctx: InstallContext) -> None:

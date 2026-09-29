@@ -17,7 +17,7 @@ pkit:
         - .pkit/adapters/claude-code/_resolve_agent.py
       record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, ADR-051, ADR-052]
     revalidated:
-      at: 2026-09-29T17:28:40Z
+      at: 2026-09-29T18:03:41Z
       outcome: updated
 ---
 
@@ -311,7 +311,7 @@ The values are the harness's own — Claude Code's, the one adapter shipped toda
 
 ## Deploy mechanics
 
-Each adapter (per COR-005) handles its own deploy. For Claude Code today, `.pkit/adapters/claude-code/deploy-agents.sh` walks `.pkit/agents/{core,project}/` and any installed capability's `agents/` folder (per [COR-026](../decisions/core/COR-026-agent-placement-by-discipline.md)), applies the overlay, and writes resolved agent files into `.claude/agents/`. The deploy primitive is invoked by `pkit init` and `pkit sync`; the resolved files are what the harness loads.
+Each adapter (per COR-005) handles its own deploy. For Claude Code today, `.pkit/adapters/claude-code/deploy-agents.sh` walks `.pkit/agents/{core,project}/` and any installed capability's `agents/` folder (per [COR-026](../decisions/core/COR-026-agent-placement-by-discipline.md)), applies the overlay, and writes resolved agent files into `.claude/agents/`. The deploy primitive is invoked by `pkit init` and `pkit sync`; the resolved files are what the harness loads. Its counterpart, the adapter's undeploy primitive (`undeploy-capability.sh <name>` for Claude Code), removes one capability's deployed agents — and skills — when the capability is unregistered but its files stay, the case a deploy re-run cannot see; the lifecycle calls it by name and knows no harness path (the adapters README, "Primitives the lifecycle calls").
 
 ### Name-collision precedence
 

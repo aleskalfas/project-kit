@@ -11,6 +11,10 @@ and the fail-closed distinction (DEC-032 D5) between:
   * a not-ok contribution collection (ERROR_COLLECTION fail-closed),
   * an unresolvable closing-issue lookup (ERROR_CLOSING_ISSUES fail-closed),
 
+and the adopter's per-contribution opt-out (#148): an opted-out contribution
+leaves the set while the rest of the capability's contribution stays, and an
+opt-out naming no installed contribution fails closed (ERROR_OPT_OUT).
+
 The `gh`-backed closing-issue/label fetchers and the collector are injected,
 so these are pure-logic unit tests with no live repo / GitHub.
 """
@@ -60,6 +64,13 @@ def rc():
 
 REPO = Path("/tmp/x")  # collect_contributions is injected; never read.
 
+# The opt-out reader the consumers call (`read_opt_outs(config)`), used by
+# `_resolve` to turn a configured list into the resolver's `opt_outs`.
+_OO = _load(
+    "pm_review_opt_outs_for_required_reviewers",
+    SCRIPTS_DIR / "_lib" / "review_opt_outs.py",
+)
+
 
 def _design_collection(rc, *, deployed=True):
     err = None if deployed else rc.ContributionError(
@@ -81,7 +92,7 @@ def _design_collection(rc, *, deployed=True):
 
 def _resolve(
     rr, *, baseline, collection, closing, labels=None, refs_unresolvable=None,
-    changed=None, files_unresolvable=None,
+    changed=None, files_unresolvable=None, opt_outs=None,
 ):
     """Drive resolve_required_local_reviewers with injected fetchers.
 
@@ -95,6 +106,9 @@ def _resolve(
     the changed-files fetcher return that `_Unresolvable` instead. The resolver
     only calls the changed-files fetcher when the collection carries a floor
     rule, so floor-free scenarios never exercise it.
+
+    `opt_outs` is the configured `review.agents.contributed_opt_out` list
+    (raw, as it appears in `project/config.yaml`); `None` is no opt-outs.
     """
     labels = labels or {}
     changed = changed or []
@@ -122,6 +136,9 @@ def _resolve(
         closing_issue_numbers=closing_fn,
         issue_labels=labels_fn,
         changed_files=changed_fn,
+        opt_outs=_OO.read_opt_outs(
+            {"review": {"agents": {"contributed_opt_out": opt_outs}}}
+        ),
         collect_contributions=lambda repo_root: collection,
     )
 
@@ -599,3 +616,217 @@ def test_diff_touches_code_empty_is_false(rr) -> None:
 
 def test_diff_touches_code_mixed_is_true(rr) -> None:
     assert rr.diff_touches_code(["README.md", "src/app.py"]) is True
+
+
+# ---- per-contribution opt-out (#148) ----------------------------------
+#
+# The adopter withdraws one `(capability, reviewer)` contribution in
+# `review.agents.contributed_opt_out`. The resolver drops it before matching,
+# so it is neither invoked by review-pr nor required by done-work, while the
+# rest of the capability's contribution still applies.
+
+_SE = "software-engineering"
+_DOCS_OPT_OUT = {
+    "capability": _SE,
+    "reviewer": "docs-reviewer",
+    "reason": "Docs are reviewed by the tech-writing team.",
+}
+
+
+def _se_collection(rc, *, docs_deployed=True):
+    """The software-engineering panel as it ships: code, security and docs
+    reviewers on the `touches-code` floor, docs also on `type: *`."""
+    def rule(reviewer, *, floor=None, match=None, deployed=True):
+        error = None if deployed else rc.ContributionError(
+            rc.ERROR_UNDEPLOYED_AGENT, _SE, f"`{reviewer}` is not deployed",
+        )
+        return rc.ContributionRule(
+            capability=_SE,
+            predicate=MappingProxyType(match or {}),
+            reviewer=reviewer,
+            floor=floor,
+            deployed=deployed,
+            resolution_error=error,
+        )
+
+    rules = (
+        rule("code-reviewer", floor=rc.FLOOR_TOUCHES_CODE),
+        rule("security-reviewer", floor=rc.FLOOR_TOUCHES_CODE),
+        rule("docs-reviewer", floor=rc.FLOOR_TOUCHES_CODE, deployed=docs_deployed),
+        rule("docs-reviewer", match={"type": rc.MATCH_ANY}, deployed=docs_deployed),
+    )
+    return rc.ContributionCollection(
+        rules=rules,
+        errors=tuple(r.resolution_error for r in rules if r.resolution_error),
+        capabilities_walked=("project-management", _SE),
+    )
+
+
+def test_without_opt_out_the_panel_requires_docs_reviewer(rr, rc) -> None:
+    """The control: the shipped panel on a code PR requires all three."""
+    res = _resolve(
+        rr, baseline=["reviewer"],
+        collection=_se_collection(rc),
+        closing=[42], labels={42: ["type:feature"]},
+        changed=["src/app.py"],
+    )
+    assert res.ok
+    # Classification-matched first (docs via `type: *`), then the floor rules.
+    assert res.required_local == (
+        "reviewer", "docs-reviewer", "code-reviewer", "security-reviewer",
+    )
+    assert res.opted_out == ()
+
+
+def test_opted_out_reviewer_is_not_required(rr, rc) -> None:
+    """docs-reviewer opted out: neither its floor rule nor its `type: *` rule
+    applies, and the rest of the contribution still does."""
+    res = _resolve(
+        rr, baseline=["reviewer"],
+        collection=_se_collection(rc),
+        closing=[42], labels={42: ["type:feature"]},
+        changed=["src/app.py"],
+        opt_outs=[_DOCS_OPT_OUT],
+    )
+    assert res.ok
+    assert res.required_local == ("reviewer", "code-reviewer", "security-reviewer")
+    assert "docs-reviewer" not in res.contributed_by
+    assert [(o.capability, o.reviewer, o.reason) for o in res.opted_out] == [
+        (_SE, "docs-reviewer", "Docs are reviewed by the tech-writing team."),
+    ]
+
+
+def test_opt_out_on_a_docs_only_classified_pr_leaves_baseline(rr, rc) -> None:
+    """The match rule was the only one that fired; withdrawn, baseline remains."""
+    res = _resolve(
+        rr, baseline=["reviewer"],
+        collection=_se_collection(rc),
+        closing=[42], labels={42: ["type:docs"]},
+        changed=["README.md"],
+        opt_outs=[_DOCS_OPT_OUT],
+    )
+    assert res.ok
+    assert res.required_local == ("reviewer",)
+
+
+def test_opt_out_never_withdraws_the_baseline(rr, rc) -> None:
+    """A reviewer the adopter registers in `local_registered` stays required
+    even when the same name's contribution is opted out."""
+    res = _resolve(
+        rr, baseline=["reviewer", "docs-reviewer"],
+        collection=_se_collection(rc),
+        closing=[42], labels={42: ["type:docs"]},
+        changed=["README.md"],
+        opt_outs=[_DOCS_OPT_OUT],
+    )
+    assert res.ok
+    assert res.required_local == ("reviewer", "docs-reviewer")
+
+
+def test_opt_out_keeps_another_capabilitys_contribution_of_the_reviewer(rr, rc) -> None:
+    """The same reviewer contributed by a second capability is still required
+    — and attributed to that capability, not the opted-out one."""
+    collection = _se_collection(rc)
+    other = rc.ContributionRule(
+        capability="tech-writing",
+        predicate=MappingProxyType({"type": ("docs",)}),
+        reviewer="docs-reviewer",
+    )
+    collection = rc.ContributionCollection(
+        rules=collection.rules + (other,),
+        capabilities_walked=collection.capabilities_walked + ("tech-writing",),
+    )
+    res = _resolve(
+        rr, baseline=["reviewer"],
+        collection=collection,
+        closing=[42], labels={42: ["type:docs"]},
+        changed=["README.md"],
+        opt_outs=[_DOCS_OPT_OUT],
+    )
+    assert res.ok
+    assert res.required_local == ("reviewer", "docs-reviewer")
+    assert res.contributed_by == {"docs-reviewer": "tech-writing"}
+
+
+def test_opted_out_undeployed_reviewer_does_not_fail_closed(rr, rc) -> None:
+    """An undeployed contributed agent fails the gate closed (DEC-032 D5) —
+    unless its contribution is opted out, since it is then never required."""
+    control = _resolve(
+        rr, baseline=["reviewer"],
+        collection=_se_collection(rc, docs_deployed=False),
+        closing=[42], labels={42: ["type:feature"]},
+        changed=["src/app.py"],
+    )
+    assert not control.ok and control.error.kind == rr.ERROR_COLLECTION
+
+    res = _resolve(
+        rr, baseline=["reviewer"],
+        collection=_se_collection(rc, docs_deployed=False),
+        closing=[42], labels={42: ["type:feature"]},
+        changed=["src/app.py"],
+        opt_outs=[_DOCS_OPT_OUT],
+    )
+    assert res.ok
+    assert res.required_local == ("reviewer", "code-reviewer", "security-reviewer")
+
+
+def test_opt_out_naming_an_unknown_capability_is_a_validation_error(rr, rc) -> None:
+    res = _resolve(
+        rr, baseline=["reviewer"],
+        collection=_se_collection(rc),
+        closing=[42], labels={42: ["type:feature"]},
+        changed=["src/app.py"],
+        opt_outs=[{**_DOCS_OPT_OUT, "capability": "ux-ui-design"}],
+    )
+    assert not res.ok
+    assert res.error.kind == rr.ERROR_OPT_OUT
+    assert res.required_local == ()
+    (detail,) = res.error.details
+    assert "contributed_opt_out[0]" in detail
+    assert "`ux-ui-design`" in detail
+
+
+def test_opt_out_naming_an_unknown_reviewer_is_a_validation_error(rr, rc) -> None:
+    res = _resolve(
+        rr, baseline=["reviewer"],
+        collection=_se_collection(rc),
+        closing=[42], labels={42: ["type:feature"]},
+        changed=["src/app.py"],
+        opt_outs=[{**_DOCS_OPT_OUT, "reviewer": "design-reviewer"}],
+    )
+    assert not res.ok
+    assert res.error.kind == rr.ERROR_OPT_OUT
+    (detail,) = res.error.details
+    assert "no reviewer `design-reviewer`" in detail
+
+
+def test_malformed_opt_out_is_a_validation_error(rr, rc) -> None:
+    """A missing reason voids the list: nothing is withdrawn, the resolver
+    refuses rather than guess."""
+    res = _resolve(
+        rr, baseline=["reviewer"],
+        collection=_se_collection(rc),
+        closing=[42], labels={42: ["type:feature"]},
+        changed=["src/app.py"],
+        opt_outs=[{"capability": _SE, "reviewer": "docs-reviewer"}],
+    )
+    assert not res.ok
+    assert res.error.kind == rr.ERROR_OPT_OUT
+    assert any(".reason" in d for d in res.error.details)
+
+
+def test_broken_declaration_is_reported_before_the_opt_out(rr, rc) -> None:
+    """A malformed declaration leaves its capability contributing nothing, which
+    would make an opt-out naming it look unknown — the collection error is the
+    root cause, so it is the one reported."""
+    err = rc.ContributionError(rc.ERROR_MALFORMED, _SE, "bad decl")
+    res = _resolve(
+        rr, baseline=["reviewer"],
+        collection=rc.ContributionCollection(
+            rules=(), errors=(err,), capabilities_walked=(_SE,),
+        ),
+        closing=[42], labels={42: ["type:feature"]},
+        opt_outs=[_DOCS_OPT_OUT],
+    )
+    assert not res.ok
+    assert res.error.kind == rr.ERROR_COLLECTION

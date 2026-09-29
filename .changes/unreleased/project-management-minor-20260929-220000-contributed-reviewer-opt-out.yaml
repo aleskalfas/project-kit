@@ -1,0 +1,18 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+body: >
+  You can opt out of one reviewer an installed capability contributes to the
+  agent-mode merge gate, without uninstalling the capability or bypassing every
+  gated PR (#148). List `{capability, reviewer, reason}` under
+  `review.agents.contributed_opt_out:` in `project/config.yaml`; the reason is
+  required. That capability's rules for that reviewer leave the resolved
+  reviewer set, so `review-pr` does not invoke it and `done-work` does not
+  require it, while the capability's other contributions, a reviewer you
+  register in `local_registered`, and the same reviewer contributed by another
+  capability all still apply. `pre-check` lists each opt-out with its reason,
+  and `review-pr` prints it next to the reviewers it invokes. An entry naming a
+  capability that is not installed, or a reviewer it does not contribute, is an
+  error: `pre-check` fails on it and `review-pr` and `done-work` refuse until it
+  is fixed or removed.
