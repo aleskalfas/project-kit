@@ -27,7 +27,7 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, ADR-056, ADR-057, ADR-059]
     revalidated:
-      at: 2026-09-29T16:34:26Z
+      at: 2026-09-29T16:58:50Z
       outcome: updated
 ---
 
@@ -355,7 +355,7 @@ The backbone runs the commands a component registers through one runner, `projec
   |---|---|---|---|---|
   | predicate | the process engine, for every predicate a process definition declares | the subject and `--json`; the environment unchanged — a predicate may reach the network | a JSON object the engine interprets (the process README, "The predicate runner") | indeterminate, fail-closed: a gate stays shut |
   | query | `pkit validate`, for a component's validator (ADR-058) | `--json`; the offline marker set ("The methodology's literals" above); the leaf must declare `query-contract: true`, or it is not started | the findings document (the `validators` row above) | an error finding |
-  | query, for a filler | the data points' resolution (`project_kit.data_points`), for a contribution's `command` — read by `pkit validate` and `pkit status` | `--json` alone: a filler takes no parameter ([COR-052](../decisions/core/COR-052-slots.md) point 6); the offline marker set; the leaf must declare `query-contract: true`, or it is not started | the filler envelope, `{"schema_version": <the point's version>, "value": <the point's value>}` and nothing else — no `remove`, which is the project's alone — whose value fits the point's schema whole | the filler inert, never an empty or a partial value: the point follows its inert policy ("How a data point resolves") |
+  | query, for a filler | the data points' resolution (`project_kit.data_points`), for a contribution's `command` — read by `pkit validate` and `pkit status`, and by `pkit connections resolve` for its one point's fillers only | `--json` alone: a filler takes no parameter ([COR-052](../decisions/core/COR-052-slots.md) point 6); the offline marker set; the leaf must declare `query-contract: true`, or it is not started | the filler envelope, `{"schema_version": <the point's version>, "value": <the point's value>}` and nothing else — no `remove`, which is the project's alone — whose value fits the point's schema whole | the filler inert, never an empty or a partial value: the point follows its inert policy ("How a data point resolves") |
   | context read | `pkit report`, for the workstream on a report's context line ([ADR-050](../../tech-docs/architecture/decisions/ADR-050-report-context-sourcing.md)) | none; the environment unchanged — the verb asks the tracker | the value it prints, read as text rather than parsed: the verb prints it bare, not as a JSON document; output that is not UTF-8 is no value | the workstream omitted, silently — except an overrun, which the report names in a warning before going on without it |
 
   The report builder is bounded like every other run, not exempt: the workstream only enriches a report, so waiting on it past the bound would let a hung tracker call hold the whole report back.
@@ -500,7 +500,7 @@ A filler command lacking the declaration, or a contribution naming both `command
 
 **What `pkit status` shows** (COR-052 point 7), under "Data points": where the project's filler files live and how many there are; how many points are defined, resolved and unresolved; then per point its policy, inert policy and default participation, and whether it resolved or why not; its value — a `single` point's answer with the filler that gave it, or each entry of a `union` or `additive` point with its origin and what it replaced; each removal override with its reason and the fillers it removed from; and every filler considered — `taken`, `inert` or `passed over`, with the reason — a command filler saying whether its command declares the query contract.
 
-**Reading one point from a script.** `pkit connections resolve <address> --json` prints the same resolution of one point as a stable document (the CLI README, "Connections commands"). It is how a component's own script reads a point it defines — a capability script runs in its own environment and does not import the backbone — before applying the value itself: the consumer, not the point, knows what the value is applied to.
+**Reading one point from a script.** `pkit connections resolve <address> --json` prints the same resolution of one point as a stable document (the CLI README, "Connections commands"). It is how a component's own script reads a point it defines — a capability script runs in its own environment and does not import the backbone — before applying the value itself: the consumer, not the point, knows what the value is applied to. **It resolves that point alone**: only its fillers are asked, so no other point's command filler starts, and reading one point costs what that point costs, however many others the project has. `pkit validate` and `pkit status` still resolve every point. Within one run each point resolves at most once, whichever reader asks first, sharing the run's one wiring and filler files. Points never read one another, so a point resolved alone is the point resolved among all.
 
 #### Discovery: what a capability would connect to
 

@@ -1,0 +1,11 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The read command `pkit connections resolve <address>` now resolves only the
+  point asked for. Before, it resolved every data point and so started every
+  command filler, and through them any nested checks, to answer for one. A script reading the
+  readers point no longer runs the documentation-check fillers. `pkit validate`
+  and `pkit status` still resolve every point. Within one run each point
+  resolves once, whichever reader asks first, so the answer is unchanged.

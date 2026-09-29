@@ -40,7 +40,7 @@ pkit:
         - src/project_kit/environment.py
       record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, PRJ-001, PRJ-003, PRJ-004, ADR-033, ADR-039, ADR-049, ADR-058, ADR-059]
     revalidated:
-      at: 2026-09-29T16:34:25Z
+      at: 2026-09-29T16:58:50Z
       outcome: updated
 ---
 
@@ -805,7 +805,7 @@ The contributor-selection key, `connections.selections`, has no command of its o
 
 ### `connections resolve <address> [--json]`
 
-Resolves the data point `<address>` (`<publisher>::<role>:<point>`) exactly as `pkit validate` reports it and `pkit status` shows it — its fillers combined by its policy ([COR-052](../decisions/core/COR-052-slots.md); the lifecycle README, "How a data point resolves") — and prints it. Read-only: it writes nothing, and command fillers run as they do there, under the query policy (`--json` alone, offline-marked, bounded). It is the seam through which a capability's own script reads a point it defines — a script runs in its own environment and does not import the backbone — and then applies the value itself, since a data point is a value and takes no parameter (COR-052 point 6).
+Resolves the data point `<address>` (`<publisher>::<role>:<point>`) exactly as `pkit validate` reports it and `pkit status` shows it — its fillers combined by its policy ([COR-052](../decisions/core/COR-052-slots.md); the lifecycle README, "How a data point resolves") — and prints it. Read-only: it writes nothing, and command fillers run as they do there, under the query policy (`--json` alone, offline-marked, bounded) — but only that point's: it resolves the one point, so no other point's command filler starts. It is the seam through which a capability's own script reads a point it defines — a script runs in its own environment and does not import the backbone — and then applies the value itself, since a data point is a value and takes no parameter (COR-052 point 6).
 
 - Without `--json`, the point's lines of the status report's "Data points" section.
 - With `--json`, one stable document: `address`; `defined`; `provider`; `policy` and `inert_policy`; `participation` (the default's, or null); `resolved`, and `why` when not; `value` — null when the point does not resolve, never a partial value; `origin` (a `single` point's answering filler); `entries` (a `union` or `additive` point's, each `{id, origin, replaces, value}`, `origin` being a capability, `project filler` or `the default`); `removals` (each `{id, reason, removed_from}`); `fillers` (each `{source, name, supplies, state, reason, query_contract}`, `state` one of `taken`, `inert`, `passed over`). An address no active provider defines as a data point prints `{address, defined: false, resolved: false, value: null, why}`.
