@@ -3,7 +3,7 @@ kind: minor
 custom:
   category: Added
 body: >
-  living-docs ships its first artefacts (DEC-001). Its package metadata declares
+  The capability ships its first artefacts (DEC-001). Its package metadata declares
   the two documentation roots as the default places of their spaces and a
   definitions location, `living-docs/` under the internal root, whose
   `rule-sets/` folder holds each space's definition as a project rule set. The
