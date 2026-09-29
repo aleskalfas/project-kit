@@ -61,7 +61,7 @@ Create artefacts with the stamp, never by copying a template by hand: it gives e
 | `pkit analysis new term <slug> [--name <text>] [--unanchored-because <text>]` | the entry `TERM-<slug>` of `glossary.md`, with its section |
 | `pkit analysis new use-case <slug> --actor <ACT-id> [--area <area>] [--title <text>]` | `use-case-model/use-cases/[<area>/]UC-NNN-<slug>.md`, its actor anchored |
 | `pkit analysis new journey <slug> --actor <ACT-id> --step <UC-id> --step <UC-id> … [--title <text>]` | `use-case-model/journeys/JRN-NNN-<slug>.md`, its steps anchored |
-| `pkit analysis new revalidation <slug> --change <ref> --trigger <trigger> --outcome <id>=<outcome> … [--gap <text> --resolution <text>]…` | a revalidation record, `revalidations/<date>-<slug>.md` — only one with something to say ("Revalidation records" below) |
+| `pkit analysis new revalidation <slug> --change <ref> --trigger <trigger> --outcome <id>=<outcome> … --because <id>=<why> … [--gap "<gap> => <resolution>"]…` | a revalidation record, `revalidations/<date>-<slug>.md` — only one with something to say ("Revalidation records" below) |
 
 Every artefact form also takes `--path <glob>` and `--record <id>`, each repeatable: the code that makes the artefact true and the decisions it relies on, written as its path and record anchors. Without them an actor or term is stamped unanchored — the core reports that, and never fails on it. An actor or term nothing embodies takes `--unanchored-because <why>` instead: the reason is written as its `unanchored-because`, and the stamp refuses it beside `--path` or `--record`.
 
@@ -132,9 +132,9 @@ An actor or a term nothing embodies carries `unanchored-because:` — the reason
 ```yaml
 change: "#123"                  # the work item, pull request or commit range that carried it
 trigger: drift                  # planned | drift | scheduled | close | onboarding
-date: 2026-10-02
+date: 2026-10-02                # the day in UTC, as a revalidation's `at` is
 by: Alex                        # a person, or an agent
-confirmed-by: Sam               # optional: who confirmed an agent's outcomes
+confirmed-by: Sam               # who confirmed an agent's outcomes, or decided stale
 outcomes:                       # each artefact covered, withdrawn ones included
   UC-003: holds                 # holds | analysis-stale | code-regressed | gap-found
   JRN-001: analysis-stale
@@ -193,10 +193,18 @@ Friction you choose not to resolve yet is not an outcome but a deferral: `pkit f
 
 ### Revalidation records
 
-`pkit analysis new revalidation <slug> --change <ref> --trigger <trigger> --outcome <id>=<outcome> … [--because <id>=<text>]… [--gap <text> --resolution <text>]… [--by <who>] [--confirmed-by <who>] [--title <text>]` writes `revalidations/<date>-<slug>.md` under the analysis location, **only when there is something to say** (DEC-001 point 6):
+`pkit analysis new revalidation <slug> --change <ref> --trigger <trigger> --outcome <id>=<outcome> … --because <id>=<why> … [--gap "<gap> => <resolution>"]… [--by <who> | --by-agent <name>] [--confirmed-by <who>] [--title <text>]` writes `revalidations/<date>-<slug>.md` under the analysis location, **only when there is something to say**:
 
-- **It writes** a record for a `planned` revalidation, or one that found a regression or a gap (`code-regressed` or `gap-found`, or a `--gap`). Its front matter names the change that carried it, the trigger, the day, who performed it (git's user name unless `--by` names another, such as the agent) and who confirmed an agent's outcomes; its body gives each outcome with its justification (`--because`, else a placeholder) and each gap with what resolved it — each `--gap` followed by its `--resolution` — or "None found."
-- **It refuses**, writing nothing: a record with nothing to say — every artefact holds, or was updated because the change was meant, and nothing was planned: each artefact's own revalidation is then the record; a regression or gap that names no gap; a gap without its resolution; no outcome, an outcome that is not one of the four, or two for one artefact; an artefact that is not in the analysis (withdrawn ones are fine); a subject already recorded that day.
+| The revalidation | A record? |
+|---|---|
+| was **planned** — a change proposed, checked before code | yes (DEC-001 point 6) |
+| found a **regression** or a **gap** — `code-regressed` or `gap-found`, or a `--gap` | yes (point 6) |
+| found an artefact **stale** where a person decided the change was meant — `analysis-stale`, with `--confirmed-by` naming them | yes: the decision point 5 leaves to a person is kept |
+| found every artefact **holds**, or updated artefacts because the change was plainly meant | no: each artefact's own revalidation is its record (point 6) |
+
+- **It writes** the front matter — the change that carried it, the trigger, the day in UTC (as a revalidation's `at` is), who performed it and who confirmed an agent's outcomes — and a body giving each outcome with its justification and each gap with what resolved it, or "None found." Who performed it is git's user name unless `--by` names another person; an agent that performed it is `--by-agent <name>`, which needs `--confirmed-by`: an agent proposes, a person decides.
+- **Every word is the person's.** Each `--outcome` has its `--because`, and each gap is written as one pair with what resolved it, `--gap "<gap> => <resolution>"`, so no justification is left as the template's placeholder and no gap is matched with another's resolution. A text still holding a placeholder — words in angle brackets, as a command shown for you writes what you supply (`<the defect reference>`) — is refused, as the friction writers refuse one.
+- **It refuses**, writing nothing: a record with nothing to say; a regression or gap that names no gap; a `--gap` that is not `<gap> => <resolution>`; an outcome without its `--because`, or with two; an agent without the person who confirmed it; a placeholder left unfilled; no outcome, an outcome that is not one of the four, or two for one artefact; an artefact that is not in the analysis (withdrawn ones are fine); a subject already recorded that day.
 
 The record never clears friction itself: commit it in the same change as the answers on the artefacts it covers. `pkit analysis validate` holds it to its schema and to the artefacts it cites.
 

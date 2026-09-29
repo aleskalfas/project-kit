@@ -24,8 +24,9 @@ the working tree; `pkit analysis check-numbers` reports a number another
 branch took first. `_lib/stamp.py` states the rules.
 
 It also writes a revalidation record, `revalidations/<date>-<slug>.md`, and only
-one with something to say — a planned revalidation, or one that found a
-regression or a gap (point 6); `_lib/revalidation.py` states the rules.
+one with something to say — a planned revalidation, one that found a
+regression or a gap (point 6), or one where a person decided an artefact was
+stale (point 5); `_lib/revalidation.py` states the rules.
 
 Usage:
   pkit analysis new use-case <slug> --actor <ACT-id> [--area <area>] [--title <text>]
@@ -35,9 +36,9 @@ Usage:
   each also: [--path <glob>]... [--record <id>]... [--base <ref>]
 
   pkit analysis new revalidation <slug> --change <ref> --trigger <trigger>
-      --outcome <id>=<outcome>... [--because <id>=<text>]...
-      [--gap <text> --resolution <text>]... [--by <who>] [--confirmed-by <who>]
-      [--title <text>]
+      --outcome <id>=<outcome>... --because <id>=<text>...
+      [--gap "<gap> => <resolution>"]... [--by <who> | --by-agent <name>]
+      [--confirmed-by <who>] [--title <text>]
 
 Exit codes:
   0  stamped
@@ -58,6 +59,9 @@ from _lib.model import ACTOR, JOURNEY, TERM, USE_CASE  # noqa: E402
 
 #: The kind a revalidation record is stamped as.
 REVALIDATION = "revalidation"
+
+#: What parts a gap from what resolved it, in `--gap "<gap> => <resolution>"`.
+GAP_SEPARATOR = " => "
 
 
 def _pair(value: str) -> tuple[str, str]:
@@ -134,7 +138,8 @@ def _parser() -> argparse.ArgumentParser:
         )
     help_text = (
         "A revalidation record, kept only when there is something to say: a planned "
-        "revalidation, or one that found a regression or a gap."
+        "revalidation, one that found a regression or a gap, or one where a person decided "
+        "an artefact was stale."
     )
     _revalidation_arguments(kinds.add_parser(REVALIDATION, help=help_text, description=help_text))
     return parser
@@ -168,46 +173,57 @@ def _revalidation_arguments(record: argparse.ArgumentParser) -> None:
         default=[],
         type=_pair,
         metavar="ID=TEXT",
-        help="Why an artefact's outcome is what it is (repeatable; a placeholder otherwise).",
+        help="Why an artefact's outcome is what it is (repeatable; one per --outcome).",
     )
     record.add_argument(
         "--gap",
         dest="gaps",
         action="append",
         default=[],
-        metavar="TEXT",
-        help="A gap found: behaviour nothing describes, or a description with no behaviour.",
+        metavar="GAP => RESOLUTION",
+        help="A gap found — behaviour nothing describes, or a description with no behaviour — "
+        "and what resolved it — the defect reported, the artefact written (repeatable).",
+    )
+    who = record.add_mutually_exclusive_group()
+    who.add_argument(
+        "--by", metavar="WHO", help="The person who performed it (default: git's user.name)."
+    )
+    who.add_argument(
+        "--by-agent",
+        metavar="NAME",
+        help="The agent that performed it; --confirmed-by then names the person who confirmed it.",
     )
     record.add_argument(
-        "--resolution",
-        dest="resolutions",
-        action="append",
-        default=[],
-        metavar="TEXT",
-        help="What resolved the gap given before it: the defect reported, the artefact written.",
+        "--confirmed-by",
+        metavar="WHO",
+        help="The person who confirmed an agent's outcomes, or decided an artefact was stale.",
     )
-    record.add_argument("--by", metavar="WHO", help="Who performed it (default: git's user.name).")
-    record.add_argument(
-        "--confirmed-by", metavar="WHO", help="The person who confirmed an agent's outcomes."
-    )
+
+
+def _gap(value: str) -> tuple[str, str]:
+    """`<gap> => <resolution>`: a gap and what resolved it, given as one pair so
+    neither can be matched with another's."""
+    gap, sep, resolved = value.partition(GAP_SEPARATOR)
+    if not sep or not gap.strip() or not resolved.strip():
+        raise stamp.Refused(
+            f'--gap {value!r} is not "<gap> => <resolution>": the gap found, then what '
+            f"resolved it — the defect reported, or the artefact written"
+        )
+    return gap.strip(), resolved.strip()
 
 
 def _stamp_record(args: argparse.Namespace) -> stamp.Stamped:
-    if len(args.gaps) != len(args.resolutions):
-        raise stamp.Refused(
-            "each --gap is followed by its --resolution: what resolved it — the defect "
-            "reported, or the artefact written"
-        )
     request = revalidation.RecordRequest(
         slug=args.slug,
         change=args.change,
         trigger=args.trigger,
         outcomes=tuple(args.outcomes),
         by=args.by,
+        by_agent=args.by_agent,
         confirmed_by=args.confirmed_by,
         title=args.title,
         because=tuple(args.because),
-        gaps=tuple(zip(args.gaps, args.resolutions, strict=True)),
+        gaps=tuple(_gap(value) for value in args.gaps),
     )
     return revalidation.stamp_record(backbone.project_root(), request)
 

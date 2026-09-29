@@ -4,14 +4,7 @@ A **revalidation** is one check of some artefacts against one version of the sys
 
 ## 1. Does it need a record?
 
-| The revalidation | A record? |
-|---|---|
-| was **planned** — a change proposed, checked before code | yes |
-| found a **regression** — the code broke what an artefact describes | yes |
-| found a **gap** — behaviour nothing describes, or a description with no behaviour | yes |
-| found every artefact **holds**, or updated artefacts because the change was **meant** | no: each artefact's own revalidation is its record |
-
-The stamp refuses a record with nothing to say, so that the few records that matter are never buried among routine ones.
+Only when it has something to say: the one table of when is the capability README's [Revalidation records](../../README.md#revalidation-records). The stamp refuses a record with nothing to say, so that the few records that matter are never buried among routine ones.
 
 ## 2. Give each artefact its answer
 
@@ -36,17 +29,18 @@ The subject of the change, as a word: `export-dropped`, `report-redesign`. The f
 
 ```
 pkit analysis new revalidation <slug> --change <ref> --trigger <planned|drift|scheduled|close|onboarding>
-    --outcome <id>=<outcome>... [--because <id>=<why>]...
-    [--gap "<what was found>" --resolution "<the defect reported, or the artefact written>"]...
-    [--by <who>] [--confirmed-by <who>] [--title "<Subject>"]
+    --outcome <id>=<outcome>... --because <id>=<why>...
+    [--gap "<what was found> => <the defect reported, or the artefact written>"]...
+    [--by <who> | --by-agent <name>] [--confirmed-by <who>] [--title "<Subject>"]
 ```
 
 - **`--change`** — what carried it: a work item (`#123`), a pull request, or a range of commits.
 - **`--trigger`** — `planned` before code; `drift` on a pull request's friction; `scheduled` for friction the whole-repository check found; `close` when a pull request changing artefacts lands; `onboarding`.
 - **`--outcome`** — each artefact covered, withdrawn ones included, and how it ended.
-- **`--because`** — each outcome's justification; an outcome given none keeps a placeholder to fill.
-- **`--gap` and `--resolution`** — each gap, followed by what resolved it; a regression or a gap found must name at least one.
-- **`--by`** — who performed it, a person or an agent (git's user name by default); **`--confirmed-by`** — the person who confirmed an agent's outcomes, and decided stale against regressed where the two were ambiguous.
+- **`--because`** — each outcome's justification, one per `--outcome`: the stamp refuses an outcome without one.
+- **`--gap`** — each gap and what resolved it, as one pair: `"<gap> => <resolution>"`. A regression or a gap found must name at least one.
+- **`--by`** — the person who performed it (git's user name by default); **`--by-agent`** — the agent that did, which needs **`--confirmed-by`**: the person who confirmed its outcomes, and decided stale against regressed where the two were ambiguous.
+- **No placeholder left.** A command an agent proposes for you writes what only you can supply in angle brackets — `<the defect reference>`, `<your name>`; the stamp refuses to write one still holding it.
 
 ## 5. Land it with the answers
 

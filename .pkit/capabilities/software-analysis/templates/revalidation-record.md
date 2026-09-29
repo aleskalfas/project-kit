@@ -1,20 +1,18 @@
 ---
 # A revalidation record (software-analysis DEC-001 points 5 and 6): one check
 # of some artefacts against one version of the system, kept only when there is
-# something to say — a planned revalidation, or one that finds a gap or a
-# regression. A routine one that finds everything holds writes no record: each
-# artefact's own revalidation block is the record. Stamp it, never copy it:
-# `pkit analysis new revalidation <slug> --change <ref> --trigger <trigger>
-# --outcome <id>=<outcome> … [--gap <text> --resolution <text>]…` writes
-# `revalidations/<date>-<slug>.md` under the analysis location, and refuses a
-# record with nothing to say. It is an act, not an anchored artefact, so it
-# carries no friction block. Its front matter's shape is
-# `schemas/revalidation-record.schema.json`.
+# something to say — when is the capability README's "Revalidation records".
+# Stamp it, never copy it: `pkit analysis new revalidation <slug> --change <ref>
+# --trigger <trigger> --outcome <id>=<outcome> … --because <id>=<why> …
+# [--gap "<gap> => <resolution>"]…` writes `revalidations/<date>-<slug>.md`
+# under the analysis location, and refuses a record with nothing to say. It is
+# an act, not an anchored artefact, so it carries no friction block. Its front
+# matter's shape is `schemas/revalidation-record.schema.json`.
 change: "#000"                    # the work item, pull request or range of commits that carried it
 trigger: planned                  # planned | drift | scheduled | close | onboarding
-date: "2026-01-01"                # the day it was performed
+date: "2026-01-01"                # the day it was performed, in UTC
 by: <who performed it — a person, or an agent>
-confirmed-by: <the person who confirmed an agent's outcomes>   # optional
+confirmed-by: <the person who confirmed an agent's outcomes, or decided stale>   # optional
 outcomes:                         # each artefact covered, by id, withdrawn ones included
   UC-000: holds                   # holds | analysis-stale | code-regressed | gap-found
 ---

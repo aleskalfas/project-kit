@@ -3,14 +3,18 @@
 Held to software-analysis DEC-001 points 5, 6 and 9:
 
 - the **record stamp**, `pkit analysis new revalidation` — a record names the
-  change that carried it, its trigger, the day, who performed it, each
-  artefact covered with its outcome, and each gap with what resolved it; it is
+  change that carried it, its trigger, the day in UTC, who performed it — an
+  agent only beside the person who confirmed it — each artefact covered with
+  its outcome and why, and each gap paired with what resolved it; it is
   `revalidations/<date>-<slug>.md` under the analysis location and passes the
   check;
-- **only when there is something to say** — a planned revalidation, or one that
-  found a regression or a gap. One whose artefacts all hold, or were updated
-  because the change was meant, is refused: each artefact's own revalidation
-  block is its record. A regression or a gap names what it found;
+- **only when there is something to say** — a planned revalidation, one that
+  found a regression or a gap, or one where a person decided an artefact was
+  stale. One whose artefacts all hold, or were updated because the change was
+  plainly meant, is refused: each artefact's own revalidation block is its
+  record. A regression or a gap names what it found;
+- **every word is the person's** — an outcome with no justification, and a text
+  still holding a placeholder, are refused rather than written;
 - an **actor or term nothing embodies** is stamped with its reason,
   `unanchored-because`, instead of anchors, and never with both.
 """
@@ -51,7 +55,8 @@ def project(
 
 
 def _today() -> str:
-    return datetime.date.today().isoformat()
+    """The record's day: UTC, as a revalidation's `at` is."""
+    return datetime.datetime.now(datetime.UTC).date().isoformat()
 
 
 def _record(repo: AdopterRepo, *args: str) -> subprocess.CompletedProcess[str]:
@@ -81,11 +86,11 @@ def test_a_regression_found_is_recorded_with_its_gap(project: AdopterRepo) -> No
         "JRN-001=holds",
         "--because",
         "UC-001=The suite still runs from the CLI by design; the change dropped it.",
+        "--because",
+        "JRN-001=The first run still passes through both use cases.",
         "--gap",
-        "The suite no longer runs from the CLI",
-        "--resolution",
-        "defect #46 reported",
-        "--by",
+        "The suite no longer runs from the CLI => defect #46 reported",
+        "--by-agent",
         "analysis-resolver",
         "--confirmed-by",
         "Sam",
@@ -107,18 +112,29 @@ def test_a_regression_found_is_recorded_with_its_gap(project: AdopterRepo) -> No
         "- **UC-001 — code-regressed.** The suite still runs from the CLI by design; the "
         "change dropped it.\n" in body
     )
-    # An outcome given no justification keeps the template's placeholder for it.
-    assert "- **JRN-001 — holds.** <why the description still stands" in body
+    assert "- **JRN-001 — holds.** The first run still passes through both use cases.\n" in body
     assert "- The suite no longer runs from the CLI — **resolved:** defect #46 reported\n" in body
-    assert "<Date>" not in body and "UC-000" not in body
+    assert "<" not in body and "UC-000" not in body
     assert errors(check(project)) == []
+
+
+#: A planned revalidation of UC-002 that found it holds.
+PLANNED = (
+    "--change",
+    "#50",
+    "--trigger",
+    "planned",
+    "--outcome",
+    "UC-002=holds",
+    "--because",
+    "UC-002=The redesign keeps the report's content; only its layout changes.",
+)
 
 
 def test_a_planned_revalidation_is_recorded_even_when_everything_holds(
     project: AdopterRepo,
 ) -> None:
-    args = ("--change", "#50", "--trigger", "planned", "--outcome", "UC-002=holds")
-    completed = _record(project, "report-redesign", *args)
+    completed = _record(project, "report-redesign", *PLANNED)
     assert completed.returncode == 0, completed.stderr
     rel = f"{RECORDS}/{_today()}-report-redesign.md"
     assert front(project, rel)["by"] == "pkit-test"  # git's user.name, when --by is not given
@@ -128,6 +144,10 @@ def test_a_planned_revalidation_is_recorded_even_when_everything_holds(
 
 
 # --- nothing to say, or not enough (DEC-001 points 5 and 6) ------------------------------------
+
+
+#: UC-001's justification, as a refusal test that is not about it gives it.
+WHY = ("--because", "UC-001=The suite still runs as described.")
 
 
 @pytest.mark.parametrize(
@@ -151,8 +171,61 @@ def test_a_planned_revalidation_is_recorded_even_when_everything_holds(
             "UC-001 found a regression or a gap: name each with --gap",
         ),
         (
-            ("--trigger", "scheduled", "--outcome", "UC-001=gap-found", "--gap", "An export"),
-            "each --gap is followed by its --resolution",
+            ("--trigger", "scheduled", "--outcome", "UC-001=gap-found", *WHY, "--gap", "An export"),
+            'is not "<gap> => <resolution>"',
+        ),
+        (
+            ("--trigger", "scheduled", "--outcome", "UC-001=gap-found", *WHY, "--gap", " => x"),
+            'is not "<gap> => <resolution>"',
+        ),
+        (
+            ("--trigger", "planned", "--outcome", "UC-001=holds", "--outcome", "JRN-001=holds"),
+            "JRN-001 has no --because",
+        ),
+        (
+            ("--trigger", "planned", "--outcome", "UC-001=holds", *WHY, *WHY),
+            "UC-001 is given two --because",
+        ),
+        (
+            ("--trigger", "planned", "--outcome", "UC-001=holds", *WHY, "--by-agent", "resolver"),
+            "resolver is an agent: name the person who confirmed its outcomes",
+        ),
+        (
+            (
+                "--trigger",
+                "drift",
+                "--outcome",
+                "UC-001=code-regressed",
+                "--because",
+                "UC-001=The export is wanted; defect <the defect reference> reported.",
+                "--gap",
+                "Nothing exports => defect #46 reported",
+            ),
+            "--because UC-001 still holds the placeholder '<the defect reference>'",
+        ),
+        (
+            (
+                "--trigger",
+                "drift",
+                "--outcome",
+                "UC-001=code-regressed",
+                *WHY,
+                "--gap",
+                "Nothing exports => defect <the defect reference> reported",
+            ),
+            "--gap still holds the placeholder '<the defect reference>'",
+        ),
+        (
+            (
+                "--trigger",
+                "planned",
+                "--outcome",
+                "UC-001=holds",
+                *WHY,
+                "--confirmed-by",
+                "<your name>",
+            ),
+            "--confirmed-by still holds the placeholder '<your name>'",
         ),
         (
             ("--trigger", "planned", "--outcome", "UC-009=holds"),
@@ -172,14 +245,45 @@ def test_a_planned_revalidation_is_recorded_even_when_everything_holds(
 def test_a_record_with_nothing_to_say_or_not_enough_is_refused(
     project: AdopterRepo, args: tuple[str, ...], refusal: str
 ) -> None:
+    """Nothing is written, whichever refusal it is."""
     completed = _record(project, "subject", "--change", "#45", *args)
     assert completed.returncode == 1, completed.stdout
     assert refusal in completed.stderr
     assert _records(project) == []
 
 
+def test_a_stale_artefact_a_person_decided_is_recorded(project: AdopterRepo) -> None:
+    """Where stale against regressed was ambiguous, the person's "meant" is what a
+    record keeps (DEC-001 point 5): with no one named, the artefact's own block is
+    the record, and the stamp refuses."""
+    args = (
+        "--change",
+        "4c1d2e9",
+        "--trigger",
+        "scheduled",
+        "--outcome",
+        "UC-001=analysis-stale",
+        "--because",
+        "UC-001=run_suite became execute on purpose; step 1 now names execute.",
+    )
+    refused = _record(project, "runner-renamed", *args)
+    assert refused.returncode == 1 and "nothing to record" in refused.stderr
+    completed = _record(project, "runner-renamed", *args, "--confirmed-by", "Sam")
+    assert completed.returncode == 0, completed.stderr
+    record = front(project, f"{RECORDS}/{_today()}-runner-renamed.md")
+    assert (record["by"], record["confirmed-by"]) == ("pkit-test", "Sam")
+    assert errors(check(project)) == []
+
+
+def test_a_person_and_an_agent_are_not_both_who_performed_it(project: AdopterRepo) -> None:
+    args = (*PLANNED, "--by", "Sam", "--by-agent", "analysis-resolver", "--confirmed-by", "Sam")
+    completed = _record(project, "report-redesign", *args)
+    assert completed.returncode == 2  # a usage error: one of the two
+    assert _records(project) == []
+
+
 def test_a_record_already_written_is_not_overwritten(project: AdopterRepo) -> None:
-    args = ("--change", "#50", "--trigger", "planned", "--outcome", "UC-002=holds")
+    args = PLANNED
     assert _record(project, "report-redesign", *args).returncode == 0
     completed = _record(project, "report-redesign", *args)
     assert completed.returncode == 1
