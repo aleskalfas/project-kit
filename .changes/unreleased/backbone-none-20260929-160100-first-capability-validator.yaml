@@ -1,0 +1,7 @@
+component: backbone
+kind: none
+body: >
+  The package-metadata reference, the CLI reference and the package schema's
+  description of `validators` now name the first capability validator,
+  living-docs' `living-docs:spaces`, where they said no shipped component
+  registers one. Wording only; no key, check or behaviour changes.
