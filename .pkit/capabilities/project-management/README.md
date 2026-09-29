@@ -78,6 +78,9 @@ workstreams:                          # one entry per allowed workstream value
 #   enforce: false
 #   rules:
 #     - { code: "src/foo/**", docs: [docs/foo.md] }
+# doc_check:                          # per DEC-053 — see "Connections"
+#   sources:
+#     friction: enforcing             # a contributed source; advisory by default
 # pre_close_triage_lead_days: 3
 # gh:                                 # per DEC-023 — both fields optional
 #   host: github.com              #   target a non-`github.com` host
@@ -714,7 +717,31 @@ pm collects a declaration purely on its presence in a **manifest-registered** co
 
 The capability provides the `pkit::work-tracking` role (COR-053); `pkit::` is this distribution's literal for the methodology's publisher qualifier ([the lifecycle README, "The methodology's literals"](../../lifecycle/README.md#the-methodologys-literals)).
 
-- **Accepts** `pkit::work-tracking:doc-check`: the documentation obligations a pull request owes, per [project-management:DEC-053-doc-check-slot]. This capability's code-to-doc mapping is the always-included default filler; a documentation capability may contribute friction on anchored pages and uncovered surface. Design-ahead until the slot is implemented.
+- **Accepts** `pkit::work-tracking:doc-check`, version 1: the documentation obligations a pull request owes, per [project-management:DEC-053-doc-check-slot]. The point is `additive` — obligations from different sources never replace one another, and one leaves only through the project's removal override with its reason — and its inert policy is `fail`. Its shape is the companion schema `schemas/doc-check.schema.json`: each obligation names its `source`, its `reason` and what it concerns.
+
+**The mapping is the default filler.** The code-to-doc mapping of `project/config.yaml` (DEC-015) stays where it is configured and fills the point on every resolution, one obligation per rule, keyed by the rule (`mapping:<code pattern>`). It is supplied by this capability's own command, `fill-doc-check`, contributed to its own point: a data point's static `default` lives in package metadata and cannot hold the project's configuration. The backbone runs it as a query wherever the point resolves — `pkit validate`, `pkit status`, `pkit connections resolve` — offline, with `--json` alone. It is exempt from the bootstrap gate: it reads only the mapping, and no config is no obligations.
+
+**The check reads the resolved point.** `check-doc-mapping` reads the point through the backbone — `pkit connections resolve pkit::work-tracking:doc-check --json` — and applies it to the pull request's diff (a data point takes no parameter; applying it is the consumer's work):
+
+- **A mapping obligation is met exactly as before:** the diff touches one of the rule's documents, or the `## Doc impact` section names the changed code path or the rule's pattern. With no documentation capability installed the point holds the mapping alone, and the check prints and exits exactly as it always did — pinned byte for byte by `tests/test_pm_check_doc_mapping_fixtures.py`.
+- **A contributed obligation** — a documentation capability's friction on an anchored page (`page-stale`) or new code nothing documents (`code-undocumented`), or one the project writes in its own filler file — **is met only by the page's answer in the diff**: a changed file matches the obligation's `document`. A `## Doc impact` line naming the page meets nothing, because the check must hold for a pull request from any tool and with no description at all. The form of the answer on the page — updated, unchanged with its justification, deferred with its reason — is the core change check's to verify (`pkit friction check`).
+- **Only this capability's own filler supplies mapping obligations.** An entry from any other origin claiming the `mapping` source would borrow the mapping's `## Doc impact` override and its setting; the check refuses it.
+- **An unresolved point fails the check** (exit 1), naming each filler that could not answer and its fix — update it, pin it, or uninstall it — rather than pass on fewer obligations than it should. For the mapping's own filler the fix is to provision its dependency: in a fresh environment run `pkit pm fill-doc-check` once before an offline `pkit validate`, since `uv` resolves a query's dependency from its cache.
+- **A removal override** in the project's filler file (`docs/pkit/fillers/pkit/work-tracking/doc-check.yaml`, with `remove: [{id, reason}]`) takes an obligation out; the check prints each one removed, with its reason.
+
+**Enforcement is per source** (DEC-053 point 3). The mapping keeps its setting, `code_path_to_doc_mapping.enforce`. Every other source is set in `project/config.yaml` under `doc_check.sources.<source>` — `advisory`, the default for a source not listed (unmet obligations are reported, the check passes), or `enforcing` (an unmet obligation fails it). Enforcing one source never enforces another, and `doc_check.sources.mapping` is refused: the mapping has its setting. As before, the real boundary is wiring `check-doc-mapping` as a required CI status check.
+
+```yaml
+code_path_to_doc_mapping:
+  enforce: false                # the mapping's setting, as before
+  rules:
+    - { code: "src/cli/**", docs: [docs/cli.md] }
+doc_check:
+  sources:
+    friction: enforcing         # a documentation capability's page friction
+```
+
+The `## Doc impact` section itself stays required on every Task and pull request (DEC-015), whatever fills the point.
 
 ## Permissions
 

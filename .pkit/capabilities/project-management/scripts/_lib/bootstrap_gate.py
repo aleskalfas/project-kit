@@ -80,6 +80,14 @@ un-bootstrapped project genuinely cannot say where an issue stands. (A
 warn-and-continue banner was considered and rejected: a warning printed on
 every command is ignored within a week.)
 
+One more verb is exempt for a different reason: `fill-doc-check`, the filler of
+the doc-check data point (DEC-053). It is not run by a person but by the
+backbone, wherever the point resolves — `pkit validate` and `pkit status`
+included — and it assumes nothing a bootstrap provides: it reads the doc
+mapping from the config, and no config is no obligations. Gated, it would turn
+every un-bootstrapped project's `pkit validate` into an error on an unresolved
+point. The verb that acts on the point, `check-doc-mapping`, stays gated.
+
 The gate is called explicitly at the top of each gated entry point — not in the
 dispatcher (direct script invocation, which happens constantly, would bypass
 it: the exact hole) and not inside the shared config/`gh` seam (the refusal
@@ -126,9 +134,9 @@ BY_MIGRATE = "migrate"
 BY_MIGRATION_GRANDFATHER = "migration-grandfather"
 
 # The five setup-and-diagnosis verbs that must work on an un-bootstrapped
-# project, each with the reason it is exempt. This mapping IS the exemption
-# list: the coverage guard reads it, and a verb absent from here must call the
-# gate.
+# project, and the one query the backbone runs, each with the reason it is
+# exempt. This mapping IS the exemption list: the coverage guard reads it, and
+# a verb absent from here must call the gate.
 EXEMPT_VERBS: dict[str, str] = {
     "bootstrap": (
         "the verb that makes a project bootstrapped — gating it would be a "
@@ -149,6 +157,13 @@ EXEMPT_VERBS: dict[str, str] = {
     "self-test": (
         "the smoke test of the capability's own transition cycle; a diagnostic "
         "of last resort that must be runnable when the project looks broken"
+    ),
+    # Not setup or diagnosis: a query the backbone runs (the module docstring).
+    "fill-doc-check": (
+        "the doc-check point's filler, run by the backbone wherever the point "
+        "resolves — `pkit validate` included; it reads only the doc mapping (no "
+        "config, no obligations), and `check-doc-mapping`, which acts on the "
+        "point, stays gated"
     ),
 }
 

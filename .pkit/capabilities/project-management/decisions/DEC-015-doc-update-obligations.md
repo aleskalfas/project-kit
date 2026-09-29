@@ -72,7 +72,7 @@ When configured, the project-manager runs the mapping at PR-open time and emits 
 
 The mapping config lives in the adopter's project namespace (the capability is team-wide generic per [project-management:DEC-002-team-wide-generic-scope]; specific paths are project-side).
 
-> **Refined by [project-management:DEC-053-doc-check-slot]:** for pull requests, the mapping check here is the always-included default filler of the `<methodology>::work-tracking:doc-check` point (the slot of COR-052, addressed by role per COR-053). A documentation capability may add obligations of its own, each source with its own enforcement setting. Mapping obligations are met exactly as described here, and the `## Doc impact` requirement stays a rule of this record.
+> **Refined by [project-management:DEC-053-doc-check-slot]:** for pull requests, the mapping here is the always-included default filler of the `<methodology>::work-tracking:doc-check` point (the slot of COR-052, addressed by role per COR-053): its rules fill the point, one obligation per rule, and `check-doc-mapping` reads the resolved point and applies it to the diff, failing when the point does not resolve. A documentation capability may add obligations of its own; each is met only by its page changed in the diff, never by a `## Doc impact` line. The mapping keeps its `enforce` setting, and every other source has its own, advisory by default. Mapping obligations are met exactly as described here, and the `## Doc impact` requirement stays a rule of this record.
 
 ### Severity classifications
 

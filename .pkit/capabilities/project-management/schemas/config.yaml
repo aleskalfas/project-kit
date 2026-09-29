@@ -75,6 +75,10 @@ has_projects_v2_board: false
 #   rules:
 #     - { code: "src/**", docs: [README.md] }
 #
+# doc_check:                          # per DEC-053 — contributed sources' enforcement
+#   sources:
+#     friction: enforcing             #   advisory (default) | enforcing; never `mapping`
+#
 # milestone_categories:               # per DEC-016 — declare before filing one
 #   milestone:
 #     title_format: "Milestone {n}: {name}"

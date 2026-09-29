@@ -19,7 +19,8 @@ What is pinned here (the decision surface, one test apiece):
   * an unresolvable repo identity does NOT fabricate a refusal;
   * staleness (stamp version != installed version) is REPORTED, never a
     refusal on its own;
-  * the exemption list is exactly the five setup-and-diagnosis verbs;
+  * the exemption list is exactly the five setup-and-diagnosis verbs and the
+    doc-check point's filler;
   * a gate that cannot evaluate fails CLOSED.
 """
 
@@ -345,15 +346,18 @@ def test_a_current_stamp_is_not_stale(gate, tmp_path):
 # --- the exemption list, and failing closed ------------------------------
 
 
-def test_the_exemption_list_is_the_five_decided_verbs(gate):
-    """The decided set, with a reason recorded per verb: each is either how you
-    BECOME bootstrapped or how you DIAGNOSE why you are not."""
+def test_the_exemption_list_is_the_decided_verbs(gate):
+    """The decided set, with a reason recorded per verb: five are how you BECOME
+    bootstrapped or how you DIAGNOSE why you are not; the sixth is the doc-check
+    point's filler, a query the backbone runs wherever the point resolves
+    (`pkit validate` included) that reads only the doc mapping (DEC-053)."""
     assert set(gate.EXEMPT_VERBS) == {
         "bootstrap",
         "pre-check",
         "migrate",
         "adopt-existing",
         "self-test",
+        "fill-doc-check",
     }
     assert all(reason.strip() for reason in gate.EXEMPT_VERBS.values())
 

@@ -11,6 +11,14 @@ without this file changing with it.
 The script runs as a subprocess under this interpreter, from the fixture
 repository, with `--capability-root` and `--pr-body-file` always given — so no
 `gh` is reached and no real project is read.
+
+Since the check reads its obligations from the resolved doc-check point
+(DEC-053) through `pkit connections resolve`, a `pkit` stand-in on PATH answers
+that read: it runs the real default filler, `fill-doc-check.py --json`, over the
+fixture's capability root and wraps its envelope as the backbone resolves an
+additive point with one filler — the mapping's obligations, in order, each
+from project-management. The expected outcomes were captured before the check
+read the point, and are unchanged.
 """
 
 from __future__ import annotations
@@ -26,6 +34,37 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CAPABILITY = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
 SCRIPT = CAPABILITY / "scripts" / "check-doc-mapping.py"
+FILLER = CAPABILITY / "scripts" / "fill-doc-check.py"
+
+# The `pkit` stand-in: `pkit connections resolve <point> --json` from the default
+# filler's real envelope. Records its argv; anything else it is asked fails.
+PKIT_STANDIN = """\
+import json, subprocess, sys
+log, filler, capability = sys.argv[1:4]
+argv = sys.argv[4:]
+with open(log, "a", encoding="utf-8") as handle:
+    handle.write(json.dumps(argv) + "\\n")
+if argv != ["connections", "resolve", "pkit::work-tracking:doc-check", "--json"]:
+    sys.exit(f"unexpected pkit call: {argv}")
+run = subprocess.run(
+    [sys.executable, filler, "--json", "--capability-root", capability],
+    capture_output=True, text=True, check=True,
+)
+obligations = json.loads(run.stdout)["value"]
+print(json.dumps({
+    "address": "pkit::work-tracking:doc-check", "defined": True,
+    "provider": "project-management", "policy": "additive", "inert_policy": "fail",
+    "participation": None, "resolved": True, "why": "", "value": obligations, "origin": "",
+    "entries": [
+        {"id": o["id"], "origin": "project-management", "replaces": [], "value": o}
+        for o in obligations
+    ],
+    "removals": [],
+    "fillers": [{"source": "contribution", "name": "project-management",
+                 "supplies": "command 'fill-doc-check'", "state": "taken", "reason": "",
+                 "query_contract": True}],
+}))
+"""
 
 BASE_FILES = {
     "src/app.py": "print('app')\n",
@@ -131,9 +170,31 @@ def _stage_capability(tmp_path: Path, mapping: str) -> Path:
     return cap
 
 
+def _stage_pkit(tmp_path: Path, cap: Path) -> Path:
+    """A directory holding the `pkit` stand-in, to put first on PATH."""
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    (bin_dir / "pkit-standin.py").write_text(PKIT_STANDIN, encoding="utf-8")
+    pkit = bin_dir / "pkit"
+    pkit.write_text(
+        "#!/bin/sh\n"
+        f'exec "{sys.executable}" "{bin_dir / "pkit-standin.py"}" '
+        f'"{tmp_path / "pkit-calls.log"}" "{FILLER}" "{cap}" "$@"\n',
+        encoding="utf-8",
+    )
+    pkit.chmod(0o755)
+    return bin_dir
+
+
+def pkit_calls(tmp_path: Path) -> list[str]:
+    log = tmp_path / "pkit-calls.log"
+    return log.read_text(encoding="utf-8").splitlines() if log.exists() else []
+
+
 def run_fixture(tmp_path: Path, fixture: Fixture) -> Outcome:
     repo = _stage_repo(tmp_path, fixture)
     cap = _stage_capability(tmp_path, fixture.mapping)
+    bin_dir = _stage_pkit(tmp_path, cap)
     body = tmp_path / "body.md"
     body.write_text(fixture.body, encoding="utf-8")
     proc = subprocess.run(
@@ -150,7 +211,11 @@ def run_fixture(tmp_path: Path, fixture: Fixture) -> Outcome:
         cwd=repo,
         capture_output=True,
         text=True,
-        env={**os.environ, "NO_COLOR": "1"},
+        env={
+            **os.environ,
+            "NO_COLOR": "1",
+            "PATH": f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}",
+        },
         check=False,
     )
     return Outcome(proc.returncode, proc.stdout, proc.stderr)
@@ -289,6 +354,18 @@ EXPECTED: dict[str, Outcome] = {
 @pytest.mark.parametrize("name", sorted(FIXTURES))
 def test_the_mapping_check_prints_exactly_what_it_did(tmp_path: Path, name: str) -> None:
     assert run_fixture(tmp_path, FIXTURES[name]) == EXPECTED[name]
+
+
+@pytest.mark.parametrize("name", sorted(set(FIXTURES) - {"mapping-not-a-mapping"}))
+def test_the_rules_it_applies_are_the_ones_the_point_resolves_to(
+    tmp_path: Path, name: str
+) -> None:
+    """The same bytes, and they came through the point: the check read it once.
+    (A malformed mapping is refused before the point is read, as before.)"""
+    run_fixture(tmp_path, FIXTURES[name])
+    assert pkit_calls(tmp_path) == [
+        '["connections", "resolve", "pkit::work-tracking:doc-check", "--json"]'
+    ]
 
 
 def test_every_fixture_has_its_expected_outcome() -> None:
