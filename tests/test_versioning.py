@@ -511,3 +511,68 @@ def test_bump_version_from_prerelease_strips_suffix(tmp_kit: Path) -> None:
     (tmp_kit / "VERSION").write_text("1.2.0rc1\n", encoding="utf-8")
     _, new = versioning.bump_version(tmp_kit, "patch")
     assert new == "1.2.1"
+
+
+# --- the declared floor raise (PRJ-002 D4) -----------------------------------
+
+
+def _package_with(tmp_path: Path, requires_backbone_line: str) -> Path:
+    pkg = tmp_path / "package.yaml"
+    pkg.write_text(
+        "schema_version: 1\n"
+        "component:\n"
+        "  kind: capability\n"
+        "  name: houseware\n"
+        "  version: 0.3.0\n"
+        '# The floor is 1.2.0: requires_backbone: ">=1.2.0" names the reason.\n'
+        f"{requires_backbone_line}\n",
+        encoding="utf-8",
+    )
+    return pkg
+
+
+@pytest.mark.parametrize(
+    ("line", "floor"),
+    [
+        ('requires_backbone: ">=1.2.0,<2.0.0"', "1.2.0"),
+        ("requires_backbone: '>=1.2.0,<2.0.0'", "1.2.0"),
+        ('requires_backbone: ">= 1.2.0, <2.0.0"', "1.2.0"),
+        ('requires_backbone: ">=1.2.0"', "1.2.0"),
+        ('requires_backbone: "<2.0.0,>=1.2.0"', None),  # does not open with the floor
+        ('requires_backbone: "*"', None),
+        ("requires_backbone: >=1.2.0", None),  # unquoted
+    ],
+)
+def test_requires_backbone_floor_reads_the_range_s_opening_bound(
+    tmp_path: Path, line: str, floor: str | None
+) -> None:
+    text = _package_with(tmp_path, line).read_text(encoding="utf-8")
+    assert versioning.requires_backbone_floor(text) == floor
+
+
+def test_raise_floor_rewrites_only_the_floor(tmp_path: Path) -> None:
+    """The lower bound moves; the upper bound, the quoting, the trailing comment and
+    a comment that mentions the key stay as written."""
+    pkg = _package_with(tmp_path, "requires_backbone: '>=1.2.0,<2.0.0'  # floor: report link")
+
+    changed = versioning.raise_component_requires_backbone_floor(pkg, "1.6.0")
+
+    assert changed == ">=1.2.0 -> >=1.6.0"
+    text = pkg.read_text(encoding="utf-8")
+    assert "requires_backbone: '>=1.6.0,<2.0.0'  # floor: report link\n" in text
+    assert '# The floor is 1.2.0: requires_backbone: ">=1.2.0" names the reason.\n' in text
+
+
+def test_raise_floor_is_raise_only(tmp_path: Path) -> None:
+    pkg = _package_with(tmp_path, 'requires_backbone: ">=1.7.0,<2.0.0"')
+    before = pkg.read_text(encoding="utf-8")
+
+    assert versioning.raise_component_requires_backbone_floor(pkg, "1.6.0") is None
+    assert versioning.raise_component_requires_backbone_floor(pkg, "1.7.0") is None
+    assert pkg.read_text(encoding="utf-8") == before
+
+
+def test_raise_floor_refuses_a_range_with_no_floor(tmp_path: Path) -> None:
+    pkg = _package_with(tmp_path, 'requires_backbone: "*"')
+    with pytest.raises(click.ClickException, match="no `>=` floor to raise"):
+        versioning.raise_component_requires_backbone_floor(pkg, "1.6.0")

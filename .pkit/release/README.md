@@ -13,7 +13,7 @@ pkit:
         - .github/workflows/release-tag.yml
       record: [COR-010, COR-041, PRJ-002, PRJ-004, ADR-040]
     revalidated:
-      at: 2026-09-29T15:20:31Z
+      at: 2026-09-29T19:26:29Z
       outcome: updated
 ---
 
@@ -57,6 +57,37 @@ body: Add the `pkit release` command.   # the note (a changelog line)
 Several changesets may name the same component (e.g. two PRs each touch the
 backbone); the release takes the **highest** segment and lists every note.
 
+### Declaring that a component needs the release's backbone
+
+A component's `requires_backbone` floor is a version cell, so a feature branch
+never writes it (PRJ-002 D1) — yet a branch can make a component depend on a
+backbone change landing in the same release. The branch says so in the
+component's changeset with one optional field, and the release writes the
+number:
+
+```yaml
+component: project-management
+kind: minor
+body: The capability leaves the journal ignore line to the backbone. Upgrade it together with the backbone.
+custom:
+  requires_backbone: release   # needs the backbone this release ships
+```
+
+- **`requires_backbone`** — its one value is **`release`**: the backbone version
+  this release ships — the new one when the backbone moves in the same release,
+  else the current `.pkit/VERSION`. `pkit release apply` raises the lower bound
+  of the component's `requires_backbone` range to that version (the floor raise,
+  below). Top-level or under `custom:`, like `category` and `pr`.
+- It belongs on a **version-moving changeset** (`patch` / `minor` / `major`) of
+  a **capability or adapter whose range opens with a `>=` floor** — a raised
+  floor changes what the component requires, which is surface and never ships
+  under an unchanged version. `pkit release lint` refuses it on a backbone
+  changeset, on a `none` changeset, on a component with no such range, and with
+  any other value; `pkit release plan` and `apply` refuse to compute a release
+  from such a changeset rather than drop the declaration.
+- Say in the changeset's body what the adopter must do — typically *upgrade the
+  component together with the backbone*.
+
 ### Authoring a changeset
 
 Contributors use **changie** — a dev-only tool provisioned through `mise`
@@ -69,8 +100,9 @@ mise run changeset        # or: changie new
 changie's native `component` / `kind` / `body` fields are exactly the schema
 above, and its `fragmentFileFormat` (`.changie.yaml`) names files
 `<component>-<kind>-<timestamp>-<random>.yaml` — the random suffix makes
-**parallel PRs collision-free**. A changeset is equally hand-writable: drop a
-YAML file with the three keys into `.changes/unreleased/`.
+**parallel PRs collision-free**. Its `custom:` prompts write the optional
+`category`, `pr` and `requires_backbone` fields. A changeset is equally
+hand-writable: drop a YAML file with the three keys into `.changes/unreleased/`.
 
 ### changie is adopter-invisible
 
@@ -202,7 +234,7 @@ PR** a human merges — it is *not* auto-run on every merge.
 | Command | Writes? | What |
 |---|---|---|
 | `pkit release plan` | no | Preview the computed release (which tiers move, to what, and the notes). |
-| `pkit release apply` | yes | Consume changesets → compute each tier from current `main` → write versions → broaden `requires_backbone` → update `CHANGELOG.md` → delete consumed changesets. Confirms first (`--yes` for CI). Tagging is a separate step (below); `--tag`/`--push` opt in. |
+| `pkit release apply` | yes | Consume changesets → compute each tier from current `main` → write versions → broaden `requires_backbone` → raise declared floors → update `CHANGELOG.md` → delete consumed changesets. Confirms first (`--yes` for CI). Tagging is a separate step (below); `--tag`/`--push` opt in. |
 | `pkit release merge <pr>` | yes (merges) | Merge a release PR (the sanctioned path — below). Guarded to `release/*` heads; merges only an open, mergeable, green PR as one squash commit whose subject is the PR title, head branch deleted on merge. Does not tag. `--dry-run` reports without merging. |
 | `pkit release publish-notes <version>` | no (publishes) | Publish a **notes-only** GitHub Release for tag `v<version>`, body = that version's `CHANGELOG.md` section (below). Idempotent (updates if it exists); **no artifact**. `--dry-run` prints the notes without calling `gh`. |
 | `pkit release check` | no | The CI guard (below). |
@@ -210,15 +242,17 @@ PR** a human merges — it is *not* auto-run on every merge.
 
 `apply` in order: writes each tier's version (`.pkit/VERSION` for the backbone,
 the `version:` line in a component's `package.yaml`); **broadens**
-`requires_backbone` (see below); prepends a `CHANGELOG.md` entry from the notes;
-and deletes the consumed changesets.
+`requires_backbone` (see below); **raises the declared floors** (below);
+prepends a `CHANGELOG.md` entry from the notes; and deletes the consumed
+changesets. `plan` shows each floor it will raise under the component's bump.
 
 ### The requires_backbone broaden — two shapes (PRJ-002 D4 + #494)
 
 `apply` widens `requires_backbone` upper bounds so a compatibility claim stays
 current without hand-editing. Which components it widens depends on **what
 moved**, and it is always **widen-only** — it raises an upper bound to cover a
-target version, never narrows a range that is already wider:
+target version, never narrows a range that is already wider. It never touches
+a lower bound; that moves only on declaration (the floor raise, below):
 
 - **A backbone release** widens **every** kit-shipped component's upper bound to
   cover the new backbone minor (`<X.(Y+1).0` for a new backbone `X.Y.Z`). This
@@ -237,8 +271,31 @@ The broaden is **keyed on "a component moved under backbone X"**, not on being
 project-kit — so it fires the same way in an adopter's own repo releasing its
 own capability. Pass **`--no-broaden`** to skip it (both shapes) when an author
 deliberately does *not* want to claim the current backbone — e.g. shipping a
-patch known-incompatible with the newest backbone; the range then stays exactly
-as authored.
+patch known-incompatible with the newest backbone; the upper bound then stays
+exactly as authored.
+
+### The declared floor raise (PRJ-002 D4)
+
+Beside the widen-only upper bound, `apply` raises a **lower bound** — and only
+where a changeset declared it (`requires_backbone: release`, "Declaring that a
+component needs the release's backbone" above). For each such component that
+the release moves, it raises the `>=` floor of its `requires_backbone` range to
+the backbone version the release ships: the new backbone when the backbone
+moves, else the current one.
+
+- **Declared, never automatic.** A floor asserts the component no longer works
+  on an older backbone, which only the change's author knows; no floor moves
+  without a changeset saying so, and a component that declared nothing keeps
+  its floor however far the backbone moves.
+- **Raise-only.** A floor already at or above that backbone is left as it is.
+- **After the broaden**, so the raised floor sits under an upper bound that
+  admits it. `--no-broaden` does not skip the raise — the need was declared —
+  and when the authored upper bound does not admit the shipped backbone, the
+  raise would leave a range that admits nothing, so `apply` refuses before
+  writing anything; drop `--no-broaden` or widen the upper bound.
+- The rewrite touches the one `>=X.Y.Z` in place, like the broaden: quoting,
+  the upper bound and comments survive, and the release PR's `package.yaml`
+  diff stays inside the release footprint the changeset guard exempts.
 
 **Tagging is a separate, anchored step** (COR-004's each-step-its-own-command
 principle — the same reason `version bump` and `version tag` are distinct).
@@ -412,7 +469,8 @@ This is the **introduce** step of introduce → migrate → retire. `pkit versio
 bump <segment>` (and its `tag` / `unbump` / `--pre` siblings) is unchanged and
 fully functional; the release step *adds* the declare-then-apply path beside
 it. Both broaden `requires_backbone` today (broadening is idempotent), so the
-two coexist safely. Retiring in-branch bumping — once the release path is
+two coexist safely; only the release step raises a declared floor, since only
+it reads changesets. Retiring in-branch bumping — once the release path is
 trusted — is a downstream change.
 
 ## The surface-without-changeset CI guard
@@ -491,7 +549,14 @@ shared aggregator (`scripts/check.sh`), which both the local pre-push hook and
    jargon-only entry"), start capitalized, and end with a period. A `none`
    changeset produces no changelog line, so its body is not linted (its
    category still is).
-3. **`CHANGELOG.md` structure** — release-section (`## `) headings match the
+3. **Changeset floor field** — a `requires_backbone` field must say `release`,
+   on a version-moving changeset of a capability or adapter whose
+   `requires_backbone` range opens with a `>=` floor. It fails on the backbone,
+   on a `none` changeset, and on a component with no floor to raise — the same
+   check `release plan` / `apply` refuse on, so the lint reports it before the
+   release does. The components are read only when a changeset carries the
+   field.
+4. **`CHANGELOG.md` structure** — release-section (`## `) headings match the
    generator's shape (`## <version> — <date>` or a date-only `## <date>`; the
    canonical KaC `## [<version>] - <date>` is also accepted), and every
    category (`### `) heading is a known group. Only heading **structure** is

@@ -28,7 +28,12 @@ the counter on an existing suffix; `promote_version` drops the
 suffix. Pre-release bumps do NOT broaden `requires_backbone` (per
 the bump-policy: pre-releases are not a stable compatibility target).
 
-The `requires_backbone` rewrite uses regex (not ruamel.yaml round-trip)
+The release step also raises a `requires_backbone` *floor*, and only on
+declaration: `raise_component_requires_backbone_floor` moves one component's
+lower bound up to the backbone a release ships, when a changeset says the
+component needs it. Nothing here raises a floor on its own.
+
+The `requires_backbone` rewrites use regex (not ruamel.yaml round-trip)
 to preserve quoting style, indentation, and trailing comments.
 """
 
@@ -40,6 +45,8 @@ from pathlib import Path
 from typing import Literal
 
 import click
+
+from project_kit.migrations import parse_version_tuple
 
 Segment = Literal["patch", "minor", "major"]
 PreKind = Literal["a", "b", "rc"]
@@ -55,6 +62,13 @@ _SEMVER_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
 _PEP440_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)(?:(a|b|rc)(\d+))?$")
 
 _REQUIRES_BACKBONE_RE = re.compile(r'(requires_backbone:\s*"[^"]*,<)(\d+)\.(\d+)\.(\d+)')
+
+# The floor a `requires_backbone` range opens with — its `>=X.Y.Z` — on the
+# top-level key's own line, the value quoted either way. Anchored to the start of
+# a line so a comment that mentions the key is never read or rewritten.
+_REQUIRES_BACKBONE_FLOOR_RE = re.compile(
+    r"""(?m)^(requires_backbone:[ \t]*["'][ \t]*>=[ \t]*)(\d+\.\d+\.\d+)(?=[ \t]*[,"'])"""
+)
 
 
 def _apply_segment(major: int, minor: int, patch: int, segment: Segment) -> tuple[int, int, int]:
@@ -423,6 +437,51 @@ def broaden_component_requires_backbone(pkg_file: Path, backbone: str) -> str | 
     old_range = _extract_range(rb_match.string, rb_match.start())
     new_range = old_range.rsplit("<", 1)[0] + f'<{new_upper}"'
     return f"{old_range} -> {new_range}"
+
+
+def requires_backbone_floor(package_text: str) -> str | None:
+    """The `>=X.Y.Z` floor a package file's `requires_backbone` range opens with.
+
+    None when there is none to raise: no `requires_backbone` line, a range that
+    does not open with a `>=` bound, or a value that is not quoted. The floor
+    raise reads the range through this one locator, so what it can raise and
+    what the release lint accepts are the same set.
+    """
+    match = _REQUIRES_BACKBONE_FLOOR_RE.search(package_text)
+    return match.group(2) if match else None
+
+
+def raise_component_requires_backbone_floor(pkg_file: Path, backbone: str) -> str | None:
+    """Raise one component's `requires_backbone` floor to `backbone`.
+
+    The lower-bound counterpart of `broaden_component_requires_backbone`, run
+    only for a component whose changeset declares it needs the backbone a
+    release ships. **Raise-only** — a floor already at or above `backbone` is
+    left untouched. Rewrites the one `>=X.Y.Z` in place (not a YAML round-trip),
+    so quoting, the upper bound and trailing comments survive.
+
+    Returns a human-readable `old -> new` floor string when it rewrote the
+    floor, `None` when the floor already admitted nothing older. Raises
+    `click.ClickException` when the range has no floor to raise
+    (`requires_backbone_floor`) or `backbone` is not a release version.
+    """
+    target = _SEMVER_RE.match(backbone)
+    if target is None:
+        raise click.ClickException(
+            f"backbone version {backbone!r} is not a release version (expected major.minor.patch)"
+        )
+    original = pkg_file.read_text(encoding="utf-8")
+    match = _REQUIRES_BACKBONE_FLOOR_RE.search(original)
+    if match is None:
+        raise click.ClickException(
+            f"{pkg_file}: requires_backbone has no `>=` floor to raise to {backbone}"
+        )
+    floor = match.group(2)
+    if parse_version_tuple(floor) >= parse_version_tuple(backbone):
+        return None
+    updated = original[: match.start(2)] + backbone + original[match.end(2) :]
+    pkg_file.write_text(updated, encoding="utf-8")
+    return f">={floor} -> >={backbone}"
 
 
 def _narrow_kit_components_requires_backbone(

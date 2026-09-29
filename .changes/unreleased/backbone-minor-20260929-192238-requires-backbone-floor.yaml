@@ -1,0 +1,17 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  A changeset can now declare that its component needs the backbone the release
+  ships, with `requires_backbone: release` (top-level or under `custom:`), and
+  `pkit release apply` raises the lower bound of that component's
+  `requires_backbone` range to that backbone version: the new one when the
+  backbone moves in the same release, else the current one. The raise is
+  raise-only and never automatic, runs after the upper-bound broaden, and is not
+  skipped by `--no-broaden`, which instead refuses the release before writing
+  anything when the authored upper bound would leave the raised range empty.
+  `pkit release plan` shows each floor it will raise. `pkit release lint`, and
+  `plan` and `apply` themselves, refuse the field on a backbone changeset, on a
+  `none` changeset, on a component that is not a capability or adapter whose
+  range opens with a `>=` floor, and with any value but `release`.

@@ -1051,7 +1051,9 @@ def release_apply(tag: bool, push: bool, no_broaden: bool, yes: bool) -> None:
     On a component release, widens that component's `requires_backbone` to
     cover the repo's current backbone (the version being released under) unless
     `--no-broaden` is given; a backbone release widens every component as
-    before. Both are widen-only. See `.pkit/release/README.md`.
+    before. Both are widen-only. A changeset declaring `requires_backbone:
+    release` raises its component's floor to the backbone the release ships —
+    raise-only, and not skipped by `--no-broaden`. See `.pkit/release/README.md`.
     """
     source_kit = _target_kit()
     plan = compute_release(source_kit)
@@ -1132,9 +1134,11 @@ def release_lint(skip: bool | None) -> None:
 
     Checks the mechanically-verifiable subset only — a changeset's category is
     a Keep-a-Changelog group, its body is a non-empty sentence (not a bare
-    reference, capitalized, period-ended), and `CHANGELOG.md` headings are
-    well-formed. It does *not* judge plain language / jargon — that is the
-    guide plus review. A reminder, not a proof; see `.pkit/release/README.md`.
+    reference, capitalized, period-ended), a `requires_backbone` floor field
+    says `release` on a version-moving changeset of a capability or adapter
+    with a `>=` floor, and `CHANGELOG.md` headings are well-formed. It does
+    *not* judge plain language / jargon — that is the guide plus review. A
+    reminder, not a proof; see `.pkit/release/README.md`.
 
     Reads committed files only (no PR context), so it runs in the shared check
     aggregator. Escape hatch: `--skip` or the PKIT_CHANGELOG_LINT_SKIP env var.
@@ -1258,6 +1262,8 @@ def _print_release_plan(plan: ReleasePlan) -> None:
                 f"  {rel.component.name}: {rel.old_version} -> "
                 f"{rel.new_version} ({rel.segment})"
             )
+            if rel.raises_floor:
+                click.echo(f"    requires_backbone floor raised to >={plan.shipped_backbone}")
             for note in rel.notes:
                 click.echo(f"    - {note}")
     click.echo(f"  changesets to consume: {len(plan.consumed)}")
