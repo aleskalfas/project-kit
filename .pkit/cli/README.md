@@ -243,6 +243,8 @@ A capability enters a project through one of two verbs, distinguished by where t
 
 If a same-named capability later begins shipping from kit source (graduation, before graduation is specified), `register` surfaces the overlap as a note and registers the in-repo copy; `sync` surfaces the same collision rather than silently shadowing either tree (COR-031 boundary case).
 
+**Refused in the methodology's source repository when the running code is not its own** ([ADR-059](../../tech-docs/architecture/decisions/ADR-059-methodology-source-repository.md)). `capabilities install`, `capabilities upgrade` (which refreshes an installed capability from source) and `capabilities register` copy or register a capability with the running code's tree. In a source checkout reached by other code they refuse exactly as [`sync`](#sync) does, with the same message — both tests, how the run got there, `Nothing was written, and no flag overrides this refusal` — before any other pre-flight, `--plan` and `--dry-run` included. The remedy names the command as it would be re-run under the checkout's own dispatcher, `.pkit/cli/pkit capabilities install <name>` and so on.
+
 ### Mandatory process connections: refused, or warned and forced
 
 A process definition's `depends_on` entry may be marked mandatory, with a reason ([COR-053](../decisions/core/COR-053-connection-points.md) point 6; the process area README, "depends_on"). The lifecycle commands read the mark from the capability's generated `depends-on` list and judge it through the wiring resolver, with COR-030's direction split (the lifecycle README, "Mandatory process connections"):

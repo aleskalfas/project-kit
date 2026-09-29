@@ -31,6 +31,7 @@ from project_kit.install import (
     find_target_root,
     install_kit,
     refuse_if_pkit_present,
+    refuse_propagation_into_source,
     source_checkout_root,
     resolve_init_target,
     scan_pkit_installs,
@@ -2893,13 +2894,25 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
             f"{target_root}/.pkit/ does not exist. Run 'pkit init' first."
         )
 
+    source_kit = find_source_kit()
+    # The methodology's source repository run by code that is not its own (the
+    # gap, ADR-059): refuse before anything is read or written (#1090).
+    refuse_propagation_into_source(
+        target_root,
+        source_kit,
+        command=f"capabilities upgrade {name}",
+        would=(
+            "refresh the capability with that code — a kit-shipped one from that "
+            "tree, over the one it is built from"
+        ),
+        own_code_does=None,
+    )
+
     if not caps.is_installed(target_root, name):
         raise click.ClickException(
             f"capability {name!r} is not installed. "
             f"Use `pkit capabilities install {name}` first."
         )
-
-    source_kit = find_source_kit()
 
     # Origin-aware branch (COR-031 D1/D4): an incubated (in-repo) capability has
     # no kit source to reconcile against — the working tree *is* the source. It
@@ -4409,11 +4422,23 @@ def install_capability_cmd(name: str, dry_run: bool, plan: bool, as_json: bool) 
             f"{target_root}/.pkit/ does not exist. Run 'pkit init' first."
         )
 
+    source_kit = find_source_kit()
+    # The methodology's source repository run by code that is not its own (the
+    # gap, ADR-059): the install would copy the running code's capability
+    # subtree into the tree it is built from. Refuse before anything else —
+    # the plan included, since the install it previews would refuse (#1090).
+    refuse_propagation_into_source(
+        target_root,
+        source_kit,
+        command=f"capabilities install {name}",
+        would="copy the capability's subtree from that tree into the one it is built from",
+        own_code_does=None,
+    )
+
     # A reserved name is refused before lookup, so the refusal names the
     # reservation rather than reporting the capability as missing.
     caps.refuse_reserved_capability_name(name)
 
-    source_kit = find_source_kit()
     capability_source = caps.find_capability_in_source(source_kit, name)
     if capability_source is None:
         raise click.ClickException(
@@ -4563,6 +4588,19 @@ def register_capability_cmd(name: str, dry_run: bool) -> None:
             f"{target_root}/.pkit/ does not exist. Run 'pkit init' first."
         )
 
+    source_kit = find_source_kit()
+    # The methodology's source repository run by code that is not its own (the
+    # gap, ADR-059): registering writes install-state with that code. Refuse
+    # before anything else, as `install` does (#1090).
+    refuse_propagation_into_source(
+        target_root,
+        source_kit,
+        command=f"capabilities register {name}",
+        would="register the capability with that code, writing install-state into the tree "
+        "it is built from",
+        own_code_does=None,
+    )
+
     # A reserved name is refused before resolution, as in `install`.
     caps.refuse_reserved_capability_name(name)
 
@@ -4570,7 +4608,6 @@ def register_capability_cmd(name: str, dry_run: bool) -> None:
     # Consulting both trees lets us surface the COR-031 boundary case where
     # a same-named capability now also ships from kit source — graduation
     # arriving unbidden — rather than silently shadowing it.
-    source_kit = find_source_kit()
     resolved = caps.resolve_capability_source(
         name,
         source_kit=source_kit,
